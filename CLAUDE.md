@@ -1,6 +1,6 @@
 # Open Source OD (OSOD)
 
-Open source practice management software for independent optometry. Built by a practicing O.D., for practicing O.D.s.
+Open source practice management software for independent clinical practices — optometry, aesthetics, and multi-service practices that combine both. Built by a practicing O.D. and licensed aesthetician who runs both under one roof.
 
 **TypeScript. React. PostgreSQL. Local-first. AGPL v3.**
 
@@ -8,9 +8,50 @@ Open source practice management software for independent optometry. Built by a p
 
 ## What This Is
 
-A modern, open source practice management system purpose-built for optometry. Not a fork of a 20-year PHP monolith. Not a cloud-dependent SaaS. Your data, your hardware, your practice.
+A modern, open source practice management system built for clinical practices that don't fit in one box. Optometry. Medical aesthetics. Practices that do both. The core is shared (patients, scheduling, billing), the modules are specialty-specific.
 
-The dental world has Open Dental. Optometry has had nothing. Until now.
+Not a fork of a 20-year PHP monolith. Not a cloud-dependent SaaS. Not "optometry software with aesthetics bolted on." Both are first-class from day one — because the founder runs both.
+
+The dental world has Open Dental. Optometry and aesthetics have had nothing. Until now.
+
+## Multi-Service Architecture
+
+OSOD is built for practices that cross specialty lines:
+
+```
+OSOD Core (shared)
+├── Patients, demographics, insurance
+├── Scheduling (multi-provider, multi-service-line)
+├── Billing / EDI
+├── E-prescribing (WENO)
+│
+├── Optometry Module
+│   ├── Comprehensive exam forms
+│   ├── Glasses / CL Rx management
+│   ├── Specialty: VT, Ortho-K, Dry Eye, Myopia
+│   ├── Vision insurance (VSP/EyeMed)
+│   └── Optical dispensing / frame inventory
+│
+├── Aesthetics Module
+│   ├── Consultation forms
+│   ├── Treatment records (injectables, lasers, skin)
+│   ├── Before/after photo management
+│   ├── Membership / package tracking
+│   ├── Product inventory (skincare, devices)
+│   └── Consent forms
+│
+└── Future Modules
+    ├── Fitness / coaching (client management)
+    └── [any clinical vertical]
+```
+
+**Key insight:** A patient at IVA might see Dr. Bang for an eye exam in the morning and get a skin treatment in the afternoon. Same patient record, same scheduling system, different clinical modules. No other open source software handles this.
+
+**Deployment options:**
+- Optometry-only practice → install core + optometry module
+- Aesthetics-only clinic → install core + aesthetics module
+- Combined practice (like IVA) → install core + both modules
+- The modules share patients, scheduling, and billing — no double entry
 
 ---
 
@@ -174,5 +215,15 @@ The vault exists so we don't reinvent wheels. Use it.
 |------|-------------|
 | **performance-od** | Business brain + knowledge vault. Domain knowledge lives here. |
 | **iva_eyecare** | Eyecare practice lab. Test OSOD features here first. |
-| **iva-aesthetics** | Aesthetics lab. Future: aesthetics module testing. |
-| **bang-fitness** | Fitness lab. Proves the platform works beyond eyecare. |
+| **iva-aesthetics** | Aesthetics practice lab. Aesthetics module tested here. Eric is also a licensed aesthetician. |
+| **bang-fitness** | Fitness lab. Proves the platform works beyond clinical practices. |
+
+---
+
+## The Founder Advantage
+
+Eric Bang is both a practicing O.D. AND a licensed aesthetician running both service lines under one roof at IVA. No other PMS developer has this dual perspective. Every design decision comes from someone who actually does the work in both domains — not from a product manager guessing what clinicians need.
+
+The aesthetics module isn't an afterthought or a future roadmap item. It's built from the same first-person operational experience as the optometry module. And the combined practice (shared patients, shared scheduling, cross-specialty workflows) is the hardest use case — if OSOD handles IVA, it handles anything.
+
+**Spin-off potential:** The aesthetics module works standalone for aesthetics-only clinics — med spas, esthetician practices, dermatology offices. Same core, different module configuration. One codebase, multiple markets.
