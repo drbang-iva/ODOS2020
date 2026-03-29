@@ -108,12 +108,55 @@ Full rationale: `performance-od/decisions/2026-03-14-open-source-od-architecture
 - Diagnosis codes → billing
 - WENO Switch API (native prescription UI)
 
-### Phase 5: Advanced
+### Phase 5: Specialty-First Clinical Modules
+
+**This is where OSOD breaks from every other PMS.** Most software treats specialties as an afterthought — a text field where you type free-form notes. OSOD builds structured, specialty-aware clinical tools from day one.
+
+**Vision Therapy Module:**
+- Structured VT evaluation forms (not free-text — real fields for real tests)
+- Treatment plan builder with protocol templates (Sanet methodology, OEPF-aligned)
+- Home therapy assignment and tracking
+- Progress tracking across visits (measurable outcomes, not "patient doing better")
+- Session notes linked to specific activities and procedures
+- AI agent integration: plug in the `vision_training` knowledge module and the system can suggest treatment protocols
+
+**Dry Eye Module:**
+- Structured dry eye workup forms (TBUT, Schirmer, meibography, osmolarity, inflammatory markers)
+- Protocol chains: diagnosis → treatment plan → follow-up schedule
+- Product/device tracking (IPL, thermal pulsation, punctal plugs)
+- Severity grading with treatment escalation pathways
+
+**Ortho-K & Specialty Contact Lens Module:**
+- **Lens parameter catalogs** — every lens design with full parameter ranges (BC, diameter, powers, peripheral curves, material, Dk). Searchable, sortable, filterable. This is what every PMS gets wrong — they give you one text field for "lens brand."
+- Fitting records with topography integration
+- Trial lens inventory management
+- Overnight wear schedules and follow-up protocols
+- Scleral lens fitting records (vault depths, OAD, landing zones)
+- Multifocal CL parameter tracking
+- Fitting troubleshooting guides linked to patient data
+
+**Myopia Management Module:**
+- Axial length tracking and progression analysis
+- Treatment comparison (Ortho-K vs. atropine vs. soft multifocal vs. combination)
+- Risk assessment scoring
+- Parent education material generation
+- Annual progression reports
+
+**Aesthetics Module:**
+- Consultation and consent forms
+- Treatment records (units, areas, products, settings for each device)
+- Before/after photo management with standardized positioning
+- Membership and package tracking (units remaining, expiration)
+- Product inventory (skincare, injectable supplies, device consumables)
+- Treatment history timeline (visual — what was done where, when)
+
+**The philosophy:** If a specialty has structured data, OSOD should capture it in structured fields — not a text box. Structured data enables AI agents, enables analytics, enables treatment comparison. Free-text notes are where clinical intelligence goes to die.
+
+### Phase 6: Advanced
 - FHIR interoperability
 - Equipment integration (OCT, VF via DICOM)
 - Optical dispensing / frame inventory
 - ONC certification
-- Specialty modules (VT, myopia management, Ortho-K)
 
 ---
 
