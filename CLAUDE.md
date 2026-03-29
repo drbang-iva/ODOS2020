@@ -4,6 +4,8 @@ Open source practice management software for independent clinical practices — 
 
 **TypeScript. React. PostgreSQL. Local-first. AGPL v3.**
 
+**Boundary:** If you're writing strategy, research, decisions, or domain knowledge — you're in the wrong repo. Switch to `performance-od`. Code, schemas, tests, and user-facing docs belong here. The WHY lives there, the HOW lives here.
+
 ---
 
 ## What This Is
