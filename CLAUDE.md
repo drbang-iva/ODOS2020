@@ -14,6 +14,12 @@ Not a fork of a 20-year PHP monolith. Not a cloud-dependent SaaS. Not "optometry
 
 The dental world has Open Dental. Optometry and aesthetics have had nothing. Until now.
 
+## The Market Shift
+
+Revenue in independent optometry is moving from vision plans to specialties. VSP/EyeMed reimbursements have been flat for 15 years while overhead climbs. The practices that thrive are specialty-heavy: Ortho-K ($1,500-2,500/patient), dry eye ($500-3,000+), myopia management ($1,000-2,000/year), vision therapy ($4,000-8,000), aesthetics (pure cash pay).
+
+**But every PMS was built for the old model** — comprehensive exam + glasses + contacts. Specialties are crammed into free-text fields and workarounds. OSOD is built for the practice model that's winning, not the one that's dying. Specialty workflows are first-class, not afterthoughts.
+
 ## Multi-Service Architecture
 
 OSOD is built for practices that cross specialty lines:
