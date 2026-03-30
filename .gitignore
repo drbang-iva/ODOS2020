@@ -5,3 +5,8 @@ dist/
 *.log
 .DS_Store
 coverage/
+
+# Raw screenshot captures (structured reference docs live in performance-od)
+examwriter-screenshot-*.png
+visit-overview-full.png
+.playwright-mcp/
