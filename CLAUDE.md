@@ -186,11 +186,40 @@ This repo has the CODE. The domain knowledge lives in performance-od's vault, li
 - `performance-od/decisions/2026-03-29-knowledge-module-platform-architecture.md` — Platform strategy
 - `performance-od/decisions/2026-03-29-vault-consolidation-osod-repo.md` — Why this repo exists
 
-**Research:**
+**Research (foundational):**
 - `performance-od/research/2026-03-13-opensourceOD-research.md` — Landscape research
 - `performance-od/research/2026-03-14-openemr-architecture-audit.md` — Why not OpenEMR
 - `performance-od/research/2026-03-14-openemr-alternatives-comparison.md` — Alternatives evaluated
 - `performance-od/research/2026-03-14-fork-vs-build-analysis.md` — Fork vs build
+- `performance-od/research/2026-03-26-apexo-codebase-analysis.md` — Apexo open source PMS analysis
+- `performance-od/research/2026-03-26-os-od-architecture-principles.md` — Architecture principles
+- `performance-od/research/2026-03-27-openclaw-hospital-paper-analysis.md` — Hospital-grade AI patterns
+
+**Research (product features — READ BEFORE BUILDING MODULES):**
+- `performance-od/research/2026-04-03-vt-home-program-brainstorm.md` — VT module product concept: gamified home therapy, avatar therapists, WebXR VR, competitive landscape (NVT, HTS, Vivid Vision, Optics Trainer). Architecture: Lovable patient app + OSOD backend + GHL community wrapper.
+- `performance-od/research/2026-04-03-ai-glasses-exam-workflow-brainstorm.md` — Voice input via AR glasses (Even Realities G1 / Brilliant Labs Frame). Wake word + whisper + local LLM structured extraction. Defining OSOD feature. Pipeline: openWakeWord → mlx_whisper → LLM → chart fields. All local.
+
+**Research (competitive PMS/software — know what exists):**
+- `performance-od/research/2026-04-02-aestheticspro-ui-ux-wireframe.md` — AestheticsPro reverse-engineering
+- `performance-od/research/2026-03-25-barti-*.md` — Barti PMS competitive intel (2 files)
+
+**Decisions (architecture + product):**
+- `performance-od/decisions/2026-03-14-open-source-od-architecture.md` — THE architecture decision (build from scratch, not fork)
+- `performance-od/decisions/2026-03-29-knowledge-module-platform-architecture.md` — Platform strategy (3-layer: free infra, paid modules, premium managed)
+- `performance-od/decisions/2026-03-29-vault-consolidation-osod-repo.md` — Why this repo exists
+- `performance-od/decisions/2026-04-03-product-identity-pivot.md` — PerformanceOD is an open source community platform. OSOD is Pillar 2. Community IS the business.
+- `performance-od/decisions/2026-04-03-vani-hermes-migration.md` — Vani (creative engine) builds OSOD UI mockups
+
+**GHL integration research (Pillar 1 connects to OSOD):**
+- `performance-od/research/2026-04-03-ghl-agent-studio-detailed-overview-mining.md` — GHL Agent Studio architecture. Understand what GHL does natively so OSOD complements, not competes.
+- `performance-od/research/2026-04-03-ghl-service-calendars-conversation-ai-mining.md` — AI-powered appointment booking. OSOD scheduling API should support this pattern.
+- `performance-od/reference/domain/foxfire-ghl-integration-architecture.md` — Foxfire→GHL integration patterns. OSOD replaces Foxfire long-term but must match its integration model.
+
+**UI paradigm (HOW to build the interface):**
+- `performance-od/decisions/2026-03-*-osod-ui-paradigm*.md` — UI paradigm decision: demonstration-first, not CRUD-form. Legacy PMS paradigm vs OSOD paradigm.
+- OSOD docs/reference/screenshot-manifest.md — 110 screenshots mapped by module. USE THIS when building features.
+
+**CRITICAL RULE: Before building any module or feature, check performance-od for relevant research, decisions, and competitive analysis. The WHY lives there. Build from knowledge, not assumptions.**
 
 **GHL integration (optional layer):**
 - `performance-od/reference/domain/ghl-docs/` — GHL platform docs
