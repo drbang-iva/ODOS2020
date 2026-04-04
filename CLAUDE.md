@@ -219,6 +219,9 @@ This repo has the CODE. The domain knowledge lives in performance-od's vault, li
 - `performance-od/decisions/2026-03-*-osod-ui-paradigm*.md` — UI paradigm decision: demonstration-first, not CRUD-form. Legacy PMS paradigm vs OSOD paradigm.
 - OSOD docs/reference/screenshot-manifest.md — 110 screenshots mapped by module. USE THIS when building features.
 
+**THE MOST IMPORTANT RESEARCH FILE:**
+- `performance-od/research/2026-04-04-osod-clinical-requirements-deep-dive.md` — Eric's complete clinical vision for OSOD. READ THIS BEFORE BUILDING ANYTHING. Covers: pictorial patient timeline (the killer feature), decision tracking, equipment registry, VT module (home + in-office + gamified + avatar-guided), contact lens trial tracking, dry eye treatment tracking, aesthetics, prescription management, device integration strategy, voice input via AR glasses. This is the requirements document.
+
 **CRITICAL RULE: Before building any module or feature, check performance-od for relevant research, decisions, and competitive analysis. The WHY lives there. Build from knowledge, not assumptions.**
 
 **GHL integration (optional layer):**
