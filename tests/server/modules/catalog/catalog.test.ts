@@ -271,6 +271,54 @@ describe('Catalog routes', () => {
       });
       expect(res.status).toBe(400);
     });
+
+    it('POST /body-areas/bulk inserts many practice body areas in one transaction', async () => {
+      const res = await app.request('/api/catalog/body-areas/bulk', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          items: [
+            { name: 'Bulk Area 1', shortCode: 'BA1', durationAdjustmentMinutes: 5, additionalEquipmentTags: [], additionalConsent: false },
+            { name: 'Bulk Area 2', shortCode: 'BA2', durationAdjustmentMinutes: 10, additionalEquipmentTags: ['ipl'], additionalConsent: true },
+            { name: 'Bulk Area 3', shortCode: 'BA3', durationAdjustmentMinutes: 0, additionalEquipmentTags: [], additionalConsent: false },
+          ],
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.inserted).toBe(3);
+
+      // Verify they show up in the practice's body area list
+      const listRes = await app.request('/api/catalog/body-areas', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const listBody = await listRes.json();
+      const bulkNames = listBody.bodyAreas
+        .filter((b: { is_system: boolean }) => !b.is_system)
+        .map((b: { name: string }) => b.name);
+      expect(bulkNames).toContain('Bulk Area 1');
+      expect(bulkNames).toContain('Bulk Area 2');
+      expect(bulkNames).toContain('Bulk Area 3');
+    });
+
+    it('POST /body-areas/bulk all inserted rows have is_system=false', async () => {
+      const res = await app.request('/api/catalog/body-areas/bulk', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          items: [
+            { name: 'NonSystemA', shortCode: 'NSA', durationAdjustmentMinutes: 0, additionalEquipmentTags: [], additionalConsent: false },
+          ],
+        }),
+      });
+      expect(res.status).toBe(201);
+
+      const check = await pool.query(
+        `SELECT is_system FROM body_area_modifiers WHERE name = 'NonSystemA'`,
+      );
+      expect(check.rows).toHaveLength(1);
+      expect(check.rows[0].is_system).toBe(false);
+    });
   });
 
   describe('appointment types', () => {

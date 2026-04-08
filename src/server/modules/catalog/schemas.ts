@@ -39,8 +39,13 @@ export const createBodyAreaSchema = z.object({
 
 export const updateBodyAreaSchema = createBodyAreaSchema.partial();
 
+export const bulkBodyAreasSchema = z.object({
+  items: z.array(createBodyAreaSchema).min(1).max(1000),
+});
+
 export type CreateBodyAreaInput = z.infer<typeof createBodyAreaSchema>;
 export type UpdateBodyAreaInput = z.infer<typeof updateBodyAreaSchema>;
+export type BulkBodyAreasInput = z.infer<typeof bulkBodyAreasSchema>;
 
 // --- APPOINTMENT TYPES ---
 

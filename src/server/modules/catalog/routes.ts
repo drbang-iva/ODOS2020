@@ -11,6 +11,7 @@ import {
   updateAppointmentTypeSchema,
   cloneFromLibrarySchema,
   bulkLibraryItemsSchema,
+  bulkBodyAreasSchema,
 } from './schemas.js';
 
 function requirePerm(permissions: string[], required: string): string | null {
@@ -112,6 +113,16 @@ export function createCatalogRoutes(service: CatalogService) {
 
     const item = await service.createBodyArea(auth.practiceId, c.req.valid('json'));
     return c.json(item, 201);
+  });
+
+  // POST /body-areas/bulk — insert up to 1000 practice-specific body areas in one transaction
+  routes.post('/body-areas/bulk', zValidator('json', bulkBodyAreasSchema), async (c) => {
+    const auth = c.get('auth');
+    const err = requirePerm(auth.permissions, 'admin:settings');
+    if (err) return c.json({ error: err }, 403);
+
+    const result = await service.bulkAddBodyAreas(auth.practiceId, c.req.valid('json'));
+    return c.json(result, 201);
   });
 
   routes.patch('/body-areas/:id', zValidator('json', updateBodyAreaSchema), async (c) => {

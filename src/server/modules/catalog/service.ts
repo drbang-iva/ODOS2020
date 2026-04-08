@@ -8,6 +8,7 @@ import type {
   UpdateAppointmentTypeInput,
   CloneFromLibraryInput,
   BulkLibraryItemsInput,
+  BulkBodyAreasInput,
 } from './schemas.js';
 
 export interface BulkInsertResult {
@@ -250,6 +251,49 @@ export class CatalogService {
       ],
     );
     return result.rows[0];
+  }
+
+  /**
+   * Insert many practice-specific body area modifiers in one transaction.
+   * All inserted rows have is_system=false. There is no UNIQUE constraint
+   * on body_area_modifiers (a practice could legitimately have multiple
+   * "Face" entries for different procedures), so this never deduplicates.
+   */
+  async bulkAddBodyAreas(
+    practiceId: string,
+    input: BulkBodyAreasInput,
+  ): Promise<BulkInsertResult> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      let inserted = 0;
+      for (const item of input.items) {
+        await client.query(
+          `INSERT INTO body_area_modifiers (
+            practice_id, name, short_code, duration_adjustment_minutes,
+            additional_equipment_tags, additional_consent, is_system
+          ) VALUES ($1, $2, $3, $4, $5, $6, false)`,
+          [
+            practiceId,
+            item.name,
+            item.shortCode,
+            item.durationAdjustmentMinutes,
+            item.additionalEquipmentTags,
+            item.additionalConsent,
+          ],
+        );
+        inserted++;
+      }
+
+      await client.query('COMMIT');
+      return { inserted };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   async updateBodyArea(
