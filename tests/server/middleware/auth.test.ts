@@ -8,11 +8,21 @@ import { runMigrations } from '../../../src/server/db/migrate.js';
 const TEST_DB_URL = 'postgresql://osod:osod_dev@localhost:5432/osod_test';
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters-long-for-validation';
 
+const ADMIN_PERMISSIONS = [
+  'admin:users', 'admin:settings',
+  'patients:read', 'patients:write',
+  'appointments:read', 'appointments:write',
+  'billing:read', 'billing:submit',
+  'clinical:read', 'clinical:write',
+  'reports:read', 'reports:export',
+];
+
 describe('auth middleware', () => {
   let pool: pg.Pool;
   let authService: AuthService;
   let app: Hono;
   let practiceId: string;
+  let adminRoleId: string;
 
   beforeEach(async () => {
     pool = new pg.Pool({ connectionString: TEST_DB_URL });
@@ -27,6 +37,14 @@ describe('auth middleware', () => {
       "INSERT INTO practices (name) VALUES ('Test Practice') RETURNING id"
     );
     practiceId = result.rows[0].id;
+
+    // Create Admin role
+    const adminRole = await pool.query(
+      `INSERT INTO user_roles (practice_id, name, permission_set, is_system)
+       VALUES ($1, 'Admin', $2, true) RETURNING id`,
+      [practiceId, ADMIN_PERMISSIONS],
+    );
+    adminRoleId = adminRole.rows[0].id;
 
     app = new Hono();
     app.use('/api/*', createAuthMiddleware(authService));
@@ -48,7 +66,7 @@ describe('auth middleware', () => {
       email: 'doc@test.com',
       password: 'securepass123',
       fullName: 'Dr. Test',
-      role: 'admin',
+      roleIds: [adminRoleId],
       isProvider: false,
       serviceLineIds: [],
     });
@@ -65,7 +83,7 @@ describe('auth middleware', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.auth.role).toBe('admin');
+    expect(body.auth.permissions).toContain('admin:users');
     expect(body.auth.actorType).toBe('human');
   });
 
@@ -74,7 +92,7 @@ describe('auth middleware', () => {
       email: 'agent@test.com',
       password: 'securepass123',
       fullName: 'Agent',
-      role: 'agent',
+      roleIds: [],
       isProvider: false,
       serviceLineIds: [],
     });
@@ -92,6 +110,7 @@ describe('auth middleware', () => {
 
     const body = await res.json();
     expect(body.auth.actorType).toBe('local_agent');
+    expect(body.auth.permissions).toContain('patients:read');
   });
 
   it('does not require auth for non-api routes', async () => {

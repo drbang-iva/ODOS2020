@@ -14,7 +14,7 @@ export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(1),
-  role: z.enum(['admin', 'provider', 'staff', 'agent']),
+  roleIds: z.array(z.string().uuid()).default([]),
   isProvider: z.boolean().default(false),
   serviceLineIds: z.array(z.string().uuid()).default([]),
 });

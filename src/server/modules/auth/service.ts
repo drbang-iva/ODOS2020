@@ -7,7 +7,7 @@ import type { LoginInput, CreateUserInput, CreateAgentKeyInput } from './schemas
 interface TokenPayload {
   userId: string;
   practiceId: string;
-  role: string;
+  permissions: string[];
 }
 
 interface AgentKeyInfo {
@@ -27,26 +27,46 @@ export class AuthService {
     this.jwtSecret = new TextEncoder().encode(jwtSecretString);
   }
 
+  async loadPermissions(userId: string): Promise<string[]> {
+    const result = await this.pool.query(`
+      SELECT DISTINCT unnest(ur.permission_set) AS perm
+      FROM user_role_assignments ura
+      JOIN user_roles ur ON ur.id = ura.role_id
+      WHERE ura.user_id = $1
+      ORDER BY perm
+    `, [userId]);
+    return result.rows.map(r => r.perm);
+  }
+
   async createUser(
     practiceId: string,
     input: CreateUserInput,
-  ): Promise<{ id: string; email: string; fullName: string; role: string }> {
+  ): Promise<{ id: string; email: string; fullName: string; permissions: string[] }> {
     const passwordHash = await bcrypt.hash(input.password, 12);
 
     const result = await this.pool.query(
-      `INSERT INTO users (practice_id, email, password_hash, full_name, role, is_provider, service_line_ids)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, email, full_name, role`,
-      [practiceId, input.email, passwordHash, input.fullName, input.role, input.isProvider, input.serviceLineIds],
+      `INSERT INTO users (practice_id, email, password_hash, full_name, is_provider, service_line_ids)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, email, full_name`,
+      [practiceId, input.email, passwordHash, input.fullName, input.isProvider, input.serviceLineIds],
     );
 
     const row = result.rows[0];
-    return { id: row.id, email: row.email, fullName: row.full_name, role: row.role };
+
+    for (const roleId of input.roleIds) {
+      await this.pool.query(
+        `INSERT INTO user_role_assignments (user_id, role_id) VALUES ($1, $2)`,
+        [row.id, roleId],
+      );
+    }
+
+    const permissions = await this.loadPermissions(row.id);
+    return { id: row.id, email: row.email, fullName: row.full_name, permissions };
   }
 
   async login(input: LoginInput): Promise<{ accessToken: string; refreshToken: string }> {
     const result = await this.pool.query(
-      `SELECT id, practice_id, email, password_hash, role, is_active
+      `SELECT id, practice_id, email, password_hash, is_active
        FROM users
        WHERE practice_id = $1 AND email = $2 AND is_active = true`,
       [input.practiceId, input.email],
@@ -58,10 +78,12 @@ export class AuthService {
     const valid = await bcrypt.compare(input.password, user.password_hash);
     if (!valid) throw new Error('Invalid credentials');
 
+    const permissions = await this.loadPermissions(user.id);
+
     const accessToken = await new jose.SignJWT({
       userId: user.id,
       practiceId: user.practice_id,
-      role: user.role,
+      permissions,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -89,16 +111,18 @@ export class AuthService {
     const practiceId = payload.practiceId as string;
 
     const result = await this.pool.query(
-      'SELECT role, is_active FROM users WHERE id = $1 AND practice_id = $2',
+      'SELECT is_active FROM users WHERE id = $1 AND practice_id = $2',
       [userId, practiceId],
     );
     const user = result.rows[0];
     if (!user || !user.is_active) throw new Error('User not found or inactive');
 
+    const permissions = await this.loadPermissions(userId);
+
     const accessToken = await new jose.SignJWT({
       userId,
       practiceId,
-      role: user.role,
+      permissions,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -123,7 +147,7 @@ export class AuthService {
     return {
       userId: payload.userId as string,
       practiceId: payload.practiceId as string,
-      role: payload.role as string,
+      permissions: (payload.permissions as string[]) ?? [],
     };
   }
 

@@ -6,6 +6,15 @@ import { runMigrations } from '../../../src/server/db/migrate.js';
 
 const TEST_DB_URL = 'postgresql://osod:osod_dev@localhost:5432/osod_test';
 
+const ADMIN_PERMISSIONS = [
+  'admin:users', 'admin:settings',
+  'patients:read', 'patients:write',
+  'appointments:read', 'appointments:write',
+  'billing:read', 'billing:submit',
+  'clinical:read', 'clinical:write',
+  'reports:read', 'reports:export',
+];
+
 describe('OSOD smoke test', () => {
   let pool: pg.Pool;
   let app: ReturnType<typeof createApp>['app'];
@@ -31,17 +40,24 @@ describe('OSOD smoke test', () => {
     app = appResult.app;
     authService = appResult.authService;
 
-    // Create practice and admin user
+    // Create practice and admin role
     const result = await pool.query(
       "INSERT INTO practices (name) VALUES ('Test Practice') RETURNING id"
     );
     practiceId = result.rows[0].id;
 
+    const adminRole = await pool.query(
+      `INSERT INTO user_roles (practice_id, name, permission_set, is_system)
+       VALUES ($1, 'Admin', $2, true) RETURNING id`,
+      [practiceId, ADMIN_PERMISSIONS],
+    );
+    const adminRoleId = adminRole.rows[0].id;
+
     await authService.createUser(practiceId, {
       email: 'admin@test.com',
       password: 'securepass123',
       fullName: 'Admin User',
-      role: 'admin',
+      roleIds: [adminRoleId],
       isProvider: false,
       serviceLineIds: [],
     });

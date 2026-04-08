@@ -7,7 +7,6 @@ import type { AuthContext } from '../../middleware/auth.js';
 export function createAuthRoutes(authService: AuthService) {
   const routes = new Hono<{ Variables: { auth: AuthContext } }>();
 
-  // Public: login
   routes.post('/login', zValidator('json', loginSchema), async (c) => {
     const input = c.req.valid('json');
     try {
@@ -18,7 +17,6 @@ export function createAuthRoutes(authService: AuthService) {
     }
   });
 
-  // Public: refresh
   routes.post('/refresh', zValidator('json', refreshSchema), async (c) => {
     const { refreshToken } = c.req.valid('json');
     try {
@@ -29,30 +27,27 @@ export function createAuthRoutes(authService: AuthService) {
     }
   });
 
-  // Protected: create user (admin only)
   routes.post('/users', zValidator('json', createUserSchema), async (c) => {
     const auth = c.get('auth');
-    if (auth.role !== 'admin') {
-      return c.json({ error: 'Admin role required' }, 403);
+    if (!auth.permissions.includes('admin:users')) {
+      return c.json({ error: 'admin:users permission required' }, 403);
     }
     const input = c.req.valid('json');
     const user = await authService.createUser(auth.practiceId, input);
     return c.json(user, 201);
   });
 
-  // Protected: create agent key (admin only)
   routes.post('/agent-keys', zValidator('json', createAgentKeySchema), async (c) => {
     const auth = c.get('auth');
-    if (auth.role !== 'admin') {
-      return c.json({ error: 'Admin role required' }, 403);
+    if (!auth.permissions.includes('admin:users')) {
+      return c.json({ error: 'admin:users permission required' }, 403);
     }
     const input = c.req.valid('json');
-    // Create an agent user identity
     const agentUser = await authService.createUser(auth.practiceId, {
       email: `${input.name}@agent.local`,
       password: crypto.randomUUID(),
       fullName: input.name,
-      role: 'agent',
+      roleIds: [],
       isProvider: false,
       serviceLineIds: [],
     });

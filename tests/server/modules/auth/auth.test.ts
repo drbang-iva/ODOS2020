@@ -6,10 +6,26 @@ import { runMigrations } from '../../../../src/server/db/migrate.js';
 const TEST_DB_URL = 'postgresql://osod:osod_dev@localhost:5432/osod_test';
 const JWT_SECRET = 'test-secret-that-is-at-least-32-characters-long-for-validation';
 
+const ADMIN_PERMISSIONS = [
+  'admin:users', 'admin:settings',
+  'patients:read', 'patients:write',
+  'appointments:read', 'appointments:write',
+  'billing:read', 'billing:submit',
+  'clinical:read', 'clinical:write',
+  'reports:read', 'reports:export',
+];
+
+const FRONT_DESK_PERMISSIONS = [
+  'patients:read', 'patients:write',
+  'appointments:read', 'appointments:write',
+];
+
 describe('AuthService', () => {
   let pool: pg.Pool;
   let auth: AuthService;
   let practiceId: string;
+  let adminRoleId: string;
+  let frontDeskRoleId: string;
 
   beforeEach(async () => {
     pool = new pg.Pool({ connectionString: TEST_DB_URL });
@@ -26,6 +42,21 @@ describe('AuthService', () => {
       "INSERT INTO practices (name) VALUES ('Test Practice') RETURNING id"
     );
     practiceId = result.rows[0].id;
+
+    // Create roles
+    const adminRole = await pool.query(
+      `INSERT INTO user_roles (practice_id, name, permission_set, is_system)
+       VALUES ($1, 'Admin', $2, true) RETURNING id`,
+      [practiceId, ADMIN_PERMISSIONS],
+    );
+    adminRoleId = adminRole.rows[0].id;
+
+    const frontDeskRole = await pool.query(
+      `INSERT INTO user_roles (practice_id, name, permission_set, is_system)
+       VALUES ($1, 'Front Desk', $2, true) RETURNING id`,
+      [practiceId, FRONT_DESK_PERMISSIONS],
+    );
+    frontDeskRoleId = frontDeskRole.rows[0].id;
   });
 
   afterAll(async () => {
@@ -33,12 +64,12 @@ describe('AuthService', () => {
   });
 
   describe('createUser', () => {
-    it('creates a user with hashed password', async () => {
+    it('creates a user with hashed password and permissions from roles', async () => {
       const user = await auth.createUser(practiceId, {
         email: 'doc@test.com',
         password: 'securepass123',
         fullName: 'Dr. Test',
-        role: 'admin',
+        roleIds: [adminRoleId],
         isProvider: true,
         serviceLineIds: [],
       });
@@ -46,10 +77,40 @@ describe('AuthService', () => {
       expect(user.id).toBeDefined();
       expect(user.email).toBe('doc@test.com');
       expect(user.fullName).toBe('Dr. Test');
-      expect(user.role).toBe('admin');
+      expect(user.permissions).toContain('admin:users');
+      expect(user.permissions).toContain('patients:read');
       // Password hash should NOT be returned
       expect((user as any).passwordHash).toBeUndefined();
       expect((user as any).password_hash).toBeUndefined();
+    });
+
+    it('creates a user with front desk permissions', async () => {
+      const user = await auth.createUser(practiceId, {
+        email: 'front@test.com',
+        password: 'securepass123',
+        fullName: 'Front Desk Staff',
+        roleIds: [frontDeskRoleId],
+        isProvider: false,
+        serviceLineIds: [],
+      });
+
+      expect(user.permissions).toContain('patients:read');
+      expect(user.permissions).toContain('appointments:write');
+      expect(user.permissions).not.toContain('admin:users');
+      expect(user.permissions).not.toContain('billing:read');
+    });
+
+    it('creates a user with no roles (empty permissions)', async () => {
+      const user = await auth.createUser(practiceId, {
+        email: 'agent@test.com',
+        password: 'securepass123',
+        fullName: 'Agent User',
+        roleIds: [],
+        isProvider: false,
+        serviceLineIds: [],
+      });
+
+      expect(user.permissions).toEqual([]);
     });
 
     it('rejects duplicate email within same practice', async () => {
@@ -57,7 +118,7 @@ describe('AuthService', () => {
         email: 'doc@test.com',
         password: 'securepass123',
         fullName: 'Dr. Test',
-        role: 'admin',
+        roleIds: [adminRoleId],
         isProvider: false,
         serviceLineIds: [],
       });
@@ -67,7 +128,7 @@ describe('AuthService', () => {
           email: 'doc@test.com',
           password: 'securepass123',
           fullName: 'Dr. Test 2',
-          role: 'staff',
+          roleIds: [frontDeskRoleId],
           isProvider: false,
           serviceLineIds: [],
         }),
@@ -81,7 +142,7 @@ describe('AuthService', () => {
         email: 'doc@test.com',
         password: 'securepass123',
         fullName: 'Dr. Test',
-        role: 'admin',
+        roleIds: [adminRoleId],
         isProvider: false,
         serviceLineIds: [],
       });
@@ -103,7 +164,7 @@ describe('AuthService', () => {
         email: 'doc@test.com',
         password: 'securepass123',
         fullName: 'Dr. Test',
-        role: 'admin',
+        roleIds: [adminRoleId],
         isProvider: false,
         serviceLineIds: [],
       });
@@ -129,12 +190,12 @@ describe('AuthService', () => {
   });
 
   describe('verifyAccessToken', () => {
-    it('decodes a valid token', async () => {
+    it('decodes a valid token with permissions', async () => {
       await auth.createUser(practiceId, {
         email: 'doc@test.com',
         password: 'securepass123',
         fullName: 'Dr. Test',
-        role: 'admin',
+        roleIds: [adminRoleId],
         isProvider: false,
         serviceLineIds: [],
       });
@@ -148,7 +209,8 @@ describe('AuthService', () => {
       const payload = await auth.verifyAccessToken(accessToken);
       expect(payload.userId).toBeDefined();
       expect(payload.practiceId).toBe(practiceId);
-      expect(payload.role).toBe('admin');
+      expect(payload.permissions).toContain('admin:users');
+      expect(payload.permissions).toContain('patients:read');
     });
   });
 
@@ -158,7 +220,7 @@ describe('AuthService', () => {
         email: 'agent@test.com',
         password: 'securepass123',
         fullName: 'Scheduling Agent',
-        role: 'agent',
+        roleIds: [],
         isProvider: false,
         serviceLineIds: [],
       });
@@ -181,7 +243,7 @@ describe('AuthService', () => {
         email: 'agent@test.com',
         password: 'securepass123',
         fullName: 'Scheduling Agent',
-        role: 'agent',
+        roleIds: [],
         isProvider: false,
         serviceLineIds: [],
       });
