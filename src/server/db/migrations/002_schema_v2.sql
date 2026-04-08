@@ -68,6 +68,11 @@ CREATE TABLE user_role_assignments (
 CREATE INDEX idx_user_role_assignments_user ON user_role_assignments(user_id);
 CREATE INDEX idx_user_role_assignments_role ON user_role_assignments(role_id);
 
+-- Prevent duplicate role assignments when service_line_id is NULL
+CREATE UNIQUE INDEX idx_unique_role_assignment_no_sl
+  ON user_role_assignments (user_id, role_id)
+  WHERE service_line_id IS NULL;
+
 -- Keep legacy role column but relax constraints for migration path
 ALTER TABLE users ALTER COLUMN role DROP NOT NULL;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
