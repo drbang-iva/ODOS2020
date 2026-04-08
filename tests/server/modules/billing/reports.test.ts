@@ -278,4 +278,267 @@ describe('ReportsService — AR aging', () => {
       expect(total).toBe(0);
     });
   });
+
+  describe('revenueByProvider', () => {
+    let provider2Id: string;
+    let eyecareSlId: string;
+    let aestheticsSlId: string;
+
+    beforeEach(async () => {
+      // Create a second provider so we can test multi-provider reporting
+      const p2 = await pool.query(
+        `INSERT INTO users (practice_id, email, password_hash, full_name, is_provider)
+         VALUES ($1, 'doc2@test.com', 'h', 'Dr. Second', true) RETURNING id`,
+        [practiceId],
+      );
+      provider2Id = p2.rows[0].id;
+
+      // Two service lines for the serviceLineId filter test
+      const sl1 = await pool.query(
+        `INSERT INTO service_lines (practice_id, name, color)
+         VALUES ($1, 'Eyecare', '#2563EB') RETURNING id`,
+        [practiceId],
+      );
+      eyecareSlId = sl1.rows[0].id;
+
+      const sl2 = await pool.query(
+        `INSERT INTO service_lines (practice_id, name, color)
+         VALUES ($1, 'Aesthetics', '#DB2777') RETURNING id`,
+        [practiceId],
+      );
+      aestheticsSlId = sl2.rows[0].id;
+    });
+
+    /**
+     * Helper: insert a charge directly with a specific provider, bypassing
+     * ChargeService because we don't need a fee schedule lookup for these
+     * tests (we set the amount explicitly).
+     *
+     * Optionally links the charge to an appointment so the serviceLineId
+     * filter has something to join through — charges has no direct
+     * service_line_id column; it's derived via appointment.
+     */
+    async function rawCharge(
+      providerId: string,
+      serviceDate: string,
+      amountCents: number,
+      appointmentId: string | null = null,
+    ): Promise<string> {
+      const result = await pool.query(
+        `INSERT INTO charges (
+          practice_id, patient_id, provider_id, appointment_id,
+          service_date, cpt_code, units, unit_amount_cents, total_amount_cents, created_by
+        ) VALUES ($1, $2, $3, $4, $5, '92004', 1, $6, $6, $3)
+        RETURNING id`,
+        [practiceId, patient1Id, providerId, appointmentId, serviceDate, amountCents],
+      );
+      return result.rows[0].id;
+    }
+
+    /**
+     * Helper: create an appointment linked to a specific service line,
+     * returning its id so a charge can be linked to it for the serviceLineId
+     * filter test.
+     */
+    async function rawAppointment(
+      providerId: string,
+      serviceLineId: string,
+      startTime: string,
+    ): Promise<string> {
+      // Need an appointment_type to satisfy the FK on appointments
+      const atRes = await pool.query(
+        `INSERT INTO appointment_types (practice_id, service_line_id, name, short_name, color, duration_blocks, display_name, service_line_ids)
+         VALUES ($1, $2, 'Test Type', 'TT', '#2563EB', 1, 'Test Type', $3)
+         RETURNING id`,
+        [practiceId, serviceLineId, [serviceLineId]],
+      );
+      const aptTypeId = atRes.rows[0].id;
+
+      const aptRes = await pool.query(
+        `INSERT INTO appointments (
+          practice_id, patient_id, provider_id, appointment_type_id,
+          service_line_id, start_time, duration_blocks, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, 1, $3)
+        RETURNING id`,
+        [practiceId, patient1Id, providerId, aptTypeId, serviceLineId, startTime],
+      );
+      return aptRes.rows[0].id;
+    }
+
+    it('returns empty providers array when no charges exist in range', async () => {
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+      expect(report.providers).toHaveLength(0);
+      expect(report.totals.chargeCount).toBe(0);
+      expect(report.totals.totalChargedCents).toBe(0);
+    });
+
+    it('aggregates charges per provider with totals', async () => {
+      // Provider 1: 2 charges totaling $450
+      await rawCharge(userId, '2026-02-01', 22500);
+      await rawCharge(userId, '2026-02-15', 22500);
+      // Provider 2: 1 charge for $185
+      await rawCharge(provider2Id, '2026-02-10', 18500);
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+
+      expect(report.providers).toHaveLength(2);
+      // Ordered by total_charged DESC, so provider 1 first
+      expect(report.providers[0].providerId).toBe(userId);
+      expect(report.providers[0].chargeCount).toBe(2);
+      expect(report.providers[0].totalChargedCents).toBe(45000);
+      expect(report.providers[0].providerName).toBe('Dr. Test');
+
+      expect(report.providers[1].providerId).toBe(provider2Id);
+      expect(report.providers[1].chargeCount).toBe(1);
+      expect(report.providers[1].totalChargedCents).toBe(18500);
+      expect(report.providers[1].providerName).toBe('Dr. Second');
+
+      expect(report.totals.chargeCount).toBe(3);
+      expect(report.totals.totalChargedCents).toBe(63500);
+    });
+
+    it('subtracts payments from outstanding', async () => {
+      const chargeId = await rawCharge(userId, '2026-02-01', 22500);
+      await payments.create(practiceId, userId, {
+        patientId: patient1Id,
+        paymentType: 'patient',
+        paymentMethod: 'cash',
+        amountCents: 10000,
+        paymentDate: '2026-02-05',
+        applications: [{ chargeId, amountCents: 10000 }],
+      });
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+
+      expect(report.providers).toHaveLength(1);
+      expect(report.providers[0].totalChargedCents).toBe(22500);
+      expect(report.providers[0].totalPaidCents).toBe(10000);
+      expect(report.providers[0].outstandingCents).toBe(12500);
+    });
+
+    it('subtracts adjustments from outstanding', async () => {
+      const chargeId = await rawCharge(userId, '2026-02-01', 22500);
+      await adjustments.create(practiceId, userId, {
+        chargeId,
+        adjustmentType: 'contractual',
+        amountCents: 5000,
+        reason: 'allowed',
+      });
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+
+      expect(report.providers[0].totalAdjustedCents).toBe(5000);
+      expect(report.providers[0].outstandingCents).toBe(17500);
+    });
+
+    it('excludes voided charges from totals', async () => {
+      const chargeId = await rawCharge(userId, '2026-02-01', 22500);
+      await rawCharge(userId, '2026-02-15', 18500);
+      await charges.voidCharge(practiceId, chargeId, userId, 'mistake');
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+
+      expect(report.providers[0].chargeCount).toBe(1);
+      expect(report.providers[0].totalChargedCents).toBe(18500);
+    });
+
+    it('excludes voided payments (outstanding goes back up)', async () => {
+      const chargeId = await rawCharge(userId, '2026-02-01', 22500);
+      const pmt = await payments.create(practiceId, userId, {
+        patientId: patient1Id,
+        paymentType: 'patient',
+        paymentMethod: 'check',
+        amountCents: 22500,
+        paymentDate: '2026-02-05',
+        applications: [{ chargeId, amountCents: 22500 }],
+      });
+      await payments.voidPayment(practiceId, pmt.payment.id, userId, 'NSF');
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+
+      expect(report.providers[0].totalPaidCents).toBe(0);
+      expect(report.providers[0].outstandingCents).toBe(22500);
+    });
+
+    it('filters by service_date range (inclusive both ends)', async () => {
+      await rawCharge(userId, '2026-01-31', 10000); // before range
+      await rawCharge(userId, '2026-02-01', 20000); // start boundary
+      await rawCharge(userId, '2026-02-15', 30000); // inside
+      await rawCharge(userId, '2026-02-28', 40000); // end boundary
+      await rawCharge(userId, '2026-03-01', 50000); // after range
+
+      const report = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-02-01',
+        endDate: '2026-02-28',
+      });
+
+      expect(report.totals.chargeCount).toBe(3);
+      expect(report.totals.totalChargedCents).toBe(90000); // 20000 + 30000 + 40000
+    });
+
+    it('filters by serviceLineId when provided (via appointment join)', async () => {
+      // Same provider, two different service lines. Each charge is tied to
+      // an appointment so the filter can join through.
+      const eyecareAppt = await rawAppointment(
+        userId,
+        eyecareSlId,
+        '2026-02-01T14:00:00Z',
+      );
+      const aestheticsAppt = await rawAppointment(
+        userId,
+        aestheticsSlId,
+        '2026-02-02T14:00:00Z',
+      );
+      await rawCharge(userId, '2026-02-01', 22500, eyecareAppt);
+      await rawCharge(userId, '2026-02-02', 30000, aestheticsAppt);
+
+      const eyecareReport = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        serviceLineId: eyecareSlId,
+      });
+      expect(eyecareReport.totals.chargeCount).toBe(1);
+      expect(eyecareReport.totals.totalChargedCents).toBe(22500);
+      expect(eyecareReport.serviceLineId).toBe(eyecareSlId);
+
+      const aestheticsReport = await reports.revenueByProvider(practiceId, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+        serviceLineId: aestheticsSlId,
+      });
+      expect(aestheticsReport.totals.chargeCount).toBe(1);
+      expect(aestheticsReport.totals.totalChargedCents).toBe(30000);
+    });
+
+    it('does not leak charges from other practices', async () => {
+      await rawCharge(userId, '2026-02-01', 22500);
+
+      const otherPractice = await pool.query(
+        `INSERT INTO practices (name) VALUES ('Other') RETURNING id`,
+      );
+      const report = await reports.revenueByProvider(otherPractice.rows[0].id, {
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      });
+      expect(report.providers).toHaveLength(0);
+    });
+  });
 });

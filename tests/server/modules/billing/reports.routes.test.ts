@@ -207,4 +207,54 @@ describe('Reports routes — AR aging', () => {
     const res = await app.request('/api/billing/reports/ar-aging');
     expect(res.status).toBe(401);
   });
+
+  describe('GET /revenue-by-provider', () => {
+    it('returns per-provider aggregation for the date range', async () => {
+      // Seed a charge on a known service date so the report has something to aggregate
+      await seedCharge('2026-03-15');
+
+      const res = await app.request(
+        '/api/billing/reports/revenue-by-provider?startDate=2026-01-01&endDate=2026-12-31',
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.providers).toBeDefined();
+      expect(body.totals).toBeDefined();
+      // The admin test user is the provider on the seeded charge
+      expect(body.providers.length).toBeGreaterThanOrEqual(1);
+      expect(body.totals.totalChargedCents).toBeGreaterThanOrEqual(22500);
+    });
+
+    it('rejects missing startDate', async () => {
+      const res = await app.request(
+        '/api/billing/reports/revenue-by-provider?endDate=2026-12-31',
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects malformed date', async () => {
+      const res = await app.request(
+        '/api/billing/reports/revenue-by-provider?startDate=2026-01&endDate=2026-12-31',
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects users without reports:read permission', async () => {
+      const res = await app.request(
+        '/api/billing/reports/revenue-by-provider?startDate=2026-01-01&endDate=2026-12-31',
+        { headers: { Authorization: `Bearer ${limitedAccessToken}` } },
+      );
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects unauthenticated requests', async () => {
+      const res = await app.request(
+        '/api/billing/reports/revenue-by-provider?startDate=2026-01-01&endDate=2026-12-31',
+      );
+      expect(res.status).toBe(401);
+    });
+  });
 });
