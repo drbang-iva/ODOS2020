@@ -2,7 +2,7 @@ import { createMiddleware } from 'hono/factory';
 import type pg from 'pg';
 import type { AuthContext } from './auth.js';
 
-const PHI_PATHS = ['/api/patients', '/api/appointments'];
+const PHI_PATHS = ['/api/patients', '/api/appointments', '/api/clinical'];
 
 function isPHIPath(path: string): boolean {
   return PHI_PATHS.some(p => path.startsWith(p));

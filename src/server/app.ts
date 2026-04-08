@@ -27,6 +27,8 @@ import { PaymentService } from './modules/billing/services/payment.service.js';
 import { AdjustmentService } from './modules/billing/services/adjustment.service.js';
 import { LedgerService } from './modules/billing/services/ledger.service.js';
 import { ReportsService } from './modules/billing/services/reports.service.js';
+import { ClinicalEncounterService } from './modules/clinical/service.js';
+import { createClinicalRoutes } from './modules/clinical/routes.js';
 import { createFeeScheduleRoutes } from './modules/billing/routes/fee-schedule.routes.js';
 import { createChargeRoutes } from './modules/billing/routes/charge.routes.js';
 import { createPaymentRoutes } from './modules/billing/routes/payment.routes.js';
@@ -57,6 +59,7 @@ export function createApp({ pool, config }: AppDependencies) {
   const adjustmentService = new AdjustmentService(pool);
   const ledgerService = new LedgerService(pool);
   const reportsService = new ReportsService(pool);
+  const clinicalEncounterService = new ClinicalEncounterService(pool, eventBus);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -108,12 +111,14 @@ export function createApp({ pool, config }: AppDependencies) {
   app.use('/api/equipment/*', authMiddleware);
   app.use('/api/equipment', authMiddleware);
   app.use('/api/billing/*', authMiddleware);
+  app.use('/api/clinical/*', authMiddleware);
   app.use('/api/service-lines/*', authMiddleware);
   app.use('/api/agent/*', authMiddleware);
 
   // Audit middleware for PHI endpoints (also before route registration)
   app.use('/api/patients/*', createAuditMiddleware(pool));
   app.use('/api/appointments/*', createAuditMiddleware(pool));
+  app.use('/api/clinical/*', createAuditMiddleware(pool));
 
   // Auth routes (login/refresh are public, users/agent-keys are protected above)
   const authRoutes = createAuthRoutes(authService);
@@ -150,6 +155,9 @@ export function createApp({ pool, config }: AppDependencies) {
   app.route('/api/billing/adjustments', createAdjustmentRoutes(adjustmentService));
   app.route('/api/billing/ledger', createLedgerRoutes(ledgerService));
   app.route('/api/billing/reports', createReportsRoutes(reportsService));
+
+  // Clinical routes (auth + audit middleware already registered for /api/clinical/*)
+  app.route('/api/clinical', createClinicalRoutes(clinicalEncounterService));
 
   return { app, eventBus, authService };
 }
