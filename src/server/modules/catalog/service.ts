@@ -7,7 +7,13 @@ import type {
   CreateAppointmentTypeInput,
   UpdateAppointmentTypeInput,
   CloneFromLibraryInput,
+  BulkLibraryItemsInput,
 } from './schemas.js';
+
+export interface BulkInsertResult {
+  /** Number of rows actually inserted */
+  inserted: number;
+}
 
 export interface LibraryItemRow {
   id: string;
@@ -112,6 +118,57 @@ export class CatalogService {
       ],
     );
     return result.rows[0];
+  }
+
+  /**
+   * Insert many treatment library items in a single transaction.
+   *
+   * The treatment_library table has no UNIQUE constraint on standard_name, so
+   * "duplicates" aren't enforced at the DB level. Calling this multiple times
+   * with the same items WILL create multiple rows. Use it for initial seeding
+   * only, or pre-deduplicate at the application level.
+   *
+   * Returns { inserted } count. Throws + rolls back on any per-row error.
+   */
+  async bulkAddLibraryItems(input: BulkLibraryItemsInput): Promise<BulkInsertResult> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      let inserted = 0;
+      for (const item of input.items) {
+        await client.query(
+          `INSERT INTO treatment_library (
+            standard_name, category, subcategory, typical_duration_minutes,
+            cpt_codes, equipment_tags, provider_scope, service_lines,
+            body_area_modifiers_available, consent_required, is_billable, default_color
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            item.standardName,
+            item.category,
+            item.subcategory ?? null,
+            item.typicalDurationMinutes,
+            item.cptCodes,
+            item.equipmentTags,
+            item.providerScope,
+            item.serviceLines,
+            item.bodyAreaModifiersAvailable,
+            item.consentRequired,
+            item.isBillable,
+            item.defaultColor,
+          ],
+        );
+        inserted++;
+      }
+
+      await client.query('COMMIT');
+      return { inserted };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   async updateLibraryItem(id: string, input: UpdateLibraryItemInput): Promise<LibraryItemRow> {

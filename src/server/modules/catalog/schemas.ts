@@ -19,8 +19,13 @@ export const createLibraryItemSchema = z.object({
 
 export const updateLibraryItemSchema = createLibraryItemSchema.partial();
 
+export const bulkLibraryItemsSchema = z.object({
+  items: z.array(createLibraryItemSchema).min(1).max(1000),
+});
+
 export type CreateLibraryItemInput = z.infer<typeof createLibraryItemSchema>;
 export type UpdateLibraryItemInput = z.infer<typeof updateLibraryItemSchema>;
+export type BulkLibraryItemsInput = z.infer<typeof bulkLibraryItemsSchema>;
 
 // --- BODY AREA MODIFIERS ---
 

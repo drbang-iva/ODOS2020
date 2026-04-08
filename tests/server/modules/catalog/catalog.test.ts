@@ -139,6 +139,84 @@ describe('Catalog routes', () => {
       const body = await res.json();
       expect(body.typical_duration_minutes).toBe(60);
     });
+
+    it('POST /library/bulk inserts many items in one transaction', async () => {
+      const res = await app.request('/api/catalog/library/bulk', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          items: [
+            {
+              standardName: 'Bulk Test Treatment 1',
+              category: 'Test Category',
+              typicalDurationMinutes: 30,
+              cptCodes: ['11111'],
+              equipmentTags: [],
+              providerScope: ['Provider'],
+              serviceLines: ['eyecare'],
+              bodyAreaModifiersAvailable: false,
+              consentRequired: false,
+              isBillable: true,
+              defaultColor: '#000000',
+            },
+            {
+              standardName: 'Bulk Test Treatment 2',
+              category: 'Test Category',
+              typicalDurationMinutes: 45,
+              cptCodes: ['22222'],
+              equipmentTags: ['oct'],
+              providerScope: ['Provider', 'Tech'],
+              serviceLines: ['eyecare'],
+              bodyAreaModifiersAvailable: false,
+              consentRequired: false,
+              isBillable: true,
+              defaultColor: '#000000',
+            },
+          ],
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.inserted).toBe(2);
+
+      // Verify items are visible via the list endpoint
+      const listRes = await app.request('/api/catalog/library?category=Test%20Category', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const listBody = await listRes.json();
+      expect(listBody.items.length).toBe(2);
+    });
+
+    it('POST /library/bulk rejects empty items array', async () => {
+      const res = await app.request('/api/catalog/library/bulk', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ items: [] }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('POST /library/bulk rejects bulk over 1000 items', async () => {
+      const items = Array.from({ length: 1001 }, (_, i) => ({
+        standardName: `T${i}`,
+        category: 'Bulk',
+        typicalDurationMinutes: 15,
+        cptCodes: [],
+        equipmentTags: [],
+        providerScope: [],
+        serviceLines: [],
+        bodyAreaModifiersAvailable: false,
+        consentRequired: false,
+        isBillable: true,
+        defaultColor: '#000000',
+      }));
+      const res = await app.request('/api/catalog/library/bulk', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ items }),
+      });
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('body area modifiers', () => {
