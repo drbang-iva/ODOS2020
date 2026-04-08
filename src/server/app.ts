@@ -43,7 +43,7 @@ export function createApp({ pool, config }: AppDependencies) {
   // Services
   const eventBus = new InProcessEventBus();
   const authService = new AuthService(pool, config.jwtSecret);
-  const scheduleService = new ScheduleService(pool);
+  const scheduleService = new ScheduleService(pool, eventBus);
   const patientService = new PatientService(pool, eventBus);
   const practiceService = new PracticeService(pool);
   const catalogService = new CatalogService(pool);

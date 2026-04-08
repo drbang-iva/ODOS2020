@@ -1,5 +1,7 @@
 import type pg from 'pg';
 import type { CreateAppointmentInput, UpdateAppointmentInput } from './schemas.js';
+import type { DomainEventBus } from '../../events/bus.js';
+import { buildEvent, type ActorContext } from '../../events/builder.js';
 
 export interface TimeSlot {
   startTime: string; // ISO 8601
@@ -41,7 +43,10 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 export class ScheduleService {
-  constructor(private pool: pg.Pool) {}
+  constructor(
+    private pool: pg.Pool,
+    private eventBus: DomainEventBus,
+  ) {}
 
   /**
    * NOTE: Phase 2 core treats provider schedule times as UTC. The `practice.timezone`
@@ -172,7 +177,7 @@ export class ScheduleService {
 
   async createAppointment(
     practiceId: string,
-    createdBy: string,
+    actor: ActorContext,
     input: CreateAppointmentInput,
   ): Promise<AppointmentRow> {
     const typeResult = await this.pool.query(
@@ -208,17 +213,35 @@ export class ScheduleService {
         durationBlocks,
         input.chiefComplaint ?? null,
         input.notes ?? null,
-        createdBy,
+        actor.userId,
       ],
     );
+    const row = result.rows[0];
 
-    return result.rows[0];
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'appointment.scheduled',
+        entityType: 'appointment',
+        entityId: row.id,
+        payload: {
+          patientId: row.patient_id,
+          providerId: row.provider_id,
+          startTime: row.start_time instanceof Date
+            ? row.start_time.toISOString()
+            : String(row.start_time),
+        },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
   async updateAppointment(
     practiceId: string,
     appointmentId: string,
     input: UpdateAppointmentInput,
+    actor: ActorContext,
   ): Promise<AppointmentRow> {
     const existing = await this.pool.query(
       'SELECT * FROM appointments WHERE id = $1 AND practice_id = $2',
@@ -293,22 +316,36 @@ export class ScheduleService {
        RETURNING *`,
       values,
     );
+    const after = result.rows[0];
 
-    return result.rows[0];
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'appointment.updated',
+        entityType: 'appointment',
+        entityId: appointmentId,
+        payload: { changes: input },
+        previousState: appt,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
   async cancelAppointment(
     practiceId: string,
     appointmentId: string,
     reason: string,
+    actor: ActorContext,
   ): Promise<AppointmentRow> {
     const existing = await this.pool.query(
-      'SELECT status FROM appointments WHERE id = $1 AND practice_id = $2',
+      'SELECT * FROM appointments WHERE id = $1 AND practice_id = $2',
       [appointmentId, practiceId],
     );
     if (existing.rows.length === 0) throw new Error('Appointment not found');
-    if (existing.rows[0].status === 'cancelled') throw new Error('Appointment already cancelled');
-    if (existing.rows[0].status === 'completed') throw new Error('Cannot cancel completed appointment');
+    const before = existing.rows[0];
+    if (before.status === 'cancelled') throw new Error('Appointment already cancelled');
+    if (before.status === 'completed') throw new Error('Cannot cancel completed appointment');
 
     const result = await this.pool.query(
       `UPDATE appointments
@@ -317,22 +354,36 @@ export class ScheduleService {
        RETURNING *`,
       [reason, appointmentId, practiceId],
     );
+    const after = result.rows[0];
 
-    return result.rows[0];
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'appointment.cancelled',
+        entityType: 'appointment',
+        entityId: appointmentId,
+        payload: { reason },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
   async transitionStatus(
     practiceId: string,
     appointmentId: string,
     newStatus: string,
+    actor: ActorContext,
   ): Promise<AppointmentRow> {
     const existing = await this.pool.query(
-      'SELECT status FROM appointments WHERE id = $1 AND practice_id = $2',
+      'SELECT * FROM appointments WHERE id = $1 AND practice_id = $2',
       [appointmentId, practiceId],
     );
     if (existing.rows.length === 0) throw new Error('Appointment not found');
+    const before = existing.rows[0];
 
-    const currentStatus = existing.rows[0].status;
+    const currentStatus = before.status;
     const allowed = STATUS_TRANSITIONS[currentStatus];
     if (!allowed || !allowed.includes(newStatus)) {
       throw new Error(`Cannot transition from ${currentStatus} to ${newStatus}`);
@@ -350,8 +401,20 @@ export class ScheduleService {
        RETURNING *`,
       [newStatus, appointmentId, practiceId],
     );
+    const after = result.rows[0];
 
-    return result.rows[0];
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'appointment.status_changed',
+        entityType: 'appointment',
+        entityId: appointmentId,
+        payload: { oldStatus: currentStatus, newStatus },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
   async getAppointment(

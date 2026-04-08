@@ -82,6 +82,12 @@ export interface AppointmentScheduledEvent extends DomainEvent {
   payload: { patientId: string; providerId: string; startTime: string };
 }
 
+export interface AppointmentUpdatedEvent extends DomainEvent {
+  type: 'appointment.updated';
+  entityType: 'appointment';
+  payload: { changes: Record<string, unknown> };
+}
+
 export interface AppointmentStatusChangedEvent extends DomainEvent {
   type: 'appointment.status_changed';
   entityType: 'appointment';
@@ -124,6 +130,7 @@ export type Phase1Event =
   | PatientResponsiblePartyAddedEvent
   | PatientResponsiblePartyDeletedEvent
   | AppointmentScheduledEvent
+  | AppointmentUpdatedEvent
   | AppointmentStatusChangedEvent
   | AppointmentCancelledEvent
   | DeviceReadingReceivedEvent

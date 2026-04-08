@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { ScheduleService } from './service.js';
 import type { AuthContext } from '../../middleware/auth.js';
+import type { ActorContext } from '../../events/builder.js';
 import {
   getAvailableSlotsSchema,
   getScheduleGridSchema,
@@ -10,6 +11,14 @@ import {
   cancelAppointmentSchema,
   statusTransitionSchema,
 } from './schemas.js';
+
+function actorFrom(auth: AuthContext): ActorContext {
+  return {
+    userId: auth.userId,
+    practiceId: auth.practiceId,
+    actorType: auth.actorType,
+  };
+}
 
 export function createScheduleRoutes(scheduleService: ScheduleService) {
   const routes = new Hono<{ Variables: { auth: AuthContext } }>();
@@ -61,7 +70,7 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
     }
     const input = c.req.valid('json');
     try {
-      const appt = await scheduleService.createAppointment(auth.practiceId, auth.userId, input);
+      const appt = await scheduleService.createAppointment(auth.practiceId, actorFrom(auth), input);
       return c.json(appt, 201);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -90,7 +99,7 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
     }
     const input = c.req.valid('json');
     try {
-      const appt = await scheduleService.updateAppointment(auth.practiceId, c.req.param('id'), input);
+      const appt = await scheduleService.updateAppointment(auth.practiceId, c.req.param('id'), input, actorFrom(auth));
       return c.json(appt);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -109,7 +118,7 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
     }
     const { reason } = c.req.valid('json');
     try {
-      const appt = await scheduleService.cancelAppointment(auth.practiceId, c.req.param('id'), reason);
+      const appt = await scheduleService.cancelAppointment(auth.practiceId, c.req.param('id'), reason, actorFrom(auth));
       return c.json(appt);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -129,7 +138,7 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
     }
     const { status } = c.req.valid('json');
     try {
-      const appt = await scheduleService.transitionStatus(auth.practiceId, c.req.param('id'), status);
+      const appt = await scheduleService.transitionStatus(auth.practiceId, c.req.param('id'), status, actorFrom(auth));
       return c.json(appt);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
