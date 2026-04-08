@@ -449,4 +449,247 @@ describe('ScheduleService', () => {
       expect(events.rows[0].metadata.payload.reason).toBe('Patient rescheduled');
     });
   });
+
+  describe('listAppointmentsForPatient', () => {
+    /**
+     * Set up a mix of past + future appointments plus one for a different patient
+     * so we can exercise every filter. We bypass the conflict detection by using
+     * widely-spaced start times.
+     */
+    async function seedHistory(): Promise<{ otherPatientId: string }> {
+      // Past appointment (2 weeks ago)
+      const pastDate = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+      // Future appointments (next Monday + 30 min slots)
+      const future1 = `${MONDAY}T09:00:00.000Z`;
+      const future2 = `${MONDAY}T10:00:00.000Z`;
+      const future3 = `${MONDAY}T11:00:00.000Z`;
+
+      await pool.query(
+        `INSERT INTO appointments (
+          practice_id, patient_id, provider_id, appointment_type_id,
+          service_line_id, start_time, duration_blocks, status, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, 3, 'completed', $3)`,
+        [practiceId, patientId, providerId, compExamTypeId, eyecareSlId, pastDate],
+      );
+
+      // Future: scheduled
+      await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: compExamTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: future1,
+      });
+
+      // Future: confirmed via direct insert
+      const f2 = await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: followUpTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: future2,
+      });
+      await service.transitionStatus(practiceId, f2.id, 'confirmed', actor);
+
+      // Future: cancelled
+      const f3 = await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: followUpTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: future3,
+      });
+      await service.cancelAppointment(practiceId, f3.id, 'Patient cancelled', actor);
+
+      // A second patient with their own appointment — must NOT leak into our queries
+      const otherPatient = await pool.query(
+        `INSERT INTO patients (practice_id, first_name, last_name, date_of_birth, sex, phone_primary, address_line1, city, state, zip)
+         VALUES ($1, 'Other', 'Patient', '1985-01-01', 'M', '555-9999', '200 Main', 'Edmond', 'OK', '73034') RETURNING id`,
+        [practiceId],
+      );
+      const otherPatientId = otherPatient.rows[0].id;
+      await service.createAppointment(practiceId, actor, {
+        patientId: otherPatientId,
+        providerId,
+        appointmentTypeId: compExamTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: `${MONDAY}T14:00:00.000Z`,
+      });
+
+      return { otherPatientId };
+    }
+
+    it('returns all non-cancelled appointments for the patient (default)', async () => {
+      await seedHistory();
+
+      const { appointments, total } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { includeCancelled: false, limit: 100, offset: 0 },
+      );
+      // Past (completed) + 2 future (scheduled + confirmed) = 3.
+      // The cancelled one is excluded; the other patient's appt is excluded.
+      expect(total).toBe(3);
+      expect(appointments).toHaveLength(3);
+      expect(appointments.every((a) => a.patient_id === patientId)).toBe(true);
+    });
+
+    it('excludes appointments from other patients', async () => {
+      const { otherPatientId } = await seedHistory();
+
+      const { appointments } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { includeCancelled: false, limit: 100, offset: 0 },
+      );
+      expect(
+        appointments.every((a) => a.patient_id !== otherPatientId),
+      ).toBe(true);
+    });
+
+    it('includes cancelled when includeCancelled=true', async () => {
+      await seedHistory();
+
+      const { total } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { includeCancelled: true, limit: 100, offset: 0 },
+      );
+      expect(total).toBe(4); // 3 non-cancelled + 1 cancelled
+    });
+
+    it('window=upcoming returns only future appointments sorted soonest-first', async () => {
+      await seedHistory();
+
+      const { appointments } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { window: 'upcoming', includeCancelled: false, limit: 100, offset: 0 },
+      );
+      // 2 future non-cancelled (the cancelled one is excluded)
+      expect(appointments).toHaveLength(2);
+      expect(new Date(appointments[0].start_time).getTime())
+        .toBeLessThan(new Date(appointments[1].start_time).getTime());
+    });
+
+    it('window=past returns only completed/old appointments', async () => {
+      await seedHistory();
+
+      const { appointments } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { window: 'past', includeCancelled: false, limit: 100, offset: 0 },
+      );
+      expect(appointments).toHaveLength(1);
+      expect(appointments[0].status).toBe('completed');
+    });
+
+    it('filters by status', async () => {
+      await seedHistory();
+
+      const { appointments, total } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { status: 'confirmed', includeCancelled: false, limit: 100, offset: 0 },
+      );
+      expect(total).toBe(1);
+      expect(appointments[0].status).toBe('confirmed');
+    });
+
+    it('filters by date range', async () => {
+      await seedHistory();
+
+      const { appointments } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        {
+          startDate: MONDAY,
+          endDate: MONDAY,
+          includeCancelled: false,
+          limit: 100,
+          offset: 0,
+        },
+      );
+      // All 2 non-cancelled future appointments are on MONDAY (the day before/after
+      // could show up if the date-range filter was broken)
+      expect(appointments).toHaveLength(2);
+      for (const a of appointments) {
+        const iso = new Date(a.start_time).toISOString();
+        expect(iso.startsWith('2026-04-13')).toBe(true);
+      }
+    });
+
+    it('respects pagination', async () => {
+      await seedHistory();
+
+      const { appointments, total } = await service.listAppointmentsForPatient(
+        practiceId,
+        patientId,
+        { limit: 2, offset: 0, includeCancelled: false },
+      );
+      expect(total).toBe(3);
+      expect(appointments).toHaveLength(2);
+    });
+
+    it('does not return appointments from other practices', async () => {
+      await seedHistory();
+
+      const otherPractice = await pool.query(
+        `INSERT INTO practices (name) VALUES ('Other Practice') RETURNING id`,
+      );
+      const { total } = await service.listAppointmentsForPatient(
+        otherPractice.rows[0].id,
+        patientId,
+        { includeCancelled: true, limit: 100, offset: 0 },
+      );
+      expect(total).toBe(0);
+    });
+  });
+
+  describe('getNextAppointmentForPatient', () => {
+    it('returns the soonest future non-cancelled appointment', async () => {
+      // Two future appointments; the 9 AM one should come first
+      await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: compExamTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: `${MONDAY}T11:00:00.000Z`,
+      });
+      await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: compExamTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: `${MONDAY}T09:00:00.000Z`,
+      });
+
+      const next = await service.getNextAppointmentForPatient(practiceId, patientId);
+      expect(next).not.toBeNull();
+      expect(new Date(next!.start_time).toISOString()).toContain('T09:00:00');
+    });
+
+    it('returns null when no future appointments exist', async () => {
+      // Only a past appointment
+      const pastDate = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      await pool.query(
+        `INSERT INTO appointments (
+          practice_id, patient_id, provider_id, appointment_type_id,
+          service_line_id, start_time, duration_blocks, status, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, 3, 'completed', $3)`,
+        [practiceId, patientId, providerId, compExamTypeId, eyecareSlId, pastDate],
+      );
+
+      const next = await service.getNextAppointmentForPatient(practiceId, patientId);
+      expect(next).toBeNull();
+    });
+
+    it('skips cancelled and no_show appointments', async () => {
+      const appt = await service.createAppointment(practiceId, actor, {
+        patientId, providerId,
+        appointmentTypeId: compExamTypeId,
+        serviceLineId: eyecareSlId,
+        startTime: `${MONDAY}T09:00:00.000Z`,
+      });
+      await service.cancelAppointment(practiceId, appt.id, 'test', actor);
+
+      const next = await service.getNextAppointmentForPatient(practiceId, patientId);
+      expect(next).toBeNull();
+    });
+  });
 });
