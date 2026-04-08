@@ -8,6 +8,8 @@ import type {
   CreateResponsiblePartyInput,
   CreateAlertInput,
 } from './schemas.js';
+import type { DomainEventBus } from '../../events/bus.js';
+import { buildEvent, type ActorContext } from '../../events/builder.js';
 
 export interface PatientRow {
   id: string;
@@ -95,11 +97,18 @@ export interface AlertRow {
 }
 
 export class PatientService {
-  constructor(private pool: pg.Pool) {}
+  constructor(
+    private pool: pg.Pool,
+    private eventBus: DomainEventBus,
+  ) {}
 
   // --- PATIENT CRUD ---
 
-  async create(practiceId: string, input: CreatePatientInput): Promise<PatientRow> {
+  async create(
+    practiceId: string,
+    input: CreatePatientInput,
+    actor: ActorContext,
+  ): Promise<PatientRow> {
     const result = await this.pool.query(
       `INSERT INTO patients (
         practice_id, first_name, middle_name, last_name, preferred_name,
@@ -148,7 +157,19 @@ export class PatientService {
         input.ethnicity ?? null,
       ],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.created',
+        entityType: 'patient',
+        entityId: row.id,
+        payload: { firstName: row.first_name, lastName: row.last_name },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
   async get(practiceId: string, patientId: string): Promise<PatientRow | null> {
@@ -163,7 +184,12 @@ export class PatientService {
     practiceId: string,
     patientId: string,
     input: UpdatePatientInput,
+    actor: ActorContext,
   ): Promise<PatientRow> {
+    // Snapshot BEFORE mutation so update events carry accurate previousState.
+    const before = await this.get(practiceId, patientId);
+    if (!before) throw new Error('Patient not found');
+
     const fieldMap: Record<string, string> = {
       firstName: 'first_name',
       middleName: 'middle_name',
@@ -206,10 +232,8 @@ export class PatientService {
     }
 
     if (setClauses.length === 1) {
-      // Nothing to update
-      const existing = await this.get(practiceId, patientId);
-      if (!existing) throw new Error('Patient not found');
-      return existing;
+      // Nothing to update — return the snapshot and skip emitting
+      return before;
     }
 
     values.push(patientId);
@@ -224,10 +248,30 @@ export class PatientService {
       values,
     );
     if (result.rows.length === 0) throw new Error('Patient not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.updated',
+        entityType: 'patient',
+        entityId: patientId,
+        payload: { changes: input },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
-  async deactivate(practiceId: string, patientId: string): Promise<PatientRow> {
+  async deactivate(
+    practiceId: string,
+    patientId: string,
+    actor: ActorContext,
+  ): Promise<PatientRow> {
+    const before = await this.get(practiceId, patientId);
+    if (!before) throw new Error('Patient not found');
+
     const result = await this.pool.query(
       `UPDATE patients SET is_active = false, updated_at = NOW()
        WHERE id = $1 AND practice_id = $2
@@ -235,7 +279,20 @@ export class PatientService {
       [patientId, practiceId],
     );
     if (result.rows.length === 0) throw new Error('Patient not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.deactivated',
+        entityType: 'patient',
+        entityId: patientId,
+        payload: {},
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
   async search(practiceId: string, input: SearchPatientsInput): Promise<{ patients: PatientRow[]; total: number }> {
@@ -302,7 +359,11 @@ export class PatientService {
     return result.rows;
   }
 
-  async addInsurance(patientId: string, input: CreateInsuranceInput): Promise<InsuranceRow> {
+  async addInsurance(
+    patientId: string,
+    input: CreateInsuranceInput,
+    actor: ActorContext,
+  ): Promise<InsuranceRow> {
     const result = await this.pool.query(
       `INSERT INTO patient_insurance (
         patient_id, priority, plan_type, payer_name, payer_id,
@@ -329,14 +390,40 @@ export class PatientService {
         input.copayCents ?? null,
       ],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.insurance.added',
+        entityType: 'patient_insurance',
+        entityId: row.id,
+        payload: {
+          patientId,
+          priority: row.priority,
+          planType: row.plan_type,
+          payerName: row.payer_name,
+        },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
   async updateInsurance(
     patientId: string,
     insuranceId: string,
     input: UpdateInsuranceInput,
+    actor: ActorContext,
   ): Promise<InsuranceRow> {
+    // Snapshot BEFORE mutation so the emitted event carries accurate state
+    const beforeResult = await this.pool.query(
+      'SELECT * FROM patient_insurance WHERE id = $1 AND patient_id = $2',
+      [insuranceId, patientId],
+    );
+    if (beforeResult.rows.length === 0) throw new Error('Insurance not found');
+    const before = beforeResult.rows[0];
+
     const fieldMap: Record<string, string> = {
       priority: 'priority',
       planType: 'plan_type',
@@ -376,15 +463,51 @@ export class PatientService {
       values,
     );
     if (result.rows.length === 0) throw new Error('Insurance not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.insurance.updated',
+        entityType: 'patient_insurance',
+        entityId: insuranceId,
+        payload: { patientId, changes: input },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
-  async deleteInsurance(patientId: string, insuranceId: string): Promise<void> {
+  async deleteInsurance(
+    patientId: string,
+    insuranceId: string,
+    actor: ActorContext,
+  ): Promise<void> {
+    // Snapshot before delete so the audit event still has the full row
+    const beforeResult = await this.pool.query(
+      'SELECT * FROM patient_insurance WHERE id = $1 AND patient_id = $2',
+      [insuranceId, patientId],
+    );
+    if (beforeResult.rows.length === 0) throw new Error('Insurance not found');
+    const before = beforeResult.rows[0];
+
     const result = await this.pool.query(
       'DELETE FROM patient_insurance WHERE id = $1 AND patient_id = $2',
       [insuranceId, patientId],
     );
     if (result.rowCount === 0) throw new Error('Insurance not found');
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.insurance.deleted',
+        entityType: 'patient_insurance',
+        entityId: insuranceId,
+        payload: { patientId },
+        previousState: before,
+        newState: null,
+      }),
+    );
   }
 
   // --- RESPONSIBLE PARTIES ---
@@ -402,6 +525,7 @@ export class PatientService {
   async addResponsibleParty(
     patientId: string,
     input: CreateResponsiblePartyInput,
+    actor: ActorContext,
   ): Promise<ResponsiblePartyRow> {
     const result = await this.pool.query(
       `INSERT INTO responsible_parties (
@@ -429,15 +553,49 @@ export class PatientService {
         input.endDate ?? null,
       ],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.responsible_party.added',
+        entityType: 'responsible_party',
+        entityId: row.id,
+        payload: { patientId, relationship: row.relationship },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
-  async deleteResponsibleParty(patientId: string, rpId: string): Promise<void> {
+  async deleteResponsibleParty(
+    patientId: string,
+    rpId: string,
+    actor: ActorContext,
+  ): Promise<void> {
+    const beforeResult = await this.pool.query(
+      'SELECT * FROM responsible_parties WHERE id = $1 AND patient_id = $2',
+      [rpId, patientId],
+    );
+    if (beforeResult.rows.length === 0) throw new Error('Responsible party not found');
+    const before = beforeResult.rows[0];
+
     const result = await this.pool.query(
       'DELETE FROM responsible_parties WHERE id = $1 AND patient_id = $2',
       [rpId, patientId],
     );
     if (result.rowCount === 0) throw new Error('Responsible party not found');
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.responsible_party.deleted',
+        entityType: 'responsible_party',
+        entityId: rpId,
+        payload: { patientId },
+        previousState: before,
+        newState: null,
+      }),
+    );
   }
 
   // --- ALERTS ---
@@ -459,31 +617,67 @@ export class PatientService {
 
   async addAlert(
     patientId: string,
-    createdBy: string,
     input: CreateAlertInput,
+    actor: ActorContext,
   ): Promise<AlertRow> {
     const result = await this.pool.query(
       `INSERT INTO patient_alerts (patient_id, alert_type, severity, message, created_by)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [patientId, input.alertType, input.severity, input.message, createdBy],
+      [patientId, input.alertType, input.severity, input.message, actor.userId],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.alert.created',
+        entityType: 'patient_alert',
+        entityId: row.id,
+        payload: {
+          alertType: row.alert_type,
+          severity: row.severity,
+          message: row.message,
+        },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
   async resolveAlert(
     patientId: string,
     alertId: string,
-    resolvedBy: string,
+    actor: ActorContext,
   ): Promise<AlertRow> {
+    const beforeResult = await this.pool.query(
+      'SELECT * FROM patient_alerts WHERE id = $1 AND patient_id = $2',
+      [alertId, patientId],
+    );
+    if (beforeResult.rows.length === 0) throw new Error('Alert not found');
+    const before = beforeResult.rows[0];
+
     const result = await this.pool.query(
       `UPDATE patient_alerts
        SET is_resolved = true, resolved_by = $1, resolved_at = NOW()
        WHERE id = $2 AND patient_id = $3
        RETURNING *`,
-      [resolvedBy, alertId, patientId],
+      [actor.userId, alertId, patientId],
     );
     if (result.rows.length === 0) throw new Error('Alert not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'patient.alert.resolved',
+        entityType: 'patient_alert',
+        entityId: alertId,
+        payload: { resolvedBy: actor.userId },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 }

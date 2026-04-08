@@ -10,9 +10,9 @@ export interface DomainEvent {
   payload: unknown;
   correlationId: string;
   /** Snapshot of the entity before the change. NULL on create. */
-  previousState?: Record<string, unknown> | null;
+  previousState?: Record<string, unknown> | object | null;
   /** Snapshot of the entity after the change. NULL on delete. */
-  newState?: Record<string, unknown> | null;
+  newState?: Record<string, unknown> | object | null;
 }
 
 // Phase 1 event types
@@ -38,6 +38,42 @@ export interface PatientAlertResolvedEvent extends DomainEvent {
   type: 'patient.alert.resolved';
   entityType: 'patient_alert';
   payload: { resolvedBy: string };
+}
+
+export interface PatientDeactivatedEvent extends DomainEvent {
+  type: 'patient.deactivated';
+  entityType: 'patient';
+  payload: Record<string, never>;
+}
+
+export interface PatientInsuranceAddedEvent extends DomainEvent {
+  type: 'patient.insurance.added';
+  entityType: 'patient_insurance';
+  payload: { patientId: string; priority: number; planType: string; payerName: string };
+}
+
+export interface PatientInsuranceUpdatedEvent extends DomainEvent {
+  type: 'patient.insurance.updated';
+  entityType: 'patient_insurance';
+  payload: { patientId: string; changes: Record<string, unknown> };
+}
+
+export interface PatientInsuranceDeletedEvent extends DomainEvent {
+  type: 'patient.insurance.deleted';
+  entityType: 'patient_insurance';
+  payload: { patientId: string };
+}
+
+export interface PatientResponsiblePartyAddedEvent extends DomainEvent {
+  type: 'patient.responsible_party.added';
+  entityType: 'responsible_party';
+  payload: { patientId: string; relationship: string };
+}
+
+export interface PatientResponsiblePartyDeletedEvent extends DomainEvent {
+  type: 'patient.responsible_party.deleted';
+  entityType: 'responsible_party';
+  payload: { patientId: string };
 }
 
 export interface AppointmentScheduledEvent extends DomainEvent {
@@ -79,8 +115,14 @@ export interface DeviceReadingReviewedEvent extends DomainEvent {
 export type Phase1Event =
   | PatientCreatedEvent
   | PatientUpdatedEvent
+  | PatientDeactivatedEvent
   | PatientAlertCreatedEvent
   | PatientAlertResolvedEvent
+  | PatientInsuranceAddedEvent
+  | PatientInsuranceUpdatedEvent
+  | PatientInsuranceDeletedEvent
+  | PatientResponsiblePartyAddedEvent
+  | PatientResponsiblePartyDeletedEvent
   | AppointmentScheduledEvent
   | AppointmentStatusChangedEvent
   | AppointmentCancelledEvent
