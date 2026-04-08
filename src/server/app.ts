@@ -17,6 +17,8 @@ import { PracticeService } from './modules/practice/service.js';
 import { createPracticeRoutes } from './modules/practice/routes.js';
 import { CatalogService } from './modules/catalog/service.js';
 import { createCatalogRoutes } from './modules/catalog/routes.js';
+import { AuditService } from './modules/audit/service.js';
+import { createAuditRoutes } from './modules/audit/routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -33,6 +35,7 @@ export function createApp({ pool, config }: AppDependencies) {
   const patientService = new PatientService(pool);
   const practiceService = new PracticeService(pool);
   const catalogService = new CatalogService(pool);
+  const auditService = new AuditService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -80,6 +83,7 @@ export function createApp({ pool, config }: AppDependencies) {
   app.use('/api/practice/*', authMiddleware);
   app.use('/api/practice', authMiddleware);
   app.use('/api/catalog/*', authMiddleware);
+  app.use('/api/audit/*', authMiddleware);
   app.use('/api/service-lines/*', authMiddleware);
   app.use('/api/agent/*', authMiddleware);
 
@@ -106,6 +110,10 @@ export function createApp({ pool, config }: AppDependencies) {
   // Catalog routes (auth middleware already registered for /api/catalog/*)
   const catalogRoutes = createCatalogRoutes(catalogService);
   app.route('/api/catalog', catalogRoutes);
+
+  // Audit routes (auth middleware already registered for /api/audit/*)
+  const auditRoutes = createAuditRoutes(auditService);
+  app.route('/api/audit', auditRoutes);
 
   return { app, eventBus, authService };
 }
