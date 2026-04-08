@@ -48,7 +48,7 @@ export function createApp({ pool, config }: AppDependencies) {
   const practiceService = new PracticeService(pool);
   const catalogService = new CatalogService(pool);
   const auditService = new AuditService(pool);
-  const equipmentService = new EquipmentService(pool);
+  const equipmentService = new EquipmentService(pool, eventBus);
   const feeScheduleService = new FeeScheduleService(pool);
   const chargeService = new ChargeService(pool);
   const paymentService = new PaymentService(pool);

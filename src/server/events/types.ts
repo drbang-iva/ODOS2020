@@ -100,6 +100,24 @@ export interface AppointmentCancelledEvent extends DomainEvent {
   payload: { reason: string };
 }
 
+export interface EquipmentRegisteredEvent extends DomainEvent {
+  type: 'equipment.registered';
+  entityType: 'equipment';
+  payload: { name: string; deviceCategory: string; integrationType: string };
+}
+
+export interface EquipmentUpdatedEvent extends DomainEvent {
+  type: 'equipment.updated';
+  entityType: 'equipment';
+  payload: { changes: Record<string, unknown> };
+}
+
+export interface EquipmentDeactivatedEvent extends DomainEvent {
+  type: 'equipment.deactivated';
+  entityType: 'equipment';
+  payload: Record<string, never>;
+}
+
 export interface DeviceReadingReceivedEvent extends DomainEvent {
   type: 'device.reading_received';
   entityType: 'device_reading';
@@ -133,6 +151,9 @@ export type Phase1Event =
   | AppointmentUpdatedEvent
   | AppointmentStatusChangedEvent
   | AppointmentCancelledEvent
+  | EquipmentRegisteredEvent
+  | EquipmentUpdatedEvent
+  | EquipmentDeactivatedEvent
   | DeviceReadingReceivedEvent
   | DeviceReadingMatchedEvent
   | DeviceReadingReviewedEvent;
