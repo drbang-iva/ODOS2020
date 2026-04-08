@@ -10,6 +10,7 @@ import {
   updateAppointmentSchema,
   cancelAppointmentSchema,
   statusTransitionSchema,
+  listPatientAppointmentsSchema,
 } from './schemas.js';
 
 function actorFrom(auth: AuthContext): ActorContext {
@@ -60,6 +61,37 @@ export function createScheduleRoutes(scheduleService: ScheduleService) {
       if (message.includes('not found')) return c.json({ error: message }, 404);
       throw err;
     }
+  });
+
+  // GET /patients/:patientId/appointments — full appointment history with filters
+  routes.get(
+    '/patients/:patientId/appointments',
+    zValidator('query', listPatientAppointmentsSchema),
+    async (c) => {
+      const auth = c.get('auth');
+      if (!auth.permissions.includes('appointments:read')) {
+        return c.json({ error: 'appointments:read permission required' }, 403);
+      }
+      const result = await scheduleService.listAppointmentsForPatient(
+        auth.practiceId,
+        c.req.param('patientId'),
+        c.req.valid('query'),
+      );
+      return c.json(result);
+    },
+  );
+
+  // GET /patients/:patientId/next-appointment — single upcoming appointment or null
+  routes.get('/patients/:patientId/next-appointment', async (c) => {
+    const auth = c.get('auth');
+    if (!auth.permissions.includes('appointments:read')) {
+      return c.json({ error: 'appointments:read permission required' }, 403);
+    }
+    const appt = await scheduleService.getNextAppointmentForPatient(
+      auth.practiceId,
+      c.req.param('patientId'),
+    );
+    return c.json({ appointment: appt });
   });
 
   // POST /appointments

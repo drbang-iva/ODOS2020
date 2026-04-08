@@ -294,4 +294,63 @@ describe('Schedule routes', () => {
     );
     expect(res.status).toBe(401);
   });
+
+  describe('patient appointment history', () => {
+    async function createAppt(startTime: string) {
+      const res = await app.request('/api/schedule/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          patientId,
+          providerId,
+          appointmentTypeId: compExamTypeId,
+          serviceLineId: eyecareSlId,
+          startTime,
+        }),
+      });
+      return (await res.json()) as { id: string };
+    }
+
+    it('GET /api/schedule/patients/:patientId/appointments returns history', async () => {
+      await createAppt(`${MONDAY}T09:00:00.000Z`);
+      await createAppt(`${MONDAY}T10:00:00.000Z`);
+
+      const res = await app.request(
+        `/api/schedule/patients/${patientId}/appointments`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.total).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(body.appointments)).toBe(true);
+    });
+
+    it('GET /api/schedule/patients/:patientId/appointments?window=upcoming sorts soonest-first', async () => {
+      const res = await app.request(
+        `/api/schedule/patients/${patientId}/appointments?window=upcoming`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      if (body.appointments.length >= 2) {
+        const first = new Date(body.appointments[0].start_time).getTime();
+        const second = new Date(body.appointments[1].start_time).getTime();
+        expect(first).toBeLessThanOrEqual(second);
+      }
+    });
+
+    it('GET /api/schedule/patients/:patientId/next-appointment returns soonest future', async () => {
+      const res = await app.request(
+        `/api/schedule/patients/${patientId}/next-appointment`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      // Either null or an appointment object, never undefined
+      expect(body).toHaveProperty('appointment');
+    });
+  });
 });

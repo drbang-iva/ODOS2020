@@ -1,5 +1,9 @@
 import type pg from 'pg';
-import type { CreateAppointmentInput, UpdateAppointmentInput } from './schemas.js';
+import type {
+  CreateAppointmentInput,
+  UpdateAppointmentInput,
+  ListPatientAppointmentsInput,
+} from './schemas.js';
 import type { DomainEventBus } from '../../events/bus.js';
 import { buildEvent, type ActorContext } from '../../events/builder.js';
 
@@ -424,6 +428,100 @@ export class ScheduleService {
     const result = await this.pool.query(
       'SELECT * FROM appointments WHERE id = $1 AND practice_id = $2',
       [appointmentId, practiceId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * List all appointments for a patient with optional filters.
+   *
+   * - `window: 'upcoming'` returns only future appointments (start_time >= now), soonest first.
+   * - `window: 'past'` returns appointments with start_time < now, most recent first.
+   * - Omit `window` for all history (most recent first).
+   * - `includeCancelled` defaults to false; cancelled appointments are hidden unless opted in.
+   * - Pagination via `limit` (max 500) and `offset`.
+   *
+   * Results are scoped to practice_id so one practice can never see another's appointments.
+   */
+  async listAppointmentsForPatient(
+    practiceId: string,
+    patientId: string,
+    input: ListPatientAppointmentsInput,
+  ): Promise<{ appointments: AppointmentRow[]; total: number }> {
+    const conditions: string[] = ['practice_id = $1', 'patient_id = $2'];
+    const values: unknown[] = [practiceId, patientId];
+    let idx = 3;
+
+    if (!input.includeCancelled) {
+      conditions.push(`status != 'cancelled'`);
+    }
+    if (input.status) {
+      conditions.push(`status = $${idx++}`);
+      values.push(input.status);
+    }
+    if (input.providerId) {
+      conditions.push(`provider_id = $${idx++}`);
+      values.push(input.providerId);
+    }
+    if (input.startDate) {
+      conditions.push(`start_time >= ($${idx++}::date)::timestamptz`);
+      values.push(input.startDate);
+    }
+    if (input.endDate) {
+      // endDate is inclusive: include everything up to end of that day
+      conditions.push(`start_time < (($${idx++}::date) + interval '1 day')::timestamptz`);
+      values.push(input.endDate);
+    }
+    if (input.window === 'upcoming') {
+      conditions.push(`start_time >= NOW()`);
+    } else if (input.window === 'past') {
+      conditions.push(`start_time < NOW()`);
+    }
+
+    const where = conditions.join(' AND ');
+    // Upcoming queries sort soonest-first; everything else sorts newest-first
+    const orderBy =
+      input.window === 'upcoming' ? 'start_time ASC' : 'start_time DESC';
+
+    const countResult = await this.pool.query(
+      `SELECT COUNT(*)::int AS total FROM appointments WHERE ${where}`,
+      values,
+    );
+    const total = countResult.rows[0].total;
+
+    values.push(input.limit);
+    const limitParam = idx++;
+    values.push(input.offset);
+    const offsetParam = idx++;
+
+    const result = await this.pool.query(
+      `SELECT * FROM appointments WHERE ${where}
+       ORDER BY ${orderBy}
+       LIMIT $${limitParam} OFFSET $${offsetParam}`,
+      values,
+    );
+
+    return { appointments: result.rows, total };
+  }
+
+  /**
+   * Return the single next upcoming non-cancelled appointment for a patient,
+   * or null if none exists. Useful for the patient chart "next appointment"
+   * card and for recall/reminder workflows.
+   */
+  async getNextAppointmentForPatient(
+    practiceId: string,
+    patientId: string,
+  ): Promise<AppointmentRow | null> {
+    const result = await this.pool.query(
+      `SELECT * FROM appointments
+       WHERE practice_id = $1
+         AND patient_id = $2
+         AND status NOT IN ('cancelled', 'no_show', 'completed')
+         AND start_time >= NOW()
+       ORDER BY start_time ASC
+       LIMIT 1`,
+      [practiceId, patientId],
     );
     return result.rows[0] ?? null;
   }
