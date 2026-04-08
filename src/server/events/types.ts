@@ -118,6 +118,18 @@ export interface EquipmentDeactivatedEvent extends DomainEvent {
   payload: Record<string, never>;
 }
 
+export interface EncounterCreatedEvent extends DomainEvent {
+  type: 'encounter.created';
+  entityType: 'clinical_encounter';
+  payload: { patientId: string; providerId: string; appointmentId: string | null };
+}
+
+export interface EncounterSignedEvent extends DomainEvent {
+  type: 'encounter.signed';
+  entityType: 'clinical_encounter';
+  payload: { signedBy: string };
+}
+
 export interface DeviceReadingReceivedEvent extends DomainEvent {
   type: 'device.reading_received';
   entityType: 'device_reading';
@@ -156,4 +168,6 @@ export type Phase1Event =
   | EquipmentDeactivatedEvent
   | DeviceReadingReceivedEvent
   | DeviceReadingMatchedEvent
-  | DeviceReadingReviewedEvent;
+  | DeviceReadingReviewedEvent
+  | EncounterCreatedEvent
+  | EncounterSignedEvent;
