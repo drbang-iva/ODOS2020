@@ -1,3 +1,9 @@
+---
+memory_class: canon
+authority: human-approved
+auto_inject_priority: 10
+---
+
 # Open Source OD (OSOD)
 
 Open source practice management software for independent clinical practices — optometry, aesthetics, and multi-service practices that combine both. Built by a practicing O.D. and licensed aesthetician who runs both under one roof.
