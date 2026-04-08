@@ -13,6 +13,10 @@ import { ScheduleService } from './modules/schedule/service.js';
 import { createScheduleRoutes } from './modules/schedule/routes.js';
 import { PatientService } from './modules/patients/service.js';
 import { createPatientRoutes } from './modules/patients/routes.js';
+import { PracticeService } from './modules/practice/service.js';
+import { createPracticeRoutes } from './modules/practice/routes.js';
+import { CatalogService } from './modules/catalog/service.js';
+import { createCatalogRoutes } from './modules/catalog/routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -27,6 +31,8 @@ export function createApp({ pool, config }: AppDependencies) {
   const authService = new AuthService(pool, config.jwtSecret);
   const scheduleService = new ScheduleService(pool);
   const patientService = new PatientService(pool);
+  const practiceService = new PracticeService(pool);
+  const catalogService = new CatalogService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -72,6 +78,8 @@ export function createApp({ pool, config }: AppDependencies) {
   app.use('/api/schedule/*', authMiddleware);
   app.use('/api/appointments/*', authMiddleware);
   app.use('/api/practice/*', authMiddleware);
+  app.use('/api/practice', authMiddleware);
+  app.use('/api/catalog/*', authMiddleware);
   app.use('/api/service-lines/*', authMiddleware);
   app.use('/api/agent/*', authMiddleware);
 
@@ -90,6 +98,14 @@ export function createApp({ pool, config }: AppDependencies) {
   // Patient routes (auth + audit middleware already registered for /api/patients/*)
   const patientRoutes = createPatientRoutes(patientService);
   app.route('/api/patients', patientRoutes);
+
+  // Practice admin routes (auth middleware already registered for /api/practice/*)
+  const practiceRoutes = createPracticeRoutes(practiceService);
+  app.route('/api/practice', practiceRoutes);
+
+  // Catalog routes (auth middleware already registered for /api/catalog/*)
+  const catalogRoutes = createCatalogRoutes(catalogService);
+  app.route('/api/catalog', catalogRoutes);
 
   return { app, eventBus, authService };
 }
