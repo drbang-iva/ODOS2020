@@ -9,6 +9,10 @@ export interface DomainEvent {
   entityId: string;
   payload: unknown;
   correlationId: string;
+  /** Snapshot of the entity before the change. NULL on create. */
+  previousState?: Record<string, unknown> | null;
+  /** Snapshot of the entity after the change. NULL on delete. */
+  newState?: Record<string, unknown> | null;
 }
 
 // Phase 1 event types
