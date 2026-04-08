@@ -11,6 +11,8 @@ import { AuthService } from './modules/auth/service.js';
 import { createAuthRoutes } from './modules/auth/routes.js';
 import { ScheduleService } from './modules/schedule/service.js';
 import { createScheduleRoutes } from './modules/schedule/routes.js';
+import { PatientService } from './modules/patients/service.js';
+import { createPatientRoutes } from './modules/patients/routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -24,6 +26,7 @@ export function createApp({ pool, config }: AppDependencies) {
   const eventBus = new InProcessEventBus();
   const authService = new AuthService(pool, config.jwtSecret);
   const scheduleService = new ScheduleService(pool);
+  const patientService = new PatientService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -84,8 +87,9 @@ export function createApp({ pool, config }: AppDependencies) {
   const scheduleRoutes = createScheduleRoutes(scheduleService);
   app.route('/api/schedule', scheduleRoutes);
 
-  // Placeholder routes (modules added in subsequent plans)
-  app.get('/api/patients', (c) => c.json({ message: 'Patients module coming next' }));
+  // Patient routes (auth + audit middleware already registered for /api/patients/*)
+  const patientRoutes = createPatientRoutes(patientService);
+  app.route('/api/patients', patientRoutes);
 
   return { app, eventBus, authService };
 }
