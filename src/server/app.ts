@@ -26,11 +26,13 @@ import { ChargeService } from './modules/billing/services/charge.service.js';
 import { PaymentService } from './modules/billing/services/payment.service.js';
 import { AdjustmentService } from './modules/billing/services/adjustment.service.js';
 import { LedgerService } from './modules/billing/services/ledger.service.js';
+import { ReportsService } from './modules/billing/services/reports.service.js';
 import { createFeeScheduleRoutes } from './modules/billing/routes/fee-schedule.routes.js';
 import { createChargeRoutes } from './modules/billing/routes/charge.routes.js';
 import { createPaymentRoutes } from './modules/billing/routes/payment.routes.js';
 import { createAdjustmentRoutes } from './modules/billing/routes/adjustment.routes.js';
 import { createLedgerRoutes } from './modules/billing/routes/ledger.routes.js';
+import { createReportsRoutes } from './modules/billing/routes/reports.routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -54,6 +56,7 @@ export function createApp({ pool, config }: AppDependencies) {
   const paymentService = new PaymentService(pool);
   const adjustmentService = new AdjustmentService(pool);
   const ledgerService = new LedgerService(pool);
+  const reportsService = new ReportsService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -146,6 +149,7 @@ export function createApp({ pool, config }: AppDependencies) {
   app.route('/api/billing/payments', createPaymentRoutes(paymentService));
   app.route('/api/billing/adjustments', createAdjustmentRoutes(adjustmentService));
   app.route('/api/billing/ledger', createLedgerRoutes(ledgerService));
+  app.route('/api/billing/reports', createReportsRoutes(reportsService));
 
   return { app, eventBus, authService };
 }

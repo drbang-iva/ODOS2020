@@ -28,6 +28,17 @@ export const bulkFeeScheduleItemsSchema = z.object({
   skipExisting: z.boolean().default(false),
 });
 
+// --- REPORTS: AR AGING ---
+
+export const arAgingDetailsQuerySchema = z.object({
+  bucket: z.enum(['current', '0-30', '31-60', '61-90', '91-120', '120+']).optional(),
+  minBalanceCents: z.coerce.number().int().nonnegative().default(1),
+  limit: z.coerce.number().int().min(1).max(500).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+export type ArAgingDetailsQueryInput = z.infer<typeof arAgingDetailsQuerySchema>;
+
 export type CreateFeeScheduleInput = z.infer<typeof createFeeScheduleSchema>;
 export type UpdateFeeScheduleInput = z.infer<typeof updateFeeScheduleSchema>;
 export type FeeScheduleItemInput = z.infer<typeof feeScheduleItemSchema>;
