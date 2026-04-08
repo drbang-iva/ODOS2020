@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { Hono } from 'hono';
 import pg from 'pg';
-import { createAuthMiddleware } from '../../../src/server/middleware/auth.js';
+import { createAuthMiddleware, type AuthContext } from '../../../src/server/middleware/auth.js';
 import { AuthService } from '../../../src/server/modules/auth/service.js';
 import { runMigrations } from '../../../src/server/db/migrate.js';
 
@@ -20,7 +20,7 @@ const ADMIN_PERMISSIONS = [
 describe('auth middleware', () => {
   let pool: pg.Pool;
   let authService: AuthService;
-  let app: Hono;
+  let app: Hono<{ Variables: { auth: AuthContext } }>;
   let practiceId: string;
   let adminRoleId: string;
 
@@ -46,7 +46,7 @@ describe('auth middleware', () => {
     );
     adminRoleId = adminRole.rows[0].id;
 
-    app = new Hono();
+    app = new Hono<{ Variables: { auth: AuthContext } }>();
     app.use('/api/*', createAuthMiddleware(authService));
     app.get('/api/test', (c) => c.json({ ok: true, auth: c.get('auth') }));
     app.get('/health', (c) => c.json({ ok: true }));
