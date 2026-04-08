@@ -9,6 +9,8 @@ import { createAuthMiddleware } from './middleware/auth.js';
 import { createAuditMiddleware } from './middleware/audit.js';
 import { AuthService } from './modules/auth/service.js';
 import { createAuthRoutes } from './modules/auth/routes.js';
+import { ScheduleService } from './modules/schedule/service.js';
+import { createScheduleRoutes } from './modules/schedule/routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -21,6 +23,7 @@ export function createApp({ pool, config }: AppDependencies) {
   // Services
   const eventBus = new InProcessEventBus();
   const authService = new AuthService(pool, config.jwtSecret);
+  const scheduleService = new ScheduleService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -57,18 +60,11 @@ export function createApp({ pool, config }: AppDependencies) {
   // Health check (no auth required)
   app.get('/health', (c) => c.json({ status: 'ok', version: '0.1.0' }));
 
-  // Auth middleware for protected auth sub-routes (users, agent-keys) —
-  // must be registered before app.route() so middleware runs for those paths.
-  // Login and refresh are public; POST /users and POST /agent-keys require admin auth.
+  // Auth middleware — MUST be registered before app.route() calls so it runs for sub-routes.
+  // Login and refresh under /api/auth are public; /api/auth/users and /api/auth/agent-keys require admin.
   const authMiddleware = createAuthMiddleware(authService);
   app.use('/api/auth/users', authMiddleware);
   app.use('/api/auth/agent-keys', authMiddleware);
-
-  // Auth routes (login/refresh are public, users/agent-keys are protected above)
-  const authRoutes = createAuthRoutes(authService);
-  app.route('/api/auth', authRoutes);
-
-  // Protected API routes (auth required)
   app.use('/api/patients/*', authMiddleware);
   app.use('/api/schedule/*', authMiddleware);
   app.use('/api/appointments/*', authMiddleware);
@@ -76,13 +72,20 @@ export function createApp({ pool, config }: AppDependencies) {
   app.use('/api/service-lines/*', authMiddleware);
   app.use('/api/agent/*', authMiddleware);
 
-  // Audit middleware for PHI endpoints
+  // Audit middleware for PHI endpoints (also before route registration)
   app.use('/api/patients/*', createAuditMiddleware(pool));
   app.use('/api/appointments/*', createAuditMiddleware(pool));
 
+  // Auth routes (login/refresh are public, users/agent-keys are protected above)
+  const authRoutes = createAuthRoutes(authService);
+  app.route('/api/auth', authRoutes);
+
+  // Schedule routes (auth middleware already registered for /api/schedule/*)
+  const scheduleRoutes = createScheduleRoutes(scheduleService);
+  app.route('/api/schedule', scheduleRoutes);
+
   // Placeholder routes (modules added in subsequent plans)
   app.get('/api/patients', (c) => c.json({ message: 'Patients module coming next' }));
-  app.get('/api/schedule/grid', (c) => c.json({ message: 'Schedule module coming next' }));
 
   return { app, eventBus, authService };
 }
