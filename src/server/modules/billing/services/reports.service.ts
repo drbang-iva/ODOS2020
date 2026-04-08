@@ -55,6 +55,40 @@ export interface ArAgingDetailsQuery {
   offset?: number;
 }
 
+export interface RevenueByProviderQuery {
+  /** Inclusive start of the service_date range, YYYY-MM-DD */
+  startDate: string;
+  /** Inclusive end of the service_date range, YYYY-MM-DD */
+  endDate: string;
+  /** Optional: only count charges on a specific service line */
+  serviceLineId?: string;
+}
+
+export interface RevenueByProviderRow {
+  providerId: string;
+  providerName: string;
+  chargeCount: number;
+  totalChargedCents: number;
+  totalPaidCents: number;
+  totalAdjustedCents: number;
+  outstandingCents: number;
+}
+
+export interface RevenueByProviderReport {
+  startDate: string;
+  endDate: string;
+  serviceLineId: string | null;
+  generatedAt: string;
+  providers: RevenueByProviderRow[];
+  totals: {
+    chargeCount: number;
+    totalChargedCents: number;
+    totalPaidCents: number;
+    totalAdjustedCents: number;
+    outstandingCents: number;
+  };
+}
+
 /**
  * ReportsService — read-only reporting over billing data.
  *
@@ -257,5 +291,119 @@ export class ReportsService {
     }));
 
     return { rows, total };
+  }
+
+  /**
+   * Revenue by provider over a date range.
+   *
+   * For each provider who has at least one non-voided charge in the range,
+   * returns charge_count, total_charged, total_paid, total_adjusted, and
+   * outstanding = charged - paid - adjusted.
+   *
+   * Date range filters on service_date (inclusive on both ends), which is
+   * what CMS and commercial payers care about — not when the charge was
+   * entered into the system.
+   *
+   * Voided charges and voided payments are excluded (matches the ledger
+   * view + AR aging semantics).
+   *
+   * Optional serviceLineId filter lets you split "eyecare revenue" from
+   * "aesthetics revenue" for providers who work both.
+   */
+  async revenueByProvider(
+    practiceId: string,
+    query: RevenueByProviderQuery,
+  ): Promise<RevenueByProviderReport> {
+    const conditions: string[] = [
+      `c.practice_id = $1`,
+      `c.status != 'voided'`,
+      `c.service_date >= $2::date`,
+      `c.service_date <= $3::date`,
+    ];
+    const values: unknown[] = [practiceId, query.startDate, query.endDate];
+    let idx = 4;
+
+    // NOTE: charges has no direct service_line_id column; it's derived through
+    // the charge's appointment. Filtering by serviceLineId here requires the
+    // charge to have an appointment_id with a matching service line. Charges
+    // that weren't created from an appointment are excluded when this filter
+    // is applied — usually the right behavior for "revenue by service line"
+    // reporting, but a limitation to be aware of.
+    let joinClause = '';
+    if (query.serviceLineId) {
+      joinClause = 'JOIN appointments a ON a.id = c.appointment_id';
+      conditions.push(`a.service_line_id = $${idx++}`);
+      values.push(query.serviceLineId);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const result = await this.pool.query(
+      `
+      SELECT
+        c.provider_id,
+        u.full_name AS provider_name,
+        COUNT(*)::int AS charge_count,
+        COALESCE(SUM(c.total_amount_cents), 0)::bigint AS total_charged_cents,
+        COALESCE(SUM(
+          (SELECT COALESCE(SUM(pa.amount_cents), 0)
+           FROM payment_applications pa
+           JOIN payments pmt ON pmt.id = pa.payment_id
+           WHERE pa.charge_id = c.id AND pmt.voided_at IS NULL)
+        ), 0)::bigint AS total_paid_cents,
+        COALESCE(SUM(
+          (SELECT COALESCE(SUM(amount_cents), 0)
+           FROM adjustments WHERE charge_id = c.id)
+        ), 0)::bigint AS total_adjusted_cents
+      FROM charges c
+      JOIN users u ON u.id = c.provider_id
+      ${joinClause}
+      WHERE ${whereClause}
+      GROUP BY c.provider_id, u.full_name
+      ORDER BY total_charged_cents DESC
+      `,
+      values,
+    );
+
+    const providers: RevenueByProviderRow[] = result.rows.map((r) => {
+      const charged = Number(r.total_charged_cents);
+      const paid = Number(r.total_paid_cents);
+      const adjusted = Number(r.total_adjusted_cents);
+      return {
+        providerId: r.provider_id,
+        providerName: r.provider_name,
+        chargeCount: r.charge_count,
+        totalChargedCents: charged,
+        totalPaidCents: paid,
+        totalAdjustedCents: adjusted,
+        outstandingCents: charged - paid - adjusted,
+      };
+    });
+
+    const totals = providers.reduce(
+      (acc, p) => ({
+        chargeCount: acc.chargeCount + p.chargeCount,
+        totalChargedCents: acc.totalChargedCents + p.totalChargedCents,
+        totalPaidCents: acc.totalPaidCents + p.totalPaidCents,
+        totalAdjustedCents: acc.totalAdjustedCents + p.totalAdjustedCents,
+        outstandingCents: acc.outstandingCents + p.outstandingCents,
+      }),
+      {
+        chargeCount: 0,
+        totalChargedCents: 0,
+        totalPaidCents: 0,
+        totalAdjustedCents: 0,
+        outstandingCents: 0,
+      },
+    );
+
+    return {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      serviceLineId: query.serviceLineId ?? null,
+      generatedAt: new Date().toISOString(),
+      providers,
+      totals,
+    };
   }
 }
