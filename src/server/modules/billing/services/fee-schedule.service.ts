@@ -1,10 +1,19 @@
 import type pg from 'pg';
 import type {
-  CreateFeeScheduleInput,
+  CreateFeeScheduleInput as ParsedCreateFeeScheduleInput,
   UpdateFeeScheduleInput,
   FeeScheduleItemInput,
   UpdateFeeScheduleItemInput,
 } from '../schemas.js';
+
+/**
+ * Service-level input shape: defaults from Zod are optional at the call site
+ * since the service is sometimes invoked directly (tests, scripts) without
+ * going through the schema parser.
+ */
+type CreateFeeScheduleInput = Omit<ParsedCreateFeeScheduleInput, 'isDefault'> & {
+  isDefault?: boolean;
+};
 
 export interface FeeScheduleRow {
   id: string;
