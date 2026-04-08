@@ -2,7 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { ReportsService } from '../services/reports.service.js';
 import type { AuthContext } from '../../../middleware/auth.js';
-import { arAgingDetailsQuerySchema } from '../schemas.js';
+import {
+  arAgingDetailsQuerySchema,
+  revenueByProviderQuerySchema,
+} from '../schemas.js';
 
 function requirePerm(permissions: string[], required: string): string | null {
   return permissions.includes(required) ? null : `${required} permission required`;
@@ -32,6 +35,21 @@ export function createReportsRoutes(service: ReportsService) {
       if (err) return c.json({ error: err }, 403);
 
       const result = await service.arAgingDetails(auth.practiceId, c.req.valid('query'));
+      return c.json(result);
+    },
+  );
+
+  // GET /revenue-by-provider?startDate=2026-01-01&endDate=2026-03-31&serviceLineId=<uuid>
+  // Per-provider revenue aggregation for a date range.
+  routes.get(
+    '/revenue-by-provider',
+    zValidator('query', revenueByProviderQuerySchema),
+    async (c) => {
+      const auth = c.get('auth');
+      const err = requirePerm(auth.permissions, 'reports:read');
+      if (err) return c.json({ error: err }, 403);
+
+      const result = await service.revenueByProvider(auth.practiceId, c.req.valid('query'));
       return c.json(result);
     },
   );

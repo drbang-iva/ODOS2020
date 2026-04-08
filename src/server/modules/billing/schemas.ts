@@ -37,7 +37,14 @@ export const arAgingDetailsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+export const revenueByProviderQuerySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  serviceLineId: z.string().uuid().optional(),
+});
+
 export type ArAgingDetailsQueryInput = z.infer<typeof arAgingDetailsQuerySchema>;
+export type RevenueByProviderQueryInput = z.infer<typeof revenueByProviderQuerySchema>;
 
 export type CreateFeeScheduleInput = z.infer<typeof createFeeScheduleSchema>;
 export type UpdateFeeScheduleInput = z.infer<typeof updateFeeScheduleSchema>;
