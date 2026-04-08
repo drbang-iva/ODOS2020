@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { PatientService } from './service.js';
 import type { AuthContext } from '../../middleware/auth.js';
+import type { ActorContext } from '../../events/builder.js';
 import {
   createPatientSchema,
   updatePatientSchema,
@@ -14,6 +15,15 @@ import {
 
 function requirePermission(permissions: string[], required: string): string | null {
   return permissions.includes(required) ? null : `${required} permission required`;
+}
+
+/** Build an ActorContext from the request's AuthContext for service event emission. */
+function actorFrom(auth: AuthContext): ActorContext {
+  return {
+    userId: auth.userId,
+    practiceId: auth.practiceId,
+    actorType: auth.actorType,
+  };
 }
 
 export function createPatientRoutes(service: PatientService) {
@@ -39,7 +49,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     const input = c.req.valid('json');
-    const patient = await service.create(auth.practiceId, input);
+    const patient = await service.create(auth.practiceId, input, actorFrom(auth));
     return c.json(patient, 201);
   });
 
@@ -62,7 +72,7 @@ export function createPatientRoutes(service: PatientService) {
 
     const input = c.req.valid('json');
     try {
-      const patient = await service.update(auth.practiceId, c.req.param('id'), input);
+      const patient = await service.update(auth.practiceId, c.req.param('id'), input, actorFrom(auth));
       return c.json(patient);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -78,7 +88,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      const patient = await service.deactivate(auth.practiceId, c.req.param('id'));
+      const patient = await service.deactivate(auth.practiceId, c.req.param('id'), actorFrom(auth));
       return c.json(patient);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -106,7 +116,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     const input = c.req.valid('json');
-    const insurance = await service.addInsurance(c.req.param('id'), input);
+    const insurance = await service.addInsurance(c.req.param('id'), input, actorFrom(auth));
     return c.json(insurance, 201);
   });
 
@@ -118,7 +128,12 @@ export function createPatientRoutes(service: PatientService) {
 
     const input = c.req.valid('json');
     try {
-      const insurance = await service.updateInsurance(c.req.param('id'), c.req.param('insId'), input);
+      const insurance = await service.updateInsurance(
+        c.req.param('id'),
+        c.req.param('insId'),
+        input,
+        actorFrom(auth),
+      );
       return c.json(insurance);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -134,7 +149,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      await service.deleteInsurance(c.req.param('id'), c.req.param('insId'));
+      await service.deleteInsurance(c.req.param('id'), c.req.param('insId'), actorFrom(auth));
       return c.json({ success: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -162,7 +177,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     const input = c.req.valid('json');
-    const rp = await service.addResponsibleParty(c.req.param('id'), input);
+    const rp = await service.addResponsibleParty(c.req.param('id'), input, actorFrom(auth));
     return c.json(rp, 201);
   });
 
@@ -173,7 +188,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      await service.deleteResponsibleParty(c.req.param('id'), c.req.param('rpId'));
+      await service.deleteResponsibleParty(c.req.param('id'), c.req.param('rpId'), actorFrom(auth));
       return c.json({ success: true });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -202,7 +217,7 @@ export function createPatientRoutes(service: PatientService) {
     if (err) return c.json({ error: err }, 403);
 
     const input = c.req.valid('json');
-    const alert = await service.addAlert(c.req.param('id'), auth.userId, input);
+    const alert = await service.addAlert(c.req.param('id'), input, actorFrom(auth));
     return c.json(alert, 201);
   });
 
@@ -216,7 +231,7 @@ export function createPatientRoutes(service: PatientService) {
       const alert = await service.resolveAlert(
         c.req.param('id'),
         c.req.param('alertId'),
-        auth.userId,
+        actorFrom(auth),
       );
       return c.json(alert);
     } catch (e) {

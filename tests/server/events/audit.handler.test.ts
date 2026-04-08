@@ -75,4 +75,57 @@ describe('audit.handler', () => {
     const result = await pool.query('SELECT action FROM audit_events WHERE entity_id = $1', [entityId]);
     expect(result.rows[0].action).toBe('update');
   });
+
+  it('writes previous_state and new_state snapshots when present on the event', async () => {
+    const entityId = '33333333-3333-3333-3333-333333333333';
+    const event: DomainEvent = {
+      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+      type: 'patient.updated',
+      timestamp: new Date().toISOString(),
+      practiceId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      actorId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      actorType: 'human',
+      entityType: 'patient',
+      entityId,
+      payload: { changes: { email: 'new@test.com' } },
+      correlationId: 'corr-snap',
+      previousState: { email: 'old@test.com', phone: '555-0000' },
+      newState: { email: 'new@test.com', phone: '555-0000' },
+    };
+
+    await bus.emit(event);
+
+    const result = await pool.query(
+      'SELECT previous_state, new_state FROM audit_events WHERE entity_id = $1',
+      [entityId],
+    );
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].previous_state).toEqual({ email: 'old@test.com', phone: '555-0000' });
+    expect(result.rows[0].new_state).toEqual({ email: 'new@test.com', phone: '555-0000' });
+  });
+
+  it('leaves previous_state and new_state NULL when not provided', async () => {
+    const entityId = '44444444-4444-4444-4444-444444444444';
+    const event: DomainEvent = {
+      id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      type: 'patient.created',
+      timestamp: new Date().toISOString(),
+      practiceId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      actorId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      actorType: 'human',
+      entityType: 'patient',
+      entityId,
+      payload: { firstName: 'X' },
+      correlationId: 'corr-no-snap',
+    };
+
+    await bus.emit(event);
+
+    const result = await pool.query(
+      'SELECT previous_state, new_state FROM audit_events WHERE entity_id = $1',
+      [entityId],
+    );
+    expect(result.rows[0].previous_state).toBeNull();
+    expect(result.rows[0].new_state).toBeNull();
+  });
 });

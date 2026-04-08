@@ -373,4 +373,74 @@ describe('Equipment routes', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe('domain events (end-to-end via app)', () => {
+    it('equipment.registered writes an audit event with newState', async () => {
+      const res = await app.request('/api/equipment', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          name: 'Event Test OCT',
+          manufacturer: 'Zeiss',
+          model: 'Cirrus 5000',
+          deviceCategory: 'oct',
+          integrationType: 'dicom',
+        }),
+      });
+      const body = await res.json();
+
+      const audit = await pool.query(
+        `SELECT metadata, new_state FROM audit_events
+         WHERE entity_type = 'equipment' AND entity_id = $1`,
+        [body.id],
+      );
+      expect(audit.rows).toHaveLength(1);
+      expect(audit.rows[0].metadata.eventType).toBe('equipment.registered');
+      expect(audit.rows[0].new_state.name).toBe('Event Test OCT');
+    });
+
+    it('device.reading_received + device.reading_matched emit when a reading lands already matched', async () => {
+      // Register a device
+      const eqRes = await app.request('/api/equipment', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          name: 'MWL Device',
+          manufacturer: 'Topcon',
+          model: 'Maestro 2',
+          deviceCategory: 'oct',
+          integrationType: 'dicom',
+        }),
+      });
+      const eq = await eqRes.json();
+
+      // Create a reading that's already matched (simulating MWL)
+      const readingRes = await app.request('/api/equipment/readings', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          equipmentId: eq.id,
+          patientId,
+          matchedBy: 'mwl',
+          readingType: 'oct_macula',
+          structuredData: { od: 260, os: 265 },
+          sourceType: 'dicom',
+          capturedAt: new Date().toISOString(),
+        }),
+      });
+      const reading = await readingRes.json();
+
+      const audit = await pool.query(
+        `SELECT metadata FROM audit_events
+         WHERE entity_id = $1 AND entity_type = 'device_reading'
+         ORDER BY created_at ASC`,
+        [reading.id],
+      );
+      // Should have BOTH received + matched events
+      expect(audit.rows).toHaveLength(2);
+      expect(audit.rows[0].metadata.eventType).toBe('device.reading_received');
+      expect(audit.rows[1].metadata.eventType).toBe('device.reading_matched');
+      expect(audit.rows[1].metadata.payload.matchedBy).toBe('mwl');
+    });
+  });
 });

@@ -7,6 +7,8 @@ import type {
   ListReadingsInput,
   ReviewReadingInput,
 } from './schemas.js';
+import type { DomainEventBus } from '../../events/bus.js';
+import { buildEvent, type ActorContext } from '../../events/builder.js';
 
 export interface EquipmentRow {
   id: string;
@@ -44,7 +46,10 @@ export interface DeviceReadingRow {
 }
 
 export class EquipmentService {
-  constructor(private pool: pg.Pool) {}
+  constructor(
+    private pool: pg.Pool,
+    private eventBus: DomainEventBus,
+  ) {}
 
   // --- EQUIPMENT CRUD ---
 
@@ -82,7 +87,11 @@ export class EquipmentService {
     return result.rows[0] ?? null;
   }
 
-  async create(practiceId: string, input: CreateEquipmentInput): Promise<EquipmentRow> {
+  async create(
+    practiceId: string,
+    input: CreateEquipmentInput,
+    actor: ActorContext,
+  ): Promise<EquipmentRow> {
     const result = await this.pool.query(
       `INSERT INTO equipment_registry (
         practice_id, name, manufacturer, model,
@@ -103,14 +112,34 @@ export class EquipmentService {
         input.parserId ?? null,
       ],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'equipment.registered',
+        entityType: 'equipment',
+        entityId: row.id,
+        payload: {
+          name: row.name,
+          deviceCategory: row.device_category,
+          integrationType: row.integration_type,
+        },
+        newState: row,
+      }),
+    );
+
+    return row;
   }
 
   async update(
     practiceId: string,
     equipmentId: string,
     input: UpdateEquipmentInput,
+    actor: ActorContext,
   ): Promise<EquipmentRow> {
+    const before = await this.get(practiceId, equipmentId);
+    if (!before) throw new Error('Equipment not found');
+
     const fieldMap: Record<string, string> = {
       name: 'name',
       manufacturer: 'manufacturer',
@@ -136,9 +165,8 @@ export class EquipmentService {
     }
 
     if (setClauses.length === 1) {
-      const existing = await this.get(practiceId, equipmentId);
-      if (!existing) throw new Error('Equipment not found');
-      return existing;
+      // Nothing to update — return the snapshot; skip emitting
+      return before;
     }
 
     values.push(equipmentId);
@@ -153,10 +181,30 @@ export class EquipmentService {
       values,
     );
     if (result.rows.length === 0) throw new Error('Equipment not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'equipment.updated',
+        entityType: 'equipment',
+        entityId: equipmentId,
+        payload: { changes: input },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
-  async deactivate(practiceId: string, equipmentId: string): Promise<EquipmentRow> {
+  async deactivate(
+    practiceId: string,
+    equipmentId: string,
+    actor: ActorContext,
+  ): Promise<EquipmentRow> {
+    const before = await this.get(practiceId, equipmentId);
+    if (!before) throw new Error('Equipment not found');
+
     const result = await this.pool.query(
       `UPDATE equipment_registry SET is_active = false, updated_at = NOW()
        WHERE id = $1 AND practice_id = $2
@@ -164,7 +212,20 @@ export class EquipmentService {
       [equipmentId, practiceId],
     );
     if (result.rows.length === 0) throw new Error('Equipment not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'equipment.deactivated',
+        entityType: 'equipment',
+        entityId: equipmentId,
+        payload: {},
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    return after;
   }
 
   // --- DEVICE READINGS ---
@@ -244,6 +305,7 @@ export class EquipmentService {
   async createReading(
     practiceId: string,
     input: CreateReadingInput,
+    actor: ActorContext,
   ): Promise<DeviceReadingRow> {
     // Verify equipment belongs to this practice
     const equipment = await this.get(practiceId, input.equipmentId);
@@ -270,7 +332,37 @@ export class EquipmentService {
         input.capturedAt,
       ],
     );
-    return result.rows[0];
+    const row = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'device.reading_received',
+        entityType: 'device_reading',
+        entityId: row.id,
+        payload: {
+          equipmentId: row.equipment_id,
+          readingType: row.reading_type,
+        },
+        newState: row,
+      }),
+    );
+
+    // If the reading came in already matched to a patient, also emit the match event.
+    // This gives the audit trail a clean "received → matched" pair for parser-driven
+    // writes that already knew the patient (e.g., via DICOM MWL).
+    if (row.patient_id && row.matched_by) {
+      await this.eventBus.emit(
+        buildEvent(actor, {
+          type: 'device.reading_matched',
+          entityType: 'device_reading',
+          entityId: row.id,
+          payload: { patientId: row.patient_id, matchedBy: row.matched_by },
+          newState: row,
+        }),
+      );
+    }
+
+    return row;
   }
 
   /**
@@ -280,15 +372,18 @@ export class EquipmentService {
   async reviewReading(
     practiceId: string,
     readingId: string,
-    reviewedBy: string,
     input: ReviewReadingInput,
+    actor: ActorContext,
   ): Promise<DeviceReadingRow> {
+    const before = await this.getReading(practiceId, readingId);
+    if (!before) throw new Error('Reading not found');
+
     const setClauses: string[] = [
       'needs_review = false',
       'reviewed_by = $1',
       'reviewed_at = NOW()',
     ];
-    const values: unknown[] = [reviewedBy];
+    const values: unknown[] = [actor.userId];
     let idx = 2;
 
     if (input.patientId !== undefined) {
@@ -313,6 +408,33 @@ export class EquipmentService {
       values,
     );
     if (result.rows.length === 0) throw new Error('Reading not found');
-    return result.rows[0];
+    const after = result.rows[0];
+
+    await this.eventBus.emit(
+      buildEvent(actor, {
+        type: 'device.reading_reviewed',
+        entityType: 'device_reading',
+        entityId: readingId,
+        payload: { reviewedBy: actor.userId },
+        previousState: before,
+        newState: after,
+      }),
+    );
+
+    // If the review also assigned/changed the patient, emit a match event too.
+    if (input.patientId !== undefined && input.patientId !== before.patient_id) {
+      await this.eventBus.emit(
+        buildEvent(actor, {
+          type: 'device.reading_matched',
+          entityType: 'device_reading',
+          entityId: readingId,
+          payload: { patientId: input.patientId, matchedBy: 'manual' },
+          previousState: before,
+          newState: after,
+        }),
+      );
+    }
+
+    return after;
   }
 }

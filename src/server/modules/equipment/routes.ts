@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import type { EquipmentService } from './service.js';
 import type { AuthContext } from '../../middleware/auth.js';
+import type { ActorContext } from '../../events/builder.js';
 import {
   createEquipmentSchema,
   updateEquipmentSchema,
@@ -13,6 +14,14 @@ import {
 
 function requirePerm(permissions: string[], required: string): string | null {
   return permissions.includes(required) ? null : `${required} permission required`;
+}
+
+function actorFrom(auth: AuthContext): ActorContext {
+  return {
+    userId: auth.userId,
+    practiceId: auth.practiceId,
+    actorType: auth.actorType,
+  };
 }
 
 export function createEquipmentRoutes(service: EquipmentService) {
@@ -36,7 +45,7 @@ export function createEquipmentRoutes(service: EquipmentService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      const reading = await service.createReading(auth.practiceId, c.req.valid('json'));
+      const reading = await service.createReading(auth.practiceId, c.req.valid('json'), actorFrom(auth));
       return c.json(reading, 201);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown';
@@ -64,8 +73,8 @@ export function createEquipmentRoutes(service: EquipmentService) {
       const reading = await service.reviewReading(
         auth.practiceId,
         c.req.param('id'),
-        auth.userId,
         c.req.valid('json'),
+        actorFrom(auth),
       );
       return c.json(reading);
     } catch (e) {
@@ -91,7 +100,7 @@ export function createEquipmentRoutes(service: EquipmentService) {
     const err = requirePerm(auth.permissions, 'admin:settings');
     if (err) return c.json({ error: err }, 403);
 
-    const item = await service.create(auth.practiceId, c.req.valid('json'));
+    const item = await service.create(auth.practiceId, c.req.valid('json'), actorFrom(auth));
     return c.json(item, 201);
   });
 
@@ -111,7 +120,7 @@ export function createEquipmentRoutes(service: EquipmentService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      const item = await service.update(auth.practiceId, c.req.param('id'), c.req.valid('json'));
+      const item = await service.update(auth.practiceId, c.req.param('id'), c.req.valid('json'), actorFrom(auth));
       return c.json(item);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown';
@@ -126,7 +135,7 @@ export function createEquipmentRoutes(service: EquipmentService) {
     if (err) return c.json({ error: err }, 403);
 
     try {
-      const item = await service.deactivate(auth.practiceId, c.req.param('id'));
+      const item = await service.deactivate(auth.practiceId, c.req.param('id'), actorFrom(auth));
       return c.json(item);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown';
