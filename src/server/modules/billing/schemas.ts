@@ -21,10 +21,18 @@ export const feeScheduleItemSchema = z.object({
 
 export const updateFeeScheduleItemSchema = feeScheduleItemSchema.partial().omit({ cptCode: true });
 
+export const bulkFeeScheduleItemsSchema = z.object({
+  items: z.array(feeScheduleItemSchema).min(1).max(1000),
+  /** When true, items whose (cptCode, modifier) already exists are silently skipped
+   * instead of causing a conflict. When false (default), duplicates fail the whole batch. */
+  skipExisting: z.boolean().default(false),
+});
+
 export type CreateFeeScheduleInput = z.infer<typeof createFeeScheduleSchema>;
 export type UpdateFeeScheduleInput = z.infer<typeof updateFeeScheduleSchema>;
 export type FeeScheduleItemInput = z.infer<typeof feeScheduleItemSchema>;
 export type UpdateFeeScheduleItemInput = z.infer<typeof updateFeeScheduleItemSchema>;
+export type BulkFeeScheduleItemsInput = z.infer<typeof bulkFeeScheduleItemsSchema>;
 
 // --- CHARGES ---
 

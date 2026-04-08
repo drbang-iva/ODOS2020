@@ -4,7 +4,16 @@ import type {
   UpdateFeeScheduleInput,
   FeeScheduleItemInput,
   UpdateFeeScheduleItemInput,
+  BulkFeeScheduleItemsInput,
 } from '../schemas.js';
+
+export interface BulkImportResult {
+  /** Number of rows actually inserted */
+  inserted: number;
+  /** Number of rows that were silently skipped because they already existed
+   * (only applicable when skipExisting=true) */
+  skipped: number;
+}
 
 /**
  * Service-level input shape: defaults from Zod are optional at the call site
@@ -272,5 +281,72 @@ export class FeeScheduleService {
       [scheduleId, cptCode, modifier ?? null],
     );
     return result.rows[0]?.amount_cents ?? null;
+  }
+
+  /**
+   * Insert many fee schedule items in a single transaction.
+   *
+   * When `skipExisting` is false (default), any duplicate (cpt_code + modifier)
+   * fails the whole batch — the transaction rolls back and nothing is inserted.
+   *
+   * When `skipExisting` is true, duplicates are silently skipped (via
+   * ON CONFLICT DO NOTHING using the table's UNIQUE constraint + the partial
+   * unique index for NULL modifiers from the billing migration).
+   *
+   * Returns { inserted, skipped } counts for the client.
+   */
+  async bulkAddItems(
+    practiceId: string,
+    scheduleId: string,
+    input: BulkFeeScheduleItemsInput,
+  ): Promise<BulkImportResult> {
+    const schedule = await this.get(practiceId, scheduleId);
+    if (!schedule) throw new Error('Fee schedule not found');
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      let inserted = 0;
+      let skipped = 0;
+
+      for (const item of input.items) {
+        // ON CONFLICT handles both the table UNIQUE(schedule, cpt, modifier) and
+        // the partial unique index for NULL modifier. DO NOTHING skips duplicates;
+        // without DO NOTHING the duplicate would raise and the txn would abort.
+        const query = input.skipExisting
+          ? `INSERT INTO fee_schedule_items
+               (fee_schedule_id, cpt_code, modifier, description, amount_cents)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT DO NOTHING
+             RETURNING id`
+          : `INSERT INTO fee_schedule_items
+               (fee_schedule_id, cpt_code, modifier, description, amount_cents)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id`;
+
+        const result = await client.query(query, [
+          scheduleId,
+          item.cptCode,
+          item.modifier ?? null,
+          item.description ?? null,
+          item.amountCents,
+        ]);
+
+        if (result.rowCount && result.rowCount > 0) {
+          inserted++;
+        } else {
+          skipped++;
+        }
+      }
+
+      await client.query('COMMIT');
+      return { inserted, skipped };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   updateFeeScheduleSchema,
   feeScheduleItemSchema,
   updateFeeScheduleItemSchema,
+  bulkFeeScheduleItemsSchema,
 } from '../schemas.js';
 
 function requirePerm(permissions: string[], required: string): string | null {
@@ -107,6 +108,40 @@ export function createFeeScheduleRoutes(service: FeeScheduleService) {
       throw e;
     }
   });
+
+  // POST /:id/items/bulk — insert up to 1000 items in one transaction.
+  // Registered BEFORE /:id/items/:itemId so the ":itemId" param doesn't swallow "bulk".
+  routes.post(
+    '/:id/items/bulk',
+    zValidator('json', bulkFeeScheduleItemsSchema),
+    async (c) => {
+      const auth = c.get('auth');
+      const err = requirePerm(auth.permissions, 'billing:submit');
+      if (err) return c.json({ error: err }, 403);
+
+      try {
+        const result = await service.bulkAddItems(
+          auth.practiceId,
+          c.req.param('id'),
+          c.req.valid('json'),
+        );
+        return c.json(result, 201);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown';
+        if (msg.includes('not found')) return c.json({ error: msg }, 404);
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          return c.json(
+            {
+              error:
+                'Duplicate CPT + modifier in the batch. Set skipExisting=true to ignore duplicates.',
+            },
+            409,
+          );
+        }
+        throw e;
+      }
+    },
+  );
 
   routes.patch('/:id/items/:itemId', zValidator('json', updateFeeScheduleItemSchema), async (c) => {
     const auth = c.get('auth');

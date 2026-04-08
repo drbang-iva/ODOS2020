@@ -19,8 +19,13 @@ export const createLibraryItemSchema = z.object({
 
 export const updateLibraryItemSchema = createLibraryItemSchema.partial();
 
+export const bulkLibraryItemsSchema = z.object({
+  items: z.array(createLibraryItemSchema).min(1).max(1000),
+});
+
 export type CreateLibraryItemInput = z.infer<typeof createLibraryItemSchema>;
 export type UpdateLibraryItemInput = z.infer<typeof updateLibraryItemSchema>;
+export type BulkLibraryItemsInput = z.infer<typeof bulkLibraryItemsSchema>;
 
 // --- BODY AREA MODIFIERS ---
 
@@ -34,8 +39,13 @@ export const createBodyAreaSchema = z.object({
 
 export const updateBodyAreaSchema = createBodyAreaSchema.partial();
 
+export const bulkBodyAreasSchema = z.object({
+  items: z.array(createBodyAreaSchema).min(1).max(1000),
+});
+
 export type CreateBodyAreaInput = z.infer<typeof createBodyAreaSchema>;
 export type UpdateBodyAreaInput = z.infer<typeof updateBodyAreaSchema>;
+export type BulkBodyAreasInput = z.infer<typeof bulkBodyAreasSchema>;
 
 // --- APPOINTMENT TYPES ---
 

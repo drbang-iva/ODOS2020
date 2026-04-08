@@ -10,6 +10,8 @@ import {
   createAppointmentTypeSchema,
   updateAppointmentTypeSchema,
   cloneFromLibrarySchema,
+  bulkLibraryItemsSchema,
+  bulkBodyAreasSchema,
 } from './schemas.js';
 
 function requirePerm(permissions: string[], required: string): string | null {
@@ -50,6 +52,17 @@ export function createCatalogRoutes(service: CatalogService) {
 
     const item = await service.createLibraryItem(c.req.valid('json'));
     return c.json(item, 201);
+  });
+
+  // POST /library/bulk — insert up to 1000 library items in one transaction.
+  // Used for initial seeding and OSOD-shipped library updates.
+  routes.post('/library/bulk', zValidator('json', bulkLibraryItemsSchema), async (c) => {
+    const auth = c.get('auth');
+    const err = requirePerm(auth.permissions, 'admin:settings');
+    if (err) return c.json({ error: err }, 403);
+
+    const result = await service.bulkAddLibraryItems(c.req.valid('json'));
+    return c.json(result, 201);
   });
 
   routes.patch('/library/:id', zValidator('json', updateLibraryItemSchema), async (c) => {
@@ -100,6 +113,16 @@ export function createCatalogRoutes(service: CatalogService) {
 
     const item = await service.createBodyArea(auth.practiceId, c.req.valid('json'));
     return c.json(item, 201);
+  });
+
+  // POST /body-areas/bulk — insert up to 1000 practice-specific body areas in one transaction
+  routes.post('/body-areas/bulk', zValidator('json', bulkBodyAreasSchema), async (c) => {
+    const auth = c.get('auth');
+    const err = requirePerm(auth.permissions, 'admin:settings');
+    if (err) return c.json({ error: err }, 403);
+
+    const result = await service.bulkAddBodyAreas(auth.practiceId, c.req.valid('json'));
+    return c.json(result, 201);
   });
 
   routes.patch('/body-areas/:id', zValidator('json', updateBodyAreaSchema), async (c) => {

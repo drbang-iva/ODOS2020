@@ -186,4 +186,116 @@ describe('FeeScheduleService', () => {
       expect(await service.lookupPrice(scheduleId, '92083', 'TC')).toBe(3500);
     });
   });
+
+  describe('bulkAddItems', () => {
+    let scheduleId: string;
+
+    beforeEach(async () => {
+      const sch = await service.create(practiceId, { name: 'Bulk Test', isDefault: true });
+      scheduleId = sch.id;
+    });
+
+    it('inserts all items in a single batch', async () => {
+      const result = await service.bulkAddItems(practiceId, scheduleId, {
+        items: [
+          { cptCode: '92004', amountCents: 22500 },
+          { cptCode: '92014', amountCents: 18500 },
+          { cptCode: '92083', amountCents: 8500 },
+        ],
+        skipExisting: false,
+      });
+
+      expect(result.inserted).toBe(3);
+      expect(result.skipped).toBe(0);
+
+      const list = await service.listItems(scheduleId);
+      expect(list).toHaveLength(3);
+    });
+
+    it('rolls back the entire batch on duplicate when skipExisting=false', async () => {
+      // Seed one item first
+      await service.addItem(practiceId, scheduleId, {
+        cptCode: '92004',
+        amountCents: 22500,
+      });
+
+      // Batch that contains a duplicate of 92004 should fail entirely
+      await expect(
+        service.bulkAddItems(practiceId, scheduleId, {
+          items: [
+            { cptCode: '92014', amountCents: 18500 }, // new — would succeed
+            { cptCode: '92004', amountCents: 25000 }, // duplicate — causes failure
+            { cptCode: '92083', amountCents: 8500 }, // new — would succeed
+          ],
+          skipExisting: false,
+        }),
+      ).rejects.toThrow();
+
+      // Verify NONE of the new items were committed (transaction rollback)
+      const list = await service.listItems(scheduleId);
+      expect(list).toHaveLength(1); // Only the originally-seeded 92004
+      expect(list[0].cpt_code).toBe('92004');
+    });
+
+    it('silently skips duplicates when skipExisting=true', async () => {
+      await service.addItem(practiceId, scheduleId, {
+        cptCode: '92004',
+        amountCents: 22500,
+      });
+
+      const result = await service.bulkAddItems(practiceId, scheduleId, {
+        items: [
+          { cptCode: '92014', amountCents: 18500 }, // new
+          { cptCode: '92004', amountCents: 25000 }, // duplicate — skipped
+          { cptCode: '92083', amountCents: 8500 }, // new
+        ],
+        skipExisting: true,
+      });
+
+      expect(result.inserted).toBe(2);
+      expect(result.skipped).toBe(1);
+
+      const list = await service.listItems(scheduleId);
+      expect(list).toHaveLength(3); // original 92004 + two new
+      // Original price stays — skipExisting doesn't overwrite
+      const original = list.find((i) => i.cpt_code === '92004');
+      expect(original?.amount_cents).toBe(22500);
+    });
+
+    it('rejects bulk add for nonexistent schedule', async () => {
+      await expect(
+        service.bulkAddItems(practiceId, '00000000-0000-0000-0000-000000000000', {
+          items: [{ cptCode: '92004', amountCents: 22500 }],
+          skipExisting: false,
+        }),
+      ).rejects.toThrow('not found');
+    });
+
+    it('rejects bulk add for another practice schedule', async () => {
+      const otherPractice = await pool.query(
+        `INSERT INTO practices (name) VALUES ('Other') RETURNING id`,
+      );
+      await expect(
+        service.bulkAddItems(otherPractice.rows[0].id, scheduleId, {
+          items: [{ cptCode: '92004', amountCents: 22500 }],
+          skipExisting: false,
+        }),
+      ).rejects.toThrow('not found');
+    });
+
+    it('handles CPT with and without modifier in the same batch', async () => {
+      const result = await service.bulkAddItems(practiceId, scheduleId, {
+        items: [
+          { cptCode: '92083', amountCents: 12000 }, // no modifier
+          { cptCode: '92083', modifier: '26', amountCents: 8500 }, // with modifier
+          { cptCode: '92083', modifier: 'TC', amountCents: 3500 },
+        ],
+        skipExisting: false,
+      });
+
+      expect(result.inserted).toBe(3);
+      const list = await service.listItems(scheduleId);
+      expect(list).toHaveLength(3);
+    });
+  });
 });
