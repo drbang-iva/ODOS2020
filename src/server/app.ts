@@ -21,6 +21,16 @@ import { AuditService } from './modules/audit/service.js';
 import { createAuditRoutes } from './modules/audit/routes.js';
 import { EquipmentService } from './modules/equipment/service.js';
 import { createEquipmentRoutes } from './modules/equipment/routes.js';
+import { FeeScheduleService } from './modules/billing/services/fee-schedule.service.js';
+import { ChargeService } from './modules/billing/services/charge.service.js';
+import { PaymentService } from './modules/billing/services/payment.service.js';
+import { AdjustmentService } from './modules/billing/services/adjustment.service.js';
+import { LedgerService } from './modules/billing/services/ledger.service.js';
+import { createFeeScheduleRoutes } from './modules/billing/routes/fee-schedule.routes.js';
+import { createChargeRoutes } from './modules/billing/routes/charge.routes.js';
+import { createPaymentRoutes } from './modules/billing/routes/payment.routes.js';
+import { createAdjustmentRoutes } from './modules/billing/routes/adjustment.routes.js';
+import { createLedgerRoutes } from './modules/billing/routes/ledger.routes.js';
 
 export interface AppDependencies {
   pool: pg.Pool;
@@ -39,6 +49,11 @@ export function createApp({ pool, config }: AppDependencies) {
   const catalogService = new CatalogService(pool);
   const auditService = new AuditService(pool);
   const equipmentService = new EquipmentService(pool);
+  const feeScheduleService = new FeeScheduleService(pool);
+  const chargeService = new ChargeService(pool);
+  const paymentService = new PaymentService(pool);
+  const adjustmentService = new AdjustmentService(pool);
+  const ledgerService = new LedgerService(pool);
 
   // Event subscriptions
   const auditHandler = createAuditHandler(pool);
@@ -89,6 +104,7 @@ export function createApp({ pool, config }: AppDependencies) {
   app.use('/api/audit/*', authMiddleware);
   app.use('/api/equipment/*', authMiddleware);
   app.use('/api/equipment', authMiddleware);
+  app.use('/api/billing/*', authMiddleware);
   app.use('/api/service-lines/*', authMiddleware);
   app.use('/api/agent/*', authMiddleware);
 
@@ -123,6 +139,13 @@ export function createApp({ pool, config }: AppDependencies) {
   // Equipment routes (auth middleware already registered for /api/equipment/*)
   const equipmentRoutes = createEquipmentRoutes(equipmentService);
   app.route('/api/equipment', equipmentRoutes);
+
+  // Billing routes (auth middleware already registered for /api/billing/*)
+  app.route('/api/billing/fee-schedules', createFeeScheduleRoutes(feeScheduleService));
+  app.route('/api/billing/charges', createChargeRoutes(chargeService));
+  app.route('/api/billing/payments', createPaymentRoutes(paymentService));
+  app.route('/api/billing/adjustments', createAdjustmentRoutes(adjustmentService));
+  app.route('/api/billing/ledger', createLedgerRoutes(ledgerService));
 
   return { app, eventBus, authService };
 }
