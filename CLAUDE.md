@@ -93,6 +93,33 @@ blocked_on: null             # or 'path/to/blocker.md' (becomes KG edge)
 ---
 ```
 
+### Rule 3 — Image retrieval is two-step (retrieve + render)
+
+When the user asks for an image ("show me", "display", "what does X
+look like", "pull up the figure", "image of"), you MUST:
+
+1. **Retrieve** via `hippocampus.find_figures(query, k=5)` OR
+   `hippocampus.recall(query, filters={'only_figures': True}, k=5)`
+2. **Display** the actual image by calling Read on `figure.image_path`
+3. **Describe** with 1-2 sentences from `figure.context` + atlas + key
+
+**Never** respond to an image request with a code block containing a
+file path, a markdown link, or a description of where the image lives.
+"Show me" is a display request, not a retrieval request — skipping
+the render step is a hard failure.
+
+For text queries, use plain `recall(query)` with **no figure auto-
+attach** (the default). Figures surface only when explicitly asked.
+Ambiguous queries default to text + explicit offer: *"Want me to pull
+up images too?"* Never silently auto-attach images on ambiguous
+queries — that was a historical failure mode and it's not coming back.
+
+**Failure-state handling:** if render fails, state the failure
+explicitly and offer a concrete alternative. Never dump a path as if
+it were a result.
+
+Full canon rule: `performance-od/.claude/projects/.../memory/feedback_image-retrieval-two-step.md`
+
 ### Why these rules are load-bearing
 
 Without Rule 1, corrections leak — recurring mistakes repeat because
@@ -102,7 +129,12 @@ Without Rule 2, cross-session continuity depends on the user's memory
 + git log + raw session JSONLs. Multi-day projects stall; cross-agent
 collaboration requires the user as the human bridge.
 
-Both are immediate behavior changes — they do not wait on any code.
+Without Rule 3, image requests fail one of two ways: text queries
+polluted with unwanted figures, or image queries returning paths
+instead of displayed images. Both closed in code (Phase 6a
+`find_figures()`) AND behavior (this rule).
+
+All three are immediate behavior changes — they do not wait on any code.
 
 ---
 
