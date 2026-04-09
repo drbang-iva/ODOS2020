@@ -14,6 +14,98 @@ Open source practice management software for independent clinical practices — 
 
 ---
 
+## EPISODIC MEMORY PROTOCOL — FLEET-WIDE
+
+Two rules that apply to **every agent working in this repo** (Claude
+Code, IVA fleet — Iris / Netra / Amara / Maya / Bodhi / Igor / Vani
+/ Rishi). Roman is isolated to bang-fitness and does not appear in
+this repo.
+
+Rationale + full design:
+`performance-od/research/2026-04-09-alex-finn-openclaw-obsidian-memory-mining.md`
+
+### Rule 1 — Log every correction to `.vip/mistakes_log.md`
+
+**When the user corrects, disagrees, or expresses frustration, STOP,
+append an entry to `.vip/mistakes_log.md`, THEN respond.** Capture
+first, fix second. No skipping on "it was minor."
+
+Trigger phrases: "no", "wrong", "nope", "that's not right", "stop",
+"you missed", "you forgot", "actually", "I told you", "re-read",
+"check the", "f you", "wtf", silent user pivots, any repetition of
+something the user already said.
+
+Path: `.vip/mistakes_log.md` inside this repo. Gitignored, per-machine,
+per-repo. Auto-created on first write. Every agent in this repo
+appends. The `agent:` field distinguishes entries.
+
+Entry template:
+
+```markdown
+## YYYY-MM-DDTHH:MM:SS — one-line summary
+**Agent:** <claude-code | iris | netra | amara | maya | bodhi | igor | vani | rishi>
+**Correction:** exact user phrasing (quote it)
+**Context:** what you were doing when the correction happened
+**What you did wrong:** honest self-analysis, no softening
+**What you should have done:** specific corrected behavior
+**Rule candidate:** draft rule if pattern is new; else "duplicate of <existing-rule>"
+**Session:** identifier of the session if known
+```
+
+This is the EPISODIC layer. `feedback_*.md` memories (Claude Code)
+and `agent_notes.md` per-agent files (OpenClaw/Hermes) are the
+SEMANTIC layer. Weekly distillation promotes recurring patterns
+from the log into canon rules.
+
+### Rule 2 — Use `outputs/agent-shared/` for cross-session WIP
+
+**At session start, read `outputs/agent-shared/active/` to see what
+is in flight. Surface in-flight work in the session opener before
+the user has to ask.**
+
+**At session end, update `last_touched` on any active file the
+session touched. Move completed projects to
+`outputs/agent-shared/completed/`. Write handoff files for explicit
+agent-to-agent transfers.**
+
+Directory structure (created once per repo):
+
+```
+outputs/agent-shared/
+├── active/       # in-flight work, any agent can pick up
+├── handoffs/     # explicit "<from>→<to>_YYYY-MM-DD_<slug>.md"
+├── completed/    # archive of finished work
+└── README.md     # protocol details
+```
+
+Active file frontmatter (Hippocampus KG reads this):
+
+```yaml
+---
+project: <slug>
+status: in-progress          # in-progress | blocked | review
+started: YYYY-MM-DD
+last_touched: YYYY-MM-DDTHH:MM:SS
+last_touched_by: <agent>
+agents_touched: [<agent>, ...]
+next_agent: null             # or '<agent>' for explicit handoff
+blocked_on: null             # or 'path/to/blocker.md' (becomes KG edge)
+---
+```
+
+### Why these rules are load-bearing
+
+Without Rule 1, corrections leak — recurring mistakes repeat because
+nothing was captured at the raw-event level.
+
+Without Rule 2, cross-session continuity depends on the user's memory
++ git log + raw session JSONLs. Multi-day projects stall; cross-agent
+collaboration requires the user as the human bridge.
+
+Both are immediate behavior changes — they do not wait on any code.
+
+---
+
 ## What This Is
 
 A modern, open source practice management system built for clinical practices that don't fit in one box. Optometry. Medical aesthetics. Practices that do both. The core is shared (patients, scheduling, billing), the modules are specialty-specific.

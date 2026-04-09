@@ -10,3 +10,6 @@ coverage/
 examwriter-screenshot-*.png
 visit-overview-full.png
 .playwright-mcp/
+
+# Per-machine vip state (mistakes_log + local settings)
+.vip/
