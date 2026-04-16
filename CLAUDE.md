@@ -422,6 +422,42 @@ The vault exists so we don't reinvent wheels. Use it.
 
 ---
 
+## Build Workflow: Two-Tab Conductor (Codex + Claude Code)
+
+Daily build pattern adapted from Devon Meadows's practice. Use this when working any slice from the Build Order above.
+
+**The two tabs in Conductor:**
+- **You (Claude Code in this tab)** = planner. Read the master build doc, scope the slice, debug at the architecture level, output prompts for Codex. Don't write production code directly during planning sessions.
+- **Codex (next tab in Conductor)** = executor. Writes the code, runs tests, opens PRs.
+
+**Master build doc — canonical source of truth:**
+
+`performance-od/decisions/2026-04-06-osod-master-integration-build-plan.md`
+
+Read it on first session of a new slice. Its **§ Build Workflow with Agents** has the full back-and-forth pattern, the build loop, and the canonical sources table for where each kind of decision/log lives.
+
+**Required response format (the load-bearing habit):**
+
+When the user asks for help diagnosing a bug, planning a slice, or scoping next steps, structure your response with two labeled sections:
+
+```
+## What's Wrong
+[diagnosis — possible causes, what to check, evidence to gather first]
+
+## What to Tell the Agent
+[exact prompt the user can copy + paste into the Codex tab]
+```
+
+The user copies the second section verbatim into Codex. Codex executes. Results return to you. Loop.
+
+This format is required for diagnosis and planning responses, not optional. Skip it only for casual questions, file reads, or pure conversation.
+
+**Diagnostic enumeration before any fix:** the "What's Wrong" section must list possible causes + evidence needed BEFORE proposing a fix. Never jump to "here's the answer."
+
+**Blocking vs polish:** at the end of every slice, classify open issues as **blocking** (don't ship) or **polish** (ship anyway). Resist polishing past blocking. Devon's rule: *"None of these are blocking. Send it tonight. That's the highest leverage thing you can do right now."*
+
+---
+
 ## Related Repos
 
 | Repo | Relationship |
