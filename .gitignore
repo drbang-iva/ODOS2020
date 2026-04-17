@@ -8,6 +8,7 @@ coverage/
 
 # Raw screenshot captures (structured reference docs live in performance-od)
 examwriter-screenshot-*.png
+research/examwriter-screenshots/
 visit-overview-full.png
 .playwright-mcp/
 
