@@ -1,16 +1,21 @@
 node_modules/
 dist/
 .env
-.env.local
 *.log
 .DS_Store
-coverage/
 
-# Raw screenshot captures (structured reference docs live in performance-od)
-examwriter-screenshot-*.png
-research/examwriter-screenshots/
-visit-overview-full.png
+# Medplum dev artifacts
+binary/
+postgres-data/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude / tooling
 .playwright-mcp/
+.conductor/
+outputs/
 
-# Per-machine vip state (mistakes_log + local settings)
+# Session-local state
 .vip/

@@ -4,475 +4,142 @@ authority: human-approved
 auto_inject_priority: 10
 ---
 
-# Open Source OD (OSOD)
+# OSOD — Open Source Optometry
 
-Open source practice management software for independent clinical practices — optometry, aesthetics, and multi-service practices that combine both. Built by a practicing O.D. and licensed aesthetician who runs both under one roof.
+Practitioner-owned open-source EHR/PM for independent optometry practices. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on practice hardware. AGPL v3.
 
-**TypeScript. React. PostgreSQL. Local-first. AGPL v3.**
-
-**Boundary:** If you're writing strategy, research, decisions, or domain knowledge — you're in the wrong repo. Switch to `performance-od`. Code, schemas, tests, and user-facing docs belong here. The WHY lives there, the HOW lives here.
+**Status:** v0.0.1 — Medplum foundation, first Patient → Encounter → ChargeItem flow.
 
 ---
 
-## EPISODIC MEMORY PROTOCOL — FLEET-WIDE
+## Repo boundary (hard rule)
 
-Two rules that apply to **every agent working in this repo** (Claude
-Code, IVA fleet — Iris / Netra / Amara / Maya / Bodhi / Igor / Vani
-/ Rishi). Roman is isolated to bang-fitness and does not appear in
-this repo.
+**This repo is code.** Application code, infrastructure config, tests, dev scripts.
 
-Rationale + full design:
-`performance-od/research/2026-04-09-alex-finn-openclaw-obsidian-memory-mining.md`
-
-### Rule 1 — Log every correction to `.vip/mistakes_log.md`
-
-**When the user corrects, disagrees, or expresses frustration, STOP,
-append an entry to `.vip/mistakes_log.md`, THEN respond.** Capture
-first, fix second. No skipping on "it was minor."
-
-Trigger phrases: "no", "wrong", "nope", "that's not right", "stop",
-"you missed", "you forgot", "actually", "I told you", "re-read",
-"check the", "f you", "wtf", silent user pivots, any repetition of
-something the user already said.
-
-Path: `.vip/mistakes_log.md` inside this repo. Gitignored, per-machine,
-per-repo. Auto-created on first write. Every agent in this repo
-appends. The `agent:` field distinguishes entries.
-
-Entry template:
-
-```markdown
-## YYYY-MM-DDTHH:MM:SS — one-line summary
-**Agent:** <claude-code | iris | netra | amara | maya | bodhi | igor | vani | rishi>
-**Correction:** exact user phrasing (quote it)
-**Context:** what you were doing when the correction happened
-**What you did wrong:** honest self-analysis, no softening
-**What you should have done:** specific corrected behavior
-**Rule candidate:** draft rule if pattern is new; else "duplicate of <existing-rule>"
-**Session:** identifier of the session if known
-```
-
-This is the EPISODIC layer. `feedback_*.md` memories (Claude Code)
-and `agent_notes.md` per-agent files (OpenClaw/Hermes) are the
-SEMANTIC layer. Weekly distillation promotes recurring patterns
-from the log into canon rules.
-
-### Rule 2 — Use `outputs/agent-shared/` for cross-session WIP
-
-**At session start, read `outputs/agent-shared/active/` to see what
-is in flight. Surface in-flight work in the session opener before
-the user has to ask.**
-
-**At session end, update `last_touched` on any active file the
-session touched. Move completed projects to
-`outputs/agent-shared/completed/`. Write handoff files for explicit
-agent-to-agent transfers.**
-
-Directory structure (created once per repo):
-
-```
-outputs/agent-shared/
-├── active/       # in-flight work, any agent can pick up
-├── handoffs/     # explicit "<from>→<to>_YYYY-MM-DD_<slug>.md"
-├── completed/    # archive of finished work
-└── README.md     # protocol details
-```
-
-Active file frontmatter (Hippocampus KG reads this):
-
-```yaml
----
-project: <slug>
-status: in-progress          # in-progress | blocked | review
-started: YYYY-MM-DD
-last_touched: YYYY-MM-DDTHH:MM:SS
-last_touched_by: <agent>
-agents_touched: [<agent>, ...]
-next_agent: null             # or '<agent>' for explicit handoff
-blocked_on: null             # or 'path/to/blocker.md' (becomes KG edge)
----
-```
-
-### Rule 3 — Image retrieval is two-step (retrieve + render)
-
-When the user asks for an image ("show me", "display", "what does X
-look like", "pull up the figure", "image of"), you MUST:
-
-1. **Retrieve** via `hippocampus.find_figures(query, k=5)` OR
-   `hippocampus.recall(query, filters={'only_figures': True}, k=5)`
-2. **Display** the actual image by calling Read on `figure.image_path`
-3. **Describe** with 1-2 sentences from `figure.context` + atlas + key
-
-**Never** respond to an image request with a code block containing a
-file path, a markdown link, or a description of where the image lives.
-"Show me" is a display request, not a retrieval request — skipping
-the render step is a hard failure.
-
-For text queries, use plain `recall(query)` with **no figure auto-
-attach** (the default). Figures surface only when explicitly asked.
-Ambiguous queries default to text + explicit offer: *"Want me to pull
-up images too?"* Never silently auto-attach images on ambiguous
-queries — that was a historical failure mode and it's not coming back.
-
-**Failure-state handling:** if render fails, state the failure
-explicitly and offer a concrete alternative. Never dump a path as if
-it were a result.
-
-Full canon rule: `performance-od/.claude/projects/.../memory/feedback_image-retrieval-two-step.md`
-
-### Why these rules are load-bearing
-
-Without Rule 1, corrections leak — recurring mistakes repeat because
-nothing was captured at the raw-event level.
-
-Without Rule 2, cross-session continuity depends on the user's memory
-+ git log + raw session JSONLs. Multi-day projects stall; cross-agent
-collaboration requires the user as the human bridge.
-
-Without Rule 3, image requests fail one of two ways: text queries
-polluted with unwanted figures, or image queries returning paths
-instead of displayed images. Both closed in code (Phase 6a
-`find_figures()`) AND behavior (this rule).
-
-All three are immediate behavior changes — they do not wait on any code.
+Strategy, research, decisions, vertical knowledge, clinical reference, marketing — all live in [performance-od](https://github.com/drbang-iva/performance-od). If you find yourself writing a decision rationale or a research investigation here, stop and move it to `performance-od/decisions/` or `performance-od/research/`.
 
 ---
 
-## What This Is
+## Architecture (2026-04-22)
 
-A modern, open source practice management system built for clinical practices that don't fit in one box. Optometry. Medical aesthetics. Practices that do both. The core is shared (patients, scheduling, billing), the modules are specialty-specific.
+### Foundation
 
-Not a fork of a 20-year PHP monolith. Not a cloud-dependent SaaS. Not "optometry software with aesthetics bolted on." Both are first-class from day one — because the founder runs both.
+**Medplum** — Apache-2.0, FHIR-native, self-hosted. Runs as a Docker container alongside Postgres 16 + Redis 7. Never on anyone's cloud.
 
-The dental world has Open Dental. Optometry and aesthetics have had nothing. Until now.
+Chosen over HAPI FHIR for:
+1. TypeScript end-to-end (no polyglot tax for solo-dev + LLM team)
+2. In-process automation via Bots (optional use; HAPI requires separate Node service)
+3. 3-6 months less rebuild work on admin/auth/subscriptions
+4. Open-core dynamics favor OSS (Medplum Inc. monetizes hosted SaaS, feature-identical to OSS)
 
-## The Market Shift
+Full rationale: [`performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md)
 
-Revenue in independent optometry is moving from vision plans to specialties. VSP/EyeMed reimbursements have been flat for 15 years while overhead climbs. The practices that thrive are specialty-heavy: Ortho-K ($1,500-2,500/patient), dry eye ($500-3,000+), myopia management ($1,000-2,000/year), vision therapy ($4,000-8,000), aesthetics (pure cash pay).
+### SDK discipline (Option 3 architecture)
 
-**But every PMS was built for the old model** — comprehensive exam + glasses + contacts. Specialties are crammed into free-text fields and workarounds. OSOD is built for the practice model that's winning, not the one that's dying. Specialty workflows are first-class, not afterthoughts.
+OSOD application code imports **only** `@medplum/fhirtypes` — pure Apache-2.0 TypeScript types, zero runtime coupling. All server communication is plain FHIR REST/GraphQL.
 
-## Multi-Service Architecture
+**Never import in OSOD app code:**
+- `@medplum/core` → use plain `fetch()` in `src/fhir-client.ts`
+- `@medplum/react` → OSOD builds its own UI
+- `@medplum/bot-layer` → workflow logic lives in OSOD's own service layer
 
-OSOD is built for practices that cross specialty lines:
+**Never call these Medplum-proprietary endpoints:**
+- `$execute-bot` (proprietary operation)
+- Medplum-specific GraphQL extensions
+- Proprietary WebSocket subscription format (use standard FHIR REST-hook or Messaging)
 
-```
-OSOD Core (shared)
-├── Patients, demographics, insurance
-├── Scheduling (multi-provider, multi-service-line)
-├── Billing / EDI
-├── E-prescribing (WENO)
-│
-├── Optometry Module
-│   ├── Comprehensive exam forms
-│   ├── Glasses / CL Rx management
-│   ├── Specialty: VT, Ortho-K, Dry Eye, Myopia
-│   ├── Vision insurance (VSP/EyeMed)
-│   └── Optical dispensing / frame inventory
-│
-├── Aesthetics Module
-│   ├── Consultation forms
-│   ├── Treatment records (injectables, lasers, skin)
-│   ├── Before/after photo management
-│   ├── Membership / package tracking
-│   ├── Product inventory (skincare, devices)
-│   └── Consent forms
-│
-└── Future Modules
-    ├── Fitness / coaching (client management)
-    └── [any clinical vertical]
-```
+**OK to import as standalone libraries** (no server lock-in):
+- `@medplum/ccda` (C-CDA converter library)
+- `@medplum/hl7` (HL7 v2 parser library)
 
-**Key insight:** A patient at IVA might see Dr. Bang for an eye exam in the morning and get a skin treatment in the afternoon. Same patient record, same scheduling system, different clinical modules. No other open source software handles this.
+Why: this keeps the FHIR server swappable. If a future reason appears to leave Medplum (HAPI, Blaze, IBM FHIR), OSOD's application layer is portable.
 
-**Deployment options:**
-- Optometry-only practice → install core + optometry module
-- Aesthetics-only clinic → install core + aesthetics module
-- Combined practice (like IVA) → install core + both modules
-- The modules share patients, scheduling, and billing — no double entry
+### Data locality (non-negotiable)
+
+Patient data lives ONLY on the practice's own hardware. No cloud, no vendor telemetry, no phone-home, no centralized backups unless the practice explicitly opts in. IVA is the proving ground; each subscribing practice installs their own self-hosted OSOD on their own Mac Mini / Mac Studio.
+
+**Docker-compose.yml is the deployment unit.** Same file works on laptop (dev), Iris (test/temp production), and M5 Studio (production after M5 ships).
 
 ---
 
-## Architecture Decision
+## Build order
 
-Full rationale: `performance-od/decisions/2026-03-14-open-source-od-architecture.md`
+### v0.0.1 — Foundation (shipped 2026-04-22)
+- Docker-compose (Medplum + Postgres + Redis)
+- Plain-fetch FHIR client (`src/fhir-client.ts`)
+- First POC flow: Patient → Encounter → ChargeItem(CPT 92015)
 
-**Key choices:**
-- Build from scratch (not an OpenEMR fork — see decision file for why)
-- PM first, EHR later
-- WENO for e-prescribing (not Surescripts)
-- GHL integration is optional, not required
-- Local-first deployment (localhost, your hardware)
-- AGPL v3 license (protects community from proprietary forks)
+### v0.1 — Optometry-specific FHIR
+- Observation profiles: Refraction, Keratometry, IOP, Visual Acuity, Pupils, Visual Field
+- Encounter extensions for eye-exam structure
+- CPT loader (post-Chacon call, once AMA token is live)
 
----
+### v0.2 — Scheduling + patient demographics
+- Custom scheduling UI on FHIR Appointment/Slot
+- Patient management UI on FHIR Patient/RelatedPerson/Coverage
 
-## Tech Stack
+### v0.3 — Billing
+- Claim workflow (FHIR Claim + ChargeItem + ExplanationOfBenefit)
+- Clearinghouse integration (Office Ally or Claim.MD)
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| **Language** | TypeScript | AI agents write it best. Full-stack. Largest community. |
-| **Frontend** | React | Largest ecosystem. Most AI training data. |
-| **Backend** | Node.js (Express or Hono) | Same language as frontend. Simple. Fast. |
-| **Database** | PostgreSQL | Battle-tested relational. Patients→visits→claims. Free. |
-| **Deployment** | Local-first (localhost) | Your data. Your hardware. No cloud dependency. |
-| **License** | AGPL v3 | Derivative works must share source. Protects the community. |
+### v0.4+ — Clinical encounters
+- Eye exam documentation UI
+- Prescriptions (WENO e-Rx, not SureScripts — see performance-od decisions)
+- Reports (AR aging, revenue-by-provider)
 
----
-
-## Build Order
-
-### Phase 1: Patients + Scheduling (CURRENT)
-- Patient record (demographics, insurance, pharmacy, Rx, balance)
-- Per-provider schedule grid (15/30 min blocks, configurable)
-- Color-coded appointment types (comprehensive, CL, follow-ups)
-- Quick-glance patient card from schedule
-- No rooms, no pre-test blocking, no dilation padding — keep it real
-
-### Phase 2: E-Prescribing (WENO)
-- EZ Integration first (iframe in patient chart)
-- Graduate to Switch API for native UI
-- Skip EPCS (optometrists rarely prescribe controlled substances)
-
-### Phase 3: Billing / EDI
-- EDI 837P claims via open-source X12 libraries
-- Clearinghouse: Office Ally (free) or Stedi (API-first)
-- EDI 835 remittance parsing
-- EDI 270/271 eligibility verification
-
-### Phase 4: Clinical EHR
-- Exam documentation (structured optometry forms)
-- Rx flow: doctor → front desk/PM
-- Diagnosis codes → billing
-- WENO Switch API (native prescription UI)
-
-### Phase 5: Specialty-First Clinical Modules
-
-**This is where OSOD breaks from every other PMS.** Most software treats specialties as an afterthought — a text field where you type free-form notes. OSOD builds structured, specialty-aware clinical tools from day one.
-
-**Vision Therapy Module:**
-- Structured VT evaluation forms (not free-text — real fields for real tests)
-- Treatment plan builder with protocol templates (Sanet methodology, OEPF-aligned)
-- Home therapy assignment and tracking
-- Progress tracking across visits (measurable outcomes, not "patient doing better")
-- Session notes linked to specific activities and procedures
-- AI agent integration: plug in the `vision_training` knowledge module and the system can suggest treatment protocols
-
-**Dry Eye Module:**
-- Structured dry eye workup forms (TBUT, Schirmer, meibography, osmolarity, inflammatory markers)
-- Protocol chains: diagnosis → treatment plan → follow-up schedule
-- Product/device tracking (IPL, thermal pulsation, punctal plugs)
-- Severity grading with treatment escalation pathways
-
-**Ortho-K & Specialty Contact Lens Module:**
-- **Lens parameter catalogs** — every lens design with full parameter ranges (BC, diameter, powers, peripheral curves, material, Dk). Searchable, sortable, filterable. This is what every PMS gets wrong — they give you one text field for "lens brand."
-- Fitting records with topography integration
-- Trial lens inventory management
-- Overnight wear schedules and follow-up protocols
-- Scleral lens fitting records (vault depths, OAD, landing zones)
-- Multifocal CL parameter tracking
-- Fitting troubleshooting guides linked to patient data
-
-**Myopia Management Module:**
-- Axial length tracking and progression analysis
-- Treatment comparison (Ortho-K vs. atropine vs. soft multifocal vs. combination)
-- Risk assessment scoring
-- Parent education material generation
-- Annual progression reports
-
-**Aesthetics Module:**
-- Consultation and consent forms
-- Treatment records (units, areas, products, settings for each device)
-- Before/after photo management with standardized positioning
-- Membership and package tracking (units remaining, expiration)
-- Product inventory (skincare, injectable supplies, device consumables)
-- Treatment history timeline (visual — what was done where, when)
-
-**The philosophy:** If a specialty has structured data, OSOD should capture it in structured fields — not a text box. Structured data enables AI agents, enables analytics, enables treatment comparison. Free-text notes are where clinical intelligence goes to die.
-
-### Phase 6: Advanced
-- FHIR interoperability
-- Equipment integration (OCT, VF via DICOM)
-- Optical dispensing / frame inventory
-- ONC certification
+**Every scope bullet re-implements work first proven in the archived v0 (see `archive/2026-04-22-custom-pre-medplum` branch).** The 341 tests of the archived build describe the requirements; the new implementation is FHIR-native.
 
 ---
 
-## Domain Knowledge (via performance-od)
+## Licensing
 
-This repo has the CODE. The domain knowledge lives in performance-od's vault, linked via `additionalDirectories`.
-
-**PMS reference architecture:**
-- `performance-od/reference/vault/software/foxfire/` — Foxfire PMS reverse-engineered (196KB, every screen documented). This is our reference for "how does a real PMS work?"
-- `performance-od/reference/vault/software/aestheticspro/` — AestheticsPro reference
-
-**Clinical domain knowledge:**
-- `performance-od/reference/vault/eyecare/` — 13 textbooks, clinical atlases
-- `performance-od/reference/vault/aesthetics/` — Dermatology, esthetics
-- `performance-od/reference/vault/seminars/` — OEPF, INPP, SECO
-
-**Architecture decisions:**
-- `performance-od/decisions/2026-03-14-open-source-od-architecture.md` — THE architecture decision
-- `performance-od/decisions/2026-03-29-knowledge-module-platform-architecture.md` — Platform strategy
-- `performance-od/decisions/2026-03-29-vault-consolidation-osod-repo.md` — Why this repo exists
-
-**Research (foundational):**
-- `performance-od/research/2026-03-13-opensourceOD-research.md` — Landscape research
-- `performance-od/research/2026-03-14-openemr-architecture-audit.md` — Why not OpenEMR
-- `performance-od/research/2026-03-14-openemr-alternatives-comparison.md` — Alternatives evaluated
-- `performance-od/research/2026-03-14-fork-vs-build-analysis.md` — Fork vs build
-- `performance-od/research/2026-03-26-apexo-codebase-analysis.md` — Apexo open source PMS analysis
-- `performance-od/research/2026-03-26-os-od-architecture-principles.md` — Architecture principles
-- `performance-od/research/2026-03-27-openclaw-hospital-paper-analysis.md` — Hospital-grade AI patterns
-
-**Research (product features — READ BEFORE BUILDING MODULES):**
-- `performance-od/research/2026-04-03-vt-home-program-brainstorm.md` — VT module product concept: gamified home therapy, avatar therapists, WebXR VR, competitive landscape (NVT, HTS, Vivid Vision, Optics Trainer). Architecture: Lovable patient app + OSOD backend + GHL community wrapper.
-- `performance-od/research/2026-04-03-ai-glasses-exam-workflow-brainstorm.md` — Voice input via AR glasses (Even Realities G1 / Brilliant Labs Frame). Wake word + whisper + local LLM structured extraction. Defining OSOD feature. Pipeline: openWakeWord → mlx_whisper → LLM → chart fields. All local.
-
-**Research (competitive PMS/software — know what exists):**
-- `performance-od/research/2026-04-02-aestheticspro-ui-ux-wireframe.md` — AestheticsPro reverse-engineering
-- `performance-od/research/2026-03-25-barti-*.md` — Barti PMS competitive intel (2 files)
-
-**Decisions (architecture + product):**
-- `performance-od/decisions/2026-03-14-open-source-od-architecture.md` — THE architecture decision (build from scratch, not fork)
-- `performance-od/decisions/2026-03-29-knowledge-module-platform-architecture.md` — Platform strategy (3-layer: free infra, paid modules, premium managed)
-- `performance-od/decisions/2026-03-29-vault-consolidation-osod-repo.md` — Why this repo exists
-- `performance-od/decisions/2026-04-03-product-identity-pivot.md` — PerformanceOD is an open source community platform. OSOD is Pillar 2. Community IS the business.
-- `performance-od/decisions/2026-04-03-vani-hermes-migration.md` — Vani (creative engine) builds OSOD UI mockups
-
-**GHL integration research (Pillar 1 connects to OSOD):**
-- `performance-od/research/2026-04-03-ghl-agent-studio-detailed-overview-mining.md` — GHL Agent Studio architecture. Understand what GHL does natively so OSOD complements, not competes.
-- `performance-od/research/2026-04-03-ghl-service-calendars-conversation-ai-mining.md` — AI-powered appointment booking. OSOD scheduling API should support this pattern.
-- `performance-od/reference/domain/foxfire-ghl-integration-architecture.md` — Foxfire→GHL integration patterns. OSOD replaces Foxfire long-term but must match its integration model.
-
-**UI paradigm (HOW to build the interface):**
-- `performance-od/decisions/2026-03-*-osod-ui-paradigm*.md` — UI paradigm decision: demonstration-first, not CRUD-form. Legacy PMS paradigm vs OSOD paradigm.
-- OSOD docs/reference/screenshot-manifest.md — 110 screenshots mapped by module. USE THIS when building features.
-
-**THE MOST IMPORTANT RESEARCH FILE:**
-- `performance-od/research/2026-04-04-osod-clinical-requirements-deep-dive.md` — Eric's complete clinical vision for OSOD. READ THIS BEFORE BUILDING ANYTHING. Covers: pictorial patient timeline (the killer feature), decision tracking, equipment registry, VT module (home + in-office + gamified + avatar-guided), contact lens trial tracking, dry eye treatment tracking, aesthetics, prescription management, device integration strategy, voice input via AR glasses. This is the requirements document.
-
-**CRITICAL RULE: Before building any module or feature, check performance-od for relevant research, decisions, and competitive analysis. The WHY lives there. Build from knowledge, not assumptions.**
-
-**GHL integration (optional layer):**
-- `performance-od/reference/domain/ghl-docs/` — GHL platform docs
-- `performance-od/reference/domain/ghl-practitioner/` — GHL best practices
+- OSOD application code: **AGPL v3** (copyleft — community protection, prevents closed-source forks)
+- Runtime deps: Apache-2.0 (Medplum, `@medplum/fhirtypes`), PostgreSQL License, BSD-3 (Redis)
+- CPT codes: © American Medical Association, licensed per-practice via OpenEMR BYOL pattern. OSOD ships **zero** CPT data in the open-source repo; practices load their own licensed CPT files.
 
 ---
 
-## Folder Structure
+## Working directory conventions
 
-```
-osod/
-├── CLAUDE.md              # This file — always loaded
-├── README.md              # Open source project readme
-├── LICENSE                # AGPL v3
-├── CONTRIBUTING.md        # How to contribute
-├── package.json
-│
-├── src/
-│   ├── server/            # Node.js backend
-│   │   ├── routes/        # API endpoints
-│   │   ├── models/        # Data models
-│   │   ├── services/      # Business logic
-│   │   └── db/
-│   │       ├── migrations/
-│   │       └── schema.sql
-│   │
-│   └── client/            # React frontend
-│       ├── components/    # Reusable UI components
-│       ├── pages/         # Route pages
-│       └── hooks/         # Custom React hooks
-│
-├── docs/                  # User-facing documentation
-│   ├── getting-started.md
-│   ├── architecture.md
-│   └── api/
-│
-├── tests/
-├── scripts/
-├── docker/
-│   └── docker-compose.yml # PostgreSQL + app
-└── .github/
-    └── workflows/         # CI/CD
-```
+| Path | Purpose |
+|---|---|
+| `docker-compose.yml` | Medplum + Postgres + Redis stack |
+| `medplum.config.json` | Dev config (replace signing keys before production) |
+| `src/` | Application code — plain TypeScript, FHIR-native |
+| `src/fhir-client.ts` | Thin plain-fetch FHIR client (no Medplum SDK) |
+| `src/index.ts` | POC entrypoint — extends into full app |
+| `tests/` | Test suite (reincarnating the archived v0 requirements as FHIR tests) |
+| `.env` | Local secrets — never committed |
+| `.env.example` | Template for `.env` |
+
+Runtime:
+- Dev (laptop): `npm run up` → localhost:8103 (FHIR API), localhost:8100 (Admin UI)
+- Test/temp production: Iris Mac Studio, same compose file, accessed via Tailscale
+- Production (future): M5 Mac Studio dedicated to OSOD, once M5 ships (~2-3 months)
 
 ---
 
-## Development Principles
+## Boundary reminders
 
-1. **Simple over clever.** Independent O.D.s will contribute. Keep code readable.
-2. **Local-first always.** No feature should require cloud connectivity.
-3. **Real practice, real workflows.** Every feature tested at IVA before shipping.
-4. **AI-friendly codebase.** Clean TypeScript that AI agents can read, modify, and extend.
-5. **No vendor lock-in.** PostgreSQL, not proprietary DB. Express, not AWS Lambda. Your data, exportable.
-
----
-
-## CRITICAL: Check Reference Files Before Coding
-
-Before implementing ANY clinical workflow, scheduling logic, billing process, or patient data handling:
-
-1. Check Foxfire reference in the vault — how does a real PMS handle this?
-2. Check the architecture decision — was this already decided?
-3. Check research files — was this already investigated?
-4. Build FROM reference, not from assumptions
-
-The vault exists so we don't reinvent wheels. Use it.
+- **Strategy/decisions/research** → write to `performance-od/`, not here.
+- **Vertical knowledge** (clinical, billing, GHL, Foxfire) → already in `performance-od/reference/domain/`. Don't duplicate.
+- **IVA practice-specific data** → `iva_eyecare` + `iva-aesthetics` repos.
+- **Marketing/business** → `performance-od/reference/core/`.
 
 ---
 
-## Build Workflow: Two-Tab Conductor (Codex + Claude Code)
+## Security (carried forward from performance-od)
 
-Daily build pattern adapted from Devon Meadows's practice. Use this when working any slice from the Build Order above.
-
-**The two tabs in Conductor:**
-- **You (Claude Code in this tab)** = planner. Read the master build doc, scope the slice, debug at the architecture level, output prompts for Codex. Don't write production code directly during planning sessions.
-- **Codex (next tab in Conductor)** = executor. Writes the code, runs tests, opens PRs.
-
-**Master build doc — canonical source of truth:**
-
-`performance-od/decisions/2026-04-06-osod-master-integration-build-plan.md`
-
-Read it on first session of a new slice. Its **§ Build Workflow with Agents** has the full back-and-forth pattern, the build loop, and the canonical sources table for where each kind of decision/log lives.
-
-**Required response format (the load-bearing habit):**
-
-When the user asks for help diagnosing a bug, planning a slice, or scoping next steps, structure your response with two labeled sections:
-
-```
-## What's Wrong
-[diagnosis — possible causes, what to check, evidence to gather first]
-
-## What to Tell the Agent
-[exact prompt the user can copy + paste into the Codex tab]
-```
-
-The user copies the second section verbatim into Codex. Codex executes. Results return to you. Loop.
-
-This format is required for diagnosis and planning responses, not optional. Skip it only for casual questions, file reads, or pure conversation.
-
-**Diagnostic enumeration before any fix:** the "What's Wrong" section must list possible causes + evidence needed BEFORE proposing a fix. Never jump to "here's the answer."
-
-**Blocking vs polish:** at the end of every slice, classify open issues as **blocking** (don't ship) or **polish** (ship anyway). Resist polishing past blocking. Devon's rule: *"None of these are blocking. Send it tonight. That's the highest leverage thing you can do right now."*
+**No agent interacts with authentication flows, credential management, or account settings.** Browser automation is read-only by default. If a task requires authentication, stop and let the human do it. Full policy: `performance-od/reference/core/soul.md`.
 
 ---
 
-## Related Repos
+## History
 
-| Repo | Relationship |
-|------|-------------|
-| **performance-od** | Business brain + knowledge vault. Domain knowledge lives here. |
-| **iva_eyecare** | Eyecare practice lab. Test OSOD features here first. |
-| **iva-aesthetics** | Aesthetics practice lab. Aesthetics module tested here. Eric is also a licensed aesthetician. |
-| **bang-fitness** | Fitness lab. Proves the platform works beyond clinical practices. |
+Prior custom TypeScript implementation (341 passing tests, non-FHIR) archived at:
+- Branch: `archive/2026-04-22-custom-pre-medplum` (pushed to origin)
+- Tag: `custom-v0-final`
 
----
+Reason for reset: Medplum foundation gives 2+ years of FHIR plumbing for free, aligns with AMA CPT distribution criterion (a) structurally (CPT only appears inside FHIR Encounter/ChargeItem/Claim — inseparable from clinical context), and removes the polyglot + rebuild tax HAPI would impose.
 
-## The Founder Advantage
-
-Eric Bang is both a practicing O.D. AND a licensed aesthetician running both service lines under one roof at IVA. No other PMS developer has this dual perspective. Every design decision comes from someone who actually does the work in both domains — not from a product manager guessing what clinicians need.
-
-The aesthetics module isn't an afterthought or a future roadmap item. It's built from the same first-person operational experience as the optometry module. And the combined practice (shared patients, shared scheduling, cross-specialty workflows) is the hardest use case — if OSOD handles IVA, it handles anything.
-
-**Spin-off potential:** The aesthetics module works standalone for aesthetics-only clinics — med spas, esthetician practices, dermatology offices. Same core, different module configuration. One codebase, multiple markets.
+Full decision rationale: `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md`

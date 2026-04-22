@@ -1,0 +1,31 @@
+{
+  "port": 8103,
+  "baseUrl": "http://localhost:8103/",
+  "appBaseUrl": "http://localhost:8100/",
+  "storageBaseUrl": "http://localhost:8103/storage/",
+  "binaryStorage": "file:./binary/",
+  "signingKeyId": "dev-signing-key",
+  "signingKey": "dev-only-key-replace-before-production",
+  "signingKeyPassphrase": "dev",
+  "supportEmail": "admin@osod.local",
+  "database": {
+    "host": "postgres",
+    "port": 5432,
+    "dbname": "medplum",
+    "username": "medplum",
+    "password": "medplum"
+  },
+  "redis": {
+    "host": "redis",
+    "port": 6379,
+    "password": "medplum"
+  },
+  "maxJsonSize": "10mb",
+  "maxBatchSize": "50mb",
+  "allowedOrigins": "*",
+  "introspectionEnabled": true,
+  "botLambdaLayerName": "",
+  "botCustomFunctionsEnabled": true,
+  "vmContextBotsEnabled": true,
+  "defaultBotRuntimeVersion": "vmcontext"
+}
