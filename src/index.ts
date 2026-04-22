@@ -78,36 +78,50 @@ async function main(): Promise<void> {
   });
   console.log("✓ Created Encounter:", encounter.id);
 
-  // 3. ChargeItem — CPT 92015 (refraction) bound to encounter + patient.
-  //    This is where CPT procedure codes actually belong in FHIR.
-  const charge = await client.create<ChargeItem>({
-    resourceType: "ChargeItem",
-    status: "billable",
-    code: {
-      coding: [
-        {
-          system: "http://www.ama-assn.org/go/cpt",
-          code: "92015",
-          display: "Determination of refractive state",
-        },
-      ],
-      text: "CPT 92015 - Determination of refractive state",
-    },
-    subject: patientRef,
-    context: { reference: `Encounter/${encounter.id}` },
-    occurrenceDateTime: new Date().toISOString(),
-    quantity: { value: 1 },
-  });
-  console.log("✓ Created ChargeItem (CPT 92015):", charge.id);
+  // 3. ChargeItems — three CPT procedures performed during this encounter.
+  //    Each is independently billable, each is bound to the same encounter.
+  //    CPT procedure codes live ONLY here, never on Patient or Encounter.
+  const procedures = [
+    { code: "92014", display: "Ophthalmological services: comprehensive, established patient" },
+    { code: "92015", display: "Determination of refractive state" },
+    { code: "92250", display: "Fundus photography with interpretation and report" },
+  ];
+
+  const charges: ChargeItem[] = [];
+  for (const p of procedures) {
+    const charge = await client.create<ChargeItem>({
+      resourceType: "ChargeItem",
+      status: "billable",
+      code: {
+        coding: [
+          {
+            system: "http://www.ama-assn.org/go/cpt",
+            code: p.code,
+            display: p.display,
+          },
+        ],
+        text: `CPT ${p.code} - ${p.display}`,
+      },
+      subject: patientRef,
+      context: { reference: `Encounter/${encounter.id}` },
+      occurrenceDateTime: new Date().toISOString(),
+      quantity: { value: 1 },
+    });
+    charges.push(charge);
+    console.log(`✓ Created ChargeItem (CPT ${p.code}):`, charge.id);
+  }
 
   console.log("\n— Demo ready —");
   console.log(`Admin UI: ${BASE_URL.replace(":8103", ":8100")}`);
-  console.log(`Patient:     Patient/${patient.id}`);
-  console.log(`Encounter:   Encounter/${encounter.id}`);
-  console.log(`ChargeItem:  ChargeItem/${charge.id}`);
+  console.log(`Patient:    Patient/${patient.id}`);
+  console.log(`Encounter:  Encounter/${encounter.id}  (Office visit — no CPT)`);
+  for (const [i, c] of charges.entries()) {
+    console.log(`ChargeItem: ChargeItem/${c.id}  (CPT ${procedures[i].code})`);
+  }
   console.log(
-    "\nThe CPT code 92015 exists ONLY inside this ChargeItem, which references\n" +
-      "the Encounter, which references the Patient. Structurally inseparable\n" +
+    "\nCPT codes 92014, 92015, 92250 exist ONLY inside ChargeItems, each\n" +
+      "bound to the Encounter, which is bound to the Patient. No CPT appears\n" +
+      "on Patient, Encounter, or anywhere else. Structurally inseparable\n" +
       "from clinical context — satisfies AMA distribution criterion (a).",
   );
 }
