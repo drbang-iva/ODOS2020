@@ -48,7 +48,8 @@ async function main(): Promise<void> {
     display: "Demo Testington",
   };
 
-  // 2. Encounter — comprehensive eye exam visit
+  // 2. Encounter — ambulatory office visit (FHIR-correct: type is VISIT-TYPE,
+  //    NOT a CPT procedure code. Procedure codes go on ChargeItem/Procedure.)
   const encounter = await client.create<Encounter>({
     resourceType: "Encounter",
     status: "finished",
@@ -61,12 +62,12 @@ async function main(): Promise<void> {
       {
         coding: [
           {
-            system: "http://www.ama-assn.org/go/cpt",
-            code: "92015",
-            display: "Determination of refractive state",
+            system: "http://snomed.info/sct",
+            code: "185349003",
+            display: "Encounter for check up (procedure)",
           },
         ],
-        text: "Comprehensive eye exam with refraction",
+        text: "Office visit",
       },
     ],
     subject: patientRef,
@@ -77,7 +78,8 @@ async function main(): Promise<void> {
   });
   console.log("✓ Created Encounter:", encounter.id);
 
-  // 3. ChargeItem — CPT 92015 bound to encounter + patient
+  // 3. ChargeItem — CPT 92015 (refraction) bound to encounter + patient.
+  //    This is where CPT procedure codes actually belong in FHIR.
   const charge = await client.create<ChargeItem>({
     resourceType: "ChargeItem",
     status: "billable",
@@ -89,7 +91,7 @@ async function main(): Promise<void> {
           display: "Determination of refractive state",
         },
       ],
-      text: "CPT 92015 — Refraction",
+      text: "CPT 92015 - Determination of refractive state",
     },
     subject: patientRef,
     context: { reference: `Encounter/${encounter.id}` },
