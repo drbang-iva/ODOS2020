@@ -6,10 +6,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "up": "docker compose up -d",
-    "down": "docker compose down",
-    "reset": "docker compose down -v",
-    "logs": "docker compose logs -f medplum-server",
+    "up": "docker-compose up -d",
+    "down": "docker-compose down",
+    "reset": "docker-compose down -v",
+    "logs": "docker-compose logs -f medplum-server",
     "poc": "tsx src/index.ts"
   },
   "dependencies": {

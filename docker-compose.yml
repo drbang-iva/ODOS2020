@@ -47,11 +47,20 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./medplum.config.json:/usr/src/medplum/packages/server/medplum.config.json:ro
+      - ./medplum.config.json:/config/medplum.config.json:ro
     ports:
       - "8103:8103"
-      - "8100:8100"
-    command: ["node", "packages/server/dist/index.js", "file:medplum.config.json"]
+    command: ["file:/config/medplum.config.json"]
+
+  medplum-app:
+    image: medplum/medplum-app:latest
+    restart: unless-stopped
+    depends_on:
+      - medplum-server
+    ports:
+      - "8100:3000"
+    environment:
+      MEDPLUM_BASE_URL: http://localhost:8103/
 
 volumes:
   postgres-data:

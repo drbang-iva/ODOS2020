@@ -3,8 +3,13 @@
  *
  * No Medplum SDK imports. Only @medplum/fhirtypes for type safety.
  * Server is swappable — any FHIR R4 server works at this interface.
+ *
+ * Auth: Medplum uses PKCE OAuth2 even for email/password login:
+ *   1. POST /auth/login with codeChallenge → {login, code}
+ *   2. POST /oauth2/token with code + code_verifier → {access_token}
  */
 
+import { createHash, randomBytes } from "node:crypto";
 import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
 
 export interface FhirClientOptions {
@@ -68,14 +73,34 @@ export class FhirClient {
   }
 
   async login(email: string, password: string): Promise<void> {
-    const res = await fetch(`${this.baseUrl}/auth/login`, {
+    const verifier = randomBytes(32).toString("base64url");
+    const challenge = createHash("sha256").update(verifier).digest("base64url");
+
+    const loginRes = await fetch(`${this.baseUrl}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        codeChallenge: challenge,
+        codeChallengeMethod: "S256",
+      }),
     });
-    if (!res.ok) throw await this.toError(res);
-    const { accessToken } = (await res.json()) as { accessToken: string };
-    this.token = accessToken;
+    if (!loginRes.ok) throw await this.toError(loginRes);
+    const { code } = (await loginRes.json()) as { login: string; code: string };
+
+    const tokenRes = await fetch(`${this.baseUrl}/oauth2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        code_verifier: verifier,
+      }),
+    });
+    if (!tokenRes.ok) throw await this.toError(tokenRes);
+    const { access_token } = (await tokenRes.json()) as { access_token: string };
+    this.token = access_token;
   }
 
   private async toError(res: Response): Promise<Error> {
