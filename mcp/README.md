@@ -15,6 +15,24 @@ Zero Medplum SDK — plain `fetch` against FHIR REST.
 | `get_charge_items` | ChargeItems for a Patient or Encounter (shows CPT codes) |
 | `fhir_search` | Escape hatch — arbitrary FHIR search |
 
+## Transport modes
+
+Set `OSOD_MCP_TRANSPORT` to choose the MCP transport:
+
+| Env var | Values | Default | Notes |
+|---|---|---|---|
+| `OSOD_MCP_TRANSPORT` | `stdio` \| `sse` | `stdio` | `stdio` remains fully backward-compatible for Claude Desktop / Claude Code launch-on-demand configs |
+
+When `OSOD_MCP_TRANSPORT=sse`, these additional env vars apply:
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `OSOD_MCP_HTTP_HOST` | `127.0.0.1` | HTTP bind host for the SSE transport |
+| `OSOD_MCP_HTTP_PORT` | `3333` | HTTP bind port for the SSE transport |
+| `OSOD_MCP_TLS` | unset | Required if binding SSE to `0.0.0.0` or any non-loopback host; this is a fail-closed gate only, not TLS cert loading |
+
+If `OSOD_MCP_HTTP_HOST` is `0.0.0.0` or any non-loopback interface and `OSOD_MCP_TLS` is not set, the server exits with an error before binding.
+
 ## Run
 
 ```bash
@@ -27,7 +45,23 @@ export MEDPLUM_BASE_URL=http://localhost:8103
 export MEDPLUM_ADMIN_EMAIL=drbang@ivaeyecare.com
 export MEDPLUM_ADMIN_PASSWORD='<your password from osod/.env>'
 
-# Stdio transport — MCP clients launch this on demand
+# Stdio transport (default) — MCP clients launch this on demand
+node dist/index.js
+
+# Equivalent explicit stdio launch
+OSOD_MCP_TRANSPORT=stdio node dist/index.js
+
+# HTTP + SSE transport on loopback only
+OSOD_MCP_TRANSPORT=sse \
+OSOD_MCP_HTTP_HOST=127.0.0.1 \
+OSOD_MCP_HTTP_PORT=3333 \
+node dist/index.js
+
+# External bind requires the TLS gate acknowledgement
+OSOD_MCP_TRANSPORT=sse \
+OSOD_MCP_HTTP_HOST=0.0.0.0 \
+OSOD_MCP_HTTP_PORT=3333 \
+OSOD_MCP_TLS=required \
 node dist/index.js
 ```
 
@@ -51,7 +85,20 @@ Add to your MCP config (`~/.claude/mcp.json` or Claude Desktop's `claude_desktop
 }
 ```
 
-Agents that have this configured can then call `osod.list_patients()`, `osod.get_observations({ patient_id: "..." })`, etc., in a normal MCP flow.
+Existing Claude Desktop / Claude Code stdio configs continue to work unchanged because `stdio` is still the default transport.
+
+## SSE endpoints
+
+When `OSOD_MCP_TRANSPORT=sse`, the server exposes:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/mcp/sse` | Opens the server-sent events stream |
+| `POST` | `/mcp/messages?sessionId=<id>` | Receives MCP client messages for the active SSE session |
+
+On startup, the server logs the full loopback URL for the SSE endpoint and the message endpoint.
+
+Agents that have this configured can then call `osod.list_patients()`, `osod.get_observations({ patient_id: "..." })`, etc., in a normal MCP flow regardless of transport.
 
 ## Add tools as OSOD grows
 
