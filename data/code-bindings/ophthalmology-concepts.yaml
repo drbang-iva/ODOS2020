@@ -1,0 +1,151 @@
+codeSystem: "https://osod.dev/fhir/CodeSystem/ophthalmology"
+version: "0.2.2"
+concepts:
+  - id: VISUAL_ACUITY
+    display: "Visual acuity"
+    category: "observation"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: VA_SNELLEN_RAW
+    display: "Visual acuity Snellen raw"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VA_LOGMAR
+    display: "Visual acuity logMAR"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VA_LETTER_SCORE
+    display: "Visual acuity ETDRS letter score"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VA_CHART_TYPE
+    display: "Visual acuity chart type"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VA_CORRECTION
+    display: "Visual acuity correction"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VA_DISTANCE
+    display: "Visual acuity test distance"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: INTRAOCULAR_PRESSURE
+    display: "Intraocular pressure"
+    category: "observation"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: REFRACTION
+    display: "Refraction"
+    category: "observation-panel"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: REFRACTION_TYPE
+    display: "Refraction type"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: SPHERE
+    display: "Sphere"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: CYLINDER
+    display: "Cylinder"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: AXIS
+    display: "Axis"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: ADD
+    display: "Near add"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: PRISM
+    display: "Prism"
+    category: "observation-component"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: OPHTHALMIC_RAW_ASSET
+    display: "Ophthalmic raw asset"
+    category: "document-reference"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: OPHTHALMIC_SOURCE_DOCUMENT
+    display: "Ophthalmic source document"
+    category: "document-reference-category"
+    mappings:
+      loinc:
+        status: "todo-verify"
+  - id: VISUAL_ACUITY_PANEL
+    display: "Visual acuity panel"
+    category: "diagnostic-report"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: REFRACTION_PANEL
+    display: "Refraction panel"
+    category: "diagnostic-report"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"
+  - id: OPHTHALMIC_DATA_CAPTURE
+    display: "Ophthalmic data capture"
+    category: "provenance-activity"
+    mappings:
+      loinc:
+        status: "todo-verify"
+      snomed:
+        status: "todo-verify"
+      dicom:
+        status: "todo-verify"

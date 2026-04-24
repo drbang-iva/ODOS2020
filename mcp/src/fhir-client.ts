@@ -13,7 +13,7 @@ interface MedplumClient {
     rt: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
-  create<T extends Resource>(r: T): Promise<T>;
+  create<T extends Resource>(r: T, extraHeaders?: Record<string, string>): Promise<T>;
 }
 
 export function createMedplumClient(opts: { baseUrl: string }): MedplumClient {
@@ -91,10 +91,13 @@ export function createMedplumClient(opts: { baseUrl: string }): MedplumClient {
       return (await res.json()) as Bundle<T>;
     },
 
-    async create<T extends Resource>(r: T): Promise<T> {
+    async create<T extends Resource>(
+      r: T,
+      extraHeaders: Record<string, string> = {},
+    ): Promise<T> {
       const res = await fetch(`${base}/fhir/R4/${r.resourceType}`, {
         method: "POST",
-        headers: headers(),
+        headers: { ...headers(), ...extraHeaders },
         body: JSON.stringify(r),
       });
       if (!res.ok) throw await toError(res);

@@ -26,10 +26,26 @@ import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient } from "./fhir-client.js";
+import { osodConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
+import { buildIopObservation } from "./fhir/ophthalmology/iop.js";
+import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.js";
+import { buildRefractionObservation } from "./fhir/ophthalmology/refraction.js";
+import { buildDocumentReference } from "./fhir/ophthalmology/rawAssets.js";
+import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
+import type {
+  IopMethod,
+  RefractionType,
+  SourceType,
+  VisualAcuityChartType,
+  VisualAcuityCorrection,
+} from "./fhir/ophthalmology/types.js";
 
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
+const CREATE_OBSERVATION_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/create_observation",
+} as const;
 
 const fhir = createMedplumClient({ baseUrl: BASE_URL });
 let authPromise: Promise<void> | undefined;
@@ -135,6 +151,93 @@ const tools = [
       },
     },
   },
+  {
+    name: "create_observation",
+    description:
+      "Create a FHIR-native ophthalmic Observation for visual acuity, IOP, or refraction. Writes use X-OSOD-Source=mcp/create_observation.",
+    inputSchema: {
+      type: "object",
+      required: ["type", "patient_id", "encounter_id", "laterality"],
+      properties: {
+        type: {
+          type: "string",
+          enum: ["iop", "va", "refraction"],
+          description: "Observation type.",
+        },
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        encounter_id: { type: "string", description: "FHIR Encounter ID or Encounter/<id>." },
+        laterality: {
+          type: "string",
+          enum: ["od", "os", "ou", "unknown", "OD", "OS", "OU", "UNKNOWN"],
+        },
+        measured_at: {
+          type: "string",
+          description: "ISO timestamp. Defaults to current server time if omitted.",
+        },
+        source_reference: {
+          type: "string",
+          description:
+            "Optional source DocumentReference/Media/ImagingStudy/Observation/QuestionnaireResponse reference for Observation.derivedFrom.",
+        },
+        device_reference: { type: "string" },
+        performer_reference: { type: "string" },
+        quality_score: { type: "number" },
+        confidence_score: { type: "number" },
+        method: {
+          type: "string",
+          description: "IOP method (GAT/iCare/Tonopen/NCT/Perkins) or refraction method.",
+        },
+        value: { type: "number", description: "IOP value in mmHg." },
+        snellen: { type: "string", description: "Raw Snellen acuity such as 20/40." },
+        logmar: { type: "number" },
+        letter_score: { type: "number" },
+        chart_type: { type: "string", enum: ["SNELLEN", "ETDRS", "LOGMAR", "OTHER", "UNKNOWN"] },
+        correction: { type: "string", enum: ["SC", "CC", "PH", "NI", "OTHER", "UNKNOWN"] },
+        distance: { type: "number" },
+        distance_unit: { type: "string", enum: ["ft", "m"] },
+        refraction_type: {
+          type: "string",
+          enum: ["AUTOREFRACTION", "MANIFEST", "CYCLOPLEGIC", "FINAL_RX", "OTHER"],
+        },
+        sphere: { type: "number" },
+        cylinder: { type: "number" },
+        axis: { type: "number" },
+        add: { type: "number" },
+        create_provenance: {
+          type: "boolean",
+          description:
+            "When true, also creates Provenance for the generated Observation using the supplied agent/source metadata.",
+        },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_raw_asset_reference",
+    description:
+      "Create a DocumentReference index for an ophthalmic PDF/image/vendor export. Attachment.hash is SHA-1/base64; OSOD SHA-256 goes in the source-sha256 extension.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "content_type"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        content_type: { type: "string" },
+        title: { type: "string" },
+        original_filename: { type: "string" },
+        creation: { type: "string" },
+        size: { type: "number" },
+        sha1_base64: { type: "string" },
+        sha256: { type: "string" },
+        url: { type: "string" },
+        data: { type: "string" },
+        description: { type: "string" },
+        author_reference: { type: "string" },
+        custodian_reference: { type: "string" },
+      },
+    },
+  },
 ] as const;
 
 /* ----- Input validation schemas (Zod) ----- */
@@ -160,6 +263,70 @@ const getChargesSchema = z.object({
 const fhirSearchSchema = z.object({
   resource_type: z.string().min(1),
   params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
+const maybeStringArraySchema = z.union([z.string(), z.array(z.string())]).optional();
+const createObservationSchema = z.object({
+  type: z.enum(["iop", "va", "refraction"]),
+  patient_id: z.string().min(1),
+  encounter_id: z.string().min(1),
+  laterality: z.string().optional(),
+  eye: z.string().optional(),
+  measured_at: z.string().optional(),
+  measuredAt: z.string().optional(),
+  source_reference: maybeStringArraySchema,
+  sourceReference: maybeStringArraySchema,
+  device_reference: z.string().optional(),
+  device: z.string().optional(),
+  performer_reference: maybeStringArraySchema,
+  performer: maybeStringArraySchema,
+  quality_score: z.number().optional(),
+  qualityScore: z.number().optional(),
+  confidence_score: z.number().optional(),
+  confidenceScore: z.number().optional(),
+  source_label: z.string().optional(),
+  source_type: z.string().optional(),
+  method: z.string().optional(),
+  value: z.number().optional(),
+  snellen: z.string().optional(),
+  logmar: z.number().optional(),
+  letter_score: z.number().int().optional(),
+  letterScore: z.number().int().optional(),
+  chart_type: z.string().optional(),
+  chartType: z.string().optional(),
+  correction: z.string().optional(),
+  distance: z.number().optional(),
+  distance_unit: z.enum(["ft", "m"]).optional(),
+  distanceUnit: z.enum(["ft", "m"]).optional(),
+  allow_unparseable: z.boolean().optional(),
+  allowUnparseable: z.boolean().optional(),
+  refraction_type: z.string().optional(),
+  refractionType: z.string().optional(),
+  sphere: z.number().optional(),
+  cylinder: z.number().optional(),
+  axis: z.number().optional(),
+  add: z.number().optional(),
+  create_provenance: z.boolean().optional(),
+  createProvenance: z.boolean().optional(),
+  provenance_agent_reference: z.string().optional(),
+  provenanceAgentReference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
+  provenanceAgentDisplay: z.string().optional(),
+});
+const createRawAssetReferenceSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  content_type: z.string().min(1),
+  title: z.string().optional(),
+  original_filename: z.string().optional(),
+  creation: z.string().optional(),
+  size: z.number().int().nonnegative().optional(),
+  sha1_base64: z.string().optional(),
+  sha256: z.string().optional(),
+  url: z.string().optional(),
+  data: z.string().optional(),
+  description: z.string().optional(),
+  author_reference: maybeStringArraySchema,
+  custodian_reference: z.string().optional(),
 });
 
 /* --------------------------------------------------------------------------
@@ -225,6 +392,81 @@ function createServer(): Server {
           const bundle = await fhir.search(resource_type as never, p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
+        case "create_observation": {
+          const input = createObservationSchema.parse(args);
+          const observationResult = buildCreateObservationResource(input);
+          const createdObservation = await fhir.create(
+            observationResult.resource,
+            CREATE_OBSERVATION_AUDIT_HEADERS,
+          );
+
+          let createdProvenance: unknown;
+          if (input.create_provenance || input.createProvenance) {
+            const observationReference = `${createdObservation.resourceType}/${createdObservation.id}`;
+            createdProvenance = await fhir.create(
+              buildProvenance({
+                targetReferences: [observationReference],
+                occurredDateTime: observationResult.resource.effectiveDateTime,
+                activityCode: "OPHTHALMIC_DATA_CAPTURE",
+                activityDisplay: "Ophthalmic data capture",
+                entityReferences: getStringArray(input.source_reference ?? input.sourceReference),
+                agents: [
+                  {
+                    typeCode: normalizeSourceType(input.source_type) === "parser" ? "parser" : "manual",
+                    typeDisplay: normalizeSourceType(input.source_type) === "parser" ? "Parser" : "Manual entry",
+                    whoReference:
+                      input.provenance_agent_reference ?? input.provenanceAgentReference,
+                    whoDisplay:
+                      input.provenance_agent_display ??
+                      input.provenanceAgentDisplay ??
+                      "OSOD MCP create_observation",
+                  },
+                ],
+              }),
+              CREATE_OBSERVATION_AUDIT_HEADERS,
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    observation: createdObservation,
+                    provenance: createdProvenance,
+                    warnings: observationResult.warnings,
+                  },
+                  null,
+                  2,
+                ),
+              },
+            ],
+          };
+        }
+        case "create_raw_asset_reference": {
+          const input = createRawAssetReferenceSchema.parse(args);
+          const documentReference = buildDocumentReference({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id
+              ? encounterReference(input.encounter_id)
+              : undefined,
+            contentType: input.content_type,
+            title: input.title,
+            originalFilename: input.original_filename,
+            creation: input.creation,
+            size: input.size,
+            sha1Base64: input.sha1_base64,
+            sha256: input.sha256,
+            url: input.url,
+            data: input.data,
+            description: input.description,
+            authorReferences: getStringArray(input.author_reference),
+            custodianReference: input.custodian_reference,
+          });
+          const created = await fhir.create(documentReference, CREATE_OBSERVATION_AUDIT_HEADERS);
+          return { content: [{ type: "text", text: JSON.stringify(created, null, 2) }] };
+        }
         default:
           return {
             content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -241,6 +483,132 @@ function createServer(): Server {
   });
 
   return server;
+}
+
+type CreateObservationInput = z.infer<typeof createObservationSchema>;
+
+function buildCreateObservationResource(input: CreateObservationInput) {
+  const eye = normalizeLaterality(input.laterality ?? input.eye ?? "");
+  const measuredAt = input.measured_at ?? input.measuredAt ?? new Date().toISOString();
+  const common = {
+    patientReference: patientReference(input.patient_id),
+    encounterReference: encounterReference(input.encounter_id),
+    eye,
+    measuredAt,
+    deviceReference: input.device_reference ?? input.device,
+    performerReferences: getStringArray(input.performer_reference ?? input.performer),
+    sourceReferences: getStringArray(input.source_reference ?? input.sourceReference),
+    qualityScore: input.quality_score ?? input.qualityScore,
+    confidenceScore: input.confidence_score ?? input.confidenceScore,
+    sourceLabel: input.source_label,
+    sourceType: normalizeSourceType(input.source_type),
+  };
+
+  switch (input.type) {
+    case "iop": {
+      if (input.value === undefined) {
+        throw new Error("create_observation type=iop requires value.");
+      }
+      return buildIopObservation({
+        ...common,
+        value: input.value,
+        unit: "mmHg",
+        method: osodConcept(normalizeIopMethod(input.method), normalizeIopMethod(input.method)),
+      });
+    }
+
+    case "va": {
+      if (!input.snellen) {
+        throw new Error("create_observation type=va requires snellen.");
+      }
+      return buildVisualAcuityObservation({
+        ...common,
+        snellen: input.snellen,
+        logmar: input.logmar,
+        letterScore: input.letter_score ?? input.letterScore,
+        chartType: normalizeChartType(input.chart_type ?? input.chartType),
+        correction: normalizeCorrection(input.correction),
+        distance: input.distance,
+        distanceUnit: input.distance_unit ?? input.distanceUnit,
+        method: input.method,
+        allowUnparseable: input.allow_unparseable ?? input.allowUnparseable,
+      });
+    }
+
+    case "refraction": {
+      return buildRefractionObservation({
+        ...common,
+        refractionType: normalizeRefractionType(input.refraction_type ?? input.refractionType ?? input.method),
+        sphere: input.sphere,
+        cylinder: input.cylinder,
+        axis: input.axis,
+        add: input.add,
+      });
+    }
+  }
+}
+
+function getStringArray(value: string | string[] | undefined): string[] | undefined {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value ? [value] : undefined;
+}
+
+function normalizeIopMethod(value: string | undefined): IopMethod {
+  const normalized = (value ?? "UNKNOWN").trim().toUpperCase().replace(/[-_ ]/g, "");
+  if (normalized === "GAT") return "GAT";
+  if (normalized === "ICARE") return "ICARE";
+  if (normalized === "TONOPEN" || normalized === "TONO-PEN") return "TONOPEN";
+  if (normalized === "NCT") return "NCT";
+  if (normalized === "PERKINS") return "PERKINS";
+  if (normalized === "OTHER") return "OTHER";
+  return "UNKNOWN";
+}
+
+function normalizeChartType(value: string | undefined): VisualAcuityChartType {
+  const normalized = (value ?? "UNKNOWN").trim().toUpperCase();
+  if (normalized === "SNELLEN" || normalized === "ETDRS" || normalized === "LOGMAR") {
+    return normalized;
+  }
+  if (normalized === "OTHER") return "OTHER";
+  return "UNKNOWN";
+}
+
+function normalizeCorrection(value: string | undefined): VisualAcuityCorrection {
+  const normalized = (value ?? "UNKNOWN").trim().toUpperCase();
+  if (normalized === "SC" || normalized === "CC" || normalized === "PH" || normalized === "NI") {
+    return normalized;
+  }
+  if (normalized === "OTHER") return "OTHER";
+  return "UNKNOWN";
+}
+
+function normalizeRefractionType(value: string | undefined): RefractionType {
+  const normalized = (value ?? "OTHER").trim().toUpperCase().replace(/[- ]/g, "_");
+  if (
+    normalized === "AUTOREFRACTION" ||
+    normalized === "MANIFEST" ||
+    normalized === "CYCLOPLEGIC" ||
+    normalized === "FINAL_RX"
+  ) {
+    return normalized;
+  }
+  return "OTHER";
+}
+
+function normalizeSourceType(value: string | undefined): SourceType {
+  const normalized = (value ?? "manual").trim().toLowerCase();
+  if (
+    normalized === "manual" ||
+    normalized === "parser" ||
+    normalized === "device" ||
+    normalized === "vendor-export" ||
+    normalized === "unknown"
+  ) {
+    return normalized;
+  }
+  return "unknown";
 }
 
 function isLoopbackHost(host: string): boolean {

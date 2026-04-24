@@ -1,0 +1,34 @@
+import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "./extensions.js";
+
+export const OPHTHALMOLOGY_CODE_BINDING_VERSION = "0.2.2";
+
+export const OPHTHALMOLOGY_CONCEPT_IDS = [
+  "VISUAL_ACUITY",
+  "VA_SNELLEN_RAW",
+  "VA_LOGMAR",
+  "VA_LETTER_SCORE",
+  "VA_CHART_TYPE",
+  "VA_CORRECTION",
+  "VA_DISTANCE",
+  "INTRAOCULAR_PRESSURE",
+  "REFRACTION",
+  "REFRACTION_TYPE",
+  "SPHERE",
+  "CYLINDER",
+  "AXIS",
+  "ADD",
+  "PRISM",
+  "OPHTHALMIC_RAW_ASSET",
+  "OPHTHALMIC_SOURCE_DOCUMENT",
+  "VISUAL_ACUITY_PANEL",
+  "REFRACTION_PANEL",
+  "OPHTHALMIC_DATA_CAPTURE",
+] as const;
+
+export function isOphthalmologyConceptId(value: string): boolean {
+  return OPHTHALMOLOGY_CONCEPT_IDS.includes(
+    value as (typeof OPHTHALMOLOGY_CONCEPT_IDS)[number],
+  );
+}
+
+export { OSOD_OPHTHALMOLOGY_CODE_SYSTEM };
