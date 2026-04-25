@@ -34,6 +34,14 @@ import { buildDocumentReference } from "./fhir/ophthalmology/rawAssets.js";
 import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
 import { buildVisionPrescription } from "./fhir/ophthalmology/visionPrescription.js";
 import { rewriteObservationBodyStructureReference } from "./fhir/ophthalmology/bodyStructure.js";
+import {
+  buildSectionSaveBundle,
+  type IopSectionSaveEntry,
+  type RefractionSectionSaveEntry,
+  type SectionSaveEntry,
+  type SectionSaveLaterality,
+  type VisualAcuitySectionSaveEntry,
+} from "./fhir/ophthalmology/save-section-bundle.js";
 import type { BodyStructure, Encounter, Observation, Patient, Resource, VisionPrescription } from "@medplum/fhirtypes";
 import type {
   IopMethod,
@@ -58,6 +66,9 @@ const CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS = {
 } as const;
 const CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_vision_prescription",
+} as const;
+const CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/save_section_observations",
 } as const;
 const UPDATE_PATIENT_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/update_patient",
@@ -320,7 +331,7 @@ const tools = [
         create_provenance: {
           type: "boolean",
           description:
-            "When true, also creates Provenance for the generated Encounter using the supplied agent metadata.",
+            "Defaults true. Set false only for legacy backfill that must suppress Encounter Provenance.",
         },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
@@ -382,7 +393,7 @@ const tools = [
         create_provenance: {
           type: "boolean",
           description:
-            "When true, also creates Provenance for the generated Observation using the supplied agent/source metadata.",
+            "Defaults true. Set false only for legacy backfill that must suppress Observation Provenance.",
         },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
@@ -411,6 +422,52 @@ const tools = [
         description: { type: "string" },
         author_reference: { type: "string" },
         custodian_reference: { type: "string" },
+        create_provenance: {
+          type: "boolean",
+          description:
+            "Defaults true. Set false only for legacy backfill that must suppress DocumentReference Provenance.",
+        },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "save_section_observations",
+    description:
+      "Atomically save VA, IOP, or refraction section Observations with BodyStructure ensures and Provenance sidecars. Writes use X-OSOD-Source=mcp/save_section_observations.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "encounter_id", "section", "entries"],
+      properties: {
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        encounter_id: { type: "string", description: "FHIR Encounter ID or Encounter/<id>." },
+        section: { type: "string", enum: ["va", "iop", "refraction"] },
+        operator_display: { type: "string" },
+        entries: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["laterality"],
+            properties: {
+              laterality: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+              snellen: { type: "string" },
+              chart_type: { type: "string" },
+              chartType: { type: "string" },
+              correction: { type: "string" },
+              value: { type: "number" },
+              method: { type: "string" },
+              refraction_type: { type: "string" },
+              refractionType: { type: "string" },
+              sphere: { type: "number" },
+              cylinder: { type: "number" },
+              axis: { type: "number" },
+              add: { type: "number" },
+              prism_amount: { type: "number" },
+              prism_base: { type: "string", enum: ["up", "down", "in", "out"] },
+            },
+          },
+        },
       },
     },
   },
@@ -433,6 +490,13 @@ const tools = [
         },
         date_written: { type: "string", description: "ISO timestamp. Defaults to now." },
         lens_type: { type: "string", description: "Lens product text. Defaults to eyeglasses." },
+        create_provenance: {
+          type: "boolean",
+          description:
+            "Defaults true. Set false only for legacy backfill that must suppress VisionPrescription Provenance.",
+        },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
       },
     },
   },
@@ -614,6 +678,33 @@ const createRawAssetReferenceSchema = z.object({
   description: z.string().optional(),
   author_reference: maybeStringArraySchema,
   custodian_reference: z.string().optional(),
+  create_provenance: z.boolean().optional(),
+  provenance_agent_reference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
+});
+const saveSectionObservationEntrySchema = z.object({
+  laterality: z.string().min(1),
+  snellen: z.string().optional(),
+  chart_type: z.string().optional(),
+  chartType: z.string().optional(),
+  correction: z.string().optional(),
+  value: z.number().optional(),
+  method: z.string().optional(),
+  refraction_type: z.string().optional(),
+  refractionType: z.string().optional(),
+  sphere: z.number().optional(),
+  cylinder: z.number().optional(),
+  axis: z.number().optional(),
+  add: z.number().optional(),
+  prism_amount: z.number().optional(),
+  prism_base: z.enum(["up", "down", "in", "out"]).optional(),
+});
+const saveSectionObservationsSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().min(1),
+  section: z.enum(["va", "iop", "refraction"]),
+  entries: z.array(saveSectionObservationEntrySchema).min(1),
+  operator_display: z.string().optional(),
 });
 const createVisionPrescriptionSchema = z.object({
   patient_id: z.string().min(1),
@@ -621,6 +712,9 @@ const createVisionPrescriptionSchema = z.object({
   prescriber_reference: z.string().min(1),
   date_written: isoTimestampSchema.optional(),
   lens_type: z.string().optional(),
+  create_provenance: z.boolean().optional(),
+  provenance_agent_reference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
 });
 
 /* --------------------------------------------------------------------------
@@ -713,7 +807,7 @@ function createServer(): Server {
           );
 
           let createdProvenance: unknown;
-          if (input.create_provenance) {
+          if (input.create_provenance ?? true) {
             const encounterReference = `${createdEncounter.resourceType}/${createdEncounter.id}`;
             createdProvenance = await fhir.create(
               buildProvenance({
@@ -766,7 +860,7 @@ function createServer(): Server {
           );
 
           let createdProvenance: unknown;
-          if (input.create_provenance || input.createProvenance) {
+          if (input.create_provenance ?? input.createProvenance ?? true) {
             const observationReference = `${createdObservation.resourceType}/${createdObservation.id}`;
             createdProvenance = await fhir.create(
               buildProvenance({
@@ -834,7 +928,61 @@ function createServer(): Server {
             documentReference,
             CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS,
           );
-          return { content: [{ type: "text", text: JSON.stringify(created, null, 2) }] };
+
+          let createdProvenance: unknown;
+          if (input.create_provenance ?? true) {
+            createdProvenance = await fhir.create(
+              buildProvenance({
+                targetReferences: [`DocumentReference/${created.id}`],
+                occurredDateTime: documentReference.date,
+                activityCode: "CREATE",
+                activityDisplay: "Create",
+                agents: [
+                  {
+                    typeCode: "author",
+                    typeDisplay: "Author",
+                    whoReference: input.provenance_agent_reference,
+                    whoDisplay:
+                      input.provenance_agent_display ??
+                      "OSOD MCP create_raw_asset_reference",
+                  },
+                ],
+              }),
+              CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS,
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  { documentReference: created, provenance: createdProvenance },
+                  null,
+                  2,
+                ),
+              },
+            ],
+          };
+        }
+        case "save_section_observations": {
+          const input = saveSectionObservationsSchema.parse(args);
+          const bundle = buildSectionSaveBundle({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: encounterReference(input.encounter_id),
+            section: input.section,
+            entries: buildSectionSaveEntries(input),
+            operatorDisplay:
+              input.operator_display ?? "OSOD MCP save_section_observations",
+          });
+          const responseBundle = await fhir.executeTransaction(
+            bundle,
+            CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS,
+          );
+
+          return {
+            content: [{ type: "text", text: JSON.stringify(responseBundle, null, 2) }],
+          };
         }
         case "create_vision_prescription": {
           const input = createVisionPrescriptionSchema.parse(args);
@@ -854,11 +1002,38 @@ function createServer(): Server {
             CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS,
           );
 
+          let createdProvenance: unknown;
+          if (input.create_provenance ?? true) {
+            createdProvenance = await fhir.create(
+              buildProvenance({
+                targetReferences: [`VisionPrescription/${created.id}`],
+                occurredDateTime: visionPrescription.dateWritten,
+                activityCode: "CREATE",
+                activityDisplay: "Create",
+                agents: [
+                  {
+                    typeCode: "author",
+                    typeDisplay: "Author",
+                    whoReference: input.provenance_agent_reference,
+                    whoDisplay:
+                      input.provenance_agent_display ??
+                      "OSOD MCP create_vision_prescription",
+                  },
+                ],
+              }),
+              CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS,
+            );
+          }
+
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify({ visionPrescription: created }, null, 2),
+                text: JSON.stringify(
+                  { visionPrescription: created, provenance: createdProvenance },
+                  null,
+                  2,
+                ),
               },
             ],
           };
@@ -884,6 +1059,7 @@ function createServer(): Server {
 type UpdatePatientInput = z.infer<typeof updatePatientSchema>;
 type CreateObservationInput = z.infer<typeof createObservationSchema>;
 type CreateEncounterInput = z.infer<typeof createEncounterSchema>;
+type SaveSectionObservationsInput = z.infer<typeof saveSectionObservationsSchema>;
 
 function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatchOperation[] {
   const operations: JsonPatchOperation[] = [];
@@ -1149,6 +1325,59 @@ function buildCreateObservationResource(input: CreateObservationInput) {
       });
     }
   }
+}
+
+function buildSectionSaveEntries(input: SaveSectionObservationsInput): SectionSaveEntry[] {
+  switch (input.section) {
+    case "va":
+      return input.entries.map((entry): VisualAcuitySectionSaveEntry => {
+        if (!entry.snellen?.trim()) {
+          throw new Error("save_section_observations section=va requires snellen for every entry.");
+        }
+        return {
+          laterality: normalizeSectionLaterality(entry.laterality),
+          snellen: entry.snellen.trim(),
+          chartType: normalizeChartType(entry.chart_type ?? entry.chartType),
+          correction: normalizeCorrection(entry.correction),
+        };
+      });
+
+    case "iop":
+      return input.entries.map((entry): IopSectionSaveEntry => {
+        if (entry.value === undefined) {
+          throw new Error("save_section_observations section=iop requires value for every entry.");
+        }
+        return {
+          laterality: normalizeSectionLaterality(entry.laterality),
+          value: entry.value,
+          method: normalizeIopMethod(entry.method),
+        };
+      });
+
+    case "refraction":
+      return input.entries.map((entry): RefractionSectionSaveEntry => {
+        return {
+          laterality: normalizeSectionLaterality(entry.laterality),
+          refractionType: normalizeRefractionType(entry.refraction_type ?? entry.refractionType),
+          sphere: entry.sphere,
+          cylinder: entry.cylinder,
+          axis: entry.axis,
+          add: entry.add,
+          prism:
+            entry.prism_amount !== undefined
+              ? { amount: entry.prism_amount, base: entry.prism_base }
+              : undefined,
+        };
+      });
+  }
+}
+
+function normalizeSectionLaterality(value: string): SectionSaveLaterality {
+  const laterality = normalizeLaterality(value);
+  if (laterality === "UNKNOWN") {
+    throw new Error("save_section_observations requires OD, OS, or OU laterality.");
+  }
+  return laterality;
 }
 
 function getStringArray(value: string | string[] | undefined): string[] | undefined {

@@ -107,7 +107,7 @@ async function loginForAccessToken(input: {
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
 
-  const loginRes = await fetch(`${base}/auth/login`, {
+  const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -137,6 +137,45 @@ async function loginForAccessToken(input: {
 
   const { access_token: accessToken } = (await tokenRes.json()) as { access_token: string };
   return accessToken;
+}
+
+async function fetchWithThrottleRetry(
+  url: string,
+  init: RequestInit,
+  attempts = 2,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= attempts; attempt += 1) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 || attempt === attempts) {
+      return res;
+    }
+
+    const body = await res.text();
+    await wait(throttleDelayMs(body));
+  }
+
+  throw new Error("unreachable throttle retry state");
+}
+
+function throttleDelayMs(body: string): number {
+  try {
+    const parsed = JSON.parse(body) as { issue?: Array<{ diagnostics?: string }> };
+    const diagnostics = parsed.issue?.find((issue) => issue.diagnostics)?.diagnostics;
+    if (diagnostics) {
+      const detail = JSON.parse(diagnostics) as { _msBeforeNext?: number };
+      if (typeof detail._msBeforeNext === "number" && detail._msBeforeNext > 0) {
+        return detail._msBeforeNext + 250;
+      }
+    }
+  } catch {
+    /* fall through to conservative delay */
+  }
+
+  return 5_000;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function stripEnvQuotes(value: string): string {
