@@ -103,7 +103,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
                 }
                 inputMode="decimal"
                 placeholder="14"
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               />
               <select
                 value={rows[laterality].method}
@@ -116,7 +116,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
                     },
                   }))
                 }
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               >
                 {["GAT", "ICARE", "TONOPEN", "NCT", "PERKINS", "OTHER", "UNKNOWN"].map((value) => (
                   <option key={value} value={value}>{value}</option>

@@ -33,11 +33,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const encounterReference = `Encounter/${encounterId}`;
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-bg text-white">
+    <div className="flex h-screen w-screen flex-col bg-bg-deep text-white">
       <EncounterHeader patient={patient} encounterId={encounterId} />
       <div className="flex min-h-0 flex-1">
         <SpineNav active={activeSection} statuses={statuses} onSelect={setActiveSection} />
-        <main className="min-w-0 flex-1 bg-bg">
+        <main className="min-w-0 flex-1 bg-bg-deep">
           {activeSection === "va" && (
             <VaSection
               patientReference={patientReference}

@@ -51,7 +51,7 @@ export function PatientPicker() {
   }, [loading, patients.length]);
 
   return (
-    <div className="min-h-screen bg-bg text-white">
+    <div className="min-h-screen bg-bg-deep text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
         <header className="flex items-center justify-between border-b border-white/10 pb-5">
           <div>

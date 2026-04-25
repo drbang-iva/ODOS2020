@@ -120,7 +120,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     },
                   }))
                 }
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               >
                 {["AUTOREFRACTION", "MANIFEST", "CYCLOPLEGIC", "FINAL_RX", "OTHER"].map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -138,7 +138,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   }
                   inputMode="decimal"
                   placeholder={field === "axis" ? "180" : "0.00"}
-                  className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                  className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
                 />
               ))}
             </div>

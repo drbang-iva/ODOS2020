@@ -94,7 +94,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
                   }))
                 }
                 placeholder="20/20"
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               />
               <select
                 value={rows[laterality].chartType}
@@ -107,7 +107,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
                     },
                   }))
                 }
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               >
                 {["SNELLEN", "ETDRS", "LOGMAR", "JAEGER", "OTHER", "UNKNOWN"].map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -124,7 +124,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
                     },
                   }))
                 }
-                className="h-11 rounded border border-white/15 bg-bg px-3 text-white outline-none focus:border-brand"
+                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               >
                 {["SC", "CC", "BCVA", "PH", "NI", "OTHER", "UNKNOWN"].map((value) => (
                   <option key={value} value={value}>{value}</option>
