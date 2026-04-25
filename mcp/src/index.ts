@@ -25,14 +25,14 @@ import {
 import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
-import { createMedplumClient } from "./fhir-client.js";
+import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { osodConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "./fhir/ophthalmology/iop.js";
 import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.js";
 import { buildRefractionObservation } from "./fhir/ophthalmology/refraction.js";
 import { buildDocumentReference } from "./fhir/ophthalmology/rawAssets.js";
 import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
-import type { Encounter } from "@medplum/fhirtypes";
+import type { Encounter, Patient } from "@medplum/fhirtypes";
 import type {
   IopMethod,
   RefractionType,
@@ -49,6 +49,9 @@ const CREATE_OBSERVATION_AUDIT_HEADERS = {
 } as const;
 const CREATE_ENCOUNTER_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_encounter",
+} as const;
+const UPDATE_PATIENT_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/update_patient",
 } as const;
 const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-ActCode";
@@ -75,6 +78,28 @@ const FHIR_ENCOUNTER_STATUS_CODES = [
   "entered-in-error",
   "unknown",
 ] as const;
+const FHIR_PATIENT_GENDER_CODES = ["male", "female", "other", "unknown"] as const;
+const FHIR_HUMAN_NAME_USE_CODES = [
+  "usual",
+  "official",
+  "temp",
+  "nickname",
+  "anonymous",
+  "old",
+  "maiden",
+] as const;
+const FHIR_CONTACT_POINT_SYSTEM_CODES = [
+  "phone",
+  "fax",
+  "email",
+  "pager",
+  "url",
+  "sms",
+  "other",
+] as const;
+const FHIR_CONTACT_POINT_USE_CODES = ["home", "work", "temp", "old", "mobile"] as const;
+const FHIR_ADDRESS_USE_CODES = ["home", "work", "temp", "old", "billing"] as const;
+const FHIR_ADDRESS_TYPE_CODES = ["postal", "physical", "both"] as const;
 
 const fhir = createMedplumClient({ baseUrl: BASE_URL });
 let authPromise: Promise<void> | undefined;
@@ -110,6 +135,66 @@ const tools = [
       required: ["patient_id"],
       properties: {
         patient_id: { type: "string", description: "FHIR Patient resource ID." },
+      },
+    },
+  },
+  {
+    name: "update_patient",
+    description:
+      "Update native FHIR Patient fields using JSON Patch replace operations. Writes use X-OSOD-Source=mcp/update_patient.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id"],
+      properties: {
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        active: { type: "boolean" },
+        gender: { type: "string", enum: FHIR_PATIENT_GENDER_CODES },
+        birth_date: {
+          type: "string",
+          description: "FHIR Patient.birthDate in YYYY-MM-DD format.",
+        },
+        name: {
+          type: "object",
+          description: "Replaces all Patient.name with a single HumanName.",
+          required: ["family", "given"],
+          properties: {
+            family: { type: "string" },
+            given: { type: "array", items: { type: "string" } },
+            prefix: { type: "array", items: { type: "string" } },
+            suffix: { type: "array", items: { type: "string" } },
+            use: { type: "string", enum: FHIR_HUMAN_NAME_USE_CODES, default: "official" },
+          },
+        },
+        telecom: {
+          type: "array",
+          description: "Replaces all Patient.telecom.",
+          items: {
+            type: "object",
+            required: ["system", "value"],
+            properties: {
+              system: { type: "string", enum: FHIR_CONTACT_POINT_SYSTEM_CODES },
+              value: { type: "string" },
+              use: { type: "string", enum: FHIR_CONTACT_POINT_USE_CODES },
+              rank: { type: "number" },
+            },
+          },
+        },
+        address: {
+          type: "array",
+          description: "Replaces all Patient.address.",
+          items: {
+            type: "object",
+            properties: {
+              use: { type: "string", enum: FHIR_ADDRESS_USE_CODES },
+              type: { type: "string", enum: FHIR_ADDRESS_TYPE_CODES },
+              line: { type: "array", items: { type: "string" } },
+              city: { type: "string" },
+              state: { type: "string" },
+              postal_code: { type: "string" },
+              country: { type: "string" },
+            },
+          },
+        },
       },
     },
   },
@@ -328,6 +413,40 @@ const listPatientsSchema = z.object({
   limit: z.number().int().positive().max(200).optional(),
 });
 const getByIdSchema = z.object({ patient_id: z.string().min(1) });
+const updatePatientNameSchema = z.object({
+  family: z.string(),
+  given: z.array(z.string()),
+  prefix: z.array(z.string()).optional(),
+  suffix: z.array(z.string()).optional(),
+  use: z.enum(FHIR_HUMAN_NAME_USE_CODES).default("official"),
+});
+const updatePatientTelecomSchema = z.object({
+  system: z.enum(FHIR_CONTACT_POINT_SYSTEM_CODES),
+  value: z.string(),
+  use: z.enum(FHIR_CONTACT_POINT_USE_CODES).optional(),
+  rank: z.number().optional(),
+});
+const updatePatientAddressSchema = z.object({
+  use: z.enum(FHIR_ADDRESS_USE_CODES).optional(),
+  type: z.enum(FHIR_ADDRESS_TYPE_CODES).optional(),
+  line: z.array(z.string()).optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postal_code: z.string().optional(),
+  country: z.string().optional(),
+});
+const updatePatientSchema = z.object({
+  patient_id: z.string({ required_error: "patient_id is required." }).min(1, "patient_id is required."),
+  active: z.boolean().optional(),
+  gender: z.enum(FHIR_PATIENT_GENDER_CODES).optional(),
+  birth_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "birth_date must use YYYY-MM-DD format.")
+    .optional(),
+  name: updatePatientNameSchema.optional(),
+  telecom: z.array(updatePatientTelecomSchema).optional(),
+  address: z.array(updatePatientAddressSchema).optional(),
+});
 const getEncountersSchema = z.object({
   patient_id: z.string().min(1),
   limit: z.number().int().positive().max(200).optional(),
@@ -492,6 +611,24 @@ function createServer(): Server {
           const { patient_id } = getByIdSchema.parse(args);
           const resource = await fhir.read("Patient", patient_id);
           return { content: [{ type: "text", text: JSON.stringify(resource, null, 2) }] };
+        }
+        case "update_patient": {
+          const input = updatePatientSchema.parse(args);
+          const operations = buildUpdatePatientPatchOperations(input);
+          const updatedPatient = await fhir.patch<Patient>(
+            "Patient",
+            stripPatientReference(input.patient_id),
+            operations,
+            UPDATE_PATIENT_AUDIT_HEADERS,
+          );
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ patient: updatedPatient }, null, 2),
+              },
+            ],
+          };
         }
         case "get_encounters": {
           const { patient_id, limit } = getEncountersSchema.parse(args);
@@ -670,8 +807,80 @@ function createServer(): Server {
   return server;
 }
 
+type UpdatePatientInput = z.infer<typeof updatePatientSchema>;
 type CreateObservationInput = z.infer<typeof createObservationSchema>;
 type CreateEncounterInput = z.infer<typeof createEncounterSchema>;
+
+function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatchOperation[] {
+  const operations: JsonPatchOperation[] = [];
+
+  if (input.active !== undefined) {
+    operations.push({ op: "replace", path: "/active", value: input.active });
+  }
+
+  if (input.gender !== undefined) {
+    operations.push({ op: "replace", path: "/gender", value: input.gender });
+  }
+
+  if (input.birth_date !== undefined) {
+    operations.push({ op: "replace", path: "/birthDate", value: input.birth_date });
+  }
+
+  if (input.name !== undefined) {
+    operations.push({
+      op: "replace",
+      path: "/name",
+      value: [
+        {
+          use: input.name.use,
+          family: input.name.family,
+          given: input.name.given,
+          ...(input.name.prefix !== undefined ? { prefix: input.name.prefix } : {}),
+          ...(input.name.suffix !== undefined ? { suffix: input.name.suffix } : {}),
+        },
+      ],
+    });
+  }
+
+  if (input.telecom !== undefined) {
+    operations.push({
+      op: "replace",
+      path: "/telecom",
+      value: input.telecom.map((telecom) => ({
+        system: telecom.system,
+        value: telecom.value,
+        ...(telecom.use !== undefined ? { use: telecom.use } : {}),
+        ...(telecom.rank !== undefined ? { rank: telecom.rank } : {}),
+      })),
+    });
+  }
+
+  if (input.address !== undefined) {
+    operations.push({
+      op: "replace",
+      path: "/address",
+      value: input.address.map((address) => ({
+        ...(address.use !== undefined ? { use: address.use } : {}),
+        ...(address.type !== undefined ? { type: address.type } : {}),
+        ...(address.line !== undefined ? { line: address.line } : {}),
+        ...(address.city !== undefined ? { city: address.city } : {}),
+        ...(address.state !== undefined ? { state: address.state } : {}),
+        ...(address.postal_code !== undefined ? { postalCode: address.postal_code } : {}),
+        ...(address.country !== undefined ? { country: address.country } : {}),
+      })),
+    });
+  }
+
+  if (operations.length === 0) {
+    throw new Error("update_patient requires at least one field to update.");
+  }
+
+  return operations;
+}
+
+function stripPatientReference(patientId: string): string {
+  return patientId.startsWith("Patient/") ? patientId.slice("Patient/".length) : patientId;
+}
 
 function buildCreateEncounterResource(input: CreateEncounterInput) {
   const warnings: string[] = [];

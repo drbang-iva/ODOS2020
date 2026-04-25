@@ -6,6 +6,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
 
+export type JsonPatchOperation =
+  | { op: "add" | "replace" | "test"; path: string; value: unknown }
+  | { op: "remove"; path: string }
+  | { op: "move" | "copy"; from: string; path: string };
+
 interface MedplumClient {
   login(email: string, password: string): Promise<void>;
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
@@ -14,6 +19,12 @@ interface MedplumClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   create<T extends Resource>(r: T, extraHeaders?: Record<string, string>): Promise<T>;
+  patch<T extends Resource>(
+    rt: T["resourceType"],
+    id: string,
+    operations: JsonPatchOperation[],
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
 }
 
 export function createMedplumClient(opts: { baseUrl: string }): MedplumClient {
@@ -99,6 +110,25 @@ export function createMedplumClient(opts: { baseUrl: string }): MedplumClient {
         method: "POST",
         headers: { ...headers(), ...extraHeaders },
         body: JSON.stringify(r),
+      });
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as T;
+    },
+
+    async patch<T extends Resource>(
+      rt: T["resourceType"],
+      id: string,
+      operations: JsonPatchOperation[],
+      extraHeaders: Record<string, string> = {},
+    ): Promise<T> {
+      const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+        method: "PATCH",
+        headers: {
+          ...headers(),
+          "Content-Type": "application/json-patch+json",
+          ...extraHeaders,
+        },
+        body: JSON.stringify(operations),
       });
       if (!res.ok) throw await toError(res);
       return (await res.json()) as T;
