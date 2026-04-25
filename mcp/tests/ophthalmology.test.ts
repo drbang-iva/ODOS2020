@@ -97,7 +97,7 @@ test("visual acuity cannot be only free text when unparseable is not explicit", 
   );
 });
 
-test("IOP stores numeric valueQuantity, UCUM mmHg, laterality, and method", () => {
+test("IOP stores numeric valueQuantity, UCUM mm[Hg], laterality, and method", () => {
   const { resource } = buildIopObservation({
     ...common,
     value: 15,
@@ -105,7 +105,7 @@ test("IOP stores numeric valueQuantity, UCUM mmHg, laterality, and method", () =
   });
 
   assert.equal(resource.valueQuantity?.value, 15);
-  assert.equal(resource.valueQuantity?.unit, "mmHg");
+  assert.equal(resource.valueQuantity?.unit, "mm[Hg]");
   assert.equal(resource.valueQuantity?.system, "http://unitsofmeasure.org");
   assert.equal(resource.valueQuantity?.code, "mm[Hg]");
   assert.equal(resource.bodySite?.coding?.[0]?.code, "OD");

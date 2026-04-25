@@ -1,3 +1,4 @@
+// MIRROR of osod/mcp/src/fhir/ophthalmology/iop.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { CodeableConcept } from "@medplum/fhirtypes";
 import type { BuildResult, IopInput, IopMethod } from "./types.js";
 import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM, SNOMED_CT_CODE_SYSTEM } from "./codeBindings.js";

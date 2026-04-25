@@ -19,12 +19,19 @@ interface MedplumClient {
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
   create<T extends Resource>(r: T, extraHeaders?: Record<string, string>): Promise<T>;
+  update<T extends Resource>(
+    rt: T["resourceType"],
+    id: string,
+    r: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
   patch<T extends Resource>(
     rt: T["resourceType"],
     id: string,
     operations: JsonPatchOperation[],
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export function createMedplumClient(opts: { baseUrl: string; accessToken?: string }): MedplumClient {
@@ -45,7 +52,7 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
     let detail = body;
     try {
       const parsed = JSON.parse(body) as OperationOutcome;
-      detail = parsed.issue?.map((i) => i.diagnostics ?? i.code).join("; ") ?? body;
+      detail = formatOperationOutcome(parsed) ?? body;
     } catch {
       /* ignore */
     }
@@ -57,7 +64,7 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       const verifier = randomBytes(32).toString("base64url");
       const challenge = createHash("sha256").update(verifier).digest("base64url");
 
-      const loginRes = await fetch(`${base}/auth/login`, {
+      const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,7 +77,7 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       if (!loginRes.ok) throw await toError(loginRes);
       const { code } = (await loginRes.json()) as { login: string; code: string };
 
-      const tokenRes = await fetch(`${base}/oauth2/token`, {
+      const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -115,6 +122,21 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       return (await res.json()) as T;
     },
 
+    async update<T extends Resource>(
+      rt: T["resourceType"],
+      id: string,
+      r: T,
+      extraHeaders: Record<string, string> = {},
+    ): Promise<T> {
+      const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+        method: "PUT",
+        headers: { ...headers(), ...extraHeaders },
+        body: JSON.stringify(r),
+      });
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as T;
+    },
+
     async patch<T extends Resource>(
       rt: T["resourceType"],
       id: string,
@@ -133,5 +155,106 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       if (!res.ok) throw await toError(res);
       return (await res.json()) as T;
     },
+
+    async executeTransaction(
+      bundle: Bundle,
+      extraHeaders: Record<string, string> = {},
+    ): Promise<Bundle> {
+      const transactionBundle: Bundle = { ...bundle, type: "transaction" };
+      const res = await fetch(`${base}/fhir/R4`, {
+        method: "POST",
+        headers: { ...headers(), ...extraHeaders },
+        body: JSON.stringify(transactionBundle),
+      });
+      if (!res.ok) throw await toError(res);
+      const responseBundle = (await res.json()) as Bundle;
+      if (hasEntryFailure(responseBundle)) {
+        await rollbackCreatedEntries(base, headers(), responseBundle, extraHeaders);
+      }
+      return responseBundle;
+    },
   };
+}
+
+function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
+  return outcome.issue
+    ?.map((issue) => {
+      const expression = issue.expression?.length
+        ? ` [${issue.expression.join(", ")}]`
+        : "";
+      return `${issue.diagnostics ?? issue.details?.text ?? issue.code}${expression}`;
+    })
+    .join("; ");
+}
+
+function hasEntryFailure(bundle: Bundle): boolean {
+  return (bundle.entry ?? []).some((entry) => {
+    const status = entry.response?.status;
+    return !status || !/^2\d\d/.test(status);
+  });
+}
+
+async function rollbackCreatedEntries(
+  base: string,
+  authHeaders: Record<string, string>,
+  bundle: Bundle,
+  extraHeaders: Record<string, string>,
+): Promise<void> {
+  const createdLocations = (bundle.entry ?? [])
+    .flatMap((entry) => {
+      const status = entry.response?.status;
+      const location = entry.response?.location;
+      if (!status?.startsWith("201") || !location) {
+        return [];
+      }
+      const match = location.match(/^([A-Za-z]+\/[^/]+)/);
+      return match ? [match[1]] : [];
+    })
+    .reverse();
+
+  for (const location of createdLocations) {
+    await fetch(`${base}/fhir/R4/${location}`, {
+      method: "DELETE",
+      headers: { ...authHeaders, ...extraHeaders },
+    }).catch(() => undefined);
+  }
+}
+
+async function fetchWithThrottleRetry(
+  url: string,
+  init: RequestInit,
+  attempts = 2,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= attempts; attempt += 1) {
+    const res = await fetch(url, init);
+    if (res.status !== 429 || attempt === attempts) {
+      return res;
+    }
+
+    const body = await res.text();
+    await wait(throttleDelayMs(body));
+  }
+
+  throw new Error("unreachable throttle retry state");
+}
+
+function throttleDelayMs(body: string): number {
+  try {
+    const parsed = JSON.parse(body) as { issue?: Array<{ diagnostics?: string }> };
+    const diagnostics = parsed.issue?.find((issue) => issue.diagnostics)?.diagnostics;
+    if (diagnostics) {
+      const detail = JSON.parse(diagnostics) as { _msBeforeNext?: number };
+      if (typeof detail._msBeforeNext === "number" && detail._msBeforeNext > 0) {
+        return detail._msBeforeNext + 250;
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
+  return 5_000;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

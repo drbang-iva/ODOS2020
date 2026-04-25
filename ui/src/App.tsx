@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
+import { EncounterCharting } from "./scenes/EncounterCharting";
 import { PatientDirector } from "./scenes/PatientDirector";
+import { PatientPicker } from "./scenes/PatientPicker";
 import { fhir } from "./lib/fhir";
+import { useViewState, type ViewState } from "./lib/view-state";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
   const [authed, setAuthed] = useState(false);
-  const [patient, setPatient] = useState<Patient | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const view = useViewState((state) => state.view);
 
   useEffect(() => {
     async function boot() {
@@ -22,9 +25,6 @@ export function App() {
       try {
         await fhir.login(email, password);
         setAuthed(true);
-        const bundle = await fhir.search<Patient>("Patient", { _count: "1" });
-        const first = bundle.entry?.[0]?.resource;
-        if (first) setPatient(first);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -43,12 +43,87 @@ export function App() {
     );
   }
 
-  if (!authed || !patient) {
+  if (!authed) {
     return (
       <div className="h-screen grid place-items-center">
         <div className="text-white/60">Connecting to FHIR…</div>
       </div>
     );
+  }
+
+  return <ViewRouter view={view} />;
+}
+
+function ViewRouter({ view }: { view: ViewState }) {
+  switch (view.kind) {
+    case "picker":
+      return <PatientPicker />;
+    case "director":
+      return <PatientRoute patientId={view.patientId} mode="director" />;
+    case "encounter":
+      return (
+        <PatientRoute
+          patientId={view.patientId}
+          mode="encounter"
+          encounterId={view.encounterId}
+        />
+      );
+  }
+}
+
+function PatientRoute({
+  patientId,
+  mode,
+  encounterId,
+}: {
+  patientId: string;
+  mode: "director" | "encounter";
+  encounterId?: string;
+}) {
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPatient() {
+      setPatient(null);
+      setError(null);
+      try {
+        const loaded = await fhir.read<Patient>("Patient", patientId);
+        if (!cancelled) setPatient(loaded);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    void loadPatient();
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId]);
+
+  if (error) {
+    return (
+      <div className="h-screen grid place-items-center p-8">
+        <div className="bg-bg-panel border border-red-500/50 rounded-lg p-6 max-w-xl">
+          <h1 className="text-red-400 text-lg font-semibold mb-2">Unable to load patient</h1>
+          <pre className="text-sm text-red-200 whitespace-pre-wrap">{error}</pre>
+        </div>
+      </div>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <div className="h-screen grid place-items-center">
+        <div className="text-white/60">Loading patient…</div>
+      </div>
+    );
+  }
+
+  if (mode === "encounter") {
+    return <EncounterCharting patient={patient} encounterId={encounterId ?? ""} />;
   }
 
   return <PatientDirector patient={patient} />;

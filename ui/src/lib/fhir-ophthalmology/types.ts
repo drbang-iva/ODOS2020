@@ -1,3 +1,4 @@
+// MIRROR of osod/mcp/src/fhir/ophthalmology/types.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type {
   CodeableConcept,
   DiagnosticReport,

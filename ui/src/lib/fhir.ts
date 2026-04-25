@@ -10,6 +10,13 @@ const AUTH = "";
 
 let token: string | undefined;
 
+export type JsonPatchOperation =
+  | { op: "add" | "replace" | "test"; path: string; value: unknown }
+  | { op: "remove"; path: string }
+  | { op: "move" | "copy"; from: string; path: string };
+
+type TransactionResponse<T> = Bundle & { readonly __osodResponseType?: T };
+
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
   const verifierBytes = new Uint8Array(32);
   crypto.getRandomValues(verifierBytes);
@@ -26,7 +33,7 @@ async function toError(res: Response): Promise<Error> {
   let detail = body;
   try {
     const parsed = JSON.parse(body) as OperationOutcome;
-    detail = parsed.issue?.map((i) => i.diagnostics ?? i.code).join("; ") ?? body;
+    detail = formatOperationOutcome(parsed) ?? body;
   } catch {
     /* ignore */
   }
@@ -40,6 +47,13 @@ function headers(): HeadersInit {
   };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
+}
+
+function sourceHeaders(sourceTag: string): HeadersInit {
+  return {
+    ...headers(),
+    "X-OSOD-Source": `ui/${sourceTag}`,
+  };
 }
 
 export const fhir = {
@@ -92,4 +106,89 @@ export const fhir = {
     if (!res.ok) throw await toError(res);
     return (await res.json()) as T;
   },
+
+  async create<T extends Resource>(resource: T, sourceTag: string): Promise<T> {
+    const res = await fetch(`${BASE}/${resource.resourceType}`, {
+      method: "POST",
+      headers: sourceHeaders(sourceTag),
+      body: JSON.stringify(resource),
+    });
+    if (!res.ok) throw await toError(res);
+    return (await res.json()) as T;
+  },
+
+  async patch<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    ops: JsonPatchOperation[],
+    sourceTag: string,
+  ): Promise<T> {
+    const res = await fetch(`${BASE}/${resourceType}/${id}`, {
+      method: "PATCH",
+      headers: {
+        ...sourceHeaders(sourceTag),
+        "Content-Type": "application/json-patch+json",
+      },
+      body: JSON.stringify(ops),
+    });
+    if (!res.ok) throw await toError(res);
+    return (await res.json()) as T;
+  },
+
+  async executeTransaction<T = unknown>(
+    bundle: Bundle,
+    sourceTag: string,
+  ): Promise<TransactionResponse<T>> {
+    const transactionBundle: Bundle = { ...bundle, type: "transaction" };
+    const res = await fetch(BASE, {
+      method: "POST",
+      headers: sourceHeaders(sourceTag),
+      body: JSON.stringify(transactionBundle),
+    });
+    if (!res.ok) throw await toError(res);
+    const responseBundle = (await res.json()) as TransactionResponse<T>;
+    if (hasEntryFailure(responseBundle)) {
+      await rollbackCreatedEntries(responseBundle, sourceTag);
+    }
+    return responseBundle;
+  },
 };
+
+function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
+  return outcome.issue
+    ?.map((issue) => {
+      const expression = issue.expression?.length
+        ? ` [${issue.expression.join(", ")}]`
+        : "";
+      return `${issue.diagnostics ?? issue.details?.text ?? issue.code}${expression}`;
+    })
+    .join("; ");
+}
+
+function hasEntryFailure(bundle: Bundle): boolean {
+  return (bundle.entry ?? []).some((entry) => {
+    const status = entry.response?.status;
+    return !status || !/^2\d\d/.test(status);
+  });
+}
+
+async function rollbackCreatedEntries(bundle: Bundle, sourceTag: string): Promise<void> {
+  const createdLocations = (bundle.entry ?? [])
+    .flatMap((entry) => {
+      const status = entry.response?.status;
+      const location = entry.response?.location;
+      if (!status?.startsWith("201") || !location) {
+        return [];
+      }
+      const match = location.match(/^([A-Za-z]+\/[^/]+)/);
+      return match ? [match[1]] : [];
+    })
+    .reverse();
+
+  for (const location of createdLocations) {
+    await fetch(`${BASE}/${location}`, {
+      method: "DELETE",
+      headers: sourceHeaders(sourceTag),
+    }).catch(() => undefined);
+  }
+}
