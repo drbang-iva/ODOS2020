@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EncounterCharting } from "./scenes/EncounterCharting";
 import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientPicker } from "./scenes/PatientPicker";
 import { fhir } from "./lib/fhir";
@@ -122,20 +123,8 @@ function PatientRoute({
   }
 
   if (mode === "encounter") {
-    return (
-      <div className="h-screen grid place-items-center p-8">
-        <div className="rounded border border-white/10 bg-bg-panel p-6 text-sm text-white/60">
-          Encounter charting is loading for {patientName(patient)} · {encounterId}
-        </div>
-      </div>
-    );
+    return <EncounterCharting patient={patient} encounterId={encounterId ?? ""} />;
   }
 
   return <PatientDirector patient={patient} />;
-}
-
-function patientName(patient: Patient): string {
-  const name = patient.name?.[0];
-  if (!name) return "Unknown patient";
-  return `${name.given?.join(" ") ?? ""} ${name.family ?? ""}`.trim() || "Unknown patient";
 }
