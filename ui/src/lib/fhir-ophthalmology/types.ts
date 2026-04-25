@@ -54,7 +54,7 @@ export interface VisualAcuityInput extends Omit<CommonObservationInput, "method"
 
 export interface IopInput extends CommonObservationInput {
   value: number;
-  unit?: "mmHg";
+  unit?: "mm[Hg]";
 }
 
 export interface RefractionInput extends CommonObservationInput {

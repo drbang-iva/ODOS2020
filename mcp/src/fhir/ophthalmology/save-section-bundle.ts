@@ -190,7 +190,7 @@ function buildSectionObservation(input: {
       return buildIopObservation({
         ...common,
         value: entry.value,
-        unit: "mmHg",
+        unit: "mm[Hg]",
         method: osodConcept(method, method),
       }).resource;
     }

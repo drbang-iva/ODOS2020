@@ -1287,7 +1287,7 @@ function buildCreateObservationResource(input: CreateObservationInput) {
       return buildIopObservation({
         ...common,
         value: input.value,
-        unit: "mmHg",
+        unit: "mm[Hg]",
         method: osodConcept(normalizeIopMethod(input.method), normalizeIopMethod(input.method)),
       });
     }
