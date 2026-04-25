@@ -9,7 +9,7 @@
 
 ## Where we are
 
-**v0.2.x is closed out.** 27/27 integration tests green. Five MCP write + transport surfaces shipped. Director UI scaffold standing. Next milestone: **v0.3** — optometry-specific FHIR profiles + first real clinical encounter flow.
+**v0.2.6 HL7 Eye Care IG alignment shipped 2026-04-25.** 35/35 integration tests green. SNOMED CT dual-coding live for IOP / Refraction / Sphere / Cylinder / Axis. New `BodyStructure` resources for OD / OS / OU. New FHIR `VisionPrescription` emitter (unblocks optical lab and dispensary interop). `OPHTHALMOLOGY_CODE_BINDING_VERSION` 0.2.2 → 0.3.0. **Foundation is now IG-conformant.** All SNOMED codes triple-source verified per Mandate 14 (PHIN VADS + BioPortal + IG ValueSets). Next milestone: **v0.3** — first real clinical encounter UI on the IG-conformant data layer.
 
 ---
 
@@ -28,6 +28,7 @@
 | **v0.2.3 create_encounter** | [`d306589`](https://github.com/drbang-iva/osod/commit/d306589) | MCP write tool for FHIR Encounter (Patient + optional Practitioner refs, v3-ActEncounterCode class, type, status, period, reason). Per-tool `X-OSOD-Source: mcp/create_encounter`. Optional Provenance | 20/20 |
 | **v0.2.4 update_patient** | [`aae433f`](https://github.com/drbang-iva/osod/commit/aae433f) | MCP write tool with PATCH semantics via RFC 6902 JSON Patch. `fhir-client.patch()` added (`Content-Type: application/json-patch+json`). Field-level Zod validation. Per-tool `X-OSOD-Source: mcp/update_patient` | 26/26 |
 | **v0.2.5 audit-header consistency** | [`aa149f1`](https://github.com/drbang-iva/osod/commit/aa149f1) | Per-tool `X-OSOD-Source` constant on every write handler (no more shared header reuse). Empirical Medplum `AuditEvent` verification: **header is NOT surfaced in `5.1.8`** → Provenance is the durable per-resource attribution path | 27/27 + build-log |
+| **v0.2.6 HL7 Eye Care IG alignment** | [`285f063`](https://github.com/drbang-iva/osod/commit/285f063) | SNOMED CT dual-coding for IOP (`41633001`) / Refraction (`251794006`) / Sphere (`251795007`) / Cylinder (`251797004`) / Axis (`251799001`). NEW `bodyStructure.ts` emitting `BodyStructure` for OD (`18944008`) / OS (`8966001`) / OU (`81745001` + bilateral qualifier `51440002`). NEW `visionPrescription.ts` building FHIR `VisionPrescription` from FINAL_RX-tagged Refractions. Structured PRISM (`valueQuantity` + `valueCodeableConcept`). FHIR-standard Provenance codes. New `create_vision_prescription` MCP tool. Version bump 0.2.2 → 0.3.0. **All SNOMED codes triple-source verified per Mandate 14.** | 35/35 tests + tsc clean + stdio smoke |
 
 ---
 
@@ -35,13 +36,16 @@
 
 - `docker compose up -d` → Medplum + Postgres + Redis healthy in ~30s
 - Director UI at `localhost:5173`, plain FHIR REST against Medplum
-- **8 MCP tools live:** 6 read + 4 write (`create_observation`, `create_raw_asset_reference`, `create_encounter`, `update_patient`)
+- **9 MCP tools live:** 6 read + 5 write (`create_observation`, `create_raw_asset_reference`, `create_encounter`, `update_patient`, `create_vision_prescription`)
 - MCP addressable from any client: Claude Desktop, Claude Code, Iris OpenClaw, Codex, future osod-lens
 - Patient → Encounter → Observation → ChargeItem round-trip with billing scaffolding
+- **HL7 Eye Care IG-conformant ophthalmic Observations** with SNOMED CT dual-coding for IOP / Refraction / Sphere / Cylinder / Axis
+- **FHIR `BodyStructure` references** for OD / OS / OU laterality — IG-conformant + queryable from any FHIR client
+- **FHIR `VisionPrescription` emitter** for FINAL_RX dispensary handoff to optical labs (Essilor, VSP, etc.)
 - Optional FHIR `Provenance` creation alongside Observations and Encounters (Mandate 7a)
 - DocumentReference-based raw asset preservation: SHA-1 (FHIR-native) + SHA-256 (OSOD extension `source-sha256`)
 - HTTP+SSE remote transport with fail-closed TLS gate (Tailnet-bound by default)
-- 27 integration tests against the live docker-compose stack
+- 35 integration tests against the live docker-compose stack
 
 ---
 
