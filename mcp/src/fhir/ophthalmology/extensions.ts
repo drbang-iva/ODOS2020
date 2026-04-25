@@ -7,9 +7,8 @@ import type {
   Resource,
 } from "./types.js";
 import type { CommonObservationInput, EyeLaterality } from "./types.js";
-
-export const OSOD_OPHTHALMOLOGY_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/ophthalmology";
+import { dualCoding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "./codeBindings.js";
+import { attachBodyStructureToObservation, buildEyeBodyStructure } from "./bodyStructure.js";
 
 export const OSOD_EXTENSION_URLS = {
   qualityScore: "https://osod.dev/fhir/StructureDefinition/quality-score",
@@ -26,16 +25,12 @@ const LATERALITY_DISPLAY: Record<EyeLaterality, string> = {
 };
 
 export function osodCoding(code: string, display?: string) {
-  return {
-    system: OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
-    code,
-    display: display ?? code,
-  };
+  return dualCoding(code, display)[0];
 }
 
 export function osodConcept(code: string, display?: string): CodeableConcept {
   return {
-    coding: [osodCoding(code, display)],
+    coding: dualCoding(code, display),
     text: display ?? code,
   };
 }
@@ -128,10 +123,22 @@ export function applyCommonObservationFields(
     .filter(Boolean)
     .join("; ");
 
-  return {
+  const observationWithCommonFields: Observation = {
     ...observation,
     subject: reference(input.patientReference),
     encounter: reference(input.encounterReference),
+    category: [
+      ...(observation.category ?? []),
+      {
+        coding: [
+          {
+            system: "http://terminology.hl7.org/CodeSystem/observation-category",
+            code: "exam",
+            display: "Exam",
+          },
+        ],
+      },
+    ],
     effectiveDateTime: input.measuredAt,
     bodySite: lateralityConcept(input.eye),
     extension: [...(observation.extension ?? []), ...extensions],
@@ -147,4 +154,13 @@ export function applyCommonObservationFields(
     ...(input.referenceRange ? { referenceRange: input.referenceRange } : {}),
     ...(noteText ? { note: [{ text: noteText }] } : {}),
   };
+
+  if (input.eye === "UNKNOWN") {
+    return observationWithCommonFields;
+  }
+
+  return attachBodyStructureToObservation(
+    observationWithCommonFields,
+    buildEyeBodyStructure(input.eye, input.patientReference),
+  );
 }

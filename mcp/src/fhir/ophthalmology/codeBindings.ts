@@ -1,6 +1,9 @@
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "./extensions.js";
+import type { Coding } from "@medplum/fhirtypes";
 
-export const OPHTHALMOLOGY_CODE_BINDING_VERSION = "0.2.2";
+export const OPHTHALMOLOGY_CODE_BINDING_VERSION = "0.3.0";
+export const OSOD_OPHTHALMOLOGY_CODE_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/ophthalmology";
+export const SNOMED_CT_CODE_SYSTEM = "http://snomed.info/sct";
 
 export const OPHTHALMOLOGY_CONCEPT_IDS = [
   "VISUAL_ACUITY",
@@ -25,10 +28,60 @@ export const OPHTHALMOLOGY_CONCEPT_IDS = [
   "OPHTHALMIC_DATA_CAPTURE",
 ] as const;
 
+export type OphthalmologyConceptId = (typeof OPHTHALMOLOGY_CONCEPT_IDS)[number];
+
+export const OSOD_TO_SNOMED: Partial<
+  Record<OphthalmologyConceptId, { code: string; display: string }>
+> = {
+  INTRAOCULAR_PRESSURE: {
+    code: "41633001",
+    display: "Intraocular pressure",
+  },
+  REFRACTION: {
+    code: "251794006",
+    display: "Refraction",
+  },
+  SPHERE: {
+    code: "251795007",
+    display: "Sphere",
+  },
+  CYLINDER: {
+    code: "251797004",
+    display: "Cylinder",
+  },
+  AXIS: {
+    code: "251799001",
+    display: "Axis",
+  },
+};
+
 export function isOphthalmologyConceptId(value: string): boolean {
   return OPHTHALMOLOGY_CONCEPT_IDS.includes(
     value as (typeof OPHTHALMOLOGY_CONCEPT_IDS)[number],
   );
 }
 
-export { OSOD_OPHTHALMOLOGY_CODE_SYSTEM };
+export function dualCoding(
+  osodCode: string,
+  display?: string,
+  snomedOverride?: { code: string; display: string },
+): Coding[] {
+  const coding: Coding[] = [
+    {
+      system: OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
+      code: osodCode,
+      display: display ?? osodCode,
+    },
+  ];
+  const snomed = snomedOverride ?? OSOD_TO_SNOMED[osodCode as OphthalmologyConceptId];
+
+  if (snomed) {
+    coding.push({
+      system: SNOMED_CT_CODE_SYSTEM,
+      code: snomed.code,
+      display: snomed.display,
+    });
+  }
+
+  return coding;
+}

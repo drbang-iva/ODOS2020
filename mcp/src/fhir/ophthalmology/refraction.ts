@@ -63,9 +63,13 @@ export function buildRefractionObservation(
     if (input.prism.amount !== undefined) {
       validateOptionalNumber("prism.amount", input.prism.amount);
     }
+    if (input.prism.amount === undefined) {
+      throw new Error("Refraction prism requires amount when prism is supplied.");
+    }
     components.push(
       component("PRISM", "Prism", {
-        valueString: JSON.stringify(input.prism),
+        valueQuantity: quantity(input.prism.amount, "PD", "http://unitsofmeasure.org", "[diop]"),
+        valueCodeableConcept: prismBaseConcept(input.prism.base),
       }),
     );
   }
@@ -97,4 +101,32 @@ function validateOptionalNumber(name: string, value: number | undefined): void {
   if (value !== undefined && !Number.isFinite(value)) {
     throw new Error(`Refraction ${name} must be numeric.`);
   }
+}
+
+function prismBaseConcept(value: string | undefined) {
+  const normalized = normalizePrismBase(value);
+
+  return {
+    coding: [
+      {
+        system: "http://hl7.org/fhir/vision-base-codes",
+        code: normalized,
+        display: normalized,
+      },
+    ],
+    text: normalized,
+  };
+}
+
+function normalizePrismBase(value: string | undefined): "up" | "down" | "in" | "out" {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (
+    normalized === "up" ||
+    normalized === "down" ||
+    normalized === "in" ||
+    normalized === "out"
+  ) {
+    return normalized;
+  }
+  throw new Error("Refraction prism base must be one of up, down, in, or out.");
 }

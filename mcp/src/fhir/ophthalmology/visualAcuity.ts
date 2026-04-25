@@ -1,4 +1,11 @@
-import type { BuildResult, VisualAcuityInput } from "./types.js";
+import type {
+  BuildResult,
+  EyeLaterality,
+  VisualAcuityChartType,
+  VisualAcuityCorrection,
+  VisualAcuityInput,
+} from "./types.js";
+import { dualCoding } from "./codeBindings.js";
 import {
   applyCommonObservationFields,
   component,
@@ -102,7 +109,14 @@ export function buildVisualAcuityObservation(
     {
       resourceType: "Observation",
       status: "final",
-      code: osodConcept("VISUAL_ACUITY", "Visual acuity"),
+      code: {
+        coding: dualCoding(
+          "VISUAL_ACUITY",
+          "Visual acuity",
+          osodVAtoSnomed(visualAcuityDistanceKind(input), input.correction, input.chartType, input.eye),
+        ),
+        text: "Visual acuity",
+      },
       method: input.method ? osodConcept(input.method, input.method) : undefined,
       component: components,
     },
@@ -124,4 +138,56 @@ export function buildVisualAcuityObservation(
 
 function roundLogmar(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+export function osodVAtoSnomed(
+  distance: "distance" | "near",
+  correction: VisualAcuityCorrection,
+  chartType: VisualAcuityChartType = "UNKNOWN",
+  eye: EyeLaterality = "UNKNOWN",
+): { code: string; display: string } {
+  if (chartType === "LOGMAR" && eye === "OD") {
+    return { code: "413078003", display: "LogMAR visual acuity right eye (observable entity)" };
+  }
+  if (chartType === "LOGMAR" && eye === "OS") {
+    return { code: "413077008", display: "LogMAR visual acuity left eye (observable entity)" };
+  }
+
+  if (distance === "near") {
+    if (chartType === "JAEGER") {
+      return { code: "251747003", display: "Near visual acuity - Jaeger's types" };
+    }
+    return { code: "251743004", display: "Near visual acuity" };
+  }
+
+  if (correction === "SC") {
+    return { code: "420050001", display: "Uncorrected visual acuity (observable entity)" };
+  }
+  if (correction === "CC") {
+    return { code: "397536007", display: "Corrected visual acuity (observable entity)" };
+  }
+  if (correction === "BCVA") {
+    return { code: "419775003", display: "Best corrected visual acuity (observable entity)" };
+  }
+  if (correction === "PH") {
+    return { code: "419475002", display: "Pinhole visual acuity (observable entity)" };
+  }
+
+  if (chartType === "SNELLEN") {
+    return { code: "422673001", display: "Snellen visual acuity (observable entity)" };
+  }
+
+  return { code: "251739003", display: "Distance visual acuity" };
+}
+
+function visualAcuityDistanceKind(input: VisualAcuityInput): "distance" | "near" {
+  if (input.distance === undefined) {
+    return "distance";
+  }
+
+  if (input.distanceUnit === "m") {
+    return input.distance <= 1 ? "near" : "distance";
+  }
+
+  return input.distance <= 3 ? "near" : "distance";
 }

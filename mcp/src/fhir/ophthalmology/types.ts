@@ -11,8 +11,8 @@ import type {
 } from "@medplum/fhirtypes";
 
 export type EyeLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
-export type VisualAcuityChartType = "SNELLEN" | "ETDRS" | "LOGMAR" | "OTHER" | "UNKNOWN";
-export type VisualAcuityCorrection = "SC" | "CC" | "PH" | "NI" | "OTHER" | "UNKNOWN";
+export type VisualAcuityChartType = "SNELLEN" | "ETDRS" | "LOGMAR" | "JAEGER" | "OTHER" | "UNKNOWN";
+export type VisualAcuityCorrection = "SC" | "CC" | "BCVA" | "PH" | "NI" | "OTHER" | "UNKNOWN";
 export type IopMethod = "GAT" | "ICARE" | "TONOPEN" | "NCT" | "PERKINS" | "OTHER" | "UNKNOWN";
 export type RefractionType = "AUTOREFRACTION" | "MANIFEST" | "CYCLOPLEGIC" | "FINAL_RX" | "OTHER";
 export type SourceType = "manual" | "parser" | "device" | "vendor-export" | "unknown";

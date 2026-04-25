@@ -5,6 +5,12 @@ import { test } from "node:test";
 import type { Observation, ObservationComponent } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
 import {
+  OPHTHALMOLOGY_CODE_BINDING_VERSION,
+  OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
+  SNOMED_CT_CODE_SYSTEM,
+} from "../src/fhir/ophthalmology/codeBindings.js";
+import { BODY_SITE_REFERENCE_EXTENSION_URL } from "../src/fhir/ophthalmology/bodyStructure.js";
+import {
   OSOD_EXTENSION_URLS,
   encounterReference,
   normalizeLaterality,
@@ -37,6 +43,9 @@ test("visual acuity 20/20 creates structured logMAR 0", () => {
 
   assert.equal(component(resource, "VA_SNELLEN_RAW").valueString, "20/20");
   assert.equal(component(resource, "VA_LOGMAR").valueQuantity?.value, 0);
+  assertCoding(resource.code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "VISUAL_ACUITY");
+  assertCoding(resource.code.coding, SNOMED_CT_CODE_SYSTEM, "397536007");
+  assertExamCategory(resource);
   assert.equal(resource.valueString, undefined);
 });
 
@@ -101,6 +110,11 @@ test("IOP stores numeric valueQuantity, UCUM mmHg, laterality, and method", () =
   assert.equal(resource.valueQuantity?.code, "mm[Hg]");
   assert.equal(resource.bodySite?.coding?.[0]?.code, "OD");
   assert.equal(resource.method?.coding?.[0]?.code, "GAT");
+  assertCoding(resource.code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "INTRAOCULAR_PRESSURE");
+  assertCoding(resource.code.coding, SNOMED_CT_CODE_SYSTEM, "41633001");
+  assertCoding(resource.method?.coding, SNOMED_CT_CODE_SYSTEM, "389152008");
+  assertExamCategory(resource);
+  assertBodyStructureReference(resource, "#osod-eye-od");
   assert.equal(resource.valueString, undefined);
 });
 
@@ -134,11 +148,47 @@ test("refraction stores signed numeric components and validates axis", () => {
   assert.equal(component(resource, "CYLINDER").valueQuantity?.value, -0.75);
   assert.equal(component(resource, "AXIS").valueQuantity?.value, 180);
   assert.equal(component(resource, "ADD").valueQuantity?.value, 2);
+  assertCoding(resource.code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "REFRACTION");
+  assertCoding(resource.code.coding, SNOMED_CT_CODE_SYSTEM, "251794006");
+  assertCoding(component(resource, "SPHERE").code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "SPHERE");
+  assertCoding(component(resource, "SPHERE").code.coding, SNOMED_CT_CODE_SYSTEM, "251795007");
+  assertCoding(component(resource, "CYLINDER").code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "CYLINDER");
+  assertCoding(component(resource, "CYLINDER").code.coding, SNOMED_CT_CODE_SYSTEM, "251797004");
+  assertCoding(component(resource, "AXIS").code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "AXIS");
+  assertCoding(component(resource, "AXIS").code.coding, SNOMED_CT_CODE_SYSTEM, "251799001");
+  assertExamCategory(resource);
   assert.equal(resource.valueString, undefined);
   assert.throws(
     () => buildRefractionObservation({ ...common, refractionType: "MANIFEST", axis: 181 }),
     /axis must be between 0 and 180/,
   );
+});
+
+test("refraction stores prism as structured quantity and base concept", () => {
+  const { resource } = buildRefractionObservation({
+    ...common,
+    refractionType: "MANIFEST",
+    sphere: -1,
+    prism: { amount: 2, base: "up" },
+  });
+  const prism = component(resource, "PRISM");
+
+  assert.equal(prism.valueString, undefined);
+  assert.equal(prism.valueQuantity?.value, 2);
+  assert.equal(prism.valueQuantity?.code, "[diop]");
+  assert.equal(prism.valueCodeableConcept?.coding?.[0]?.code, "up");
+});
+
+test("Observation bodySite extension references contained BodyStructure", () => {
+  const { resource } = buildIopObservation({
+    ...common,
+    value: 15,
+    method: osodConcept("GAT", "GAT"),
+  });
+
+  assert.equal(resource.contained?.[0]?.resourceType, "BodyStructure");
+  assert.equal(resource.contained?.[0]?.id, "osod-eye-od");
+  assertBodyStructureReference(resource, "#osod-eye-od");
 });
 
 test("Observation.derivedFrom is created when sourceReference exists", () => {
@@ -194,7 +244,13 @@ test("Provenance supports parser/manual attribution and source entity linkage", 
 
   assert.equal(provenance.target[0].reference, "Observation/o1");
   assert.equal(provenance.agent[0].who.display, "OSOD MCP create_observation");
+  assert.equal(provenance.agent[0].type?.coding?.[0]?.system, "http://terminology.hl7.org/CodeSystem/provenance-participant-type");
+  assert.equal(provenance.agent[0].type?.coding?.[0]?.code, "author");
   assert.equal(provenance.entity?.[0]?.what.reference, "DocumentReference/doc1");
+});
+
+test("ophthalmology code binding version is 0.3.0", () => {
+  assert.equal(OPHTHALMOLOGY_CODE_BINDING_VERSION, "0.3.0");
 });
 
 test("code-binding YAML has local concepts and no finalized unverified external codes", () => {
@@ -251,4 +307,37 @@ function component(observation: Observation, code: string): ObservationComponent
   const found = observation.component?.find((c) => c.code.coding?.some((coding) => coding.code === code));
   assert.ok(found, `Expected component ${code}`);
   return found;
+}
+
+function assertCoding(
+  codings: Observation["code"]["coding"],
+  system: string,
+  code: string,
+): void {
+  assert.ok(
+    codings?.some((coding) => coding.system === system && coding.code === code),
+    `Expected coding ${system}|${code}`,
+  );
+}
+
+function assertExamCategory(observation: Observation): void {
+  assert.ok(
+    observation.category?.some((category) =>
+      category.coding?.some(
+        (coding) =>
+          coding.system === "http://terminology.hl7.org/CodeSystem/observation-category" &&
+          coding.code === "exam",
+      ),
+    ),
+    "Expected Observation.category=exam",
+  );
+}
+
+function assertBodyStructureReference(observation: Observation, expectedReference: string): void {
+  assert.equal(
+    observation.bodySite?.extension?.find(
+      (extension) => extension.url === BODY_SITE_REFERENCE_EXTENSION_URL,
+    )?.valueReference?.reference,
+    expectedReference,
+  );
 }

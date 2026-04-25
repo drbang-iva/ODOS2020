@@ -32,7 +32,9 @@ import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.
 import { buildRefractionObservation } from "./fhir/ophthalmology/refraction.js";
 import { buildDocumentReference } from "./fhir/ophthalmology/rawAssets.js";
 import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
-import type { Encounter, Patient } from "@medplum/fhirtypes";
+import { buildVisionPrescription } from "./fhir/ophthalmology/visionPrescription.js";
+import { rewriteObservationBodyStructureReference } from "./fhir/ophthalmology/bodyStructure.js";
+import type { BodyStructure, Encounter, Observation, Patient, Resource, VisionPrescription } from "@medplum/fhirtypes";
 import type {
   IopMethod,
   RefractionType,
@@ -53,6 +55,9 @@ const CREATE_ENCOUNTER_AUDIT_HEADERS = {
 } as const;
 const CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_raw_asset_reference",
+} as const;
+const CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/create_vision_prescription",
 } as const;
 const UPDATE_PATIENT_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/update_patient",
@@ -362,8 +367,8 @@ const tools = [
         snellen: { type: "string", description: "Raw Snellen acuity such as 20/40." },
         logmar: { type: "number" },
         letter_score: { type: "number" },
-        chart_type: { type: "string", enum: ["SNELLEN", "ETDRS", "LOGMAR", "OTHER", "UNKNOWN"] },
-        correction: { type: "string", enum: ["SC", "CC", "PH", "NI", "OTHER", "UNKNOWN"] },
+        chart_type: { type: "string", enum: ["SNELLEN", "ETDRS", "LOGMAR", "JAEGER", "OTHER", "UNKNOWN"] },
+        correction: { type: "string", enum: ["SC", "CC", "BCVA", "PH", "NI", "OTHER", "UNKNOWN"] },
         distance: { type: "number" },
         distance_unit: { type: "string", enum: ["ft", "m"] },
         refraction_type: {
@@ -406,6 +411,28 @@ const tools = [
         description: { type: "string" },
         author_reference: { type: "string" },
         custodian_reference: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_vision_prescription",
+    description:
+      "Create a FHIR VisionPrescription from a FINAL_RX Refraction Observation. Writes use X-OSOD-Source=mcp/create_vision_prescription.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "refraction_observation_id", "prescriber_reference"],
+      properties: {
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        refraction_observation_id: {
+          type: "string",
+          description: "FHIR Observation ID or Observation/<id> for the FINAL_RX refraction.",
+        },
+        prescriber_reference: {
+          type: "string",
+          description: "Practitioner/<id> or PractitionerRole/<id> authorizing the prescription.",
+        },
+        date_written: { type: "string", description: "ISO timestamp. Defaults to now." },
+        lens_type: { type: "string", description: "Lens product text. Defaults to eyeglasses." },
       },
     },
   },
@@ -563,6 +590,8 @@ const createObservationSchema = z.object({
   cylinder: z.number().optional(),
   axis: z.number().optional(),
   add: z.number().optional(),
+  prism_amount: z.number().optional(),
+  prism_base: z.enum(["up", "down", "in", "out"]).optional(),
   create_provenance: z.boolean().optional(),
   createProvenance: z.boolean().optional(),
   provenance_agent_reference: z.string().optional(),
@@ -585,6 +614,13 @@ const createRawAssetReferenceSchema = z.object({
   description: z.string().optional(),
   author_reference: maybeStringArraySchema,
   custodian_reference: z.string().optional(),
+});
+const createVisionPrescriptionSchema = z.object({
+  patient_id: z.string().min(1),
+  refraction_observation_id: z.string().min(1),
+  prescriber_reference: z.string().min(1),
+  date_written: isoTimestampSchema.optional(),
+  lens_type: z.string().optional(),
 });
 
 /* --------------------------------------------------------------------------
@@ -683,12 +719,12 @@ function createServer(): Server {
               buildProvenance({
                 targetReferences: [encounterReference],
                 occurredDateTime: encounterResult.resource.period?.start,
-                activityCode: "ENCOUNTER_CREATE",
-                activityDisplay: "Encounter create",
+                activityCode: "CREATE",
+                activityDisplay: "Create",
                 agents: [
                   {
-                    typeCode: "manual",
-                    typeDisplay: "Manual entry",
+                    typeCode: "author",
+                    typeDisplay: "Author",
                     whoReference: input.provenance_agent_reference,
                     whoDisplay:
                       input.provenance_agent_display ?? "OSOD MCP create_encounter",
@@ -721,8 +757,11 @@ function createServer(): Server {
         case "create_observation": {
           const input = createObservationSchema.parse(args);
           const observationResult = buildCreateObservationResource(input);
-          const createdObservation = await fhir.create(
+          const observationBodySiteResult = await persistObservationBodyStructures(
             observationResult.resource,
+          );
+          const createdObservation = await fhir.create(
+            observationBodySiteResult.observation,
             CREATE_OBSERVATION_AUDIT_HEADERS,
           );
 
@@ -732,14 +771,14 @@ function createServer(): Server {
             createdProvenance = await fhir.create(
               buildProvenance({
                 targetReferences: [observationReference],
-                occurredDateTime: observationResult.resource.effectiveDateTime,
-                activityCode: "OPHTHALMIC_DATA_CAPTURE",
-                activityDisplay: "Ophthalmic data capture",
+                occurredDateTime: observationBodySiteResult.observation.effectiveDateTime,
+                activityCode: "CREATE",
+                activityDisplay: "Create",
                 entityReferences: getStringArray(input.source_reference ?? input.sourceReference),
                 agents: [
                   {
-                    typeCode: normalizeSourceType(input.source_type) === "parser" ? "parser" : "manual",
-                    typeDisplay: normalizeSourceType(input.source_type) === "parser" ? "Parser" : "Manual entry",
+                    typeCode: normalizeSourceType(input.source_type) === "parser" ? "performer" : "author",
+                    typeDisplay: normalizeSourceType(input.source_type) === "parser" ? "Performer" : "Author",
                     whoReference:
                       input.provenance_agent_reference ?? input.provenanceAgentReference,
                     whoDisplay:
@@ -760,6 +799,7 @@ function createServer(): Server {
                 text: JSON.stringify(
                   {
                     observation: createdObservation,
+                    bodyStructures: observationBodySiteResult.bodyStructures,
                     provenance: createdProvenance,
                     warnings: observationResult.warnings,
                   },
@@ -795,6 +835,33 @@ function createServer(): Server {
             CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS,
           );
           return { content: [{ type: "text", text: JSON.stringify(created, null, 2) }] };
+        }
+        case "create_vision_prescription": {
+          const input = createVisionPrescriptionSchema.parse(args);
+          const refractionObservation = await fhir.read<Observation>(
+            "Observation",
+            stripObservationReference(input.refraction_observation_id),
+          );
+          const visionPrescription = buildVisionPrescription({
+            refractionObservation,
+            patientReference: patientReference(input.patient_id),
+            prescriberReference: input.prescriber_reference,
+            dateWritten: input.date_written,
+            lensType: input.lens_type,
+          });
+          const created = await fhir.create<VisionPrescription>(
+            visionPrescription,
+            CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS,
+          );
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ visionPrescription: created }, null, 2),
+              },
+            ],
+          };
         }
         default:
           return {
@@ -887,6 +954,57 @@ function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatch
 
 function stripPatientReference(patientId: string): string {
   return patientId.startsWith("Patient/") ? patientId.slice("Patient/".length) : patientId;
+}
+
+function stripObservationReference(observationId: string): string {
+  return observationId.startsWith("Observation/")
+    ? observationId.slice("Observation/".length)
+    : observationId;
+}
+
+async function persistObservationBodyStructures(
+  observation: Observation,
+): Promise<{ observation: Observation; bodyStructures: BodyStructure[] | undefined }> {
+  const containedBodyStructures = (observation.contained ?? []).filter(isBodyStructure);
+  if (containedBodyStructures.length === 0) {
+    return { observation, bodyStructures: undefined };
+  }
+
+  let rewrittenObservation: Observation = {
+    ...observation,
+    contained: observation.contained?.filter((resource) => !isBodyStructure(resource)),
+  };
+  if (rewrittenObservation.contained?.length === 0) {
+    delete rewrittenObservation.contained;
+  }
+
+  const createdBodyStructures: BodyStructure[] = [];
+  for (const bodyStructure of containedBodyStructures) {
+    const originalReference = bodyStructure.id ? `#${bodyStructure.id}` : undefined;
+    const { id: _containedId, ...bodyStructureToCreate } = bodyStructure;
+    const createdBodyStructure = await fhir.create<BodyStructure>(
+      bodyStructureToCreate,
+      CREATE_OBSERVATION_AUDIT_HEADERS,
+    );
+    createdBodyStructures.push(createdBodyStructure);
+
+    if (originalReference) {
+      rewrittenObservation = rewriteObservationBodyStructureReference(
+        rewrittenObservation,
+        originalReference,
+        `${createdBodyStructure.resourceType}/${createdBodyStructure.id}`,
+      );
+    }
+  }
+
+  return {
+    observation: rewrittenObservation,
+    bodyStructures: createdBodyStructures,
+  };
+}
+
+function isBodyStructure(resource: Resource): resource is BodyStructure {
+  return resource.resourceType === "BodyStructure";
 }
 
 function buildCreateEncounterResource(input: CreateEncounterInput) {
@@ -1024,6 +1142,10 @@ function buildCreateObservationResource(input: CreateObservationInput) {
         cylinder: input.cylinder,
         axis: input.axis,
         add: input.add,
+        prism:
+          input.prism_amount !== undefined
+            ? { amount: input.prism_amount, base: input.prism_base }
+            : undefined,
       });
     }
   }
@@ -1049,7 +1171,7 @@ function normalizeIopMethod(value: string | undefined): IopMethod {
 
 function normalizeChartType(value: string | undefined): VisualAcuityChartType {
   const normalized = (value ?? "UNKNOWN").trim().toUpperCase();
-  if (normalized === "SNELLEN" || normalized === "ETDRS" || normalized === "LOGMAR") {
+  if (normalized === "SNELLEN" || normalized === "ETDRS" || normalized === "LOGMAR" || normalized === "JAEGER") {
     return normalized;
   }
   if (normalized === "OTHER") return "OTHER";
@@ -1058,7 +1180,7 @@ function normalizeChartType(value: string | undefined): VisualAcuityChartType {
 
 function normalizeCorrection(value: string | undefined): VisualAcuityCorrection {
   const normalized = (value ?? "UNKNOWN").trim().toUpperCase();
-  if (normalized === "SC" || normalized === "CC" || normalized === "PH" || normalized === "NI") {
+  if (normalized === "SC" || normalized === "CC" || normalized === "BCVA" || normalized === "PH" || normalized === "NI") {
     return normalized;
   }
   if (normalized === "OTHER") return "OTHER";
