@@ -25,6 +25,7 @@ interface MedplumClient {
     operations: JsonPatchOperation[],
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export function createMedplumClient(opts: { baseUrl: string; accessToken?: string }): MedplumClient {
@@ -45,7 +46,7 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
     let detail = body;
     try {
       const parsed = JSON.parse(body) as OperationOutcome;
-      detail = parsed.issue?.map((i) => i.diagnostics ?? i.code).join("; ") ?? body;
+      detail = formatOperationOutcome(parsed) ?? body;
     } catch {
       /* ignore */
     }
@@ -133,5 +134,30 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       if (!res.ok) throw await toError(res);
       return (await res.json()) as T;
     },
+
+    async executeTransaction(
+      bundle: Bundle,
+      extraHeaders: Record<string, string> = {},
+    ): Promise<Bundle> {
+      const transactionBundle: Bundle = { ...bundle, type: "transaction" };
+      const res = await fetch(`${base}/fhir/R4`, {
+        method: "POST",
+        headers: { ...headers(), ...extraHeaders },
+        body: JSON.stringify(transactionBundle),
+      });
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as Bundle;
+    },
   };
+}
+
+function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
+  return outcome.issue
+    ?.map((issue) => {
+      const expression = issue.expression?.length
+        ? ` [${issue.expression.join(", ")}]`
+        : "";
+      return `${issue.diagnostics ?? issue.details?.text ?? issue.code}${expression}`;
+    })
+    .join("; ");
 }
