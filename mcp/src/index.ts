@@ -32,6 +32,7 @@ import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.
 import { buildRefractionObservation } from "./fhir/ophthalmology/refraction.js";
 import { buildDocumentReference } from "./fhir/ophthalmology/rawAssets.js";
 import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
+import type { Encounter } from "@medplum/fhirtypes";
 import type {
   IopMethod,
   RefractionType,
@@ -46,6 +47,34 @@ const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_observation",
 } as const;
+const CREATE_ENCOUNTER_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/create_encounter",
+} as const;
+const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
+  "http://terminology.hl7.org/CodeSystem/v3-ActCode";
+const AMA_CPT_CODE_SYSTEM = "http://www.ama-assn.org/go/cpt";
+// Verified against http://terminology.hl7.org/CodeSystem/v3-ActCode.
+const HL7_V3_ACT_ENCOUNTER_CLASS_CODES = [
+  "AMB",
+  "EMER",
+  "IMP",
+  "HH",
+  "SS",
+  "VR",
+  "OBSENC",
+  "PRENC",
+] as const;
+const FHIR_ENCOUNTER_STATUS_CODES = [
+  "planned",
+  "arrived",
+  "triaged",
+  "in-progress",
+  "onleave",
+  "finished",
+  "cancelled",
+  "entered-in-error",
+  "unknown",
+] as const;
 
 const fhir = createMedplumClient({ baseUrl: BASE_URL });
 let authPromise: Promise<void> | undefined;
@@ -148,6 +177,59 @@ const tools = [
           type: "object",
           description: "FHIR search parameters as key-value pairs.",
         },
+      },
+    },
+  },
+  {
+    name: "create_encounter",
+    description:
+      "Create a FHIR Encounter for a Patient. Writes use X-OSOD-Source=mcp/create_encounter.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "class_code", "status"],
+      properties: {
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        class_code: {
+          type: "string",
+          enum: HL7_V3_ACT_ENCOUNTER_CLASS_CODES,
+          description:
+            "FHIR Encounter.class code from http://terminology.hl7.org/CodeSystem/v3-ActCode.",
+        },
+        status: {
+          type: "string",
+          enum: FHIR_ENCOUNTER_STATUS_CODES,
+          description: "Native FHIR Encounter.status enum.",
+        },
+        practitioner_reference: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+          description: "Practitioner/<id> reference(s) for Encounter.participant.individual.",
+        },
+        type_system: {
+          type: "string",
+          description:
+            "Code system for Encounter.type visit type. CPT billing codes belong in ChargeItem, not Encounter.type.",
+        },
+        type_code: { type: "string" },
+        type_display: { type: "string" },
+        period_start: { type: "string", description: "ISO timestamp for Encounter.period.start." },
+        period_end: { type: "string", description: "ISO timestamp for Encounter.period.end." },
+        reason_code: {
+          type: "string",
+          description: "Reason code for Encounter.reasonCode.coding.",
+        },
+        reason_system: {
+          type: "string",
+          description:
+            "Reason code system. Defaults to http://snomed.info/sct when reason_code is supplied.",
+        },
+        reason_display: { type: "string" },
+        create_provenance: {
+          type: "boolean",
+          description:
+            "When true, also creates Provenance for the generated Encounter using the supplied agent metadata.",
+        },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
       },
     },
   },
@@ -265,6 +347,59 @@ const fhirSearchSchema = z.object({
   params: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 const maybeStringArraySchema = z.union([z.string(), z.array(z.string())]).optional();
+const encounterClassCodeSchema = z.enum(HL7_V3_ACT_ENCOUNTER_CLASS_CODES, {
+  errorMap: (issue, ctx) => {
+    if (issue.code === z.ZodIssueCode.invalid_enum_value) {
+      return {
+        message: `class_code must be one of: ${HL7_V3_ACT_ENCOUNTER_CLASS_CODES.join(", ")}.`,
+      };
+    }
+    if (issue.code === z.ZodIssueCode.invalid_type) {
+      return {
+        message: `class_code is required and must be one of: ${HL7_V3_ACT_ENCOUNTER_CLASS_CODES.join(", ")}.`,
+      };
+    }
+    return { message: ctx.defaultError };
+  },
+});
+const encounterStatusSchema = z.enum(FHIR_ENCOUNTER_STATUS_CODES, {
+  errorMap: (issue, ctx) => {
+    if (issue.code === z.ZodIssueCode.invalid_enum_value) {
+      return {
+        message: `status must be one of: ${FHIR_ENCOUNTER_STATUS_CODES.join(", ")}.`,
+      };
+    }
+    if (issue.code === z.ZodIssueCode.invalid_type) {
+      return {
+        message: `status is required and must be one of: ${FHIR_ENCOUNTER_STATUS_CODES.join(", ")}.`,
+      };
+    }
+    return { message: ctx.defaultError };
+  },
+});
+const isoTimestampSchema = z.string().datetime({ message: "Expected an ISO timestamp." });
+const createEncounterSchema = z.object({
+  patient_id: z.string({ required_error: "patient_id is required." }).min(1, "patient_id is required."),
+  class_code: encounterClassCodeSchema,
+  status: encounterStatusSchema,
+  practitioner_reference: maybeStringArraySchema,
+  type_system: z
+    .string()
+    .refine((system) => system.trim() !== AMA_CPT_CODE_SYSTEM, {
+      message: "Encounter.type must describe visit type; CPT billing codes belong in ChargeItem.",
+    })
+    .optional(),
+  type_code: z.string().optional(),
+  type_display: z.string().optional(),
+  period_start: isoTimestampSchema.optional(),
+  period_end: isoTimestampSchema.optional(),
+  reason_code: z.string().optional(),
+  reason_system: z.string().optional(),
+  reason_display: z.string().optional(),
+  create_provenance: z.boolean().optional(),
+  provenance_agent_reference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
+});
 const createObservationSchema = z.object({
   type: z.enum(["iop", "va", "refraction"]),
   patient_id: z.string().min(1),
@@ -392,6 +527,56 @@ function createServer(): Server {
           const bundle = await fhir.search(resource_type as never, p);
           return { content: [{ type: "text", text: JSON.stringify(bundle, null, 2) }] };
         }
+        case "create_encounter": {
+          const input = createEncounterSchema.parse(args);
+          const encounterResult = buildCreateEncounterResource(input);
+          const createdEncounter = await fhir.create(
+            encounterResult.resource,
+            CREATE_ENCOUNTER_AUDIT_HEADERS,
+          );
+
+          let createdProvenance: unknown;
+          if (input.create_provenance) {
+            const encounterReference = `${createdEncounter.resourceType}/${createdEncounter.id}`;
+            createdProvenance = await fhir.create(
+              buildProvenance({
+                targetReferences: [encounterReference],
+                occurredDateTime: encounterResult.resource.period?.start,
+                activityCode: "ENCOUNTER_CREATE",
+                activityDisplay: "Encounter create",
+                agents: [
+                  {
+                    typeCode: "manual",
+                    typeDisplay: "Manual entry",
+                    whoReference: input.provenance_agent_reference,
+                    whoDisplay:
+                      input.provenance_agent_display ?? "OSOD MCP create_encounter",
+                  },
+                ],
+              }),
+              CREATE_ENCOUNTER_AUDIT_HEADERS,
+            );
+          }
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    encounter: createdEncounter,
+                    provenance: createdProvenance,
+                    warnings: encounterResult.warnings.length
+                      ? encounterResult.warnings
+                      : undefined,
+                  },
+                  null,
+                  2,
+                ),
+              },
+            ],
+          };
+        }
         case "create_observation": {
           const input = createObservationSchema.parse(args);
           const observationResult = buildCreateObservationResource(input);
@@ -486,6 +671,86 @@ function createServer(): Server {
 }
 
 type CreateObservationInput = z.infer<typeof createObservationSchema>;
+type CreateEncounterInput = z.infer<typeof createEncounterSchema>;
+
+function buildCreateEncounterResource(input: CreateEncounterInput) {
+  const warnings: string[] = [];
+  const practitionerReferences = getStringArray(input.practitioner_reference);
+  const hasType = Boolean(input.type_system || input.type_code || input.type_display);
+  const hasPeriod = Boolean(input.period_start || input.period_end);
+  const hasReason = Boolean(input.reason_code || input.reason_display);
+
+  if (input.type_system && !input.type_code) {
+    warnings.push("type_system was supplied without type_code; Encounter.type coding has no code.");
+  }
+
+  const encounter: Encounter = {
+    resourceType: "Encounter",
+    status: input.status,
+    class: {
+      system: HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM,
+      code: input.class_code,
+    },
+    subject: { reference: patientReference(input.patient_id) },
+    ...(practitionerReferences?.length
+      ? {
+          participant: practitionerReferences.map((practitionerReference) => ({
+            individual: { reference: practitionerReference },
+          })),
+        }
+      : {}),
+    ...(hasType
+      ? {
+          type: [
+            {
+              ...(input.type_system || input.type_code || input.type_display
+                ? {
+                    coding: [
+                      {
+                        ...(input.type_system ? { system: input.type_system } : {}),
+                        ...(input.type_code ? { code: input.type_code } : {}),
+                        ...(input.type_display ? { display: input.type_display } : {}),
+                      },
+                    ],
+                  }
+                : {}),
+              ...(input.type_display ? { text: input.type_display } : {}),
+            },
+          ],
+        }
+      : {}),
+    ...(hasPeriod
+      ? {
+          period: {
+            ...(input.period_start ? { start: input.period_start } : {}),
+            ...(input.period_end ? { end: input.period_end } : {}),
+          },
+        }
+      : {}),
+    ...(hasReason
+      ? {
+          reasonCode: [
+            {
+              ...(input.reason_code
+                ? {
+                    coding: [
+                      {
+                        system: input.reason_system ?? "http://snomed.info/sct",
+                        code: input.reason_code,
+                        ...(input.reason_display ? { display: input.reason_display } : {}),
+                      },
+                    ],
+                  }
+                : {}),
+              ...(input.reason_display ? { text: input.reason_display } : {}),
+            },
+          ],
+        }
+      : {}),
+  };
+
+  return { resource: encounter, warnings };
+}
 
 function buildCreateObservationResource(input: CreateObservationInput) {
   const eye = normalizeLaterality(input.laterality ?? input.eye ?? "");
