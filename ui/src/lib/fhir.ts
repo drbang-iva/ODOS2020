@@ -146,7 +146,11 @@ export const fhir = {
       body: JSON.stringify(transactionBundle),
     });
     if (!res.ok) throw await toError(res);
-    return (await res.json()) as TransactionResponse<T>;
+    const responseBundle = (await res.json()) as TransactionResponse<T>;
+    if (hasEntryFailure(responseBundle)) {
+      await rollbackCreatedEntries(responseBundle, sourceTag);
+    }
+    return responseBundle;
   },
 };
 
@@ -159,4 +163,32 @@ function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
       return `${issue.diagnostics ?? issue.details?.text ?? issue.code}${expression}`;
     })
     .join("; ");
+}
+
+function hasEntryFailure(bundle: Bundle): boolean {
+  return (bundle.entry ?? []).some((entry) => {
+    const status = entry.response?.status;
+    return !status || !/^2\d\d/.test(status);
+  });
+}
+
+async function rollbackCreatedEntries(bundle: Bundle, sourceTag: string): Promise<void> {
+  const createdLocations = (bundle.entry ?? [])
+    .flatMap((entry) => {
+      const status = entry.response?.status;
+      const location = entry.response?.location;
+      if (!status?.startsWith("201") || !location) {
+        return [];
+      }
+      const match = location.match(/^([A-Za-z]+\/[^/]+)/);
+      return match ? [match[1]] : [];
+    })
+    .reverse();
+
+  for (const location of createdLocations) {
+    await fetch(`${BASE}/${location}`, {
+      method: "DELETE",
+      headers: sourceHeaders(sourceTag),
+    }).catch(() => undefined);
+  }
 }

@@ -10,7 +10,8 @@
     "down": "docker-compose down",
     "reset": "docker-compose down -v",
     "logs": "docker-compose logs -f medplum-server",
-    "poc": "tsx src/index.ts"
+    "poc": "tsx src/index.ts",
+    "install-profiles": "tsx scripts/install-profiles.ts"
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0"
