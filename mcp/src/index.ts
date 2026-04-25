@@ -44,11 +44,15 @@ import type {
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
+const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_observation",
 } as const;
 const CREATE_ENCOUNTER_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/create_encounter",
+} as const;
+const CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/create_raw_asset_reference",
 } as const;
 const UPDATE_PATIENT_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/update_patient",
@@ -101,7 +105,7 @@ const FHIR_CONTACT_POINT_USE_CODES = ["home", "work", "temp", "old", "mobile"] a
 const FHIR_ADDRESS_USE_CODES = ["home", "work", "temp", "old", "billing"] as const;
 const FHIR_ADDRESS_TYPE_CODES = ["postal", "physical", "both"] as const;
 
-const fhir = createMedplumClient({ baseUrl: BASE_URL });
+const fhir = createMedplumClient({ baseUrl: BASE_URL, accessToken: ACCESS_TOKEN });
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
@@ -786,7 +790,10 @@ function createServer(): Server {
             authorReferences: getStringArray(input.author_reference),
             custodianReference: input.custodian_reference,
           });
-          const created = await fhir.create(documentReference, CREATE_OBSERVATION_AUDIT_HEADERS);
+          const created = await fhir.create(
+            documentReference,
+            CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS,
+          );
           return { content: [{ type: "text", text: JSON.stringify(created, null, 2) }] };
         }
         default:
@@ -1133,6 +1140,10 @@ function enforceSseTlsGate(host: string): void {
 }
 
 async function authenticateWithMedplum(): Promise<void> {
+  if (ACCESS_TOKEN) {
+    return;
+  }
+
   if (!EMAIL || !PASSWORD) {
     throw new Error(
       "osod-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",

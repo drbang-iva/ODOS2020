@@ -27,9 +27,9 @@ interface MedplumClient {
   ): Promise<T>;
 }
 
-export function createMedplumClient(opts: { baseUrl: string }): MedplumClient {
+export function createMedplumClient(opts: { baseUrl: string; accessToken?: string }): MedplumClient {
   const base = opts.baseUrl.replace(/\/$/, "");
-  let token: string | undefined;
+  let token: string | undefined = opts.accessToken;
 
   function headers(): Record<string, string> {
     const h: Record<string, string> = {
