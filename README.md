@@ -2,7 +2,7 @@
 
 Practitioner-owned open-source EHR/PM for independent optometry practices. Self-hosted on practice hardware. Built on the Medplum FHIR foundation.
 
-**Status:** v0.0.1 — Medplum foundation + first Patient → Encounter → ChargeItem flow.
+**Status:** v0.2.x closed out (2026-04-25). 8 MCP tools live (6 read + 4 write), dual-transport, 27/27 integration tests green. Full stage-by-stage build dashboard: [`STATUS.md`](STATUS.md).
 
 ## Architecture
 
