@@ -3,6 +3,7 @@ import { EncounterCharting } from "./scenes/EncounterCharting";
 import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientPicker } from "./scenes/PatientPicker";
 import { fhir } from "./lib/fhir";
+import { RoleProvider } from "./lib/role-context";
 import { useViewState, type ViewState } from "./lib/view-state";
 import type { Patient } from "@medplum/fhirtypes";
 
@@ -51,7 +52,11 @@ export function App() {
     );
   }
 
-  return <ViewRouter view={view} />;
+  return (
+    <RoleProvider>
+      <ViewRouter view={view} />
+    </RoleProvider>
+  );
 }
 
 function ViewRouter({ view }: { view: ViewState }) {

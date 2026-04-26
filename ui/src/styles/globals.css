@@ -19,3 +19,13 @@ body {
 .orbital-pulse {
   animation: orbital-pulse 2s ease-in-out infinite;
 }
+
+@layer components {
+  .sidebar-input {
+    @apply h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-brand;
+  }
+
+  .sidebar-button {
+    @apply rounded border border-brand/60 bg-brand/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}

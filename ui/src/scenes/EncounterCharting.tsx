@@ -1,10 +1,12 @@
 import { useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
+import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
 import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
+import { useRole } from "../lib/role-context";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
 interface Props {
@@ -16,9 +18,11 @@ const EMPTY_STATUSES: SectionStatusMap = {
   va: { completed: false },
   iop: { completed: false },
   refraction: { completed: false },
+  assessment: { completed: false },
 };
 
 export function EncounterCharting({ patient, encounterId }: Props) {
+  const { config } = useRole();
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>(EMPTY_STATUSES);
 
@@ -33,9 +37,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const encounterReference = `Encounter/${encounterId}`;
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-bg-deep text-white">
+    <div className={["flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader patient={patient} encounterId={encounterId} />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <SpineNav active={activeSection} statuses={statuses} onSelect={setActiveSection} />
         <main className="min-w-0 flex-1 bg-bg-deep">
           {activeSection === "va" && (
@@ -57,6 +61,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("refraction", status)}
+            />
+          )}
+          {activeSection === "assessment" && (
+            <AssessmentSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("assessment", status)}
             />
           )}
         </main>

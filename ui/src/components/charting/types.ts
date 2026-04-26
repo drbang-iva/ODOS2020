@@ -1,4 +1,4 @@
-export type ChartSectionId = "va" | "iop" | "refraction";
+export type ChartSectionId = "va" | "iop" | "refraction" | "assessment";
 
 export interface SectionSaveStatus {
   completed: boolean;

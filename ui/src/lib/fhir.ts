@@ -122,12 +122,14 @@ export const fhir = {
     id: string,
     ops: JsonPatchOperation[],
     sourceTag: string,
+    ifMatchVersionId?: string,
   ): Promise<T> {
     const res = await fetch(`${BASE}/${resourceType}/${id}`, {
       method: "PATCH",
       headers: {
         ...sourceHeaders(sourceTag),
         "Content-Type": "application/json-patch+json",
+        ...(ifMatchVersionId ? { "If-Match": `W/"${ifMatchVersionId}"` } : {}),
       },
       body: JSON.stringify(ops),
     });

@@ -14,6 +14,7 @@ export function buildStartEncounterCreateBundle(input: {
   patientId: string;
   now: string;
   practitionerReference?: string;
+  episodeReference?: string;
 }): Bundle {
   const encounterFullUrl = `urn:uuid:encounter-${crypto.randomUUID()}`;
   const patientReference = input.patientId.startsWith("Patient/")
@@ -28,6 +29,7 @@ export function buildStartEncounterCreateBundle(input: {
       code: "AMB",
     },
     subject: { reference: patientReference },
+    ...(input.episodeReference ? { episodeOfCare: [{ reference: input.episodeReference }] } : {}),
     period: { start: input.now },
     meta: { profile: [ENCOUNTER_COMPREHENSIVE_EXAM_PROFILE] },
   };

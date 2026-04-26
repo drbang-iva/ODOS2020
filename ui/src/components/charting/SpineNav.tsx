@@ -4,6 +4,7 @@ const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
   { id: "va", label: "Visual Acuity" },
   { id: "iop", label: "IOP" },
   { id: "refraction", label: "Refraction" },
+  { id: "assessment", label: "Assessment" },
 ];
 
 interface Props {
@@ -14,9 +15,9 @@ interface Props {
 
 export function SpineNav({ active, statuses, onSelect }: Props) {
   return (
-    <nav className="w-60 shrink-0 border-r border-white/10 bg-bg-panel/70 p-4">
+    <nav className="shrink-0 border-b border-white/10 bg-bg-panel/70 p-3 md:w-60 md:border-b-0 md:border-r md:p-4">
       <div className="text-xs uppercase tracking-widest text-white/35">Spine</div>
-      <div className="mt-4 space-y-2">
+      <div className="mt-3 flex gap-2 overflow-x-auto md:mt-4 md:block md:space-y-2 md:overflow-visible">
         {SECTIONS.map((section) => {
           const completed = statuses[section.id].completed;
           const focused = active === section.id;
@@ -25,7 +26,7 @@ export function SpineNav({ active, statuses, onSelect }: Props) {
               key={section.id}
               onClick={() => onSelect(section.id)}
               className={[
-                "grid min-h-20 w-full grid-cols-[10px_1fr] gap-3 rounded border p-3 text-left transition",
+                "grid min-h-20 w-44 shrink-0 grid-cols-[10px_1fr] gap-3 rounded border p-3 text-left transition md:w-full",
                 focused ? "border-brand/70 bg-brand/15" : "border-white/10 bg-bg-mid/70 hover:border-white/25",
               ].join(" ")}
             >
