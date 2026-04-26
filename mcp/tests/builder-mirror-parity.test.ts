@@ -12,6 +12,26 @@ import { buildSectionSaveBundle as buildUiSectionSaveBundle } from "../../ui/src
 import { buildVisualAcuityObservation as buildUiVisualAcuityObservation } from "../../ui/src/lib/fhir-ophthalmology/visualAcuity.js";
 import { osodConcept as mcpOsodConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { osodConcept as uiOsodConcept } from "../../ui/src/lib/fhir-ophthalmology/extensions.js";
+import { buildEpisodeOfCare as buildMcpEpisodeOfCare } from "../src/fhir/episodeOfCare.js";
+import { buildEpisodeOfCare as buildUiEpisodeOfCare } from "../../ui/src/lib/fhir-clinical/episodeOfCare.js";
+import {
+  buildEncounterDiagnosisComponent as buildMcpEncounterDiagnosisComponent,
+  buildEncounterDiagnosisCondition as buildMcpEncounterDiagnosisCondition,
+  buildProblemListCondition as buildMcpProblemListCondition,
+} from "../src/fhir/condition.js";
+import {
+  buildEncounterDiagnosisComponent as buildUiEncounterDiagnosisComponent,
+  buildEncounterDiagnosisCondition as buildUiEncounterDiagnosisCondition,
+  buildProblemListCondition as buildUiProblemListCondition,
+} from "../../ui/src/lib/fhir-clinical/condition.js";
+import { buildAllergyIntolerance as buildMcpAllergyIntolerance } from "../src/fhir/allergyIntolerance.js";
+import { buildAllergyIntolerance as buildUiAllergyIntolerance } from "../../ui/src/lib/fhir-clinical/allergyIntolerance.js";
+import { buildSmokingStatusObservation as buildMcpSmokingStatusObservation } from "../src/fhir/smokingStatus.js";
+import { buildSmokingStatusObservation as buildUiSmokingStatusObservation } from "../../ui/src/lib/fhir-clinical/smokingStatus.js";
+import { buildCareTeam as buildMcpCareTeam } from "../src/fhir/careTeam.js";
+import { buildCareTeam as buildUiCareTeam } from "../../ui/src/lib/fhir-clinical/careTeam.js";
+import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
+import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinical/procedure.js";
 
 const common = {
   patientReference: "Patient/p1",
@@ -98,6 +118,98 @@ test("UI ophthalmology mirror matches MCP section-save composer output", () => {
     buildMcpSectionSaveBundle(input),
     buildUiSectionSaveBundle(input),
   );
+});
+
+test("UI clinical mirror matches MCP EpisodeOfCare builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    typeCode: "dry-eye" as const,
+    status: "active" as const,
+    managingOrganizationReference: "Organization/o1",
+    periodStart: "2026-04-25T12:00:00.000Z",
+    conditionReferences: ["Condition/c1"],
+  };
+
+  assertJsonEqual(buildMcpEpisodeOfCare(input), buildUiEpisodeOfCare(input));
+});
+
+test("UI clinical mirror matches MCP encounter-diagnosis Condition builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    code: { system: "http://hl7.org/fhir/sid/icd-10-cm", code: "H52.13" },
+    bodyStructureReference: "BodyStructure/b1",
+  };
+
+  assertJsonEqual(
+    buildMcpEncounterDiagnosisCondition(input),
+    buildUiEncounterDiagnosisCondition(input),
+  );
+});
+
+test("UI clinical mirror matches MCP problem-list Condition builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    code: { system: "http://snomed.info/sct", code: "73211009" },
+    clinicalStatus: "active" as const,
+  };
+
+  assertJsonEqual(buildMcpProblemListCondition(input), buildUiProblemListCondition(input));
+});
+
+test("UI clinical mirror matches MCP Encounter.diagnosis component output", () => {
+  assertJsonEqual(
+    buildMcpEncounterDiagnosisComponent("Condition/c1", 1),
+    buildUiEncounterDiagnosisComponent("Condition/c1", 1),
+  );
+});
+
+test("UI clinical mirror matches MCP AllergyIntolerance builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    noKnownAllergy: true,
+  };
+
+  assertJsonEqual(buildMcpAllergyIntolerance(input), buildUiAllergyIntolerance(input));
+});
+
+test("UI clinical mirror matches MCP Smoking Status builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    statusCode: "266919005" as const,
+    effectiveDateTime: "2026-04-25T12:00:00.000Z",
+  };
+
+  assertJsonEqual(
+    buildMcpSmokingStatusObservation(input),
+    buildUiSmokingStatusObservation(input),
+  );
+});
+
+test("UI clinical mirror matches MCP CareTeam builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    participant: [
+      {
+        role: { text: "Primary optometrist" },
+        practitionerRoleReference: "PractitionerRole/pr1",
+        practitionerReference: "Practitioner/pra1",
+      },
+    ],
+  };
+
+  assertJsonEqual(buildMcpCareTeam(input), buildUiCareTeam(input));
+});
+
+test("UI clinical mirror matches MCP Procedure builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    status: "completed" as const,
+    code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" },
+    bodyStructureReference: "BodyStructure/b1",
+  };
+
+  assertJsonEqual(buildMcpProcedure(input), buildUiProcedure(input));
 });
 
 function assertJsonEqual(left: unknown, right: unknown): void {

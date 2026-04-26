@@ -1,0 +1,36 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "https://osod.dev/fhir/CodeSystem/episode-of-care-type",
+  "version": "0.35.0",
+  "name": "OSODEpisodeOfCareType",
+  "title": "OSOD Episode of Care Type",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-04-25",
+  "publisher": "OSOD",
+  "description": "OSOD local episode-of-care type codes for optometry longitudinal care programs.",
+  "caseSensitive": true,
+  "content": "complete",
+  "concept": [
+    {
+      "code": "myopia-management",
+      "display": "Myopia management",
+      "definition": "Longitudinal optometric program for monitoring and treating progressive myopia."
+    },
+    {
+      "code": "glaucoma",
+      "display": "Glaucoma",
+      "definition": "Longitudinal optometric program for glaucoma suspicion, diagnosis, monitoring, or treatment coordination."
+    },
+    {
+      "code": "dry-eye",
+      "display": "Dry eye",
+      "definition": "Longitudinal optometric program for ocular surface disease and dry eye evaluation, treatment, and follow-up."
+    },
+    {
+      "code": "diabetic-eye-care",
+      "display": "Diabetic eye care",
+      "definition": "Longitudinal optometric program for diabetic retinal evaluation, monitoring, and care coordination."
+    }
+  ]
+}

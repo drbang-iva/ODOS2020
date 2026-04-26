@@ -1,0 +1,19 @@
+{
+  "resourceType": "ValueSet",
+  "url": "https://osod.dev/fhir/ValueSet/episode-of-care-type",
+  "version": "0.35.0",
+  "name": "OSODEpisodeOfCareTypeValueSet",
+  "title": "OSOD Episode of Care Type ValueSet",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-04-25",
+  "publisher": "OSOD",
+  "description": "OSOD local episode-of-care type value set for optometry longitudinal care programs.",
+  "compose": {
+    "include": [
+      {
+        "system": "https://osod.dev/fhir/CodeSystem/episode-of-care-type"
+      }
+    ]
+  }
+}

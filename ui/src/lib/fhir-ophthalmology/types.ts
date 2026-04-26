@@ -113,6 +113,7 @@ export interface ProvenanceInput {
   activityDisplay?: string;
   agents: ProvenanceAgentInput[];
   entityReferences?: string[];
+  entityValues?: ProvenanceEntityValueInput[];
 }
 
 export interface ProvenanceAgentInput {
@@ -122,6 +123,11 @@ export interface ProvenanceAgentInput {
   roleDisplay?: string;
   whoReference?: string;
   whoDisplay?: string;
+}
+
+export interface ProvenanceEntityValueInput {
+  role?: "source" | "revision" | "quotation" | "removal";
+  display: string;
 }
 
 export type {

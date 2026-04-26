@@ -35,6 +35,56 @@ import { buildProvenance } from "./fhir/ophthalmology/provenance.js";
 import { buildVisionPrescription } from "./fhir/ophthalmology/visionPrescription.js";
 import { rewriteObservationBodyStructureReference } from "./fhir/ophthalmology/bodyStructure.js";
 import {
+  EPISODE_OF_CARE_STATUS_CODES,
+  EPISODE_OF_CARE_TYPE_CODES,
+  buildEpisodeOfCare,
+  episodeOfCareTypeConcept,
+  type EpisodeOfCareStatusCode,
+  type EpisodeOfCareTypeCode,
+} from "./fhir/episodeOfCare.js";
+import {
+  CONDITION_CLINICAL_STATUS_CODES,
+  CONDITION_VERIFICATION_STATUS_CODES,
+  buildEncounterDiagnosisComponent,
+  buildEncounterDiagnosisCondition,
+  buildProblemListCondition,
+  clinicalStatusConcept,
+  conditionBodySite,
+  conditionCategoryConcept,
+  conditionCodeConcept,
+  hasConditionCategory,
+  verificationStatusConcept,
+  type ConditionClinicalStatusCode,
+  type ConditionVerificationStatusCode,
+} from "./fhir/condition.js";
+import {
+  ALLERGY_CLINICAL_STATUS_CODES,
+  ALLERGY_VERIFICATION_STATUS_CODES,
+  RXNORM_CODE_SYSTEM,
+  SNOMED_CT_CODE_SYSTEM,
+  buildAllergyIntolerance,
+  type AllergyClinicalStatusCode,
+  type AllergyVerificationStatusCode,
+} from "./fhir/allergyIntolerance.js";
+import {
+  SMOKING_STATUS_CODES,
+  buildSmokingStatusObservation,
+  type SmokingStatusCode,
+} from "./fhir/smokingStatus.js";
+import {
+  CARE_TEAM_STATUS_CODES,
+  buildCareTeam,
+  type CareTeamStatusCode,
+} from "./fhir/careTeam.js";
+import {
+  PROCEDURE_STATUS_CODES,
+  PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL,
+  buildProcedure,
+  procedureTargetBodyStructureExtension,
+  type ProcedureStatusCode,
+} from "./fhir/procedure.js";
+import { auditHeaders, type V035WriteToolName } from "./tools/audit.js";
+import {
   buildSectionSaveBundle,
   type IopSectionSaveEntry,
   type RefractionSectionSaveEntry,
@@ -42,7 +92,21 @@ import {
   type SectionSaveLaterality,
   type VisualAcuitySectionSaveEntry,
 } from "./fhir/ophthalmology/save-section-bundle.js";
-import type { BodyStructure, Encounter, Observation, Patient, Resource, VisionPrescription } from "@medplum/fhirtypes";
+import type {
+  AllergyIntolerance,
+  BodyStructure,
+  CareTeam,
+  CodeableConcept,
+  Condition,
+  Encounter,
+  EpisodeOfCare,
+  Observation,
+  Patient,
+  Procedure,
+  Provenance,
+  Resource,
+  VisionPrescription,
+} from "@medplum/fhirtypes";
 import type {
   IopMethod,
   RefractionType,
@@ -500,6 +564,276 @@ const tools = [
       },
     },
   },
+  {
+    name: "create_episode_of_care",
+    description:
+      "Create a FHIR EpisodeOfCare using the OSOD EpisodeOfCare.type ValueSet. Writes use X-OSOD-Source=mcp/create_episode_of_care.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "type_code", "status"],
+      properties: {
+        patient_id: { type: "string" },
+        type_code: { type: "string", enum: EPISODE_OF_CARE_TYPE_CODES },
+        status: { type: "string", enum: EPISODE_OF_CARE_STATUS_CODES },
+        managing_organization_reference: { type: "string" },
+        period_start: { type: "string" },
+        period_end: { type: "string" },
+        condition_references: { type: "array", items: { type: "string" } },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_episode_of_care",
+    description:
+      "Version-aware PATCH for FHIR EpisodeOfCare. Writes use X-OSOD-Source=mcp/update_episode_of_care.",
+    inputSchema: {
+      type: "object",
+      required: ["episode_of_care_id"],
+      properties: {
+        episode_of_care_id: { type: "string" },
+        type_code: { type: "string", enum: EPISODE_OF_CARE_TYPE_CODES },
+        status: { type: "string", enum: EPISODE_OF_CARE_STATUS_CODES },
+        managing_organization_reference: { type: "string" },
+        period_start: { type: "string" },
+        period_end: { type: "string" },
+        condition_references: { type: "array", items: { type: "string" } },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_condition_with_tier",
+    description:
+      "Create an encounter-diagnosis Condition and set Encounter.diagnosis.rank. Writes use X-OSOD-Source=mcp/create_condition_with_tier.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "encounter_id", "code_system", "code", "tier"],
+      properties: conditionToolInputProperties({ includeEncounter: true, includeTier: true }),
+    },
+  },
+  {
+    name: "create_problem_list_condition",
+    description:
+      "Create a longitudinal problem-list-item Condition. Writes use X-OSOD-Source=mcp/create_problem_list_condition.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "code_system", "code"],
+      properties: conditionToolInputProperties({ includeEncounter: false, includeTier: false }),
+    },
+  },
+  {
+    name: "update_condition_status",
+    description:
+      "Version-aware PATCH of Condition.clinicalStatus. Writes use X-OSOD-Source=mcp/update_condition_status.",
+    inputSchema: {
+      type: "object",
+      required: ["condition_id", "clinical_status"],
+      properties: {
+        condition_id: { type: "string" },
+        clinical_status: { type: "string", enum: CONDITION_CLINICAL_STATUS_CODES },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_condition_tier",
+    description:
+      "Version-aware PATCH of Encounter.diagnosis.rank for an encounter-diagnosis Condition. Rejects category flips.",
+    inputSchema: {
+      type: "object",
+      required: ["condition_id", "encounter_id", "tier"],
+      properties: {
+        condition_id: { type: "string" },
+        encounter_id: { type: "string" },
+        tier: { type: "number" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_condition_body_site",
+    description:
+      "Version-aware PATCH of Condition bodySite BodyStructure reference extension. Writes use X-OSOD-Source=mcp/update_condition_body_site.",
+    inputSchema: {
+      type: "object",
+      required: ["condition_id", "body_structure_reference"],
+      properties: {
+        condition_id: { type: "string" },
+        body_structure_reference: { type: "string" },
+        body_site_text: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_condition_code",
+    description:
+      "Version-aware PATCH of Condition.code for ICD specificity correction. Provenance captures the prior code value.",
+    inputSchema: {
+      type: "object",
+      required: ["condition_id", "code_system", "code"],
+      properties: {
+        condition_id: { type: "string" },
+        code_system: { type: "string" },
+        code: { type: "string" },
+        code_display: { type: "string" },
+        code_text: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "mark_condition_entered_in_error",
+    description:
+      "Version-aware PATCH of Condition.verificationStatus to entered-in-error. Does not delete the Condition.",
+    inputSchema: {
+      type: "object",
+      required: ["condition_id"],
+      properties: {
+        condition_id: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_allergy_intolerance",
+    description:
+      "Create a US Core AllergyIntolerance using the .code-first pattern. Writes use X-OSOD-Source=mcp/create_allergy_intolerance.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id"],
+      properties: {
+        patient_id: { type: "string" },
+        no_known_allergy: { type: "boolean" },
+        code_system: { type: "string" },
+        code: { type: "string" },
+        code_display: { type: "string" },
+        code_text: { type: "string" },
+        clinical_status: { type: "string", enum: ALLERGY_CLINICAL_STATUS_CODES },
+        verification_status: { type: "string", enum: ALLERGY_VERIFICATION_STATUS_CODES },
+        reaction_manifestation_system: { type: "string" },
+        reaction_manifestation_code: { type: "string" },
+        reaction_manifestation_display: { type: "string" },
+        reaction_substance_system: { type: "string" },
+        reaction_substance_code: { type: "string" },
+        reaction_substance_display: { type: "string" },
+        reaction_severity: { type: "string", enum: ["mild", "moderate", "severe"] },
+        reaction_description: { type: "string" },
+        recorded_date: { type: "string" },
+        recorder_reference: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_smoking_status_observation",
+    description:
+      "Create a US Core Smoking Status Observation with LOINC 72166-2 and a coded answer.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "status_code"],
+      properties: {
+        patient_id: { type: "string" },
+        status_code: { type: "string", enum: SMOKING_STATUS_CODES },
+        effective_date_time: { type: "string" },
+        performer_reference: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+        },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_care_team",
+    description:
+      "Create a US Core CareTeam using PractitionerRole participant references when available.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "participants"],
+      properties: {
+        patient_id: { type: "string" },
+        status: { type: "string", enum: CARE_TEAM_STATUS_CODES },
+        name: { type: "string" },
+        participants: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["role_text"],
+            properties: {
+              role_system: { type: "string" },
+              role_code: { type: "string" },
+              role_display: { type: "string" },
+              role_text: { type: "string" },
+              practitioner_role_reference: { type: "string" },
+              practitioner_reference: { type: "string" },
+              related_person_reference: { type: "string" },
+            },
+          },
+        },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_procedure",
+    description:
+      "Create a FHIR Procedure with optional procedure-targetBodyStructure extension.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "status", "code_system", "code"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        status: { type: "string", enum: PROCEDURE_STATUS_CODES },
+        code_system: { type: "string" },
+        code: { type: "string" },
+        code_display: { type: "string" },
+        code_text: { type: "string" },
+        performed_date_time: { type: "string" },
+        body_structure_reference: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_procedure_body_site",
+    description:
+      "Version-aware PATCH of Procedure procedure-targetBodyStructure extension.",
+    inputSchema: {
+      type: "object",
+      required: ["procedure_id", "body_structure_reference"],
+      properties: {
+        procedure_id: { type: "string" },
+        body_structure_reference: { type: "string" },
+        create_provenance: { type: "boolean", description: "Defaults true." },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
 ] as const;
 
 /* ----- Input validation schemas (Zod) ----- */
@@ -715,6 +1049,144 @@ const createVisionPrescriptionSchema = z.object({
   create_provenance: z.boolean().optional(),
   provenance_agent_reference: z.string().optional(),
   provenance_agent_display: z.string().optional(),
+});
+const provenanceControlSchema = {
+  create_provenance: z.boolean().optional(),
+  provenance_agent_reference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
+} as const;
+const codeInputSchema = {
+  code_system: z.string().min(1),
+  code: z.string().min(1),
+  code_display: z.string().optional(),
+  code_text: z.string().optional(),
+} as const;
+const episodeOfCareIdSchema = z.string().min(1);
+const createEpisodeOfCareSchema = z.object({
+  patient_id: z.string().min(1),
+  type_code: z.enum(EPISODE_OF_CARE_TYPE_CODES),
+  status: z.enum(EPISODE_OF_CARE_STATUS_CODES),
+  managing_organization_reference: z.string().optional(),
+  period_start: isoTimestampSchema.optional(),
+  period_end: isoTimestampSchema.optional(),
+  condition_references: z.array(z.string().min(1)).optional(),
+  ...provenanceControlSchema,
+});
+const updateEpisodeOfCareSchema = z.object({
+  episode_of_care_id: episodeOfCareIdSchema,
+  type_code: z.enum(EPISODE_OF_CARE_TYPE_CODES).optional(),
+  status: z.enum(EPISODE_OF_CARE_STATUS_CODES).optional(),
+  managing_organization_reference: z.string().optional(),
+  period_start: isoTimestampSchema.optional(),
+  period_end: isoTimestampSchema.optional(),
+  condition_references: z.array(z.string().min(1)).optional(),
+  ...provenanceControlSchema,
+});
+const conditionCodeFieldsSchema = z.object({
+  ...codeInputSchema,
+  body_structure_reference: z.string().optional(),
+  body_site_text: z.string().optional(),
+  clinical_status: z.enum(CONDITION_CLINICAL_STATUS_CODES).optional(),
+  verification_status: z.enum(CONDITION_VERIFICATION_STATUS_CODES).optional(),
+  onset_date_time: isoTimestampSchema.optional(),
+  abatement_date_time: isoTimestampSchema.optional(),
+  recorded_date: z.string().optional(),
+  ...provenanceControlSchema,
+});
+const createConditionWithTierSchema = conditionCodeFieldsSchema.extend({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().min(1),
+  tier: z.number().int().positive(),
+});
+const createProblemListConditionSchema = conditionCodeFieldsSchema.extend({
+  patient_id: z.string().min(1),
+});
+const updateConditionStatusSchema = z.object({
+  condition_id: z.string().min(1),
+  clinical_status: z.enum(CONDITION_CLINICAL_STATUS_CODES),
+  ...provenanceControlSchema,
+});
+const updateConditionTierSchema = z.object({
+  condition_id: z.string().min(1),
+  encounter_id: z.string().min(1),
+  tier: z.number().int().positive(),
+  ...provenanceControlSchema,
+});
+const updateConditionBodySiteSchema = z.object({
+  condition_id: z.string().min(1),
+  body_structure_reference: z.string().min(1),
+  body_site_text: z.string().optional(),
+  ...provenanceControlSchema,
+});
+const updateConditionCodeSchema = z.object({
+  condition_id: z.string().min(1),
+  ...codeInputSchema,
+  ...provenanceControlSchema,
+});
+const markConditionEnteredInErrorSchema = z.object({
+  condition_id: z.string().min(1),
+  ...provenanceControlSchema,
+});
+const createAllergyIntoleranceSchema = z.object({
+  patient_id: z.string().min(1),
+  no_known_allergy: z.boolean().optional(),
+  code_system: z.string().optional(),
+  code: z.string().optional(),
+  code_display: z.string().optional(),
+  code_text: z.string().optional(),
+  clinical_status: z.enum(ALLERGY_CLINICAL_STATUS_CODES).optional(),
+  verification_status: z.enum(ALLERGY_VERIFICATION_STATUS_CODES).optional(),
+  reaction_manifestation_system: z.string().optional(),
+  reaction_manifestation_code: z.string().optional(),
+  reaction_manifestation_display: z.string().optional(),
+  reaction_substance_system: z.string().optional(),
+  reaction_substance_code: z.string().optional(),
+  reaction_substance_display: z.string().optional(),
+  reaction_severity: z.enum(["mild", "moderate", "severe"]).optional(),
+  reaction_description: z.string().optional(),
+  recorded_date: z.string().optional(),
+  recorder_reference: z.string().optional(),
+  ...provenanceControlSchema,
+});
+const createSmokingStatusObservationSchema = z.object({
+  patient_id: z.string().min(1),
+  status_code: z.enum(SMOKING_STATUS_CODES),
+  effective_date_time: isoTimestampSchema.optional(),
+  performer_reference: maybeStringArraySchema,
+  ...provenanceControlSchema,
+});
+const createCareTeamSchema = z.object({
+  patient_id: z.string().min(1),
+  status: z.enum(CARE_TEAM_STATUS_CODES).optional(),
+  name: z.string().optional(),
+  participants: z
+    .array(
+      z.object({
+        role_system: z.string().optional(),
+        role_code: z.string().optional(),
+        role_display: z.string().optional(),
+        role_text: z.string().min(1),
+        practitioner_role_reference: z.string().optional(),
+        practitioner_reference: z.string().optional(),
+        related_person_reference: z.string().optional(),
+      }),
+    )
+    .min(1),
+  ...provenanceControlSchema,
+});
+const createProcedureSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  status: z.enum(PROCEDURE_STATUS_CODES),
+  ...codeInputSchema,
+  performed_date_time: isoTimestampSchema.optional(),
+  body_structure_reference: z.string().optional(),
+  ...provenanceControlSchema,
+});
+const updateProcedureBodySiteSchema = z.object({
+  procedure_id: z.string().min(1),
+  body_structure_reference: z.string().min(1),
+  ...provenanceControlSchema,
 });
 
 /* --------------------------------------------------------------------------
@@ -1038,6 +1510,404 @@ function createServer(): Server {
             ],
           };
         }
+        case "create_episode_of_care": {
+          const input = createEpisodeOfCareSchema.parse(args);
+          const episodeOfCare = buildEpisodeOfCare({
+            typeCode: input.type_code,
+            status: input.status,
+            patientReference: patientReference(input.patient_id),
+            managingOrganizationReference: input.managing_organization_reference,
+            periodStart: input.period_start,
+            periodEnd: input.period_end,
+            conditionReferences: input.condition_references,
+          });
+          const created = await fhir.create<EpisodeOfCare>(
+            episodeOfCare,
+            auditHeaders("create_episode_of_care"),
+          );
+          const provenance = await createV035Provenance(
+            "create_episode_of_care",
+            input,
+            [`EpisodeOfCare/${created.id}`],
+            "CREATE",
+            episodeOfCare.period?.start,
+          );
+
+          return toolJson({ episodeOfCare: created, provenance });
+        }
+        case "update_episode_of_care": {
+          const input = updateEpisodeOfCareSchema.parse(args);
+          const id = stripReference(input.episode_of_care_id, "EpisodeOfCare");
+          const existing = await fhir.read<EpisodeOfCare>("EpisodeOfCare", id);
+          const operations = buildUpdateEpisodeOfCarePatchOperations(existing, input);
+          const updated = await fhir.patch<EpisodeOfCare>(
+            "EpisodeOfCare",
+            id,
+            operations,
+            versionedHeaders(existing, auditHeaders("update_episode_of_care")),
+          );
+          const provenance = await createV035Provenance(
+            "update_episode_of_care",
+            input,
+            [`EpisodeOfCare/${updated.id}`],
+            "UPDATE",
+            updated.period?.start,
+          );
+
+          return toolJson({ episodeOfCare: updated, provenance });
+        }
+        case "create_condition_with_tier": {
+          const input = createConditionWithTierSchema.parse(args);
+          const encounterId = stripReference(input.encounter_id, "Encounter");
+          const existingEncounter = await fhir.read<Encounter>("Encounter", encounterId);
+          const condition = buildEncounterDiagnosisCondition({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: encounterReference(input.encounter_id),
+            code: conditionCodeFromInput(input),
+            clinicalStatus: input.clinical_status,
+            verificationStatus: input.verification_status,
+            onsetDateTime: input.onset_date_time,
+            abatementDateTime: input.abatement_date_time,
+            recordedDate: input.recorded_date,
+            bodyStructureReference: input.body_structure_reference,
+            bodySiteText: input.body_site_text,
+          });
+          const createdCondition = await fhir.create<Condition>(
+            condition,
+            auditHeaders("create_condition_with_tier"),
+          );
+          const diagnosisEntry = buildEncounterDiagnosisComponent(
+            `Condition/${createdCondition.id}`,
+            input.tier,
+          );
+          const updatedEncounter = await fhir.patch<Encounter>(
+            "Encounter",
+            encounterId,
+            addEncounterDiagnosisPatchOperations(existingEncounter, diagnosisEntry),
+            versionedHeaders(existingEncounter, auditHeaders("create_condition_with_tier")),
+          );
+          const provenance = await createV035Provenance(
+            "create_condition_with_tier",
+            input,
+            [`Condition/${createdCondition.id}`, `Encounter/${updatedEncounter.id}`],
+            "CREATE",
+            condition.recordedDate ?? condition.onsetDateTime,
+          );
+
+          return toolJson({ condition: createdCondition, encounter: updatedEncounter, provenance });
+        }
+        case "create_problem_list_condition": {
+          const input = createProblemListConditionSchema.parse(args);
+          const condition = buildProblemListCondition({
+            patientReference: patientReference(input.patient_id),
+            code: conditionCodeFromInput(input),
+            clinicalStatus: input.clinical_status,
+            verificationStatus: input.verification_status,
+            onsetDateTime: input.onset_date_time,
+            abatementDateTime: input.abatement_date_time,
+            recordedDate: input.recorded_date,
+            bodyStructureReference: input.body_structure_reference,
+            bodySiteText: input.body_site_text,
+          });
+          const created = await fhir.create<Condition>(
+            condition,
+            auditHeaders("create_problem_list_condition"),
+          );
+          const provenance = await createV035Provenance(
+            "create_problem_list_condition",
+            input,
+            [`Condition/${created.id}`],
+            "CREATE",
+            condition.recordedDate ?? condition.onsetDateTime,
+          );
+
+          return toolJson({ condition: created, provenance });
+        }
+        case "update_condition_status": {
+          const input = updateConditionStatusSchema.parse(args);
+          const id = stripReference(input.condition_id, "Condition");
+          const existing = await fhir.read<Condition>("Condition", id);
+          const updated = await fhir.patch<Condition>(
+            "Condition",
+            id,
+            [
+              {
+                op: existing.clinicalStatus ? "replace" : "add",
+                path: "/clinicalStatus",
+                value: clinicalStatusConcept(input.clinical_status),
+              },
+            ],
+            versionedHeaders(existing, auditHeaders("update_condition_status")),
+          );
+          const provenance = await createV035Provenance(
+            "update_condition_status",
+            input,
+            [`Condition/${updated.id}`],
+            "UPDATE",
+          );
+
+          return toolJson({ condition: updated, provenance });
+        }
+        case "update_condition_tier": {
+          const input = updateConditionTierSchema.parse(args);
+          const conditionId = stripReference(input.condition_id, "Condition");
+          const encounterId = stripReference(input.encounter_id, "Encounter");
+          const condition = await fhir.read<Condition>("Condition", conditionId);
+          if (!hasConditionCategory(condition, "encounter-diagnosis")) {
+            throw new Error(
+              "update_condition_tier only applies to encounter-diagnosis Conditions. Category changes require creating a new Condition with the new category.",
+            );
+          }
+          const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+          const diagnosisIndex = findEncounterDiagnosisIndex(encounter, `Condition/${condition.id}`);
+          if (diagnosisIndex < 0) {
+            throw new Error(
+              "Encounter.diagnosis does not reference this Condition. Create a new encounter-diagnosis Condition instead of flipping category or tier in place.",
+            );
+          }
+          const updatedEncounter = await fhir.patch<Encounter>(
+            "Encounter",
+            encounterId,
+            [
+              {
+                op: "replace",
+                path: `/diagnosis/${diagnosisIndex}/rank`,
+                value: input.tier,
+              },
+            ],
+            versionedHeaders(encounter, auditHeaders("update_condition_tier")),
+          );
+          const provenance = await createV035Provenance(
+            "update_condition_tier",
+            input,
+            [`Encounter/${updatedEncounter.id}`, `Condition/${condition.id}`],
+            "UPDATE",
+          );
+
+          return toolJson({ encounter: updatedEncounter, condition, provenance });
+        }
+        case "update_condition_body_site": {
+          const input = updateConditionBodySiteSchema.parse(args);
+          const id = stripReference(input.condition_id, "Condition");
+          const existing = await fhir.read<Condition>("Condition", id);
+          const updated = await fhir.patch<Condition>(
+            "Condition",
+            id,
+            [
+              {
+                op: existing.bodySite ? "replace" : "add",
+                path: "/bodySite",
+                value: conditionBodySite(input.body_structure_reference, input.body_site_text),
+              },
+            ],
+            versionedHeaders(existing, auditHeaders("update_condition_body_site")),
+          );
+          const provenance = await createV035Provenance(
+            "update_condition_body_site",
+            input,
+            [`Condition/${updated.id}`],
+            "UPDATE",
+          );
+
+          return toolJson({ condition: updated, provenance });
+        }
+        case "update_condition_code": {
+          const input = updateConditionCodeSchema.parse(args);
+          const id = stripReference(input.condition_id, "Condition");
+          const existing = await fhir.read<Condition>("Condition", id);
+          const priorCode = existing.code;
+          const updated = await fhir.patch<Condition>(
+            "Condition",
+            id,
+            [
+              {
+                op: existing.code ? "replace" : "add",
+                path: "/code",
+                value: conditionCodeConcept(conditionCodeFromInput(input)),
+              },
+            ],
+            versionedHeaders(existing, auditHeaders("update_condition_code")),
+          );
+          const provenance = await createV035Provenance(
+            "update_condition_code",
+            input,
+            [`Condition/${updated.id}`],
+            "UPDATE",
+            undefined,
+            [
+              {
+                role: "revision",
+                display: `prior Condition.code: ${JSON.stringify(priorCode ?? null)}`,
+              },
+            ],
+          );
+
+          return toolJson({ condition: updated, provenance });
+        }
+        case "mark_condition_entered_in_error": {
+          const input = markConditionEnteredInErrorSchema.parse(args);
+          const id = stripReference(input.condition_id, "Condition");
+          const existing = await fhir.read<Condition>("Condition", id);
+          const operations: JsonPatchOperation[] = [
+            {
+              op: existing.verificationStatus ? "replace" : "add",
+              path: "/verificationStatus",
+              value: verificationStatusConcept("entered-in-error"),
+            },
+          ];
+          if (existing.clinicalStatus) {
+            operations.push({ op: "remove", path: "/clinicalStatus" });
+          }
+          const updated = await fhir.patch<Condition>(
+            "Condition",
+            id,
+            operations,
+            versionedHeaders(existing, auditHeaders("mark_condition_entered_in_error")),
+          );
+          const provenance = await createV035Provenance(
+            "mark_condition_entered_in_error",
+            input,
+            [`Condition/${updated.id}`],
+            "UPDATE",
+          );
+
+          return toolJson({ condition: updated, provenance });
+        }
+        case "create_allergy_intolerance": {
+          const input = createAllergyIntoleranceSchema.parse(args);
+          const allergyIntolerance = buildAllergyIntolerance({
+            patientReference: patientReference(input.patient_id),
+            noKnownAllergy: input.no_known_allergy,
+            code: input.no_known_allergy ? undefined : allergyCodeFromInput(input),
+            clinicalStatus: input.clinical_status,
+            verificationStatus: input.verification_status,
+            recordedDate: input.recorded_date,
+            recorderReference: input.recorder_reference,
+            reaction: allergyReactionFromInput(input),
+          });
+          const created = await fhir.create<AllergyIntolerance>(
+            allergyIntolerance,
+            auditHeaders("create_allergy_intolerance"),
+          );
+          const provenance = await createV035Provenance(
+            "create_allergy_intolerance",
+            input,
+            [`AllergyIntolerance/${created.id}`],
+            "CREATE",
+            allergyIntolerance.recordedDate,
+          );
+
+          return toolJson({ allergyIntolerance: created, provenance });
+        }
+        case "create_smoking_status_observation": {
+          const input = createSmokingStatusObservationSchema.parse(args);
+          const observation = buildSmokingStatusObservation({
+            patientReference: patientReference(input.patient_id),
+            statusCode: input.status_code,
+            effectiveDateTime: input.effective_date_time ?? new Date().toISOString(),
+            performerReferences: getStringArray(input.performer_reference),
+          });
+          const created = await fhir.create<Observation>(
+            observation,
+            auditHeaders("create_smoking_status_observation"),
+          );
+          const provenance = await createV035Provenance(
+            "create_smoking_status_observation",
+            input,
+            [`Observation/${created.id}`],
+            "CREATE",
+            observation.effectiveDateTime,
+          );
+
+          return toolJson({ observation: created, provenance });
+        }
+        case "create_care_team": {
+          const input = createCareTeamSchema.parse(args);
+          const careTeam = buildCareTeam({
+            patientReference: patientReference(input.patient_id),
+            status: input.status,
+            name: input.name,
+            participant: input.participants.map((participant) => ({
+              role: {
+                system: participant.role_system,
+                code: participant.role_code,
+                display: participant.role_display,
+                text: participant.role_text,
+              },
+              practitionerRoleReference: participant.practitioner_role_reference,
+              practitionerReference: participant.practitioner_reference,
+              relatedPersonReference: participant.related_person_reference,
+            })),
+          });
+          const created = await fhir.create<CareTeam>(
+            careTeam,
+            auditHeaders("create_care_team"),
+          );
+          const provenance = await createV035Provenance(
+            "create_care_team",
+            input,
+            [`CareTeam/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ careTeam: created, provenance });
+        }
+        case "create_procedure": {
+          const input = createProcedureSchema.parse(args);
+          const procedure = buildProcedure({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            status: input.status,
+            code: procedureCodeFromInput(input),
+            performedDateTime: input.performed_date_time,
+            bodyStructureReference: input.body_structure_reference,
+          });
+          const created = await fhir.create<Procedure>(
+            procedure,
+            auditHeaders("create_procedure"),
+          );
+          const provenance = await createV035Provenance(
+            "create_procedure",
+            input,
+            [`Procedure/${created.id}`],
+            "CREATE",
+            procedure.performedDateTime,
+          );
+
+          return toolJson({ procedure: created, provenance });
+        }
+        case "update_procedure_body_site": {
+          const input = updateProcedureBodySiteSchema.parse(args);
+          const id = stripReference(input.procedure_id, "Procedure");
+          const existing = await fhir.read<Procedure>("Procedure", id);
+          const nextExtensions = [
+            ...(existing.extension ?? []).filter(
+              (extension) =>
+                extension.url !== PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL,
+            ),
+            procedureTargetBodyStructureExtension(input.body_structure_reference),
+          ];
+          const updated = await fhir.patch<Procedure>(
+            "Procedure",
+            id,
+            [
+              {
+                op: existing.extension ? "replace" : "add",
+                path: "/extension",
+                value: nextExtensions,
+              },
+            ],
+            versionedHeaders(existing, auditHeaders("update_procedure_body_site")),
+          );
+          const provenance = await createV035Provenance(
+            "update_procedure_body_site",
+            input,
+            [`Procedure/${updated.id}`],
+            "UPDATE",
+          );
+
+          return toolJson({ procedure: updated, provenance });
+        }
         default:
           return {
             content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -1060,6 +1930,268 @@ type UpdatePatientInput = z.infer<typeof updatePatientSchema>;
 type CreateObservationInput = z.infer<typeof createObservationSchema>;
 type CreateEncounterInput = z.infer<typeof createEncounterSchema>;
 type SaveSectionObservationsInput = z.infer<typeof saveSectionObservationsSchema>;
+type UpdateEpisodeOfCareInput = z.infer<typeof updateEpisodeOfCareSchema>;
+type CreateAllergyIntoleranceInput = z.infer<typeof createAllergyIntoleranceSchema>;
+type CreateProcedureInput = z.infer<typeof createProcedureSchema>;
+
+interface V035ProvenanceControlInput {
+  create_provenance?: boolean;
+  provenance_agent_reference?: string;
+  provenance_agent_display?: string;
+}
+
+function conditionToolInputProperties(input: {
+  includeEncounter: boolean;
+  includeTier: boolean;
+}): Record<string, unknown> {
+  return {
+    patient_id: { type: "string" },
+    ...(input.includeEncounter ? { encounter_id: { type: "string" } } : {}),
+    code_system: { type: "string" },
+    code: { type: "string" },
+    code_display: { type: "string" },
+    code_text: { type: "string" },
+    ...(input.includeTier ? { tier: { type: "number" } } : {}),
+    body_structure_reference: { type: "string" },
+    body_site_text: { type: "string" },
+    clinical_status: { type: "string", enum: CONDITION_CLINICAL_STATUS_CODES },
+    verification_status: { type: "string", enum: CONDITION_VERIFICATION_STATUS_CODES },
+    onset_date_time: { type: "string" },
+    abatement_date_time: { type: "string" },
+    recorded_date: { type: "string" },
+    create_provenance: { type: "boolean", description: "Defaults true." },
+    provenance_agent_reference: { type: "string" },
+    provenance_agent_display: { type: "string" },
+  };
+}
+
+function toolJson(value: unknown) {
+  return { content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }] };
+}
+
+function stripReference(value: string, resourceType: string): string {
+  return value.startsWith(`${resourceType}/`) ? value.slice(resourceType.length + 1) : value;
+}
+
+function versionedHeaders(
+  resource: Resource,
+  extraHeaders: Record<string, string>,
+): Record<string, string> {
+  const versionId = resource.meta?.versionId;
+  if (!versionId) {
+    throw new Error(
+      `${resource.resourceType}/${resource.id ?? "(unknown)"} is missing meta.versionId; refusing version-aware PATCH.`,
+    );
+  }
+
+  return {
+    ...extraHeaders,
+    "If-Match": `W/"${versionId}"`,
+  };
+}
+
+async function createV035Provenance(
+  toolName: V035WriteToolName,
+  input: V035ProvenanceControlInput,
+  targetReferences: string[],
+  activityCode: "CREATE" | "UPDATE",
+  occurredDateTime?: string,
+  entityValues?: Array<{
+    role?: "source" | "revision" | "quotation" | "removal";
+    display: string;
+  }>,
+): Promise<Provenance | undefined> {
+  if (input.create_provenance === false) {
+    return undefined;
+  }
+
+  return fhir.create<Provenance>(
+    buildProvenance({
+      targetReferences,
+      occurredDateTime,
+      activityCode,
+      activityDisplay: activityCode === "CREATE" ? "Create" : "Update",
+      agents: [
+        {
+          typeCode: "author",
+          typeDisplay: "Author",
+          whoReference: input.provenance_agent_reference,
+          whoDisplay: input.provenance_agent_display ?? `OSOD MCP ${toolName}`,
+        },
+      ],
+      entityValues,
+    }),
+    auditHeaders(toolName),
+  );
+}
+
+function buildUpdateEpisodeOfCarePatchOperations(
+  existing: EpisodeOfCare,
+  input: UpdateEpisodeOfCareInput,
+): JsonPatchOperation[] {
+  const operations: JsonPatchOperation[] = [];
+
+  if (input.status !== undefined) {
+    operations.push({ op: "replace", path: "/status", value: input.status });
+  }
+
+  if (input.type_code !== undefined) {
+    operations.push({
+      op: existing.type ? "replace" : "add",
+      path: "/type",
+      value: [episodeOfCareTypeConcept(input.type_code)],
+    });
+  }
+
+  if (input.managing_organization_reference !== undefined) {
+    operations.push({
+      op: existing.managingOrganization ? "replace" : "add",
+      path: "/managingOrganization",
+      value: { reference: input.managing_organization_reference },
+    });
+  }
+
+  if (input.period_start !== undefined || input.period_end !== undefined) {
+    operations.push({
+      op: existing.period ? "replace" : "add",
+      path: "/period",
+      value: {
+        ...(existing.period ?? {}),
+        ...(input.period_start !== undefined ? { start: input.period_start } : {}),
+        ...(input.period_end !== undefined ? { end: input.period_end } : {}),
+      },
+    });
+  }
+
+  if (input.condition_references !== undefined) {
+    operations.push({
+      op: existing.diagnosis ? "replace" : "add",
+      path: "/diagnosis",
+      value: input.condition_references.map((conditionReference) => ({
+        condition: { reference: conditionReference },
+      })),
+    });
+  }
+
+  if (operations.length === 0) {
+    throw new Error("update_episode_of_care requires at least one field to update.");
+  }
+
+  return operations;
+}
+
+function conditionCodeFromInput(input: {
+  code_system: string;
+  code: string;
+  code_display?: string;
+  code_text?: string;
+}) {
+  return {
+    system: input.code_system,
+    code: input.code,
+    display: input.code_display,
+    text: input.code_text,
+  };
+}
+
+function procedureCodeFromInput(input: CreateProcedureInput) {
+  return {
+    system: input.code_system,
+    code: input.code,
+    display: input.code_display,
+    text: input.code_text,
+  };
+}
+
+function allergyCodeFromInput(input: CreateAllergyIntoleranceInput) {
+  if (!input.code_system || !input.code) {
+    throw new Error(
+      "create_allergy_intolerance requires code_system and code unless no_known_allergy is true.",
+    );
+  }
+
+  return {
+    system: input.code_system,
+    code: input.code,
+    display: input.code_display,
+    text: input.code_text,
+  };
+}
+
+function allergyReactionFromInput(
+  input: CreateAllergyIntoleranceInput,
+): NonNullable<Parameters<typeof buildAllergyIntolerance>[0]["reaction"]> | undefined {
+  const hasReaction = Boolean(
+    input.reaction_manifestation_system ||
+      input.reaction_manifestation_code ||
+      input.reaction_manifestation_display ||
+      input.reaction_substance_system ||
+      input.reaction_substance_code ||
+      input.reaction_substance_display ||
+      input.reaction_severity ||
+      input.reaction_description,
+  );
+  if (!hasReaction) {
+    return undefined;
+  }
+  if (!input.reaction_manifestation_system || !input.reaction_manifestation_code) {
+    throw new Error(
+      "AllergyIntolerance.reaction requires reaction_manifestation_system and reaction_manifestation_code.",
+    );
+  }
+  if (
+    (input.reaction_substance_system && !input.reaction_substance_code) ||
+    (!input.reaction_substance_system && input.reaction_substance_code)
+  ) {
+    throw new Error(
+      "AllergyIntolerance.reaction.substance requires both reaction_substance_system and reaction_substance_code.",
+    );
+  }
+
+  return [
+    {
+      manifestation: {
+        system: input.reaction_manifestation_system,
+        code: input.reaction_manifestation_code,
+        display: input.reaction_manifestation_display,
+      },
+      ...(input.reaction_substance_system && input.reaction_substance_code
+        ? {
+            substance: {
+              system: input.reaction_substance_system,
+              code: input.reaction_substance_code,
+              display: input.reaction_substance_display,
+            },
+          }
+        : {}),
+      severity: input.reaction_severity,
+      description: input.reaction_description,
+    },
+  ];
+}
+
+function addEncounterDiagnosisPatchOperations(
+  encounter: Encounter,
+  diagnosisEntry: NonNullable<Encounter["diagnosis"]>[number],
+): JsonPatchOperation[] {
+  if ((encounter.diagnosis?.length ?? 0) > 0) {
+    return [{ op: "add", path: "/diagnosis/-", value: diagnosisEntry }];
+  }
+
+  return [{ op: "add", path: "/diagnosis", value: [diagnosisEntry] }];
+}
+
+function findEncounterDiagnosisIndex(encounter: Encounter, conditionReference: string): number {
+  const conditionId = stripReference(conditionReference, "Condition");
+  return (encounter.diagnosis ?? []).findIndex((diagnosis) => {
+    const referenceValue = diagnosis.condition?.reference;
+    return (
+      referenceValue === conditionReference ||
+      (referenceValue !== undefined &&
+        stripReference(referenceValue, "Condition") === conditionId)
+    );
+  });
+}
 
 function buildUpdatePatientPatchOperations(input: UpdatePatientInput): JsonPatchOperation[] {
   const operations: JsonPatchOperation[] = [];

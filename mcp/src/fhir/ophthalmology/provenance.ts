@@ -60,12 +60,18 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
         ? reference(agent.whoReference)
         : { display: agent.whoDisplay ?? "Unknown OSOD source agent" },
     })),
-    ...(input.entityReferences?.length
+    ...(input.entityReferences?.length || input.entityValues?.length
       ? {
-          entity: input.entityReferences.map((r) => ({
-            role: "source" as const,
-            what: reference(r),
-          })),
+          entity: [
+            ...(input.entityReferences ?? []).map((r) => ({
+              role: "source" as const,
+              what: reference(r),
+            })),
+            ...(input.entityValues ?? []).map((entity) => ({
+              role: entity.role ?? ("revision" as const),
+              what: { display: entity.display },
+            })),
+          ],
         }
       : {}),
   };

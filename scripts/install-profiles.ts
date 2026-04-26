@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { StructureDefinition } from "@medplum/fhirtypes";
+import type { CodeSystem, Resource, StructureDefinition, ValueSet } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
 
 loadRepoEnv();
@@ -27,44 +27,74 @@ const profileFiles = (await readdir(profilesDir))
   .sort();
 
 for (const file of profileFiles) {
-  const profile = JSON.parse(
-    await readFile(resolve(profilesDir, file), "utf8"),
-  ) as StructureDefinition;
+  await installCanonicalResource(
+    JSON.parse(await readFile(resolve(profilesDir, file), "utf8")) as CanonicalResource,
+    file,
+  );
+}
 
-  if (profile.resourceType !== "StructureDefinition" || !profile.url) {
-    throw new Error(`${file} is not a StructureDefinition with a canonical url.`);
+const terminologyDir = resolve(process.cwd(), "data/terminology");
+if (existsSync(terminologyDir)) {
+  const terminologyFiles = (await readdir(terminologyDir))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+
+  for (const file of terminologyFiles) {
+    await installCanonicalResource(
+      JSON.parse(await readFile(resolve(terminologyDir, file), "utf8")) as CanonicalResource,
+      file,
+    );
+  }
+}
+
+type CanonicalResource = StructureDefinition | CodeSystem | ValueSet;
+
+async function installCanonicalResource(resource: CanonicalResource, file: string): Promise<void> {
+  if (!isSupportedCanonicalResource(resource) || !resource.url) {
+    throw new Error(
+      `${file} is not a supported canonical resource with a canonical url.`,
+    );
   }
 
-  const existingBundle = await fhir.search<StructureDefinition>("StructureDefinition", {
-    url: profile.url,
+  const existingBundle = await fhir.search<CanonicalResource>(resource.resourceType, {
+    url: resource.url,
     _count: "1",
   });
   const existing = existingBundle.entry?.[0]?.resource;
 
   if (existing?.id) {
-    if (sameSemanticProfile(existing, profile)) {
-      console.log(`unchanged ${profile.url} (${existing.id})`);
-      continue;
+    if (sameSemanticResource(existing, resource)) {
+      console.log(`unchanged ${resource.url} (${existing.id})`);
+      return;
     }
 
-    const updated = await fhir.update<StructureDefinition>(
-      "StructureDefinition",
+    const updated = await fhir.update<CanonicalResource>(
+      resource.resourceType,
       existing.id,
-      { ...profile, id: existing.id },
+      { ...resource, id: existing.id },
     );
     console.log(`updated ${updated.url} (${updated.id})`);
-  } else {
-    const created = await fhir.create<StructureDefinition>(profile);
-    console.log(`created ${created.url} (${created.id})`);
+    return;
   }
+
+  const created = await fhir.create<CanonicalResource>(resource);
+  console.log(`created ${created.url} (${created.id})`);
 }
 
-function sameSemanticProfile(left: StructureDefinition, right: StructureDefinition): boolean {
+function isSupportedCanonicalResource(resource: Resource): resource is CanonicalResource {
+  return (
+    resource.resourceType === "StructureDefinition" ||
+    resource.resourceType === "CodeSystem" ||
+    resource.resourceType === "ValueSet"
+  );
+}
+
+function sameSemanticResource(left: CanonicalResource, right: CanonicalResource): boolean {
   return stableStringify(stripServerFields(left)) === stableStringify(stripServerFields(right));
 }
 
-function stripServerFields(profile: StructureDefinition): unknown {
-  const clone = structuredClone(profile) as Partial<StructureDefinition>;
+function stripServerFields(resource: CanonicalResource): unknown {
+  const clone = structuredClone(resource) as Partial<CanonicalResource>;
   delete clone.id;
   delete clone.meta;
   return clone;
