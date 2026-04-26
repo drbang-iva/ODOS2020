@@ -9,9 +9,13 @@
 
 ## Where we are
 
+**v0.35a inbound write logic shipped 2026-04-25.** Code SHA: [`8917662`](https://github.com/drbang-iva/osod/commit/8917662) (tag `v0.35a`). First slice of milestone v0.35. USCDI v3 capture matrix (94 elements / 19 data classes), Mandate 14 verification ledger (every code constant primary-source verified before use), EpisodeOfCare CodeSystem + ValueSet for clinical-program types, six FHIR builders mirrored MCP↔UI (EpisodeOfCare / Condition with encounter-diagnosis vs problem-list-item split / AllergyIntolerance code-first / SmokingStatus LOINC 72166-2 / CareTeam PractitionerRole-first / Procedure with `procedure-targetBodyStructure` extension), and fourteen MCP write tools with version-aware PATCH semantics + per-tool `X-OSOD-Source` headers + default-on Provenance sidecars. **Second production run of the pressure-test protocol** caught seven BLOCKING items pre-Codex including a numerical USCDI error and two wrong FHIR mappings.
+
 **v0.3 first clinical encounter UI shipped 2026-04-25.** Code SHA: [`8e2a5ef`](https://github.com/drbang-iva/osod/commit/8e2a5ef). The Director UI now supports the thin clinical path: pick patient, start comprehensive exam, enter VA / IOP / refraction, save each section as an atomic FHIR transaction Bundle with Provenance sidecars, then sign and finish. The data layer is guarded by installable v0.3 FHIR StructureDefinitions with snapshots for VA, IOP, Refraction, Axial Length, and Comprehensive Exam Encounter.
 
 This slice is intentionally narrow: no AI, no voice, no additional charting skins, no billing workflow beyond the archived POC foundation.
+
+**Next: v0.35b** (outbound view / UI logic) — Director chart sidebar cards (Allergies / Tobacco Use / Care Team / Problem List), Episode-aware "Start comprehensive exam" prompt, diagnosis tier inline tagger on Spine Assessment, edit-in-place affordances (no delete-and-recreate), MDM hint counter (CPT 2023 thresholds), role context dropdown (doctor / tech / front-desk).
 
 ---
 
@@ -30,6 +34,7 @@ This slice is intentionally narrow: no AI, no voice, no additional charting skin
 | **v0.2.5 audit-header consistency** | [`aa149f1`](https://github.com/drbang-iva/osod/commit/aa149f1) | Per-tool `X-OSOD-Source` constants. Empirical Medplum 5.1.8 finding: header is not surfaced in FHIR `AuditEvent`; Provenance is durable attribution | 27/27 + build-log |
 | **v0.2.6 HL7 Eye Care IG alignment** | [`285f063`](https://github.com/drbang-iva/osod/commit/285f063) | SNOMED dual-coding, OD / OS / OU `BodyStructure`, FHIR `VisionPrescription`, structured PRISM, `create_vision_prescription` | 35/35 + tsc |
 | **v0.3 clinical encounter UI** | [`8e2a5ef`](https://github.com/drbang-iva/osod/commit/8e2a5ef) | Patient picker, comprehensive exam start, Encounter charting scene, VA / IOP / Refraction section saves, sign & finish, mirrored ophthalmology builders, `save_section_observations`, clinical Provenance default ON, five v0.3 StructureDefinitions, idempotent profile installer | 54/54 + MCP tsc + UI tsc + UI build 1.039 MB |
+| **v0.35a inbound write logic** | [`8917662`](https://github.com/drbang-iva/osod/commit/8917662) (tag `v0.35a`) | USCDI v3 capture matrix (94 elements / 19 classes), Mandate 14 verification ledger (all `verified`), EpisodeOfCare CodeSystem + ValueSet (myopia-management / glaucoma / dry-eye / diabetic-eye-care), six FHIR builders mirrored MCP↔UI (EpisodeOfCare, Condition with encounter-diagnosis vs problem-list-item split + health-concern category, AllergyIntolerance with `.code`-first + SNOMED 716186003, SmokingStatus US Core Observation with LOINC 72166-2, CareTeam PractitionerRole-first, Procedure with `procedure-targetBodyStructure` extension), fourteen MCP write tools all version-aware PATCH + per-tool `X-OSOD-Source` + Provenance default-on. Second production run of the pressure-test protocol caught seven BLOCKING + nine DECISION-AFFECTING items pre-Codex. | 30 files +4237/-26; 112/112 mcp tests; MCP + UI tsc clean; tag `v0.35a` pushed |
 
 ---
 
