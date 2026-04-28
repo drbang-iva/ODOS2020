@@ -1,0 +1,34 @@
+module: dry-eye-advanced
+version: 0.4.0
+status: active
+description: Dry Eye Advanced data-foundation and Director charting module for v0.4b.
+routes:
+  - id: encounter-charting-dry-eye
+    surface: director
+    path: /encounter/:encounterId/dry-eye
+eventTypes:
+  - dry-eye-questionnaire-administered
+  - dry-eye-questionnaire-score-derived
+  - meibography-scored
+  - dry-eye-treatment-session-created
+  - dry-eye-treatment-series-created
+  - ophthalmic-medication-status-changed
+  - dry-eye-adverse-event-recorded
+profiles:
+  - https://osod.dev/fhir/StructureDefinition/Observation-MeibomianGlandScore
+  - https://osod.dev/fhir/StructureDefinition/Observation-TBUT
+  - https://osod.dev/fhir/StructureDefinition/Observation-Schirmer
+  - http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse
+  - http://hl7.org/fhir/StructureDefinition/Procedure
+  - http://hl7.org/fhir/StructureDefinition/MedicationStatement
+  - http://hl7.org/fhir/StructureDefinition/DeviceUseStatement
+  - http://hl7.org/fhir/StructureDefinition/AdverseEvent
+toolDeclarations:
+  - create_dry_eye_questionnaire_response
+  - create_meibography_observation
+  - create_dry_eye_treatment_procedure
+  - create_dry_eye_treatment_series
+  - update_dry_eye_treatment_procedure_status
+  - create_ophthalmic_medication_statement
+  - update_dry_eye_medication_status
+  - create_dry_eye_adverse_event

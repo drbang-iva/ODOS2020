@@ -21,6 +21,14 @@ export const V04_WRITE_TOOL_NAMES = [
   "create_device_definition",
   "create_concept_map",
   "create_substance",
+  "create_dry_eye_questionnaire_response",
+  "create_meibography_observation",
+  "create_dry_eye_treatment_procedure",
+  "create_dry_eye_treatment_series",
+  "update_dry_eye_treatment_procedure_status",
+  "create_ophthalmic_medication_statement",
+  "update_dry_eye_medication_status",
+  "create_dry_eye_adverse_event",
 ] as const;
 
 export type V035WriteToolName = (typeof V035_WRITE_TOOL_NAMES)[number];

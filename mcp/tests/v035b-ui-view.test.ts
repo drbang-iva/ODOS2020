@@ -56,7 +56,7 @@ test("role config is switchable presentation-only plumbing", () => {
 test("chart card registry keeps v0.35b sidebar cards visible to every role", () => {
   assert.deepEqual(
     CHART_CARD_REGISTRY.map((card) => card.id),
-    ["programs", "allergies", "tobacco-use", "care-team", "problem-list"],
+    ["programs", "allergies", "tobacco-use", "product-timeline", "care-team", "problem-list"],
   );
 
   for (const card of CHART_CARD_REGISTRY) {

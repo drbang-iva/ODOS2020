@@ -105,6 +105,38 @@ import {
   observationHistoryFromBundle,
   summarizeProgression,
 } from "./fhir/ocularMeasurementGraph.js";
+import {
+  DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
+  DRY_EYE_TREATMENT_TYPE_CODES,
+} from "./fhir/dryEyeTerminology.js";
+import {
+  buildDryEyeQuestionnaireResponse,
+  buildDryEyeQuestionnaireScoreObservation,
+  type DryEyeQuestionnaireAnswerInput,
+} from "./fhir/dryEyeQuestionnaireResponse.js";
+import {
+  MEIBOGRAPHY_LIDS,
+  MEIBOGRAPHY_SCORE_SYSTEMS,
+  buildMeibographyObservation,
+} from "./fhir/meibography.js";
+import {
+  DRY_EYE_PROCEDURE_STATUS_CODES,
+  buildDryEyeTreatmentProcedure,
+  buildDryEyeTreatmentSeriesChildren,
+  buildDryEyeTreatmentSeriesProcedure,
+  procedureStatusForDryEyeUpdate,
+} from "./fhir/dryEyeProcedure.js";
+import {
+  DRY_EYE_ADVERSE_EVENT_ACTUALITY_CODES,
+  buildDryEyeAdverseEvent,
+} from "./fhir/dryEyeAdverseEvent.js";
+import {
+  DRY_EYE_MEDICATION_TIMELINE_STATUS_CODES,
+  OPHTHALMIC_MEDICATION_STATUS_CODES,
+  OPHTHALMIC_SUPPLY_TYPE_CODES,
+  buildOphthalmicMedicationStatement,
+  medicationStatementStatusForTimeline,
+} from "./fhir/ophthalmicMedicationStatement.js";
 import { auditHeaders, type V035WriteToolName, type V04WriteToolName } from "./tools/audit.js";
 import {
   buildSectionSaveBundle,
@@ -121,15 +153,19 @@ import type {
   CodeableConcept,
   ConceptMap,
   Condition,
+  DocumentReference,
   Device,
   DeviceDefinition,
   DiagnosticReport,
   Encounter,
   EpisodeOfCare,
+  AdverseEvent,
+  MedicationStatement,
   Observation,
   Patient,
   Procedure,
   Provenance,
+  QuestionnaireResponse,
   Resource,
   Substance,
   VisionPrescription,
@@ -972,6 +1008,188 @@ const tools = [
     },
   },
   {
+    name: "create_dry_eye_questionnaire_response",
+    description:
+      "Create a dry-eye QuestionnaireResponse and auto-derived summary Observation. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_questionnaire_response.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "instrument", "answers"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        instrument: { type: "string", enum: DRY_EYE_QUESTIONNAIRE_INSTRUMENTS },
+        authored: { type: "string" },
+        author_reference: { type: "string" },
+        source_reference: { type: "string" },
+        answers: { type: "array", items: dryEyeQuestionnaireAnswerSchemaJson() },
+        score: { type: "number" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_meibography_observation",
+    description:
+      "Create a meibography image DocumentReference plus derived meibography score Observation. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_meibography_observation.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "eye", "lid", "scoring_system", "total_score"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        eye: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+        lid: { type: "string", enum: MEIBOGRAPHY_LIDS },
+        scoring_system: { type: "string", enum: MEIBOGRAPHY_SCORE_SYSTEMS },
+        total_score: { type: "number" },
+        gland_scores: { type: "array", items: { type: "number" } },
+        effective_date_time: { type: "string" },
+        document_reference_id: { type: "string" },
+        content_type: { type: "string" },
+        url: { type: "string" },
+        data: { type: "string" },
+        title: { type: "string" },
+        description: { type: "string" },
+        sha256: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_dry_eye_treatment_procedure",
+    description:
+      "Create one dry-eye treatment Procedure session with Procedure.usedReference for the treatment device. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_treatment_procedure.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "treatment_type"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        treatment_type: { type: "string", enum: DRY_EYE_TREATMENT_TYPE_CODES },
+        status: { type: "string", enum: DRY_EYE_PROCEDURE_STATUS_CODES },
+        series_procedure_id: { type: "string" },
+        performed_date_time: { type: "string" },
+        treatment_device_id: { type: "string" },
+        reason_text: { type: "string" },
+        session_number: { type: "number" },
+        total_sessions: { type: "number" },
+        energy_mj: { type: "number" },
+        wavelength_nm: { type: "number" },
+        spot_count: { type: "number" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_dry_eye_treatment_series",
+    description:
+      "Create a series-parent Procedure and scheduled child Procedure.partOf sessions. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_treatment_series.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "treatment_type", "total_sessions"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        treatment_type: { type: "string", enum: DRY_EYE_TREATMENT_TYPE_CODES },
+        total_sessions: { type: "number" },
+        series_start_date_time: { type: "string" },
+        child_schedule_date_times: { type: "array", items: { type: "string" } },
+        treatment_device_id: { type: "string" },
+        reason_text: { type: "string" },
+        energy_mj: { type: "number" },
+        wavelength_nm: { type: "number" },
+        spot_count: { type: "number" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_dry_eye_treatment_procedure_status",
+    description:
+      "Version-aware PATCH for dry-eye Procedure.status. Input aborted maps to FHIR stopped. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_dry_eye_treatment_procedure_status.",
+    inputSchema: {
+      type: "object",
+      required: ["procedure_id", "status"],
+      properties: {
+        procedure_id: { type: "string" },
+        status: { type: "string", enum: ["in-progress", "completed", "aborted"] },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_ophthalmic_medication_statement",
+    description:
+      "Create a dry-eye MedicationStatement with ophthalmic route and OTC/Rx/supplement flag. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_ophthalmic_medication_statement.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "medication_text"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        episode_of_care_id: { type: "string" },
+        medication_system: { type: "string" },
+        medication_code: { type: "string" },
+        medication_display: { type: "string" },
+        medication_text: { type: "string" },
+        status: { type: "string", enum: OPHTHALMIC_MEDICATION_STATUS_CODES },
+        effective_date_time: { type: "string" },
+        supply_type: { type: "string", enum: OPHTHALMIC_SUPPLY_TYPE_CODES },
+        indication_text: { type: "string" },
+        dosage_text: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_dry_eye_medication_status",
+    description:
+      "Version-aware PATCH of dry-eye MedicationStatement status using active/resolved/resumed timeline states. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_dry_eye_medication_status.",
+    inputSchema: {
+      type: "object",
+      required: ["medication_statement_id", "status"],
+      properties: {
+        medication_statement_id: { type: "string" },
+        status: { type: "string", enum: DRY_EYE_MEDICATION_TIMELINE_STATUS_CODES },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_dry_eye_adverse_event",
+    description:
+      "Create a FHIR AdverseEvent for dry-eye complications with USCDI v7 forward-compatible fields. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_adverse_event.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "event_text"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        event_system: { type: "string" },
+        event_code: { type: "string" },
+        event_display: { type: "string" },
+        event_text: { type: "string" },
+        actuality: { type: "string", enum: DRY_EYE_ADVERSE_EVENT_ACTUALITY_CODES },
+        date: { type: "string" },
+        detected: { type: "string" },
+        seriousness_text: { type: "string" },
+        severity_text: { type: "string" },
+        outcome_text: { type: "string" },
+        suspect_entity_references: { type: "array", items: { type: "string" } },
+        reference_document_references: { type: "array", items: { type: "string" } },
+        resulting_condition_references: { type: "array", items: { type: "string" } },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
     name: "get_observation_history",
     description:
       "Return ordered Observations for patient + code with optional laterality and date-range filters.",
@@ -1475,6 +1693,117 @@ const createSubstanceSchema = z.object({
   dk: z.number().optional(),
   water_content_range: z.string().optional(),
   description: z.string().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const dryEyeQuestionnaireAnswerSchema = z.object({
+  link_id: z.string().min(1),
+  text: z.string().optional(),
+  value_integer: z.number().int().optional(),
+  value_decimal: z.number().optional(),
+  value_string: z.string().optional(),
+  value_boolean: z.boolean().optional(),
+});
+const createDryEyeQuestionnaireResponseSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  instrument: z.enum(DRY_EYE_QUESTIONNAIRE_INSTRUMENTS),
+  authored: isoTimestampSchema.optional(),
+  author_reference: z.string().optional(),
+  source_reference: z.string().optional(),
+  answers: z.array(dryEyeQuestionnaireAnswerSchema).min(1),
+  score: z.number().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const createMeibographyObservationSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  eye: z.enum(["OD", "OS", "OU", "od", "os", "ou"]),
+  lid: z.enum(MEIBOGRAPHY_LIDS),
+  scoring_system: z.enum(MEIBOGRAPHY_SCORE_SYSTEMS),
+  total_score: z.number().int(),
+  gland_scores: z.array(z.number().int()).optional(),
+  effective_date_time: isoTimestampSchema.optional(),
+  document_reference_id: z.string().optional(),
+  content_type: z.string().optional(),
+  url: z.string().optional(),
+  data: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  sha256: z.string().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const dryEyeTreatmentParametersSchema = {
+  energy_mj: z.number().optional(),
+  wavelength_nm: z.number().optional(),
+  spot_count: z.number().int().optional(),
+} as const;
+const createDryEyeTreatmentProcedureSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  treatment_type: z.enum(DRY_EYE_TREATMENT_TYPE_CODES),
+  status: z.enum(DRY_EYE_PROCEDURE_STATUS_CODES).optional(),
+  series_procedure_id: z.string().optional(),
+  performed_date_time: isoTimestampSchema.optional(),
+  treatment_device_id: z.string().optional(),
+  reason_text: z.string().optional(),
+  session_number: z.number().int().positive().optional(),
+  total_sessions: z.number().int().positive().optional(),
+  ...dryEyeTreatmentParametersSchema,
+  ...v04ProvenanceAgentSchema,
+});
+const createDryEyeTreatmentSeriesSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  treatment_type: z.enum(DRY_EYE_TREATMENT_TYPE_CODES),
+  total_sessions: z.number().int().positive(),
+  series_start_date_time: isoTimestampSchema.optional(),
+  child_schedule_date_times: z.array(isoTimestampSchema).optional(),
+  treatment_device_id: z.string().optional(),
+  reason_text: z.string().optional(),
+  ...dryEyeTreatmentParametersSchema,
+  ...v04ProvenanceAgentSchema,
+});
+const updateDryEyeTreatmentProcedureStatusSchema = z.object({
+  procedure_id: z.string().min(1),
+  status: z.enum(["in-progress", "completed", "aborted"]),
+  ...v04ProvenanceAgentSchema,
+});
+const createOphthalmicMedicationStatementSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  episode_of_care_id: z.string().optional(),
+  medication_system: z.string().optional(),
+  medication_code: z.string().optional(),
+  medication_display: z.string().optional(),
+  medication_text: z.string().min(1),
+  status: z.enum(OPHTHALMIC_MEDICATION_STATUS_CODES).optional(),
+  effective_date_time: isoTimestampSchema.optional(),
+  supply_type: z.enum(OPHTHALMIC_SUPPLY_TYPE_CODES).optional(),
+  indication_text: z.string().optional(),
+  dosage_text: z.string().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const updateDryEyeMedicationStatusSchema = z.object({
+  medication_statement_id: z.string().min(1),
+  status: z.enum(DRY_EYE_MEDICATION_TIMELINE_STATUS_CODES),
+  ...v04ProvenanceAgentSchema,
+});
+const createDryEyeAdverseEventSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  event_system: z.string().optional(),
+  event_code: z.string().optional(),
+  event_display: z.string().optional(),
+  event_text: z.string().min(1),
+  actuality: z.enum(DRY_EYE_ADVERSE_EVENT_ACTUALITY_CODES).optional(),
+  date: isoTimestampSchema.optional(),
+  detected: isoTimestampSchema.optional(),
+  seriousness_text: z.string().optional(),
+  severity_text: z.string().optional(),
+  outcome_text: z.string().optional(),
+  suspect_entity_references: z.array(z.string()).optional(),
+  reference_document_references: z.array(z.string()).optional(),
+  resulting_condition_references: z.array(z.string()).optional(),
   ...v04ProvenanceAgentSchema,
 });
 const dateRangeSchema = z.object({
@@ -2363,6 +2692,335 @@ function createServer(): Server {
 
           return toolJson({ substance: created, provenance });
         }
+        case "create_dry_eye_questionnaire_response": {
+          const input = createDryEyeQuestionnaireResponseSchema.parse(args);
+          const questionnaireResponse = buildDryEyeQuestionnaireResponse({
+            instrument: input.instrument,
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            authored: input.authored,
+            authorReference: input.author_reference,
+            sourceReference: input.source_reference,
+            answers: toDryEyeQuestionnaireAnswers(input.answers),
+          });
+          const createdQuestionnaireResponse = await fhir.create<QuestionnaireResponse>(
+            questionnaireResponse,
+            auditHeaders("create_dry_eye_questionnaire_response"),
+          );
+          const scoreObservation = buildDryEyeQuestionnaireScoreObservation({
+            instrument: input.instrument,
+            patientReference: patientReference(input.patient_id),
+            questionnaireResponseReference: `QuestionnaireResponse/${createdQuestionnaireResponse.id}`,
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            effectiveDateTime: input.authored,
+            score: input.score,
+            answers: toDryEyeQuestionnaireAnswers(input.answers),
+          });
+          const createdScoreObservation = await fhir.create<Observation>(
+            scoreObservation,
+            auditHeaders("create_dry_eye_questionnaire_response"),
+          );
+          const provenance = await createV04Provenance(
+            "create_dry_eye_questionnaire_response",
+            input,
+            [
+              `QuestionnaireResponse/${createdQuestionnaireResponse.id}`,
+              `Observation/${createdScoreObservation.id}`,
+            ],
+            "CREATE",
+            questionnaireResponse.authored,
+          );
+
+          return toolJson({
+            questionnaireResponse: createdQuestionnaireResponse,
+            scoreObservation: createdScoreObservation,
+            provenance,
+          });
+        }
+        case "create_meibography_observation": {
+          const input = createMeibographyObservationSchema.parse(args);
+          let documentReference = input.document_reference_id
+            ? `DocumentReference/${stripReference(input.document_reference_id, "DocumentReference")}`
+            : undefined;
+          let createdDocumentReference: DocumentReference | undefined;
+          if (!documentReference) {
+            if (!input.content_type || (!input.url && !input.data)) {
+              throw new Error(
+                "create_meibography_observation requires document_reference_id or content_type plus url/data.",
+              );
+            }
+            createdDocumentReference = await fhir.create<DocumentReference>(
+              buildDocumentReference({
+                patientReference: patientReference(input.patient_id),
+                encounterReference: input.encounter_id
+                  ? encounterReference(input.encounter_id)
+                  : undefined,
+                contentType: input.content_type,
+                url: input.url,
+                data: input.data,
+                title: input.title ?? "Meibography image",
+                description: input.description,
+                sha256: input.sha256,
+                categoryCode: "MEIBOGRAPHY_IMAGE",
+                typeCode: "MEIBOGRAPHY_IMAGE",
+              }),
+              auditHeaders("create_meibography_observation"),
+            );
+            documentReference = `DocumentReference/${createdDocumentReference.id}`;
+          }
+          const observation = buildMeibographyObservation({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            documentReference,
+            eye: input.eye.toUpperCase() as "OD" | "OS" | "OU",
+            lid: input.lid,
+            scoringSystem: input.scoring_system,
+            totalScore: input.total_score,
+            glandScores: input.gland_scores,
+            effectiveDateTime: input.effective_date_time,
+          });
+          const createdObservation = await fhir.create<Observation>(
+            observation,
+            auditHeaders("create_meibography_observation"),
+          );
+          const targets = [
+            ...(createdDocumentReference?.id ? [`DocumentReference/${createdDocumentReference.id}`] : []),
+            `Observation/${createdObservation.id}`,
+          ];
+          const provenance = await createV04Provenance(
+            "create_meibography_observation",
+            input,
+            targets,
+            "CREATE",
+            observation.effectiveDateTime,
+          );
+
+          return toolJson({
+            documentReference: createdDocumentReference,
+            observation: createdObservation,
+            provenance,
+          });
+        }
+        case "create_dry_eye_treatment_procedure": {
+          const input = createDryEyeTreatmentProcedureSchema.parse(args);
+          const procedure = buildDryEyeTreatmentProcedure({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            treatmentType: input.treatment_type,
+            status: input.status,
+            seriesProcedureReference: input.series_procedure_id
+              ? normalizeToolReference(input.series_procedure_id, "Procedure")
+              : undefined,
+            performedDateTime: input.performed_date_time,
+            treatmentDeviceReference: input.treatment_device_id
+              ? normalizeToolReference(input.treatment_device_id, "Device")
+              : undefined,
+            reasonText: input.reason_text,
+            sessionNumber: input.session_number,
+            totalSessions: input.total_sessions,
+            parameters: dryEyeTreatmentParameters(input),
+          });
+          const created = await fhir.create<Procedure>(
+            procedure,
+            auditHeaders("create_dry_eye_treatment_procedure"),
+          );
+          const provenance = await createV04Provenance(
+            "create_dry_eye_treatment_procedure",
+            input,
+            [`Procedure/${created.id}`],
+            "CREATE",
+            procedure.performedDateTime ?? procedure.performedPeriod?.start,
+          );
+
+          return toolJson({ procedure: created, provenance });
+        }
+        case "create_dry_eye_treatment_series": {
+          const input = createDryEyeTreatmentSeriesSchema.parse(args);
+          const parent = buildDryEyeTreatmentSeriesProcedure({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            treatmentType: input.treatment_type,
+            totalSessions: input.total_sessions,
+            seriesStartDateTime: input.series_start_date_time,
+            treatmentDeviceReference: input.treatment_device_id
+              ? normalizeToolReference(input.treatment_device_id, "Device")
+              : undefined,
+            reasonText: input.reason_text,
+            childScheduleDateTimes: input.child_schedule_date_times,
+            parameters: dryEyeTreatmentParameters(input),
+          });
+          const createdParent = await fhir.create<Procedure>(
+            parent,
+            auditHeaders("create_dry_eye_treatment_series"),
+          );
+          const children = buildDryEyeTreatmentSeriesChildren({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            treatmentType: input.treatment_type,
+            totalSessions: input.total_sessions,
+            seriesStartDateTime: input.series_start_date_time,
+            treatmentDeviceReference: input.treatment_device_id
+              ? normalizeToolReference(input.treatment_device_id, "Device")
+              : undefined,
+            reasonText: input.reason_text,
+            childScheduleDateTimes: input.child_schedule_date_times,
+            parameters: dryEyeTreatmentParameters(input),
+            seriesProcedureReference: `Procedure/${createdParent.id}`,
+          });
+          const createdChildren: Procedure[] = [];
+          for (const child of children) {
+            createdChildren.push(
+              await fhir.create<Procedure>(
+                child,
+                auditHeaders("create_dry_eye_treatment_series"),
+              ),
+            );
+          }
+          const provenance = await createV04Provenance(
+            "create_dry_eye_treatment_series",
+            input,
+            [
+              `Procedure/${createdParent.id}`,
+              ...createdChildren.map((child) => `Procedure/${child.id}`),
+            ],
+            "CREATE",
+            parent.performedDateTime,
+          );
+
+          return toolJson({
+            seriesProcedure: createdParent,
+            sessionProcedures: createdChildren,
+            provenance,
+          });
+        }
+        case "update_dry_eye_treatment_procedure_status": {
+          const input = updateDryEyeTreatmentProcedureStatusSchema.parse(args);
+          const id = stripReference(input.procedure_id, "Procedure");
+          const existing = await fhir.read<Procedure>("Procedure", id);
+          const nextStatus = procedureStatusForDryEyeUpdate(input.status);
+          const operations: JsonPatchOperation[] = [
+            { op: "replace", path: "/status", value: nextStatus },
+          ];
+          if (input.status === "aborted") {
+            operations.push({
+              op: existing.statusReason ? "replace" : "add",
+              path: "/statusReason",
+              value: { text: "Aborted" },
+            });
+          }
+          const updated = await fhir.patch<Procedure>(
+            "Procedure",
+            id,
+            operations,
+            versionedHeaders(existing, auditHeaders("update_dry_eye_treatment_procedure_status")),
+          );
+          const provenance = await createV04Provenance(
+            "update_dry_eye_treatment_procedure_status",
+            input,
+            [`Procedure/${updated.id}`],
+            "UPDATE",
+            updated.performedDateTime ?? updated.performedPeriod?.start,
+            [{ role: "revision", display: `prior Procedure.status: ${existing.status}` }],
+          );
+
+          return toolJson({ procedure: updated, provenance });
+        }
+        case "create_ophthalmic_medication_statement": {
+          const input = createOphthalmicMedicationStatementSchema.parse(args);
+          const medicationStatement = buildOphthalmicMedicationStatement({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            episodeOfCareReference: input.episode_of_care_id
+              ? normalizeToolReference(input.episode_of_care_id, "EpisodeOfCare")
+              : undefined,
+            medication: {
+              system: input.medication_system,
+              code: input.medication_code,
+              display: input.medication_display,
+              text: input.medication_text,
+            },
+            status: input.status,
+            effectiveDateTime: input.effective_date_time,
+            supplyType: input.supply_type,
+            indicationText: input.indication_text,
+            dosageText: input.dosage_text,
+          });
+          const created = await fhir.create<MedicationStatement>(
+            medicationStatement,
+            auditHeaders("create_ophthalmic_medication_statement"),
+          );
+          const provenance = await createV04Provenance(
+            "create_ophthalmic_medication_statement",
+            input,
+            [`MedicationStatement/${created.id}`],
+            "CREATE",
+            medicationStatement.effectiveDateTime ?? medicationStatement.effectivePeriod?.start,
+          );
+
+          return toolJson({ medicationStatement: created, provenance });
+        }
+        case "update_dry_eye_medication_status": {
+          const input = updateDryEyeMedicationStatusSchema.parse(args);
+          const id = stripReference(input.medication_statement_id, "MedicationStatement");
+          const existing = await fhir.read<MedicationStatement>("MedicationStatement", id);
+          const updated = await fhir.patch<MedicationStatement>(
+            "MedicationStatement",
+            id,
+            [
+              {
+                op: "replace",
+                path: "/status",
+                value: medicationStatementStatusForTimeline(input.status),
+              },
+            ],
+            versionedHeaders(existing, auditHeaders("update_dry_eye_medication_status")),
+          );
+          const provenance = await createV04Provenance(
+            "update_dry_eye_medication_status",
+            input,
+            [`MedicationStatement/${updated.id}`],
+            "UPDATE",
+            updated.effectiveDateTime ?? updated.effectivePeriod?.start,
+            [{ role: "revision", display: `prior MedicationStatement.status: ${existing.status}` }],
+          );
+
+          return toolJson({ medicationStatement: updated, provenance });
+        }
+        case "create_dry_eye_adverse_event": {
+          const input = createDryEyeAdverseEventSchema.parse(args);
+          const adverseEvent = buildDryEyeAdverseEvent({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            event: {
+              system: input.event_system,
+              code: input.event_code,
+              display: input.event_display,
+              text: input.event_text,
+            },
+            actuality: input.actuality,
+            date: input.date,
+            detected: input.detected,
+            seriousnessText: input.seriousness_text,
+            severityText: input.severity_text,
+            outcomeText: input.outcome_text,
+            suspectEntityReferences: input.suspect_entity_references,
+            referenceDocumentReferences: input.reference_document_references,
+            resultingConditionReferences: input.resulting_condition_references,
+          });
+          const created = await fhir.create<AdverseEvent>(
+            adverseEvent,
+            auditHeaders("create_dry_eye_adverse_event"),
+          );
+          const provenance = await createV04Provenance(
+            "create_dry_eye_adverse_event",
+            input,
+            [`AdverseEvent/${created.id}`],
+            "CREATE",
+            adverseEvent.date ?? adverseEvent.detected ?? adverseEvent.recordedDate,
+          );
+
+          return toolJson({ adverseEvent: created, provenance });
+        }
         case "get_observation_history": {
           const input = getObservationHistorySchema.parse(args);
           const bundle = await fhir.search<Observation>(
@@ -2502,6 +3160,8 @@ type UpdateEpisodeOfCareInput = z.infer<typeof updateEpisodeOfCareSchema>;
 type CreateAllergyIntoleranceInput = z.infer<typeof createAllergyIntoleranceSchema>;
 type CreateProcedureInput = z.infer<typeof createProcedureSchema>;
 type LensPropertyToolInput = z.infer<typeof lensPropertyInputSchema>;
+type DryEyeQuestionnaireAnswerToolInput =
+  z.infer<typeof dryEyeQuestionnaireAnswerSchema>;
 type V04ProvenanceAgentInput = {
   provenance_agent_reference?: string;
   provenance_agent_display?: string;
@@ -2550,6 +3210,21 @@ function lensPropertyInputSchemaJson(): Record<string, unknown> {
       value_system: { type: "string" },
       value_display: { type: "string" },
       value_text: { type: "string" },
+    },
+  };
+}
+
+function dryEyeQuestionnaireAnswerSchemaJson(): Record<string, unknown> {
+  return {
+    type: "object",
+    required: ["link_id"],
+    properties: {
+      link_id: { type: "string" },
+      text: { type: "string" },
+      value_integer: { type: "number" },
+      value_decimal: { type: "number" },
+      value_string: { type: "string" },
+      value_boolean: { type: "boolean" },
     },
   };
 }
@@ -2667,6 +3342,38 @@ function toLensPropertyInputs(
     valueDisplay: property.value_display,
     valueText: property.value_text,
   }));
+}
+
+function toDryEyeQuestionnaireAnswers(
+  answers: DryEyeQuestionnaireAnswerToolInput[],
+): DryEyeQuestionnaireAnswerInput[] {
+  return answers.map((answer) => ({
+    linkId: answer.link_id,
+    text: answer.text,
+    valueInteger: answer.value_integer,
+    valueDecimal: answer.value_decimal,
+    valueString: answer.value_string,
+    valueBoolean: answer.value_boolean,
+  }));
+}
+
+function dryEyeTreatmentParameters(input: {
+  energy_mj?: number;
+  wavelength_nm?: number;
+  spot_count?: number;
+}) {
+  if (
+    input.energy_mj === undefined &&
+    input.wavelength_nm === undefined &&
+    input.spot_count === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    energyMj: input.energy_mj,
+    wavelengthNm: input.wavelength_nm,
+    spotCount: input.spot_count,
+  };
 }
 
 async function findDiagnosticReport(

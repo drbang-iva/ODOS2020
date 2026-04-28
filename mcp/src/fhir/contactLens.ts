@@ -50,7 +50,7 @@ export const OSOD_SUBSTANCE_IDENTIFIER_SYSTEM = `${OSOD_FHIR_BASE}/Identifier/co
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 export const LOINC_CODE_SYSTEM = "http://loinc.org";
 
-export const UCUM_UNIT_CODES = ["[diop]", "mm", "um", "ms", "%", "deg"] as const;
+export const UCUM_UNIT_CODES = ["[diop]", "mm", "um", "ms", "%", "deg", "mJ", "nm"] as const;
 export type UcumUnitCode = (typeof UCUM_UNIT_CODES)[number];
 
 const CONTACT_LENS_TYPE_DEFINITIONS = [
@@ -872,24 +872,47 @@ function buildV04CodeSystems(): CodeSystem[] {
     codeSystem("contact-lens-material", "OSOD contact lens materials", CONTACT_LENS_MATERIAL_CODES.map((code) => ({ code, display: titleCase(code) }))),
     codeSystem("contact-lens-coating", "OSOD contact lens coatings", CONTACT_LENS_COATING_CODES.map((code) => ({ code, display: titleCase(code) }))),
     codeSystem("dry-eye-treatment-type", "OSOD dry-eye treatment types", [
+      {
+        code: "IPL",
+        display: "Intense pulsed light",
+        designation: [
+          { language: "en", value: "Lumenis IPL" },
+          { language: "en", value: "OptiLight IPL" },
+        ],
+      },
+      { code: "LLLT", display: "Low-level light therapy" },
+      { code: "RF", display: "Radiofrequency treatment" },
+      { code: "heat-mask", display: "Heat mask" },
+      { code: "lid-debridement", display: "Lid debridement" },
+      { code: "blepharoexfoliation", display: "Blepharoexfoliation" },
+      { code: "scleral-lens-rehab", display: "Scleral lens rehabilitation" },
       { code: "artificial-tears", display: "Artificial tears" },
-      { code: "warm-compress", display: "Warm compress" },
-      { code: "lid-hygiene", display: "Lid hygiene" },
       { code: "prescription-anti-inflammatory", display: "Prescription anti-inflammatory" },
+      { code: "omega-3", display: "Omega-3 supplement" },
     ]),
     codeSystem("meibography-score", "OSOD meibography scores", [
       { code: "meiboscore-0", display: "Meiboscore 0" },
       { code: "meiboscore-1", display: "Meiboscore 1" },
       { code: "meiboscore-2", display: "Meiboscore 2" },
       { code: "meiboscore-3", display: "Meiboscore 3" },
+      { code: "meiboscore-gland", display: "Meiboscore gland-level score" },
+      { code: "meiboscore-total-lid", display: "Meiboscore total per lid, 0-9" },
       { code: "arita-0", display: "Arita 0" },
       { code: "arita-1", display: "Arita 1" },
       { code: "arita-2", display: "Arita 2" },
       { code: "arita-3", display: "Arita 3" },
+      { code: "arita-gland", display: "Arita gland-level score" },
+      { code: "arita-total-lid", display: "Arita total per lid, 0-15" },
     ]),
     codeSystem("dry-eye-questionnaire-instrument", "OSOD dry-eye questionnaire instruments", [
       { code: "OSDI", display: "Ocular Surface Disease Index" },
+      { code: "SPEED", display: "Standard Patient Evaluation of Eye Dryness" },
       { code: "DEQ-5", display: "Dry Eye Questionnaire 5" },
+      { code: "McMonnies", display: "McMonnies Dry Eye Questionnaire" },
+      { code: "OSDI-summary-score", display: "OSDI summary score" },
+      { code: "SPEED-summary-score", display: "SPEED summary score" },
+      { code: "DEQ-5-summary-score", display: "DEQ-5 summary score" },
+      { code: "McMonnies-summary-score", display: "McMonnies summary score" },
     ]),
     codeSystem("myopia-control-intervention", "OSOD myopia control interventions", [
       { code: "ortho-K", display: "Orthokeratology" },
@@ -1121,7 +1144,11 @@ function observationProfile(
 function codeSystem(
   id: string,
   title: string,
-  concepts: ReadonlyArray<{ code: string; display?: string }>,
+  concepts: ReadonlyArray<{
+    code: string;
+    display?: string;
+    designation?: NonNullable<CodeSystem["concept"]>[number]["designation"];
+  }>,
 ): CodeSystem {
   return {
     resourceType: "CodeSystem",
@@ -1137,6 +1164,7 @@ function codeSystem(
     concept: concepts.map((concept) => ({
       code: concept.code,
       display: concept.display ?? titleCase(concept.code),
+      ...(concept.designation?.length ? { designation: concept.designation } : {}),
     })),
   };
 }

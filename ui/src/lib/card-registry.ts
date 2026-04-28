@@ -1,6 +1,12 @@
 import type { CardDensity, RoleId } from "./roles";
 
-export type ChartCardId = "allergies" | "tobacco-use" | "care-team" | "problem-list" | "programs";
+export type ChartCardId =
+  | "allergies"
+  | "tobacco-use"
+  | "care-team"
+  | "problem-list"
+  | "programs"
+  | "product-timeline";
 
 export interface ChartCardRegistration {
   id: ChartCardId;
@@ -22,6 +28,11 @@ export const CHART_CARD_REGISTRY: ChartCardRegistration[] = [
   {
     id: "tobacco-use",
     label: "Tobacco Use",
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+  },
+  {
+    id: "product-timeline",
+    label: "Product Timeline",
     densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
   },
   {

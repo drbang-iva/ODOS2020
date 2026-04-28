@@ -2,8 +2,9 @@ import type { ChartSectionId, SectionStatusMap } from "./types";
 
 const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
   { id: "va", label: "Visual Acuity" },
-  { id: "iop", label: "IOP" },
   { id: "refraction", label: "Refraction" },
+  { id: "dry-eye", label: "Dry Eye" },
+  { id: "iop", label: "IOP" },
   { id: "assessment", label: "Assessment" },
 ];
 

@@ -5,6 +5,7 @@ import type {
   CodeSystem,
   ConceptMap,
   DeviceDefinition,
+  Questionnaire,
   Resource,
   SearchParameter,
   StructureDefinition,
@@ -21,6 +22,7 @@ import {
   buildV04SubstanceSeeds,
   type ConceptMapMappingInput,
 } from "../mcp/src/fhir/contactLens.js";
+import { buildDryEyeCanonicalResources } from "../mcp/src/fhir/dryEyeTerminology.js";
 
 loadRepoEnv();
 
@@ -52,6 +54,10 @@ for (const file of profileFiles) {
 }
 
 for (const resource of buildV04CanonicalResources()) {
+  await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
+}
+
+for (const resource of buildDryEyeCanonicalResources()) {
   await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
 }
 
@@ -105,6 +111,7 @@ type CanonicalResource =
   | CodeSystem
   | ValueSet
   | ConceptMap
+  | Questionnaire
   | SearchParameter;
 
 type IdentifiedSeedResource = DeviceDefinition | Substance;
@@ -178,6 +185,7 @@ function isSupportedCanonicalResource(resource: Resource): resource is Canonical
     resource.resourceType === "CodeSystem" ||
     resource.resourceType === "ValueSet" ||
     resource.resourceType === "ConceptMap" ||
+    resource.resourceType === "Questionnaire" ||
     resource.resourceType === "SearchParameter"
   );
 }

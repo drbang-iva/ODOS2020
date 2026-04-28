@@ -3,8 +3,10 @@ import type {
   AllergyIntolerance,
   CareTeam,
   Condition,
+  DeviceUseStatement,
   Encounter,
   EpisodeOfCare,
+  MedicationStatement,
   Observation,
   Patient,
 } from "@medplum/fhirtypes";
@@ -39,6 +41,8 @@ interface ChartData {
   problemList: Condition[];
   episodes: EpisodeOfCare[];
   encounters: Encounter[];
+  medications: MedicationStatement[];
+  deviceUseStatements: DeviceUseStatement[];
 }
 
 const EMPTY_DATA: ChartData = {
@@ -48,6 +52,8 @@ const EMPTY_DATA: ChartData = {
   problemList: [],
   episodes: [],
   encounters: [],
+  medications: [],
+  deviceUseStatements: [],
 };
 
 export function ChartSidebar({ patient }: { patient: Patient }) {
@@ -69,6 +75,8 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
         conditionBundle,
         episodeBundle,
         encounterBundle,
+        medicationBundle,
+        deviceUseBundle,
       ] = await Promise.all([
         fhir.search<AllergyIntolerance>("AllergyIntolerance", { patient: patientReference, _count: "20" }),
         fhir.search<Observation>("Observation", { subject: patientReference, _count: "40", _sort: "-date" }),
@@ -76,6 +84,8 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
         fhir.search<Condition>("Condition", { subject: patientReference, _count: "80" }),
         fhir.search<EpisodeOfCare>("EpisodeOfCare", { patient: patientReference, _count: "20" }),
         fhir.search<Encounter>("Encounter", { subject: patientReference, _count: "30", _sort: "-date" }),
+        fhir.search<MedicationStatement>("MedicationStatement", { subject: patientReference, _count: "60" }),
+        fhir.search<DeviceUseStatement>("DeviceUseStatement", { subject: patientReference, _count: "60" }),
       ]);
 
       setData({
@@ -85,6 +95,8 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
         problemList: resources(conditionBundle).filter(isProblemListCondition),
         episodes: resources(episodeBundle).filter((episode) => episode.status === "active"),
         encounters: resources(encounterBundle),
+        medications: resources(medicationBundle),
+        deviceUseStatements: resources(deviceUseBundle),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -135,6 +147,13 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             patient={patient}
             observations={data.smokingObservations}
             onChanged={load}
+          />
+        )}
+        {density("product-timeline") !== "hidden" && (
+          <ProductTimelineCard
+            density={density("product-timeline")}
+            medications={data.medications}
+            deviceUseStatements={data.deviceUseStatements}
           />
         )}
         {density("care-team") !== "hidden" && (
@@ -350,6 +369,45 @@ function TobaccoUseCard({
   );
 }
 
+function ProductTimelineCard({
+  density,
+  medications,
+  deviceUseStatements,
+}: {
+  density: string;
+  medications: MedicationStatement[];
+  deviceUseStatements: DeviceUseStatement[];
+}) {
+  const groups = productTimelineGroups(medications, deviceUseStatements);
+
+  return (
+    <SidebarCard id="product-timeline" title="Product Timeline" density={density}>
+      {groups.length === 0 ? (
+        <EmptyLine>No products recorded.</EmptyLine>
+      ) : (
+        <div className="space-y-3">
+          {groups.map((group) => (
+            <div key={group.indication} className="rounded border border-white/10 bg-bg-mid/60 p-2">
+              <div className="text-xs uppercase tracking-widest text-white/35">{group.indication}</div>
+              <div className="mt-2 space-y-2">
+                {group.items.map((item) => (
+                  <div key={item.key} className="text-sm text-white/75">
+                    <span className="font-semibold text-white">{item.label}</span>
+                    <span className="ml-2 text-xs text-white/45">{item.status}</span>
+                    {density === "full" && item.date && (
+                      <span className="ml-2 text-xs text-white/35">{item.date}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </SidebarCard>
+  );
+}
+
 function CareTeamCard({
   density,
   patient,
@@ -402,6 +460,44 @@ function CareTeamCard({
       )}
     </SidebarCard>
   );
+}
+
+function productTimelineGroups(
+  medications: MedicationStatement[],
+  deviceUseStatements: DeviceUseStatement[],
+): Array<{
+  indication: string;
+  items: Array<{ key: string; label: string; status: string; date?: string }>;
+}> {
+  const byIndication = new Map<string, Array<{ key: string; label: string; status: string; date?: string }>>();
+  for (const medication of medications) {
+    const indication = medication.reasonCode?.[0]?.text ?? "Unspecified";
+    const items = byIndication.get(indication) ?? [];
+    items.push({
+      key: `MedicationStatement/${medication.id ?? medication.medicationCodeableConcept?.text}`,
+      label: displayCode(medication.medicationCodeableConcept),
+      status: medication.status,
+      date: medication.effectiveDateTime?.slice(0, 10) ?? medication.effectivePeriod?.start?.slice(0, 10),
+    });
+    byIndication.set(indication, items);
+  }
+  for (const statement of deviceUseStatements) {
+    const indication = statement.reasonCode?.[0]?.text ?? "Unspecified";
+    const items = byIndication.get(indication) ?? [];
+    items.push({
+      key: `DeviceUseStatement/${statement.id ?? statement.device.reference}`,
+      label: statement.device.display ?? statement.device.reference ?? "Device",
+      status: statement.status,
+      date: statement.timingDateTime?.slice(0, 10) ?? statement.timingPeriod?.start?.slice(0, 10),
+    });
+    byIndication.set(indication, items);
+  }
+  return [...byIndication.entries()]
+    .map(([indication, items]) => ({
+      indication,
+      items: items.sort((left, right) => (right.date ?? "").localeCompare(left.date ?? "")),
+    }))
+    .sort((left, right) => left.indication.localeCompare(right.indication));
 }
 
 function ProblemListCard({

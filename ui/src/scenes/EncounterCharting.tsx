@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
+import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
@@ -16,8 +17,9 @@ interface Props {
 
 const EMPTY_STATUSES: SectionStatusMap = {
   va: { completed: false },
-  iop: { completed: false },
   refraction: { completed: false },
+  "dry-eye": { completed: false },
+  iop: { completed: false },
   assessment: { completed: false },
 };
 
@@ -61,6 +63,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("refraction", status)}
+            />
+          )}
+          {activeSection === "dry-eye" && (
+            <DryEyeSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("dry-eye", status)}
             />
           )}
           {activeSection === "assessment" && (

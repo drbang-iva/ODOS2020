@@ -9,6 +9,14 @@ test("v0.4 foundation write tools each emit their per-tool X-OSOD-Source header 
     "create_device_definition",
     "create_concept_map",
     "create_substance",
+    "create_dry_eye_questionnaire_response",
+    "create_meibography_observation",
+    "create_dry_eye_treatment_procedure",
+    "create_dry_eye_treatment_series",
+    "update_dry_eye_treatment_procedure_status",
+    "create_ophthalmic_medication_statement",
+    "update_dry_eye_medication_status",
+    "create_dry_eye_adverse_event",
   ]);
 
   for (const toolName of V04_WRITE_TOOL_NAMES) {

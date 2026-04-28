@@ -32,6 +32,24 @@ import { buildCareTeam as buildMcpCareTeam } from "../src/fhir/careTeam.js";
 import { buildCareTeam as buildUiCareTeam } from "../../ui/src/lib/fhir-clinical/careTeam.js";
 import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
 import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinical/procedure.js";
+import {
+  buildDryEyeQuestionnaireResponse as buildMcpDryEyeQuestionnaireResponse,
+  buildDryEyeQuestionnaireScoreObservation as buildMcpDryEyeQuestionnaireScoreObservation,
+  defaultDryEyeQuestionnaireAnswers as defaultMcpDryEyeQuestionnaireAnswers,
+} from "../src/fhir/dryEyeQuestionnaireResponse.js";
+import {
+  buildDryEyeQuestionnaireResponse as buildUiDryEyeQuestionnaireResponse,
+  buildDryEyeQuestionnaireScoreObservation as buildUiDryEyeQuestionnaireScoreObservation,
+  defaultDryEyeQuestionnaireAnswers as defaultUiDryEyeQuestionnaireAnswers,
+} from "../../ui/src/lib/fhir-dry-eye/questionnaireResponse.js";
+import { buildMeibographyObservation as buildMcpMeibographyObservation } from "../src/fhir/meibography.js";
+import { buildMeibographyObservation as buildUiMeibographyObservation } from "../../ui/src/lib/fhir-dry-eye/meibography.js";
+import { buildDryEyeTreatmentProcedure as buildMcpDryEyeTreatmentProcedure } from "../src/fhir/dryEyeProcedure.js";
+import { buildDryEyeTreatmentProcedure as buildUiDryEyeTreatmentProcedure } from "../../ui/src/lib/fhir-dry-eye/procedure.js";
+import { buildOphthalmicMedicationStatement as buildMcpOphthalmicMedicationStatement } from "../src/fhir/ophthalmicMedicationStatement.js";
+import { buildOphthalmicMedicationStatement as buildUiOphthalmicMedicationStatement } from "../../ui/src/lib/fhir-dry-eye/ophthalmicMedicationStatement.js";
+import { buildDryEyeAdverseEvent as buildMcpDryEyeAdverseEvent } from "../src/fhir/dryEyeAdverseEvent.js";
+import { buildDryEyeAdverseEvent as buildUiDryEyeAdverseEvent } from "../../ui/src/lib/fhir-dry-eye/adverseEvent.js";
 
 const common = {
   patientReference: "Patient/p1",
@@ -210,6 +228,93 @@ test("UI clinical mirror matches MCP Procedure builder output", () => {
   };
 
   assertJsonEqual(buildMcpProcedure(input), buildUiProcedure(input));
+});
+
+test("UI dry-eye mirror matches MCP QuestionnaireResponse and score builders", () => {
+  const answers = defaultMcpDryEyeQuestionnaireAnswers("DEQ-5", 1);
+  assertJsonEqual(answers, defaultUiDryEyeQuestionnaireAnswers("DEQ-5", 1));
+  const responseInput = {
+    instrument: "DEQ-5" as const,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    authored: "2026-04-28T12:00:00.000Z",
+    answers,
+  };
+  assertJsonEqual(
+    buildMcpDryEyeQuestionnaireResponse(responseInput),
+    buildUiDryEyeQuestionnaireResponse(responseInput),
+  );
+  const scoreInput = {
+    instrument: "DEQ-5" as const,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    questionnaireResponseReference: "QuestionnaireResponse/qr1",
+    effectiveDateTime: "2026-04-28T12:00:00.000Z",
+    answers,
+  };
+  assertJsonEqual(
+    buildMcpDryEyeQuestionnaireScoreObservation(scoreInput),
+    buildUiDryEyeQuestionnaireScoreObservation(scoreInput),
+  );
+});
+
+test("UI dry-eye mirror matches MCP meibography builder", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    documentReference: "DocumentReference/img1",
+    eye: "OS" as const,
+    lid: "lower" as const,
+    scoringSystem: "arita" as const,
+    totalScore: 5,
+    glandScores: [1, 1, 1, 1, 1],
+    effectiveDateTime: "2026-04-28T12:00:00.000Z",
+  };
+  assertJsonEqual(buildMcpMeibographyObservation(input), buildUiMeibographyObservation(input));
+});
+
+test("UI dry-eye mirror matches MCP treatment Procedure builder", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    treatmentType: "IPL" as const,
+    seriesProcedureReference: "Procedure/series1",
+    performedDateTime: "2026-04-28T12:00:00.000Z",
+    treatmentDeviceReference: "Device/ipl1",
+    sessionNumber: 1,
+    totalSessions: 4,
+    parameters: { energyMj: 14, wavelengthNm: 590, spotCount: 42 },
+  };
+  assertJsonEqual(buildMcpDryEyeTreatmentProcedure(input), buildUiDryEyeTreatmentProcedure(input));
+});
+
+test("UI dry-eye mirror matches MCP MedicationStatement and AdverseEvent builders", () => {
+  const medicationInput = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    medication: { text: "Restasis" },
+    supplyType: "rx" as const,
+    indicationText: "Dry eye",
+    dosageText: "One drop twice daily",
+    effectiveDateTime: "2026-04-28T12:00:00.000Z",
+    dateAsserted: "2026-04-28T12:00:00.000Z",
+  };
+  assertJsonEqual(
+    buildMcpOphthalmicMedicationStatement(medicationInput),
+    buildUiOphthalmicMedicationStatement(medicationInput),
+  );
+  const adverseEventInput = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    event: { text: "Corneal edema" },
+    date: "2026-04-28T12:00:00.000Z",
+    recordedDate: "2026-04-28T12:00:00.000Z",
+    suspectEntityReferences: ["Procedure/ipl1"],
+  };
+  assertJsonEqual(
+    buildMcpDryEyeAdverseEvent(adverseEventInput),
+    buildUiDryEyeAdverseEvent(adverseEventInput),
+  );
 });
 
 function assertJsonEqual(left: unknown, right: unknown): void {
