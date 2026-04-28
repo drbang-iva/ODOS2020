@@ -1,6 +1,6 @@
 # OSOD Build Status
 
-**As of:** 2026-04-25
+**As of:** 2026-04-28
 **Foundation:** Medplum 5.1.8 (Apache-2.0, self-hosted via docker-compose)
 **This repo:** code (Medplum stack, MCP server, Director UI, FHIR profiles, tests)
 **Strategy / decisions / mandates:** [drbang-iva/performance-od](https://github.com/drbang-iva/performance-od)
@@ -17,7 +17,7 @@
 
 This slice is intentionally narrow: no AI, no voice, no additional charting skins, no billing workflow beyond the archived POC foundation.
 
-**Next: v0.35b** (outbound view / UI logic) — Director chart sidebar cards (Allergies / Tobacco Use / Care Team / Problem List), Episode-aware "Start comprehensive exam" prompt, diagnosis tier inline tagger on Spine Assessment, edit-in-place affordances (no delete-and-recreate), MDM hint counter (CPT 2023 thresholds), role context dropdown (doctor / tech / front-desk).
+**Next: v0.4 — FHIR-native ocular measurement graph + first standard modules.** Pressure-test in progress per [`performance-od/research/2026-04-28-v0.4-pre-triangulation-draft.md`](https://github.com/drbang-iva/performance-od/blob/main/research/2026-04-28-v0.4-pre-triangulation-draft.md). Locked-default sub-slice split: **v0.4a** ocular measurement graph hardening + Mandate 4 infrastructure audit + gap-fillers + verification ledger; **v0.4b** Dry Eye Advanced module (meibography, OSDI/SPEED/DEQ-5 questionnaires, IPL/LLLT/RF treatment series, product/supplement timeline); **v0.4c** Contact Lens + Myopia Management module (unified lens-fitting infra for ortho-K adult+pediatric, MiSight, dual-focus, stock soft — with shape that supports specialty CL extension at v0.6 — plus myopia-management overlay for axial length progression, treatment comparison, atropine MedicationStatement, age-banded protocols). No Codex execution against v0.4 scope until full triangulation (Wave-1 + ChatGPT GPT-5.5 + Gemini hybrid) reconciles into a binding decision file.
 
 ---
 
@@ -44,31 +44,41 @@ This slice is intentionally narrow: no AI, no voice, no additional charting skin
 ## What works end-to-end today
 
 - `npm run up` runs Medplum + Postgres + Redis locally via `docker-compose`.
-- `npm run install-profiles` installs or updates five v0.3 FHIR profiles and is idempotent on repeat runs.
+- `npm run install-profiles` installs or updates the v0.3 + v0.35 FHIR profiles, CodeSystems, and ValueSets and is idempotent on repeat runs.
 - Director UI at `localhost:5173` talks plain FHIR REST to Medplum through `ui/src/lib/fhir.ts`.
 - Patient picker searches `Patient` by name with a 300 ms debounce and routes into Director state without auto-selecting the first patient.
-- "Start comprehensive exam" creates a profiled Encounter and Provenance attribution, then advances the Encounter to `in-progress`.
+- "Start comprehensive exam" prompt offers three options — stand-alone visit, part of an existing program, or start a new program. Episode-aware flow creates a profiled Encounter (linked to selected EpisodeOfCare when applicable) and Provenance attribution, then advances the Encounter to `in-progress`. Promote-to-Episode action retroactively links prior stand-alone Encounters to a new Episode via PATCH (no recreate).
 - Encounter charting scene supports VA, IOP, and Refraction sections. Each section save composes `BodyStructure` ensure + `Observation` creates + `Provenance` sidecars in a transaction Bundle.
-- Section save Bundles are composed by the same mirrored contract used by UI and MCP; parity tests guard drift.
+- Spine Assessment section supports Principal/Secondary diagnosis tier tagger inline (`Encounter.diagnosis.use=billing` + `rank`) and edit-in-place affordances on every diagnosis card: laterality (`update_condition_body_site` via `procedure-targetBodyStructure` extension), ICD-10 recoding (`update_condition_code`), tier change (`update_condition_tier` — rejects category-flip), clinical status, and entered-in-error (`mark_condition_entered_in_error` — preserves the Condition with `verificationStatus=entered-in-error`). No delete-and-recreate path anywhere.
+- Director chart sidebar renders five v0.35 cards against live data: **Programs** (active EpisodeOfCare list with status + linked Encounter count), **Allergies** (`AllergyIntolerance` list with Add allergy + Mark no known allergies → SNOMED 716186003 negation), **Tobacco Use** (Smoking Status Observation with LOINC 72166-2 + coded answer picker), **Care Team** (PractitionerRole-first member list), **Problem List** (chronic Conditions with `category=problem-list-item`).
+- Sign-off renders a deterministic MDM threshold counter (Low / Moderate / High per CPT 2023 problem-count tiers; reads `Encounter.diagnosis` + active problem-list Conditions; read-only label, no E/M code suggestion — Mandate 13 + FDA SaMD §Criterion 3 boundary preserved).
+- Role context plumbing: `RoleContext` provider, `useRole()` hook, `roles.ts` (doctor / tech / front-desk + default-view config), role dropdown in Director top bar, role-aware card-renderer registry. Presentation-only by binding acceptance criterion — NOT authorization, NOT MCP gating, NOT write-permission logic.
+- Section save Bundles are composed by the same mirrored contract used by UI and MCP; parity test guard extended for v0.35a builders covers all v0.35b write paths.
 - BodyStructure idempotency uses `BodyStructure.location` by patient + SNOMED laterality, not morphology.
 - "Sign & finish" patches Encounter status to `finished`, writes `period.end`, and emits Provenance.
-- MCP exposes 12 tools: 6 read tools plus 6 write tools (`create_observation`, `create_raw_asset_reference`, `create_encounter`, `update_patient`, `create_vision_prescription`, `save_section_observations`).
-- Clinical writes default Provenance ON for `create_observation`, `create_encounter`, `create_raw_asset_reference`, and `create_vision_prescription`; `update_patient` remains demographics opt-in.
+- MCP exposes ~26 tools: 6 read tools plus 20 write tools. v0.3 writes (`create_observation`, `create_raw_asset_reference`, `create_encounter`, `update_patient`, `create_vision_prescription`, `save_section_observations`) plus v0.35a writes (`create_episode_of_care`, `update_episode_of_care`, `create_condition_with_tier`, `create_problem_list_condition`, `update_condition_status`, `update_condition_tier`, `update_condition_body_site`, `update_condition_code`, `mark_condition_entered_in_error`, `create_allergy_intolerance`, `create_smoking_status_observation`, `create_care_team`, `create_procedure`, `update_procedure_body_site`).
+- All v0.35a write tools are version-aware PATCH (use `If-Match`) + per-tool `X-OSOD-Source` header + Provenance default-on. Clinical writes default Provenance ON across the full v0.3 + v0.35a clinical-write surface.
 - Client transaction execution detects per-entry failures and compensates created resources so section saves do not leave partial clinical state when Medplum returns a mixed transaction-response.
 
 ---
 
 ## What's NOT yet built
 
-- Standard clinical modules beyond the v0.3 thin slice (dry eye advanced, ortho-K, myopia management) -> v0.4+
-- Billing workflow (Claim / EOB / clearinghouse integration) -> v0.4+
-- Image handling (Orthanc bridge, `ImagingStudy` linking) -> v0.5+
+- Standard clinical modules (dry eye advanced, contact-lens fitting, myopia management) -> v0.4 (in pre-triangulation)
+- Ocular measurement graph longitudinal-query infrastructure (search params, helper MCP tools, cross-resource linkage discipline) -> v0.4a
+- Mandate 4 infrastructure systems not yet stood up (equipment registry, module registration system, fitting/trial/remake tracking, unified medication/product timeline view) -> v0.4a audit + gap-fillers
+- Billing workflow (Claim / EOB / clearinghouse integration) -> v0.6
+- Image handling (Orthanc bridge, DICOM Supp 247 ingestion, `ImagingStudy` linking) -> v0.5+/v0.6
 - Compliance rules engine skeleton (Mandate 8) -> v0.5
 - Intake scaffold skeleton (Mandate 6) -> v0.5
-- Alternate exam skins (Spine remains the only v0.3 charting UI) -> v0.5
-- Voice, AI charting, and agent attestation flows -> v0.5+
-- Role-based timeline dropdown -> v0.5
-- iOS `osod-lens` companion -> deferred
+- Alternate exam skins (Spine remains the only charting UI) -> v0.5
+- Native voice-to-FHIR scribe + clinician attestation pipeline -> v0.5
+- Multi-tenant RBAC + Medplum AccessPolicy + Information Blocking compliance audit -> v0.5 (production spine)
+- SMART on FHIR v2 + CDS Hooks 2.0.1 + AgentOps governance -> v0.55 (depends on v0.5)
+- 3D Three.js timeline rendering -> parallel visual track per Mandate 3 (reads from already-built data model; not gating)
+- Role-based timeline dropdown rendering -> parallel visual track (role *context* plumbing already shipped at v0.35; what's deferred is the actual timeline visualization)
+- Specialty CL UI surfaces + ordering integrations (scleral / RGP / hybrid / custom) -> v0.6 (data model lands in v0.4c, UI is the deferred piece)
+- iOS `osod-lens` companion -> deferred per Mandate 12
 
 ---
 
@@ -87,13 +97,13 @@ npm run install-profiles
 cd mcp
 npx tsc --noEmit
 npm test
-# Expected: 54/54 passing
+# Expected: 120/120 passing (was 54/54 at v0.3 close; +58 v0.35a write-logic tests + +8 v0.35b view-logic tests)
 
 # 4. Run UI checks
 cd ../ui
 npx tsc --noEmit
 npm run build
-# Expected: build clean; main JS bundle about 1.039 MB, under the 1.2 MB cap
+# Expected: build clean; existing large-chunk warning only
 
 # 5. Human golden path smoke
 npm run dev
@@ -105,9 +115,12 @@ npm run dev
 
 ## Reference docs (canonical)
 
-- **v0.3 pressure-test synthesis:** [`performance-od/decisions/2026-04-25-v0.3-architecture-pressure-test-synthesis.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-25-v0.3-architecture-pressure-test-synthesis.md)
-- **Master build sheet:** [`performance-od/decisions/2026-04-22-osod-master-build-sheet-v0.2.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-22-osod-master-build-sheet-v0.2.md)
 - **Mandates:** [`performance-od/reference/domain/open-source-od/mandates.md`](https://github.com/drbang-iva/performance-od/blob/main/reference/domain/open-source-od/mandates.md)
+- **Master build sheet:** [`performance-od/decisions/2026-04-22-osod-master-build-sheet-v0.2.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-22-osod-master-build-sheet-v0.2.md)
+- **Pre-v0.3 pressure-test synthesis:** [`performance-od/decisions/2026-04-25-pre-v0.3-architecture-pressure-test-synthesis.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-25-pre-v0.3-architecture-pressure-test-synthesis.md)
+- **v0.35 pressure-test synthesis:** [`performance-od/decisions/2026-04-25-v0.35-architecture-pressure-test-synthesis.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-25-v0.35-architecture-pressure-test-synthesis.md)
+- **v0.4 pre-triangulation draft (in pressure-test):** [`performance-od/research/2026-04-28-v0.4-pre-triangulation-draft.md`](https://github.com/drbang-iva/performance-od/blob/main/research/2026-04-28-v0.4-pre-triangulation-draft.md)
+- **Pressure-test protocol:** [`performance-od/reference/domain/open-source-od/pressure-test-protocol.md`](https://github.com/drbang-iva/performance-od/blob/main/reference/domain/open-source-od/pressure-test-protocol.md)
 - **Build log:** [`osod/docs/build-log/`](https://github.com/drbang-iva/osod/tree/main/docs/build-log)
 
 ---
