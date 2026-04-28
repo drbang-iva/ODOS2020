@@ -23,6 +23,7 @@ import {
   type ConceptMapMappingInput,
 } from "../mcp/src/fhir/contactLens.js";
 import { buildDryEyeCanonicalResources } from "../mcp/src/fhir/dryEyeTerminology.js";
+import { buildMyopiaCanonicalResources } from "../mcp/src/fhir/myopiaManagement.js";
 
 loadRepoEnv();
 
@@ -58,6 +59,10 @@ for (const resource of buildV04CanonicalResources()) {
 }
 
 for (const resource of buildDryEyeCanonicalResources()) {
+  await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
+}
+
+for (const resource of buildMyopiaCanonicalResources()) {
   await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
 }
 

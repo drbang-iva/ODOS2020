@@ -1,0 +1,33 @@
+id: myopia-management
+name: Myopia Management
+version: 0.4.0
+status: active
+boundary: longitudinal care strategy
+routes:
+  - /encounter/:encounterId/myopia-management
+eventTypes:
+  - episode-start
+  - care-plan-change
+  - atropine-status-change
+  - axial-length-measurement
+profiles:
+  - https://osod.dev/fhir/StructureDefinition/CarePlan-MyopiaManagement
+  - https://osod.dev/fhir/StructureDefinition/Observation-AxialLength
+  - http://hl7.org/fhir/StructureDefinition/EpisodeOfCare
+  - http://hl7.org/fhir/StructureDefinition/MedicationStatement
+  - http://hl7.org/fhir/StructureDefinition/DeviceUseStatement
+  - http://hl7.org/fhir/StructureDefinition/AdverseEvent
+toolDeclarations:
+  - create_myopia_management_episode
+  - create_or_update_myopia_plan
+  - create_atropine_medication_statement
+  - update_atropine_medication_status
+  - record_myopia_axial_length_measurement
+  - aggregate_myopia_treatments
+sharedSubstrate:
+  - contact-lens-foundation
+  - EpisodeOfCare
+  - CarePlan.activity
+  - MedicationStatement
+  - DeviceUseStatement
+  - ocular-measurement-graph

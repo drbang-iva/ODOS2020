@@ -1,4 +1,11 @@
-export type ChartSectionId = "va" | "refraction" | "dry-eye" | "iop" | "assessment";
+export type ChartSectionId =
+  | "va"
+  | "refraction"
+  | "ortho-k"
+  | "dry-eye"
+  | "myopia-management"
+  | "iop"
+  | "assessment";
 
 export interface SectionSaveStatus {
   completed: boolean;

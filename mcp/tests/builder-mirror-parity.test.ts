@@ -50,6 +50,24 @@ import { buildOphthalmicMedicationStatement as buildMcpOphthalmicMedicationState
 import { buildOphthalmicMedicationStatement as buildUiOphthalmicMedicationStatement } from "../../ui/src/lib/fhir-dry-eye/ophthalmicMedicationStatement.js";
 import { buildDryEyeAdverseEvent as buildMcpDryEyeAdverseEvent } from "../src/fhir/dryEyeAdverseEvent.js";
 import { buildDryEyeAdverseEvent as buildUiDryEyeAdverseEvent } from "../../ui/src/lib/fhir-dry-eye/adverseEvent.js";
+import {
+  buildOrthoKFitObservation as buildMcpOrthoKFitObservation,
+  buildOrthoKFittingEvent as buildMcpOrthoKFittingEvent,
+  buildOrthoKLensDevice as buildMcpOrthoKLensDevice,
+} from "../src/fhir/orthoK.js";
+import {
+  buildOrthoKFitObservation as buildUiOrthoKFitObservation,
+  buildOrthoKFittingEvent as buildUiOrthoKFittingEvent,
+  buildOrthoKLensDevice as buildUiOrthoKLensDevice,
+} from "../../ui/src/lib/fhir-v04c/orthoK.js";
+import {
+  buildAtropineMedicationStatement as buildMcpAtropineMedicationStatement,
+  buildMyopiaManagementCarePlan as buildMcpMyopiaManagementCarePlan,
+} from "../src/fhir/myopiaManagement.js";
+import {
+  buildAtropineMedicationStatement as buildUiAtropineMedicationStatement,
+  buildMyopiaManagementCarePlan as buildUiMyopiaManagementCarePlan,
+} from "../../ui/src/lib/fhir-v04c/myopiaManagement.js";
 
 const common = {
   patientReference: "Patient/p1",
@@ -314,6 +332,86 @@ test("UI dry-eye mirror matches MCP MedicationStatement and AdverseEvent builder
   assertJsonEqual(
     buildMcpDryEyeAdverseEvent(adverseEventInput),
     buildUiDryEyeAdverseEvent(adverseEventInput),
+  );
+});
+
+test("UI v0.4c Ortho-K mirror matches MCP lens, fitting, and fit finding builders", () => {
+  const lensInput = {
+    patientReference: "Patient/p1",
+    deviceName: "Night lens OD",
+    manufacturer: "Paragon",
+    definitionReference: "DeviceDefinition/paragon-crt",
+    properties: [
+      { code: "base-curve-mm", valueNumber: 7.8, unitCode: "mm" as const },
+      { code: "reverse-curve-depth-um", valueNumber: 550, unitCode: "um" as const },
+      { code: "sphere-power", valueNumber: -2, unitCode: "[diop]" as const },
+    ],
+  };
+  assertJsonEqual(buildMcpOrthoKLensDevice(lensInput), buildUiOrthoKLensDevice(lensInput));
+
+  const procedureInput = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    lensDeviceReference: "Device/lens1",
+    performedDateTime: "2026-04-28T12:00:00.000Z",
+    noteText: "Initial fit",
+  };
+  assertJsonEqual(
+    buildMcpOrthoKFittingEvent(procedureInput),
+    buildUiOrthoKFittingEvent(procedureInput),
+  );
+
+  const observationInput = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    lensDeviceReference: "Device/lens1",
+    findingCode: "centration" as const,
+    effectiveDateTime: "2026-04-28T12:00:00.000Z",
+    valueCode: "well-centered",
+    valueDisplay: "Well-centered",
+  };
+  assertJsonEqual(
+    buildMcpOrthoKFitObservation(observationInput),
+    buildUiOrthoKFitObservation(observationInput),
+  );
+});
+
+test("UI v0.4c myopia mirror matches MCP CarePlan and atropine builders", () => {
+  const carePlanInput = {
+    patientReference: "Patient/p1",
+    episodeOfCareReference: "EpisodeOfCare/mm1",
+    encounterReference: "Encounter/e1",
+    created: "2026-04-28T12:00:00.000Z",
+    activities: [
+      {
+        interventionCode: "ortho-K" as const,
+        status: "in-progress" as const,
+        resourceReference: "Device/lens1",
+        description: "Ortho-K intervention",
+      },
+      {
+        interventionCode: "atropine-medium-dose" as const,
+        status: "scheduled" as const,
+        description: "Atropine pending",
+      },
+    ],
+  };
+  assertJsonEqual(
+    buildMcpMyopiaManagementCarePlan(carePlanInput),
+    buildUiMyopiaManagementCarePlan(carePlanInput),
+  );
+
+  const atropineInput = {
+    patientReference: "Patient/p1",
+    episodeOfCareReference: "EpisodeOfCare/mm1",
+    concentration: "0.025%" as const,
+    frequencyText: "1 drop OU qhs",
+    effectiveDateTime: "2026-04-28T12:00:00.000Z",
+    dateAsserted: "2026-04-28T12:00:00.000Z",
+  };
+  assertJsonEqual(
+    buildMcpAtropineMedicationStatement(atropineInput),
+    buildUiAtropineMedicationStatement(atropineInput),
   );
 });
 

@@ -103,6 +103,8 @@ const PARAMETER_DEFINITIONS = [
   { code: "segment-height-lower-pupil-margin-mm", display: "Segment height from lower pupil margin" },
   { code: "prism-ballast-diopter", display: "Prism ballast" },
   { code: "truncation-mm", display: "Truncation" },
+  { code: "peripheral-curve-system", display: "Peripheral curve system" },
+  { code: "edge-lift", display: "Edge lift" },
   { code: "sagittal-depth-um", display: "Sagittal depth" },
   { code: "central-clearance-target-um", display: "Central clearance target" },
   { code: "limbal-clearance-um", display: "Limbal clearance" },
@@ -121,7 +123,9 @@ const PARAMETER_DEFINITIONS = [
   { code: "gp-zone-diameter-mm", display: "GP zone diameter" },
   { code: "soft-skirt-curve", display: "Soft skirt curve" },
   { code: "soft-skirt-material", display: "Soft skirt material" },
+  { code: "soft-skirt-edge-lift", display: "Soft skirt edge lift" },
   { code: "junction-vault-um", display: "Junction vault" },
+  { code: "junction-lift", display: "Junction lift" },
   { code: "water-content-percent", display: "Water content percent" },
   { code: "replacement-schedule", display: "Replacement schedule" },
   { code: "material", display: "Material" },
@@ -154,6 +158,15 @@ export const CONTACT_LENS_CLINICAL_OBSERVATION_CODES = [
   "edge-compression",
   "orientation-stability",
   "wear-time-duration",
+  "centration",
+  "lens-decentration",
+  "corneal-molding-response",
+  "fluorescein-pattern",
+  "edge-clearance",
+  "comfort",
+  "segment-position",
+  "rotation-stability",
+  "visual-acuity",
 ] as const;
 export type ContactLensClinicalObservationCode =
   (typeof CONTACT_LENS_CLINICAL_OBSERVATION_CODES)[number];
@@ -240,6 +253,8 @@ const PARAMETER_CODES_BY_FAMILY = {
     "segment-height-lower-pupil-margin-mm",
     "prism-ballast-diopter",
     "truncation-mm",
+    "peripheral-curve-system",
+    "edge-lift",
     "center-thickness-mm",
     "fenestration",
   ],
@@ -270,7 +285,9 @@ const PARAMETER_CODES_BY_FAMILY = {
     "gp-zone-diameter-mm",
     "soft-skirt-curve",
     "soft-skirt-material",
+    "soft-skirt-edge-lift",
     "junction-vault-um",
+    "junction-lift",
     "base-curve-mm",
     "water-content-percent",
     "center-thickness-mm",
@@ -819,6 +836,29 @@ export function buildV04DeviceDefinitionSeeds(): DeviceDefinition[] {
       ],
     }),
     buildDeviceDefinition({
+      catalogCode: "ample-eye-ortho-k",
+      displayName: "Ample Eye Ortho-K design",
+      lensTypeCode: "ortho-K",
+      manufacturer: "Ample Eye",
+      properties: [
+        { code: "base-curve-mm", valueNumber: 7.8, unitCode: "mm" },
+        { code: "reverse-curve-depth-um", valueNumber: 550, unitCode: "um" },
+        { code: "diameter-mm", valueNumber: 10.6, unitCode: "mm" },
+      ],
+    }),
+    buildDeviceDefinition({
+      catalogCode: "art-optical-ortho-k",
+      displayName: "Art Optical Ortho-K design",
+      lensTypeCode: "ortho-K",
+      manufacturer: "Art Optical",
+      properties: [
+        { code: "optic-zone-diameter-mm", valueNumber: 6.2, unitCode: "mm" },
+        { code: "alignment-curve-mm", valueNumber: 8.3, unitCode: "mm" },
+        { code: "material", valueCode: "Boston-XO2", valueDisplay: "Boston XO2" },
+      ],
+      materialCodes: ["Boston-XO2"],
+    }),
+    buildDeviceDefinition({
       catalogCode: "custom-color-contact-lens",
       displayName: "Custom Color Contact Lens design",
       lensTypeCode: "custom-design",
@@ -916,12 +956,20 @@ function buildV04CodeSystems(): CodeSystem[] {
     ]),
     codeSystem("myopia-control-intervention", "OSOD myopia control interventions", [
       { code: "ortho-K", display: "Orthokeratology" },
-      { code: "atropine", display: "Atropine" },
-      { code: "dual-focus-soft-lens", display: "Dual-focus soft contact lens" },
-      { code: "spectacle-lens", display: "Spectacle lens" },
+      { code: "atropine-low-dose", display: "Low-dose atropine" },
+      { code: "atropine-medium-dose", display: "Medium-dose atropine" },
+      { code: "atropine-high-dose", display: "High-dose atropine" },
+      { code: "MiSight", display: "MiSight" },
+      { code: "dual-focus-CL", display: "Dual-focus contact lens" },
+      { code: "Stellest-spectacles", display: "Stellest-class spectacles" },
+      { code: "undercorrection", display: "Undercorrection" },
+      { code: "outdoor-time-Rx", display: "Outdoor-time prescription" },
     ]),
     codeSystem("atropine-concentration-ucum", "OSOD atropine concentration UCUM codes", [
-      { code: "%", display: "Percent concentration" },
+      { code: "0.01%", display: "Atropine 0.01%" },
+      { code: "0.025%", display: "Atropine 0.025%" },
+      { code: "0.05%", display: "Atropine 0.05%" },
+      { code: "0.1%", display: "Atropine 0.1%" },
     ]),
   ];
 }
@@ -937,6 +985,28 @@ function buildV04ValueSets(): ValueSet[] {
     ),
     parameterValueSet("scleral-lens-parameters", "Scleral lens parameters", PARAMETER_CODES_BY_FAMILY.scleral),
     parameterValueSet("hybrid-lens-parameters", "Hybrid lens parameters", PARAMETER_CODES_BY_FAMILY.hybrid),
+    codeValueSet(
+      "myopia-control-interventions",
+      "Myopia control interventions",
+      MYOPIA_CONTROL_INTERVENTION_CODE_SYSTEM,
+      [
+        "ortho-K",
+        "atropine-low-dose",
+        "atropine-medium-dose",
+        "atropine-high-dose",
+        "MiSight",
+        "dual-focus-CL",
+        "Stellest-spectacles",
+        "undercorrection",
+        "outdoor-time-Rx",
+      ],
+    ),
+    codeValueSet(
+      "atropine-concentration-ucum",
+      "Atropine concentration UCUM codes",
+      ATROPINE_CONCENTRATION_UCUM_CODE_SYSTEM,
+      ["0.01%", "0.025%", "0.05%", "0.1%"],
+    ),
   ];
 }
 
@@ -1192,6 +1262,33 @@ function parameterValueSet(
             code,
             display: PARAMETER_DEFINITIONS.find((definition) => definition.code === code)?.display,
           })),
+        },
+      ],
+    },
+  };
+}
+
+function codeValueSet(
+  id: string,
+  title: string,
+  system: string,
+  codes: readonly string[],
+): ValueSet {
+  return {
+    resourceType: "ValueSet",
+    url: `${OSOD_FHIR_BASE}/ValueSet/${id}`,
+    version: "0.4.0",
+    name: `OSOD${pascalCase(id)}ValueSet`,
+    title,
+    status: "active",
+    experimental: false,
+    date: "2026-04-28",
+    publisher: "OSOD",
+    compose: {
+      include: [
+        {
+          system,
+          concept: codes.map((code) => ({ code, display: titleCase(code) })),
         },
       ],
     },

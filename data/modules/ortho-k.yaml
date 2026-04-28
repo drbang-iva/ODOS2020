@@ -1,0 +1,29 @@
+id: ortho-k
+name: Ortho-K
+version: 0.4.0
+status: active
+boundary: device-fitting intervention
+routes:
+  - /encounter/:encounterId/ortho-k
+eventTypes:
+  - initial-fit
+  - refit
+  - parameter-adjustment
+  - failed-trial
+profiles:
+  - https://osod.dev/fhir/StructureDefinition/Device-OrthoKLens
+  - https://osod.dev/fhir/StructureDefinition/Observation-ContactLensFitFinding
+  - http://hl7.org/fhir/StructureDefinition/Procedure
+  - http://hl7.org/fhir/StructureDefinition/AdverseEvent
+toolDeclarations:
+  - create_ortho_k_lens_device
+  - record_ortho_k_fitting_event
+  - record_ortho_k_fit_observation
+  - record_ortho_k_trial
+  - update_ortho_k_lens_parameters
+sharedSubstrate:
+  - contact-lens-foundation
+  - Device.property
+  - DeviceDefinition registry
+  - Procedure.partOf fitting series
+  - Observation.focus lens fit findings

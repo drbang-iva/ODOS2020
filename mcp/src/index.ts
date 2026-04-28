@@ -137,6 +137,26 @@ import {
   buildOphthalmicMedicationStatement,
   medicationStatementStatusForTimeline,
 } from "./fhir/ophthalmicMedicationStatement.js";
+import {
+  ORTHO_K_FIT_FINDING_CODES,
+  buildOrthoKFitObservation,
+  buildOrthoKFittingEvent,
+  buildOrthoKLensDevice,
+  buildOrthoKTrialProcedure,
+  buildUpdateOrthoKLensParametersPatch,
+} from "./fhir/orthoK.js";
+import {
+  ATROPINE_CONCENTRATION_CODES,
+  ATROPINE_MEDICATION_TIMELINE_STATUS_CODES,
+  MYOPIA_CONTROL_INTERVENTION_CODES,
+  buildAtropineMedicationStatement,
+  buildMyopiaAxialLengthObservation,
+  buildMyopiaManagementCarePlan,
+  buildUpdateMyopiaCarePlanPatch,
+  carePlanInterventionReference,
+  medicationStatementStatusForAtropineTimeline,
+  type MyopiaPlanActivityInput,
+} from "./fhir/myopiaManagement.js";
 import { auditHeaders, type V035WriteToolName, type V04WriteToolName } from "./tools/audit.js";
 import {
   buildSectionSaveBundle,
@@ -160,6 +180,7 @@ import type {
   Encounter,
   EpisodeOfCare,
   AdverseEvent,
+  CarePlan,
   MedicationStatement,
   Observation,
   Patient,
@@ -1190,6 +1211,223 @@ const tools = [
     },
   },
   {
+    name: "create_ortho_k_lens_device",
+    description:
+      "Create a patient-specific Device-OrthoKLens. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_ortho_k_lens_device.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "properties"],
+      properties: {
+        patient_id: { type: "string" },
+        definition_id: { type: "string" },
+        device_name: { type: "string" },
+        manufacturer: { type: "string" },
+        model_number: { type: "string" },
+        lot_number: { type: "string" },
+        serial_number: { type: "string" },
+        coating_substance_id: { type: "string" },
+        properties: { type: "array", items: lensPropertyInputSchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "record_ortho_k_fitting_event",
+    description:
+      "Create an Ortho-K fitting Procedure with Procedure.usedReference -> Device. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_fitting_event.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "lens_device_id"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        lens_device_id: { type: "string" },
+        event_code: { type: "string", enum: ["initial-fit", "refit", "parameter-adjustment", "failed-trial"] },
+        status: { type: "string" },
+        performed_date_time: { type: "string" },
+        series_procedure_id: { type: "string" },
+        note_text: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "record_ortho_k_fit_observation",
+    description:
+      "Create an Ortho-K fit finding Observation with Observation.focus -> Device. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_fit_observation.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "lens_device_id", "finding_code"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        lens_device_id: { type: "string" },
+        finding_code: { type: "string", enum: ORTHO_K_FIT_FINDING_CODES },
+        effective_date_time: { type: "string" },
+        value_number: { type: "number" },
+        unit_code: { type: "string", enum: UCUM_UNIT_CODES },
+        value_code: { type: "string" },
+        value_display: { type: "string" },
+        wear_time_ms: { type: "number" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "record_ortho_k_trial",
+    description:
+      "Create a child Ortho-K trial Procedure via Procedure.partOf. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_trial.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "lens_device_id", "series_procedure_id", "trial_number"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        lens_device_id: { type: "string" },
+        series_procedure_id: { type: "string" },
+        trial_number: { type: "number" },
+        event_code: { type: "string", enum: ["initial-fit", "refit", "parameter-adjustment", "failed-trial"] },
+        status: { type: "string" },
+        performed_date_time: { type: "string" },
+        note_text: { type: "string" },
+        outcome_text: { type: "string" },
+        parameter_change_summary: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_ortho_k_lens_parameters",
+    description:
+      "Version-aware PATCH of Ortho-K Device.property entries. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_ortho_k_lens_parameters.",
+    inputSchema: {
+      type: "object",
+      required: ["lens_device_id", "properties"],
+      properties: {
+        lens_device_id: { type: "string" },
+        properties: { type: "array", items: lensPropertyInputSchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_myopia_management_episode",
+    description:
+      "Create a myopia-management EpisodeOfCare. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_myopia_management_episode.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id"],
+      properties: {
+        patient_id: { type: "string" },
+        status: { type: "string", enum: EPISODE_OF_CARE_STATUS_CODES },
+        managing_organization_reference: { type: "string" },
+        period_start: { type: "string" },
+        period_end: { type: "string" },
+        condition_references: { type: "array", items: { type: "string" } },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_or_update_myopia_plan",
+    description:
+      "Create or version-aware PATCH a CarePlan-driven myopia treatment plan. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_or_update_myopia_plan.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "activities"],
+      properties: {
+        patient_id: { type: "string" },
+        care_plan_id: { type: "string" },
+        episode_of_care_id: { type: "string" },
+        encounter_id: { type: "string" },
+        status: { type: "string" },
+        created: { type: "string" },
+        title: { type: "string" },
+        note_text: { type: "string" },
+        activities: { type: "array", items: myopiaPlanActivitySchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_atropine_medication_statement",
+    description:
+      "Create a myopia-management atropine MedicationStatement with compounded concentration. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_atropine_medication_statement.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "concentration", "frequency_text"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        episode_of_care_id: { type: "string" },
+        concentration: { type: "string", enum: ATROPINE_CONCENTRATION_CODES },
+        frequency_text: { type: "string" },
+        status: { type: "string", enum: OPHTHALMIC_MEDICATION_STATUS_CODES },
+        effective_date_time: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_atropine_medication_status",
+    description:
+      "Version-aware PATCH of atropine MedicationStatement status using active/tapering/resolved states. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_atropine_medication_status.",
+    inputSchema: {
+      type: "object",
+      required: ["medication_statement_id", "status"],
+      properties: {
+        medication_statement_id: { type: "string" },
+        status: { type: "string", enum: ATROPINE_MEDICATION_TIMELINE_STATUS_CODES },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "record_myopia_axial_length_measurement",
+    description:
+      "Create an axial length Observation using the existing v0.3 profile. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_myopia_axial_length_measurement.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "encounter_id", "eye", "value_mm"],
+      properties: {
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        eye: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+        measured_at: { type: "string" },
+        value_mm: { type: "number" },
+        device_reference: { type: "string" },
+        performer_references: { type: "array", items: { type: "string" } },
+        source_references: { type: "array", items: { type: "string" } },
+        quality_score: { type: "number" },
+        confidence_score: { type: "number" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "aggregate_myopia_treatments",
+    description:
+      "Read-only expansion of CarePlan.activity entries and their linked myopia intervention resources.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id"],
+      properties: {
+        patient_id: { type: "string" },
+        care_plan_id: { type: "string" },
+      },
+    },
+  },
+  {
     name: "get_observation_history",
     description:
       "Return ordered Observations for patient + code with optional laterality and date-range filters.",
@@ -1805,6 +2043,143 @@ const createDryEyeAdverseEventSchema = z.object({
   reference_document_references: z.array(z.string()).optional(),
   resulting_condition_references: z.array(z.string()).optional(),
   ...v04ProvenanceAgentSchema,
+});
+const orthoKProcedureStatusSchema = z.enum([
+  "preparation",
+  "in-progress",
+  "not-done",
+  "on-hold",
+  "stopped",
+  "completed",
+  "entered-in-error",
+  "unknown",
+]);
+const createOrthoKLensDeviceSchema = z.object({
+  patient_id: z.string().min(1),
+  definition_id: z.string().optional(),
+  device_name: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model_number: z.string().optional(),
+  lot_number: z.string().optional(),
+  serial_number: z.string().optional(),
+  coating_substance_id: z.string().optional(),
+  properties: z.array(lensPropertyInputSchema).min(1),
+  ...v04ProvenanceAgentSchema,
+});
+const recordOrthoKFittingEventSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  lens_device_id: z.string().min(1),
+  event_code: z.enum(["initial-fit", "refit", "parameter-adjustment", "failed-trial"]).optional(),
+  status: orthoKProcedureStatusSchema.optional(),
+  performed_date_time: isoTimestampSchema.optional(),
+  series_procedure_id: z.string().optional(),
+  note_text: z.string().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const recordOrthoKFitObservationSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  lens_device_id: z.string().min(1),
+  finding_code: z.enum(ORTHO_K_FIT_FINDING_CODES),
+  effective_date_time: isoTimestampSchema.optional(),
+  value_number: z.number().optional(),
+  unit_code: z.enum(UCUM_UNIT_CODES).optional(),
+  value_code: z.string().optional(),
+  value_display: z.string().optional(),
+  wear_time_ms: z.number().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const recordOrthoKTrialSchema = recordOrthoKFittingEventSchema.extend({
+  series_procedure_id: z.string().min(1),
+  trial_number: z.number().int().positive(),
+  outcome_text: z.string().optional(),
+  parameter_change_summary: z.string().optional(),
+});
+const updateOrthoKLensParametersSchema = z.object({
+  lens_device_id: z.string().min(1),
+  properties: z.array(lensPropertyInputSchema).min(1),
+  ...v04ProvenanceAgentSchema,
+});
+const createMyopiaManagementEpisodeSchema = z.object({
+  patient_id: z.string().min(1),
+  status: z.enum(EPISODE_OF_CARE_STATUS_CODES).optional(),
+  managing_organization_reference: z.string().optional(),
+  period_start: isoTimestampSchema.optional(),
+  period_end: isoTimestampSchema.optional(),
+  condition_references: z.array(z.string().min(1)).optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const carePlanStatusSchema = z.enum([
+  "draft",
+  "active",
+  "on-hold",
+  "revoked",
+  "completed",
+  "entered-in-error",
+  "unknown",
+]);
+const carePlanActivityStatusSchema = z.enum([
+  "not-started",
+  "scheduled",
+  "in-progress",
+  "on-hold",
+  "completed",
+  "cancelled",
+  "stopped",
+  "unknown",
+  "entered-in-error",
+]);
+const myopiaPlanActivitySchema = z.object({
+  intervention_code: z.enum(MYOPIA_CONTROL_INTERVENTION_CODES),
+  status: carePlanActivityStatusSchema.optional(),
+  resource_reference: z.string().optional(),
+  scheduled_date_time: isoTimestampSchema.optional(),
+  description: z.string().optional(),
+});
+const createOrUpdateMyopiaPlanSchema = z.object({
+  patient_id: z.string().min(1),
+  care_plan_id: z.string().optional(),
+  episode_of_care_id: z.string().optional(),
+  encounter_id: z.string().optional(),
+  status: carePlanStatusSchema.optional(),
+  created: isoTimestampSchema.optional(),
+  title: z.string().optional(),
+  note_text: z.string().optional(),
+  activities: z.array(myopiaPlanActivitySchema).min(1),
+  ...v04ProvenanceAgentSchema,
+});
+const createAtropineMedicationStatementSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().optional(),
+  episode_of_care_id: z.string().optional(),
+  concentration: z.enum(ATROPINE_CONCENTRATION_CODES),
+  frequency_text: z.string().min(1),
+  status: z.enum(OPHTHALMIC_MEDICATION_STATUS_CODES).optional(),
+  effective_date_time: isoTimestampSchema.optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const updateAtropineMedicationStatusSchema = z.object({
+  medication_statement_id: z.string().min(1),
+  status: z.enum(ATROPINE_MEDICATION_TIMELINE_STATUS_CODES),
+  ...v04ProvenanceAgentSchema,
+});
+const recordMyopiaAxialLengthMeasurementSchema = z.object({
+  patient_id: z.string().min(1),
+  encounter_id: z.string().min(1),
+  eye: z.enum(["OD", "OS", "OU", "od", "os", "ou"]),
+  measured_at: isoTimestampSchema.optional(),
+  value_mm: z.number(),
+  device_reference: z.string().optional(),
+  performer_references: z.array(z.string()).optional(),
+  source_references: z.array(z.string()).optional(),
+  quality_score: z.number().optional(),
+  confidence_score: z.number().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const aggregateMyopiaTreatmentsSchema = z.object({
+  patient_id: z.string().min(1),
+  care_plan_id: z.string().optional(),
 });
 const dateRangeSchema = z.object({
   start: z.string().optional(),
@@ -3021,6 +3396,300 @@ function createServer(): Server {
 
           return toolJson({ adverseEvent: created, provenance });
         }
+        case "create_ortho_k_lens_device": {
+          const input = createOrthoKLensDeviceSchema.parse(args);
+          const device = buildOrthoKLensDevice({
+            patientReference: patientReference(input.patient_id),
+            definitionReference: input.definition_id,
+            deviceName: input.device_name,
+            manufacturer: input.manufacturer,
+            modelNumber: input.model_number,
+            lotNumber: input.lot_number,
+            serialNumber: input.serial_number,
+            coatingSubstanceReference: input.coating_substance_id,
+            properties: toLensPropertyInputs(input.properties),
+          });
+          const created = await fhir.create<Device>(device, auditHeaders("create_ortho_k_lens_device"));
+          const provenance = await createV04Provenance(
+            "create_ortho_k_lens_device",
+            input,
+            [`Device/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ device: created, provenance });
+        }
+        case "record_ortho_k_fitting_event": {
+          const input = recordOrthoKFittingEventSchema.parse(args);
+          const procedure = buildOrthoKFittingEvent({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            lensDeviceReference: normalizeToolReference(input.lens_device_id, "Device"),
+            eventCode: input.event_code,
+            status: input.status,
+            performedDateTime: input.performed_date_time,
+            seriesProcedureReference: input.series_procedure_id
+              ? normalizeToolReference(input.series_procedure_id, "Procedure")
+              : undefined,
+            noteText: input.note_text,
+          });
+          const created = await fhir.create<Procedure>(procedure, auditHeaders("record_ortho_k_fitting_event"));
+          const provenance = await createV04Provenance(
+            "record_ortho_k_fitting_event",
+            input,
+            [`Procedure/${created.id}`],
+            "CREATE",
+            procedure.performedDateTime,
+          );
+
+          return toolJson({ procedure: created, provenance });
+        }
+        case "record_ortho_k_fit_observation": {
+          const input = recordOrthoKFitObservationSchema.parse(args);
+          const observation = buildOrthoKFitObservation({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            lensDeviceReference: normalizeToolReference(input.lens_device_id, "Device"),
+            findingCode: input.finding_code,
+            effectiveDateTime: input.effective_date_time,
+            valueNumber: input.value_number,
+            unitCode: input.unit_code,
+            valueCode: input.value_code,
+            valueDisplay: input.value_display,
+            wearTimeMs: input.wear_time_ms,
+          });
+          const created = await fhir.create<Observation>(observation, auditHeaders("record_ortho_k_fit_observation"));
+          const provenance = await createV04Provenance(
+            "record_ortho_k_fit_observation",
+            input,
+            [`Observation/${created.id}`],
+            "CREATE",
+            observation.effectiveDateTime,
+          );
+
+          return toolJson({ observation: created, provenance });
+        }
+        case "record_ortho_k_trial": {
+          const input = recordOrthoKTrialSchema.parse(args);
+          const procedure = buildOrthoKTrialProcedure({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            lensDeviceReference: normalizeToolReference(input.lens_device_id, "Device"),
+            eventCode: input.event_code,
+            status: input.status,
+            performedDateTime: input.performed_date_time,
+            seriesProcedureReference: normalizeToolReference(input.series_procedure_id, "Procedure"),
+            noteText: input.note_text,
+            trialNumber: input.trial_number,
+            outcomeText: input.outcome_text,
+            parameterChangeSummary: input.parameter_change_summary,
+          });
+          const created = await fhir.create<Procedure>(procedure, auditHeaders("record_ortho_k_trial"));
+          const provenance = await createV04Provenance(
+            "record_ortho_k_trial",
+            input,
+            [`Procedure/${created.id}`],
+            "CREATE",
+            procedure.performedDateTime,
+          );
+
+          return toolJson({ procedure: created, provenance });
+        }
+        case "update_ortho_k_lens_parameters": {
+          const input = updateOrthoKLensParametersSchema.parse(args);
+          const id = stripReference(input.lens_device_id, "Device");
+          const existing = await fhir.read<Device>("Device", id);
+          const updated = await fhir.patch<Device>(
+            "Device",
+            id,
+            buildUpdateOrthoKLensParametersPatch(existing, toLensPropertyInputs(input.properties) ?? []),
+            versionedHeaders(existing, auditHeaders("update_ortho_k_lens_parameters")),
+          );
+          const provenance = await createV04Provenance(
+            "update_ortho_k_lens_parameters",
+            input,
+            [`Device/${updated.id}`],
+            "UPDATE",
+            undefined,
+            [{ role: "revision", display: `prior Device.property count: ${(existing.property ?? []).length}` }],
+          );
+
+          return toolJson({ device: updated, provenance });
+        }
+        case "create_myopia_management_episode": {
+          const input = createMyopiaManagementEpisodeSchema.parse(args);
+          const episodeOfCare = buildEpisodeOfCare({
+            typeCode: "myopia-management",
+            status: input.status ?? "active",
+            patientReference: patientReference(input.patient_id),
+            managingOrganizationReference: input.managing_organization_reference,
+            periodStart: input.period_start,
+            periodEnd: input.period_end,
+            conditionReferences: input.condition_references,
+          });
+          const created = await fhir.create<EpisodeOfCare>(
+            episodeOfCare,
+            auditHeaders("create_myopia_management_episode"),
+          );
+          const provenance = await createV04Provenance(
+            "create_myopia_management_episode",
+            input,
+            [`EpisodeOfCare/${created.id}`],
+            "CREATE",
+            episodeOfCare.period?.start,
+          );
+
+          return toolJson({ episodeOfCare: created, provenance });
+        }
+        case "create_or_update_myopia_plan": {
+          const input = createOrUpdateMyopiaPlanSchema.parse(args);
+          const activities = toMyopiaPlanActivities(input.activities);
+          if (input.care_plan_id) {
+            const id = stripReference(input.care_plan_id, "CarePlan");
+            const existing = await fhir.read<CarePlan>("CarePlan", id);
+            const updated = await fhir.patch<CarePlan>(
+              "CarePlan",
+              id,
+              buildUpdateMyopiaCarePlanPatch(existing, activities, input.status),
+              versionedHeaders(existing, auditHeaders("create_or_update_myopia_plan")),
+            );
+            const provenance = await createV04Provenance(
+              "create_or_update_myopia_plan",
+              input,
+              [`CarePlan/${updated.id}`],
+              "UPDATE",
+              updated.created,
+              [{ role: "revision", display: `prior CarePlan.activity count: ${(existing.activity ?? []).length}` }],
+            );
+
+            return toolJson({ carePlan: updated, provenance });
+          }
+          const carePlan = buildMyopiaManagementCarePlan({
+            patientReference: patientReference(input.patient_id),
+            episodeOfCareReference: input.episode_of_care_id
+              ? normalizeToolReference(input.episode_of_care_id, "EpisodeOfCare")
+              : undefined,
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            status: input.status,
+            created: input.created,
+            title: input.title,
+            noteText: input.note_text,
+            activities,
+          });
+          const created = await fhir.create<CarePlan>(carePlan, auditHeaders("create_or_update_myopia_plan"));
+          const provenance = await createV04Provenance(
+            "create_or_update_myopia_plan",
+            input,
+            [`CarePlan/${created.id}`],
+            "CREATE",
+            carePlan.created,
+          );
+
+          return toolJson({ carePlan: created, provenance });
+        }
+        case "create_atropine_medication_statement": {
+          const input = createAtropineMedicationStatementSchema.parse(args);
+          const medicationStatement = buildAtropineMedicationStatement({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: input.encounter_id ? encounterReference(input.encounter_id) : undefined,
+            episodeOfCareReference: input.episode_of_care_id
+              ? normalizeToolReference(input.episode_of_care_id, "EpisodeOfCare")
+              : undefined,
+            concentration: input.concentration,
+            frequencyText: input.frequency_text,
+            status: input.status,
+            effectiveDateTime: input.effective_date_time,
+          });
+          const created = await fhir.create<MedicationStatement>(
+            medicationStatement,
+            auditHeaders("create_atropine_medication_statement"),
+          );
+          const provenance = await createV04Provenance(
+            "create_atropine_medication_statement",
+            input,
+            [`MedicationStatement/${created.id}`],
+            "CREATE",
+            medicationStatement.effectiveDateTime ?? medicationStatement.effectivePeriod?.start,
+          );
+
+          return toolJson({ medicationStatement: created, provenance });
+        }
+        case "update_atropine_medication_status": {
+          const input = updateAtropineMedicationStatusSchema.parse(args);
+          const id = stripReference(input.medication_statement_id, "MedicationStatement");
+          const existing = await fhir.read<MedicationStatement>("MedicationStatement", id);
+          const updated = await fhir.patch<MedicationStatement>(
+            "MedicationStatement",
+            id,
+            [{ op: "replace", path: "/status", value: medicationStatementStatusForAtropineTimeline(input.status) }],
+            versionedHeaders(existing, auditHeaders("update_atropine_medication_status")),
+          );
+          const provenance = await createV04Provenance(
+            "update_atropine_medication_status",
+            input,
+            [`MedicationStatement/${updated.id}`],
+            "UPDATE",
+            updated.effectiveDateTime ?? updated.effectivePeriod?.start,
+            [{ role: "revision", display: `prior MedicationStatement.status: ${existing.status}` }],
+          );
+
+          return toolJson({ medicationStatement: updated, provenance });
+        }
+        case "record_myopia_axial_length_measurement": {
+          const input = recordMyopiaAxialLengthMeasurementSchema.parse(args);
+          const observation = buildMyopiaAxialLengthObservation({
+            patientReference: patientReference(input.patient_id),
+            encounterReference: encounterReference(input.encounter_id),
+            eye: normalizeLaterality(input.eye),
+            measuredAt: input.measured_at ?? new Date().toISOString(),
+            valueMm: input.value_mm,
+            deviceReference: input.device_reference,
+            performerReferences: input.performer_references,
+            sourceReferences: input.source_references,
+            qualityScore: input.quality_score,
+            confidenceScore: input.confidence_score,
+          });
+          const observationBodySiteResult = await persistObservationBodyStructures(observation);
+          const created = await fhir.create<Observation>(
+            observationBodySiteResult.observation,
+            auditHeaders("record_myopia_axial_length_measurement"),
+          );
+          const provenance = await createV04Provenance(
+            "record_myopia_axial_length_measurement",
+            input,
+            [
+              `Observation/${created.id}`,
+              ...(observationBodySiteResult.bodyStructures ?? []).map((bodyStructure) => `BodyStructure/${bodyStructure.id}`),
+            ],
+            "CREATE",
+            observation.effectiveDateTime,
+          );
+
+          return toolJson({ observation: created, bodyStructures: observationBodySiteResult.bodyStructures ?? [], provenance });
+        }
+        case "aggregate_myopia_treatments": {
+          const input = aggregateMyopiaTreatmentsSchema.parse(args);
+          const carePlans = input.care_plan_id
+            ? [await fhir.read<CarePlan>("CarePlan", stripReference(input.care_plan_id, "CarePlan"))]
+            : await findMyopiaCarePlans(patientReference(input.patient_id));
+          const expanded = [];
+          for (const carePlan of carePlans) {
+            const activities = [];
+            for (const activity of carePlan.activity ?? []) {
+              const linkedReference = carePlanInterventionReference(activity);
+              activities.push({
+                code: activity.detail?.code,
+                status: activity.detail?.status,
+                description: activity.detail?.description,
+                linkedReference,
+                resource: linkedReference ? await readReference(linkedReference) : undefined,
+              });
+            }
+            expanded.push({ carePlan, activities });
+          }
+
+          return toolJson({ carePlans: expanded });
+        }
         case "get_observation_history": {
           const input = getObservationHistorySchema.parse(args);
           const bundle = await fhir.search<Observation>(
@@ -3162,6 +3831,7 @@ type CreateProcedureInput = z.infer<typeof createProcedureSchema>;
 type LensPropertyToolInput = z.infer<typeof lensPropertyInputSchema>;
 type DryEyeQuestionnaireAnswerToolInput =
   z.infer<typeof dryEyeQuestionnaireAnswerSchema>;
+type MyopiaPlanActivityToolInput = z.infer<typeof myopiaPlanActivitySchema>;
 type V04ProvenanceAgentInput = {
   provenance_agent_reference?: string;
   provenance_agent_display?: string;
@@ -3225,6 +3895,33 @@ function dryEyeQuestionnaireAnswerSchemaJson(): Record<string, unknown> {
       value_decimal: { type: "number" },
       value_string: { type: "string" },
       value_boolean: { type: "boolean" },
+    },
+  };
+}
+
+function myopiaPlanActivitySchemaJson(): Record<string, unknown> {
+  return {
+    type: "object",
+    required: ["intervention_code"],
+    properties: {
+      intervention_code: { type: "string", enum: MYOPIA_CONTROL_INTERVENTION_CODES },
+      status: {
+        type: "string",
+        enum: [
+          "not-started",
+          "scheduled",
+          "in-progress",
+          "on-hold",
+          "completed",
+          "cancelled",
+          "stopped",
+          "unknown",
+          "entered-in-error",
+        ],
+      },
+      resource_reference: { type: "string" },
+      scheduled_date_time: { type: "string" },
+      description: { type: "string" },
     },
   };
 }
@@ -3357,6 +4054,18 @@ function toDryEyeQuestionnaireAnswers(
   }));
 }
 
+function toMyopiaPlanActivities(
+  activities: MyopiaPlanActivityToolInput[],
+): MyopiaPlanActivityInput[] {
+  return activities.map((activity) => ({
+    interventionCode: activity.intervention_code,
+    status: activity.status,
+    resourceReference: activity.resource_reference,
+    scheduledDateTime: activity.scheduled_date_time,
+    description: activity.description,
+  }));
+}
+
 function dryEyeTreatmentParameters(input: {
   energy_mj?: number;
   wavelength_nm?: number;
@@ -3374,6 +4083,30 @@ function dryEyeTreatmentParameters(input: {
     wavelengthNm: input.wavelength_nm,
     spotCount: input.spot_count,
   };
+}
+
+async function findMyopiaCarePlans(subjectReference: string): Promise<CarePlan[]> {
+  const bundle = await fhir.search<CarePlan>("CarePlan", {
+    subject: subjectReference,
+    _count: "50",
+  });
+  return (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .filter((resource): resource is CarePlan =>
+      resource?.resourceType === "CarePlan" &&
+      resource.category?.some((category) =>
+        category.text?.toLowerCase().includes("myopia") === true ||
+        (category.coding ?? []).some((coding) => coding.code === "myopia-management"),
+      ) === true,
+    );
+}
+
+async function readReference(referenceValue: string): Promise<Resource | undefined> {
+  const match = referenceValue.match(/^([A-Za-z]+)\/([^/]+)$/);
+  if (!match) {
+    return undefined;
+  }
+  return fhir.read(match[1] as never, match[2]);
 }
 
 async function findDiagnosticReport(

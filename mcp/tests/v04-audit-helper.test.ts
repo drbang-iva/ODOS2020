@@ -17,6 +17,16 @@ test("v0.4 foundation write tools each emit their per-tool X-OSOD-Source header 
     "create_ophthalmic_medication_statement",
     "update_dry_eye_medication_status",
     "create_dry_eye_adverse_event",
+    "create_ortho_k_lens_device",
+    "record_ortho_k_fitting_event",
+    "record_ortho_k_fit_observation",
+    "record_ortho_k_trial",
+    "update_ortho_k_lens_parameters",
+    "create_myopia_management_episode",
+    "create_or_update_myopia_plan",
+    "create_atropine_medication_statement",
+    "update_atropine_medication_status",
+    "record_myopia_axial_length_measurement",
   ]);
 
   for (const toolName of V04_WRITE_TOOL_NAMES) {

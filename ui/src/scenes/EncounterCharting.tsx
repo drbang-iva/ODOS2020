@@ -4,6 +4,8 @@ import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
+import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
+import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
 import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
@@ -18,7 +20,9 @@ interface Props {
 const EMPTY_STATUSES: SectionStatusMap = {
   va: { completed: false },
   refraction: { completed: false },
+  "ortho-k": { completed: false },
   "dry-eye": { completed: false },
+  "myopia-management": { completed: false },
   iop: { completed: false },
   assessment: { completed: false },
 };
@@ -65,11 +69,25 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("refraction", status)}
             />
           )}
+          {activeSection === "ortho-k" && (
+            <OrthoKSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("ortho-k", status)}
+            />
+          )}
           {activeSection === "dry-eye" && (
             <DryEyeSection
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("dry-eye", status)}
+            />
+          )}
+          {activeSection === "myopia-management" && (
+            <MyopiaManagementSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("myopia-management", status)}
             />
           )}
           {activeSection === "assessment" && (
