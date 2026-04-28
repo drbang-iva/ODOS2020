@@ -1,0 +1,21 @@
+lab_code: synergeyes
+lab_display: SynergEyes
+target_uri: urn:osod:contact-lens-lab:synergeyes:parameter
+organization_reference: Organization/synergeyes
+mappings:
+  - source: gp-zone-base-curve-mm
+    source_display: GP zone base curve
+    target: GPBC
+    target_display: GP base curve
+  - source: gp-zone-diameter-mm
+    source_display: GP zone diameter
+    target: GPDia
+    target_display: GP diameter
+  - source: soft-skirt-curve
+    source_display: Soft skirt curve
+    target: SkirtCurve
+    target_display: Skirt curve
+  - source: junction-vault-um
+    source_display: Junction vault
+    target: Vault
+    target_display: Vault

@@ -1,8 +1,26 @@
 import { existsSync, readFileSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { CodeSystem, Resource, StructureDefinition, ValueSet } from "@medplum/fhirtypes";
+import type {
+  CodeSystem,
+  ConceptMap,
+  DeviceDefinition,
+  Resource,
+  SearchParameter,
+  StructureDefinition,
+  Substance,
+  ValueSet,
+} from "@medplum/fhirtypes";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import {
+  OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+  OSOD_SUBSTANCE_IDENTIFIER_SYSTEM,
+  buildConceptMap,
+  buildV04CanonicalResources,
+  buildV04DeviceDefinitionSeeds,
+  buildV04SubstanceSeeds,
+  type ConceptMapMappingInput,
+} from "../mcp/src/fhir/contactLens.js";
 
 loadRepoEnv();
 
@@ -33,6 +51,10 @@ for (const file of profileFiles) {
   );
 }
 
+for (const resource of buildV04CanonicalResources()) {
+  await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
+}
+
 const terminologyDir = resolve(process.cwd(), "data/terminology");
 if (existsSync(terminologyDir)) {
   const terminologyFiles = (await readdir(terminologyDir))
@@ -47,7 +69,45 @@ if (existsSync(terminologyDir)) {
   }
 }
 
-type CanonicalResource = StructureDefinition | CodeSystem | ValueSet;
+const labMappingsDir = resolve(process.cwd(), "data/contact-lens-lab-mappings");
+if (existsSync(labMappingsDir)) {
+  const labMappingFiles = (await readdir(labMappingsDir))
+    .filter((name) => name.endsWith(".yaml") || name.endsWith(".yml"))
+    .sort();
+
+  for (const file of labMappingFiles) {
+    const mapping = parseLabMappingYaml(
+      await readFile(resolve(labMappingsDir, file), "utf8"),
+      file,
+    );
+    await installCanonicalResource(buildConceptMap(mapping), file);
+  }
+}
+
+for (const resource of buildV04DeviceDefinitionSeeds()) {
+  await installIdentifiedResource(
+    resource,
+    OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+    resource.identifier?.[0]?.value,
+  );
+}
+
+for (const resource of buildV04SubstanceSeeds()) {
+  await installIdentifiedResource(
+    resource,
+    OSOD_SUBSTANCE_IDENTIFIER_SYSTEM,
+    resource.identifier?.[0]?.value,
+  );
+}
+
+type CanonicalResource =
+  | StructureDefinition
+  | CodeSystem
+  | ValueSet
+  | ConceptMap
+  | SearchParameter;
+
+type IdentifiedSeedResource = DeviceDefinition | Substance;
 
 async function installCanonicalResource(resource: CanonicalResource, file: string): Promise<void> {
   if (!isSupportedCanonicalResource(resource) || !resource.url) {
@@ -55,46 +115,113 @@ async function installCanonicalResource(resource: CanonicalResource, file: strin
       `${file} is not a supported canonical resource with a canonical url.`,
     );
   }
+  const installResource = await hydrateStructureDefinitionSnapshot(resource);
 
-  const existingBundle = await fhir.search<CanonicalResource>(resource.resourceType, {
-    url: resource.url,
+  const existingBundle = await fhir.search<CanonicalResource>(installResource.resourceType, {
+    url: installResource.url,
     _count: "1",
   });
   const existing = existingBundle.entry?.[0]?.resource;
 
   if (existing?.id) {
-    if (sameSemanticResource(existing, resource)) {
-      console.log(`unchanged ${resource.url} (${existing.id})`);
+    if (sameSemanticResource(existing, installResource)) {
+      console.log(`unchanged ${installResource.url} (${existing.id})`);
       return;
     }
 
     const updated = await fhir.update<CanonicalResource>(
-      resource.resourceType,
+      installResource.resourceType,
       existing.id,
-      { ...resource, id: existing.id },
+      { ...installResource, id: existing.id },
     );
     console.log(`updated ${updated.url} (${updated.id})`);
     return;
   }
 
-  const created = await fhir.create<CanonicalResource>(resource);
+  const created = await fhir.create<CanonicalResource>(installResource);
   console.log(`created ${created.url} (${created.id})`);
+}
+
+async function hydrateStructureDefinitionSnapshot<T extends CanonicalResource>(
+  resource: T,
+): Promise<T> {
+  if (resource.resourceType !== "StructureDefinition") {
+    return resource;
+  }
+
+  const baseDefinition =
+    resource.baseDefinition?.startsWith("https://osod.dev/fhir/StructureDefinition/")
+      ? `http://hl7.org/fhir/StructureDefinition/${resource.type}`
+      : resource.baseDefinition;
+  if (!baseDefinition) {
+    return resource;
+  }
+
+  const baseBundle = await fhir.search<StructureDefinition>("StructureDefinition", {
+    url: baseDefinition,
+    _count: "1",
+  });
+  const base = baseBundle.entry?.[0]?.resource;
+  if (!base?.snapshot?.element?.length) {
+    return resource;
+  }
+
+  return {
+    ...resource,
+    snapshot: structuredClone(base.snapshot),
+  };
 }
 
 function isSupportedCanonicalResource(resource: Resource): resource is CanonicalResource {
   return (
     resource.resourceType === "StructureDefinition" ||
     resource.resourceType === "CodeSystem" ||
-    resource.resourceType === "ValueSet"
+    resource.resourceType === "ValueSet" ||
+    resource.resourceType === "ConceptMap" ||
+    resource.resourceType === "SearchParameter"
   );
 }
 
-function sameSemanticResource(left: CanonicalResource, right: CanonicalResource): boolean {
+async function installIdentifiedResource(
+  resource: IdentifiedSeedResource,
+  identifierSystem: string,
+  identifierValue: string | undefined,
+): Promise<void> {
+  if (!identifierValue) {
+    throw new Error(`${resource.resourceType} seed is missing ${identifierSystem} identifier.`);
+  }
+
+  const existingBundle = await fhir.search<IdentifiedSeedResource>(resource.resourceType, {
+    identifier: `${identifierSystem}|${identifierValue}`,
+    _count: "1",
+  });
+  const existing = existingBundle.entry?.[0]?.resource;
+
+  if (existing?.id) {
+    if (sameSemanticResource(existing, resource)) {
+      console.log(`unchanged ${resource.resourceType}/${identifierValue} (${existing.id})`);
+      return;
+    }
+
+    const updated = await fhir.update<IdentifiedSeedResource>(
+      resource.resourceType,
+      existing.id,
+      { ...resource, id: existing.id },
+    );
+    console.log(`updated ${updated.resourceType}/${identifierValue} (${updated.id})`);
+    return;
+  }
+
+  const created = await fhir.create<IdentifiedSeedResource>(resource);
+  console.log(`created ${created.resourceType}/${identifierValue} (${created.id})`);
+}
+
+function sameSemanticResource(left: Resource, right: Resource): boolean {
   return stableStringify(stripServerFields(left)) === stableStringify(stripServerFields(right));
 }
 
-function stripServerFields(resource: CanonicalResource): unknown {
-  const clone = structuredClone(resource) as Partial<CanonicalResource>;
+function stripServerFields(resource: Resource): unknown {
+  const clone = structuredClone(resource) as Partial<Resource>;
   delete clone.id;
   delete clone.meta;
   return clone;
@@ -142,4 +269,82 @@ function stripEnvQuotes(value: string): string {
     return value.slice(1, -1);
   }
   return value;
+}
+
+interface LabMappingInput {
+  labCode: string;
+  labDisplay: string;
+  targetUri: string;
+  organizationReference?: string;
+  mappings: ConceptMapMappingInput[];
+}
+
+function parseLabMappingYaml(text: string, file: string): LabMappingInput {
+  const scalars: Record<string, string> = {};
+  const mappings: ConceptMapMappingInput[] = [];
+  let current: Record<string, string> | undefined;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const withoutComment = rawLine.replace(/\s+#.*$/, "");
+    if (!withoutComment.trim()) {
+      continue;
+    }
+    if (withoutComment.trim() === "mappings:") {
+      continue;
+    }
+
+    const itemMatch = /^  - ([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(withoutComment);
+    if (itemMatch) {
+      current = {};
+      mappings.push(current as unknown as ConceptMapMappingInput);
+      current[itemMatch[1]] = unquoteYaml(itemMatch[2]);
+      continue;
+    }
+
+    const nestedMatch = /^    ([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(withoutComment);
+    if (nestedMatch && current) {
+      current[nestedMatch[1]] = unquoteYaml(nestedMatch[2]);
+      continue;
+    }
+
+    const scalarMatch = /^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/.exec(withoutComment);
+    if (scalarMatch) {
+      scalars[scalarMatch[1]] = unquoteYaml(scalarMatch[2]);
+      continue;
+    }
+
+    throw new Error(`${file}: unsupported YAML line: ${rawLine}`);
+  }
+
+  const labCode = scalars.lab_code;
+  const labDisplay = scalars.lab_display;
+  const targetUri = scalars.target_uri;
+  if (!labCode || !labDisplay || !targetUri) {
+    throw new Error(`${file}: lab_code, lab_display, and target_uri are required.`);
+  }
+
+  return {
+    labCode,
+    labDisplay,
+    targetUri,
+    organizationReference: scalars.organization_reference,
+    mappings: mappings.map((mapping) => ({
+      sourceCode: mapping.sourceCode ?? (mapping as Record<string, string>).source,
+      sourceDisplay: mapping.sourceDisplay ?? (mapping as Record<string, string>).source_display,
+      targetCode: mapping.targetCode ?? (mapping as Record<string, string>).target,
+      targetDisplay: mapping.targetDisplay ?? (mapping as Record<string, string>).target_display,
+      equivalence: mapping.equivalence,
+    })),
+  };
+}
+
+function unquoteYaml(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
 }

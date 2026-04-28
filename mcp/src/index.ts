@@ -83,7 +83,29 @@ import {
   procedureTargetBodyStructureExtension,
   type ProcedureStatusCode,
 } from "./fhir/procedure.js";
-import { auditHeaders, type V035WriteToolName } from "./tools/audit.js";
+import {
+  CONTACT_LENS_CLINICAL_OBSERVATION_CODES,
+  CONTACT_LENS_MATERIAL_CODES,
+  CONTACT_LENS_PARAMETER_CODES,
+  CONTACT_LENS_TYPE_CODES,
+  CONTACT_LENS_COATING_CODES,
+  UCUM_UNIT_CODES,
+  buildConceptMap,
+  buildDeviceDefinition,
+  buildLensDevice,
+  buildSubstance,
+  buildUpdateLensDevicePropertiesPatch,
+  normalizeLensTypeCode,
+  type ContactLensPropertyInput,
+} from "./fhir/contactLens.js";
+import {
+  buildObservationSearchParams,
+  compareTreatmentEpisodes as summarizeTreatmentEpisodes,
+  groupedDiagnosticReport,
+  observationHistoryFromBundle,
+  summarizeProgression,
+} from "./fhir/ocularMeasurementGraph.js";
+import { auditHeaders, type V035WriteToolName, type V04WriteToolName } from "./tools/audit.js";
 import {
   buildSectionSaveBundle,
   type IopSectionSaveEntry,
@@ -97,7 +119,11 @@ import type {
   BodyStructure,
   CareTeam,
   CodeableConcept,
+  ConceptMap,
   Condition,
+  Device,
+  DeviceDefinition,
+  DiagnosticReport,
   Encounter,
   EpisodeOfCare,
   Observation,
@@ -105,6 +131,7 @@ import type {
   Procedure,
   Provenance,
   Resource,
+  Substance,
   VisionPrescription,
 } from "@medplum/fhirtypes";
 import type {
@@ -834,6 +861,185 @@ const tools = [
       },
     },
   },
+  {
+    name: "create_lens_device",
+    description:
+      "Create a patient-specific contact-lens Device using Device.property for lens geometry. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_lens_device.",
+    inputSchema: {
+      type: "object",
+      required: ["lens_type"],
+      properties: {
+        lens_type: { type: "string", enum: CONTACT_LENS_TYPE_CODES },
+        patient_id: { type: "string" },
+        definition_id: { type: "string" },
+        device_name: { type: "string" },
+        manufacturer: { type: "string" },
+        model_number: { type: "string" },
+        lot_number: { type: "string" },
+        serial_number: { type: "string" },
+        coating_substance_id: { type: "string" },
+        properties: { type: "array", items: lensPropertyInputSchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "update_lens_device_properties",
+    description:
+      "Version-aware PATCH of contact-lens Device.property entries. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_lens_device_properties.",
+    inputSchema: {
+      type: "object",
+      required: ["lens_device_id", "properties"],
+      properties: {
+        lens_device_id: { type: "string" },
+        lens_type: { type: "string", enum: CONTACT_LENS_TYPE_CODES },
+        properties: { type: "array", items: lensPropertyInputSchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_device_definition",
+    description:
+      "Create a contact-lens DeviceDefinition catalog blueprint. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_device_definition.",
+    inputSchema: {
+      type: "object",
+      required: ["catalog_code", "display_name", "lens_type"],
+      properties: {
+        catalog_code: { type: "string" },
+        display_name: { type: "string" },
+        lens_type: { type: "string", enum: CONTACT_LENS_TYPE_CODES },
+        manufacturer: { type: "string" },
+        organization_reference: { type: "string" },
+        model_number: { type: "string" },
+        material_codes: { type: "array", items: { type: "string", enum: CONTACT_LENS_MATERIAL_CODES } },
+        properties: { type: "array", items: lensPropertyInputSchemaJson() },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_concept_map",
+    description:
+      "Create a ConceptMap from OSOD contact-lens parameter codes to lab-specific aliases. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_concept_map.",
+    inputSchema: {
+      type: "object",
+      required: ["lab_code", "lab_display", "target_uri", "mappings"],
+      properties: {
+        lab_code: { type: "string" },
+        lab_display: { type: "string" },
+        target_uri: { type: "string" },
+        organization_reference: { type: "string" },
+        mappings: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["source_code", "target_code"],
+            properties: {
+              source_code: { type: "string", enum: CONTACT_LENS_PARAMETER_CODES },
+              source_display: { type: "string" },
+              target_code: { type: "string" },
+              target_display: { type: "string" },
+              equivalence: { type: "string" },
+            },
+          },
+        },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "create_substance",
+    description:
+      "Create a contact-lens material or coating Substance. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_substance.",
+    inputSchema: {
+      type: "object",
+      required: ["code", "display", "kind"],
+      properties: {
+        code: { type: "string" },
+        display: { type: "string" },
+        kind: { type: "string", enum: ["material", "coating"] },
+        dk: { type: "number" },
+        water_content_range: { type: "string" },
+        description: { type: "string" },
+        provenance_agent_reference: { type: "string" },
+        provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "get_observation_history",
+    description:
+      "Return ordered Observations for patient + code with optional laterality and date-range filters.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "code"],
+      properties: {
+        patient_id: { type: "string" },
+        code: { type: "string", description: "FHIR token, either code or system|code." },
+        eye: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+        date_range: dateRangeSchemaJson(),
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_progression_summary",
+    description:
+      "Return pure-data longitudinal slope, R squared, and largest step changes for patient + code.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "code"],
+      properties: {
+        patient_id: { type: "string" },
+        code: { type: "string" },
+        eye: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+      },
+    },
+  },
+  {
+    name: "get_grouped_diagnostic_report",
+    description:
+      "Return a DiagnosticReport matching a report type with linked Observation results resolved.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "report_type"],
+      properties: {
+        patient_id: { type: "string" },
+        report_type: { type: "string", description: "FHIR token or report text/code." },
+      },
+    },
+  },
+  {
+    name: "get_lens_fit_history",
+    description:
+      "Return fit-finding Observations focused on a specific contact-lens Device, with standard focus search or documented fallback.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "lens_device_id"],
+      properties: {
+        patient_id: { type: "string" },
+        lens_device_id: { type: "string" },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "compare_treatment_episodes",
+    description:
+      "Return pure-data cross-Episode summary for a Patient. No clinical interpretation is produced.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id"],
+      properties: {
+        patient_id: { type: "string" },
+      },
+    },
+  },
 ] as const;
 
 /* ----- Input validation schemas (Zod) ----- */
@@ -1187,6 +1393,117 @@ const updateProcedureBodySiteSchema = z.object({
   procedure_id: z.string().min(1),
   body_structure_reference: z.string().min(1),
   ...provenanceControlSchema,
+});
+const v04ProvenanceAgentSchema = {
+  provenance_agent_reference: z.string().optional(),
+  provenance_agent_display: z.string().optional(),
+} as const;
+const lensPropertyInputSchema = z.object({
+  code: z.string().min(1),
+  value_number: z.number().optional(),
+  unit_code: z.enum(UCUM_UNIT_CODES).optional(),
+  value_code: z.string().optional(),
+  value_system: z.string().optional(),
+  value_display: z.string().optional(),
+  value_text: z.string().optional(),
+});
+const createLensDeviceSchema = z.object({
+  lens_type: z.enum(CONTACT_LENS_TYPE_CODES as [string, ...string[]]),
+  patient_id: z.string().optional(),
+  definition_id: z.string().optional(),
+  device_name: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model_number: z.string().optional(),
+  lot_number: z.string().optional(),
+  serial_number: z.string().optional(),
+  coating_substance_id: z.string().optional(),
+  properties: z.array(lensPropertyInputSchema).optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const updateLensDevicePropertiesSchema = z.object({
+  lens_device_id: z.string().min(1),
+  lens_type: z.enum(CONTACT_LENS_TYPE_CODES as [string, ...string[]]).optional(),
+  properties: z.array(lensPropertyInputSchema).min(1),
+  ...v04ProvenanceAgentSchema,
+});
+const createDeviceDefinitionSchema = z.object({
+  catalog_code: z.string().min(1),
+  display_name: z.string().min(1),
+  lens_type: z.enum(CONTACT_LENS_TYPE_CODES as [string, ...string[]]),
+  manufacturer: z.string().optional(),
+  organization_reference: z.string().optional(),
+  model_number: z.string().optional(),
+  material_codes: z.array(z.enum(CONTACT_LENS_MATERIAL_CODES)).optional(),
+  properties: z.array(lensPropertyInputSchema).optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const createConceptMapSchema = z.object({
+  lab_code: z.string().min(1),
+  lab_display: z.string().min(1),
+  target_uri: z.string().min(1),
+  organization_reference: z.string().optional(),
+  mappings: z
+    .array(
+      z.object({
+        source_code: z.string().min(1),
+        source_display: z.string().optional(),
+        target_code: z.string().min(1),
+        target_display: z.string().optional(),
+        equivalence: z
+          .enum([
+            "relatedto",
+            "equivalent",
+            "equal",
+            "wider",
+            "subsumes",
+            "narrower",
+            "specializes",
+            "inexact",
+            "unmatched",
+            "disjoint",
+          ])
+          .optional(),
+      }),
+    )
+    .min(1),
+  ...v04ProvenanceAgentSchema,
+});
+const createSubstanceSchema = z.object({
+  code: z.string().min(1),
+  display: z.string().min(1),
+  kind: z.enum(["material", "coating"]),
+  dk: z.number().optional(),
+  water_content_range: z.string().optional(),
+  description: z.string().optional(),
+  ...v04ProvenanceAgentSchema,
+});
+const dateRangeSchema = z.object({
+  start: z.string().optional(),
+  end: z.string().optional(),
+});
+const getObservationHistorySchema = z.object({
+  patient_id: z.string().min(1),
+  code: z.string().min(1),
+  eye: z.string().optional(),
+  date_range: dateRangeSchema.optional(),
+  limit: z.number().int().positive().max(500).optional(),
+});
+const getProgressionSummarySchema = z.object({
+  patient_id: z.string().min(1),
+  code: z.string().min(1),
+  eye: z.string().optional(),
+});
+const getGroupedDiagnosticReportSchema = z.object({
+  patient_id: z.string().min(1),
+  report_type: z.string().min(1),
+});
+const getLensFitHistorySchema = z.object({
+  patient_id: z.string().min(1),
+  lens_device_id: z.string().min(1),
+  limit: z.number().int().positive().max(500).optional(),
+});
+const compareTreatmentEpisodesSchema = z.object({
+  patient_id: z.string().min(1),
 });
 
 /* --------------------------------------------------------------------------
@@ -1908,6 +2225,257 @@ function createServer(): Server {
 
           return toolJson({ procedure: updated, provenance });
         }
+        case "create_lens_device": {
+          const input = createLensDeviceSchema.parse(args);
+          const device = buildLensDevice({
+            lensTypeCode: input.lens_type,
+            patientReference: input.patient_id ? patientReference(input.patient_id) : undefined,
+            definitionReference: input.definition_id,
+            deviceName: input.device_name,
+            manufacturer: input.manufacturer,
+            modelNumber: input.model_number,
+            lotNumber: input.lot_number,
+            serialNumber: input.serial_number,
+            coatingSubstanceReference: input.coating_substance_id,
+            properties: toLensPropertyInputs(input.properties),
+          });
+          const created = await fhir.create<Device>(device, auditHeaders("create_lens_device"));
+          const provenance = await createV04Provenance(
+            "create_lens_device",
+            input,
+            [`Device/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ device: created, provenance });
+        }
+        case "update_lens_device_properties": {
+          const input = updateLensDevicePropertiesSchema.parse(args);
+          const id = stripReference(input.lens_device_id, "Device");
+          const existing = await fhir.read<Device>("Device", id);
+          const lensType =
+            input.lens_type ?? existing.type?.coding?.find((coding) => coding.code)?.code;
+          if (!lensType) {
+            throw new Error(
+              "update_lens_device_properties requires lens_type when Device.type does not carry an OSOD lens type code.",
+            );
+          }
+          const normalizedLensType = normalizeLensTypeCode(lensType);
+          const updated = await fhir.patch<Device>(
+            "Device",
+            id,
+            buildUpdateLensDevicePropertiesPatch(
+              existing,
+              normalizedLensType,
+              toLensPropertyInputs(input.properties) ?? [],
+            ),
+            versionedHeaders(existing, auditHeaders("update_lens_device_properties")),
+          );
+          const provenance = await createV04Provenance(
+            "update_lens_device_properties",
+            input,
+            [`Device/${updated.id}`],
+            "UPDATE",
+            undefined,
+            [
+              {
+                role: "revision",
+                display: `prior Device.property count: ${(existing.property ?? []).length}`,
+              },
+            ],
+          );
+
+          return toolJson({ device: updated, provenance });
+        }
+        case "create_device_definition": {
+          const input = createDeviceDefinitionSchema.parse(args);
+          const deviceDefinition = buildDeviceDefinition({
+            catalogCode: input.catalog_code,
+            displayName: input.display_name,
+            lensTypeCode: input.lens_type,
+            manufacturer: input.manufacturer,
+            organizationReference: input.organization_reference,
+            modelNumber: input.model_number,
+            materialCodes: input.material_codes,
+            properties: toLensPropertyInputs(input.properties),
+          });
+          const created = await fhir.create<DeviceDefinition>(
+            deviceDefinition,
+            auditHeaders("create_device_definition"),
+          );
+          const provenance = await createV04Provenance(
+            "create_device_definition",
+            input,
+            [`DeviceDefinition/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ deviceDefinition: created, provenance });
+        }
+        case "create_concept_map": {
+          const input = createConceptMapSchema.parse(args);
+          const conceptMap = buildConceptMap({
+            labCode: input.lab_code,
+            labDisplay: input.lab_display,
+            targetUri: input.target_uri,
+            organizationReference: input.organization_reference,
+            mappings: input.mappings.map((mapping) => ({
+              sourceCode: mapping.source_code,
+              sourceDisplay: mapping.source_display,
+              targetCode: mapping.target_code,
+              targetDisplay: mapping.target_display,
+              equivalence: mapping.equivalence,
+            })),
+          });
+          const created = await fhir.create<ConceptMap>(
+            conceptMap,
+            auditHeaders("create_concept_map"),
+          );
+          const provenance = await createV04Provenance(
+            "create_concept_map",
+            input,
+            [`ConceptMap/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ conceptMap: created, provenance });
+        }
+        case "create_substance": {
+          const input = createSubstanceSchema.parse(args);
+          const substance = buildSubstance({
+            code: input.code,
+            display: input.display,
+            kind: input.kind,
+            dk: input.dk,
+            waterContentRange: input.water_content_range,
+            description: input.description,
+          });
+          const created = await fhir.create<Substance>(
+            substance,
+            auditHeaders("create_substance"),
+          );
+          const provenance = await createV04Provenance(
+            "create_substance",
+            input,
+            [`Substance/${created.id}`],
+            "CREATE",
+          );
+
+          return toolJson({ substance: created, provenance });
+        }
+        case "get_observation_history": {
+          const input = getObservationHistorySchema.parse(args);
+          const bundle = await fhir.search<Observation>(
+            "Observation",
+            buildObservationSearchParams({
+              patientReference: patientReference(input.patient_id),
+              filters: {
+                code: input.code,
+                eye: input.eye,
+                dateRange: input.date_range,
+              },
+              count: input.limit,
+            }),
+          );
+          const observations = observationHistoryFromBundle(bundle, {
+            code: input.code,
+            eye: input.eye,
+            dateRange: input.date_range,
+          });
+
+          return toolJson({ observations });
+        }
+        case "get_progression_summary": {
+          const input = getProgressionSummarySchema.parse(args);
+          const bundle = await fhir.search<Observation>(
+            "Observation",
+            buildObservationSearchParams({
+              patientReference: patientReference(input.patient_id),
+              filters: { code: input.code, eye: input.eye },
+              count: 500,
+            }),
+          );
+          const observations = observationHistoryFromBundle(bundle, {
+            code: input.code,
+            eye: input.eye,
+          });
+
+          return toolJson({
+            summary: summarizeProgression(observations, input.code, input.eye),
+          });
+        }
+        case "get_grouped_diagnostic_report": {
+          const input = getGroupedDiagnosticReportSchema.parse(args);
+          const report = await findDiagnosticReport(
+            patientReference(input.patient_id),
+            input.report_type,
+          );
+          if (!report) {
+            return toolJson({ diagnosticReport: undefined, observations: [] });
+          }
+          const observations = await readReportObservations(report);
+
+          return toolJson(groupedDiagnosticReport(report, observations));
+        }
+        case "get_lens_fit_history": {
+          const input = getLensFitHistorySchema.parse(args);
+          const lensReference = normalizeToolReference(input.lens_device_id, "Device");
+          const subjectReference = patientReference(input.patient_id);
+          let searchMode = "standard-focus";
+          let bundle;
+          try {
+            bundle = await fhir.search<Observation>("Observation", {
+              subject: subjectReference,
+              focus: lensReference,
+              _sort: "date",
+              _count: String(input.limit ?? 200),
+            });
+          } catch (err) {
+            searchMode = "subject-filter-fallback";
+            bundle = await fhir.search<Observation>("Observation", {
+              subject: subjectReference,
+              _sort: "date",
+              _count: String(input.limit ?? 200),
+            });
+          }
+          const observations = observationHistoryFromBundle(bundle, {
+            code: "",
+            focusReference: lensReference,
+          }).filter((observation) =>
+            (observation.focus ?? []).some((focus) => focus.reference === lensReference),
+          );
+
+          return toolJson({
+            searchMode,
+            fallbackDocumentation:
+              searchMode === "subject-filter-fallback"
+                ? "Medplum rejected Observation?focus; queried by subject and filtered Observation.focus client-side."
+                : undefined,
+            observations,
+          });
+        }
+        case "compare_treatment_episodes": {
+          const input = compareTreatmentEpisodesSchema.parse(args);
+          const subjectReference = patientReference(input.patient_id);
+          const [episodeBundle, observationBundle] = await Promise.all([
+            fhir.search<EpisodeOfCare>("EpisodeOfCare", {
+              patient: subjectReference,
+              _count: "200",
+            }),
+            fhir.search<Observation>("Observation", {
+              subject: subjectReference,
+              _count: "500",
+            }),
+          ]);
+          const episodes = (episodeBundle.entry ?? [])
+            .map((entry) => entry.resource)
+            .filter((resource): resource is EpisodeOfCare => resource?.resourceType === "EpisodeOfCare");
+          const observations = (observationBundle.entry ?? [])
+            .map((entry) => entry.resource)
+            .filter((resource): resource is Observation => resource?.resourceType === "Observation");
+
+          return toolJson({ episodes: summarizeTreatmentEpisodes(episodes, observations) });
+        }
         default:
           return {
             content: [{ type: "text", text: `Unknown tool: ${name}` }],
@@ -1933,6 +2501,11 @@ type SaveSectionObservationsInput = z.infer<typeof saveSectionObservationsSchema
 type UpdateEpisodeOfCareInput = z.infer<typeof updateEpisodeOfCareSchema>;
 type CreateAllergyIntoleranceInput = z.infer<typeof createAllergyIntoleranceSchema>;
 type CreateProcedureInput = z.infer<typeof createProcedureSchema>;
+type LensPropertyToolInput = z.infer<typeof lensPropertyInputSchema>;
+type V04ProvenanceAgentInput = {
+  provenance_agent_reference?: string;
+  provenance_agent_display?: string;
+};
 
 interface V035ProvenanceControlInput {
   create_provenance?: boolean;
@@ -1962,6 +2535,32 @@ function conditionToolInputProperties(input: {
     create_provenance: { type: "boolean", description: "Defaults true." },
     provenance_agent_reference: { type: "string" },
     provenance_agent_display: { type: "string" },
+  };
+}
+
+function lensPropertyInputSchemaJson(): Record<string, unknown> {
+  return {
+    type: "object",
+    required: ["code"],
+    properties: {
+      code: { type: "string", enum: CONTACT_LENS_PARAMETER_CODES },
+      value_number: { type: "number" },
+      unit_code: { type: "string", enum: UCUM_UNIT_CODES },
+      value_code: { type: "string" },
+      value_system: { type: "string" },
+      value_display: { type: "string" },
+      value_text: { type: "string" },
+    },
+  };
+}
+
+function dateRangeSchemaJson(): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: {
+      start: { type: "string" },
+      end: { type: "string" },
+    },
   };
 }
 
@@ -2023,6 +2622,110 @@ async function createV035Provenance(
     }),
     auditHeaders(toolName),
   );
+}
+
+async function createV04Provenance(
+  toolName: V04WriteToolName,
+  input: V04ProvenanceAgentInput,
+  targetReferences: string[],
+  activityCode: "CREATE" | "UPDATE",
+  occurredDateTime?: string,
+  entityValues?: Array<{
+    role?: "source" | "revision" | "quotation" | "removal";
+    display: string;
+  }>,
+): Promise<Provenance> {
+  return fhir.create<Provenance>(
+    buildProvenance({
+      targetReferences,
+      occurredDateTime,
+      activityCode,
+      activityDisplay: activityCode === "CREATE" ? "Create" : "Update",
+      agents: [
+        {
+          typeCode: "author",
+          typeDisplay: "Author",
+          whoReference: input.provenance_agent_reference,
+          whoDisplay: input.provenance_agent_display ?? `OSOD MCP ${toolName}`,
+        },
+      ],
+      entityValues,
+    }),
+    auditHeaders(toolName),
+  );
+}
+
+function toLensPropertyInputs(
+  properties: LensPropertyToolInput[] | undefined,
+): ContactLensPropertyInput[] | undefined {
+  return properties?.map((property) => ({
+    code: property.code,
+    valueNumber: property.value_number,
+    unitCode: property.unit_code,
+    valueCode: property.value_code,
+    valueSystem: property.value_system,
+    valueDisplay: property.value_display,
+    valueText: property.value_text,
+  }));
+}
+
+async function findDiagnosticReport(
+  subjectReference: string,
+  reportType: string,
+): Promise<DiagnosticReport | undefined> {
+  const tokenSearch = await fhir.search<DiagnosticReport>("DiagnosticReport", {
+    subject: subjectReference,
+    code: reportType,
+    _count: "1",
+  });
+  const tokenMatch = tokenSearch.entry?.[0]?.resource;
+  if (tokenMatch) {
+    return tokenMatch;
+  }
+
+  const bundle = await fhir.search<DiagnosticReport>("DiagnosticReport", {
+    subject: subjectReference,
+    _count: "50",
+  });
+  return (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .find((resource): resource is DiagnosticReport =>
+      resource?.resourceType === "DiagnosticReport" && reportMatches(resource, reportType),
+    );
+}
+
+async function readReportObservations(report: DiagnosticReport): Promise<Observation[]> {
+  const references = (report.result ?? [])
+    .map((result) => result.reference)
+    .filter((reference): reference is string => Boolean(reference?.startsWith("Observation/")));
+  const observations: Observation[] = [];
+
+  for (const reference of references) {
+    observations.push(
+      await fhir.read<Observation>("Observation", stripReference(reference, "Observation")),
+    );
+  }
+
+  return observations;
+}
+
+function reportMatches(report: DiagnosticReport, reportType: string): boolean {
+  const normalized = reportType.trim().toLowerCase();
+  return (
+    report.code.text?.toLowerCase().includes(normalized) === true ||
+    (report.code.coding ?? []).some((coding) => {
+      const token = coding.system && coding.code ? `${coding.system}|${coding.code}` : coding.code;
+      return (
+        token === reportType ||
+        coding.code === reportType ||
+        coding.display?.toLowerCase().includes(normalized) === true
+      );
+    })
+  );
+}
+
+function normalizeToolReference(value: string, resourceType: string): string {
+  return value.startsWith(`${resourceType}/`) ? value : `${resourceType}/${value}`;
 }
 
 function buildUpdateEpisodeOfCarePatchOperations(

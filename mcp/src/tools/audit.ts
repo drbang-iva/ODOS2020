@@ -15,8 +15,18 @@ export const V035_WRITE_TOOL_NAMES = [
   "update_procedure_body_site",
 ] as const;
 
-export type V035WriteToolName = (typeof V035_WRITE_TOOL_NAMES)[number];
+export const V04_WRITE_TOOL_NAMES = [
+  "create_lens_device",
+  "update_lens_device_properties",
+  "create_device_definition",
+  "create_concept_map",
+  "create_substance",
+] as const;
 
-export function auditHeaders(toolName: V035WriteToolName): { "X-OSOD-Source": string } {
+export type V035WriteToolName = (typeof V035_WRITE_TOOL_NAMES)[number];
+export type V04WriteToolName = (typeof V04_WRITE_TOOL_NAMES)[number];
+export type OsodWriteToolName = V035WriteToolName | V04WriteToolName;
+
+export function auditHeaders(toolName: OsodWriteToolName): { "X-OSOD-Source": string } {
   return { "X-OSOD-Source": `mcp/${toolName}` };
 }

@@ -1,0 +1,21 @@
+lab_code: bostonsight
+lab_display: BostonSight
+target_uri: urn:osod:contact-lens-lab:bostonsight:parameter
+organization_reference: Organization/bostonsight
+mappings:
+  - source: sagittal-depth-um
+    source_display: Sagittal depth
+    target: Sag
+    target_display: Sagittal depth
+  - source: central-clearance-target-um
+    source_display: Central clearance target
+    target: CC
+    target_display: Central clearance
+  - source: landing-zone-superior
+    source_display: Superior landing zone
+    target: SLZ
+    target_display: Superior landing zone
+  - source: landing-zone-inferior
+    source_display: Inferior landing zone
+    target: ILZ
+    target_display: Inferior landing zone

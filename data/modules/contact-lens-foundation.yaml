@@ -1,0 +1,49 @@
+module: contact-lens-foundation
+version: 0.4.0
+status: active
+description: v0.4a data foundation for contact-lens devices, lab catalogs, materials, fit findings, and longitudinal query surfaces.
+routes:
+  - none-v0.4a-data-foundation-only
+profiles:
+  - https://osod.dev/fhir/StructureDefinition/Device-ContactLens
+  - https://osod.dev/fhir/StructureDefinition/Device-OrthoKLens
+  - https://osod.dev/fhir/StructureDefinition/Device-CornealGPLens
+  - https://osod.dev/fhir/StructureDefinition/Device-ScleralLens
+  - https://osod.dev/fhir/StructureDefinition/Device-HybridLens
+  - https://osod.dev/fhir/StructureDefinition/Device-SoftLens
+  - https://osod.dev/fhir/StructureDefinition/Observation-KReadings
+  - https://osod.dev/fhir/StructureDefinition/Observation-Pachymetry
+  - https://osod.dev/fhir/StructureDefinition/Observation-MeibomianGlandScore
+  - https://osod.dev/fhir/StructureDefinition/Observation-TBUT
+  - https://osod.dev/fhir/StructureDefinition/Observation-Schirmer
+  - https://osod.dev/fhir/StructureDefinition/Observation-ContactLensFitFinding
+code_systems:
+  - https://osod.dev/fhir/CodeSystem/contact-lens-type
+  - https://osod.dev/fhir/CodeSystem/contact-lens-parameter
+  - https://osod.dev/fhir/CodeSystem/contact-lens-fitting-event
+  - https://osod.dev/fhir/CodeSystem/contact-lens-clinical-observation
+  - https://osod.dev/fhir/CodeSystem/contact-lens-material
+  - https://osod.dev/fhir/CodeSystem/contact-lens-coating
+value_sets:
+  - https://osod.dev/fhir/ValueSet/ortho-k-lens-parameters
+  - https://osod.dev/fhir/ValueSet/corneal-gp-lens-parameters
+  - https://osod.dev/fhir/ValueSet/corneal-gp-bitoric-bifocal-parameters
+  - https://osod.dev/fhir/ValueSet/scleral-lens-parameters
+  - https://osod.dev/fhir/ValueSet/hybrid-lens-parameters
+event_types:
+  - contact-lens-device-created
+  - contact-lens-device-properties-updated
+  - contact-lens-fit-finding-recorded
+  - contact-lens-trial-started
+  - contact-lens-remake-recorded
+tools:
+  - create_lens_device
+  - update_lens_device_properties
+  - create_device_definition
+  - create_concept_map
+  - create_substance
+  - get_observation_history
+  - get_progression_summary
+  - get_grouped_diagnostic_report
+  - get_lens_fit_history
+  - compare_treatment_episodes

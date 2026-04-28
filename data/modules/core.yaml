@@ -1,0 +1,22 @@
+module: core
+version: 0.4.0
+status: active
+description: OSOD core FHIR foundation and longitudinal chart infrastructure.
+profiles:
+  - https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam
+  - https://osod.dev/fhir/StructureDefinition/Observation-VA
+  - https://osod.dev/fhir/StructureDefinition/Observation-IOP
+  - https://osod.dev/fhir/StructureDefinition/Observation-Refraction
+  - https://osod.dev/fhir/StructureDefinition/Observation-AxialLength
+event_types:
+  - clinical-resource-created
+  - clinical-resource-updated
+  - raw-asset-indexed
+tools:
+  - list_patients
+  - get_patient
+  - update_patient
+  - get_encounters
+  - get_observations
+  - create_observation
+  - create_raw_asset_reference
