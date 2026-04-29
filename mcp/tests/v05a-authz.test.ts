@@ -283,6 +283,111 @@ test("AccessPolicy generator POST round-trip is accepted by Medplum when integra
   assert.equal(created.resource?.[0]?.interaction?.includes("search"), true);
 });
 
+test(
+  "v0.5a auditor AccessPolicy enforces compartment isolation when bound via ProjectMembership (closes Mandate 8 fixture caveat)",
+  { timeout: 90_000 },
+  async (t) => {
+    loadRepoEnv();
+    const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
+    const email = process.env.MEDPLUM_ADMIN_EMAIL;
+    const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+    if (!email || !password) {
+      t.skip(
+        "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the v0.5a enforcement fixture. " +
+          "This is the human-provisioned step per Mandate 8 — the agent does not create credentials, only uses what the human dropped into env vars.",
+      );
+      return;
+    }
+
+    const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+
+    // 1. Resolve the admin's project ID from /auth/me — avoids hardcoding any installation-specific IDs.
+    const meRes = await fetch(`${baseUrl}/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    assert.ok(meRes.ok, `GET /auth/me failed: ${meRes.status}`);
+    const me = (await meRes.json()) as { project?: { id?: string } };
+    const projectId = me.project?.id;
+    assert.ok(projectId, "Could not resolve project id from /auth/me — admin user has no project membership.");
+
+    // 2. Generate a fresh auditor AccessPolicy from the v0.5a generator and POST it as the admin.
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+    policy.name = `OSOD v0.5a Auditor Enforcement ${Date.now()}`;
+    const createdPolicy = await fhir.create<AccessPolicy>(policy);
+    assert.ok(createdPolicy.id, "AccessPolicy create did not return an id.");
+
+    // 3. Atomically create a ClientApplication + ProjectMembership bound to the AccessPolicy via the
+    //    super-admin endpoint. This is the canonical Medplum path that creates the membership for us;
+    //    direct FHIR ProjectMembership creation is restricted to specific service paths.
+    const adminClientRes = await fetch(`${baseUrl}/admin/projects/${projectId}/client`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: `v0.5a-auditor-enforcement-${Date.now()}`,
+        description: "v0.5a Mandate 8 enforcement fixture (auto-provisioned by integration test)",
+        accessPolicy: { reference: `AccessPolicy/${createdPolicy.id}` },
+      }),
+    });
+    const adminClientBody = await adminClientRes.text();
+    assert.ok(
+      adminClientRes.ok,
+      `POST /admin/projects/${projectId}/client failed: ${adminClientRes.status} ${adminClientBody}`,
+    );
+    const clientApp = JSON.parse(adminClientBody) as { id: string; secret: string };
+    assert.ok(clientApp.id, "Admin client create did not return an id.");
+    assert.ok(clientApp.secret, "Admin client create did not return a secret.");
+
+    // 4. OAuth client_credentials grant — acts as the new bound client.
+    const tokenRes = await fetch(`${baseUrl}/oauth2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientApp.id,
+        client_secret: clientApp.secret,
+      }),
+    });
+    assert.ok(tokenRes.ok, `client_credentials grant failed: ${tokenRes.status}`);
+    const { access_token: clientToken } = (await tokenRes.json()) as { access_token: string };
+    assert.ok(clientToken, "client_credentials response missing access_token.");
+
+    const auth = { Authorization: `Bearer ${clientToken}` };
+
+    // 5a. POSITIVE: GET AuditEvent — auditor role grants AuditEvent read.
+    const auditRes = await fetch(`${baseUrl}/fhir/R4/AuditEvent?_count=1`, { headers: auth });
+    assert.equal(auditRes.status, 200, "auditor should be allowed to read AuditEvent.");
+
+    // 5b. POSITIVE: GET Provenance — auditor role grants Provenance read.
+    const provRes = await fetch(`${baseUrl}/fhir/R4/Provenance?_count=1`, { headers: auth });
+    assert.equal(provRes.status, 200, "auditor should be allowed to read Provenance.");
+
+    // 5c. NEGATIVE: POST Observation — auditor role grants no clinical write capability.
+    const obsRes = await fetch(`${baseUrl}/fhir/R4/Observation`, {
+      method: "POST",
+      headers: { ...auth, "Content-Type": "application/fhir+json" },
+      body: JSON.stringify({
+        resourceType: "Observation",
+        status: "final",
+        code: { text: "v0.5a fixture - should be rejected" },
+      }),
+    });
+    assert.ok(
+      obsRes.status >= 400 && obsRes.status < 500,
+      `auditor must NOT be allowed to write Observation; got ${obsRes.status}.`,
+    );
+
+    // 5d. NEGATIVE: GET Patient — auditor role does not include Patient in its resourceRules.
+    const patRes = await fetch(`${baseUrl}/fhir/R4/Patient?_count=1`, { headers: auth });
+    assert.ok(
+      patRes.status >= 400 && patRes.status < 500,
+      `auditor must NOT be allowed to read Patient; got ${patRes.status}.`,
+    );
+  },
+);
+
 function membershipFixture(): ProjectMembership {
   return {
     resourceType: "ProjectMembership",
