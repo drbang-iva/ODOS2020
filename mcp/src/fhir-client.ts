@@ -4,7 +4,11 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import type { Binary, Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import {
+  assertBinaryCreateThroughParser,
+  assertBinaryPatchAllowed,
+} from "./parsers/binarySecurityContext.js";
 
 export type JsonPatchOperation =
   | { op: "add" | "replace" | "test"; path: string; value: unknown }
@@ -113,6 +117,9 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       r: T,
       extraHeaders: Record<string, string> = {},
     ): Promise<T> {
+      if (isBinaryResource(r)) {
+        assertBinaryCreateThroughParser(r, extraHeaders);
+      }
       const res = await fetch(`${base}/fhir/R4/${r.resourceType}`, {
         method: "POST",
         headers: { ...headers(), ...extraHeaders },
@@ -128,6 +135,9 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       r: T,
       extraHeaders: Record<string, string> = {},
     ): Promise<T> {
+      if (rt === "Binary" && isBinaryResource(r)) {
+        assertBinaryCreateThroughParser(r, extraHeaders);
+      }
       const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
         method: "PUT",
         headers: { ...headers(), ...extraHeaders },
@@ -143,6 +153,9 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       operations: JsonPatchOperation[],
       extraHeaders: Record<string, string> = {},
     ): Promise<T> {
+      if (rt === "Binary") {
+        assertBinaryPatchAllowed({ operations });
+      }
       const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
         method: "PATCH",
         headers: {
@@ -161,6 +174,7 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       extraHeaders: Record<string, string> = {},
     ): Promise<Bundle> {
       const transactionBundle: Bundle = { ...bundle, type: "transaction" };
+      assertTransactionBinaryWritesUseParser(transactionBundle, extraHeaders);
       const res = await fetch(`${base}/fhir/R4`, {
         method: "POST",
         headers: { ...headers(), ...extraHeaders },
@@ -174,6 +188,54 @@ export function createMedplumClient(opts: { baseUrl: string; accessToken?: strin
       return responseBundle;
     },
   };
+}
+
+function isBinaryResource(resource: Resource): resource is Binary {
+  return resource.resourceType === "Binary";
+}
+
+function assertTransactionBinaryWritesUseParser(
+  bundle: Bundle,
+  extraHeaders: Record<string, string>,
+): void {
+  for (const entry of bundle.entry ?? []) {
+    const method = entry.request?.method;
+    const url = entry.request?.url ?? "";
+    const isPersistedBinaryWrite =
+      (method === "POST" && url === "Binary") ||
+      ((method === "PUT" || method === "PATCH") && url.startsWith("Binary/"));
+
+    if (!isPersistedBinaryWrite) {
+      continue;
+    }
+
+    if (method === "PATCH") {
+      assertBinaryPatchAllowed({ operations: binaryPatchOperations(entry.resource) });
+      continue;
+    }
+
+    if (!entry.resource || !isBinaryResource(entry.resource)) {
+      throw new Error("Binary transaction write must include a Binary resource body.");
+    }
+    assertBinaryCreateThroughParser(entry.resource, extraHeaders);
+  }
+}
+
+function binaryPatchOperations(resource: Resource | undefined): JsonPatchOperation[] {
+  if (!resource || resource.resourceType !== "Binary") {
+    return [];
+  }
+
+  const data = (resource as Binary).data;
+  if (!data) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(Buffer.from(data, "base64").toString("utf8")) as JsonPatchOperation[];
+  } catch {
+    return [];
+  }
 }
 
 function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
