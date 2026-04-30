@@ -13,6 +13,10 @@ redis_port="${OSOD_REDIS_PORT:-6379}"
 redis_password="${OSOD_REDIS_PASSWORD:-medplum}"
 binary_target="${OSOD_BINARY_TARGET:-/data/binary}"
 
+record_event() {
+  npx tsx scripts/record-audit-event.ts "$1" "${2:-}"
+}
+
 redis_cmd() {
   if [[ -n "${OSOD_REDIS_CLI:-}" ]]; then
     "$OSOD_REDIS_CLI" -h "$redis_host" -p "$redis_port" -a "$redis_password" "$@"
@@ -24,10 +28,17 @@ redis_cmd() {
 }
 
 compose() {
+  local compose_args=()
+  if [[ -n "${OSOD_COMPOSE_PROJECT:-}" ]]; then
+    compose_args+=("-p" "$OSOD_COMPOSE_PROJECT")
+  fi
+  if [[ -n "${OSOD_COMPOSE_FILE:-}" ]]; then
+    compose_args+=("-f" "$OSOD_COMPOSE_FILE")
+  fi
   if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
+    docker-compose "${compose_args[@]}" "$@"
   else
-    docker compose "$@"
+    docker compose "${compose_args[@]}" "$@"
   fi
 }
 
@@ -38,6 +49,18 @@ hash_path() {
   else
     shasum -a 256 "$path" | awk '{print $1}'
   fi
+}
+
+wait_for_medplum() {
+  local base_url="${MEDPLUM_BASE_URL:-http://localhost:8103}"
+  for _ in $(seq 1 90); do
+    if node -e "fetch('${base_url%/}/healthcheck').then(r=>process.exit(r.status < 500 ? 0 : 1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Timed out waiting for Medplum at $base_url" >&2
+  exit 1
 }
 
 verify_hash() {
@@ -63,6 +86,7 @@ echo "restore-started $manifest_path"
 compose stop medplum-app medplum-server || true
 
 pg_restore --jobs 4 --clean --if-exists --dbname="$postgres_url" "$postgres_path"
+record_event "restore-started" "restore-started $manifest_path"
 
 redis_cmd SHUTDOWN NOSAVE >/dev/null 2>&1 || true
 compose start redis
@@ -83,5 +107,7 @@ else
 fi
 
 compose start medplum-server medplum-app
+wait_for_medplum
 npx tsx scripts/verify-restore-integrity.ts "$manifest_path"
+record_event "restore-completed" "restore-completed $manifest_path"
 echo "restore-completed $manifest_path"

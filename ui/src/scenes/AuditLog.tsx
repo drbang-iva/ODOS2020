@@ -1,13 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AUDIT_EVENT_TYPES,
   canReviewAuditLog,
   defaultAuditDateRange,
   exportAuditRowsAsCsv,
   exportAuditRowsAsJson,
-  filterAuditLogRows,
-  sampleAuditRows,
+  fetchAuditLogRows,
   type AuditEventType,
+  type AuditLogRow,
   type AuditOutcome,
   type AuditReviewRole,
 } from "../lib/audit-log";
@@ -22,8 +22,9 @@ export function AuditLog() {
   const [outcome, setOutcome] = useState<AuditOutcome | "">("");
   const [eventTypes, setEventTypes] = useState<AuditEventType[]>([]);
   const [breakGlassOnly, setBreakGlassOnly] = useState(false);
-  const rows = useMemo(() => sampleAuditRows(), []);
-  const filteredRows = filterAuditLogRows(rows, {
+  const [rows, setRows] = useState<AuditLogRow[]>([]);
+  const [error, setError] = useState<string | undefined>();
+  const filters = useMemo(() => ({
     patientId: patientId || undefined,
     actorId: actorId || undefined,
     from: `${from}T00:00:00.000Z`,
@@ -31,7 +32,30 @@ export function AuditLog() {
     eventTypes,
     outcome: outcome || undefined,
     breakGlassOnly,
-  });
+  }), [actorId, breakGlassOnly, eventTypes, from, outcome, patientId, to]);
+
+  useEffect(() => {
+    if (!canReviewAuditLog(role)) {
+      return;
+    }
+    let cancelled = false;
+    fetchAuditLogRows(filters, role)
+      .then((nextRows) => {
+        if (!cancelled) {
+          setRows(nextRows);
+          setError(undefined);
+        }
+      })
+      .catch((nextError: unknown) => {
+        if (!cancelled) {
+          setRows([]);
+          setError(nextError instanceof Error ? nextError.message : String(nextError));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, role]);
 
   if (!canReviewAuditLog(role)) {
     return (
@@ -53,10 +77,10 @@ export function AuditLog() {
             <p className="text-sm text-white/55">Role: {role}</p>
           </div>
           <div className="flex gap-2">
-            <button className="rounded border border-white/20 px-3 py-2 text-sm" onClick={() => download("audit-log.csv", exportAuditRowsAsCsv(filteredRows), "text/csv")}>
+            <button className="rounded border border-white/20 px-3 py-2 text-sm" onClick={() => download("audit-log.csv", exportAuditRowsAsCsv(rows), "text/csv")}>
               CSV
             </button>
-            <button className="rounded border border-white/20 px-3 py-2 text-sm" onClick={() => download("audit-log.json", exportAuditRowsAsJson(filteredRows), "application/json")}>
+            <button className="rounded border border-white/20 px-3 py-2 text-sm" onClick={() => download("audit-log.json", exportAuditRowsAsJson(rows), "application/json")}>
               JSON
             </button>
           </div>
@@ -108,6 +132,7 @@ export function AuditLog() {
         </aside>
 
         <section className="overflow-hidden border border-white/10 bg-black/20">
+          {error ? <div className="border-b border-red-500/30 bg-red-950/20 px-4 py-3 text-sm text-red-100">{error}</div> : null}
           <table className="w-full min-w-[980px] border-collapse text-left text-sm">
             <thead className="bg-white/5 text-xs uppercase text-white/45">
               <tr>
@@ -122,7 +147,7 @@ export function AuditLog() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.id} className="border-t border-white/10">
                   <td className="px-3 py-3 text-white/75">{row.eventTime}</td>
                   <td className="px-3 py-3">{row.eventType}</td>

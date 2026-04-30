@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import type { AccessPolicy, AuditEvent, Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
   AuditEventProjectionQueue,
   InMemoryOsodAuditRepository,
@@ -12,8 +13,17 @@ import {
   executePhiOperationWithAudit,
   ocrStyleAuditQuery,
 } from "../src/authz/osodAudit.js";
+import { createLiveOsodAuditRuntime } from "../src/authz/liveAudit.js";
 import { verifyRestoreIntegrity } from "../src/authz/restoreIntegrity.js";
 import { informationBlockingExceptionForDenial } from "../src/policy/ib-exception-map.js";
+import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
+import { auditEventTypeForFhirWrite, type MedplumClient } from "../src/fhir-client.js";
+import {
+  connectMcpServer,
+  createAuthenticatedFhirClient,
+  loadRepoEnv,
+  parseToolOutput,
+} from "./integration-helpers.js";
 import {
   canReviewAuditLog,
   exportAuditRowsAsCsv,
@@ -49,6 +59,9 @@ test("v0.5b audit event type ValueSet covers the required read, write, security,
     "restore-completed",
     "external-api-call",
   ]);
+  assert.equal(auditEventTypeForFhirWrite("AccessPolicy", "update"), "policy-change");
+  assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "create"), "projectmembership-lifecycle");
+  assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "patch"), "role-change");
 });
 
 test("v0.5b SQL migration creates append-only osod_audit_events table with required indexes and guards", () => {
@@ -220,7 +233,10 @@ test("audit UI model is auditor/practice-admin gated and exports OCR query rows 
   assert.equal(canReviewAuditLog("clinician"), false);
   assert.equal(canReviewAuditLog("aesthetics-provider"), false);
   assert.equal(canReviewAuditLog("unknown"), false);
-  assert.match(exportAuditRowsAsCsv(filtered), /eventTime,eventType,actorId/);
+  assert.match(
+    exportAuditRowsAsCsv(filtered),
+    /id,eventTime,eventType,actorId,actorRole,patientId,resourceType,resourceId,actionOutcome,actionReason,policyUrl,sessionId,ipAddress,userAgent,breakGlass,breakGlassReason,ibActorClassification,ibException,provenanceId,auditEventId,createdAt/,
+  );
   assert.match(exportAuditRowsAsCsv(filtered), /denied/);
   assert.match(exportAuditRowsAsJson(filtered), /"ibException": "privacy"/);
 });
@@ -258,6 +274,103 @@ test("restore integrity suite passes all five v0.5b post-restore checks", () => 
   assert.equal(result.passed, true);
   assert.equal(result.checks.length, 5);
 });
+
+test(
+  "live MCP audit worker records actual read, write, and AccessPolicy denial with AuditEvent projection",
+  { timeout: 120_000 },
+  async (t) => {
+    loadRepoEnv();
+    const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+    const email = process.env.MEDPLUM_ADMIN_EMAIL;
+    const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+    if (!email || !password) {
+      t.skip("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for the live audit worker integration fixture.");
+      return;
+    }
+
+    const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+    const audit = createLiveOsodAuditRuntime({
+      postgresUrl: process.env.OSOD_POSTGRES_URL,
+      medplumBaseUrl: baseUrl,
+      medplumEmail: email,
+      medplumPassword: password,
+    });
+    t.after(async () => {
+      await audit.close();
+    });
+
+    const patient = await fhir.create<Patient>({
+      resourceType: "Patient",
+      active: true,
+      gender: "unknown",
+      name: [{ use: "official", family: `AuditWorker${Date.now()}`, given: ["Live"] }],
+    });
+    assert.ok(patient.id);
+
+    const adminMcp = await connectMcpServer({
+      baseUrl,
+      email,
+      password,
+      accessToken,
+      clientName: "osod-mcp-v05b-live-audit-admin",
+    });
+    t.after(async () => {
+      await adminMcp.client.close();
+    });
+
+    parseToolOutput<Patient>(
+      await adminMcp.client.callTool({
+        name: "get_patient",
+        arguments: { patient_id: patient.id },
+      }),
+    );
+    parseToolOutput<{ patient: Patient }>(
+      await adminMcp.client.callTool({
+        name: "update_patient",
+        arguments: { patient_id: patient.id, active: false },
+      }),
+    );
+
+    const auditorToken = await createAuditorClientToken({ baseUrl, accessToken, fhir });
+    const auditorMcp = await connectMcpServer({
+      baseUrl,
+      email,
+      password,
+      accessToken: auditorToken,
+      clientName: "osod-mcp-v05b-live-audit-auditor-denial",
+    });
+    t.after(async () => {
+      await auditorMcp.client.close();
+    });
+
+    const denied = await auditorMcp.client.callTool({
+      name: "get_patient",
+      arguments: { patient_id: patient.id },
+    });
+    assert.equal(denied.isError, true);
+
+    const rows = await audit.queryRows({
+      patientId: patient.id,
+      actorId: "osod-mcp",
+      eventTypes: ["read", "patch", "denied"],
+      limit: 50,
+    });
+    assert.ok(rows.some((row) => row.eventType === "read" && row.resourceType === "Patient"));
+    assert.ok(rows.some((row) => row.eventType === "patch" && row.resourceType === "Patient"));
+    const deniedRow = rows.find((row) => row.eventType === "denied");
+    assert.equal(deniedRow?.ibException, "privacy");
+
+    const auditEvents = bundleResources(
+      await fhir.search<AuditEvent>("AuditEvent", { _count: "1000", _sort: "-_lastUpdated" }),
+    );
+    for (const row of rows.filter((candidate) => candidate.eventType !== "denied").slice(0, 2)) {
+      assert.ok(
+        auditEvents.some((auditEvent) => auditEventHasOsodRowId(auditEvent, row.id)),
+        `Expected projected AuditEvent for osod_audit_events row ${row.id}`,
+      );
+    }
+  },
+);
 
 function seedNinetyDays(patientId: string) {
   return [
@@ -325,4 +438,71 @@ function seedNinetyDays(patientId: string) {
       actionOutcome: "granted",
     }),
   ];
+}
+
+async function createAuditorClientToken(input: {
+  baseUrl: string;
+  accessToken: string;
+  fhir: MedplumClient;
+}): Promise<string> {
+  const meRes = await fetch(`${input.baseUrl.replace(/\/$/, "")}/auth/me`, {
+    headers: { Authorization: `Bearer ${input.accessToken}` },
+  });
+  assert.ok(meRes.ok, `GET /auth/me failed: ${meRes.status}`);
+  const me = (await meRes.json()) as { project?: { id?: string } };
+  assert.ok(me.project?.id, "Could not resolve project id from /auth/me.");
+
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
+  policy.name = `OSOD v0.5b Auditor Denial ${Date.now()}`;
+  const createdPolicy = await input.fhir.create<AccessPolicy>(policy);
+  assert.ok(createdPolicy.id);
+
+  const adminClientRes = await fetch(
+    `${input.baseUrl.replace(/\/$/, "")}/admin/projects/${me.project.id}/client`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: `v0.5b-live-audit-denial-${Date.now()}`,
+        description: "v0.5b live audit denial integration fixture",
+        accessPolicy: { reference: `AccessPolicy/${createdPolicy.id}` },
+      }),
+    },
+  );
+  const adminClientBody = await adminClientRes.text();
+  assert.ok(
+    adminClientRes.ok,
+    `POST /admin/projects/${me.project.id}/client failed: ${adminClientRes.status} ${adminClientBody}`,
+  );
+  const clientApp = JSON.parse(adminClientBody) as { id: string; secret: string };
+
+  const tokenRes = await fetch(`${input.baseUrl.replace(/\/$/, "")}/oauth2/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientApp.id,
+      client_secret: clientApp.secret,
+    }),
+  });
+  assert.ok(tokenRes.ok, `client_credentials grant failed: ${tokenRes.status}`);
+  const { access_token: clientToken } = (await tokenRes.json()) as { access_token: string };
+  return clientToken;
+}
+
+function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {
+  return bundle.entry?.map((entry) => entry.resource).filter((resource): resource is T => Boolean(resource)) ?? [];
+}
+
+function auditEventHasOsodRowId(auditEvent: AuditEvent, rowId: string): boolean {
+  return (
+    auditEvent.entity?.some((entity) =>
+      entity.detail?.some(
+        (detail) => detail.type === "osod_audit_event_id" && detail.valueString === rowId,
+      ),
+    ) ?? false
+  );
 }

@@ -33,15 +33,18 @@ export function verifyRestoreIntegrity(input: RestoreIntegrityInput): RestoreInt
 }
 
 function verifyAuditSnapshot(input: RestoreIntegrityInput): RestoreIntegrityResult["checks"][number] {
-  const latest = [...input.restoredAuditRows].sort((a, b) => b.eventTime.localeCompare(a.eventTime))[0]
+  const restoredSnapshotRows = input.restoredAuditRows.filter(
+    (row) => row.eventType !== "restore-started" && row.eventType !== "restore-completed",
+  );
+  const latest = [...restoredSnapshotRows].sort((a, b) => b.eventTime.localeCompare(a.eventTime))[0]
     ?.eventTime;
   const passed =
-    input.restoredAuditRows.length === input.manifestAuditSnapshot.count &&
+    restoredSnapshotRows.length === input.manifestAuditSnapshot.count &&
     latest === input.manifestAuditSnapshot.latestEventTime;
   return {
     name: "osod_audit_events row count + latest event time",
     passed,
-    detail: `manifest=${input.manifestAuditSnapshot.count}/${input.manifestAuditSnapshot.latestEventTime ?? "none"} restored=${input.restoredAuditRows.length}/${latest ?? "none"}`,
+    detail: `manifest=${input.manifestAuditSnapshot.count}/${input.manifestAuditSnapshot.latestEventTime ?? "none"} restored=${restoredSnapshotRows.length}/${latest ?? "none"} restoreLifecycleRows=${input.restoredAuditRows.length - restoredSnapshotRows.length}`,
   };
 }
 

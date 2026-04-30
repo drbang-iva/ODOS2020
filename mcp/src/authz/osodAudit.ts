@@ -533,6 +533,8 @@ function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entit
     ...(row.ibException
       ? [{ type: "ib_exception", valueString: row.ibException }]
       : []),
+    { type: "osod_audit_event_id", valueString: row.id },
+    ...(row.sessionId ? [{ type: "session_id", valueString: row.sessionId }] : []),
   ];
   if (detail.length) {
     entities.push({ name: "audit-details", detail });

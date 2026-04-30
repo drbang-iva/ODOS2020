@@ -40,20 +40,24 @@ export interface AuditLogRow {
   id: string;
   eventTime: string;
   eventType: AuditEventType;
-  actorId?: string;
-  actorRole?: string;
-  patientId?: string;
-  resourceType?: string;
-  resourceId?: string;
+  actorId?: string | null;
+  actorRole?: string | null;
+  patientId?: string | null;
+  resourceType?: string | null;
+  resourceId?: string | null;
   actionOutcome: AuditOutcome;
-  actionReason?: string;
-  policyUrl?: string;
-  sessionId?: string;
+  actionReason?: string | null;
+  policyUrl?: string | null;
+  sessionId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   breakGlass: boolean;
-  breakGlassReason?: string;
+  breakGlassReason?: string | null;
   ibActorClassification: "health-care-provider";
-  ibException?: string;
-  provenanceId?: string;
+  ibException?: string | null;
+  provenanceId?: string | null;
+  auditEventId?: string | null;
+  createdAt: string;
 }
 
 export interface AuditLogFilters {
@@ -67,6 +71,30 @@ export interface AuditLogFilters {
 }
 
 export const AUDIT_REVIEW_ALLOWED_ROLES: AuditReviewRole[] = ["auditor", "practice-admin"];
+
+export const AUDIT_LOG_SCHEMA_COLUMNS = [
+  "id",
+  "eventTime",
+  "eventType",
+  "actorId",
+  "actorRole",
+  "patientId",
+  "resourceType",
+  "resourceId",
+  "actionOutcome",
+  "actionReason",
+  "policyUrl",
+  "sessionId",
+  "ipAddress",
+  "userAgent",
+  "breakGlass",
+  "breakGlassReason",
+  "ibActorClassification",
+  "ibException",
+  "provenanceId",
+  "auditEventId",
+  "createdAt",
+] as const;
 
 export function canReviewAuditLog(role: AuditReviewRole): boolean {
   return AUDIT_REVIEW_ALLOWED_ROLES.includes(role);
@@ -93,32 +121,72 @@ export function filterAuditLogRows(
 }
 
 export function exportAuditRowsAsJson(rows: readonly AuditLogRow[]): string {
-  return JSON.stringify(rows, null, 2);
+  return JSON.stringify(rows.map(normalizeAuditLogRow), null, 2);
 }
 
 export function exportAuditRowsAsCsv(rows: readonly AuditLogRow[]): string {
-  const headers = [
-    "eventTime",
-    "eventType",
-    "actorId",
-    "actorRole",
-    "patientId",
-    "resourceType",
-    "resourceId",
-    "actionOutcome",
-    "actionReason",
-    "policyUrl",
-    "breakGlass",
-    "breakGlassReason",
-    "ibActorClassification",
-    "ibException",
-    "provenanceId",
-  ] as const;
   const lines = [
-    headers.join(","),
-    ...rows.map((row) => headers.map((header) => csvEscape(String(row[header] ?? ""))).join(",")),
+    AUDIT_LOG_SCHEMA_COLUMNS.join(","),
+    ...rows.map((row) =>
+      AUDIT_LOG_SCHEMA_COLUMNS.map((header) => csvEscape(String(normalizeAuditLogRow(row)[header] ?? ""))).join(","),
+    ),
   ];
   return `${lines.join("\r\n")}\r\n`;
+}
+
+export async function fetchAuditLogRows(
+  filters: AuditLogFilters,
+  role: AuditReviewRole,
+  actorId = "audit-ui",
+): Promise<AuditLogRow[]> {
+  const params = new URLSearchParams();
+  if (filters.patientId) params.set("patient_id", filters.patientId);
+  if (filters.actorId) params.set("actor_id", filters.actorId);
+  params.set("from", filters.from);
+  params.set("to", filters.to);
+  if (filters.outcome) params.set("outcome", filters.outcome);
+  if (filters.breakGlassOnly) params.set("break_glass_only", "true");
+  for (const eventType of filters.eventTypes) {
+    params.append("event_type", eventType);
+  }
+
+  const response = await fetch(`${auditApiBase()}/audit/events?${params.toString()}`, {
+    headers: {
+      "X-OSOD-Role": role,
+      "X-OSOD-Actor-Id": actorId,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Audit log request failed: ${response.status}`);
+  }
+  const body = (await response.json()) as { rows?: AuditLogRow[] };
+  return (body.rows ?? []).map(normalizeAuditLogRow);
+}
+
+export function normalizeAuditLogRow(row: AuditLogRow): AuditLogRow {
+  return {
+    id: row.id,
+    eventTime: row.eventTime,
+    eventType: row.eventType,
+    actorId: row.actorId ?? null,
+    actorRole: row.actorRole ?? null,
+    patientId: row.patientId ?? null,
+    resourceType: row.resourceType ?? null,
+    resourceId: row.resourceId ?? null,
+    actionOutcome: row.actionOutcome,
+    actionReason: row.actionReason ?? null,
+    policyUrl: row.policyUrl ?? null,
+    sessionId: row.sessionId ?? null,
+    ipAddress: row.ipAddress ?? null,
+    userAgent: row.userAgent ?? null,
+    breakGlass: row.breakGlass,
+    breakGlassReason: row.breakGlassReason ?? null,
+    ibActorClassification: row.ibActorClassification,
+    ibException: row.ibException ?? null,
+    provenanceId: row.provenanceId ?? null,
+    auditEventId: row.auditEventId ?? null,
+    createdAt: row.createdAt,
+  };
 }
 
 export function defaultAuditDateRange(now = new Date()): {
@@ -148,6 +216,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       sessionId: "session-own",
       breakGlass: false,
       ibActorClassification: "health-care-provider",
+      createdAt: isoDaysAgo(now, 1),
     },
     {
       id: "audit-2",
@@ -165,6 +234,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       breakGlass: false,
       ibActorClassification: "health-care-provider",
       ibException: "privacy",
+      createdAt: isoDaysAgo(now, 7),
     },
     {
       id: "audit-3",
@@ -182,8 +252,14 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       breakGlass: true,
       breakGlassReason: "Emergency on-call care.",
       ibActorClassification: "health-care-provider",
+      createdAt: isoDaysAgo(now, 15),
     },
   ];
+}
+
+function auditApiBase(): string {
+  const meta = import.meta as ImportMeta & { env?: Record<string, string | undefined> };
+  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 function csvEscape(value: string): string {

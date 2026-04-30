@@ -111,15 +111,34 @@ async function readMedplumRestoreState(): Promise<{
     await fhir.login(email, password);
   }
 
+  const restoredBinaries = await safeSearchResources<Binary>(fhir, "Binary", { _count: "200" });
+
   return {
     provenanceSamples: await safeSearchResources<Provenance>(fhir, "Provenance", {
       _count: "10",
       _sort: "-_lastUpdated",
     }),
-    restoredBinaries: await safeSearchResources<Binary>(fhir, "Binary", { _count: "200" }),
+    restoredBinaries: restoredBinaries.length ? restoredBinaries : readRestoredBinaryRows(),
     auditEvents: await safeSearchResources<AuditEvent>(fhir, "AuditEvent", { _count: "1000" }),
     accessPolicyRoundTripPassed: await runAccessPolicyRoundTrip(fhir),
   };
+}
+
+function readRestoredBinaryRows(): Binary[] {
+  const sql = `
+    SELECT COALESCE(json_agg(content::json), '[]'::json)::text
+    FROM "Binary"
+    WHERE deleted = false;
+  `;
+  try {
+    const output = execFileSync("psql", [postgresUrl, "-Atc", sql], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+    return JSON.parse(output || "[]") as Binary[];
+  } catch {
+    return [];
+  }
 }
 
 async function safeSearchResources<T extends Resource>(

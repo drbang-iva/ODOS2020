@@ -1,0 +1,68 @@
+# OSOD isolated destructive DR drill stack.
+# Project name must be supplied as: docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml ...
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: medplum
+      POSTGRES_USER: medplum
+      POSTGRES_PASSWORD: medplum
+    volumes:
+      - osod_dr_drill_postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medplum -d medplum"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "medplum"]
+    volumes:
+      - osod_dr_drill_redis:/data
+    ports:
+      - "127.0.0.1:16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "medplum", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  medplum-server:
+    image: medplum/medplum-server:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./medplum.dr-drill.config.json:/config/medplum.config.json:ro
+      - osod_dr_drill_binary:/data/binary
+      - ./backup-dr-drill:/backup
+    ports:
+      - "18103:8103"
+    command: ["file:/config/medplum.config.json"]
+
+  medplum-app:
+    image: medplum/medplum-app:latest
+    restart: unless-stopped
+    depends_on:
+      - medplum-server
+    ports:
+      - "18100:3000"
+    environment:
+      MEDPLUM_BASE_URL: http://localhost:18103/
+
+volumes:
+  osod_dr_drill_postgres:
+    name: osod_dr_drill_postgres
+  osod_dr_drill_redis:
+    name: osod_dr_drill_redis
+  osod_dr_drill_binary:
+    name: osod_dr_drill_binary

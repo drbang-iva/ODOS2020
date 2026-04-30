@@ -26,6 +26,17 @@ import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
+import { createLiveOsodAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
+import {
+  buildOsodAuditEventRow,
+  type OsodAuditEventRecord,
+  type OsodAuditEventType,
+} from "./authz/osodAudit.js";
+import {
+  PRACTICE_ROLE_IDS,
+  assertBusinessActionAllowed,
+  type PracticeRoleId,
+} from "./authz/roles.js";
 import { osodConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "./fhir/ophthalmology/iop.js";
 import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.js";
@@ -269,7 +280,27 @@ const FHIR_CONTACT_POINT_USE_CODES = ["home", "work", "temp", "old", "mobile"] a
 const FHIR_ADDRESS_USE_CODES = ["home", "work", "temp", "old", "billing"] as const;
 const FHIR_ADDRESS_TYPE_CODES = ["postal", "physical", "both"] as const;
 
-const fhir = createMedplumClient({ baseUrl: BASE_URL, accessToken: ACCESS_TOKEN });
+const auditRuntime = createLiveOsodAuditRuntime({
+  postgresUrl: process.env.OSOD_POSTGRES_URL,
+  medplumBaseUrl: BASE_URL,
+  medplumAccessToken: process.env.OSOD_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
+  medplumEmail: process.env.OSOD_AUDIT_MEDPLUM_EMAIL ?? EMAIL,
+  medplumPassword: process.env.OSOD_AUDIT_MEDPLUM_PASSWORD ?? PASSWORD,
+  disabled: process.env.OSOD_AUDIT_DISABLED === "1",
+  projectionWorkerIntervalMs: Number(process.env.OSOD_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
+});
+auditRuntime.startProjectionWorker();
+
+const fhir = createMedplumClient({
+  baseUrl: BASE_URL,
+  accessToken: ACCESS_TOKEN,
+  audit: auditRuntime,
+  auditContext: {
+    actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
+    actorRole: "system",
+    sessionId: process.env.OSOD_AUDIT_SESSION_ID,
+  },
+});
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
@@ -4765,6 +4796,155 @@ function enforceSseTlsGate(host: string): void {
   }
 }
 
+function auditRouteRole(req: express.Request): PracticeRoleId | undefined {
+  const raw = req.header("X-OSOD-Role") ?? auditRouteString(req, "role");
+  return PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId) ? (raw as PracticeRoleId) : undefined;
+}
+
+function auditRouteFilters(req: express.Request): LiveAuditQueryFilters {
+  const eventTypeValues = auditRouteStringList(req, "event_type", "eventTypes");
+  return {
+    patientId: auditRouteString(req, "patient_id", "patientId"),
+    actorId: auditRouteString(req, "actor_id", "actorId"),
+    from: auditRouteString(req, "from"),
+    to: auditRouteString(req, "to"),
+    eventTypes: eventTypeValues.filter((value): value is OsodAuditEventType =>
+      isOsodAuditEventType(value),
+    ),
+    outcome: auditRouteOutcome(req),
+    breakGlassOnly: auditRouteBoolean(req, "break_glass_only", "breakGlassOnly"),
+    limit: auditRouteNumber(req, "limit"),
+  };
+}
+
+function auditRouteString(
+  req: express.Request,
+  ...names: string[]
+): string | undefined {
+  for (const name of names) {
+    const value = req.query[name];
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (typeof raw === "string" && raw.trim()) {
+      return raw.trim();
+    }
+  }
+  return undefined;
+}
+
+function auditRouteStringList(req: express.Request, ...names: string[]): string[] {
+  return names.flatMap((name) => {
+    const value = req.query[name];
+    const values = Array.isArray(value) ? value : [value];
+    return values.flatMap((item) =>
+      typeof item === "string"
+        ? item.split(",").map((part) => part.trim()).filter(Boolean)
+        : [],
+    );
+  });
+}
+
+function auditRouteBoolean(req: express.Request, ...names: string[]): boolean {
+  const value = auditRouteString(req, ...names);
+  return value === "1" || value === "true";
+}
+
+function auditRouteNumber(req: express.Request, name: string): number | undefined {
+  const value = auditRouteString(req, name);
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function auditRouteOutcome(req: express.Request): "granted" | "denied" | undefined {
+  const value = auditRouteString(req, "outcome", "actionOutcome");
+  return value === "granted" || value === "denied" ? value : undefined;
+}
+
+function auditRouteJsonRow(row: OsodAuditEventRecord): Record<string, string | boolean | null> {
+  return {
+    id: row.id,
+    eventTime: row.eventTime,
+    eventType: row.eventType,
+    actorId: row.actorId ?? null,
+    actorRole: row.actorRole ?? null,
+    patientId: row.patientId ?? null,
+    resourceType: row.resourceType ?? null,
+    resourceId: row.resourceId ?? null,
+    actionOutcome: row.actionOutcome,
+    actionReason: row.actionReason ?? null,
+    policyUrl: row.policyUrl ?? null,
+    sessionId: row.sessionId ?? null,
+    ipAddress: row.ipAddress ?? null,
+    userAgent: row.userAgent ?? null,
+    breakGlass: row.breakGlass,
+    breakGlassReason: row.breakGlassReason ?? null,
+    ibActorClassification: row.ibActorClassification,
+    ibException: row.ibException ?? null,
+    provenanceId: row.provenanceId ?? null,
+    auditEventId: row.auditEventId ?? null,
+    createdAt: row.createdAt,
+  };
+}
+
+function isOsodAuditEventType(value: string): value is OsodAuditEventType {
+  return [
+    "read",
+    "search",
+    "history",
+    "vread",
+    "create",
+    "update",
+    "patch",
+    "transaction",
+    "nullify-attempt",
+    "delete-attempt",
+    "denied",
+    "break-glass-invoked",
+    "break-glass-expired",
+    "login",
+    "logout",
+    "login-failed",
+    "role-change",
+    "policy-change",
+    "projectmembership-lifecycle",
+    "backup-started",
+    "backup-completed",
+    "restore-started",
+    "restore-completed",
+    "external-api-call",
+  ].includes(value);
+}
+
+async function recordAuditRouteDenial(input: {
+  actorId: string;
+  actorRole: PracticeRoleId | "system";
+  filters: LiveAuditQueryFilters;
+  reason: string;
+  req: express.Request;
+}): Promise<void> {
+  await auditRuntime.recordDenied(
+    buildOsodAuditEventRow({
+      eventType: "denied",
+      actorId: input.actorId,
+      actorRole: input.actorRole,
+      patientId: input.filters.patientId,
+      resourceType: "osod_audit_events",
+      actionOutcome: "denied",
+      actionReason: input.reason,
+      policyUrl:
+        input.actorRole === "system" ? undefined : `AccessPolicy/osod-${input.actorRole}`,
+      ipAddress: requestIp(input.req),
+      userAgent: input.req.header("user-agent"),
+    }),
+  );
+}
+
+function requestIp(req: express.Request): string | undefined {
+  return req.ip?.replace(/^::ffff:/, "");
+}
+
 async function authenticateWithMedplum(): Promise<void> {
   if (ACCESS_TOKEN) {
     return;
@@ -4807,6 +4987,72 @@ async function main(): Promise<void> {
       const transports = new Map<string, SSEServerTransport>();
 
       app.use(express.json({ limit: "4mb" }));
+      app.use((req, res, next) => {
+        const origin = process.env.OSOD_MCP_ALLOWED_ORIGIN ?? "*";
+        res.header("Access-Control-Allow-Origin", origin);
+        res.header("Access-Control-Allow-Headers", "Content-Type, X-OSOD-Role, X-OSOD-Actor-Id");
+        res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        if (req.method === "OPTIONS") {
+          res.sendStatus(204);
+          return;
+        }
+        next();
+      });
+
+      app.get("/audit/events", async (req, res) => {
+        const actorRole = auditRouteRole(req);
+        const actorId = auditRouteString(req, "actor_id") ?? req.header("X-OSOD-Actor-Id") ?? "audit-ui";
+        const filters = auditRouteFilters(req);
+
+        try {
+          if (!actorRole) {
+            await recordAuditRouteDenial({
+              actorId,
+              actorRole: "system",
+              filters,
+              reason: "access-policy-compartment-isolation: unknown audit-review role",
+              req,
+            });
+            res.status(403).json({ error: "audit.read role required" });
+            return;
+          }
+
+          assertBusinessActionAllowed(actorRole, "audit.read");
+          const rows = await auditRuntime.record(
+            buildOsodAuditEventRow({
+              eventType: "read",
+              actorId,
+              actorRole,
+              patientId: filters.patientId,
+              resourceType: "osod_audit_events",
+              actionOutcome: "granted",
+              actionReason: "audit-log-review",
+              policyUrl: `AccessPolicy/osod-${actorRole}`,
+              ipAddress: requestIp(req),
+              userAgent: req.header("user-agent"),
+            }),
+            () => auditRuntime.queryRows(filters),
+          );
+          res.json({ rows: rows.map(auditRouteJsonRow) });
+        } catch (error) {
+          if (actorRole) {
+            await recordAuditRouteDenial({
+              actorId,
+              actorRole,
+              filters,
+              reason:
+                error instanceof Error
+                  ? `access-policy-compartment-isolation: ${error.message}`
+                  : "access-policy-compartment-isolation",
+              req,
+            }).catch((auditError) => {
+              console.error("osod-mcp: failed to audit /audit/events denial:", auditError);
+            });
+          }
+          const status = error instanceof Error && /lacks business action/.test(error.message) ? 403 : 500;
+          res.status(status).json({ error: status === 403 ? "audit.read role required" : "audit route failed" });
+        }
+      });
 
       app.get("/mcp/sse", async (_req, res) => {
         try {
@@ -4817,6 +5063,21 @@ async function main(): Promise<void> {
           transports.set(transport.sessionId, transport);
           res.on("close", () => {
             transports.delete(transport.sessionId);
+            auditRuntime
+              .record(
+                buildOsodAuditEventRow({
+                  eventType: "logout",
+                  actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
+                  actorRole: "system",
+                  sessionId: transport.sessionId,
+                  actionOutcome: "granted",
+                  actionReason: "sse-session-closed",
+                }),
+                () => undefined,
+              )
+              .catch((error) => {
+                console.error("osod-mcp: failed to audit SSE logout:", error);
+              });
           });
 
           await server.connect(transport);

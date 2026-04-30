@@ -9,6 +9,10 @@ redis_port="${OSOD_REDIS_PORT:-6379}"
 redis_password="${OSOD_REDIS_PASSWORD:-medplum}"
 binary_source="${OSOD_BINARY_SOURCE:-/data/binary}"
 
+record_event() {
+  npx tsx scripts/record-audit-event.ts "$1" "${2:-}"
+}
+
 redis_cmd() {
   if [[ -n "${OSOD_REDIS_CLI:-}" ]]; then
     "$OSOD_REDIS_CLI" -h "$redis_host" -p "$redis_port" -a "$redis_password" "$@"
@@ -20,10 +24,17 @@ redis_cmd() {
 }
 
 compose() {
+  local compose_args=()
+  if [[ -n "${OSOD_COMPOSE_PROJECT:-}" ]]; then
+    compose_args+=("-p" "$OSOD_COMPOSE_PROJECT")
+  fi
+  if [[ -n "${OSOD_COMPOSE_FILE:-}" ]]; then
+    compose_args+=("-f" "$OSOD_COMPOSE_FILE")
+  fi
   if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose "$@"
+    docker-compose "${compose_args[@]}" "$@"
   else
-    docker compose "$@"
+    docker compose "${compose_args[@]}" "$@"
   fi
 }
 
@@ -44,8 +55,7 @@ binary_path="$backup_dir/binary-$timestamp"
 manifest_path="$backup_dir/manifest-$timestamp.json"
 
 echo "backup-started $timestamp"
-
-pg_dump --jobs 4 --format=directory --file="$postgres_path" "$postgres_url"
+record_event "backup-started" "backup-started $timestamp"
 
 lastsave_before="$(redis_cmd --raw LASTSAVE 2>/dev/null || echo 0)"
 redis_cmd BGSAVE >/dev/null
@@ -70,14 +80,17 @@ fi
 
 if [[ -d "$binary_source" ]]; then
   rsync -a "$binary_source"/ "$binary_path"/
-elif (command -v docker-compose >/dev/null 2>&1 || command -v docker >/dev/null 2>&1) &&
-  compose exec -T medplum-server test -d "$binary_source" >/dev/null 2>&1; then
+elif command -v docker-compose >/dev/null 2>&1 || command -v docker >/dev/null 2>&1; then
   mkdir -p "$binary_path"
-  compose cp "medplum-server:$binary_source/." "$binary_path"
+  if ! compose cp "medplum-server:$binary_source/." "$binary_path" >/dev/null 2>&1; then
+    echo "binary-source-missing $binary_source; wrote empty binary backup directory" >&2
+  fi
 else
   mkdir -p "$binary_path"
   echo "binary-source-missing $binary_source; wrote empty binary backup directory" >&2
 fi
+
+pg_dump --jobs 4 --format=directory --file="$postgres_path" "$postgres_url"
 
 audit_snapshot="$(psql "$postgres_url" -Atc "SELECT json_build_object('count', count(*), 'latestEventTime', max(event_time), 'projectionQueueDrained', bool_and(audit_event_id IS NOT NULL))::text FROM osod_audit_events" 2>/dev/null || echo '{"count":0,"projectionQueueDrained":false}')"
 
@@ -97,4 +110,5 @@ cat >"$manifest_path" <<JSON
 }
 JSON
 
+record_event "backup-completed" "backup-completed $manifest_path"
 echo "backup-completed $manifest_path"

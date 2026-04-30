@@ -3,9 +3,14 @@
 This drill is operator-only. No MCP tool may trigger backup, restore, or the
 destructive reset.
 
+**Isolation warning:** This drill runs in an isolated compose context. The
+primary `osod` compose project is NOT touched. Operators are responsible for
+ensuring the drill compose context is the active context before running
+destructive commands.
+
 ## Preconditions
 
-- Docker Compose stack reachable.
+- Docker Compose stack reachable in the isolated `osod-dr-drill` project.
 - `pg_dump`, `pg_restore`, `psql`, `rsync`, `shasum`, `docker-compose`, and `npx` available.
 - `redis-cli` available on the host, or `docker-compose exec` access to the `redis` service for the fallback path.
 - Backup volume mounted and encrypted at rest by the operator.
@@ -17,12 +22,22 @@ destructive reset.
 ## Commands
 
 ```bash
-npm run up
-OSOD_BACKUP_DIR="$PWD/backup" scripts/backup.sh
-docker-compose down -v
-npm run up
-scripts/restore.sh "$PWD/backup/manifest-<timestamp>.json"
-cd mcp && node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts
+export OSOD_DR_COMPOSE="docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
+export MEDPLUM_BASE_URL="http://localhost:18103"
+export OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum"
+export OSOD_REDIS_PORT="16379"
+export OSOD_COMPOSE_PROJECT="osod-dr-drill"
+export OSOD_COMPOSE_FILE="docker-compose.dr-drill.yml"
+export MEDPLUM_ADMIN_EMAIL="${MEDPLUM_ADMIN_EMAIL:-drill-admin@osod.local}"
+export MEDPLUM_ADMIN_PASSWORD="${MEDPLUM_ADMIN_PASSWORD:-Osod-dr-drill-Password-1!}"
+
+$OSOD_DR_COMPOSE up -d
+npx tsx scripts/seed-dr-drill.ts
+OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
+$OSOD_DR_COMPOSE down -v
+$OSOD_DR_COMPOSE up -d
+scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
+cd mcp && MEDPLUM_BASE_URL="http://localhost:18103" OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum" node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts
 ```
 
 ## Expected Output
@@ -33,6 +48,8 @@ cd mcp && node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-back
 - Five integrity checks print `PASS`.
 - `restore-completed <backup-dir>/manifest-<timestamp>.json`
 - v0.5a Mandate 8 boundary tests pass.
+- v0.5a enforcement boundary fixture passes when the human-provisioned
+  Medplum credentials are present.
 - v0.5b fixtures pass:
   - OCR-style query
   - denied-access `ib_exception=privacy`

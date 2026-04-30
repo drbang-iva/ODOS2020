@@ -28,11 +28,33 @@ jobs:
       - name: Run MCP and boundary tests
         run: npm test
         working-directory: mcp
-      - name: DR drill command ledger
+      - name: Run isolated DR drill
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103
+          MEDPLUM_ADMIN_EMAIL: drill-admin@osod.local
+          MEDPLUM_ADMIN_PASSWORD: Osod-dr-drill-Password-1!
+          OSOD_POSTGRES_URL: postgresql://medplum:medplum@127.0.0.1:15432/medplum
+          OSOD_REDIS_PORT: "16379"
+          OSOD_COMPOSE_PROJECT: osod-dr-drill
+          OSOD_COMPOSE_FILE: docker-compose.dr-drill.yml
         run: |
-          echo "Manual DR drill job is wired. Operator-run sequence:"
-          echo "npm run up"
-          echo "OSOD_BACKUP_DIR=$PWD/backup scripts/backup.sh"
-          echo "docker-compose down -v"
-          echo "scripts/restore.sh backup/manifest-<timestamp>.json"
-          echo "cd mcp && node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts"
+          docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+          npx tsx scripts/seed-dr-drill.ts
+          OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
+          manifest="$(ls -t "$PWD"/backup-dr-drill/manifest-*.json | head -n 1)"
+          test -n "$manifest"
+          timestamp="$(node -e "const m=require('$manifest'); process.stdout.write(m.timestamp)")"
+          test -s "$PWD/backup-dr-drill/redis-$timestamp.rdb"
+          test -d "$PWD/backup-dr-drill/postgres-$timestamp"
+          test "$(find "$PWD/backup-dr-drill/postgres-$timestamp" -type f | wc -l)" -gt 0
+          test -d "$PWD/backup-dr-drill/binary-$timestamp"
+          test "$(find "$PWD/backup-dr-drill/binary-$timestamp" -type f | wc -l)" -gt 0
+          docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml down -v
+          docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+          scripts/restore.sh "$manifest"
+          cd mcp
+          node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts
+          node --import tsx --test --test-concurrency=1 tests/v05a-authz.test.ts
+      - name: Clean isolated DR drill context
+        if: always()
+        run: docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml down -v
