@@ -1,0 +1,38 @@
+name: OSOD DR Drill
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dr-drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install MCP dependencies
+        run: npm ci
+        working-directory: mcp
+      - name: Install UI dependencies
+        run: npm ci
+        working-directory: ui
+      - name: Typecheck
+        run: |
+          (cd mcp && npx tsc --noEmit)
+          (cd ui && npx tsc --noEmit)
+      - name: Run MCP and boundary tests
+        run: npm test
+        working-directory: mcp
+      - name: DR drill command ledger
+        run: |
+          echo "Manual DR drill job is wired. Operator-run sequence:"
+          echo "npm run up"
+          echo "OSOD_BACKUP_DIR=$PWD/backup scripts/backup.sh"
+          echo "docker-compose down -v"
+          echo "scripts/restore.sh backup/manifest-<timestamp>.json"
+          echo "cd mcp && node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts"

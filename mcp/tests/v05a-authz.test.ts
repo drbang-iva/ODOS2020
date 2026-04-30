@@ -189,7 +189,7 @@ test("ProjectMembership lifecycle transitions emit audit rows and placeholder Au
     });
     membership = result.membership;
     assert.equal(getProjectMembershipLifecycleState(membership), resultState(action));
-    assert.equal(result.auditRow.outcome, "success");
+    assert.equal(result.auditRow.actionOutcome, "granted");
     assert.equal(result.auditEvent.resourceType, "AuditEvent");
     assert.equal(result.auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "practice-admin");
   }
@@ -209,8 +209,8 @@ test("ProjectMembership role review preserves state and emits a review audit row
   });
 
   assert.equal(getProjectMembershipLifecycleState(review.membership), "active");
-  assert.equal(review.auditRow.eventType, "membership.role-review");
-  assert.equal(review.auditRow.details?.reviewNote, "Quarterly access review complete.");
+  assert.equal(review.auditRow.eventType, "projectmembership-lifecycle");
+  assert.match(review.auditRow.actionReason ?? "", /role-review/);
 });
 
 test("break-glass requires human reason, creates time-limited access, and flags admin review", () => {
@@ -227,7 +227,7 @@ test("break-glass requires human reason, creates time-limited access, and flags 
   assert.equal(result.grant.policyUrl, BREAK_GLASS_POLICY_URL);
   assert.equal(result.grant.adminReviewRequired, true);
   assert.equal(result.grant.expiresAt, "2026-04-29T13:00:00.000Z");
-  assert.equal(result.auditRow.eventType, "break-glass.granted");
+  assert.equal(result.auditRow.eventType, "break-glass-invoked");
   assert.equal(result.auditEvent.agent[0].policy?.[0], BREAK_GLASS_POLICY_URL);
   assert.doesNotThrow(() =>
     assertBreakGlassGrantActive(result.grant, "2026-04-29T12:59:00.000Z"),

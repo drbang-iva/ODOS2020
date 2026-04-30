@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
+import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientPicker } from "./scenes/PatientPicker";
 import { fhir } from "./lib/fhir";
@@ -54,7 +55,7 @@ export function App() {
 
   return (
     <RoleProvider>
-      <ViewRouter view={view} />
+      {window.location.pathname === "/audit/log" ? <AuditLog /> : <ViewRouter view={view} />}
     </RoleProvider>
   );
 }

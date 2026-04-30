@@ -48,6 +48,8 @@ services:
         condition: service_healthy
     volumes:
       - ./medplum.config.json:/config/medplum.config.json:ro
+      - medplum-binary:/data/binary
+      - ./backup:/backup
     ports:
       - "8103:8103"
     command: ["file:/config/medplum.config.json"]
@@ -64,3 +66,4 @@ services:
 
 volumes:
   postgres-data:
+  medplum-binary:

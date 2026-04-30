@@ -61,17 +61,17 @@ export function invokeBreakGlass(input: BreakGlassRequest): BreakGlassResult {
     }),
   };
   const auditRow = buildOsodAuditEventRow({
-    eventType: "break-glass.granted",
+    eventType: "break-glass-invoked",
     occurredAt: grantedAt,
     actorReference: input.actorReference,
     actorDisplay: input.actorDisplay,
     actorRole: input.actorRole,
     patientReference: input.patientReference,
-    outcome: "success",
-    outcomeDescription: `Break-glass access granted until ${expiresAt}.`,
+    actionOutcome: "granted",
+    actionReason: `Break-glass access granted until ${expiresAt}.`,
     policyUrl: BREAK_GLASS_POLICY_URL,
-    reason: grant.reason,
-    adminReviewRequired: true,
+    breakGlass: true,
+    breakGlassReason: grant.reason,
   });
 
   return {

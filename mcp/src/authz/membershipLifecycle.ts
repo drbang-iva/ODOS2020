@@ -62,19 +62,14 @@ export function transitionProjectMembershipLifecycle(
     ? `ProjectMembership/${input.membership.id}`
     : "ProjectMembership/(pending)";
   const auditRow = buildOsodAuditEventRow({
-    eventType: lifecycleEventType(input.action),
+    eventType: "projectmembership-lifecycle",
     occurredAt,
     actorReference: input.actorReference,
     actorDisplay: input.actorDisplay,
     actorRole: input.actorRole,
     targetReference,
-    outcome: "success",
-    outcomeDescription: `ProjectMembership lifecycle ${input.action}: ${currentState ?? "none"} -> ${nextState}`,
-    details: {
-      previousState: currentState,
-      nextState,
-      reviewNote: input.reviewNote,
-    },
+    actionOutcome: "granted",
+    actionReason: `ProjectMembership lifecycle ${input.action}: ${currentState ?? "none"} -> ${nextState}`,
   });
 
   return {
@@ -178,21 +173,4 @@ function buildLifecyclePatch(
     },
   ];
   return operations;
-}
-
-function lifecycleEventType(
-  action: ProjectMembershipLifecycleAction,
-): OsodAuditEventRow["eventType"] {
-  switch (action) {
-    case "invite":
-      return "membership.invited";
-    case "activate":
-      return "membership.activated";
-    case "deactivate":
-      return "membership.deactivated";
-    case "terminate":
-      return "membership.terminated";
-    case "role-review":
-      return "membership.role-review";
-  }
 }
