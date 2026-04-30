@@ -3,6 +3,7 @@ import type {
   AccessPolicyResource,
   ProjectMembershipAccess,
 } from "@medplum/fhirtypes";
+import { OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION } from "../../../policy/observation-status-machine.js";
 
 export const FHIR_INTERACTIONS = [
   "create",
@@ -110,6 +111,11 @@ const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
       "Signed clinical resources cannot be downgraded out of final/amended/corrected state by ordinary RBAC writes.",
     expression:
       "%before.exists() implies (%before.status != 'final' or status = 'final' or status = 'amended' or status = 'corrected' or status = 'entered-in-error')",
+  },
+  {
+    description:
+      "Observation.status must follow the v0.5c scribe-attestation-amendment state machine.",
+    expression: OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION,
   },
 ];
 

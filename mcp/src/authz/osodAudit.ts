@@ -46,7 +46,7 @@ export const OSOD_AUDIT_EVENT_TYPES = [
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
 export type OsodActionOutcome = "granted" | "denied";
 export type OsodAuditOutcome = "success" | "denied" | "error";
-export type OsodActorRole = PracticeRoleId | "system";
+export type OsodActorRole = PracticeRoleId | "scribe" | "system";
 
 export interface OsodAuditEventRecord {
   id: string;

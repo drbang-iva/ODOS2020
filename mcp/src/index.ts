@@ -149,6 +149,24 @@ import {
   medicationStatementStatusForTimeline,
 } from "./fhir/ophthalmicMedicationStatement.js";
 import {
+  OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+  OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+} from "../../policy/attestation-policy-urls.js";
+import {
+  appendObservationContextSchema,
+  assertBinarySecurityContextForEncounter,
+  assertClinicianSessionMatches,
+  buildAmendmentTransaction,
+  buildAppendObservationTransaction,
+  buildAttestationTransaction,
+  buildClinicalWriteAuditRow,
+  buildRejectedClinicalWriteAuditRow,
+  buildScribeDraftObservation,
+  clinicianAttestationSchema,
+  observationAmendmentSchema,
+  scribeWriteObservationSchema,
+} from "./fhir/scribeAttestation.js";
+import {
   ORTHO_K_FIT_FINDING_CODES,
   buildOrthoKFitObservation,
   buildOrthoKFittingEvent,
@@ -179,6 +197,7 @@ import {
 } from "./fhir/ophthalmology/save-section-bundle.js";
 import type {
   AllergyIntolerance,
+  Binary,
   BodyStructure,
   CareTeam,
   CodeableConcept,
@@ -228,6 +247,18 @@ const CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS = {
 } as const;
 const CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/save_section_observations",
+} as const;
+const SCRIBE_WRITE_OBSERVATION_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/scribe_write_observation",
+} as const;
+const CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/clinician_attest_observation",
+} as const;
+const AMEND_OBSERVATION_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/amend_observation",
+} as const;
+const APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS = {
+  "X-OSOD-Source": "mcp/append_observation_context",
 } as const;
 const UPDATE_PATIENT_AUDIT_HEADERS = {
   "X-OSOD-Source": "mcp/update_patient",
@@ -576,6 +607,108 @@ const tools = [
         },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "scribe_write_observation",
+    description:
+      "Create a text-first scribe draft Observation at status=preliminary. Accepts transcription text and metadata only; audio bytes are rejected by schema.",
+    inputSchema: {
+      type: "object",
+      required: ["patient_id", "encounter_id", "intended_observation_type", "text", "scribe_id"],
+      additionalProperties: false,
+      properties: {
+        patient_id: { type: "string", description: "FHIR Patient ID or Patient/<id>." },
+        encounter_id: { type: "string", description: "FHIR Encounter ID or Encounter/<id>." },
+        intended_observation_type: { type: "string" },
+        text: { type: "string", description: "Local-upstream transcription text. No audio bytes." },
+        scribe_id: { type: "string", description: "Practitioner ID or Practitioner/<id> for the scribe identity." },
+        recorded_at: { type: "string" },
+        audio_binary_id: {
+          type: "string",
+          description: "Optional Binary ID/reference produced by the local transcription pipeline; securityContext is verified by read, never search.",
+        },
+        source_reference: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+        },
+        ui_state: {
+          type: "string",
+          enum: [
+            "pending-clinician-review",
+            "clinician-reviewing",
+            "attestation-in-flight",
+          ],
+        },
+      },
+    },
+  },
+  {
+    name: "clinician_attest_observation",
+    description:
+      "Atomically transition a preliminary Observation to final and create signed Provenance. Clinician identity must match the caller session.",
+    inputSchema: {
+      type: "object",
+      required: ["observation_id", "clinician_id", "signature_data_base64"],
+      additionalProperties: false,
+      properties: {
+        observation_id: { type: "string", description: "FHIR Observation ID or Observation/<id>." },
+        clinician_id: { type: "string", description: "Practitioner ID or Practitioner/<id>." },
+        signature_data_base64: {
+          type: "string",
+          description: "Base64 detached signature envelope from the local signing layer.",
+        },
+      },
+    },
+  },
+  {
+    name: "amend_observation",
+    description:
+      "Atomically transition a signed Observation to amended, corrected, or entered-in-error and create signed amendment Provenance.",
+    inputSchema: {
+      type: "object",
+      required: ["observation_id", "clinician_id", "target_status", "amendment_text", "signature_data_base64"],
+      additionalProperties: false,
+      properties: {
+        observation_id: { type: "string", description: "FHIR Observation ID or Observation/<id>." },
+        clinician_id: { type: "string", description: "Practitioner ID or Practitioner/<id>." },
+        target_status: { type: "string", enum: ["amended", "corrected", "entered-in-error"] },
+        amendment_text: { type: "string" },
+        signature_data_base64: {
+          type: "string",
+          description: "Base64 detached signature envelope from the local signing layer.",
+        },
+      },
+    },
+  },
+  {
+    name: "append_observation_context",
+    description:
+      "Create a new final Observation linked to an existing final Observation with derivedFrom and signed APPEND Provenance.",
+    inputSchema: {
+      type: "object",
+      required: [
+        "source_observation_id",
+        "patient_id",
+        "encounter_id",
+        "intended_observation_type",
+        "text",
+        "clinician_id",
+        "signature_data_base64",
+      ],
+      additionalProperties: false,
+      properties: {
+        source_observation_id: { type: "string", description: "Original final Observation ID or reference." },
+        patient_id: { type: "string" },
+        encounter_id: { type: "string" },
+        intended_observation_type: { type: "string" },
+        text: { type: "string" },
+        clinician_id: { type: "string", description: "Practitioner ID or Practitioner/<id>." },
+        signature_data_base64: {
+          type: "string",
+          description: "Base64 detached signature envelope from the local signing layer.",
+        },
+        recorded_at: { type: "string" },
       },
     },
   },
@@ -2428,6 +2561,200 @@ function createServer(): Server {
             ],
           };
         }
+        case "scribe_write_observation": {
+          const input = scribeWriteObservationSchema.parse(args);
+          const encounter = await fhir.read<Encounter>(
+            "Encounter",
+            stripReference(input.encounter_id, "Encounter"),
+          );
+          if (input.audio_binary_id) {
+            const binary = await fhir.read<Binary>(
+              "Binary",
+              stripReference(input.audio_binary_id, "Binary"),
+            );
+            assertBinarySecurityContextForEncounter(binary, encounter);
+          }
+
+          const observation = buildScribeDraftObservation(input, encounter);
+          const auditRow = buildClinicalWriteAuditRow({
+            eventType: "create",
+            actorId: input.scribe_id,
+            actorRole: "scribe",
+            observation,
+            actionReason: "scribe-draft preliminary",
+          });
+          const createdObservation = await auditRuntime.record(auditRow, () =>
+            fhir.update<Observation>(
+              "Observation",
+              observation.id!,
+              observation,
+              SCRIBE_WRITE_OBSERVATION_AUDIT_HEADERS,
+            ),
+          );
+
+          return toolJson({ observation: createdObservation });
+        }
+        case "clinician_attest_observation": {
+          const input = clinicianAttestationSchema.parse(args);
+          const observation = await fhir.read<Observation>(
+            "Observation",
+            stripReference(input.observation_id, "Observation"),
+          );
+          try {
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            const transaction = buildAttestationTransaction({
+              observation,
+              clinicianId: input.clinician_id,
+              signatureDataBase64: input.signature_data_base64,
+            });
+            const auditRow = buildClinicalWriteAuditRow({
+              eventType: "update",
+              actorId: input.clinician_id,
+              actorRole: "clinician",
+              observation,
+              provenanceId: transaction.provenance.id,
+              policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+              actionReason: "CREATE",
+            });
+            const responseBundle = await auditRuntime.record(auditRow, () =>
+              fhir.executeTransaction(
+                transaction.bundle,
+                CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS,
+              ),
+            );
+            return toolJson({
+              responseBundle,
+              provenance: transaction.provenance,
+              patchOperations: transaction.patchOperations,
+            });
+          } catch (error) {
+            await auditRuntime
+              .recordDenied(
+                buildRejectedClinicalWriteAuditRow({
+                  actorId: input.clinician_id,
+                  actorRole: "clinician",
+                  observation,
+                  actionReason: `attestation failed: ${error instanceof Error ? error.message : String(error)}`,
+                  policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+                }),
+              )
+              .catch((auditError) => {
+                console.error("osod-mcp: failed to audit attestation rejection:", auditError);
+              });
+            throw error;
+          }
+        }
+        case "amend_observation": {
+          const input = observationAmendmentSchema.parse(args);
+          const observation = await fhir.read<Observation>(
+            "Observation",
+            stripReference(input.observation_id, "Observation"),
+          );
+          try {
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            const transaction = buildAmendmentTransaction({
+              observation,
+              clinicianId: input.clinician_id,
+              targetStatus: input.target_status,
+              amendmentText: input.amendment_text,
+              signatureDataBase64: input.signature_data_base64,
+            });
+            const actionReason =
+              transaction.activityCode === "NULLIFY"
+                ? `NULLIFY: ${input.amendment_text}`
+                : transaction.activityCode;
+            const auditRow = buildClinicalWriteAuditRow({
+              eventType: "update",
+              actorId: input.clinician_id,
+              actorRole: "clinician",
+              observation,
+              provenanceId: transaction.provenance.id,
+              policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+              actionReason,
+            });
+            const responseBundle = await auditRuntime.record(auditRow, () =>
+              fhir.executeTransaction(transaction.bundle, AMEND_OBSERVATION_AUDIT_HEADERS),
+            );
+            return toolJson({
+              responseBundle,
+              provenance: transaction.provenance,
+              patchOperations: transaction.patchOperations,
+            });
+          } catch (error) {
+            await auditRuntime
+              .recordDenied(
+                buildRejectedClinicalWriteAuditRow({
+                  actorId: input.clinician_id,
+                  actorRole: "clinician",
+                  observation,
+                  actionReason: `amendment failed: ${error instanceof Error ? error.message : String(error)}`,
+                  policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+                }),
+              )
+              .catch((auditError) => {
+                console.error("osod-mcp: failed to audit amendment rejection:", auditError);
+              });
+            throw error;
+          }
+        }
+        case "append_observation_context": {
+          const input = appendObservationContextSchema.parse(args);
+          const sourceObservation = await fhir.read<Observation>(
+            "Observation",
+            stripReference(input.source_observation_id, "Observation"),
+          );
+          try {
+            assertClinicianSessionMatches({
+              clinicianId: input.clinician_id,
+              sessionPractitionerId: sessionPractitionerId(),
+            });
+            const transaction = buildAppendObservationTransaction({
+              sourceObservation,
+              appendInput: input,
+            });
+            const auditRow = buildClinicalWriteAuditRow({
+              eventType: "update",
+              actorId: input.clinician_id,
+              actorRole: "clinician",
+              observation: transaction.observation,
+              provenanceId: transaction.provenance.id,
+              policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+              actionReason: "APPEND",
+            });
+            const responseBundle = await auditRuntime.record(auditRow, () =>
+              fhir.executeTransaction(
+                transaction.bundle,
+                APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS,
+              ),
+            );
+            return toolJson({
+              responseBundle,
+              observation: transaction.observation,
+              provenance: transaction.provenance,
+            });
+          } catch (error) {
+            await auditRuntime
+              .recordDenied(
+                buildRejectedClinicalWriteAuditRow({
+                  actorId: input.clinician_id,
+                  actorRole: "clinician",
+                  observation: sourceObservation,
+                  actionReason: `append failed: ${error instanceof Error ? error.message : String(error)}`,
+                  policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+                }),
+              )
+              .catch((auditError) => {
+                console.error("osod-mcp: failed to audit append rejection:", auditError);
+              });
+            throw error;
+          }
+        }
         case "create_raw_asset_reference": {
           const input = createRawAssetReferenceSchema.parse(args);
           const documentReference = buildDocumentReference({
@@ -3973,6 +4300,10 @@ function toolJson(value: unknown) {
 
 function stripReference(value: string, resourceType: string): string {
   return value.startsWith(`${resourceType}/`) ? value.slice(resourceType.length + 1) : value;
+}
+
+function sessionPractitionerId(): string | undefined {
+  return process.env.OSOD_SESSION_PRACTITIONER_ID ?? process.env.OSOD_AUDIT_ACTOR_ID;
 }
 
 function versionedHeaders(

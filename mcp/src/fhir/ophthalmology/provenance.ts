@@ -28,6 +28,7 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
     resourceType: "Provenance",
     target: input.targetReferences.map((r) => reference(r)),
     recorded,
+    ...(input.policyUrls?.length ? { policy: input.policyUrls } : {}),
     ...(input.occurredDateTime ? { occurredDateTime: input.occurredDateTime } : {}),
     ...(input.activityCode || input.activityDisplay
       ? {
@@ -46,9 +47,9 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
             ),
           }
         : {}),
-      ...(agent.roleCode || agent.roleDisplay
+      ...(agent.roleConcepts?.length || agent.roleCode || agent.roleDisplay
         ? {
-            role: [
+            role: agent.roleConcepts ?? [
               provenanceParticipantConcept(
                 normalizeParticipantType(agent.roleCode),
                 agent.roleDisplay,
@@ -74,6 +75,7 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
           ],
         }
       : {}),
+    ...(input.signatures?.length ? { signature: input.signatures } : {}),
   };
 }
 

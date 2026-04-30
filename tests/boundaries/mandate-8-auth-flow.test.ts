@@ -11,6 +11,11 @@ import {
   assertAuditSessionVisible,
   buildOsodAuditEventRow,
 } from "../../mcp/src/authz/osodAudit.js";
+import {
+  assertClinicianSessionMatches,
+  buildScribeDraftObservation,
+  scribeWriteObservationSchema,
+} from "../../mcp/src/fhir/scribeAttestation.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MCP_INDEX = resolve(HERE, "../../mcp/src/index.ts");
@@ -163,6 +168,47 @@ test("Mandate 8 boundary: MCP cannot modify osod_audit_events rows", () => {
   assert.throws(
     () => assertAuditMutationAllowed({ operation: "DELETE", dbRole: "superuser" }),
     /trigger guard/,
+  );
+});
+
+test("Mandate 8 boundary: scribe-write emits preliminary and cannot directly finalize", () => {
+  const toolNames = listMcpToolNames();
+  assert.equal(toolNames.includes("scribe_write_observation"), true);
+
+  const draft = buildScribeDraftObservation({
+    patient_id: "patient-x",
+    encounter_id: "encounter-x",
+    intended_observation_type: "Scribe draft",
+    text: "Draft text from local transcription.",
+    scribe_id: "scribe-1",
+  });
+  assert.equal(draft.status, "preliminary");
+  assert.equal(draft.performer?.[0]?.reference, "Practitioner/scribe-1");
+
+  assert.equal(
+    scribeWriteObservationSchema.safeParse({
+      patient_id: "patient-x",
+      encounter_id: "encounter-x",
+      intended_observation_type: "Scribe draft",
+      text: "Draft text from local transcription.",
+      scribe_id: "scribe-1",
+      status: "final",
+    }).success,
+    false,
+  );
+});
+
+test("Mandate 8 boundary: clinician attestation cannot cross-sign for another clinician", () => {
+  const toolNames = listMcpToolNames();
+  assert.equal(toolNames.includes("clinician_attest_observation"), true);
+
+  assert.throws(
+    () =>
+      assertClinicianSessionMatches({
+        clinicianId: "clinician-b",
+        sessionPractitionerId: "clinician-a",
+      }),
+    /Mandate 8 boundary \+ ledger row 20/,
   );
 });
 

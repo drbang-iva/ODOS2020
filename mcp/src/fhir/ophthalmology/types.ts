@@ -108,11 +108,13 @@ export interface ProvenanceInput {
   targetReferences: string[];
   occurredDateTime?: string;
   recorded?: string;
+  policyUrls?: string[];
   activityCode?: string;
   activityDisplay?: string;
   agents: ProvenanceAgentInput[];
   entityReferences?: string[];
   entityValues?: ProvenanceEntityValueInput[];
+  signatures?: Provenance["signature"];
 }
 
 export interface ProvenanceAgentInput {
@@ -120,6 +122,7 @@ export interface ProvenanceAgentInput {
   typeDisplay?: string;
   roleCode?: string;
   roleDisplay?: string;
+  roleConcepts?: CodeableConcept[];
   whoReference?: string;
   whoDisplay?: string;
 }

@@ -1,0 +1,1 @@
+export const OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD = "derivedFrom";
