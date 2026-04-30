@@ -11,7 +11,10 @@
     "reset": "docker-compose down -v",
     "logs": "docker-compose logs -f medplum-server",
     "poc": "tsx src/index.ts",
-    "install-profiles": "tsx scripts/install-profiles.ts"
+    "install-profiles": "tsx scripts/install-profiles.ts",
+    "setup-practice": "tsx scripts/setup-practice.ts",
+    "preflight": "tsx scripts/preflight-lint.ts",
+    "verify-backup-destination": "tsx scripts/verify-backup-destination.ts"
   },
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0"

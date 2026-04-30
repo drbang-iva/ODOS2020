@@ -58,6 +58,8 @@ test("v0.5b audit event type ValueSet covers the required read, write, security,
     "restore-started",
     "restore-completed",
     "external-api-call",
+    "preflight-block",
+    "noop",
   ]);
   assert.equal(auditEventTypeForFhirWrite("AccessPolicy", "update"), "policy-change");
   assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "create"), "projectmembership-lifecycle");

@@ -6,7 +6,7 @@
 # Stop:    docker compose down
 # Reset:   docker compose down -v    (nukes Postgres volume — fresh start)
 #
-# First-run: create admin account at http://localhost:8100/register
+# First-run: npm run setup-practice (interactive, human-supervised)
 
 services:
   postgres:

@@ -16,6 +16,8 @@ import {
   buildScribeDraftObservation,
   scribeWriteObservationSchema,
 } from "../../mcp/src/fhir/scribeAttestation.js";
+import { assertPreflightNetworkSurface } from "../../scripts/preflight-lint.ts";
+import { assertInteractiveSetupWizardAllowed } from "../../scripts/setup-practice.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MCP_INDEX = resolve(HERE, "../../mcp/src/index.ts");
@@ -209,6 +211,66 @@ test("Mandate 8 boundary: clinician attestation cannot cross-sign for another cl
         sessionPractitionerId: "clinician-a",
       }),
     /Mandate 8 boundary \+ ledger row 20/,
+  );
+});
+
+test("Mandate 8 boundary: setup wizard is interactive and refuses unattended agent context", () => {
+  assert.throws(
+    () =>
+      assertInteractiveSetupWizardAllowed({
+        env: { OSOD_UNATTENDED_AGENT: "true" } as NodeJS.ProcessEnv,
+        hasTty: true,
+      }),
+    /interactive setup wizard/,
+  );
+  assert.throws(
+    () =>
+      assertInteractiveSetupWizardAllowed({
+        env: {} as NodeJS.ProcessEnv,
+        hasTty: false,
+      }),
+    /soul\.md security policy/,
+  );
+  assert.throws(
+    () =>
+      assertInteractiveSetupWizardAllowed({
+        env: { OSOD_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
+        hasTty: true,
+        parentCommand: "cron",
+      }),
+    /human at the keyboard/,
+  );
+  assert.doesNotThrow(() =>
+    assertInteractiveSetupWizardAllowed({
+      env: { OSOD_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
+      hasTty: false,
+    }),
+  );
+});
+
+test("Mandate 8 boundary: preflight linter network surface is local and never auth-flow navigation", () => {
+  assert.doesNotThrow(() =>
+    assertPreflightNetworkSurface([
+      "http://localhost:8103/healthcheck",
+      "http://127.0.0.1:8103/fhir/R4/metadata",
+      "http://medplum-server:8103/healthcheck",
+    ]),
+  );
+  assert.throws(
+    () => assertPreflightNetworkSurface(["https://example.com/fhir/R4/Patient"]),
+    /local-only/,
+  );
+  assert.throws(
+    () => assertPreflightNetworkSurface(["http://localhost:8103/auth/login"]),
+    /login, recovery, or password-change/,
+  );
+  assert.throws(
+    () => assertPreflightNetworkSurface(["http://localhost:8103/password/change"]),
+    /login, recovery, or password-change/,
+  );
+  assert.throws(
+    () => assertPreflightNetworkSurface(["http://localhost:8103/account-recovery"]),
+    /login, recovery, or password-change/,
   );
 });
 

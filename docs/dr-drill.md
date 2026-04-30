@@ -11,8 +11,8 @@ destructive commands.
 ## Preconditions
 
 - Docker Compose stack reachable in the isolated `osod-dr-drill` project.
-- `pg_dump`, `pg_restore`, `psql`, `rsync`, `shasum`, `docker-compose`, and `npx` available.
-- `redis-cli` available on the host, or `docker-compose exec` access to the `redis` service for the fallback path.
+- `pg_dump`, `pg_restore`, `psql`, `rsync`, `shasum`, Docker Compose v2, and `npx` available.
+- `redis-cli` available on the host, or `docker compose exec` access to the `redis` service for the fallback path.
 - Backup volume mounted and encrypted at rest by the operator.
 - Human-provisioned env vars available where needed:
   - `OSOD_POSTGRES_URL`
@@ -22,7 +22,7 @@ destructive commands.
 ## Commands
 
 ```bash
-export OSOD_DR_COMPOSE="docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
+export OSOD_DR_COMPOSE="docker compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
 export MEDPLUM_BASE_URL="http://localhost:18103"
 export OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum"
 export OSOD_REDIS_PORT="16379"
@@ -33,10 +33,10 @@ export MEDPLUM_ADMIN_PASSWORD="${MEDPLUM_ADMIN_PASSWORD:-Osod-dr-drill-Password-
 
 $OSOD_DR_COMPOSE up -d
 npx tsx scripts/seed-dr-drill.ts
-OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
+MEDPLUM_BASE_URL="$MEDPLUM_BASE_URL" MEDPLUM_ADMIN_EMAIL="$MEDPLUM_ADMIN_EMAIL" MEDPLUM_ADMIN_PASSWORD="$MEDPLUM_ADMIN_PASSWORD" OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
 $OSOD_DR_COMPOSE down -v
 $OSOD_DR_COMPOSE up -d
-scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
+MEDPLUM_BASE_URL="$MEDPLUM_BASE_URL" MEDPLUM_ADMIN_EMAIL="$MEDPLUM_ADMIN_EMAIL" MEDPLUM_ADMIN_PASSWORD="$MEDPLUM_ADMIN_PASSWORD" scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
 cd mcp && MEDPLUM_BASE_URL="http://localhost:18103" OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum" node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts
 ```
 

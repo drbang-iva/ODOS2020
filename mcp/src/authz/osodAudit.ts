@@ -41,6 +41,8 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "restore-started",
   "restore-completed",
   "external-api-call",
+  "preflight-block",
+  "noop",
 ] as const;
 
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
@@ -492,7 +494,7 @@ function auditAction(eventType: OsodAuditEventType): AuditEvent["action"] {
   if (eventType === "delete-attempt" || eventType === "nullify-attempt") {
     return "D";
   }
-  if (eventType === "denied" || eventType === "login-failed") {
+  if (eventType === "denied" || eventType === "login-failed" || eventType === "preflight-block") {
     return "E";
   }
   return "U";

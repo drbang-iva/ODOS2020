@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS osod_audit_events (
             'login', 'logout', 'login-failed',
             'role-change', 'policy-change', 'projectmembership-lifecycle',
             'backup-started', 'backup-completed', 'restore-started', 'restore-completed',
-            'external-api-call'
+            'external-api-call',
+            'preflight-block', 'noop'
         )
     ),
     CONSTRAINT osod_audit_events_action_outcome_check CHECK (
@@ -53,6 +54,24 @@ CREATE TABLE IF NOT EXISTS osod_audit_events (
         action_outcome = 'granted' OR ib_exception IS NOT NULL
     )
 );
+
+ALTER TABLE osod_audit_events
+    DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check;
+
+ALTER TABLE osod_audit_events
+    ADD CONSTRAINT osod_audit_events_event_type_check CHECK (
+        event_type IN (
+            'read', 'search', 'history', 'vread',
+            'create', 'update', 'patch', 'transaction', 'nullify-attempt', 'delete-attempt',
+            'denied',
+            'break-glass-invoked', 'break-glass-expired',
+            'login', 'logout', 'login-failed',
+            'role-change', 'policy-change', 'projectmembership-lifecycle',
+            'backup-started', 'backup-completed', 'restore-started', 'restore-completed',
+            'external-api-call',
+            'preflight-block', 'noop'
+        )
+    );
 
 CREATE INDEX IF NOT EXISTS osod_audit_events_patient_time_idx
     ON osod_audit_events (patient_id, event_time DESC);

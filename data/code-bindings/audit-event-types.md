@@ -38,6 +38,8 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `restore-started` | contingency-event | Restore process started. |
 | `restore-completed` | contingency-event | Restore process completed. |
 | `external-api-call` | integration-event | Outbound call touching another system on behalf of a user. |
+| `preflight-block` | local-readiness-event | Local preflight hard-block, currently reserved for env-var PHI leakage. |
+| `noop` | setup-event | Idempotent setup rerun where no FHIR resource write occurred. |
 
 ## Information Blocking Exceptions
 

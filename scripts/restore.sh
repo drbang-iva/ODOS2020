@@ -86,7 +86,6 @@ echo "restore-started $manifest_path"
 compose stop medplum-app medplum-server || true
 
 pg_restore --jobs 4 --clean --if-exists --dbname="$postgres_url" "$postgres_path"
-record_event "restore-started" "restore-started $manifest_path"
 
 redis_cmd SHUTDOWN NOSAVE >/dev/null 2>&1 || true
 compose start redis
@@ -108,6 +107,7 @@ fi
 
 compose start medplum-server medplum-app
 wait_for_medplum
+record_event "restore-started" "restore-started $manifest_path"
 npx tsx scripts/verify-restore-integrity.ts "$manifest_path"
 record_event "restore-completed" "restore-completed $manifest_path"
 echo "restore-completed $manifest_path"

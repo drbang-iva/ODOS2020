@@ -2,7 +2,7 @@
 
 Practitioner-owned open-source EHR/PM for independent optometry practices. Self-hosted on practice hardware. Built on the Medplum FHIR foundation.
 
-**Status:** v0.2.x closed out (2026-04-25). 8 MCP tools live (6 read + 4 write), dual-transport, 27/27 integration tests green. Full stage-by-stage build dashboard: [`STATUS.md`](STATUS.md).
+**Status:** v0.5d production-spine closeout in progress. Local Medplum foundation, identity/RBAC, audit/DR, scribe-attestation-amendment substrate, and local-hardware setup/preflight ergonomics.
 
 ## Architecture
 
@@ -10,16 +10,44 @@ Practitioner-owned open-source EHR/PM for independent optometry practices. Self-
 - **Application:** Custom TypeScript/Node, talks plain FHIR REST.
 - **Data locality:** Patient data lives only on practice hardware. No cloud, no phone-home, no telemetry.
 
-## Prerequisites
+## Practice Install
 
-- **Docker** — install via Colima (recommended) or Docker Desktop
-  ```bash
-  brew install colima docker docker-compose
-  colima start --cpu 4 --memory 8 --disk 40
-  ```
-- **Node 22+** and **npm** (for running the POC script)
+Run OSOD on your own hardware. Your patients, your machines, your data.
 
-## Quick start
+OSOD is designed for a practice-owned Mac Studio, NUC, Linux box, or server with at least 16 GB RAM and 500 GB storage. The practice remains responsible for physical safeguards around that hardware and its backup media; see v0.5 verification ledger row 46 for HIPAA 45 CFR §164.310. Docker Compose v2 is the local deployment surface; see ledger row 47 and the official Docker Compose install docs: <https://docs.docker.com/compose/install/>.
+
+```bash
+# 1. Install Docker + Docker Compose v2, then clone OSOD
+git clone https://github.com/drbang-iva/osod.git
+cd osod
+
+# 2. Install Node dependencies for the setup scripts
+npm install
+cd mcp && npm install && cd ..
+
+# 3. Start the canonical local stack
+docker compose up -d
+docker compose ps
+
+# 4. Provide human-owned setup credentials
+cp .env.example .env
+# Edit .env or export OSOD_PRACTICE_NAME, OSOD_ADMIN_EMAIL,
+# OSOD_ADMIN_NAME, and OSOD_ADMIN_PASSWORD.
+
+# 5. Run the interactive setup wizard
+npm run setup-practice
+
+# 6. Run the local preflight linter before live patient data
+npm run preflight
+```
+
+The setup wizard creates the first admin project/user, first Practitioner, first clinician AccessPolicy, and an audit trail for those writes. It is an interactive, human-supervised installer, not an autonomous agent. Re-running it after setup is a clean no-op.
+
+OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
+
+For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see [`docs/install.md`](docs/install.md) and [`docs/backup.md`](docs/backup.md).
+
+## Developer Quick Start
 
 ```bash
 # 1. Start Medplum + Postgres + Redis
@@ -29,14 +57,11 @@ npm run up
 docker compose ps
 # All three should be "running (healthy)"
 
-# 3. Open admin UI and create first admin account
-open http://localhost:8100/register
-
-# 4. Copy credentials into .env
+# 3. Copy credentials into .env
 cp .env.example .env
 # Edit .env with your email + password
 
-# 5. Install deps + run POC
+# 4. Install deps + run POC
 npm install
 npm run poc
 ```
