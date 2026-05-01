@@ -5,6 +5,9 @@
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
+  "bin": {
+    "osod": "./scripts/osod.ts"
+  },
   "scripts": {
     "up": "docker-compose up -d",
     "down": "docker-compose down",

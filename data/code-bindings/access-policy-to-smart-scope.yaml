@@ -1,0 +1,55 @@
+---
+ledger:
+  v0_55_rows:
+    - 9
+    - 11
+generated_from:
+  - mcp/src/authz/roles.ts
+status: verified 2026-05-01
+interaction_to_permission:
+  create: c
+  read: r
+  update: u
+  delete: d
+  search: s
+  history: r
+  vread: r
+roles:
+  practice-admin:
+    "*" : cruds
+  clinician:
+    Patient: rs
+    Encounter: cruds
+    Observation: cruds
+    Condition: cruds
+    Procedure: cruds
+    DiagnosticReport: cruds
+    DocumentReference: cruds
+    Media: cruds
+    Device: cruds
+    DeviceRequest: cruds
+    MedicationStatement: cruds
+    EpisodeOfCare: cruds
+    CarePlan: cruds
+    ChargeItem: cruds
+    Provenance: crs
+    Binary: r
+  front-desk:
+    Patient: cruds
+    RelatedPerson: cruds
+    Coverage: cruds
+    Account: cruds
+    Appointment: cruds
+    Slot: cruds
+    Schedule: cruds
+    Encounter: cruds
+  auditor:
+    AuditEvent: rs
+    Provenance: rs
+  aesthetics-provider:
+    Patient: rs
+    Procedure: cruds
+    DocumentReference: cruds
+    Media: cruds
+    Binary: r
+    Provenance: crs

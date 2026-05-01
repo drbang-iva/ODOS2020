@@ -363,12 +363,14 @@ export function buildClinicalWriteAuditRow(input: {
   actorId: string;
   actorRole: "scribe" | "clinician" | "system";
   observation: Observation;
+  eventTime?: string;
   provenanceId?: string;
   policyUrl?: string;
   actionReason?: string;
 }): OsodAuditEventRecord {
   return buildOsodAuditEventRow({
     eventType: input.eventType,
+    eventTime: input.eventTime,
     actorId: normalizeReferenceId(input.actorId, "Practitioner"),
     actorRole: input.actorRole,
     patientReference: input.observation.subject?.reference,

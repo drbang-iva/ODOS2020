@@ -5,6 +5,7 @@ import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Resource } from "@medplum/fhirtypes";
 import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import { smartScopeLintVerdict } from "../mcp/src/smart/scope.js";
 import { findPhiPatternMatches, type PreflightPhiMatch } from "../policy/preflight-phi-patterns.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -292,6 +293,27 @@ export function runVendorCanonicalShapePass(
           line: index + 1,
           ledgerRow: shape.ledgerRow,
           lesson: shape.lesson,
+        });
+      }
+      for (const match of line.matchAll(/(["'`])((?:patient|user|system)\/[^"'`\s]+)\1/g)) {
+        const scope = match[2]!;
+        const verdict = smartScopeLintVerdict(scope);
+        if (verdict === "valid-v2" || verdict === "not-smart-resource") {
+          continue;
+        }
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: verdict === "legacy-warning" ? "warning" : "hard-block",
+          code: verdict === "legacy-warning" ? "smart-scope-v1-legacy" : "smart-scope-invalid",
+          message:
+            verdict === "legacy-warning"
+              ? "SMART v1 scope string is backward-compatible only; v2 granular permissions are preferred."
+              : "Malformed SMART scope string; expected ledger row 11 grammar.",
+          source: displayPath(file.path),
+          line: index + 1,
+          column: match.index === undefined ? undefined : match.index + 1,
+          ledgerRow: 11,
+          lesson: "v0.55a SMART scope-string Pass 4 lint",
         });
       }
     }

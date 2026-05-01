@@ -18,6 +18,10 @@ import {
 } from "../../mcp/src/fhir/scribeAttestation.js";
 import { assertPreflightNetworkSurface } from "../../scripts/preflight-lint.ts";
 import { assertInteractiveSetupWizardAllowed } from "../../scripts/setup-practice.ts";
+import {
+  assertSmartAuthorizationNetworkSurface,
+} from "../../mcp/src/smart/authorization-server.js";
+import { approveStagedScopeDecision } from "../../mcp/src/smart/scope-intersection.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MCP_INDEX = resolve(HERE, "../../mcp/src/index.ts");
@@ -272,6 +276,54 @@ test("Mandate 8 boundary: preflight linter network surface is local and never au
     () => assertPreflightNetworkSurface(["http://localhost:8103/account-recovery"]),
     /login, recovery, or password-change/,
   );
+});
+
+test("Mandate 8 boundary: SMART authorization server network surface is local-only", () => {
+  assert.doesNotThrow(() =>
+    assertSmartAuthorizationNetworkSurface([
+      "http://localhost:8103/.well-known/smart-configuration",
+      "http://127.0.0.1:8103/token",
+      "http://medplum-server:8103/oauth2/token",
+    ]),
+  );
+  assert.throws(
+    () => assertSmartAuthorizationNetworkSurface(["https://identity.example.com/oauth2/authorize"]),
+    /local/,
+  );
+});
+
+test("Mandate 8 boundary: SMART staged review refuses autonomous-agent approval", () => {
+  const decision = {
+    id: "decision-1",
+    appClientId: "client-1",
+    userId: "practitioner-1",
+    requestedScopes: ["patient/Observation.rs"],
+    effectiveScopes: [],
+    policyId: "AccessPolicy/osod-clinician",
+    parameterizedBounds: { patient: "Patient/patient-1" },
+    outcomeClass: "staged-review" as const,
+    decisionTimestamp: "2026-05-01T00:00:00.000Z",
+    expirationTimestamp: "2026-05-01T00:15:00.000Z",
+  };
+  assert.throws(
+    () =>
+      approveStagedScopeDecision({
+        decision,
+        adminUserId: "admin-1",
+        adminRole: "practice-admin",
+        actorRole: "autonomous-agent",
+      }),
+    /autonomous agents cannot approve/,
+  );
+});
+
+test("Mandate 8 boundary: SMART authorization round-trip does not call non-local OAuth endpoints", () => {
+  const networkTrace = [
+    "http://127.0.0.1:8103/authorize",
+    "http://127.0.0.1:8103/token",
+    "http://medplum-server:8103/oauth2/token",
+  ];
+  assert.doesNotThrow(() => assertSmartAuthorizationNetworkSurface(networkTrace));
 });
 
 function listMcpToolNames(): string[] {

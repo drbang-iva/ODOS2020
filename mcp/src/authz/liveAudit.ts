@@ -13,9 +13,12 @@ import {
 } from "./osodAudit.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-const AUDIT_MIGRATION_PATH = fileURLToPath(
+const AUDIT_MIGRATION_PATHS = [
   new URL("../../../data/migrations/2026-04-29-v05b-osod-audit-events.sql", import.meta.url),
-);
+  new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-01-v055a-smart-clients.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-01-v055a-smart-scope-decisions.sql", import.meta.url),
+].map((url) => fileURLToPath(url));
 
 export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;
@@ -190,7 +193,12 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
   }
 
   private async ensureSchema(): Promise<void> {
-    this.schemaReady ??= readFile(AUDIT_MIGRATION_PATH, "utf8").then((sql) => this.pool.query(sql).then(() => undefined));
+    this.schemaReady ??= Promise.all(
+      AUDIT_MIGRATION_PATHS.map(async (path) => {
+        const sql = await readFile(path, "utf8");
+        await this.pool.query(sql);
+      }),
+    ).then(() => undefined);
     await this.schemaReady;
   }
 

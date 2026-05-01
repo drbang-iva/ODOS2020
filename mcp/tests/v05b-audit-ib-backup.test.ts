@@ -33,7 +33,7 @@ import {
 } from "../../ui/src/lib/audit-log.ts";
 
 test("v0.5b audit event type ValueSet covers the required read, write, security, IB, and DR events", () => {
-  assert.deepEqual(OSOD_AUDIT_EVENT_TYPES, [
+  const v05bRequiredEventTypes = [
     "read",
     "search",
     "history",
@@ -60,7 +60,10 @@ test("v0.5b audit event type ValueSet covers the required read, write, security,
     "external-api-call",
     "preflight-block",
     "noop",
-  ]);
+  ];
+  assert.deepEqual(OSOD_AUDIT_EVENT_TYPES.slice(0, v05bRequiredEventTypes.length), v05bRequiredEventTypes);
+  assert.equal(OSOD_AUDIT_EVENT_TYPES.includes("smart-token-issue"), true);
+  assert.equal(OSOD_AUDIT_EVENT_TYPES.includes("smart-sandbox-register"), true);
   assert.equal(auditEventTypeForFhirWrite("AccessPolicy", "update"), "policy-change");
   assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "create"), "projectmembership-lifecycle");
   assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "patch"), "role-change");

@@ -37,6 +37,10 @@ import {
   assertBusinessActionAllowed,
   type PracticeRoleId,
 } from "./authz/roles.js";
+import {
+  SmartAuthorizationState,
+  createSmartAuthorizationRouter,
+} from "./smart/authorization-server.js";
 import { osodConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "./fhir/ophthalmology/iop.js";
 import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.js";
@@ -5311,17 +5315,19 @@ async function main(): Promise<void> {
     case "sse": {
       const host = process.env.OSOD_MCP_HTTP_HOST ?? "127.0.0.1";
       const port = getHttpPort();
+      const origin = formatHttpOrigin(host, port);
 
       enforceSseTlsGate(host);
 
       const app = express();
       const transports = new Map<string, SSEServerTransport>();
+      const smartState = new SmartAuthorizationState();
 
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.OSOD_MCP_ALLOWED_ORIGIN ?? "*";
         res.header("Access-Control-Allow-Origin", origin);
-        res.header("Access-Control-Allow-Headers", "Content-Type, X-OSOD-Role, X-OSOD-Actor-Id");
+        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-OSOD-Role, X-OSOD-Actor-Id, X-OSOD-Actor-Role");
         res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         if (req.method === "OPTIONS") {
           res.sendStatus(204);
@@ -5329,6 +5335,14 @@ async function main(): Promise<void> {
         }
         next();
       });
+      app.use(
+        createSmartAuthorizationRouter({
+          issuer: origin,
+          fhirBaseUrl: BASE_URL,
+          audit: auditRuntime,
+          state: smartState,
+        }),
+      );
 
       app.get("/audit/events", async (req, res) => {
         const actorRole = auditRouteRole(req);
@@ -5445,8 +5459,6 @@ async function main(): Promise<void> {
           }
         }
       });
-
-      const origin = formatHttpOrigin(host, port);
 
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {

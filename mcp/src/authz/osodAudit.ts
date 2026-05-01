@@ -43,12 +43,21 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "external-api-call",
   "preflight-block",
   "noop",
+  "smart-token-issue",
+  "smart-token-refresh",
+  "smart-token-revoke",
+  "smart-introspection",
+  "smart-discovery-fetch",
+  "smart-scope-staged-review",
+  "smart-scope-approved",
+  "smart-scope-rejected",
+  "smart-sandbox-register",
 ] as const;
 
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
 export type OsodActionOutcome = "granted" | "denied";
 export type OsodAuditOutcome = "success" | "denied" | "error";
-export type OsodActorRole = PracticeRoleId | "scribe" | "system";
+export type OsodActorRole = PracticeRoleId | "scribe" | "system" | "autonomous-agent";
 
 export interface OsodAuditEventRecord {
   id: string;
@@ -488,14 +497,28 @@ function auditAction(eventType: OsodAuditEventType): AuditEvent["action"] {
   if (eventType === "read" || eventType === "search" || eventType === "history" || eventType === "vread") {
     return "R";
   }
-  if (eventType === "create" || eventType === "backup-started" || eventType === "restore-started") {
+  if (
+    eventType === "create" ||
+    eventType === "backup-started" ||
+    eventType === "restore-started" ||
+    eventType === "smart-token-issue" ||
+    eventType === "smart-sandbox-register"
+  ) {
     return "C";
   }
-  if (eventType === "delete-attempt" || eventType === "nullify-attempt") {
+  if (eventType === "delete-attempt" || eventType === "nullify-attempt" || eventType === "smart-token-revoke") {
     return "D";
   }
-  if (eventType === "denied" || eventType === "login-failed" || eventType === "preflight-block") {
+  if (
+    eventType === "denied" ||
+    eventType === "login-failed" ||
+    eventType === "preflight-block" ||
+    eventType === "smart-scope-rejected"
+  ) {
     return "E";
+  }
+  if (eventType === "smart-introspection" || eventType === "smart-discovery-fetch") {
+    return "R";
   }
   return "U";
 }

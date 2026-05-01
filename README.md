@@ -43,6 +43,8 @@ npm run preflight
 
 The setup wizard creates the first admin project/user, first Practitioner, first clinician AccessPolicy, and an audit trail for those writes. It is an interactive, human-supervised installer, not an autonomous agent. Re-running it after setup is a clean no-op.
 
+The local SMART authorization server runs in the MCP Node adapter for SMART App Launch v2 authorization, token, introspection, revocation, JWKS, and sandbox-registration flows. It uses the practice-local signing key at `OSOD_SMART_SIGNING_KEY_PATH` and intersects requested SMART scopes with OSOD AccessPolicy before issuing tokens; see [`docs/smart.md`](docs/smart.md).
+
 OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
 
 For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see [`docs/install.md`](docs/install.md) and [`docs/backup.md`](docs/backup.md).

@@ -40,6 +40,15 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `external-api-call` | integration-event | Outbound call touching another system on behalf of a user. |
 | `preflight-block` | local-readiness-event | Local preflight hard-block, currently reserved for env-var PHI leakage. |
 | `noop` | setup-event | Idempotent setup rerun where no FHIR resource write occurred. |
+| `smart-token-issue` | smart-authz-event | Token successfully issued to a SMART client. Ledger: v0.55 row 7. |
+| `smart-token-refresh` | smart-authz-event | Refresh token redeemed for a new SMART access token. Ledger: v0.55 row 7. |
+| `smart-token-revoke` | smart-authz-event | SMART token revoked by client request, reuse detection, or admin action. Ledger: v0.55 row 12. |
+| `smart-introspection` | smart-authz-event | SMART token introspection endpoint called. Ledger: v0.55 row 6. |
+| `smart-discovery-fetch` | smart-authz-event | SMART discovery document fetched from `.well-known/smart-configuration`. Ledger: v0.55 row 5. |
+| `smart-scope-staged-review` | smart-authz-event | SMART scope request entered staged admin review. Ledger: v0.55 rows 9 and 11. |
+| `smart-scope-approved` | smart-authz-event | SMART scope decision approved automatically or by admin review. Ledger: v0.55 rows 9 and 11. |
+| `smart-scope-rejected` | smart-authz-event | SMART scope request rejected automatically or by admin review. Ledger: v0.55 rows 9 and 11. |
+| `smart-sandbox-register` | smart-authz-event | Sandbox SMART app registered through the local developer endpoint. Ledger: v0.55 rows 4 and 5. |
 
 ## Information Blocking Exceptions
 

@@ -309,6 +309,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
     }),
     buildClinicalWriteAuditRow({
       eventType: "create",
+      eventTime: "2026-04-01T12:01:00.000Z",
       actorId: "scribe-1",
       actorRole: "scribe",
       observation: PRELIMINARY_OBSERVATION,
@@ -316,6 +317,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
     }),
     buildClinicalWriteAuditRow({
       eventType: "update",
+      eventTime: "2026-04-01T12:02:00.000Z",
       actorId: "clinician-1",
       actorRole: "clinician",
       observation: FINAL_OBSERVATION,
