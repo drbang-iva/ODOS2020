@@ -10,6 +10,10 @@ import {
   verifierPair,
 } from "../helpers.ts";
 import type { SmartClientRegistration } from "../../../mcp/src/smart/authorization-server.ts";
+import {
+  InMemorySmartAppRegistryStore,
+  type SmartAppMedplumAdapter,
+} from "../../../mcp/src/smart/registration/dynamic-client-registration.js";
 
 test("v0.55a negative: state mismatch is rejected at token exchange", async () => {
   const server = await createSmartTestServer();
@@ -240,6 +244,54 @@ test("v0.55a negative: confidential asymmetric expired client_assertion is rejec
   }
 });
 
+test("v0.55b negative: patient-payload app without BAA is rejected at registration", async () => {
+  const server = await registrationServer();
+  try {
+    const response = await registerSmartApp(server.origin, {
+      phi_boundary: "patient-payload",
+      baa_required: false,
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json() as { error: string }).error, "phi-baa-mismatch");
+  } finally {
+    await server.close();
+  }
+});
+
+test("v0.55b negative: image analysis opt-in is rejected at registration", async () => {
+  const server = await registrationServer();
+  try {
+    const response = await registerSmartApp(server.origin, {
+      image_analysis_prohibited: false,
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json() as { error: string }).error, "image-scope-violation");
+  } finally {
+    await server.close();
+  }
+});
+
+test("v0.55b negative: app prohibited in the practice state is rejected at registration", async () => {
+  const previous = process.env.OSOD_PRACTICE_JURISDICTION;
+  process.env.OSOD_PRACTICE_JURISDICTION = "US-SC";
+  const server = await registrationServer();
+  try {
+    const response = await registerSmartApp(server.origin, {
+      prohibitedStates: ["US-SC"],
+      risk_class: "autonomous-refraction",
+    });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json() as { error: string }).error, "jurisdiction-violation");
+  } finally {
+    if (previous === undefined) {
+      delete process.env.OSOD_PRACTICE_JURISDICTION;
+    } else {
+      process.env.OSOD_PRACTICE_JURISDICTION = previous;
+    }
+    await server.close();
+  }
+});
+
 function expiredClientAssertion(clientId: string, audience: string, privateKeyPem: string): string {
   const header = { alg: "RS256", typ: "JWT", kid: "client-key" };
   const now = Math.floor(Date.now() / 1000);
@@ -258,4 +310,46 @@ function expiredClientAssertion(clientId: string, audience: string, privateKeyPe
 
 function base64urlJson(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function registrationServer() {
+  const adapter: SmartAppMedplumAdapter = {
+    async registerSmartApp() {
+      return { client_id: "negative-client" };
+    },
+    async revokeSmartApp() {
+      return undefined;
+    },
+    async updateSmartAppMetadata() {
+      return undefined;
+    },
+  };
+  return createSmartTestServer({
+    smartAppRegistryStore: new InMemorySmartAppRegistryStore(),
+    smartAppMedplumAdapter: adapter,
+  });
+}
+
+function registerSmartApp(origin: string, overrides: Record<string, unknown>) {
+  return fetch(`${origin}/oauth2/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_name: "Negative Test App",
+      redirect_uris: [`${origin}/callback`],
+      token_endpoint_auth_method: "none",
+      scope: "user/Observation.rs",
+      scope_request_canonical: "user/Observation.rs",
+      risk_class: "low",
+      phi_boundary: "metadata-only",
+      launch_mode: "ehr",
+      network_egress: "local-only",
+      external_services_required: false,
+      baa_required: false,
+      image_analysis_prohibited: true,
+      allowedJurisdictions: ["US"],
+      prohibitedStates: [],
+      ...overrides,
+    }),
+  });
 }

@@ -22,24 +22,34 @@ The SMART discovery document is served from:
 http://127.0.0.1:<mcp-port>/.well-known/smart-configuration
 ```
 
-The document is generated dynamically from the local SMART server state on each request. It advertises only implemented capabilities and returns an ETag that changes when local SMART state changes, such as sandbox app registration or signing-key publication changes.
+The document is generated dynamically from the local SMART server state on each request. It advertises only implemented capabilities and returns an ETag that changes when local SMART state changes, such as local app registration or signing-key publication changes.
 
-## Sandbox App Registration
+## Dynamic App Registration
 
-Sandbox registration is intentionally minimal in v0.55a:
+v0.55b registers opted-in SMART apps through RFC 7591 dynamic client registration at the local endpoint:
 
 ```bash
-curl -X POST http://127.0.0.1:<mcp-port>/sandbox/register \
+curl -X POST http://127.0.0.1:<mcp-port>/oauth2/register \
   -H 'Content-Type: application/json' \
   -d '{
-    "name": "Local Sandbox App",
+    "client_name": "Local SMART App",
     "redirect_uris": ["http://127.0.0.1:5173/callback"],
-    "scopes_requested": ["user/Observation.rs"],
-    "client_type": "public"
+    "token_endpoint_auth_method": "none",
+    "scope": "user/Observation.rs",
+    "scope_request_canonical": "user/Observation.rs",
+    "risk_class": "low",
+    "phi_boundary": "metadata-only",
+    "launch_mode": "ehr",
+    "network_egress": "local-only",
+    "external_services_required": false,
+    "baa_required": false,
+    "image_analysis_prohibited": true,
+    "allowedJurisdictions": ["US"],
+    "prohibitedStates": []
   }'
 ```
 
-Sandbox apps are flagged as sandbox-only and cannot request patient-compartment PHI scopes. Full SMART app registry and seed manifests ship in v0.55b.
+The registration stores an OSOD canonical Endpoint or Device record with the `smart-client-app` extension, then uses the Medplum adapter boundary to provision the local authorization client. The deprecated `/sandbox/register` endpoint returns HTTP 410 in v0.55b and is no longer advertised in SMART discovery.
 
 ## Confidential Asymmetric Backend Apps
 

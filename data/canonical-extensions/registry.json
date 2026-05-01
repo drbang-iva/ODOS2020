@@ -1,0 +1,198 @@
+{
+  "resourceType": "OSODCanonicalExtensionRegistry",
+  "generatedAt": "2026-05-01",
+  "extensions": [
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
+      "namespace": "smart",
+      "status": "active",
+      "sliceConsumer": "v0.55b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/observation-attestation-ui-state",
+      "namespace": "clinical-attestation",
+      "status": "active",
+      "sliceConsumer": "v0.5c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
+      "namespace": "authz",
+      "status": "active",
+      "sliceConsumer": "v0.5a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/project-membership-role-review",
+      "namespace": "authz",
+      "status": "active",
+      "sliceConsumer": "v0.5a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "v0.3"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-VA",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "v0.3"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-IOP",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "v0.3"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Refraction",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "v0.3"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-AxialLength",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "v0.4c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-ContactLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-OrthoKLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-CornealGPLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-ScleralLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-HybridLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Device-SoftLens",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-KReadings",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Pachymetry",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-ContactLensFitFinding",
+      "namespace": "contact-lens",
+      "status": "active",
+      "sliceConsumer": "v0.4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-MeibomianGlandScore",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-TBUT",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Schirmer",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/Observation-DryEyeQuestionnaireScore",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/CarePlan-MyopiaManagement",
+      "namespace": "myopia-management",
+      "status": "active",
+      "sliceConsumer": "v0.4c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/myopia-careplan-activity-intervention",
+      "namespace": "myopia-management",
+      "status": "active",
+      "sliceConsumer": "v0.4c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-energy-mj",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-wavelength-nm",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-spot-count",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/ophthalmic-medication-supply-type",
+      "namespace": "dry-eye",
+      "status": "active",
+      "sliceConsumer": "v0.4b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/quality-score",
+      "namespace": "ophthalmology",
+      "status": "active",
+      "sliceConsumer": "v0.2"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/confidence-score",
+      "namespace": "ophthalmology",
+      "status": "active",
+      "sliceConsumer": "v0.2"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/eye-laterality",
+      "namespace": "ophthalmology",
+      "status": "active",
+      "sliceConsumer": "v0.2"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+      "namespace": "ophthalmology",
+      "status": "active",
+      "sliceConsumer": "v0.2"
+    }
+  ]
+}

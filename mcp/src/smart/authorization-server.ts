@@ -23,7 +23,6 @@ import {
 } from "./pkce.js";
 import {
   approveStagedScopeDecision,
-  assertSandboxScopeAllowed,
   evaluateSmartScopeIntersection,
   type SmartClientAuthClass,
   type SmartLaunchContext,
@@ -38,6 +37,14 @@ import {
   sendSmartConfiguration,
   type SmartConfigurationSnapshot,
 } from "./well-known-smart-configuration.js";
+import {
+  createDefaultSmartAppRegistryStore,
+  createDynamicClientRegistrationHandler,
+  type SmartAppMedplumAdapter,
+  type SmartAppRegistryStore,
+} from "./registration/dynamic-client-registration.js";
+import { createMedplumSmartAppRegistryAdapter } from "../../../data/medplum-adapters/smart-app-registry-adapter.js";
+import { V055B_SMART_CAPABILITIES } from "./registration/smart-client-app.js";
 
 export const SMART_AUTH_CODE_TTL_SECONDS = 60;
 export const SMART_ACCESS_TOKEN_TTL_SECONDS = 300;
@@ -114,6 +121,8 @@ export interface SmartAuthorizationServerOptions {
   readonly signingKey?: SmartSigningKey;
   readonly audit?: FhirAuditRecorder;
   readonly state?: SmartAuthorizationState;
+  readonly smartAppRegistryStore?: SmartAppRegistryStore;
+  readonly smartAppMedplumAdapter?: SmartAppMedplumAdapter;
   readonly now?: () => Date;
 }
 
@@ -121,14 +130,6 @@ export interface SmartSigningKey {
   readonly kid: string;
   readonly privateKey: KeyObject;
   readonly publicJwk: JsonWebKey & { kid: string; alg: "RS256"; use: "sig" };
-}
-
-export interface SandboxRegistrationInput {
-  readonly name?: string;
-  readonly redirect_uris?: readonly string[];
-  readonly jwks_uri?: string;
-  readonly scopes_requested?: readonly string[];
-  readonly client_type?: SmartClientType;
 }
 
 export class SmartAuthorizationState {
@@ -264,6 +265,8 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     postgresUrl: process.env.OSOD_POSTGRES_URL,
   });
   const signingKey = options.signingKey ?? loadSmartSigningKey(options.signingKeyPath);
+  const smartAppRegistryStore = options.smartAppRegistryStore ?? createDefaultSmartAppRegistryStore(options.fhirBaseUrl);
+  const smartAppMedplumAdapter = options.smartAppMedplumAdapter ?? createMedplumSmartAppRegistryAdapter();
   const router = express.Router();
 
   router.use(express.urlencoded({ extended: false }));
@@ -457,55 +460,23 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     res.type("application/json").json({ keys: [signingKey.publicJwk] });
   });
 
-  router.post("/sandbox/register", async (req, res) => {
-    try {
-      const input = req.body as SandboxRegistrationInput;
-      const redirectUris = [...(input.redirect_uris ?? [])];
-      if (!redirectUris.length) {
-        throw oauthError("invalid_request", "redirect_uris is required", 400);
-      }
-      for (const redirectUri of redirectUris) {
-        assertExactRedirectUriShape(redirectUri);
-      }
-      const parsedScopes = parseSmartScopeList((input.scopes_requested ?? []).join(" "));
-      for (const scope of parsedScopes.resourceScopes) {
-        assertSandboxScopeAllowed(scope);
-      }
-      const clientId = `sandbox-${randomUUID()}`;
-      const clientType = input.client_type ?? "public";
-      const secret = clientType === "confidential" && !input.jwks_uri ? randomSecret() : undefined;
-      if (input.jwks_uri) {
-        assertLocalNetworkUrl(input.jwks_uri);
-      }
-      const client: SmartClientRegistration = {
-        clientId,
-        name: input.name ?? "Sandbox SMART App",
-        redirectUris,
-        clientType,
-        tokenEndpointAuthMethod:
-          clientType === "public" ? "none" : input.jwks_uri ? "private_key_jwt" : "client_secret_basic",
-        jwksUri: input.jwks_uri,
-        clientSecretHash: secret ? secretHash(secret) : undefined,
-        scopesAllowed: [...(input.scopes_requested ?? [])],
-        isSandbox: true,
-      };
-      await state.saveClient(client);
-      await audit(options.audit, "smart-sandbox-register", req, {
-        actorId: client.clientId,
-        actorRole: "system",
-        resourceType: "ClientApplication",
-        resourceId: client.clientId,
-        actionReason: "sandbox SMART app registered",
-      });
-      res.status(201).json({
-        client_id: client.clientId,
-        client_secret: secret,
-        token_endpoint_auth_method: client.tokenEndpointAuthMethod,
-        is_sandbox: true,
-      });
-    } catch (error) {
-      sendOauthError(res, error);
-    }
+  router.post(
+    "/oauth2/register",
+    createDynamicClientRegistrationHandler({
+      state,
+      store: smartAppRegistryStore,
+      adapter: smartAppMedplumAdapter,
+      audit: options.audit,
+      now,
+    }),
+  );
+
+  router.post("/sandbox/register", (_req, res) => {
+    res.status(410).json({
+      error: "deprecated_endpoint",
+      error_description: "/sandbox/register was retired in v0.55b; use /oauth2/register.",
+      registration_endpoint: `${options.issuer}/oauth2/register`,
+    });
   });
 
   router.post("/admin/smart/scope-decisions/:id/approve", async (req, res) => {
@@ -1000,18 +971,11 @@ async function smartConfigurationSnapshot(
     introspectionEndpoint: `${base}/introspect`,
     revocationEndpoint: `${base}/revoke`,
     jwksUri: `${base}/.well-known/jwks.json`,
-    registrationEndpoint: `${base}/sandbox/register`,
     scopesSupported: supportedScopes,
     responseTypesSupported: ["code"],
     codeChallengeMethodsSupported: ["S256"],
-    capabilities: [
-      "launch-ehr",
-      "launch-standalone",
-      "client-public",
-      "client-confidential-symmetric",
-      "client-confidential-asymmetric",
-      "sso-openid-connect",
-    ],
+    registrationEndpoint: `${base}/oauth2/register`,
+    capabilities: V055B_SMART_CAPABILITIES,
     tokenEndpointAuthMethodsSupported: [
       "none",
       "client_secret_basic",
@@ -1067,13 +1031,6 @@ function assertRedirectUri(client: SmartClientRegistration, redirectUri: string 
   if (!redirectUri || !client.redirectUris.includes(redirectUri)) {
     throw oauthError("invalid_request", "redirect_uri must exactly match registered URI", 400);
   }
-}
-
-function assertExactRedirectUriShape(redirectUri: string): void {
-  if (redirectUri.includes("*")) {
-    throw oauthError("invalid_request", "redirect_uri wildcards are forbidden", 400);
-  }
-  new URL(redirectUri);
 }
 
 function assertLocalNetworkUrl(value: string): void {

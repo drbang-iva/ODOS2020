@@ -54,6 +54,20 @@ for (const file of profileFiles) {
   );
 }
 
+const canonicalExtensionsDir = resolve(process.cwd(), "data/canonical-extensions");
+if (existsSync(canonicalExtensionsDir)) {
+  const extensionFiles = (await readdir(canonicalExtensionsDir))
+    .filter((name) => name.endsWith(".json") && name !== "registry.json")
+    .sort();
+
+  for (const file of extensionFiles) {
+    await installCanonicalResource(
+      JSON.parse(await readFile(resolve(canonicalExtensionsDir, file), "utf8")) as CanonicalResource,
+      file,
+    );
+  }
+}
+
 for (const resource of buildV04CanonicalResources()) {
   await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
 }

@@ -1,0 +1,28 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "smart-app-activity",
+  "url": "https://osod.dev/fhir/CodeSystem/smart-app-activity",
+  "version": "0.55b",
+  "name": "OSODSmartAppActivityCodeSystem",
+  "title": "OSOD SMART App Activity Codes",
+  "status": "active",
+  "content": "complete",
+  "concept": [
+    {
+      "code": "smart-app-register",
+      "display": "SMART app register"
+    },
+    {
+      "code": "smart-app-install",
+      "display": "SMART app install"
+    },
+    {
+      "code": "smart-app-remove",
+      "display": "SMART app remove"
+    },
+    {
+      "code": "smart-app-review",
+      "display": "SMART app review"
+    }
+  ]
+}
