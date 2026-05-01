@@ -193,12 +193,12 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
   }
 
   private async ensureSchema(): Promise<void> {
-    this.schemaReady ??= Promise.all(
-      AUDIT_MIGRATION_PATHS.map(async (path) => {
+    this.schemaReady ??= (async () => {
+      for (const path of AUDIT_MIGRATION_PATHS) {
         const sql = await readFile(path, "utf8");
         await this.pool.query(sql);
-      }),
-    ).then(() => undefined);
+      }
+    })();
     await this.schemaReady;
   }
 
