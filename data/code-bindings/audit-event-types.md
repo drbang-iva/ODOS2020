@@ -56,6 +56,15 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `smart-app-removed` | smart-registry-event | SMART app removed from the local registry. Ledger: v0.55 row 27. |
 | `smart-app-review-pending` | smart-registry-event | SMART app install entered pending admin review. Ledger: v0.55 row 24. |
 | `smart-app-metadata-updated` | smart-registry-event | SMART app registry metadata updated. Ledger: v0.55 rows 19 and 23. |
+| `cds.discovery.served` | cds-event | CDS Hooks discovery document served from the local `/cds-services` endpoint. Ledger: v0.55 rows 28 and 29. |
+| `cds.service.registered` | cds-event | External CDS service registered after local admin review. Ledger: v0.55 rows 34 and 38. |
+| `cds.service.deactivated` | cds-event | External CDS service deactivated through the local admin workflow. Ledger: v0.55 row 38. |
+| `cds.hook.fired` | cds-event | CDS hook fired against matching local or opted-in external services. Ledger: v0.55 rows 28 and 29. |
+| `cds.card.rendered` | cds-event | CDS card validated and rendered. Ledger: v0.55 row 35. |
+| `cds.card.rejected_validation` | cds-event | CDS card rejected before rendering because schema validation failed. Ledger: v0.55 row 35. |
+| `cds.card.suppressed_stale` | cds-event | CDS card suppressed because its TTL expired before display. Ledger: v0.55 rows 34 and 35. |
+| `cds.feedback.accepted` | cds-event | CDS feedback recorded for an accepted card. Ledger: v0.55 row 28. |
+| `cds.feedback.overridden` | cds-event | CDS feedback recorded for an overridden card. Ledger: v0.55 row 28. |
 
 ## Information Blocking Exceptions
 

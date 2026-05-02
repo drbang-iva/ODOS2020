@@ -1,7 +1,14 @@
 # OSOD v0.5b DR Drill Runbook
 
-This drill is operator-only. No MCP tool may trigger backup, restore, or the
-destructive reset.
+This drill is operator-driven. No OSOD MCP tool, autonomous agent, launchd job,
+or unsupervised subagent may trigger backup, restore, or the destructive reset.
+Per the CLAUDE.md scope clarification (performance-od, 2026-04-29) carried into
+v0.55c Lesson #5 (amended 2026-05-02), Claude Code running interactively on the
+operator's laptop with the operator at the keyboard MAY drive this drill — every
+tool call is supervised and explicit `Bash(...)` permission rules in
+`.claude/settings.local.json` paper-trail the authorization. The boundary
+protects against unsupervised destructive operations, not against supervised
+ones.
 
 **Isolation warning:** This drill runs in an isolated compose context. The
 primary `osod` compose project is NOT touched. Operators are responsible for

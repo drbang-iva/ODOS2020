@@ -88,6 +88,37 @@ test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures",
   assert.equal(migration.findings[0]?.code, "promise-all-migration");
 });
 
+test("v0.55c preflight pass 4 hard-blocks CDS hook and copy boundary fixtures", () => {
+  const mixedHookIds = runVendorCanonicalShapePass({
+    files: [
+      { path: "mcp/src/cds/services/a.ts", text: 'export const a = { discovery: { id: "osod-a" } };\n' },
+      {
+        path: "mcp/src/cds/services/b.ts",
+        text: 'export const b = { discovery: { id: "https://osod.dev/cds-hooks/b" } };\n',
+      },
+    ],
+  });
+  assert.equal(mixedHookIds.status, "hard-block");
+  assert.equal(mixedHookIds.findings[0]?.code, "hook-id-format");
+
+  const missingDsiFields = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/cds/services/bad.ts",
+        text: "export const card = { cards: [{ summary: 'x', indicator: 'info', source: { label: 'x' } }] };\n",
+      },
+    ],
+  });
+  assert.equal(missingDsiFields.status, "hard-block");
+  assert.equal(missingDsiFields.findings[0]?.code, "hti-1-dsi-card-schema");
+
+  const copy = runVendorCanonicalShapePass({
+    files: [{ path: "README.md", text: "Use the approved CDS vendor for external services.\n" }],
+  });
+  assert.equal(copy.status, "hard-block");
+  assert.equal(copy.findings[0]?.code, "external-cds-services-superlative-block");
+});
+
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
   const dir = mkdtempSync(join(tmpdir(), "osod-preflight-"));
   try {

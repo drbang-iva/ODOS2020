@@ -45,6 +45,25 @@ import {
 } from "./registration/dynamic-client-registration.js";
 import { createMedplumSmartAppRegistryAdapter } from "../../../data/medplum-adapters/smart-app-registry-adapter.js";
 import { V055B_SMART_CAPABILITIES } from "./registration/smart-client-app.js";
+import { dispatchCdsHook } from "../cds/dispatcher.js";
+import {
+  buildCanonicalCdsService,
+  buildCdsServiceProvenance,
+  cdsServiceDiscoveryEntry,
+  CdsServiceRegistryError,
+  deactivateCdsServiceEndpoint,
+  InMemoryCdsServiceRegistryStore,
+  activeCdsServiceEndpoints,
+  type CdsServiceRegistryStore,
+} from "../cds/service-registry.js";
+import {
+  InMemoryCdsFeedbackRepository,
+  parseCdsFeedbackRequest,
+  persistCdsFeedback,
+  type CdsFeedbackRepository,
+} from "../cds/feedback.js";
+import { OSOD_DEFAULT_CDS_SERVICES, OSOD_DEFAULT_CDS_SERVICE_IDS } from "../cds/services/index.js";
+import type { CdsHookEvaluationInput, CdsHookId, CdsFhirAuthorization } from "../cds/types.js";
 
 export const SMART_AUTH_CODE_TTL_SECONDS = 60;
 export const SMART_ACCESS_TOKEN_TTL_SECONDS = 300;
@@ -123,6 +142,8 @@ export interface SmartAuthorizationServerOptions {
   readonly state?: SmartAuthorizationState;
   readonly smartAppRegistryStore?: SmartAppRegistryStore;
   readonly smartAppMedplumAdapter?: SmartAppMedplumAdapter;
+  readonly cdsServiceRegistryStore?: CdsServiceRegistryStore;
+  readonly cdsFeedbackRepository?: CdsFeedbackRepository;
   readonly now?: () => Date;
 }
 
@@ -267,6 +288,8 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   const signingKey = options.signingKey ?? loadSmartSigningKey(options.signingKeyPath);
   const smartAppRegistryStore = options.smartAppRegistryStore ?? createDefaultSmartAppRegistryStore(options.fhirBaseUrl);
   const smartAppMedplumAdapter = options.smartAppMedplumAdapter ?? createMedplumSmartAppRegistryAdapter();
+  const cdsServiceRegistryStore = options.cdsServiceRegistryStore ?? new InMemoryCdsServiceRegistryStore();
+  const cdsFeedbackRepository = options.cdsFeedbackRepository ?? new InMemoryCdsFeedbackRepository();
   const router = express.Router();
 
   router.use(express.urlencoded({ extended: false }));
@@ -458,6 +481,126 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
 
   router.get("/.well-known/jwks.json", (_req, res) => {
     res.type("application/json").json({ keys: [signingKey.publicJwk] });
+  });
+
+  router.get("/cds-services", async (req, res) => {
+    await audit(options.audit, "cds.discovery.served", req, {
+      actorId: "cds-discovery",
+      actorRole: "system",
+      resourceType: "CDSHooksDiscovery",
+      actionReason: "CDS Hooks discovery document fetched",
+    });
+    const externalServices = activeCdsServiceEndpoints(await cdsServiceRegistryStore.list());
+    res.type("application/json").json({
+      services: [
+        ...OSOD_DEFAULT_CDS_SERVICES.map((service) => service.discovery),
+        ...externalServices.map(cdsServiceDiscoveryEntry),
+      ],
+    });
+  });
+
+  router.post("/cds-services/register", async (req, res) => {
+    try {
+      const canonical = buildCanonicalCdsService(req.body);
+      const stored = await cdsServiceRegistryStore.create(canonical.endpoint);
+      await cdsServiceRegistryStore.createProvenance?.(
+        buildCdsServiceProvenance({
+          target: `Endpoint/${stored.id}`,
+          activityCode: "register",
+          recorded: now().toISOString(),
+          actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
+          actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        }),
+      );
+      await audit(options.audit, "cds.service.registered", req, {
+        actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
+        actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        resourceType: "Endpoint",
+        resourceId: stored.id,
+        actionReason: "External CDS service registered through local practice-admin review.",
+      });
+      res.status(201).json({ status: "registered", service: stored });
+    } catch (error) {
+      sendCdsRegistryError(res, error);
+    }
+  });
+
+  router.post("/cds-services/:id/deactivate", async (req, res) => {
+    try {
+      const existing = await cdsServiceRegistryStore.read(req.params.id);
+      if (!existing) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
+      const deactivated = deactivateCdsServiceEndpoint(existing);
+      const stored = cdsServiceRegistryStore.update
+        ? await cdsServiceRegistryStore.update(deactivated)
+        : deactivated;
+      await cdsServiceRegistryStore.createProvenance?.(
+        buildCdsServiceProvenance({
+          target: `Endpoint/${stored.id}`,
+          activityCode: req.body?.activity === "amend" ? "amend" : "nullify",
+          recorded: now().toISOString(),
+          actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
+          actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        }),
+      );
+      await audit(options.audit, "cds.service.deactivated", req, {
+        actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
+        actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        resourceType: "Endpoint",
+        resourceId: stored.id,
+        actionReason: "External CDS service deactivated through local practice-admin workflow.",
+      });
+      res.json({ status: "deactivated", service: stored });
+    } catch (error) {
+      sendCdsRegistryError(res, error);
+    }
+  });
+
+  router.post("/cds-services/:id/feedback", async (req, res) => {
+    try {
+      const result = await persistCdsFeedback({
+        request: parseCdsFeedbackRequest(req.body),
+        repository: cdsFeedbackRepository,
+        serviceId: req.params.id,
+        userId: req.header("X-OSOD-Actor-Id") ?? bodyString(req, "user_id") ?? "local-practitioner",
+        patientId: bodyString(req, "patient_id"),
+        encounterId: bodyString(req, "encounter_id"),
+        now: now(),
+      });
+      for (const row of result.auditEvents) {
+        await options.audit?.recordDenied(row);
+      }
+      res.status(201).json({ feedback: result.rows });
+    } catch (error) {
+      sendInvalidRequestError(res, error);
+    }
+  });
+
+  router.post("/cds-services/:id", async (req, res) => {
+    try {
+      const services = [
+        ...OSOD_DEFAULT_CDS_SERVICE_IDS,
+        ...activeCdsServiceEndpoints(await cdsServiceRegistryStore.list()).map((service) => service.metadata.serviceId),
+      ];
+      if (!services.includes(req.params.id)) {
+        res.status(404).json({ error: "not_found" });
+        return;
+      }
+      const result = await dispatchCdsHook({
+        input: cdsHookInputFromRequest(req, options, now()),
+        externalServices: activeCdsServiceEndpoints(await cdsServiceRegistryStore.list()),
+        fhirAuthorizationFor: async (service) => cdsFhirAuthorizationForService(state, signingKey, options, service.metadata.serviceId, service.metadata.scopeRequestCanonical, now()),
+        now: now(),
+      });
+      for (const row of result.auditEvents) {
+        await options.audit?.recordDenied(row);
+      }
+      res.type("application/json").json({ cards: result.cards });
+    } catch (error) {
+      sendInvalidRequestError(res, error);
+    }
   });
 
   router.post(
@@ -975,6 +1118,8 @@ async function smartConfigurationSnapshot(
     responseTypesSupported: ["code"],
     codeChallengeMethodsSupported: ["S256"],
     registrationEndpoint: `${base}/oauth2/register`,
+    cdsHooksEndpoint: `${base}/cds-services`,
+    cdsCapabilities: OSOD_DEFAULT_CDS_SERVICE_IDS,
     capabilities: V055B_SMART_CAPABILITIES,
     tokenEndpointAuthMethodsSupported: [
       "none",
@@ -984,6 +1129,64 @@ async function smartConfigurationSnapshot(
     ],
     grantTypesSupported: ["authorization_code", "client_credentials", "refresh_token"],
     updatedAt: state.updatedAt,
+  };
+}
+
+function cdsHookInputFromRequest(
+  req: Request,
+  options: SmartAuthorizationServerOptions,
+  now: Date,
+): CdsHookEvaluationInput {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const hook = body.hook;
+  if (hook !== "order-sign" && hook !== "order-select" && hook !== "encounter-discharge") {
+    throw new Error("invalid_request: hook must be order-sign, order-select, or encounter-discharge");
+  }
+  const context = isRecord(body.context) ? body.context : {};
+  const prefetch = isRecord(body.prefetch) ? body.prefetch : {};
+  return {
+    hook: hook as CdsHookId,
+    hookInstance: typeof body.hookInstance === "string" ? body.hookInstance : randomUUID(),
+    fhirServer: typeof body.fhirServer === "string" ? body.fhirServer : options.fhirBaseUrl,
+    userId: req.header("X-OSOD-Actor-Id") ?? contextString(context, "userId") ?? "local-practitioner",
+    patientId: contextString(context, "patientId"),
+    encounterId: contextString(context, "encounterId"),
+    context,
+    prefetch,
+    now,
+  };
+}
+
+async function cdsFhirAuthorizationForService(
+  state: SmartAuthorizationState,
+  signingKey: SmartSigningKey,
+  options: SmartAuthorizationServerOptions,
+  serviceId: string,
+  scope: string,
+  now: Date,
+): Promise<CdsFhirAuthorization | undefined> {
+  const client = await state.getClient(serviceId);
+  if (!client || client.clientType !== "confidential") {
+    return undefined;
+  }
+  const token = issueToken({
+    state,
+    signingKey,
+    options,
+    clientId: client.clientId,
+    scope,
+    username: client.clientId,
+    sub: client.clientId,
+    launchContext: {},
+    tokenKind: "access_token",
+    now,
+  });
+  return {
+    access_token: token.token,
+    token_type: "Bearer",
+    expires_in: Math.max(token.exp - token.iat, 0),
+    scope: token.scope,
+    subject: token.sub,
   };
 }
 
@@ -1210,6 +1413,34 @@ function sendOauthError(res: Response, error: unknown): void {
     return;
   }
   res.status(500).json({ error: "server_error" });
+}
+
+function sendCdsRegistryError(res: Response, error: unknown): void {
+  if (error instanceof CdsServiceRegistryError) {
+    res.status(error.status).json({ error: error.code, error_description: error.message });
+    return;
+  }
+  sendInvalidRequestError(res, error);
+}
+
+function sendInvalidRequestError(res: Response, error: unknown): void {
+  if (error instanceof Error && error.message.startsWith("invalid_request:")) {
+    res.status(400).json({ error: "invalid_request", error_description: error.message.replace(/^invalid_request:\s*/, "") });
+    return;
+  }
+  res.status(500).json({
+    error: "server_error",
+    error_description: error instanceof Error ? error.message : String(error),
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function contextString(context: Record<string, unknown>, key: string): string | undefined {
+  const value = context[key];
+  return typeof value === "string" && value ? value : undefined;
 }
 
 async function audit(

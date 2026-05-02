@@ -202,6 +202,15 @@ const MARKETPLACE_SUPERLATIVE_PATTERN = new RegExp(
   ].join(""),
   "i",
 );
+const EXTERNAL_CDS_SUPERLATIVE_PATTERN = new RegExp(
+  [
+    "\\b(?:trusted\\s+vendor\\s+list|allowlist|vendor-managed\\s+CDS\\s+catalog|approved\\s+CDS\\s+vendor|preferred\\s+CDS\\s+vendor)\\b",
+  ].join(""),
+  "i",
+);
+const CDS_SERVICE_ID_PATTERN = /\bid\s*:\s*["'`]([^"'`]+)["'`]/g;
+const OSOD_CDS_SERVICE_ID_PATTERN = /^osod-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const OSOD_CDS_SERVICE_URL_PATTERN = /^https:\/\/osod\.dev\/cds-hooks\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const PREFLIGHT_ALLOWED_NETWORK_PATTERNS: readonly RegExp[] = [
   /^https?:\/\/localhost(?::\d+)?(?:\/|$)/i,
@@ -376,22 +385,40 @@ export function runVendorCanonicalShapePass(
     }
   }
 
-  for (const file of readMarketplaceCopyFiles()) {
+  for (const finding of cdsHookIdFormatFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of cdsCardSchemaFindings(files)) {
+    findings.push(finding);
+  }
+
+  for (const file of copyFilesForPass(options, files)) {
     const lines = file.text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
-      if (!MARKETPLACE_SUPERLATIVE_PATTERN.test(line)) {
-        continue;
+      if (MARKETPLACE_SUPERLATIVE_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "marketplace-superlative-block",
+          message: "Marketplace-superlative copy is blocked until v0.55 ledger row 25 clears.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 25,
+          lesson: "Mandate 14-amendment 2026-05-01b",
+        });
       }
-      findings.push({
-        pass: "vendor-canonical-shapes",
-        severity: "hard-block",
-        code: "marketplace-superlative-block",
-        message: "Marketplace-superlative copy is blocked until v0.55 ledger row 25 clears.",
-        source: displayPath(file.path),
-        line: index + 1,
-        ledgerRow: 25,
-        lesson: "Mandate 14-amendment 2026-05-01b",
-      });
+      if (EXTERNAL_CDS_SUPERLATIVE_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "external-cds-services-superlative-block",
+          message: "External CDS services copy must stay opt-in only until v0.55 ledger row 37 clears.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 37,
+          lesson: "Mandate 14-amendment 2026-05-01b",
+        });
+      }
     }
   }
 
@@ -648,6 +675,80 @@ function isMcpSourcePath(path: string): boolean {
   return displayPath(path).startsWith("mcp/src/");
 }
 
+function isCdsServicePath(path: string): boolean {
+  return displayPath(path).startsWith("mcp/src/cds/services/");
+}
+
+function cdsHookIdFormatFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const ids: Array<{ path: string; line: number; id: string; format: "short" | "url" | "invalid" }> = [];
+  for (const file of files) {
+    if (!isCdsServicePath(file.path)) {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      for (const match of line.matchAll(CDS_SERVICE_ID_PATTERN)) {
+        const id = match[1]!;
+        const format = OSOD_CDS_SERVICE_ID_PATTERN.test(id)
+          ? "short"
+          : OSOD_CDS_SERVICE_URL_PATTERN.test(id)
+            ? "url"
+            : "invalid";
+        ids.push({ path: file.path, line: index + 1, id, format });
+      }
+    }
+  }
+  const activeFormats = new Set(ids.filter((entry) => entry.format !== "invalid").map((entry) => entry.format));
+  return ids
+    .filter((entry) => entry.format === "invalid" || activeFormats.size > 1)
+    .map((entry) => ({
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "hook-id-format",
+      message: `CDS service id ${entry.id} does not match the v0.55c hook-service ID format decision.`,
+      source: displayPath(entry.path),
+      line: entry.line,
+      ledgerRow: 33,
+      lesson: "v0.55c PROVISIONAL #3 consumption gate",
+    }));
+}
+
+function cdsCardSchemaFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const helperProvidesDsiFields = files.some((file) =>
+    isCdsServicePath(file.path) &&
+    file.text.includes("dsi_type") &&
+    file.text.includes("intervention_risk_management") &&
+    file.text.includes("source_attributes"),
+  );
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!isCdsServicePath(file.path)) {
+      continue;
+    }
+    const emitsCards = /\bcards\s*:|\bruleCard\s*\(/.test(file.text);
+    if (!emitsCards) {
+      continue;
+    }
+    const hasFields =
+      file.text.includes("dsi_type") &&
+      file.text.includes("intervention_risk_management") &&
+      file.text.includes("source_attributes");
+    if (hasFields || (file.text.includes("ruleCard(") && helperProvidesDsiFields)) {
+      continue;
+    }
+    findings.push({
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "hti-1-dsi-card-schema",
+      message: "CDS card emitter is missing required HTI-1 DSI disclosure fields.",
+      source: displayPath(file.path),
+      line: 1,
+      ledgerRow: 35,
+      lesson: "v0.55c Binding #4",
+    });
+  }
+  return findings;
+}
+
 function urlHost(value: string): string | undefined {
   try {
     return new URL(value).host.toLowerCase();
@@ -671,6 +772,21 @@ function readMarketplaceCopyFiles(): { path: string; text: string }[] {
   return files;
 }
 
+function copyFilesForPass(
+  options: VendorCanonicalShapePassOptions,
+  files: readonly { path: string; text: string }[],
+): { path: string; text: string }[] {
+  if (!options.files) {
+    return readMarketplaceCopyFiles();
+  }
+  return files.filter((file) => isSubscriberFacingCopyPath(file.path));
+}
+
+function isSubscriberFacingCopyPath(path: string): boolean {
+  const displayed = displayPath(path);
+  return displayed === "README.md" || displayed.startsWith("docs/") || displayed.startsWith("ui/src/");
+}
+
 function walkMarkdown(path: string, files: { path: string; text: string }[]): void {
   let entries;
   try {
@@ -681,7 +797,7 @@ function walkMarkdown(path: string, files: { path: string; text: string }[]): vo
   for (const entry of entries) {
     const child = join(path, entry.name);
     if (entry.isDirectory()) {
-      if (![".git", ".osod", "dist", "node_modules"].includes(entry.name)) {
+      if (![".git", ".osod", "build-log", "dist", "node_modules"].includes(entry.name)) {
         walkMarkdown(child, files);
       }
       continue;

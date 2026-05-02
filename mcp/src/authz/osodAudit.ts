@@ -59,6 +59,15 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "smart-app-removed",
   "smart-app-review-pending",
   "smart-app-metadata-updated",
+  "cds.discovery.served",
+  "cds.service.registered",
+  "cds.service.deactivated",
+  "cds.hook.fired",
+  "cds.card.rendered",
+  "cds.card.rejected_validation",
+  "cds.card.suppressed_stale",
+  "cds.feedback.accepted",
+  "cds.feedback.overridden",
 ] as const;
 
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];

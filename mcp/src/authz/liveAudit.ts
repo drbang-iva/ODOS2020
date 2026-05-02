@@ -20,6 +20,9 @@ const AUDIT_MIGRATION_PATHS = [
   new URL("../../../data/migrations/2026-05-01-v055a-smart-scope-decisions.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055b-smart-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055b-smart-app-installations.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-02-v055c-cds-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-02-v055c-cds-feedback.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-02-v055c-cds-service-keys.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
 
 export interface LiveAuditRuntimeOptions {
