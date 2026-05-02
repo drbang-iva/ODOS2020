@@ -1,0 +1,171 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "cds-service",
+  "url": "https://osod.dev/fhir/StructureDefinition/cds-service",
+  "version": "0.55c",
+  "name": "OSODCDSService",
+  "title": "OSOD CDS Service",
+  "status": "active",
+  "date": "2026-05-02",
+  "publisher": "OSOD",
+  "description": "OSOD local-only external CDS Hooks service registry metadata carried on Endpoint.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Endpoint"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "OSOD CDS service registry metadata",
+        "definition": "Local-only CDS Hooks service metadata. External services are empty by default and practice-admin opt-in only.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:title",
+        "path": "Extension.extension",
+        "sliceName": "title",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:description",
+        "path": "Extension.extension",
+        "sliceName": "description",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:endpoint_url",
+        "path": "Extension.extension",
+        "sliceName": "endpoint_url",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:cds_risk_class",
+        "path": "Extension.extension",
+        "sliceName": "cds_risk_class",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:phi_boundary",
+        "path": "Extension.extension",
+        "sliceName": "phi_boundary",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:launch_mode",
+        "path": "Extension.extension",
+        "sliceName": "launch_mode",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:network_egress",
+        "path": "Extension.extension",
+        "sliceName": "network_egress",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:external_services_required",
+        "path": "Extension.extension",
+        "sliceName": "external_services_required",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:baa_required",
+        "path": "Extension.extension",
+        "sliceName": "baa_required",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:image_analysis_prohibited",
+        "path": "Extension.extension",
+        "sliceName": "image_analysis_prohibited",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:image_analysis_prohibited.valueBoolean",
+        "path": "Extension.extension.valueBoolean",
+        "fixedBoolean": true
+      },
+      {
+        "id": "Extension.extension:allowedJurisdictions",
+        "path": "Extension.extension",
+        "sliceName": "allowedJurisdictions",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:prohibitedStates",
+        "path": "Extension.extension",
+        "sliceName": "prohibitedStates",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:scope_request_canonical",
+        "path": "Extension.extension",
+        "sliceName": "scope_request_canonical",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:hook_subscriptions",
+        "path": "Extension.extension",
+        "sliceName": "hook_subscriptions",
+        "min": 1,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:card_ttl_minutes",
+        "path": "Extension.extension",
+        "sliceName": "card_ttl_minutes",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:request_timeout_seconds",
+        "path": "Extension.extension",
+        "sliceName": "request_timeout_seconds",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:admin_review_status",
+        "path": "Extension.extension",
+        "sliceName": "admin_review_status",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/cds-service"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 0,
+        "max": "0"
+      }
+    ]
+  }
+}

@@ -9,6 +9,8 @@ export interface SmartConfigurationSnapshot {
   readonly revocationEndpoint: string;
   readonly jwksUri: string;
   readonly registrationEndpoint: string;
+  readonly cdsHooksEndpoint: string;
+  readonly cdsCapabilities: readonly string[];
   readonly scopesSupported: readonly string[];
   readonly responseTypesSupported: readonly string[];
   readonly codeChallengeMethodsSupported: readonly string[];
@@ -27,6 +29,8 @@ export interface SmartConfigurationDocument {
   readonly introspection_endpoint: string;
   readonly jwks_uri: string;
   readonly registration_endpoint: string;
+  readonly cds_hooks_endpoint: string;
+  readonly cds_capabilities: readonly string[];
   readonly scopes_supported: readonly string[];
   readonly response_types_supported: readonly string[];
   readonly grant_types_supported: readonly string[];
@@ -44,6 +48,8 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
     introspection_endpoint: snapshot.introspectionEndpoint,
     jwks_uri: snapshot.jwksUri,
     registration_endpoint: snapshot.registrationEndpoint,
+    cds_hooks_endpoint: snapshot.cdsHooksEndpoint,
+    cds_capabilities: snapshot.cdsCapabilities,
     scopes_supported: snapshot.scopesSupported,
     response_types_supported: snapshot.responseTypesSupported,
     grant_types_supported: snapshot.grantTypesSupported,

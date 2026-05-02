@@ -11,6 +11,8 @@ import type {
   SmartAppMedplumAdapter,
   SmartAppRegistryStore,
 } from "../../mcp/src/smart/registration/dynamic-client-registration.js";
+import type { CdsServiceRegistryStore } from "../../mcp/src/cds/service-registry.js";
+import type { CdsFeedbackRepository } from "../../mcp/src/cds/feedback.js";
 import { pkceS256Challenge } from "../../mcp/src/smart/pkce.js";
 
 export interface SmartTestServer {
@@ -29,6 +31,8 @@ export async function createSmartTestServer(input: {
   readonly now?: () => Date;
   readonly smartAppRegistryStore?: SmartAppRegistryStore;
   readonly smartAppMedplumAdapter?: SmartAppMedplumAdapter;
+  readonly cdsServiceRegistryStore?: CdsServiceRegistryStore;
+  readonly cdsFeedbackRepository?: CdsFeedbackRepository;
   readonly configureApp?: (app: express.Express, origin: string) => void;
 } = {}): Promise<SmartTestServer> {
   const app = express();
@@ -50,6 +54,8 @@ export async function createSmartTestServer(input: {
       now: input.now,
       smartAppRegistryStore: input.smartAppRegistryStore,
       smartAppMedplumAdapter: input.smartAppMedplumAdapter,
+      cdsServiceRegistryStore: input.cdsServiceRegistryStore,
+      cdsFeedbackRepository: input.cdsFeedbackRepository,
     }),
   );
   return {

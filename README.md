@@ -47,6 +47,8 @@ The setup wizard creates the first admin project/user, first Practitioner, first
 
 The local SMART authorization server runs in the MCP Node adapter for SMART App Launch v2 authorization, token, introspection, revocation, JWKS, and local app-registration flows. It uses the practice-local signing key at `OSOD_SMART_SIGNING_KEY_PATH`, intersects requested SMART scopes with OSOD AccessPolicy before issuing tokens, and registers opted-in apps through the local eyecare SMART app seed catalog; see [`docs/smart.md`](docs/smart.md) and [`docs/smart-app-registry.md`](docs/smart-app-registry.md).
 
+Decision support runs locally. External CDS services are off by default — opt in only the ones you trust, only when you trust them. The v0.55c CDS Hooks client advertises local OSOD specialty services and practice-approved external services through the local `/cds-services` endpoint; see [`docs/cds-hooks.md`](docs/cds-hooks.md).
+
 OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
 
 For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see [`docs/install.md`](docs/install.md) and [`docs/backup.md`](docs/backup.md).

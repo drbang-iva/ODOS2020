@@ -1,7 +1,13 @@
 {
   "resourceType": "OSODCanonicalExtensionRegistry",
-  "generatedAt": "2026-05-01",
+  "generatedAt": "2026-05-02",
   "extensions": [
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/cds-service",
+      "namespace": "cds",
+      "status": "active",
+      "sliceConsumer": "v0.55c"
+    },
     {
       "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
       "namespace": "smart",
