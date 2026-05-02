@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, extname, join, relative, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Resource } from "@medplum/fhirtypes";
 import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
@@ -186,6 +186,23 @@ const VENDOR_CANONICAL_SHAPES: readonly ForbiddenShape[] = [
   },
 ];
 
+const MEDPLUM_CLIENT_APP_PATTERN = new RegExp(`\\b${["Client", "Application"].join("")}\\b`);
+const OSOD_EXTENSION_URL_PATTERN =
+  /https?:\/\/[^"'\s]+\/fhir\/StructureDefinition\/[^"'\s]+/g;
+const PROMISE_ALL_MIGRATION_PATTERN = new RegExp(
+  ["\\bPromise", "\\.", "all", "\\s*\\(", "\\s*[^)]*\\b", "(?:migration|MIGRATION_PATHS|migrationPaths)"].join(""),
+);
+const MARKETPLACE_SUPERLATIVE_PATTERN = new RegExp(
+  [
+    "\\b(?:first|the only|sole)\\s+",
+    "(?:eyecare|optometric)\\s+",
+    "(?:SMART|smart)\\s+",
+    "(?:app\\s+)?",
+    "marketplace\\b",
+  ].join(""),
+  "i",
+);
+
 export const PREFLIGHT_ALLOWED_NETWORK_PATTERNS: readonly RegExp[] = [
   /^https?:\/\/localhost(?::\d+)?(?:\/|$)/i,
   /^https?:\/\/127\.0\.0\.1(?::\d+)?(?:\/|$)/i,
@@ -279,6 +296,46 @@ export function runVendorCanonicalShapePass(
   for (const file of files) {
     const lines = file.text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
+      if (MEDPLUM_CLIENT_APP_PATTERN.test(line) && !isMedplumAdapterPath(file.path)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "client-application-boundary",
+          message: "Forbidden Medplum client app shape outside the v0.55b adapter boundary.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 21,
+          lesson: "v0.55b Binding #1",
+        });
+      }
+      if (isMcpSourcePath(file.path) && PROMISE_ALL_MIGRATION_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "promise-all-migration",
+          message: "Migration DDL must apply sequentially; Promise.all over migration paths is forbidden.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 15,
+          lesson: "v0.55a Lesson 14",
+        });
+      }
+      for (const match of line.matchAll(OSOD_EXTENSION_URL_PATTERN)) {
+        const url = match[0]!;
+        if (urlHost(url) === "osod.dev" && !canonicalExtensionUrls().has(url)) {
+          findings.push({
+            pass: "vendor-canonical-shapes",
+            severity: "hard-block",
+            code: "osod-extension-url-shape",
+            message: "OSOD-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+            source: displayPath(file.path),
+            line: index + 1,
+            column: match.index === undefined ? undefined : match.index + 1,
+            ledgerRow: 19,
+            lesson: "v0.55b Binding #1",
+          });
+        }
+      }
       for (const shape of VENDOR_CANONICAL_SHAPES) {
         shape.pattern.lastIndex = 0;
         if (!shape.pattern.test(line)) {
@@ -316,6 +373,25 @@ export function runVendorCanonicalShapePass(
           lesson: "v0.55a SMART scope-string Pass 4 lint",
         });
       }
+    }
+  }
+
+  for (const file of readMarketplaceCopyFiles()) {
+    const lines = file.text.split(/\r?\n/);
+    for (const [index, line] of lines.entries()) {
+      if (!MARKETPLACE_SUPERLATIVE_PATTERN.test(line)) {
+        continue;
+      }
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "marketplace-superlative-block",
+        message: "Marketplace-superlative copy is blocked until v0.55 ledger row 25 clears.",
+        source: displayPath(file.path),
+        line: index + 1,
+        ledgerRow: 25,
+        lesson: "Mandate 14-amendment 2026-05-01b",
+      });
     }
   }
 
@@ -527,6 +603,15 @@ function readSourceFiles(roots: readonly string[]): { path: string; text: string
 }
 
 function walk(path: string, files: { path: string; text: string }[]): void {
+  try {
+    const maybeFile = readFileSync(path, "utf8");
+    if (SOURCE_EXTENSIONS.has(extname(path))) {
+      files.push({ path, text: maybeFile });
+    }
+    return;
+  } catch {
+    /* continue as directory */
+  }
   let entries;
   try {
     entries = readdirSync(path, { withFileTypes: true });
@@ -549,7 +634,83 @@ function walk(path: string, files: { path: string; text: string }[]): void {
 }
 
 function displayPath(path: string): string {
+  if (!isAbsolute(path)) {
+    return path;
+  }
   return relative(REPO_ROOT, path) || path;
+}
+
+function isMedplumAdapterPath(path: string): boolean {
+  return displayPath(path).startsWith("data/medplum-adapters/");
+}
+
+function isMcpSourcePath(path: string): boolean {
+  return displayPath(path).startsWith("mcp/src/");
+}
+
+function urlHost(value: string): string | undefined {
+  try {
+    return new URL(value).host.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+function readMarketplaceCopyFiles(): { path: string; text: string }[] {
+  const files: { path: string; text: string }[] = [];
+  const readIfExists = (path: string): void => {
+    try {
+      files.push({ path, text: readFileSync(path, "utf8") });
+    } catch {
+      /* absent docs are handled by tests */
+    }
+  };
+  readIfExists(resolve(REPO_ROOT, "README.md"));
+  walkMarkdown(resolve(REPO_ROOT, "docs"), files);
+  walkMarkdown(resolve(REPO_ROOT, "ui/src"), files);
+  return files;
+}
+
+function walkMarkdown(path: string, files: { path: string; text: string }[]): void {
+  let entries;
+  try {
+    entries = readdirSync(path, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const child = join(path, entry.name);
+    if (entry.isDirectory()) {
+      if (![".git", ".osod", "dist", "node_modules"].includes(entry.name)) {
+        walkMarkdown(child, files);
+      }
+      continue;
+    }
+    if (entry.isFile() && [".md", ".ts", ".tsx"].includes(extname(entry.name))) {
+      files.push({ path: child, text: readFileSync(child, "utf8") });
+    }
+  }
+}
+
+let cachedCanonicalExtensionUrls: Set<string> | undefined;
+
+function canonicalExtensionUrls(): Set<string> {
+  cachedCanonicalExtensionUrls ??= (() => {
+    const registryPath = resolve(REPO_ROOT, "data/canonical-extensions/registry.json");
+    try {
+      const registry = JSON.parse(readFileSync(registryPath, "utf8")) as {
+        extensions?: Array<{ url?: string }>;
+      };
+      return new Set(
+        (registry.extensions ?? [])
+          .map((entry) => entry.url)
+          .filter((url): url is string => typeof url === "string"),
+      );
+    } catch {
+      return new Set<string>();
+    }
+  })();
+  return cachedCanonicalExtensionUrls;
 }
 
 function writeReports(report: PreflightReport): void {

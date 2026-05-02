@@ -7,6 +7,10 @@ import {
   createSmartAuthorizationRouter,
   type SmartClientRegistration,
 } from "../../mcp/src/smart/authorization-server.js";
+import type {
+  SmartAppMedplumAdapter,
+  SmartAppRegistryStore,
+} from "../../mcp/src/smart/registration/dynamic-client-registration.js";
 import { pkceS256Challenge } from "../../mcp/src/smart/pkce.js";
 
 export interface SmartTestServer {
@@ -23,6 +27,8 @@ export interface SmartTestServer {
 export async function createSmartTestServer(input: {
   readonly clients?: readonly SmartClientRegistration[];
   readonly now?: () => Date;
+  readonly smartAppRegistryStore?: SmartAppRegistryStore;
+  readonly smartAppMedplumAdapter?: SmartAppMedplumAdapter;
   readonly configureApp?: (app: express.Express, origin: string) => void;
 } = {}): Promise<SmartTestServer> {
   const app = express();
@@ -42,6 +48,8 @@ export async function createSmartTestServer(input: {
       signingKey: createEphemeralSmartSigningKey(),
       state,
       now: input.now,
+      smartAppRegistryStore: input.smartAppRegistryStore,
+      smartAppMedplumAdapter: input.smartAppMedplumAdapter,
     }),
   );
   return {

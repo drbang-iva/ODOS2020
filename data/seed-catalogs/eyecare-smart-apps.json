@@ -1,0 +1,11 @@
+{
+  "catalog": "local eyecare SMART app seed catalog",
+  "version": "v0.55b",
+  "generatedAt": "2026-05-01",
+  "entries": [],
+  "forwardGates": [
+    "No vendor app entry ships until all per-app metadata fields clear two-primary-source verification under v0.55 ledger row 25.",
+    "No patient-engagement-vendor app entries are allowed in v0.55b.",
+    "Every future entry keeps image_analysis_prohibited true unless Mandate 13 is amended by a separate verified decision."
+  ]
+}

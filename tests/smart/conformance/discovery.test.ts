@@ -9,10 +9,16 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
     const first = await fetch(`${server.origin}/.well-known/smart-configuration`);
     assert.equal(first.status, 200);
     assert.equal(first.headers.get("content-type")?.includes("application/json"), true);
-    const firstJson = await first.json() as { capabilities: string[]; code_challenge_methods_supported: string[] };
+    const firstJson = await first.json() as {
+      capabilities: string[];
+      code_challenge_methods_supported: string[];
+      registration_endpoint: string;
+    };
     assert.equal(firstJson.capabilities.includes("client-public"), true);
     assert.equal(firstJson.capabilities.includes("client-confidential-asymmetric"), true);
+    assert.equal(firstJson.capabilities.includes("context-ehr-patient"), true);
     assert.deepEqual(firstJson.code_challenge_methods_supported, ["S256"]);
+    assert.equal(firstJson.registration_endpoint, `${server.origin}/oauth2/register`);
     const firstEtag = first.headers.get("etag");
 
     server.state.clients.set("symmetric-client", symmetricClient(server.origin));

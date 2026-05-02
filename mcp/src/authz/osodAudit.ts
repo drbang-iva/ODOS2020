@@ -52,6 +52,13 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "smart-scope-approved",
   "smart-scope-rejected",
   "smart-sandbox-register",
+  "smart-app-registered",
+  "smart-app-jurisdiction-blocked",
+  "smart-app-installed",
+  "smart-app-install-rejected",
+  "smart-app-removed",
+  "smart-app-review-pending",
+  "smart-app-metadata-updated",
 ] as const;
 
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
@@ -502,18 +509,27 @@ function auditAction(eventType: OsodAuditEventType): AuditEvent["action"] {
     eventType === "backup-started" ||
     eventType === "restore-started" ||
     eventType === "smart-token-issue" ||
-    eventType === "smart-sandbox-register"
+    eventType === "smart-sandbox-register" ||
+    eventType === "smart-app-registered" ||
+    eventType === "smart-app-installed"
   ) {
     return "C";
   }
-  if (eventType === "delete-attempt" || eventType === "nullify-attempt" || eventType === "smart-token-revoke") {
+  if (
+    eventType === "delete-attempt" ||
+    eventType === "nullify-attempt" ||
+    eventType === "smart-token-revoke" ||
+    eventType === "smart-app-removed"
+  ) {
     return "D";
   }
   if (
     eventType === "denied" ||
     eventType === "login-failed" ||
     eventType === "preflight-block" ||
-    eventType === "smart-scope-rejected"
+    eventType === "smart-scope-rejected" ||
+    eventType === "smart-app-jurisdiction-blocked" ||
+    eventType === "smart-app-install-rejected"
   ) {
     return "E";
   }

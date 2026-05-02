@@ -1,0 +1,187 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "smart-client-app",
+  "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
+  "version": "0.55b",
+  "name": "OSODSmartClientApp",
+  "title": "OSOD SMART Client App",
+  "status": "active",
+  "date": "2026-05-01",
+  "publisher": "OSOD",
+  "description": "OSOD local-only SMART app registry metadata carried on Endpoint or Device.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Endpoint"
+    },
+    {
+      "type": "element",
+      "expression": "Device"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "OSOD SMART app registry metadata",
+        "definition": "Local-only SMART app registration and install policy metadata.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata",
+        "path": "Extension.extension",
+        "sliceName": "oauth_metadata",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "oauth_metadata"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:client_type",
+        "path": "Extension.extension.extension",
+        "sliceName": "client_type",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:token_endpoint_auth_method",
+        "path": "Extension.extension.extension",
+        "sliceName": "token_endpoint_auth_method",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:jwks_uri",
+        "path": "Extension.extension.extension",
+        "sliceName": "jwks_uri",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:redirect_uris",
+        "path": "Extension.extension.extension",
+        "sliceName": "redirect_uris",
+        "min": 1,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:launch_uri",
+        "path": "Extension.extension.extension",
+        "sliceName": "launch_uri",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:default_scope",
+        "path": "Extension.extension.extension",
+        "sliceName": "default_scope",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:oauth_metadata.extension:allowed_origin",
+        "path": "Extension.extension.extension",
+        "sliceName": "allowed_origin",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:risk_class",
+        "path": "Extension.extension",
+        "sliceName": "risk_class",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:phi_boundary",
+        "path": "Extension.extension",
+        "sliceName": "phi_boundary",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:launch_mode",
+        "path": "Extension.extension",
+        "sliceName": "launch_mode",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:network_egress",
+        "path": "Extension.extension",
+        "sliceName": "network_egress",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:external_services_required",
+        "path": "Extension.extension",
+        "sliceName": "external_services_required",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:baa_required",
+        "path": "Extension.extension",
+        "sliceName": "baa_required",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:image_analysis_prohibited",
+        "path": "Extension.extension",
+        "sliceName": "image_analysis_prohibited",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:image_analysis_prohibited.valueBoolean",
+        "path": "Extension.extension.valueBoolean",
+        "fixedBoolean": true
+      },
+      {
+        "id": "Extension.extension:allowedJurisdictions",
+        "path": "Extension.extension",
+        "sliceName": "allowedJurisdictions",
+        "min": 1,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:prohibitedStates",
+        "path": "Extension.extension",
+        "sliceName": "prohibitedStates",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:scope_request_canonical",
+        "path": "Extension.extension",
+        "sliceName": "scope_request_canonical",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/smart-client-app"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 0,
+        "max": "0"
+      }
+    ]
+  }
+}

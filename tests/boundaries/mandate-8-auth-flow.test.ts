@@ -22,6 +22,7 @@ import {
   assertSmartAuthorizationNetworkSurface,
 } from "../../mcp/src/smart/authorization-server.js";
 import { approveStagedScopeDecision } from "../../mcp/src/smart/scope-intersection.js";
+import { assertSmartAppAdminActionAllowed } from "../../mcp/src/smart/registration/install-flow.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MCP_INDEX = resolve(HERE, "../../mcp/src/index.ts");
@@ -324,6 +325,44 @@ test("Mandate 8 boundary: SMART authorization round-trip does not call non-local
     "http://medplum-server:8103/oauth2/token",
   ];
   assert.doesNotThrow(() => assertSmartAuthorizationNetworkSurface(networkTrace));
+});
+
+test("Mandate 8 boundary: SMART app registry admin action requires human-supervised practice-admin", () => {
+  assert.throws(
+    () => assertSmartAppAdminActionAllowed({ actorId: "agent-1", actorRole: "autonomous-agent" }),
+    /practice-admin session/,
+  );
+  assert.throws(
+    () => assertSmartAppAdminActionAllowed({ actorId: undefined, actorRole: "practice-admin" }),
+    /practice-admin session/,
+  );
+  assert.doesNotThrow(() => assertSmartAppAdminActionAllowed({ actorId: "admin-1", actorRole: "practice-admin" }));
+});
+
+test("Mandate 8 boundary: SMART app registry network trace is local-only and has no remote catalog sync", () => {
+  const networkTrace = [
+    "http://127.0.0.1:8103/oauth2/register",
+    "http://localhost:8103/fhir/R4/Endpoint",
+    "http://medplum-server:8103/admin/projects/local/client",
+  ];
+  assert.doesNotThrow(() => assertSmartAuthorizationNetworkSurface(networkTrace));
+  assert.equal(networkTrace.some((url) => /catalog|sync|appstore/i.test(url)), false);
+});
+
+test("Mandate 8 boundary: operational copy contains no blocked marketplace superlative", () => {
+  const roots = [
+    resolve(HERE, "../../README.md"),
+    resolve(HERE, "../../docs/smart.md"),
+    resolve(HERE, "../../docs/smart-app-registry.md"),
+    resolve(HERE, "../../ui/src/admin/smart-app-review/SmartAppReviewPanel.tsx"),
+  ];
+  const pattern = new RegExp(
+    "\\b(first|the only|sole)\\s+(eyecare|optometric)\\s+(SMART|smart)\\s+(app\\s+)?marketplace\\b",
+    "i",
+  );
+  for (const root of roots) {
+    assert.equal(pattern.test(readFileSync(root, "utf8")), false, root);
+  }
 });
 
 function listMcpToolNames(): string[] {

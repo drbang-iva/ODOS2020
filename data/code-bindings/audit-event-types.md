@@ -49,6 +49,13 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `smart-scope-approved` | smart-authz-event | SMART scope decision approved automatically or by admin review. Ledger: v0.55 rows 9 and 11. |
 | `smart-scope-rejected` | smart-authz-event | SMART scope request rejected automatically or by admin review. Ledger: v0.55 rows 9 and 11. |
 | `smart-sandbox-register` | smart-authz-event | Sandbox SMART app registered through the local developer endpoint. Ledger: v0.55 rows 4 and 5. |
+| `smart-app-registered` | smart-registry-event | SMART app registered through local dynamic client registration. Ledger: v0.55 row 16. |
+| `smart-app-jurisdiction-blocked` | smart-registry-event | SMART app install blocked by jurisdiction rule. Ledger: v0.55 row 20. |
+| `smart-app-installed` | smart-registry-event | SMART app installed after local admin review. Ledger: v0.55 rows 23 and 25. |
+| `smart-app-install-rejected` | smart-registry-event | SMART app install rejected by local manifest policy. Ledger: v0.55 rows 23 and 24. |
+| `smart-app-removed` | smart-registry-event | SMART app removed from the local registry. Ledger: v0.55 row 27. |
+| `smart-app-review-pending` | smart-registry-event | SMART app install entered pending admin review. Ledger: v0.55 row 24. |
+| `smart-app-metadata-updated` | smart-registry-event | SMART app registry metadata updated. Ledger: v0.55 rows 19 and 23. |
 
 ## Information Blocking Exceptions
 

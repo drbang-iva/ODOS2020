@@ -16,6 +16,8 @@ Run OSOD on your own hardware. Your patients, your machines, your data.
 
 OSOD is designed for a practice-owned Mac Studio, NUC, Linux box, or server with at least 16 GB RAM and 500 GB storage. The practice remains responsible for physical safeguards around that hardware and its backup media; see v0.5 verification ledger row 46 for HIPAA 45 CFR §164.310. Docker Compose v2 is the local deployment surface; see ledger row 47 and the official Docker Compose install docs: <https://docs.docker.com/compose/install/>.
 
+Install only the SMART apps you opt into. Your registry, your seed catalog, your call.
+
 ```bash
 # 1. Install Docker + Docker Compose v2, then clone OSOD
 git clone https://github.com/drbang-iva/osod.git
@@ -43,7 +45,7 @@ npm run preflight
 
 The setup wizard creates the first admin project/user, first Practitioner, first clinician AccessPolicy, and an audit trail for those writes. It is an interactive, human-supervised installer, not an autonomous agent. Re-running it after setup is a clean no-op.
 
-The local SMART authorization server runs in the MCP Node adapter for SMART App Launch v2 authorization, token, introspection, revocation, JWKS, and sandbox-registration flows. It uses the practice-local signing key at `OSOD_SMART_SIGNING_KEY_PATH` and intersects requested SMART scopes with OSOD AccessPolicy before issuing tokens; see [`docs/smart.md`](docs/smart.md).
+The local SMART authorization server runs in the MCP Node adapter for SMART App Launch v2 authorization, token, introspection, revocation, JWKS, and local app-registration flows. It uses the practice-local signing key at `OSOD_SMART_SIGNING_KEY_PATH`, intersects requested SMART scopes with OSOD AccessPolicy before issuing tokens, and registers opted-in apps through the local eyecare SMART app seed catalog; see [`docs/smart.md`](docs/smart.md) and [`docs/smart-app-registry.md`](docs/smart-app-registry.md).
 
 OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
 

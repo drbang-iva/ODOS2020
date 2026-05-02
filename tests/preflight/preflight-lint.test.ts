@@ -62,6 +62,32 @@ test("v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree a
   assert.equal(salted.findings[0]?.code, "observation-attestation-property");
 });
 
+test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures", () => {
+  const clientAppShape = ["Client", "Application"].join("");
+  const clientApp = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/bad.ts", text: `const x = ${JSON.stringify(clientAppShape)};\n` }],
+  });
+  assert.equal(clientApp.status, "hard-block");
+  assert.equal(clientApp.findings[0]?.code, "client-application-boundary");
+
+  const extension = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/bad.ts",
+        text: `const url = "${["https://osod.dev/fhir/StructureDefinition", "not-in-registry"].join("/")}";\n`,
+      },
+    ],
+  });
+  assert.equal(extension.status, "hard-block");
+  assert.equal(extension.findings[0]?.code, "osod-extension-url-shape");
+
+  const migration = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/bad.ts", text: "await Promise.all(MIGRATION_PATHS.map(runMigration));\n" }],
+  });
+  assert.equal(migration.status, "hard-block");
+  assert.equal(migration.findings[0]?.code, "promise-all-migration");
+});
+
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
   const dir = mkdtempSync(join(tmpdir(), "osod-preflight-"));
   try {
