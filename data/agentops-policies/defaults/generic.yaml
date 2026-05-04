@@ -1,0 +1,69 @@
+policies:
+  - rule_id: generic-read-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: "*"
+      target_resourceType: "*"
+      specific_action: read
+      clinical_billing_patient_facing_impact: none
+      initiation_mode: user-initiated
+    threshold_class: LOW
+    agent_scope: any-agent
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Read-only user-initiated AgentOps actions are auto-accepted with audit and undo metadata.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: generic-clinical-write-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: "*"
+      target_resourceType: "*"
+      specific_action: write
+      clinical_billing_patient_facing_impact: clinical
+      initiation_mode: user-initiated
+    threshold_class: HIGH
+    agent_scope: any-agent
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Unknown clinical writes require staged review by default.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: generic-raw-image-byte-to-llm-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: raw-image-byte-to-llm
+      target_resourceType: Binary
+      specific_action: execute
+      clinical_billing_patient_facing_impact: clinical
+      initiation_mode: user-initiated
+    threshold_class: CRITICAL
+    agent_scope: any-agent
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Mandate 13 blocks raw image bytes from entering any LLM context.
+    on_violation:
+      verdict: blocked
+      §171_exception_code: PreventingHarm
+      escalation_target: break-glass
+  - rule_id: generic-high-frequency-query-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: high-frequency-fhir-query
+      target_resourceType: "*"
+      specific_action: read
+      clinical_billing_patient_facing_impact: mixed
+      initiation_mode: user-initiated
+    threshold_class: HIGH
+    agent_scope: any-agent
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: High-frequency third-party agent query load may degrade local health IT performance.
+    on_violation:
+      verdict: blocked
+      §171_exception_code: HealthITPerformance
+      escalation_target: staged-admin-review
+retention:
+  retention_years: 7

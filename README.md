@@ -49,6 +49,8 @@ The local SMART authorization server runs in the MCP Node adapter for SMART App 
 
 Decision support runs locally. External CDS services are off by default — opt in only the ones you trust, only when you trust them. The v0.55c CDS Hooks client advertises local OSOD specialty services and practice-approved external services through the local `/cds-services` endpoint; see [`docs/cds-hooks.md`](docs/cds-hooks.md).
 
+AI agents that touch your charts run under AgentOps governance — every action is auditable, blockable, and undoable. Your rules. Your machine. Your call. See [`docs/agentops.md`](docs/agentops.md).
+
 OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
 
 For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see [`docs/install.md`](docs/install.md) and [`docs/backup.md`](docs/backup.md).

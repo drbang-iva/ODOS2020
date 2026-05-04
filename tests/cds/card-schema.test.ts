@@ -45,3 +45,17 @@ test("v0.55c CDS card schema rejects executable card payloads", () => {
   };
   assert.equal(validateCdsCard(executableSuggestion).valid, false);
 });
+
+test("v0.55d agent-origin CDS cards require initiation_mode and agent_device_reference", () => {
+  const missing = validateCdsCard(baseCard, { agentOrigin: true });
+  assert.equal(missing.valid, false);
+  assert.equal(missing.errors.includes("initiation_mode is required"), true);
+  assert.equal(missing.errors.includes("agent_device_reference is required"), true);
+
+  const agentCard = {
+    ...baseCard,
+    initiation_mode: "user-initiated",
+    agent_device_reference: "Device/iris",
+  };
+  assert.equal(validateCdsCard(agentCard, { agentOrigin: true }).valid, true);
+});

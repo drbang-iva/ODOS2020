@@ -13,12 +13,25 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
       capabilities: string[];
       code_challenge_methods_supported: string[];
       registration_endpoint: string;
+      osod_extensions: {
+        agentops_endpoint: string;
+        agentops_capabilities: string[];
+      };
     };
     assert.equal(firstJson.capabilities.includes("client-public"), true);
     assert.equal(firstJson.capabilities.includes("client-confidential-asymmetric"), true);
     assert.equal(firstJson.capabilities.includes("context-ehr-patient"), true);
     assert.deepEqual(firstJson.code_challenge_methods_supported, ["S256"]);
     assert.equal(firstJson.registration_endpoint, `${server.origin}/oauth2/register`);
+    assert.deepEqual(firstJson.osod_extensions, {
+      agentops_endpoint: `${server.origin}/agentops`,
+      agentops_capabilities: [
+        "agent_registration",
+        "threshold_matrix_query",
+        "safety_valve_inspection",
+        "audit_record_query",
+      ],
+    });
     const firstEtag = first.headers.get("etag");
 
     server.state.clients.set("symmetric-client", symmetricClient(server.origin));

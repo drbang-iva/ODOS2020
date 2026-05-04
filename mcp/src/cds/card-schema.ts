@@ -5,16 +5,24 @@ import type {
   CdsInterventionRiskManagement,
   CdsSourceAttributes,
 } from "./types.js";
+import { hasPredictiveDsiSourceAttributes } from "../agentops/device-registry.js";
+import { INITIATION_MODES } from "../agentops/types.js";
+import type { Device } from "@medplum/fhirtypes";
 
 export interface CdsCardValidationResult {
   readonly valid: boolean;
   readonly errors: readonly string[];
 }
 
+export interface CdsCardValidationOptions {
+  readonly agentOrigin?: boolean;
+  readonly agentDevice?: Device;
+}
+
 const DSI_TYPES: readonly CdsDsiType[] = ["predictive", "evidence-based", "rules-based"];
 const INDICATORS = ["info", "warning", "critical"] as const;
 
-export function validateCdsCard(card: unknown): CdsCardValidationResult {
+export function validateCdsCard(card: unknown, options: CdsCardValidationOptions = {}): CdsCardValidationResult {
   const errors: string[] = [];
   if (!isRecord(card)) {
     return { valid: false, errors: ["card must be an object"] };
@@ -38,6 +46,17 @@ export function validateCdsCard(card: unknown): CdsCardValidationResult {
   }
   requireRiskManagement(card.intervention_risk_management, errors);
   requireSourceAttributes(card.source_attributes, errors);
+  const hasAgentFields = typeof card.initiation_mode === "string" || typeof card.agent_device_reference === "string";
+  if (options.agentOrigin || hasAgentFields) {
+    const initiationMode = requireString(card, "initiation_mode", errors);
+    if (initiationMode && !INITIATION_MODES.includes(initiationMode as (typeof INITIATION_MODES)[number])) {
+      errors.push("initiation_mode must be user-initiated or autonomously-initiated");
+    }
+    const reference = requireString(card, "agent_device_reference", errors);
+    if (reference && !reference.startsWith("Device/")) {
+      errors.push("agent_device_reference must be a FHIR Reference(Device)");
+    }
+  }
 
   if (dsiType === "predictive") {
     if (!Array.isArray(card.training_data_demographics) || card.training_data_demographics.length === 0) {
@@ -57,6 +76,9 @@ export function validateCdsCard(card: unknown): CdsCardValidationResult {
         }
       }
     }
+    if ((options.agentOrigin || hasAgentFields) && !hasPredictiveDsiSourceAttributes(options.agentDevice)) {
+      errors.push("dsi-source-attributes-missing");
+    }
   }
 
   if (containsExecutableContent(card)) {
@@ -66,8 +88,8 @@ export function validateCdsCard(card: unknown): CdsCardValidationResult {
   return { valid: errors.length === 0, errors };
 }
 
-export function assertValidCdsCard(card: unknown): asserts card is CdsCard {
-  const result = validateCdsCard(card);
+export function assertValidCdsCard(card: unknown, options: CdsCardValidationOptions = {}): asserts card is CdsCard {
+  const result = validateCdsCard(card, options);
   if (!result.valid) {
     throw new Error(`CDS card validation failed: ${result.errors.join("; ")}`);
   }

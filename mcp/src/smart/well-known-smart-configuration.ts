@@ -11,6 +11,10 @@ export interface SmartConfigurationSnapshot {
   readonly registrationEndpoint: string;
   readonly cdsHooksEndpoint: string;
   readonly cdsCapabilities: readonly string[];
+  readonly osodExtensions?: {
+    readonly agentopsEndpoint?: string;
+    readonly agentopsCapabilities?: readonly string[];
+  };
   readonly scopesSupported: readonly string[];
   readonly responseTypesSupported: readonly string[];
   readonly codeChallengeMethodsSupported: readonly string[];
@@ -31,6 +35,10 @@ export interface SmartConfigurationDocument {
   readonly registration_endpoint: string;
   readonly cds_hooks_endpoint: string;
   readonly cds_capabilities: readonly string[];
+  readonly osod_extensions?: {
+    readonly agentops_endpoint?: string;
+    readonly agentops_capabilities?: readonly string[];
+  };
   readonly scopes_supported: readonly string[];
   readonly response_types_supported: readonly string[];
   readonly grant_types_supported: readonly string[];
@@ -50,6 +58,14 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
     registration_endpoint: snapshot.registrationEndpoint,
     cds_hooks_endpoint: snapshot.cdsHooksEndpoint,
     cds_capabilities: snapshot.cdsCapabilities,
+    ...(snapshot.osodExtensions
+      ? {
+          osod_extensions: {
+            agentops_endpoint: snapshot.osodExtensions.agentopsEndpoint,
+            agentops_capabilities: snapshot.osodExtensions.agentopsCapabilities,
+          },
+        }
+      : {}),
     scopes_supported: snapshot.scopesSupported,
     response_types_supported: snapshot.responseTypesSupported,
     grant_types_supported: snapshot.grantTypesSupported,

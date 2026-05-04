@@ -25,6 +25,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - osod-internal
 
   redis:
     image: redis:7-alpine
@@ -37,6 +39,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - osod-internal
 
   medplum-server:
     image: medplum/medplum-server:latest
@@ -53,6 +57,8 @@ services:
     ports:
       - "8103:8103"
     command: ["file:/config/medplum.config.json"]
+    networks:
+      - osod-internal
 
   medplum-app:
     image: medplum/medplum-app:latest
@@ -63,7 +69,48 @@ services:
       - "8100:3000"
     environment:
       MEDPLUM_BASE_URL: http://localhost:8103/
+    networks:
+      - osod-internal
+
+  osod-core:
+    image: node:22-alpine
+    profiles: ["agentops"]
+    working_dir: /workspace
+    command: ["npm", "--prefix", "mcp", "run", "start"]
+    environment:
+      MEDPLUM_BASE_URL: http://medplum-server:8103/
+      OSOD_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+      OSOD_AGENTOPS_RUNTIME: supervisor
+    volumes:
+      - ./:/workspace:ro
+    depends_on:
+      medplum-server:
+        condition: service_started
+    networks:
+      - osod-internal
+      - osod-egress
+
+  osod-agent-iris:
+    image: node:22-alpine
+    profiles: ["agentops"]
+    working_dir: /workspace
+    command: ["node", "mcp/dist/agentops/runtime/agent-process.js"]
+    environment:
+      AGENT_DEVICE_ID: https://osod.dev/agents/iris
+      MEDPLUM_BASE_URL: http://medplum-server:8103/
+      OSOD_CORE_IPC_URL: http://osod-core:8787/
+    volumes:
+      - ./:/workspace:ro
+    depends_on:
+      - osod-core
+    networks:
+      - osod-internal
 
 volumes:
   postgres-data:
   medplum-binary:
+
+networks:
+  osod-internal:
+    internal: true
+  osod-egress:

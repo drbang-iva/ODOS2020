@@ -82,7 +82,17 @@ test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures",
   assert.equal(extension.findings[0]?.code, "osod-extension-url-shape");
 
   const migration = runVendorCanonicalShapePass({
-    files: [{ path: "mcp/src/bad.ts", text: "await Promise.all(MIGRATION_PATHS.map(runMigration));\n" }],
+    files: [
+      {
+        path: "mcp/src/bad.ts",
+        text: [
+          "await Promise",
+          ".all(",
+          ["MIGRATION", "PATHS"].join("_"),
+          ".map(runMigration));\n",
+        ].join(""),
+      },
+    ],
   });
   assert.equal(migration.status, "hard-block");
   assert.equal(migration.findings[0]?.code, "promise-all-migration");
@@ -117,6 +127,69 @@ test("v0.55c preflight pass 4 hard-blocks CDS hook and copy boundary fixtures", 
   });
   assert.equal(copy.status, "hard-block");
   assert.equal(copy.findings[0]?.code, "external-cds-services-superlative-block");
+});
+
+test("v0.55d preflight pass 4 hard-blocks AgentOps policy and naming fixtures", () => {
+  const badPolicy = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "data/agentops-policies/defaults/bad.yaml",
+        text: [
+          "policies:",
+          "  - rule_id: bad",
+          "    rule_version: 2026-05-04",
+          "    composite_key:",
+          "      tool_name: bad",
+          "      target_resourceType: Observation",
+          "      specific_action: write",
+          "      clinical_billing_patient_facing_impact: clinical",
+          "    threshold_class: HIGH",
+          "    agent_scope: any-agent",
+          "    effective_from: 2026-05-04",
+          "    effective_to: null",
+          "    rationale: missing initiation mode",
+          "    on_violation:",
+          "      verdict: confirmation-required",
+          "      escalation_target: staged-admin-review",
+          "retention:",
+          "  retention_years: 7",
+        ].join("\n"),
+      },
+    ],
+  });
+  assert.equal(badPolicy.status, "hard-block");
+  assert.equal(badPolicy.findings[0]?.code, "agentops-policy-schema");
+
+  const alias = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/agentops/bad.ts", text: "const init_mode = 'x';\n" }],
+  });
+  assert.equal(alias.status, "hard-block");
+  assert.equal(alias.findings[0]?.code, "agentops-initiation-mode-canonical-name");
+});
+
+test("v0.55d preflight pass 4 hard-blocks AgentOps response and AIAST fixtures", () => {
+  const aiast = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/agentops/bad.ts", text: "const coding = { code: 'AIAST' };\n" }],
+  });
+  assert.equal(aiast.status, "hard-block");
+  assert.equal(aiast.findings[0]?.code, "agentops-aiast-system-uri-required");
+
+  const leak = runVendorCanonicalShapePass({
+    files: [{ path: "mcp/src/agentops/safety-valve.ts", text: "res.setHeader('X-OSOD-IB-Exception', 'x');\n" }],
+  });
+  assert.equal(leak.status, "hard-block");
+  assert.equal(leak.findings[0]?.code, "agentops-safety-valve-no-protectingcareaccess-leak");
+
+  const network = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/agentops/runtime/supervisor.ts",
+        text: [["ipt", "ables"].join(""), " --uid-owner 501\n"].join(""),
+      },
+    ],
+  });
+  assert.equal(network.status, "hard-block");
+  assert.equal(network.findings[0]?.code, "agentops-dual-container-network-namespace-required");
 });
 
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
