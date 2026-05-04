@@ -1,0 +1,55 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "model-identity",
+  "url": "https://osod.dev/fhir/StructureDefinition/model-identity",
+  "version": "0.55d",
+  "name": "OSODModelIdentity",
+  "status": "active",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Device"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "description": "OSOD AgentOps metadata for a FHIR Device representing an underlying AI model.",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "AgentOps model identity metadata"
+      },
+      {
+        "id": "Extension.extension:vendor_name",
+        "path": "Extension.extension",
+        "sliceName": "vendor_name",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:vendor_baa_eligible",
+        "path": "Extension.extension",
+        "sliceName": "vendor_baa_eligible",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:mcp_baa_carve_out",
+        "path": "Extension.extension",
+        "sliceName": "mcp_baa_carve_out",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/model-identity"
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "row_id": 43,
+    "source_url": "https://www.federalregister.gov/documents/2025/12/29/2025-23896/health-data-technology-and-interoperability-astponc-deregulatory-actions-to-unleash-prosperity",
+    "access_date": "2026-05-04",
+    "status": "verified-at-authoring; Proposed; per-commit re-verification REQUIRED",
+    "commit_sha": "uncommitted-v0.55d"
+  },
+  {
+    "row_id": 45,
+    "source_url": "https://support.claude.com/en/articles/8114513-business-associate-agreements-baa-for-commercial-customers",
+    "access_date": "2026-05-04",
+    "status": "verified-at-authoring; third-party MCP data flows not covered by Anthropic BAA; per-commit re-verification REQUIRED",
+    "commit_sha": "uncommitted-v0.55d"
+  }
+]

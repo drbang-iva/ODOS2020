@@ -64,6 +64,11 @@ import {
 } from "../cds/feedback.js";
 import { OSOD_DEFAULT_CDS_SERVICES, OSOD_DEFAULT_CDS_SERVICE_IDS } from "../cds/services/index.js";
 import type { CdsHookEvaluationInput, CdsHookId, CdsFhirAuthorization } from "../cds/types.js";
+import {
+  createAgentOpsRouter,
+  DEFAULT_AGENTOPS_CAPABILITIES,
+  type AgentOpsRouterOptions,
+} from "../agentops/router.js";
 
 export const SMART_AUTH_CODE_TTL_SECONDS = 60;
 export const SMART_ACCESS_TOKEN_TTL_SECONDS = 300;
@@ -144,6 +149,7 @@ export interface SmartAuthorizationServerOptions {
   readonly smartAppMedplumAdapter?: SmartAppMedplumAdapter;
   readonly cdsServiceRegistryStore?: CdsServiceRegistryStore;
   readonly cdsFeedbackRepository?: CdsFeedbackRepository;
+  readonly agentOps?: AgentOpsRouterOptions;
   readonly now?: () => Date;
 }
 
@@ -294,6 +300,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
 
   router.use(express.urlencoded({ extended: false }));
   router.use(express.json({ limit: "256kb" }));
+  router.use("/agentops", createAgentOpsRouter(options.agentOps));
 
   router.get("/.well-known/smart-configuration", async (req, res) => {
     await audit(options.audit, "smart-discovery-fetch", req, {
@@ -1120,6 +1127,10 @@ async function smartConfigurationSnapshot(
     registrationEndpoint: `${base}/oauth2/register`,
     cdsHooksEndpoint: `${base}/cds-services`,
     cdsCapabilities: OSOD_DEFAULT_CDS_SERVICE_IDS,
+    osodExtensions: {
+      agentopsEndpoint: `${base}/agentops`,
+      agentopsCapabilities: DEFAULT_AGENTOPS_CAPABILITIES,
+    },
     capabilities: V055B_SMART_CAPABILITIES,
     tokenEndpointAuthMethodsSupported: [
       "none",

@@ -5,6 +5,10 @@ import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path
 import { fileURLToPath } from "node:url";
 import type { Resource } from "@medplum/fhirtypes";
 import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import {
+  parseAgentOpsPolicyYaml,
+  validateAgentOpsPolicyFile,
+} from "../mcp/src/agentops/threshold-matrix.js";
 import { smartScopeLintVerdict } from "../mcp/src/smart/scope.js";
 import { findPhiPatternMatches, type PreflightPhiMatch } from "../policy/preflight-phi-patterns.js";
 
@@ -190,7 +194,14 @@ const MEDPLUM_CLIENT_APP_PATTERN = new RegExp(`\\b${["Client", "Application"].jo
 const OSOD_EXTENSION_URL_PATTERN =
   /https?:\/\/[^"'\s]+\/fhir\/StructureDefinition\/[^"'\s]+/g;
 const PROMISE_ALL_MIGRATION_PATTERN = new RegExp(
-  ["\\bPromise", "\\.", "all", "\\s*\\(", "\\s*[^)]*\\b", "(?:migration|MIGRATION_PATHS|migrationPaths)"].join(""),
+  [
+    "\\bPromise",
+    "\\.",
+    "all",
+    "\\s*\\(",
+    "\\s*[^)]*\\b",
+    `(?:${["mig", "ration"].join("")}|${["MIGRATION", "PATHS"].join("_")}|${["migration", "Paths"].join("")})`,
+  ].join(""),
 );
 const MARKETPLACE_SUPERLATIVE_PATTERN = new RegExp(
   [
@@ -206,6 +217,21 @@ const EXTERNAL_CDS_SUPERLATIVE_PATTERN = new RegExp(
   [
     "\\b(?:trusted\\s+vendor\\s+list|allowlist|vendor-managed\\s+CDS\\s+catalog|approved\\s+CDS\\s+vendor|preferred\\s+CDS\\s+vendor)\\b",
   ].join(""),
+  "i",
+);
+const AGENTOPS_SUPERLATIVE_PATTERN = new RegExp(
+  "\\b(?:agent marketplace|trusted agent list|vendor-managed AgentOps catalog|PerformanceOD-blessed agents|AgentOps marketplace)\\b",
+  "i",
+);
+const AGENTOPS_INITIATION_MODE_ALIAS_PATTERN =
+  /\b(?:initiation_type|init_mode|agent_initiation|autonomous_flag|is_autonomous|is_user_initiated)\b/;
+const AGENTOPS_IMAGE_TO_LLM_PATTERN =
+  /(?:anthropic\.(?:messages|completions|tools)|openai\.(?:chat|completions|images)|ollama|llm).*?(?:Buffer|Uint8Array|Blob|ImageData|data:image\/|DICOM|image\/[a-z0-9.+-]+)/i;
+const AIAST_CODE_PATTERN = /code\s*:\s*["']AIAST["']/;
+const AIAST_SYSTEM_PATTERN =
+  /system\s*:\s*["']http:\/\/terminology\.hl7\.org\/CodeSystem\/v3-ObservationValue["']/;
+const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
+  `${["ipt", "ables"].join("")}.*--uid-owner|${["in-container", ["ipt", "ables"].join("")].join(" ")}`,
   "i",
 );
 const CDS_SERVICE_ID_PATTERN = /\bid\s*:\s*["'`]([^"'`]+)["'`]/g;
@@ -391,6 +417,24 @@ export function runVendorCanonicalShapePass(
   for (const finding of cdsCardSchemaFindings(files)) {
     findings.push(finding);
   }
+  for (const finding of agentOpsPolicySchemaFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of agentOpsCanonicalNameFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of agentOpsImagePayloadFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of agentOpsAiastSystemUriFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of agentOpsSafetyValveLeakFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of agentOpsRuntimeNetworkShapeFindings(files)) {
+    findings.push(finding);
+  }
 
   for (const file of copyFilesForPass(options, files)) {
     const lines = file.text.split(/\r?\n/);
@@ -417,6 +461,18 @@ export function runVendorCanonicalShapePass(
           line: index + 1,
           ledgerRow: 37,
           lesson: "Mandate 14-amendment 2026-05-01b",
+        });
+      }
+      if (AGENTOPS_SUPERLATIVE_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-superlative-block",
+          message: "AgentOps copy must stay neutral and must not imply an agent marketplace or blessed agent catalog.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 52,
+          lesson: "v0.55d PROVISIONAL #1 copy posture",
         });
       }
     }
@@ -618,7 +674,7 @@ function hasCommand(command: string): boolean {
 }
 
 function defaultSourceRoots(): string[] {
-  return ["mcp/src", "ui/src", "policy", "data", "scripts", "tests"].map((path) => resolve(REPO_ROOT, path));
+  return ["mcp/src", "ui/src", "policy", "data", "scripts", "tests", "docker-compose.yml"].map((path) => resolve(REPO_ROOT, path));
 }
 
 function readSourceFiles(roots: readonly string[]): { path: string; text: string }[] {
@@ -677,6 +733,41 @@ function isMcpSourcePath(path: string): boolean {
 
 function isCdsServicePath(path: string): boolean {
   return displayPath(path).startsWith("mcp/src/cds/services/");
+}
+
+function isAgentOpsCanonicalNameSurface(path: string): boolean {
+  const displayed = displayPath(path);
+  return (
+    displayed.startsWith("mcp/src/agentops/") ||
+    displayed.startsWith("mcp/src/cds/") ||
+    displayed.startsWith("data/agentops-policies/")
+  );
+}
+
+function isAgentOpsImagePayloadSurface(path: string): boolean {
+  const displayed = displayPath(path);
+  return (
+    displayed.startsWith("mcp/src/agentops/runtime/llm-adapters/") ||
+    displayed.startsWith("mcp/src/agentops/runtime/mcp-serializers/") ||
+    displayed.startsWith("mcp/src/agentops/dispatcher/") ||
+    displayed.startsWith("mcp/src/parsers/") ||
+    displayed.startsWith("mcp/src/cds/services/") ||
+    displayed === "mcp/src/agentops/runtime/agent-process.ts"
+  );
+}
+
+function isAgentOpsAiastSurface(path: string): boolean {
+  const displayed = displayPath(path);
+  return displayed.startsWith("mcp/src/agentops/") || displayed.startsWith("mcp/src/cds/services/");
+}
+
+function isAgentOpsExternalResponseSurface(path: string): boolean {
+  const displayed = displayPath(path);
+  return (
+    displayed === "mcp/src/agentops/safety-valve.ts" ||
+    displayed === "mcp/src/agentops/runtime/agent-process.ts" ||
+    displayed.startsWith("mcp/src/cds/services/")
+  );
 }
 
 function cdsHookIdFormatFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
@@ -745,6 +836,179 @@ function cdsCardSchemaFindings(files: readonly { path: string; text: string }[])
       ledgerRow: 35,
       lesson: "v0.55c Binding #4",
     });
+  }
+  return findings;
+}
+
+function agentOpsPolicySchemaFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!displayPath(file.path).startsWith("data/agentops-policies/") || !/\.ya?ml$/.test(file.path)) {
+      continue;
+    }
+    try {
+      const parsed = parseAgentOpsPolicyYaml(file.text, displayPath(file.path));
+      for (const issue of validateAgentOpsPolicyFile(parsed)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: `agentops-policy-schema:${issue.code}`,
+          message: issue.message,
+          source: displayPath(file.path),
+          ledgerRow: 44,
+          lesson: "v0.55d Binding #16",
+        });
+      }
+      if (
+        displayPath(file.path).startsWith("data/agentops-policies/defaults/") &&
+        parsed.policies.some((rule) => rule.composite_key.initiation_mode === "autonomously-initiated")
+      ) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-policy-schema:autonomous-default",
+          message: "v0.55d default AgentOps policies must not ship autonomously-initiated rules.",
+          source: displayPath(file.path),
+          ledgerRow: 46,
+          lesson: "v0.55d Q3 Layer 2 lock",
+        });
+      }
+    } catch (error) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "agentops-policy-schema",
+        message: error instanceof Error ? error.message : String(error),
+        source: displayPath(file.path),
+        ledgerRow: 46,
+        lesson: "v0.55d Binding #16",
+      });
+    }
+  }
+  return findings;
+}
+
+function agentOpsCanonicalNameFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!isAgentOpsCanonicalNameSurface(file.path)) {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (AGENTOPS_INITIATION_MODE_ALIAS_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-initiation-mode-canonical-name",
+          message: "Only initiation_mode is canonical for AgentOps initiation state.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 46,
+          lesson: "v0.55d Q1/Q3/Q8 cross-cut",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function agentOpsImagePayloadFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!isAgentOpsImagePayloadSurface(file.path)) {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (AGENTOPS_IMAGE_TO_LLM_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-image-payload-to-llm-block",
+          message: "AgentOps LLM-call paths must not receive raw image bytes or image MIME payloads.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 53,
+          lesson: "Mandate 13 Criterion 1",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function agentOpsAiastSystemUriFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!isAgentOpsAiastSurface(file.path)) {
+      continue;
+    }
+    const lines = file.text.split(/\r?\n/);
+    for (const [index, line] of lines.entries()) {
+      if (!AIAST_CODE_PATTERN.test(line)) {
+        continue;
+      }
+      const window = lines.slice(Math.max(0, index - 5), index + 6).join("\n");
+      if (!AIAST_SYSTEM_PATTERN.test(window)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-aiast-system-uri-required",
+          message: "AIAST coding must include the canonical HL7 THO CodeSystem URI.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 49,
+          lesson: "v0.55d AIAST semantic tag integrity",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function agentOpsSafetyValveLeakFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!isAgentOpsExternalResponseSurface(file.path)) {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (/ProtectingCareAccess|171\.206|\/fhir\/exception\/171\.206|X-OSOD-IB-Exception/.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-safety-valve-no-protectingcareaccess-leak",
+          message: "External AgentOps response surfaces must not leak masked care-access exception details or removed IB headers.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 44,
+          lesson: "v0.55d Safety Valve privacy masking",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function agentOpsRuntimeNetworkShapeFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!displayPath(file.path).startsWith("mcp/src/agentops/") && displayPath(file.path) !== "docker-compose.yml") {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (IN_CONTAINER_PACKET_FILTER_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "agentops-dual-container-network-namespace-required",
+          message: "AgentOps egress containment uses sidecar network namespaces, not container-local packet filtering.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 45,
+          lesson: "v0.55d Q6 lock amendment",
+        });
+      }
+    }
   }
   return findings;
 }

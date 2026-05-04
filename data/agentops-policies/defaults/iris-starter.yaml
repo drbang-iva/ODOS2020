@@ -1,0 +1,67 @@
+policies:
+  - rule_id: iris-finalize-chart-summary-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: iris-finalize-chart-summary
+      target_resourceType: Composition
+      specific_action: write
+      clinical_billing_patient_facing_impact: clinical
+      initiation_mode: user-initiated
+    threshold_class: MEDIUM
+    agent_scope: https://osod.dev/agents/iris
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Iris can draft and finalize chart summaries after inline clinician confirmation.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: iris-propose-followup-appointment-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: iris-propose-followup-appointment
+      target_resourceType: Appointment
+      specific_action: write
+      clinical_billing_patient_facing_impact: mixed
+      initiation_mode: user-initiated
+    threshold_class: LOW
+    agent_scope: https://osod.dev/agents/iris
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Iris follow-up proposals stay clinician-facing and remain undoable.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: iris-draft-clinical-correspondence-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: iris-draft-clinical-correspondence
+      target_resourceType: Communication
+      specific_action: write
+      clinical_billing_patient_facing_impact: clinical
+      initiation_mode: user-initiated
+    threshold_class: MEDIUM
+    agent_scope: https://osod.dev/agents/iris
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Iris may draft clinician-facing correspondence but patient-channel dispatch remains out of scope.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: iris-billing-code-submission-user-initiated
+    rule_version: 2026-05-04
+    composite_key:
+      tool_name: iris-submit-billing-code
+      target_resourceType: Claim
+      specific_action: write
+      clinical_billing_patient_facing_impact: billing
+      initiation_mode: user-initiated
+    threshold_class: CRITICAL
+    agent_scope: https://osod.dev/agents/iris
+    effective_from: 2026-05-04
+    effective_to: null
+    rationale: Billing-impact submissions require dual verification.
+    on_violation:
+      verdict: escalated
+      escalation_target: dual-verification
+retention:
+  retention_years: 7

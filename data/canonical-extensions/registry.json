@@ -3,6 +3,36 @@
   "generatedAt": "2026-05-02",
   "extensions": [
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/agent-identity",
+      "namespace": "agentops",
+      "status": "active",
+      "sliceConsumer": "v0.55d"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/model-identity",
+      "namespace": "agentops",
+      "status": "active",
+      "sliceConsumer": "v0.55d"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/agentops-record",
+      "namespace": "agentops",
+      "status": "active",
+      "sliceConsumer": "v0.55d"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/agentops-blocked-payload",
+      "namespace": "agentops",
+      "status": "active",
+      "sliceConsumer": "v0.55d"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+      "namespace": "agentops",
+      "status": "active",
+      "sliceConsumer": "v0.55d"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/cds-service",
       "namespace": "cds",
       "status": "active",

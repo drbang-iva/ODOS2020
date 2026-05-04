@@ -1,4 +1,5 @@
 import type { Coding, CodeableConcept, Encounter, Observation, ServiceRequest } from "@medplum/fhirtypes";
+import type { InitiationMode } from "../agentops/types.js";
 
 export const CDS_HOOKS_SPEC_VERSION = "2.0.1";
 export const CDS_SERVICE_EXTENSION_URL =
@@ -118,6 +119,8 @@ export interface CdsCard {
   readonly algorithmic_validity_bounds?: CdsAlgorithmicValidityBounds;
   readonly card_ttl_minutes?: number;
   readonly generatedAt?: string;
+  readonly initiation_mode?: InitiationMode;
+  readonly agent_device_reference?: string;
 }
 
 export type CdsRiskClass = "LOW" | "MEDIUM" | "HIGH" | "SaMD-boundary-adjacent";

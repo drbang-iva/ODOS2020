@@ -1,0 +1,40 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "source-sha256",
+  "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+  "version": "0.55d",
+  "name": "OSODSourceSha256",
+  "status": "active",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Attachment"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "description": "SHA-256 digest of stripped source bytes when Attachment.data is removed before AgentOps delivery.",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Source SHA-256 digest"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/source-sha256"
+      },
+      {
+        "id": "Extension.valueString",
+        "path": "Extension.valueString",
+        "min": 1,
+        "max": "1"
+      }
+    ]
+  }
+}

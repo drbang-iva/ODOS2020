@@ -11,9 +11,10 @@ import {
   type OsodAuditEventRecord,
   type OsodAuditEventType,
 } from "./osodAudit.js";
+import type { AgentOpsAuditFields } from "../agentops/types.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-const AUDIT_MIGRATION_PATHS = [
+const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-04-29-v05b-osod-audit-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-clients.sql", import.meta.url),
@@ -23,6 +24,8 @@ const AUDIT_MIGRATION_PATHS = [
   new URL("../../../data/migrations/2026-05-02-v055c-cds-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-02-v055c-cds-feedback.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-02-v055c-cds-service-keys.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-04-v055d-agentops-records.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-04-v055d-agentops-events.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
 
 export interface LiveAuditRuntimeOptions {
@@ -153,6 +156,18 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
           break_glass_reason,
           ib_actor_classification,
           ib_exception,
+          agent_identity,
+          attempted_action,
+          target_fhir_resource,
+          threshold_class,
+          verdict,
+          rationale,
+          source_identity,
+          section_171_exception_code,
+          aiast_tag_confirmation,
+          initiation_mode,
+          retention_until,
+          attempted_payload_full,
           provenance_id,
           audit_event_id,
           created_at
@@ -199,7 +214,7 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
 
   private async ensureSchema(): Promise<void> {
     this.schemaReady ??= (async () => {
-      for (const path of AUDIT_MIGRATION_PATHS) {
+      for (const path of AUDIT_DDL_FILES) {
         const sql = await readFile(path, "utf8");
         await this.pool.query(sql);
       }
@@ -232,13 +247,27 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
           break_glass_reason,
           ib_actor_classification,
           ib_exception,
+          agent_identity,
+          attempted_action,
+          target_fhir_resource,
+          threshold_class,
+          verdict,
+          rationale,
+          source_identity,
+          section_171_exception_code,
+          aiast_tag_confirmation,
+          initiation_mode,
+          retention_until,
+          attempted_payload_full,
           provenance_id,
           audit_event_id,
           created_at
         )
         VALUES (
           $1::uuid, $2::timestamptz, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, NULLIF($13, '')::inet, $14, $15, $16, $17, $18, $19, $20, $21::timestamptz
+          $11, $12, NULLIF($13, '')::inet, $14, $15, $16, $17, $18,
+          $19, $20::jsonb, $21::jsonb, $22, $23, $24::jsonb, $25::jsonb, $26,
+          $27, $28, $29::timestamptz, $30::jsonb, $31, $32, $33::timestamptz
         )
         RETURNING
           id::text,
@@ -259,6 +288,18 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
           break_glass_reason,
           ib_actor_classification,
           ib_exception,
+          agent_identity,
+          attempted_action,
+          target_fhir_resource,
+          threshold_class,
+          verdict,
+          rationale,
+          source_identity,
+          section_171_exception_code,
+          aiast_tag_confirmation,
+          initiation_mode,
+          retention_until,
+          attempted_payload_full,
           provenance_id,
           audit_event_id,
           created_at
@@ -282,6 +323,18 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
         row.breakGlassReason,
         row.ibActorClassification,
         row.ibException,
+        row.agentOps?.agent_identity,
+        row.agentOps?.attempted_action ? JSON.stringify(row.agentOps.attempted_action) : null,
+        row.agentOps?.target_fhir_resource ? JSON.stringify(row.agentOps.target_fhir_resource) : null,
+        row.agentOps?.threshold_class,
+        row.agentOps?.verdict,
+        row.agentOps?.rationale ? JSON.stringify(row.agentOps.rationale) : null,
+        row.agentOps?.source_identity ? JSON.stringify(row.agentOps.source_identity) : null,
+        row.agentOps?.section_171_exception_code,
+        row.agentOps?.aiast_tag_confirmation,
+        row.agentOps?.initiation_mode,
+        row.agentOps?.retention_until,
+        row.agentOps?.attempted_payload_full === undefined ? null : JSON.stringify(row.agentOps.attempted_payload_full),
         row.provenanceId,
         row.auditEventId,
         row.createdAt,
@@ -368,10 +421,53 @@ function pgRowToAuditRecord(row: Record<string, unknown>): OsodAuditEventRecord 
     breakGlassReason: optionalString(row.break_glass_reason),
     ibActorClassification: "health-care-provider",
     ibException: optionalString(row.ib_exception) as OsodAuditEventRecord["ibException"],
+    agentOps: agentOpsFieldsFromRow(row),
     provenanceId: optionalString(row.provenance_id),
     auditEventId: optionalString(row.audit_event_id),
     createdAt: iso(row.created_at),
   };
+}
+
+function agentOpsFieldsFromRow(row: Record<string, unknown>): AgentOpsAuditFields | undefined {
+  if (!row.agent_identity) {
+    return undefined;
+  }
+  return {
+    agent_identity: String(row.agent_identity),
+    attempted_action: jsonValue(row.attempted_action, { tool_name: "unknown", parameters: {} }),
+    target_fhir_resource: jsonValue(row.target_fhir_resource, {
+      resourceType: optionalString(row.resource_type) ?? "Resource",
+      id: optionalString(row.resource_id) ?? "unknown",
+      version: null,
+    }),
+    threshold_class: String(row.threshold_class ?? "HIGH") as AgentOpsAuditFields["threshold_class"],
+    verdict: String(row.verdict ?? "confirmation-required") as AgentOpsAuditFields["verdict"],
+    rationale: jsonValue(row.rationale, { rule_id: "unknown", rule_version: "unknown" }),
+    source_identity: jsonValue(row.source_identity, {
+      token_hash: "",
+      source_ip: optionalString(row.ip_address) ?? "",
+      agent_identity_uri: String(row.agent_identity),
+    }),
+    section_171_exception_code: optionalString(row.section_171_exception_code) as AgentOpsAuditFields["section_171_exception_code"],
+    aiast_tag_confirmation: Boolean(row.aiast_tag_confirmation),
+    initiation_mode: String(row.initiation_mode ?? "user-initiated") as AgentOpsAuditFields["initiation_mode"],
+    retention_until: iso(row.retention_until),
+    attempted_payload_full: row.attempted_payload_full ?? undefined,
+  };
+}
+
+function jsonValue<T>(value: unknown, fallback: T): T {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  return value as T;
 }
 
 function iso(value: unknown): string {

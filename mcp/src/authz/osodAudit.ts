@@ -7,6 +7,11 @@ import {
   type InformationBlockingException,
 } from "../policy/ib-exception-map.js";
 import type { PracticeRoleId } from "./roles.js";
+import {
+  AGENTOPS_AUDIT_EVENT_TYPES,
+  AGENTOPS_RECORD_EXTENSION_URL,
+  type AgentOpsAuditFields,
+} from "../agentops/types.js";
 
 export const OSOD_AUDIT_EVENT_TYPE_SYSTEM =
   "https://osod.dev/fhir/CodeSystem/audit-event-type";
@@ -68,6 +73,7 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "cds.card.suppressed_stale",
   "cds.feedback.accepted",
   "cds.feedback.overridden",
+  ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 
 export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
@@ -94,6 +100,7 @@ export interface OsodAuditEventRecord {
   breakGlassReason?: string;
   ibActorClassification: typeof IB_ACTOR_CLASSIFICATION;
   ibException?: InformationBlockingException;
+  agentOps?: AgentOpsAuditFields;
   provenanceId?: string;
   auditEventId?: string;
   createdAt: string;
@@ -126,6 +133,7 @@ export interface BuildOsodAuditEventInput {
   breakGlassReason?: string;
   reason?: string;
   ibException?: InformationBlockingException | string;
+  agentOps?: AgentOpsAuditFields;
   provenanceId?: string;
   auditEventId?: string;
 }
@@ -181,6 +189,18 @@ export const OSOD_AUDIT_EVENTS_SCHEMA = {
     "break_glass_reason",
     "ib_actor_classification",
     "ib_exception",
+    "agent_identity",
+    "attempted_action",
+    "target_fhir_resource",
+    "threshold_class",
+    "verdict",
+    "rationale",
+    "source_identity",
+    "section_171_exception_code",
+    "aiast_tag_confirmation",
+    "initiation_mode",
+    "retention_until",
+    "attempted_payload_full",
     "provenance_id",
     "audit_event_id",
     "created_at",
@@ -230,6 +250,7 @@ export function buildOsodAuditEventRow(input: BuildOsodAuditEventInput): OsodAud
     breakGlassReason: input.breakGlassReason ?? input.reason,
     ibActorClassification: IB_ACTOR_CLASSIFICATION,
     ibException,
+    agentOps: input.agentOps,
     provenanceId: idFromReference(input.provenanceId, "Provenance") ?? input.provenanceId,
     auditEventId: input.auditEventId,
     createdAt: eventTime,
@@ -252,7 +273,11 @@ export function buildAuditEventProjection(row: OsodAuditEventRecord): AuditEvent
     agent: [
       {
         ...(row.actorRole ? { role: [roleConcept(row.actorRole)] } : {}),
-        ...(row.actorId ? { who: { reference: `Practitioner/${row.actorId}` } } : {}),
+        ...(row.agentOps?.agent_identity
+          ? { who: { reference: row.agentOps.agent_identity } }
+          : row.actorId
+            ? { who: { reference: `Practitioner/${row.actorId}` } }
+            : {}),
         requestor: row.actorRole !== "system",
         ...(row.policyUrl ? { policy: [row.policyUrl] } : {}),
       },
@@ -576,6 +601,14 @@ function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entit
       entities.push({ what: { reference }, name: "resource" });
     }
   }
+  if (row.agentOps?.target_fhir_resource.resourceType && row.agentOps.target_fhir_resource.id) {
+    entities.push({
+      what: {
+        reference: `${row.agentOps.target_fhir_resource.resourceType}/${row.agentOps.target_fhir_resource.id}`,
+      },
+      name: "agentops-target",
+    });
+  }
   const detail = [
     ...(row.breakGlassReason
       ? [{ type: "break_glass_reason", valueString: row.breakGlassReason }]
@@ -585,6 +618,35 @@ function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entit
       : []),
     { type: "osod_audit_event_id", valueString: row.id },
     ...(row.sessionId ? [{ type: "session_id", valueString: row.sessionId }] : []),
+    ...(row.agentOps
+      ? [
+          {
+            type: "agentops_record",
+            valueString: JSON.stringify({
+              extension_url: AGENTOPS_RECORD_EXTENSION_URL,
+              agent_identity: row.agentOps.agent_identity,
+              attempted_action: row.agentOps.attempted_action,
+              target_fhir_resource: row.agentOps.target_fhir_resource,
+              threshold_class: row.agentOps.threshold_class,
+              verdict: row.agentOps.verdict,
+              rationale: row.agentOps.rationale,
+              source_identity: row.agentOps.source_identity,
+              section_171_exception_code: row.agentOps.section_171_exception_code,
+              aiast_tag_confirmation: row.agentOps.aiast_tag_confirmation,
+              initiation_mode: row.agentOps.initiation_mode,
+              retention_until: row.agentOps.retention_until,
+            }),
+          },
+          ...(row.agentOps.attempted_payload_full
+            ? [
+                {
+                  type: "agentops_blocked_payload",
+                  valueString: JSON.stringify(row.agentOps.attempted_payload_full),
+                },
+              ]
+            : []),
+        ]
+      : []),
   ];
   if (detail.length) {
     entities.push({ name: "audit-details", detail });
