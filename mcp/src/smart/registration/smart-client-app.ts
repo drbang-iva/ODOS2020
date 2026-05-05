@@ -65,6 +65,8 @@ export interface OSODSmartClientAppPolicy {
   readonly networkEgress: SmartAppNetworkEgress;
   readonly externalServicesRequired: boolean;
   readonly baaRequired: boolean;
+  readonly vendorBaaEligible?: boolean;
+  readonly practiceBaaOrContractAttestedAt?: string;
   readonly imageAnalysisProhibited: boolean;
   readonly allowedJurisdictions: readonly string[];
   readonly prohibitedStates: readonly string[];
@@ -98,6 +100,8 @@ export interface DynamicClientRegistrationInput {
   readonly network_egress?: SmartAppNetworkEgress;
   readonly external_services_required?: boolean;
   readonly baa_required?: boolean;
+  readonly vendor_baa_eligible?: boolean;
+  readonly practice_baa_or_contract_attested_at?: string;
   readonly image_analysis_prohibited?: boolean;
   readonly allowedJurisdictions?: readonly string[];
   readonly prohibitedStates?: readonly string[];
@@ -168,6 +172,8 @@ export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInp
     ]),
     externalServicesRequired: requiredBoolean(input.external_services_required, "external_services_required"),
     baaRequired: requiredBoolean(input.baa_required, "baa_required"),
+    vendorBaaEligible: input.vendor_baa_eligible,
+    practiceBaaOrContractAttestedAt: input.practice_baa_or_contract_attested_at,
     imageAnalysisProhibited: requiredBoolean(input.image_analysis_prohibited, "image_analysis_prohibited"),
     allowedJurisdictions: stringArray(input.allowedJurisdictions, "allowedJurisdictions"),
     prohibitedStates: stringArray(input.prohibitedStates, "prohibitedStates"),
@@ -192,6 +198,20 @@ export function assertInstallPolicy(
     throw new SmartAppRegistryError(
       "phi-baa-mismatch",
       "Install blocked: patient-payload apps require BAA attestation.",
+    );
+  }
+  if (policy.baaRequired && !policy.vendorBaaEligible) {
+    throw new SmartAppRegistryError(
+      "vendor-baa-not-eligible",
+      "Install blocked: vendor BAA eligibility must be verified before this app can handle patient payloads.",
+      403,
+    );
+  }
+  if (policy.baaRequired && !policy.practiceBaaOrContractAttestedAt) {
+    throw new SmartAppRegistryError(
+      "practice-baa-attestation-required",
+      "Install blocked: the local practice must attest its BAA or contract before registration.",
+      403,
     );
   }
   if (!policy.imageAnalysisProhibited) {
@@ -249,6 +269,10 @@ export function readSmartClientApp(record: Endpoint | Device): OSODSmartClientAp
       "external_services_required",
     ),
     baaRequired: requiredBool(extensionValue(extension, "baa_required", undefined, "valueBoolean"), "baa_required"),
+    vendorBaaEligible: optionalBool(extensionValue(extension, "vendor_baa_eligible", undefined, "valueBoolean")),
+    practiceBaaOrContractAttestedAt: optionalText(
+      extensionValue(extension, "practice_baa_or_contract_attested_at", undefined, "valueDateTime"),
+    ),
     imageAnalysisProhibited: requiredBool(
       extensionValue(extension, "image_analysis_prohibited", undefined, "valueBoolean"),
       "image_analysis_prohibited",
@@ -294,6 +318,10 @@ export function smartClientAppExtension(
       { url: "network_egress", valueCode: policy.networkEgress },
       { url: "external_services_required", valueBoolean: policy.externalServicesRequired },
       { url: "baa_required", valueBoolean: policy.baaRequired },
+      ...(policy.vendorBaaEligible === undefined ? [] : [{ url: "vendor_baa_eligible", valueBoolean: policy.vendorBaaEligible }]),
+      ...(policy.practiceBaaOrContractAttestedAt
+        ? [{ url: "practice_baa_or_contract_attested_at", valueDateTime: policy.practiceBaaOrContractAttestedAt }]
+        : []),
       { url: "image_analysis_prohibited", valueBoolean: policy.imageAnalysisProhibited },
       ...policy.allowedJurisdictions.map((value) => ({ url: "allowedJurisdictions", valueString: value })),
       ...policy.prohibitedStates.map((value) => ({ url: "prohibitedStates", valueString: value })),
@@ -324,6 +352,8 @@ export function smartClientRegistrationResponse(input: {
     network_egress: input.app.policy.networkEgress,
     external_services_required: input.app.policy.externalServicesRequired,
     baa_required: input.app.policy.baaRequired,
+    vendor_baa_eligible: input.app.policy.vendorBaaEligible,
+    practice_baa_or_contract_attested_at: input.app.policy.practiceBaaOrContractAttestedAt,
     image_analysis_prohibited: input.app.policy.imageAnalysisProhibited,
     allowedJurisdictions: input.app.policy.allowedJurisdictions,
     prohibitedStates: input.app.policy.prohibitedStates,
@@ -430,7 +460,7 @@ function extensionValue(
   extension: Extension,
   url: string,
   nestedUrl: string | undefined,
-  key: "valueBoolean" | "valueCode" | "valueString" | "valueUri",
+  key: "valueBoolean" | "valueCode" | "valueString" | "valueUri" | "valueDateTime",
 ): string | boolean | undefined {
   const child = extension.extension?.find((candidate) => candidate.url === url);
   const target = nestedUrl ? child?.extension?.find((candidate) => candidate.url === nestedUrl) : child;
@@ -466,6 +496,10 @@ function requiredBool(value: unknown, field: string): boolean {
     throw new SmartAppRegistryError("invalid_client_metadata", `${field} is required.`);
   }
   return value;
+}
+
+function optionalBool(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
 }
 
 export type SmartAppCanonicalRecord = Extract<Resource, Endpoint | Device> | Endpoint | Device;

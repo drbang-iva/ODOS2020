@@ -65,5 +65,55 @@ policies:
       verdict: blocked
       §171_exception_code: HealthITPerformance
       escalation_target: staged-admin-review
+  - rule_id: generic-bulk-group-export-user-initiated
+    rule_version: 2026-05-05
+    composite_key:
+      tool_name: bulk-data-group-export
+      target_resourceType: Group
+      specific_action: read
+      clinical_billing_patient_facing_impact: mixed
+      initiation_mode: user-initiated
+    threshold_class: HIGH
+    agent_scope: any-agent
+    effective_from: 2026-05-05
+    effective_to: null
+    rationale: Agent-driven Group export has large-cohort PHI egress impact and requires staged review.
+    on_violation:
+      verdict: confirmation-required
+      escalation_target: staged-admin-review
+  - rule_id: generic-bulk-patient-export-user-initiated
+    rule_version: 2026-05-05
+    composite_key:
+      tool_name: bulk-data-patient-export
+      target_resourceType: Patient
+      specific_action: read
+      clinical_billing_patient_facing_impact: mixed
+      initiation_mode: user-initiated
+    threshold_class: CRITICAL
+    agent_scope: any-agent
+    effective_from: 2026-05-05
+    effective_to: null
+    rationale: Agent-driven Patient export covers the all-patients compartment and is treated as full-practice PHI egress.
+    on_violation:
+      verdict: blocked
+      §171_exception_code: Security
+      escalation_target: staged-admin-review
+  - rule_id: generic-bulk-system-export-user-initiated
+    rule_version: 2026-05-05
+    composite_key:
+      tool_name: bulk-data-system-export
+      target_resourceType: "*"
+      specific_action: read
+      clinical_billing_patient_facing_impact: mixed
+      initiation_mode: user-initiated
+    threshold_class: CRITICAL
+    agent_scope: any-agent
+    effective_from: 2026-05-05
+    effective_to: null
+    rationale: Agent-driven system export is admin-only and has system-wide PHI egress impact.
+    on_violation:
+      verdict: blocked
+      §171_exception_code: Security
+      escalation_target: staged-admin-review
 retention:
   retention_years: 7

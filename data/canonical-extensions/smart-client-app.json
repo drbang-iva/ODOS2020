@@ -2,11 +2,11 @@
   "resourceType": "StructureDefinition",
   "id": "smart-client-app",
   "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
-  "version": "0.55b",
+  "version": "0.55e",
   "name": "OSODSmartClientApp",
   "title": "OSOD SMART Client App",
   "status": "active",
-  "date": "2026-05-01",
+  "date": "2026-05-05",
   "publisher": "OSOD",
   "description": "OSOD local-only SMART app registry metadata carried on Endpoint or Device.",
   "fhirVersion": "4.0.1",
@@ -136,6 +136,20 @@
         "path": "Extension.extension",
         "sliceName": "baa_required",
         "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:vendor_baa_eligible",
+        "path": "Extension.extension",
+        "sliceName": "vendor_baa_eligible",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:practice_baa_or_contract_attested_at",
+        "path": "Extension.extension",
+        "sliceName": "practice_baa_or_contract_attested_at",
+        "min": 0,
         "max": "1"
       },
       {

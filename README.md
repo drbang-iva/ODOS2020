@@ -51,6 +51,8 @@ Decision support runs locally. External CDS services are off by default — opt 
 
 AI agents that touch your charts run under AgentOps governance — every action is auditable, blockable, and undoable. Your rules. Your machine. Your call. See [`docs/agentops.md`](docs/agentops.md).
 
+Patient Access API — your patients can authorize third-party apps to read their records, just like the regulator requires. Population-level export — group exports run on your hardware, NDJSON files stay on your filesystem, your data never leaves the building unless you authorize it. See [`docs/bulk-data.md`](docs/bulk-data.md) and [`docs/capability-statement.md`](docs/capability-statement.md).
+
 OSOD is designed for your own hardware. If you have a strong reason to want cloud, that is a separate conversation; the engine ships local-only.
 
 For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see [`docs/install.md`](docs/install.md) and [`docs/backup.md`](docs/backup.md).

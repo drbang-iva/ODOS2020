@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-05-05T00:00:00.000-04:00",
+  "results": {
+    "mcp/src/__tests__/capability/patient-read.test.ts": "passing",
+    "mcp/src/__tests__/capability/observation-read.test.ts": "passing",
+    "mcp/src/__tests__/capability/bulk-data-group-export.test.ts": "passing",
+    "mcp/src/__tests__/capability/bulk-data-patient-export.test.ts": "passing",
+    "mcp/src/__tests__/capability/bulk-data-system-export.test.ts": "passing"
+  }
+}

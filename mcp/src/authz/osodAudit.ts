@@ -73,6 +73,15 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "cds.card.suppressed_stale",
   "cds.feedback.accepted",
   "cds.feedback.overridden",
+  "bulk_export.kickoff.group",
+  "bulk_export.kickoff.patient",
+  "bulk_export.kickoff.system",
+  "bulk_export.complete",
+  "bulk_export.cancelled",
+  "bulk_export.rejected",
+  "patient_access.token.issued",
+  "patient_access.token.revoked",
+  "capability_statement.served",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 
