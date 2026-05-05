@@ -9,10 +9,24 @@ const PHI_SHAPED_IDENTIFIER_PATTERNS: readonly RegExp[] = [
   /\b[A-Z][a-z]+[._-][A-Z][a-z]+\b/,
 ];
 
+const MAX_PHI_SHAPE_RETRIES = 64;
+
 export function generateBulkExportJobId(): string {
-  const id = randomBytes(24).toString("base64url");
-  assertBulkExportIdentifierIsOpaque(id);
-  return id;
+  for (let attempt = 0; attempt < MAX_PHI_SHAPE_RETRIES; attempt += 1) {
+    const id = randomBytes(24).toString("base64url");
+    try {
+      assertBulkExportIdentifierIsOpaque(id);
+      return id;
+    } catch {
+      // Random base64url can incidentally match the PHI-shape regex set
+      // (notably the [A-Z][a-z]+[._-][A-Z][a-z]+ pattern). Re-roll.
+      // The PHI assertion remains the canonical defense per BINDING #25;
+      // the retry preserves coverage while keeping the generator deterministic-pass.
+    }
+  }
+  throw new Error(
+    "Bulk Data export identifier generator exhausted retries; PHI-shape patterns may be too aggressive against random base64url.",
+  );
 }
 
 export function assertBulkExportIdentifierIsOpaque(value: string): void {
