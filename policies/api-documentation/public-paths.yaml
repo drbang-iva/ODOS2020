@@ -1,0 +1,10 @@
+paths:
+  - /.well-known/smart-configuration
+  - /metadata
+  - /api-documentation
+  - /api-documentation/openapi.json
+cache:
+  static_ttl_seconds: 86400
+  dynamic_ttl_seconds: 60
+rate_limit:
+  anonymous_requests_per_minute: 120

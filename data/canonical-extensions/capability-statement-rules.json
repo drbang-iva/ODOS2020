@@ -1,0 +1,44 @@
+{
+  "rules": [
+    {
+      "claim_path": "rest[0].resource[?(@.type=='Patient')].interaction[?(@.code=='read')]",
+      "claim_description": "Patient read REST interaction",
+      "backing_test": "mcp/src/__tests__/capability/patient-read.test.ts",
+      "test_result_required": "passing",
+      "required_for_certification": true,
+      "certification_anchor": "§170.315(g)(10) USCDI v3 Patient profile read interaction"
+    },
+    {
+      "claim_path": "rest[0].resource[?(@.type=='Observation')].interaction[?(@.code=='read')]",
+      "claim_description": "Observation read REST interaction",
+      "backing_test": "mcp/src/__tests__/capability/observation-read.test.ts",
+      "test_result_required": "passing",
+      "required_for_certification": true,
+      "certification_anchor": "§170.315(g)(10) USCDI v3 Observation read interaction"
+    },
+    {
+      "claim_path": "rest[0].operation[?(@.name=='export-group')]",
+      "claim_description": "Group export operation",
+      "backing_test": "mcp/src/__tests__/capability/bulk-data-group-export.test.ts",
+      "test_result_required": "passing",
+      "required_for_certification": true,
+      "certification_anchor": "§170.215(d)(1) Bulk Data v1.0.0 Group export"
+    },
+    {
+      "claim_path": "rest[0].operation[?(@.name=='export-patient')]",
+      "claim_description": "Patient export operation",
+      "backing_test": "mcp/src/__tests__/capability/bulk-data-patient-export.test.ts",
+      "test_result_required": "passing",
+      "required_for_certification": false,
+      "certification_anchor": "§170.215(d)(1) Bulk Data Patient export optional in v0.55e"
+    },
+    {
+      "claim_path": "rest[0].operation[?(@.name=='export-system')]",
+      "claim_description": "System export operation",
+      "backing_test": "mcp/src/__tests__/capability/bulk-data-system-export.test.ts",
+      "test_result_required": "passing",
+      "required_for_certification": false,
+      "certification_anchor": "§170.215(d)(1) Bulk Data System export optional in v0.55e"
+    }
+  ]
+}

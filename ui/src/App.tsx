@@ -6,9 +6,18 @@ import { PatientPicker } from "./scenes/PatientPicker";
 import { fhir } from "./lib/fhir";
 import { RoleProvider } from "./lib/role-context";
 import { useViewState, type ViewState } from "./lib/view-state";
+import { AuthorizeConsent } from "./smart/authorize-consent";
+import { GrantsManagement } from "./smart/grants-management";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
+  if (window.location.pathname === "/oauth2/authorize") {
+    return <AuthorizeConsent />;
+  }
+  if (window.location.pathname === "/oauth2/grants") {
+    return <GrantsManagement />;
+  }
+
   const [authed, setAuthed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const view = useViewState((state) => state.view);

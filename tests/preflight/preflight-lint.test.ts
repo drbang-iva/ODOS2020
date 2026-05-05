@@ -192,6 +192,73 @@ test("v0.55d preflight pass 4 hard-blocks AgentOps response and AIAST fixtures",
   assert.equal(network.findings[0]?.code, "agentops-dual-container-network-namespace-required");
 });
 
+test("v0.55e preflight pass 4 hard-blocks Bulk Data job ID, endpoint, and meta-security fixtures", () => {
+  const predictableJobId = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/bulk-data/job-id-generator.ts",
+        text: "export function generateBulkExportJobId(patientName: string) { const id = patientName; return id; }\n",
+      },
+    ],
+  });
+  assert.equal(predictableJobId.status, "hard-block");
+  assert.equal(predictableJobId.findings[0]?.code, "bulk-data-no-phi-in-job-id");
+
+  const singlePatientExport = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/bulk-data/router.ts",
+        text: 'router.get("/Patient/:id/$export", handler);\n',
+      },
+    ],
+  });
+  assert.equal(singlePatientExport.status, "hard-block");
+  assert.equal(singlePatientExport.findings[0]?.code, "bulk-data-export-endpoint-shape");
+
+  const strippedSecurity = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/bulk-data/output/bad.ts",
+        text: "delete resource.meta.security;\n",
+      },
+    ],
+  });
+  assert.equal(strippedSecurity.status, "hard-block");
+  assert.equal(strippedSecurity.findings[0]?.code, "meta-security-preservation-on-ndjson-output");
+});
+
+test("v0.55e preflight pass 4 enforces CapabilityStatement claim backing tests and audit-event counts", () => {
+  const missingCapabilityTest = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "data/canonical-extensions/capability-statement-rules.json",
+        text: JSON.stringify({
+          rules: [
+            {
+              claim_path: "rest[0].operation[?(@.name=='export-group')]",
+              backing_test: "mcp/src/__tests__/capability/missing.test.ts",
+              required_for_certification: true,
+            },
+          ],
+        }),
+      },
+    ],
+  });
+  assert.equal(missingCapabilityTest.status, "hard-block");
+  assert.equal(missingCapabilityTest.findings[0]?.code, "capability-statement-claim-must-have-test");
+
+  const mismatchedCount = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "docs/build-log/bad.md",
+        text: ["Adds 2 new event types:", "- `one`", "- `two`", "- `three`"].join("\n"),
+      },
+    ],
+  });
+  assert.equal(mismatchedCount.status, "hard-block");
+  assert.equal(mismatchedCount.findings[0]?.code, "audit-event-count-vs-list-consistency");
+});
+
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
   const dir = mkdtempSync(join(tmpdir(), "osod-preflight-"));
   try {

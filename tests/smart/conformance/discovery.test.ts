@@ -13,9 +13,21 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
       capabilities: string[];
       code_challenge_methods_supported: string[];
       registration_endpoint: string;
+      token_endpoint_auth_methods_supported: string[];
+      token_endpoint_auth_signing_alg_values_supported: string[];
       osod_extensions: {
         agentops_endpoint: string;
         agentops_capabilities: string[];
+        bulk_data: {
+          export_endpoints: {
+            group_export: string;
+            patient_export: string;
+            system_export: string;
+          };
+          requires_access_token_default: boolean;
+          retention_days_default: number;
+          supported_type_filter: boolean;
+        };
       };
     };
     assert.equal(firstJson.capabilities.includes("client-public"), true);
@@ -23,15 +35,22 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
     assert.equal(firstJson.capabilities.includes("context-ehr-patient"), true);
     assert.deepEqual(firstJson.code_challenge_methods_supported, ["S256"]);
     assert.equal(firstJson.registration_endpoint, `${server.origin}/oauth2/register`);
-    assert.deepEqual(firstJson.osod_extensions, {
-      agentops_endpoint: `${server.origin}/agentops`,
-      agentops_capabilities: [
-        "agent_registration",
-        "threshold_matrix_query",
-        "safety_valve_inspection",
-        "audit_record_query",
-      ],
+    assert.equal(firstJson.token_endpoint_auth_methods_supported.includes("private_key_jwt"), true);
+    assert.equal(firstJson.token_endpoint_auth_signing_alg_values_supported.some((alg) => alg === "RS384" || alg === "ES384"), true);
+    assert.equal(firstJson.osod_extensions.agentops_endpoint, `${server.origin}/agentops`);
+    assert.deepEqual(firstJson.osod_extensions.agentops_capabilities, [
+      "agent_registration",
+      "threshold_matrix_query",
+      "safety_valve_inspection",
+      "audit_record_query",
+    ]);
+    assert.deepEqual(firstJson.osod_extensions.bulk_data.export_endpoints, {
+      group_export: "Group/{id}/$export",
+      patient_export: "Patient/$export",
+      system_export: "$export",
     });
+    assert.equal(firstJson.osod_extensions.bulk_data.requires_access_token_default, true);
+    assert.equal(firstJson.osod_extensions.bulk_data.supported_type_filter, false);
     const firstEtag = first.headers.get("etag");
 
     server.state.clients.set("symmetric-client", symmetricClient(server.origin));

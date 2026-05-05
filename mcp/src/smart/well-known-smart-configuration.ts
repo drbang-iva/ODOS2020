@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Request, Response } from "express";
+import { sanitizeSmartDiscoveryStrings } from "./well-known-synthesis.js";
 
 export interface SmartConfigurationSnapshot {
   readonly issuer: string;
@@ -20,8 +21,10 @@ export interface SmartConfigurationSnapshot {
   readonly codeChallengeMethodsSupported: readonly string[];
   readonly capabilities: readonly string[];
   readonly tokenEndpointAuthMethodsSupported: readonly string[];
+  readonly tokenEndpointAuthSigningAlgValuesSupported: readonly string[];
   readonly grantTypesSupported: readonly string[];
   readonly updatedAt: string;
+  readonly practicePublicBaseUrl?: string;
 }
 
 export interface SmartConfigurationDocument {
@@ -29,6 +32,7 @@ export interface SmartConfigurationDocument {
   readonly authorization_endpoint: string;
   readonly token_endpoint: string;
   readonly token_endpoint_auth_methods_supported: readonly string[];
+  readonly token_endpoint_auth_signing_alg_values_supported: readonly string[];
   readonly revocation_endpoint: string;
   readonly introspection_endpoint: string;
   readonly jwks_uri: string;
@@ -38,6 +42,16 @@ export interface SmartConfigurationDocument {
   readonly osod_extensions?: {
     readonly agentops_endpoint?: string;
     readonly agentops_capabilities?: readonly string[];
+    readonly bulk_data?: {
+      readonly export_endpoints: {
+        readonly group_export: "Group/{id}/$export";
+        readonly patient_export: "Patient/$export";
+        readonly system_export: "$export";
+      };
+      readonly requires_access_token_default: true;
+      readonly retention_days_default: number;
+      readonly supported_type_filter: boolean;
+    };
   };
   readonly scopes_supported: readonly string[];
   readonly response_types_supported: readonly string[];
@@ -47,11 +61,12 @@ export interface SmartConfigurationDocument {
 }
 
 export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): SmartConfigurationDocument {
-  return {
+  const document = {
     issuer: snapshot.issuer,
     authorization_endpoint: snapshot.authorizationEndpoint,
     token_endpoint: snapshot.tokenEndpoint,
     token_endpoint_auth_methods_supported: snapshot.tokenEndpointAuthMethodsSupported,
+    token_endpoint_auth_signing_alg_values_supported: snapshot.tokenEndpointAuthSigningAlgValuesSupported,
     revocation_endpoint: snapshot.revocationEndpoint,
     introspection_endpoint: snapshot.introspectionEndpoint,
     jwks_uri: snapshot.jwksUri,
@@ -63,6 +78,16 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
           osod_extensions: {
             agentops_endpoint: snapshot.osodExtensions.agentopsEndpoint,
             agentops_capabilities: snapshot.osodExtensions.agentopsCapabilities,
+            bulk_data: {
+              export_endpoints: {
+                group_export: "Group/{id}/$export",
+                patient_export: "Patient/$export",
+                system_export: "$export",
+              } as const,
+              requires_access_token_default: true as const,
+              retention_days_default: Number(process.env.OSOD_BULK_EXPORT_RETENTION_DAYS ?? 7),
+              supported_type_filter: false,
+            },
           },
         }
       : {}),
@@ -72,6 +97,10 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
     code_challenge_methods_supported: snapshot.codeChallengeMethodsSupported,
     capabilities: snapshot.capabilities,
   };
+  return sanitizeSmartDiscoveryStrings(
+    document,
+    snapshot.practicePublicBaseUrl ?? process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? snapshot.issuer,
+  );
 }
 
 export function smartConfigurationEtag(snapshot: SmartConfigurationSnapshot): string {
@@ -86,7 +115,7 @@ export function sendSmartConfiguration(
 ): void {
   const etag = smartConfigurationEtag(snapshot);
   res.type("application/json");
-  res.setHeader("Cache-Control", "private, max-age=60, must-revalidate");
+  res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
   res.setHeader("ETag", etag);
   if (req.header("if-none-match") === etag) {
     res.status(304).end();

@@ -38,6 +38,12 @@ import {
   type SmartConfigurationSnapshot,
 } from "./well-known-smart-configuration.js";
 import {
+  synthesizeCapabilityStatement,
+  sanitizeForPublicEmission,
+} from "../capability/capability-statement-synthesizer.js";
+import { createBulkDataRouter } from "../bulk-data/router.js";
+import { defaultBulkDataBackendScopes } from "../bulk-data/auth/backend-services.js";
+import {
   createDefaultSmartAppRegistryStore,
   createDynamicClientRegistrationHandler,
   type SmartAppMedplumAdapter,
@@ -45,6 +51,11 @@ import {
 } from "./registration/dynamic-client-registration.js";
 import { createMedplumSmartAppRegistryAdapter } from "../../../data/medplum-adapters/smart-app-registry-adapter.js";
 import { V055B_SMART_CAPABILITIES } from "./registration/smart-client-app.js";
+import {
+  bearerTokenRecord,
+  patientGrantSummaries,
+  revokePatientGrant,
+} from "./revocation/handler.js";
 import { dispatchCdsHook } from "../cds/dispatcher.js";
 import {
   buildCanonicalCdsService,
@@ -95,6 +106,7 @@ export interface SmartClientRegistration {
 
 export interface SmartAuthorizationCode {
   readonly code: string;
+  readonly grantId: string;
   readonly clientId: string;
   readonly redirectUri: string;
   readonly state?: string;
@@ -136,6 +148,7 @@ export interface SmartTokenRecord {
   readonly launchContext: SmartLaunchContext;
   active: boolean;
   readonly authorizationCode?: string;
+  readonly grantId?: string;
 }
 
 export interface SmartAuthorizationServerOptions {
@@ -301,6 +314,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   router.use(express.urlencoded({ extended: false }));
   router.use(express.json({ limit: "256kb" }));
   router.use("/agentops", createAgentOpsRouter(options.agentOps));
+  router.use(createBulkDataRouter({ state, audit: options.audit }));
 
   router.get("/.well-known/smart-configuration", async (req, res) => {
     await audit(options.audit, "smart-discovery-fetch", req, {
@@ -310,6 +324,62 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
       actionReason: "SMART discovery document fetched",
     });
     sendSmartConfiguration(req, res, await smartConfigurationSnapshot(options, state));
+  });
+
+  router.get("/metadata", async (req, res) => {
+    const result = synthesizeCapabilityStatement({
+      baseUrl: options.fhirBaseUrl,
+      patientExportEnabled: process.env.OSOD_BULK_EXPORT_PATIENT_ENABLED === "true",
+      systemExportEnabled: process.env.OSOD_BULK_EXPORT_SYSTEM_ENABLED === "true",
+    });
+    res.type("application/fhir+json");
+    res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
+    res.setHeader("ETag", result.etag);
+    if (req.header("if-none-match") === result.etag) {
+      res.status(304).end();
+      return;
+    }
+    res.json(result.capabilityStatement);
+  });
+
+  router.get("/api-documentation", (req, res) => {
+    const base = publicBaseUrl(options);
+    res.type("application/json").setHeader("Cache-Control", "public, max-age=86400").json({
+      product: "OSOD Patient Access API",
+      base_urls: [
+        sanitizeForPublicEmission(`${base}/`, base),
+        sanitizeForPublicEmission(`${base}/authorize`, base),
+        sanitizeForPublicEmission(`${base}/token`, base),
+        sanitizeForPublicEmission(`${base}/metadata`, base),
+        sanitizeForPublicEmission(`${base}/Group/{id}/$export`, base),
+      ],
+      schemas: [
+        sanitizeForPublicEmission(`${base}/api-documentation/openapi.json`, base),
+        sanitizeForPublicEmission(`${base}/metadata`, base),
+        sanitizeForPublicEmission(`${base}/.well-known/smart-configuration`, base),
+      ],
+      rate_limit: {
+        anonymous_requests_per_minute: Number(process.env.OSOD_PUBLIC_DOCS_RATE_LIMIT ?? 120),
+      },
+    });
+  });
+
+  router.get("/api-documentation/openapi.json", (_req, res) => {
+    const base = publicBaseUrl(options);
+    res.type("application/json").setHeader("Cache-Control", "public, max-age=86400").json({
+      openapi: "3.1.0",
+      info: {
+        title: "OSOD Patient Access and Bulk Data API",
+        version: "0.55e",
+      },
+      servers: [{ url: sanitizeForPublicEmission(base, base) }],
+      paths: {
+        "/.well-known/smart-configuration": { get: { summary: "SMART configuration discovery" } },
+        "/metadata": { get: { summary: "FHIR CapabilityStatement" } },
+        "/Group/{id}/$export": { get: { summary: "FHIR Bulk Data Group export kickoff" } },
+        "/bulk-export/status/{jobId}": { get: { summary: "FHIR Bulk Data export status polling" }, delete: { summary: "FHIR Bulk Data export cancellation" } },
+      },
+    });
   });
 
   router.get("/authorize", async (req, res) => {
@@ -384,6 +454,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
       const code = randomSecret();
       state.authorizationCodes.set(code, {
         code,
+        grantId: randomUUID(),
         clientId: client.clientId,
         redirectUri,
         state: stringQuery(req, "state"),
@@ -484,6 +555,36 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     } catch (error) {
       sendOauthError(res, error);
     }
+  });
+
+  router.get("/grants", async (req, res) => {
+    const bearer = bearerTokenRecord(state, req, now());
+    if (!bearer?.launchContext.patient) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    res.json({ grants: patientGrantSummaries(state, bearer.username) });
+  });
+
+  router.delete("/grants/:grantId", async (req, res) => {
+    const bearer = bearerTokenRecord(state, req, now());
+    if (!bearer?.launchContext.patient) {
+      res.status(401).json({ error: "unauthorized" });
+      return;
+    }
+    const revoked = revokePatientGrant(state, req.params.grantId, bearer.username);
+    if (!revoked) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    await audit(options.audit, "patient_access.token.revoked", req, {
+      actorId: bearer.username,
+      actorRole: "system",
+      resourceType: "OAuth2Grant",
+      resourceId: req.params.grantId,
+      actionReason: "patient-directed SMART app authorization revocation",
+    });
+    res.status(204).end();
   });
 
   router.get("/.well-known/jwks.json", (_req, res) => {
@@ -661,6 +762,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
           const code = randomSecret();
           state.authorizationCodes.set(code, {
             code,
+            grantId: randomUUID(),
             clientId: pending.clientId,
             redirectUri: pending.redirectUri,
             state: pending.state,
@@ -815,6 +917,7 @@ async function handleAuthorizationCodeGrant(input: {
     launchContext: authCode.launchContext,
     tokenKind: "access_token",
     authorizationCode: authCode.code,
+    grantId: authCode.grantId,
     now: input.now(),
   });
   const refreshToken = issueToken({
@@ -828,11 +931,12 @@ async function handleAuthorizationCodeGrant(input: {
     launchContext: authCode.launchContext,
     tokenKind: "refresh_token",
     authorizationCode: authCode.code,
+    grantId: authCode.grantId,
     now: input.now(),
   });
   authCode.issuedTokenJtis.push(accessToken.jti, refreshToken.jti);
   input.state.touch(input.now());
-  await audit(input.options.audit, "smart-token-issue", input.req, {
+  await audit(input.options.audit, authCode.launchContext.patient ? "patient_access.token.issued" : "smart-token-issue", input.req, {
     actorId: authCode.userId,
     actorRole: authCode.roleId,
     resourceType: "OAuth2Token",
@@ -866,6 +970,7 @@ async function handleRefreshTokenGrant(input: {
     sub: existing.sub,
     launchContext: existing.launchContext,
     tokenKind: "access_token",
+    grantId: existing.grantId,
     now: input.now(),
   });
   await audit(input.options.audit, "smart-token-refresh", input.req, {
@@ -928,6 +1033,7 @@ function issueToken(input: {
   readonly launchContext: SmartLaunchContext;
   readonly tokenKind: "access_token" | "refresh_token";
   readonly authorizationCode?: string;
+  readonly grantId?: string;
   readonly now: Date;
 }): SmartTokenRecord {
   const iat = epochSeconds(input.now);
@@ -948,6 +1054,7 @@ function issueToken(input: {
     launchContext: input.launchContext,
     active: true,
     authorizationCode: input.authorizationCode,
+    grantId: input.grantId,
   };
   const token =
     input.tokenKind === "access_token"
@@ -1088,6 +1195,7 @@ function tokenResponse(accessToken: SmartTokenRecord, refreshToken?: string): Re
     token_type: "Bearer",
     expires_in: Math.max(accessToken.exp - accessToken.iat, 0),
     scope: accessToken.scope,
+    grant_id: accessToken.grantId,
     refresh_token: refreshToken,
     patient: accessToken.launchContext.patient,
     encounter: accessToken.launchContext.encounter,
@@ -1112,6 +1220,7 @@ async function smartConfigurationSnapshot(
     "fhirUser",
     "online_access",
     "offline_access",
+    ...defaultBulkDataBackendScopes().split(/\s+/),
     ...new Set(clients.flatMap((client) => client.scopesAllowed)),
   ].sort();
   return {
@@ -1138,8 +1247,10 @@ async function smartConfigurationSnapshot(
       "client_secret_post",
       "private_key_jwt",
     ],
+    tokenEndpointAuthSigningAlgValuesSupported: ["RS384", "ES384"],
     grantTypesSupported: ["authorization_code", "client_credentials", "refresh_token"],
     updatedAt: state.updatedAt,
+    practicePublicBaseUrl: process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? options.issuer,
   };
 }
 
@@ -1211,6 +1322,10 @@ function defaultSandboxClient(issuer: string): SmartClientRegistration {
     scopesAllowed: [],
     isSandbox: true,
   };
+}
+
+function publicBaseUrl(options: SmartAuthorizationServerOptions): string {
+  return (process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? options.issuer).replace(/\/$/, "");
 }
 
 async function requireClient(

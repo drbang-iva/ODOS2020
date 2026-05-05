@@ -57,7 +57,7 @@ for (const file of profileFiles) {
 const canonicalExtensionsDir = resolve(process.cwd(), "data/canonical-extensions");
 if (existsSync(canonicalExtensionsDir)) {
   const extensionFiles = (await readdir(canonicalExtensionsDir))
-    .filter((name) => name.endsWith(".json") && name !== "registry.json")
+    .filter((name) => name.endsWith(".json") && name !== "registry.json" && name !== "capability-statement-rules.json")
     .sort();
 
   for (const file of extensionFiles) {

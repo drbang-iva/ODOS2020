@@ -1,0 +1,28 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Group",
+        "id": "osod-exportable-group",
+        "type": "person",
+        "actual": true,
+        "identifier": [
+          {
+            "system": "https://osod.dev/fhir/NamingSystem/local-bulk-data-group",
+            "value": "osod-exportable-group"
+          }
+        ],
+        "name": "OSOD exportable patient group",
+        "member": [
+          {
+            "entity": {
+              "reference": "Patient/patient-1"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

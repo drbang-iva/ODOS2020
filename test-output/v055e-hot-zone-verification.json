@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-05-05T00:00:00.000-04:00",
+  "slice": "v0.55e",
+  "access_date": "2026-05-05",
+  "cadence": {
+    "anthropic_vendor_doc": "session-open and before commits touching Anthropic/MCP vendor surface",
+    "hti_5": "session-open and v0.55 milestone-close only",
+    "hl7_ai_transparency": "session-open and v0.55 milestone-close only"
+  },
+  "rows": [
+    {
+      "ledger_row": 43,
+      "topic": "HTI-5 status",
+      "status": "verified",
+      "finding": "Federal Register document 2025-23896 remains Document Type Proposed Rule; healthIT.gov mirror remains HTI-5 Proposed Rule.",
+      "sources": [
+        {
+          "url": "https://www.federalregister.gov/documents/2025/12/29/2025-23896/health-data-technology-and-interoperability-astponc-deregulatory-actions-to-unleash-prosperity",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        },
+        {
+          "url": "https://www.healthit.gov/regulations/hti-rules/hti-5-proposed-rule/",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        }
+      ]
+    },
+    {
+      "ledger_row": 45,
+      "topic": "Anthropic HIPAA-Ready Implementation Guide",
+      "status": "verified",
+      "finding": "Native Messages API is eligible under Anthropic BAA; MCPs/Connectors and External MCP third-party data flows remain outside Anthropic BAA coverage.",
+      "sources": [
+        {
+          "url": "https://privacy.claude.com/en/articles/8114513-business-associate-agreements-baa-for-commercial-customers",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        },
+        {
+          "url": "https://trust.anthropic.com/updates",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        }
+      ]
+    },
+    {
+      "ledger_row": 71,
+      "topic": "HL7 AI Transparency on FHIR IG",
+      "status": "Tier-B-PROVISIONAL",
+      "finding": "HL7 continuous build resolves at version 1.0.0-ballot with Trial-use status; v0.55e consumes only the independent Provenance R4 plus THO security-label architecture.",
+      "sources": [
+        {
+          "url": "https://build.fhir.org/ig/HL7/aitransparency-ig/",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        },
+        {
+          "url": "https://github.com/HL7/aitransparency-ig",
+          "access_method": "real-browser user-agent fetch",
+          "http_status": 200
+        }
+      ]
+    }
+  ]
+}

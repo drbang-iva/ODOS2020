@@ -1353,7 +1353,7 @@ const tools = [
   {
     name: "create_dry_eye_adverse_event",
     description:
-      "Create a FHIR AdverseEvent for dry-eye complications with USCDI v7 forward-compatible fields. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_adverse_event.",
+      "Create a FHIR AdverseEvent for dry-eye complications with later-USCDI forward-compatible fields. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_adverse_event.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "event_text"],

@@ -230,6 +230,11 @@ const AGENTOPS_IMAGE_TO_LLM_PATTERN =
 const AIAST_CODE_PATTERN = /code\s*:\s*["']AIAST["']/;
 const AIAST_SYSTEM_PATTERN =
   /system\s*:\s*["']http:\/\/terminology\.hl7\.org\/CodeSystem\/v3-ObservationValue["']/;
+const BULK_JOB_ID_PHI_CONSTRUCTOR_PATTERN =
+  /(?:const|let|return)\s+(?:jobId|id)\b[^;\n]*(?:patient|mrn|dob|name|ssn|Date\.now|new Date|Math\.random|counter|\+\+)/i;
+const BULK_META_SECURITY_STRIP_PATTERN =
+  /delete\s+\w+\.meta\.security|\.meta\s*=\s*undefined|\.meta\.security\s*=\s*undefined|JSON\.stringify\([^,\n]+,\s*(?:replacer|[^)]*meta)/;
+const BULK_FORBIDDEN_EXPORT_ENDPOINT_PATTERN = /Patient\/(?::id|\{id\})\/\$export|\/Patient\/:id\/\$export/;
 const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
   `${["ipt", "ables"].join("")}.*--uid-owner|${["in-container", ["ipt", "ables"].join("")].join(" ")}`,
   "i",
@@ -433,6 +438,21 @@ export function runVendorCanonicalShapePass(
     findings.push(finding);
   }
   for (const finding of agentOpsRuntimeNetworkShapeFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of bulkDataJobIdFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of capabilityStatementRuleFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of bulkDataMetaSecurityFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of bulkDataEndpointShapeFindings(files)) {
+    findings.push(finding);
+  }
+  for (const finding of auditEventCountConsistencyFindings(options.files ? files : [...files, ...readAuditEventCountFiles()])) {
     findings.push(finding);
   }
 
@@ -750,6 +770,7 @@ function isAgentOpsImagePayloadSurface(path: string): boolean {
     displayed.startsWith("mcp/src/agentops/runtime/llm-adapters/") ||
     displayed.startsWith("mcp/src/agentops/runtime/mcp-serializers/") ||
     displayed.startsWith("mcp/src/agentops/dispatcher/") ||
+    displayed.startsWith("mcp/src/bulk-data/") ||
     displayed.startsWith("mcp/src/parsers/") ||
     displayed.startsWith("mcp/src/cds/services/") ||
     displayed === "mcp/src/agentops/runtime/agent-process.ts"
@@ -758,7 +779,11 @@ function isAgentOpsImagePayloadSurface(path: string): boolean {
 
 function isAgentOpsAiastSurface(path: string): boolean {
   const displayed = displayPath(path);
-  return displayed.startsWith("mcp/src/agentops/") || displayed.startsWith("mcp/src/cds/services/");
+  return (
+    displayed.startsWith("mcp/src/agentops/") ||
+    displayed.startsWith("mcp/src/cds/services/") ||
+    displayed.startsWith("mcp/src/bulk-data/output/")
+  );
 }
 
 function isAgentOpsExternalResponseSurface(path: string): boolean {
@@ -766,6 +791,8 @@ function isAgentOpsExternalResponseSurface(path: string): boolean {
   return (
     displayed === "mcp/src/agentops/safety-valve.ts" ||
     displayed === "mcp/src/agentops/runtime/agent-process.ts" ||
+    displayed === "mcp/src/bulk-data/refusal-handler.ts" ||
+    displayed.startsWith("mcp/src/bulk-data/output/") ||
     displayed.startsWith("mcp/src/cds/services/")
   );
 }
@@ -944,6 +971,9 @@ function agentOpsAiastSystemUriFindings(files: readonly { path: string; text: st
     }
     const lines = file.text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
+      if (line.includes('"AIAST" |') || line.includes("'AIAST' |")) {
+        continue;
+      }
       if (!AIAST_CODE_PATTERN.test(line)) {
         continue;
       }
@@ -1013,6 +1043,216 @@ function agentOpsRuntimeNetworkShapeFindings(files: readonly { path: string; tex
   return findings;
 }
 
+function bulkDataJobIdFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (displayPath(file.path) !== "mcp/src/bulk-data/job-id-generator.ts") {
+      continue;
+    }
+    if (!file.text.includes("randomBytes") || !file.text.includes("BULK_EXPORT_JOB_ID_PATTERN")) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "bulk-data-no-phi-in-job-id",
+        message: "Bulk Data job IDs must be high-entropy URL-safe nonces with a runtime shape check.",
+        source: displayPath(file.path),
+        line: 1,
+        ledgerRow: 70,
+        lesson: "v0.55e Binding #25",
+      });
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (BULK_JOB_ID_PHI_CONSTRUCTOR_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "bulk-data-no-phi-in-job-id",
+          message: "Bulk Data job IDs must not be derived from PHI, dates, counters, or predictable values.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 70,
+          lesson: "v0.55e Binding #25",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function capabilityStatementRuleFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const rulesFile = files.find((file) => displayPath(file.path) === "data/canonical-extensions/capability-statement-rules.json");
+  const capabilityTests = new Set(
+    files
+      .map((file) => displayPath(file.path))
+      .filter((path) => path.startsWith("mcp/src/__tests__/capability/") && path.endsWith(".test.ts")),
+  );
+  if (!rulesFile && capabilityTests.size === 0) {
+    return [];
+  }
+  const findings: PreflightFinding[] = [];
+  let rules: Array<{ backing_test?: string; claim_path?: string; required_for_certification?: boolean }> = [];
+  try {
+    rules = (JSON.parse(rulesFile?.text ?? "{}") as { rules?: typeof rules }).rules ?? [];
+  } catch {
+    findings.push({
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "capability-statement-claim-must-have-test",
+      message: "CapabilityStatement rules JSON must parse cleanly.",
+      source: rulesFile ? displayPath(rulesFile.path) : "data/canonical-extensions/capability-statement-rules.json",
+      line: 1,
+      ledgerRow: 60,
+      lesson: "v0.55e Binding #3",
+    });
+    return findings;
+  }
+  const backingTests = new Set<string>();
+  for (const [index, rule] of rules.entries()) {
+    if (typeof rule.required_for_certification !== "boolean") {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "capability-statement-claim-must-have-test",
+        message: "CapabilityStatement claim rule must explicitly set required_for_certification.",
+        source: rulesFile ? displayPath(rulesFile.path) : "data/canonical-extensions/capability-statement-rules.json",
+        line: index + 1,
+        ledgerRow: 60,
+        lesson: "v0.55e Binding #3",
+      });
+    }
+    if (!rule.backing_test || !capabilityTests.has(rule.backing_test)) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "capability-statement-claim-must-have-test",
+        message: `CapabilityStatement claim ${rule.claim_path ?? "(unknown)"} lacks an existing backing integration test.`,
+        source: rulesFile ? displayPath(rulesFile.path) : "data/canonical-extensions/capability-statement-rules.json",
+        line: index + 1,
+        ledgerRow: 60,
+        lesson: "v0.55e Binding #3",
+      });
+      continue;
+    }
+    backingTests.add(rule.backing_test);
+  }
+  for (const testPath of capabilityTests) {
+    if (!backingTests.has(testPath)) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "capability-statement-claim-must-have-test",
+        message: "CapabilityStatement capability test is not referenced by the rules file.",
+        source: testPath,
+        line: 1,
+        ledgerRow: 60,
+        lesson: "v0.55e Binding #3",
+      });
+    }
+  }
+  return findings;
+}
+
+function bulkDataMetaSecurityFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    if (!displayPath(file.path).startsWith("mcp/src/bulk-data/output/")) {
+      continue;
+    }
+    for (const [index, line] of file.text.split(/\r?\n/).entries()) {
+      if (BULK_META_SECURITY_STRIP_PATTERN.test(line)) {
+        findings.push({
+          pass: "vendor-canonical-shapes",
+          severity: "hard-block",
+          code: "meta-security-preservation-on-ndjson-output",
+          message: "Bulk Data NDJSON output must not strip FHIR meta.security.",
+          source: displayPath(file.path),
+          line: index + 1,
+          ledgerRow: 68,
+          lesson: "v0.55e Binding #10",
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+function bulkDataEndpointShapeFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const file = files.find((candidate) => displayPath(candidate.path) === "mcp/src/bulk-data/router.ts");
+  if (!file) {
+    return [];
+  }
+  const findings: PreflightFinding[] = [];
+  const checks = [
+    { ok: file.text.includes('"/Group/:id/$export"'), message: "Group export route must include a concrete Group id path parameter." },
+    { ok: file.text.includes('"/Patient/$export"'), message: "Patient export route must be all-patients-compartment Patient/$export." },
+    { ok: file.text.includes('"/$export"'), message: "System export route must be root-level $export." },
+    { ok: !BULK_FORBIDDEN_EXPORT_ENDPOINT_PATTERN.test(file.text), message: "Patient export must not be implemented as a single-patient Patient/{id}/$export route." },
+  ];
+  for (const check of checks) {
+    if (!check.ok) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "bulk-data-export-endpoint-shape",
+        message: check.message,
+        source: displayPath(file.path),
+        line: 1,
+        ledgerRow: 54,
+        lesson: "v0.55e Binding #1",
+      });
+    }
+  }
+  return findings;
+}
+
+function auditEventCountConsistencyFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const findings: PreflightFinding[] = [];
+  for (const file of files) {
+    const displayed = displayPath(file.path);
+    if (!displayed.endsWith(".md") && !displayed.startsWith("data/code-bindings/")) {
+      continue;
+    }
+    const match = /(\d+)\s+new\s+(?:audit\s+)?event[_ ]types?/i.exec(file.text);
+    if (!match) {
+      continue;
+    }
+    const claimed = Number(match[1]);
+    const afterLines = file.text.slice(match.index + match[0].length).split(/\r?\n/);
+    let listed = 0;
+    let started = false;
+    for (const line of afterLines) {
+      if (/^\s*-\s+`[^`]+`/.test(line)) {
+        listed += 1;
+        started = true;
+        continue;
+      }
+      if (!started && !line.trim()) {
+        continue;
+      }
+      if (started) {
+        break;
+      }
+    }
+    if (listed > 0 && listed !== claimed) {
+      findings.push({
+        pass: "vendor-canonical-shapes",
+        severity: "hard-block",
+        code: "audit-event-count-vs-list-consistency",
+        message: `Audit event count claim says ${claimed}, but the following list has ${listed} items.`,
+        source: displayPath(file.path),
+        line: lineForIndex(file.text, match.index),
+        ledgerRow: 65,
+        lesson: "v0.55e Binding #11",
+      });
+    }
+  }
+  return findings;
+}
+
+function lineForIndex(text: string, index: number): number {
+  return text.slice(0, index).split(/\r?\n/).length;
+}
+
 function urlHost(value: string): string | undefined {
   try {
     return new URL(value).host.toLowerCase();
@@ -1033,6 +1273,21 @@ function readMarketplaceCopyFiles(): { path: string; text: string }[] {
   readIfExists(resolve(REPO_ROOT, "README.md"));
   walkMarkdown(resolve(REPO_ROOT, "docs"), files);
   walkMarkdown(resolve(REPO_ROOT, "ui/src"), files);
+  return files;
+}
+
+function readAuditEventCountFiles(): { path: string; text: string }[] {
+  const files: { path: string; text: string }[] = [];
+  walkMarkdown(resolve(REPO_ROOT, "docs/build-log"), files);
+  walkMarkdown(resolve(REPO_ROOT, "data/code-bindings"), files);
+  const readIfExists = (path: string): void => {
+    try {
+      files.push({ path, text: readFileSync(path, "utf8") });
+    } catch {
+      /* absent files are fine */
+    }
+  };
+  readIfExists(resolve(REPO_ROOT, "README.md"));
   return files;
 }
 
