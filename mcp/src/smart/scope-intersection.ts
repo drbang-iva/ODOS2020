@@ -46,6 +46,7 @@ export interface SmartScopeIntersectionInput {
   readonly clientAuthClass: SmartClientAuthClass;
   readonly requestedScopes: readonly SmartResourceScope[];
   readonly launchContext?: SmartLaunchContext;
+  readonly firstPartyOsodCoreClient?: boolean;
   readonly policyId?: string;
   readonly now?: Date;
   readonly decisionTtlMs?: number;
@@ -64,7 +65,14 @@ export function evaluateSmartScopeIntersection(input: SmartScopeIntersectionInpu
   const now = input.now ?? new Date();
   const requested = input.requestedScopes.map(formatSmartResourceScope);
   const effective = input.requestedScopes
-    .flatMap((scope) => intersectScopeWithRole(scope, input.roleId, input.clientAuthClass))
+    .flatMap((scope) =>
+      intersectScopeWithRole(scope, {
+        roleId: input.roleId,
+        clientAuthClass: input.clientAuthClass,
+        firstPartyOsodCoreClient:
+          input.firstPartyOsodCoreClient ?? isFirstPartyOsodCoreClient(input.appClientId),
+      }),
+    )
     .map(formatSmartResourceScope);
   const uniqueEffective = [...new Set(effective)].sort();
   const missing = requested.filter((scope) => !uniqueEffective.includes(scope));
@@ -125,14 +133,21 @@ export function assertSandboxScopeAllowed(scope: SmartResourceScope): void {
 
 function intersectScopeWithRole(
   requested: SmartResourceScope,
-  roleId: PracticeRoleId,
-  clientAuthClass: SmartClientAuthClass,
+  input: {
+    readonly roleId: PracticeRoleId;
+    readonly clientAuthClass: SmartClientAuthClass;
+    readonly firstPartyOsodCoreClient: boolean;
+  },
 ): SmartResourceScope[] {
-  if (requested.prefix === "system" && clientAuthClass === "public") {
+  if (requested.prefix === "system" && input.clientAuthClass === "public") {
     return [];
   }
 
-  const allowedPermissions = allowedPermissionsForResource(roleId, requested.resourceType);
+  if (isFrameCatalogDeviceDefinitionReadScope(requested) && !input.firstPartyOsodCoreClient) {
+    return [];
+  }
+
+  const allowedPermissions = allowedPermissionsForResource(input.roleId, requested.resourceType);
   const requestedPermissions = new Set(requested.permissions);
   const permissions = SMART_V2_PERMISSION_ORDER.filter(
     (permission) => allowedPermissions.has(permission) && requestedPermissions.has(permission),
@@ -143,6 +158,17 @@ function intersectScopeWithRole(
   }
 
   return [{ ...requested, permissions, legacy: false }];
+}
+
+export function isFirstPartyOsodCoreClient(clientId: string): boolean {
+  return clientId === "osod-core" || clientId.startsWith("osod-core-") || clientId.startsWith("osod-mcp");
+}
+
+function isFrameCatalogDeviceDefinitionReadScope(scope: SmartResourceScope): boolean {
+  return (
+    scope.resourceType === "DeviceDefinition" &&
+    (scope.permissions.includes("r") || scope.permissions.includes("s"))
+  );
 }
 
 function allowedPermissionsForResource(roleId: PracticeRoleId, resourceType: string): Set<SmartV2Permission> {

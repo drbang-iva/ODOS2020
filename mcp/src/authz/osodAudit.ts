@@ -82,6 +82,17 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "patient_access.token.issued",
   "patient_access.token.revoked",
   "capability_statement.served",
+  "catalog_sync.frames.bulk.upserted",
+  "catalog_sync.frames.bulk.retired",
+  "catalog_sync.frames.run.success",
+  "catalog_sync.frames.run.failure",
+  "catalog_sync.frames.run.partial",
+  "catalog_sync.hcpcs.delta.upserted",
+  "catalog_sync.hcpcs.delta.retired",
+  "catalog_sync.hcpcs.run.success",
+  "catalog_sync.hcpcs.run.failure",
+  "catalog.frames.export.csv",
+  "practice.frames-data-subscription.toggled",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 

@@ -229,6 +229,66 @@
       "namespace": "ophthalmology",
       "status": "active",
       "sliceConsumer": "v0.2"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/catalog-publicity-class",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/dispensary-location",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-at",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-source-file",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-subscription-active",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-username",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/inventory-status",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/qty-on-hand",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/sale-price-cents",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "v0.6a"
     }
   ]
 }

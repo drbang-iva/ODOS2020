@@ -81,6 +81,7 @@ services:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
       OSOD_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
       OSOD_AGENTOPS_RUNTIME: supervisor
+      NODE_OPTIONS: --experimental-network-imports=false
     volumes:
       - ./:/workspace:ro
     depends_on:
