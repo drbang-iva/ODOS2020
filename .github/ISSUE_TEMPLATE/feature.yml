@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest a new capability or enhancement
+title: "[feature] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OSOD is single-practitioner-led and prioritizes the operator's milestone roadmap. Feature requests are read but may not be implemented quickly. Discussion before code is encouraged for anything non-trivial.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the practitioner / clinical / technical problem, not the proposed solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you solve it? Include any constraints (FHIR profile, AGPL implications, local-only posture).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider?
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and impact
+      description: Which slices does this touch? Does it require schema changes, FHIR profile changes, AccessPolicy changes, or AgentOps governance changes?
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: I understand OSOD is local-first and that features adding cloud calls, telemetry, or default phone-home will be declined
+          required: true

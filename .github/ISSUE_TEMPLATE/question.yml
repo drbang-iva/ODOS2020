@@ -1,0 +1,30 @@
+name: Question
+description: Ask about how OSOD works, how to use it, or its direction
+title: "[question] "
+labels: ["question", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a question, check the README, STATUS.md, and the docs/ directory. Many common questions are answered there.
+
+        Discussions are not yet enabled, so questions land here for now.
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What are you trying to understand or do?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What have you already tried or read? Link to any relevant docs or code.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and the README / STATUS.md / docs
+          required: true

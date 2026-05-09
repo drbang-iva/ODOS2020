@@ -1,0 +1,54 @@
+name: Bug report
+description: Something is broken or behaving incorrectly
+title: "[bug] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please include enough detail that a reviewer can reproduce the issue without follow-up.
+
+        **Do not include PHI, patient data, or production secrets.** Redact aggressively.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected vs. what occurred.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reproduce. Code snippets, commands, or curl examples preferred.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OSOD version / commit
+      description: Output of `git rev-parse HEAD` or the milestone tag (e.g., v0.55e).
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, Docker version, hardware (Mac Studio / NUC / Linux box), Medplum version.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Stack traces, error output, audit log entries. Redact PHI.
+      render: shell
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and confirmed this is not a duplicate
+          required: true
+        - label: I have not included PHI, patient data, or production secrets in this report
+          required: true
