@@ -1,0 +1,80 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# CI scope: the everyday verification path Devon flagged in osod issue #2.
+# DR drill lives in dr-drill.yml (deeper, slower, separate trigger).
+# This workflow proves: deps install, types compile, tests pass, UI builds,
+# preflight lint clean. Nothing more.
+
+jobs:
+  mcp:
+    name: mcp — install + typecheck + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            mcp/package-lock.json
+      - name: install root deps
+        run: npm ci
+      - name: install mcp deps
+        working-directory: mcp
+        run: npm ci
+      - name: typecheck mcp
+        working-directory: mcp
+        run: npx tsc --noEmit
+      - name: run mcp tests
+        working-directory: mcp
+        run: npm test
+
+  ui:
+    name: ui — install + typecheck + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+      - name: install ui deps
+        working-directory: ui
+        run: npm ci
+      - name: typecheck ui
+        working-directory: ui
+        run: npx tsc --noEmit
+      - name: build ui
+        working-directory: ui
+        run: npm run build
+
+  preflight:
+    name: preflight — Pass 4 custom lint rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [mcp]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            mcp/package-lock.json
+      - name: install deps
+        run: |
+          npm ci
+          cd mcp && npm ci
+      - name: run preflight
+        run: npm run preflight

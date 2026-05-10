@@ -64,6 +64,25 @@ OSOD is designed for the practice's own hardware. If a practice ever wants cloud
 
 Plus the catalog architecture trifecta drafted 2026-05-05: product catalogs hybrid FHIR + sibling SQL; medical-coding licensing strategy; per-catalog sync infrastructure.
 
+## First install/pilot milestone — Tier-1 "Install + Chart + Safety"
+
+A local optometry practice can, on its own hardware, with no cloud dependency:
+
+1. Install OSOD via documented script
+2. Pass `npm run preflight` clean
+3. Onboard admin Practitioner + AccessPolicies
+4. Chart a basic visit (refraction, IOP, anterior/posterior segment, signing)
+5. Verify AuditEvent captures all PHI access
+6. Run DR drill 32/32 + 5/5 integrity checks recoverably
+7. Export the patient via §170.315(g)(10) Patient Access API
+8. Understand explicitly what is NOT production-ready yet
+
+**Tier-1 has zero in-flight v0.6 dependencies.** v0.55 substrate is what we validate first in a real practice. The proving-ground practice runs their current PMS in parallel for revenue cycle during the Tier-1 pilot — OSOD is the charting + audit + safety substrate during validation.
+
+Tier-2 (cash dispensary) needs v0.6c. Tier-3 (insured visit) needs v0.6b + v0.6c + v0.6d.
+
+Full acceptance criteria, rationale, and v0.6 ranking against pilot tiers: [`docs/operator-dashboard.md`](docs/operator-dashboard.md). Live build status: [`STATUS.md`](STATUS.md).
+
 ## Practice install (developer-only — not a customer onboarding path yet)
 
 OSOD targets a practice-owned Mac Studio, NUC, Linux box, or server with at least 16 GB RAM and 500 GB storage. The practice handles the physical safeguards around hardware and backup media; see v0.5 verification ledger row 46 for HIPAA 45 CFR §164.310. Docker Compose v2 is the local deployment surface; ledger row 47 + the official Docker Compose install docs: <https://docs.docker.com/compose/install/>.
@@ -137,10 +156,10 @@ Admin UI: http://localhost:8100
 
 ## Repository relationships
 
-- **Business brain + knowledge vault:** [`performance-od`](https://github.com/drbang-iva/performance-od) — strategy, decisions, research, the AI agent fleet, and the wider PerformanceOD posture. OSOD is one of three pillars there (alongside open-source marketing & automation, and a community-for-ODs concept).
-- **Code:** this repository.
+- **Business brain + knowledge vault (private):** [`performance-od`](https://github.com/drbang-iva/performance-od) — strategy, decisions, research, mandates, four-wave triangulation files, the AI agent fleet, and the wider PerformanceOD posture. OSOD is one of three pillars there (alongside open-source marketing & automation, and a community-for-ODs concept). The private repo is maintainer-only; nothing private (PHI, secrets, customer data, raw clinic data, finance) crosses the boundary into this OSOD repo.
+- **Code (this repo, public AGPL-3.0):** application code, infrastructure config, tests, dev scripts, build logs, evidence files.
 
-See `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md` for the architecture rationale, and `performance-od/decisions/2026-03-14-open-source-od-architecture.md` for the founding architecture decision.
+See `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md` for the architecture rationale, `performance-od/decisions/2026-03-14-open-source-od-architecture.md` for the founding architecture decision, and `performance-od/decisions/2026-05-10-osod-first-pilot-milestone.md` for the Tier-1 first-pilot-milestone decision.
 
 ## History
 
