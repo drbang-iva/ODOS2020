@@ -10,6 +10,12 @@ on:
 # DR drill lives in dr-drill.yml (deeper, slower, separate trigger).
 # This workflow proves: deps install, types compile, tests pass, UI builds,
 # preflight lint clean. Nothing more.
+#
+# Shell: each test/preflight step uses bash with `shopt -s globstar` because
+# the mcp/package.json test script relies on `**` glob expansion. The default
+# GH Actions shell does not have globstar enabled, and `npm run` invokes via
+# sh which never supports globstar. Inlining the test invocation under bash
+# with globstar is the least-invasive fix for now.
 
 jobs:
   mcp:
@@ -20,7 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
@@ -35,7 +41,21 @@ jobs:
         run: npx tsc --noEmit
       - name: run mcp tests
         working-directory: mcp
-        run: npm test
+        shell: bash
+        run: |
+          shopt -s globstar
+          node --import tsx --test --test-concurrency=1 \
+            src/__tests__/**/*.test.ts \
+            tests/**/*.test.ts \
+            ../tests/boundaries/**/*.test.ts \
+            ../tests/observation-status-machine/**/*.test.ts \
+            ../tests/setup-wizard/**/*.test.ts \
+            ../tests/preflight/**/*.test.ts \
+            ../tests/smart/**/*.test.ts \
+            ../tests/cds/**/*.test.ts \
+            ../tests/agentops/**/*.test.ts \
+            ../tests/bulk-data/**/*.test.ts \
+            ../tests/mandate-8/**/*.test.ts
 
   ui:
     name: ui — install + typecheck + build
@@ -45,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: ui/package-lock.json
       - name: install ui deps
@@ -67,7 +87,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
