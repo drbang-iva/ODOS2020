@@ -1,4 +1,4 @@
-export type RoleId = "doctor" | "tech" | "front-desk";
+export type RoleId = "doctor" | "tech" | "front-desk" | "practice-admin";
 export type CardDensity = "compact" | "full" | "hidden";
 
 export interface RoleConfig {
@@ -37,6 +37,13 @@ export const ROLE_CONFIG: Record<RoleId, RoleConfig> = {
   "front-desk": {
     id: "front-desk",
     label: "Front desk",
+    defaultView: "admin-cards",
+    encounterDensity: "compact",
+    directorOrbitalFilters: ["systemic", "refractive"],
+  },
+  "practice-admin": {
+    id: "practice-admin",
+    label: "Practice admin",
     defaultView: "admin-cards",
     encounterDensity: "compact",
     directorOrbitalFilters: ["systemic", "refractive"],

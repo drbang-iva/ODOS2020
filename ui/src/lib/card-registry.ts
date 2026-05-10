@@ -18,32 +18,32 @@ export const CHART_CARD_REGISTRY: ChartCardRegistration[] = [
   {
     id: "programs",
     label: "Programs",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
   {
     id: "allergies",
     label: "Allergies",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
   {
     id: "tobacco-use",
     label: "Tobacco Use",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
   {
     id: "product-timeline",
     label: "Product Timeline",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
   {
     id: "care-team",
     label: "Care Team",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
   {
     id: "problem-list",
     label: "Problem List",
-    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact" },
+    densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
   },
 ];
 

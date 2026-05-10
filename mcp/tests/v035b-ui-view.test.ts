@@ -39,10 +39,11 @@ import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinic
 import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
 
 test("role config is switchable presentation-only plumbing", () => {
-  assert.deepEqual(ROLE_IDS, ["doctor", "tech", "front-desk"]);
+  assert.deepEqual(ROLE_IDS, ["doctor", "tech", "front-desk", "practice-admin"]);
   assert.equal(ROLE_CONFIG.doctor.defaultView, "encounter-charting");
   assert.equal(ROLE_CONFIG.tech.defaultView, "chart-sidebar");
   assert.equal(ROLE_CONFIG["front-desk"].defaultView, "admin-cards");
+  assert.equal(ROLE_CONFIG["practice-admin"].defaultView, "admin-cards");
 
   const rolesSource = readUi("src/lib/roles.ts");
   assert.match(rolesSource, /Presentation only/);

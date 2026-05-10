@@ -8,6 +8,7 @@ import { RoleProvider } from "./lib/role-context";
 import { useViewState, type ViewState } from "./lib/view-state";
 import { AuthorizeConsent } from "./smart/authorize-consent";
 import { GrantsManagement } from "./smart/grants-management";
+import { OpticalFrames } from "./scenes/OpticalFrames";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -64,9 +65,26 @@ export function App() {
 
   return (
     <RoleProvider>
-      {window.location.pathname === "/audit/log" ? <AuditLog /> : <ViewRouter view={view} />}
+      <RouteSwitch view={view} />
     </RoleProvider>
   );
+}
+
+function RouteSwitch({ view }: { view: ViewState }) {
+  switch (window.location.pathname) {
+    case "/audit/log":
+      return <AuditLog />;
+    case "/admin/optical/catalog/frames":
+      return <OpticalFrames route="catalog" />;
+    case "/admin/optical/inventory/frames":
+      return <OpticalFrames route="inventory" />;
+    case "/dispensary/lookup":
+      return <OpticalFrames route="lookup" />;
+    case "/admin/practice/settings/frames-data":
+      return <OpticalFrames route="settings" />;
+    default:
+      return <ViewRouter view={view} />;
+  }
 }
 
 function ViewRouter({ view }: { view: ViewState }) {
