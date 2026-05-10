@@ -42,6 +42,12 @@ export interface FramesDataSubscriptionSettings {
   readonly lastIngestSourceFile?: string;
 }
 
+export interface FramePosLookupMatch {
+  readonly catalog: FrameCatalogItem;
+  readonly inventory?: PracticeFrameInventoryItem;
+  readonly score: number;
+}
+
 export async function searchFrameCatalog(query: string): Promise<FrameCatalogItem[]> {
   const bundle = await fhir.search<DeviceDefinition>("DeviceDefinition", {
     _count: "50",
@@ -144,6 +150,27 @@ export function exportableFrameRows(rows: readonly FrameCatalogItem[]): readonly
   return rows.filter((row) => row.publicityClass === "open" || row.publicityClass === "no_public_price");
 }
 
+export function rankFramePosLookupRows(
+  rows: readonly FrameCatalogItem[],
+  inventory: readonly PracticeFrameInventoryItem[],
+  query: string,
+  limit = 8,
+): readonly FramePosLookupMatch[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  const inventoryByUrl = new Map(inventory.map((row) => [row.canonicalUrl, row]));
+  const matches: FramePosLookupMatch[] = [];
+
+  for (const row of rows) {
+    const score = frameLookupScore(row, normalizedQuery);
+    if (score === 0) {
+      continue;
+    }
+    insertLookupMatch(matches, { catalog: row, inventory: inventoryByUrl.get(row.canonicalUrl), score }, limit);
+  }
+
+  return matches;
+}
+
 function deviceDefinitionToFrameCatalogItem(resource: DeviceDefinition): FrameCatalogItem {
   const properties: Record<string, string> = {};
   for (const property of resource.property ?? []) {
@@ -198,4 +225,33 @@ function extensionBoolean(resource: { extension?: readonly { url?: string; value
 
 function extensionNumber(resource: { extension?: readonly { url?: string; valueInteger?: number }[] } | undefined, url: string): number | null {
   return resource?.extension?.find((candidate) => candidate.url === url)?.valueInteger ?? null;
+}
+
+function frameLookupScore(row: FrameCatalogItem, normalizedQuery: string): number {
+  if (!normalizedQuery) {
+    return 1;
+  }
+  const sku = row.sku.toLowerCase();
+  const gtin = row.gtin14 ?? "";
+  const display = row.display.toLowerCase();
+  const manufacturer = row.manufacturer.toLowerCase();
+
+  if (sku === normalizedQuery || gtin === normalizedQuery) return 100;
+  if (sku.startsWith(normalizedQuery) || display.startsWith(normalizedQuery)) return 75;
+  if (display.includes(normalizedQuery) || manufacturer.includes(normalizedQuery) || gtin.includes(normalizedQuery)) return 50;
+  return 0;
+}
+
+function insertLookupMatch(matches: FramePosLookupMatch[], match: FramePosLookupMatch, limit: number): void {
+  if (matches.length < limit) {
+    matches.push(match);
+    matches.sort((a, b) => b.score - a.score);
+    return;
+  }
+  const last = matches[matches.length - 1];
+  if (!last || match.score <= last.score) {
+    return;
+  }
+  matches[matches.length - 1] = match;
+  matches.sort((a, b) => b.score - a.score);
 }

@@ -4,6 +4,7 @@ import {
   exportableFrameRows,
   loadFramesDataSubscriptionSettings,
   loadPracticeFrameInventory,
+  rankFramePosLookupRows,
   saveFramesDataSubscriptionSettings,
   searchFrameCatalog,
   type FrameCatalogItem,
@@ -166,15 +167,12 @@ function InventoryTable({ rows, catalog }: { rows: readonly PracticeFrameInvento
 }
 
 function PosLookup({ rows, inventory, query }: { rows: readonly FrameCatalogItem[]; inventory: readonly PracticeFrameInventoryItem[]; query: string }) {
-  const inventoryByUrl = useMemo(() => new Map(inventory.map((row) => [row.canonicalUrl, row])), [inventory]);
-  const matches = rows.filter((row) => {
-    const q = query.toLowerCase();
-    return !q || row.display.toLowerCase().includes(q) || row.sku.toLowerCase().includes(q) || row.gtin14?.includes(q);
-  });
+  const matches = useMemo(() => rankFramePosLookupRows(rows, inventory, query), [rows, inventory, query]);
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      {matches.slice(0, 8).map((row) => {
-        const inv = inventoryByUrl.get(row.canonicalUrl);
+      {matches.map((match) => {
+        const row = match.catalog;
+        const inv = match.inventory;
         return (
           <div key={row.canonicalUrl} className="rounded border border-white/10 bg-white/[0.03] p-4">
             <div className="flex items-start justify-between gap-3">

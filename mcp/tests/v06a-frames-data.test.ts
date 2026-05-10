@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createWriteStream, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { once } from "node:events";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { test } from "node:test";
 import type { AuditEvent, ChargeItemDefinition, DeviceDefinition, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import {
@@ -19,11 +21,21 @@ import {
 } from "../src/catalog/frame-types.js";
 import { runFramesBulkIngest, type FramesBulkIngestContext } from "../src/catalog-sync/frames/frames-data-bulk-ingest.js";
 import { assertNotFramesDataHost } from "../src/catalog-sync/frames/no-egress-guard.js";
+import { parseFrameCatalogRowsFromFile } from "../src/catalog-sync/frames/parsers/frame-file-parser.js";
 import { seedFrameHcpcsRows } from "../src/catalog-sync/hcpcs/hcpcs-sync.js";
+import { assertLocalTerminologyUrl, validateFrameTerminologyLocally } from "../src/catalog/terminology-validation.js";
 import { parseSmartResourceScope } from "../src/smart/scope.js";
 import { evaluateSmartScopeIntersection } from "../src/smart/scope-intersection.js";
+import { rankFramePosLookupRows, type FrameCatalogItem, type PracticeFrameInventoryItem } from "../../ui/src/lib/optical-frames.js";
 
 const REPO_ROOT = resolve(process.cwd(), "..");
+const V06A_DR_TABLES = [
+  "osod_frames_catalog",
+  "osod_practice_frames_inventory",
+  "osod_catalog_sync_runs",
+  "osod_catalog_overlays",
+  "osod_terminology_hcpcs",
+] as const;
 
 test("v0.6a SQL migration creates closure-aligned Frames Data substrate", () => {
   const sql = readFileSync(resolve(REPO_ROOT, "data/migrations/2026-05-09-v06a-frames-data.sql"), "utf8");
@@ -185,6 +197,84 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
   }
 });
 
+test("Bulk ingest N=100 emits 200 FHIR resources and 403 attribution artifacts", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "osod-v06a-100-"));
+  const file = join(dir, "frames-100.csv");
+  writeFileSync(
+    file,
+    [
+      "skuId,brandName,modelName,colorName,sourceColorRaw,sourceMaterialRaw,eyesizeMm,dblMm,templeMm,gtin14,msrpCents",
+      ...Array.from({ length: 100 }, (_, i) => `SKU-${i},Brand,Model ${i},Black,Black,Acetate,54,18,145,1234567890${String(i).padStart(2, "0")},19900`),
+    ].join("\n"),
+  );
+
+  const context = ingestContext({ now: "2026-05-09T13:00:00.000Z", existing: () => null });
+
+  try {
+    const result = await runFramesBulkIngest(
+      { practiceId: "practice-a", uploadedFilePath: file, fileFormat: "frames-data-365-export" },
+      context,
+    );
+    assert.equal(result.rowsInserted, 100);
+    assert.equal(result.rowsRetired, 0);
+    assert.equal(result.sqlMutations, 100);
+    assert.equal(result.fhirResourcesCreated, 200);
+    assert.equal(result.attributionArtifacts, 403);
+    assert.equal(result.cursorHighWater, null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("Stream parser handles a 50MB NDJSON catalog drop without readFileSync or heap blowup", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "osod-v06a-50mb-"));
+  const file = join(dir, "frames-large.ndjson");
+  const stream = createWriteStream(file);
+  const filler = "x".repeat(256 * 1024);
+
+  try {
+    for (let i = 0; i < 205; i += 1) {
+      const ok = stream.write(JSON.stringify({
+        skuId: `NDJSON-${i}`,
+        brandName: "Stream Brand",
+        modelName: `Stream Model ${i}`,
+        colorName: "Black",
+        sourceColorRaw: "Black",
+        sourceMaterialRaw: "Acetate",
+        eyesizeMm: 54,
+        dblMm: 18,
+        templeMm: 145,
+        notes: filler,
+      }) + "\n");
+      if (!ok) {
+        await once(stream, "drain");
+      }
+    }
+    stream.end();
+    await once(stream, "finish");
+    assert.ok(statSync(file).size > 50 * 1024 * 1024);
+
+    const heapBefore = process.memoryUsage().heapUsed;
+    let rows = 0;
+    for await (const row of parseFrameCatalogRowsFromFile({
+      filePath: file,
+      fileFormat: "unknown",
+      sourceVersion: "operator-upload:frames-large.ndjson",
+      sourceUrl: "operator-upload://frames-large.ndjson",
+      accessDate: "2026-05-09",
+    })) {
+      assert.equal(row.sourceUrl, "operator-upload://frames-large.ndjson");
+      rows += 1;
+    }
+    const heapDelta = process.memoryUsage().heapUsed - heapBefore;
+    assert.equal(rows, 205);
+    assert.ok(heapDelta < 200 * 1024 * 1024, `heap delta ${heapDelta} exceeded 200MB`);
+  } finally {
+    stream.destroy();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("Pass 4 closure scans block Frames Data HTTP and sync readFileSync shapes", () => {
   assert.throws(() => assertNotFramesDataHost("api.framesdata.com"), /egress blocked/);
   const framesDir = resolve(process.cwd(), "src/catalog-sync/frames");
@@ -193,6 +283,28 @@ test("Pass 4 closure scans block Frames Data HTTP and sync readFileSync shapes",
   assert.doesNotMatch(source, /fs\.readFileSync\s*\(/);
   assert.doesNotMatch(source, /https?:\/\/[^"'\s]*framesdata\.com/i);
   assert.doesNotMatch(source, /\bfetch\s*\([^)]*framesdata\.com/i);
+  assert.match(readFileSync(resolve(REPO_ROOT, "docs/build-log/2026-05-09-v0.6a-frames-data.md"), "utf8"), /framesdata\.com/);
+});
+
+test("Pass 4 deep scans enforce local-only terminology and Medplum fhirtypes-only imports", async () => {
+  assert.throws(() => assertLocalTerminologyUrl("https://tx.fhir.org/r4/ValueSet/$expand"), /external terminology host blocked/);
+  assert.throws(() => assertLocalTerminologyUrl("https://terminology.hl7.org/CodeSystem/$lookup"), /external terminology host blocked/);
+  await validateFrameTerminologyLocally({
+    hasHcpcsCode: (code) => ["V2020", "V2025", "V2600"].includes(code),
+    hasSnomedCode: (code) => code === "310105000",
+  });
+
+  const scanFiles = [
+    ...listFiles(resolve(process.cwd(), "src/catalog")),
+    ...listFiles(resolve(process.cwd(), "src/catalog-sync")),
+    resolve(REPO_ROOT, "package.json"),
+    resolve(REPO_ROOT, "mcp/package.json"),
+    resolve(REPO_ROOT, "ui/package.json"),
+  ].filter((file) => /\.(ts|tsx|json)$/.test(file));
+  const source = scanFiles.map((file) => readFileSync(file, "utf8")).join("\n");
+  assert.doesNotMatch(source, /@medplum\/(?:core|react)/);
+  assert.doesNotMatch(source, /\$execute-bot/);
+  assert.doesNotMatch(source, /createHash\(["']sha256["']\)/);
 });
 
 test("SMART DeviceDefinition catalog scopes require first-party OSOD core client", () => {
@@ -223,15 +335,60 @@ test("HCPCS seed rows mark V-series frame codes laterality-exempt", () => {
   assert.equal(rows.every((row) => row.metadata.laterality_exempt === true), true);
 });
 
+test("SQL substrate statically covers overlay isolation, FORCE RLS, SCD, and DR table manifest", () => {
+  const sql = readFileSync(resolve(REPO_ROOT, "data/migrations/2026-05-09-v06a-frames-data.sql"), "utf8");
+  assert.match(sql, /catalog_canonical_url TEXT NOT NULL/);
+  assert.match(sql, /USING \(practice_id = current_setting\('osod\.practice_id', true\)\)/);
+  assert.match(sql, /WITH CHECK \(practice_id = current_setting\('osod\.practice_id', true\)\)/);
+  assert.match(sql, /CREATE UNIQUE INDEX IF NOT EXISTS idx_frames_catalog_sku_active_unique/);
+  assert.match(sql, /WHERE effective_to IS NULL/);
+  assert.match(sql, /gtin14 CHARACTER\(14\) CHECK \(gtin14 IS NULL OR gtin14 ~ '\^\[0-9\]\{14\}\$'\)/);
+  for (const table of V06A_DR_TABLES) {
+    assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
+  }
+});
+
+test("Dispensary POS lookup remains under 100ms p95 over a 100K-row fixture", () => {
+  const rows: FrameCatalogItem[] = Array.from({ length: 100_000 }, (_, index) => ({
+    canonicalUrl: `https://osod.dev/catalog/frames/SKU-${index}`,
+    sku: `SKU-${index}`,
+    display: `Brand Model ${index}`,
+    manufacturer: "Manufacturer",
+    gtin14: String(index).padStart(14, "0"),
+    properties: {},
+    publicityClass: "open",
+  }));
+  const inventory: PracticeFrameInventoryItem[] = rows.slice(99_990, 100_000).map((row, index) => ({
+    id: `inv-${index}`,
+    canonicalUrl: row.canonicalUrl,
+    qtyOnHand: index + 1,
+    status: "active",
+  }));
+  const durations = Array.from({ length: 7 }, () => {
+    const started = performance.now();
+    const matches = rankFramePosLookupRows(rows, inventory, "SKU-99999", 8);
+    const duration = performance.now() - started;
+    assert.equal(matches[0]?.catalog.sku, "SKU-99999");
+    assert.equal(matches[0]?.inventory?.qtyOnHand, 10);
+    return duration;
+  }).sort((a, b) => a - b);
+  const p95 = durations[Math.ceil(durations.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY;
+  assert.ok(p95 < 100, `POS lookup p95 ${p95.toFixed(2)}ms exceeded 100ms`);
+});
+
 test("Inventory UI has no password field and no raw SQL route", () => {
   const uiFiles = [
     resolve(REPO_ROOT, "ui/src/lib/optical-frames.ts"),
     resolve(REPO_ROOT, "ui/src/scenes/OpticalFrames.tsx"),
   ].map((file) => readFileSync(file, "utf8")).join("\n");
   assert.doesNotMatch(uiFiles, /type=["']password["']/i);
+  assert.doesNotMatch(uiFiles, /passwordSecret|framesDataPassword|bearer token|api key/i);
   assert.doesNotMatch(uiFiles, /\bSELECT\b|\bosod_frames_catalog\b|\bosod_practice_frames_inventory\b/i);
   assert.match(uiFiles, /DeviceDefinition/);
   assert.match(uiFiles, /Basic/);
+  assert.match(uiFiles, /Username/);
+  assert.match(uiFiles, /Active subscription/);
+  assert.match(uiFiles, /Upload latest catalog file/);
   assert.match(uiFiles, /practice\.frames-data-subscription\.toggled/);
 });
 
@@ -272,6 +429,27 @@ function sampleRow(skuId: string, overrides: Partial<FrameCatalogRow> = {}): Fra
     sourceUrl: "operator-upload://fixture.csv",
     accessDate: "2026-05-09",
     ...overrides,
+  };
+}
+
+function ingestContext(input: {
+  readonly now: string;
+  readonly existing: (skuId: string) => FrameCatalogRow | null;
+}): FramesBulkIngestContext {
+  return {
+    now: () => new Date(input.now),
+    openSyncRun: async (run) => ({
+      id: "sync-run-fixture",
+      syncRunTimestamp: run.syncRunTimestamp,
+    }),
+    findActiveFrameBySku: async (skuId) => input.existing(skuId),
+    retireFrameCatalogRow: async () => undefined,
+    insertFrameCatalogRow: async () => undefined,
+    closeSyncRun: async (run) => {
+      assert.equal(run.sourceVersion.startsWith("operator-upload:"), true);
+      assert.equal(run.outcome, "success");
+    },
+    writeFhirResource: async () => undefined,
   };
 }
 

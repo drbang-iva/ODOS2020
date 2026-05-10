@@ -9,6 +9,7 @@ binary/
 postgres-data/
 backup/
 backup-dr-drill/
+backup-dr-drill-v06a/
 
 # IDE
 .vscode/
