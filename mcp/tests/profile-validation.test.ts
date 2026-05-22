@@ -25,16 +25,16 @@ let fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
 let patient: Patient;
 let encounter: Encounter;
 let bodyStructure: BodyStructure;
+let profileValidationSetup: Promise<void> | undefined;
+
+const MEDPLUM_SKIP_MESSAGE =
+  "MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for Medplum integration tests.";
 
 before(async () => {
   loadRepoEnv();
-  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const email = process.env.MEDPLUM_ADMIN_EMAIL;
-  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
-  if (!email || !password) {
-    throw new Error("MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD are required for profile validation tests.");
-  }
+});
 
+async function setupProfileValidationFixture(baseUrl: string, email: string, password: string): Promise<void> {
   ({ fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password }));
   await installProfilesForTest();
   patient = await fhir.create<Patient>({
@@ -46,7 +46,12 @@ before(async () => {
     ...buildEyeBodyStructure("OD", `Patient/${patient.id}`),
     id: undefined,
   });
-});
+}
+
+async function ensureProfileValidationFixture(baseUrl: string, email: string, password: string): Promise<void> {
+  profileValidationSetup ??= setupProfileValidationFixture(baseUrl, email, password);
+  await profileValidationSetup;
+}
 
 async function installProfilesForTest(): Promise<void> {
   const profilesDir = resolve(process.cwd(), "../data/profiles");
@@ -73,7 +78,18 @@ async function installProfilesForTest(): Promise<void> {
   }
 }
 
-test("profile validation accepts conformant v0.3 resources", async () => {
+// TODO(osod#11): integration tests skip when MEDPLUM env is unset. CI has no Medplum backend yet — see issue 11.
+test("profile validation accepts conformant v0.3 resources", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const resources = [
     buildVaObservation(),
     buildIopProfileObservation(),
@@ -90,7 +106,17 @@ test("profile validation accepts conformant v0.3 resources", async () => {
   assert.ok(createdEncounter.id, "Expected comprehensive Encounter to create.");
 });
 
-test("profile validation rejects IOP with non-UCUM pressure unit", async () => {
+test("profile validation rejects IOP with non-UCUM pressure unit", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildIopProfileObservation();
   invalid.valueQuantity = {
     ...invalid.valueQuantity,
@@ -100,19 +126,49 @@ test("profile validation rejects IOP with non-UCUM pressure unit", async () => {
   await assertRejectsProfile(invalid, /valueQuantity\.unit|mm\[Hg\]|Observation/);
 });
 
-test("profile validation rejects Observation missing bodySite reference extension", async () => {
+test("profile validation rejects Observation missing bodySite reference extension", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildVaObservation();
   invalid.bodySite = { ...invalid.bodySite, extension: [] };
   await assertRejectsProfile(invalid, /bodySite|Observation/);
 });
 
-test("profile validation rejects Observation missing encounter", async () => {
+test("profile validation rejects Observation missing encounter", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildRefractionProfileObservation();
   delete invalid.encounter;
   await assertRejectsProfile(invalid, /encounter|Observation/);
 });
 
-test("profile validation rejects axial length with non-mm UCUM code", async () => {
+test("profile validation rejects axial length with non-mm UCUM code", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildAxialLengthObservation();
   invalid.valueQuantity = {
     ...invalid.valueQuantity,
@@ -122,7 +178,17 @@ test("profile validation rejects axial length with non-mm UCUM code", async () =
   await assertRejectsProfile(invalid, /valueQuantity|mm|Observation/);
 });
 
-test("profile validation rejects comprehensive Encounter with non-AMB class", async () => {
+test("profile validation rejects comprehensive Encounter with non-AMB class", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildEncounter("in-progress");
   invalid.class = {
     system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
@@ -131,7 +197,17 @@ test("profile validation rejects comprehensive Encounter with non-AMB class", as
   await assertRejectsProfile(invalid, /class|Encounter/);
 });
 
-test("profile validation rejects finished Encounter without period.end", async () => {
+test("profile validation rejects finished Encounter without period.end", async (t) => {
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+  const email = process.env.MEDPLUM_ADMIN_EMAIL;
+  const password = process.env.MEDPLUM_ADMIN_PASSWORD;
+  if (!email || !password) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+
+  await ensureProfileValidationFixture(baseUrl, email, password);
+
   const invalid = buildEncounter("finished");
   await assertRejectsProfile(invalid, /period\.end|Encounter|finished/);
 });
