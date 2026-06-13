@@ -35,6 +35,7 @@ test("Bulk Data export file URLs contain only high-entropy job paths", async () 
     const status = await fetch(statusUrl, { headers: { Accept: "application/json" } });
     const manifest = await status.json() as { output: Array<{ url: string }> };
     assert.equal(manifest.output.length > 0, true);
+    assert.equal(manifest.output.some((output) => output.url.endsWith("/Patient.ndjson")), true);
     for (const output of manifest.output) {
       assert.equal(/\b(?:MRN|DOB|SSN|Patient\/|John|Smith|1970|1980|1990)\b/i.test(output.url), false);
       assert.match(new URL(output.url).pathname, /\/bulk-export\/file\/[A-Za-z0-9_-]{16,}\/[A-Za-z]+\.ndjson$/);

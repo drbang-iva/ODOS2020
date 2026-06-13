@@ -23,6 +23,8 @@ if (!manifestPath) {
 loadRepoEnv();
 
 const postgresUrl = process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const containerPostgresUrl =
+  process.env.OSOD_CONTAINER_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const email = process.env.MEDPLUM_ADMIN_EMAIL;
 const password = process.env.MEDPLUM_ADMIN_PASSWORD;
@@ -78,10 +80,7 @@ function readRestoredAuditRows(expectedCount: number): OsodAuditEventRecord[] {
     FROM osod_audit_events;
   `;
   try {
-    const output = execFileSync("psql", [postgresUrl, "-Atc", sql], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+    const output = runPsql(sql).trim();
     return JSON.parse(output || "[]") as OsodAuditEventRecord[];
   } catch (error) {
     if (expectedCount === 0) {
@@ -131,13 +130,56 @@ function readRestoredBinaryRows(): Binary[] {
     WHERE deleted = false;
   `;
   try {
-    const output = execFileSync("psql", [postgresUrl, "-Atc", sql], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+    const output = runPsql(sql).trim();
     return JSON.parse(output || "[]") as Binary[];
   } catch {
     return [];
+  }
+}
+
+function runPsql(sql: string): string {
+  const compose = composeCommand();
+  if (compose) {
+    return execFileSync(compose.command, [
+      ...compose.args,
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      containerPostgresUrl,
+      "-Atc",
+      sql,
+    ], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+  return execFileSync("psql", [postgresUrl, "-Atc", sql], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function composeCommand(): { command: string; args: string[] } | undefined {
+  if (!process.env.OSOD_COMPOSE_PROJECT && !process.env.OSOD_COMPOSE_FILE) {
+    return undefined;
+  }
+  const args = [
+    ...(process.env.OSOD_COMPOSE_PROJECT ? ["-p", process.env.OSOD_COMPOSE_PROJECT] : []),
+    ...(process.env.OSOD_COMPOSE_FILE ? ["-f", process.env.OSOD_COMPOSE_FILE] : []),
+  ];
+  if (hasCommand("docker-compose")) {
+    return { command: "docker-compose", args };
+  }
+  return { command: "docker", args: ["compose", ...args] };
+}
+
+function hasCommand(command: string): boolean {
+  try {
+    execFileSync("which", [command], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
   }
 }
 

@@ -19,6 +19,7 @@
     "preflight": "tsx scripts/preflight-lint.ts",
     "dr-drill": "tsx scripts/dr-drill.ts",
     "audit-verify": "tsx scripts/verify-tier1-visit-audit.ts",
+    "verify-bulk-export": "tsx scripts/verify-bulk-export.ts",
     "agentops:migration-type-regen": "tsx scripts/agentops-migration-type-regen.ts",
     "verify-backup-destination": "tsx scripts/verify-backup-destination.ts"
   },

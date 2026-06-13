@@ -10,20 +10,21 @@ tool call is supervised and explicit `Bash(...)` permission rules in
 protects against unsupervised destructive operations, not against supervised
 ones.
 
-**Isolation warning:** This drill runs in an isolated compose context. The
-primary `osod` compose project is NOT touched. Operators are responsible for
-ensuring the drill compose context is the active context before running
-destructive commands.
+**Isolation warning:** `npm run dr-drill` force-selects the isolated
+`osod-dr-drill` compose project and fixed drill ports (`18103`, `15432`,
+`16379`). It ignores inherited main-stack routing variables such as
+`OSOD_POSTGRES_URL`, `MEDPLUM_BASE_URL`, `OSOD_REDIS_*`, and `MEDPLUM_*` so a
+shell configured for the practice stack cannot redirect the drill into
+production data.
 
 ## Preconditions
 
 - Docker Compose stack reachable in the isolated `osod-dr-drill` project.
-- `pg_dump`, `pg_restore`, `psql`, `rsync`, `shasum`, Docker Compose v2, and `npx` available.
+- `rsync`, `shasum`, Docker Compose v2, and `npx` available.
+- `pg_dump`, `pg_restore`, and drill `psql` calls run inside the Postgres container; no host Postgres client is required for `npm run dr-drill`.
 - `redis-cli` available on the host, or `docker-compose exec` access to the `redis` service for the fallback path.
 - Backup volume mounted and encrypted at rest by the operator.
 - Human-provisioned env vars available where needed:
-  - `OSOD_POSTGRES_URL`
-  - `OSOD_REDIS_PASSWORD`
   - `OSOD_BACKUP_DIR`
 
 ## Commands
@@ -45,6 +46,7 @@ Manual equivalent:
 export OSOD_DR_COMPOSE="docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
 export MEDPLUM_BASE_URL="http://localhost:18103"
 export OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum"
+export OSOD_CONTAINER_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:5432/medplum"
 export OSOD_REDIS_PORT="16379"
 export OSOD_COMPOSE_PROJECT="osod-dr-drill"
 export OSOD_COMPOSE_FILE="docker-compose.dr-drill.yml"
@@ -61,7 +63,7 @@ cd mcp && MEDPLUM_BASE_URL="http://localhost:18103" OSOD_POSTGRES_URL="postgresq
 cd ..
 $OSOD_DR_COMPOSE down -v
 $OSOD_DR_COMPOSE up -d postgres
-OSOD_POSTGRES_URL="$OSOD_POSTGRES_URL" OSOD_V06A_DR_BACKUP_DIR="$PWD/backup-dr-drill-v06a" npx tsx scripts/v06a-frames-dr-drill.ts
+OSOD_POSTGRES_URL="$OSOD_POSTGRES_URL" OSOD_CONTAINER_POSTGRES_URL="$OSOD_CONTAINER_POSTGRES_URL" OSOD_V06A_DR_BACKUP_DIR="$PWD/backup-dr-drill-v06a" npx tsx scripts/v06a-frames-dr-drill.ts
 $OSOD_DR_COMPOSE down -v
 ```
 

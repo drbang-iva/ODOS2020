@@ -112,11 +112,16 @@ npm run setup-practice
 
 # 6. Run the local preflight linter before live patient data
 npm run preflight
+
+# 7. Verify the Tier-1 safety signals
+npm run audit-verify
+npm run verify-bulk-export
+npm run dr-drill
 ```
 
 The wizard creates the first admin project / user, first Practitioner, first clinician AccessPolicy, and an audit trail for those writes. It's an interactive, human-supervised installer, not an autonomous agent. Re-running it after setup is a clean no-op.
 
-For the expanded walkthrough, troubleshooting, env-var table, port checks, backup destination verification, and preflight reports, see `docs/install.md` and `docs/backup.md`.
+For the expanded walkthrough, troubleshooting, env-var table, port checks, audit verification, Bulk Data verification, DR drill, backup destination verification, and preflight reports, see `docs/install.md`, `docs/bulk-data.md`, `docs/dr-drill.md`, and `docs/backup.md`.
 
 ## Developer quick start
 

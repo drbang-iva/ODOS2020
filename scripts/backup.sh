@@ -3,7 +3,7 @@ set -euo pipefail
 
 timestamp="${OSOD_BACKUP_TIMESTAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 backup_dir="${OSOD_BACKUP_DIR:-/backup}"
-postgres_url="${OSOD_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+container_postgres_url="${OSOD_CONTAINER_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
 redis_host="${OSOD_REDIS_HOST:-127.0.0.1}"
 redis_port="${OSOD_REDIS_PORT:-6379}"
 redis_password="${OSOD_REDIS_PASSWORD:-medplum}"
@@ -47,9 +47,17 @@ hash_path() {
   fi
 }
 
+postgres_dump() {
+  compose exec -T postgres pg_dump --format=custom --dbname="$container_postgres_url"
+}
+
+postgres_query() {
+  compose exec -T postgres psql "$container_postgres_url" -Atc "$1"
+}
+
 mkdir -p "$backup_dir"
 
-postgres_path="$backup_dir/postgres-$timestamp"
+postgres_path="$backup_dir/postgres-$timestamp.dump"
 redis_path="$backup_dir/redis-$timestamp.rdb"
 binary_path="$backup_dir/binary-$timestamp"
 manifest_path="$backup_dir/manifest-$timestamp.json"
@@ -90,9 +98,9 @@ else
   echo "binary-source-missing $binary_source; wrote empty binary backup directory" >&2
 fi
 
-pg_dump --jobs 4 --format=directory --file="$postgres_path" "$postgres_url"
+postgres_dump >"$postgres_path"
 
-audit_snapshot="$(psql "$postgres_url" -Atc "SELECT json_build_object('count', count(*), 'latestEventTime', max(event_time), 'projectionQueueDrained', bool_and(audit_event_id IS NOT NULL))::text FROM osod_audit_events" 2>/dev/null || echo '{"count":0,"projectionQueueDrained":false}')"
+audit_snapshot="$(postgres_query "SELECT json_build_object('count', count(*), 'latestEventTime', max(event_time), 'projectionQueueDrained', bool_and(audit_event_id IS NOT NULL))::text FROM osod_audit_events" 2>/dev/null || echo '{"count":0,"projectionQueueDrained":false}')"
 
 postgres_hash="$(hash_path "$postgres_path")"
 redis_hash="$(hash_path "$redis_path")"

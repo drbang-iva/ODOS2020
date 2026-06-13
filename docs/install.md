@@ -34,6 +34,8 @@ docker-compose up -d
 docker-compose ps
 ```
 
+Do not skip the `mcp/` install. `setup-practice`, SMART/Bulk Data checks, and several verifier paths import packages installed under `mcp/node_modules`.
+
 The root `docker-compose.yml` starts Postgres, Redis, Medplum server, and the local Medplum admin UI. OSOD setup and preflight commands run from the repo against that local stack.
 
 The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
@@ -70,6 +72,14 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `OSOD_SETUP_STATE_PATH` | no | Defaults to `./.osod-setup-state.json`. No PHI is written there. |
 | `OSOD_SETUP_INTERACTIVE_ACK` | no | Set to `human-supervised` only when a human is intentionally running without a TTY. |
 | `OSOD_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
+
+`npm run setup-practice` and `npm run audit-verify` load `.env` from the repo root when a variable is not already exported. `npm run verify-bulk-export` is self-contained and does not need practice credentials. For manual shell commands such as `psql`, export the file into the current shell first:
+
+```bash
+set -a
+. ./.env
+set +a
+```
 
 ## Setup Wizard
 
@@ -193,6 +203,54 @@ SELECT
    FROM (SELECT event_type, count(*) FROM visit_rows GROUP BY event_type) counts) AS event_types;
 SQL
 ```
+
+## Patient Access Bulk Export Verification
+
+Run the Tier-1 Patient Access Bulk Data verifier:
+
+```bash
+npm run verify-bulk-export
+```
+
+Expected output includes:
+
+```json
+{
+  "status": "PASS",
+  "tokenEndpoint": "/oauth2/token",
+  "outputTypes": ["Group", "Patient", "Observation"],
+  "ndjsonFiles": {
+    "Group.ndjson": 1,
+    "Patient.ndjson": 1,
+    "Observation.ndjson": 1
+  },
+  "metaSecurityPreserved": {
+    "AIAST": true,
+    "DICTAST": true,
+    "CPLYCUI": true
+  }
+}
+```
+
+The verifier creates a local SMART Backend Services client using `private_key_jwt`, obtains a token at `/oauth2/token`, kicks off `Group/tier1-bulk-group/$export` with `Prefer: respond-async`, polls the status URL, downloads the NDJSON files, parses every line as FHIR JSON, and confirms the AIAST / DICTAST / CPLYCUI `meta.security` labels survive serialization.
+
+## DR Drill
+
+Run the destructive-recovery drill before first live patient data:
+
+```bash
+npm run dr-drill
+```
+
+Expected output:
+
+- Broad post-restore tests: `32/32`.
+- Restore integrity checks: five `PASS` lines.
+- v0.6a frames drill: `canonicalChecks: "32/32"` and `tableIntegrity: "5/5"`.
+
+The wrapper always uses the isolated `osod-dr-drill` compose project and the isolated host ports `18103`, `15432`, and `16379`. It intentionally ignores inherited main-stack variables such as `OSOD_POSTGRES_URL`, `MEDPLUM_BASE_URL`, `OSOD_REDIS_*`, and `MEDPLUM_*` so a shell configured for the practice stack cannot redirect the drill into production data.
+
+`pg_dump`, `pg_restore`, and the drill SQL checks run inside the `postgres:16` container through Docker Compose. A host Homebrew/Postgres client is no longer required for the DR drill, which avoids client/server mismatches such as a Postgres 17 dump being restored into the Postgres 16 container.
 
 ## Backup Destination
 

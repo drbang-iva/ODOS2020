@@ -32,6 +32,35 @@ Manifest files advertise `requiresAccessToken: true`, and OSOD enforces that at 
 
 SMART Backend Services clients register through the existing local SMART app registry with `private_key_jwt` and a local `jwks_uri`. v0.55e does not add a parallel Bulk Data client registry.
 
+## Tier-1 Verifier
+
+Operators can verify the shipped Patient Access Bulk Data path with one command:
+
+```bash
+npm run verify-bulk-export
+```
+
+The verifier starts a local OSOD SMART/Bulk Data route, uses a SMART Backend Services client authenticated with `private_key_jwt`, obtains a token at `/oauth2/token`, kicks off `Group/tier1-bulk-group/$export` with `Prefer: respond-async`, polls the status URL, downloads every advertised NDJSON file, and parses every line as FHIR JSON.
+
+Expected PASS summary:
+
+```json
+{
+  "status": "PASS",
+  "outputTypes": ["Group", "Patient", "Observation"],
+  "ndjsonFiles": {
+    "Group.ndjson": 1,
+    "Patient.ndjson": 1,
+    "Observation.ndjson": 1
+  },
+  "metaSecurityPreserved": {
+    "AIAST": true,
+    "DICTAST": true,
+    "CPLYCUI": true
+  }
+}
+```
+
 ## Patient Access
 
 The `/oauth2/authorize` consent surface renders requested scopes, app identity, patient identity, and Approve/Deny controls. The backend remains the authority for redirect URI validation, PKCE, state handling, authorization-code issuance, and audit emission.

@@ -1,12 +1,14 @@
 #!/usr/bin/env tsx
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const postgresUrl = process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:15432/medplum";
+const containerPostgresUrl =
+  process.env.OSOD_CONTAINER_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const backupRoot = resolve(process.env.OSOD_V06A_DR_BACKUP_DIR ?? "backup-dr-drill-v06a");
 const timestamp = process.env.OSOD_BACKUP_TIMESTAMP ?? new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-const dumpPath = resolve(backupRoot, `v06a-frames-${timestamp}`);
+const dumpPath = resolve(backupRoot, `v06a-frames-${timestamp}.dump`);
 
 const v06aTables = [
   "osod_frames_catalog",
@@ -31,16 +33,13 @@ runCanonicalChecks("pre-backup");
 
 mkdirSync(backupRoot, { recursive: true });
 rmSync(dumpPath, { recursive: true, force: true });
-run("pg_dump", [
-  "--format=directory",
-  "--jobs=4",
-  `--file=${dumpPath}`,
+pgDump([
+  "--format=custom",
   ...dumpedRelations.flatMap((table) => ["--table", table]),
-  postgresUrl,
-]);
+], dumpPath);
 
 dropV06aTables();
-run("pg_restore", ["--jobs=4", `--dbname=${postgresUrl}`, dumpPath]);
+pgRestore(dumpPath);
 
 const after = snapshotTables();
 const integrity = verifyIntegrity(before, after);
@@ -84,7 +83,7 @@ function dropV06aTables(): void {
 }
 
 function applyMigration(path: string): void {
-  run("psql", ["-v", "ON_ERROR_STOP=1", postgresUrl, "-f", path]);
+  psqlFile(path);
 }
 
 function seedV06aFixtures(): void {
@@ -247,11 +246,120 @@ function runCanonicalChecks(label: string): { passed: number; total: number } {
 }
 
 function sql(statement: string): void {
-  run("psql", ["-v", "ON_ERROR_STOP=1", postgresUrl, "-c", statement]);
+  runPsql(["-v", "ON_ERROR_STOP=1", "-c", statement]);
 }
 
 function psql(statement: string): string {
-  return run("psql", ["-v", "ON_ERROR_STOP=1", "-At", postgresUrl, "-c", statement]).trim();
+  return runPsql(["-v", "ON_ERROR_STOP=1", "-At", "-c", statement]).trim();
+}
+
+function psqlFile(path: string): void {
+  const compose = composeCommand();
+  if (compose) {
+    execFileSync(compose.command, [
+      ...compose.args,
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      "-v",
+      "ON_ERROR_STOP=1",
+      containerPostgresUrl,
+    ], {
+      cwd: resolve(process.cwd()),
+      input: readFileSync(path),
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return;
+  }
+  run("psql", ["-v", "ON_ERROR_STOP=1", postgresUrl, "-f", path]);
+}
+
+function pgDump(args: readonly string[], outputPath: string): void {
+  const compose = composeCommand();
+  if (compose) {
+    const dump = execFileSync(compose.command, [
+      ...compose.args,
+      "exec",
+      "-T",
+      "postgres",
+      "pg_dump",
+      ...args,
+      "--dbname",
+      containerPostgresUrl,
+    ], {
+      cwd: resolve(process.cwd()),
+      encoding: "buffer",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    writeFileSync(outputPath, dump);
+    return;
+  }
+  run("pg_dump", [...args, `--file=${outputPath}`, postgresUrl]);
+}
+
+function pgRestore(inputPath: string): void {
+  const compose = composeCommand();
+  if (compose) {
+    execFileSync(compose.command, [
+      ...compose.args,
+      "exec",
+      "-T",
+      "postgres",
+      "pg_restore",
+      "--dbname",
+      containerPostgresUrl,
+    ], {
+      cwd: resolve(process.cwd()),
+      input: readFileSync(inputPath),
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return;
+  }
+  run("pg_restore", [`--dbname=${postgresUrl}`, inputPath]);
+}
+
+function runPsql(args: readonly string[]): string {
+  const compose = composeCommand();
+  if (compose) {
+    return execFileSync(compose.command, [
+      ...compose.args,
+      "exec",
+      "-T",
+      "postgres",
+      "psql",
+      containerPostgresUrl,
+      ...args,
+    ], {
+      cwd: resolve(process.cwd()),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+  return run("psql", [postgresUrl, ...args]);
+}
+
+function composeCommand(): { command: string; args: string[] } | undefined {
+  if (!process.env.OSOD_COMPOSE_PROJECT && !process.env.OSOD_COMPOSE_FILE) {
+    return undefined;
+  }
+  const args = [
+    ...(process.env.OSOD_COMPOSE_PROJECT ? ["-p", process.env.OSOD_COMPOSE_PROJECT] : []),
+    ...(process.env.OSOD_COMPOSE_FILE ? ["-f", process.env.OSOD_COMPOSE_FILE] : []),
+  ];
+  if (hasCommand("docker-compose")) {
+    return { command: "docker-compose", args };
+  }
+  return { command: "docker", args: ["compose", ...args] };
+}
+
+function hasCommand(command: string): boolean {
+  try {
+    execFileSync("which", [command], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function run(command: string, args: readonly string[]): string {

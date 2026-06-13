@@ -3,27 +3,38 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-const project = process.env.OSOD_DR_COMPOSE_PROJECT ?? "osod-dr-drill";
-const composeFile = process.env.OSOD_DR_COMPOSE_FILE ?? "docker-compose.dr-drill.yml";
+const project = "osod-dr-drill";
+const composeFile = "docker-compose.dr-drill.yml";
 const backupDir = resolve(process.env.OSOD_BACKUP_DIR ?? "backup-dr-drill");
 const framesBackupDir = resolve(process.env.OSOD_V06A_DR_BACKUP_DIR ?? "backup-dr-drill-v06a");
 const timestamp = process.env.OSOD_BACKUP_TIMESTAMP ?? new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 const manifestPath = resolve(backupDir, `manifest-${timestamp}.json`);
+const isolatedPostgresUrl = "postgresql://medplum:medplum@127.0.0.1:15432/medplum";
+const isolatedContainerPostgresUrl = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const isolatedMedplumBaseUrl = "http://localhost:18103";
 
 const drillEnv = {
   ...process.env,
-  MEDPLUM_BASE_URL: process.env.MEDPLUM_BASE_URL ?? "http://localhost:18103",
-  OSOD_POSTGRES_URL:
-    process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:15432/medplum",
-  OSOD_REDIS_PORT: process.env.OSOD_REDIS_PORT ?? "16379",
-  OSOD_REDIS_PASSWORD: process.env.OSOD_REDIS_PASSWORD ?? "medplum",
+  MEDPLUM_BASE_URL: isolatedMedplumBaseUrl,
+  OSOD_POSTGRES_URL: isolatedPostgresUrl,
+  OSOD_CONTAINER_POSTGRES_URL: isolatedContainerPostgresUrl,
+  OSOD_REDIS_HOST: "127.0.0.1",
+  OSOD_REDIS_PORT: "16379",
+  OSOD_REDIS_PASSWORD: "medplum",
+  OSOD_REDIS_CLI: "",
+  OSOD_BINARY_SOURCE: "/data/binary",
+  OSOD_BINARY_TARGET: "/data/binary",
   OSOD_COMPOSE_PROJECT: project,
   OSOD_COMPOSE_FILE: composeFile,
   OSOD_BACKUP_DIR: backupDir,
   OSOD_BACKUP_TIMESTAMP: timestamp,
   OSOD_V06A_DR_BACKUP_DIR: framesBackupDir,
-  MEDPLUM_ADMIN_EMAIL: process.env.MEDPLUM_ADMIN_EMAIL ?? "drill-admin@osod.local",
-  MEDPLUM_ADMIN_PASSWORD: process.env.MEDPLUM_ADMIN_PASSWORD ?? "Osod-dr-drill-Password-1!",
+  MEDPLUM_ADMIN_EMAIL: "drill-admin@osod.local",
+  MEDPLUM_ADMIN_PASSWORD: "Osod-dr-drill-Password-1!",
+  OSOD_AUDIT_MEDPLUM_EMAIL: "drill-admin@osod.local",
+  OSOD_AUDIT_MEDPLUM_PASSWORD: "Osod-dr-drill-Password-1!",
+  MEDPLUM_ACCESS_TOKEN: "",
+  OSOD_AUDIT_MEDPLUM_ACCESS_TOKEN: "",
 };
 
 mkdirSync(backupDir, { recursive: true });
@@ -32,7 +43,11 @@ mkdirSync(framesBackupDir, { recursive: true });
 try {
   console.log("OSOD DR drill: broad isolated restore + v0.6a frames integrity");
   console.log(`compose project: ${project}`);
+  console.log(`isolated Medplum: ${isolatedMedplumBaseUrl}`);
+  console.log(`isolated Postgres host URL: ${isolatedPostgresUrl}`);
   console.log(`backup manifest: ${manifestPath}`);
+  reportIgnoredProductionEnv();
+  assertIsolatedDrillEnv();
 
   runCompose("reset isolated drill stack", ["down", "-v"]);
   runCompose("start isolated drill stack", ["up", "-d"]);
@@ -89,7 +104,17 @@ async function waitForPostgres(): Promise<void> {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     try {
-      execFileSync("psql", [drillEnv.OSOD_POSTGRES_URL, "-Atc", "select 1"], {
+      const compose = composeCommand();
+      execFileSync(compose.command, [
+        ...compose.args,
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        drillEnv.OSOD_CONTAINER_POSTGRES_URL,
+        "-Atc",
+        "select 1",
+      ], {
         env: drillEnv,
         stdio: "ignore",
       });
@@ -99,6 +124,43 @@ async function waitForPostgres(): Promise<void> {
     }
   }
   throw new Error(`Timed out waiting for Postgres at ${drillEnv.OSOD_POSTGRES_URL}.`);
+}
+
+function reportIgnoredProductionEnv(): void {
+  const ignored = [
+    "MEDPLUM_BASE_URL",
+    "OSOD_POSTGRES_URL",
+    "OSOD_CONTAINER_POSTGRES_URL",
+    "OSOD_REDIS_HOST",
+    "OSOD_REDIS_PORT",
+    "OSOD_REDIS_PASSWORD",
+    "OSOD_REDIS_CLI",
+    "OSOD_BINARY_SOURCE",
+    "OSOD_BINARY_TARGET",
+    "MEDPLUM_ADMIN_EMAIL",
+    "MEDPLUM_ADMIN_PASSWORD",
+    "MEDPLUM_ACCESS_TOKEN",
+    "OSOD_AUDIT_MEDPLUM_ACCESS_TOKEN",
+  ].filter((name) => process.env[name] !== undefined);
+  if (ignored.length) {
+    console.log(`ignored inherited drill-routing env: ${ignored.join(", ")}`);
+  }
+}
+
+function assertIsolatedDrillEnv(): void {
+  const expected = {
+    MEDPLUM_BASE_URL: isolatedMedplumBaseUrl,
+    OSOD_POSTGRES_URL: isolatedPostgresUrl,
+    OSOD_CONTAINER_POSTGRES_URL: isolatedContainerPostgresUrl,
+    OSOD_REDIS_PORT: "16379",
+    OSOD_COMPOSE_PROJECT: project,
+    OSOD_COMPOSE_FILE: composeFile,
+  };
+  for (const [name, value] of Object.entries(expected)) {
+    if (drillEnv[name] !== value) {
+      throw new Error(`DR drill isolation failed: ${name} must be ${value}, got ${drillEnv[name] ?? "<unset>"}.`);
+    }
+  }
 }
 
 function run(

@@ -594,6 +594,7 @@ async function resolveProjectId(input: { baseUrl: string; accessToken: string })
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
+    loadRepoEnv();
     assertInteractiveSetupWizardAllowed();
     const interactiveConfig = process.stdin.isTTY ? await collectInteractiveConfig() : {};
     const result = await runSetupPractice({
@@ -610,4 +611,35 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }
+}
+
+function loadRepoEnv(): void {
+  const envPath = resolve(process.cwd(), ".env");
+  if (!existsSync(envPath)) {
+    return;
+  }
+
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
+    if (!match || process.env[match[1]] !== undefined) {
+      continue;
+    }
+
+    process.env[match[1]] = stripEnvQuotes(match[2].trim());
+  }
+}
+
+function stripEnvQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
 }

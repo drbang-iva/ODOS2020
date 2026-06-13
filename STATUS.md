@@ -29,6 +29,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 - Identity + RBAC + AccessPolicy (5 role types: provider, tech, front-desk, billing, admin)
 - Audit substrate — every PHI access fires `AuditEvent`; durable attribution via `Provenance`
 - DR drill: broad isolated backup/restore integrity + v0.6a frames 32/32 canonical checks + 5/5 table integrity
+- Patient Access Bulk Data verifier (`npm run verify-bulk-export`) — SMART Backend Services `private_key_jwt`, `Group/{id}/$export`, valid NDJSON, AIAST/DICTAST/CPLYCUI label preservation
 - Scribe attestation / amendment substrate (compensating-transaction rollback reuses v0.5c nullify/amend)
 - Local-hardware setup wizard (`npm run setup-practice`)
 - Local preflight linter (`npm run preflight`) — Pass 4 custom lint rules (19 active)
@@ -56,7 +57,8 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 |---|---|---|
 | v0.6a fixture tests | 14/14 (consolidated from 22 fixture concepts) | `mcp/tests/v06a-frames-data.test.ts` |
 | Pass 4 lint | 19/19 rules clean, 0 warnings | `npm run preflight` |
-| DR drill | broad restore integrity + v0.6a frames 32/32 canonical checks + 5/5 table integrity | `npm run dr-drill` |
+| DR drill | broad restore integrity + v0.6a frames 32/32 canonical checks + 5/5 table integrity; wrapper force-isolates the drill stack even when main-stack env vars are set | `npm run dr-drill` |
+| Patient Access Bulk Data verifier | PASS with Group/Patient/Observation NDJSON and preserved AIAST/DICTAST/CPLYCUI `meta.security` labels | `npm run verify-bulk-export` |
 | Broad MCP suite | 1201/1201 (1187 v0.55e baseline + 14 new v0.6a) | `npm test` |
 | Mandate 14 verification ledger | 10/20 rows closed at consumption time | `data/code-bindings/v0.6-verification-ledger.md` |
 | Mandate 15 boundary audit | 3 checks appended | `docs/build-log/2026-05-09-v0.6a-frames-data.md` |
@@ -134,7 +136,7 @@ Tier-1 has zero in-flight v0.6 dependencies. v0.55 + v0.6a substrate is what we 
 - [ ] Chart a real test visit (refraction, IOP, anterior/posterior segment, sign + finish)
 - [ ] Verify `AuditEvent` count for the visit: canonical synthetic Tier-1 visit baseline is 8 OSOD audit rows + 8 FHIR AuditEvent projections (`npm run audit-verify`)
 - [ ] Run DR drill on practice hardware — broad restore integrity plus v0.6a frames 32/32 + 5/5 must pass
-- [ ] Patient Access API returns valid bulk NDJSON for the test patient
+- [ ] Patient Access API returns valid bulk NDJSON for the test patient (`npm run verify-bulk-export`)
 - [ ] CapabilityStatement reflects truthful certification posture (not certified as a complete system; specific surfaces named)
 - [ ] Documented gaps section in `docs/install.md` enumerates every v0.6+ capability still in flight
 
@@ -165,6 +167,7 @@ cd ui && npm install && npm run build
 # 5. Run preflight + DR drill
 npm run preflight  # Pass 4 lint, 19 rules, 0 warnings
 npm run audit-verify  # 8 OSOD audit rows + 8 FHIR AuditEvent projections
+npm run verify-bulk-export  # Group/Patient/Observation NDJSON + security labels preserved
 npm run dr-drill      # broad restore integrity + v0.6a frames 32/32 + 5/5
 
 # 6. Smoke test

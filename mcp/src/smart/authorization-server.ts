@@ -42,6 +42,7 @@ import {
   sanitizeForPublicEmission,
 } from "../capability/capability-statement-synthesizer.js";
 import { createBulkDataRouter } from "../bulk-data/router.js";
+import type { BulkDataExportFixture, BulkDataRuntimeConfig } from "../bulk-data/types.js";
 import { defaultBulkDataBackendScopes } from "../bulk-data/auth/backend-services.js";
 import {
   createDefaultSmartAppRegistryStore,
@@ -163,6 +164,10 @@ export interface SmartAuthorizationServerOptions {
   readonly cdsServiceRegistryStore?: CdsServiceRegistryStore;
   readonly cdsFeedbackRepository?: CdsFeedbackRepository;
   readonly agentOps?: AgentOpsRouterOptions;
+  readonly bulkData?: {
+    readonly fixture?: BulkDataExportFixture;
+    readonly config?: Partial<BulkDataRuntimeConfig>;
+  };
   readonly now?: () => Date;
 }
 
@@ -314,7 +319,12 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   router.use(express.urlencoded({ extended: false }));
   router.use(express.json({ limit: "256kb" }));
   router.use("/agentops", createAgentOpsRouter(options.agentOps));
-  router.use(createBulkDataRouter({ state, audit: options.audit }));
+  router.use(createBulkDataRouter({
+    state,
+    audit: options.audit,
+    fixture: options.bulkData?.fixture,
+    config: options.bulkData?.config,
+  }));
 
   router.get("/.well-known/smart-configuration", async (req, res) => {
     await audit(options.audit, "smart-discovery-fetch", req, {
@@ -479,7 +489,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     }
   });
 
-  router.post("/token", async (req, res) => {
+  const tokenHandler = async (req: Request, res: Response): Promise<void> => {
     try {
       const client = await authenticateTokenClient(state, req, options.issuer);
       const grantType = bodyString(req, "grant_type");
@@ -499,7 +509,10 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     } catch (error) {
       sendOauthError(res, error);
     }
-  });
+  };
+
+  router.post("/token", tokenHandler);
+  router.post("/oauth2/token", tokenHandler);
 
   router.post("/introspect", async (req, res) => {
     try {
@@ -1226,7 +1239,7 @@ async function smartConfigurationSnapshot(
   return {
     issuer: base,
     authorizationEndpoint: `${base}/authorize`,
-    tokenEndpoint: `${base}/token`,
+    tokenEndpoint: `${base}/oauth2/token`,
     introspectionEndpoint: `${base}/introspect`,
     revocationEndpoint: `${base}/revoke`,
     jwksUri: `${base}/.well-known/jwks.json`,

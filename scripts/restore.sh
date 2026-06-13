@@ -7,7 +7,7 @@ if [[ -z "$manifest_path" ]]; then
   exit 2
 fi
 
-postgres_url="${OSOD_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+container_postgres_url="${OSOD_CONTAINER_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
 redis_host="${OSOD_REDIS_HOST:-127.0.0.1}"
 redis_port="${OSOD_REDIS_PORT:-6379}"
 redis_password="${OSOD_REDIS_PASSWORD:-medplum}"
@@ -51,6 +51,10 @@ hash_path() {
   fi
 }
 
+postgres_restore() {
+  compose exec -T postgres pg_restore --clean --if-exists --dbname="$container_postgres_url"
+}
+
 wait_for_medplum() {
   local base_url="${MEDPLUM_BASE_URL:-http://localhost:8103}"
   for _ in $(seq 1 90); do
@@ -85,7 +89,7 @@ verify_hash "$binary_path" "$(node -e "const m=require('$manifest_path'); consol
 echo "restore-started $manifest_path"
 compose stop medplum-app medplum-server || true
 
-pg_restore --jobs 4 --clean --if-exists --dbname="$postgres_url" "$postgres_path"
+postgres_restore <"$postgres_path"
 
 redis_cmd SHUTDOWN NOSAVE >/dev/null 2>&1 || true
 compose start redis

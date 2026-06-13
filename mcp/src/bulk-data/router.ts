@@ -10,6 +10,7 @@ import {
   tokenHash,
   validateBulkDataDownloadRequest,
   type BulkDataAccessTokenValidator,
+  type BulkDataAccessTokenValidation,
 } from "./auth/access-token-validator.js";
 import { bulkDataRefusalResponse } from "./refusal-handler.js";
 import { LocalBulkExportJobStore, type BulkExportJobStore } from "./storage.js";
@@ -164,7 +165,8 @@ export function createBulkDataRouter(options: BulkDataRouterOptions): Router {
       now: now(),
     });
     if (!validation.ok) {
-      await emitAudit(options.audit, "agentops.action.blocked" as OsodAuditEventType, req, job, validation.reason);
+      const denied = validation as Extract<BulkDataAccessTokenValidation, { readonly ok: false }>;
+      await emitAudit(options.audit, "agentops.action.blocked" as OsodAuditEventType, req, job, denied.reason);
       res.status(401).json({ error: "unauthorized", error_description: "Bearer token is not authorized for this export file." });
       return;
     }
@@ -274,6 +276,7 @@ function groupResources(
   return resourcesByRequestedTypes(
     fixture.resources.filter((resource) =>
       (resource.resourceType === "Group" && resource.id === groupId) ||
+      (resource.resourceType === "Patient" && typeof resource.id === "string" && members.has(resource.id)) ||
       resourcePatientIds(resource).some((id) => members.has(id)),
     ),
     requestedTypes,
