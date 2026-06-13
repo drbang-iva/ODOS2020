@@ -44,7 +44,7 @@ OSOD is designed for the practice's own hardware. If a practice ever wants cloud
 - SMART Backend Services
 - Truthful CapabilityStatement with severity-aware suppression
 - Information Blocking Safety Valve composition
-- Audit + DR substrate (32/32 + 5/5 integrity check pattern)
+- Audit + DR substrate (broad restore integrity plus v0.6a frames 32/32 canonical checks + 5/5 table integrity)
 - Local Medplum foundation (Postgres + Redis + Medplum server via Docker Compose)
 - Identity + RBAC + AccessPolicy
 - Scribe attestation / amendment substrate
@@ -73,7 +73,7 @@ A local optometry practice can, on its own hardware, with no cloud dependency:
 3. Onboard admin Practitioner + AccessPolicies
 4. Chart a basic visit (refraction, IOP, anterior/posterior segment, signing)
 5. Verify AuditEvent captures all PHI access
-6. Run DR drill 32/32 + 5/5 integrity checks recoverably
+6. Run DR drill broad restore integrity plus v0.6a frames 32/32 + 5/5 checks recoverably
 7. Export the patient via §170.315(g)(10) Patient Access API
 8. Understand explicitly what is NOT production-ready yet
 
@@ -99,8 +99,8 @@ npm install
 cd mcp && npm install && cd ..
 
 # 3. Start the canonical local stack
-docker compose up -d
-docker compose ps
+docker-compose up -d
+docker-compose ps
 
 # 4. Provide human-owned setup credentials
 cp .env.example .env
@@ -125,7 +125,7 @@ For the expanded walkthrough, troubleshooting, env-var table, port checks, backu
 npm run up
 
 # 2. Wait ~30s for services to come up, then check
-docker compose ps
+docker-compose ps
 # All three should be "running (healthy)"
 
 # 3. Copy credentials into .env

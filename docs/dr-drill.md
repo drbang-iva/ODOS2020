@@ -19,7 +19,7 @@ destructive commands.
 
 - Docker Compose stack reachable in the isolated `osod-dr-drill` project.
 - `pg_dump`, `pg_restore`, `psql`, `rsync`, `shasum`, Docker Compose v2, and `npx` available.
-- `redis-cli` available on the host, or `docker compose exec` access to the `redis` service for the fallback path.
+- `redis-cli` available on the host, or `docker-compose exec` access to the `redis` service for the fallback path.
 - Backup volume mounted and encrypted at rest by the operator.
 - Human-provisioned env vars available where needed:
   - `OSOD_POSTGRES_URL`
@@ -28,8 +28,21 @@ destructive commands.
 
 ## Commands
 
+One-command operator wrapper:
+
 ```bash
-export OSOD_DR_COMPOSE="docker compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
+npm run dr-drill
+```
+
+The wrapper runs both DR surfaces that v0.6a currently needs:
+
+1. The broad isolated seed → backup → destructive reset → restore → integrity verifier path for `osod_audit_events`, signed `Provenance`, `Binary.securityContext`, FHIR `AuditEvent` projection coverage, and AccessPolicy / ProjectMembership round-trip.
+2. The v0.6a frames-table drill in `scripts/v06a-frames-dr-drill.ts`, which prints `canonicalChecks: 32/32` and `tableIntegrity: 5/5`.
+
+Manual equivalent:
+
+```bash
+export OSOD_DR_COMPOSE="docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml"
 export MEDPLUM_BASE_URL="http://localhost:18103"
 export OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum"
 export OSOD_REDIS_PORT="16379"
@@ -45,6 +58,11 @@ $OSOD_DR_COMPOSE down -v
 $OSOD_DR_COMPOSE up -d
 MEDPLUM_BASE_URL="$MEDPLUM_BASE_URL" MEDPLUM_ADMIN_EMAIL="$MEDPLUM_ADMIN_EMAIL" MEDPLUM_ADMIN_PASSWORD="$MEDPLUM_ADMIN_PASSWORD" scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
 cd mcp && MEDPLUM_BASE_URL="http://localhost:18103" OSOD_POSTGRES_URL="postgresql://medplum:medplum@127.0.0.1:15432/medplum" node --import tsx --test --test-concurrency=1 tests/v05b-audit-ib-backup.test.ts ../tests/boundaries/mandate-8-auth-flow.test.ts
+cd ..
+$OSOD_DR_COMPOSE down -v
+$OSOD_DR_COMPOSE up -d postgres
+OSOD_POSTGRES_URL="$OSOD_POSTGRES_URL" OSOD_V06A_DR_BACKUP_DIR="$PWD/backup-dr-drill-v06a" npx tsx scripts/v06a-frames-dr-drill.ts
+$OSOD_DR_COMPOSE down -v
 ```
 
 ## Expected Output
@@ -54,13 +72,8 @@ cd mcp && MEDPLUM_BASE_URL="http://localhost:18103" OSOD_POSTGRES_URL="postgresq
 - `restore-started <backup-dir>/manifest-<timestamp>.json`
 - Five integrity checks print `PASS`.
 - `restore-completed <backup-dir>/manifest-<timestamp>.json`
-- v0.5a Mandate 8 boundary tests pass.
-- v0.5a enforcement boundary fixture passes when the human-provisioned
-  Medplum credentials are present.
-- v0.5b fixtures pass:
-  - OCR-style query
-  - denied-access `ib_exception=privacy`
-  - audit UI CSV / JSON export model
+- Broad post-restore fixtures pass.
+- v0.6a frames drill prints `canonicalChecks: "32/32"` and `tableIntegrity: "5/5"`.
 
 ## Integrity Suite
 

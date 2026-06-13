@@ -37,16 +37,20 @@ That warning is not a hard block. It is a handoff to the practice's hardware own
 
 ## Backup and Restore Drill
 
-v0.5d reuses the v0.5b DR drill unchanged. See [`docs/dr-drill.md`](dr-drill.md).
+The operator wrapper runs the broad v0.5b restore drill plus the v0.6a frames-table drill. See [`docs/dr-drill.md`](dr-drill.md).
+
+```bash
+npm run dr-drill
+```
 
 Operator-only outline:
 
 ```bash
-docker compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
 npx tsx scripts/seed-dr-drill.ts
 OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
-docker compose -p osod-dr-drill -f docker-compose.dr-drill.yml down -v
-docker compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml down -v
+docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
 scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
 ```
 

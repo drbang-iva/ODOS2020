@@ -30,18 +30,20 @@ git clone https://github.com/drbang-iva/osod.git
 cd osod
 npm install
 cd mcp && npm install && cd ..
-docker compose up -d
-docker compose ps
+docker-compose up -d
+docker-compose ps
 ```
 
 The root `docker-compose.yml` starts Postgres, Redis, Medplum server, and the local Medplum admin UI. OSOD setup and preflight commands run from the repo against that local stack.
+
+The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
 
 Healthcheck commands:
 
 ```bash
 curl -fsS http://localhost:8103/healthcheck
-docker compose ps
-docker compose logs --tail 100 medplum-server
+docker-compose ps
+docker-compose logs --tail 100 medplum-server
 ```
 
 Expected local endpoints:
@@ -105,9 +107,9 @@ The no-op path emits an audit row with `event_type = noop` and `action_reason = 
 For an empty test stack, reset compose volumes and remove the local setup state:
 
 ```bash
-docker compose down -v
+docker-compose down -v
 rm -f .osod-setup-state.json
-docker compose up -d
+docker-compose up -d
 npm run setup-practice
 ```
 
@@ -143,6 +145,55 @@ The linter runs four local passes:
 
 There is no data-residency pass in v0.5d because OSOD is local-only.
 
+## Audit Verification
+
+After setup and preflight, run the canonical synthetic Tier-1 visit audit check:
+
+```bash
+npm run audit-verify
+```
+
+Expected output includes:
+
+```json
+{
+  "baseline": 8,
+  "osodAuditRows": 8,
+  "fhirAuditEvents": 8
+}
+```
+
+This helper charts one synthetic test visit with a Patient, comprehensive Encounter start, five clinical Observations (visual acuity, refraction, IOP, anterior segment, posterior segment), and sign/finish. It verifies both the append-only `osod_audit_events` rows and the projected FHIR `AuditEvent` resources for that visit. The single-visit Tier-1 baseline is **8 OSOD audit rows + 8 FHIR AuditEvent projections**. If a companion bet still says the visit baseline is `32`, correct the bet: `32` belongs to DR drill canonical checks, not to one charted visit.
+
+To re-check the count from the `sessionId` printed by `npm run audit-verify`:
+
+```bash
+export OSOD_POSTGRES_URL="${OSOD_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+export SESSION_ID="tier1-visit-<from audit-verify output>"
+
+psql "$OSOD_POSTGRES_URL" -v session_id="$SESSION_ID" <<'SQL'
+WITH visit_rows AS (
+  SELECT id::text, event_type
+  FROM osod_audit_events
+  WHERE session_id = :'session_id'
+),
+projected AS (
+  SELECT DISTINCT ae.id
+  FROM "AuditEvent" ae
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(ae.content::jsonb->'entity', '[]'::jsonb)) AS entity_item(value)
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(entity_item.value->'detail', '[]'::jsonb)) AS detail_item(value)
+  JOIN visit_rows vr ON detail_item.value->>'type' = 'osod_audit_event_id'
+    AND detail_item.value->>'valueString' = vr.id
+  WHERE ae.deleted = false
+)
+SELECT
+  (SELECT count(*) FROM visit_rows) AS osod_audit_rows,
+  (SELECT count(*) FROM projected) AS fhir_audit_events,
+  (SELECT jsonb_object_agg(event_type, count)
+   FROM (SELECT event_type, count(*) FROM visit_rows GROUP BY event_type) counts) AS event_types;
+SQL
+```
+
 ## Backup Destination
 
 See [`docs/backup.md`](backup.md). To verify a candidate local or attached-drive destination:
@@ -166,28 +217,67 @@ lsof -nP -iTCP:6379 -sTCP:LISTEN
 
 Stop the conflicting local service or edit the root `docker-compose.yml` port mappings before first live use. Keep the compose file as the canonical local stack; do not introduce alternate deploy templates.
 
-## Troubleshooting
+For the recurring case where another practice system already owns host Postgres port `127.0.0.1:5432`, leave that service running and remap only OSOD's **host** port.
 
-If `docker compose up -d` fails:
+In root `docker-compose.yml`, change the Postgres published port from:
+
+```yaml
+ports:
+  - "127.0.0.1:5432:5432"
+```
+
+to:
+
+```yaml
+ports:
+  - "127.0.0.1:5433:5432"
+```
+
+Only the left-side host port changes. Keep the container-network URL unchanged:
+
+```yaml
+OSOD_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+```
+
+Then make the host-run tooling URL match the new host port in `.env`:
 
 ```bash
-docker compose logs --tail 200 postgres
-docker compose logs --tail 200 redis
-docker compose logs --tail 200 medplum-server
+OSOD_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+```
+
+Use the same URL for host-side `psql`, setup, preflight, and audit verification:
+
+```bash
+export OSOD_POSTGRES_URL=postgresql://medplum:medplum@127.0.0.1:5433/medplum
+docker-compose up -d
+psql "$OSOD_POSTGRES_URL" -c "select 1;"
+npm run setup-practice
+npm run preflight
+npm run audit-verify
+```
+
+## Troubleshooting
+
+If `docker-compose up -d` fails:
+
+```bash
+docker-compose logs --tail 200 postgres
+docker-compose logs --tail 200 redis
+docker-compose logs --tail 200 medplum-server
 ```
 
 If the setup wizard cannot reach Medplum:
 
 ```bash
 curl -v http://localhost:8103/healthcheck
-docker compose ps
+docker-compose ps
 ```
 
 If audit rows fail:
 
 ```bash
-docker compose ps postgres
-psql "postgresql://medplum:medplum@127.0.0.1:5432/medplum" -c "select count(*) from osod_audit_events;"
+docker-compose ps postgres
+psql "${OSOD_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}" -c "select count(*) from osod_audit_events;"
 ```
 
 If preflight hard-blocks on env-var PHI, remove the PHI-shaped value from the environment, restart the local stack, and rerun `npm run preflight`.

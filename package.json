@@ -17,6 +17,8 @@
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
     "preflight": "tsx scripts/preflight-lint.ts",
+    "dr-drill": "tsx scripts/dr-drill.ts",
+    "audit-verify": "tsx scripts/verify-tier1-visit-audit.ts",
     "agentops:migration-type-regen": "tsx scripts/agentops-migration-type-regen.ts",
     "verify-backup-destination": "tsx scripts/verify-backup-destination.ts"
   },

@@ -25,7 +25,7 @@ This is **developmental code under milestone-locked development.** No general-pu
 |---|---|---|
 | **v0.5 substrate** (identity, AccessPolicy, audit, DR, scribe attestation, profile installer, clinical encounter UI) | **Shipped** Apr 2026 | broad MCP suite + DR drill + Pass 4 preflight |
 | **v0.55 integration spine** (SMART v2 + app registry + CDS Hooks 2.0.1 + AgentOps + Bulk Data + Patient Access + truthful CapabilityStatement) | **Shipped 2026-05-05** at osod tag `v0.55` / commit `e8c8d9e` | [`decisions/2026-05-05-v0.55-milestone-close-audit.md`](https://github.com/drbang-iva/performance-od/) (private — maintainers) |
-| **v0.6a Frames Data** (HCPCS terminology + frames catalog + per-practice inventory + ChargeItemDefinition builder + bulk-file ingest + inventory UI primitive) | **Shipped 2026-05-09** at osod tag `v0.6a` / merge commit `ce6e94f` | 1201/1201 MCP + 14/14 v0.6a fixtures + DR drill 32/32 + 5/5 + Pass 4 19/19 |
+| **v0.6a Frames Data** (HCPCS terminology + frames catalog + per-practice inventory + ChargeItemDefinition builder + bulk-file ingest + inventory UI primitive) | **Shipped 2026-05-09** at osod tag `v0.6a` / merge commit `ce6e94f` | 1201/1201 MCP + 14/14 v0.6a fixtures + broad DR restore integrity + frames 32/32 + 5/5 + Pass 4 19/19 |
 | **v0.6 remaining (7 slices)** | In flight (v0.6b PVerify next) | master build sheet (private companion repo) |
 | **v0.65 / v0.7 / v0.8** | Planned | not authored |
 
@@ -39,7 +39,7 @@ This is **developmental code under milestone-locked development.** No general-pu
 - SMART on FHIR v2 authz (third-party SMART apps integrate via the local registry; you opt in only the apps you trust)
 - CDS Hooks 2.0.1 locally-enforced (external CDS off by default)
 - Every PHI access fires `AuditEvent`; durable per-resource attribution via `Provenance`
-- DR drill: backup → restore → integrity verification (32 broad + 5 canonical)
+- DR drill: broad backup → restore → integrity verification plus v0.6a frames canonical/table checks
 - Bulk Data $export + Patient Access API (§170.315(g)(10) surface)
 - AgentOps: any AI agent action is audited, blockable, undoable
 - v0.6a inventory UI primitive (frames catalog browse + per-practice inventory + add-to-inventory)
@@ -51,8 +51,8 @@ This is **developmental code under milestone-locked development.** No general-pu
 | Broad MCP test suite | 1201/1201 |
 | Focused v0.6a fixtures | 14/14 |
 | Pass 4 custom lint rules | 19/19 clean |
-| DR drill broad | 32/32 |
-| DR drill canonical integrity | 5/5 (audit_events, Provenance, Binary, AccessPolicy round-trip) |
+| DR drill broad restore integrity | 5/5 (audit_events, Provenance, Binary, AuditEvent projection coverage, AccessPolicy round-trip) |
+| v0.6a frames DR canonical/table checks | 32/32 canonical + 5/5 table integrity |
 | Mandate 14 verification ledger | 10/20 rows closed at consumption time; 10/20 carry-forward consumption-gated |
 | v0.55a-e substrate after v0.6a merge | Untouched (one v0.35b role-list regression fixed in same commit) |
 
@@ -79,7 +79,7 @@ A local optometry practice can, on its own hardware, with no cloud dependency:
 2. **Preflight.** `npm run preflight` passes clean (Pass 4 lint, 19 rules, 0 warnings).
 3. **Onboard.** Create Organization + admin Practitioner. Configure SMART app registry + AccessPolicies for the role set.
 4. **Chart a visit.** Schedule a patient, run a basic exam, record structured findings (chief complaint, refraction, IOP, basic anterior/posterior segment), sign the encounter.
-5. **Audit.** Every PHI access fires `AuditEvent`. DR drill 32/32 + 5/5 integrity recoverable on practice hardware.
+5. **Audit.** Every PHI access fires `AuditEvent`. The canonical synthetic Tier-1 visit baseline is 8 OSOD audit rows + 8 FHIR AuditEvent projections; DR drill broad restore integrity plus v0.6a frames 32/32 + 5/5 is recoverable on practice hardware.
 6. **Patient export.** Patient Access API per §170.315(g)(10) returns the patient's bulk export.
 7. **Truthful capability surface.** `CapabilityStatement` accurately describes what is and is not certified.
 8. **Documented gaps.** The practice understands explicitly what is NOT production-ready yet and where each v0.6+ gap lands.

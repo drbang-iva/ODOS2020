@@ -113,5 +113,5 @@ volumes:
 
 networks:
   osod-internal:
-    internal: true
+    driver: bridge
   osod-egress:
