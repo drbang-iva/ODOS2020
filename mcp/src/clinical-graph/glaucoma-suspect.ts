@@ -12,6 +12,7 @@ import type {
   DetectedIssue,
   Observation,
   PlanDefinition,
+  Provenance,
   Reference,
   Resource,
 } from "@medplum/fhirtypes";
@@ -29,6 +30,7 @@ import {
   quantity,
   reference,
 } from "../fhir/ophthalmology/extensions.js";
+import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const GLAUCOMA_PHASE0_LEDGER_PATH = resolve(
@@ -51,6 +53,43 @@ export const CPT_CODE_SYSTEM = "urn:ama:cpt";
  */
 export const GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD = 0.6;
 
+export const GLAUCOMA_FINDING_DEFINITION_KEYS = [
+  "cup_disc_ratio",
+  "intraocular_pressure",
+  "pachymetry_um",
+  "rnfl_gcc",
+] as const;
+
+export type GlaucomaFindingDefinitionKey = typeof GLAUCOMA_FINDING_DEFINITION_KEYS[number];
+
+const GLAUCOMA_FINDING_STUB_METADATA: Record<
+  GlaucomaFindingDefinitionKey,
+  Pick<ClinicalFindingDefinition, "sectionKey" | "anatomyTarget"> & {
+    valueKind: "quantity" | "component-panel";
+  }
+> = {
+  cup_disc_ratio: {
+    sectionKey: "optic-nerve",
+    anatomyTarget: "optic-nerve",
+    valueKind: "quantity",
+  },
+  intraocular_pressure: {
+    sectionKey: "tonometry",
+    anatomyTarget: "eye",
+    valueKind: "quantity",
+  },
+  pachymetry_um: {
+    sectionKey: "cornea",
+    anatomyTarget: "cornea",
+    valueKind: "quantity",
+  },
+  rnfl_gcc: {
+    sectionKey: "oct",
+    anatomyTarget: "retina",
+    valueKind: "component-panel",
+  },
+};
+
 /** Source class recorded on OSOD-local graph rows for provenance and audit context. */
 export type ClinicalGraphSource =
   | "manual"
@@ -65,6 +104,7 @@ export type FindingInterpretation = "normal" | "abnormal" | "borderline" | "unkn
 
 /** UI/reconciliation lifecycle for non-committal diagnosis suggestion edges. */
 export type SuggestionVisitState =
+  | "unreviewed"
   | "generated"
   | "shown"
   | "suppressed"
@@ -136,6 +176,9 @@ export interface FindingInstance {
   laterality: EyeLaterality;
   value: FindingValue;
   interpretation?: FindingInterpretation;
+  method?: CodeableConcept;
+  performerReferences?: string[];
+  sourceReferences?: string[];
   sourceType: SourceType | "agent" | "protocol";
   confidence?: number;
   recordedAt: string;
@@ -145,6 +188,17 @@ export interface FindingInstance {
 /** Value payload supported by the Phase 1 finding-to-Observation projector. */
 export type FindingValue =
   | { type: "quantity"; value: number; unit: string; system?: string; code?: string }
+  | {
+      type: "components";
+      components: Array<{
+        code: string;
+        display: string;
+        value: number | string | boolean;
+        unit?: string;
+        system?: string;
+        unitCode?: string;
+      }>;
+    }
   | { type: "string"; value: string }
   | { type: "boolean"; value: boolean }
   | { type: "json"; value: Record<string, unknown> };
@@ -175,8 +229,10 @@ export interface DiagnosisSuggestionEdge {
   predicateKey: string;
   predicateExpression: Record<string, unknown>;
   rank: number;
+  score: number;
   confidence?: number;
   explanation: string;
+  evidenceFindingInstanceIds: string[];
   ruleVersion?: string;
   visitState: SuggestionVisitState;
   acceptedAt?: string;
@@ -292,6 +348,17 @@ export interface GlaucomaPhase0DiagnosisCode {
 export interface GlaucomaPhase0Ledger {
   accessDate?: string;
   diagnosisCodes: GlaucomaPhase0DiagnosisCode[];
+  stubs?: {
+    findingDefinitions?: GlaucomaFindingDefinitionStubRow[];
+  };
+}
+
+export interface GlaucomaFindingDefinitionStubRow {
+  key: GlaucomaFindingDefinitionKey;
+  display: string;
+  status: ClinicalFindingDefinition["sourceStatus"];
+  notBillReady: boolean;
+  externalCode: null;
 }
 
 /** Input to the glaucoma cup/disc predicate; produces a finding plus local suggestion edge only. */
@@ -304,6 +371,43 @@ export interface GlaucomaPredicateInput {
   findingInstanceId: string;
   recordedAt: string;
   provenance: ClinicalGraphProvenance;
+}
+
+export interface CaptureGlaucomaFindingInput {
+  definition: ClinicalFindingDefinition;
+  patientReference: string;
+  encounterReference: string;
+  laterality: EyeLaterality;
+  value: FindingValue;
+  recordedAt: string;
+  provenance: ClinicalGraphProvenance;
+  findingInstanceId?: string;
+  observationId?: string;
+  interpretation?: FindingInterpretation;
+  sourceType?: FindingInstance["sourceType"];
+  confidence?: number;
+  method?: CodeableConcept;
+  performerReferences?: string[];
+  sourceReferences?: string[];
+}
+
+export interface CapturedGlaucomaFinding {
+  finding: FindingInstance;
+  observation: Observation;
+  provenance: Provenance;
+}
+
+export interface GlaucomaSuggestionEngineInput {
+  findings: readonly FindingInstance[];
+  findingDefinitions: readonly ClinicalFindingDefinition[];
+  provenance: ClinicalGraphProvenance;
+  encounterReference?: string;
+  ledger?: GlaucomaPhase0Ledger;
+}
+
+export interface DiagnosisSuggestionEvaluation {
+  diagnosisDefinition: DiagnosisDefinition;
+  suggestionEdge: DiagnosisSuggestionEdge;
 }
 
 /**
@@ -331,6 +435,8 @@ export function buildFindingInstance(
   return {
     ...input,
     id: input.id ?? randomUUID(),
+    performerReferences: input.performerReferences ?? [],
+    sourceReferences: input.sourceReferences ?? [],
     sourceType: input.sourceType ?? "manual",
   };
 }
@@ -363,6 +469,15 @@ export function projectFindingInstanceToObservation(
         ? `clinicalGraphSource=${finding.sourceType}`
         : undefined,
     confidenceScore: finding.confidence,
+    method: finding.method,
+    performerReferences: finding.performerReferences?.length
+      ? finding.performerReferences
+      : finding.provenance.actorReference
+        ? [finding.provenance.actorReference]
+        : undefined,
+    sourceReferences: finding.sourceReferences?.length
+      ? finding.sourceReferences
+      : finding.provenance.sourceReferences,
   });
 }
 
@@ -390,8 +505,8 @@ export function buildDiagnosisDefinition(
  * Builds a non-committal suggestion edge; it is OSOD-local and never a confirmed diagnosis by itself.
  */
 export function buildDiagnosisSuggestionEdge(
-  input: Omit<DiagnosisSuggestionEdge, "id" | "visitState"> &
-    Partial<Pick<DiagnosisSuggestionEdge, "id" | "visitState">>,
+  input: Omit<DiagnosisSuggestionEdge, "id" | "visitState" | "evidenceFindingInstanceIds" | "score"> &
+    Partial<Pick<DiagnosisSuggestionEdge, "id" | "visitState" | "evidenceFindingInstanceIds" | "score">>,
 ): DiagnosisSuggestionEdge {
   if (!input.sourceFindingDefinitionId && !input.sourceFindingInstanceId) {
     throw new Error("DiagnosisSuggestionEdge requires a source finding definition or instance.");
@@ -399,7 +514,10 @@ export function buildDiagnosisSuggestionEdge(
   return {
     ...input,
     id: input.id ?? randomUUID(),
-    visitState: input.visitState ?? "generated",
+    evidenceFindingInstanceIds: input.evidenceFindingInstanceIds ??
+      (input.sourceFindingInstanceId ? [input.sourceFindingInstanceId] : []),
+    score: input.score ?? input.confidence ?? 1 / input.rank,
+    visitState: input.visitState ?? "unreviewed",
   };
 }
 
@@ -598,6 +716,113 @@ export function buildGlaucomaOpenAngleDiagnosisDefinition(input: {
   });
 }
 
+export function buildGlaucomaFindingDefinitionStubs(input: {
+  provenance: ClinicalGraphProvenance;
+  ledger?: GlaucomaPhase0Ledger;
+}): ClinicalFindingDefinition[] {
+  const rows = input.ledger?.stubs?.findingDefinitions ??
+    loadGlaucomaPhase0Ledger().stubs?.findingDefinitions ??
+    [];
+
+  return rows.map((row) => buildGlaucomaFindingDefinitionStub(row, input.provenance));
+}
+
+export function buildGlaucomaFindingDefinitionStub(
+  row: GlaucomaFindingDefinitionStubRow,
+  provenance: ClinicalGraphProvenance,
+): ClinicalFindingDefinition {
+  const metadata = GLAUCOMA_FINDING_STUB_METADATA[row.key];
+  return buildClinicalFindingDefinition({
+    id: `finding-def-${row.key.replaceAll("_", "-")}`,
+    stableKey: row.key,
+    display: row.display,
+    sectionKey: metadata.sectionKey,
+    anatomyTarget: metadata.anatomyTarget,
+    valueSchema: {
+      valueKind: metadata.valueKind,
+      operatorInputRequired: true,
+      units: "TODO: operator input required before bill-ready use.",
+      normalRange: "TODO: operator input required before bill-ready use.",
+      seededPredicateExamples: row.key === "cup_disc_ratio"
+        ? [
+            {
+              predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
+              threshold: GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
+              source: "canon Phase-1 predicate example",
+            },
+          ]
+        : [],
+    },
+    normalSemantics: {
+      status: "TODO: operator input required before clinical normal/abnormal semantics are seeded.",
+    },
+    sourceStatus: row.status,
+    notBillReady: row.notBillReady,
+    active: true,
+    provenance: {
+      ...provenance,
+      note: [
+        provenance.note,
+        "Operator-gated glaucoma finding definition stub; no clinical value-set, unit binding, normal range, or threshold seeded except canon cup/disc >= 0.6 predicate example.",
+      ].filter(Boolean).join(" "),
+    },
+  });
+}
+
+export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): CapturedGlaucomaFinding {
+  const findingId = input.findingInstanceId ??
+    deterministicGraphId("finding", input.definition.stableKey, input.laterality, input.recordedAt);
+  const observationReference = `Observation/${input.observationId ?? findingId}`;
+  const performerReferences = input.performerReferences ??
+    (input.provenance.actorReference ? [input.provenance.actorReference] : []);
+  const sourceReferences = input.sourceReferences ?? input.provenance.sourceReferences ?? [];
+  const finding = buildFindingInstance({
+    id: findingId,
+    findingDefinitionId: input.definition.id,
+    patientReference: input.patientReference,
+    encounterReference: input.encounterReference,
+    observationReference,
+    laterality: input.laterality,
+    value: input.value,
+    interpretation: input.interpretation,
+    method: input.method,
+    performerReferences,
+    sourceReferences,
+    sourceType: input.sourceType,
+    confidence: input.confidence,
+    recordedAt: input.recordedAt,
+    provenance: input.provenance,
+  });
+  const observation = projectFindingInstanceToObservation(finding, input.definition);
+  const provenance = buildProvenance({
+    targetReferences: [observationReference],
+    occurredDateTime: input.recordedAt,
+    recorded: input.recordedAt,
+    activityCode: "CREATE",
+    activityDisplay: "Capture glaucoma finding evidence",
+    agents: [
+      input.provenance.actorReference
+        ? {
+            typeCode: "author",
+            typeDisplay: "Author",
+            whoReference: input.provenance.actorReference,
+          }
+        : {
+            typeCode: "author",
+            typeDisplay: "Author",
+            whoDisplay: `OSOD ${input.provenance.source} evidence source`,
+          },
+    ],
+    entityReferences: sourceReferences,
+    entityValues: (input.provenance.ledgerRefs ?? []).map((ledgerRef) => ({
+      role: "source" as const,
+      display: ledgerRef,
+    })),
+  });
+
+  return { finding, observation, provenance };
+}
+
 /**
  * Builds the glaucoma-minimum cup/disc finding plus suggestion edge; it never confirms a diagnosis.
  */
@@ -635,6 +860,7 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
       deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
     },
     rank: 1,
+    score: riskBucket === "high" ? 0.8 : 0.55,
     confidence: riskBucket === "high" ? 0.8 : 0.55,
     explanation:
       riskBucket === "high"
@@ -644,6 +870,110 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
   });
 
   return { finding, diagnosisDefinition, suggestionEdge };
+}
+
+export function evaluateGlaucomaDiagnosisSuggestions(
+  input: GlaucomaSuggestionEngineInput,
+): DiagnosisSuggestionEvaluation[] {
+  const definitionsById = new Map(input.findingDefinitions.map((definition) => [definition.id, definition]));
+  const evaluations = input.findings
+    .filter((finding) => !input.encounterReference || finding.encounterReference === input.encounterReference)
+    .filter((finding) => definitionsById.get(finding.findingDefinitionId)?.stableKey === "cup_disc_ratio")
+    .filter((finding) => finding.value.type === "quantity" && Number.isFinite(finding.value.value))
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id))
+    .map((finding) => {
+      const definition = definitionsById.get(finding.findingDefinitionId);
+      if (!definition || finding.value.type !== "quantity") {
+        return undefined;
+      }
+      const riskBucket = finding.value.value >= GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD ? "high" : "low";
+      const diagnosisDefinition = buildGlaucomaOpenAngleDiagnosisDefinition({
+        id: deterministicGraphId("dx-def", "glaucoma-suspect-open-angle", riskBucket, finding.laterality),
+        laterality: finding.laterality,
+        riskBucket,
+        provenance: input.provenance,
+        findingDefinitionIds: [definition.id],
+        ledger: input.ledger,
+      });
+      const score = riskBucket === "high" ? 0.8 : 0.55;
+      const suggestionEdge = buildDiagnosisSuggestionEdge({
+        id: deterministicGraphId(
+          "suggestion",
+          finding.id,
+          "glaucoma-suspect-open-angle",
+          riskBucket,
+          finding.laterality,
+        ),
+        sourceFindingDefinitionId: definition.id,
+        sourceFindingInstanceId: finding.id,
+        targetDiagnosisDefinitionId: diagnosisDefinition.id,
+        predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
+        predicateExpression: {
+          finding: "cup_disc_ratio",
+          operator: riskBucket === "high" ? ">=" : "<",
+          threshold: GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
+          observedValue: finding.value.value,
+          deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
+        },
+        rank: 1,
+        score,
+        confidence: score,
+        explanation:
+          riskBucket === "high"
+            ? "Cup/disc ratio meets the glaucoma-minimum high-risk suggestion branch."
+            : "Cup/disc ratio stays below the glaucoma-minimum high-risk branch and maps to the low-risk suggestion branch.",
+        evidenceFindingInstanceIds: [finding.id],
+        ruleVersion: "glaucoma-minimum-v0",
+        visitState: "unreviewed",
+        provenance: {
+          ...input.provenance,
+          source: "rule",
+          sourceReferences: [
+            ...(finding.observationReference ? [finding.observationReference] : []),
+            ...(input.provenance.sourceReferences ?? []),
+          ],
+          note: [
+            input.provenance.note,
+            "Pure glaucoma-minimum evaluator: finding evidence in, suggestion edge out; no EncounterDiagnosis, Condition, charge, or coverage side effects.",
+          ].filter(Boolean).join(" "),
+        },
+      });
+
+      return { diagnosisDefinition, suggestionEdge };
+    })
+    .filter((result): result is DiagnosisSuggestionEvaluation => Boolean(result))
+    .sort((a, b) =>
+      b.suggestionEdge.score - a.suggestionEdge.score ||
+      a.suggestionEdge.id.localeCompare(b.suggestionEdge.id));
+
+  return evaluations.map((evaluation, index) => ({
+    diagnosisDefinition: evaluation.diagnosisDefinition,
+    suggestionEdge: {
+      ...evaluation.suggestionEdge,
+      rank: index + 1,
+    },
+  }));
+}
+
+export function rejectDiagnosisSuggestionEdge(
+  edge: DiagnosisSuggestionEdge,
+  input: { rejectedAt: string; provenance?: ClinicalGraphProvenance; reason?: string },
+): DiagnosisSuggestionEdge {
+  return {
+    ...edge,
+    visitState: "rejected",
+    acceptedAt: undefined,
+    rejectedAt: input.rejectedAt,
+    provenance: {
+      ...edge.provenance,
+      ...(input.provenance ?? {}),
+      note: [
+        edge.provenance.note,
+        input.provenance?.note,
+        input.reason ? `Rejected suggestion: ${input.reason}` : undefined,
+      ].filter(Boolean).join(" "),
+    },
+  };
 }
 
 /**
@@ -869,7 +1199,7 @@ function lateralityDisplay(laterality: EyeLaterality): string {
 
 function findingValueToObservationValue(
   value: FindingValue,
-): Pick<Observation, "valueBoolean" | "valueQuantity" | "valueString"> {
+): Pick<Observation, "component" | "valueBoolean" | "valueQuantity" | "valueString"> {
   if (value.type === "quantity") {
     return {
       valueQuantity: quantity(
@@ -882,6 +1212,25 @@ function findingValueToObservationValue(
   }
   if (value.type === "boolean") {
     return { valueBoolean: value.value };
+  }
+  if (value.type === "components") {
+    return {
+      component: value.components.map((item) => ({
+        code: osodConcept(item.code, item.display),
+        ...(typeof item.value === "number"
+          ? {
+              valueQuantity: quantity(
+                item.value,
+                item.unit ?? "",
+                item.system ?? (item.unitCode ? "http://unitsofmeasure.org" : undefined),
+                item.unitCode,
+              ),
+            }
+          : typeof item.value === "boolean"
+            ? { valueBoolean: item.value }
+            : { valueString: item.value }),
+      })),
+    };
   }
   if (value.type === "json") {
     return { valueString: JSON.stringify(value.value) };
@@ -901,6 +1250,14 @@ function observationSourceType(sourceType: FindingInstance["sourceType"]): Sourc
     return "unknown";
   }
   return sourceType;
+}
+
+function deterministicGraphId(prefix: string, ...parts: Array<string | number | undefined>): string {
+  return [prefix, ...parts.filter((part) => part !== undefined)]
+    .join("-")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 /**
