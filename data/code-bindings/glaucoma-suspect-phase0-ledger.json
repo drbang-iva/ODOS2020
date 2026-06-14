@@ -121,50 +121,65 @@
   ],
   "procedures": [
     {
-      "code": "92020",
-      "system": "urn:ama:cpt",
+      "conceptKey": "gonioscopy",
       "display": "Gonioscopy",
-      "cmsPfsShortDescriptor": "Gonioscopy",
+      "cptBinding": {
+        "status": "deferred-to-licensed-adapter",
+        "system": "urn:ama:cpt",
+        "note": "CPT is AMA-copyrighted; not shipped in this AGPL repo. Bound at the practice via its own AMA-licensed adapter (v0.7)."
+      },
       "coverageReady": false,
       "sourceRefs": ["cmsPfsRvu26A"]
     },
     {
-      "code": "76514",
-      "system": "urn:ama:cpt",
-      "display": "Corneal pachymetry, unilateral or bilateral",
-      "cmsPfsShortDescriptor": "Echo exam of eye thickness",
+      "conceptKey": "corneal-pachymetry",
+      "display": "Corneal pachymetry",
+      "cptBinding": {
+        "status": "deferred-to-licensed-adapter",
+        "system": "urn:ama:cpt",
+        "note": "CPT is AMA-copyrighted; not shipped in this AGPL repo. Bound at the practice via its own AMA-licensed adapter (v0.7)."
+      },
       "coverageReady": false,
       "sourceRefs": ["cmsPfsRvu26A"]
     },
     {
-      "code": "92133",
-      "system": "urn:ama:cpt",
-      "display": "SCODI, posterior segment, optic nerve",
-      "cmsPfsShortDescriptor": "Cptrzd oph dx img pst sgm on",
+      "conceptKey": "scodi-optic-nerve",
+      "display": "SCODI optic nerve",
+      "cptBinding": {
+        "status": "deferred-to-licensed-adapter",
+        "system": "urn:ama:cpt",
+        "note": "CPT is AMA-copyrighted; not shipped in this AGPL repo. Bound at the practice via its own AMA-licensed adapter (v0.7)."
+      },
       "coverageReady": false,
       "sourceRefs": ["cmsPfsRvu26A", "cmsScodiArticleA57804", "cmsScodiArticleA56825"]
     },
     {
-      "code": "92083",
-      "system": "urn:ama:cpt",
-      "display": "Visual field examination, extended/threshold",
-      "cmsPfsShortDescriptor": "Extended visual field xm",
+      "conceptKey": "visual-field-threshold",
+      "display": "Visual field threshold",
+      "cptBinding": {
+        "status": "deferred-to-licensed-adapter",
+        "system": "urn:ama:cpt",
+        "note": "CPT is AMA-copyrighted; not shipped in this AGPL repo. Bound at the practice via its own AMA-licensed adapter (v0.7)."
+      },
       "coverageReady": false,
       "sourceRefs": ["cmsPfsRvu26A"]
     },
     {
-      "code": "92250",
-      "system": "urn:ama:cpt",
-      "display": "Fundus photography with interpretation and report",
-      "cmsPfsShortDescriptor": "Fundus photography w/i&r",
+      "conceptKey": "fundus-photography",
+      "display": "Fundus photography",
+      "cptBinding": {
+        "status": "deferred-to-licensed-adapter",
+        "system": "urn:ama:cpt",
+        "note": "CPT is AMA-copyrighted; not shipped in this AGPL repo. Bound at the practice via its own AMA-licensed adapter (v0.7)."
+      },
       "coverageReady": false,
       "sourceRefs": ["cmsPfsRvu26A", "cmsScodiArticleA56825"]
     }
   ],
   "provisionalCoverageRules": [
     {
-      "id": "palmetto-sc-scodi-92133-h40-0",
-      "procedureCode": "92133",
+      "id": "palmetto-sc-scodi-optic-nerve-h40-0",
+      "procedureCode": "scodi-optic-nerve",
       "diagnosisFamily": "H40.0",
       "jurisdiction": "Palmetto GBA J-M South Carolina",
       "status": "provisional",

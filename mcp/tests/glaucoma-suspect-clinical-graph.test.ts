@@ -41,14 +41,19 @@ test("Phase 0 ledger carries verified glaucoma seeds and explicit not-bill-ready
     true,
   );
   assert.deepEqual(
-    ledger.procedures.map((row: { code: string }) => row.code),
-    ["92020", "76514", "92133", "92083", "92250"],
+    ledger.procedures.map((row: { conceptKey: string }) => row.conceptKey),
+    ["gonioscopy", "corneal-pachymetry", "scodi-optic-nerve", "visual-field-threshold", "fundus-photography"],
   );
   assert.equal(
-    ledger.procedures.every((row: { system: string; coverageReady: boolean }) => row.system === CPT_CODE_SYSTEM && row.coverageReady === false),
+    ledger.procedures.every((row: { cptBinding: { status: string; system: string }; coverageReady: boolean }) =>
+      row.cptBinding.status === "deferred-to-licensed-adapter" &&
+      row.cptBinding.system === CPT_CODE_SYSTEM &&
+      row.coverageReady === false),
     true,
   );
+  assert.equal(ledger.procedures.every((row: { code?: string; cmsPfsShortDescriptor?: string }) => row.code === undefined && row.cmsPfsShortDescriptor === undefined), true);
   assert.equal(ledger.provisionalCoverageRules[0].status, "provisional");
+  assert.equal(ledger.provisionalCoverageRules[0].procedureCode, "scodi-optic-nerve");
   assert.equal(ledger.provisionalCoverageRules[0].jurisdiction, "Palmetto GBA J-M South Carolina");
   assert.equal(
     ledger.stubs.findingDefinitions.every((row: { notBillReady: boolean; externalCode: null }) => row.notBillReady && row.externalCode === null),
