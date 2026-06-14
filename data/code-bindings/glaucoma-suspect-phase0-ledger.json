@@ -1,0 +1,204 @@
+{
+  "ledger": "glaucoma-suspect-phase0",
+  "status": "phase0-seeded",
+  "mandate": "Mandate 14",
+  "accessDate": "2026-06-14",
+  "scope": "Glaucoma-minimum Phase 0 ledger for the ODOS 20/20 charting clinical graph.",
+  "sources": {
+    "cdcIcd10Cm2026CodeDescriptions": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
+      "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
+      "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
+      "accessDate": "2026-06-14"
+    },
+    "nlmClinicalTablesIcd10Cm": {
+      "type": "primary-official-nih",
+      "name": "NLM Clinical Tables ICD-10-CM API",
+      "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
+      "exampleQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=H40.011&sf=code&df=code,name",
+      "accessDate": "2026-06-14"
+    },
+    "cmsPfsRvu26A": {
+      "type": "primary-cms-payment-file",
+      "name": "CMS PFS Relative Value File RVU26A, January 2026 release",
+      "url": "https://www.cms.gov/medicare/payment/fee-schedules/physician/pfs-relative-value-files/rvu26a",
+      "downloadUrl": "https://www.cms.gov/files/zip/rvu26a-updated-12-29-2025.zip",
+      "accessDate": "2026-06-14"
+    },
+    "cmsScodiArticleA57804": {
+      "type": "primary-cms-coverage",
+      "name": "CMS Billing and Coding Article A57804, SCODI",
+      "url": "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleId=57804&ver=41",
+      "accessDate": "2026-06-14"
+    },
+    "cmsScodiLcdL34431": {
+      "type": "primary-cms-coverage",
+      "name": "CMS LCD L34431, SCODI, Palmetto GBA South Carolina",
+      "url": "https://www.cms.gov/medicare-coverage-database/view/lcd.aspx?LCDId=34431",
+      "accessDate": "2026-06-14"
+    },
+    "cmsScodiArticleA56825": {
+      "type": "primary-cms-coverage",
+      "name": "CMS Billing and Coding Article A56825, SCODI",
+      "url": "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleId=56825",
+      "accessDate": "2026-06-14"
+    }
+  },
+  "diagnosisFamilies": [
+    {
+      "family": "H40.00-",
+      "description": "Preglaucoma, unspecified",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.01-",
+      "description": "Open angle with borderline findings, low risk",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.02-",
+      "description": "Open angle with borderline findings, high risk",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.03-",
+      "description": "Anatomical narrow angle",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.04-",
+      "description": "Steroid responder",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.05-",
+      "description": "Ocular hypertension",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H40.06-",
+      "description": "Primary angle closure without glaucoma damage",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    }
+  ],
+  "diagnosisCodes": [
+    { "code": "H40.001", "display": "Preglaucoma, unspecified, right eye", "family": "H40.00-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.002", "display": "Preglaucoma, unspecified, left eye", "family": "H40.00-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.003", "display": "Preglaucoma, unspecified, bilateral", "family": "H40.00-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.009", "display": "Preglaucoma, unspecified, unspecified eye", "family": "H40.00-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.011", "display": "Open angle with borderline findings, low risk, right eye", "family": "H40.01-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.012", "display": "Open angle with borderline findings, low risk, left eye", "family": "H40.01-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.013", "display": "Open angle with borderline findings, low risk, bilateral", "family": "H40.01-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.019", "display": "Open angle with borderline findings, low risk, unspecified eye", "family": "H40.01-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.021", "display": "Open angle with borderline findings, high risk, right eye", "family": "H40.02-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.022", "display": "Open angle with borderline findings, high risk, left eye", "family": "H40.02-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.023", "display": "Open angle with borderline findings, high risk, bilateral", "family": "H40.02-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.029", "display": "Open angle with borderline findings, high risk, unspecified eye", "family": "H40.02-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.031", "display": "Anatomical narrow angle, right eye", "family": "H40.03-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.032", "display": "Anatomical narrow angle, left eye", "family": "H40.03-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.033", "display": "Anatomical narrow angle, bilateral", "family": "H40.03-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.039", "display": "Anatomical narrow angle, unspecified eye", "family": "H40.03-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.041", "display": "Steroid responder, right eye", "family": "H40.04-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.042", "display": "Steroid responder, left eye", "family": "H40.04-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.043", "display": "Steroid responder, bilateral", "family": "H40.04-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.049", "display": "Steroid responder, unspecified eye", "family": "H40.04-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.051", "display": "Ocular hypertension, right eye", "family": "H40.05-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.052", "display": "Ocular hypertension, left eye", "family": "H40.05-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.053", "display": "Ocular hypertension, bilateral", "family": "H40.05-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.059", "display": "Ocular hypertension, unspecified eye", "family": "H40.05-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.061", "display": "Primary angle closure without glaucoma damage, right eye", "family": "H40.06-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.062", "display": "Primary angle closure without glaucoma damage, left eye", "family": "H40.06-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.063", "display": "Primary angle closure without glaucoma damage, bilateral", "family": "H40.06-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H40.069", "display": "Primary angle closure without glaucoma damage, unspecified eye", "family": "H40.06-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] }
+  ],
+  "procedures": [
+    {
+      "code": "92020",
+      "system": "urn:ama:cpt",
+      "display": "Gonioscopy",
+      "cmsPfsShortDescriptor": "Gonioscopy",
+      "coverageReady": false,
+      "sourceRefs": ["cmsPfsRvu26A"]
+    },
+    {
+      "code": "76514",
+      "system": "urn:ama:cpt",
+      "display": "Corneal pachymetry, unilateral or bilateral",
+      "cmsPfsShortDescriptor": "Echo exam of eye thickness",
+      "coverageReady": false,
+      "sourceRefs": ["cmsPfsRvu26A"]
+    },
+    {
+      "code": "92133",
+      "system": "urn:ama:cpt",
+      "display": "SCODI, posterior segment, optic nerve",
+      "cmsPfsShortDescriptor": "Cptrzd oph dx img pst sgm on",
+      "coverageReady": false,
+      "sourceRefs": ["cmsPfsRvu26A", "cmsScodiArticleA57804", "cmsScodiArticleA56825"]
+    },
+    {
+      "code": "92083",
+      "system": "urn:ama:cpt",
+      "display": "Visual field examination, extended/threshold",
+      "cmsPfsShortDescriptor": "Extended visual field xm",
+      "coverageReady": false,
+      "sourceRefs": ["cmsPfsRvu26A"]
+    },
+    {
+      "code": "92250",
+      "system": "urn:ama:cpt",
+      "display": "Fundus photography with interpretation and report",
+      "cmsPfsShortDescriptor": "Fundus photography w/i&r",
+      "coverageReady": false,
+      "sourceRefs": ["cmsPfsRvu26A", "cmsScodiArticleA56825"]
+    }
+  ],
+  "provisionalCoverageRules": [
+    {
+      "id": "palmetto-sc-scodi-92133-h40-0",
+      "procedureCode": "92133",
+      "diagnosisFamily": "H40.0",
+      "jurisdiction": "Palmetto GBA J-M South Carolina",
+      "status": "provisional",
+      "notBillReady": true,
+      "note": "Founded only as a jurisdiction-stamped placeholder. Exact covered ICD list, utilization limits, and effective article/LCD version must be pulled before bill-ready use.",
+      "sourceRefs": ["cmsScodiArticleA57804", "cmsScodiLcdL34431", "cmsScodiArticleA56825"]
+    }
+  ],
+  "stubs": {
+    "findingDefinitions": [
+      { "key": "cup_disc_ratio", "display": "Cup/disc ratio", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
+      { "key": "intraocular_pressure", "display": "Intraocular pressure", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
+      { "key": "pachymetry_um", "display": "Pachymetry in micrometers", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
+      { "key": "rnfl_gcc", "display": "RNFL/GCC", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null }
+    ],
+    "protocolBundle": {
+      "key": "glaucoma_suspect_protocol",
+      "status": "unseeded-needs-operator-input",
+      "notBillReady": true
+    },
+    "coverageMappings": {
+      "status": "unseeded-needs-operator-input",
+      "notBillReady": true
+    }
+  },
+  "deferredPhase1FastFollows": [
+    "rule-versioning",
+    "recalc-invalidation",
+    "cross-recompute candidate persistence",
+    "evidence capture workflow",
+    "suggestion engine",
+    "confirmation UI",
+    "protocol UI",
+    "charge/coverage finalization",
+    "end-to-end claim workflow"
+  ]
+}
