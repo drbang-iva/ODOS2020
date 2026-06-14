@@ -269,7 +269,7 @@ const UPDATE_PATIENT_AUDIT_HEADERS = {
 } as const;
 const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-ActCode";
-const AMA_CPT_CODE_SYSTEM = "http://www.ama-assn.org/go/cpt";
+const AMA_CPT_CODE_SYSTEM = "urn:ama:cpt";
 // Verified against http://terminology.hl7.org/CodeSystem/v3-ActCode.
 const HL7_V3_ACT_ENCOUNTER_CLASS_CODES = [
   "AMB",
@@ -466,7 +466,7 @@ const tools = [
   {
     name: "get_charge_items",
     description:
-      "List ChargeItem resources for a given Patient or Encounter. Use to see CPT codes billed during an encounter.",
+      "List ChargeItem resources for a given Patient or Encounter. Use to see locally loaded procedure codes billed during an encounter.",
     inputSchema: {
       type: "object",
       properties: {

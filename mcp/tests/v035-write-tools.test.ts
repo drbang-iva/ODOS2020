@@ -34,6 +34,17 @@ type CreateSmokingOutput = ToolOutput<{}> & { observation: Observation };
 type CreateCareTeamOutput = ToolOutput<{}> & { careTeam: CareTeam };
 type CreateProcedureOutput = ToolOutput<{}> & { procedure: Procedure };
 
+const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+const CPT_CODE_SYSTEM = "urn:ama:cpt";
+const SCODI_OPTIC_NERVE = {
+  conceptKey: "scodi-optic-nerve",
+  cptBinding: {
+    status: "deferred-to-licensed-adapter" as const,
+    system: CPT_CODE_SYSTEM,
+  },
+};
+
 test("v0.35 MCP write tools create version-aware FHIR resources with Provenance", { timeout: 180_000 }, async (t) => {
   loadRepoEnv();
 
@@ -336,14 +347,16 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
           patient_id: patient.id,
           encounter_id: encounter.id,
           status: "completed",
-          code_system: "http://www.ama-assn.org/go/cpt",
-          code: "92133",
+          code_system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+          code: SCODI_OPTIC_NERVE.conceptKey,
           body_structure_reference: bodyStructureReference,
         },
       }),
     );
 
     procedure = output.procedure;
+    assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
+    assert.equal(output.procedure.code?.coding?.[0]?.code, "scodi-optic-nerve");
     assert.equal(output.procedure.extension?.[0]?.url, PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL);
     assert.equal(output.procedure.extension?.[0]?.valueReference?.reference, bodyStructureReference);
     assertProvenance(output.provenance, `Procedure/${output.procedure.id}`);

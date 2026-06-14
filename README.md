@@ -142,7 +142,7 @@ Expected output:
 ✓ Logged in as admin@osod.local
 ✓ Created Patient: <uuid>
 ✓ Created Encounter: <uuid>
-✓ Created ChargeItem (CPT 92015): <uuid>
+✓ Created ChargeItem (deferred-procedure-concept): <uuid>
 
 — Demo ready —
 Admin UI: http://localhost:8100

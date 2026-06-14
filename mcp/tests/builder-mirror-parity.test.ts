@@ -75,6 +75,16 @@ const common = {
   eye: "OD" as const,
   measuredAt: "2026-04-25T12:00:00.000Z",
 };
+const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+const CPT_CODE_SYSTEM = "urn:ama:cpt";
+const SCODI_OPTIC_NERVE = {
+  conceptKey: "scodi-optic-nerve",
+  cptBinding: {
+    status: "deferred-to-licensed-adapter" as const,
+    system: CPT_CODE_SYSTEM,
+  },
+};
 
 test("UI ophthalmology mirror matches MCP IOP builder output", () => {
   assertJsonEqual(
@@ -241,10 +251,11 @@ test("UI clinical mirror matches MCP Procedure builder output", () => {
   const input = {
     patientReference: "Patient/p1",
     status: "completed" as const,
-    code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" },
+    code: { system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM, code: SCODI_OPTIC_NERVE.conceptKey },
     bodyStructureReference: "BodyStructure/b1",
   };
 
+  assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assertJsonEqual(buildMcpProcedure(input), buildUiProcedure(input));
 });
 

@@ -51,6 +51,25 @@ import {
   withProcedureTargetBodyStructure,
 } from "../src/fhir/procedure.js";
 
+const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+const CPT_CODE_SYSTEM = "urn:ama:cpt";
+const SCODI_OPTIC_NERVE = {
+  conceptKey: "scodi-optic-nerve",
+  cptBinding: {
+    status: "deferred-to-licensed-adapter" as const,
+    system: CPT_CODE_SYSTEM,
+  },
+};
+
+function deferredProcedureCode(concept = SCODI_OPTIC_NERVE) {
+  return {
+    system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+    code: concept.conceptKey,
+    text: concept.conceptKey,
+  };
+}
+
 test("EpisodeOfCare.type uses the OSOD CodeSystem", () => {
   const concept = episodeOfCareTypeConcept("glaucoma");
   assert.equal(concept.coding?.[0]?.system, OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
@@ -296,10 +315,11 @@ test("Procedure builder uses procedure-targetBodyStructure extension", () => {
   const procedure = buildProcedure({
     patientReference: "Patient/p1",
     status: "completed",
-    code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" },
+    code: deferredProcedureCode(),
     bodyStructureReference: "BodyStructure/b1",
   });
 
+  assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assert.equal(procedure.extension?.[0]?.url, PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL);
   assert.equal(procedure.extension?.[0]?.valueReference?.reference, "BodyStructure/b1");
 });
@@ -309,7 +329,7 @@ test("Procedure body-structure helper replaces existing target extension", () =>
     resourceType: "Procedure",
     status: "completed",
     subject: { reference: "Patient/p1" },
-    code: procedureCodeConcept({ system: "http://www.ama-assn.org/go/cpt", code: "92133" }),
+    code: procedureCodeConcept(deferredProcedureCode()),
     extension: [
       {
         url: PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL,
@@ -328,7 +348,7 @@ test("Procedure body-structure helper removes target extension when omitted", ()
     resourceType: "Procedure",
     status: "completed",
     subject: { reference: "Patient/p1" },
-    code: procedureCodeConcept({ system: "http://www.ama-assn.org/go/cpt", code: "92133" }),
+    code: procedureCodeConcept(deferredProcedureCode()),
     extension: [
       {
         url: PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL,
@@ -345,11 +365,12 @@ test("Procedure body-structure helper removes target extension when omitted", ()
   );
 });
 
-test("Procedure code concept preserves display text", () => {
-  const concept = procedureCodeConcept({
-    system: "http://www.ama-assn.org/go/cpt",
-    code: "92133",
-    display: "Scanning computerized ophthalmic diagnostic imaging",
-  });
-  assert.equal(concept.text, "Scanning computerized ophthalmic diagnostic imaging");
+test("Procedure code concept preserves deferred concept key", () => {
+  const concept = procedureCodeConcept(deferredProcedureCode());
+
+  assert.equal(SCODI_OPTIC_NERVE.conceptKey, "scodi-optic-nerve");
+  assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
+  assert.equal(concept.coding?.[0]?.system, DEFERRED_PROCEDURE_CONCEPT_SYSTEM);
+  assert.equal(concept.coding?.[0]?.code, "scodi-optic-nerve");
+  assert.equal(concept.text, "scodi-optic-nerve");
 });
