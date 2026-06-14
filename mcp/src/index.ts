@@ -1765,7 +1765,7 @@ const createEncounterSchema = z.object({
   practitioner_reference: maybeStringArraySchema,
   type_system: z
     .string()
-    .refine((system) => !BLOCKED_CPT_CODE_SYSTEMS.has(system.trim()), {
+    .refine((system) => !BLOCKED_CPT_CODE_SYSTEMS.has(system.trim().toLowerCase()), {
       message: "Encounter.type must describe visit type; CPT billing codes belong in ChargeItem.",
     })
     .optional(),

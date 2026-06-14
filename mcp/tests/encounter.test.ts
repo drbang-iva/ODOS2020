@@ -98,6 +98,22 @@ test("create_encounter MCP write tool integrates with Medplum", { timeout: 90_00
     assert.match(toolText(result), /class_code must be one of: AMB/);
   });
 
+  await t.test("rejects CPT type_system regardless of case at Zod parse", async () => {
+    const result = await mcp.client.callTool({
+      name: "create_encounter",
+      arguments: {
+        patient_id: patient.id,
+        class_code: "AMB",
+        status: "in-progress",
+        type_system: "URN:AMA:CPT",
+        type_code: "deferred-procedure-concept",
+      },
+    });
+
+    assert.equal(result.isError, true);
+    assert.match(toolText(result), /CPT billing codes belong in ChargeItem/);
+  });
+
   await t.test("rejects missing patient_id at Zod parse", async () => {
     const result = await mcp.client.callTool({
       name: "create_encounter",
