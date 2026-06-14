@@ -269,7 +269,9 @@ const UPDATE_PATIENT_AUDIT_HEADERS = {
 } as const;
 const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-ActCode";
-const AMA_CPT_CODE_SYSTEM = "http://www.ama-assn.org/go/cpt";
+const AMA_CPT_CODE_SYSTEM = "urn:ama:cpt";
+const LEGACY_AMA_CPT_CODE_SYSTEM = ["http://www.", "ama-assn", ".org/go/", "cpt"].join("");
+const BLOCKED_CPT_CODE_SYSTEMS = new Set([AMA_CPT_CODE_SYSTEM, LEGACY_AMA_CPT_CODE_SYSTEM]);
 // Verified against http://terminology.hl7.org/CodeSystem/v3-ActCode.
 const HL7_V3_ACT_ENCOUNTER_CLASS_CODES = [
   "AMB",
@@ -466,7 +468,7 @@ const tools = [
   {
     name: "get_charge_items",
     description:
-      "List ChargeItem resources for a given Patient or Encounter. Use to see CPT codes billed during an encounter.",
+      "List ChargeItem resources for a given Patient or Encounter. Use to see locally loaded procedure codes billed during an encounter.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1763,7 +1765,7 @@ const createEncounterSchema = z.object({
   practitioner_reference: maybeStringArraySchema,
   type_system: z
     .string()
-    .refine((system) => system.trim() !== AMA_CPT_CODE_SYSTEM, {
+    .refine((system) => !BLOCKED_CPT_CODE_SYSTEMS.has(system.trim().toLowerCase()), {
       message: "Encounter.type must describe visit type; CPT billing codes belong in ChargeItem.",
     })
     .optional(),

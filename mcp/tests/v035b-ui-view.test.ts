@@ -37,6 +37,10 @@ import { buildCareTeam as buildUiCareTeam } from "../../ui/src/lib/fhir-clinical
 import { buildCareTeam as buildMcpCareTeam } from "../src/fhir/careTeam.js";
 import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinical/procedure.js";
 import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 test("role config is switchable presentation-only plumbing", () => {
   assert.deepEqual(ROLE_IDS, ["doctor", "tech", "front-desk", "practice-admin"]);
@@ -154,9 +158,10 @@ test("v0.35b UI write builders still match the equivalent MCP builders", () => {
     buildMcpCareTeam({ patientReference: "Patient/p1", participant: [{ role: { text: "Ophthalmologist" }, practitionerRoleReference: "PractitionerRole/pr1" }] }),
   );
   assertJsonEqual(
-    buildUiProcedure({ patientReference: "Patient/p1", status: "completed", code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" }, bodyStructureReference: "BodyStructure/b1" }),
-    buildMcpProcedure({ patientReference: "Patient/p1", status: "completed", code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" }, bodyStructureReference: "BodyStructure/b1" }),
+    buildUiProcedure({ patientReference: "Patient/p1", status: "completed", code: { system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM, code: SCODI_OPTIC_NERVE.conceptKey }, bodyStructureReference: "BodyStructure/b1" }),
+    buildMcpProcedure({ patientReference: "Patient/p1", status: "completed", code: { system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM, code: SCODI_OPTIC_NERVE.conceptKey }, bodyStructureReference: "BodyStructure/b1" }),
   );
+  assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
 });
 
 test("diagnosis tier helper enforces one principal and secondary rank greater than one", () => {

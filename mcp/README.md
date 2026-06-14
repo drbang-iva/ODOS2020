@@ -12,7 +12,7 @@ Zero Medplum SDK — plain `fetch` against FHIR REST.
 | `get_patient` | Single Patient resource by ID |
 | `get_encounters` | Encounters for a given Patient |
 | `get_observations` | Observations for a Patient (optional category filter) |
-| `get_charge_items` | ChargeItems for a Patient or Encounter (shows CPT codes) |
+| `get_charge_items` | ChargeItems for a Patient or Encounter (shows locally loaded procedure codes) |
 | `fhir_search` | Escape hatch — arbitrary FHIR search |
 
 ## Transport modes

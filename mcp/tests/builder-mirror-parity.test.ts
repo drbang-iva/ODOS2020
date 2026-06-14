@@ -68,6 +68,10 @@ import {
   buildAtropineMedicationStatement as buildUiAtropineMedicationStatement,
   buildMyopiaManagementCarePlan as buildUiMyopiaManagementCarePlan,
 } from "../../ui/src/lib/fhir-v04c/myopiaManagement.js";
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 const common = {
   patientReference: "Patient/p1",
@@ -241,10 +245,11 @@ test("UI clinical mirror matches MCP Procedure builder output", () => {
   const input = {
     patientReference: "Patient/p1",
     status: "completed" as const,
-    code: { system: "http://www.ama-assn.org/go/cpt", code: "92133" },
+    code: { system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM, code: SCODI_OPTIC_NERVE.conceptKey },
     bodyStructureReference: "BodyStructure/b1",
   };
 
+  assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
   assertJsonEqual(buildMcpProcedure(input), buildUiProcedure(input));
 });
 

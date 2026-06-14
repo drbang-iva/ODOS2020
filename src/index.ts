@@ -2,10 +2,10 @@
  * OSOD v0.0.1 — First FHIR flow.
  *
  * Proves the Medplum foundation works by creating:
- *   Patient → Encounter → ChargeItem (CPT 92015)
+ *   Patient → Encounter → ChargeItem (deferred procedure concept)
  *
  * Screenshot the resulting resources in Medplum admin UI for the
- * AMA / Chacon call: "CPT codes only appear inside clinical context."
+ * licensing check: procedure concepts stay decoupled from proprietary CPT data.
  *
  * Run: npm run poc  (after `npm run up` and admin account created)
  */
@@ -21,6 +21,17 @@ import { FhirClient } from "./fhir-client.js";
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
+const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+const CPT_CODE_SYSTEM = "urn:ama:cpt";
+
+interface DeferredCptBoundProcedure {
+  conceptKey: string;
+  cptBinding: {
+    status: "deferred-to-licensed-adapter";
+    system: typeof CPT_CODE_SYSTEM;
+  };
+}
 
 async function main(): Promise<void> {
   if (!EMAIL || !PASSWORD) {
@@ -48,8 +59,8 @@ async function main(): Promise<void> {
     display: "Demo Testington",
   };
 
-  // 2. Encounter — ambulatory office visit (FHIR-correct: type is VISIT-TYPE,
-  //    NOT a CPT procedure code. Procedure codes go on ChargeItem/Procedure.)
+  // 2. Encounter — ambulatory office visit (FHIR-correct: type is visit type,
+  //    not a licensed procedure code. Procedure concepts go on ChargeItem/Procedure.)
   const encounter = await client.create<Encounter>({
     resourceType: "Encounter",
     status: "finished",
@@ -78,13 +89,12 @@ async function main(): Promise<void> {
   });
   console.log("✓ Created Encounter:", encounter.id);
 
-  // 3. ChargeItems — three CPT procedures performed during this encounter.
-  //    Each is independently billable, each is bound to the same encounter.
-  //    CPT procedure codes live ONLY here, never on Patient or Encounter.
-  const procedures = [
-    { code: "92014", display: "Ophthalmological services: comprehensive, established patient" },
-    { code: "92015", display: "Determination of refractive state" },
-    { code: "92250", display: "Fundus photography with interpretation and report" },
+  // 3. ChargeItems — deferred procedure concepts performed during this encounter.
+  //    CPT values load later through the practice's own licensed adapter.
+  const procedures: DeferredCptBoundProcedure[] = [
+    deferredCptBoundProcedure("comprehensive-established-eye-exam"),
+    deferredCptBoundProcedure("refraction-determination"),
+    deferredCptBoundProcedure("fundus-photography"),
   ];
 
   const charges: ChargeItem[] = [];
@@ -95,12 +105,11 @@ async function main(): Promise<void> {
       code: {
         coding: [
           {
-            system: "http://www.ama-assn.org/go/cpt",
-            code: p.code,
-            display: p.display,
+            system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+            code: p.conceptKey,
           },
         ],
-        text: `CPT ${p.code} - ${p.display}`,
+        text: p.conceptKey,
       },
       subject: patientRef,
       context: { reference: `Encounter/${encounter.id}` },
@@ -108,22 +117,31 @@ async function main(): Promise<void> {
       quantity: { value: 1 },
     });
     charges.push(charge);
-    console.log(`✓ Created ChargeItem (CPT ${p.code}):`, charge.id);
+    console.log(`✓ Created ChargeItem (${p.conceptKey}):`, charge.id);
   }
 
   console.log("\n— Demo ready —");
   console.log(`Admin UI: ${BASE_URL.replace(":8103", ":8100")}`);
   console.log(`Patient:    Patient/${patient.id}`);
-  console.log(`Encounter:  Encounter/${encounter.id}  (Office visit — no CPT)`);
+  console.log(`Encounter:  Encounter/${encounter.id}  (Office visit — no procedure code)`);
   for (const [i, c] of charges.entries()) {
-    console.log(`ChargeItem: ChargeItem/${c.id}  (CPT ${procedures[i].code})`);
+    console.log(`ChargeItem: ChargeItem/${c.id}  (${procedures[i].conceptKey})`);
   }
   console.log(
-    "\nCPT codes 92014, 92015, 92250 exist ONLY inside ChargeItems, each\n" +
-      "bound to the Encounter, which is bound to the Patient. No CPT appears\n" +
-      "on Patient, Encounter, or anywhere else. Structurally inseparable\n" +
-      "from clinical context — satisfies AMA distribution criterion (a).",
+    "\nChargeItems use OSOD-local concept keys with CPT binding deferred to\n" +
+      "the practice's licensed adapter. No CPT value or descriptor ships in\n" +
+      "this public demo.",
   );
+}
+
+function deferredCptBoundProcedure(conceptKey: string): DeferredCptBoundProcedure {
+  return {
+    conceptKey,
+    cptBinding: {
+      status: "deferred-to-licensed-adapter",
+      system: CPT_CODE_SYSTEM,
+    },
+  };
 }
 
 main().catch((e: unknown) => {

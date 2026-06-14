@@ -21,6 +21,10 @@ import {
 } from "./integration-helpers.js";
 import { CONDITION_BODY_SITE_EXTENSION_URL } from "../src/fhir/condition.js";
 import { PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL } from "../src/fhir/procedure.js";
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 interface ToolOutput<T extends object> {
   provenance?: Provenance;
@@ -336,14 +340,16 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
           patient_id: patient.id,
           encounter_id: encounter.id,
           status: "completed",
-          code_system: "http://www.ama-assn.org/go/cpt",
-          code: "92133",
+          code_system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+          code: SCODI_OPTIC_NERVE.conceptKey,
           body_structure_reference: bodyStructureReference,
         },
       }),
     );
 
     procedure = output.procedure;
+    assert.equal(SCODI_OPTIC_NERVE.cptBinding.status, "deferred-to-licensed-adapter");
+    assert.equal(output.procedure.code?.coding?.[0]?.code, "scodi-optic-nerve");
     assert.equal(output.procedure.extension?.[0]?.url, PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL);
     assert.equal(output.procedure.extension?.[0]?.valueReference?.reference, bodyStructureReference);
     assertProvenance(output.provenance, `Procedure/${output.procedure.id}`);

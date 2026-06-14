@@ -142,7 +142,9 @@ Expected output:
 ✓ Logged in as admin@osod.local
 ✓ Created Patient: <uuid>
 ✓ Created Encounter: <uuid>
-✓ Created ChargeItem (CPT 92015): <uuid>
+✓ Created ChargeItem (comprehensive-established-eye-exam): <uuid>
+✓ Created ChargeItem (refraction-determination): <uuid>
+✓ Created ChargeItem (fundus-photography): <uuid>
 
 — Demo ready —
 Admin UI: http://localhost:8100
