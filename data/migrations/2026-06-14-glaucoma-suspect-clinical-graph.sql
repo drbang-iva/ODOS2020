@@ -48,6 +48,9 @@ CREATE TABLE IF NOT EXISTS osod_diagnosis_definitions (
     icd10_display TEXT,
     coding_status TEXT NOT NULL DEFAULT 'placeholder'
         CHECK (coding_status IN ('verified', 'placeholder', 'provisional')),
+    CONSTRAINT verified_diagnosis_requires_icd10_code CHECK (
+        coding_status <> 'verified' OR icd10_code IS NOT NULL
+    ),
     laterality_required BOOLEAN NOT NULL DEFAULT false,
     applicable_finding_definition_ids UUID[] NOT NULL DEFAULT '{}',
     separates_severity_stage_payer_risk BOOLEAN NOT NULL DEFAULT true,
@@ -94,7 +97,7 @@ CREATE TABLE IF NOT EXISTS osod_encounter_diagnoses (
     condition_reference TEXT UNIQUE,
     clinical_status TEXT NOT NULL DEFAULT 'active'
         CHECK (clinical_status IN ('active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved')),
-    verification_status TEXT NOT NULL DEFAULT 'confirmed'
+    verification_status TEXT NOT NULL DEFAULT 'unconfirmed'
         CHECK (verification_status IN ('unconfirmed', 'provisional', 'differential', 'confirmed', 'refuted', 'entered-in-error')),
     diagnosis_rank INTEGER NOT NULL CHECK (diagnosis_rank >= 1),
     laterality TEXT NOT NULL DEFAULT 'UNKNOWN' CHECK (laterality IN ('OD', 'OS', 'OU', 'UNKNOWN')),
@@ -103,7 +106,11 @@ CREATE TABLE IF NOT EXISTS osod_encounter_diagnoses (
     payer_risk_bucket TEXT,
     clinician_note TEXT,
     provenance JSONB NOT NULL DEFAULT '{}'::jsonb,
-    confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    confirmed_at TIMESTAMPTZ,
+    CONSTRAINT encounter_diagnosis_confirmation_gate CHECK (
+        (verification_status = 'confirmed' AND confirmed_at IS NOT NULL) OR
+        (verification_status <> 'confirmed' AND confirmed_at IS NULL)
+    )
 );
 
 CREATE TABLE IF NOT EXISTS osod_encounter_diagnosis_evidence (

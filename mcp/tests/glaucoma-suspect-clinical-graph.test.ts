@@ -5,8 +5,10 @@ import { test } from "node:test";
 import {
   CPT_CODE_SYSTEM,
   buildClinicalFindingDefinition,
+  buildDiagnosisDefinition,
   buildEncounterDiagnosis,
   buildGlaucomaCupDiscSuggestion,
+  buildGlaucomaOpenAngleDiagnosisDefinition,
   projectEncounterDiagnosisToCondition,
   projectFindingInstanceToObservation,
 } from "../src/clinical-graph/glaucoma-suspect.js";
@@ -86,6 +88,10 @@ test("Phase 1 migration declares the OSOD-owned clinical graph entities", () => 
   assert.match(sql, /disease_stage TEXT/);
   assert.match(sql, /payer_risk_bucket TEXT/);
   assert.match(sql, /not_bill_ready BOOLEAN NOT NULL DEFAULT true/);
+  assert.match(sql, /verification_status TEXT NOT NULL DEFAULT 'unconfirmed'/);
+  assert.match(sql, /confirmed_at TIMESTAMPTZ,/);
+  assert.match(sql, /CONSTRAINT encounter_diagnosis_confirmation_gate CHECK/);
+  assert.match(sql, /CONSTRAINT verified_diagnosis_requires_icd10_code CHECK/);
 });
 
 test("FindingInstance can exist and project to Observation with zero confirmed diagnoses", () => {
@@ -161,6 +167,8 @@ test("one FindingInstance can support multiple EncounterDiagnoses", () => {
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
     laterality: "OU",
+    verificationStatus: "confirmed",
+    confirmedAt: provenance.recordedAt,
     evidenceFindingInstanceIds: sharedEvidence,
     evidenceObservationReferences: sharedObservation,
     provenance,
@@ -171,6 +179,8 @@ test("one FindingInstance can support multiple EncounterDiagnoses", () => {
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
     laterality: "OU",
+    verificationStatus: "confirmed",
+    confirmedAt: provenance.recordedAt,
     evidenceFindingInstanceIds: sharedEvidence,
     evidenceObservationReferences: sharedObservation,
     provenance,
@@ -200,6 +210,8 @@ test("clinical severity, disease stage, and payer-risk bucket remain independent
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
     laterality: "OD",
+    verificationStatus: "confirmed",
+    confirmedAt: provenance.recordedAt,
     clinicalSeverity: osodConcept("mild-clinical-severity", "Mild clinical severity"),
     diseaseStage: osodConcept("pre-perimetric-stage", "Pre-perimetric stage"),
     payerRiskBucket: "high",
@@ -213,4 +225,103 @@ test("clinical severity, disease stage, and payer-risk bucket remain independent
   assert.equal(encounterDiagnosis.payerRiskBucket, "high");
   assert.notEqual(condition.severity?.coding?.[0]?.code, encounterDiagnosis.payerRiskBucket);
   assert.notEqual(condition.stage?.[0]?.summary?.coding?.[0]?.code, encounterDiagnosis.payerRiskBucket);
+});
+
+test("Condition projection requires explicit confirmed EncounterDiagnosis", () => {
+  const { diagnosisDefinition } = buildGlaucomaCupDiscSuggestion({
+    cupDiscRatio: 0.65,
+    laterality: "OD",
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingDefinitionId: "finding-def-cup-disc",
+    findingInstanceId: "finding-cd-od",
+    recordedAt: "2026-06-14T12:00:00.000Z",
+    provenance,
+  });
+  const base = {
+    id: "enc-dx-confirm-gate",
+    diagnosisDefinitionId: diagnosisDefinition.id,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    laterality: "OD" as const,
+    evidenceObservationReferences: ["Observation/cup-disc-od"],
+    provenance,
+  };
+  const unconfirmed = buildEncounterDiagnosis(base);
+  const provisional = buildEncounterDiagnosis({ ...base, id: "enc-dx-provisional", verificationStatus: "provisional" });
+  const confirmed = buildEncounterDiagnosis({
+    ...base,
+    id: "enc-dx-confirmed",
+    verificationStatus: "confirmed",
+    confirmedAt: provenance.recordedAt,
+  });
+
+  assert.equal(unconfirmed.verificationStatus, "unconfirmed");
+  assert.equal(unconfirmed.confirmedAt, undefined);
+  assert.throws(
+    () => projectEncounterDiagnosisToCondition(unconfirmed, diagnosisDefinition),
+    /Only confirmed EncounterDiagnosis rows can project to FHIR Condition/,
+  );
+  assert.throws(
+    () => projectEncounterDiagnosisToCondition(provisional, diagnosisDefinition),
+    /Only confirmed EncounterDiagnosis rows can project to FHIR Condition/,
+  );
+  assert.equal(projectEncounterDiagnosisToCondition(confirmed, diagnosisDefinition).resourceType, "Condition");
+  assert.throws(
+    () => buildEncounterDiagnosis({ ...base, id: "enc-dx-bad-confirmed", verificationStatus: "confirmed" }),
+    /Confirmed EncounterDiagnosis requires confirmedAt/,
+  );
+  assert.throws(
+    () => buildEncounterDiagnosis({ ...base, id: "enc-dx-bad-unconfirmed", confirmedAt: provenance.recordedAt }),
+    /Only confirmed EncounterDiagnosis rows can carry confirmedAt/,
+  );
+});
+
+test("provisional coverage rule diagnosis families resolve to declared ledger keys", () => {
+  const ledger = JSON.parse(
+    readFileSync(
+      resolve(REPO_ROOT, "data/code-bindings/glaucoma-suspect-phase0-ledger.json"),
+      "utf8",
+    ),
+  );
+  const declaredFamilies = new Set(ledger.diagnosisFamilies.map((row: { family: string }) => row.family));
+  const ruleFamilies = ledger.provisionalCoverageRules[0].diagnosisFamilies;
+
+  assert.deepEqual(ruleFamilies, Array.from(declaredFamilies));
+  assert.equal(ruleFamilies.every((family: string) => declaredFamilies.has(family)), true);
+});
+
+test("verified DiagnosisDefinition requires an ICD-10-CM code", () => {
+  assert.throws(
+    () => buildDiagnosisDefinition({
+      stableKey: "missing_verified_code",
+      display: "Missing verified code",
+      clinicalFamily: "glaucoma-suspect",
+      codingStatus: "verified",
+      lateralityRequired: true,
+      provenance,
+    }),
+    /Verified DiagnosisDefinition requires an ICD-10-CM code/,
+  );
+});
+
+test("glaucoma open-angle diagnosis verifies only through the Phase 0 ledger", () => {
+  const verified = buildGlaucomaOpenAngleDiagnosisDefinition({
+    laterality: "OD",
+    riskBucket: "low",
+    provenance,
+  });
+  const placeholder = buildGlaucomaOpenAngleDiagnosisDefinition({
+    laterality: "OD",
+    riskBucket: "low",
+    provenance,
+    ledger: { diagnosisCodes: [] },
+  });
+
+  assert.equal(verified.codingStatus, "verified");
+  assert.equal(verified.icd10Code, "H40.011");
+  assert.equal(verified.icd10Display, "Open angle with borderline findings, low risk, right eye");
+  assert.equal(placeholder.codingStatus, "placeholder");
+  assert.equal(placeholder.icd10Code, undefined);
+  assert.match(placeholder.provenance.note ?? "", /Mandate-14 TODO/);
 });

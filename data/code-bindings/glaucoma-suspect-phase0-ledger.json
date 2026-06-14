@@ -180,7 +180,7 @@
     {
       "id": "palmetto-sc-scodi-optic-nerve-h40-0",
       "procedureCode": "scodi-optic-nerve",
-      "diagnosisFamily": "H40.0",
+      "diagnosisFamilies": ["H40.00-", "H40.01-", "H40.02-", "H40.03-", "H40.04-", "H40.05-", "H40.06-"],
       "jurisdiction": "Palmetto GBA J-M South Carolina",
       "status": "provisional",
       "notBillReady": true,
