@@ -37,17 +37,10 @@ import { buildCareTeam as buildUiCareTeam } from "../../ui/src/lib/fhir-clinical
 import { buildCareTeam as buildMcpCareTeam } from "../src/fhir/careTeam.js";
 import { buildProcedure as buildUiProcedure } from "../../ui/src/lib/fhir-clinical/procedure.js";
 import { buildProcedure as buildMcpProcedure } from "../src/fhir/procedure.js";
-
-const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
-const CPT_CODE_SYSTEM = "urn:ama:cpt";
-const SCODI_OPTIC_NERVE = {
-  conceptKey: "scodi-optic-nerve",
-  cptBinding: {
-    status: "deferred-to-licensed-adapter" as const,
-    system: CPT_CODE_SYSTEM,
-  },
-};
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 test("role config is switchable presentation-only plumbing", () => {
   assert.deepEqual(ROLE_IDS, ["doctor", "tech", "front-desk", "practice-admin"]);

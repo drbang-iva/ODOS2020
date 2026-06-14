@@ -68,22 +68,16 @@ import {
   buildAtropineMedicationStatement as buildUiAtropineMedicationStatement,
   buildMyopiaManagementCarePlan as buildUiMyopiaManagementCarePlan,
 } from "../../ui/src/lib/fhir-v04c/myopiaManagement.js";
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 const common = {
   patientReference: "Patient/p1",
   encounterReference: "Encounter/e1",
   eye: "OD" as const,
   measuredAt: "2026-04-25T12:00:00.000Z",
-};
-const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
-const CPT_CODE_SYSTEM = "urn:ama:cpt";
-const SCODI_OPTIC_NERVE = {
-  conceptKey: "scodi-optic-nerve",
-  cptBinding: {
-    status: "deferred-to-licensed-adapter" as const,
-    system: CPT_CODE_SYSTEM,
-  },
 };
 
 test("UI ophthalmology mirror matches MCP IOP builder output", () => {

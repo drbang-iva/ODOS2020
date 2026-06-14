@@ -50,25 +50,11 @@ import {
   procedureCodeConcept,
   withProcedureTargetBodyStructure,
 } from "../src/fhir/procedure.js";
-
-const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
-const CPT_CODE_SYSTEM = "urn:ama:cpt";
-const SCODI_OPTIC_NERVE = {
-  conceptKey: "scodi-optic-nerve",
-  cptBinding: {
-    status: "deferred-to-licensed-adapter" as const,
-    system: CPT_CODE_SYSTEM,
-  },
-};
-
-function deferredProcedureCode(concept = SCODI_OPTIC_NERVE) {
-  return {
-    system: DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
-    code: concept.conceptKey,
-    text: concept.conceptKey,
-  };
-}
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+  deferredProcedureCode,
+} from "./fixtures/deferred-procedure-constants.js";
 
 test("EpisodeOfCare.type uses the OSOD CodeSystem", () => {
   const concept = episodeOfCareTypeConcept("glaucoma");

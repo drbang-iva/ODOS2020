@@ -21,6 +21,10 @@ import {
 } from "./integration-helpers.js";
 import { CONDITION_BODY_SITE_EXTENSION_URL } from "../src/fhir/condition.js";
 import { PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL } from "../src/fhir/procedure.js";
+import {
+  DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
+  SCODI_OPTIC_NERVE,
+} from "./fixtures/deferred-procedure-constants.js";
 
 interface ToolOutput<T extends object> {
   provenance?: Provenance;
@@ -33,17 +37,6 @@ type CreateAllergyOutput = ToolOutput<{}> & { allergyIntolerance: AllergyIntoler
 type CreateSmokingOutput = ToolOutput<{}> & { observation: Observation };
 type CreateCareTeamOutput = ToolOutput<{}> & { careTeam: CareTeam };
 type CreateProcedureOutput = ToolOutput<{}> & { procedure: Procedure };
-
-const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
-const CPT_CODE_SYSTEM = "urn:ama:cpt";
-const SCODI_OPTIC_NERVE = {
-  conceptKey: "scodi-optic-nerve",
-  cptBinding: {
-    status: "deferred-to-licensed-adapter" as const,
-    system: CPT_CODE_SYSTEM,
-  },
-};
 
 test("v0.35 MCP write tools create version-aware FHIR resources with Provenance", { timeout: 180_000 }, async (t) => {
   loadRepoEnv();
