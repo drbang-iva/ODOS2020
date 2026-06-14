@@ -7,10 +7,14 @@ import {
   buildClinicalFindingDefinition,
   buildDiagnosisDefinition,
   buildEncounterDiagnosis,
+  buildGlaucomaFindingDefinitionStubs,
   buildGlaucomaCupDiscSuggestion,
   buildGlaucomaOpenAngleDiagnosisDefinition,
+  captureGlaucomaFinding,
+  evaluateGlaucomaDiagnosisSuggestions,
   projectEncounterDiagnosisToCondition,
   projectFindingInstanceToObservation,
+  rejectDiagnosisSuggestionEdge,
 } from "../src/clinical-graph/glaucoma-suspect.js";
 import { osodConcept } from "../src/fhir/ophthalmology/extensions.js";
 
@@ -94,6 +98,112 @@ test("Phase 1 migration declares the OSOD-owned clinical graph entities", () => 
   assert.match(sql, /CONSTRAINT verified_diagnosis_requires_icd10_code CHECK/);
 });
 
+test("Phase 2 and 3 migration adds evidence capture and unreviewed suggestion fields", () => {
+  const sql = readFileSync(
+    resolve(REPO_ROOT, "data/migrations/2026-06-14-glaucoma-suspect-evidence-suggestions.sql"),
+    "utf8",
+  );
+
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS method JSONB/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS performer_references TEXT\[\] NOT NULL DEFAULT '\{\}'/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS source_references TEXT\[\] NOT NULL DEFAULT '\{\}'/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS score NUMERIC\(6,3\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS evidence_finding_instance_ids UUID\[\] NOT NULL DEFAULT '\{\}'/);
+  assert.match(sql, /ALTER COLUMN visit_state SET DEFAULT 'unreviewed'/);
+  assert.match(sql, /visit_state IN \('unreviewed', 'generated', 'shown', 'suppressed', 'accepted', 'rejected', 'expired', 'superseded'\)/);
+});
+
+test("glaucoma finding definitions stay operator-gated stubs except the canon cup-disc predicate", () => {
+  const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
+  const byKey = new Map(definitions.map((definition) => [definition.stableKey, definition]));
+  const cupDisc = byKey.get("cup_disc_ratio");
+
+  assert.deepEqual(
+    definitions.map((definition) => definition.stableKey),
+    ["cup_disc_ratio", "intraocular_pressure", "pachymetry_um", "rnfl_gcc"],
+  );
+  assert.equal(definitions.every((definition) => definition.sourceStatus === "unseeded-needs-operator-input"), true);
+  assert.equal(definitions.every((definition) => definition.notBillReady), true);
+  assert.equal(definitions.every((definition) => definition.fhirObservationCode === undefined), true);
+  assert.match(String(cupDisc?.valueSchema.units), /TODO: operator input required/);
+  assert.deepEqual(cupDisc?.valueSchema.seededPredicateExamples, [
+    {
+      predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
+      threshold: 0.6,
+      source: "canon Phase-1 predicate example",
+    },
+  ]);
+  assert.deepEqual(byKey.get("intraocular_pressure")?.valueSchema.seededPredicateExamples, []);
+});
+
+test("Phase 2 capture projects standalone glaucoma evidence to Observation plus Provenance", () => {
+  const definition = buildGlaucomaFindingDefinitionStubs({ provenance })
+    .find((row) => row.stableKey === "cup_disc_ratio");
+  assert.ok(definition);
+
+  const captured = captureGlaucomaFinding({
+    definition,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-cd-od-runtime",
+    observationId: "observation-cd-od-runtime",
+    laterality: "OD",
+    value: { type: "quantity", value: 0.64, unit: "ratio", code: "1" },
+    method: osodConcept("manual-entry", "Manual entry"),
+    performerReferences: ["Practitioner/dr-bang"],
+    recordedAt: "2026-06-14T13:00:00.000Z",
+    provenance,
+  });
+  const confirmedDiagnoses = [];
+
+  assert.equal(captured.finding.laterality, "OD");
+  assert.equal(captured.finding.observationReference, "Observation/observation-cd-od-runtime");
+  assert.equal(captured.observation.resourceType, "Observation");
+  assert.equal(captured.observation.id, "observation-cd-od-runtime");
+  assert.equal(captured.observation.valueQuantity?.value, 0.64);
+  assert.equal(captured.observation.bodySite?.coding?.[0]?.code, "OD");
+  assert.equal(captured.observation.method?.coding?.[0]?.code, "manual-entry");
+  assert.equal(captured.observation.performer?.[0]?.reference, "Practitioner/dr-bang");
+  assert.equal(captured.observation.effectiveDateTime, "2026-06-14T13:00:00.000Z");
+  assert.equal(captured.provenance.resourceType, "Provenance");
+  assert.equal(captured.provenance.target[0]?.reference, "Observation/observation-cd-od-runtime");
+  assert.equal(confirmedDiagnoses.length, 0);
+});
+
+test("Phase 2 capture supports component Observations without seeded RNFL/GCC thresholds", () => {
+  const definition = buildGlaucomaFindingDefinitionStubs({ provenance })
+    .find((row) => row.stableKey === "rnfl_gcc");
+  assert.ok(definition);
+
+  const captured = captureGlaucomaFinding({
+    definition,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-rnfl-gcc-od",
+    laterality: "OD",
+    value: {
+      type: "components",
+      components: [
+        {
+          code: "operator-provided-rnfl-measurement",
+          display: "Operator-provided RNFL measurement",
+          value: "operator-provided measurement pending unit binding",
+        },
+      ],
+    },
+    recordedAt: "2026-06-14T13:05:00.000Z",
+    provenance,
+  });
+
+  assert.equal(definition.notBillReady, true);
+  assert.match(String(definition.valueSchema.normalRange), /TODO: operator input required/);
+  assert.equal(captured.observation.component?.length, 1);
+  assert.equal(
+    captured.observation.component?.[0]?.valueString,
+    "operator-provided measurement pending unit binding",
+  );
+});
+
 test("FindingInstance can exist and project to Observation with zero confirmed diagnoses", () => {
   const definition = buildClinicalFindingDefinition({
     id: "finding-def-cup-disc",
@@ -136,8 +246,106 @@ test("glaucoma cup/disc suggestion edge never creates a Condition", () => {
   });
 
   assert.equal(diagnosisDefinition.icd10Code, "H40.022");
-  assert.equal(suggestionEdge.visitState, "generated");
+  assert.equal(suggestionEdge.visitState, "unreviewed");
+  assert.equal(suggestionEdge.score, 0.8);
+  assert.deepEqual(suggestionEdge.evidenceFindingInstanceIds, ["finding-cd-os"]);
   assert.equal("resourceType" in suggestionEdge, false);
+});
+
+test("Phase 3 pure evaluator turns large C/D into an unreviewed suggestion, not a Condition", () => {
+  const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-ms-cupping-od",
+    laterality: "OD",
+    value: { type: "quantity", value: 0.72, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:10:00.000Z",
+    provenance,
+  });
+  const conditions = [];
+  const suggestions = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    encounterReference: "Encounter/e1",
+    provenance,
+  });
+
+  assert.equal(suggestions.length, 1);
+  assert.equal(suggestions[0].diagnosisDefinition.icd10Code, "H40.021");
+  assert.equal(suggestions[0].suggestionEdge.visitState, "unreviewed");
+  assert.equal(suggestions[0].suggestionEdge.targetDiagnosisDefinitionId, suggestions[0].diagnosisDefinition.id);
+  assert.deepEqual(suggestions[0].suggestionEdge.evidenceFindingInstanceIds, ["finding-ms-cupping-od"]);
+  assert.equal("resourceType" in suggestions[0].suggestionEdge, false);
+  assert.equal(conditions.length, 0);
+});
+
+test("rejecting the large-C/D glaucoma suggestion leaves the finding and no glaucoma Condition", () => {
+  const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-ms-cupping-os",
+    laterality: "OS",
+    value: { type: "quantity", value: 0.74, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:15:00.000Z",
+    provenance,
+  });
+  const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+  const rejected = rejectDiagnosisSuggestionEdge(suggestion.suggestionEdge, {
+    rejectedAt: "2026-06-14T13:16:00.000Z",
+    provenance,
+    reason: "Large cup/disc retained as neutral evidence for non-glaucomatous cupping differential.",
+  });
+  const findings = [captured.finding];
+  const glaucomaConditions = [];
+
+  assert.equal(rejected.visitState, "rejected");
+  assert.equal(rejected.rejectedAt, "2026-06-14T13:16:00.000Z");
+  assert.equal(findings.some((finding) => finding.id === "finding-ms-cupping-os"), true);
+  assert.equal(glaucomaConditions.length, 0);
+});
+
+test("Phase 3 evaluator is pure and deterministic over the same evidence", () => {
+  const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-pure-ou",
+    laterality: "OU",
+    value: { type: "quantity", value: 0.61, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:20:00.000Z",
+    provenance,
+  });
+  const first = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+  const second = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+  const conditions = [];
+
+  assert.deepEqual(second, first);
+  assert.equal(first[0].suggestionEdge.id, "suggestion-finding-pure-ou-glaucoma-suspect-open-angle-high-ou");
+  assert.equal(first[0].diagnosisDefinition.id, "dx-def-glaucoma-suspect-open-angle-high-ou");
+  assert.equal(conditions.length, 0);
 });
 
 test("one FindingInstance can support multiple EncounterDiagnoses", () => {
