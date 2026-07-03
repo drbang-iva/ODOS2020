@@ -1,0 +1,99 @@
+import type { Invoice, InvoiceLineItemPriceComponent } from "@medplum/fhirtypes";
+import { paymentTenderExtension } from "./osodPaymentTender.js";
+
+/**
+ * Adjustment/discount codes applied to self-pay lines. Source: Foxfire corpus
+ * `orders-optical-cl.md:82` — PPAY (Prompt Pay), FAMILY (Family Discount). The full adjustment-code
+ * list is [MINE] (not yet captured), so unknown codes are accepted and carried verbatim rather than
+ * rejected; known codes get a display. See Slice-3 spec §5.
+ */
+export const OSOD_OPTICAL_ADJUSTMENT_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-adjustment";
+
+const ADJUSTMENT_DISPLAY: Record<string, string> = {
+  PPAY: "Prompt Pay",
+  FAMILY: "Family Discount",
+};
+
+export interface OpticalInvoiceLineInput {
+  /** The ChargeItem this payment line settles (Invoice.lineItem.chargeItemReference). */
+  chargeItemReference: string;
+  /** Base line amount in whole cents (the ChargeItem's billed price). */
+  amountCents: number;
+  /** Optional self-pay adjustment (e.g. PPAY, FAMILY) → a discount priceComponent on this line. */
+  discount?: { code: string; amountCents: number };
+}
+
+export interface OpticalInvoiceInput {
+  patientReference: string;
+  /** CASH or CHECK — carried in the osod-payment-tender extension (R4 has no coded tender field). */
+  tender: string;
+  lineItems: OpticalInvoiceLineInput[];
+  /** Invoice.status R4 required VS (defaults to "issued"). */
+  status?: Invoice["status"];
+}
+
+/**
+ * Build the R4 Invoice that records a cash/check payment for a spectacle optical order.
+ *
+ * Each lineItem references a ChargeItem (chargeItemReference); the tender (CASH/CHECK) rides in the
+ * osod-payment-tender extension (Slice-3 spec §7 trap #5); totals are Money in USD. Invoice — NOT
+ * PaymentReconciliation, which is payer/insurer-scoped (trap #2). Weekend build is an internal
+ * ledger record: no live processor. See Slice-3 spec §5/§7 (dual-source verified R4).
+ */
+export function buildOpticalInvoice(input: OpticalInvoiceInput): Invoice {
+  if (!input.patientReference) {
+    throw new Error("Optical invoice requires a patient (subject) reference.");
+  }
+  if (!input.lineItems || input.lineItems.length === 0) {
+    throw new Error("Optical invoice requires at least one line item.");
+  }
+
+  let grossCents = 0;
+  let netCents = 0;
+
+  const lineItem = input.lineItems.map((li, index) => {
+    const priceComponent: InvoiceLineItemPriceComponent[] = [
+      { type: "base", amount: { value: li.amountCents / 100, currency: "USD" } },
+    ];
+    grossCents += li.amountCents;
+    netCents += li.amountCents;
+
+    if (li.discount) {
+      if (!Number.isInteger(li.discount.amountCents) || li.discount.amountCents < 0) {
+        throw new Error("Optical invoice discount amount (amountCents) must be a nonnegative integer.");
+      }
+      netCents -= li.discount.amountCents;
+      priceComponent.push({
+        type: "discount",
+        code: {
+          coding: [
+            {
+              system: OSOD_OPTICAL_ADJUSTMENT_SYSTEM,
+              code: li.discount.code,
+              ...(ADJUSTMENT_DISPLAY[li.discount.code]
+                ? { display: ADJUSTMENT_DISPLAY[li.discount.code] }
+                : {}),
+            },
+          ],
+        },
+        amount: { value: li.discount.amountCents / 100, currency: "USD" },
+      });
+    }
+
+    return {
+      sequence: index + 1,
+      chargeItemReference: { reference: li.chargeItemReference },
+      priceComponent,
+    };
+  });
+
+  return {
+    resourceType: "Invoice",
+    status: input.status ?? "issued",
+    subject: { reference: input.patientReference },
+    extension: [paymentTenderExtension(input.tender)],
+    lineItem,
+    totalGross: { value: grossCents / 100, currency: "USD" },
+    totalNet: { value: netCents / 100, currency: "USD" },
+  };
+}
