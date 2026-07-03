@@ -32,7 +32,9 @@ export const OPTICAL_ORDER_STATUSES = [
 
 export type OpticalOrderStatusCode = (typeof OPTICAL_ORDER_STATUSES)[number]["code"];
 
-const STATUS_BY_CODE = new Map(OPTICAL_ORDER_STATUSES.map((status) => [status.code, status]));
+const STATUS_BY_CODE = new Map<string, (typeof OPTICAL_ORDER_STATUSES)[number]>(
+  OPTICAL_ORDER_STATUSES.map((status) => [status.code, status]),
+);
 
 export function assertOpticalOrderStatus(code: string): asserts code is OpticalOrderStatusCode {
   if (!STATUS_BY_CODE.has(code)) {
