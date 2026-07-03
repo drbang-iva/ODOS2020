@@ -33,9 +33,9 @@ Mandate 14 audit for the optical cash-order kernel builders (`mcp/src/fhir/optic
 | Artifact | Chosen value | Source 1 | Source 2 | Access date | Status |
 |---|---|---|---|---|---|
 | ODOS CodeSystem (17 values, corpus-verbatim) | https://osod.dev/fhir/CodeSystem/optical-order-status | performance-od `reference/domain/.../foxfire-reverse-engineering/orders-optical-cl.md:171` | performance-od `decisions/2026-07-03-odos-slice3-optical-cash-order-kernel-spec.md` §4 | 2026-07-03 | verified (corpus-verbatim) |
-| ODOS extension (trap #5: R4 has no coded tender field) | https://osod.dev/fhir/StructureDefinition/osod-payment-tender | orders-optical-cl.md:85 (Transactions-screen Codes: CASH · CHECK) | spec §7 item 5 | 2026-07-03 | verified (corpus-verbatim) |
-| ODOS CodeSystem (payment tender) | https://osod.dev/fhir/CodeSystem/payment-tender — CASH, CHECK | orders-optical-cl.md:85 | spec §7 item 5 | 2026-07-03 | verified (corpus-verbatim) |
-| ODOS CodeSystem (self-pay adjustments) | https://osod.dev/fhir/CodeSystem/optical-adjustment — PPAY, FAMILY | orders-optical-cl.md:82 | spec §5 | 2026-07-03 | provisional — full adjustment-code list is [MINE]; unknown codes carried verbatim until harvested from live Foxfire |
+| ODOS extension (trap #5: R4 has no coded tender field) | https://osod.dev/fhir/StructureDefinition/osod-payment-tender | orders-optical-cl.md:85 (Transactions-screen Codes: CASH · CHECK) | live-Foxfire Payment Code dropdown harvest 2026-07-03 | 2026-07-03 | verified (corpus-verbatim) |
+| ODOS CodeSystem (payment tender) | https://osod.dev/fhir/CodeSystem/payment-tender — CASH, CHECK | orders-optical-cl.md:85 | live-Foxfire Payment Code dropdown harvest 2026-07-03 (only Payment Type CASH/CHECK + Responsibility Patient rows in scope; CREDIT/financing/insurance rows deferred to Slice-2+) | 2026-07-03 | verified (corpus-verbatim) |
+| ODOS CodeSystem (self-pay adjustments, Category=DS) | https://osod.dev/fhir/CodeSystem/optical-adjustment — 2PAIR, CSDIS, FAMILY, PPAY (cash-native); DEYE, DVSP (plan-linked) | orders-optical-cl.md:82 | live-Foxfire Adjustment Code dropdown harvest 2026-07-03 | 2026-07-03 | verified (corpus-verbatim; vocabulary practice-extensible → unknown codes carried verbatim). Non-discount rows WO/PRTN/REFP (ADJ/REF) and insurance IADJ rows intentionally excluded (Slice-2+). |
 
 ## Billing codes
 
@@ -49,6 +49,6 @@ Mandate 14 audit for the optical cash-order kernel builders (`mcp/src/fhir/optic
 
 | Item | Status |
 |---|---|
-| Full adjustment-code list | [MINE] — harvest from live Foxfire (operator, ~5 min in-system) |
-| Legal order-status transition matrix | [MINE] — v1 ships free-transition-within-the-17 (spec §4); `Cancelled` terminal + Order-Type immutability enforced at the service layer (UI/expansion phase), not in the builders |
+| Full adjustment-code list | CLOSED 2026-07-03 — harvested from live Foxfire Adjustment Code dropdown; DS discount codes verified above. Full transaction-code table (payments/adjustments/refunds/insurance) recorded in Open Brain; raw table to be appended to performance-od `orders-optical-cl.md`. |
+| Legal order-status transition matrix | [MINE] — still open. v1 ships free-transition-within-the-17 (spec §4); `Cancelled` terminal + Order-Type immutability enforced at the service layer (UI/expansion phase), not in the builders |
 | Lab cascade dropdowns | deferred with sub-segment 3.6 |

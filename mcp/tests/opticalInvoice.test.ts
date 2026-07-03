@@ -57,7 +57,7 @@ test("buildOpticalInvoice applies a line discount (PPAY) as a discount priceComp
   assert.equal(base?.amount?.value, 200);
   assert.equal(discount?.amount?.value, 20);
   assert.equal(discount?.code?.coding?.[0]?.code, "PPAY");
-  assert.equal(discount?.code?.coding?.[0]?.display, "Prompt Pay");
+  assert.equal(discount?.code?.coding?.[0]?.display, "Prompt Pay Discount");
 
   // gross = base (200), net = base - discount (180)
   assert.equal(invoice.totalGross?.value, 200);

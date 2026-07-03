@@ -1,18 +1,11 @@
 import type { Invoice, InvoiceLineItemPriceComponent } from "@medplum/fhirtypes";
 import { paymentTenderExtension } from "./osodPaymentTender.js";
+import { OSOD_OPTICAL_ADJUSTMENT_SYSTEM, opticalAdjustmentDisplay } from "./osodOpticalAdjustment.js";
 
-/**
- * Adjustment/discount codes applied to self-pay lines. Source: Foxfire corpus
- * `orders-optical-cl.md:82` — PPAY (Prompt Pay), FAMILY (Family Discount). The full adjustment-code
- * list is [MINE] (not yet captured), so unknown codes are accepted and carried verbatim rather than
- * rejected; known codes get a display. See Slice-3 spec §5.
- */
-export const OSOD_OPTICAL_ADJUSTMENT_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-adjustment";
-
-const ADJUSTMENT_DISPLAY: Record<string, string> = {
-  PPAY: "Prompt Pay",
-  FAMILY: "Family Discount",
-};
+// Self-pay discount vocabulary now lives in ./osodOpticalAdjustment (harvested from live Foxfire
+// 2026-07-03). Re-exported for consumers that discovered it here first. Unknown (practice-custom)
+// codes are still accepted and carried verbatim; known codes get a corpus-verbatim display.
+export { OSOD_OPTICAL_ADJUSTMENT_SYSTEM } from "./osodOpticalAdjustment.js";
 
 export interface OpticalInvoiceLineInput {
   /** The ChargeItem this payment line settles (Invoice.lineItem.chargeItemReference). */
@@ -70,8 +63,8 @@ export function buildOpticalInvoice(input: OpticalInvoiceInput): Invoice {
             {
               system: OSOD_OPTICAL_ADJUSTMENT_SYSTEM,
               code: li.discount.code,
-              ...(ADJUSTMENT_DISPLAY[li.discount.code]
-                ? { display: ADJUSTMENT_DISPLAY[li.discount.code] }
+              ...(opticalAdjustmentDisplay(li.discount.code)
+                ? { display: opticalAdjustmentDisplay(li.discount.code) }
                 : {}),
             },
           ],
