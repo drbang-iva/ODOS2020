@@ -68,6 +68,30 @@ export async function loadPracticeFrameInventory(): Promise<PracticeFrameInvento
   return basicEntries(bundle).map(basicToInventoryItem);
 }
 
+export async function decrementPracticeFrameInventory(
+  item: PracticeFrameInventoryItem,
+): Promise<PracticeFrameInventoryItem> {
+  if (!item.id) {
+    throw new Error("Practice frame inventory item is missing its FHIR Basic id.");
+  }
+  if (item.qtyOnHand <= 0) {
+    throw new Error("Practice frame inventory quantity is already zero.");
+  }
+  const current = await fhir.read<Basic>("Basic", item.id);
+  const qtyIndex = current.extension?.findIndex((extension) => extension.url === EXTENSION_URLS.qtyOnHand) ?? -1;
+  if (qtyIndex < 0) {
+    throw new Error("Practice frame inventory item is missing qty-on-hand.");
+  }
+  const updated = await fhir.patch<Basic>(
+    "Basic",
+    item.id,
+    [{ op: "replace", path: `/extension/${qtyIndex}/valueInteger`, value: item.qtyOnHand - 1 }],
+    "practice.frame-inventory.dispense",
+    current.meta?.versionId,
+  );
+  return basicToInventoryItem(updated);
+}
+
 export async function loadFramesDataSubscriptionSettings(): Promise<FramesDataSubscriptionSettings> {
   const bundle = await fhir.search<Basic>("Basic", {
     code: `${BASIC_KIND_SYSTEM}|frames-data-subscription`,
