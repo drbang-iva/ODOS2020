@@ -20,15 +20,15 @@ export const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcp
 
 export const OPTICAL_ORDER_STATUSES = [
   { code: "quote", display: "Quote" },
-  { code: "waiting-for-pre-auth", display: "Waiting For Pre Auth" },
+  { code: "waiting-for-pre-auth", display: "Waiting for Pre Auth" },
   { code: "at-lab", display: "At Lab" },
   { code: "lenses-on-order", display: "Lenses On Order" },
   { code: "frame-on-order", display: "Frame On Order" },
   { code: "waiting-on-patients-frame", display: "Waiting on Patients Frame" },
   { code: "notified", display: "Notified" },
-  { code: "notified-left-message", display: "Notified – Left Message" },
+  { code: "notified-left-message", display: "Notified - Left Message" },
   { code: "dispensed", display: "Dispensed" },
-  { code: "complete-unable-to-notify", display: "Complete – Unable to Notify" },
+  { code: "complete-unable-to-notify", display: "Complete - Unable to Notify" },
   { code: "waiting-on-payment", display: "Waiting On Payment" },
   { code: "cancelled", display: "Cancelled" },
   { code: "quick-order", display: "Quick Order" },

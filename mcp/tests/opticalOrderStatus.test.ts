@@ -23,6 +23,13 @@ test("opticalOrderStatusConcept binds a status to the local CodeSystem with its 
   assert.equal(coding?.display, "At Lab");
 });
 
+test("status displays match live Foxfire verbatim (2026-07-03 harvest: lowercase 'for', plain hyphens)", () => {
+  const displayByCode = new Map(OPTICAL_ORDER_STATUSES.map((s) => [s.code, s.display]));
+  assert.equal(displayByCode.get("waiting-for-pre-auth"), "Waiting for Pre Auth");
+  assert.equal(displayByCode.get("notified-left-message"), "Notified - Left Message");
+  assert.equal(displayByCode.get("complete-unable-to-notify"), "Complete - Unable to Notify");
+});
+
 test("assertOpticalOrderStatus rejects a code outside the 17-value vocabulary", () => {
   assert.throws(() => assertOpticalOrderStatus("shipped"), /optical order status/i);
 });
