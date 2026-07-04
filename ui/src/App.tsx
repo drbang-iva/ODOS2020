@@ -9,6 +9,7 @@ import { useViewState, type ViewState } from "./lib/view-state";
 import { AuthorizeConsent } from "./smart/authorize-consent";
 import { GrantsManagement } from "./smart/grants-management";
 import { OpticalFrames } from "./scenes/OpticalFrames";
+import { OpticalOrder } from "./scenes/OpticalOrder";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -80,6 +81,8 @@ function RouteSwitch({ view }: { view: ViewState }) {
       return <OpticalFrames route="inventory" />;
     case "/dispensary/lookup":
       return <OpticalFrames route="lookup" />;
+    case "/dispensary/orders":
+      return <OpticalOrder />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
     default:
