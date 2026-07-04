@@ -47,6 +47,8 @@ Mandate 14 audit for the optical cash-order kernel builders (`mcp/src/fhir/optic
 | HCPCS system URI (reused from v0.6a `frame-types.ts`) | https://bluebutton.cms.gov/resources/codesystem/hcpcs | `v0.6-verification-ledger.md` | `mcp/src/catalog/frame-types.ts:5` | 2026-05-08 | verified (v0.6a) |
 | Test-fixture codes (NOT shipped bindings) | V2100, 92015 | test files only (`opticalOrderComposite.test.ts`, `opticalChargeItem.test.ts`) | — | 2026-07-03 | provisional — fixture-only; verify before any shipped use |
 
+**Slice 3b (lab-order emitter T0, `opticalLabOrder.ts`):** asserts **no new external medical codes**. Rx values come from VisionPrescription (data); `lensCpt` and `treatments[]` are caller-supplied pass-through (never asserted by ODOS). The `LabOrder` model is DCS/OMA-shaped for T1; the DCS byte-format field labels remain `[MINE]` until the free Vision Council DCS v3.14 spec is read at T1 build time (see `performance-od/research/2026-07-04-visionweb-oma-lab-integration-derisking.md`).
+
 ## Deferred / [MINE] items (gate §8.2 log)
 
 | Item | Status |
