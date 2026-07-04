@@ -1,5 +1,7 @@
-import type { VisionPrescription } from "@medplum/fhirtypes";
+import type { ChargeItem, Invoice, VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useState } from "react";
+import { fhir } from "../lib/fhir";
+import { buildFinancialSummary, renderReceiptSheet } from "../lib/optical-financial-summary";
 import {
   buildLabOrder,
   labOrderToExport,
@@ -36,6 +38,7 @@ import {
   type FramePosLookupMatch,
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
+import { openPrintWindow } from "../lib/print-window";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -142,6 +145,7 @@ export function OpticalOrder() {
   const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
   const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
+  const [receiptSourceIds, setReceiptSourceIds] = useState<{ invoiceId: string; chargeItemIds: string[] } | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const selectedCharge = chargeLines.find((line) => line.id === selectedChargeId) ?? chargeLines[0];
@@ -195,6 +199,9 @@ export function OpticalOrder() {
   }, [selectedTotalCents]);
 
   const canProcessPayment = patientReference && rxReference && selectedLines.length > 0 && !createdTaskId;
+  const canPrintReceipt = Boolean(
+    createdTaskId && receiptSourceIds && receiptSourceIds.invoiceId && receiptSourceIds.chargeItemIds.length > 0,
+  );
   const selectedFrameLocked = Boolean(selectedCharge.frame);
 
   function selectLabOption(option: string) {
@@ -284,8 +291,42 @@ export function OpticalOrder() {
       tender,
     });
     setCreatedTaskId(created.taskId);
+    setReceiptSourceIds({ invoiceId: created.invoiceId, chargeItemIds: created.chargeItemIds });
     setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
     setStatus(`Order ${created.deviceRequestId} paid by ${tender}.`);
+  }
+
+  async function printReceipt() {
+    setError(null);
+    setStatus("");
+    if (!createdTaskId || !receiptSourceIds) {
+      setError("A paid order is required before printing a receipt.");
+      return;
+    }
+    try {
+      const [invoice, chargeItems] = await Promise.all([
+        fhir.read<Invoice>("Invoice", receiptSourceIds.invoiceId),
+        Promise.all(receiptSourceIds.chargeItemIds.map((id) => fhir.read<ChargeItem>("ChargeItem", id))),
+      ]);
+      const summary = buildFinancialSummary({
+        practiceName: optionalString(header.staffLocation) ?? "Integrated Vision & Aesthetics",
+        patientName: labOrderCapture.patientName.trim(),
+        patientRef: patientReference || undefined,
+        receiptDate: header.serviceDate,
+        orderId: header.orderNumber || createdTaskId,
+        providerName: optionalString(header.provider),
+        invoice,
+        chargeItems,
+      });
+      const printed = openPrintWindow(`Receipt ${summary.header.orderId}`, renderReceiptSheet(summary));
+      if (!printed) {
+        setError("The browser blocked the receipt print window.");
+        return;
+      }
+      setStatus(`Receipt ready for order ${summary.header.orderId}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   function applyDiscount() {
@@ -383,16 +424,11 @@ export function OpticalOrder() {
     if (!input) return;
     const order = buildLabOrder(input);
     const html = renderLabOrderSheet(order);
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) {
+    const printed = openPrintWindow(`Lab Order ${input.orderId}`, html);
+    if (!printed) {
       setError("The browser blocked the lab sheet print window.");
       return;
     }
-    printWindow.document.open();
-    printWindow.document.write(
-      `<!doctype html><html><head><title>Lab Order ${escapeDocumentTitle(input.orderId)}</title></head><body>${html}<script>window.addEventListener("load", function () { window.focus(); window.print(); });<\/script></body></html>`,
-    );
-    printWindow.document.close();
     setStatus(`Lab sheet ready for ${input.lab}.`);
   }
 
@@ -480,9 +516,11 @@ export function OpticalOrder() {
               paymentAmount={paymentAmount}
               selectedTotalCents={selectedTotalCents}
               canProcessPayment={Boolean(canProcessPayment)}
+              canPrintReceipt={canPrintReceipt}
               onTenderChange={setTender}
               onAmountChange={setPaymentAmount}
               onProcess={() => void processPayment()}
+              onPrintReceipt={() => void printReceipt()}
             />
             <DiscountPanel
               mode={discountMode}
@@ -760,17 +798,21 @@ function PaymentPanel({
   paymentAmount,
   selectedTotalCents,
   canProcessPayment,
+  canPrintReceipt,
   onTenderChange,
   onAmountChange,
   onProcess,
+  onPrintReceipt,
 }: {
   tender: PaymentTenderCode;
   paymentAmount: string;
   selectedTotalCents: number;
   canProcessPayment: boolean;
+  canPrintReceipt: boolean;
   onTenderChange: (tender: PaymentTenderCode) => void;
   onAmountChange: (amount: string) => void;
   onProcess: () => void;
+  onPrintReceipt: () => void;
 }) {
   return (
     <section className="rounded border border-white/10 p-3">
@@ -791,9 +833,14 @@ function PaymentPanel({
           <input className="sidebar-input text-white/50" value={formatMoneyInput(selectedTotalCents)} readOnly />
         </label>
       </div>
-      <button className="sidebar-button mt-3 w-full" disabled={!canProcessPayment} onClick={onProcess}>
-        Process Payment
-      </button>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        <button className="sidebar-button" disabled={!canProcessPayment} onClick={onProcess}>
+          Process Payment
+        </button>
+        <button className="sidebar-button" disabled={!canPrintReceipt} onClick={onPrintReceipt}>
+          Print Receipt
+        </button>
+      </div>
     </section>
   );
 }
@@ -1333,10 +1380,6 @@ function optionalNumber(value: string): number | undefined {
   if (!trimmed) return undefined;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function escapeDocumentTitle(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!);
 }
 
 function safeFilename(value: string): string {
