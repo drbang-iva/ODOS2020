@@ -49,6 +49,8 @@ Mandate 14 audit for the optical cash-order kernel builders (`mcp/src/fhir/optic
 
 **Slice 3b (lab-order emitter T0, `opticalLabOrder.ts`):** asserts **no new external medical codes**. Rx values come from VisionPrescription (data); `lensCpt` and `treatments[]` are caller-supplied pass-through (never asserted by ODOS). The `LabOrder` model is DCS/OMA-shaped for T1; the DCS byte-format field labels remain `[MINE]` until the free Vision Council DCS v3.14 spec is read at T1 build time (see `performance-od/research/2026-07-04-visionweb-oma-lab-integration-derisking.md`).
 
+**Slice 3c (patient receipt / financial summary, `opticalFinancialSummary.ts`):** asserts **no new external medical codes**. Line descriptions/codes come from the order's ChargeItems (display-only pass-through); all money comes from the Invoice priceComponents/totals and must reconcile or the builder throws. Tender vocabulary reuses the verified `osod-payment-tender` CodeSystem.
+
 ## Deferred / [MINE] items (gate §8.2 log)
 
 | Item | Status |
