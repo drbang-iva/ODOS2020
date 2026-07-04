@@ -67,7 +67,7 @@ const INPUT: BuildLabOrderInput = {
     frameType: "Zyl",
     source: "frame-to-come",
   },
-  lensCpt: "V2781",
+  lensCpt: "CALLER-LENS-CODE",
   frameTraceRef: "trace-lab-parity",
 };
 
