@@ -9,6 +9,7 @@ import type {
   VisionPrescriptionLensSpecification,
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
+import type { LabOrderFrame } from "./optical-lab-order";
 
 export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
 export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
@@ -157,6 +158,30 @@ export interface CreatedOpticalOrderIds {
   taskId: string;
   chargeItemIds: string[];
   invoiceId: string;
+}
+
+export function labOrderFrameFromAttachedFrame(
+  frame: AttachedFrame | undefined,
+  source: LabOrderFrame["source"],
+): LabOrderFrame {
+  return {
+    ...(frame
+      ? {
+          brand: frame.brand,
+          model: frame.model,
+          color: frame.color,
+          eye: frame.eye,
+          bridge: frame.bridge,
+          temple: frame.temple,
+          a: frame.a,
+          b: frame.b,
+          ed: frame.ed,
+          dbl: frame.dbl,
+          frameType: frame.frameType,
+        }
+      : {}),
+    source,
+  };
 }
 
 export async function loadVisionPrescription(reference: string): Promise<VisionPrescription> {

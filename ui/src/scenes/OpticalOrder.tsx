@@ -1,4 +1,13 @@
+import type { VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useState } from "react";
+import {
+  buildLabOrder,
+  labOrderToExport,
+  renderLabOrderSheet,
+  type BuildLabOrderInput,
+  type LabOrderFrame,
+  type LabOrderRxEye,
+} from "../lib/optical-lab-order";
 import {
   CHARGE_COLUMNS,
   OPTICAL_ADJUSTMENTS,
@@ -8,6 +17,7 @@ import {
   RX_COLUMNS,
   canTransitionOpticalOrderStatus,
   createOpticalCashOrder,
+  labOrderFrameFromAttachedFrame,
   loadVisionPrescription,
   transitionOpticalOrderStatus,
   visionPrescriptionRows,
@@ -41,6 +51,39 @@ interface OrderHeaderState {
 }
 
 type FrameCriteriaKey = "upc" | "barcode" | "designer" | "material" | "category" | "name";
+
+const IVA_LABS = ["Best Price Digital Lab", "Cherry Optical Lab", "Zeiss (VISUSTORE)"] as const;
+const LAB_OTHER_OPTION = "Other";
+const LAB_ORDER_JOB_TYPES = ["Rx", "Frame To Come", "Frame Only", "Lenses Only"] as const;
+const FRAME_SOURCE_OPTIONS: Array<{ value: LabOrderFrame["source"]; label: string }> = [
+  { value: "frame-to-come", label: "Frame To Come" },
+  { value: "patient-own", label: "Patient Own" },
+  { value: "stock", label: "Stock" },
+];
+
+interface LabOrderEyeFittingState {
+  distPd: string;
+  nearPd: string;
+  segHeight: string;
+}
+
+interface LabOrderCaptureState {
+  patientName: string;
+  shipTo: string;
+  jobType: (typeof LAB_ORDER_JOB_TYPES)[number];
+  lensDesign: string;
+  lensMaterial: string;
+  treatments: string[];
+  specialInstructions: string;
+  commentsToLab: string;
+  lensCpt: string;
+  frameSource: LabOrderFrame["source"];
+  frameTraceRef: string;
+  fitting: {
+    od: LabOrderEyeFittingState;
+    os: LabOrderEyeFittingState;
+  };
+}
 
 // Quick-advance walks the corpus happy path (Quote → … → At Lab → Notified → Dispensed).
 // Foxfire's Product Pickup tab also offers "Mark As Product Received", but the 17-value order-status
@@ -82,6 +125,9 @@ export function OpticalOrder() {
   const [discountAmount, setDiscountAmount] = useState("");
   const [adjustmentCode, setAdjustmentCode] = useState("PPAY");
   const [customAdjustmentCode, setCustomAdjustmentCode] = useState("");
+  const [labOption, setLabOption] = useState("");
+  const [otherLab, setOtherLab] = useState("");
+  const [labOrderCapture, setLabOrderCapture] = useState<LabOrderCaptureState>(initialLabOrderCapture());
   const [frameCriteria, setFrameCriteria] = useState<Record<FrameCriteriaKey, string>>({
     upc: "",
     barcode: "",
@@ -93,6 +139,7 @@ export function OpticalOrder() {
   const [frameType, setFrameType] = useState("");
   const [frameMatches, setFrameMatches] = useState<FramePosLookupMatch[]>([]);
   const [inventoryRows, setInventoryRows] = useState<PracticeFrameInventoryItem[]>([]);
+  const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
   const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
   const [status, setStatus] = useState("");
@@ -100,6 +147,11 @@ export function OpticalOrder() {
   const selectedCharge = chargeLines.find((line) => line.id === selectedChargeId) ?? chargeLines[0];
   const selectedLines = chargeLines.filter((line) => line.selected);
   const selectedTotalCents = selectedLines.reduce((sum, line) => sum + patientBalanceCents(line), 0);
+  const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
+  const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
+  const canPrintLabSheet = Boolean(
+    patientReference && signedVisionPrescription && header.lab.trim() && labOrderCapture.patientName.trim(),
+  );
 
   useEffect(() => {
     if (!rxReference) {
@@ -108,7 +160,10 @@ export function OpticalOrder() {
     let cancelled = false;
     loadVisionPrescription(rxReference)
       .then((rx) => {
-        if (!cancelled) setRxRows(visionPrescriptionRows(rx));
+        if (!cancelled) {
+          setVisionPrescription(rx);
+          setRxRows(visionPrescriptionRows(rx));
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -141,6 +196,55 @@ export function OpticalOrder() {
 
   const canProcessPayment = patientReference && rxReference && selectedLines.length > 0 && !createdTaskId;
   const selectedFrameLocked = Boolean(selectedCharge.frame);
+
+  function selectLabOption(option: string) {
+    setLabOption(option);
+    if (option === LAB_OTHER_OPTION) {
+      setHeader((current) => ({ ...current, lab: otherLab }));
+      return;
+    }
+    setOtherLab("");
+    setHeader((current) => ({ ...current, lab: option }));
+  }
+
+  function changeOtherLab(lab: string) {
+    setOtherLab(lab);
+    setHeader((current) => ({ ...current, lab }));
+  }
+
+  function patchLabOrderCapture(patch: Partial<LabOrderCaptureState>) {
+    setLabOrderCapture((current) => ({ ...current, ...patch }));
+  }
+
+  function updateTreatment(index: number, value: string) {
+    setLabOrderCapture((current) => ({
+      ...current,
+      treatments: current.treatments.map((treatment, treatmentIndex) =>
+        treatmentIndex === index ? value : treatment,
+      ),
+    }));
+  }
+
+  function addTreatment() {
+    setLabOrderCapture((current) => ({ ...current, treatments: [...current.treatments, ""] }));
+  }
+
+  function removeTreatment(index: number) {
+    setLabOrderCapture((current) => ({
+      ...current,
+      treatments: current.treatments.filter((_, treatmentIndex) => treatmentIndex !== index),
+    }));
+  }
+
+  function updateFitting(eye: "od" | "os", field: keyof LabOrderEyeFittingState, value: string) {
+    setLabOrderCapture((current) => ({
+      ...current,
+      fitting: {
+        ...current.fitting,
+        [eye]: { ...current.fitting[eye], [field]: value },
+      },
+    }));
+  }
 
   async function changeOrderStatus(next: OpticalOrderStatusCode) {
     setError(null);
@@ -227,13 +331,100 @@ export function OpticalOrder() {
     );
   }
 
+  function assembleLabOrderInput(): BuildLabOrderInput | null {
+    setError(null);
+    if (!patientReference) {
+      setError("Patient is required before printing a lab sheet.");
+      return null;
+    }
+    if (!signedVisionPrescription) {
+      setError("An active signed VisionPrescription is required before printing a lab sheet.");
+      return null;
+    }
+    if (!header.lab.trim()) {
+      setError("Lab is required before printing a lab sheet.");
+      return null;
+    }
+    if (!labOrderCapture.patientName.trim()) {
+      setError("Patient name is required before printing a lab sheet.");
+      return null;
+    }
+
+    return {
+      orderId: header.orderNumber || createdTaskId || `draft-${header.serviceDate}`,
+      orderDate: header.serviceDate,
+      lab: header.lab.trim(),
+      shipTo: optionalString(labOrderCapture.shipTo),
+      patientName: labOrderCapture.patientName.trim(),
+      patientRef: patientReference,
+      providerName: optionalString(header.provider),
+      trayNumber: optionalString(header.trayNumber),
+      visionPrescription: signedVisionPrescription,
+      lensSpec: {
+        jobType: labOrderCapture.jobType,
+        lensDesign: labOrderCapture.lensDesign.trim(),
+        lensMaterial: labOrderCapture.lensMaterial.trim(),
+        treatments: labOrderCapture.treatments.map((treatment) => treatment.trim()).filter(Boolean),
+        specialInstructions: optionalString(labOrderCapture.specialInstructions),
+        commentsToLab: optionalString(labOrderCapture.commentsToLab),
+      },
+      fitting: {
+        od: fittingEye(labOrderCapture.fitting.od),
+        os: fittingEye(labOrderCapture.fitting.os),
+      },
+      frame: labOrderFrameFromAttachedFrame(attachedLabFrame, labOrderCapture.frameSource),
+      lensCpt: optionalString(labOrderCapture.lensCpt),
+      frameTraceRef: optionalString(labOrderCapture.frameTraceRef),
+    };
+  }
+
+  function printLabSheet() {
+    const input = assembleLabOrderInput();
+    if (!input) return;
+    const order = buildLabOrder(input);
+    const html = renderLabOrderSheet(order);
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      setError("The browser blocked the lab sheet print window.");
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(
+      `<!doctype html><html><head><title>Lab Order ${escapeDocumentTitle(input.orderId)}</title></head><body>${html}<script>window.addEventListener("load", function () { window.focus(); window.print(); });<\/script></body></html>`,
+    );
+    printWindow.document.close();
+    setStatus(`Lab sheet ready for ${input.lab}.`);
+  }
+
+  function downloadLabOrderJson() {
+    const input = assembleLabOrderInput();
+    if (!input) return;
+    const order = buildLabOrder(input);
+    const blob = new Blob([JSON.stringify(labOrderToExport(order), null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${safeFilename(input.orderId)}-lab-order.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setStatus(`Lab order JSON downloaded for ${input.lab}.`);
+  }
+
   return (
     <div className="min-h-screen bg-bg-deep text-white">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4">
         <HeaderFields
           header={header}
           orderCreated={Boolean(createdTaskId)}
+          labOption={labOption}
+          otherLab={otherLab}
           onChange={setHeader}
+          onLabOptionChange={selectLabOption}
+          onOtherLabChange={changeOtherLab}
           onStatusChange={(next) => void changeOrderStatus(next)}
         />
 
@@ -306,6 +497,22 @@ export function OpticalOrder() {
               onCustomAdjustmentCodeChange={setCustomAdjustmentCode}
               onApply={applyDiscount}
             />
+            <LabOrderPanel
+              header={header}
+              patientReference={patientReference}
+              activeRxLoaded={Boolean(signedVisionPrescription)}
+              attachedFrame={attachedLabFrame}
+              capture={labOrderCapture}
+              canPrint={canPrintLabSheet}
+              onHeaderChange={setHeader}
+              onCapturePatch={patchLabOrderCapture}
+              onTreatmentChange={updateTreatment}
+              onAddTreatment={addTreatment}
+              onRemoveTreatment={removeTreatment}
+              onFittingChange={updateFitting}
+              onPrint={printLabSheet}
+              onDownload={downloadLabOrderJson}
+            />
           </div>
         </div>
 
@@ -345,12 +552,20 @@ export function OpticalOrder() {
 function HeaderFields({
   header,
   orderCreated,
+  labOption,
+  otherLab,
   onChange,
+  onLabOptionChange,
+  onOtherLabChange,
   onStatusChange,
 }: {
   header: OrderHeaderState;
   orderCreated: boolean;
+  labOption: string;
+  otherLab: string;
   onChange: (next: OrderHeaderState) => void;
+  onLabOptionChange: (next: string) => void;
+  onOtherLabChange: (next: string) => void;
   onStatusChange: (next: OpticalOrderStatusCode) => void;
 }) {
   return (
@@ -371,7 +586,12 @@ function HeaderFields({
             ))}
           </select>
         </label>
-        <Field label="Lab" value={header.lab} onChange={(lab) => onChange({ ...header, lab })} />
+        <LabSelect
+          labOption={labOption}
+          otherLab={otherLab}
+          onLabOptionChange={onLabOptionChange}
+          onOtherLabChange={onOtherLabChange}
+        />
         <Field label="Staff" value={header.staff} onChange={(staff) => onChange({ ...header, staff })} />
         <label className="grid gap-1 text-xs text-white/60">
           <span>Order Type</span>
@@ -395,6 +615,40 @@ function HeaderFields({
         <Field label="Order #" value={header.orderNumber} readOnly onChange={() => undefined} />
       </div>
     </section>
+  );
+}
+
+function LabSelect({
+  labOption,
+  otherLab,
+  onLabOptionChange,
+  onOtherLabChange,
+}: {
+  labOption: string;
+  otherLab: string;
+  onLabOptionChange: (next: string) => void;
+  onOtherLabChange: (next: string) => void;
+}) {
+  return (
+    <label className="grid gap-1 text-xs text-white/60">
+      <span>Lab</span>
+      <select className="sidebar-input" value={labOption} onChange={(event) => onLabOptionChange(event.target.value)}>
+        <option value="">Select lab</option>
+        {IVA_LABS.map((lab) => (
+          <option key={lab} value={lab}>
+            {lab}
+          </option>
+        ))}
+        <option value={LAB_OTHER_OPTION}>{LAB_OTHER_OPTION}</option>
+      </select>
+      {labOption === LAB_OTHER_OPTION ? (
+        <input
+          className="sidebar-input"
+          value={otherLab}
+          onChange={(event) => onOtherLabChange(event.target.value)}
+        />
+      ) : null}
+    </label>
   );
 }
 
@@ -601,6 +855,155 @@ function DiscountPanel({
   );
 }
 
+function LabOrderPanel({
+  header,
+  patientReference,
+  activeRxLoaded,
+  attachedFrame,
+  capture,
+  canPrint,
+  onHeaderChange,
+  onCapturePatch,
+  onTreatmentChange,
+  onAddTreatment,
+  onRemoveTreatment,
+  onFittingChange,
+  onPrint,
+  onDownload,
+}: {
+  header: OrderHeaderState;
+  patientReference: string;
+  activeRxLoaded: boolean;
+  attachedFrame: AttachedFrame | undefined;
+  capture: LabOrderCaptureState;
+  canPrint: boolean;
+  onHeaderChange: (next: OrderHeaderState) => void;
+  onCapturePatch: (patch: Partial<LabOrderCaptureState>) => void;
+  onTreatmentChange: (index: number, value: string) => void;
+  onAddTreatment: () => void;
+  onRemoveTreatment: (index: number) => void;
+  onFittingChange: (eye: "od" | "os", field: keyof LabOrderEyeFittingState, value: string) => void;
+  onPrint: () => void;
+  onDownload: () => void;
+}) {
+  return (
+    <section className="rounded border border-white/10 p-3">
+      <div className="mb-3 text-sm font-semibold">Lab Sheet</div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Patient Name" value={capture.patientName} onChange={(patientName) => onCapturePatch({ patientName })} />
+        <Field label="Patient Ref" value={patientReference} readOnly onChange={() => undefined} />
+        <Field label="Ship To" value={capture.shipTo} onChange={(shipTo) => onCapturePatch({ shipTo })} />
+        <Field label="Provider" value={header.provider} onChange={(provider) => onHeaderChange({ ...header, provider })} />
+        <Field label="Tray #" value={header.trayNumber} onChange={(trayNumber) => onHeaderChange({ ...header, trayNumber })} />
+        <Field label="Lens CPT" value={capture.lensCpt} onChange={(lensCpt) => onCapturePatch({ lensCpt })} />
+        <label className="grid gap-1 text-xs text-white/60">
+          <span>Job Type</span>
+          <select
+            className="sidebar-input"
+            value={capture.jobType}
+            onChange={(event) => onCapturePatch({ jobType: event.target.value as LabOrderCaptureState["jobType"] })}
+          >
+            {LAB_ORDER_JOB_TYPES.map((jobType) => (
+              <option key={jobType} value={jobType}>
+                {jobType}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="Lens Design" value={capture.lensDesign} onChange={(lensDesign) => onCapturePatch({ lensDesign })} />
+        <Field label="Lens Material" value={capture.lensMaterial} onChange={(lensMaterial) => onCapturePatch({ lensMaterial })} />
+        <label className="grid gap-1 text-xs text-white/60">
+          <span>Frame Source</span>
+          <select
+            className="sidebar-input"
+            value={capture.frameSource}
+            onChange={(event) => onCapturePatch({ frameSource: event.target.value as LabOrderFrame["source"] })}
+          >
+            {FRAME_SOURCE_OPTIONS.map((source) => (
+              <option key={source.value} value={source.value}>
+                {source.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Field label="Frame Trace Ref" value={capture.frameTraceRef} onChange={(frameTraceRef) => onCapturePatch({ frameTraceRef })} />
+        <Field label="Active Rx" value={activeRxLoaded ? "Loaded" : ""} readOnly onChange={() => undefined} />
+        <Field label="Attached Frame" value={attachedFrame ? attachedFrame.model : ""} readOnly onChange={() => undefined} />
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <TextAreaField
+          label="Special Instructions"
+          value={capture.specialInstructions}
+          onChange={(specialInstructions) => onCapturePatch({ specialInstructions })}
+        />
+        <TextAreaField
+          label="Comments To Lab"
+          value={capture.commentsToLab}
+          onChange={(commentsToLab) => onCapturePatch({ commentsToLab })}
+        />
+      </div>
+
+      <div className="mt-3 rounded border border-white/10 p-2">
+        <div className="mb-2 text-xs font-semibold text-white/70">Treatments</div>
+        <div className="grid gap-2">
+          {capture.treatments.map((treatment, index) => (
+            <div key={index} className="grid grid-cols-[minmax(0,1fr)_92px] gap-2">
+              <input
+                className="sidebar-input"
+                value={treatment}
+                onChange={(event) => onTreatmentChange(index, event.target.value)}
+              />
+              <button className="sidebar-button py-1" onClick={() => onRemoveTreatment(index)}>
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+        <button className="sidebar-button mt-2 w-full" onClick={onAddTreatment}>
+          Add Treatment
+        </button>
+      </div>
+
+      <div className="mt-3 rounded border border-white/10 p-2">
+        <div className="mb-2 text-xs font-semibold text-white/70">Fitting Measurements</div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <FittingEyeFields eye="OD" values={capture.fitting.od} onChange={(field, value) => onFittingChange("od", field, value)} />
+          <FittingEyeFields eye="OS" values={capture.fitting.os} onChange={(field, value) => onFittingChange("os", field, value)} />
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        <button className="sidebar-button" disabled={!canPrint} onClick={onPrint}>
+          Print Lab Sheet
+        </button>
+        <button className="sidebar-button" disabled={!canPrint} onClick={onDownload}>
+          Download Order (JSON)
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function FittingEyeFields({
+  eye,
+  values,
+  onChange,
+}: {
+  eye: "OD" | "OS";
+  values: LabOrderEyeFittingState;
+  onChange: (field: keyof LabOrderEyeFittingState, value: string) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="text-xs font-semibold text-white/70">{eye}</div>
+      <Field label="Dist PD" type="number" value={values.distPd} onChange={(value) => onChange("distPd", value)} />
+      <Field label="Near PD" type="number" value={values.nearPd} onChange={(value) => onChange("nearPd", value)} />
+      <Field label="Seg Height" type="number" value={values.segHeight} onChange={(value) => onChange("segHeight", value)} />
+    </div>
+  );
+}
+
 function FrameAttachPanel({
   criteria,
   frameType,
@@ -782,6 +1185,27 @@ function Field({
   );
 }
 
+function TextAreaField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="grid gap-1 text-xs text-white/60">
+      <span>{label}</span>
+      <textarea
+        className="sidebar-input min-h-20 resize-y"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
 function DisabledCell({ value }: { value: string }) {
   return (
     <td className="border-r border-white/10 bg-white/[0.03] px-2 py-2 text-white/35">
@@ -862,4 +1286,59 @@ function dollarsToCents(value: string): number {
 
 function formatMoneyInput(cents: number): string {
   return (cents / 100).toFixed(2);
+}
+
+function initialLabOrderCapture(): LabOrderCaptureState {
+  return {
+    patientName: "",
+    shipTo: "",
+    jobType: "Rx",
+    lensDesign: "",
+    lensMaterial: "",
+    treatments: [""],
+    specialInstructions: "",
+    commentsToLab: "",
+    lensCpt: "",
+    frameSource: "stock",
+    frameTraceRef: "",
+    fitting: {
+      od: emptyFittingEye(),
+      os: emptyFittingEye(),
+    },
+  };
+}
+
+function emptyFittingEye(): LabOrderEyeFittingState {
+  return { distPd: "", nearPd: "", segHeight: "" };
+}
+
+function optionalString(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function fittingEye(values: LabOrderEyeFittingState): Pick<LabOrderRxEye, "distPd" | "nearPd" | "segHeight"> {
+  const result: Pick<LabOrderRxEye, "distPd" | "nearPd" | "segHeight"> = {};
+  const distPd = optionalNumber(values.distPd);
+  const nearPd = optionalNumber(values.nearPd);
+  const segHeight = optionalNumber(values.segHeight);
+  if (distPd !== undefined) result.distPd = distPd;
+  if (nearPd !== undefined) result.nearPd = nearPd;
+  if (segHeight !== undefined) result.segHeight = segHeight;
+  return result;
+}
+
+function optionalNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function escapeDocumentTitle(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]!);
+}
+
+function safeFilename(value: string): string {
+  return value.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "lab-order";
 }
