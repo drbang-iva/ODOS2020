@@ -34,6 +34,8 @@ export interface AssembleOpticalCashOrderInput {
   tender: string;
   /** Initial optical order lifecycle status (Task.businessStatus); defaults to "quote". */
   businessStatus?: string;
+  /** Optical order type carried on Task.code; defaults to "rx". Immutable after create. */
+  orderType?: string;
 }
 
 /**
@@ -66,6 +68,7 @@ export function assembleOpticalCashOrder(input: AssembleOpticalCashOrderInput): 
     patientReference: input.patientReference,
     deviceRequestReference: deviceRequestUrn,
     businessStatus: input.businessStatus,
+    orderType: input.orderType,
   });
 
   const chargeItems = input.charges.map((charge) =>

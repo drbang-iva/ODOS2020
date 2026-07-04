@@ -289,6 +289,12 @@
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-tender",
+      "namespace": "optical-order",
+      "status": "active",
+      "sliceConsumer": "slice-3"
     }
   ]
 }

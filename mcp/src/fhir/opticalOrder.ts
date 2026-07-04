@@ -1,6 +1,7 @@
 import type { DeviceRequest, Task } from "@medplum/fhirtypes";
 import { HCPCS_SYSTEM } from "../catalog/frame-types.js";
 import { opticalOrderStatusConcept } from "./opticalOrderStatus.js";
+import { opticalOrderTypeConcept } from "./opticalOrderType.js";
 
 export interface SpectacleOrderInput {
   patientReference: string;
@@ -54,6 +55,8 @@ export interface OpticalOrderTaskInput {
   deviceRequestReference: string;
   /** One of the 17 optical order statuses (defaults to "quote"). Bound to Task.businessStatus. */
   businessStatus?: string;
+  /** One of the 5 optical order types (defaults to "rx"). Bound to Task.code. */
+  orderType?: string;
   /** FHIR R4 Task.status (required workflow vocabulary). Defaults to "in-progress". */
   status?: Task["status"];
 }
@@ -77,6 +80,7 @@ export function buildOpticalOrderTask(input: OpticalOrderTaskInput): Task {
     resourceType: "Task",
     status: input.status ?? "in-progress",
     intent: "order",
+    code: opticalOrderTypeConcept(input.orderType ?? "rx"),
     focus: { reference: input.deviceRequestReference },
     for: { reference: input.patientReference },
     businessStatus: opticalOrderStatusConcept(input.businessStatus ?? "quote"),

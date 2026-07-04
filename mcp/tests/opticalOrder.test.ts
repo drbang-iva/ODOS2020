@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildSpectacleOrderDeviceRequest, buildOpticalOrderTask } from "../src/fhir/opticalOrder.js";
 import { OSOD_OPTICAL_ORDER_STATUS_SYSTEM } from "../src/fhir/opticalOrderStatus.js";
+import { OSOD_OPTICAL_ORDER_TYPE_SYSTEM } from "../src/fhir/opticalOrderType.js";
 
 const TASK_STATUS_VOCAB = [
   "draft", "requested", "received", "accepted", "rejected", "ready",
@@ -45,6 +46,7 @@ test("buildOpticalOrderTask wires the order lifecycle: focus→DeviceRequest, fo
     patientReference: "Patient/p1",
     deviceRequestReference: "DeviceRequest/dr1",
     businessStatus: "at-lab",
+    orderType: "frame-only",
   });
 
   assert.equal(task.resourceType, "Task");
@@ -53,16 +55,19 @@ test("buildOpticalOrderTask wires the order lifecycle: focus→DeviceRequest, fo
   assert.equal(task.for?.reference, "Patient/p1");
   assert.equal(task.businessStatus?.coding?.[0]?.system, OSOD_OPTICAL_ORDER_STATUS_SYSTEM);
   assert.equal(task.businessStatus?.coding?.[0]?.code, "at-lab");
+  assert.equal(task.code?.coding?.[0]?.system, OSOD_OPTICAL_ORDER_TYPE_SYSTEM);
+  assert.equal(task.code?.coding?.[0]?.code, "frame-only");
   // Task.status stays on the FHIR required workflow vocabulary, NOT the optical vocab
   assert.ok(TASK_STATUS_VOCAB.includes(task.status), `Task.status ${task.status} not in FHIR vocab`);
 });
 
-test("buildOpticalOrderTask defaults businessStatus to quote", () => {
+test("buildOpticalOrderTask defaults businessStatus to quote and order type to rx", () => {
   const task = buildOpticalOrderTask({
     patientReference: "Patient/p1",
     deviceRequestReference: "DeviceRequest/dr1",
   });
   assert.equal(task.businessStatus?.coding?.[0]?.code, "quote");
+  assert.equal(task.code?.coding?.[0]?.code, "rx");
 });
 
 test("buildOpticalOrderTask rejects an invalid businessStatus", () => {
@@ -74,5 +79,17 @@ test("buildOpticalOrderTask rejects an invalid businessStatus", () => {
         businessStatus: "shipped",
       }),
     /optical order status/i,
+  );
+});
+
+test("buildOpticalOrderTask rejects an invalid orderType", () => {
+  assert.throws(
+    () =>
+      buildOpticalOrderTask({
+        patientReference: "Patient/p1",
+        deviceRequestReference: "DeviceRequest/dr1",
+        orderType: "contact-lens",
+      }),
+    /optical order type/i,
   );
 });
