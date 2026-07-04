@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { VisionPrescription } from "@medplum/fhirtypes";
-import { buildLabOrder, labOrderToExport } from "../src/fhir/opticalLabOrder.js";
+import { buildLabOrder, labOrderToExport, renderLabOrderSheet } from "../src/fhir/opticalLabOrder.js";
 
 const RX: VisionPrescription = {
   resourceType: "VisionPrescription",
@@ -130,4 +130,32 @@ test("labOrderToExport wraps the LabOrder in a tagged, versioned, JSON-round-tri
   assert.deepEqual(exported.order, order);
   // T1 seam: must be a clean JSON snapshot (no undefined/functions to trip serialization)
   assert.deepEqual(JSON.parse(JSON.stringify(exported)), exported);
+});
+
+test("renderLabOrderSheet renders every group with its values", () => {
+  const order = buildLabOrder({
+    ...BASE,
+    providerName: "Dr. Bang",
+    trayNumber: "42",
+    fitting: { od: { distPd: 31, segHeight: 18 }, os: { distPd: 30.5, segHeight: 18 } },
+    frame: { brand: "Walkthrough", model: "Wayfarer", color: "Black", frameType: "Zyl", source: "frame-to-come" },
+  });
+  const html = renderLabOrderSheet(order);
+
+  assert.match(html, /ORD-1001/); // order id
+  assert.match(html, /Best Price Digital Lab/); // lab
+  assert.match(html, /Wanda Walkthrough/); // patient
+  assert.match(html, /-2\.25/); // OD sphere from the VisionPrescription
+  assert.match(html, /180/); // OD axis
+  assert.match(html, /Frame To Come/); // job type
+  assert.match(html, /Polycarbonate/); // material
+  assert.match(html, /AR/); // a treatment
+  assert.match(html, /Wayfarer/); // frame model
+  assert.match(html, /<table|<section|<div/i); // is HTML
+});
+
+test("renderLabOrderSheet shows an em-dash for missing optional fields, never 'undefined'", () => {
+  const html = renderLabOrderSheet(buildLabOrder(BASE)); // no frame, fitting, provider, tray
+  assert.doesNotMatch(html, /undefined/);
+  assert.match(html, /—/);
 });

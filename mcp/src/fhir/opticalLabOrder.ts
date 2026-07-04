@@ -156,6 +156,86 @@ export function labOrderToExport(order: LabOrder): LabOrderExport {
   return { format: "osod-lab-order", version: "0", order };
 }
 
+const DASH = "—";
+
+function cell(value: string | number | undefined): string {
+  return value === undefined || value === "" ? DASH : escapeHtml(String(value));
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+function rxRow(label: string, eye: LabOrderRxEye): string {
+  const prism = eye.prism !== undefined ? `${eye.prism} ${eye.base ?? ""}`.trim() : undefined;
+  return `<tr><th>${label}</th><td>${cell(eye.sphere)}</td><td>${cell(eye.cylinder)}</td><td>${cell(eye.axis)}</td><td>${cell(eye.add)}</td><td>${cell(prism)}</td><td>${cell(eye.distPd)}</td><td>${cell(eye.nearPd)}</td><td>${cell(eye.segHeight)}</td></tr>`;
+}
+
+/**
+ * Render a LabOrder as a self-contained, printable HTML lab sheet — the T0 baseline transport
+ * (spec §5.1). Zero dependency; browser print-to-PDF covers "print". Every field renders or shows an
+ * em-dash — never blank/undefined (gate §4.3). Mirrors the Foxfire "Print Rx / Lab Details" layout.
+ */
+export function renderLabOrderSheet(order: LabOrder): string {
+  const h = order.header;
+  const l = order.lensSpec;
+  const f = order.frame;
+  const treatments = l.treatments.length ? l.treatments.map(escapeHtml).join(", ") : DASH;
+
+  return `<section class="osod-lab-sheet">
+<style>
+  .osod-lab-sheet { font-family: system-ui, sans-serif; color: #111; max-width: 8.5in; }
+  .osod-lab-sheet h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  .osod-lab-sheet h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #ccc; margin: 1rem 0 .4rem; padding-bottom: .15rem; }
+  .osod-lab-sheet table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  .osod-lab-sheet th, .osod-lab-sheet td { border: 1px solid #ddd; padding: .25rem .4rem; text-align: left; }
+  .osod-lab-sheet .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; font-size: .85rem; }
+  .osod-lab-sheet .kv div { padding: .1rem 0; }
+  .osod-lab-sheet .kv b { color: #555; font-weight: 600; }
+  @media print { .osod-lab-sheet { max-width: none; } }
+</style>
+<h1>Lab Order — ${cell(h.orderId)}</h1>
+<div class="kv">
+  <div><b>Lab:</b> ${cell(h.lab)}</div>
+  <div><b>Order Date:</b> ${cell(h.orderDate)}</div>
+  <div><b>Ship To:</b> ${cell(h.shipTo)}</div>
+  <div><b>Patient:</b> ${cell(h.patientName)}</div>
+  <div><b>Provider:</b> ${cell(h.providerName)}</div>
+  <div><b>Tray #:</b> ${cell(h.trayNumber)}</div>
+</div>
+<h2>Prescription</h2>
+<table>
+  <thead><tr><th>Eye</th><th>Sphere</th><th>Cyl</th><th>Axis</th><th>Add</th><th>Prism</th><th>Dist PD</th><th>Near PD</th><th>Seg Ht</th></tr></thead>
+  <tbody>
+    ${rxRow("OD", order.rx.od)}
+    ${rxRow("OS", order.rx.os)}
+  </tbody>
+</table>
+${order.rx.lensCpt ? `<div class="kv"><div><b>Lens CPT:</b> ${cell(order.rx.lensCpt)}</div></div>` : ""}
+<h2>Lens Specification</h2>
+<div class="kv">
+  <div><b>Job Type:</b> ${cell(l.jobType)}</div>
+  <div><b>Design:</b> ${cell(l.lensDesign)}</div>
+  <div><b>Material:</b> ${cell(l.lensMaterial)}</div>
+  <div style="grid-column: 1 / -1"><b>Treatments:</b> ${treatments}</div>
+  <div style="grid-column: 1 / -1"><b>Special Instructions:</b> ${cell(l.specialInstructions)}</div>
+  <div style="grid-column: 1 / -1"><b>Comments to Lab:</b> ${cell(l.commentsToLab)}</div>
+</div>
+<h2>Frame</h2>
+<div class="kv">
+  <div><b>Source:</b> ${cell(f?.source)}</div>
+  <div><b>Brand:</b> ${cell(f?.brand)}</div>
+  <div><b>Model:</b> ${cell(f?.model)}</div>
+  <div><b>Color:</b> ${cell(f?.color)}</div>
+  <div><b>Type:</b> ${cell(f?.frameType)}</div>
+  <div><b>Eye/Bridge:</b> ${cell(f?.eye)} / ${cell(f?.bridge)}</div>
+  <div><b>A / B / ED:</b> ${cell(f?.a)} / ${cell(f?.b)} / ${cell(f?.ed)}</div>
+  <div><b>DBL / Temple:</b> ${cell(f?.dbl)} / ${cell(f?.temple)}</div>
+  <div><b>Trace:</b> ${cell(order.frameTraceRef)}</div>
+</div>
+</section>`;
+}
+
 function rxEye(
   spec: VisionPrescriptionLensSpecification | undefined,
   fitting: Pick<LabOrderRxEye, "distPd" | "nearPd" | "segHeight"> | undefined,
