@@ -42,8 +42,12 @@ interface OrderHeaderState {
 
 type FrameCriteriaKey = "upc" | "barcode" | "designer" | "material" | "category" | "name";
 
+// Quick-advance walks the corpus happy path (Quote → … → At Lab → Notified → Dispensed).
+// Foxfire's Product Pickup tab also offers "Mark As Product Received", but the 17-value order-status
+// vocabulary has no "received" state — pickup tracking is a separate Foxfire surface — so ODOS does
+// not invent a mapping for it; the free-pick status dropdown covers everything else.
 const QUICK_ADVANCE: Array<{ label: string; status: OpticalOrderStatusCode }> = [
-  { label: "Mark Received", status: "waiting-on-payment" },
+  { label: "At Lab", status: "at-lab" },
   { label: "Notified", status: "notified" },
   { label: "Picked Up", status: "dispensed" },
   { label: "Cancelled", status: "cancelled" },
