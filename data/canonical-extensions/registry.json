@@ -295,6 +295,18 @@
       "namespace": "optical-order",
       "status": "active",
       "sliceConsumer": "slice-3"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-processor-fees",
+      "namespace": "payments",
+      "status": "active",
+      "sliceConsumer": "v0.6c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-surface",
+      "namespace": "payments",
+      "status": "active",
+      "sliceConsumer": "v0.6c"
     }
   ]
 }

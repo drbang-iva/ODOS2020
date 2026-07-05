@@ -30,8 +30,11 @@ export interface AssembleOpticalCashOrderInput {
   orderHcpcsDisplay?: string;
   /** The charge lines (frame + lenses + services). At least one is required. */
   charges: OpticalCashOrderChargeInput[];
-  /** CASH or CHECK. */
-  tender: string;
+  /**
+   * CASH or CHECK for a manual cash order. Omit for a processor order: the Invoice is issued
+   * untendered and the tender rides on the settling PaymentReconciliation (seam spec §6).
+   */
+  tender?: string;
   /** Initial optical order lifecycle status (Task.businessStatus); defaults to "quote". */
   businessStatus?: string;
   /** Optical order type carried on Task.code; defaults to "rx". Immutable after create. */

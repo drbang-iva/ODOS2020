@@ -18,8 +18,13 @@ export interface OpticalInvoiceLineInput {
 
 export interface OpticalInvoiceInput {
   patientReference: string;
-  /** CASH or CHECK — carried in the osod-payment-tender extension (R4 has no coded tender field). */
-  tender: string;
+  /**
+   * CASH or CHECK — carried in the osod-payment-tender extension (R4 has no coded tender field).
+   * Optional: the Invoice is the bill and exists before it is paid. A processor order issues the
+   * Invoice untendered — the tender lives on the settling PaymentReconciliation instead (seam spec
+   * 2026-07-05 §6; the receipt then requires explicit payment lines, never a tender fallback).
+   */
+  tender?: string;
   lineItems: OpticalInvoiceLineInput[];
   /** Invoice.status R4 required VS (defaults to "issued"). */
   status?: Invoice["status"];
@@ -84,7 +89,7 @@ export function buildOpticalInvoice(input: OpticalInvoiceInput): Invoice {
     resourceType: "Invoice",
     status: input.status ?? "issued",
     subject: { reference: input.patientReference },
-    extension: [paymentTenderExtension(input.tender)],
+    ...(input.tender !== undefined ? { extension: [paymentTenderExtension(input.tender)] } : {}),
     lineItem,
     totalGross: { value: grossCents / 100, currency: "USD" },
     totalNet: { value: netCents / 100, currency: "USD" },

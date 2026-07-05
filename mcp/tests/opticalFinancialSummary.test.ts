@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildOpticalChargeItem } from "../src/fhir/opticalCharge.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
-import { buildFinancialSummary, renderReceiptSheet } from "../src/fhir/opticalFinancialSummary.js";
+import {
+  buildFinancialSummary,
+  paymentReconciliationsToTenderLines,
+  renderReceiptSheet,
+} from "../src/fhir/opticalFinancialSummary.js";
+import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
+import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
 
 // Real Slice-3 builders as fixtures — the receipt reads what the kernel actually produces.
 const CHARGES = [
@@ -150,4 +156,114 @@ test("renderReceiptSheet shows $0.00 due when paid in full and em-dash for absen
   assert.match(html, /\$0\.00/);
   assert.match(html, /—/); // provider absent → em-dash
   assert.doesNotMatch(html, /undefined/);
+});
+
+// --- Invoice ↔ PaymentReconciliation seam: the projection feeding the existing payments? hook ---
+// (seam spec 2026-07-05 §3: payments come from exactly one source — PaymentReconciliation[] when any
+// exist for the Invoice, else the Invoice tender extension — never both.)
+
+function processorPayment(amountCents: number, display?: string) {
+  return buildPaymentReconciliation({
+    outcome: "success",
+    createdIso: "2026-07-05T14:30:00.000Z",
+    paymentDate: "2026-07-05",
+    amountCents,
+    invoiceReference: "Invoice/inv1",
+    processorTransactionId: `txn-${amountCents}`,
+    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/stripe-transaction",
+    surface: "online",
+    tender: { code: "CARD", ...(display ? { display } : {}) },
+  });
+}
+
+test("paymentReconciliationsToTenderLines projects PRs into receipt tender lines (display ?? code)", () => {
+  const lines = paymentReconciliationsToTenderLines([
+    processorPayment(20000, "VISA ****4242"),
+    processorPayment(4400),
+  ]);
+  // Patient-facing labels prefer the display (Slice-3c live-drive lesson: raw codes are unfriendly):
+  // the adapter's instrument label wins, else the vocabulary display ("Card"), else the raw code.
+  assert.deepEqual(lines, [
+    { tender: "VISA ****4242", amountCents: 20000 },
+    { tender: "Card", amountCents: 4400 },
+  ]);
+});
+
+test("paymentReconciliationsToTenderLines falls back to the raw code for a practice-custom tender", () => {
+  const pr = processorPayment(1000);
+  const custom = {
+    ...pr,
+    extension: pr.extension?.map((ext) =>
+      ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL
+        ? { url: ext.url, valueCodeableConcept: { coding: [{ code: "GIFTCERT" }] } }
+        : ext,
+    ),
+  };
+  assert.deepEqual(paymentReconciliationsToTenderLines([custom]), [
+    { tender: "GIFTCERT", amountCents: 1000 },
+  ]);
+});
+
+test("a processor-settled receipt derives AMOUNT DUE NOW from the projected PRs (untendered Invoice)", () => {
+  const untenderedInvoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    lineItems: [
+      { chargeItemReference: "ChargeItem/ci1", amountCents: 18500, discount: { code: "PPAY", amountCents: 3700 } },
+      { chargeItemReference: "ChargeItem/ci2", amountCents: 12000, discount: { code: "PPAY", amountCents: 2400 } },
+    ],
+  });
+  const summary = buildFinancialSummary({
+    practiceName: "Integrated Vision & Aesthetics",
+    patientName: "Wanda Walkthrough",
+    receiptDate: "2026-07-05",
+    orderId: "ORD-1002",
+    invoice: untenderedInvoice,
+    chargeItems: CHARGES,
+    payments: paymentReconciliationsToTenderLines([processorPayment(24400, "VISA ****4242")]),
+  });
+  assert.equal(summary.payments.paymentsAppliedCents, 24400);
+  assert.equal(summary.amountDueNowCents, 0);
+  assert.deepEqual(summary.payments.tenderLines, [{ tender: "VISA ****4242", amountCents: 24400 }]);
+});
+
+test("a partial processor payment (deposit) leaves the balance due", () => {
+  const untenderedInvoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 18500 }],
+  });
+  const summary = buildFinancialSummary({
+    practiceName: "IV&A",
+    patientName: "Wanda Walkthrough",
+    receiptDate: "2026-07-05",
+    orderId: "ORD-1003",
+    invoice: untenderedInvoice,
+    chargeItems: [CHARGES[0]],
+    payments: paymentReconciliationsToTenderLines([processorPayment(10000, "VISA ****4242")]),
+  });
+  assert.equal(summary.amountDueNowCents, 8500);
+});
+
+test("paymentReconciliationsToTenderLines rejects a PR without the osod-payment-tender extension", () => {
+  const pr = processorPayment(1000);
+  const stripped = { ...pr, extension: pr.extension?.filter((e) => !e.url.includes("payment-tender")) };
+  assert.throws(() => paymentReconciliationsToTenderLines([stripped]), /tender/i);
+});
+
+test("an untendered Invoice with no payments still refuses the tender fallback (processor path must pass payments)", () => {
+  const untenderedInvoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 18500 }],
+  });
+  assert.throws(
+    () =>
+      buildFinancialSummary({
+        practiceName: "IV&A",
+        patientName: "Wanda Walkthrough",
+        receiptDate: "2026-07-05",
+        orderId: "ORD-1004",
+        invoice: untenderedInvoice,
+        chargeItems: [CHARGES[0]],
+      }),
+    /tender/i,
+  );
 });

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle } from "@medplum/fhirtypes";
+import type { Bundle, Invoice } from "@medplum/fhirtypes";
 import { assembleOpticalCashOrder } from "../src/fhir/opticalOrderComposite.js";
+import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
 
 function entriesByType(bundle: Bundle, resourceType: string) {
   return (bundle.entry ?? []).filter((e) => e.resource?.resourceType === resourceType);
@@ -116,6 +117,22 @@ test("assembleOpticalCashOrder requires at least one charge line", () => {
       }),
     /charge line/i,
   );
+});
+
+test("assembleOpticalCashOrder with no tender emits an untendered issued Invoice (processor order — seam spec §6)", () => {
+  const bundle = assembleOpticalCashOrder({
+    patientReference: "Patient/p1",
+    visionPrescriptionReference: "VisionPrescription/vp1",
+    orderHcpcsCode: "V2020",
+    charges: [{ code: "V2020", feeCents: 18500 }],
+  });
+
+  const [invoiceEntry] = entriesByType(bundle, "Invoice");
+  assert.ok(invoiceEntry, "expected an Invoice entry");
+  const invoice = invoiceEntry.resource as Invoice;
+  assert.equal(invoice.status, "issued");
+  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  assert.equal(tenderExt, undefined, "processor order carries no tender on the Invoice — it lives on the PaymentReconciliation");
 });
 
 test("assembleOpticalCashOrder propagates builder validation (invalid tender, invalid status, missing Rx)", () => {

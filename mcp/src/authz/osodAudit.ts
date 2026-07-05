@@ -93,6 +93,15 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "catalog_sync.hcpcs.run.failure",
   "catalog.frames.export.csv",
   "practice.frames-data-subscription.toggled",
+  "payment.charge.attempted",
+  "payment.charge.completed",
+  "payment.charge.failed",
+  "payment.refund.attempted",
+  "payment.refund.completed",
+  "payment.void.attempted",
+  "payment.settle.batch",
+  "payment.financing.preauthorized",
+  "payment.financing.declined",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 
