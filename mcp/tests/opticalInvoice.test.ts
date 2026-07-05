@@ -74,6 +74,18 @@ test("buildOpticalInvoice carries a CHECK tender", () => {
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CHECK");
 });
 
+test("buildOpticalInvoice with no tender issues the bill untendered (processor path — the tender lives on the PaymentReconciliation)", () => {
+  const invoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 5000 }],
+  });
+  assert.equal(invoice.status, "issued");
+  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  assert.equal(tenderExt, undefined);
+  // the bill is otherwise complete — totals still computed
+  assert.equal(invoice.totalNet?.value, 50);
+});
+
 test("buildOpticalInvoice rejects a tender outside CASH/CHECK", () => {
   assert.throws(
     () =>

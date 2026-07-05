@@ -1,4 +1,9 @@
-import type { ChargeItem, Invoice, InvoiceLineItemPriceComponent } from "@medplum/fhirtypes";
+import type {
+  ChargeItem,
+  Invoice,
+  InvoiceLineItemPriceComponent,
+  PaymentReconciliation,
+} from "@medplum/fhirtypes";
 import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "./osodPaymentTender.js";
 
 /**
@@ -134,6 +139,33 @@ export function buildFinancialSummary(input: BuildFinancialSummaryInput): Financ
     payments: { tenderLines, paymentsAppliedCents },
     amountDueNowCents: netCents - paymentsAppliedCents,
   };
+}
+
+/**
+ * Project PaymentReconciliations (the settling processor payments) into receipt tender lines for
+ * buildFinancialSummary's `payments` input. Tender label = the PR's osod-payment-tender extension
+ * display (e.g. "VISA ****4242") falling back to its code.
+ *
+ * The anti-drift invariant (seam spec 2026-07-05 §3): payments are counted from exactly one source —
+ * PaymentReconciliation[] when any exist for the Invoice (pass this projection), else the Invoice
+ * tender extension (omit `payments`) — never both. A processor order's Invoice carries no tender
+ * extension, so forgetting to pass `payments` fails loudly in invoiceTender rather than silently
+ * showing an unpaid bill as cash-paid.
+ */
+export function paymentReconciliationsToTenderLines(
+  paymentReconciliations: PaymentReconciliation[],
+): FinancialSummaryTenderLine[] {
+  return paymentReconciliations.map((pr) => {
+    const coding = pr.extension?.find((ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+      ?.valueCodeableConcept?.coding?.[0];
+    const tender = coding?.display ?? coding?.code;
+    if (!tender) {
+      throw new Error(
+        "PaymentReconciliation is missing the osod-payment-tender extension — cannot derive the receipt tender label.",
+      );
+    }
+    return { tender, amountCents: toCents(pr.paymentAmount?.value ?? NaN) };
+  });
 }
 
 const DASH = "—";

@@ -65,6 +65,15 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `cds.card.suppressed_stale` | cds-event | CDS card suppressed because its TTL expired before display. Ledger: v0.55 rows 34 and 35. |
 | `cds.feedback.accepted` | cds-event | CDS feedback recorded for an accepted card. Ledger: v0.55 row 28. |
 | `cds.feedback.overridden` | cds-event | CDS feedback recorded for an overridden card. Ledger: v0.55 row 28. |
+| `payment.charge.attempted` | payment-event | Payment charge initiated through a processor adapter. Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.charge.completed` | payment-event | Payment charge completed; the payment record is a PaymentReconciliation (processor) or the tendered Invoice (manual). Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.charge.failed` | payment-event | Payment charge declined or failed; audited against the Invoice it attempted to settle — no PaymentReconciliation is created. Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.refund.attempted` | payment-event | Refund initiated (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.refund.completed` | payment-event | Refund completed (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.void.attempted` | payment-event | Transaction void initiated (workflow deferred to v0.7). Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.settle.batch` | payment-event | Processor settlement batch gathered (settlement reconciliation UI deferred to v0.7). Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.financing.preauthorized` | payment-event | Patient financing application pre-authorized by the financing platform. Ledger: payment-reconciliation-seam-ledger.md. |
+| `payment.financing.declined` | payment-event | Patient financing application declined by the financing platform. Ledger: payment-reconciliation-seam-ledger.md. |
 
 ## Information Blocking Exceptions
 
