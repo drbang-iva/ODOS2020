@@ -8,7 +8,7 @@ auto_inject_priority: 10
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on the practice's own hardware. AGPL v3.
 
-**Current state:** v0.6a Frames Data SHIPPED (2026-05-09). v0.55 integration spine shipped (2026-05-05). 1 of 8 v0.6 slices shipped; v0.6b PVerify is next. The substrate is real working code under milestone-locked development. **Nothing is packaged as a customer install yet.** First-pilot scope is named below.
+**Current state:** v0.6c payments kernel + card path SHIPPED to main (2026-07-05, PRs #22/#23 — untagged; v0.6c closes after the Stripe test-mode adapter + live front-desk walkthrough). Tier-2 cash dispensary COMPLETE (Slices 3/3b/3c, 2026-07-03/04, PRs #19–#21). v0.6a Frames Data shipped 2026-05-09; v0.55 integration spine 2026-05-05. v0.6b PVerify is the next authoring slice. The substrate is real working code under milestone-locked development. **Nothing is packaged as a customer install yet.** First-pilot scope is named below.
 
 For the full current-state operator view, see [`STATUS.md`](STATUS.md) and [`docs/operator-dashboard.md`](docs/operator-dashboard.md).
 
@@ -85,13 +85,21 @@ Cloud retracted by decision 2026-04-30 — see `performance-od/decisions/2026-04
   - FHIR `ChargeItemDefinition` builder cross-referencing frame SKUs
   - Bulk-file-ingest pathway (Access-Point-like local-subscriber workflow)
   - Inventory management UI primitive
+- **Tier-2 cash dispensary** (Slices 3 / 3b / 3c, SHIPPED 2026-07-03/04, PRs #19–#21):
+  - Cash spectacle order kernel — DeviceRequest + Task 17-status lifecycle + ChargeItem + CASH/CHECK Invoice with `osod-payment-tender` extension; live E2E walkthrough on the local Medplum stack
+  - Lab-order emitter T0 (print/export lab sheet) + patient receipt / financial summary (hard-reconciled to the Invoice)
+- **v0.6c payments kernel + card path** (SHIPPED to main 2026-07-05, PRs #22/#23; untagged — close pending Stripe test-mode + live walkthrough):
+  - Invoice↔PaymentReconciliation seam (Invoice = the bill; PaymentReconciliation = the settling processor payment, `detail.request → Invoice`; manual cash keeps the Invoice tender extension, no PR)
+  - Vendor-neutral `PaymentProcessorAdapter` + manual-cash + Clover REST Pay Display adapters; unified `POST /payments/charge` on osod-core
+  - Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants (practice scope); identity-derived role gate (`practice-role` `meta.tag` on AccessPolicy; no client role header)
+  - Dispensary card checkout UI (Codex) with receipt-consistency + parity guards
 
 ### In flight (v0.6 remaining)
 
 | Slice | Scope | Status |
 |---|---|---|
-| `v0.6b` | PVerify eligibility integration | next |
-| `v0.6c` | Payment processor adapters (in-clinic POS + online + financing) | queued |
+| `v0.6b` | PVerify eligibility integration | next authoring slice |
+| `v0.6c` | Payment processor adapters (in-clinic POS + online + financing) | kernel + Clover + card path SHIPPED; close pending Stripe test-mode adapter, Clover sandbox device / bank ISV answer, live front-desk walkthrough; financing adapters per practice demand |
 | `v0.6d` | Claim.MD claims pipeline | queued |
 | `v0.6e` | DICOM Supplement 247 imaging | queued |
 | `v0.6f` | WENO e-prescribing | queued |

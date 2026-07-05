@@ -1,8 +1,8 @@
 # OSOD Build Status
 
-**Generated:** 2026-05-10
-**Current osod tag:** `v0.6a` at commit `ce6e94f`
-**Branch:** `main`
+**Generated:** 2026-07-05
+**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21 and the v0.6c payments kernel + card path #22–#23, currently untagged — v0.6c tags at slice close)
+**Branch:** `main` at `d3fee55`
 
 This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/). Architectural rationale lives in the companion private business repo at [`performance-od`](https://github.com/drbang-iva/performance-od).
 
@@ -46,9 +46,42 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 - Inventory management UI primitive
 - 11 new AuditEvent event_types (frames bulk + hcpcs + csv export + subscription toggle)
 
+### Tier-2 cash dispensary (SHIPPED 2026-07-03/04, PRs #19–#21)
+
+- Cash spectacle order kernel — DeviceRequest (order, `basedOn → VisionPrescription`) + Task 17-status lifecycle (`businessStatus`) + ChargeItem lines + CASH/CHECK Invoice with `osod-payment-tender` extension + PPAY/FAMILY discount priceComponents; single FHIR transaction Bundle
+- Frame attach/dispense with version-guarded inventory decrement (reuses v0.6a Frames Data)
+- Lab-order emitter T0 — DCS/OMA-shaped model + printable lab sheet (transport-independent; T1 direct-DCS deferred)
+- Patient receipt / financial summary — hard-reconciled to `Invoice.totalGross/totalNet` (throws on mismatch); printable
+- Proven by live end-to-end walkthrough on the local Medplum stack (order → payment → lifecycle → dispense → lab sheet → receipt)
+
+### v0.6c payments kernel + card path (SHIPPED to main 2026-07-05, PRs #22–#23; v0.6c closes after Stripe test-mode + live front-desk walkthrough)
+
+- Invoice↔PaymentReconciliation seam — Invoice = the bill; PaymentReconciliation = the settling processor payment (`detail[0].request → Invoice`); manual cash/check keeps the Invoice tender extension and emits no PR (seam spec, performance-od 2026-07-05)
+- Vendor-neutral `PaymentProcessorAdapter` (charge/refund/void/settle/status) + manual-cash adapter + Clover REST Pay Display adapter (cloud, doc-verified shapes; OAuth token never persisted)
+- Unified `POST /payments/charge` on osod-core — the processor secret lives server-side only; 9 new `payment.*` audit event types
+- Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants at practice scope (also fixes the latent gap that made the cash order flow admin-only); identity-derived role gate via the `practice-role` `meta.tag` on AccessPolicy (no client role header)
+- Dispensary card checkout UI — untendered order → device charge → PR-backed receipt; declined/failed leaves the order payable; receipt-consistency guard (cash vs card render identical money) mutation-proven
+
 ---
 
 ## What's verified
+
+### v0.6c payments evidence (2026-07-05, PRs #22–#23 both CI-green: mcp typecheck+tests, ui build, Pass 4 preflight, CodeRabbit)
+
+| Gate | Result | Source |
+|---|---|---|
+| Broad MCP suite | 1293 pass / 23 fail — all 23 are live-Medplum integration tests (local stack down; same set skips on CI) | `npm test` (mcp) |
+| Payments-boundary tests (seam, adapters, dispatch, endpoint, RBAC, resolver, UI helper) | ~60 new tests green across 7 test files | `mcp/tests/payment*.test.ts`, `cloverAdapter`, `manualCashAdapter`, `opticalCheckoutPaymentUi`, `v05a-authz` additions |
+| Receipt-consistency guard (§8: cash vs card identical money) | green, mutation-proven | `mcp/tests/paymentSeamConsistency.test.ts` |
+| Attribution invariant (body-supplied staffReference ignored) | green (impostor test) | `mcp/tests/paymentChargeHandler.test.ts` |
+| PCI posture | no token/PAN path; Clover OAuth token asserted absent from persisted PR | grep gate + unit assertion |
+| `tsc --noEmit` (mcp) + ui build | clean | local + CI |
+| Mandate 14 ledger | seam + Clover + endpoint + RBAC rows | `data/code-bindings/payment-reconciliation-seam-ledger.md` |
+
+### Tier-2 cash dispensary evidence (2026-07-03/04)
+
+- Live end-to-end DoD walkthrough on the local Medplum 5.1.8 stack: order → frame attach (inventory 3→2) → PPAY discount → CASH payment Bundle → lifecycle to dispensed; server-side verification of the full FHIR graph
+- Full mcp suite 1265/1265 green against the live stack at merge time (PR #19); receipt hard-reconciliation proven on live data (PR #21)
 
 ### v0.6a close evidence (2026-05-09)
 
@@ -80,7 +113,8 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 | Capability | Status | Lands at |
 |---|---|---|
 | Insurance eligibility check | Not built | v0.6b PVerify (next) |
-| Card payments + financing | Not built | v0.6c Payment processor |
+| Card payments | **Code-complete, not yet live-validated** — Clover adapter + charge endpoint + checkout UI shipped; live card-present gated on Clover sandbox Dev Kit / bank ISV answer; Stripe test-mode adapter pending operator account update | v0.6c close |
+| Patient financing (CareCredit / Cherry / Sunbit) | Not built (adapter slots exist) | v0.6c+ per practice demand |
 | Electronic claim submission | Not built | v0.6d Claim.MD |
 | DICOM device integration | Not built | v0.6e DICOM Supp 247 |
 | E-prescribing | Not built | v0.6f WENO |
@@ -107,6 +141,15 @@ Plus the operational lessons that carry forward into v0.6b: see [`docs/operator-
 - **No claim of production-readiness at v0.6a.** This is developmental code under milestone-locked development.
 
 ---
+
+## v0.6c close-out checklist (remaining)
+
+- [ ] Stripe TEST-MODE adapter (operator updating the Stripe account; drops into the dispatch as one adapter file + env registration)
+- [ ] Clover sandbox operator steps (`docs/payments-clover-sandbox.md`) — developer account, test merchant, RAID, OAuth token; live card-present gated on Dev Kit purchase decision / bank ISV answer
+- [ ] AccessPolicy re-seed so existing policies carry the `practice-role` `meta.tag` (pre-pilot: safe; noted in `docs/install.md`)
+- [ ] Live walkthrough as a REAL front-desk user (not admin) — cash regression + endpoint rail (manual-cash method) + card path once a processor target exists
+- [ ] Front-desk frame-inventory dispense grant (the remaining piece for a fully non-admin cash walkthrough; small follow-on)
+- [ ] Tag `v0.6c` + close audit
 
 ## Next-release checklist (v0.6b PVerify)
 

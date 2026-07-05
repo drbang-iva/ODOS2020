@@ -1,7 +1,7 @@
 # OSOD Operator Dashboard
 
-**Last updated:** 2026-05-10
-**Latest tag:** `v0.6a` at commit `ce6e94f`
+**Last updated:** 2026-07-05
+**Latest tag:** `v0.6a` at commit `ce6e94f` — main (`d3fee55`) has since shipped Tier-2 cash dispensary (#19–#21) and the v0.6c payments kernel + card path (#22–#23), untagged until v0.6c closes
 
 A one-page operator view. Read this before contributing, before installing, before promising anything about OSOD.
 
@@ -26,7 +26,9 @@ This is **developmental code under milestone-locked development.** No general-pu
 | **v0.5 substrate** (identity, AccessPolicy, audit, DR, scribe attestation, profile installer, clinical encounter UI) | **Shipped** Apr 2026 | broad MCP suite + DR drill + Pass 4 preflight |
 | **v0.55 integration spine** (SMART v2 + app registry + CDS Hooks 2.0.1 + AgentOps + Bulk Data + Patient Access + truthful CapabilityStatement) | **Shipped 2026-05-05** at osod tag `v0.55` / commit `e8c8d9e` | [`decisions/2026-05-05-v0.55-milestone-close-audit.md`](https://github.com/drbang-iva/performance-od/) (private — maintainers) |
 | **v0.6a Frames Data** (HCPCS terminology + frames catalog + per-practice inventory + ChargeItemDefinition builder + bulk-file ingest + inventory UI primitive) | **Shipped 2026-05-09** at osod tag `v0.6a` / merge commit `ce6e94f` | 1201/1201 MCP + 14/14 v0.6a fixtures + broad DR restore integrity + frames 32/32 + 5/5 + Pass 4 19/19 |
-| **v0.6 remaining (7 slices)** | In flight (v0.6b PVerify next) | master build sheet (private companion repo) |
+| **Tier-2 cash dispensary** (order kernel + 17-status lifecycle + frame attach/dispense + CASH/CHECK invoice + lab sheet + patient receipt) | **Shipped 2026-07-03/04** (PRs #19–#21) | live E2E walkthrough on the local Medplum stack; 1265/1265 mcp at merge; receipt hard-reconciliation on live data |
+| **v0.6c payments kernel + card path** (Invoice↔PaymentReconciliation seam + manual-cash & Clover adapters + `POST /payments/charge` + payments RBAC/authz model + card checkout UI) | **Shipped to main 2026-07-05** (PRs #22–#23); v0.6c closes after Stripe test-mode + live front-desk walkthrough | CI green ×2 (mcp, ui, preflight, CodeRabbit); ~60 new payment-boundary tests; receipt-consistency guard mutation-proven; ledger `payment-reconciliation-seam-ledger.md` |
+| **v0.6 remaining (6 slices)** | In flight (v0.6b PVerify next authoring slice) | master build sheet (private companion repo) |
 | **v0.65 / v0.7 / v0.8** | Planned | not authored |
 
 ---
@@ -43,6 +45,8 @@ This is **developmental code under milestone-locked development.** No general-pu
 - Bulk Data $export + Patient Access API (§170.315(g)(10) surface)
 - AgentOps: any AI agent action is audited, blockable, undoable
 - v0.6a inventory UI primitive (frames catalog browse + per-practice inventory + add-to-inventory)
+- Tier-2 cash dispensary: cash spectacle order → frame attach/dispense (inventory decrement) → CASH/CHECK payment → 17-status lifecycle → printable lab sheet → printable patient receipt (hard-reconciled to the Invoice)
+- Card payment path (code-complete): card tender → untendered order → `POST /payments/charge` (Clover REST Pay Display; secret server-side only; caller-token PaymentReconciliation write under Medplum AccessPolicy; identity-derived role gate) → PR-backed receipt. Live validation pending a processor target (Stripe test-mode / Clover sandbox device)
 
 ## 4. What is verified
 
@@ -133,6 +137,11 @@ These are the lessons learned during v0.6a Codex execution. Each is a behavior c
 
 | Gate | Trigger | Owner |
 |---|---|---|
+| Stripe TEST-MODE adapter (v0.6c close item) | operator confirms the Stripe account is updated | supervised Claude Code |
+| Clover sandbox setup + Dev Kit / bank ISV decision (`docs/payments-clover-sandbox.md`) | operator-side; live card-present gated on it | operator |
+| AccessPolicy re-seed (`practice-role` `meta.tag` on existing policies) | before any pre-existing install exercises `/payments/charge` (pre-pilot: safe) | operator via setup/seed path |
+| Live walkthrough as a REAL front-desk user (not admin) | local stack up + AccessPolicy re-seed | operator + supervised Claude Code |
+| Front-desk frame-inventory dispense grant | first fully non-admin cash walkthrough | supervised Claude Code |
 | AV-roster (Ledger #8) secondary source closure | v0.6+ commit that re-touches `validateFrameClaimModifiers` OR independent source surfaces | operator |
 | Tom Doyle vendor-track conversation | operator-side scheduling | operator |
 | Synthesis amendment commit (2026-05-08 file) | v0.6 milestone-close OR Wave-N triangulation against v0.6b/c/d | supervised Claude Code at operator direction |
