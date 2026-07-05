@@ -46,9 +46,11 @@ export interface TransactionResult {
   transactionId: string;
   /**
    * The canonical FHIR record of this payment: a PaymentReconciliation for processor adapters,
-   * the tendered Invoice for the manual adapter (seam spec §4 — cash emits no PR).
+   * the tendered Invoice for the manual adapter (seam spec §4 — cash emits no PR). Present only
+   * when outcome is success/pending — money that did not move has no financial record (declined
+   * and failed charges are AuditEvent-only, seam spec §5).
    */
-  paymentRecord: { resourceType: "PaymentReconciliation" | "Invoice"; id: string };
+  paymentRecord?: { resourceType: "PaymentReconciliation" | "Invoice"; id: string };
   outcome: "success" | "declined" | "pending" | "failed";
   amountChargedCents: number;
   /** Processor fees in whole cents (0 for manual). */

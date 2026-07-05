@@ -38,3 +38,18 @@ Mandate 14 audit for the payments-slice seam builders (`mcp/src/payments/payment
 | (none asserted this tranche) | — | — | — | 2026-07-05 | n/a — charge lines remain caller-supplied via Slice-3 builders |
 
 **Seam invariants under test:** the exactly-one-payment-source rule (§3) and the receipt-consistency guard (§8 — identical Totals/AMOUNT DUE NOW across cash vs processor paths) are locked by `tests/paymentSeamConsistency.test.ts` (mutation-proven) and the double-tender rejection in `manual-cash-adapter.ts`.
+
+## Clover REST Pay Display adapter (tranche 2 — vendor API shapes, doc-verified)
+
+Access date: 2026-07-05. Sources are Clover's current primary documentation; the make-a-sale response sample is carried verbatim as the unit-test fixture in `tests/cloverAdapter.test.ts`.
+
+| Artifact | Chosen value | Source 1 | Source 2 | Access date | Status |
+|---|---|---|---|---|---|
+| Charge endpoint (cloud) | `POST {base}/connect/v1/payments` — body `{amount (cents), externalPaymentId, final}`; response `payment.{id, result, amount, createdTime, cardTransaction.{cardType,last4,authCode}}`; `result === "SUCCESS"` = captured sale | https://docs.clover.com/dev/docs/making-a-sale | https://docs.clover.com/dev/docs/rest-pay-overview | 2026-07-05 | verified |
+| Required headers | `Authorization: Bearer {OAuth expiring token}` (explicitly NOT a static merchant token) · `X-Clover-Device-Id` (device serial) · `X-POS-Id` · `Idempotency-Key` (required on payment/charge/refund/capture) | https://docs.clover.com/dev/docs/rest-pay-development-basics | https://docs.clover.com/dev/docs/rest-pay-overview | 2026-07-05 | verified |
+| Sandbox base URL | `https://apisandbox.dev.clover.com` (endpoints under `/connect/v1/`) | https://docs.clover.com/dev/docs/rest-pay-development-basics | docs.clover.com search corroboration (`/connect/v1/device/ping` example) | 2026-07-05 | verified |
+| Refund endpoint (v0.7-fenced; recorded for the deferral message) | `POST {base}/connect/v1/payments/{paymentId}/refunds` — `{fullRefund: true}` or `{amount}` | https://docs.clover.com/dev/docs/refunding-a-charge | https://docs.clover.com/dev/docs/api-tutorials | 2026-07-05 | verified (workflow deferred) |
+| Device constraint (drives the operator setup doc) | Cloud Pay Display cannot run in an emulator; production devices cannot join sandbox → Dev Kit required for sandbox E2E | https://docs.clover.com/dev/docs/devices-and-dev-kits-faqs | https://docs.clover.com/dev/docs/cloud-sdk-v3 | 2026-07-05 | verified |
+| ODOS NamingSystem (local — Clover payment ids on PaymentReconciliation.paymentIdentifier) | https://osod.dev/fhir/NamingSystem/clover-payment | `mcp/src/payments/adapters/clover-adapter.ts` | seam ledger (this file) §5 paymentIdentifier row | 2026-07-05 | verified (local) |
+
+No card data fields are parsed beyond `cardType` + `last4` (receipt label — not PCI-scoped); the OAuth token is used for the Authorization header only and unit-test-asserted absent from the persisted PaymentReconciliation.
