@@ -1,6 +1,5 @@
 import type { ChargeItem, Invoice, PaymentReconciliation, VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useState } from "react";
-import { RoleSelector } from "../components/RoleSelector";
 import { fhir } from "../lib/fhir";
 import {
   buildFinancialSummary,
@@ -46,7 +45,6 @@ import {
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
 import { openPrintWindow } from "../lib/print-window";
-import { useRole } from "../lib/role-context";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -115,7 +113,6 @@ const QUICK_ADVANCE: Array<{ label: string; status: OpticalOrderStatusCode }> = 
 ];
 
 export function OpticalOrder() {
-  const { role } = useRole();
   const params = new URLSearchParams(window.location.search);
   const [patientReference] = useState(params.get("patient") ?? "");
   const [rxReference] = useState(params.get("rx") ?? "");
@@ -374,7 +371,6 @@ export function OpticalOrder() {
       patientReference,
       invoiceReference: `Invoice/${order.invoiceId}`,
       taskReference: `Task/${order.taskId}`,
-      role,
     });
 
     if (result.outcome !== "success") {
@@ -731,9 +727,6 @@ function HeaderFields({
     <section className="rounded border border-white/10">
       <div className="grid gap-3 p-3 md:grid-cols-5 xl:grid-cols-10">
         <Field label="Staff Location" value={header.staffLocation} onChange={(staffLocation) => onChange({ ...header, staffLocation })} />
-        <div className="flex items-end">
-          <RoleSelector />
-        </div>
         <label className="grid gap-1 text-xs text-white/60">
           <span>Order Status</span>
           <select

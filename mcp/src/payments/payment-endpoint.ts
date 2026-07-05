@@ -1,3 +1,10 @@
+import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
+import type { MedplumClient } from "../fhir-client.js";
+import {
+  OSOD_PRACTICE_ROLE_SYSTEM,
+  PRACTICE_ROLE_IDS,
+  type PracticeRoleId,
+} from "../authz/roles.js";
 import type { AdapterRegistration } from "./payment-config.js";
 
 /**
@@ -86,4 +93,61 @@ export async function verifyMedplumStaffToken(opts: {
     return null;
   }
   return { staffReference: `${profile.resourceType}/${profile.id}` };
+}
+
+export interface ResolvedStaffRole {
+  staffReference: string;
+  role: PracticeRoleId;
+}
+
+/**
+ * Resolve a caller to their verified staff identity AND their OSOD role (decision 2026-07-05 §3).
+ *
+ * Authentication uses the caller's forwarded token (/auth/me proves who they are). The role is then
+ * derived from the AccessPolicy bound to their ProjectMembership — read with the osod-core SERVICE
+ * client, because a caller's own AccessPolicy need not grant ProjectMembership/AccessPolicy read.
+ * The role comes from the policy's practice-role identifier (buildMedplumAccessPolicy stamps it), so
+ * it is deterministic rather than display-name parsing. Returns null for any failure — invalid
+ * token, non-staff profile, no membership, or an AccessPolicy with no resolvable role (cannot
+ * determine authorization → deny).
+ */
+export async function resolveStaffRole(opts: {
+  baseUrl: string;
+  authHeader: string | undefined;
+  serviceClient: Pick<MedplumClient, "search" | "read">;
+  fetchImpl?: typeof fetch;
+}): Promise<ResolvedStaffRole | null> {
+  const verified = await verifyMedplumStaffToken({
+    baseUrl: opts.baseUrl,
+    authHeader: opts.authHeader,
+    fetchImpl: opts.fetchImpl,
+  });
+  if (!verified) {
+    return null;
+  }
+
+  const memberships: Bundle<ProjectMembership> = await opts.serviceClient.search<ProjectMembership>(
+    "ProjectMembership",
+    { profile: verified.staffReference },
+  );
+  const membership = memberships.entry?.[0]?.resource;
+  const policyReference =
+    membership?.access?.[0]?.policy?.reference ?? membership?.accessPolicy?.reference;
+  const policyId = policyReference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+  if (!policyId) {
+    return null;
+  }
+
+  let policy: AccessPolicy;
+  try {
+    policy = await opts.serviceClient.read<AccessPolicy>("AccessPolicy", policyId);
+  } catch {
+    return null;
+  }
+
+  const roleValue = policy.meta?.tag?.find((tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM)?.code;
+  if (!roleValue || !PRACTICE_ROLE_IDS.includes(roleValue as PracticeRoleId)) {
+    return null;
+  }
+  return { staffReference: verified.staffReference, role: roleValue as PracticeRoleId };
 }

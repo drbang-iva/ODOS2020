@@ -65,3 +65,15 @@ Access date: 2026-07-05. `POST /payments/charge` on osod-core (unified dispatch:
 | Attribution invariant | The charge's requestor/audit actor is ALWAYS the verified token identity; a body-supplied `staffReference` is ignored | seam spec §5 (staff attribution) | `mcp/tests/paymentChargeHandler.test.ts` (impostor test) | 2026-07-05 | verified |
 
 `payment.charge.attempted` (device-attempt granularity) is registered but not yet emitted — the endpoint audits `completed`/`failed`; attempt-level emission lands with the UI tranche if operationally wanted.
+
+## Authorization model — RBAC grants + identity-derived role gate (tranche 4)
+
+Access date: 2026-07-05. Decision: performance-od `decisions/2026-07-05-odos-payments-rbac-authorization-model.md`. The `/payments/charge` write runs on the **caller's** token (Medplum AccessPolicy governs it); the role is derived from the caller's verified identity, not a client header. No new external medical codes; internal RBAC vocabulary + resource grants only.
+
+| Artifact | Chosen value | Source 1 | Source 2 | Access date | Status |
+|---|---|---|---|---|---|
+| OSOD tag system (role<->AccessPolicy link; carried on `meta.tag` because Medplum's AccessPolicy has no `identifier` element) | https://osod.dev/fhir/NamingSystem/practice-role — `code` = PracticeRoleId | `mcp/src/authz/roles.ts` `buildMedplumAccessPolicy` | `mcp/tests/v05a-authz.test.ts` + `paymentEndpoint.test.ts` | 2026-07-05 | verified (local) |
+| Front-desk dispensary resource grants (practice scope — PaymentReconciliation is not a Patient-compartment resource; dispensary is a walk-up counter) | DeviceRequest (create,read) · ChargeItem (create,read) · PaymentReconciliation (create,read — no update) · Task (create,read,update) · Invoice (create,read,update) | decision §2 | `mcp/src/authz/roles.ts` `DISPENSARY_RESOURCE_RULES` + tests | 2026-07-05 | verified (local) |
+| Identity->role resolver | caller-token `GET /auth/me` -> profile; osod-core service client `ProjectMembership?profile=` -> bound AccessPolicy `meta.tag` -> PracticeRoleId | Medplum auth/search API | `mcp/src/payments/payment-endpoint.ts` `resolveStaffRole` + tests | 2026-07-05 | verified |
+
+Also fixes the pre-existing latent gap: front-desk now holds the grants to run the **cash** order flow too (previously admin-only). Forward gate: re-seed AccessPolicies so existing policies carry the `practice-role` tag (pre-pilot: safe). Bug fixed en route: the "no Clover config in UI" guard used a cwd-relative `ui/src` path that failed under the full mcp suite; now resolved from the test file.

@@ -10,7 +10,6 @@ import type {
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 import type { LabOrderFrame } from "./optical-lab-order";
-import type { RoleId } from "./roles";
 
 export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
 export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
@@ -172,7 +171,6 @@ export interface OpticalCardChargeInput {
   patientReference: string;
   invoiceReference: string;
   taskReference: string;
-  role: RoleId;
 }
 
 export interface TransactionResult {
@@ -253,11 +251,12 @@ export async function chargeOpticalCardPayment(
   if (!authHeader) {
     throw new Error("A signed-in FHIR session is required before taking a card payment.");
   }
+  // The server derives the caller's role from the verified token (decision 2026-07-05 §3);
+  // the UI sends no role — the presentation role toggle is not authorization.
   const response = await (deps.fetchImpl ?? fetch)("/payments/charge", {
     method: "POST",
     headers: {
       Authorization: authHeader,
-      "X-OSOD-Role": input.role,
       "Content-Type": "application/json",
       Accept: "application/json",
     },

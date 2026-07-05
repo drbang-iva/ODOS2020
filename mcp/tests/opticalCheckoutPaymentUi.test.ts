@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+
+// Resolve ui/src from this test file, not the runner's cwd (the full mcp suite runs from mcp/).
+const UI_SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "ui", "src");
 import {
   CHECKOUT_TENDERS,
   chargeOpticalCardPayment,
@@ -25,7 +29,6 @@ test("UI card charge helper posts only the server-owned Clover charge request", 
       patientReference: "Patient/p1",
       invoiceReference: "Invoice/inv1",
       taskReference: "Task/task1",
-      role: "front-desk",
     },
     {
       authHeader: () => "Bearer ui-token",
@@ -49,7 +52,8 @@ test("UI card charge helper posts only the server-owned Clover charge request", 
   assert.equal(captured?.url, "/payments/charge");
   assert.equal(captured?.init?.method, "POST");
   assert.equal((captured?.init?.headers as Record<string, string>).Authorization, "Bearer ui-token");
-  assert.equal((captured?.init?.headers as Record<string, string>)["X-OSOD-Role"], "front-desk");
+  // No role header — the server derives the role from the verified token (decision 2026-07-05 §3).
+  assert.equal((captured?.init?.headers as Record<string, string>)["X-OSOD-Role"], undefined);
   const body = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>;
   assert.deepEqual(body, {
     method: "clover",
@@ -72,7 +76,6 @@ test("UI card charge helper surfaces endpoint authz/session failures", async () 
           patientReference: "Patient/p1",
           invoiceReference: "Invoice/inv1",
           taskReference: "Task/task1",
-          role: "doctor",
         },
         {
           authHeader: () => "Bearer ui-token",
@@ -94,7 +97,7 @@ test("UI card charge amount is derived from Invoice.totalNet cents", () => {
 });
 
 test("ui source does not import Clover processor config", () => {
-  const text = listFiles("ui/src")
+  const text = listFiles(UI_SRC)
     .filter((file) => /\.(ts|tsx)$/.test(file))
     .map((file) => readFileSync(file, "utf8"))
     .join("\n");

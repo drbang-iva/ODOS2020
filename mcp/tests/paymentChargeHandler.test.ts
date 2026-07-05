@@ -173,3 +173,24 @@ test("an unexpected adapter/transport error returns 502 and audits the failure (
   assert.equal(audits[0].eventType, "payment.charge.failed");
   assert.match((res.body as { error: string }).error, /socket hang up|charge failed/i);
 });
+
+test("an authenticated staff whose role lacks payment.charge is rejected 403 before any adapter call or audit", async () => {
+  let charged = false;
+  const fetchImpl = (async () => {
+    charged = true;
+    return { ok: true, status: 200, json: async () => ({}), text: async () => "" };
+  }) as typeof fetch;
+  const { audits, deps: d } = deps({
+    fetchImpl,
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc1",
+      actorRole: "clinician",
+      fhir: cloverTransport({}).fhir as never,
+    }),
+  });
+  const res = await handleChargeRequest(d, { authHeader: "Bearer good", body: BODY });
+  assert.equal(res.status, 403);
+  assert.match((res.body as { error: string }).error, /payment\.charge/);
+  assert.equal(charged, false);
+  assert.equal(audits.length, 0);
+});

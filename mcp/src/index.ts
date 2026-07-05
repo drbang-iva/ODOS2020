@@ -41,7 +41,7 @@ import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import {
   paymentAdapterRegistrationsFromEnv,
-  verifyMedplumStaffToken,
+  resolveStaffRole,
 } from "./payments/payment-endpoint.js";
 import {
   SmartAuthorizationState,
@@ -5144,15 +5144,6 @@ function auditRouteRole(req: express.Request): PracticeRoleId | undefined {
   return PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId) ? (raw as PracticeRoleId) : undefined;
 }
 
-function roleAllowsPaymentCharge(roleId: PracticeRoleId): boolean {
-  try {
-    assertBusinessActionAllowed(roleId, "payment.charge");
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function auditRouteFilters(req: express.Request): LiveAuditQueryFilters {
   const eventTypeValues = auditRouteStringList(req, "event_type", "eventTypes");
   return {
@@ -5425,25 +5416,31 @@ async function main(): Promise<void> {
 
       app.post("/payments/charge", async (req, res) => {
         try {
-          const actorRole = auditRouteRole(req);
-          if (!actorRole || !roleAllowsPaymentCharge(actorRole)) {
-            res.status(403).json({ error: "payment.charge role required" });
-            return;
-          }
-
+          // Ensure the osod-core service client is authenticated so it can resolve the caller's
+          // role from their bound AccessPolicy (same pattern as /mcp/sse).
+          await authenticateWithMedplum();
+          const authHeader = req.header("authorization");
           const result = await handleChargeRequest(
             {
-              authenticate: async (authHeader) => {
-                const verified = await verifyMedplumStaffToken({ baseUrl: BASE_URL, authHeader });
-                if (!verified) {
+              // Role is derived from the caller's verified identity, not a client header
+              // (decision 2026-07-05 §3); the gate + 403 live inside the handler.
+              authenticate: async (header) => {
+                const resolved = await resolveStaffRole({
+                  baseUrl: BASE_URL,
+                  authHeader: header,
+                  serviceClient: fhir,
+                });
+                if (!resolved) {
                   return null;
                 }
                 return {
-                  staffReference: verified.staffReference,
-                  actorRole,
+                  staffReference: resolved.staffReference,
+                  actorRole: resolved.role,
+                  // The PR write runs on the caller's token so Medplum AccessPolicy governs it
+                  // (decision 2026-07-05 §1); the role gate is defense in depth on top.
                   fhir: createMedplumClient({
                     baseUrl: BASE_URL,
-                    accessToken: authHeader!.slice("Bearer ".length),
+                    accessToken: header!.slice("Bearer ".length),
                   }),
                 };
               },
@@ -5452,7 +5449,7 @@ async function main(): Promise<void> {
                 await auditRuntime.record(row, () => undefined);
               },
             },
-            { authHeader: req.header("authorization"), body: req.body },
+            { authHeader, body: req.body },
           );
           res.status(result.status).json(result.body);
         } catch (error) {

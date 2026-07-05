@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { assertBusinessActionAllowed } from "../src/authz/roles.js";
+import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
+import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/authz/roles.js";
 import {
   paymentAdapterRegistrationsFromEnv,
+  resolveStaffRole,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
 
@@ -108,4 +110,102 @@ test("a token whose profile is not a Practitioner/PractitionerRole resolves null
     await verifyMedplumStaffToken({ baseUrl: "http://x", authHeader: "Bearer t", fetchImpl }),
     null,
   );
+});
+
+// --- resolveStaffRole: identity-derived role from the bound AccessPolicy (decision 2026-07-05 §3) ---
+
+function frontDeskPolicy(): AccessPolicy {
+  return {
+    resourceType: "AccessPolicy",
+    id: "ap-front-desk",
+    name: "OSOD Front Desk",
+    meta: { tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+  };
+}
+
+function serviceClient(opts: { membership?: ProjectMembership | null; policy?: AccessPolicy | null }) {
+  const calls = { search: [] as unknown[], read: [] as unknown[] };
+  return {
+    calls,
+    search: async <T,>(rt: string, params?: Record<string, string>): Promise<Bundle<T>> => {
+      calls.search.push({ rt, params });
+      const entry = opts.membership ? [{ resource: opts.membership as unknown as T }] : [];
+      return { resourceType: "Bundle", type: "searchset", entry } as Bundle<T>;
+    },
+    read: async <T,>(rt: string, id: string): Promise<T> => {
+      calls.read.push({ rt, id });
+      if (!opts.policy) throw new Error(`AccessPolicy/${id} not found`);
+      return opts.policy as unknown as T;
+    },
+  };
+}
+
+const MEMBERSHIP_FRONT_DESK: ProjectMembership = {
+  resourceType: "ProjectMembership",
+  user: { reference: "User/u1" },
+  profile: { reference: "Practitioner/staff1" },
+  project: { reference: "Project/p1" },
+  access: [{ policy: { reference: "AccessPolicy/ap-front-desk" } }],
+};
+
+test("resolveStaffRole derives the role from the caller's bound AccessPolicy identifier (service-client lookup)", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK, policy: frontDeskPolicy() });
+  const staff = await resolveStaffRole({
+    baseUrl: "http://localhost:8103",
+    authHeader: "Bearer good",
+    serviceClient: svc,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, { staffReference: "Practitioner/staff1", role: "front-desk" });
+  assert.deepEqual(svc.calls.search[0], {
+    rt: "ProjectMembership",
+    params: { profile: "Practitioner/staff1" },
+  });
+  assert.deepEqual(svc.calls.read[0], { rt: "AccessPolicy", id: "ap-front-desk" });
+});
+
+test("resolveStaffRole returns null for an invalid token and never reaches the service client", async () => {
+  const { fetchImpl } = meTransport(401, {});
+  const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK, policy: frontDeskPolicy() });
+  assert.equal(
+    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer bad", serviceClient: svc, fetchImpl }),
+    null,
+  );
+  assert.equal(svc.calls.search.length, 0);
+});
+
+test("resolveStaffRole returns null when the caller has no ProjectMembership", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const svc = serviceClient({ membership: null });
+  assert.equal(
+    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
+    null,
+  );
+});
+
+test("resolveStaffRole returns null when the AccessPolicy carries no practice-role identifier (cannot determine role -> deny)", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const svc = serviceClient({
+    membership: MEMBERSHIP_FRONT_DESK,
+    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "OSOD Front Desk" },
+  });
+  assert.equal(
+    await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
+    null,
+  );
+});
+
+test("resolveStaffRole also reads the legacy single accessPolicy binding", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const legacyMembership: ProjectMembership = {
+    resourceType: "ProjectMembership",
+    user: { reference: "User/u1" },
+    profile: { reference: "Practitioner/staff1" },
+    project: { reference: "Project/p1" },
+    accessPolicy: { reference: "AccessPolicy/ap-front-desk" },
+  };
+  const svc = serviceClient({ membership: legacyMembership, policy: frontDeskPolicy() });
+  const staff = await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl });
+  assert.equal(staff?.role, "front-desk");
 });
