@@ -10,6 +10,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 import type { LabOrderFrame } from "./optical-lab-order";
+import type { RoleId } from "./roles";
 
 export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
 export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
@@ -50,6 +51,11 @@ export const OPTICAL_ORDER_TYPES = [
 export const PAYMENT_TENDERS = [
   { code: "CASH", display: "Cash" },
   { code: "CHECK", display: "Check" },
+] as const;
+
+export const CHECKOUT_TENDERS = [
+  ...PAYMENT_TENDERS,
+  { code: "CARD_TERMINAL", display: "Card (terminal)" },
 ] as const;
 
 export const OPTICAL_ADJUSTMENTS = [
@@ -103,6 +109,7 @@ export const CHARGE_COLUMNS = [
 export type OpticalOrderStatusCode = (typeof OPTICAL_ORDER_STATUSES)[number]["code"];
 export type OpticalOrderTypeCode = (typeof OPTICAL_ORDER_TYPES)[number]["code"];
 export type PaymentTenderCode = (typeof PAYMENT_TENDERS)[number]["code"];
+export type CheckoutTenderCode = (typeof CHECKOUT_TENDERS)[number]["code"];
 
 export interface RxDisplayRow {
   eye: "OD" | "OS";
@@ -150,7 +157,7 @@ export interface OpticalCashOrderDraft {
   businessStatus: OpticalOrderStatusCode;
   orderType: OpticalOrderTypeCode;
   charges: OpticalChargeLineDraft[];
-  tender: PaymentTenderCode;
+  tender?: PaymentTenderCode;
 }
 
 export interface CreatedOpticalOrderIds {
@@ -158,6 +165,25 @@ export interface CreatedOpticalOrderIds {
   taskId: string;
   chargeItemIds: string[];
   invoiceId: string;
+}
+
+export interface OpticalCardChargeInput {
+  amountCents: number;
+  patientReference: string;
+  invoiceReference: string;
+  taskReference: string;
+  role: RoleId;
+}
+
+export interface TransactionResult {
+  transactionId: string;
+  paymentRecord?: { resourceType: "PaymentReconciliation" | "Invoice"; id: string };
+  outcome: "success" | "declined" | "pending" | "failed";
+  amountChargedCents: number;
+  feesCents: number;
+  settlementDate?: string;
+  declineCode?: string;
+  declineReason?: string;
 }
 
 export function labOrderFrameFromAttachedFrame(
@@ -217,6 +243,47 @@ export async function createOpticalCashOrder(input: OpticalCashOrderDraft): Prom
     chargeItemIds: created.get("ChargeItem") ?? [],
     invoiceId: oneCreatedId(created, "Invoice"),
   };
+}
+
+export async function chargeOpticalCardPayment(
+  input: OpticalCardChargeInput,
+  deps: { authHeader?: () => string | undefined; fetchImpl?: typeof fetch } = {},
+): Promise<TransactionResult> {
+  const authHeader = (deps.authHeader ?? fhir.authHeader)();
+  if (!authHeader) {
+    throw new Error("A signed-in FHIR session is required before taking a card payment.");
+  }
+  const response = await (deps.fetchImpl ?? fetch)("/payments/charge", {
+    method: "POST",
+    headers: {
+      Authorization: authHeader,
+      "X-OSOD-Role": input.role,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      method: "clover",
+      amountCents: input.amountCents,
+      patientReference: input.patientReference,
+      invoiceReference: input.invoiceReference,
+      taskReference: input.taskReference,
+      description: "Optical order card payment",
+      surface: "in-clinic-pos",
+    }),
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(paymentErrorMessage(response, body));
+  }
+  return body as TransactionResult;
+}
+
+export function invoiceTotalNetCents(invoice: Invoice): number {
+  const totalNet = invoice.totalNet?.value;
+  if (typeof totalNet !== "number" || !Number.isFinite(totalNet)) {
+    throw new Error("Card payment requires an Invoice.totalNet amount.");
+  }
+  return Math.round(totalNet * 100);
 }
 
 export async function transitionOpticalOrderStatus(
@@ -316,14 +383,14 @@ function buildOpticalChargeItem(
   };
 }
 
-function buildOpticalInvoice(input: OpticalCashOrderDraft, chargeItemReferences: string[]): Invoice {
+export function buildOpticalInvoice(input: OpticalCashOrderDraft, chargeItemReferences: string[]): Invoice {
   let grossCents = 0;
   let netCents = 0;
   return {
     resourceType: "Invoice",
     status: "issued",
     subject: { reference: input.patientReference },
-    extension: [paymentTenderExtension(input.tender)],
+    ...(input.tender !== undefined ? { extension: [paymentTenderExtension(input.tender)] } : {}),
     lineItem: input.charges.map((line, index) => {
       grossCents += line.feeCents;
       netCents += line.feeCents - (line.discount?.amountCents ?? 0);
@@ -431,6 +498,24 @@ function paymentTenderExtension(code: PaymentTenderCode) {
       text: tender.display,
     },
   };
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return { error: text };
+  }
+}
+
+function paymentErrorMessage(response: Response, body: unknown): string {
+  const message =
+    typeof body === "object" && body !== null && "error" in body
+      ? String((body as { error: unknown }).error)
+      : response.statusText;
+  return `Payment charge failed: ${response.status} ${message}`;
 }
 
 function opticalAdjustmentDisplay(code: string): string | undefined {
