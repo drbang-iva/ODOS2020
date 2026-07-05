@@ -104,7 +104,23 @@ const UPDATE_INTERACTIONS: FhirInteraction[] = [
   "history",
   "vread",
 ];
+const CREATE_READ_INTERACTIONS: FhirInteraction[] = ["create", "read", "search", "history", "vread"];
 const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
+
+/**
+ * Dispensary order + financial resources granted to front-desk at practice scope (v0.6c payments
+ * authorization model, decision 2026-07-05 §2). Practice-scope not patient-compartment: the
+ * dispensary is a walk-up counter, and PaymentReconciliation is not a Patient-compartment resource.
+ * PaymentReconciliation is create-only (payment records are immutable; refunds are new records, v0.7);
+ * Task/Invoice also need update (status advance / manual-cash balancing).
+ */
+const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "ChargeItem", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Task", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+];
 
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
@@ -216,11 +232,14 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         description: "Patient/<id> compartment reference assigned for front-desk workflow.",
       },
     ],
-    resourceRules: FRONT_DESK_RESOURCES.map((resourceType): OsodResourceRule => ({
-      resourceType,
-      interactions: resourceType === "Patient" ? UPDATE_INTERACTIONS : UPDATE_INTERACTIONS,
-      scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
-    })),
+    resourceRules: [
+      ...FRONT_DESK_RESOURCES.map((resourceType): OsodResourceRule => ({
+        resourceType,
+        interactions: UPDATE_INTERACTIONS,
+        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+      })),
+      ...DISPENSARY_RESOURCE_RULES,
+    ],
   },
   auditor: {
     id: "auditor",
@@ -295,10 +314,16 @@ export function getRoleDeclaration(roleId: PracticeRoleId): OsodRoleDeclaration 
   return ROLE_REGISTRY[roleId];
 }
 
+export const OSOD_PRACTICE_ROLE_SYSTEM = "https://osod.dev/fhir/NamingSystem/practice-role";
+
 export function buildMedplumAccessPolicy(role: OsodRoleDeclaration): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
     name: `OSOD ${role.display}`,
+    // Machine-readable role↔policy link so the payment endpoint can derive a caller's role from
+    // their bound AccessPolicy (decision 2026-07-05 §3) rather than a spoofable client header.
+    // Carried on meta.tag — Medplum's AccessPolicy resource has no identifier element.
+    meta: { tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: role.id }] },
     resource: role.resourceRules.map(toMedplumResourceRule),
   };
 }

@@ -1,4 +1,9 @@
-import type { ChargeItem, Invoice, InvoiceLineItemPriceComponent } from "@medplum/fhirtypes";
+import type {
+  ChargeItem,
+  Invoice,
+  InvoiceLineItemPriceComponent,
+  PaymentReconciliation,
+} from "@medplum/fhirtypes";
 import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "./optical-order";
 
 /**
@@ -134,6 +139,22 @@ export function buildFinancialSummary(input: BuildFinancialSummaryInput): Financ
     payments: { tenderLines, paymentsAppliedCents },
     amountDueNowCents: netCents - paymentsAppliedCents,
   };
+}
+
+export function paymentReconciliationsToTenderLines(
+  paymentReconciliations: PaymentReconciliation[],
+): FinancialSummaryTenderLine[] {
+  return paymentReconciliations.map((pr) => {
+    const coding = pr.extension?.find((ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+      ?.valueCodeableConcept?.coding?.[0];
+    const tender = coding?.display ?? coding?.code;
+    if (!tender) {
+      throw new Error(
+        "PaymentReconciliation is missing the osod-payment-tender extension — cannot derive the receipt tender label.",
+      );
+    }
+    return { tender, amountCents: toCents(pr.paymentAmount?.value ?? NaN) };
+  });
 }
 
 const DASH = "—";

@@ -1,4 +1,5 @@
 import type { OsodActorRole, OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-audit.js";
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
 import type { ChargeRequest, PaymentSurface, TransactionResult } from "./payment-processor-adapter.js";
@@ -58,6 +59,10 @@ export async function handleChargeRequest(
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to take a payment." } };
+  }
+  // Authorize on the caller's identity-derived role (decision 2026-07-05 §3), not a client header.
+  if (!staffMayCharge(staff.actorRole)) {
+    return { status: 403, body: { error: "payment.charge role required" } };
   }
 
   const parsed = parseChargeBody(input.body);
@@ -165,6 +170,18 @@ function parseChargeBody(raw: unknown): { body: ChargeBody } | { error: string }
     return { error: "surface is required." };
   }
   return { body: b as unknown as ChargeBody };
+}
+
+function staffMayCharge(actorRole: OsodActorRole): boolean {
+  if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) {
+    return false;
+  }
+  try {
+    assertBusinessActionAllowed(actorRole as PracticeRoleId, "payment.charge");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function messageOf(error: unknown): string {

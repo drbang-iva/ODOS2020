@@ -68,6 +68,11 @@ import {
   buildAtropineMedicationStatement as buildUiAtropineMedicationStatement,
   buildMyopiaManagementCarePlan as buildUiMyopiaManagementCarePlan,
 } from "../../ui/src/lib/fhir-v04c/myopiaManagement.js";
+import { buildOpticalInvoice as buildMcpOpticalInvoice } from "../src/fhir/opticalInvoice.js";
+import {
+  buildOpticalInvoice as buildUiOpticalInvoice,
+  type OpticalCashOrderDraft,
+} from "../../ui/src/lib/optical-order.js";
 import {
   DEFERRED_PROCEDURE_CONCEPT_SYSTEM,
   SCODI_OPTIC_NERVE,
@@ -420,6 +425,52 @@ test("UI v0.4c myopia mirror matches MCP CarePlan and atropine builders", () => 
   );
 });
 
+test("UI optical Invoice mirror matches MCP for tendered and untendered orders", () => {
+  const chargeItemReferences = ["ChargeItem/ci-1", "ChargeItem/ci-2"];
+  const uiDraft = {
+    patientReference: "Patient/p1",
+    visionPrescriptionReference: "VisionPrescription/rx1",
+    businessStatus: "quote",
+    orderType: "rx",
+    orderHcpcsCode: "V2020",
+    charges: [
+      { ...opticalChargeLine("V2020", 18500), discount: { code: "PPAY", amountCents: 3700 } },
+      { ...opticalChargeLine("V2100", 12000), discount: { code: "PPAY", amountCents: 2400 } },
+    ],
+    tender: "CASH",
+  } satisfies OpticalCashOrderDraft;
+  const mcpInput = {
+    patientReference: uiDraft.patientReference,
+    lineItems: [
+      { chargeItemReference: chargeItemReferences[0], amountCents: 18500, discount: { code: "PPAY", amountCents: 3700 } },
+      { chargeItemReference: chargeItemReferences[1], amountCents: 12000, discount: { code: "PPAY", amountCents: 2400 } },
+    ],
+  };
+
+  assertJsonEqual(
+    buildMcpOpticalInvoice({ ...mcpInput, tender: "CASH" }),
+    buildUiOpticalInvoice(uiDraft, chargeItemReferences),
+  );
+  assertJsonEqual(
+    buildMcpOpticalInvoice(mcpInput),
+    buildUiOpticalInvoice({ ...uiDraft, tender: undefined }, chargeItemReferences),
+  );
+});
+
 function assertJsonEqual(left: unknown, right: unknown): void {
   assert.equal(JSON.stringify(left), JSON.stringify(right));
+}
+
+function opticalChargeLine(procedure: string, feeCents: number): OpticalCashOrderDraft["charges"][number] {
+  return {
+    id: procedure,
+    procedure,
+    modifier: "",
+    diagnosis: "",
+    units: 1,
+    feeCents,
+    taxCents: 0,
+    selected: true,
+    taxable: false,
+  };
 }

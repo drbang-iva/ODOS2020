@@ -57,6 +57,10 @@ function sourceHeaders(sourceTag: string): HeadersInit {
 }
 
 export const fhir = {
+  authHeader(): string | undefined {
+    return token ? `Bearer ${token}` : undefined;
+  },
+
   async login(email: string, password: string): Promise<void> {
     const { verifier, challenge } = await pkce();
     const loginRes = await fetch(`${AUTH}/auth/login`, {

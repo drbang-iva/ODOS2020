@@ -62,6 +62,57 @@ test("AccessPolicy generator emits Medplum interactions, criteria, and writeCons
   assert.match(observationRule?.writeConstraint?.[0]?.expression ?? "", /%before\.status != 'final'/);
 });
 
+// --- v0.6c payments authorization model: front-desk dispensary grants (decision 2026-07-05 §2) ---
+
+test("front-desk can create the dispensary order + financial resources at practice scope", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
+  const rule = (resourceType: string) => policy.resource?.find((r) => r.resourceType === resourceType);
+
+  // order resources: create + read, practice scope (no compartment criteria — walk-up counter)
+  for (const resourceType of ["DeviceRequest", "ChargeItem"]) {
+    const r = rule(resourceType);
+    assert.deepEqual(r?.interaction, ["create", "read", "search", "history", "vread"], resourceType);
+    assert.equal(r?.criteria, undefined, `${resourceType} is practice-scoped`);
+  }
+
+  // Task + Invoice also need update (status advance / manual-cash balancing)
+  for (const resourceType of ["Task", "Invoice"]) {
+    const r = rule(resourceType);
+    assert.ok(r?.interaction?.includes("create"), resourceType);
+    assert.ok(r?.interaction?.includes("update"), resourceType);
+    assert.equal(r?.criteria, undefined, `${resourceType} is practice-scoped`);
+  }
+});
+
+test("front-desk can create but NOT update a PaymentReconciliation (payment records are immutable)", () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
+  const pr = policy.resource?.find((r) => r.resourceType === "PaymentReconciliation");
+  assert.deepEqual(pr?.interaction, ["create", "read", "search", "history", "vread"]);
+  assert.equal(pr?.interaction?.includes("update"), false);
+  assert.equal(pr?.criteria, undefined);
+});
+
+test("non-billing roles get no PaymentReconciliation grant (clinician, auditor)", () => {
+  for (const roleId of ["clinician", "auditor"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    assert.equal(
+      policy.resource?.some((r) => r.resourceType === "PaymentReconciliation"),
+      false,
+      roleId,
+    );
+  }
+});
+
+test("every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)", () => {
+  for (const roleId of ["front-desk", "practice-admin", "clinician", "auditor", "aesthetics-provider"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const tag = policy.meta?.tag?.find(
+      (t) => t.system === "https://osod.dev/fhir/NamingSystem/practice-role",
+    );
+    assert.equal(tag?.code, roleId, roleId);
+  }
+});
+
 test("ProjectMembership access builder emits parameterized provider, patient, and state-license values", () => {
   const access = buildProjectMembershipAccess({
     policyReference: "AccessPolicy/osod-aesthetics-provider",
