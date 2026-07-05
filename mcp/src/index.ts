@@ -37,6 +37,12 @@ import {
   assertBusinessActionAllowed,
   type PracticeRoleId,
 } from "./authz/roles.js";
+import { handleChargeRequest } from "./payments/payment-charge-handler.js";
+import { createPaymentDispatch } from "./payments/payment-config.js";
+import {
+  paymentAdapterRegistrationsFromEnv,
+  verifyMedplumStaffToken,
+} from "./payments/payment-endpoint.js";
 import {
   SmartAuthorizationState,
   createSmartAuthorizationRouter,
@@ -5138,6 +5144,15 @@ function auditRouteRole(req: express.Request): PracticeRoleId | undefined {
   return PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId) ? (raw as PracticeRoleId) : undefined;
 }
 
+function roleAllowsPaymentCharge(roleId: PracticeRoleId): boolean {
+  try {
+    assertBusinessActionAllowed(roleId, "payment.charge");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function auditRouteFilters(req: express.Request): LiveAuditQueryFilters {
   const eventTypeValues = auditRouteStringList(req, "event_type", "eventTypes");
   return {
@@ -5398,6 +5413,53 @@ async function main(): Promise<void> {
           }
           const status = error instanceof Error && /lacks business action/.test(error.message) ? 403 : 500;
           res.status(status).json({ error: status === 403 ? "audit.read role required" : "audit route failed" });
+        }
+      });
+
+      // Unified payment charge boundary (seam spec follow-up, operator-confirmed 2026-07-05):
+      // processor charges need the vendor secret, which lives only here. Authorization is the
+      // payment.charge business action (same pattern as audit.read); authentication verifies the
+      // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
+      // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
+      const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
+
+      app.post("/payments/charge", async (req, res) => {
+        try {
+          const actorRole = auditRouteRole(req);
+          if (!actorRole || !roleAllowsPaymentCharge(actorRole)) {
+            res.status(403).json({ error: "payment.charge role required" });
+            return;
+          }
+
+          const result = await handleChargeRequest(
+            {
+              authenticate: async (authHeader) => {
+                const verified = await verifyMedplumStaffToken({ baseUrl: BASE_URL, authHeader });
+                if (!verified) {
+                  return null;
+                }
+                return {
+                  staffReference: verified.staffReference,
+                  actorRole,
+                  fhir: createMedplumClient({
+                    baseUrl: BASE_URL,
+                    accessToken: authHeader!.slice("Bearer ".length),
+                  }),
+                };
+              },
+              dispatch: paymentDispatch,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /payments/charge failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "payment route failed" });
+          }
         }
       });
 

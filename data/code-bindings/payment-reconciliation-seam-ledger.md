@@ -53,3 +53,15 @@ Access date: 2026-07-05. Sources are Clover's current primary documentation; the
 | ODOS NamingSystem (local — Clover payment ids on PaymentReconciliation.paymentIdentifier) | https://osod.dev/fhir/NamingSystem/clover-payment | `mcp/src/payments/adapters/clover-adapter.ts` | seam ledger (this file) §5 paymentIdentifier row | 2026-07-05 | verified (local) |
 
 No card data fields are parsed beyond `cardType` + `last4` (receipt label — not PCI-scoped); the OAuth token is used for the Authorization header only and unit-test-asserted absent from the persisted PaymentReconciliation.
+
+## Checkout charge boundary (tranche 3 — no new FHIR codes)
+
+Access date: 2026-07-05. `POST /payments/charge` on osod-core (unified dispatch: `payment-config.ts` → adapters; handler `payment-charge-handler.ts`; wiring `index.ts`). No new medical codes, FHIR elements, or extensions — the endpoint composes the already-ledgered seam artifacts. New internal authz vocabulary only:
+
+| Artifact | Chosen value | Source 1 | Source 2 | Access date | Status |
+|---|---|---|---|---|---|
+| OSOD business action (RBAC gate on the charge route, same pattern as audit.read) | `payment.charge` — granted to `front-desk`, `practice-admin`; denied to `clinician`, `auditor`, `aesthetics-provider` | `mcp/src/authz/roles.ts` (v0.5a RBAC substrate) | `mcp/tests/paymentEndpoint.test.ts` | 2026-07-05 | verified (local) |
+| Authn for the forwarded UI token | Medplum `GET /auth/me` → staff Practitioner/PractitionerRole profile; non-staff profiles (Patient) rejected | Medplum auth API (`/auth/me`, token-introspection pattern already used by the stack) | `mcp/src/payments/payment-endpoint.ts` + tests | 2026-07-05 | verified |
+| Attribution invariant | The charge's requestor/audit actor is ALWAYS the verified token identity; a body-supplied `staffReference` is ignored | seam spec §5 (staff attribution) | `mcp/tests/paymentChargeHandler.test.ts` (impostor test) | 2026-07-05 | verified |
+
+`payment.charge.attempted` (device-attempt granularity) is registered but not yet emitted — the endpoint audits `completed`/`failed`; attempt-level emission lands with the UI tranche if operationally wanted.

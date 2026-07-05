@@ -39,6 +39,7 @@ export const BUSINESS_ACTIONS = [
   "audit.read",
   "aesthetics.procedure.write",
   "break-glass.invoke",
+  "payment.charge",
 ] as const;
 
 export type BusinessAction = (typeof BUSINESS_ACTIONS)[number];
@@ -152,7 +153,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {
@@ -207,7 +208,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Front Desk",
     description:
       "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read"],
+    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge"],
     membershipParameters: [
       {
         name: "patient_compartment",
