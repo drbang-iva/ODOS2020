@@ -157,11 +157,25 @@ const FRONT_DESK_RESOURCES = [
   "RelatedPerson",
   "Coverage",
   "Account",
-  "Appointment",
-  "Slot",
-  "Schedule",
   "Encounter",
 ] as const;
+
+/**
+ * Scheduler resources granted to front-desk at practice scope (scheduler Phase 3a, parallel to
+ * PRs #24-#26). Practice-scope not patient-compartment: the day grid reads ALL resources'
+ * Schedules, the whole visit-type catalog, and every patient's appointments for the day, and
+ * booking writes Appointments for arbitrary patients — Schedule/Slot/HealthcareService are not
+ * Patient-compartment resources at all, so a compartment criteria matches nothing. Mirrors the
+ * v0.6c dispensary practice-scope precedent (decision 2026-07-05 §2). Schedule/Slot/
+ * HealthcareService stay read-only (practice-admin manages them); Appointment gets no delete —
+ * cancellation is a status change, never a delete.
+ */
+const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "Appointment", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Schedule", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Slot", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "HealthcareService", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
   "practice-admin": {
@@ -238,6 +252,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         interactions: UPDATE_INTERACTIONS,
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       })),
+      ...SCHEDULING_RESOURCE_RULES,
       ...DISPENSARY_RESOURCE_RULES,
     ],
   },
