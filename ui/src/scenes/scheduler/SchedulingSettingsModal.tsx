@@ -12,10 +12,17 @@ import {
 } from "../../lib/scheduling";
 import {
   addSchedulingOffice,
+  applyBlockScope,
   assignScheduleOffice,
+  blockScopeState,
+  clone,
   copyWeeklyHoursBetweenSchedules,
   deleteSchedulingBlock,
+  nextAvailableHoursWindow,
   removeSchedulingOffice,
+  renameSchedulingOffice,
+  replaceSchedulingBlock,
+  validateSchedulingPracticeSettings,
 } from "../../lib/scheduling-settings";
 
 const WEEKDAYS: Array<{ code: Weekday; display: string }> = [
@@ -49,6 +56,7 @@ export function SchedulingSettingsModal({
   const [newOfficeName, setNewOfficeName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockScopeError, setBlockScopeError] = useState<string | null>(null);
   const resourceOptions = useMemo(
     () =>
       resources
@@ -60,6 +68,7 @@ export function SchedulingSettingsModal({
   useEffect(() => {
     setDraft(clone(config));
     setSelectedBlockIndex(initialBlockIndex ?? 0);
+    setBlockScopeError(null);
   }, [config, initialBlockIndex]);
 
   useEffect(() => {
@@ -72,6 +81,7 @@ export function SchedulingSettingsModal({
     setSaving(true);
     setError(null);
     try {
+      validateSchedulingPracticeSettings(draft);
       await onSave(draft);
       onClose();
     } catch (err) {
@@ -80,6 +90,15 @@ export function SchedulingSettingsModal({
       setSaving(false);
     }
   }
+
+  const draftValidationError = useMemo(() => {
+    try {
+      validateSchedulingPracticeSettings(draft);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err);
+    }
+  }, [draft]);
 
   function guardedUpdate(update: (current: SchedulingPracticeConfig) => SchedulingPracticeConfig) {
     try {
@@ -105,9 +124,9 @@ export function SchedulingSettingsModal({
             x
           </button>
         </header>
-        {error && (
+        {(error || blockScopeError || draftValidationError) && (
           <div className="border-b border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
-            {error}
+            {error ?? blockScopeError ?? draftValidationError}
           </div>
         )}
         <div className="grid gap-4 p-4 lg:grid-cols-[1.15fr_0.85fr]">
@@ -223,12 +242,11 @@ export function SchedulingSettingsModal({
                   <BlockEditor
                     block={selectedBlock}
                     resources={resourceOptions}
-                    onChange={(block) =>
-                      setDraft((current) => ({
-                        ...current,
-                        blocks: current.blocks.map((candidate, index) => (index === selectedBlockIndex ? block : candidate)),
-                      }))
-                    }
+                    onChange={(block) => {
+                      setBlockScopeError(null);
+                      guardedUpdate((current) => replaceSchedulingBlock(current, selectedBlockIndex, block));
+                    }}
+                    onScopeError={setBlockScopeError}
                     onDelete={() =>
                       guardedUpdate((current) => {
                         const next = deleteSchedulingBlock(current, selectedBlockIndex);
@@ -256,6 +274,11 @@ export function SchedulingSettingsModal({
                               candidate.id === office.id ? { ...candidate, name: event.target.value } : candidate,
                             ),
                           }))
+                        }
+                        onBlur={(event) =>
+                          guardedUpdate((current) =>
+                            renameSchedulingOffice(current, office.id, event.target.value),
+                          )
                         }
                       />
                       <button
@@ -320,7 +343,12 @@ export function SchedulingSettingsModal({
           <button className="scheduler-button" type="button" onClick={onClose}>
             Close
           </button>
-          <button className="scheduler-button" type="button" disabled={saving} onClick={() => void save()}>
+          <button
+            className="scheduler-button"
+            type="button"
+            disabled={saving || Boolean(blockScopeError || draftValidationError)}
+            onClick={() => void save()}
+          >
             Save
           </button>
         </footer>
@@ -371,7 +399,13 @@ function WeeklyHoursEditor({
                 <button
                   className="scheduler-button"
                   type="button"
-                  onClick={() => updateDay(day.code, [...windows, { start: "13:00", end: "17:00" }])}
+                  disabled={!nextAvailableHoursWindow(windows)}
+                  onClick={() => {
+                    const next = nextAvailableHoursWindow(windows);
+                    if (next) {
+                      updateDay(day.code, [...windows, next]);
+                    }
+                  }}
                 >
                   Add Window
                 </button>
@@ -455,14 +489,36 @@ function BlockEditor({
   block,
   resources,
   onChange,
+  onScopeError,
   onDelete,
 }: {
   block: BlockedTime;
   resources: Array<{ resource: Schedule; reference: string }>;
   onChange: (block: BlockedTime) => void;
+  onScopeError: (message: string | null) => void;
   onDelete: () => void;
 }) {
   const allDay = !block.start && !block.end;
+  const [scopeMode, setScopeMode] = useState(blockScopeState(block).mode);
+  const [selectedReferences, setSelectedReferences] = useState(blockScopeState(block).scheduleReferences);
+
+  useEffect(() => {
+    const scope = blockScopeState(block);
+    setScopeMode(scope.mode);
+    setSelectedReferences(scope.scheduleReferences);
+  }, [block]);
+
+  function applyScope(mode: "all" | "selected", references: string[]) {
+    setScopeMode(mode);
+    setSelectedReferences(references);
+    if (mode === "selected" && references.length === 0) {
+      onScopeError("Selected resources scope requires at least one selected resource.");
+      return;
+    }
+    onScopeError(null);
+    onChange(applyBlockScope(block, { mode, scheduleReferences: references }));
+  }
+
   return (
     <div className="grid gap-3 border border-white/10 bg-white/[0.03] p-3">
       <div className="grid gap-2 md:grid-cols-2">
@@ -554,23 +610,45 @@ function BlockEditor({
         </div>
       )}
       <fieldset className="border border-white/10 p-2">
-        <legend className="px-1 text-xs uppercase text-white/45">Resources</legend>
+        <legend className="px-1 text-xs uppercase text-white/45">Applies To</legend>
+        <div className="mb-2 flex flex-wrap gap-3">
+          <label className="flex items-center gap-2 text-sm text-white/75">
+            <input
+              type="radio"
+              checked={scopeMode === "all"}
+              onChange={() => applyScope("all", [])}
+            />
+            <span>All resources</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-white/75">
+            <input
+              type="radio"
+              checked={scopeMode === "selected"}
+              onChange={() => applyScope("selected", selectedReferences.length > 0 ? selectedReferences : [])}
+            />
+            <span>Selected resources</span>
+          </label>
+        </div>
+        {scopeMode === "selected" && selectedReferences.length === 0 && (
+          <div className="mb-2 text-sm text-red-200">Select at least one resource.</div>
+        )}
         <div className="grid gap-2 md:grid-cols-2">
           {resources.map((entry) => {
-            const scoped = block.scheduleReferences?.includes(entry.reference) ?? false;
+            const scoped = selectedReferences.includes(entry.reference);
             return (
               <label key={entry.reference} className="flex items-center gap-2 text-sm text-white/75">
                 <input
                   type="checkbox"
+                  disabled={scopeMode !== "selected"}
                   checked={scoped}
                   onChange={(event) => {
-                    const current = new Set(block.scheduleReferences ?? []);
+                    const current = new Set(selectedReferences);
                     if (event.target.checked) {
                       current.add(entry.reference);
                     } else {
                       current.delete(entry.reference);
                     }
-                    onChange({ ...block, scheduleReferences: [...current] });
+                    applyScope("selected", [...current]);
                   }}
                 />
                 <span>{resourceDisplay(entry.resource)}</span>
@@ -593,8 +671,4 @@ function withoutTimes(block: BlockedTime): BlockedTime {
   void start;
   void end;
   return rest;
-}
-
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
 }

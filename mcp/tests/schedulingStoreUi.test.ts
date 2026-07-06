@@ -20,6 +20,7 @@ import {
 } from "../../ui/src/lib/scheduling.js";
 import {
   OSOD_SCHEDULING_CONFIG_CODE,
+  OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
   OSOD_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource,
   type PersistedSchedulingPracticeConfig,
@@ -54,6 +55,8 @@ function resetStore(date = "2026-07-06"): void {
     appointments: [],
     config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
     configResource: undefined,
+    configError: null,
+    configReadFailed: false,
     officeId: "all",
     loading: false,
     error: null,
@@ -244,23 +247,23 @@ test("loadDay queries appointments with practice-offset day bounds", async () =>
   ]);
 });
 
-test("loadConfig searches the coded Basic singleton and keeps the default config when absent", async () => {
+test("loadDay searches the coded Basic singleton and keeps the default config when absent", async () => {
   resetStore("2026-07-06");
   const client = writableClient();
 
-  await useSchedulingStore.getState().loadConfig({ fhirClient: client });
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
 
   const configSearch = client.searches.find((call) => call.resourceType === "Basic");
   assert.equal(
     configSearch?.params?.get("code"),
     `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`,
   );
-  assert.equal(configSearch?.params?.get("_count"), "1");
+  assert.equal(configSearch?.params?.get("_count"), "10");
   assert.deepEqual(useSchedulingStore.getState().config, DEFAULT_SCHEDULING_PRACTICE_CONFIG);
   assert.equal(useSchedulingStore.getState().configResource, undefined);
 });
 
-test("loadConfig hydrates config and preserves the backing Basic resource identity", async () => {
+test("loadDay hydrates config and preserves the backing Basic resource identity", async () => {
   resetStore("2026-07-06");
   const basic = {
     ...buildSchedulingPracticeConfigResource(STORED_CONFIG),
@@ -269,7 +272,7 @@ test("loadConfig hydrates config and preserves the backing Basic resource identi
   };
   const client = writableClient({ basics: [basic] });
 
-  await useSchedulingStore.getState().loadConfig({ fhirClient: client });
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
 
   assert.deepEqual(useSchedulingStore.getState().config, STORED_CONFIG);
   assert.equal(useSchedulingStore.getState().configResource?.id, "cfg-1");
@@ -298,24 +301,107 @@ test("loadDay hydrates config before appointment search bounds and force-refresh
   assert.equal(client.searches.filter((call) => call.resourceType === "Basic").length, 2);
 });
 
-test("loadConfig ignores a stale response after the selected date changes", async () => {
+test("loadDay falls back to default config when the Basic search fails and still loads the day", async () => {
   resetStore("2026-07-06");
-  const slowConfig = deferred<Bundle<Basic>>();
-  const basic = buildSchedulingPracticeConfigResource(STORED_CONFIG);
   const client: SchedulingFhirClient = {
     async search(resourceType) {
-      assert.equal(resourceType, "Basic");
-      return slowConfig.promise;
+      if (resourceType === "Basic") {
+        throw new Error("Basic search denied");
+      }
+      if (resourceType === "Schedule") {
+        return bundle([seededSchedules()[0]!]) as Bundle<Schedule>;
+      }
+      if (resourceType === "HealthcareService") {
+        return bundle([seededVisitTypes()[0]!]) as Bundle<HealthcareService>;
+      }
+      return bundle([appointment("appt-1", "2026-07-06T09:00:00-05:00")]) as Bundle<Appointment>;
     },
   };
 
-  const load = useSchedulingStore.getState().loadConfig({ fhirClient: client });
-  useSchedulingStore.getState().setDate("2026-07-07");
-  slowConfig.resolve(bundle([basic]));
-  await load;
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
 
-  assert.equal(useSchedulingStore.getState().date, "2026-07-07");
-  assert.deepEqual(useSchedulingStore.getState().config, DEFAULT_SCHEDULING_PRACTICE_CONFIG);
+  const state = useSchedulingStore.getState();
+  assert.deepEqual(state.config, DEFAULT_SCHEDULING_PRACTICE_CONFIG);
+  assert.equal(state.configResource, undefined);
+  assert.match(state.configError ?? "", /Basic search denied/);
+  assert.equal(state.error, null);
+  assert.equal(state.catalogsLoaded, true);
+  assert.deepEqual(state.resources.map((resource) => resource.id), ["sch-provider"]);
+  assert.deepEqual(state.appointments.map((entry) => entry.id), ["appt-1"]);
+});
+
+test("loadDay falls back to default config when stored JSON is malformed and still loads the day", async () => {
+  resetStore("2026-07-06");
+  const malformed: Basic = {
+    resourceType: "Basic",
+    id: "cfg-bad",
+    code: {
+      coding: [{ system: OSOD_SCHEDULING_CONFIG_SYSTEM, code: OSOD_SCHEDULING_CONFIG_CODE }],
+    },
+    extension: [{ url: OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
+  };
+  const client = writableClient({
+    basics: [malformed],
+    appointments: [appointment("appt-1", "2026-07-06T09:00:00-05:00")],
+  });
+
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
+
+  const state = useSchedulingStore.getState();
+  assert.deepEqual(state.config, DEFAULT_SCHEDULING_PRACTICE_CONFIG);
+  assert.equal(state.configResource, undefined);
+  assert.match(state.configError ?? "", /malformed|parsed/i);
+  assert.equal(state.error, null);
+  assert.equal(state.catalogsLoaded, true);
+  assert.deepEqual(state.appointments.map((entry) => entry.id), ["appt-1"]);
+});
+
+test("saveConfig refuses to overwrite when the stored config could not be read", async () => {
+  resetStore("2026-07-06");
+  const client = writableClient();
+  await useSchedulingStore.getState().loadDay({
+    fhirClient: {
+      ...client,
+      async search(resourceType, params) {
+        if (resourceType === "Basic") {
+          throw new Error("Basic search denied");
+        }
+        return client.search(resourceType, params);
+      },
+    },
+    force: true,
+  });
+
+  await assert.rejects(
+    useSchedulingStore.getState().saveConfig(STORED_CONFIG, { fhirClient: client }),
+    /stored settings could not be read; refusing to overwrite/i,
+  );
+
+  assert.equal(client.created.length, 0);
+});
+
+test("loadDay uses the newest scheduling-config singleton and warns when duplicates exist", async () => {
+  resetStore("2026-07-06");
+  const olderConfig = { ...STORED_CONFIG, timezoneOffset: "-06:00" };
+  const newerConfig = { ...STORED_CONFIG, timezoneOffset: "-07:00" };
+  const older = {
+    ...buildSchedulingPracticeConfigResource(olderConfig),
+    id: "cfg-older",
+    meta: { lastUpdated: "2026-07-05T10:00:00.000Z" },
+  };
+  const newer = {
+    ...buildSchedulingPracticeConfigResource(newerConfig),
+    id: "cfg-newer",
+    meta: { lastUpdated: "2026-07-06T10:00:00.000Z" },
+  };
+  const client = writableClient({ basics: [older, newer] });
+
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
+
+  const state = useSchedulingStore.getState();
+  assert.equal(state.config.timezoneOffset, "-07:00");
+  assert.equal(state.configResource?.id, "cfg-newer");
+  assert.match(state.configError ?? "", /multiple/i);
 });
 
 test("saveConfig updates the singleton Basic with config source tag and reloads the day", async () => {
@@ -340,6 +426,48 @@ test("saveConfig updates the singleton Basic with config source tag and reloads 
     client.searches.some((call) => call.resourceType === "Appointment"),
     true,
   );
+});
+
+test("saveConfig keeps the committed config, clears loading, and reloads only appointments", async () => {
+  resetStore("2026-07-06");
+  const existing = {
+    ...buildSchedulingPracticeConfigResource(DEFAULT_SCHEDULING_PRACTICE_CONFIG),
+    id: "cfg-1",
+    meta: { versionId: "4" },
+  };
+  useSchedulingStore.setState({
+    configResource: existing,
+    catalogsLoaded: true,
+    resources: seededSchedules(),
+    visitTypes: seededVisitTypes(),
+  });
+  const client = writableClient({ basics: [existing] });
+
+  await useSchedulingStore.getState().saveConfig(STORED_CONFIG, { fhirClient: client });
+
+  assert.deepEqual(useSchedulingStore.getState().config, STORED_CONFIG);
+  assert.equal(useSchedulingStore.getState().loading, false);
+  assert.equal(client.searches.filter((call) => call.resourceType === "Appointment").length, 1);
+  assert.equal(client.searches.filter((call) => call.resourceType === "Basic").length, 0);
+  assert.equal(client.searches.filter((call) => call.resourceType === "Schedule").length, 0);
+  assert.equal(client.searches.filter((call) => call.resourceType === "HealthcareService").length, 0);
+});
+
+test("config hydration reconciles a removed selected office back to all offices", async () => {
+  resetStore("2026-07-06");
+  useSchedulingStore.setState({ officeId: "satellite" });
+  const withoutSatellite = {
+    ...STORED_CONFIG,
+    offices: [{ id: "main", name: "Main Office" }],
+    officeBySchedule: {},
+  };
+  const client = writableClient({
+    basics: [{ ...buildSchedulingPracticeConfigResource(withoutSatellite), id: "cfg-1" }],
+  });
+
+  await useSchedulingStore.getState().loadDay({ fhirClient: client, force: true });
+
+  assert.equal(useSchedulingStore.getState().officeId, "all");
 });
 
 test("saveConfig creates the singleton Basic on first boot", async () => {

@@ -6,9 +6,10 @@ import {
   SCHEDULER_PALETTE,
   appointmentGeometry,
   availabilityShadingForColumn,
-  blocksForSchedule,
+  blocksForScheduleWithIndex,
   buildAppointmentBlockContent,
   buildTimeAxis,
+  isoFromDateAndMinutes,
   minutesFromIsoDateTime,
   resourceActorReference,
   resourceDisplay,
@@ -25,12 +26,10 @@ import {
   type ClinicMode,
   type SchedulingOpening,
 } from "../lib/scheduling";
-import { editableBlockedTimeIndex } from "../lib/scheduling-settings";
 import { todayYmd, useSchedulingStore } from "../lib/scheduling-store";
 import {
   confirmDoubleBookAndRetry,
   defaultAppointmentModalDraft,
-  isoFromDateAndMinutes,
   type AppointmentModalDraft,
 } from "../lib/scheduler-appointment-ui";
 import { AppointmentDetailsModal } from "./scheduler/AppointmentDetailsModal";
@@ -65,8 +64,10 @@ export function SchedulerDayGrid() {
   const officeId = useSchedulingStore((state) => state.officeId);
   const loading = useSchedulingStore((state) => state.loading);
   const error = useSchedulingStore((state) => state.error);
+  const configError = useSchedulingStore((state) => state.configError);
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
   const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
+  const clearConfigError = useSchedulingStore((state) => state.clearConfigError);
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
   const today = useSchedulingStore((state) => state.today);
   const loadDay = useSchedulingStore((state) => state.loadDay);
@@ -249,8 +250,7 @@ export function SchedulerDayGrid() {
     setSettingsOpen(true);
   }
 
-  function handleBlockedRegionClick(resource: Schedule, startMinutes: number, endMinutes: number) {
-    const blockIndex = editableBlockedTimeIndex(config, resource, date, startMinutes, endMinutes);
+  function handleBlockedRegionClick(blockIndex: number | undefined) {
     if (blockIndex !== undefined) {
       openSettings(blockIndex);
     }
@@ -335,6 +335,14 @@ export function SchedulerDayGrid() {
       {error && (
         <div className="border-y border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
           {error}
+        </div>
+      )}
+      {configError && (
+        <div className="flex items-center justify-between gap-3 border-y border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
+          <span>Scheduling settings warning: {configError}</span>
+          <button className="scheduler-button" type="button" onClick={clearConfigError}>
+            Dismiss
+          </button>
         </div>
       )}
       <section className="px-4 pb-5">
@@ -619,17 +627,19 @@ function ResourceColumn({
   slotMinutes: number;
   appointments: PositionedAppointment[];
   onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
-  onBlockedRegionClick: (resource: Schedule, startMinutes: number, endMinutes: number) => void;
+  onBlockedRegionClick: (blockIndex: number | undefined) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
 }) {
   const config = useSchedulingStore((state) => state.config);
+  const indexedBlocks = blocksForScheduleWithIndex(config, resource);
   const regions = availabilityShadingForColumn({
     date,
     axisStartMinutes,
     axisEndMinutes,
     slotMinutes,
     weeklyHours: weeklyHoursForSchedule(config, resource),
-    blocks: blocksForSchedule(config, resource),
+    blocks: indexedBlocks.map((entry) => entry.block),
+    blockIndexes: indexedBlocks.map((entry) => entry.blockIndex),
   });
 
   return (
@@ -660,7 +670,7 @@ function ResourceColumn({
       {regions
         .filter((region) => region.kind === "blocked")
         .map((region) => {
-          const editable = region.blockedKind === "custom";
+          const editable = region.blockedKind === "custom" && region.blockIndex !== undefined;
           return (
             <button
               key={`${columnIndex}-blocked-${region.startMinutes}-${region.endMinutes}`}
@@ -677,7 +687,7 @@ function ResourceColumn({
               onClick={(event) => {
                 event.stopPropagation();
                 if (editable) {
-                  onBlockedRegionClick(resource, region.startMinutes, region.endMinutes);
+                  onBlockedRegionClick(region.blockIndex);
                 }
               }}
             >

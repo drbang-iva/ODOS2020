@@ -4,8 +4,10 @@ import type { Appointment, HealthcareService, Schedule } from "@medplum/fhirtype
 import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
 import { buildVisitType } from "../src/fhir/schedulingVisitType.js";
 import {
+  availabilityShadingForColumn,
   buildSchedulingAppointment,
   findNextOpenings,
+  findOpenSearchScopeKey,
   scheduleReference,
   visibleSchedulingResourcesForOffice,
   type SchedulingPracticeConfig,
@@ -14,9 +16,10 @@ import {
   addSchedulingOffice,
   assignScheduleOffice,
   copyWeeklyHoursBetweenSchedules,
-  editableBlockedTimeIndex,
   removeSchedulingOffice,
   replaceSchedulingBlock,
+  validateBlockScope,
+  validateSchedulingPracticeSettings,
 } from "../../ui/src/lib/scheduling-settings.js";
 
 function schedules(): Schedule[] {
@@ -139,6 +142,56 @@ test("settings helpers update offices, block assigned-office removal, and copy r
   });
 });
 
+test("settings helpers reserve the all-office sentinel", () => {
+  const withAll = addSchedulingOffice(config(), "All");
+  assert.deepEqual(withAll.offices.at(-1), { id: "all-2", name: "All" });
+  assert.throws(
+    () =>
+      validateSchedulingPracticeSettings({
+        ...config(),
+        offices: [{ id: "all", name: "All" }],
+      }),
+    /reserved/i,
+  );
+});
+
+test("settings helper rejects selected block scope with zero resources", () => {
+  assert.throws(
+    () => validateBlockScope({ mode: "selected", scheduleReferences: [] }),
+    /selected resources/i,
+  );
+  assert.doesNotThrow(() => validateBlockScope({ mode: "all", scheduleReferences: [] }));
+});
+
+test("settings helper rejects overlapping or unsorted hours windows", () => {
+  assert.throws(
+    () =>
+      validateSchedulingPracticeSettings({
+        ...config(),
+        defaultWeeklyHours: {
+          mon: [
+            { start: "09:00", end: "12:00" },
+            { start: "11:30", end: "13:00" },
+          ],
+        },
+      }),
+    /overlap|sorted/i,
+  );
+  assert.throws(
+    () =>
+      validateSchedulingPracticeSettings({
+        ...config(),
+        defaultWeeklyHours: {
+          mon: [
+            { start: "13:00", end: "15:00" },
+            { start: "09:00", end: "12:00" },
+          ],
+        },
+      }),
+    /overlap|sorted/i,
+  );
+});
+
 test("blocked-time edit helper round-trips through the mirrored kernel validation", () => {
   const edited = replaceSchedulingBlock(config(), 0, {
     kind: "custom",
@@ -165,27 +218,38 @@ test("blocked-time edit helper round-trips through the mirrored kernel validatio
   );
 });
 
-test("only custom blocked regions are editable from the grid", () => {
-  const resource = schedules()[0]!;
+test("blocked regions carry their source block index for click-to-edit identity", () => {
   const blockedConfig: SchedulingPracticeConfig = {
     ...config(),
     blocks: [
-      { kind: "custom", description: "Rep lunch", date: "2026-07-06", start: "12:00", end: "13:00" },
+      { kind: "custom", description: "First", date: "2026-07-06", start: "12:00", end: "13:00" },
       {
-        kind: "staff-off",
-        description: "Training",
+        kind: "custom",
+        description: "Second",
         date: "2026-07-06",
-        start: "14:00",
-        end: "15:00",
+        start: "12:15",
+        end: "12:45",
         scheduleReferences: ["Schedule/sch-provider"],
       },
     ],
   };
 
-  assert.equal(editableBlockedTimeIndex(blockedConfig, resource, "2026-07-06", 12 * 60, 13 * 60), 0);
-  assert.equal(
-    editableBlockedTimeIndex(blockedConfig, resource, "2026-07-06", 14 * 60, 15 * 60),
-    undefined,
+  const blockedRegions = availabilityShadingForColumn({
+    date: "2026-07-06",
+    axisStartMinutes: 12 * 60,
+    axisEndMinutes: 13 * 60,
+    slotMinutes: 15,
+    weeklyHours: blockedConfig.defaultWeeklyHours,
+    blocks: blockedConfig.blocks,
+    blockIndexes: [0, 1],
+  }).filter((region) => region.kind === "blocked");
+
+  assert.deepEqual(
+    blockedRegions.map((region) => [region.description, region.blockIndex]),
+    [
+      ["First", 0],
+      ["Second", 1],
+    ],
   );
 });
 
@@ -249,7 +313,7 @@ test("findNextOpenings crosses days, uses the async day loader, respects limit, 
     "2026-07-07T09:00:00-05:00",
     "2026-07-07T09:30:00-05:00",
   ]);
-  assert.deepEqual(loadedDays, ["2026-07-06", "2026-07-07"]);
+  assert.deepEqual(loadedDays, ["2026-07-07"]);
 
   const capped = await findNextOpenings({
     visitTypeCode: "routine-exam-new",
@@ -263,4 +327,124 @@ test("findNextOpenings crosses days, uses the async day loader, respects limit, 
     appointmentsByDay: { "2026-07-06": [] },
   });
   assert.deepEqual(capped, []);
+});
+
+test("findNextOpenings clamps today's search start to the next practice-local slot boundary", async () => {
+  const openings = await findNextOpenings({
+    visitTypeCode: "routine-exam-new",
+    visitTypes: [routineVisitType()],
+    resources: [schedules()[0]!],
+    config: {
+      ...config(),
+      defaultWeeklyHours: { mon: [{ start: "09:00", end: "17:00" }] },
+    },
+    from: "2026-07-06T00:00:00-05:00",
+    now: () => "2026-07-06T20:00:00Z",
+    slotMinutes: 30,
+    limit: 2,
+    appointmentsByDay: { "2026-07-06": [] },
+  });
+
+  assert.deepEqual(openings.map((opening) => opening.start), [
+    "2026-07-06T15:00:00-05:00",
+    "2026-07-06T15:30:00-05:00",
+  ]);
+
+  const tomorrow = await findNextOpenings({
+    visitTypeCode: "routine-exam-new",
+    visitTypes: [routineVisitType()],
+    resources: [schedules()[0]!],
+    config: {
+      ...config(),
+      defaultWeeklyHours: { tue: [{ start: "09:00", end: "10:00" }] },
+    },
+    from: "2026-07-07T00:00:00-05:00",
+    now: () => "2026-07-06T20:00:00Z",
+    slotMinutes: 30,
+    limit: 1,
+    appointmentsByDay: { "2026-07-07": [] },
+  });
+
+  assert.equal(tomorrow[0]?.start, "2026-07-07T09:00:00-05:00");
+});
+
+test("findNextOpenings collapses duplicate candidates from overlapping hours windows", async () => {
+  const openings = await findNextOpenings({
+    visitTypeCode: "routine-exam-new",
+    visitTypes: [routineVisitType()],
+    resources: [schedules()[0]!],
+    config: {
+      ...config(),
+      defaultWeeklyHours: {
+        mon: [
+          { start: "09:00", end: "10:00" },
+          { start: "09:30", end: "10:30" },
+        ],
+      },
+    },
+    from: "2026-07-06T09:00:00-05:00",
+    now: () => "2026-07-05T12:00:00Z",
+    slotMinutes: 30,
+    limit: 5,
+    horizonDays: 1,
+    appointmentsByDay: { "2026-07-06": [] },
+  });
+
+  assert.deepEqual(openings.map((opening) => opening.start), [
+    "2026-07-06T09:00:00-05:00",
+    "2026-07-06T09:30:00-05:00",
+    "2026-07-06T10:00:00-05:00",
+  ]);
+});
+
+test("findNextOpenings skips appointment fetches for closed days and empty resource sets", async () => {
+  const loadedDays: string[] = [];
+  const closed = await findNextOpenings({
+    visitTypeCode: "routine-exam-new",
+    visitTypes: [routineVisitType()],
+    resources: [schedules()[0]!],
+    config: {
+      ...config(),
+      defaultWeeklyHours: { mon: [{ start: "09:00", end: "10:00" }] },
+    },
+    from: "2026-07-11T00:00:00-05:00",
+    now: () => "2026-07-10T12:00:00Z",
+    slotMinutes: 30,
+    limit: 1,
+    horizonDays: 2,
+    loadAppointmentsForDay: async (date) => {
+      loadedDays.push(date);
+      return [];
+    },
+  });
+  assert.deepEqual(closed, []);
+  assert.deepEqual(loadedDays, []);
+
+  const emptyResources = await findNextOpenings({
+    visitTypeCode: "routine-exam-new",
+    visitTypes: [routineVisitType()],
+    resources: [],
+    config: config(),
+    from: "2026-07-06T09:00:00-05:00",
+    slotMinutes: 30,
+    limit: 1,
+    loadAppointmentsForDay: async (date) => {
+      loadedDays.push(date);
+      return [];
+    },
+  });
+  assert.deepEqual(emptyResources, []);
+  assert.deepEqual(loadedDays, []);
+});
+
+test("find-open search scope changes when clinic mode or visible resources change", () => {
+  const resourceSet = schedules();
+  assert.notEqual(
+    findOpenSearchScopeKey({ clinicMode: "eyecare", resources: resourceSet }),
+    findOpenSearchScopeKey({ clinicMode: "aesthetics", resources: resourceSet }),
+  );
+  assert.notEqual(
+    findOpenSearchScopeKey({ clinicMode: "eyecare", resources: resourceSet.slice(0, 2) }),
+    findOpenSearchScopeKey({ clinicMode: "eyecare", resources: resourceSet.slice(0, 1) }),
+  );
 });

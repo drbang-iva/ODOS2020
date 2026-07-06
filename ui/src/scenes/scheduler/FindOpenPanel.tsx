@@ -1,6 +1,8 @@
 import type { HealthcareService, Schedule } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import {
+  FIND_OPEN_DEFAULT_LIMIT,
+  findOpenSearchScopeKey,
   resourceDisplay,
   scheduleReference,
   visibleSchedulingVisitTypes,
@@ -39,6 +41,9 @@ export function FindOpenPanel({
   const [resourceReference, setResourceReference] = useState("all");
   const [fromDate, setFromDate] = useState(defaultDate);
   const [openings, setOpenings] = useState<SchedulingOpening[]>([]);
+  const scopeKey = useMemo(() => findOpenSearchScopeKey({ clinicMode, resources }), [clinicMode, resources]);
+  const [lastScopeKey, setLastScopeKey] = useState(scopeKey);
+  const [stale, setStale] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +52,17 @@ export function FindOpenPanel({
       setVisitTypeCodeValue(firstVisitTypeCode);
     }
   }, [firstVisitTypeCode, visitTypeCodeValue]);
+
+  useEffect(() => {
+    if (scopeKey === lastScopeKey) {
+      return;
+    }
+    if (openings.length > 0) {
+      setOpenings([]);
+      setStale(true);
+    }
+    setLastScopeKey(scopeKey);
+  }, [lastScopeKey, openings.length, scopeKey]);
 
   async function search() {
     if (!visitTypeCodeValue) {
@@ -60,9 +76,11 @@ export function FindOpenPanel({
         visitTypeCode: visitTypeCodeValue,
         ...(resourceReference !== "all" ? { resourceScheduleReference: resourceReference } : {}),
         from: `${fromDate}T00:00:00${timezoneOffset}`,
-        limit: 5,
+        limit: FIND_OPEN_DEFAULT_LIMIT,
       });
       setOpenings(results);
+      setStale(false);
+      setLastScopeKey(scopeKey);
     } catch (err) {
       setOpenings([]);
       setError(err instanceof Error ? err.message : String(err));
@@ -127,9 +145,9 @@ export function FindOpenPanel({
       </div>
       {error && <div className="mt-3 text-sm text-red-200">{error}</div>}
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        {openings.map((opening) => (
+        {openings.map((opening, index) => (
           <button
-            key={`${opening.scheduleReference}-${opening.start}`}
+            key={`${opening.scheduleReference}-${opening.start}-${index}`}
             className="border border-white/10 bg-white/[0.05] px-3 py-2 text-left text-sm hover:bg-white/[0.1]"
             type="button"
             onClick={() => onSelect(opening, visitTypeCodeValue)}
@@ -138,7 +156,10 @@ export function FindOpenPanel({
             <span className="block text-xs text-white/55">{opening.actorDisplay ?? opening.scheduleReference}</span>
           </button>
         ))}
-        {!loading && openings.length === 0 && (
+        {!loading && stale && openings.length === 0 && (
+          <div className="text-sm text-white/45">Results are stale — search again.</div>
+        )}
+        {!loading && !stale && openings.length === 0 && (
           <div className="text-sm text-white/45">No openings loaded.</div>
         )}
         {loading && <div className="text-sm text-white/45">Searching openings...</div>}

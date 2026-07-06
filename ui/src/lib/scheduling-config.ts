@@ -2,6 +2,8 @@ import type { Basic } from "@medplum/fhirtypes";
 import {
   BLOCKED_TIME_KINDS,
   type BlockedTime,
+  type SchedulingOffice,
+  type SchedulingPracticeConfig,
   type WeeklyHours,
 } from "./scheduling";
 
@@ -15,19 +17,8 @@ export const OSOD_SCHEDULING_CONFIG_EXTENSION_URL =
 
 export type PersistedBlockedTime = BlockedTime & { scheduleReferences?: string[] };
 
-export interface SchedulingOffice {
-  id: string;
-  name: string;
-}
-
-export interface PersistedSchedulingPracticeConfig {
-  timezoneOffset: string;
-  defaultWeeklyHours: WeeklyHours;
-  weeklyHoursBySchedule: Record<string, WeeklyHours>;
-  blocks: PersistedBlockedTime[];
-  offices: SchedulingOffice[];
-  officeBySchedule: Record<string, string>;
-}
+export type { SchedulingOffice };
+export type PersistedSchedulingPracticeConfig = SchedulingPracticeConfig;
 
 const OFFSET = /^[+-]\d{2}:\d{2}$/;
 const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;

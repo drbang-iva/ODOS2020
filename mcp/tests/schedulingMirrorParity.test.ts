@@ -265,6 +265,115 @@ test("UI scheduler practice-config mirror validation errors match the kernel ver
   );
 });
 
+test("UI scheduler practice-config mirror weekly-hours errors match the kernel verbatim", () => {
+  const cases: McpPersistedSchedulingPracticeConfig[] = [
+    { ...PRACTICE_CONFIG, defaultWeeklyHours: { mon: [{ start: "8am", end: "12:00" }] } },
+    { ...PRACTICE_CONFIG, defaultWeeklyHours: { mon: [{ start: "12:00", end: "12:00" }] } },
+    {
+      ...PRACTICE_CONFIG,
+      weeklyHoursBySchedule: { "Schedule/sch-1": { tue: [{ start: "noon", end: "18:00" }] } },
+    },
+    {
+      ...PRACTICE_CONFIG,
+      weeklyHoursBySchedule: { "Schedule/sch-1": { tue: [{ start: "18:00", end: "10:00" }] } },
+    },
+  ];
+
+  for (const candidate of cases) {
+    assert.throws(
+      () => uiBuildSchedulingPracticeConfigResource(candidate),
+      (err) => {
+        assert.ok(err instanceof Error);
+        assert.throws(() => mcpBuildSchedulingPracticeConfigResource(candidate), {
+          message: err.message,
+        });
+        return true;
+      },
+    );
+  }
+});
+
+test("UI scheduler practice-config mirror block and office errors match the kernel verbatim", () => {
+  const cases: McpPersistedSchedulingPracticeConfig[] = [
+    { ...PRACTICE_CONFIG, blocks: [{ kind: "custom" }] },
+    { ...PRACTICE_CONFIG, blocks: [{ kind: "custom", date: "07/10/2026" }] },
+    { ...PRACTICE_CONFIG, blocks: [{ kind: "custom", date: "2026-07-10", start: "8am" }] },
+    { ...PRACTICE_CONFIG, blocks: [{ kind: "custom", date: "2026-07-10", end: "5pm" }] },
+    { ...PRACTICE_CONFIG, officeBySchedule: { "Schedule/sch-1": "missing-office" } },
+  ];
+
+  for (const candidate of cases) {
+    assert.throws(
+      () => uiBuildSchedulingPracticeConfigResource(candidate),
+      (err) => {
+        assert.ok(err instanceof Error);
+        assert.throws(() => mcpBuildSchedulingPracticeConfigResource(candidate), {
+          message: err.message,
+        });
+        return true;
+      },
+    );
+  }
+});
+
+test("UI scheduler practice-config mirror parse errors match the kernel verbatim", () => {
+  const validRaw = JSON.stringify(PRACTICE_CONFIG);
+  const cases = [
+    {
+      resourceType: "Basic",
+      code: { coding: [{ system: "https://wrong.example", code: "wrong" }] },
+      extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: validRaw }],
+    },
+    {
+      resourceType: "Basic",
+      code: {
+        coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+      },
+    },
+    {
+      resourceType: "Basic",
+      code: {
+        coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+      },
+      extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
+    },
+  ] as const;
+
+  for (const candidate of cases) {
+    assert.throws(
+      () => uiParseSchedulingPracticeConfig(candidate),
+      (err) => {
+        assert.ok(err instanceof Error);
+        assert.throws(() => mcpParseSchedulingPracticeConfig(candidate), {
+          message: err.message,
+        });
+        return true;
+      },
+    );
+  }
+});
+
+test("UI scheduler practice-config mirror parse drops unknown forward-compat keys like the kernel", () => {
+  const raw = JSON.stringify({ ...PRACTICE_CONFIG, futureKnob: { enabled: true } });
+  const uiBasic = {
+    resourceType: "Basic",
+    code: {
+      coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+    },
+    extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
+  } as const;
+  const mcpBasic = {
+    ...uiBasic,
+    code: {
+      coding: [{ system: MCP_OSOD_SCHEDULING_CONFIG_SYSTEM, code: MCP_OSOD_SCHEDULING_CONFIG_CODE }],
+    },
+    extension: [{ url: MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
+  } as const;
+
+  assert.deepEqual(uiParseSchedulingPracticeConfig(uiBasic), mcpParseSchedulingPracticeConfig(mcpBasic));
+  assert.equal("futureKnob" in uiParseSchedulingPracticeConfig(uiBasic), false);
+});
+
 test("UI scheduler mirror clinic-mode helpers match the kernel", () => {
   for (const mode of ["eyecare", "aesthetics", "both"]) {
     assert.deepEqual(uiDisciplinesForMode(mode), mcpDisciplinesForMode(mode));

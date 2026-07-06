@@ -9,11 +9,15 @@ import {
   OSOD_VISION_COVERAGE_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM,
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
+  FIND_OPEN_DEFAULT_LIMIT,
+  FIND_OPEN_HORIZON_DAYS,
   addMinutesIso,
+  appointmentDayBoundsParams,
   appointmentActorReferences,
   appointmentConfirmationExtension,
   appointmentDurationMinutes,
   appointmentVisitTypeCode,
+  addDaysYmd,
   findNextOpenings,
   isNonBlockingAppointmentStatus,
   isResourceVisibleInMode,
@@ -27,6 +31,7 @@ import {
   visitTypeDurationMinutes,
   visitTypeEligibleResourceReferences,
   visibleSchedulingResourcesForOffice,
+  ymdFromIsoDateTime,
   type AppointmentConfirmationStatus,
   type BookSchedulingAppointmentInput,
   type ClinicMode,
@@ -36,6 +41,7 @@ import {
   type SchedulingPracticeConfig,
 } from "./scheduling";
 import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
+import { validateSchedulingPracticeSettings } from "./scheduling-settings";
 import {
   OSOD_SCHEDULING_CONFIG_CODE,
   OSOD_SCHEDULING_CONFIG_SYSTEM,
@@ -131,6 +137,8 @@ export interface SchedulingStoreState {
   appointments: Appointment[];
   config: SchedulingPracticeConfig;
   configResource?: Basic;
+  configError: string | null;
+  configReadFailed: boolean;
   officeId: string | "all";
   catalogsLoaded: boolean;
   loading: boolean;
@@ -138,12 +146,12 @@ export interface SchedulingStoreState {
   setClinicMode: (clinicMode: ClinicMode) => void;
   setDate: (date: string) => void;
   setOfficeId: (officeId: string | "all") => void;
+  clearConfigError: () => void;
   shiftDate: (days: number) => void;
   today: () => void;
-  loadConfig: (deps?: { fhirClient?: SchedulingFhirClient }) => Promise<void>;
   saveConfig: (config: SchedulingPracticeConfig, deps?: SchedulingWriteDeps) => Promise<void>;
   loadDay: (deps?: { fhirClient?: SchedulingFhirClient; force?: boolean }) => Promise<void>;
-  findOpenings: (input: FindOpeningsInput, deps?: { fhirClient?: SchedulingFhirClient }) => Promise<SchedulingOpening[]>;
+  findOpenings: (input: FindOpeningsInput, deps?: { fhirClient?: SchedulingFhirClient; now?: () => string }) => Promise<SchedulingOpening[]>;
   createAppointment: (
     input: BookSchedulingAppointmentInput,
     deps?: SchedulingWriteDeps,
@@ -179,6 +187,8 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   appointments: [],
   config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
   configResource: undefined,
+  configError: null,
+  configReadFailed: false,
   officeId: "all",
   catalogsLoaded: false,
   loading: false,
@@ -186,41 +196,26 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   setClinicMode: (clinicMode) => set({ clinicMode }),
   setDate: (date) => set({ date }),
   setOfficeId: (officeId) => set({ officeId }),
+  clearConfigError: () => set({ configError: null }),
   shiftDate: (days) => set({ date: addDaysYmd(get().date, days) }),
   today: () => set({ date: todayYmd(new Date(), get().config.timezoneOffset) }),
-  async loadConfig(deps) {
-    const client = deps?.fhirClient ?? fhir;
-    const date = get().date;
-    set({ loading: true, error: null });
-    try {
-      const loaded = await fetchSchedulingConfig(client);
-      if (get().date !== date) {
-        return;
-      }
-      set({ config: loaded.config, configResource: loaded.resource, loading: false });
-    } catch (err) {
-      if (get().date !== date) {
-        return;
-      }
-      set({ loading: false, error: errorMessage(err) });
-      throw err;
-    }
-  },
   async saveConfig(config, deps) {
     const client = deps?.fhirClient ?? fhir;
-    const date = get().date;
+    if (get().configReadFailed) {
+      const message = "Stored settings could not be read; refusing to overwrite.";
+      set({ loading: false, error: message });
+      throw new Error(message);
+    }
     set({ loading: true, error: null });
     try {
+      validateSchedulingPracticeSettings(config);
       const existing = get().configResource;
       const resource = buildSchedulingPracticeConfigResource(config, existing);
       const saved = existing?.id
         ? await updateResource(client, resource, SCHEDULING_SOURCE_TAGS.config)
         : await createResource(client, resource, SCHEDULING_SOURCE_TAGS.config);
-      if (get().date !== date) {
-        return;
-      }
-      set({ config, configResource: saved });
-      await get().loadDay({ fhirClient: client, force: true });
+      set(configStatePatch(get(), config, saved, null, false, { loading: false, error: null }));
+      await get().loadDay({ fhirClient: client });
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
@@ -233,8 +228,13 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const loadedConfig = shouldLoadCatalogs
-        ? await fetchSchedulingConfig(client)
-        : { config: get().config, resource: get().configResource };
+        ? await safeFetchSchedulingConfig(client)
+        : {
+            config: get().config,
+            resource: get().configResource,
+            warning: get().configError,
+            readFailed: get().configReadFailed,
+          };
       if (get().date !== date) {
         return;
       }
@@ -249,10 +249,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         searchAll<Appointment>(
           client,
           "Appointment",
-          new URLSearchParams([
-            ["date", `ge${date}T00:00:00${config.timezoneOffset}`],
-            ["date", `lt${addDaysYmd(date, 1)}T00:00:00${config.timezoneOffset}`],
-          ]),
+          appointmentDayBoundsParams(date, config.timezoneOffset),
         ),
       ]);
       if (get().date !== date) {
@@ -262,8 +259,13 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         resources,
         visitTypes,
         appointments,
-        config,
-        configResource: loadedConfig.resource,
+        ...configStatePatch(
+          get(),
+          config,
+          loadedConfig.resource,
+          loadedConfig.warning ?? null,
+          loadedConfig.readFailed ?? false,
+        ),
         catalogsLoaded: true,
         loading: false,
       });
@@ -298,17 +300,11 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       config: state.config,
       from: input.from,
       slotMinutes: state.slotMinutes,
-      limit: input.limit ?? 5,
-      horizonDays: input.horizonDays,
-      loadAppointmentsForDay: (date) =>
-        searchAll<Appointment>(
-          client,
-          "Appointment",
-          new URLSearchParams([
-            ["date", `ge${date}T00:00:00${state.config.timezoneOffset}`],
-            ["date", `lt${addDaysYmd(date, 1)}T00:00:00${state.config.timezoneOffset}`],
-          ]),
-        ),
+      limit: input.limit ?? FIND_OPEN_DEFAULT_LIMIT,
+      horizonDays: input.horizonDays ?? FIND_OPEN_HORIZON_DAYS,
+      now: deps?.now ?? (() => new Date().toISOString()),
+      loadAppointmentsForDay: (date, actorReferences) =>
+        fetchOpeningAppointmentsForDay(state, client, date, actorReferences ?? []),
     });
   },
   async createAppointment(input, deps) {
@@ -401,12 +397,6 @@ export function todayYmd(
     .slice(0, 10);
 }
 
-export function addDaysYmd(date: string, days: number): string {
-  const cursor = new Date(`${date}T00:00:00Z`);
-  cursor.setUTCDate(cursor.getUTCDate() + days);
-  return cursor.toISOString().slice(0, 10);
-}
-
 export async function searchAll<T extends Resource>(
   client: SchedulingFhirClient,
   resourceType: T["resourceType"],
@@ -434,19 +424,75 @@ export async function searchAll<T extends Resource>(
 async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
   config: SchedulingPracticeConfig;
   resource?: Basic;
+  warning?: string;
 }> {
   const bundle = await client.search<Basic>(
     "Basic",
     new URLSearchParams([
       ["code", `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`],
-      ["_count", "1"],
+      ["_count", "10"],
     ]),
   );
-  const resource = bundle.entry?.find((entry) => entry.resource)?.resource;
+  const resources = (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Basic => Boolean(resource));
+  const resource = newestBasic(resources);
   if (!resource) {
     return { config: DEFAULT_SCHEDULING_PRACTICE_CONFIG };
   }
-  return { config: parseSchedulingPracticeConfig(resource), resource };
+  return {
+    config: parseSchedulingPracticeConfig(resource),
+    resource,
+    ...(resources.length > 1
+      ? { warning: `Multiple scheduling-config singletons found; using ${resource.id ? `Basic/${resource.id}` : "the newest resource"}.` }
+      : {}),
+  };
+}
+
+async function safeFetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
+  config: SchedulingPracticeConfig;
+  resource?: Basic;
+  warning?: string;
+  readFailed?: boolean;
+}> {
+  try {
+    return { ...(await fetchSchedulingConfig(client)), readFailed: false };
+  } catch (err) {
+    return {
+      config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+      warning: errorMessage(err),
+      readFailed: true,
+    };
+  }
+}
+
+function newestBasic(resources: Basic[]): Basic | undefined {
+  return [...resources].sort((a, b) => lastUpdatedMs(b) - lastUpdatedMs(a))[0];
+}
+
+function lastUpdatedMs(resource: Basic): number {
+  const value = resource.meta?.lastUpdated;
+  return value ? Date.parse(value) || 0 : 0;
+}
+
+function configStatePatch(
+  state: SchedulingStoreState,
+  config: SchedulingPracticeConfig,
+  resource: Basic | undefined,
+  configError: string | null,
+  configReadFailed: boolean,
+  extra: Partial<SchedulingStoreState> = {},
+): Partial<SchedulingStoreState> {
+  const officeIds = new Set(config.offices.map((office) => office.id));
+  const officeId = state.officeId === "all" || officeIds.has(state.officeId) ? state.officeId : "all";
+  return {
+    config,
+    configResource: resource,
+    configError,
+    configReadFailed,
+    officeId,
+    ...extra,
+  };
 }
 
 function paramsWithCount(
@@ -639,17 +685,41 @@ async function fetchConflictAppointmentsByActors(
     const appointments = await searchAll<Appointment>(
       client,
       "Appointment",
-      new URLSearchParams([
-        ["date", `ge${date}T00:00:00${state.config.timezoneOffset}`],
-        ["date", `lt${addDaysYmd(date, 1)}T00:00:00${state.config.timezoneOffset}`],
-        ["actor", actor],
-      ]),
+      withActorParam(appointmentDayBoundsParams(date, state.config.timezoneOffset), actor),
     );
     for (const appointment of appointments) {
       byKey.set(appointment.id ?? JSON.stringify(appointment), appointment);
     }
   }
   return [...byKey.values()];
+}
+
+async function fetchOpeningAppointmentsForDay(
+  state: SchedulingStoreState,
+  client: SchedulingFhirClient,
+  date: string,
+  actorReferences: string[],
+): Promise<Appointment[]> {
+  if (actorReferences.length === 0) {
+    return searchAll<Appointment>(client, "Appointment", appointmentDayBoundsParams(date, state.config.timezoneOffset));
+  }
+  const byKey = new Map<string, Appointment>();
+  for (const actor of actorReferences) {
+    const appointments = await searchAll<Appointment>(
+      client,
+      "Appointment",
+      withActorParam(appointmentDayBoundsParams(date, state.config.timezoneOffset), actor),
+    );
+    for (const appointment of appointments) {
+      byKey.set(appointment.id ?? JSON.stringify(appointment), appointment);
+    }
+  }
+  return [...byKey.values()];
+}
+
+function withActorParam(params: URLSearchParams, actor: string): URLSearchParams {
+  params.set("actor", actor);
+  return params;
 }
 
 function assertNoAppointmentConflicts(
@@ -926,16 +996,6 @@ function resourceActorsKey(appointment: Appointment): string {
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
   return aStart < bEnd && bStart < aEnd;
-}
-
-function ymdFromIsoDateTime(dateTime: string, timezoneOffset: string): string {
-  const timestamp = Date.parse(dateTime);
-  if (!Number.isFinite(timestamp)) {
-    throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
-  }
-  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 function isDisciplineVisibleForMode(discipline: string, mode: ClinicMode): boolean {

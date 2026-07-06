@@ -1,15 +1,19 @@
-import type { Schedule } from "@medplum/fhirtypes";
 import {
-  blocksForSchedule,
-  scheduleReference,
   type BlockedTime,
+  type DayHours,
   type SchedulingPracticeConfig,
   type Weekday,
 } from "./scheduling";
+import { minutesOfDay } from "./scheduling";
 import { buildSchedulingPracticeConfigResource } from "./scheduling-config";
 
-const WEEKDAY_BY_UTC_DAY: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const WEEKDAYS: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const RESERVED_OFFICE_IDS = new Set(["all"]);
+
+export interface BlockScopeState {
+  mode: "all" | "selected";
+  scheduleReferences: string[];
+}
 
 export function addSchedulingOffice(
   config: SchedulingPracticeConfig,
@@ -19,7 +23,7 @@ export function addSchedulingOffice(
   if (!trimmed) {
     throw new Error("Office name is required.");
   }
-  const id = uniqueOfficeId(trimmed, new Set(config.offices.map((office) => office.id)));
+  const id = uniqueOfficeId(trimmed, new Set([...config.offices.map((office) => office.id), ...RESERVED_OFFICE_IDS]));
   return validated({ ...config, offices: [...config.offices, { id, name: trimmed }] });
 }
 
@@ -88,6 +92,7 @@ export function replaceSchedulingBlock(
   index: number,
   block: BlockedTime,
 ): SchedulingPracticeConfig {
+  assertPersistableBlockScope(block);
   const blocks = [...config.blocks];
   blocks[index] = cleanBlock(block);
   return validated({ ...config, blocks });
@@ -100,44 +105,60 @@ export function deleteSchedulingBlock(
   return validated({ ...config, blocks: config.blocks.filter((_, candidateIndex) => candidateIndex !== index) });
 }
 
-export function editableBlockedTimeIndex(
-  config: SchedulingPracticeConfig,
-  schedule: Schedule,
-  date: string,
-  startMinutes: number,
-  endMinutes: number,
-): number | undefined {
-  const applicable = new Set(blocksForSchedule(config, schedule));
-  const weekday = WEEKDAY_BY_UTC_DAY[new Date(`${date}T00:00:00Z`).getUTCDay()]!;
-  const index = config.blocks.findIndex((block) => {
-    if (block.kind !== "custom" || !applicable.has(block)) {
-      return false;
-    }
-    if (block.date !== date && !(block.weekdays?.includes(weekday) ?? false)) {
-      return false;
-    }
-    const blockStart = block.start ? minutesOfDay(block.start, "Blocked-time start") : 0;
-    const blockEnd = block.end ? minutesOfDay(block.end, "Blocked-time end") : 24 * 60;
-    return startMinutes < blockEnd && blockStart < endMinutes;
-  });
-  return index >= 0 ? index : undefined;
+export function blockScopeState(block: BlockedTime): BlockScopeState {
+  return block.scheduleReferences?.length
+    ? { mode: "selected", scheduleReferences: [...block.scheduleReferences] }
+    : { mode: "all", scheduleReferences: [] };
 }
 
-export function customBlockIndexForSchedule(
-  config: SchedulingPracticeConfig,
-  schedule: Schedule,
-  block: BlockedTime,
-): number | undefined {
-  const reference = scheduleReference(schedule);
-  const index = config.blocks.findIndex(
-    (candidate) =>
-      candidate === block &&
-      candidate.kind === "custom" &&
-      (!candidate.scheduleReferences ||
-        candidate.scheduleReferences.length === 0 ||
-        (reference !== undefined && candidate.scheduleReferences.includes(reference))),
+export function validateBlockScope(scope: BlockScopeState): void {
+  if (scope.mode === "selected" && scope.scheduleReferences.length === 0) {
+    throw new Error("Selected resources scope requires at least one selected resource.");
+  }
+}
+
+export function applyBlockScope(block: BlockedTime, scope: BlockScopeState): BlockedTime {
+  validateBlockScope(scope);
+  if (scope.mode === "all") {
+    const { scheduleReferences, ...rest } = block;
+    void scheduleReferences;
+    return rest;
+  }
+  return { ...block, scheduleReferences: [...scope.scheduleReferences] };
+}
+
+export function validateSchedulingPracticeSettings(config: SchedulingPracticeConfig): void {
+  for (const office of config.offices) {
+    if (!office.name.trim()) {
+      throw new Error("Office name is required.");
+    }
+    if (RESERVED_OFFICE_IDS.has(office.id)) {
+      throw new Error(`Office id "${office.id}" is reserved for the All Offices selector.`);
+    }
+  }
+  buildSchedulingPracticeConfigResource(config);
+  assertSortedNonOverlappingHours(config.defaultWeeklyHours, "Default weekly hours");
+  for (const [scheduleReference, hours] of Object.entries(config.weeklyHoursBySchedule)) {
+    assertSortedNonOverlappingHours(hours, `Weekly hours for ${scheduleReference}`);
+  }
+  for (const block of config.blocks) {
+    assertPersistableBlockScope(block);
+  }
+}
+
+export function nextAvailableHoursWindow(windows: DayHours[]): DayHours | undefined {
+  if (windows.length === 0) {
+    return { start: "09:00", end: "17:00" };
+  }
+  const lastEnd = windows.reduce(
+    (latest, window) => Math.max(latest, minutesOfDay(window.end, "Operating-hours end")),
+    0,
   );
-  return index >= 0 ? index : undefined;
+  if (lastEnd >= 23 * 60) {
+    return undefined;
+  }
+  const end = Math.min(lastEnd + 60, 23 * 60 + 59);
+  return { start: formatMinutes(lastEnd), end: formatMinutes(end) };
 }
 
 function cleanBlock(block: BlockedTime): BlockedTime {
@@ -172,18 +193,34 @@ function slug(value: string): string {
 }
 
 function validated(config: SchedulingPracticeConfig): SchedulingPracticeConfig {
-  buildSchedulingPracticeConfigResource(config);
+  validateSchedulingPracticeSettings(config);
   return config;
 }
 
-function clone<T>(value: T): T {
+export function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function minutesOfDay(time: string, context: string): number {
-  const match = TIME_HHMM.exec(time);
-  if (!match) {
-    throw new Error(`${context} must be an HH:MM 24-hour time, got "${time}".`);
+function assertSortedNonOverlappingHours(hours: SchedulingPracticeConfig["defaultWeeklyHours"], context: string): void {
+  for (const weekday of WEEKDAYS) {
+    let previousEnd = -1;
+    for (const window of hours[weekday] ?? []) {
+      const start = minutesOfDay(window.start, `${context} ${weekday} start`);
+      const end = minutesOfDay(window.end, `${context} ${weekday} end`);
+      if (start < previousEnd) {
+        throw new Error(`${context} ${weekday} windows must be sorted and non-overlapping.`);
+      }
+      previousEnd = end;
+    }
   }
-  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function assertPersistableBlockScope(block: BlockedTime): void {
+  if (block.scheduleReferences && block.scheduleReferences.length === 0) {
+    validateBlockScope({ mode: "selected", scheduleReferences: [] });
+  }
+}
+
+function formatMinutes(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
