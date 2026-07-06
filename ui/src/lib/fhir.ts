@@ -16,6 +16,7 @@ export type JsonPatchOperation =
   | { op: "move" | "copy"; from: string; path: string };
 
 type TransactionResponse<T> = Bundle & { readonly __osodResponseType?: T };
+export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
   const verifierBytes = new Uint8Array(32);
@@ -92,7 +93,7 @@ export const fhir = {
 
   async search<T extends Resource>(
     resourceType: T["resourceType"],
-    params: Record<string, string> = {},
+    params: FhirSearchParams = {},
   ): Promise<Bundle<T>> {
     const query = new URLSearchParams(params).toString();
     const url = `${BASE}/${resourceType}${query ? "?" + query : ""}`;
