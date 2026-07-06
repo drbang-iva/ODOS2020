@@ -102,6 +102,12 @@ export const fhir = {
     return (await res.json()) as Bundle<T>;
   },
 
+  async searchUrl<T extends Resource>(url: string): Promise<Bundle<T>> {
+    const res = await fetch(normalizeFhirSearchUrl(url), { headers: headers() });
+    if (!res.ok) throw await toError(res);
+    return (await res.json()) as Bundle<T>;
+  },
+
   async read<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
@@ -160,6 +166,14 @@ export const fhir = {
     return responseBundle;
   },
 };
+
+function normalizeFhirSearchUrl(url: string): string {
+  const parsed = new URL(url, "http://osod.local");
+  if (parsed.pathname.startsWith(BASE)) {
+    return `${parsed.pathname}${parsed.search}`;
+  }
+  return url;
+}
 
 function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
   return outcome.issue

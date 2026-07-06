@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Schedule } from "@medplum/fhirtypes";
+import type { HealthcareService, Schedule } from "@medplum/fhirtypes";
 import { buildSchedulingAppointment } from "../src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
+import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import { defaultVisitTypeCatalog } from "../src/fhir/schedulingVisitType.js";
 import {
   SCHEDULER_PALETTE,
   appointmentGeometry,
   availabilityShadingForColumn,
+  blocksForSchedule,
   buildAppointmentBlockContent,
   buildTimeAxis,
   scheduleReference,
+  visitTypeDisplayColor,
   visibleAppointmentsForMode,
   visibleSchedulingResources,
   visibleSchedulingVisitTypes,
@@ -96,12 +99,75 @@ test("appointment geometry maps actor, wall-clock start, and duration onto colum
   });
 
   assert.deepEqual(
-    appointmentGeometry({ appointment, resources, axisStartMinutes: 8 * 60, slotMinutes: 30 }),
-    {
+    appointmentGeometry({
+      appointment,
+      resources,
+      axisStartMinutes: 8 * 60,
+      slotMinutes: 30,
+      timezoneOffset: "-05:00",
+    }),
+    [{
       columnIndex: 1,
       rowStart: 2.5,
       rowSpan: 1.5,
+    }],
+  );
+});
+
+test("appointment geometry places UTC instants in practice-local rows", () => {
+  const resources = [provider("sch-od", "Practitioner/od", ["eyecare"])];
+  const appointment = buildSchedulingAppointment({
+    patient: { reference: "Patient/p1", display: "Doe, Jane" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }],
+    start: "2026-07-06T14:00:00Z",
+    durationMinutes: 30,
+  });
+
+  assert.deepEqual(
+    appointmentGeometry({
+      appointment,
+      resources,
+      axisStartMinutes: 8 * 60,
+      slotMinutes: 30,
+      timezoneOffset: "-05:00",
+    }),
+    [{ columnIndex: 0, rowStart: 2, rowSpan: 1 }],
+  );
+});
+
+test("appointment geometry emits one block for every booked resource column", () => {
+  const resources = [
+    provider("sch-od", "Practitioner/od", ["eyecare"]),
+    {
+      ...buildSchedulingResource({
+        kind: "room",
+        actorReference: "Location/exam-1",
+        actorDisplay: "Exam 1",
+        disciplines: ["eyecare"],
+      }),
+      id: "sch-room",
     },
+  ];
+  const appointment = buildSchedulingAppointment({
+    patient: { reference: "Patient/p1", display: "Doe, Jane" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }, { reference: "Location/exam-1" }],
+    start: "2026-07-06T09:00:00-05:00",
+    durationMinutes: 30,
+  });
+
+  assert.deepEqual(
+    appointmentGeometry({
+      appointment,
+      resources,
+      axisStartMinutes: 8 * 60,
+      slotMinutes: 30,
+      timezoneOffset: "-05:00",
+    }).map((geometry) => geometry.columnIndex),
+    [0, 1],
   );
 });
 
@@ -128,6 +194,36 @@ test("availability shading marks outside hours, in-hours, and blocked regions pe
   assert.equal(regions[3]?.rowSpan, 1);
   assert.equal(regions[3]?.blockedKind, "custom");
   assert.equal(regions[3]?.description, "Rep lunch");
+});
+
+test("blocks can scope to one schedule without shading every resource column", () => {
+  const resourceA = provider("sch-a", "Practitioner/a", ["eyecare"]);
+  const resourceB = provider("sch-b", "Practitioner/b", ["eyecare"]);
+  const config: SchedulingPracticeConfig = {
+    timezoneOffset: "-05:00",
+    defaultWeeklyHours: { mon: [{ start: "08:00", end: "12:00" }] },
+    weeklyHoursBySchedule: {},
+    blocks: [
+      { kind: "custom", description: "Lunch", weekdays: ["mon"], start: "12:00", end: "13:00" },
+      {
+        kind: "staff-off",
+        description: "OD out",
+        date: MONDAY,
+        start: "09:00",
+        end: "10:00",
+        scheduleReferences: ["Schedule/sch-a"],
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    blocksForSchedule(config, resourceA).map((block) => block.description),
+    ["Lunch", "OD out"],
+  );
+  assert.deepEqual(
+    blocksForSchedule(config, resourceB).map((block) => block.description),
+    ["Lunch"],
+  );
 });
 
 test("appointment content assembly renders patient, visit type, status axes, insurance, and badges", () => {
@@ -184,4 +280,61 @@ test("non-patient appointments render as gold blocks and hidden-discipline appoi
   assert.deepEqual(visibleAppointmentsForMode([staffMeeting, aesthetics], "eyecare"), [staffMeeting]);
   assert.deepEqual(visibleAppointmentsForMode([staffMeeting, aesthetics], "both"), [staffMeeting, aesthetics]);
   assert.equal(scheduleReference(provider("sch-od", "Practitioner/od", ["eyecare"])), "Schedule/sch-od");
+});
+
+test("cancelled and entered-in-error appointments do not occupy visible grid slots", () => {
+  const live = buildSchedulingAppointment({
+    patient: { reference: "Patient/live", display: "Live Patient" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }],
+    start: "2026-07-06T09:00:00-05:00",
+    durationMinutes: 30,
+    status: "scheduled",
+  });
+  const cancelled = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/cancelled", display: "Cancelled Patient" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/od" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+      status: "cancelled",
+    }),
+    id: "cancelled",
+  };
+  const enteredInError = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/error", display: "Error Patient" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/od" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+      status: "scheduled",
+    }),
+    id: "entered-in-error",
+    status: "entered-in-error" as const,
+  };
+
+  assert.deepEqual(
+    visibleAppointmentsForMode([cancelled, enteredInError, live], "eyecare").map((appointment) => appointment.id),
+    [live.id],
+  );
+});
+
+test("visit type display color falls back through discipline defaults before new-exam blue", () => {
+  const aestheticsNoColor: HealthcareService = {
+    resourceType: "HealthcareService",
+    active: true,
+    category: [{ coding: [{ system: OSOD_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
+  };
+  const noDisciplineNoColor: HealthcareService = {
+    resourceType: "HealthcareService",
+    active: true,
+  };
+
+  assert.equal(visitTypeDisplayColor(aestheticsNoColor), SCHEDULER_PALETTE.aestheticsCyan);
+  assert.equal(visitTypeDisplayColor(noDisciplineNoColor), SCHEDULER_PALETTE.newExamBlue);
 });

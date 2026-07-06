@@ -6,6 +6,7 @@ import {
   SCHEDULER_PALETTE,
   appointmentGeometry,
   availabilityShadingForColumn,
+  blocksForSchedule,
   buildAppointmentBlockContent,
   buildTimeAxis,
   resourceDisplay,
@@ -13,15 +14,23 @@ import {
   visibleSchedulingResources,
   visibleSchedulingVisitTypes,
   visitTypeCode,
-  visitTypeColor,
+  visitTypeDisplayColor,
   weeklyHoursForSchedule,
   type AppointmentBlockContent,
   type AppointmentGeometry,
+  type ClinicMode,
 } from "../lib/scheduling";
 import { useSchedulingStore } from "../lib/scheduling-store";
 
 const ROW_HEIGHT = 46;
 const GUTTER_WIDTH = 76;
+const DATE_DISPLAY_FORMAT = new Intl.DateTimeFormat(undefined, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 interface PositionedAppointment {
   appointment: Appointment;
@@ -68,25 +77,35 @@ export function SchedulerDayGrid() {
   const positionedAppointments = useMemo(
     () =>
       visibleAppointments
-        .map((appointment): PositionedAppointment | undefined => {
-          const geometry = appointmentGeometry({
+        .flatMap((appointment): PositionedAppointment[] => {
+          const geometries = appointmentGeometry({
             appointment,
             resources: visibleResources,
             axisStartMinutes: timeAxis.startMinutes,
             slotMinutes,
+            timezoneOffset: config.timezoneOffset,
           });
-          if (!geometry || geometry.rowStart + geometry.rowSpan <= 0 || geometry.rowStart >= timeAxis.rows.length) {
-            return undefined;
-          }
-          return {
-            appointment,
-            geometry,
-            content: buildAppointmentBlockContent(appointment, visitTypes),
-          };
+          return geometries
+            .filter(
+              (geometry) =>
+                geometry.rowStart + geometry.rowSpan > 0 && geometry.rowStart < timeAxis.rows.length,
+            )
+            .map((geometry) => ({
+              appointment,
+              geometry,
+              content: buildAppointmentBlockContent(appointment, visitTypes),
+            }));
         })
-        .filter((block): block is PositionedAppointment => Boolean(block))
         .sort((a, b) => a.geometry.rowStart - b.geometry.rowStart),
-    [visibleAppointments, visibleResources, timeAxis.startMinutes, timeAxis.rows.length, slotMinutes, visitTypes],
+    [
+      visibleAppointments,
+      visibleResources,
+      timeAxis.startMinutes,
+      timeAxis.rows.length,
+      slotMinutes,
+      config.timezoneOffset,
+      visitTypes,
+    ],
   );
   const gridTemplateColumns =
     visibleResources.length > 0
@@ -173,10 +192,10 @@ function SchedulerToolbar({
   onPreviousDay,
   onToday,
 }: {
-  clinicMode: string;
+  clinicMode: ClinicMode;
   date: string;
   legendOpen: boolean;
-  onClinicModeChange: (mode: "eyecare" | "aesthetics" | "both") => void;
+  onClinicModeChange: (mode: ClinicMode) => void;
   onLegendToggle: () => void;
   onNextDay: () => void;
   onPreviousDay: () => void;
@@ -223,7 +242,7 @@ function SchedulerToolbar({
         className="scheduler-select"
         value={clinicMode}
         aria-label="Clinic mode"
-        onChange={(event) => onClinicModeChange(event.target.value as "eyecare" | "aesthetics" | "both")}
+        onChange={(event) => onClinicModeChange(event.target.value as ClinicMode)}
       >
         {CLINIC_MODES.map((mode) => (
           <option key={mode.code} value={mode.code}>
@@ -242,7 +261,7 @@ function SchedulerLegend({ visitTypes }: { visitTypes: HealthcareService[] }) {
         <span className="text-sm text-white/45">No active visit types</span>
       ) : (
         visitTypes.map((visitType) => {
-          const color = visitTypeColor(visitType) ?? SCHEDULER_PALETTE.newExamBlue;
+          const color = visitTypeDisplayColor(visitType);
           return (
             <div
               key={visitType.id ?? visitTypeCode(visitType) ?? visitType.name}
@@ -319,7 +338,7 @@ function ResourceColumn({
     axisEndMinutes,
     slotMinutes,
     weeklyHours: weeklyHoursForSchedule(config, resource),
-    blocks: config.blocks,
+    blocks: blocksForSchedule(config, resource),
   });
 
   return (
@@ -361,7 +380,10 @@ function ResourceColumn({
           </div>
         ))}
       {appointments.map((block) => (
-        <AppointmentBlock key={block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`} block={block} />
+        <AppointmentBlock
+          key={`${block.geometry.columnIndex}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
+          block={block}
+        />
       ))}
     </div>
   );
@@ -407,13 +429,7 @@ function AppointmentBlock({ block }: { block: PositionedAppointment }) {
 }
 
 function formatDateDisplay(date: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T12:00:00Z`));
+  return DATE_DISPLAY_FORMAT.format(new Date(`${date}T12:00:00Z`));
 }
 
 function contrastTextColor(hex: string): string {

@@ -135,6 +135,7 @@ export interface BlockedTime {
   weekdays?: Weekday[];
   start?: string;
   end?: string;
+  scheduleReferences?: string[];
 }
 
 export interface CoverageDisplay {
@@ -199,6 +200,8 @@ export interface AppointmentBlockContent {
   isNonPatient: boolean;
 }
 
+export const NON_BLOCKING_APPOINTMENT_STATUSES = ["cancelled", "entered-in-error"] as const satisfies readonly Appointment["status"][];
+
 const MODE_BY_CODE = new Map<string, (typeof CLINIC_MODES)[number]>(
   CLINIC_MODES.map((mode) => [mode.code, mode]),
 );
@@ -218,6 +221,7 @@ const STATUS_BY_CODE = new Map<string, (typeof OSOD_APPOINTMENT_STATUSES)[number
 const BLOCKED_KIND_BY_CODE = new Map<string, (typeof BLOCKED_TIME_KINDS)[number]>(
   BLOCKED_TIME_KINDS.map((kind) => [kind.code, kind]),
 );
+const NON_BLOCKING_STATUS_SET = new Set<Appointment["status"]>(NON_BLOCKING_APPOINTMENT_STATUSES);
 const DEFAULT_COLOR_BY_DISCIPLINE: Record<SchedulingDiscipline, string> = {
   eyecare: SCHEDULER_PALETTE.newExamBlue,
   aesthetics: SCHEDULER_PALETTE.aestheticsCyan,
@@ -227,13 +231,17 @@ const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export function assertClinicMode(code: string): asserts code is ClinicMode {
   if (!MODE_BY_CODE.has(code)) {
-    throw new Error(`Unknown clinic mode "${code}".`);
+    throw new Error(
+      `Unknown clinic mode "${code}" — must be one of eyecare, aesthetics, or both (brief §1).`,
+    );
   }
 }
 
 export function assertDiscipline(code: string): asserts code is SchedulingDiscipline {
   if (!DISCIPLINE_BY_CODE.has(code)) {
-    throw new Error(`Unknown scheduling discipline "${code}".`);
+    throw new Error(
+      `Unknown scheduling discipline "${code}" — must be eyecare or aesthetics.`,
+    );
   }
 }
 
@@ -380,6 +388,9 @@ export function visibleAppointmentsForMode(
   mode: ClinicMode | string,
 ): Appointment[] {
   return appointments.filter((appointment) => {
+    if (NON_BLOCKING_STATUS_SET.has(appointment.status)) {
+      return false;
+    }
     const discipline = appointmentDiscipline(appointment);
     return discipline === undefined || isDisciplineVisible(discipline, mode);
   });
@@ -403,6 +414,19 @@ export function weeklyHoursForSchedule(
 ): WeeklyHours {
   const reference = scheduleReference(schedule);
   return reference ? config.weeklyHoursBySchedule[reference] ?? config.defaultWeeklyHours : config.defaultWeeklyHours;
+}
+
+export function blocksForSchedule(
+  config: SchedulingPracticeConfig,
+  schedule: Schedule,
+): BlockedTime[] {
+  const reference = scheduleReference(schedule);
+  return config.blocks.filter(
+    (block) =>
+      !block.scheduleReferences ||
+      block.scheduleReferences.length === 0 ||
+      (reference !== undefined && block.scheduleReferences.includes(reference)),
+  );
 }
 
 export function buildTimeAxis(input: {
@@ -435,28 +459,29 @@ export function appointmentGeometry(input: {
   resources: Schedule[];
   axisStartMinutes: number;
   slotMinutes: number;
-}): AppointmentGeometry | undefined {
+  timezoneOffset: string;
+}): AppointmentGeometry[] {
   if (!input.appointment.start) {
-    return undefined;
+    return [];
   }
   const actorReferences = appointmentActorReferences(input.appointment);
-  const columnIndex = input.resources.findIndex((resource) => {
+  const columnIndexes = input.resources.flatMap((resource, columnIndex) => {
     const actorReference = resourceActorReference(resource);
-    return actorReference ? actorReferences.includes(actorReference) : false;
+    return actorReference && actorReferences.includes(actorReference) ? [columnIndex] : [];
   });
-  if (columnIndex === -1) {
-    return undefined;
+  if (columnIndexes.length === 0) {
+    return [];
   }
-  const startMinutes = minutesFromIsoDateTime(input.appointment.start);
+  const startMinutes = minutesFromIsoDateTime(input.appointment.start, input.timezoneOffset);
   const durationMinutes = appointmentDurationMinutes(input.appointment);
   if (!durationMinutes) {
-    return undefined;
+    return [];
   }
-  return {
+  return columnIndexes.map((columnIndex) => ({
     columnIndex,
     rowStart: (startMinutes - input.axisStartMinutes) / input.slotMinutes,
     rowSpan: Math.max(durationMinutes / input.slotMinutes, 1),
-  };
+  }));
 }
 
 export function availabilityShadingForColumn(input: {
@@ -525,10 +550,7 @@ export function buildAppointmentBlockContent(
     patientDisplay: patient?.actor?.display ?? appointment.description ?? "Non-patient",
     visitTypeDisplay: visitTypeDisplay(appointment, visitType, code),
     ...(code ? { visitTypeCode: code } : {}),
-    color: isNonPatient
-      ? SCHEDULER_PALETTE.nonPatientGold
-      : visitTypeColor(visitType ?? ({} as HealthcareService)) ??
-        (discipline ? DEFAULT_COLOR_BY_DISCIPLINE[discipline] : SCHEDULER_PALETTE.newExamBlue),
+    color: isNonPatient ? SCHEDULER_PALETTE.nonPatientGold : visitTypeDisplayColor(visitType, discipline),
     ...(status ? { status } : {}),
     statusDisplay: status ? STATUS_BY_CODE.get(status)?.display ?? status : "Unknown",
     confirmation,
@@ -537,6 +559,17 @@ export function buildAppointmentBlockContent(
     badges,
     isNonPatient,
   };
+}
+
+export function visitTypeDisplayColor(
+  visitType: HealthcareService | undefined,
+  discipline?: SchedulingDiscipline,
+): string {
+  const resolvedDiscipline = discipline ?? (visitType ? visitTypeDiscipline(visitType) : undefined);
+  return (
+    (visitType ? visitTypeColor(visitType) : undefined) ??
+    (resolvedDiscipline ? DEFAULT_COLOR_BY_DISCIPLINE[resolvedDiscipline] : SCHEDULER_PALETTE.newExamBlue)
+  );
 }
 
 function coverageOf(appointment: Appointment, url: string): CoverageDisplay | undefined {
@@ -575,12 +608,22 @@ function minutesOfDay(time: string, context: string): number {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function minutesFromIsoDateTime(dateTime: string): number {
-  const match = /T(\d{2}):(\d{2})/.exec(dateTime);
-  if (!match) {
+export function minutesFromIsoDateTime(dateTime: string, timezoneOffset: string): number {
+  const timestamp = Date.parse(dateTime);
+  if (!Number.isFinite(timestamp)) {
     throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
   }
-  return Number(match[1]) * 60 + Number(match[2]);
+  const local = new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000);
+  return local.getUTCHours() * 60 + local.getUTCMinutes();
+}
+
+function timezoneOffsetMinutes(timezoneOffset: string): number {
+  const match = /^([+-])(\d{2}):(\d{2})$/.exec(timezoneOffset);
+  if (!match) {
+    throw new Error(`Timezone offset must be ±HH:MM, got "${timezoneOffset}".`);
+  }
+  const sign = match[1] === "-" ? -1 : 1;
+  return sign * (Number(match[2]) * 60 + Number(match[3]));
 }
 
 function formatTimeLabel(minutes: number): string {

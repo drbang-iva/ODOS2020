@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { HealthcareService } from "@medplum/fhirtypes";
 import {
   CLINIC_MODES as MCP_CLINIC_MODES,
   OSOD_DISCIPLINE_SYSTEM as MCP_OSOD_DISCIPLINE_SYSTEM,
@@ -77,6 +78,7 @@ import {
   OSOD_VISION_COVERAGE_EXTENSION_URL as UI_OSOD_VISION_COVERAGE_EXTENSION_URL,
   OSOD_VISIT_DURATION_EXTENSION_URL as UI_OSOD_VISIT_DURATION_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM as UI_OSOD_VISIT_TYPE_SYSTEM,
+  NON_BLOCKING_APPOINTMENT_STATUSES as UI_NON_BLOCKING_APPOINTMENT_STATUSES,
   RESOURCE_KINDS as UI_RESOURCE_KINDS,
   SCHEDULER_PALETTE as UI_SCHEDULER_PALETTE,
   SCHEDULING_DISCIPLINES as UI_SCHEDULING_DISCIPLINES,
@@ -96,6 +98,7 @@ import {
   visitTypeCode as uiVisitTypeCode,
   visitTypeColor as uiVisitTypeColor,
   visitTypeDiscipline as uiVisitTypeDiscipline,
+  visitTypeDisplayColor as uiVisitTypeDisplayColor,
   visitTypeDurationMinutes as uiVisitTypeDurationMinutes,
   visitTypeEligibleResourceReferences as uiVisitTypeEligibleResourceReferences,
   visionCoverageOf as uiVisionCoverageOf,
@@ -127,6 +130,7 @@ test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.equal(UI_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL, MCP_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL);
   assert.equal(UI_OSOD_BLOCKED_TIME_KIND_SYSTEM, MCP_OSOD_BLOCKED_TIME_KIND_SYSTEM);
   assert.deepEqual(UI_BLOCKED_TIME_KINDS, MCP_BLOCKED_TIME_KINDS);
+  assert.deepEqual(UI_NON_BLOCKING_APPOINTMENT_STATUSES, ["cancelled", "entered-in-error"]);
 });
 
 test("UI scheduler mirror clinic-mode helpers match the kernel", () => {
@@ -139,6 +143,25 @@ test("UI scheduler mirror clinic-mode helpers match the kernel", () => {
       );
     }
   }
+});
+
+test("UI scheduler mirror clinic-mode errors match the kernel verbatim", () => {
+  assert.throws(
+    () => uiDisciplinesForMode("surgery"),
+    (err) => {
+      assert.ok(err instanceof Error);
+      assert.throws(() => mcpDisciplinesForMode("surgery"), { message: err.message });
+      return true;
+    },
+  );
+  assert.throws(
+    () => uiIsDisciplineVisible("surgery", "both"),
+    (err) => {
+      assert.ok(err instanceof Error);
+      assert.throws(() => mcpIsDisciplineVisible("surgery", "both"), { message: err.message });
+      return true;
+    },
+  );
 });
 
 test("UI scheduler mirror visit-type readers match the kernel", () => {
@@ -203,6 +226,36 @@ test("UI scheduler mirror appointment readers match the kernel", () => {
   assert.deepEqual(uiMedicalCoverageOf(appointment), mcpMedicalCoverageOf(appointment));
   assert.equal(uiIsUrgentAppointment(appointment), mcpIsUrgentAppointment(appointment));
   assert.equal(uiIsFollowUpAppointment(appointment), mcpIsFollowUpAppointment(appointment));
+});
+
+test("UI scheduler mirror appointment status reader matches non-walk-in kernel cases", () => {
+  const cases = [
+    { status: "arrived" as const, expected: "checked-in" },
+    { status: "fulfilled" as const, expected: "checked-out" },
+  ];
+  for (const entry of cases) {
+    assert.equal(uiOsodAppointmentStatusOf(entry), entry.expected);
+    assert.equal(uiOsodAppointmentStatusOf(entry), mcpOsodAppointmentStatusOf(entry));
+  }
+});
+
+test("UI visit-type display color owns the full palette fallback chain", () => {
+  const explicitColor = buildVisitType({
+    code: "branded",
+    name: "Branded Visit",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: MCP_SCHEDULER_PALETTE.officeVisitOrange,
+  });
+  const colorlessAesthetics: HealthcareService = {
+    resourceType: "HealthcareService",
+    category: [{ coding: [{ system: MCP_OSOD_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
+  };
+  const noDiscipline: HealthcareService = { resourceType: "HealthcareService" };
+
+  assert.equal(uiVisitTypeDisplayColor(explicitColor), MCP_SCHEDULER_PALETTE.officeVisitOrange);
+  assert.equal(uiVisitTypeDisplayColor(colorlessAesthetics), MCP_SCHEDULER_PALETTE.aestheticsCyan);
+  assert.equal(uiVisitTypeDisplayColor(noDiscipline), MCP_SCHEDULER_PALETTE.newExamBlue);
 });
 
 test("UI scheduler mirror blocked-time reader matches the kernel", () => {
