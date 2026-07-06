@@ -49,15 +49,19 @@ function appointment(id: string, start: string): Appointment {
 
 function resetStore(date = "2026-07-06"): void {
   useSchedulingStore.setState({
+    view: "day",
     date,
     resources: [],
     visitTypes: [],
     appointments: [],
+    appointmentsByDay: {},
+    loadedWindow: null,
     config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
     configResource: undefined,
     configError: null,
     configReadFailed: false,
     officeId: "all",
+    weekResourceScheduleReference: undefined,
     loading: false,
     error: null,
     catalogsLoaded: false,
@@ -519,6 +523,101 @@ test("loadDay ignores slower stale responses after the selected date changes", a
   assert.equal(state.date, "2026-07-07");
   assert.deepEqual(state.appointments.map((entry) => entry.id), ["new"]);
   assert.equal(state.error, null);
+});
+
+test("shiftDate follows the selected scheduler view granularity", () => {
+  resetStore("2026-01-31");
+  useSchedulingStore.getState().setView("day");
+  useSchedulingStore.getState().shiftDate(1);
+  assert.equal(useSchedulingStore.getState().date, "2026-02-01");
+
+  useSchedulingStore.setState({ date: "2026-07-08" });
+  useSchedulingStore.getState().setView("week");
+  useSchedulingStore.getState().shiftDate(-1);
+  assert.equal(useSchedulingStore.getState().date, "2026-07-01");
+
+  useSchedulingStore.setState({ date: "2026-01-31" });
+  useSchedulingStore.getState().setView("month");
+  useSchedulingStore.getState().shiftDate(1);
+  assert.equal(useSchedulingStore.getState().date, "2026-02-28");
+});
+
+test("loadWindow performs one ranged Appointment search and buckets results by practice-local day", async () => {
+  resetStore("2026-07-08");
+  useSchedulingStore.getState().setView("week");
+  const client = writableClient({
+    appointments: [
+      appointment("late", "2026-07-07T01:30:00Z"),
+      appointment("local", "2026-07-07T09:00:00-05:00"),
+    ],
+  });
+
+  await useSchedulingStore.getState().loadWindow("2026-07-06", "2026-07-13", {
+    fhirClient: client,
+    force: true,
+  });
+
+  const appointmentSearches = client.searches.filter((call) => call.resourceType === "Appointment");
+  assert.equal(appointmentSearches.length, 1);
+  assert.deepEqual(appointmentSearches[0]?.params?.getAll("date"), [
+    "ge2026-07-06T00:00:00-05:00",
+    "lt2026-07-13T00:00:00-05:00",
+  ]);
+  const state = useSchedulingStore.getState();
+  assert.deepEqual(state.appointmentsByDay["2026-07-06"]?.map((entry) => entry.id), ["late"]);
+  assert.deepEqual(state.appointmentsByDay["2026-07-07"]?.map((entry) => entry.id), ["local"]);
+  assert.deepEqual(state.loadedWindow, {
+    fromYmd: "2026-07-06",
+    toYmdExclusive: "2026-07-13",
+    view: "week",
+    anchorDate: "2026-07-08",
+  });
+});
+
+test("loadWindow ignores stale ranged responses after the selected view and date change", async () => {
+  resetStore("2026-07-08");
+  useSchedulingStore.getState().setView("week");
+  const oldAppointments = deferred<Bundle<Appointment>>();
+  const newAppointments = deferred<Bundle<Appointment>>();
+  const oldSearchStarted = deferred<void>();
+  const client: SchedulingFhirClient = {
+    async search(resourceType, params) {
+      if (resourceType !== "Appointment") {
+        return EMPTY_BUNDLE as Bundle<Schedule | HealthcareService>;
+      }
+      const dates = new URLSearchParams(params).getAll("date").join("|");
+      if (dates.includes("2026-07-06")) {
+        oldSearchStarted.resolve();
+        return oldAppointments.promise;
+      }
+      return newAppointments.promise;
+    },
+  };
+
+  const oldLoad = useSchedulingStore
+    .getState()
+    .loadWindow("2026-07-06", "2026-07-13", { fhirClient: client, force: true });
+  await oldSearchStarted.promise;
+  useSchedulingStore.getState().setView("month");
+  useSchedulingStore.getState().setDate("2026-08-15");
+  const newLoad = useSchedulingStore
+    .getState()
+    .loadWindow("2026-07-27", "2026-09-07", { fhirClient: client, force: true });
+
+  newAppointments.resolve(bundle([appointment("new", "2026-08-03T09:00:00-05:00")]));
+  await newLoad;
+  oldAppointments.resolve(bundle([appointment("old", "2026-07-06T09:00:00-05:00")]));
+  await oldLoad;
+
+  const state = useSchedulingStore.getState();
+  assert.deepEqual(state.appointmentsByDay["2026-08-03"]?.map((entry) => entry.id), ["new"]);
+  assert.equal(state.appointmentsByDay["2026-07-06"], undefined);
+  assert.deepEqual(state.loadedWindow, {
+    fromYmd: "2026-07-27",
+    toYmdExclusive: "2026-09-07",
+    view: "month",
+    anchorDate: "2026-08-15",
+  });
 });
 
 test("loadDay reuses loaded catalogs on date navigation and force-refreshes on demand", async () => {
