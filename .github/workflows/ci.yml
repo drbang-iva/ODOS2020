@@ -31,10 +31,17 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             mcp/package-lock.json
+            ui/package-lock.json
       - name: install root deps
         run: npm ci
       - name: install mcp deps
         working-directory: mcp
+        run: npm ci
+      # mcp/tests cross-import ui/src modules (mirror-parity + ui-logic idiom); as of
+      # scheduler Phase 2 those ui modules have runtime deps (zustand), so the mcp job
+      # needs ui/node_modules too.
+      - name: install ui deps
+        working-directory: ui
         run: npm ci
       - name: typecheck mcp
         working-directory: mcp
