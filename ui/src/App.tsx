@@ -10,6 +10,7 @@ import { AuthorizeConsent } from "./smart/authorize-consent";
 import { GrantsManagement } from "./smart/grants-management";
 import { OpticalFrames } from "./scenes/OpticalFrames";
 import { OpticalOrder } from "./scenes/OpticalOrder";
+import { SchedulerDayGrid } from "./scenes/SchedulerDayGrid";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -83,6 +84,9 @@ function RouteSwitch({ view }: { view: ViewState }) {
       return <OpticalFrames route="lookup" />;
     case "/dispensary/orders":
       return <OpticalOrder />;
+    case "/schedule/day":
+    case "/scheduler/day":
+      return <SchedulerDayGrid />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
     default:

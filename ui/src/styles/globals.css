@@ -28,4 +28,24 @@ body {
   .sidebar-button {
     @apply rounded border border-brand/60 bg-brand/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50;
   }
+
+  .scheduler-button {
+    @apply h-9 rounded border border-white/15 bg-white/[0.06] px-3 text-sm font-semibold text-white transition hover:bg-white/[0.12] disabled:cursor-not-allowed disabled:text-white/35 disabled:hover:bg-white/[0.06];
+  }
+
+  .scheduler-icon-button {
+    @apply grid h-9 w-9 place-items-center rounded border border-white/15 bg-white/[0.06] text-sm font-bold text-white transition hover:bg-white/[0.12];
+  }
+
+  .scheduler-select {
+    @apply h-9 rounded border border-white/15 bg-black/40 px-3 text-sm font-semibold text-white outline-none transition focus:border-white/35 disabled:cursor-not-allowed disabled:text-white/35;
+  }
+
+  .scheduler-segment {
+    @apply h-8 rounded px-3 text-sm font-semibold text-white/45 transition disabled:cursor-not-allowed;
+  }
+
+  .scheduler-segment-active {
+    @apply h-8 rounded bg-white/15 px-3 text-sm font-semibold text-white;
+  }
 }
