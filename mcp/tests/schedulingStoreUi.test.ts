@@ -1,13 +1,23 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Appointment, Bundle, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
+import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
+import { defaultVisitTypeCatalog } from "../src/fhir/schedulingVisitType.js";
 import {
   DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+  SCHEDULING_SOURCE_TAGS,
   searchAll,
   todayYmd,
   useSchedulingStore,
   type SchedulingFhirClient,
 } from "../../ui/src/lib/scheduling-store.js";
+import {
+  OSOD_VISION_COVERAGE_EXTENSION_URL,
+  buildSchedulingAppointment,
+  confirmationStatusOf,
+  medicalCoverageOf,
+  visionCoverageOf,
+} from "../../ui/src/lib/scheduling.js";
 
 const EMPTY_BUNDLE = { resourceType: "Bundle", type: "searchset", entry: [] } as const;
 
@@ -41,6 +51,102 @@ function resetStore(date = "2026-07-06"): void {
     error: null,
     catalogsLoaded: false,
   });
+}
+
+function seededVisitTypes(): HealthcareService[] {
+  return defaultVisitTypeCatalog("both").map((visitType, index) => ({
+    ...visitType,
+    id: `vt-${index + 1}`,
+  }));
+}
+
+function seededSchedules(): Schedule[] {
+  return [
+    {
+      ...buildSchedulingResource({
+        kind: "provider",
+        actorReference: "Practitioner/bang-eric",
+        actorDisplay: "Bang, Eric",
+        disciplines: ["eyecare"],
+      }),
+      id: "sch-provider",
+    },
+    {
+      ...buildSchedulingResource({
+        kind: "room",
+        actorReference: "Location/exam-1",
+        actorDisplay: "Exam 1",
+        disciplines: ["eyecare"],
+      }),
+      id: "sch-room",
+    },
+    {
+      ...buildSchedulingResource({
+        kind: "provider",
+        actorReference: "Practitioner/smith-amy",
+        actorDisplay: "Smith, Amy",
+        disciplines: ["eyecare"],
+      }),
+      id: "sch-provider-2",
+    },
+  ];
+}
+
+function hydrateCatalogState(appointments: Appointment[] = []): void {
+  useSchedulingStore.setState({
+    clinicMode: "both",
+    resources: seededSchedules(),
+    visitTypes: seededVisitTypes(),
+    appointments,
+    catalogsLoaded: true,
+    error: null,
+    loading: false,
+  });
+}
+
+function writableClient(seed: {
+  appointments?: Appointment[];
+  resources?: Schedule[];
+  visitTypes?: HealthcareService[];
+} = {}): SchedulingFhirClient & {
+  created: Array<{ resource: Resource; sourceTag: string }>;
+  updated: Array<{ resource: Resource; sourceTag: string }>;
+  searches: Array<{ resourceType: string; params?: URLSearchParams }>;
+} {
+  const data: Record<string, Resource[]> = {
+    Appointment: [...(seed.appointments ?? [])],
+    Schedule: [...(seed.resources ?? seededSchedules())],
+    HealthcareService: [...(seed.visitTypes ?? seededVisitTypes())],
+  };
+  const created: Array<{ resource: Resource; sourceTag: string }> = [];
+  const updated: Array<{ resource: Resource; sourceTag: string }> = [];
+  const searches: Array<{ resourceType: string; params?: URLSearchParams }> = [];
+  return {
+    created,
+    updated,
+    searches,
+    async search(resourceType, params) {
+      searches.push({ resourceType, params: params ? new URLSearchParams(params) : undefined });
+      return bundle(data[resourceType] ?? []) as Bundle<Schedule | HealthcareService | Appointment>;
+    },
+    async create(resource: Resource, sourceTag: string) {
+      const withId = { ...resource, id: `${resource.resourceType}-${created.length + 1}` };
+      created.push({ resource: withId, sourceTag });
+      data[resource.resourceType] = [...(data[resource.resourceType] ?? []), withId];
+      return withId as never;
+    },
+    async update(resource: Resource, sourceTag: string) {
+      updated.push({ resource, sourceTag });
+      data[resource.resourceType] = (data[resource.resourceType] ?? []).map((candidate) =>
+        candidate.id === resource.id ? resource : candidate,
+      );
+      return resource as never;
+    },
+  } as SchedulingFhirClient & {
+    created: Array<{ resource: Resource; sourceTag: string }>;
+    updated: Array<{ resource: Resource; sourceTag: string }>;
+    searches: Array<{ resourceType: string; params?: URLSearchParams }>;
+  };
 }
 
 function deferred<T>(): {
@@ -161,4 +267,315 @@ test("loadDay reuses loaded catalogs on date navigation and force-refreshes on d
   assert.equal(counts.get("Appointment"), 3);
   assert.equal(counts.get("Schedule"), 2);
   assert.equal(counts.get("HealthcareService"), 2);
+});
+
+test("createAppointment writes a mirrored Appointment, source-tags the write, then reloads the day", async () => {
+  resetStore("2026-07-06");
+  hydrateCatalogState();
+  const client = writableClient();
+
+  await useSchedulingStore.getState().createAppointment(
+    {
+      patient: { reference: "Patient/p1", display: "Doe, Jane" },
+      visitTypeCode: "routine-exam-new",
+      resourceScheduleReferences: ["Schedule/sch-provider"],
+      start: "2026-07-06T09:00:00-05:00",
+    },
+    { fhirClient: client, now: () => "2026-07-06T14:00:00-05:00" },
+  );
+
+  assert.equal(client.created.length, 1);
+  assert.equal(client.created[0]?.sourceTag, SCHEDULING_SOURCE_TAGS.create);
+  const created = client.created[0]?.resource as Appointment;
+  assert.equal(created.status, "booked");
+  assert.equal(created.created, "2026-07-06T14:00:00-05:00");
+  assert.deepEqual(
+    created.participant.map((participant) => participant.actor?.reference),
+    ["Patient/p1", "Practitioner/bang-eric"],
+  );
+  assert.deepEqual(useSchedulingStore.getState().appointments.map((entry) => entry.id), [
+    "Appointment-1",
+  ]);
+});
+
+test("setAppointmentStatus and setConfirmationStatus update from the refreshed resource snapshot", async () => {
+  resetStore("2026-07-06");
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-1",
+    meta: { versionId: "3" },
+  };
+  hydrateCatalogState([existing]);
+  const client = writableClient({ appointments: [existing] });
+
+  await useSchedulingStore.getState().setAppointmentStatus(existing, "walk-in", {
+    fhirClient: client,
+  });
+  await useSchedulingStore.getState().setConfirmationStatus(existing, "confirmed", {
+    fhirClient: client,
+  });
+
+  const statusUpdate = client.updated[0]?.resource as Appointment;
+  assert.equal(client.updated[0]?.sourceTag, SCHEDULING_SOURCE_TAGS.status);
+  assert.equal(statusUpdate.status, "arrived");
+  assert.equal(statusUpdate.appointmentType?.coding?.[0]?.code, "WALKIN");
+  const confirmationUpdate = client.updated[1]?.resource as Appointment;
+  assert.equal(client.updated[1]?.sourceTag, SCHEDULING_SOURCE_TAGS.confirmation);
+  assert.equal(confirmationUpdate.status, "arrived");
+  assert.equal(confirmationUpdate.appointmentType?.coding?.[0]?.code, "WALKIN");
+  assert.equal(confirmationStatusOf(confirmationUpdate), "confirmed");
+});
+
+test("confirmation updates merge onto the current Appointment without dropping foreign fields", async () => {
+  resetStore("2026-07-06");
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+      status: "checked-in",
+    }),
+    id: "appt-preserve",
+    identifier: [{ system: "https://foreign.example/appt", value: "ABC-123" }],
+    slot: [{ reference: "Slot/slot-1" }],
+    basedOn: [{ reference: "ServiceRequest/sr-1" }],
+    cancelationReason: { text: "foreign reason" },
+    extension: [
+      {
+        url: "https://foreign.example/fhir/StructureDefinition/do-not-touch",
+        valueString: "foreign value",
+      },
+      ...buildSchedulingAppointment({
+        patient: { reference: "Patient/p1" },
+        visitTypeCode: "routine-exam-new",
+        discipline: "eyecare",
+        resources: [{ reference: "Practitioner/bang-eric" }],
+        start: "2026-07-06T09:00:00-05:00",
+        durationMinutes: 30,
+      }).extension!,
+    ],
+  };
+  hydrateCatalogState([existing]);
+  const client = writableClient({ appointments: [existing] });
+
+  await useSchedulingStore.getState().setConfirmationStatus(existing, "confirmed", {
+    fhirClient: client,
+  });
+
+  const updated = client.updated[0]?.resource as Appointment;
+  assert.equal(updated.status, "checked-in");
+  assert.deepEqual(updated.identifier, existing.identifier);
+  assert.deepEqual(updated.slot, existing.slot);
+  assert.deepEqual(updated.basedOn, existing.basedOn);
+  assert.deepEqual(updated.cancelationReason, existing.cancelationReason);
+  assert.equal(
+    updated.extension?.find((extension) => extension.url === "https://foreign.example/fhir/StructureDefinition/do-not-touch")
+      ?.valueString,
+    "foreign value",
+  );
+  assert.equal(confirmationStatusOf(updated), "confirmed");
+});
+
+test("coverage updates distinguish undefined keep, null clear, and value replace", async () => {
+  resetStore("2026-07-06");
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+      visionCoverage: { reference: "Coverage/vision-1", display: "VSP" },
+      medicalCoverage: { reference: "Coverage/medical-1", display: "BCBS" },
+    }),
+    id: "appt-coverage",
+    extension: [
+      {
+        url: "https://foreign.example/fhir/StructureDefinition/keep-me",
+        valueString: "still here",
+      },
+      ...buildSchedulingAppointment({
+        patient: { reference: "Patient/p1" },
+        visitTypeCode: "routine-exam-new",
+        discipline: "eyecare",
+        resources: [{ reference: "Practitioner/bang-eric" }],
+        start: "2026-07-06T09:00:00-05:00",
+        durationMinutes: 30,
+        visionCoverage: { reference: "Coverage/vision-1", display: "VSP" },
+        medicalCoverage: { reference: "Coverage/medical-1", display: "BCBS" },
+      }).extension!,
+    ],
+  };
+  hydrateCatalogState([existing]);
+  const client = writableClient({ appointments: [existing] });
+
+  await useSchedulingStore.getState().updateAppointment(
+    existing,
+    { visionCoverage: null as never },
+    { fhirClient: client },
+  );
+
+  const updated = client.updated[0]?.resource as Appointment;
+  assert.equal(visionCoverageOf(updated), undefined);
+  assert.deepEqual(medicalCoverageOf(updated), { reference: "Coverage/medical-1", display: "BCBS" });
+  assert.equal(
+    updated.extension?.find((extension) => extension.url === "https://foreign.example/fhir/StructureDefinition/keep-me")
+      ?.valueString,
+    "still here",
+  );
+  assert.equal(
+    updated.extension?.some((extension) => extension.url === OSOD_VISION_COVERAGE_EXTENSION_URL),
+    false,
+  );
+});
+
+test("moveAppointment rebuilds time and resource participants through the same conflict guard", async () => {
+  resetStore("2026-07-06");
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1", display: "Doe, Jane" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-1",
+  };
+  hydrateCatalogState([existing]);
+  const client = writableClient({ appointments: [existing] });
+
+  await useSchedulingStore.getState().moveAppointment(
+    existing,
+    { start: "2026-07-06T10:00:00-05:00", resourceScheduleActor: "Location/exam-1" },
+    { fhirClient: client },
+  );
+
+  const moved = client.updated[0]?.resource as Appointment;
+  assert.equal(client.updated[0]?.sourceTag, SCHEDULING_SOURCE_TAGS.move);
+  assert.equal(moved.start, "2026-07-06T10:00:00-05:00");
+  assert.equal(moved.end, "2026-07-06T10:30:00-05:00");
+  assert.deepEqual(
+    moved.participant.map((participant) => participant.actor?.reference),
+    ["Patient/p1", "Location/exam-1"],
+  );
+});
+
+test("moveAppointment swaps only the source resource actor and preserves other resource participants", async () => {
+  resetStore("2026-07-06");
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1", display: "Doe, Jane" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }, { reference: "Location/exam-1" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-multi-resource",
+  };
+  hydrateCatalogState([existing]);
+  const client = writableClient({ appointments: [existing] });
+
+  await useSchedulingStore.getState().moveAppointment(
+    existing,
+    {
+      start: "2026-07-06T10:00:00-05:00",
+      resourceScheduleActor: "Practitioner/smith-amy",
+      sourceResourceScheduleActor: "Practitioner/bang-eric",
+    } as never,
+    { fhirClient: client },
+  );
+
+  const moved = client.updated[0]?.resource as Appointment;
+  assert.deepEqual(
+    moved.participant.map((participant) => participant.actor?.reference),
+    ["Patient/p1", "Practitioner/smith-amy", "Location/exam-1"],
+  );
+});
+
+test("createAppointment fetches target-day target-resource conflicts before booking", async () => {
+  resetStore("2026-07-06");
+  hydrateCatalogState([]);
+  const remoteConflict: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p0" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-09T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "remote-conflict",
+  };
+  const client = writableClient({ appointments: [remoteConflict] });
+
+  await assert.rejects(
+    useSchedulingStore.getState().createAppointment(
+      {
+        patient: { reference: "Patient/p1" },
+        visitTypeCode: "routine-exam-new",
+        resourceScheduleReferences: ["Schedule/sch-provider"],
+        start: "2026-07-09T09:15:00-05:00",
+      },
+      { fhirClient: client },
+    ),
+    /remote-conflict|already booked/,
+  );
+
+  const conflictSearch = client.searches.find(
+    (call) => call.resourceType === "Appointment" && call.params?.get("actor") === "Practitioner/bang-eric",
+  );
+  assert.deepEqual(conflictSearch?.params?.getAll("date"), [
+    "ge2026-07-09T00:00:00-05:00",
+    "lt2026-07-10T00:00:00-05:00",
+  ]);
+  assert.equal(client.created.length, 0);
+});
+
+test("status-only updates skip conflict checks even when the current day is double-booked", async () => {
+  resetStore("2026-07-06");
+  const first: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-first",
+  };
+  const second: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p2" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-06T09:15:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-second",
+  };
+  hydrateCatalogState([first, second]);
+  const client = writableClient({ appointments: [first, second] });
+
+  await useSchedulingStore.getState().setAppointmentStatus(first, "checked-in", {
+    fhirClient: client,
+  });
+
+  const updated = client.updated[0]?.resource as Appointment;
+  assert.equal(updated.id, "appt-first");
+  assert.equal(updated.status, "checked-in");
 });

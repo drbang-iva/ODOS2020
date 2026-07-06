@@ -1,4 +1,4 @@
-import type { Appointment, HealthcareService, Schedule, Slot } from "@medplum/fhirtypes";
+import type { Appointment, Extension, HealthcareService, Reference, Schedule, Slot } from "@medplum/fhirtypes";
 
 export const CLINIC_MODES = [
   { code: "eyecare", display: "Eyecare Only" },
@@ -143,6 +143,56 @@ export interface CoverageDisplay {
   display?: string;
 }
 
+export type CoverageInput = CoverageDisplay;
+
+export interface SchedulingAppointmentInput {
+  patient?: { reference: string; display?: string };
+  description?: string;
+  visitTypeCode: string;
+  visitTypeDisplay?: string;
+  discipline: string;
+  resources: { reference: string; display?: string }[];
+  start: string;
+  durationMinutes: number;
+  status?: string;
+  confirmation?: string;
+  visionCoverage?: CoverageInput;
+  medicalCoverage?: CoverageInput;
+  notes?: string;
+  urgent?: boolean;
+  followUp?: boolean;
+  slotReferences?: string[];
+  created?: string;
+}
+
+export interface BookSchedulingAppointmentInput {
+  patient?: { reference: string; display?: string };
+  description?: string;
+  visitTypeCode: string;
+  resourceScheduleReferences: string[];
+  start: string;
+  durationMinutes?: number;
+  status?: OsodAppointmentStatus;
+  confirmation?: AppointmentConfirmationStatus;
+  visionCoverage?: CoverageInput;
+  medicalCoverage?: CoverageInput;
+  notes?: string;
+  urgent?: boolean;
+  followUp?: boolean;
+  allowDoubleBook?: boolean;
+  created?: string;
+}
+
+export interface ValidateSchedulingAppointmentInput {
+  clinicMode: ClinicMode | string;
+  visitTypes: HealthcareService[];
+  resources: Schedule[];
+  appointments: Appointment[];
+  input: BookSchedulingAppointmentInput;
+  now?: () => string;
+  ignoreAppointmentId?: string;
+}
+
 export interface SchedulingPracticeConfig {
   timezoneOffset: string;
   defaultWeeklyHours: WeeklyHours;
@@ -228,6 +278,8 @@ const DEFAULT_COLOR_BY_DISCIPLINE: Record<SchedulingDiscipline, string> = {
 };
 const WEEKDAY_BY_UTC_DAY: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const ISO_WITH_OFFSET =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|[+-]\d{2}:\d{2})$/;
 
 export function assertClinicMode(code: string): asserts code is ClinicMode {
   if (!MODE_BY_CODE.has(code)) {
@@ -243,6 +295,270 @@ export function assertDiscipline(code: string): asserts code is SchedulingDiscip
       `Unknown scheduling discipline "${code}" — must be eyecare or aesthetics.`,
     );
   }
+}
+
+export function assertConfirmationStatus(
+  code: string,
+): asserts code is AppointmentConfirmationStatus {
+  if (!CONFIRMATION_BY_CODE.has(code)) {
+    throw new Error(
+      `Unknown confirmation status "${code}" — must be one of the four Eyefinity confirmation values.`,
+    );
+  }
+}
+
+export function assertOsodAppointmentStatus(
+  code: string,
+): asserts code is OsodAppointmentStatus {
+  if (!STATUS_BY_CODE.has(code)) {
+    throw new Error(
+      `Unknown appointment status "${code}" — must be one of the six front-desk lifecycle values.`,
+    );
+  }
+}
+
+export function toFhirAppointmentStatus(code: string): {
+  status: Appointment["status"];
+  appointmentTypeCode?: string;
+} {
+  assertOsodAppointmentStatus(code);
+  const status = STATUS_BY_CODE.get(code)!;
+  return {
+    status: status.fhirStatus,
+    ...("appointmentTypeCode" in status ? { appointmentTypeCode: status.appointmentTypeCode } : {}),
+  };
+}
+
+export function addMinutesIso(start: string, minutes: number): string {
+  const match = ISO_WITH_OFFSET.exec(start);
+  if (!match) {
+    throw new Error(
+      `Appointment start must be an ISO dateTime with a timezone offset, got "${start}".`,
+    );
+  }
+  const [, year, month, day, hour, minute, second, offset] = match;
+  const wallClockMs =
+    Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second)) +
+    minutes * 60_000;
+  const shifted = new Date(wallClockMs);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}` +
+    `T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}:${pad(shifted.getUTCSeconds())}` +
+    offset
+  );
+}
+
+export function appointmentConfirmationExtension(code: string): Extension {
+  assertConfirmationStatus(code);
+  const status = CONFIRMATION_BY_CODE.get(code)!;
+  return {
+    url: OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+    valueCodeableConcept: {
+      coding: [
+        {
+          system: OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
+          code: status.code,
+          display: status.display,
+        },
+      ],
+      text: status.display,
+    },
+  };
+}
+
+export function buildSchedulingAppointment(input: SchedulingAppointmentInput): Appointment {
+  if (!input.patient && !input.description) {
+    throw new Error(
+      "An appointment requires a patient — or a description when booking a non-patient block.",
+    );
+  }
+  if (!input.visitTypeCode) {
+    throw new Error("An appointment requires a visit-type catalog code.");
+  }
+  assertDiscipline(input.discipline);
+  if (!input.resources || input.resources.length === 0) {
+    throw new Error("An appointment requires at least one resource (provider/room/equipment).");
+  }
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
+    throw new Error("Appointment duration (durationMinutes) must be a positive integer.");
+  }
+  const end = addMinutesIso(input.start, input.durationMinutes);
+  const fhirStatus = toFhirAppointmentStatus(input.status ?? "scheduled");
+
+  return {
+    resourceType: "Appointment",
+    status: fhirStatus.status,
+    ...(fhirStatus.appointmentTypeCode
+      ? {
+          appointmentType: {
+            coding: [
+              {
+                system: V2_0276_APPOINTMENT_TYPE_SYSTEM,
+                code: fhirStatus.appointmentTypeCode,
+              },
+            ],
+          },
+        }
+      : {}),
+    serviceCategory: [{ coding: [disciplineCoding(input.discipline)] }],
+    serviceType: [
+      {
+        coding: [
+          {
+            system: OSOD_VISIT_TYPE_SYSTEM,
+            code: input.visitTypeCode,
+            ...(input.visitTypeDisplay ? { display: input.visitTypeDisplay } : {}),
+          },
+        ],
+        ...(input.visitTypeDisplay ? { text: input.visitTypeDisplay } : {}),
+      },
+    ],
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.urgent ? { priority: 1 } : {}),
+    start: input.start,
+    end,
+    minutesDuration: input.durationMinutes,
+    ...(input.slotReferences && input.slotReferences.length > 0
+      ? { slot: input.slotReferences.map((reference): Reference<Slot> => ({ reference })) }
+      : {}),
+    ...(input.created ? { created: input.created } : {}),
+    ...(input.notes ? { comment: input.notes } : {}),
+    participant: [
+      ...(input.patient
+        ? [
+            {
+              actor: {
+                reference: input.patient.reference,
+                ...(input.patient.display ? { display: input.patient.display } : {}),
+              },
+              status: "accepted" as const,
+            },
+          ]
+        : []),
+      ...input.resources.map((resource) => ({
+        actor: {
+          reference: resource.reference,
+          ...(resource.display ? { display: resource.display } : {}),
+        },
+        status: "accepted" as const,
+      })),
+    ],
+    extension: [
+      appointmentConfirmationExtension(input.confirmation ?? "not-confirmed"),
+      ...(input.visionCoverage
+        ? [coverageExtension(OSOD_VISION_COVERAGE_EXTENSION_URL, input.visionCoverage)]
+        : []),
+      ...(input.medicalCoverage
+        ? [coverageExtension(OSOD_MEDICAL_COVERAGE_EXTENSION_URL, input.medicalCoverage)]
+        : []),
+      ...(input.followUp ? [{ url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true }] : []),
+    ],
+  };
+}
+
+export function validateAndBuildSchedulingAppointment(
+  deps: ValidateSchedulingAppointmentInput,
+): Appointment {
+  assertClinicMode(deps.clinicMode);
+  const mode = deps.clinicMode;
+  const input = deps.input;
+  const entry = deps.visitTypes.find(
+    (hs) => visitTypeCode(hs) === input.visitTypeCode && hs.active !== false,
+  );
+  if (!entry) {
+    throw new Error(`Unknown visit type "${input.visitTypeCode}" — not in the active catalog.`);
+  }
+  const discipline = visitTypeDiscipline(entry);
+  if (!discipline) {
+    throw new Error(`Visit type "${input.visitTypeCode}" has no discipline category.`);
+  }
+  if (!isDisciplineVisible(discipline, mode)) {
+    throw new Error(
+      `Visit type "${input.visitTypeCode}" is not available under this practice's clinic mode ("${mode}").`,
+    );
+  }
+  const durationMinutes = input.durationMinutes ?? visitTypeDurationMinutes(entry);
+  if (!durationMinutes) {
+    throw new Error(`Visit type "${input.visitTypeCode}" has no duration and none was supplied.`);
+  }
+  if (!input.resourceScheduleReferences || input.resourceScheduleReferences.length === 0) {
+    throw new Error("Booking requires at least one resource (provider/room/equipment).");
+  }
+
+  const eligible = visitTypeEligibleResourceReferences(entry);
+  const resolvedResources: { reference: string; display?: string }[] = [];
+  for (const reference of input.resourceScheduleReferences) {
+    const schedule = deps.resources.find((resource) => scheduleReference(resource) === reference);
+    if (!schedule) {
+      throw new Error(`${reference} not found in the loaded scheduler resources.`);
+    }
+    if (!isResourceVisibleInMode(schedule, mode)) {
+      throw new Error(
+        `Resource ${reference} is not visible under this practice's clinic mode ("${mode}").`,
+      );
+    }
+    const actor = schedule.actor?.[0];
+    if (!actor?.reference) {
+      throw new Error(`Resource ${reference} has no actor reference.`);
+    }
+    if (eligible.length > 0 && !eligible.includes(actor.reference)) {
+      throw new Error(
+        `Resource ${actor.reference} is not eligible for visit type "${input.visitTypeCode}".`,
+      );
+    }
+    resolvedResources.push({
+      reference: actor.reference,
+      ...(actor.display ? { display: actor.display } : {}),
+    });
+  }
+
+  const appointment = buildSchedulingAppointment({
+    ...(input.patient ? { patient: input.patient } : {}),
+    ...(input.description ? { description: input.description } : {}),
+    visitTypeCode: input.visitTypeCode,
+    ...(entry.name ? { visitTypeDisplay: entry.name } : {}),
+    discipline,
+    resources: resolvedResources,
+    start: input.start,
+    durationMinutes,
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.confirmation ? { confirmation: input.confirmation } : {}),
+    ...(input.visionCoverage ? { visionCoverage: input.visionCoverage } : {}),
+    ...(input.medicalCoverage ? { medicalCoverage: input.medicalCoverage } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.urgent ? { urgent: input.urgent } : {}),
+    ...(input.followUp ? { followUp: input.followUp } : {}),
+    created: input.created ?? deps.now?.() ?? new Date().toISOString(),
+  });
+
+  if (!input.allowDoubleBook && !NON_BLOCKING_STATUS_SET.has(appointment.status)) {
+    const newStart = Date.parse(appointment.start!);
+    const newEnd = Date.parse(appointment.end!);
+    for (const resource of resolvedResources) {
+      const conflict = deps.appointments.find((candidate) => {
+        if (candidate.id && candidate.id === deps.ignoreAppointmentId) {
+          return false;
+        }
+        if (NON_BLOCKING_STATUS_SET.has(candidate.status)) {
+          return false;
+        }
+        if (!appointmentActorReferences(candidate).includes(resource.reference)) {
+          return false;
+        }
+        const window = appointmentWindow(candidate);
+        return window && overlaps(newStart, newEnd, window.start, window.end);
+      });
+      if (conflict) {
+        throw new Error(
+          `Resource ${resource.reference} is already booked over ${input.start} ` +
+            `(conflict with Appointment/${conflict.id ?? "?"}). Pass allowDoubleBook to overbook.`,
+        );
+      }
+    }
+  }
+
+  return appointment;
 }
 
 export function disciplinesForMode(mode: string): SchedulingDiscipline[] {
@@ -406,6 +722,14 @@ export function resourceActorReference(schedule: Schedule): string | undefined {
 
 export function resourceDisplay(schedule: Schedule): string {
   return schedule.actor?.[0]?.display ?? schedule.actor?.[0]?.reference ?? schedule.comment ?? "Unassigned";
+}
+
+export function scheduleReferenceForActor(
+  resources: Schedule[],
+  actorReference: string,
+): string | undefined {
+  const schedule = resources.find((resource) => resourceActorReference(resource) === actorReference);
+  return schedule ? scheduleReference(schedule) : undefined;
 }
 
 export function weeklyHoursForSchedule(
@@ -583,6 +907,25 @@ function coverageOf(appointment: Appointment, url: string): CoverageDisplay | un
   };
 }
 
+function coverageExtension(url: string, coverage: CoverageInput): Extension {
+  return {
+    url,
+    valueReference: {
+      ...(coverage.reference ? { reference: coverage.reference } : {}),
+      ...(coverage.display ? { display: coverage.display } : {}),
+    },
+  };
+}
+
+function disciplineCoding(discipline: string) {
+  assertDiscipline(discipline);
+  return {
+    system: OSOD_DISCIPLINE_SYSTEM,
+    code: discipline,
+    display: DISCIPLINE_BY_CODE.get(discipline)?.display,
+  };
+}
+
 interface MinutesWindow {
   startMinutes: number;
   endMinutes: number;
@@ -663,13 +1006,17 @@ function blockAppliesToDate(block: BlockedTime, date: string, weekday: Weekday):
   return block.date === date || (block.weekdays?.includes(weekday) ?? false);
 }
 
-function appointmentActorReferences(appointment: Appointment): string[] {
+export function appointmentActorReferences(appointment: Appointment): string[] {
   return appointment.participant
     .map((participant) => participant.actor?.reference)
     .filter((reference): reference is string => Boolean(reference));
 }
 
-function appointmentDurationMinutes(appointment: Appointment): number | undefined {
+export function isNonBlockingAppointmentStatus(status: Appointment["status"]): boolean {
+  return NON_BLOCKING_STATUS_SET.has(status);
+}
+
+export function appointmentDurationMinutes(appointment: Appointment): number | undefined {
   if (typeof appointment.minutesDuration === "number" && appointment.minutesDuration > 0) {
     return appointment.minutesDuration;
   }
@@ -678,6 +1025,17 @@ function appointmentDurationMinutes(appointment: Appointment): number | undefine
     return duration > 0 ? duration : undefined;
   }
   return undefined;
+}
+
+function appointmentWindow(appointment: Appointment): { start: number; end: number } | undefined {
+  if (!appointment.start || !appointment.end) {
+    return undefined;
+  }
+  return { start: Date.parse(appointment.start), end: Date.parse(appointment.end) };
+}
+
+function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
 }
 
 function patientParticipant(appointment: Appointment) {

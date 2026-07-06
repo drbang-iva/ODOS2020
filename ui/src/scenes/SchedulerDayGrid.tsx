@@ -9,6 +9,7 @@ import {
   blocksForSchedule,
   buildAppointmentBlockContent,
   buildTimeAxis,
+  resourceActorReference,
   resourceDisplay,
   visibleAppointmentsForMode,
   visibleSchedulingResources,
@@ -21,6 +22,14 @@ import {
   type ClinicMode,
 } from "../lib/scheduling";
 import { useSchedulingStore } from "../lib/scheduling-store";
+import {
+  confirmDoubleBookAndRetry,
+  defaultAppointmentModalDraft,
+  isoFromDateAndMinutes,
+  type AppointmentModalDraft,
+} from "../lib/scheduler-appointment-ui";
+import { AppointmentDetailsModal } from "./scheduler/AppointmentDetailsModal";
+import { PatientQuickCard } from "./scheduler/PatientQuickCard";
 
 const ROW_HEIGHT = 46;
 const GUTTER_WIDTH = 76;
@@ -52,11 +61,40 @@ export function SchedulerDayGrid() {
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
   const today = useSchedulingStore((state) => state.today);
   const loadDay = useSchedulingStore((state) => state.loadDay);
+  const createAppointment = useSchedulingStore((state) => state.createAppointment);
+  const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
+  const setAppointmentStatus = useSchedulingStore((state) => state.setAppointmentStatus);
+  const moveAppointment = useSchedulingStore((state) => state.moveAppointment);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [quickCardSelection, setQuickCardSelection] = useState<{
+    appointment: Appointment;
+    sourceResourceActor?: string;
+  } | null>(null);
+  const [quickCardPinned, setQuickCardPinned] = useState(false);
+  const [details, setDetails] = useState<
+    { appointment: Appointment; draft?: never } | { appointment?: never; draft: AppointmentModalDraft } | null
+  >(null);
+  const [moveSource, setMoveSource] = useState<{
+    appointment: Appointment;
+    sourceResourceActor?: string;
+  } | null>(null);
 
   useEffect(() => {
     void loadDay();
   }, [date, loadDay]);
+
+  useEffect(() => {
+    if (!moveSource) {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMoveSource(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [moveSource]);
 
   const visibleResources = useMemo(
     () => visibleSchedulingResources(resources, clinicMode),
@@ -69,6 +107,18 @@ export function SchedulerDayGrid() {
   const visibleAppointments = useMemo(
     () => visibleAppointmentsForMode(appointments, clinicMode),
     [appointments, clinicMode],
+  );
+  const quickCardAppointment = useMemo(
+    () => currentAppointment(quickCardSelection?.appointment ?? null, appointments),
+    [appointments, quickCardSelection],
+  );
+  const detailsAppointment = useMemo(
+    () => currentAppointment(details && "appointment" in details ? details.appointment ?? null : null, appointments),
+    [appointments, details],
+  );
+  const moveSourceAppointment = useMemo(
+    () => currentAppointment(moveSource?.appointment ?? null, appointments),
+    [appointments, moveSource],
   );
   const timeAxis = useMemo(
     () => buildTimeAxis({ date, resources: visibleResources, config, slotMinutes }),
@@ -113,6 +163,73 @@ export function SchedulerDayGrid() {
       : `${GUTTER_WIDTH}px`;
   const bodyHeight = Math.max(timeAxis.rows.length * ROW_HEIGHT, ROW_HEIGHT);
 
+  function openNewAppointment(resource: Schedule, startMinutes: number, status: "scheduled" | "walk-in" = "scheduled") {
+    setDetails({
+      draft: defaultAppointmentModalDraft({
+        date,
+        startMinutes,
+        timezoneOffset: config.timezoneOffset,
+        resources: visibleResources,
+        visitTypes,
+        clinicMode,
+        resource,
+        status,
+      }),
+    });
+  }
+
+  async function moveToCell(
+    source: { appointment: Appointment; sourceResourceActor?: string },
+    resource: Schedule,
+    startMinutes: number,
+    allowDoubleBook = false,
+  ) {
+    const actor = resourceActorReference(resource);
+    const appointment = currentAppointment(source.appointment, appointments);
+    if (!actor || !appointment) {
+      return;
+    }
+    try {
+      await moveAppointment(
+        appointment,
+        {
+          start: isoFromDateAndMinutes(date, startMinutes, config.timezoneOffset),
+          resourceScheduleActor: actor,
+          sourceResourceScheduleActor: source.sourceResourceActor,
+          allowDoubleBook,
+        },
+      );
+      setMoveSource(null);
+    } catch (err) {
+      if (!allowDoubleBook) {
+        await confirmDoubleBookAndRetry(err, () => moveToCell(source, resource, startMinutes, true));
+      }
+    }
+  }
+
+  function handleCellClick(resource: Schedule, startMinutes: number) {
+    if (moveSource) {
+      void moveToCell(moveSource, resource, startMinutes);
+      return;
+    }
+    openNewAppointment(resource, startMinutes);
+  }
+
+  function handleAppointmentClick(appointment: Appointment, sourceResourceActor?: string) {
+    setQuickCardSelection({ appointment, sourceResourceActor });
+    if (!quickCardPinned) {
+      setDetails(null);
+    }
+  }
+
+  function handleWalkIn() {
+    const resource = visibleResources[0];
+    if (!resource) {
+      return;
+    }
+    openNewAppointment(resource, timeAxis.rows[0]?.startMinutes ?? 9 * 60, "walk-in");
+  }
+
   return (
     <main
       className="min-h-screen text-white"
@@ -124,10 +241,28 @@ export function SchedulerDayGrid() {
         legendOpen={legendOpen}
         onClinicModeChange={setClinicMode}
         onLegendToggle={() => setLegendOpen((open) => !open)}
+        onMove={() =>
+          setMoveSource((current) =>
+            current
+              ? null
+              : quickCardAppointment
+                ? { appointment: quickCardAppointment, sourceResourceActor: quickCardSelection?.sourceResourceActor }
+                : null,
+          )
+        }
         onNextDay={() => shiftDate(1)}
         onPreviousDay={() => shiftDate(-1)}
         onToday={today}
+        onWalkIn={handleWalkIn}
+        moveActive={Boolean(moveSource)}
+        moveEnabled={Boolean(quickCardAppointment)}
       />
+      {moveSourceAppointment && (
+        <div className="border-b border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
+          Move mode: click a target cell for {moveSourceAppointment.description ?? moveSourceAppointment.id ?? "appointment"}.
+          Press Escape to cancel.
+        </div>
+      )}
       {legendOpen && <SchedulerLegend visitTypes={visibleVisitTypes} />}
       {error && (
         <div className="border-y border-red-400/40 bg-red-950/50 px-4 py-2 text-sm text-red-100">
@@ -167,6 +302,8 @@ export function SchedulerDayGrid() {
                       appointments={positionedAppointments.filter(
                         (block) => block.geometry.columnIndex === columnIndex,
                       )}
+                      onAppointmentClick={handleAppointmentClick}
+                      onCellClick={handleCellClick}
                     />
                   ))}
                 </div>
@@ -178,6 +315,31 @@ export function SchedulerDayGrid() {
           <div className="mt-3 text-sm text-white/55">Loading scheduler day...</div>
         )}
       </section>
+      <PatientQuickCard
+        appointment={quickCardAppointment}
+        pinned={quickCardPinned}
+        onPinnedChange={setQuickCardPinned}
+        onClose={() => {
+          setQuickCardPinned(false);
+          setQuickCardSelection(null);
+        }}
+        onDetails={(appointment) => setDetails({ appointment })}
+        date={date}
+      />
+      {details && (
+        <AppointmentDetailsModal
+          appointment={"appointment" in details ? detailsAppointment ?? undefined : undefined}
+          initialDraft={"draft" in details ? details.draft : undefined}
+          clinicMode={clinicMode}
+          timezoneOffset={config.timezoneOffset}
+          resources={visibleResources}
+          visitTypes={visitTypes}
+          onClose={() => setDetails(null)}
+          onCreate={createAppointment}
+          onUpdate={updateAppointment}
+          onSetStatus={setAppointmentStatus}
+        />
+      )}
     </main>
   );
 }
@@ -188,18 +350,26 @@ function SchedulerToolbar({
   legendOpen,
   onClinicModeChange,
   onLegendToggle,
+  onMove,
   onNextDay,
   onPreviousDay,
   onToday,
+  onWalkIn,
+  moveActive,
+  moveEnabled,
 }: {
   clinicMode: ClinicMode;
   date: string;
   legendOpen: boolean;
   onClinicModeChange: (mode: ClinicMode) => void;
   onLegendToggle: () => void;
+  onMove: () => void;
   onNextDay: () => void;
   onPreviousDay: () => void;
   onToday: () => void;
+  onWalkIn: () => void;
+  moveActive: boolean;
+  moveEnabled: boolean;
 }) {
   return (
     <header className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-black/35 px-4 py-3">
@@ -226,11 +396,19 @@ function SchedulerToolbar({
           Month
         </button>
       </div>
+      <button className="scheduler-button" type="button" onClick={onWalkIn}>
+        Walk-In
+      </button>
       <button className="scheduler-button" type="button" disabled>
         Find Open
       </button>
-      <button className="scheduler-button" type="button" disabled>
-        Move
+      <button
+        className={clsx("scheduler-button", moveActive && "border-amber-300/50 bg-amber-500/15")}
+        type="button"
+        disabled={!moveEnabled}
+        onClick={onMove}
+      >
+        {moveActive ? "Moving" : "Move"}
       </button>
       <button className={clsx("scheduler-button", legendOpen && "border-white/35 bg-white/15")} type="button" onClick={onLegendToggle}>
         Legend
@@ -321,6 +499,8 @@ function ResourceColumn({
   axisEndMinutes,
   slotMinutes,
   appointments,
+  onAppointmentClick,
+  onCellClick,
 }: {
   resource: Schedule;
   columnIndex: number;
@@ -330,6 +510,8 @@ function ResourceColumn({
   axisEndMinutes: number;
   slotMinutes: number;
   appointments: PositionedAppointment[];
+  onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
+  onCellClick: (resource: Schedule, startMinutes: number) => void;
 }) {
   const config = useSchedulingStore((state) => state.config);
   const regions = availabilityShadingForColumn({
@@ -363,6 +545,7 @@ function ResourceColumn({
           key={row.startMinutes}
           className="relative border-b border-white/10"
           style={{ height: ROW_HEIGHT }}
+          onClick={() => onCellClick(resource, row.startMinutes)}
         />
       ))}
       {regions
@@ -383,13 +566,23 @@ function ResourceColumn({
         <AppointmentBlock
           key={`${block.geometry.columnIndex}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
           block={block}
+          resource={resource}
+          onClick={onAppointmentClick}
         />
       ))}
     </div>
   );
 }
 
-function AppointmentBlock({ block }: { block: PositionedAppointment }) {
+function AppointmentBlock({
+  block,
+  resource,
+  onClick,
+}: {
+  block: PositionedAppointment;
+  resource: Schedule;
+  onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
+}) {
   const { geometry, content, appointment } = block;
   const color = content.color;
   const textColor = contrastTextColor(color);
@@ -404,7 +597,10 @@ function AppointmentBlock({ block }: { block: PositionedAppointment }) {
         borderColor: `${color}ee`,
         color: textColor,
       }}
-      onClick={() => console.log("scheduler.appointment.selected", appointment.id ?? appointment.start)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick(appointment, resourceActorReference(resource));
+      }}
     >
       <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
       <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
@@ -426,6 +622,13 @@ function AppointmentBlock({ block }: { block: PositionedAppointment }) {
       )}
     </button>
   );
+}
+
+function currentAppointment(appointment: Appointment | null, appointments: Appointment[]): Appointment | null {
+  if (!appointment?.id) {
+    return appointment;
+  }
+  return appointments.find((candidate) => candidate.id === appointment.id) ?? appointment;
 }
 
 function formatDateDisplay(date: string): string {

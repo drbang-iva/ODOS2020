@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { HealthcareService } from "@medplum/fhirtypes";
+import type { Appointment, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import {
   CLINIC_MODES as MCP_CLINIC_MODES,
   OSOD_DISCIPLINE_SYSTEM as MCP_OSOD_DISCIPLINE_SYSTEM,
@@ -24,6 +24,7 @@ import {
   OSOD_VISIT_TYPE_SYSTEM as MCP_OSOD_VISIT_TYPE_SYSTEM,
   SCHEDULER_PALETTE as MCP_SCHEDULER_PALETTE,
   buildVisitType,
+  defaultVisitTypeCatalog,
   visitTypeCode as mcpVisitTypeCode,
   visitTypeColor as mcpVisitTypeColor,
   visitTypeDiscipline as mcpVisitTypeDiscipline,
@@ -85,6 +86,7 @@ import {
   V2_0276_APPOINTMENT_TYPE_SYSTEM as UI_V2_0276_APPOINTMENT_TYPE_SYSTEM,
   appointmentVisitTypeCode as uiAppointmentVisitTypeCode,
   blockedTimeKindOf as uiBlockedTimeKindOf,
+  buildSchedulingAppointment as uiBuildSchedulingAppointment,
   confirmationStatusOf as uiConfirmationStatusOf,
   disciplinesForMode as uiDisciplinesForMode,
   isDisciplineVisible as uiIsDisciplineVisible,
@@ -93,6 +95,7 @@ import {
   isUrgentAppointment as uiIsUrgentAppointment,
   medicalCoverageOf as uiMedicalCoverageOf,
   osodAppointmentStatusOf as uiOsodAppointmentStatusOf,
+  validateAndBuildSchedulingAppointment as uiValidateAndBuildSchedulingAppointment,
   resourceDisciplines as uiResourceDisciplines,
   resourceKind as uiResourceKind,
   visitTypeCode as uiVisitTypeCode,
@@ -103,6 +106,36 @@ import {
   visitTypeEligibleResourceReferences as uiVisitTypeEligibleResourceReferences,
   visionCoverageOf as uiVisionCoverageOf,
 } from "../../ui/src/lib/scheduling.js";
+
+function defaultMirrorCatalog(): HealthcareService[] {
+  return defaultVisitTypeCatalog("both").map((visitType, index) => ({
+    ...visitType,
+    id: `vt-${index + 1}`,
+  }));
+}
+
+function defaultMirrorResources(): Schedule[] {
+  return [
+    {
+      ...buildSchedulingResource({
+        kind: "provider",
+        actorReference: "Practitioner/bang-eric",
+        actorDisplay: "Bang, Eric",
+        disciplines: ["eyecare"],
+      }),
+      id: "sch-provider",
+    },
+    {
+      ...buildSchedulingResource({
+        kind: "room",
+        actorReference: "Location/treatment-room",
+        actorDisplay: "Treatment Room",
+        disciplines: ["aesthetics"],
+      }),
+      id: "sch-room",
+    },
+  ];
+}
 
 test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.deepEqual(UI_CLINIC_MODES, MCP_CLINIC_MODES);
@@ -226,6 +259,163 @@ test("UI scheduler mirror appointment readers match the kernel", () => {
   assert.deepEqual(uiMedicalCoverageOf(appointment), mcpMedicalCoverageOf(appointment));
   assert.equal(uiIsUrgentAppointment(appointment), mcpIsUrgentAppointment(appointment));
   assert.equal(uiIsFollowUpAppointment(appointment), mcpIsFollowUpAppointment(appointment));
+});
+
+test("UI scheduler mirror Appointment builder matches the kernel output", () => {
+  const input = {
+    patient: { reference: "Patient/p1", display: "Doe, Jane" },
+    visitTypeCode: "routine-exam-new",
+    visitTypeDisplay: "Routine Exam (New)",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/bang-eric", display: "Bang, Eric" }],
+    start: "2026-07-08T09:00:00-05:00",
+    durationMinutes: 30,
+    status: "walk-in",
+    confirmation: "confirmed",
+    visionCoverage: { reference: "Coverage/vsp-1", display: "VSP" },
+    medicalCoverage: { reference: "Coverage/bcbs-1", display: "BCBS" },
+    notes: "Prefers morning",
+    urgent: true,
+    followUp: true,
+    created: "2026-07-06T14:00:00-05:00",
+  } as const;
+
+  assert.deepEqual(uiBuildSchedulingAppointment(input), buildSchedulingAppointment(input));
+});
+
+test("UI scheduler mirror Appointment builder errors match the kernel verbatim", () => {
+  assert.throws(
+    () =>
+      uiBuildSchedulingAppointment({
+        visitTypeCode: "routine-exam-new",
+        discipline: "eyecare",
+        resources: [{ reference: "Practitioner/bang-eric" }],
+        start: "2026-07-08T09:00:00-05:00",
+        durationMinutes: 30,
+      }),
+    (err) => {
+      assert.ok(err instanceof Error);
+      assert.throws(
+        () =>
+          buildSchedulingAppointment({
+            visitTypeCode: "routine-exam-new",
+            discipline: "eyecare",
+            resources: [{ reference: "Practitioner/bang-eric" }],
+            start: "2026-07-08T09:00:00-05:00",
+            durationMinutes: 30,
+          }),
+        { message: err.message },
+      );
+      return true;
+    },
+  );
+});
+
+test("UI scheduler booking validator mirrors kernel service validation order and messages", () => {
+  const catalog = defaultMirrorCatalog();
+  const resources = defaultMirrorResources();
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p0" },
+      visitTypeCode: "routine-exam-established",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-08T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-existing",
+  };
+
+  assert.throws(
+    () =>
+      uiValidateAndBuildSchedulingAppointment({
+        clinicMode: "both",
+        visitTypes: catalog,
+        resources,
+        appointments: [],
+        input: {
+          patient: { reference: "Patient/p1" },
+          visitTypeCode: "unicorn-exam",
+          resourceScheduleReferences: ["Schedule/sch-provider"],
+          start: "2026-07-08T09:00:00-05:00",
+        },
+        now: () => "2026-07-06T14:00:00-05:00",
+      }),
+    { message: 'Unknown visit type "unicorn-exam" — not in the active catalog.' },
+  );
+  assert.throws(
+    () =>
+      uiValidateAndBuildSchedulingAppointment({
+        clinicMode: "eyecare",
+        visitTypes: catalog,
+        resources,
+        appointments: [],
+        input: {
+          patient: { reference: "Patient/p1" },
+          visitTypeCode: "aesthetics-consult",
+          resourceScheduleReferences: ["Schedule/sch-room"],
+          start: "2026-07-08T09:00:00-05:00",
+        },
+        now: () => "2026-07-06T14:00:00-05:00",
+      }),
+    {
+      message:
+        'Visit type "aesthetics-consult" is not available under this practice\'s clinic mode ("eyecare").',
+    },
+  );
+  assert.throws(
+    () =>
+      uiValidateAndBuildSchedulingAppointment({
+        clinicMode: "both",
+        visitTypes: catalog,
+        resources,
+        appointments: [existing],
+        input: {
+          patient: { reference: "Patient/p1" },
+          visitTypeCode: "routine-exam-new",
+          resourceScheduleReferences: ["Schedule/sch-provider"],
+          start: "2026-07-08T09:15:00-05:00",
+        },
+        now: () => "2026-07-06T14:00:00-05:00",
+      }),
+    {
+      message:
+        'Resource Practitioner/bang-eric is already booked over 2026-07-08T09:15:00-05:00 (conflict with Appointment/appt-existing). Pass allowDoubleBook to overbook.',
+    },
+  );
+});
+
+test("UI scheduler validator treats non-blocking resulting appointments as conflict-free", () => {
+  const catalog = defaultMirrorCatalog();
+  const resources = defaultMirrorResources();
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p0" },
+      visitTypeCode: "routine-exam-established",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-08T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-existing",
+  };
+
+  const cancelled = uiValidateAndBuildSchedulingAppointment({
+    clinicMode: "both",
+    visitTypes: catalog,
+    resources,
+    appointments: [existing],
+    input: {
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      resourceScheduleReferences: ["Schedule/sch-provider"],
+      start: "2026-07-08T09:15:00-05:00",
+      status: "cancelled",
+    },
+    now: () => "2026-07-06T14:00:00-05:00",
+  });
+
+  assert.equal(cancelled.status, "cancelled");
 });
 
 test("UI scheduler mirror appointment status reader matches non-walk-in kernel cases", () => {

@@ -128,6 +128,19 @@ export const fhir = {
     return (await res.json()) as T;
   },
 
+  async update<T extends Resource>(resource: T, sourceTag: string): Promise<T> {
+    if (!resource.id) {
+      throw new Error(`FHIR update requires ${resource.resourceType}.id.`);
+    }
+    const res = await fetch(`${BASE}/${resource.resourceType}/${resource.id}`, {
+      method: "PUT",
+      headers: sourceHeaders(sourceTag),
+      body: JSON.stringify(resource),
+    });
+    if (!res.ok) throw await toError(res);
+    return (await res.json()) as T;
+  },
+
   async patch<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
