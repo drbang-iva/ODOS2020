@@ -3,12 +3,14 @@ import {
   appointmentDurationMinutes,
   appointmentVisitTypeCode,
   confirmationStatusOf,
+  isoFromDateAndMinutes,
   isFollowUpAppointment,
   isUrgentAppointment,
   medicalCoverageOf,
   osodAppointmentStatusOf,
   scheduleReference,
   scheduleReferenceForActor,
+  timezoneOffsetMinutes,
   visitTypeCode,
   visitTypeDurationMinutes,
   visibleSchedulingVisitTypes,
@@ -207,12 +209,6 @@ export function maskedSsnLast4(patient: Patient): string | undefined {
   return `***-**-${digits.slice(-4)}`;
 }
 
-export function isoFromDateAndMinutes(date: string, minutes: number, timezoneOffset: string): string {
-  const hour = Math.floor(minutes / 60);
-  const minute = minutes % 60;
-  return `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00${timezoneOffset}`;
-}
-
 export function dateInputValue(isoDateTime: string, timezoneOffset: string): string {
   return localIsoDateTime(isoDateTime, timezoneOffset).slice(0, 10);
 }
@@ -295,15 +291,6 @@ function localIsoDateTime(isoDateTime: string, timezoneOffset: string): string {
     return isoDateTime;
   }
   return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000).toISOString();
-}
-
-function timezoneOffsetMinutes(timezoneOffset: string): number {
-  const match = /^([+-])(\d{2}):(\d{2})$/.exec(timezoneOffset);
-  if (!match) {
-    throw new Error(`Timezone offset must be ±HH:MM, got "${timezoneOffset}".`);
-  }
-  const sign = match[1] === "-" ? -1 : 1;
-  return sign * (Number(match[2]) * 60 + Number(match[3]));
 }
 
 function ageOnDate(birthDate: string, onDate: string): number {

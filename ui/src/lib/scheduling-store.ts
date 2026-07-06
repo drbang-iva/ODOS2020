@@ -1,4 +1,4 @@
-import type { Appointment, Bundle, Extension, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Basic, Bundle, Extension, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
 import { create } from "zustand";
 import { fhir } from "./fhir";
 import {
@@ -9,11 +9,16 @@ import {
   OSOD_VISION_COVERAGE_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM,
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
+  FIND_OPEN_DEFAULT_LIMIT,
+  FIND_OPEN_HORIZON_DAYS,
   addMinutesIso,
+  appointmentDayBoundsParams,
   appointmentActorReferences,
   appointmentConfirmationExtension,
   appointmentDurationMinutes,
   appointmentVisitTypeCode,
+  addDaysYmd,
+  findNextOpenings,
   isNonBlockingAppointmentStatus,
   isResourceVisibleInMode,
   resourceActorReference,
@@ -25,14 +30,24 @@ import {
   visitTypeDiscipline,
   visitTypeDurationMinutes,
   visitTypeEligibleResourceReferences,
+  visibleSchedulingResourcesForOffice,
+  ymdFromIsoDateTime,
   type AppointmentConfirmationStatus,
   type BookSchedulingAppointmentInput,
   type ClinicMode,
   type CoverageInput,
   type OsodAppointmentStatus,
+  type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
 import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
+import { validateSchedulingPracticeSettings } from "./scheduling-settings";
+import {
+  OSOD_SCHEDULING_CONFIG_CODE,
+  OSOD_SCHEDULING_CONFIG_SYSTEM,
+  buildSchedulingPracticeConfigResource,
+  parseSchedulingPracticeConfig,
+} from "./scheduling-config";
 
 export const SCHEDULING_SOURCE_TAGS = {
   create: "scheduler",
@@ -40,6 +55,7 @@ export const SCHEDULING_SOURCE_TAGS = {
   status: "scheduler-status",
   confirmation: "scheduler-confirmation",
   move: "scheduler-move",
+  config: "scheduler-config",
 } as const;
 
 export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
@@ -52,7 +68,6 @@ export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
     fri: [{ start: "08:00", end: "17:00" }],
   },
   weeklyHoursBySchedule: {},
-  // Persisted practice scheduling settings land here in a later slice.
   blocks: [
     {
       kind: "custom",
@@ -62,6 +77,8 @@ export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
       end: "13:00",
     },
   ],
+  offices: [{ id: "main", name: "Main Office" }],
+  officeBySchedule: {},
 };
 
 export interface SchedulingFhirClient {
@@ -103,6 +120,14 @@ export interface MoveAppointmentInput {
   allowDoubleBook?: boolean;
 }
 
+export interface FindOpeningsInput {
+  visitTypeCode: string;
+  resourceScheduleReference?: string;
+  from: string;
+  limit?: number;
+  horizonDays?: number;
+}
+
 export interface SchedulingStoreState {
   clinicMode: ClinicMode;
   date: string;
@@ -111,14 +136,22 @@ export interface SchedulingStoreState {
   visitTypes: HealthcareService[];
   appointments: Appointment[];
   config: SchedulingPracticeConfig;
+  configResource?: Basic;
+  configError: string | null;
+  configReadFailed: boolean;
+  officeId: string | "all";
   catalogsLoaded: boolean;
   loading: boolean;
   error: string | null;
   setClinicMode: (clinicMode: ClinicMode) => void;
   setDate: (date: string) => void;
+  setOfficeId: (officeId: string | "all") => void;
+  clearConfigError: () => void;
   shiftDate: (days: number) => void;
   today: () => void;
+  saveConfig: (config: SchedulingPracticeConfig, deps?: SchedulingWriteDeps) => Promise<void>;
   loadDay: (deps?: { fhirClient?: SchedulingFhirClient; force?: boolean }) => Promise<void>;
+  findOpenings: (input: FindOpeningsInput, deps?: { fhirClient?: SchedulingFhirClient; now?: () => string }) => Promise<SchedulingOpening[]>;
   createAppointment: (
     input: BookSchedulingAppointmentInput,
     deps?: SchedulingWriteDeps,
@@ -153,20 +186,59 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   visitTypes: [],
   appointments: [],
   config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+  configResource: undefined,
+  configError: null,
+  configReadFailed: false,
+  officeId: "all",
   catalogsLoaded: false,
   loading: false,
   error: null,
   setClinicMode: (clinicMode) => set({ clinicMode }),
   setDate: (date) => set({ date }),
+  setOfficeId: (officeId) => set({ officeId }),
+  clearConfigError: () => set({ configError: null }),
   shiftDate: (days) => set({ date: addDaysYmd(get().date, days) }),
   today: () => set({ date: todayYmd(new Date(), get().config.timezoneOffset) }),
+  async saveConfig(config, deps) {
+    const client = deps?.fhirClient ?? fhir;
+    if (get().configReadFailed) {
+      const message = "Stored settings could not be read; refusing to overwrite.";
+      set({ loading: false, error: message });
+      throw new Error(message);
+    }
+    set({ loading: true, error: null });
+    try {
+      validateSchedulingPracticeSettings(config);
+      const existing = get().configResource;
+      const resource = buildSchedulingPracticeConfigResource(config, existing);
+      const saved = existing?.id
+        ? await updateResource(client, resource, SCHEDULING_SOURCE_TAGS.config)
+        : await createResource(client, resource, SCHEDULING_SOURCE_TAGS.config);
+      set(configStatePatch(get(), config, saved, null, false, { loading: false, error: null }));
+      await get().loadDay({ fhirClient: client });
+    } catch (err) {
+      set({ loading: false, error: errorMessage(err) });
+      throw err;
+    }
+  },
   async loadDay(deps) {
     const client = deps?.fhirClient ?? fhir;
     const date = get().date;
-    const config = get().config;
     const shouldLoadCatalogs = deps?.force === true || !get().catalogsLoaded;
     set({ loading: true, error: null });
     try {
+      const loadedConfig = shouldLoadCatalogs
+        ? await safeFetchSchedulingConfig(client)
+        : {
+            config: get().config,
+            resource: get().configResource,
+            warning: get().configError,
+            readFailed: get().configReadFailed,
+          };
+      if (get().date !== date) {
+        return;
+      }
+      const config = loadedConfig.config;
       const [resources, visitTypes, appointments] = await Promise.all([
         shouldLoadCatalogs
           ? searchAll<Schedule>(client, "Schedule", { active: "true" })
@@ -177,16 +249,26 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         searchAll<Appointment>(
           client,
           "Appointment",
-          new URLSearchParams([
-            ["date", `ge${date}T00:00:00${config.timezoneOffset}`],
-            ["date", `lt${addDaysYmd(date, 1)}T00:00:00${config.timezoneOffset}`],
-          ]),
+          appointmentDayBoundsParams(date, config.timezoneOffset),
         ),
       ]);
       if (get().date !== date) {
         return;
       }
-      set({ resources, visitTypes, appointments, catalogsLoaded: true, loading: false });
+      set({
+        resources,
+        visitTypes,
+        appointments,
+        ...configStatePatch(
+          get(),
+          config,
+          loadedConfig.resource,
+          loadedConfig.warning ?? null,
+          loadedConfig.readFailed ?? false,
+        ),
+        catalogsLoaded: true,
+        loading: false,
+      });
     } catch (err) {
       if (get().date !== date) {
         return;
@@ -196,6 +278,34 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  },
+  async findOpenings(input, deps) {
+    const client = deps?.fhirClient ?? fhir;
+    const state = get();
+    const resources = visibleSchedulingResourcesForOffice(
+      state.resources,
+      state.clinicMode,
+      state.config,
+      state.officeId,
+    ).filter((resource) => {
+      if (!input.resourceScheduleReference) {
+        return true;
+      }
+      return scheduleReference(resource) === input.resourceScheduleReference;
+    });
+    return findNextOpenings({
+      visitTypeCode: input.visitTypeCode,
+      visitTypes: state.visitTypes,
+      resources,
+      config: state.config,
+      from: input.from,
+      slotMinutes: state.slotMinutes,
+      limit: input.limit ?? FIND_OPEN_DEFAULT_LIMIT,
+      horizonDays: input.horizonDays ?? FIND_OPEN_HORIZON_DAYS,
+      now: deps?.now ?? (() => new Date().toISOString()),
+      loadAppointmentsForDay: (date, actorReferences) =>
+        fetchOpeningAppointmentsForDay(state, client, date, actorReferences ?? []),
+    });
   },
   async createAppointment(input, deps) {
     const client = deps?.fhirClient ?? fhir;
@@ -287,12 +397,6 @@ export function todayYmd(
     .slice(0, 10);
 }
 
-export function addDaysYmd(date: string, days: number): string {
-  const cursor = new Date(`${date}T00:00:00Z`);
-  cursor.setUTCDate(cursor.getUTCDate() + days);
-  return cursor.toISOString().slice(0, 10);
-}
-
 export async function searchAll<T extends Resource>(
   client: SchedulingFhirClient,
   resourceType: T["resourceType"],
@@ -315,6 +419,80 @@ export async function searchAll<T extends Resource>(
     }
     bundle = await client.searchUrl<T>(nextUrl);
   }
+}
+
+async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
+  config: SchedulingPracticeConfig;
+  resource?: Basic;
+  warning?: string;
+}> {
+  const bundle = await client.search<Basic>(
+    "Basic",
+    new URLSearchParams([
+      ["code", `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`],
+      ["_count", "10"],
+    ]),
+  );
+  const resources = (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Basic => Boolean(resource));
+  const resource = newestBasic(resources);
+  if (!resource) {
+    return { config: DEFAULT_SCHEDULING_PRACTICE_CONFIG };
+  }
+  return {
+    config: parseSchedulingPracticeConfig(resource),
+    resource,
+    ...(resources.length > 1
+      ? { warning: `Multiple scheduling-config singletons found; using ${resource.id ? `Basic/${resource.id}` : "the newest resource"}.` }
+      : {}),
+  };
+}
+
+async function safeFetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
+  config: SchedulingPracticeConfig;
+  resource?: Basic;
+  warning?: string;
+  readFailed?: boolean;
+}> {
+  try {
+    return { ...(await fetchSchedulingConfig(client)), readFailed: false };
+  } catch (err) {
+    return {
+      config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+      warning: errorMessage(err),
+      readFailed: true,
+    };
+  }
+}
+
+function newestBasic(resources: Basic[]): Basic | undefined {
+  return [...resources].sort((a, b) => lastUpdatedMs(b) - lastUpdatedMs(a))[0];
+}
+
+function lastUpdatedMs(resource: Basic): number {
+  const value = resource.meta?.lastUpdated;
+  return value ? Date.parse(value) || 0 : 0;
+}
+
+function configStatePatch(
+  state: SchedulingStoreState,
+  config: SchedulingPracticeConfig,
+  resource: Basic | undefined,
+  configError: string | null,
+  configReadFailed: boolean,
+  extra: Partial<SchedulingStoreState> = {},
+): Partial<SchedulingStoreState> {
+  const officeIds = new Set(config.offices.map((office) => office.id));
+  const officeId = state.officeId === "all" || officeIds.has(state.officeId) ? state.officeId : "all";
+  return {
+    config,
+    configResource: resource,
+    configError,
+    configReadFailed,
+    officeId,
+    ...extra,
+  };
 }
 
 function paramsWithCount(
@@ -507,17 +685,41 @@ async function fetchConflictAppointmentsByActors(
     const appointments = await searchAll<Appointment>(
       client,
       "Appointment",
-      new URLSearchParams([
-        ["date", `ge${date}T00:00:00${state.config.timezoneOffset}`],
-        ["date", `lt${addDaysYmd(date, 1)}T00:00:00${state.config.timezoneOffset}`],
-        ["actor", actor],
-      ]),
+      withActorParam(appointmentDayBoundsParams(date, state.config.timezoneOffset), actor),
     );
     for (const appointment of appointments) {
       byKey.set(appointment.id ?? JSON.stringify(appointment), appointment);
     }
   }
   return [...byKey.values()];
+}
+
+async function fetchOpeningAppointmentsForDay(
+  state: SchedulingStoreState,
+  client: SchedulingFhirClient,
+  date: string,
+  actorReferences: string[],
+): Promise<Appointment[]> {
+  if (actorReferences.length === 0) {
+    return searchAll<Appointment>(client, "Appointment", appointmentDayBoundsParams(date, state.config.timezoneOffset));
+  }
+  const byKey = new Map<string, Appointment>();
+  for (const actor of actorReferences) {
+    const appointments = await searchAll<Appointment>(
+      client,
+      "Appointment",
+      withActorParam(appointmentDayBoundsParams(date, state.config.timezoneOffset), actor),
+    );
+    for (const appointment of appointments) {
+      byKey.set(appointment.id ?? JSON.stringify(appointment), appointment);
+    }
+  }
+  return [...byKey.values()];
+}
+
+function withActorParam(params: URLSearchParams, actor: string): URLSearchParams {
+  params.set("actor", actor);
+  return params;
 }
 
 function assertNoAppointmentConflicts(
@@ -796,16 +998,6 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
   return aStart < bEnd && bStart < aEnd;
 }
 
-function ymdFromIsoDateTime(dateTime: string, timezoneOffset: string): string {
-  const timestamp = Date.parse(dateTime);
-  if (!Number.isFinite(timestamp)) {
-    throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
-  }
-  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000)
-    .toISOString()
-    .slice(0, 10);
-}
-
 function isDisciplineVisibleForMode(discipline: string, mode: ClinicMode): boolean {
   return mode === "both" || discipline === mode;
 }
@@ -816,7 +1008,7 @@ async function createResource<T extends Resource>(
   sourceTag: string,
 ): Promise<T> {
   if (!client.create) {
-    throw new Error("FHIR client cannot create scheduler appointments.");
+    throw new Error(`FHIR client cannot create scheduler ${resource.resourceType}.`);
   }
   return client.create(resource, sourceTag);
 }
@@ -827,7 +1019,7 @@ async function updateResource<T extends Resource>(
   sourceTag: string,
 ): Promise<T> {
   if (!client.update) {
-    throw new Error("FHIR client cannot update scheduler appointments.");
+    throw new Error(`FHIR client cannot update scheduler ${resource.resourceType}.`);
   }
   return client.update(resource, sourceTag);
 }

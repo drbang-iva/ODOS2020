@@ -138,6 +138,11 @@ export interface BlockedTime {
   scheduleReferences?: string[];
 }
 
+export interface SchedulingOffice {
+  id: string;
+  name: string;
+}
+
 export interface CoverageDisplay {
   reference?: string;
   display?: string;
@@ -198,6 +203,31 @@ export interface SchedulingPracticeConfig {
   defaultWeeklyHours: WeeklyHours;
   weeklyHoursBySchedule: Record<string, WeeklyHours>;
   blocks: BlockedTime[];
+  offices: SchedulingOffice[];
+  officeBySchedule: Record<string, string>;
+}
+
+export interface SchedulingOpening {
+  start: string;
+  scheduleReference: string;
+  actorDisplay?: string;
+}
+
+export const FIND_OPEN_DEFAULT_LIMIT = 5;
+export const FIND_OPEN_HORIZON_DAYS = 60;
+
+export interface FindNextOpeningsInput {
+  visitTypeCode: string;
+  visitTypes: HealthcareService[];
+  resources: Schedule[];
+  config: SchedulingPracticeConfig;
+  from: string;
+  slotMinutes: number;
+  limit: number;
+  horizonDays?: number;
+  now?: () => string;
+  appointmentsByDay?: Record<string, Appointment[]> | Map<string, Appointment[]>;
+  loadAppointmentsForDay?: (date: string, actorReferences?: string[]) => Promise<Appointment[]>;
 }
 
 export interface TimeAxisRow {
@@ -224,6 +254,7 @@ export interface AvailabilityRegion {
   endMinutes: number;
   rowStart: number;
   rowSpan: number;
+  blockIndex?: number;
   blockedKind?: BlockedTimeKind;
   blockedKindDisplay?: string;
   description?: string;
@@ -686,6 +717,24 @@ export function visibleSchedulingResources(resources: Schedule[], mode: ClinicMo
   );
 }
 
+export function visibleSchedulingResourcesForOffice(
+  resources: Schedule[],
+  mode: ClinicMode | string,
+  config: SchedulingPracticeConfig,
+  officeId: string | "all",
+): Schedule[] {
+  const visible = visibleSchedulingResources(resources, mode);
+  if (officeId === "all") {
+    return visible;
+  }
+  return visible.filter((resource) => {
+    const reference = scheduleReference(resource);
+    const assignedOffice = reference ? config.officeBySchedule[reference] : undefined;
+    // Unassigned resources remain visible in every office until the practice assigns them.
+    return assignedOffice === undefined || assignedOffice === officeId;
+  });
+}
+
 export function visibleSchedulingVisitTypes(
   visitTypes: HealthcareService[],
   mode: ClinicMode | string,
@@ -710,6 +759,151 @@ export function visibleAppointmentsForMode(
     const discipline = appointmentDiscipline(appointment);
     return discipline === undefined || isDisciplineVisible(discipline, mode);
   });
+}
+
+export async function findNextOpenings(input: FindNextOpeningsInput): Promise<SchedulingOpening[]> {
+  if (!Number.isInteger(input.slotMinutes) || input.slotMinutes <= 0) {
+    throw new Error("Slot granularity (slotMinutes) must be a positive integer.");
+  }
+  if (!Number.isInteger(input.limit) || input.limit <= 0) {
+    return [];
+  }
+  const visitType = input.visitTypes.find(
+    (candidate) => candidate.active !== false && visitTypeCode(candidate) === input.visitTypeCode,
+  );
+  if (!visitType) {
+    throw new Error(`Unknown visit type "${input.visitTypeCode}" — not in the active catalog.`);
+  }
+  const durationMinutes = visitTypeDurationMinutes(visitType);
+  if (!durationMinutes) {
+    throw new Error(`Visit type "${input.visitTypeCode}" has no duration and none was supplied.`);
+  }
+  const eligible = new Set(visitTypeEligibleResourceReferences(visitType));
+  const candidateResources = input.resources
+    .map((resource, resourceIndex) => ({
+      resource,
+      resourceIndex,
+      scheduleReference: scheduleReference(resource),
+      actorReference: resourceActorReference(resource),
+      actorDisplay: resourceDisplay(resource),
+    }))
+    .filter(
+      (entry): entry is {
+        resource: Schedule;
+        resourceIndex: number;
+        scheduleReference: string;
+        actorReference: string;
+        actorDisplay: string;
+      } =>
+        Boolean(entry.scheduleReference) &&
+        Boolean(entry.actorReference) &&
+        (eligible.size === 0 || eligible.has(entry.actorReference!)),
+    );
+  if (candidateResources.length === 0) {
+    return [];
+  }
+
+  const searchStart = openingSearchStart(input);
+  const fromDate = searchStart.date;
+  const fromMinutes = searchStart.minutes;
+  const horizonDays = input.horizonDays ?? FIND_OPEN_HORIZON_DAYS;
+  const openings: SchedulingOpening[] = [];
+
+  for (let dayOffset = 0; dayOffset < horizonDays && openings.length < input.limit; dayOffset += 1) {
+    const date = addDaysYmd(fromDate, dayOffset);
+    const earliestStart = dayOffset === 0 ? alignToSlot(fromMinutes, input.slotMinutes) : 0;
+    const potentialCandidates: Array<
+      SchedulingOpening & { actorReference: string; startMinutes: number; endMinutes: number; resourceIndex: number }
+    > = [];
+
+    for (const entry of candidateResources) {
+      const regions = availabilityShadingForColumn({
+        date,
+        axisStartMinutes: 0,
+        axisEndMinutes: 24 * 60,
+        slotMinutes: input.slotMinutes,
+        weeklyHours: weeklyHoursForSchedule(input.config, entry.resource),
+        blocks: blocksForSchedule(input.config, entry.resource),
+      });
+      const blocked = regions.filter((region) => region.kind === "blocked");
+      for (const hours of regions.filter((region) => region.kind === "in-hours")) {
+        for (
+          let at = Math.max(hours.startMinutes, earliestStart);
+          at + durationMinutes <= hours.endMinutes;
+          at += input.slotMinutes
+        ) {
+          const end = at + durationMinutes;
+          if (blocked.some((region) => overlaps(at, end, region.startMinutes, region.endMinutes))) {
+            continue;
+          }
+          potentialCandidates.push({
+            start: isoFromDateAndMinutes(date, at, input.config.timezoneOffset),
+            scheduleReference: entry.scheduleReference,
+            actorDisplay: entry.actorDisplay,
+            actorReference: entry.actorReference,
+            startMinutes: at,
+            endMinutes: end,
+            resourceIndex: entry.resourceIndex,
+          });
+        }
+      }
+    }
+
+    if (potentialCandidates.length === 0) {
+      continue;
+    }
+    const actorReferences = [...new Set(potentialCandidates.map((candidate) => candidate.actorReference))];
+    const appointments = await appointmentsForOpeningDate(input, date, actorReferences);
+    const appointmentsByActor = appointmentWindowsByActor(appointments);
+    const seen = new Set<string>();
+    const dayCandidates: Array<SchedulingOpening & { startMinutes: number; resourceIndex: number }> = [];
+    for (const candidate of potentialCandidates) {
+      const key = `${candidate.scheduleReference}|${candidate.start}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      const startMs = Date.parse(candidate.start);
+      const endMs = Date.parse(isoFromDateAndMinutes(date, candidate.endMinutes, input.config.timezoneOffset));
+      const conflicts = appointmentsByActor
+        .get(candidate.actorReference)
+        ?.some((window) => overlaps(startMs, endMs, window.startMs, window.endMs));
+      if (conflicts) {
+        continue;
+      }
+      seen.add(key);
+      dayCandidates.push({
+        start: candidate.start,
+        scheduleReference: candidate.scheduleReference,
+        actorDisplay: candidate.actorDisplay,
+        startMinutes: candidate.startMinutes,
+        resourceIndex: candidate.resourceIndex,
+      });
+    }
+
+    dayCandidates.sort((a, b) => a.startMinutes - b.startMinutes || a.resourceIndex - b.resourceIndex);
+    for (const candidate of dayCandidates) {
+      openings.push({
+        start: candidate.start,
+        scheduleReference: candidate.scheduleReference,
+        actorDisplay: candidate.actorDisplay,
+      });
+      if (openings.length >= input.limit) {
+        break;
+      }
+    }
+  }
+
+  return openings;
+}
+
+export function findOpenSearchScopeKey(input: {
+  clinicMode: ClinicMode;
+  resources: Schedule[];
+}): string {
+  return [
+    input.clinicMode,
+    ...input.resources.map((resource) => scheduleReference(resource) ?? resource.actor?.[0]?.reference ?? ""),
+  ].join("|");
 }
 
 export function scheduleReference(schedule: Schedule): string | undefined {
@@ -744,13 +938,22 @@ export function blocksForSchedule(
   config: SchedulingPracticeConfig,
   schedule: Schedule,
 ): BlockedTime[] {
+  return blocksForScheduleWithIndex(config, schedule).map((entry) => entry.block);
+}
+
+export function blocksForScheduleWithIndex(
+  config: SchedulingPracticeConfig,
+  schedule: Schedule,
+): Array<{ block: BlockedTime; blockIndex: number }> {
   const reference = scheduleReference(schedule);
-  return config.blocks.filter(
-    (block) =>
+  return config.blocks
+    .map((block, blockIndex) => ({ block, blockIndex }))
+    .filter(
+      ({ block }) =>
       !block.scheduleReferences ||
       block.scheduleReferences.length === 0 ||
       (reference !== undefined && block.scheduleReferences.includes(reference)),
-  );
+    );
 }
 
 export function buildTimeAxis(input: {
@@ -815,6 +1018,7 @@ export function availabilityShadingForColumn(input: {
   slotMinutes: number;
   weeklyHours: WeeklyHours;
   blocks: BlockedTime[];
+  blockIndexes?: number[];
 }): AvailabilityRegion[] {
   if (input.axisEndMinutes <= input.axisStartMinutes) {
     return [];
@@ -839,20 +1043,24 @@ export function availabilityShadingForColumn(input: {
 
   const weekday = weekdayOfDate(input.date);
   const blocked: AvailabilityRegion[] = [];
-  for (const block of input.blocks.filter((candidate) => blockAppliesToDate(candidate, input.date, weekday))) {
+  input.blocks.forEach((block, index) => {
+    if (!blockAppliesToDate(block, input.date, weekday)) {
+      return;
+    }
     const startMinutes = block.start ? minutesOfDay(block.start, "Blocked-time start") : 0;
     const endMinutes = block.end ? minutesOfDay(block.end, "Blocked-time end") : 24 * 60;
     const clamped = clampWindow({ startMinutes, endMinutes }, input.axisStartMinutes, input.axisEndMinutes);
     if (!clamped) {
-      continue;
+      return;
     }
     blocked.push({
       ...region("blocked", clamped.startMinutes, clamped.endMinutes, input),
+      blockIndex: input.blockIndexes?.[index] ?? index,
       blockedKind: block.kind,
       blockedKindDisplay: BLOCKED_KIND_BY_CODE.get(block.kind)?.display,
       ...(block.description ? { description: block.description } : {}),
     });
-  }
+  });
 
   return [...regions, ...blocked];
 }
@@ -939,11 +1147,11 @@ function windowsForDate(date: string, weeklyHours: WeeklyHours): MinutesWindow[]
   }));
 }
 
-function weekdayOfDate(date: string): Weekday {
+export function weekdayOfDate(date: string): Weekday {
   return WEEKDAY_BY_UTC_DAY[new Date(`${date}T00:00:00Z`).getUTCDay()]!;
 }
 
-function minutesOfDay(time: string, context: string): number {
+export function minutesOfDay(time: string, context: string): number {
   const match = TIME_HHMM.exec(time);
   if (!match) {
     throw new Error(`${context} must be an HH:MM 24-hour time, got "${time}".`);
@@ -960,7 +1168,92 @@ export function minutesFromIsoDateTime(dateTime: string, timezoneOffset: string)
   return local.getUTCHours() * 60 + local.getUTCMinutes();
 }
 
-function timezoneOffsetMinutes(timezoneOffset: string): number {
+export function ymdFromIsoDateTime(dateTime: string, timezoneOffset: string): string {
+  const timestamp = Date.parse(dateTime);
+  if (!Number.isFinite(timestamp)) {
+    throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
+  }
+  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+export function addDaysYmd(date: string, days: number): string {
+  const cursor = new Date(`${date}T00:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() + days);
+  return cursor.toISOString().slice(0, 10);
+}
+
+export function isoFromDateAndMinutes(date: string, minutes: number, timezoneOffset: string): string {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00${timezoneOffset}`;
+}
+
+export function appointmentDayBoundsParams(date: string, timezoneOffset: string): URLSearchParams {
+  return new URLSearchParams([
+    ["date", `ge${date}T00:00:00${timezoneOffset}`],
+    ["date", `lt${addDaysYmd(date, 1)}T00:00:00${timezoneOffset}`],
+  ]);
+}
+
+function alignToSlot(minutes: number, slotMinutes: number): number {
+  return Math.ceil(minutes / slotMinutes) * slotMinutes;
+}
+
+async function appointmentsForOpeningDate(
+  input: FindNextOpeningsInput,
+  date: string,
+  actorReferences: string[],
+): Promise<Appointment[]> {
+  if (input.appointmentsByDay instanceof Map) {
+    return input.appointmentsByDay.get(date) ?? [];
+  }
+  if (input.appointmentsByDay) {
+    return input.appointmentsByDay[date] ?? [];
+  }
+  if (input.loadAppointmentsForDay) {
+    return input.loadAppointmentsForDay(date, actorReferences);
+  }
+  return [];
+}
+
+function appointmentWindowsByActor(appointments: Appointment[]): Map<string, Array<{ startMs: number; endMs: number }>> {
+  const byActor = new Map<string, Array<{ startMs: number; endMs: number }>>();
+  for (const appointment of appointments) {
+    if (NON_BLOCKING_STATUS_SET.has(appointment.status) || !appointment.start || !appointment.end) {
+      continue;
+    }
+    const startMs = Date.parse(appointment.start);
+    const endMs = Date.parse(appointment.end);
+    for (const actorReference of appointmentActorReferences(appointment)) {
+      const windows = byActor.get(actorReference) ?? [];
+      windows.push({ startMs, endMs });
+      byActor.set(actorReference, windows);
+    }
+  }
+  return byActor;
+}
+
+function openingSearchStart(input: FindNextOpeningsInput): { date: string; minutes: number } {
+  const fromDate = ymdFromIsoDateTime(input.from, input.config.timezoneOffset);
+  const fromMinutes = minutesFromIsoDateTime(input.from, input.config.timezoneOffset);
+  const nowIso = input.now?.();
+  if (!nowIso) {
+    return { date: fromDate, minutes: fromMinutes };
+  }
+  const nowDate = ymdFromIsoDateTime(nowIso, input.config.timezoneOffset);
+  const nowMinutes = alignToSlot(minutesFromIsoDateTime(nowIso, input.config.timezoneOffset), input.slotMinutes);
+  if (fromDate < nowDate) {
+    return { date: nowDate, minutes: nowMinutes };
+  }
+  if (fromDate === nowDate) {
+    return { date: fromDate, minutes: Math.max(fromMinutes, nowMinutes) };
+  }
+  return { date: fromDate, minutes: fromMinutes };
+}
+
+export function timezoneOffsetMinutes(timezoneOffset: string): number {
   const match = /^([+-])(\d{2}):(\d{2})$/.exec(timezoneOffset);
   if (!match) {
     throw new Error(`Timezone offset must be ±HH:MM, got "${timezoneOffset}".`);
