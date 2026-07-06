@@ -385,6 +385,39 @@ test("UI scheduler booking validator mirrors kernel service validation order and
   );
 });
 
+test("UI scheduler validator treats non-blocking resulting appointments as conflict-free", () => {
+  const catalog = defaultMirrorCatalog();
+  const resources = defaultMirrorResources();
+  const existing: Appointment = {
+    ...buildSchedulingAppointment({
+      patient: { reference: "Patient/p0" },
+      visitTypeCode: "routine-exam-established",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/bang-eric" }],
+      start: "2026-07-08T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    id: "appt-existing",
+  };
+
+  const cancelled = uiValidateAndBuildSchedulingAppointment({
+    clinicMode: "both",
+    visitTypes: catalog,
+    resources,
+    appointments: [existing],
+    input: {
+      patient: { reference: "Patient/p1" },
+      visitTypeCode: "routine-exam-new",
+      resourceScheduleReferences: ["Schedule/sch-provider"],
+      start: "2026-07-08T09:15:00-05:00",
+      status: "cancelled",
+    },
+    now: () => "2026-07-06T14:00:00-05:00",
+  });
+
+  assert.equal(cancelled.status, "cancelled");
+});
+
 test("UI scheduler mirror appointment status reader matches non-walk-in kernel cases", () => {
   const cases = [
     { status: "arrived" as const, expected: "checked-in" },

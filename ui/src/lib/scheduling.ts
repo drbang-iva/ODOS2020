@@ -532,7 +532,7 @@ export function validateAndBuildSchedulingAppointment(
     created: input.created ?? deps.now?.() ?? new Date().toISOString(),
   });
 
-  if (!input.allowDoubleBook) {
+  if (!input.allowDoubleBook && !NON_BLOCKING_STATUS_SET.has(appointment.status)) {
     const newStart = Date.parse(appointment.start!);
     const newEnd = Date.parse(appointment.end!);
     for (const resource of resolvedResources) {
@@ -1006,10 +1006,14 @@ function blockAppliesToDate(block: BlockedTime, date: string, weekday: Weekday):
   return block.date === date || (block.weekdays?.includes(weekday) ?? false);
 }
 
-function appointmentActorReferences(appointment: Appointment): string[] {
+export function appointmentActorReferences(appointment: Appointment): string[] {
   return appointment.participant
     .map((participant) => participant.actor?.reference)
     .filter((reference): reference is string => Boolean(reference));
+}
+
+export function isNonBlockingAppointmentStatus(status: Appointment["status"]): boolean {
+  return NON_BLOCKING_STATUS_SET.has(status);
 }
 
 export function appointmentDurationMinutes(appointment: Appointment): number | undefined {

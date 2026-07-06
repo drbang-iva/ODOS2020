@@ -117,13 +117,14 @@ export function draftToBookInput(
   draft: AppointmentModalDraft,
   allowDoubleBook = false,
 ): BookSchedulingAppointmentInput {
+  const durationMinutes = validDurationMinutes(draft.durationMinutes);
   return {
     ...(draft.nonPatient ? {} : draft.patient ? { patient: draft.patient } : {}),
     ...(draft.nonPatient || draft.description.trim() ? { description: draft.description.trim() } : {}),
     visitTypeCode: draft.visitTypeCode,
     resourceScheduleReferences: draft.resourceScheduleReferences,
     start: draft.start,
-    durationMinutes: draft.durationMinutes,
+    ...(durationMinutes ? { durationMinutes } : {}),
     status: draft.status,
     confirmation: draft.confirmation,
     ...(coverageInput(draft.visionCoverageReference, draft.visionCoverageDisplay)
@@ -143,17 +144,18 @@ export function draftToAppointmentChanges(
   draft: AppointmentModalDraft,
   allowDoubleBook = false,
 ): AppointmentChangeInput {
+  const durationMinutes = validDurationMinutes(draft.durationMinutes);
   return {
     patient: draft.nonPatient ? null : draft.patient,
     description: draft.description,
     visitTypeCode: draft.visitTypeCode,
     resourceScheduleReferences: draft.resourceScheduleReferences,
     start: draft.start,
-    durationMinutes: draft.durationMinutes,
+    ...(durationMinutes ? { durationMinutes } : {}),
     status: draft.status,
     confirmation: draft.confirmation,
-    visionCoverage: coverageInput(draft.visionCoverageReference, draft.visionCoverageDisplay),
-    medicalCoverage: coverageInput(draft.medicalCoverageReference, draft.medicalCoverageDisplay),
+    visionCoverage: coverageInput(draft.visionCoverageReference, draft.visionCoverageDisplay) ?? null,
+    medicalCoverage: coverageInput(draft.medicalCoverageReference, draft.medicalCoverageDisplay) ?? null,
     notes: draft.notes,
     urgent: draft.urgent,
     followUp: draft.followUp,
@@ -211,12 +213,12 @@ export function isoFromDateAndMinutes(date: string, minutes: number, timezoneOff
   return `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00${timezoneOffset}`;
 }
 
-export function dateInputValue(isoDateTime: string): string {
-  return isoDateTime.slice(0, 10);
+export function dateInputValue(isoDateTime: string, timezoneOffset: string): string {
+  return localIsoDateTime(isoDateTime, timezoneOffset).slice(0, 10);
 }
 
-export function timeInputValue(isoDateTime: string): string {
-  return isoDateTime.slice(11, 16);
+export function timeInputValue(isoDateTime: string, timezoneOffset: string): string {
+  return localIsoDateTime(isoDateTime, timezoneOffset).slice(11, 16);
 }
 
 export function withDateAndTime(
@@ -228,7 +230,27 @@ export function withDateAndTime(
   return { ...draft, start: `${date}T${time}:00${timezoneOffset}` };
 }
 
-function patientInputOf(appointment: Appointment): { reference: string; display?: string } | undefined {
+export async function confirmDoubleBookAndRetry(
+  err: unknown,
+  retry: () => Promise<void>,
+): Promise<boolean> {
+  const message = err instanceof Error ? err.message : String(err);
+  if (!message.includes("Pass allowDoubleBook to overbook")) {
+    return false;
+  }
+  const ok = window.confirm(`${message}\n\nBook anyway (double-book)?`);
+  if (!ok) {
+    return false;
+  }
+  await retry();
+  return true;
+}
+
+export function appointmentModalDurationError(draft: AppointmentModalDraft): string | undefined {
+  return validDurationMinutes(draft.durationMinutes) ? undefined : "Duration must be >= 1 minute.";
+}
+
+export function patientInputOf(appointment: Appointment): { reference: string; display?: string } | undefined {
   const actor = appointment.participant.find((participant) =>
     participant.actor?.reference?.startsWith("Patient/"),
   )?.actor;
@@ -241,7 +263,7 @@ function patientInputOf(appointment: Appointment): { reference: string; display?
   };
 }
 
-function resourceScheduleReferencesOf(resources: Schedule[], appointment: Appointment): string[] {
+export function resourceScheduleReferencesOf(resources: Schedule[], appointment: Appointment): string[] {
   return appointment.participant
     .map((participant) => participant.actor?.reference)
     .filter(
@@ -261,6 +283,27 @@ function coverageInput(reference: string, display: string): CoverageInput | unde
         ...(cleanDisplay ? { display: cleanDisplay } : {}),
       }
     : undefined;
+}
+
+function validDurationMinutes(value: number): number | undefined {
+  return Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function localIsoDateTime(isoDateTime: string, timezoneOffset: string): string {
+  const timestamp = Date.parse(isoDateTime);
+  if (!Number.isFinite(timestamp)) {
+    return isoDateTime;
+  }
+  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000).toISOString();
+}
+
+function timezoneOffsetMinutes(timezoneOffset: string): number {
+  const match = /^([+-])(\d{2}):(\d{2})$/.exec(timezoneOffset);
+  if (!match) {
+    throw new Error(`Timezone offset must be ±HH:MM, got "${timezoneOffset}".`);
+  }
+  const sign = match[1] === "-" ? -1 : 1;
+  return sign * (Number(match[2]) * 60 + Number(match[3]));
 }
 
 function ageOnDate(birthDate: string, onDate: string): number {

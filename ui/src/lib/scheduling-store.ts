@@ -1,17 +1,30 @@
-import type { Appointment, Bundle, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Bundle, Extension, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
 import { create } from "zustand";
 import { fhir } from "./fhir";
 import {
+  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  OSOD_DISCIPLINE_SYSTEM,
+  OSOD_FOLLOW_UP_EXTENSION_URL,
+  OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
+  OSOD_VISION_COVERAGE_EXTENSION_URL,
+  OSOD_VISIT_TYPE_SYSTEM,
+  V2_0276_APPOINTMENT_TYPE_SYSTEM,
+  addMinutesIso,
+  appointmentActorReferences,
+  appointmentConfirmationExtension,
   appointmentDurationMinutes,
   appointmentVisitTypeCode,
-  confirmationStatusOf,
-  isFollowUpAppointment,
-  isUrgentAppointment,
-  medicalCoverageOf,
-  osodAppointmentStatusOf,
+  isNonBlockingAppointmentStatus,
+  isResourceVisibleInMode,
+  resourceActorReference,
+  scheduleReference,
   scheduleReferenceForActor,
+  toFhirAppointmentStatus,
   validateAndBuildSchedulingAppointment,
-  visionCoverageOf,
+  visitTypeCode,
+  visitTypeDiscipline,
+  visitTypeDurationMinutes,
+  visitTypeEligibleResourceReferences,
   type AppointmentConfirmationStatus,
   type BookSchedulingAppointmentInput,
   type ClinicMode,
@@ -19,6 +32,15 @@ import {
   type OsodAppointmentStatus,
   type SchedulingPracticeConfig,
 } from "./scheduling";
+import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
+
+export const SCHEDULING_SOURCE_TAGS = {
+  create: "scheduler",
+  update: "scheduler-update",
+  status: "scheduler-status",
+  confirmation: "scheduler-confirmation",
+  move: "scheduler-move",
+} as const;
 
 export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
   timezoneOffset: "-05:00",
@@ -66,8 +88,8 @@ export interface AppointmentChangeInput {
   durationMinutes?: number;
   status?: OsodAppointmentStatus;
   confirmation?: AppointmentConfirmationStatus;
-  visionCoverage?: CoverageInput;
-  medicalCoverage?: CoverageInput;
+  visionCoverage?: CoverageInput | null;
+  medicalCoverage?: CoverageInput | null;
   notes?: string;
   urgent?: boolean;
   followUp?: boolean;
@@ -77,6 +99,7 @@ export interface AppointmentChangeInput {
 export interface MoveAppointmentInput {
   start: string;
   resourceScheduleActor: string;
+  sourceResourceScheduleActor?: string;
   allowDoubleBook?: boolean;
 }
 
@@ -178,15 +201,19 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
     const client = deps?.fhirClient ?? fhir;
     set({ loading: true, error: null });
     try {
+      const checkConflicts = shouldCheckCreateConflicts(input);
+      const appointments = checkConflicts
+        ? await fetchTargetConflictAppointments(get(), client, input.start, input.resourceScheduleReferences)
+        : [];
       const appointment = validateAndBuildSchedulingAppointment({
         clinicMode: get().clinicMode,
         visitTypes: get().visitTypes,
         resources: get().resources,
-        appointments: get().appointments,
-        input,
+        appointments,
+        input: checkConflicts ? input : { ...input, allowDoubleBook: true },
         now: deps?.now,
       });
-      await createResource(client, appointment, "scheduler");
+      await createResource(client, appointment, SCHEDULING_SOURCE_TAGS.create);
       await get().loadDay({ fhirClient: client });
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
@@ -194,7 +221,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
     }
   },
   async updateAppointment(appointment, changes, deps) {
-    await writeAppointmentUpdate(get, set, appointment, changes, deps, "scheduler-update");
+    await writeAppointmentUpdate(get, set, appointment, changes, deps, SCHEDULING_SOURCE_TAGS.update);
   },
   async setAppointmentStatus(appointment, osodStatus, deps) {
     await writeAppointmentUpdate(
@@ -203,7 +230,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       appointment,
       { status: osodStatus },
       deps,
-      "scheduler-status",
+      SCHEDULING_SOURCE_TAGS.status,
     );
   },
   async setConfirmationStatus(appointment, code, deps) {
@@ -213,10 +240,11 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       appointment,
       { confirmation: code },
       deps,
-      "scheduler-confirmation",
+      SCHEDULING_SOURCE_TAGS.confirmation,
     );
   },
   async moveAppointment(appointment, input, deps) {
+    const current = currentAppointment(get(), appointment);
     const targetSchedule = input.resourceScheduleActor.startsWith("Schedule/")
       ? input.resourceScheduleActor
       : scheduleReferenceForActor(get().resources, input.resourceScheduleActor);
@@ -227,17 +255,25 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       set({ error: err.message });
       throw err;
     }
+    const resourceScheduleReferences = input.sourceResourceScheduleActor
+      ? replaceSourceResourceScheduleReference(
+          get().resources,
+          current,
+          input.sourceResourceScheduleActor,
+          targetSchedule,
+        )
+      : [targetSchedule];
     await writeAppointmentUpdate(
       get,
       set,
       appointment,
       {
         start: input.start,
-        resourceScheduleReferences: [targetSchedule],
+        resourceScheduleReferences,
         allowDoubleBook: input.allowDoubleBook,
       },
       deps,
-      "scheduler-move",
+      SCHEDULING_SOURCE_TAGS.move,
     );
   },
 }));
@@ -311,7 +347,13 @@ async function writeAppointmentUpdate(
   const client = deps?.fhirClient ?? fhir;
   set({ loading: true, error: null });
   try {
-    const updated = rebuildAppointmentForUpdate(get(), appointment, changes, deps?.now);
+    const state = get();
+    const current = currentAppointment(state, appointment);
+    const updated = rebuildAppointmentForUpdate(state, current, changes);
+    if (shouldCheckUpdateConflicts(current, updated, changes)) {
+      const conflicts = await fetchTargetConflictAppointmentsForAppointment(state, client, updated);
+      assertNoAppointmentConflicts(updated, conflicts, current.id);
+    }
     await updateResource(client, updated, sourceTag);
     await get().loadDay({ fhirClient: client });
   } catch (err) {
@@ -324,88 +366,448 @@ function rebuildAppointmentForUpdate(
   state: SchedulingStoreState,
   appointment: Appointment,
   changes: AppointmentChangeInput,
-  now?: () => string,
 ): Appointment {
-  const existingPatient = patientInputOf(appointment);
-  const patient =
-    changes.patient === null ? undefined : changes.patient !== undefined ? changes.patient : existingPatient;
-  const description =
-    changes.description !== undefined ? cleanOptionalString(changes.description) : appointment.description;
-  const visitTypeCode = changes.visitTypeCode ?? appointmentVisitTypeCode(appointment);
-  if (!visitTypeCode) {
-    throw new Error("Appointment update requires a visit-type catalog code.");
+  const updated: Appointment = {
+    ...appointment,
+    participant: [...appointment.participant],
+    ...(appointment.extension ? { extension: [...appointment.extension] } : {}),
+  };
+
+  if (changes.patient !== undefined) {
+    applyPatientChange(updated, changes.patient);
   }
-  const start = changes.start ?? appointment.start;
-  if (!start) {
+  if (changes.description !== undefined) {
+    setOptional(updated, "description", cleanOptionalString(changes.description));
+  }
+  if (changes.visitTypeCode !== undefined) {
+    applyVisitTypeChange(state, updated, changes.visitTypeCode);
+  }
+  if (changes.resourceScheduleReferences !== undefined) {
+    applyResourceScheduleReferences(state, updated, changes.resourceScheduleReferences);
+  }
+  if (changes.start !== undefined) {
+    updated.start = changes.start;
+  }
+  if (changes.durationMinutes !== undefined) {
+    if (!Number.isInteger(changes.durationMinutes) || changes.durationMinutes <= 0) {
+      throw new Error("Appointment duration (durationMinutes) must be a positive integer.");
+    }
+    updated.minutesDuration = changes.durationMinutes;
+  }
+  if (changes.start !== undefined || changes.durationMinutes !== undefined) {
+    const duration = appointmentDurationMinutes(updated);
+    if (!updated.start || !duration) {
+      throw new Error("Appointment update requires an appointment start time and positive duration.");
+    }
+    updated.end = addMinutesIso(updated.start, duration);
+  }
+  if (changes.status !== undefined) {
+    applyStatusChange(updated, changes.status);
+  }
+  if (changes.confirmation !== undefined) {
+    replaceExtension(updated, OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL, appointmentConfirmationExtension(changes.confirmation));
+  }
+  if (changes.visionCoverage !== undefined) {
+    applyCoverageChange(updated, OSOD_VISION_COVERAGE_EXTENSION_URL, changes.visionCoverage);
+  }
+  if (changes.medicalCoverage !== undefined) {
+    applyCoverageChange(updated, OSOD_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
+  }
+  if (changes.notes !== undefined) {
+    setOptional(updated, "comment", cleanOptionalString(changes.notes));
+  }
+  if (changes.urgent !== undefined) {
+    if (changes.urgent) {
+      updated.priority = 1;
+    } else {
+      delete updated.priority;
+    }
+  }
+  if (changes.followUp !== undefined) {
+    replaceExtension(
+      updated,
+      OSOD_FOLLOW_UP_EXTENSION_URL,
+      changes.followUp ? { url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true } : undefined,
+    );
+  }
+
+  return updated;
+}
+
+function currentAppointment(state: SchedulingStoreState, appointment: Appointment): Appointment {
+  return appointment.id
+    ? state.appointments.find((candidate) => candidate.id === appointment.id) ?? appointment
+    : appointment;
+}
+
+function shouldCheckCreateConflicts(input: BookSchedulingAppointmentInput): boolean {
+  if (input.allowDoubleBook) {
+    return false;
+  }
+  return !isNonBlockingAppointmentStatus(toFhirAppointmentStatus(input.status ?? "scheduled").status);
+}
+
+function shouldCheckUpdateConflicts(
+  before: Appointment,
+  after: Appointment,
+  changes: AppointmentChangeInput,
+): boolean {
+  if (changes.allowDoubleBook || isNonBlockingAppointmentStatus(after.status)) {
+    return false;
+  }
+  if (
+    changes.start === undefined &&
+    changes.durationMinutes === undefined &&
+    changes.resourceScheduleReferences === undefined
+  ) {
+    return false;
+  }
+  return (
+    before.start !== after.start ||
+    before.end !== after.end ||
+    resourceActorsKey(before) !== resourceActorsKey(after)
+  );
+}
+
+async function fetchTargetConflictAppointments(
+  state: SchedulingStoreState,
+  client: SchedulingFhirClient,
+  start: string,
+  resourceScheduleReferences: string[],
+): Promise<Appointment[]> {
+  const actors = resourceScheduleReferences
+    .map((reference) => {
+      const schedule = state.resources.find((resource) => scheduleReference(resource) === reference);
+      return schedule ? resourceActorReference(schedule) : undefined;
+    })
+    .filter((reference): reference is string => Boolean(reference));
+  return fetchConflictAppointmentsByActors(state, client, start, actors);
+}
+
+async function fetchTargetConflictAppointmentsForAppointment(
+  state: SchedulingStoreState,
+  client: SchedulingFhirClient,
+  appointment: Appointment,
+): Promise<Appointment[]> {
+  if (!appointment.start) {
     throw new Error("Appointment update requires an appointment start time.");
   }
-  const resourceScheduleReferences =
-    changes.resourceScheduleReferences ?? resourceScheduleReferencesOf(state.resources, appointment);
-  const built = validateAndBuildSchedulingAppointment({
-    clinicMode: state.clinicMode,
-    visitTypes: state.visitTypes,
-    resources: state.resources,
-    appointments: state.appointments,
-    input: {
-      ...(patient ? { patient } : {}),
-      ...(description ? { description } : {}),
-      visitTypeCode,
-      resourceScheduleReferences,
-      start,
-      durationMinutes: changes.durationMinutes ?? appointmentDurationMinutes(appointment),
-      status: changes.status ?? osodAppointmentStatusOf(appointment) ?? "scheduled",
-      confirmation: changes.confirmation ?? confirmationStatusOf(appointment) ?? "not-confirmed",
-      ...(changes.visionCoverage !== undefined
-        ? { visionCoverage: changes.visionCoverage }
-        : coverageInput(visionCoverageOf(appointment), "visionCoverage")),
-      ...(changes.medicalCoverage !== undefined
-        ? { medicalCoverage: changes.medicalCoverage }
-        : coverageInput(medicalCoverageOf(appointment), "medicalCoverage")),
-      notes: changes.notes !== undefined ? changes.notes : appointment.comment,
-      urgent: changes.urgent ?? isUrgentAppointment(appointment),
-      followUp: changes.followUp ?? isFollowUpAppointment(appointment),
-      allowDoubleBook: changes.allowDoubleBook,
-      created: appointment.created,
-    },
-    now,
-    ignoreAppointmentId: appointment.id,
-  });
-  return {
-    ...built,
-    ...(appointment.id ? { id: appointment.id } : {}),
-    ...(appointment.meta ? { meta: appointment.meta } : {}),
-  };
+  return fetchConflictAppointmentsByActors(state, client, appointment.start, resourceActorReferences(appointment));
 }
 
-function patientInputOf(appointment: Appointment): { reference: string; display?: string } | undefined {
-  const actor = appointment.participant.find((participant) =>
-    participant.actor?.reference?.startsWith("Patient/"),
-  )?.actor;
-  if (!actor?.reference) {
-    return undefined;
+async function fetchConflictAppointmentsByActors(
+  state: SchedulingStoreState,
+  client: SchedulingFhirClient,
+  start: string,
+  actorReferences: string[],
+): Promise<Appointment[]> {
+  const date = ymdFromIsoDateTime(start, state.config.timezoneOffset);
+  const byKey = new Map<string, Appointment>();
+  for (const actor of actorReferences) {
+    const appointments = await searchAll<Appointment>(
+      client,
+      "Appointment",
+      new URLSearchParams([
+        ["date", `ge${date}T00:00:00${state.config.timezoneOffset}`],
+        ["date", `lt${addDaysYmd(date, 1)}T00:00:00${state.config.timezoneOffset}`],
+        ["actor", actor],
+      ]),
+    );
+    for (const appointment of appointments) {
+      byKey.set(appointment.id ?? JSON.stringify(appointment), appointment);
+    }
   }
-  return {
-    reference: actor.reference,
-    ...(actor.display ? { display: actor.display } : {}),
-  };
+  return [...byKey.values()];
 }
 
-function resourceScheduleReferencesOf(resources: Schedule[], appointment: Appointment): string[] {
-  return appointment.participant
-    .map((participant) => participant.actor?.reference)
-    .filter(
-      (reference): reference is string =>
-        typeof reference === "string" && !reference.startsWith("Patient/"),
-    )
-    .map((actorReference) => scheduleReferenceForActor(resources, actorReference))
-    .filter((reference): reference is string => Boolean(reference));
+function assertNoAppointmentConflicts(
+  appointment: Appointment,
+  candidates: Appointment[],
+  ignoreAppointmentId?: string,
+): void {
+  if (!appointment.start || !appointment.end || isNonBlockingAppointmentStatus(appointment.status)) {
+    return;
+  }
+  const start = Date.parse(appointment.start);
+  const end = Date.parse(appointment.end);
+  for (const actor of resourceActorReferences(appointment)) {
+    const conflict = candidates.find((candidate) => {
+      if (candidate.id && candidate.id === ignoreAppointmentId) {
+        return false;
+      }
+      if (isNonBlockingAppointmentStatus(candidate.status)) {
+        return false;
+      }
+      if (!appointmentActorReferences(candidate).includes(actor)) {
+        return false;
+      }
+      if (!candidate.start || !candidate.end) {
+        return false;
+      }
+      return overlaps(start, end, Date.parse(candidate.start), Date.parse(candidate.end));
+    });
+    if (conflict) {
+      throw new Error(
+        `Resource ${actor} is already booked over ${appointment.start} ` +
+          `(conflict with Appointment/${conflict.id ?? "?"}). Pass allowDoubleBook to overbook.`,
+      );
+    }
+  }
 }
 
-function coverageInput(
-  coverage: CoverageInput | undefined,
-  _key: "visionCoverage" | "medicalCoverage",
-): { visionCoverage?: CoverageInput; medicalCoverage?: CoverageInput } {
-  return coverage ? { [_key]: coverage } : {};
+function replaceSourceResourceScheduleReference(
+  resources: Schedule[],
+  appointment: Appointment,
+  sourceActorReference: string,
+  targetScheduleReference: string,
+): string[] {
+  const sourceScheduleReference = sourceActorReference.startsWith("Schedule/")
+    ? sourceActorReference
+    : scheduleReferenceForActor(resources, sourceActorReference);
+  if (!sourceScheduleReference) {
+    throw new Error(`Move source ${sourceActorReference} is not a loaded scheduler resource actor.`);
+  }
+  const current = resourceScheduleReferencesOf(resources, appointment);
+  if (!current.includes(sourceScheduleReference)) {
+    throw new Error(`Move source ${sourceActorReference} is not assigned to Appointment/${appointment.id ?? "?"}.`);
+  }
+  return current.map((reference) =>
+    reference === sourceScheduleReference ? targetScheduleReference : reference,
+  );
+}
+
+function applyPatientChange(
+  appointment: Appointment,
+  patient: { reference: string; display?: string } | null | undefined,
+): void {
+  appointment.participant = appointment.participant.filter(
+    (participant) => !participant.actor?.reference?.startsWith("Patient/"),
+  );
+  if (!patient) {
+    return;
+  }
+  appointment.participant.unshift({
+    actor: {
+      reference: patient.reference,
+      ...(patient.display ? { display: patient.display } : {}),
+    },
+    status: "accepted",
+  });
+}
+
+function applyVisitTypeChange(
+  state: SchedulingStoreState,
+  appointment: Appointment,
+  code: string,
+): void {
+  const entry = state.visitTypes.find((visitType) => visitTypeCode(visitType) === code && visitType.active !== false);
+  if (!entry) {
+    throw new Error(`Unknown visit type "${code}" — not in the active catalog.`);
+  }
+  const discipline = visitTypeDiscipline(entry);
+  if (!discipline) {
+    throw new Error(`Visit type "${code}" has no discipline category.`);
+  }
+  if (!isDisciplineVisibleForMode(discipline, state.clinicMode)) {
+    throw new Error(
+      `Visit type "${code}" is not available under this practice's clinic mode ("${state.clinicMode}").`,
+    );
+  }
+  appointment.serviceCategory = [
+    {
+      coding: [
+        {
+          system: OSOD_DISCIPLINE_SYSTEM,
+          code: discipline,
+          display: discipline === "eyecare" ? "Eyecare" : "Aesthetics",
+        },
+      ],
+    },
+  ];
+  appointment.serviceType = [
+    {
+      coding: [
+        {
+          system: OSOD_VISIT_TYPE_SYSTEM,
+          code,
+          ...(entry.name ? { display: entry.name } : {}),
+        },
+      ],
+      ...(entry.name ? { text: entry.name } : {}),
+    },
+  ];
+  if (!appointmentDurationMinutes(appointment)) {
+    const duration = visitTypeDurationMinutes(entry);
+    if (duration) {
+      appointment.minutesDuration = duration;
+      if (appointment.start) {
+        appointment.end = addMinutesIso(appointment.start, duration);
+      }
+    }
+  }
+}
+
+function applyResourceScheduleReferences(
+  state: SchedulingStoreState,
+  appointment: Appointment,
+  references: string[],
+): void {
+  if (references.length === 0) {
+    throw new Error("Booking requires at least one resource (provider/room/equipment).");
+  }
+  const visitType = appointmentVisitTypeCode(appointment);
+  if (!visitType) {
+    throw new Error("Appointment update requires a visit-type catalog code.");
+  }
+  const entry = state.visitTypes.find((candidate) => visitTypeCode(candidate) === visitType && candidate.active !== false);
+  const eligible = entry ? visitTypeEligibleResourceReferences(entry) : [];
+  const patientParticipants = appointment.participant.filter((participant) =>
+    participant.actor?.reference?.startsWith("Patient/"),
+  );
+  const resourceParticipants = references.map((reference) => {
+    const schedule = state.resources.find((resource) => scheduleReference(resource) === reference);
+    if (!schedule) {
+      throw new Error(`${reference} not found in the loaded scheduler resources.`);
+    }
+    if (!isResourceVisibleInMode(schedule, state.clinicMode)) {
+      throw new Error(
+        `Resource ${reference} is not visible under this practice's clinic mode ("${state.clinicMode}").`,
+      );
+    }
+    const actor = schedule.actor?.[0];
+    if (!actor?.reference) {
+      throw new Error(`Resource ${reference} has no actor reference.`);
+    }
+    if (eligible.length > 0 && !eligible.includes(actor.reference)) {
+      throw new Error(`Resource ${actor.reference} is not eligible for visit type "${visitType}".`);
+    }
+    const existing = appointment.participant.find((participant) => participant.actor?.reference === actor.reference);
+    return {
+      ...(existing ?? {}),
+      actor: {
+        ...(existing?.actor ?? {}),
+        reference: actor.reference,
+        ...(actor.display ? { display: actor.display } : {}),
+      },
+      status: existing?.status ?? "accepted",
+    };
+  });
+  appointment.participant = [...patientParticipants, ...resourceParticipants];
+}
+
+function applyStatusChange(appointment: Appointment, status: OsodAppointmentStatus): void {
+  const mapped = toFhirAppointmentStatus(status);
+  appointment.status = mapped.status;
+  if (mapped.appointmentTypeCode) {
+    const coding = {
+      system: V2_0276_APPOINTMENT_TYPE_SYSTEM,
+      code: mapped.appointmentTypeCode,
+    };
+    appointment.appointmentType = {
+      ...(appointment.appointmentType ?? {}),
+      coding: [
+        ...(appointment.appointmentType?.coding ?? []).filter(
+          (candidate) =>
+            candidate.system !== V2_0276_APPOINTMENT_TYPE_SYSTEM ||
+            candidate.code !== mapped.appointmentTypeCode,
+        ),
+        coding,
+      ],
+    };
+    return;
+  }
+  if (!appointment.appointmentType?.coding?.length) {
+    return;
+  }
+  const coding = appointment.appointmentType.coding.filter(
+    (candidate) => candidate.system !== V2_0276_APPOINTMENT_TYPE_SYSTEM || candidate.code !== "WALKIN",
+  );
+  if (coding.length > 0) {
+    appointment.appointmentType = { ...appointment.appointmentType, coding };
+  } else {
+    delete appointment.appointmentType;
+  }
+}
+
+function applyCoverageChange(
+  appointment: Appointment,
+  url: string,
+  coverage: CoverageInput | null,
+): void {
+  replaceExtension(
+    appointment,
+    url,
+    coverage
+      ? {
+          url,
+          valueReference: {
+            ...(coverage.reference ? { reference: coverage.reference } : {}),
+            ...(coverage.display ? { display: coverage.display } : {}),
+          },
+        }
+      : undefined,
+  );
+}
+
+function replaceExtension(appointment: Appointment, url: string, next: Extension | undefined): void {
+  const extensions = appointment.extension ?? [];
+  let replaced = false;
+  const merged = extensions.flatMap((extension) => {
+    if (extension.url !== url) {
+      return [extension];
+    }
+    if (next && !replaced) {
+      replaced = true;
+      return [next];
+    }
+    return [];
+  });
+  if (next && !replaced) {
+    merged.push(next);
+  }
+  if (merged.length > 0) {
+    appointment.extension = merged;
+  } else {
+    delete appointment.extension;
+  }
+}
+
+function setOptional<K extends "description" | "comment">(
+  appointment: Appointment,
+  key: K,
+  value: Appointment[K] | undefined,
+): void {
+  if (value) {
+    appointment[key] = value;
+  } else {
+    delete appointment[key];
+  }
+}
+
+function resourceActorReferences(appointment: Appointment): string[] {
+  return appointmentActorReferences(appointment).filter((reference) => !reference.startsWith("Patient/"));
+}
+
+function resourceActorsKey(appointment: Appointment): string {
+  return resourceActorReferences(appointment).sort().join("|");
+}
+
+function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function ymdFromIsoDateTime(dateTime: string, timezoneOffset: string): string {
+  const timestamp = Date.parse(dateTime);
+  if (!Number.isFinite(timestamp)) {
+    throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
+  }
+  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function isDisciplineVisibleForMode(discipline: string, mode: ClinicMode): boolean {
+  return mode === "both" || discipline === mode;
 }
 
 async function createResource<T extends Resource>(

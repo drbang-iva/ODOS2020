@@ -21,9 +21,13 @@ import {
 } from "../../ui/src/lib/scheduling.js";
 import {
   appointmentModalDraftFromAppointment,
+  dateInputValue,
   defaultAppointmentModalDraft,
+  draftToAppointmentChanges,
+  timeInputValue,
   maskedSsnLast4,
   patientQuickCardViewModel,
+  withDateAndTime,
 } from "../../ui/src/lib/scheduler-appointment-ui.js";
 
 const MONDAY = "2026-07-06";
@@ -396,6 +400,55 @@ test("appointment modal draft round-trips editable Eyefinity fields from an exis
   assert.equal(draft.followUp, true);
 });
 
+test("modal date/time helpers render stored instants in practice-local time and preserve clock time across date edits", () => {
+  const draft = appointmentModalDraftFromAppointment(
+    buildSchedulingAppointment({
+      patient: { reference: "Patient/p1", display: "Doe, Jane" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/od" }],
+      start: "2026-07-06T14:00:00Z",
+      durationMinutes: 30,
+    }),
+    [provider("sch-od", "Practitioner/od", ["eyecare"], "OD")],
+  );
+
+  assert.equal(dateInputValue(draft.start, "-05:00"), "2026-07-06");
+  assert.equal(timeInputValue(draft.start, "-05:00"), "09:00");
+  assert.equal(
+    withDateAndTime(draft, "2026-07-07", timeInputValue(draft.start, "-05:00"), "-05:00").start,
+    "2026-07-07T09:00:00-05:00",
+  );
+});
+
+test("appointment draft changes stage confirmation and emit null for cleared coverage fields", () => {
+  const draft = appointmentModalDraftFromAppointment(
+    buildSchedulingAppointment({
+      patient: { reference: "Patient/p1", display: "Doe, Jane" },
+      visitTypeCode: "routine-exam-new",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/od" }],
+      start: "2026-07-06T09:00:00-05:00",
+      durationMinutes: 30,
+      confirmation: "left-message",
+      visionCoverage: { display: "VSP" },
+      medicalCoverage: { display: "BCBS" },
+    }),
+    [provider("sch-od", "Practitioner/od", ["eyecare"], "OD")],
+  );
+
+  const changes = draftToAppointmentChanges({
+    ...draft,
+    confirmation: "confirmed",
+    visionCoverageReference: "",
+    visionCoverageDisplay: "",
+  });
+
+  assert.equal(changes.confirmation, "confirmed");
+  assert.equal(changes.visionCoverage, null);
+  assert.deepEqual(changes.medicalCoverage, { display: "BCBS" });
+});
+
 test("quick-card view model masks SSN to last four and never returns the raw identifier", () => {
   const patient: Patient = {
     resourceType: "Patient",
@@ -405,12 +458,12 @@ test("quick-card view model masks SSN to last four and never returns the raw ide
     gender: "female",
     identifier: [
       { type: { coding: [{ code: "MR" }] }, value: "MRN-123" },
-      { system: "http://hl7.org/fhir/sid/us-ssn", value: "123-45-6789" },
+      { system: "http://hl7.org/fhir/sid/us-ssn", value: "900-12-3456" },
     ],
   };
 
-  assert.equal(maskedSsnLast4(patient), "***-**-6789");
-  assert.equal(maskedSsnLast4(patient)?.includes("123-45"), false);
+  assert.equal(maskedSsnLast4(patient), "***-**-3456");
+  assert.equal(maskedSsnLast4(patient)?.includes("900-12"), false);
   assert.deepEqual(patientQuickCardViewModel({ patient, onDate: "2026-07-06" }), {
     name: "Jane Doe",
     birthDate: "1980-01-02",
@@ -420,7 +473,7 @@ test("quick-card view model masks SSN to last four and never returns the raw ide
     emails: [],
     address: "none",
     mrn: "MRN-123",
-    ssnLast4: "***-**-6789",
+    ssnLast4: "***-**-3456",
     provider: "none",
   });
 });

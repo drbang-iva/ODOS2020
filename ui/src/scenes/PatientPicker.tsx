@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { fhir } from "../lib/fhir";
+import { patientName } from "../lib/scheduler-appointment-ui";
 import { useViewState } from "../lib/view-state";
 
 export function PatientPicker() {
@@ -119,12 +120,6 @@ export function PatientPicker() {
       </div>
     </div>
   );
-}
-
-function patientName(patient: Patient): string {
-  const name = patient.name?.[0];
-  if (!name) return "Unknown patient";
-  return `${name.given?.join(" ") ?? ""} ${name.family ?? ""}`.trim() || "Unknown patient";
 }
 
 function shortId(id: string | undefined): string {

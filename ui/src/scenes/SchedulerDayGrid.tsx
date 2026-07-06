@@ -22,7 +22,12 @@ import {
   type ClinicMode,
 } from "../lib/scheduling";
 import { useSchedulingStore } from "../lib/scheduling-store";
-import { defaultAppointmentModalDraft, isoFromDateAndMinutes, type AppointmentModalDraft } from "../lib/scheduler-appointment-ui";
+import {
+  confirmDoubleBookAndRetry,
+  defaultAppointmentModalDraft,
+  isoFromDateAndMinutes,
+  type AppointmentModalDraft,
+} from "../lib/scheduler-appointment-ui";
 import { AppointmentDetailsModal } from "./scheduler/AppointmentDetailsModal";
 import { PatientQuickCard } from "./scheduler/PatientQuickCard";
 
@@ -59,15 +64,20 @@ export function SchedulerDayGrid() {
   const createAppointment = useSchedulingStore((state) => state.createAppointment);
   const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
   const setAppointmentStatus = useSchedulingStore((state) => state.setAppointmentStatus);
-  const setConfirmationStatus = useSchedulingStore((state) => state.setConfirmationStatus);
   const moveAppointment = useSchedulingStore((state) => state.moveAppointment);
   const [legendOpen, setLegendOpen] = useState(true);
-  const [quickCardAppointment, setQuickCardAppointment] = useState<Appointment | null>(null);
+  const [quickCardSelection, setQuickCardSelection] = useState<{
+    appointment: Appointment;
+    sourceResourceActor?: string;
+  } | null>(null);
   const [quickCardPinned, setQuickCardPinned] = useState(false);
   const [details, setDetails] = useState<
     { appointment: Appointment; draft?: never } | { appointment?: never; draft: AppointmentModalDraft } | null
   >(null);
-  const [moveSource, setMoveSource] = useState<Appointment | null>(null);
+  const [moveSource, setMoveSource] = useState<{
+    appointment: Appointment;
+    sourceResourceActor?: string;
+  } | null>(null);
 
   useEffect(() => {
     void loadDay();
@@ -97,6 +107,18 @@ export function SchedulerDayGrid() {
   const visibleAppointments = useMemo(
     () => visibleAppointmentsForMode(appointments, clinicMode),
     [appointments, clinicMode],
+  );
+  const quickCardAppointment = useMemo(
+    () => currentAppointment(quickCardSelection?.appointment ?? null, appointments),
+    [appointments, quickCardSelection],
+  );
+  const detailsAppointment = useMemo(
+    () => currentAppointment(details && "appointment" in details ? details.appointment ?? null : null, appointments),
+    [appointments, details],
+  );
+  const moveSourceAppointment = useMemo(
+    () => currentAppointment(moveSource?.appointment ?? null, appointments),
+    [appointments, moveSource],
   );
   const timeAxis = useMemo(
     () => buildTimeAxis({ date, resources: visibleResources, config, slotMinutes }),
@@ -156,9 +178,15 @@ export function SchedulerDayGrid() {
     });
   }
 
-  async function moveToCell(appointment: Appointment, resource: Schedule, startMinutes: number, allowDoubleBook = false) {
+  async function moveToCell(
+    source: { appointment: Appointment; sourceResourceActor?: string },
+    resource: Schedule,
+    startMinutes: number,
+    allowDoubleBook = false,
+  ) {
     const actor = resourceActorReference(resource);
-    if (!actor) {
+    const appointment = currentAppointment(source.appointment, appointments);
+    if (!actor || !appointment) {
       return;
     }
     try {
@@ -167,17 +195,14 @@ export function SchedulerDayGrid() {
         {
           start: isoFromDateAndMinutes(date, startMinutes, config.timezoneOffset),
           resourceScheduleActor: actor,
+          sourceResourceScheduleActor: source.sourceResourceActor,
           allowDoubleBook,
         },
       );
       setMoveSource(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (!allowDoubleBook && message.includes("Pass allowDoubleBook to overbook")) {
-        const ok = window.confirm(`${message}\n\nBook anyway (double-book)?`);
-        if (ok) {
-          await moveToCell(appointment, resource, startMinutes, true);
-        }
+      if (!allowDoubleBook) {
+        await confirmDoubleBookAndRetry(err, () => moveToCell(source, resource, startMinutes, true));
       }
     }
   }
@@ -190,8 +215,8 @@ export function SchedulerDayGrid() {
     openNewAppointment(resource, startMinutes);
   }
 
-  function handleAppointmentClick(appointment: Appointment) {
-    setQuickCardAppointment(appointment);
+  function handleAppointmentClick(appointment: Appointment, sourceResourceActor?: string) {
+    setQuickCardSelection({ appointment, sourceResourceActor });
     if (!quickCardPinned) {
       setDetails(null);
     }
@@ -216,7 +241,15 @@ export function SchedulerDayGrid() {
         legendOpen={legendOpen}
         onClinicModeChange={setClinicMode}
         onLegendToggle={() => setLegendOpen((open) => !open)}
-        onMove={() => setMoveSource((current) => (current ? null : quickCardAppointment))}
+        onMove={() =>
+          setMoveSource((current) =>
+            current
+              ? null
+              : quickCardAppointment
+                ? { appointment: quickCardAppointment, sourceResourceActor: quickCardSelection?.sourceResourceActor }
+                : null,
+          )
+        }
         onNextDay={() => shiftDate(1)}
         onPreviousDay={() => shiftDate(-1)}
         onToday={today}
@@ -224,9 +257,9 @@ export function SchedulerDayGrid() {
         moveActive={Boolean(moveSource)}
         moveEnabled={Boolean(quickCardAppointment)}
       />
-      {moveSource && (
+      {moveSourceAppointment && (
         <div className="border-b border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
-          Move mode: click a target cell for {moveSource.description ?? moveSource.id ?? "appointment"}.
+          Move mode: click a target cell for {moveSourceAppointment.description ?? moveSourceAppointment.id ?? "appointment"}.
           Press Escape to cancel.
         </div>
       )}
@@ -288,14 +321,14 @@ export function SchedulerDayGrid() {
         onPinnedChange={setQuickCardPinned}
         onClose={() => {
           setQuickCardPinned(false);
-          setQuickCardAppointment(null);
+          setQuickCardSelection(null);
         }}
         onDetails={(appointment) => setDetails({ appointment })}
         date={date}
       />
       {details && (
         <AppointmentDetailsModal
-          appointment={"appointment" in details ? details.appointment : undefined}
+          appointment={"appointment" in details ? detailsAppointment ?? undefined : undefined}
           initialDraft={"draft" in details ? details.draft : undefined}
           clinicMode={clinicMode}
           timezoneOffset={config.timezoneOffset}
@@ -305,7 +338,6 @@ export function SchedulerDayGrid() {
           onCreate={createAppointment}
           onUpdate={updateAppointment}
           onSetStatus={setAppointmentStatus}
-          onSetConfirmation={setConfirmationStatus}
         />
       )}
     </main>
@@ -478,7 +510,7 @@ function ResourceColumn({
   axisEndMinutes: number;
   slotMinutes: number;
   appointments: PositionedAppointment[];
-  onAppointmentClick: (appointment: Appointment) => void;
+  onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
 }) {
   const config = useSchedulingStore((state) => state.config);
@@ -534,6 +566,7 @@ function ResourceColumn({
         <AppointmentBlock
           key={`${block.geometry.columnIndex}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
           block={block}
+          resource={resource}
           onClick={onAppointmentClick}
         />
       ))}
@@ -543,10 +576,12 @@ function ResourceColumn({
 
 function AppointmentBlock({
   block,
+  resource,
   onClick,
 }: {
   block: PositionedAppointment;
-  onClick: (appointment: Appointment) => void;
+  resource: Schedule;
+  onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
 }) {
   const { geometry, content, appointment } = block;
   const color = content.color;
@@ -564,7 +599,7 @@ function AppointmentBlock({
       }}
       onClick={(event) => {
         event.stopPropagation();
-        onClick(appointment);
+        onClick(appointment, resourceActorReference(resource));
       }}
     >
       <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
@@ -587,6 +622,13 @@ function AppointmentBlock({
       )}
     </button>
   );
+}
+
+function currentAppointment(appointment: Appointment | null, appointments: Appointment[]): Appointment | null {
+  if (!appointment?.id) {
+    return appointment;
+  }
+  return appointments.find((candidate) => candidate.id === appointment.id) ?? appointment;
 }
 
 function formatDateDisplay(date: string): string {

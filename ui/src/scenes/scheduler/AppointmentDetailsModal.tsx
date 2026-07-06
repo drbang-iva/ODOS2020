@@ -14,7 +14,9 @@ import {
   type OsodAppointmentStatus,
 } from "../../lib/scheduling";
 import {
+  appointmentModalDurationError,
   appointmentModalDraftFromAppointment,
+  confirmDoubleBookAndRetry,
   dateInputValue,
   defaultAppointmentModalDraft,
   draftToAppointmentChanges,
@@ -40,7 +42,6 @@ export function AppointmentDetailsModal({
   onCreate,
   onUpdate,
   onSetStatus,
-  onSetConfirmation,
 }: {
   appointment?: Appointment;
   initialDraft?: AppointmentModalDraft;
@@ -60,37 +61,43 @@ export function AppointmentDetailsModal({
     status: OsodAppointmentStatus,
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
-  onSetConfirmation: (
-    appointment: Appointment,
-    code: AppointmentConfirmationStatus,
-    deps?: SchedulingWriteDeps,
-  ) => Promise<void>;
 }) {
   const fallbackDraft = useMemo(
-    () =>
-      initialDraft ??
-      defaultAppointmentModalDraft({
+    () => {
+      if (appointment) {
+        return undefined;
+      }
+      if (initialDraft) {
+        return initialDraft;
+      }
+      const resource = resources[0];
+      if (!resource) {
+        return undefined;
+      }
+      return defaultAppointmentModalDraft({
         date: new Date().toISOString().slice(0, 10),
         startMinutes: 9 * 60,
         timezoneOffset,
         resources,
         visitTypes,
         clinicMode,
-        resource: resources[0]!,
-      }),
-    [clinicMode, initialDraft, resources, timezoneOffset, visitTypes],
+        resource,
+      });
+    },
+    [appointment, clinicMode, initialDraft, resources, timezoneOffset, visitTypes],
   );
+  const createDisabled = !appointment && !fallbackDraft;
   const [draft, setDraft] = useState<AppointmentModalDraft>(
-    appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft,
+    appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset),
   );
   const [patientQueryOpen, setPatientQueryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDraft(appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft);
+    setDraft(appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset));
     setError(null);
-  }, [appointment, fallbackDraft, resources]);
+  }, [appointment?.id, Boolean(fallbackDraft)]);
 
   const visibleVisitTypes = useMemo(
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
@@ -98,6 +105,15 @@ export function AppointmentDetailsModal({
   );
 
   async function save(allowDoubleBook = false) {
+    if (createDisabled) {
+      setError("No scheduler resources are loaded for this appointment.");
+      return;
+    }
+    const durationError = appointmentModalDurationError(draft);
+    if (durationError) {
+      setError(durationError);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -109,12 +125,8 @@ export function AppointmentDetailsModal({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!allowDoubleBook && message.includes("Pass allowDoubleBook to overbook")) {
-        const ok = window.confirm(`${message}\n\nBook anyway (double-book)?`);
-        if (ok) {
-          await save(true);
-          return;
-        }
+      if (!allowDoubleBook && (await confirmDoubleBookAndRetry(err, () => save(true)))) {
+        return;
       }
       setError(message);
     } finally {
@@ -135,22 +147,6 @@ export function AppointmentDetailsModal({
       if (status === "cancelled") {
         onClose();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function setConfirmation(code: AppointmentConfirmationStatus) {
-    setDraft((current) => ({ ...current, confirmation: code }));
-    if (!appointment) {
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await onSetConfirmation(appointment, code);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -195,6 +191,11 @@ export function AppointmentDetailsModal({
                 {error}
               </div>
             )}
+            {createDisabled && (
+              <div className="border border-amber-300/35 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">
+                No scheduler resources are loaded for this appointment.
+              </div>
+            )}
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="scheduler-field">
@@ -234,8 +235,8 @@ export function AppointmentDetailsModal({
                 <input
                   className="scheduler-input"
                   type="date"
-                  value={dateInputValue(draft.start)}
-                  onChange={(event) => updateDateTime(event.target.value, timeInputValue(draft.start))}
+                  value={dateInputValue(draft.start, timezoneOffset)}
+                  onChange={(event) => updateDateTime(event.target.value, timeInputValue(draft.start, timezoneOffset))}
                 />
               </label>
               <label className="scheduler-field">
@@ -243,8 +244,8 @@ export function AppointmentDetailsModal({
                 <input
                   className="scheduler-input"
                   type="time"
-                  value={timeInputValue(draft.start)}
-                  onChange={(event) => updateDateTime(dateInputValue(draft.start), event.target.value)}
+                  value={timeInputValue(draft.start, timezoneOffset)}
+                  onChange={(event) => updateDateTime(dateInputValue(draft.start, timezoneOffset), event.target.value)}
                 />
               </label>
             </div>
@@ -309,7 +310,7 @@ export function AppointmentDetailsModal({
                   className="scheduler-input"
                   value={draft.confirmation}
                   onChange={(event) =>
-                    void setConfirmation(event.target.value as AppointmentConfirmationStatus)
+                    setDraft((current) => ({ ...current, confirmation: event.target.value as AppointmentConfirmationStatus }))
                   }
                 >
                   {APPOINTMENT_CONFIRMATION_STATUSES.map((status) => (
@@ -440,13 +441,33 @@ export function AppointmentDetailsModal({
           <button className="scheduler-button" type="button" onClick={onClose}>
             Close
           </button>
-          <button className="scheduler-button" type="button" disabled={saving} onClick={() => void save()}>
+          <button className="scheduler-button" type="button" disabled={saving || createDisabled} onClick={() => void save()}>
             Save
           </button>
         </footer>
       </section>
     </div>
   );
+}
+
+function emptyDraft(timezoneOffset: string): AppointmentModalDraft {
+  return {
+    nonPatient: false,
+    description: "",
+    visitTypeCode: "",
+    resourceScheduleReferences: [],
+    start: `1970-01-01T09:00:00${timezoneOffset}`,
+    durationMinutes: 30,
+    status: "scheduled",
+    confirmation: "not-confirmed",
+    visionCoverageReference: "",
+    visionCoverageDisplay: "",
+    medicalCoverageReference: "",
+    medicalCoverageDisplay: "",
+    notes: "",
+    urgent: false,
+    followUp: false,
+  };
 }
 
 function PatientSearch({

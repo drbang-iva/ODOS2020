@@ -1,4 +1,4 @@
-import type { Appointment, Encounter, Invoice, Patient } from "@medplum/fhirtypes";
+import type { Appointment, Bundle, Encounter, Invoice, Patient, PaymentReconciliation } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
@@ -40,7 +40,7 @@ export function PatientQuickCard({
     async function load() {
       setError(null);
       try {
-        const [patientResource, encounters, invoices] = await Promise.all([
+        const [patientResource, encounters, openInvoices] = await Promise.all([
           fhir.read<Patient>("Patient", id),
           fhir.search<Encounter>("Encounter", {
             patient: id,
@@ -48,17 +48,13 @@ export function PatientQuickCard({
             _sort: "-date",
             _count: "1",
           }),
-          fhir.search<Invoice>("Invoice", {
-            subject,
-            status: "issued",
-            _count: "50",
-          }),
+          loadOpenInvoiceCount(subject),
         ]);
         if (cancelled) return;
         setPatient(patientResource);
         const encounter = encounters.entry?.[0]?.resource;
         setLastExamDate(encounter?.period?.start?.slice(0, 10) ?? "unknown");
-        setOpenInvoiceCount((invoices.entry ?? []).filter((entry) => entry.resource).length);
+        setOpenInvoiceCount(openInvoices);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
@@ -165,4 +161,31 @@ function patientReferenceOf(appointment: Appointment | null): string | undefined
   return appointment?.participant.find((participant) =>
     participant.actor?.reference?.startsWith("Patient/"),
   )?.actor?.reference;
+}
+
+async function loadOpenInvoiceCount(subject: string): Promise<number> {
+  const invoices = await fhir.search<Invoice>("Invoice", {
+    subject,
+    status: "issued",
+    _count: "100",
+    _elements: "id",
+  });
+  const invoiceReferences = (invoices.entry ?? [])
+    .map((entry) => entry.resource?.id)
+    .filter((id): id is string => Boolean(id))
+    .map((id) => `Invoice/${id}`);
+  const settled = await Promise.all(
+    invoiceReferences.map(async (invoiceReference) => {
+      const reconciliations = await fhir.search<PaymentReconciliation>("PaymentReconciliation", {
+        request: invoiceReference,
+        _summary: "count",
+      });
+      return bundleTotal(reconciliations) > 0;
+    }),
+  );
+  return settled.filter((isSettled) => !isSettled).length;
+}
+
+function bundleTotal(bundle: Bundle): number {
+  return typeof bundle.total === "number" ? bundle.total : (bundle.entry ?? []).length;
 }
