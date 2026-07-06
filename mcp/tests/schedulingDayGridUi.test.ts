@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { HealthcareService, Schedule } from "@medplum/fhirtypes";
+import type { HealthcareService, Patient, Schedule } from "@medplum/fhirtypes";
 import { buildSchedulingAppointment } from "../src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
 import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
@@ -19,6 +19,12 @@ import {
   visibleSchedulingVisitTypes,
   type SchedulingPracticeConfig,
 } from "../../ui/src/lib/scheduling.js";
+import {
+  appointmentModalDraftFromAppointment,
+  defaultAppointmentModalDraft,
+  maskedSsnLast4,
+  patientQuickCardViewModel,
+} from "../../ui/src/lib/scheduler-appointment-ui.js";
 
 const MONDAY = "2026-07-06";
 
@@ -337,4 +343,84 @@ test("visit type display color falls back through discipline defaults before new
 
   assert.equal(visitTypeDisplayColor(aestheticsNoColor), SCHEDULER_PALETTE.aestheticsCyan);
   assert.equal(visitTypeDisplayColor(noDisciplineNoColor), SCHEDULER_PALETTE.newExamBlue);
+});
+
+test("default appointment modal draft uses the clicked resource, time, catalog duration, and walk-in override", () => {
+  const catalog = defaultVisitTypeCatalog("both");
+  const resources = [provider("sch-od", "Practitioner/od", ["eyecare"], "OD")];
+
+  const draft = defaultAppointmentModalDraft({
+    date: MONDAY,
+    startMinutes: 9 * 60,
+    timezoneOffset: "-05:00",
+    resources,
+    visitTypes: catalog,
+    clinicMode: "both",
+    resource: resources[0]!,
+    status: "walk-in",
+  });
+
+  assert.equal(draft.start, "2026-07-06T09:00:00-05:00");
+  assert.equal(draft.visitTypeCode, "routine-exam-new");
+  assert.equal(draft.durationMinutes, 30);
+  assert.deepEqual(draft.resourceScheduleReferences, ["Schedule/sch-od"]);
+  assert.equal(draft.status, "walk-in");
+});
+
+test("appointment modal draft round-trips editable Eyefinity fields from an existing block", () => {
+  const appointment = buildSchedulingAppointment({
+    patient: { reference: "Patient/p1", display: "Doe, Jane" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }],
+    start: "2026-07-06T09:00:00-05:00",
+    durationMinutes: 30,
+    confirmation: "confirmed",
+    visionCoverage: { display: "VSP" },
+    medicalCoverage: { display: "BCBS" },
+    notes: "Bring trial frame",
+    urgent: true,
+    followUp: true,
+  });
+  const resources = [provider("sch-od", "Practitioner/od", ["eyecare"], "OD")];
+
+  const draft = appointmentModalDraftFromAppointment(appointment, resources);
+
+  assert.equal(draft.patient?.reference, "Patient/p1");
+  assert.equal(draft.nonPatient, false);
+  assert.equal(draft.confirmation, "confirmed");
+  assert.equal(draft.visionCoverageDisplay, "VSP");
+  assert.equal(draft.medicalCoverageDisplay, "BCBS");
+  assert.equal(draft.notes, "Bring trial frame");
+  assert.equal(draft.urgent, true);
+  assert.equal(draft.followUp, true);
+});
+
+test("quick-card view model masks SSN to last four and never returns the raw identifier", () => {
+  const patient: Patient = {
+    resourceType: "Patient",
+    id: "p1",
+    name: [{ given: ["Jane"], family: "Doe" }],
+    birthDate: "1980-01-02",
+    gender: "female",
+    identifier: [
+      { type: { coding: [{ code: "MR" }] }, value: "MRN-123" },
+      { system: "http://hl7.org/fhir/sid/us-ssn", value: "123-45-6789" },
+    ],
+  };
+
+  assert.equal(maskedSsnLast4(patient), "***-**-6789");
+  assert.equal(maskedSsnLast4(patient)?.includes("123-45"), false);
+  assert.deepEqual(patientQuickCardViewModel({ patient, onDate: "2026-07-06" }), {
+    name: "Jane Doe",
+    birthDate: "1980-01-02",
+    age: 46,
+    birthSex: "female",
+    phones: [],
+    emails: [],
+    address: "none",
+    mrn: "MRN-123",
+    ssnLast4: "***-**-6789",
+    provider: "none",
+  });
 });
