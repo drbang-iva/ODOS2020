@@ -307,6 +307,60 @@
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "v0.6c"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-duration",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-display-color",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-eligible-resource",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-intake-form",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-appointment-confirmation",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-vision-coverage",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-medical-coverage",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-appointment-follow-up",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-blocked-time-kind",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-1"
     }
   ]
 }
