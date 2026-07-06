@@ -67,7 +67,9 @@ export type ResourceScope =
   | { kind: "patient-compartment"; parameterName: "patient_compartment" }
   | { kind: "provider-assigned-patient"; parameterName: "provider_profile" }
   | { kind: "self-profile"; parameterName: "provider_profile" }
-  | { kind: "audit-only" };
+  | { kind: "audit-only" }
+  /** Practice-wide but fenced to a fixed search criteria (e.g. one coded singleton). */
+  | { kind: "practice-search"; criteria: string };
 
 export interface WriteConstraintDeclaration {
   description: string;
@@ -175,6 +177,17 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "Schedule", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "Slot", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "HealthcareService", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  // Phase 4a: the practice scheduling-config singleton (hours/templates/blocked time/offices).
+  // Criteria-fenced so the desk touches exactly one coded Basic — never Basic at large.
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
+    },
+  },
 ];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
@@ -445,6 +458,8 @@ function criteriaForRule(rule: OsodResourceRule): string | undefined {
       return `${rule.resourceType}?general-practitioner=%${rule.scope.parameterName}`;
     case "self-profile":
       return `${rule.resourceType}?_id=%${rule.scope.parameterName}.id`;
+    case "practice-search":
+      return rule.scope.criteria;
   }
 }
 

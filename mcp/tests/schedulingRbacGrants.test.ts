@@ -83,3 +83,22 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
   assert.equal(rulesFor("clinician", "HealthcareService").length, 0);
   assert.equal(rulesFor("clinician", "Schedule").length, 0);
 });
+
+test("front-desk reads + writes ONLY the scheduling-config Basic singleton (criteria-scoped, Phase 4a)", () => {
+  const rules = rulesFor("front-desk", "Basic");
+  assert.equal(rules.length, 1);
+  const rule = rules[0]!;
+  assert.equal(
+    rule.criteria,
+    "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
+    "the grant must be fenced to the config singleton, never all Basic resources",
+  );
+  for (const interaction of ["create", "read", "update", "search"]) {
+    assert.ok(rule.interaction?.includes(interaction as never), `Basic config needs ${interaction}`);
+  }
+  assert.ok(!rule.interaction?.includes("delete"));
+});
+
+test("clinician and auditor get no Basic grant (regression guard)", () => {
+  assert.equal(rulesFor("clinician", "Basic").length, 0);
+});
