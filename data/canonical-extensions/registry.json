@@ -361,6 +361,12 @@
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-scheduling-practice-config",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "scheduler-phase-4a"
     }
   ]
 }
