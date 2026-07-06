@@ -61,6 +61,14 @@ import {
   generateSlots,
 } from "../src/scheduling/availability.js";
 import {
+  OSOD_SCHEDULING_CONFIG_CODE as MCP_OSOD_SCHEDULING_CONFIG_CODE,
+  OSOD_SCHEDULING_CONFIG_EXTENSION_URL as MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+  OSOD_SCHEDULING_CONFIG_SYSTEM as MCP_OSOD_SCHEDULING_CONFIG_SYSTEM,
+  buildSchedulingPracticeConfigResource as mcpBuildSchedulingPracticeConfigResource,
+  parseSchedulingPracticeConfig as mcpParseSchedulingPracticeConfig,
+  type PersistedSchedulingPracticeConfig as McpPersistedSchedulingPracticeConfig,
+} from "../src/scheduling/practice-config.js";
+import {
   APPOINTMENT_CONFIRMATION_STATUSES as UI_APPOINTMENT_CONFIRMATION_STATUSES,
   BLOCKED_TIME_KINDS as UI_BLOCKED_TIME_KINDS,
   CLINIC_MODES as UI_CLINIC_MODES,
@@ -106,6 +114,13 @@ import {
   visitTypeEligibleResourceReferences as uiVisitTypeEligibleResourceReferences,
   visionCoverageOf as uiVisionCoverageOf,
 } from "../../ui/src/lib/scheduling.js";
+import {
+  OSOD_SCHEDULING_CONFIG_CODE as UI_OSOD_SCHEDULING_CONFIG_CODE,
+  OSOD_SCHEDULING_CONFIG_EXTENSION_URL as UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+  OSOD_SCHEDULING_CONFIG_SYSTEM as UI_OSOD_SCHEDULING_CONFIG_SYSTEM,
+  buildSchedulingPracticeConfigResource as uiBuildSchedulingPracticeConfigResource,
+  parseSchedulingPracticeConfig as uiParseSchedulingPracticeConfig,
+} from "../../ui/src/lib/scheduling-config.js";
 
 function defaultMirrorCatalog(): HealthcareService[] {
   return defaultVisitTypeCatalog("both").map((visitType, index) => ({
@@ -137,6 +152,33 @@ function defaultMirrorResources(): Schedule[] {
   ];
 }
 
+const PRACTICE_CONFIG: McpPersistedSchedulingPracticeConfig = {
+  timezoneOffset: "-05:00",
+  defaultWeeklyHours: {
+    mon: [{ start: "08:00", end: "17:00" }],
+    fri: [{ start: "08:00", end: "12:00" }],
+  },
+  weeklyHoursBySchedule: {
+    "Schedule/sch-1": { tue: [{ start: "10:00", end: "18:00" }] },
+  },
+  blocks: [
+    {
+      kind: "custom",
+      description: "Lunch",
+      weekdays: ["mon", "tue", "wed", "thu", "fri"],
+      start: "12:00",
+      end: "13:00",
+    },
+    {
+      kind: "staff-off",
+      date: "2026-07-10",
+      scheduleReferences: ["Schedule/sch-1"],
+    },
+  ],
+  offices: [{ id: "main", name: "Main Office" }],
+  officeBySchedule: { "Schedule/sch-1": "main" },
+};
+
 test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.deepEqual(UI_CLINIC_MODES, MCP_CLINIC_MODES);
   assert.deepEqual(UI_SCHEDULING_DISCIPLINES, MCP_SCHEDULING_DISCIPLINES);
@@ -164,6 +206,63 @@ test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.equal(UI_OSOD_BLOCKED_TIME_KIND_SYSTEM, MCP_OSOD_BLOCKED_TIME_KIND_SYSTEM);
   assert.deepEqual(UI_BLOCKED_TIME_KINDS, MCP_BLOCKED_TIME_KINDS);
   assert.deepEqual(UI_NON_BLOCKING_APPOINTMENT_STATUSES, ["cancelled", "entered-in-error"]);
+});
+
+test("UI scheduler practice-config mirror constants match the Phase-4a kernel", () => {
+  assert.equal(UI_OSOD_SCHEDULING_CONFIG_SYSTEM, MCP_OSOD_SCHEDULING_CONFIG_SYSTEM);
+  assert.equal(UI_OSOD_SCHEDULING_CONFIG_CODE, MCP_OSOD_SCHEDULING_CONFIG_CODE);
+  assert.equal(
+    UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+    MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+  );
+});
+
+test("UI scheduler practice-config mirror build/parse round-trip matches the kernel", () => {
+  const existing = mcpBuildSchedulingPracticeConfigResource(PRACTICE_CONFIG);
+  existing.id = "cfg-1";
+  existing.meta = { versionId: "7" };
+
+  assert.deepEqual(
+    uiBuildSchedulingPracticeConfigResource(PRACTICE_CONFIG, existing),
+    mcpBuildSchedulingPracticeConfigResource(PRACTICE_CONFIG, existing),
+  );
+  assert.deepEqual(
+    uiParseSchedulingPracticeConfig(uiBuildSchedulingPracticeConfigResource(PRACTICE_CONFIG)),
+    mcpParseSchedulingPracticeConfig(mcpBuildSchedulingPracticeConfigResource(PRACTICE_CONFIG)),
+  );
+});
+
+test("UI scheduler practice-config mirror validation errors match the kernel verbatim", () => {
+  assert.throws(
+    () => uiBuildSchedulingPracticeConfigResource({ ...PRACTICE_CONFIG, timezoneOffset: "EST" }),
+    (err) => {
+      assert.ok(err instanceof Error);
+      assert.throws(
+        () => mcpBuildSchedulingPracticeConfigResource({ ...PRACTICE_CONFIG, timezoneOffset: "EST" }),
+        { message: err.message },
+      );
+      return true;
+    },
+  );
+  assert.throws(
+    () =>
+      uiBuildSchedulingPracticeConfigResource({
+        ...PRACTICE_CONFIG,
+        blocks: [{ kind: "holiday" as never, date: "2026-07-10" }],
+      }),
+    (err) => {
+      assert.ok(err instanceof Error);
+      assert.throws(
+        () =>
+          mcpBuildSchedulingPracticeConfigResource({
+            ...PRACTICE_CONFIG,
+            blocks: [{ kind: "holiday" as never, date: "2026-07-10" }],
+          }),
+        { message: err.message },
+      );
+      return true;
+    },
+  );
 });
 
 test("UI scheduler mirror clinic-mode helpers match the kernel", () => {

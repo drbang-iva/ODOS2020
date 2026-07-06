@@ -9,19 +9,24 @@ import {
   blocksForSchedule,
   buildAppointmentBlockContent,
   buildTimeAxis,
+  minutesFromIsoDateTime,
   resourceActorReference,
   resourceDisplay,
+  scheduleReference,
   visibleAppointmentsForMode,
-  visibleSchedulingResources,
+  visibleSchedulingResourcesForOffice,
   visibleSchedulingVisitTypes,
   visitTypeCode,
   visitTypeDisplayColor,
+  visitTypeDurationMinutes,
   weeklyHoursForSchedule,
   type AppointmentBlockContent,
   type AppointmentGeometry,
   type ClinicMode,
+  type SchedulingOpening,
 } from "../lib/scheduling";
-import { useSchedulingStore } from "../lib/scheduling-store";
+import { editableBlockedTimeIndex } from "../lib/scheduling-settings";
+import { todayYmd, useSchedulingStore } from "../lib/scheduling-store";
 import {
   confirmDoubleBookAndRetry,
   defaultAppointmentModalDraft,
@@ -29,7 +34,9 @@ import {
   type AppointmentModalDraft,
 } from "../lib/scheduler-appointment-ui";
 import { AppointmentDetailsModal } from "./scheduler/AppointmentDetailsModal";
+import { FindOpenPanel } from "./scheduler/FindOpenPanel";
 import { PatientQuickCard } from "./scheduler/PatientQuickCard";
+import { SchedulingSettingsModal } from "./scheduler/SchedulingSettingsModal";
 
 const ROW_HEIGHT = 46;
 const GUTTER_WIDTH = 76;
@@ -55,17 +62,24 @@ export function SchedulerDayGrid() {
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const appointments = useSchedulingStore((state) => state.appointments);
   const config = useSchedulingStore((state) => state.config);
+  const officeId = useSchedulingStore((state) => state.officeId);
   const loading = useSchedulingStore((state) => state.loading);
   const error = useSchedulingStore((state) => state.error);
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
+  const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
   const today = useSchedulingStore((state) => state.today);
   const loadDay = useSchedulingStore((state) => state.loadDay);
+  const saveConfig = useSchedulingStore((state) => state.saveConfig);
+  const findOpenings = useSchedulingStore((state) => state.findOpenings);
   const createAppointment = useSchedulingStore((state) => state.createAppointment);
   const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
   const setAppointmentStatus = useSchedulingStore((state) => state.setAppointmentStatus);
   const moveAppointment = useSchedulingStore((state) => state.moveAppointment);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [findOpenVisible, setFindOpenVisible] = useState(false);
+  const [settingsBlockIndex, setSettingsBlockIndex] = useState<number | undefined>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [quickCardSelection, setQuickCardSelection] = useState<{
     appointment: Appointment;
     sourceResourceActor?: string;
@@ -97,8 +111,8 @@ export function SchedulerDayGrid() {
   }, [moveSource]);
 
   const visibleResources = useMemo(
-    () => visibleSchedulingResources(resources, clinicMode),
-    [resources, clinicMode],
+    () => visibleSchedulingResourcesForOffice(resources, clinicMode, config, officeId),
+    [resources, clinicMode, config, officeId],
   );
   const visibleVisitTypes = useMemo(
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
@@ -230,6 +244,43 @@ export function SchedulerDayGrid() {
     openNewAppointment(resource, timeAxis.rows[0]?.startMinutes ?? 9 * 60, "walk-in");
   }
 
+  function openSettings(blockIndex?: number) {
+    setSettingsBlockIndex(blockIndex);
+    setSettingsOpen(true);
+  }
+
+  function handleBlockedRegionClick(resource: Schedule, startMinutes: number, endMinutes: number) {
+    const blockIndex = editableBlockedTimeIndex(config, resource, date, startMinutes, endMinutes);
+    if (blockIndex !== undefined) {
+      openSettings(blockIndex);
+    }
+  }
+
+  function handleOpeningSelect(opening: SchedulingOpening, selectedVisitTypeCode: string) {
+    const resource = visibleResources.find((candidate) => scheduleReference(candidate) === opening.scheduleReference);
+    const visitType = visitTypes.find((candidate) => visitTypeCode(candidate) === selectedVisitTypeCode);
+    if (!resource) {
+      return;
+    }
+    const draft = defaultAppointmentModalDraft({
+      date: opening.start.slice(0, 10),
+      startMinutes: minutesFromIsoDateTime(opening.start, config.timezoneOffset),
+      timezoneOffset: config.timezoneOffset,
+      resources: visibleResources,
+      visitTypes,
+      clinicMode,
+      resource,
+    });
+    setDetails({
+      draft: {
+        ...draft,
+        visitTypeCode: selectedVisitTypeCode,
+        durationMinutes: visitTypeDurationMinutes(visitType ?? ({} as HealthcareService)) ?? draft.durationMinutes,
+      },
+    });
+    setFindOpenVisible(false);
+  }
+
   return (
     <main
       className="min-h-screen text-white"
@@ -241,6 +292,7 @@ export function SchedulerDayGrid() {
         legendOpen={legendOpen}
         onClinicModeChange={setClinicMode}
         onLegendToggle={() => setLegendOpen((open) => !open)}
+        onFindOpen={() => setFindOpenVisible((open) => !open)}
         onMove={() =>
           setMoveSource((current) =>
             current
@@ -252,11 +304,27 @@ export function SchedulerDayGrid() {
         }
         onNextDay={() => shiftDate(1)}
         onPreviousDay={() => shiftDate(-1)}
+        onOfficeChange={setOfficeId}
+        onSettings={() => openSettings()}
         onToday={today}
         onWalkIn={handleWalkIn}
+        officeId={officeId}
+        offices={config.offices}
         moveActive={Boolean(moveSource)}
         moveEnabled={Boolean(quickCardAppointment)}
       />
+      {findOpenVisible && (
+        <FindOpenPanel
+          clinicMode={clinicMode}
+          defaultDate={todayYmd(new Date(), config.timezoneOffset)}
+          resources={visibleResources}
+          timezoneOffset={config.timezoneOffset}
+          visitTypes={visitTypes}
+          onClose={() => setFindOpenVisible(false)}
+          onFind={findOpenings}
+          onSelect={handleOpeningSelect}
+        />
+      )}
       {moveSourceAppointment && (
         <div className="border-b border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
           Move mode: click a target cell for {moveSourceAppointment.description ?? moveSourceAppointment.id ?? "appointment"}.
@@ -303,6 +371,7 @@ export function SchedulerDayGrid() {
                         (block) => block.geometry.columnIndex === columnIndex,
                       )}
                       onAppointmentClick={handleAppointmentClick}
+                      onBlockedRegionClick={handleBlockedRegionClick}
                       onCellClick={handleCellClick}
                     />
                   ))}
@@ -340,6 +409,19 @@ export function SchedulerDayGrid() {
           onSetStatus={setAppointmentStatus}
         />
       )}
+      {settingsOpen && (
+        <SchedulingSettingsModal
+          config={config}
+          currentDate={date}
+          initialBlockIndex={settingsBlockIndex}
+          resources={resources}
+          onClose={() => {
+            setSettingsOpen(false);
+            setSettingsBlockIndex(undefined);
+          }}
+          onSave={saveConfig}
+        />
+      )}
     </main>
   );
 }
@@ -348,11 +430,16 @@ function SchedulerToolbar({
   clinicMode,
   date,
   legendOpen,
+  officeId,
+  offices,
   onClinicModeChange,
+  onFindOpen,
   onLegendToggle,
   onMove,
   onNextDay,
+  onOfficeChange,
   onPreviousDay,
+  onSettings,
   onToday,
   onWalkIn,
   moveActive,
@@ -361,11 +448,16 @@ function SchedulerToolbar({
   clinicMode: ClinicMode;
   date: string;
   legendOpen: boolean;
+  officeId: string | "all";
+  offices: Array<{ id: string; name: string }>;
   onClinicModeChange: (mode: ClinicMode) => void;
+  onFindOpen: () => void;
   onLegendToggle: () => void;
   onMove: () => void;
   onNextDay: () => void;
+  onOfficeChange: (officeId: string | "all") => void;
   onPreviousDay: () => void;
+  onSettings: () => void;
   onToday: () => void;
   onWalkIn: () => void;
   moveActive: boolean;
@@ -399,8 +491,11 @@ function SchedulerToolbar({
       <button className="scheduler-button" type="button" onClick={onWalkIn}>
         Walk-In
       </button>
-      <button className="scheduler-button" type="button" disabled>
+      <button className="scheduler-button" type="button" onClick={onFindOpen}>
         Find Open
+      </button>
+      <button className="scheduler-button" type="button" onClick={onSettings}>
+        Settings
       </button>
       <button
         className={clsx("scheduler-button", moveActive && "border-amber-300/50 bg-amber-500/15")}
@@ -413,9 +508,21 @@ function SchedulerToolbar({
       <button className={clsx("scheduler-button", legendOpen && "border-white/35 bg-white/15")} type="button" onClick={onLegendToggle}>
         Legend
       </button>
-      <select className="scheduler-select" disabled value="main-office" aria-label="Office selector">
-        <option value="main-office">Main Office</option>
-      </select>
+      {offices.length > 1 && (
+        <select
+          className="scheduler-select"
+          value={officeId}
+          aria-label="Office selector"
+          onChange={(event) => onOfficeChange(event.target.value as string | "all")}
+        >
+          <option value="all">All Offices</option>
+          {offices.map((office) => (
+            <option key={office.id} value={office.id}>
+              {office.name}
+            </option>
+          ))}
+        </select>
+      )}
       <select
         className="scheduler-select"
         value={clinicMode}
@@ -500,6 +607,7 @@ function ResourceColumn({
   slotMinutes,
   appointments,
   onAppointmentClick,
+  onBlockedRegionClick,
   onCellClick,
 }: {
   resource: Schedule;
@@ -511,6 +619,7 @@ function ResourceColumn({
   slotMinutes: number;
   appointments: PositionedAppointment[];
   onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
+  onBlockedRegionClick: (resource: Schedule, startMinutes: number, endMinutes: number) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
 }) {
   const config = useSchedulingStore((state) => state.config);
@@ -550,18 +659,32 @@ function ResourceColumn({
       ))}
       {regions
         .filter((region) => region.kind === "blocked")
-        .map((region) => (
-          <div
-            key={`${columnIndex}-blocked-${region.startMinutes}-${region.endMinutes}`}
-            className="absolute inset-x-1 z-10 overflow-hidden border border-white/10 bg-zinc-500/45 px-2 py-1 text-[11px] font-semibold text-white/80"
-            style={{
-              top: region.rowStart * ROW_HEIGHT + 2,
-              height: Math.max(region.rowSpan * ROW_HEIGHT - 4, 24),
-            }}
-          >
-            <div className="truncate">{region.description ?? region.blockedKindDisplay ?? "Blocked"}</div>
-          </div>
-        ))}
+        .map((region) => {
+          const editable = region.blockedKind === "custom";
+          return (
+            <button
+              key={`${columnIndex}-blocked-${region.startMinutes}-${region.endMinutes}`}
+              className={clsx(
+                "absolute inset-x-1 z-10 overflow-hidden border border-white/10 bg-zinc-500/45 px-2 py-1 text-left text-[11px] font-semibold text-white/80",
+                editable && "hover:bg-zinc-400/55",
+              )}
+              type="button"
+              disabled={!editable}
+              style={{
+                top: region.rowStart * ROW_HEIGHT + 2,
+                height: Math.max(region.rowSpan * ROW_HEIGHT - 4, 24),
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (editable) {
+                  onBlockedRegionClick(resource, region.startMinutes, region.endMinutes);
+                }
+              }}
+            >
+              <div className="truncate">{region.description ?? region.blockedKindDisplay ?? "Blocked"}</div>
+            </button>
+          );
+        })}
       {appointments.map((block) => (
         <AppointmentBlock
           key={`${block.geometry.columnIndex}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}

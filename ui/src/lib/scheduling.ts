@@ -138,6 +138,11 @@ export interface BlockedTime {
   scheduleReferences?: string[];
 }
 
+export interface SchedulingOffice {
+  id: string;
+  name: string;
+}
+
 export interface CoverageDisplay {
   reference?: string;
   display?: string;
@@ -198,6 +203,27 @@ export interface SchedulingPracticeConfig {
   defaultWeeklyHours: WeeklyHours;
   weeklyHoursBySchedule: Record<string, WeeklyHours>;
   blocks: BlockedTime[];
+  offices: SchedulingOffice[];
+  officeBySchedule: Record<string, string>;
+}
+
+export interface SchedulingOpening {
+  start: string;
+  scheduleReference: string;
+  actorDisplay?: string;
+}
+
+export interface FindNextOpeningsInput {
+  visitTypeCode: string;
+  visitTypes: HealthcareService[];
+  resources: Schedule[];
+  config: SchedulingPracticeConfig;
+  from: string;
+  slotMinutes: number;
+  limit: number;
+  horizonDays?: number;
+  appointmentsByDay?: Record<string, Appointment[]> | Map<string, Appointment[]>;
+  loadAppointmentsForDay?: (date: string) => Promise<Appointment[]>;
 }
 
 export interface TimeAxisRow {
@@ -686,6 +712,24 @@ export function visibleSchedulingResources(resources: Schedule[], mode: ClinicMo
   );
 }
 
+export function visibleSchedulingResourcesForOffice(
+  resources: Schedule[],
+  mode: ClinicMode | string,
+  config: SchedulingPracticeConfig,
+  officeId: string | "all",
+): Schedule[] {
+  const visible = visibleSchedulingResources(resources, mode);
+  if (officeId === "all") {
+    return visible;
+  }
+  return visible.filter((resource) => {
+    const reference = scheduleReference(resource);
+    const assignedOffice = reference ? config.officeBySchedule[reference] : undefined;
+    // Unassigned resources remain visible in every office until the practice assigns them.
+    return assignedOffice === undefined || assignedOffice === officeId;
+  });
+}
+
 export function visibleSchedulingVisitTypes(
   visitTypes: HealthcareService[],
   mode: ClinicMode | string,
@@ -710,6 +754,117 @@ export function visibleAppointmentsForMode(
     const discipline = appointmentDiscipline(appointment);
     return discipline === undefined || isDisciplineVisible(discipline, mode);
   });
+}
+
+export async function findNextOpenings(input: FindNextOpeningsInput): Promise<SchedulingOpening[]> {
+  if (!Number.isInteger(input.slotMinutes) || input.slotMinutes <= 0) {
+    throw new Error("Slot granularity (slotMinutes) must be a positive integer.");
+  }
+  if (!Number.isInteger(input.limit) || input.limit <= 0) {
+    return [];
+  }
+  const visitType = input.visitTypes.find(
+    (candidate) => candidate.active !== false && visitTypeCode(candidate) === input.visitTypeCode,
+  );
+  if (!visitType) {
+    throw new Error(`Unknown visit type "${input.visitTypeCode}" — not in the active catalog.`);
+  }
+  const durationMinutes = visitTypeDurationMinutes(visitType);
+  if (!durationMinutes) {
+    throw new Error(`Visit type "${input.visitTypeCode}" has no duration and none was supplied.`);
+  }
+  const eligible = new Set(visitTypeEligibleResourceReferences(visitType));
+  const candidateResources = input.resources
+    .map((resource, resourceIndex) => ({
+      resource,
+      resourceIndex,
+      scheduleReference: scheduleReference(resource),
+      actorReference: resourceActorReference(resource),
+      actorDisplay: resourceDisplay(resource),
+    }))
+    .filter(
+      (entry): entry is {
+        resource: Schedule;
+        resourceIndex: number;
+        scheduleReference: string;
+        actorReference: string;
+        actorDisplay: string;
+      } =>
+        Boolean(entry.scheduleReference) &&
+        Boolean(entry.actorReference) &&
+        (eligible.size === 0 || eligible.has(entry.actorReference!)),
+    );
+
+  const fromDate = ymdFromIsoDateTime(input.from, input.config.timezoneOffset);
+  const fromMinutes = minutesFromIsoDateTime(input.from, input.config.timezoneOffset);
+  const horizonDays = input.horizonDays ?? 60;
+  const openings: SchedulingOpening[] = [];
+
+  for (let dayOffset = 0; dayOffset < horizonDays && openings.length < input.limit; dayOffset += 1) {
+    const date = addDaysYmd(fromDate, dayOffset);
+    const appointments = await appointmentsForOpeningDate(input, date);
+    const earliestStart = dayOffset === 0 ? alignToSlot(fromMinutes, input.slotMinutes) : 0;
+    const dayCandidates: Array<SchedulingOpening & { startMinutes: number; resourceIndex: number }> = [];
+
+    for (const entry of candidateResources) {
+      const regions = availabilityShadingForColumn({
+        date,
+        axisStartMinutes: 0,
+        axisEndMinutes: 24 * 60,
+        slotMinutes: input.slotMinutes,
+        weeklyHours: weeklyHoursForSchedule(input.config, entry.resource),
+        blocks: blocksForSchedule(input.config, entry.resource),
+      });
+      const blocked = regions.filter((region) => region.kind === "blocked");
+      for (const hours of regions.filter((region) => region.kind === "in-hours")) {
+        for (
+          let at = Math.max(hours.startMinutes, earliestStart);
+          at + durationMinutes <= hours.endMinutes;
+          at += input.slotMinutes
+        ) {
+          const end = at + durationMinutes;
+          if (blocked.some((region) => overlaps(at, end, region.startMinutes, region.endMinutes))) {
+            continue;
+          }
+          if (
+            appointments.some((appointment) =>
+              appointmentBlocksOpening(
+                appointment,
+                entry.actorReference,
+                date,
+                at,
+                end,
+                input.config.timezoneOffset,
+              ),
+            )
+          ) {
+            continue;
+          }
+          dayCandidates.push({
+            start: isoFromDateAndMinutes(date, at, input.config.timezoneOffset),
+            scheduleReference: entry.scheduleReference,
+            actorDisplay: entry.actorDisplay,
+            startMinutes: at,
+            resourceIndex: entry.resourceIndex,
+          });
+        }
+      }
+    }
+
+    dayCandidates.sort((a, b) => a.startMinutes - b.startMinutes || a.resourceIndex - b.resourceIndex);
+    for (const candidate of dayCandidates) {
+      openings.push({
+        start: candidate.start,
+        scheduleReference: candidate.scheduleReference,
+        actorDisplay: candidate.actorDisplay,
+      });
+      if (openings.length >= input.limit) {
+        break;
+      }
+    }
+  }
+
+  return openings;
 }
 
 export function scheduleReference(schedule: Schedule): string | undefined {
@@ -958,6 +1113,70 @@ export function minutesFromIsoDateTime(dateTime: string, timezoneOffset: string)
   }
   const local = new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000);
   return local.getUTCHours() * 60 + local.getUTCMinutes();
+}
+
+function ymdFromIsoDateTime(dateTime: string, timezoneOffset: string): string {
+  const timestamp = Date.parse(dateTime);
+  if (!Number.isFinite(timestamp)) {
+    throw new Error(`Expected an ISO dateTime, got "${dateTime}".`);
+  }
+  return new Date(timestamp + timezoneOffsetMinutes(timezoneOffset) * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function addDaysYmd(date: string, days: number): string {
+  const cursor = new Date(`${date}T00:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() + days);
+  return cursor.toISOString().slice(0, 10);
+}
+
+function isoFromDateAndMinutes(date: string, minutes: number, timezoneOffset: string): string {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${date}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00${timezoneOffset}`;
+}
+
+function alignToSlot(minutes: number, slotMinutes: number): number {
+  return Math.ceil(minutes / slotMinutes) * slotMinutes;
+}
+
+async function appointmentsForOpeningDate(
+  input: FindNextOpeningsInput,
+  date: string,
+): Promise<Appointment[]> {
+  if (input.appointmentsByDay instanceof Map) {
+    return input.appointmentsByDay.get(date) ?? [];
+  }
+  if (input.appointmentsByDay) {
+    return input.appointmentsByDay[date] ?? [];
+  }
+  if (input.loadAppointmentsForDay) {
+    return input.loadAppointmentsForDay(date);
+  }
+  return [];
+}
+
+function appointmentBlocksOpening(
+  appointment: Appointment,
+  actorReference: string,
+  date: string,
+  startMinutes: number,
+  endMinutes: number,
+  timezoneOffset: string,
+): boolean {
+  if (NON_BLOCKING_STATUS_SET.has(appointment.status)) {
+    return false;
+  }
+  if (!appointmentActorReferences(appointment).includes(actorReference)) {
+    return false;
+  }
+  if (!appointment.start || !appointment.end) {
+    return false;
+  }
+  const start = Date.parse(isoFromDateAndMinutes(date, startMinutes, timezoneOffset));
+  const end = Date.parse(isoFromDateAndMinutes(date, endMinutes, timezoneOffset));
+  return overlaps(start, end, Date.parse(appointment.start), Date.parse(appointment.end));
 }
 
 function timezoneOffsetMinutes(timezoneOffset: string): number {
