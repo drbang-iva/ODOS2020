@@ -578,6 +578,28 @@ test("openDay reconciles the week resource selection like setView does", () => {
   );
 });
 
+test("slotMinutes derives from the selected office's booking increment", () => {
+  resetStore();
+  useSchedulingStore.setState({
+    config: {
+      ...DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+      offices: [
+        { id: "main", name: "Main", slotMinutes: 15 },
+        { id: "west", name: "West", slotMinutes: 10 },
+      ],
+      defaultSlotMinutes: 20,
+    },
+    officeId: "all",
+  });
+
+  useSchedulingStore.getState().setOfficeId("main");
+  assert.equal(useSchedulingStore.getState().slotMinutes, 15, "specific office uses its own increment");
+  useSchedulingStore.getState().setOfficeId("west");
+  assert.equal(useSchedulingStore.getState().slotMinutes, 10);
+  useSchedulingStore.getState().setOfficeId("all");
+  assert.equal(useSchedulingStore.getState().slotMinutes, 20, "all offices fall back to the practice default");
+});
+
 test("loadWindow performs one ranged Appointment search and buckets results by practice-local day", async () => {
   resetStore("2026-07-08");
   useSchedulingStore.getState().setView("week");

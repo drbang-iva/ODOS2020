@@ -136,6 +136,9 @@ export function parseSchedulingPracticeConfig(basic: Basic): PersistedScheduling
     blocks: (parsed.blocks ?? []) as PersistedBlockedTime[],
     offices: (parsed.offices ?? []) as SchedulingOffice[],
     officeBySchedule: (parsed.officeBySchedule ?? {}) as Record<string, string>,
+    ...(typeof parsed.defaultSlotMinutes === "number"
+      ? { defaultSlotMinutes: parsed.defaultSlotMinutes }
+      : {}),
   };
   assertConfig(config);
   return config;

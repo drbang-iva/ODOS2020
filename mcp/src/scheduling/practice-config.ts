@@ -34,6 +34,8 @@ export interface SchedulingOffice {
   id: string;
   /** Office selector display name. */
   name: string;
+  /** Booking increment in minutes for this office (10/15/30/60). Falls back to the practice default. */
+  slotMinutes?: number;
 }
 
 export interface PersistedSchedulingPracticeConfig {
@@ -47,6 +49,8 @@ export interface PersistedSchedulingPracticeConfig {
   offices: SchedulingOffice[];
   /** Resource → office assignment, keyed by Schedule reference. */
   officeBySchedule: Record<string, string>;
+  /** Practice-wide booking increment (minutes), used for "All Offices" and offices without an override. */
+  defaultSlotMinutes?: number;
 }
 
 const OFFSET = /^[+-]\d{2}:\d{2}$/;
@@ -174,6 +178,9 @@ export function parseSchedulingPracticeConfig(basic: Basic): PersistedScheduling
     blocks: (parsed.blocks ?? []) as PersistedBlockedTime[],
     offices: (parsed.offices ?? []) as SchedulingOffice[],
     officeBySchedule: (parsed.officeBySchedule ?? {}) as Record<string, string>,
+    ...(typeof parsed.defaultSlotMinutes === "number"
+      ? { defaultSlotMinutes: parsed.defaultSlotMinutes }
+      : {}),
   };
   assertConfig(config);
   return config;

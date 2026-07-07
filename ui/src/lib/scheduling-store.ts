@@ -32,6 +32,7 @@ import {
   visitTypeDurationMinutes,
   visitTypeEligibleResourceReferences,
   visibleSchedulingResourcesForOffice,
+  resolveSlotMinutes,
   ymdFromIsoDateTime,
   type AppointmentConfirmationStatus,
   type BookSchedulingAppointmentInput,
@@ -209,7 +210,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   clinicMode: "both",
   view: "day",
   date: todayYmd(new Date(), DEFAULT_SCHEDULING_PRACTICE_CONFIG.timezoneOffset),
-  slotMinutes: 30,
+  slotMinutes: resolveSlotMinutes(DEFAULT_SCHEDULING_PRACTICE_CONFIG, "all"),
   resources: [],
   visitTypes: [],
   appointments: [],
@@ -262,6 +263,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   setOfficeId: (officeId) =>
     set((state) => ({
       officeId,
+      slotMinutes: resolveSlotMinutes(state.config, officeId),
       weekResourceScheduleReference: reconcileWeekResourceReference({
         currentReference: state.weekResourceScheduleReference,
         resources: state.resources,
@@ -658,6 +660,7 @@ function configStatePatch(
     configError,
     configReadFailed,
     officeId,
+    slotMinutes: resolveSlotMinutes(config, officeId),
     ...extra,
   };
 }

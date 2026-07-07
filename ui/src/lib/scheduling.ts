@@ -141,6 +141,8 @@ export interface BlockedTime {
 export interface SchedulingOffice {
   id: string;
   name: string;
+  /** Booking increment in minutes for this office (10/15/30/60). Falls back to the practice default. */
+  slotMinutes?: number;
 }
 
 export interface CoverageDisplay {
@@ -205,6 +207,33 @@ export interface SchedulingPracticeConfig {
   blocks: BlockedTime[];
   offices: SchedulingOffice[];
   officeBySchedule: Record<string, string>;
+  /** Practice-wide booking increment (minutes), used for "All Offices" and offices without an override. */
+  defaultSlotMinutes?: number;
+}
+
+/** Selectable booking increments (minutes) offered in scheduling settings. */
+export const SCHEDULING_SLOT_OPTIONS = [10, 15, 30, 60] as const;
+export const DEFAULT_SLOT_MINUTES = 30;
+
+/**
+ * The booking increment (minutes) for the currently-selected office: that office's
+ * own slotMinutes if set, else the practice default, else 30. The day grid shares
+ * one time axis across resource columns, so granularity is resolved from the
+ * selected office rather than mixed per-column.
+ */
+export function resolveSlotMinutes(
+  config: SchedulingPracticeConfig,
+  officeId: string | "all",
+): number {
+  if (officeId !== "all") {
+    const office = config.offices.find((candidate) => candidate.id === officeId);
+    if (office?.slotMinutes && office.slotMinutes > 0) {
+      return office.slotMinutes;
+    }
+  }
+  return config.defaultSlotMinutes && config.defaultSlotMinutes > 0
+    ? config.defaultSlotMinutes
+    : DEFAULT_SLOT_MINUTES;
 }
 
 export interface SchedulingOpening {

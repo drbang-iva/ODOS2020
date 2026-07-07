@@ -17,6 +17,7 @@ import {
   visibleAppointmentsForMode,
   visibleSchedulingResources,
   visibleSchedulingVisitTypes,
+  resolveSlotMinutes,
   type SchedulingPracticeConfig,
 } from "../../ui/src/lib/scheduling.js";
 import {
@@ -140,6 +141,34 @@ test("time axis expands to cover appointments booked outside operating hours", (
     geometry !== undefined && geometry.rowStart >= 0 && geometry.rowStart < axis.rows.length,
     "the previously-hidden early booking now lands inside the expanded axis",
   );
+});
+
+test("resolveSlotMinutes prefers the office increment, then the practice default, then 30", () => {
+  const config: SchedulingPracticeConfig = {
+    timezoneOffset: "-05:00",
+    defaultWeeklyHours: {},
+    weeklyHoursBySchedule: {},
+    blocks: [],
+    offices: [
+      { id: "main", name: "Main Office", slotMinutes: 15 },
+      { id: "west", name: "West Side", slotMinutes: 10 },
+      { id: "plain", name: "No Override" },
+    ],
+    officeBySchedule: {},
+    defaultSlotMinutes: 20,
+  };
+  assert.equal(resolveSlotMinutes(config, "main"), 15, "office override wins");
+  assert.equal(resolveSlotMinutes(config, "west"), 10, "per-office 10-min");
+  assert.equal(resolveSlotMinutes(config, "plain"), 20, "office without override -> practice default");
+  assert.equal(resolveSlotMinutes(config, "all"), 20, "all offices -> practice default");
+
+  const bare: SchedulingPracticeConfig = {
+    ...config,
+    defaultSlotMinutes: undefined,
+    offices: [{ id: "main", name: "Main Office" }],
+  };
+  assert.equal(resolveSlotMinutes(bare, "all"), 30, "no default configured -> 30 fallback");
+  assert.equal(resolveSlotMinutes(bare, "main"), 30, "office + no default -> 30");
 });
 
 test("appointment geometry maps actor, wall-clock start, and duration onto column and row offsets", () => {
