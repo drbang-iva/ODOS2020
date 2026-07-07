@@ -1,8 +1,8 @@
 # OSOD Build Status
 
-**Generated:** 2026-07-06
-**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, and the ODOS scheduler #24–#30 — all currently untagged; v0.6c tags at slice close)
-**Branch:** `main` at `16a4ccd`
+**Generated:** 2026-07-07
+**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, the ODOS scheduler #24–#30, and the scheduler Pass-2 follow-ons #31–#34, #36, #38 — all currently untagged; v0.6c tags at slice close)
+**Branch:** `main` at `ccc097e`
 
 This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/). Architectural rationale lives in the companion private business repo at [`performance-od`](https://github.com/drbang-iva/performance-od).
 
@@ -73,6 +73,17 @@ Front-desk-first scheduler serving three clinic modes (eyecare-only / aesthetics
 - **Config persistence** (#28) — practice scheduling config (hours, per-resource templates, blocked time, offices) persists as one coded `Basic` singleton (`osod-scheduling-config`), criteria-fenced front-desk grant.
 - **Settings + offices + find-next-available** (#29) — hours/blocked-time/offices editors, config hydration, office selector, Find Open (Eyefinity "Find Open") feeding the booking modal.
 - **Week + month views** (#30) — Monday-start week (single resource × 7 days) and month density-scan calendar; one ranged query per window; verified-correct calendar math (leap Feb, day-of-month clamp, practice-local bucketing).
+
+### ODOS scheduler Pass-2 follow-ons (SHIPPED to main 2026-07-07, PRs #31–#34, #36, #38; untagged)
+
+Post-#30 refinements, each its own slice + PR, each through the gate set (ui build + mcp suite + Pass-4 preflight):
+
+- **Pass-2 foundation** (#31) — shared `ResourceDayColumn` extracted so day + week render through one block component (restores the week's dropped insurance line + badges); week/month→day wrong-day render flash fixed via day-scoped `appointmentsByDay[date]` + an atomic `openDay` action; Find-Open gated to day view; two dead exports removed. This extraction is also the seam the exploded/Plexus renderer plugs into.
+- **Out-of-hours rendering** (#32) — appointments booked outside a resource's operating hours now expand the time axis to cover them, instead of bucketing to the right day but silently not rendering (day + week).
+- **Demo-seed script** (#33) — `npm run seed-scheduler` seeds resources / visit-types / appointments for local front-desk walkthroughs.
+- **Per-office booking increment** (#34) — 10/15/30/60-min grid granularity configurable per office (Settings → Offices; `resolveSlotMinutes`).
+- **Vertical zoom** (#36) — a `−`/`+` toolbar control scales row height (`round(ROW_HEIGHT × zoom)`, clamped `[0.5, 1.75]`) independently of the booking increment, so a fine increment no longer makes a single hour fill the screen; session-scoped viewing preference shared by day + week.
+- **Short-block content density** (#38) — a 10/15-min block (~40px) no longer clips: below a height threshold it shows a compact cue strip (status glyph + urgent/billing attention dots), and the full clipped detail (both status axes, insurance line, badges) moves to a read-only hover card (keyboard-focus accessible). Pure `scheduler-block-density` module (11 new tests) + `AppointmentHoverCard`. First shipped rung of the front-desk cockpit disclosure ladder (design doc below).
 
 ---
 
@@ -165,11 +176,14 @@ Plus the operational lessons that carry forward into v0.6b: see [`docs/operator-
 
 ## ODOS scheduler — remaining
 
-- [x] **Phase-5 deferred polish (Pass-2 foundation)** — shared `ResourceDayColumn` extracted (day + week now render through one block component; the week's dropped insurance line + badges are restored); week/month→day wrong-day render flash fixed (day grid sources `appointmentsByDay[date]` — day-scoped by construction — plus an atomic `openDay` store action replacing the `setDate`+`setView` pair); Find-Open gated to day view; two dead exports removed (`patientInputOf`, `PatientQuickCardViewModel`). Gates: ui build clean, mcp 1467 pass / 0 fail / 23 live-skipped, Pass-4 preflight 0/0. (This extraction is also the seam the exploded-view renderer plugs into.)
-- [ ] Pass 2 — exploded front-desk view (the brief's showpiece; a new renderer over the same store). Design pending its own `performance-od` brief.
-- [ ] Out-of-hours appointment rendering — appointments booked outside a resource's operating hours bucket to the right day but fall outside the hours-derived time axis and silently do not render (day + week; pre-existing since #25). Fix: expand the axis to cover booked appointments, or add an out-of-hours overflow affordance.
-- [ ] Live front-desk walkthrough — book/move/check-in a synthetic patient on the local stack under a real front-desk login (validates the #27 grants end-to-end).
-- [ ] Operator decision — practice-wide `Patient` read for the booking picker (currently patient-compartment scoped; widening PHI scope is an operator-level authz call).
+Shipped since the #24–#30 core (all 2026-07-07): Pass-2 foundation (#31), out-of-hours rendering (#32), demo-seed (#33), per-office booking increment (#34), vertical zoom (#36), short-block density (#38) — see the shipped subsection above.
+
+**Front-desk cockpit design (Fable, 2026-07-07).** The design-forward work is now a committed spec: `performance-od/decisions/2026-07-07-odos-frontdesk-cockpit-design.md` — a host+guest-layers cockpit (swappable Schedule/Floor center + phone-width comms panels behind an iOS-badge dock), covering the disclosure ladder, the floor board (auto-location trust rules, typed waits, pinned staff jobs), the comms organs with a GHL-first `CommsProvider` seam, and a `ScheduleProvider` seam (native default; Foxfire adapter open). Phase 1 (short-block density) shipped as #38; Phases 2–8 are mechanical builds off the locked spec.
+
+- [ ] **Cockpit Phase 2 — shell** — `/frontdesk` route: swappable center stage (Schedule ⇄ Floor), badge dock, guest-panel mechanics (slide-over, drag-to-float, per-workstation memory).
+- [ ] **Cockpit Phases 3–8** — floor board + auto-location + typed waits/jobs (floor track); GHL `CommsProvider` + Messages/Calls/Requests/Call Pop + Team Chat + Reviews (comms track). See design doc §8.
+- [ ] **Live front-desk walkthrough** — book/move/check-in a synthetic patient on the local stack under a real front-desk login; validates the #27 grants + the Pass-2 fixes end-to-end. Operator-driven (agent does not drive auth); seed is ready via `npm run seed-scheduler`.
+- [ ] **Operator decision** — practice-wide `Patient` read for the booking picker (currently patient-compartment scoped; widening PHI scope is an operator-level authz call).
 
 ## Next-release checklist (v0.6b PVerify)
 
