@@ -23,14 +23,20 @@ export interface PositionedAppointment {
   content: AppointmentBlockContent;
 }
 
-export function SchedulerTimeGutter({ rows }: { rows: Array<{ startMinutes: number; label: string }> }) {
+export function SchedulerTimeGutter({
+  rows,
+  rowHeight = ROW_HEIGHT,
+}: {
+  rows: Array<{ startMinutes: number; label: string }>;
+  rowHeight?: number;
+}) {
   return (
     <div className="border-r border-white/10 bg-black/35">
       {rows.map((row) => (
         <div
           key={row.startMinutes}
           className="border-b border-white/10 px-2 pt-1 text-right text-[11px] text-white/50"
-          style={{ height: ROW_HEIGHT }}
+          style={{ height: rowHeight }}
         >
           {row.startMinutes % 60 === 0 ? row.label : ""}
         </div>
@@ -54,10 +60,12 @@ export function SchedulerColumnsEmptyState({ loading, viewNoun }: { loading: boo
 function AppointmentBlock({
   block,
   resource,
+  rowHeight,
   onClick,
 }: {
   block: PositionedAppointment;
   resource: Schedule;
+  rowHeight: number;
   onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
 }) {
   const { geometry, content, appointment } = block;
@@ -67,8 +75,8 @@ function AppointmentBlock({
       type="button"
       className="absolute inset-x-1 z-20 overflow-hidden rounded-sm border px-2 py-1 text-left shadow-lg"
       style={{
-        top: geometry.rowStart * ROW_HEIGHT + 3,
-        height: Math.max(geometry.rowSpan * ROW_HEIGHT - 6, 30),
+        top: geometry.rowStart * rowHeight + 3,
+        height: Math.max(geometry.rowSpan * rowHeight - 6, 30),
         background: `linear-gradient(135deg, ${color}, ${color}cc)`,
         borderColor: `${color}ee`,
         color: contrastTextColor(color),
@@ -110,6 +118,7 @@ export function ResourceDayColumn({
   slotMinutes,
   appointments,
   columnKey,
+  rowHeight = ROW_HEIGHT,
   onAppointmentClick,
   onBlockedRegionClick,
   onCellClick,
@@ -123,6 +132,7 @@ export function ResourceDayColumn({
   slotMinutes: number;
   appointments: PositionedAppointment[];
   columnKey: string;
+  rowHeight?: number;
   onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
   onBlockedRegionClick: (blockIndex: number | undefined) => void;
   onCellClick: (resource: Schedule, startMinutes: number) => void;
@@ -139,7 +149,7 @@ export function ResourceDayColumn({
   });
 
   return (
-    <div className="relative border-r border-white/10" style={{ minHeight: rows.length * ROW_HEIGHT }}>
+    <div className="relative border-r border-white/10" style={{ minHeight: rows.length * rowHeight }}>
       {regions
         .filter((region) => region.kind !== "blocked")
         .map((region) => (
@@ -149,14 +159,14 @@ export function ResourceDayColumn({
               "absolute inset-x-0",
               region.kind === "in-hours" ? "bg-white/[0.075]" : "bg-white/[0.025]",
             )}
-            style={{ top: region.rowStart * ROW_HEIGHT, height: region.rowSpan * ROW_HEIGHT }}
+            style={{ top: region.rowStart * rowHeight, height: region.rowSpan * rowHeight }}
           />
         ))}
       {rows.map((row) => (
         <div
           key={row.startMinutes}
           className="relative border-b border-white/10"
-          style={{ height: ROW_HEIGHT }}
+          style={{ height: rowHeight }}
           onClick={() => onCellClick(resource, row.startMinutes)}
         />
       ))}
@@ -174,8 +184,8 @@ export function ResourceDayColumn({
               type="button"
               disabled={!editable}
               style={{
-                top: region.rowStart * ROW_HEIGHT + 2,
-                height: Math.max(region.rowSpan * ROW_HEIGHT - 4, 24),
+                top: region.rowStart * rowHeight + 2,
+                height: Math.max(region.rowSpan * rowHeight - 4, 24),
               }}
               onClick={(event) => {
                 event.stopPropagation();
@@ -193,6 +203,7 @@ export function ResourceDayColumn({
           key={`${columnKey}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
           block={block}
           resource={resource}
+          rowHeight={rowHeight}
           onClick={onAppointmentClick}
         />
       ))}

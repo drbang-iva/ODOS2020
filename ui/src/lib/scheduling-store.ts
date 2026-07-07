@@ -90,6 +90,18 @@ export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
   officeBySchedule: {},
 };
 
+// Day/week vertical zoom — a per-user viewing preference (session state, not
+// practice config) that scales row height so a fine booking increment (10/15
+// min) doesn't make a single hour fill the screen.
+export const SCHEDULER_ZOOM_MIN = 0.5;
+export const SCHEDULER_ZOOM_MAX = 1.75;
+export const SCHEDULER_ZOOM_STEP = 0.25;
+function clampZoom(zoom: number): number {
+  return Number.isFinite(zoom)
+    ? Math.min(SCHEDULER_ZOOM_MAX, Math.max(SCHEDULER_ZOOM_MIN, zoom))
+    : 1;
+}
+
 export interface SchedulingFhirClient {
   search<T extends Resource>(
     resourceType: T["resourceType"],
@@ -149,6 +161,7 @@ export interface SchedulingStoreState {
   view: SchedulerView;
   date: string;
   slotMinutes: number;
+  zoom: number;
   resources: Schedule[];
   visitTypes: HealthcareService[];
   appointments: Appointment[];
@@ -172,6 +185,8 @@ export interface SchedulingStoreState {
   clearConfigError: () => void;
   shiftDate: (direction: number) => void;
   today: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
   saveConfig: (config: SchedulingPracticeConfig, deps?: SchedulingWriteDeps) => Promise<void>;
   loadDay: (deps?: { fhirClient?: SchedulingFhirClient; force?: boolean }) => Promise<void>;
   loadWindow: (
@@ -211,6 +226,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   view: "day",
   date: todayYmd(new Date(), DEFAULT_SCHEDULING_PRACTICE_CONFIG.timezoneOffset),
   slotMinutes: resolveSlotMinutes(DEFAULT_SCHEDULING_PRACTICE_CONFIG, "all"),
+  zoom: 1,
   resources: [],
   visitTypes: [],
   appointments: [],
@@ -276,6 +292,8 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   clearConfigError: () => set({ configError: null }),
   shiftDate: (direction) => set({ date: shiftSchedulerDate(get().date, get().view, direction) }),
   today: () => set({ date: todayYmd(new Date(), get().config.timezoneOffset) }),
+  zoomIn: () => set((state) => ({ zoom: clampZoom(state.zoom + SCHEDULER_ZOOM_STEP) })),
+  zoomOut: () => set((state) => ({ zoom: clampZoom(state.zoom - SCHEDULER_ZOOM_STEP) })),
   async saveConfig(config, deps) {
     const client = deps?.fhirClient ?? fhir;
     if (get().configReadFailed) {
