@@ -1,38 +1,32 @@
 import type { Appointment, HealthcareService, Schedule } from "@medplum/fhirtypes";
-import clsx from "clsx";
 import { useMemo } from "react";
 import {
   appointmentGeometry,
-  availabilityShadingForColumn,
-  blocksForScheduleWithIndex,
   buildAppointmentBlockContent,
   buildTimeAxisForDates,
   resourceActorReference,
   resourceDisplay,
   scheduleReference,
   visibleAppointmentsForMode,
-  weeklyHoursForSchedule,
-  type AppointmentBlockContent,
-  type AppointmentGeometry,
   type ClinicMode,
   type SchedulingPracticeConfig,
 } from "../../lib/scheduling";
 import { weekDays } from "../../lib/scheduling-calendar";
+import {
+  GUTTER_WIDTH,
+  ROW_HEIGHT,
+  ResourceDayColumn,
+  SchedulerColumnsEmptyState,
+  SchedulerTimeGutter,
+  type PositionedAppointment,
+} from "./ResourceDayColumn";
 
-const ROW_HEIGHT = 46;
-const GUTTER_WIDTH = 76;
 const DAY_HEADER_FORMAT = new Intl.DateTimeFormat(undefined, {
   weekday: "short",
   month: "short",
   day: "numeric",
   timeZone: "UTC",
 });
-
-interface PositionedAppointment {
-  appointment: Appointment;
-  geometry: AppointmentGeometry;
-  content: AppointmentBlockContent;
-}
 
 export function SchedulerWeekGrid({
   appointmentsByDay,
@@ -117,10 +111,10 @@ export function SchedulerWeekGrid({
               ))}
             </div>
             {!selectedResource || timeAxis.rows.length === 0 ? (
-              <EmptyWeekState loading={loading} />
+              <SchedulerColumnsEmptyState loading={loading} viewNoun="week" />
             ) : (
               <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
-                <TimeGutter rows={timeAxis.rows} />
+                <SchedulerTimeGutter rows={timeAxis.rows} />
                 {days.map((day) => (
                   <WeekDayColumn
                     key={day}
@@ -202,150 +196,20 @@ function WeekDayColumn({
         }));
     })
     .sort((a, b) => a.geometry.rowStart - b.geometry.rowStart);
-  const indexedBlocks = blocksForScheduleWithIndex(config, resource);
-  const regions = availabilityShadingForColumn({
-    date,
-    axisStartMinutes,
-    axisEndMinutes,
-    slotMinutes,
-    weeklyHours: weeklyHoursForSchedule(config, resource),
-    blocks: indexedBlocks.map((entry) => entry.block),
-    blockIndexes: indexedBlocks.map((entry) => entry.blockIndex),
-  });
-
   return (
-    <div className="relative border-r border-white/10" style={{ minHeight: rows.length * ROW_HEIGHT }}>
-      {regions
-        .filter((region) => region.kind !== "blocked")
-        .map((region) => (
-          <div
-            key={`${date}-${region.kind}-${region.startMinutes}`}
-            className={clsx(
-              "absolute inset-x-0",
-              region.kind === "in-hours" ? "bg-white/[0.075]" : "bg-white/[0.025]",
-            )}
-            style={{ top: region.rowStart * ROW_HEIGHT, height: region.rowSpan * ROW_HEIGHT }}
-          />
-        ))}
-      {rows.map((row) => (
-        <div
-          key={row.startMinutes}
-          className="relative border-b border-white/10"
-          style={{ height: ROW_HEIGHT }}
-          onClick={() => onCellClick(date, resource, row.startMinutes)}
-        />
-      ))}
-      {regions
-        .filter((region) => region.kind === "blocked")
-        .map((region) => {
-          const editable = region.blockedKind === "custom" && region.blockIndex !== undefined;
-          return (
-            <button
-              key={`${date}-blocked-${region.startMinutes}-${region.endMinutes}`}
-              className={clsx(
-                "absolute inset-x-1 z-10 overflow-hidden border border-white/10 bg-zinc-500/45 px-2 py-1 text-left text-[11px] font-semibold text-white/80",
-                editable && "hover:bg-zinc-400/55",
-              )}
-              type="button"
-              disabled={!editable}
-              style={{
-                top: region.rowStart * ROW_HEIGHT + 2,
-                height: Math.max(region.rowSpan * ROW_HEIGHT - 4, 24),
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (editable) {
-                  onBlockedRegionClick(region.blockIndex);
-                }
-              }}
-            >
-              <div className="truncate">{region.description ?? region.blockedKindDisplay ?? "Blocked"}</div>
-            </button>
-          );
-        })}
-      {positioned.map((block) => (
-        <AppointmentBlock
-          key={`${date}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
-          block={block}
-          resource={resource}
-          onClick={onAppointmentClick}
-        />
-      ))}
-    </div>
+    <ResourceDayColumn
+      resource={resource}
+      config={config}
+      columnKey={date}
+      date={date}
+      rows={rows}
+      axisStartMinutes={axisStartMinutes}
+      axisEndMinutes={axisEndMinutes}
+      slotMinutes={slotMinutes}
+      appointments={positioned}
+      onAppointmentClick={onAppointmentClick}
+      onBlockedRegionClick={onBlockedRegionClick}
+      onCellClick={(columnResource, startMinutes) => onCellClick(date, columnResource, startMinutes)}
+    />
   );
-}
-
-function TimeGutter({ rows }: { rows: Array<{ startMinutes: number; label: string }> }) {
-  return (
-    <div className="border-r border-white/10 bg-black/35">
-      {rows.map((row) => (
-        <div
-          key={row.startMinutes}
-          className="border-b border-white/10 px-2 pt-1 text-right text-[11px] text-white/50"
-          style={{ height: ROW_HEIGHT }}
-        >
-          {row.startMinutes % 60 === 0 ? row.label : ""}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AppointmentBlock({
-  block,
-  resource,
-  onClick,
-}: {
-  block: PositionedAppointment;
-  resource: Schedule;
-  onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
-}) {
-  const { geometry, content, appointment } = block;
-  const color = content.color;
-  return (
-    <button
-      type="button"
-      className="absolute inset-x-1 z-20 overflow-hidden rounded-sm border px-2 py-1 text-left shadow-lg"
-      style={{
-        top: geometry.rowStart * ROW_HEIGHT + 3,
-        height: Math.max(geometry.rowSpan * ROW_HEIGHT - 6, 30),
-        background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-        borderColor: `${color}ee`,
-        color: contrastTextColor(color),
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick(appointment, resourceActorReference(resource));
-      }}
-    >
-      <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
-      <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
-      <div className="truncate text-[10px] leading-tight opacity-85">
-        {content.statusDisplay} · {content.confirmationDisplay}
-      </div>
-    </button>
-  );
-}
-
-function EmptyWeekState({ loading }: { loading: boolean }) {
-  return (
-    <div className="grid min-h-[420px] place-items-center border-t border-white/10 bg-black/25">
-      <div className="text-sm text-white/50">
-        {loading ? "Loading scheduler week..." : "No scheduler resources found for this clinic mode."}
-      </div>
-    </div>
-  );
-}
-
-function contrastTextColor(hex: string): string {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match) {
-    return "#ffffff";
-  }
-  const value = match[1];
-  const r = Number.parseInt(value.slice(0, 2), 16);
-  const g = Number.parseInt(value.slice(2, 4), 16);
-  const b = Number.parseInt(value.slice(4, 6), 16);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > 0.6 ? "#08080f" : "#ffffff";
 }

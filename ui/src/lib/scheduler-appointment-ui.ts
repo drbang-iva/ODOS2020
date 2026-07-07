@@ -42,7 +42,7 @@ export interface AppointmentModalDraft {
   followUp: boolean;
 }
 
-export interface PatientQuickCardViewModel {
+interface PatientQuickCardViewModel {
   name: string;
   birthDate: string;
   age: number | undefined;
@@ -246,7 +246,7 @@ export function appointmentModalDurationError(draft: AppointmentModalDraft): str
   return validDurationMinutes(draft.durationMinutes) ? undefined : "Duration must be >= 1 minute.";
 }
 
-export function patientInputOf(appointment: Appointment): { reference: string; display?: string } | undefined {
+function patientInputOf(appointment: Appointment): { reference: string; display?: string } | undefined {
   const actor = appointment.participant.find((participant) =>
     participant.actor?.reference?.startsWith("Patient/"),
   )?.actor;
