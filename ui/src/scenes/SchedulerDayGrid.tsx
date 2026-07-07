@@ -26,26 +26,26 @@ import {
   type ClinicMode,
   type SchedulingOpening,
 } from "../lib/scheduling";
+import {
+  appointmentDraftForSchedulerCell,
+  formatSchedulerDateLabel,
+  schedulerWindowForView,
+  type SchedulerView,
+} from "../lib/scheduling-calendar";
 import { todayYmd, useSchedulingStore } from "../lib/scheduling-store";
 import {
   confirmDoubleBookAndRetry,
-  defaultAppointmentModalDraft,
   type AppointmentModalDraft,
 } from "../lib/scheduler-appointment-ui";
 import { AppointmentDetailsModal } from "./scheduler/AppointmentDetailsModal";
 import { FindOpenPanel } from "./scheduler/FindOpenPanel";
 import { PatientQuickCard } from "./scheduler/PatientQuickCard";
+import { SchedulerMonthGrid } from "./scheduler/SchedulerMonthGrid";
+import { SchedulerWeekGrid } from "./scheduler/SchedulerWeekGrid";
 import { SchedulingSettingsModal } from "./scheduler/SchedulingSettingsModal";
 
 const ROW_HEIGHT = 46;
 const GUTTER_WIDTH = 76;
-const DATE_DISPLAY_FORMAT = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 interface PositionedAppointment {
   appointment: Appointment;
@@ -55,22 +55,29 @@ interface PositionedAppointment {
 
 export function SchedulerDayGrid() {
   const clinicMode = useSchedulingStore((state) => state.clinicMode);
+  const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
   const slotMinutes = useSchedulingStore((state) => state.slotMinutes);
   const resources = useSchedulingStore((state) => state.resources);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const appointments = useSchedulingStore((state) => state.appointments);
+  const appointmentsByDay = useSchedulingStore((state) => state.appointmentsByDay);
   const config = useSchedulingStore((state) => state.config);
   const officeId = useSchedulingStore((state) => state.officeId);
+  const weekResourceScheduleReference = useSchedulingStore((state) => state.weekResourceScheduleReference);
   const loading = useSchedulingStore((state) => state.loading);
   const error = useSchedulingStore((state) => state.error);
   const configError = useSchedulingStore((state) => state.configError);
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
+  const setView = useSchedulingStore((state) => state.setView);
   const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
+  const setDate = useSchedulingStore((state) => state.setDate);
+  const setWeekResourceScheduleReference = useSchedulingStore((state) => state.setWeekResourceScheduleReference);
   const clearConfigError = useSchedulingStore((state) => state.clearConfigError);
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
   const today = useSchedulingStore((state) => state.today);
   const loadDay = useSchedulingStore((state) => state.loadDay);
+  const loadWindow = useSchedulingStore((state) => state.loadWindow);
   const saveConfig = useSchedulingStore((state) => state.saveConfig);
   const findOpenings = useSchedulingStore((state) => state.findOpenings);
   const createAppointment = useSchedulingStore((state) => state.createAppointment);
@@ -95,8 +102,19 @@ export function SchedulerDayGrid() {
   } | null>(null);
 
   useEffect(() => {
-    void loadDay();
-  }, [date, loadDay]);
+    if (view === "day") {
+      void loadDay();
+      return;
+    }
+    const window = schedulerWindowForView(date, view);
+    void loadWindow(window.fromYmd, window.toYmdExclusive);
+  }, [date, loadDay, loadWindow, view]);
+
+  useEffect(() => {
+    if (view !== "day") {
+      setMoveSource(null);
+    }
+  }, [view]);
 
   useEffect(() => {
     if (!moveSource) {
@@ -178,10 +196,15 @@ export function SchedulerDayGrid() {
       : `${GUTTER_WIDTH}px`;
   const bodyHeight = Math.max(timeAxis.rows.length * ROW_HEIGHT, ROW_HEIGHT);
 
-  function openNewAppointment(resource: Schedule, startMinutes: number, status: "scheduled" | "walk-in" = "scheduled") {
+  function openNewAppointment(
+    resource: Schedule,
+    startMinutes: number,
+    appointmentDate = date,
+    status: "scheduled" | "walk-in" = "scheduled",
+  ) {
     setDetails({
-      draft: defaultAppointmentModalDraft({
-        date,
+      draft: appointmentDraftForSchedulerCell({
+        date: appointmentDate,
         startMinutes,
         timezoneOffset: config.timezoneOffset,
         resources: visibleResources,
@@ -230,6 +253,15 @@ export function SchedulerDayGrid() {
     openNewAppointment(resource, startMinutes);
   }
 
+  function handleWeekCellClick(weekDate: string, resource: Schedule, startMinutes: number) {
+    openNewAppointment(resource, startMinutes, weekDate);
+  }
+
+  function handleMonthDateSelect(monthDate: string) {
+    setDate(monthDate);
+    setView("day");
+  }
+
   function handleAppointmentClick(appointment: Appointment, sourceResourceActor?: string) {
     setQuickCardSelection({ appointment, sourceResourceActor });
     if (!quickCardPinned) {
@@ -242,7 +274,7 @@ export function SchedulerDayGrid() {
     if (!resource) {
       return;
     }
-    openNewAppointment(resource, timeAxis.rows[0]?.startMinutes ?? 9 * 60, "walk-in");
+    openNewAppointment(resource, timeAxis.rows[0]?.startMinutes ?? 9 * 60, date, "walk-in");
   }
 
   function openSettings(blockIndex?: number) {
@@ -262,7 +294,7 @@ export function SchedulerDayGrid() {
     if (!resource) {
       return;
     }
-    const draft = defaultAppointmentModalDraft({
+    const draft = appointmentDraftForSchedulerCell({
       date: opening.start.slice(0, 10),
       startMinutes: minutesFromIsoDateTime(opening.start, config.timezoneOffset),
       timezoneOffset: config.timezoneOffset,
@@ -289,6 +321,7 @@ export function SchedulerDayGrid() {
       <SchedulerToolbar
         clinicMode={clinicMode}
         date={date}
+        dayActionsEnabled={view === "day"}
         legendOpen={legendOpen}
         onClinicModeChange={setClinicMode}
         onLegendToggle={() => setLegendOpen((open) => !open)}
@@ -302,16 +335,18 @@ export function SchedulerDayGrid() {
                 : null,
           )
         }
-        onNextDay={() => shiftDate(1)}
-        onPreviousDay={() => shiftDate(-1)}
+        onNext={() => shiftDate(1)}
+        onPrevious={() => shiftDate(-1)}
         onOfficeChange={setOfficeId}
         onSettings={() => openSettings()}
         onToday={today}
+        onViewChange={setView}
         onWalkIn={handleWalkIn}
         officeId={officeId}
         offices={config.offices}
         moveActive={Boolean(moveSource)}
         moveEnabled={Boolean(quickCardAppointment)}
+        view={view}
       />
       {findOpenVisible && (
         <FindOpenPanel
@@ -345,53 +380,83 @@ export function SchedulerDayGrid() {
           </button>
         </div>
       )}
-      <section className="px-4 pb-5">
-        <div className="overflow-hidden border border-white/10 bg-black/20">
-          <div className="overflow-x-auto">
-            <div className="min-w-[820px]">
-              <div
-                className="grid border-b border-white/10"
-                style={{ gridTemplateColumns }}
-              >
-                <div className="border-r border-white/10 bg-black/40 px-3 py-3 text-xs uppercase text-white/45">
-                  Time
-                </div>
-                {visibleResources.map((resource) => (
-                  <ResourceHeader key={resource.id ?? resource.actor?.[0]?.reference} resource={resource} />
-                ))}
-              </div>
-              {visibleResources.length === 0 || timeAxis.rows.length === 0 ? (
-                <EmptyGridState loading={loading} />
-              ) : (
-                <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
-                  <TimeGutter rows={timeAxis.rows} />
-                  {visibleResources.map((resource, columnIndex) => (
-                    <ResourceColumn
-                      key={resource.id ?? resource.actor?.[0]?.reference}
-                      resource={resource}
-                      columnIndex={columnIndex}
-                      date={date}
-                      rows={timeAxis.rows}
-                      axisStartMinutes={timeAxis.startMinutes}
-                      axisEndMinutes={timeAxis.endMinutes}
-                      slotMinutes={slotMinutes}
-                      appointments={positionedAppointments.filter(
-                        (block) => block.geometry.columnIndex === columnIndex,
-                      )}
-                      onAppointmentClick={handleAppointmentClick}
-                      onBlockedRegionClick={handleBlockedRegionClick}
-                      onCellClick={handleCellClick}
-                    />
+      {view === "day" ? (
+        <section className="px-4 pb-5">
+          <div className="overflow-hidden border border-white/10 bg-black/20">
+            <div className="overflow-x-auto">
+              <div className="min-w-[820px]">
+                <div
+                  className="grid border-b border-white/10"
+                  style={{ gridTemplateColumns }}
+                >
+                  <div className="border-r border-white/10 bg-black/40 px-3 py-3 text-xs uppercase text-white/45">
+                    Time
+                  </div>
+                  {visibleResources.map((resource) => (
+                    <ResourceHeader key={resource.id ?? resource.actor?.[0]?.reference} resource={resource} />
                   ))}
                 </div>
-              )}
+                {visibleResources.length === 0 || timeAxis.rows.length === 0 ? (
+                  <EmptyGridState loading={loading} />
+                ) : (
+                  <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
+                    <TimeGutter rows={timeAxis.rows} />
+                    {visibleResources.map((resource, columnIndex) => (
+                      <ResourceColumn
+                        key={resource.id ?? resource.actor?.[0]?.reference}
+                        resource={resource}
+                        columnIndex={columnIndex}
+                        date={date}
+                        rows={timeAxis.rows}
+                        axisStartMinutes={timeAxis.startMinutes}
+                        axisEndMinutes={timeAxis.endMinutes}
+                        slotMinutes={slotMinutes}
+                        appointments={positionedAppointments.filter(
+                          (block) => block.geometry.columnIndex === columnIndex,
+                        )}
+                        onAppointmentClick={handleAppointmentClick}
+                        onBlockedRegionClick={handleBlockedRegionClick}
+                        onCellClick={handleCellClick}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        {loading && (
-          <div className="mt-3 text-sm text-white/55">Loading scheduler day...</div>
-        )}
-      </section>
+          {loading && (
+            <div className="mt-3 text-sm text-white/55">Loading scheduler day...</div>
+          )}
+        </section>
+      ) : view === "week" ? (
+        <SchedulerWeekGrid
+          appointmentsByDay={appointmentsByDay}
+          clinicMode={clinicMode}
+          config={config}
+          date={date}
+          loading={loading}
+          onAppointmentClick={handleAppointmentClick}
+          onBlockedRegionClick={handleBlockedRegionClick}
+          onCellClick={handleWeekCellClick}
+          onSelectedResourceChange={setWeekResourceScheduleReference}
+          resources={visibleResources}
+          selectedScheduleReference={weekResourceScheduleReference}
+          slotMinutes={slotMinutes}
+          visitTypes={visitTypes}
+        />
+      ) : (
+        <SchedulerMonthGrid
+          appointments={appointments}
+          clinicMode={clinicMode}
+          config={config}
+          date={date}
+          loading={loading}
+          officeId={officeId}
+          onDateSelect={handleMonthDateSelect}
+          resources={resources}
+          visitTypes={visitTypes}
+        />
+      )}
       <PatientQuickCard
         appointment={quickCardAppointment}
         pinned={quickCardPinned}
@@ -437,6 +502,7 @@ export function SchedulerDayGrid() {
 function SchedulerToolbar({
   clinicMode,
   date,
+  dayActionsEnabled,
   legendOpen,
   officeId,
   offices,
@@ -444,17 +510,20 @@ function SchedulerToolbar({
   onFindOpen,
   onLegendToggle,
   onMove,
-  onNextDay,
+  onNext,
   onOfficeChange,
-  onPreviousDay,
+  onPrevious,
   onSettings,
   onToday,
+  onViewChange,
   onWalkIn,
   moveActive,
   moveEnabled,
+  view,
 }: {
   clinicMode: ClinicMode;
   date: string;
+  dayActionsEnabled: boolean;
   legendOpen: boolean;
   officeId: string | "all";
   offices: Array<{ id: string; name: string }>;
@@ -462,57 +531,75 @@ function SchedulerToolbar({
   onFindOpen: () => void;
   onLegendToggle: () => void;
   onMove: () => void;
-  onNextDay: () => void;
+  onNext: () => void;
   onOfficeChange: (officeId: string | "all") => void;
-  onPreviousDay: () => void;
+  onPrevious: () => void;
   onSettings: () => void;
   onToday: () => void;
+  onViewChange: (view: SchedulerView) => void;
   onWalkIn: () => void;
   moveActive: boolean;
   moveEnabled: boolean;
+  view: SchedulerView;
 }) {
   return (
     <header className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-black/35 px-4 py-3">
       <button className="scheduler-button" type="button" onClick={onToday}>
         Today
       </button>
-      <button className="scheduler-icon-button" type="button" aria-label="Previous day" onClick={onPreviousDay}>
+      <button className="scheduler-icon-button" type="button" aria-label={`Previous ${view}`} onClick={onPrevious}>
         &lt;
       </button>
-      <button className="scheduler-icon-button" type="button" aria-label="Next day" onClick={onNextDay}>
+      <button className="scheduler-icon-button" type="button" aria-label={`Next ${view}`} onClick={onNext}>
         &gt;
       </button>
       <div className="min-w-[210px] px-2 text-sm font-semibold text-white">
-        {formatDateDisplay(date)}
+        {formatSchedulerDateLabel(date, view)}
       </div>
       <div className="flex rounded border border-white/15 bg-black/30 p-0.5">
-        <button className="scheduler-segment-active" type="button">
+        <button
+          className={view === "day" ? "scheduler-segment-active" : "scheduler-segment"}
+          type="button"
+          onClick={() => onViewChange("day")}
+        >
           Day
         </button>
-        <button className="scheduler-segment" type="button" disabled>
+        <button
+          className={view === "week" ? "scheduler-segment-active" : "scheduler-segment"}
+          type="button"
+          onClick={() => onViewChange("week")}
+        >
           Week
         </button>
-        <button className="scheduler-segment" type="button" disabled>
+        <button
+          className={view === "month" ? "scheduler-segment-active" : "scheduler-segment"}
+          type="button"
+          onClick={() => onViewChange("month")}
+        >
           Month
         </button>
       </div>
-      <button className="scheduler-button" type="button" onClick={onWalkIn}>
-        Walk-In
-      </button>
+      {dayActionsEnabled && (
+        <button className="scheduler-button" type="button" onClick={onWalkIn}>
+          Walk-In
+        </button>
+      )}
       <button className="scheduler-button" type="button" onClick={onFindOpen}>
         Find Open
       </button>
       <button className="scheduler-button" type="button" onClick={onSettings}>
         Settings
       </button>
-      <button
-        className={clsx("scheduler-button", moveActive && "border-amber-300/50 bg-amber-500/15")}
-        type="button"
-        disabled={!moveEnabled}
-        onClick={onMove}
-      >
-        {moveActive ? "Moving" : "Move"}
-      </button>
+      {dayActionsEnabled && (
+        <button
+          className={clsx("scheduler-button", moveActive && "border-amber-300/50 bg-amber-500/15")}
+          type="button"
+          disabled={!moveEnabled}
+          onClick={onMove}
+        >
+          {moveActive ? "Moving" : "Move"}
+        </button>
+      )}
       <button className={clsx("scheduler-button", legendOpen && "border-white/35 bg-white/15")} type="button" onClick={onLegendToggle}>
         Legend
       </button>
@@ -762,10 +849,6 @@ function currentAppointment(appointment: Appointment | null, appointments: Appoi
     return appointment;
   }
   return appointments.find((candidate) => candidate.id === appointment.id) ?? appointment;
-}
-
-function formatDateDisplay(date: string): string {
-  return DATE_DISPLAY_FORMAT.format(new Date(`${date}T12:00:00Z`));
 }
 
 function contrastTextColor(hex: string): string {

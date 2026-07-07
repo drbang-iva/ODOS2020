@@ -13,6 +13,7 @@ import {
   FIND_OPEN_HORIZON_DAYS,
   addMinutesIso,
   appointmentDayBoundsParams,
+  appointmentRangeBoundsParams,
   appointmentActorReferences,
   appointmentConfirmationExtension,
   appointmentDurationMinutes,
@@ -40,6 +41,13 @@ import {
   type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
+import {
+  bucketAppointmentsByPracticeDay,
+  reconcileWeekResourceReference,
+  schedulerWindowForView,
+  shiftSchedulerDate,
+  type SchedulerView,
+} from "./scheduling-calendar";
 import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
 import { validateSchedulingPracticeSettings } from "./scheduling-settings";
 import {
@@ -128,29 +136,47 @@ export interface FindOpeningsInput {
   horizonDays?: number;
 }
 
+export interface LoadedSchedulingWindow {
+  fromYmd: string;
+  toYmdExclusive: string;
+  view: SchedulerView;
+  anchorDate: string;
+}
+
 export interface SchedulingStoreState {
   clinicMode: ClinicMode;
+  view: SchedulerView;
   date: string;
   slotMinutes: number;
   resources: Schedule[];
   visitTypes: HealthcareService[];
   appointments: Appointment[];
+  appointmentsByDay: Record<string, Appointment[]>;
+  loadedWindow: LoadedSchedulingWindow | null;
   config: SchedulingPracticeConfig;
   configResource?: Basic;
   configError: string | null;
   configReadFailed: boolean;
   officeId: string | "all";
+  weekResourceScheduleReference?: string;
   catalogsLoaded: boolean;
   loading: boolean;
   error: string | null;
   setClinicMode: (clinicMode: ClinicMode) => void;
+  setView: (view: SchedulerView) => void;
   setDate: (date: string) => void;
   setOfficeId: (officeId: string | "all") => void;
+  setWeekResourceScheduleReference: (reference: string | undefined) => void;
   clearConfigError: () => void;
-  shiftDate: (days: number) => void;
+  shiftDate: (direction: number) => void;
   today: () => void;
   saveConfig: (config: SchedulingPracticeConfig, deps?: SchedulingWriteDeps) => Promise<void>;
   loadDay: (deps?: { fhirClient?: SchedulingFhirClient; force?: boolean }) => Promise<void>;
+  loadWindow: (
+    fromYmd: string,
+    toYmdExclusive: string,
+    deps?: { fhirClient?: SchedulingFhirClient; force?: boolean },
+  ) => Promise<void>;
   findOpenings: (input: FindOpeningsInput, deps?: { fhirClient?: SchedulingFhirClient; now?: () => string }) => Promise<SchedulingOpening[]>;
   createAppointment: (
     input: BookSchedulingAppointmentInput,
@@ -180,24 +206,60 @@ export interface SchedulingStoreState {
 
 export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   clinicMode: "both",
+  view: "day",
   date: todayYmd(new Date(), DEFAULT_SCHEDULING_PRACTICE_CONFIG.timezoneOffset),
   slotMinutes: 30,
   resources: [],
   visitTypes: [],
   appointments: [],
+  appointmentsByDay: {},
+  loadedWindow: null,
   config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
   configResource: undefined,
   configError: null,
   configReadFailed: false,
   officeId: "all",
+  weekResourceScheduleReference: undefined,
   catalogsLoaded: false,
   loading: false,
   error: null,
-  setClinicMode: (clinicMode) => set({ clinicMode }),
+  setClinicMode: (clinicMode) =>
+    set((state) => ({
+      clinicMode,
+      weekResourceScheduleReference: reconcileWeekResourceReference({
+        currentReference: state.weekResourceScheduleReference,
+        resources: state.resources,
+        clinicMode,
+        config: state.config,
+        officeId: state.officeId,
+      }),
+    })),
+  setView: (view) =>
+    set((state) => ({
+      view,
+      weekResourceScheduleReference: reconcileWeekResourceReference({
+        currentReference: state.weekResourceScheduleReference,
+        resources: state.resources,
+        clinicMode: state.clinicMode,
+        config: state.config,
+        officeId: state.officeId,
+      }),
+    })),
   setDate: (date) => set({ date }),
-  setOfficeId: (officeId) => set({ officeId }),
+  setOfficeId: (officeId) =>
+    set((state) => ({
+      officeId,
+      weekResourceScheduleReference: reconcileWeekResourceReference({
+        currentReference: state.weekResourceScheduleReference,
+        resources: state.resources,
+        clinicMode: state.clinicMode,
+        config: state.config,
+        officeId,
+      }),
+    })),
+  setWeekResourceScheduleReference: (reference) => set({ weekResourceScheduleReference: reference }),
   clearConfigError: () => set({ configError: null }),
-  shiftDate: (days) => set({ date: addDaysYmd(get().date, days) }),
+  shiftDate: (direction) => set({ date: shiftSchedulerDate(get().date, get().view, direction) }),
   today: () => set({ date: todayYmd(new Date(), get().config.timezoneOffset) }),
   async saveConfig(config, deps) {
     const client = deps?.fhirClient ?? fhir;
@@ -215,7 +277,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         ? await updateResource(client, resource, SCHEDULING_SOURCE_TAGS.config)
         : await createResource(client, resource, SCHEDULING_SOURCE_TAGS.config);
       set(configStatePatch(get(), config, saved, null, false, { loading: false, error: null }));
-      await get().loadDay({ fhirClient: client });
+      await reloadSelectedSchedulerView(get, client);
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
@@ -224,6 +286,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   async loadDay(deps) {
     const client = deps?.fhirClient ?? fhir;
     const date = get().date;
+    const view = get().view;
     const shouldLoadCatalogs = deps?.force === true || !get().catalogsLoaded;
     set({ loading: true, error: null });
     try {
@@ -235,7 +298,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
             warning: get().configError,
             readFailed: get().configReadFailed,
           };
-      if (get().date !== date) {
+      if (get().date !== date || get().view !== view) {
         return;
       }
       const config = loadedConfig.config;
@@ -252,25 +315,116 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
           appointmentDayBoundsParams(date, config.timezoneOffset),
         ),
       ]);
-      if (get().date !== date) {
+      if (get().date !== date || get().view !== view) {
         return;
       }
+      const patched = configStatePatch(
+        get(),
+        config,
+        loadedConfig.resource,
+        loadedConfig.warning ?? null,
+        loadedConfig.readFailed ?? false,
+      );
+      const officeId = patched.officeId ?? get().officeId;
       set({
         resources,
         visitTypes,
         appointments,
-        ...configStatePatch(
-          get(),
+        appointmentsByDay: bucketAppointmentsByPracticeDay(appointments, config.timezoneOffset),
+        loadedWindow: {
+          fromYmd: date,
+          toYmdExclusive: addDaysYmd(date, 1),
+          view,
+          anchorDate: date,
+        },
+        ...patched,
+        weekResourceScheduleReference: reconcileWeekResourceReference({
+          currentReference: get().weekResourceScheduleReference,
+          resources,
+          clinicMode: get().clinicMode,
           config,
-          loadedConfig.resource,
-          loadedConfig.warning ?? null,
-          loadedConfig.readFailed ?? false,
-        ),
+          officeId,
+        }),
         catalogsLoaded: true,
         loading: false,
       });
     } catch (err) {
-      if (get().date !== date) {
+      if (get().date !== date || get().view !== view) {
+        return;
+      }
+      set({
+        loading: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  },
+  async loadWindow(fromYmd, toYmdExclusive, deps) {
+    const client = deps?.fhirClient ?? fhir;
+    const anchorDate = get().date;
+    const view = get().view;
+    const shouldLoadCatalogs = deps?.force === true || !get().catalogsLoaded;
+    set({ loading: true, error: null });
+    try {
+      const loadedConfig = shouldLoadCatalogs
+        ? await safeFetchSchedulingConfig(client)
+        : {
+            config: get().config,
+            resource: get().configResource,
+            warning: get().configError,
+            readFailed: get().configReadFailed,
+          };
+      if (get().date !== anchorDate || get().view !== view) {
+        return;
+      }
+      const config = loadedConfig.config;
+      const [resources, visitTypes, appointments] = await Promise.all([
+        shouldLoadCatalogs
+          ? searchAll<Schedule>(client, "Schedule", { active: "true" })
+          : Promise.resolve(get().resources),
+        shouldLoadCatalogs
+          ? searchAll<HealthcareService>(client, "HealthcareService", { active: "true" })
+          : Promise.resolve(get().visitTypes),
+        searchAll<Appointment>(
+          client,
+          "Appointment",
+          appointmentRangeBoundsParams(fromYmd, toYmdExclusive, config.timezoneOffset),
+        ),
+      ]);
+      if (get().date !== anchorDate || get().view !== view) {
+        return;
+      }
+      const patched = configStatePatch(
+        get(),
+        config,
+        loadedConfig.resource,
+        loadedConfig.warning ?? null,
+        loadedConfig.readFailed ?? false,
+      );
+      const officeId = patched.officeId ?? get().officeId;
+      set({
+        resources,
+        visitTypes,
+        appointments,
+        appointmentsByDay: bucketAppointmentsByPracticeDay(appointments, config.timezoneOffset),
+        loadedWindow: {
+          fromYmd,
+          toYmdExclusive,
+          view,
+          anchorDate,
+        },
+        ...patched,
+        weekResourceScheduleReference: reconcileWeekResourceReference({
+          currentReference: get().weekResourceScheduleReference,
+          resources,
+          clinicMode: get().clinicMode,
+          config,
+          officeId,
+        }),
+        catalogsLoaded: true,
+        loading: false,
+      });
+    } catch (err) {
+      if (get().date !== anchorDate || get().view !== view) {
         return;
       }
       set({
@@ -324,7 +478,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         now: deps?.now,
       });
       await createResource(client, appointment, SCHEDULING_SOURCE_TAGS.create);
-      await get().loadDay({ fhirClient: client });
+      await reloadSelectedSchedulerView(get, client);
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
@@ -533,11 +687,24 @@ async function writeAppointmentUpdate(
       assertNoAppointmentConflicts(updated, conflicts, current.id);
     }
     await updateResource(client, updated, sourceTag);
-    await get().loadDay({ fhirClient: client });
+    await reloadSelectedSchedulerView(get, client);
   } catch (err) {
     set({ loading: false, error: errorMessage(err) });
     throw err;
   }
+}
+
+async function reloadSelectedSchedulerView(
+  get: () => SchedulingStoreState,
+  client: SchedulingFhirClient,
+): Promise<void> {
+  const state = get();
+  if (state.view === "day") {
+    await state.loadDay({ fhirClient: client });
+    return;
+  }
+  const window = schedulerWindowForView(state.date, state.view);
+  await state.loadWindow(window.fromYmd, window.toYmdExclusive, { fhirClient: client });
 }
 
 function rebuildAppointmentForUpdate(

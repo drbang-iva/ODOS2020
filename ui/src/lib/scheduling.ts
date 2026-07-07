@@ -962,8 +962,22 @@ export function buildTimeAxis(input: {
   config: SchedulingPracticeConfig;
   slotMinutes: number;
 }): TimeAxis {
+  return buildTimeAxisForDates({
+    dates: [input.date],
+    resources: input.resources,
+    config: input.config,
+    slotMinutes: input.slotMinutes,
+  });
+}
+
+export function buildTimeAxisForDates(input: {
+  dates: string[];
+  resources: Schedule[];
+  config: SchedulingPracticeConfig;
+  slotMinutes: number;
+}): TimeAxis {
   const windows = input.resources.flatMap((resource) =>
-    windowsForDate(input.date, weeklyHoursForSchedule(input.config, resource)),
+    input.dates.flatMap((date) => windowsForDate(date, weeklyHoursForSchedule(input.config, resource))),
   );
   if (windows.length === 0) {
     return { startMinutes: 0, endMinutes: 0, rows: [] };
@@ -1191,9 +1205,17 @@ export function isoFromDateAndMinutes(date: string, minutes: number, timezoneOff
 }
 
 export function appointmentDayBoundsParams(date: string, timezoneOffset: string): URLSearchParams {
+  return appointmentRangeBoundsParams(date, addDaysYmd(date, 1), timezoneOffset);
+}
+
+export function appointmentRangeBoundsParams(
+  fromYmd: string,
+  toYmdExclusive: string,
+  timezoneOffset: string,
+): URLSearchParams {
   return new URLSearchParams([
-    ["date", `ge${date}T00:00:00${timezoneOffset}`],
-    ["date", `lt${addDaysYmd(date, 1)}T00:00:00${timezoneOffset}`],
+    ["date", `ge${fromYmd}T00:00:00${timezoneOffset}`],
+    ["date", `lt${toYmdExclusive}T00:00:00${timezoneOffset}`],
   ]);
 }
 
