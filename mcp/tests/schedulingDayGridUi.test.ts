@@ -94,6 +94,54 @@ test("time axis comes from the union of operating windows and pads to whole hour
   assert.equal(axis.rows.at(-1)?.startMinutes, 17 * 60 + 30);
 });
 
+test("time axis expands to cover appointments booked outside operating hours", () => {
+  const resources = [provider("sch-od", "Practitioner/od", ["eyecare"])];
+  const config: SchedulingPracticeConfig = {
+    timezoneOffset: "-05:00",
+    defaultWeeklyHours: {},
+    weeklyHoursBySchedule: {
+      "Schedule/sch-od": { mon: [{ start: "09:00", end: "12:00" }] },
+    },
+    blocks: [],
+  };
+  const early = buildSchedulingAppointment({
+    patient: { reference: "Patient/p1", display: "Early, Riser" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }],
+    start: "2026-07-06T07:30:00-05:00",
+    durationMinutes: 30,
+  });
+  const late = buildSchedulingAppointment({
+    patient: { reference: "Patient/p2", display: "Late, Comer" },
+    visitTypeCode: "routine-exam-new",
+    discipline: "eyecare",
+    resources: [{ reference: "Practitioner/od" }],
+    start: "2026-07-06T12:30:00-05:00",
+    durationMinutes: 30,
+  });
+
+  const baseline = buildTimeAxis({ date: MONDAY, resources, config, slotMinutes: 30 });
+  assert.equal(baseline.startMinutes, 9 * 60, "baseline axis starts at opening");
+  assert.equal(baseline.endMinutes, 12 * 60, "baseline axis ends at close");
+
+  const axis = buildTimeAxis({ date: MONDAY, resources, config, slotMinutes: 30, appointments: [early, late] });
+  assert.equal(axis.startMinutes, 7 * 60, "axis expands down to the 07:30 booking (floored to 7:00)");
+  assert.equal(axis.endMinutes, 13 * 60, "axis expands up to the 12:30-13:00 booking (ceiled to 13:00)");
+
+  const [geometry] = appointmentGeometry({
+    appointment: early,
+    resources,
+    axisStartMinutes: axis.startMinutes,
+    slotMinutes: 30,
+    timezoneOffset: "-05:00",
+  });
+  assert.ok(
+    geometry !== undefined && geometry.rowStart >= 0 && geometry.rowStart < axis.rows.length,
+    "the previously-hidden early booking now lands inside the expanded axis",
+  );
+});
+
 test("appointment geometry maps actor, wall-clock start, and duration onto column and row offsets", () => {
   const resources = [
     provider("sch-od", "Practitioner/od", ["eyecare"]),

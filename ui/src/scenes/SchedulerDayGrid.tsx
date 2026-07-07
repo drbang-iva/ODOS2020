@@ -154,8 +154,8 @@ export function SchedulerDayGrid() {
     [appointments, moveSource],
   );
   const timeAxis = useMemo(
-    () => buildTimeAxis({ date, resources: visibleResources, config, slotMinutes }),
-    [date, visibleResources, config, slotMinutes],
+    () => buildTimeAxis({ date, resources: visibleResources, config, slotMinutes, appointments: visibleAppointments }),
+    [date, visibleResources, config, slotMinutes, visibleAppointments],
   );
   const positionedAppointments = useMemo(
     () =>
