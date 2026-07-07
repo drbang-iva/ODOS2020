@@ -1,8 +1,8 @@
 # OSOD Build Status
 
-**Generated:** 2026-07-05
-**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21 and the v0.6c payments kernel + card path #22–#23, currently untagged — v0.6c tags at slice close)
-**Branch:** `main` at `d3fee55`
+**Generated:** 2026-07-06
+**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, and the ODOS scheduler #24–#30 — all currently untagged; v0.6c tags at slice close)
+**Branch:** `main` at `16a4ccd`
 
 This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/). Architectural rationale lives in the companion private business repo at [`performance-od`](https://github.com/drbang-iva/performance-od).
 
@@ -61,6 +61,18 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 - Unified `POST /payments/charge` on osod-core — the processor secret lives server-side only; 9 new `payment.*` audit event types
 - Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants at practice scope (also fixes the latent gap that made the cash order flow admin-only); identity-derived role gate via the `practice-role` `meta.tag` on AccessPolicy (no client role header)
 - Dispensary card checkout UI — untendered order → device charge → PR-backed receipt; declined/failed leaves the order payable; receipt-consistency guard (cash vs card render identical money) mutation-proven
+
+### ODOS scheduler — unified, modular, FHIR-native (SHIPPED to main 2026-07-06, PRs #24–#30; untagged)
+
+Front-desk-first scheduler serving three clinic modes (eyecare-only / aesthetics-only / both-combined) selected by practice config; design brief in performance-od 2026-07-06. Built one slice per PR, each through a multi-agent close audit + fix round (~48 confirmed findings caught-and-fixed across the series, zero broken merges).
+
+- **Data model + service layer** (#24) — clinic-mode axis (discipline visibility filtering); visit-type catalog as `HealthcareService` (duration/color/eligible-resources via `osod-*` extensions, new types are DATA); resources as `Schedule` actors (Practitioner/Location/Device); `Appointment` builder on the Eyefinity model — serviceType, vision+medical coverage extensions, two status axes (Appointment Status ↔ R4 `appointment-status`; Confirmation Status extension), urgent/follow-up; availability → `Slot` from operating hours + blocked time. Service layer has zero UI coupling.
+- **Day-view resource grid** (#25) — columns = mode-filtered resources, color-by-type blocks with billing-context-on-block, free/busy/blocked shading, v8 dark palette; live clinic-mode selector.
+- **Appointment CRUD** (#26) — Eyefinity details modal, patient quick-card (masked SSN, balance), book/edit/move/cancel/check-in, non-patient blocks; merge-onto-real-resource update path (preserves `slot`/foreign extensions), server-side conflict scope.
+- **Front-desk scheduling RBAC** (#27) — `Appointment` create/read/update + `Schedule`/`Slot`/`HealthcareService` read at practice scope; the scheduler is operable under a real front-desk login.
+- **Config persistence** (#28) — practice scheduling config (hours, per-resource templates, blocked time, offices) persists as one coded `Basic` singleton (`osod-scheduling-config`), criteria-fenced front-desk grant.
+- **Settings + offices + find-next-available** (#29) — hours/blocked-time/offices editors, config hydration, office selector, Find Open (Eyefinity "Find Open") feeding the booking modal.
+- **Week + month views** (#30) — Monday-start week (single resource × 7 days) and month density-scan calendar; one ranged query per window; verified-correct calendar math (leap Feb, day-of-month clamp, practice-local bucketing).
 
 ---
 
@@ -150,6 +162,13 @@ Plus the operational lessons that carry forward into v0.6b: see [`docs/operator-
 - [ ] Live walkthrough as a REAL front-desk user (not admin) — cash regression + endpoint rail (manual-cash method) + card path once a processor target exists
 - [ ] Front-desk frame-inventory dispense grant (the remaining piece for a fully non-admin cash walkthrough; small follow-on)
 - [ ] Tag `v0.6c` + close audit
+
+## ODOS scheduler — remaining
+
+- [ ] Pass 2 — exploded front-desk view (the brief's showpiece; a second renderer over the same store). Folds in the Phase-5 deferred polish: extract a shared resource-day column component (fixes the day/week block-renderer copy-paste that already drifted — week blocks currently omit the insurance line + badges), the week/month→day transient wrong-day render flash, Find-Open toolbar gating outside day view, and two dead exports.
+- [ ] Out-of-hours appointment rendering — appointments booked outside a resource's operating hours bucket to the right day but fall outside the hours-derived time axis and silently do not render (day + week; pre-existing since #25). Fix: expand the axis to cover booked appointments, or add an out-of-hours overflow affordance.
+- [ ] Live front-desk walkthrough — book/move/check-in a synthetic patient on the local stack under a real front-desk login (validates the #27 grants end-to-end).
+- [ ] Operator decision — practice-wide `Patient` read for the booking picker (currently patient-compartment scoped; widening PHI scope is an operator-level authz call).
 
 ## Next-release checklist (v0.6b PVerify)
 
