@@ -60,6 +60,19 @@ export function SchedulerWeekGrid({
   const days = useMemo(() => weekDays(date), [date]);
   const selectedResource =
     resources.find((resource) => scheduleReference(resource) === selectedScheduleReference) ?? resources[0];
+  // The selected resource's bookings across the visible week — feeds the axis so
+  // out-of-hours appointments expand it instead of being silently dropped.
+  const selectedResourceAppointments = useMemo(() => {
+    const actor = selectedResource ? resourceActorReference(selectedResource) : undefined;
+    if (!actor) {
+      return [];
+    }
+    return days.flatMap((day) =>
+      visibleAppointmentsForMode(appointmentsByDay[day] ?? [], clinicMode).filter((appointment) =>
+        appointment.participant.some((participant) => participant.actor?.reference === actor),
+      ),
+    );
+  }, [appointmentsByDay, clinicMode, days, selectedResource]);
   const timeAxis = useMemo(
     () =>
       selectedResource
@@ -68,9 +81,10 @@ export function SchedulerWeekGrid({
             resources: [selectedResource],
             config,
             slotMinutes,
+            appointments: selectedResourceAppointments,
           })
         : { startMinutes: 0, endMinutes: 0, rows: [] },
-    [config, days, selectedResource, slotMinutes],
+    [config, days, selectedResource, slotMinutes, selectedResourceAppointments],
   );
   const gridTemplateColumns = `${GUTTER_WIDTH}px repeat(7, minmax(150px, 1fr))`;
   const bodyHeight = Math.max(timeAxis.rows.length * ROW_HEIGHT, ROW_HEIGHT);

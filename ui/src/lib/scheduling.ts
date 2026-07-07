@@ -961,12 +961,14 @@ export function buildTimeAxis(input: {
   resources: Schedule[];
   config: SchedulingPracticeConfig;
   slotMinutes: number;
+  appointments?: Appointment[];
 }): TimeAxis {
   return buildTimeAxisForDates({
     dates: [input.date],
     resources: input.resources,
     config: input.config,
     slotMinutes: input.slotMinutes,
+    appointments: input.appointments,
   });
 }
 
@@ -975,15 +977,30 @@ export function buildTimeAxisForDates(input: {
   resources: Schedule[];
   config: SchedulingPracticeConfig;
   slotMinutes: number;
+  appointments?: Appointment[];
 }): TimeAxis {
   const windows = input.resources.flatMap((resource) =>
     input.dates.flatMap((date) => windowsForDate(date, weeklyHoursForSchedule(input.config, resource))),
   );
-  if (windows.length === 0) {
+  // Expand the axis to also cover appointments booked outside operating hours.
+  // appointmentGeometry positions purely by time-of-day, so an out-of-hours
+  // booking otherwise maps to a row outside [0, rows.length) and both grids
+  // silently filter it out. This also covers the "no operating hours that day but
+  // a booking exists" case (windows empty, appointments non-empty).
+  const appointmentBounds = (input.appointments ?? []).flatMap((appointment) => {
+    if (!appointment.start) {
+      return [];
+    }
+    const startMinutes = minutesFromIsoDateTime(appointment.start, input.config.timezoneOffset);
+    const durationMinutes = appointmentDurationMinutes(appointment) ?? 0;
+    return [{ startMinutes, endMinutes: startMinutes + durationMinutes }];
+  });
+  const bounds = [...windows, ...appointmentBounds];
+  if (bounds.length === 0) {
     return { startMinutes: 0, endMinutes: 0, rows: [] };
   }
-  const startMinutes = Math.floor(Math.min(...windows.map((window) => window.startMinutes)) / 60) * 60;
-  const endMinutes = Math.ceil(Math.max(...windows.map((window) => window.endMinutes)) / 60) * 60;
+  const startMinutes = Math.floor(Math.min(...bounds.map((bound) => bound.startMinutes)) / 60) * 60;
+  const endMinutes = Math.ceil(Math.max(...bounds.map((bound) => bound.endMinutes)) / 60) * 60;
   const rows: TimeAxisRow[] = [];
   for (let at = startMinutes; at < endMinutes; at += input.slotMinutes) {
     rows.push({
