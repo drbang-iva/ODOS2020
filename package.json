@@ -14,6 +14,7 @@
     "reset": "docker-compose down -v",
     "logs": "docker-compose logs -f medplum-server",
     "poc": "tsx src/index.ts",
+    "seed-scheduler": "tsx scripts/seed-scheduler-demo.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
     "preflight": "tsx scripts/preflight-lint.ts",
