@@ -70,6 +70,9 @@ export function SchedulerDayGrid() {
   const clearConfigError = useSchedulingStore((state) => state.clearConfigError);
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
   const today = useSchedulingStore((state) => state.today);
+  const zoom = useSchedulingStore((state) => state.zoom);
+  const zoomIn = useSchedulingStore((state) => state.zoomIn);
+  const zoomOut = useSchedulingStore((state) => state.zoomOut);
   const loadDay = useSchedulingStore((state) => state.loadDay);
   const loadWindow = useSchedulingStore((state) => state.loadWindow);
   const saveConfig = useSchedulingStore((state) => state.saveConfig);
@@ -194,7 +197,8 @@ export function SchedulerDayGrid() {
     visibleResources.length > 0
       ? `${GUTTER_WIDTH}px repeat(${visibleResources.length}, minmax(190px, 1fr))`
       : `${GUTTER_WIDTH}px`;
-  const bodyHeight = Math.max(timeAxis.rows.length * ROW_HEIGHT, ROW_HEIGHT);
+  const rowHeight = Math.round(ROW_HEIGHT * zoom);
+  const bodyHeight = Math.max(timeAxis.rows.length * rowHeight, rowHeight);
 
   function openNewAppointment(
     resource: Schedule,
@@ -341,6 +345,9 @@ export function SchedulerDayGrid() {
         onToday={today}
         onViewChange={setView}
         onWalkIn={handleWalkIn}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        zoomEnabled={view !== "month"}
         officeId={officeId}
         offices={config.offices}
         moveActive={Boolean(moveSource)}
@@ -399,7 +406,7 @@ export function SchedulerDayGrid() {
                   <SchedulerColumnsEmptyState loading={loading} viewNoun="day" />
                 ) : (
                   <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
-                    <SchedulerTimeGutter rows={timeAxis.rows} />
+                    <SchedulerTimeGutter rows={timeAxis.rows} rowHeight={rowHeight} />
                     {visibleResources.map((resource, columnIndex) => (
                       <ResourceDayColumn
                         key={resource.id ?? resource.actor?.[0]?.reference}
@@ -408,6 +415,7 @@ export function SchedulerDayGrid() {
                         columnKey={String(columnIndex)}
                         date={date}
                         rows={timeAxis.rows}
+                        rowHeight={rowHeight}
                         axisStartMinutes={timeAxis.startMinutes}
                         axisEndMinutes={timeAxis.endMinutes}
                         slotMinutes={slotMinutes}
@@ -440,6 +448,7 @@ export function SchedulerDayGrid() {
           onCellClick={handleWeekCellClick}
           onSelectedResourceChange={setWeekResourceScheduleReference}
           resources={visibleResources}
+          rowHeight={rowHeight}
           selectedScheduleReference={weekResourceScheduleReference}
           slotMinutes={slotMinutes}
           visitTypes={visitTypes}
@@ -517,6 +526,9 @@ function SchedulerToolbar({
   onToday,
   onViewChange,
   onWalkIn,
+  onZoomIn,
+  onZoomOut,
+  zoomEnabled,
   moveActive,
   moveEnabled,
   view,
@@ -538,6 +550,9 @@ function SchedulerToolbar({
   onToday: () => void;
   onViewChange: (view: SchedulerView) => void;
   onWalkIn: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  zoomEnabled: boolean;
   moveActive: boolean;
   moveEnabled: boolean;
   view: SchedulerView;
@@ -579,6 +594,16 @@ function SchedulerToolbar({
           Month
         </button>
       </div>
+      {zoomEnabled && (
+        <div className="flex rounded border border-white/15 bg-black/30 p-0.5">
+          <button className="scheduler-segment" type="button" aria-label="Zoom out" onClick={onZoomOut}>
+            −
+          </button>
+          <button className="scheduler-segment" type="button" aria-label="Zoom in" onClick={onZoomIn}>
+            +
+          </button>
+        </div>
+      )}
       {dayActionsEnabled && (
         <button className="scheduler-button" type="button" onClick={onWalkIn}>
           Walk-In
