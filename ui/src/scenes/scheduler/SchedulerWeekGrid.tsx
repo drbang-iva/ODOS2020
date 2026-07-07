@@ -14,7 +14,6 @@ import {
 import { weekDays } from "../../lib/scheduling-calendar";
 import {
   GUTTER_WIDTH,
-  ROW_HEIGHT,
   ResourceDayColumn,
   SchedulerColumnsEmptyState,
   SchedulerTimeGutter,
@@ -39,6 +38,7 @@ export function SchedulerWeekGrid({
   onCellClick,
   onSelectedResourceChange,
   resources,
+  rowHeight,
   selectedScheduleReference,
   slotMinutes,
   visitTypes,
@@ -53,6 +53,7 @@ export function SchedulerWeekGrid({
   onCellClick: (date: string, resource: Schedule, startMinutes: number) => void;
   onSelectedResourceChange: (reference: string | undefined) => void;
   resources: Schedule[];
+  rowHeight: number;
   selectedScheduleReference?: string;
   slotMinutes: number;
   visitTypes: HealthcareService[];
@@ -87,7 +88,7 @@ export function SchedulerWeekGrid({
     [config, days, selectedResource, slotMinutes, selectedResourceAppointments],
   );
   const gridTemplateColumns = `${GUTTER_WIDTH}px repeat(7, minmax(150px, 1fr))`;
-  const bodyHeight = Math.max(timeAxis.rows.length * ROW_HEIGHT, ROW_HEIGHT);
+  const bodyHeight = Math.max(timeAxis.rows.length * rowHeight, rowHeight);
 
   return (
     <section className="px-4 pb-5">
@@ -128,7 +129,7 @@ export function SchedulerWeekGrid({
               <SchedulerColumnsEmptyState loading={loading} viewNoun="week" />
             ) : (
               <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
-                <SchedulerTimeGutter rows={timeAxis.rows} />
+                <SchedulerTimeGutter rows={timeAxis.rows} rowHeight={rowHeight} />
                 {days.map((day) => (
                   <WeekDayColumn
                     key={day}
@@ -143,6 +144,7 @@ export function SchedulerWeekGrid({
                     onCellClick={onCellClick}
                     resource={selectedResource}
                     rows={timeAxis.rows}
+                    rowHeight={rowHeight}
                     slotMinutes={slotMinutes}
                     visitTypes={visitTypes}
                   />
@@ -169,6 +171,7 @@ function WeekDayColumn({
   onCellClick,
   resource,
   rows,
+  rowHeight,
   slotMinutes,
   visitTypes,
 }: {
@@ -183,6 +186,7 @@ function WeekDayColumn({
   onCellClick: (date: string, resource: Schedule, startMinutes: number) => void;
   resource: Schedule;
   rows: Array<{ startMinutes: number }>;
+  rowHeight: number;
   slotMinutes: number;
   visitTypes: HealthcareService[];
 }) {
@@ -217,6 +221,7 @@ function WeekDayColumn({
       columnKey={date}
       date={date}
       rows={rows}
+      rowHeight={rowHeight}
       axisStartMinutes={axisStartMinutes}
       axisEndMinutes={axisEndMinutes}
       slotMinutes={slotMinutes}

@@ -5,6 +5,9 @@ import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
 import { defaultVisitTypeCatalog } from "../src/fhir/schedulingVisitType.js";
 import {
   DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+  SCHEDULER_ZOOM_MAX,
+  SCHEDULER_ZOOM_MIN,
+  SCHEDULER_ZOOM_STEP,
   SCHEDULING_SOURCE_TAGS,
   searchAll,
   todayYmd,
@@ -51,6 +54,7 @@ function resetStore(date = "2026-07-06"): void {
   useSchedulingStore.setState({
     view: "day",
     date,
+    zoom: 1,
     resources: [],
     visitTypes: [],
     appointments: [],
@@ -598,6 +602,27 @@ test("slotMinutes derives from the selected office's booking increment", () => {
   assert.equal(useSchedulingStore.getState().slotMinutes, 10);
   useSchedulingStore.getState().setOfficeId("all");
   assert.equal(useSchedulingStore.getState().slotMinutes, 20, "all offices fall back to the practice default");
+});
+
+test("zoomIn / zoomOut step the vertical zoom by SCHEDULER_ZOOM_STEP", () => {
+  resetStore();
+  useSchedulingStore.setState({ zoom: 1 });
+  useSchedulingStore.getState().zoomIn();
+  assert.equal(useSchedulingStore.getState().zoom, 1 + SCHEDULER_ZOOM_STEP, "zoomIn adds one step");
+  useSchedulingStore.getState().zoomOut();
+  useSchedulingStore.getState().zoomOut();
+  assert.equal(useSchedulingStore.getState().zoom, 1 - SCHEDULER_ZOOM_STEP, "zoomOut subtracts one step");
+});
+
+test("zoomIn / zoomOut clamp to the min and max vertical zoom", () => {
+  resetStore();
+  useSchedulingStore.setState({ zoom: SCHEDULER_ZOOM_MAX });
+  useSchedulingStore.getState().zoomIn();
+  assert.equal(useSchedulingStore.getState().zoom, SCHEDULER_ZOOM_MAX, "clamps at max");
+
+  useSchedulingStore.setState({ zoom: SCHEDULER_ZOOM_MIN });
+  useSchedulingStore.getState().zoomOut();
+  assert.equal(useSchedulingStore.getState().zoom, SCHEDULER_ZOOM_MIN, "clamps at min");
 });
 
 test("loadWindow performs one ranged Appointment search and buckets results by practice-local day", async () => {
