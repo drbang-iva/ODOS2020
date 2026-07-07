@@ -165,6 +165,7 @@ export interface SchedulingStoreState {
   setClinicMode: (clinicMode: ClinicMode) => void;
   setView: (view: SchedulerView) => void;
   setDate: (date: string) => void;
+  openDay: (date: string) => void;
   setOfficeId: (officeId: string | "all") => void;
   setWeekResourceScheduleReference: (reference: string | undefined) => void;
   clearConfigError: () => void;
@@ -246,6 +247,18 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       }),
     })),
   setDate: (date) => set({ date }),
+  openDay: (date) =>
+    set((state) => ({
+      date,
+      view: "day",
+      weekResourceScheduleReference: reconcileWeekResourceReference({
+        currentReference: state.weekResourceScheduleReference,
+        resources: state.resources,
+        clinicMode: state.clinicMode,
+        config: state.config,
+        officeId: state.officeId,
+      }),
+    })),
   setOfficeId: (officeId) =>
     set((state) => ({
       officeId,

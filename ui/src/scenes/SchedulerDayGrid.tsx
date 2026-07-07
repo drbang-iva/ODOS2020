@@ -5,8 +5,6 @@ import {
   CLINIC_MODES,
   SCHEDULER_PALETTE,
   appointmentGeometry,
-  availabilityShadingForColumn,
-  blocksForScheduleWithIndex,
   buildAppointmentBlockContent,
   buildTimeAxis,
   isoFromDateAndMinutes,
@@ -20,9 +18,6 @@ import {
   visitTypeCode,
   visitTypeDisplayColor,
   visitTypeDurationMinutes,
-  weeklyHoursForSchedule,
-  type AppointmentBlockContent,
-  type AppointmentGeometry,
   type ClinicMode,
   type SchedulingOpening,
 } from "../lib/scheduling";
@@ -43,15 +38,14 @@ import { PatientQuickCard } from "./scheduler/PatientQuickCard";
 import { SchedulerMonthGrid } from "./scheduler/SchedulerMonthGrid";
 import { SchedulerWeekGrid } from "./scheduler/SchedulerWeekGrid";
 import { SchedulingSettingsModal } from "./scheduler/SchedulingSettingsModal";
-
-const ROW_HEIGHT = 46;
-const GUTTER_WIDTH = 76;
-
-interface PositionedAppointment {
-  appointment: Appointment;
-  geometry: AppointmentGeometry;
-  content: AppointmentBlockContent;
-}
+import {
+  GUTTER_WIDTH,
+  ROW_HEIGHT,
+  ResourceDayColumn,
+  SchedulerColumnsEmptyState,
+  SchedulerTimeGutter,
+  type PositionedAppointment,
+} from "./scheduler/ResourceDayColumn";
 
 export function SchedulerDayGrid() {
   const clinicMode = useSchedulingStore((state) => state.clinicMode);
@@ -71,7 +65,7 @@ export function SchedulerDayGrid() {
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
   const setView = useSchedulingStore((state) => state.setView);
   const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
-  const setDate = useSchedulingStore((state) => state.setDate);
+  const openDay = useSchedulingStore((state) => state.openDay);
   const setWeekResourceScheduleReference = useSchedulingStore((state) => state.setWeekResourceScheduleReference);
   const clearConfigError = useSchedulingStore((state) => state.clearConfigError);
   const shiftDate = useSchedulingStore((state) => state.shiftDate);
@@ -113,6 +107,7 @@ export function SchedulerDayGrid() {
   useEffect(() => {
     if (view !== "day") {
       setMoveSource(null);
+      setFindOpenVisible(false);
     }
   }, [view]);
 
@@ -137,9 +132,14 @@ export function SchedulerDayGrid() {
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
     [visitTypes, clinicMode],
   );
+  // Source the day grid from the practice-day bucket, not the raw window-wide
+  // appointments: appointmentGeometry positions purely by time-of-day, so on a
+  // week/month -> day transition the previous window's appointments would paint
+  // the single day column until loadDay() refetches. appointmentsByDay[date] is
+  // day-scoped by construction, so only the selected day ever renders.
   const visibleAppointments = useMemo(
-    () => visibleAppointmentsForMode(appointments, clinicMode),
-    [appointments, clinicMode],
+    () => visibleAppointmentsForMode(appointmentsByDay[date] ?? [], clinicMode),
+    [appointmentsByDay, date, clinicMode],
   );
   const quickCardAppointment = useMemo(
     () => currentAppointment(quickCardSelection?.appointment ?? null, appointments),
@@ -258,8 +258,7 @@ export function SchedulerDayGrid() {
   }
 
   function handleMonthDateSelect(monthDate: string) {
-    setDate(monthDate);
-    setView("day");
+    openDay(monthDate);
   }
 
   function handleAppointmentClick(appointment: Appointment, sourceResourceActor?: string) {
@@ -397,15 +396,16 @@ export function SchedulerDayGrid() {
                   ))}
                 </div>
                 {visibleResources.length === 0 || timeAxis.rows.length === 0 ? (
-                  <EmptyGridState loading={loading} />
+                  <SchedulerColumnsEmptyState loading={loading} viewNoun="day" />
                 ) : (
                   <div className="grid" style={{ gridTemplateColumns, minHeight: bodyHeight }}>
-                    <TimeGutter rows={timeAxis.rows} />
+                    <SchedulerTimeGutter rows={timeAxis.rows} />
                     {visibleResources.map((resource, columnIndex) => (
-                      <ResourceColumn
+                      <ResourceDayColumn
                         key={resource.id ?? resource.actor?.[0]?.reference}
                         resource={resource}
-                        columnIndex={columnIndex}
+                        config={config}
+                        columnKey={String(columnIndex)}
                         date={date}
                         rows={timeAxis.rows}
                         axisStartMinutes={timeAxis.startMinutes}
@@ -584,9 +584,11 @@ function SchedulerToolbar({
           Walk-In
         </button>
       )}
-      <button className="scheduler-button" type="button" onClick={onFindOpen}>
-        Find Open
-      </button>
+      {dayActionsEnabled && (
+        <button className="scheduler-button" type="button" onClick={onFindOpen}>
+          Find Open
+        </button>
+      )}
       <button className="scheduler-button" type="button" onClick={onSettings}>
         Settings
       </button>
@@ -666,200 +668,9 @@ function ResourceHeader({ resource }: { resource: Schedule }) {
   );
 }
 
-function EmptyGridState({ loading }: { loading: boolean }) {
-  return (
-    <div className="grid min-h-[420px] place-items-center border-t border-white/10 bg-black/25">
-      <div className="text-sm text-white/50">
-        {loading ? "Loading scheduler day..." : "No scheduler resources found for this clinic mode."}
-      </div>
-    </div>
-  );
-}
-
-function TimeGutter({ rows }: { rows: Array<{ startMinutes: number; label: string }> }) {
-  return (
-    <div className="border-r border-white/10 bg-black/35">
-      {rows.map((row) => (
-        <div
-          key={row.startMinutes}
-          className="border-b border-white/10 px-2 pt-1 text-right text-[11px] text-white/50"
-          style={{ height: ROW_HEIGHT }}
-        >
-          {row.startMinutes % 60 === 0 ? row.label : ""}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ResourceColumn({
-  resource,
-  columnIndex,
-  date,
-  rows,
-  axisStartMinutes,
-  axisEndMinutes,
-  slotMinutes,
-  appointments,
-  onAppointmentClick,
-  onBlockedRegionClick,
-  onCellClick,
-}: {
-  resource: Schedule;
-  columnIndex: number;
-  date: string;
-  rows: Array<{ startMinutes: number }>;
-  axisStartMinutes: number;
-  axisEndMinutes: number;
-  slotMinutes: number;
-  appointments: PositionedAppointment[];
-  onAppointmentClick: (appointment: Appointment, sourceResourceActor?: string) => void;
-  onBlockedRegionClick: (blockIndex: number | undefined) => void;
-  onCellClick: (resource: Schedule, startMinutes: number) => void;
-}) {
-  const config = useSchedulingStore((state) => state.config);
-  const indexedBlocks = blocksForScheduleWithIndex(config, resource);
-  const regions = availabilityShadingForColumn({
-    date,
-    axisStartMinutes,
-    axisEndMinutes,
-    slotMinutes,
-    weeklyHours: weeklyHoursForSchedule(config, resource),
-    blocks: indexedBlocks.map((entry) => entry.block),
-    blockIndexes: indexedBlocks.map((entry) => entry.blockIndex),
-  });
-
-  return (
-    <div className="relative border-r border-white/10" style={{ minHeight: rows.length * ROW_HEIGHT }}>
-      {regions
-        .filter((region) => region.kind !== "blocked")
-        .map((region) => (
-          <div
-            key={`${columnIndex}-${region.kind}-${region.startMinutes}`}
-            className={clsx(
-              "absolute inset-x-0",
-              region.kind === "in-hours" ? "bg-white/[0.075]" : "bg-white/[0.025]",
-            )}
-            style={{
-              top: region.rowStart * ROW_HEIGHT,
-              height: region.rowSpan * ROW_HEIGHT,
-            }}
-          />
-        ))}
-      {rows.map((row) => (
-        <div
-          key={row.startMinutes}
-          className="relative border-b border-white/10"
-          style={{ height: ROW_HEIGHT }}
-          onClick={() => onCellClick(resource, row.startMinutes)}
-        />
-      ))}
-      {regions
-        .filter((region) => region.kind === "blocked")
-        .map((region) => {
-          const editable = region.blockedKind === "custom" && region.blockIndex !== undefined;
-          return (
-            <button
-              key={`${columnIndex}-blocked-${region.startMinutes}-${region.endMinutes}`}
-              className={clsx(
-                "absolute inset-x-1 z-10 overflow-hidden border border-white/10 bg-zinc-500/45 px-2 py-1 text-left text-[11px] font-semibold text-white/80",
-                editable && "hover:bg-zinc-400/55",
-              )}
-              type="button"
-              disabled={!editable}
-              style={{
-                top: region.rowStart * ROW_HEIGHT + 2,
-                height: Math.max(region.rowSpan * ROW_HEIGHT - 4, 24),
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (editable) {
-                  onBlockedRegionClick(region.blockIndex);
-                }
-              }}
-            >
-              <div className="truncate">{region.description ?? region.blockedKindDisplay ?? "Blocked"}</div>
-            </button>
-          );
-        })}
-      {appointments.map((block) => (
-        <AppointmentBlock
-          key={`${block.geometry.columnIndex}-${block.appointment.id ?? `${block.geometry.rowStart}-${block.content.patientDisplay}`}`}
-          block={block}
-          resource={resource}
-          onClick={onAppointmentClick}
-        />
-      ))}
-    </div>
-  );
-}
-
-function AppointmentBlock({
-  block,
-  resource,
-  onClick,
-}: {
-  block: PositionedAppointment;
-  resource: Schedule;
-  onClick: (appointment: Appointment, sourceResourceActor?: string) => void;
-}) {
-  const { geometry, content, appointment } = block;
-  const color = content.color;
-  const textColor = contrastTextColor(color);
-  return (
-    <button
-      type="button"
-      className="absolute inset-x-1 z-20 overflow-hidden rounded-sm border px-2 py-1 text-left shadow-lg"
-      style={{
-        top: geometry.rowStart * ROW_HEIGHT + 3,
-        height: Math.max(geometry.rowSpan * ROW_HEIGHT - 6, 30),
-        background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-        borderColor: `${color}ee`,
-        color: textColor,
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick(appointment, resourceActorReference(resource));
-      }}
-    >
-      <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
-      <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
-      <div className="truncate text-[10px] leading-tight opacity-85">
-        {content.statusDisplay} · {content.confirmationDisplay}
-      </div>
-      <div className="truncate text-[10px] leading-tight opacity-80">{content.insuranceLine}</div>
-      {content.badges.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-1">
-          {content.badges.map((badge) => (
-            <span
-              key={badge.code}
-              className="rounded-sm bg-black/25 px-1 py-0.5 text-[9px] font-bold uppercase"
-            >
-              {badge.display}
-            </span>
-          ))}
-        </div>
-      )}
-    </button>
-  );
-}
-
 function currentAppointment(appointment: Appointment | null, appointments: Appointment[]): Appointment | null {
   if (!appointment?.id) {
     return appointment;
   }
   return appointments.find((candidate) => candidate.id === appointment.id) ?? appointment;
-}
-
-function contrastTextColor(hex: string): string {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match) {
-    return "#ffffff";
-  }
-  const value = match[1];
-  const r = Number.parseInt(value.slice(0, 2), 16);
-  const g = Number.parseInt(value.slice(2, 4), 16);
-  const b = Number.parseInt(value.slice(4, 6), 16);
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  return luminance > 0.6 ? "#08080f" : "#ffffff";
 }

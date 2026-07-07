@@ -542,6 +542,42 @@ test("shiftDate follows the selected scheduler view granularity", () => {
   assert.equal(useSchedulingStore.getState().date, "2026-02-28");
 });
 
+test("openDay switches to the day view and target date in one atomic update", () => {
+  resetStore("2026-07-06");
+  useSchedulingStore.setState({ view: "month" });
+  const updates: Array<{ view: string; date: string }> = [];
+  const unsubscribe = useSchedulingStore.subscribe((state) =>
+    updates.push({ view: state.view, date: state.date }),
+  );
+  useSchedulingStore.getState().openDay("2026-07-20");
+  unsubscribe();
+
+  const state = useSchedulingStore.getState();
+  assert.equal(state.view, "day");
+  assert.equal(state.date, "2026-07-20");
+  // The flash came from setDate + setView firing as two separate mutations: one
+  // intermediate render showed the old view at the new date. openDay must land both
+  // in a single store notification.
+  assert.equal(updates.length, 1);
+  assert.deepEqual(updates[0], { view: "day", date: "2026-07-20" });
+});
+
+test("openDay reconciles the week resource selection like setView does", () => {
+  resetStore("2026-07-06");
+  useSchedulingStore.setState({
+    view: "week",
+    resources: seededSchedules(),
+    weekResourceScheduleReference: "Schedule/does-not-exist",
+  });
+  useSchedulingStore.getState().openDay("2026-07-20");
+
+  const reference = useSchedulingStore.getState().weekResourceScheduleReference;
+  assert.ok(
+    reference === undefined || reference?.startsWith("Schedule/"),
+    "stale week resource reference should be reconciled to a real resource or cleared",
+  );
+});
+
 test("loadWindow performs one ranged Appointment search and buckets results by practice-local day", async () => {
   resetStore("2026-07-08");
   useSchedulingStore.getState().setView("week");
