@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   BLOCKED_TIME_KINDS,
+  DEFAULT_SLOT_MINUTES,
+  SCHEDULING_SLOT_OPTIONS,
   resourceDisplay,
   scheduleReference,
   type BlockedTime,
@@ -261,9 +263,25 @@ export function SchedulingSettingsModal({
 
             <Panel title="Offices">
               <div className="grid gap-3">
+                <label className="scheduler-field">
+                  Default booking increment
+                  <select
+                    className="scheduler-input"
+                    value={draft.defaultSlotMinutes ?? DEFAULT_SLOT_MINUTES}
+                    onChange={(event) =>
+                      guardedUpdate((current) => ({ ...current, defaultSlotMinutes: Number(event.target.value) }))
+                    }
+                  >
+                    {SCHEDULING_SLOT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option} min
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="grid gap-2">
                   {draft.offices.map((office) => (
-                    <div key={office.id} className="grid grid-cols-[1fr_auto] gap-2">
+                    <div key={office.id} className="grid grid-cols-[1fr_auto_auto] gap-2">
                       <input
                         className="scheduler-input"
                         value={office.name}
@@ -281,6 +299,31 @@ export function SchedulingSettingsModal({
                           )
                         }
                       />
+                      <select
+                        className="scheduler-input"
+                        aria-label={`${office.name || "Office"} booking increment`}
+                        value={office.slotMinutes ?? ""}
+                        onChange={(event) =>
+                          guardedUpdate((current) => ({
+                            ...current,
+                            offices: current.offices.map((candidate) =>
+                              candidate.id === office.id
+                                ? {
+                                    ...candidate,
+                                    slotMinutes: event.target.value ? Number(event.target.value) : undefined,
+                                  }
+                                : candidate,
+                            ),
+                          }))
+                        }
+                      >
+                        <option value="">Default ({draft.defaultSlotMinutes ?? DEFAULT_SLOT_MINUTES} min)</option>
+                        {SCHEDULING_SLOT_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option} min
+                          </option>
+                        ))}
+                      </select>
                       <button
                         className="scheduler-button"
                         type="button"

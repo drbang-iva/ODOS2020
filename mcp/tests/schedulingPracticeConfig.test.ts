@@ -36,6 +36,21 @@ const CONFIG: PersistedSchedulingPracticeConfig = {
   officeBySchedule: { "Schedule/sch-1": "main" },
 };
 
+test("scheduling config round-trips per-office and practice-default booking increments", () => {
+  const config: PersistedSchedulingPracticeConfig = {
+    ...CONFIG,
+    offices: [
+      { id: "main", name: "Main Office", slotMinutes: 15 },
+      { id: "west", name: "West Side", slotMinutes: 10 },
+    ],
+    defaultSlotMinutes: 20,
+  };
+  const restored = parseSchedulingPracticeConfig(buildSchedulingPracticeConfigResource(config));
+  assert.equal(restored.defaultSlotMinutes, 20);
+  assert.equal(restored.offices.find((office) => office.id === "main")?.slotMinutes, 15);
+  assert.equal(restored.offices.find((office) => office.id === "west")?.slotMinutes, 10);
+});
+
 test("the practice scheduling config persists as a coded singleton Basic resource", () => {
   const basic = buildSchedulingPracticeConfigResource(CONFIG);
   assert.equal(basic.resourceType, "Basic");
