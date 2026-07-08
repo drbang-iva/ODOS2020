@@ -195,3 +195,27 @@ Prior custom TypeScript implementation (341 passing tests, non-FHIR) archived at
 Reason for reset: Medplum foundation gives 2+ years of FHIR plumbing for free, aligns with AMA CPT distribution criterion (a) structurally (CPT only appears inside FHIR Encounter/ChargeItem/Claim — inseparable from clinical context), and removes the polyglot + rebuild tax HAPI would impose.
 
 Full decision rationale: `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md` (private companion repo).
+
+## Cross-model routing & build→evaluate pipeline (ACTIVE)
+
+Eric works across Claude (Fable 5 / Opus 4.8 / Sonnet 5) and Codex (gpt-5.5). Canonical
+source of truth: `performance-od/core/model-routing-card.md` — this section is a
+mirror for this repo's agent; if it drifts from the card, the card wins.
+
+**Every routing call names model AND effort together, always** (e.g. `Opus, extra`,
+`Sonnet, medium` — never model alone). Claude Code effort ladder (ascending): low ·
+medium · high · extra · max · ultra. Codex effort (`model_reasoning_effort`): low ·
+medium · high · xhigh.
+
+Deliverable picks the model: design/architecture synthesis/showpiece UX → Fable
+(high); hard implementation/gnarly debug/close audit → Opus (medium; extra/max for
+audits); mechanical build from a settled spec/TDD grunt/tests/docs → Sonnet (medium,
+default home base); independent verification/evaluation → Codex (high). Advice/Q&A
+is Sonnet. Default down, escalate up; flag mid-session drift plainly.
+
+**Author ≠ evaluator, always** — the model/tool that wrote code never grades its own
+code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. CodeRabbit
+(when present on the PR) is a cheap first pass, never a substitute for the model-level
+eval, never the last word on correctness-critical code. Scope: this gate fires on a
+shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
+Nothing is "done" until an independent evaluation actually ran.
