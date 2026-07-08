@@ -1,5 +1,6 @@
 import type { Appointment, Schedule } from "@medplum/fhirtypes";
 import clsx from "clsx";
+import { useEffect, useRef, useState } from "react";
 import {
   availabilityShadingForColumn,
   blocksForScheduleWithIndex,
@@ -9,6 +10,8 @@ import {
   type AppointmentGeometry,
   type SchedulingPracticeConfig,
 } from "../../lib/scheduling";
+import { buildCompactCues, isCompactBlock } from "../../lib/scheduler-block-density";
+import { AppointmentHoverCard } from "./AppointmentHoverCard";
 
 // Shared geometry for the day and week resource grids. Both render "one resource,
 // one day, a column of time-positioned blocks"; keeping a single renderer here is
@@ -57,6 +60,8 @@ export function SchedulerColumnsEmptyState({ loading, viewNoun }: { loading: boo
   );
 }
 
+const HOVER_OPEN_DELAY_MS = 150;
+
 function AppointmentBlock({
   block,
   resource,
@@ -70,41 +75,92 @@ function AppointmentBlock({
 }) {
   const { geometry, content, appointment } = block;
   const color = content.color;
+  const height = Math.max(geometry.rowSpan * rowHeight - 6, 30);
+  const compact = isCompactBlock(height);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const openTimer = useRef<number | undefined>(undefined);
+  const [hoverAnchor, setHoverAnchor] = useState<{ top: number; left: number; right: number } | null>(null);
+
+  useEffect(() => () => window.clearTimeout(openTimer.current), []);
+
+  function openHoverCard() {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      setHoverAnchor({ top: rect.top, left: rect.left, right: rect.right });
+    }
+  }
+
+  function scheduleHoverCard() {
+    window.clearTimeout(openTimer.current);
+    openTimer.current = window.setTimeout(openHoverCard, HOVER_OPEN_DELAY_MS);
+  }
+
+  function closeHoverCard() {
+    window.clearTimeout(openTimer.current);
+    setHoverAnchor(null);
+  }
+
   return (
-    <button
-      type="button"
-      className="absolute inset-x-1 z-20 overflow-hidden rounded-sm border px-2 py-1 text-left shadow-lg"
-      style={{
-        top: geometry.rowStart * rowHeight + 3,
-        height: Math.max(geometry.rowSpan * rowHeight - 6, 30),
-        background: `linear-gradient(135deg, ${color}, ${color}cc)`,
-        borderColor: `${color}ee`,
-        color: contrastTextColor(color),
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick(appointment, resourceActorReference(resource));
-      }}
-    >
-      <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
-      <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
-      <div className="truncate text-[10px] leading-tight opacity-85">
-        {content.statusDisplay} · {content.confirmationDisplay}
-      </div>
-      <div className="truncate text-[10px] leading-tight opacity-80">{content.insuranceLine}</div>
-      {content.badges.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-1">
-          {content.badges.map((badge) => (
-            <span
-              key={badge.code}
-              className="rounded-sm bg-black/25 px-1 py-0.5 text-[9px] font-bold uppercase"
-            >
-              {badge.display}
-            </span>
-          ))}
-        </div>
-      )}
-    </button>
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="absolute inset-x-1 z-20 overflow-hidden rounded-sm border px-2 py-1 text-left shadow-lg"
+        style={{
+          top: geometry.rowStart * rowHeight + 3,
+          height,
+          background: `linear-gradient(135deg, ${color}, ${color}cc)`,
+          borderColor: `${color}ee`,
+          color: contrastTextColor(color),
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+          closeHoverCard();
+          onClick(appointment, resourceActorReference(resource));
+        }}
+        onMouseEnter={scheduleHoverCard}
+        onMouseLeave={closeHoverCard}
+        onFocus={openHoverCard}
+        onBlur={closeHoverCard}
+      >
+        <div className="truncate text-[13px] font-bold leading-tight">{content.patientDisplay}</div>
+        <div className="truncate text-[11px] font-semibold leading-tight opacity-90">{content.visitTypeDisplay}</div>
+        {compact ? (
+          <div className="mt-0.5 flex items-center gap-1.5">
+            {buildCompactCues(content).map((cue) => (
+              <span
+                key={cue.key}
+                title={cue.label}
+                className="text-[10px] font-bold leading-none"
+                style={{ color: cue.color, textShadow: "0 0 2px rgba(0,0,0,0.8)" }}
+              >
+                {cue.glyph}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="truncate text-[10px] leading-tight opacity-85">
+              {content.statusDisplay} · {content.confirmationDisplay}
+            </div>
+            <div className="truncate text-[10px] leading-tight opacity-80">{content.insuranceLine}</div>
+            {content.badges.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {content.badges.map((badge) => (
+                  <span
+                    key={badge.code}
+                    className="rounded-sm bg-black/25 px-1 py-0.5 text-[9px] font-bold uppercase"
+                  >
+                    {badge.display}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </button>
+      {hoverAnchor && <AppointmentHoverCard content={content} anchor={hoverAnchor} />}
+    </>
   );
 }
 
