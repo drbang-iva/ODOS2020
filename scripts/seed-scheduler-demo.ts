@@ -274,7 +274,11 @@ async function main(): Promise<void> {
         status: "checked-in",
         ...(card.visionPlan ? { visionCoverage: { display: card.visionPlan } } : {}),
       });
-      appt.extension = [...(appt.extension ?? []), floorStateExtension(card.station, minutesAgoIso(card.minutesAgo))];
+      appt.extension = [
+        ...(appt.extension ?? []),
+        // Static demo cards are freshly staged, so check-in time == since.
+        floorStateExtension(card.station, minutesAgoIso(card.minutesAgo), minutesAgoIso(card.minutesAgo)),
+      ];
       await client.create<Appointment>(appt);
       floorSlot += 1;
     }

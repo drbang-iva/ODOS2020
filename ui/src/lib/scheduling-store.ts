@@ -42,7 +42,7 @@ import {
   type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
-import { OSOD_FLOOR_STATE_EXTENSION_URL, floorStateExtension } from "./floor-state";
+import { OSOD_FLOOR_STATE_EXTENSION_URL, floorStateExtension, parseFloorState } from "./floor-state";
 import {
   bucketAppointmentsByPracticeDay,
   reconcileWeekResourceReference,
@@ -1164,10 +1164,21 @@ function applyFloorStationChange(
   station: string | null,
   now: (() => string) | undefined,
 ): void {
+  if (!station) {
+    // Checkout: clear the whole floor-state (station + since + checkedInAt).
+    replaceExtension(appointment, OSOD_FLOOR_STATE_EXTENSION_URL, undefined);
+    return;
+  }
+  const timestamp = (now ?? (() => new Date().toISOString()))();
+  // Preserve the original check-in time across station moves; set it fresh only on the
+  // first check-in (when no floor-state exists yet). `appointment` here is the update
+  // clone still carrying the pre-change extension, so parseFloorState reads the CURRENT
+  // (pre-move) state.
+  const existingCheckedInAt = parseFloorState(appointment)?.checkedInAt;
   replaceExtension(
     appointment,
     OSOD_FLOOR_STATE_EXTENSION_URL,
-    station ? floorStateExtension(station, (now ?? (() => new Date().toISOString()))()) : undefined,
+    floorStateExtension(station, timestamp, existingCheckedInAt ?? timestamp),
   );
 }
 

@@ -24,9 +24,9 @@ function appt(
   id: string,
   station: string,
   since: string,
-  opts: { status?: Appointment["status"]; visionPlan?: string } = {},
+  opts: { status?: Appointment["status"]; visionPlan?: string; checkedInAt?: string } = {},
 ): Appointment {
-  const extensions = [floorStateExtension(station, since)];
+  const extensions = [floorStateExtension(station, since, opts.checkedInAt ?? since)];
   if (opts.visionPlan) {
     extensions.push(visionCoverageExtension(opts.visionPlan));
   }
@@ -167,9 +167,41 @@ test("deriveFloorBoard treats a walk-in (raw status arrived + WALKIN type) as on
       coding: [{ system: V2_0276_APPOINTMENT_TYPE_SYSTEM, code: "WALKIN" }],
     },
     participant: [{ actor: { reference: "Patient/a7" }, status: "accepted" }],
-    extension: [floorStateExtension("waiting", "2026-07-08T14:05:00.000Z")],
+    extension: [floorStateExtension("waiting", "2026-07-08T14:05:00.000Z", "2026-07-08T14:05:00.000Z")],
   };
   const board = deriveFloorBoard([walkIn], [], CONFIG, now);
   assert.equal(board.waiting.length, 1);
   assert.equal(board.waiting[0].appointment.id, "a7");
+});
+
+test("deriveFloorBoard surfaces a preserved checkedInAt distinct from since", () => {
+  const now = "2026-07-08T14:30:00.000Z";
+  // Moved patient: entered the current lane at 14:20 but first checked in at 13:45.
+  const moved = appt("a8", "waiting", "2026-07-08T14:20:00.000Z", { checkedInAt: "2026-07-08T13:45:00.000Z" });
+  const board = deriveFloorBoard([moved], [], CONFIG, now);
+  assert.equal(board.waiting.length, 1);
+  assert.equal(board.waiting[0].since, "2026-07-08T14:20:00.000Z");
+  assert.equal(board.waiting[0].checkedInAt, "2026-07-08T13:45:00.000Z");
+});
+
+test("deriveFloorBoard falls back checkedInAt to since when the extension lacks it", () => {
+  const now = "2026-07-08T14:30:00.000Z";
+  const legacy: Appointment = {
+    resourceType: "Appointment",
+    id: "a9",
+    status: "checked-in",
+    participant: [{ actor: { reference: "Patient/a9" }, status: "accepted" }],
+    extension: [
+      {
+        url: "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+        extension: [
+          { url: "station", valueString: "waiting" },
+          { url: "since", valueInstant: "2026-07-08T14:05:00.000Z" },
+        ],
+      },
+    ],
+  };
+  const board = deriveFloorBoard([legacy], [], CONFIG, now);
+  assert.equal(board.waiting.length, 1);
+  assert.equal(board.waiting[0].checkedInAt, "2026-07-08T14:05:00.000Z");
 });

@@ -44,6 +44,8 @@ export interface FloorCard {
   content: AppointmentBlockContent;
   station: string;
   since: string;
+  /** When the patient first checked in; preserved across moves (falls back to `since`). */
+  checkedInAt: string;
   timer: TimerState;
   payerCue: PayerCue | undefined;
 }
@@ -126,6 +128,7 @@ export function deriveFloorBoard(
       content,
       station: floorState.station,
       since: floorState.since,
+      checkedInAt: floorState.checkedInAt ?? floorState.since,
       timer: timerState(floorState.since, thresholdFor(floorState.station, config), now),
       payerCue: payerCue(visionCoverageOf(appointment)?.display, config),
     };
