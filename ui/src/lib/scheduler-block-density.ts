@@ -9,3 +9,52 @@ export const COMPACT_BLOCK_HEIGHT = 64;
 export function isCompactBlock(blockHeightPx: number): boolean {
   return blockHeightPx < COMPACT_BLOCK_HEIGHT;
 }
+
+import { SCHEDULER_PALETTE, type AppointmentBlockContent } from "./scheduling";
+
+export interface CompactCue {
+  key: string;
+  label: string;
+  glyph: string;
+  color: string;
+}
+
+function statusCue(content: AppointmentBlockContent): CompactCue {
+  const label = content.statusDisplay;
+  switch (content.status) {
+    case "checked-in":
+    case "walk-in":
+      return { key: "status", label, glyph: "●", color: SCHEDULER_PALETTE.establishedTeal };
+    case "checked-out":
+      return { key: "status", label, glyph: "●", color: SCHEDULER_PALETTE.mutedLineLight };
+    case "no-show":
+      return { key: "status", label, glyph: "✕", color: SCHEDULER_PALETTE.urgentRed };
+    case "cancelled":
+      return { key: "status", label, glyph: "✕", color: SCHEDULER_PALETTE.mutedLineLight };
+    default:
+      // scheduled (or unknown): the short-block question is "confirmed yet?"
+      return content.confirmation === "confirmed"
+        ? { key: "status", label: content.confirmationDisplay, glyph: "✓", color: SCHEDULER_PALETTE.establishedTeal }
+        : { key: "status", label: content.confirmationDisplay, glyph: "◌", color: SCHEDULER_PALETTE.nonPatientGold };
+  }
+}
+
+function needsBillingAttention(content: AppointmentBlockContent): boolean {
+  return !content.isNonPatient && content.insuranceLine.includes("none");
+}
+
+export function buildCompactCues(content: AppointmentBlockContent): CompactCue[] {
+  const cues: CompactCue[] = [statusCue(content)];
+  if (content.badges.some((badge) => badge.code === "urgent")) {
+    cues.push({ key: "urgent", label: "Urgent", glyph: "!", color: SCHEDULER_PALETTE.urgentRed });
+  }
+  if (needsBillingAttention(content)) {
+    cues.push({
+      key: "insurance",
+      label: `Coverage gap — ${content.insuranceLine}`,
+      glyph: "$",
+      color: SCHEDULER_PALETTE.nonPatientGold,
+    });
+  }
+  return cues.slice(0, 3);
+}
