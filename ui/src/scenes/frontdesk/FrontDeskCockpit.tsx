@@ -5,7 +5,7 @@ import { togglePanel, type CockpitCenterView, type CockpitPanelId } from "../../
 import { SchedulerDayGrid } from "../SchedulerDayGrid";
 import { CockpitBadgeDock } from "./CockpitBadgeDock";
 import { CockpitGuestPanel } from "./CockpitGuestPanel";
-import { CockpitFloorPlaceholder } from "./CockpitFloorPlaceholder";
+import { CockpitFloorBoard } from "./CockpitFloorBoard";
 
 // The front-desk cockpit shell (design doc §2). Root is a <div> (not <main>) so
 // the embedded SchedulerDayGrid's own <main> stays the single landmark.
@@ -17,7 +17,7 @@ export function FrontDeskCockpit() {
     <div className="relative flex min-h-screen text-white" style={{ backgroundColor: SCHEDULER_PALETTE.surfaceBase }}>
       <section className="min-w-0 flex-1">
         <CockpitTopBar centerView={centerView} onCenterViewChange={setCenterView} />
-        {centerView === "schedule" ? <SchedulerDayGrid /> : <CockpitFloorPlaceholder />}
+        {centerView === "schedule" ? <SchedulerDayGrid /> : <CockpitFloorBoard />}
       </section>
       <CockpitBadgeDock openPanel={openPanel} onToggle={(id) => setOpenPanel((prev) => togglePanel(prev, id))} />
       {openPanel && <CockpitGuestPanel panel={openPanel} onClose={() => setOpenPanel(null)} />}

@@ -124,3 +124,25 @@ export function deriveFloorBoard(
   }
   return board;
 }
+
+// The MVP default board config (ui cannot import mcp runtime code). Only `stations`
+// and `defaultThreshold` mirror mcp/src/scheduling/floor-config.ts's
+// DEFAULT_FLOOR_STATIONS / DEFAULT_LANE_THRESHOLDS, and that mirroring is the sole
+// thing guarded by mcp/tests/floorConfigParity.test.ts. The `laneThresholds`
+// (waiting 10/20) and empty `payerMap` are ui-side MVP stand-ins with no mcp
+// counterpart yet — they'll be replaced when the persisted floor-config singleton
+// read lands (deferred fast-follow).
+export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
+  stations: [
+    { id: "front-desk", label: "Front desk", order: 0 },
+    { id: "waiting", label: "Waiting", order: 1 },
+    { id: "pretest", label: "Pretest", order: 2 },
+    { id: "chair-1", label: "Chair 1", order: 3 },
+    { id: "chair-2", label: "Chair 2", order: 4 },
+    { id: "optical", label: "Optical", order: 5 },
+    { id: "checkout", label: "Checkout", order: 6 },
+  ],
+  laneThresholds: { waiting: { amberMinutes: 10, redMinutes: 20 } },
+  defaultThreshold: { amberMinutes: 20, redMinutes: 30 },
+  payerMap: {},
+};
