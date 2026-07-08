@@ -25,6 +25,8 @@ export interface FloorBoardConfig {
   laneThresholds: Record<string, LaneThreshold>;
   defaultThreshold: LaneThreshold;
   payerMap: Record<string, PayerCueKind>;
+  /** Display label for the practice's own house plan (config, not hardcoded). */
+  housePlanLabel?: string;
 }
 
 export interface TimerState {
@@ -77,7 +79,14 @@ export function payerCue(planDisplay: string | undefined, config: FloorBoardConf
     return undefined;
   }
   const kind = config.payerMap[planDisplay];
-  return kind ? { kind, label: planDisplay } : undefined;
+  if (!kind) {
+    return undefined;
+  }
+  // The house-plan chip shows the practice's own configured label (config, not
+  // hardcoded — no universal default can know a practice's plan name), falling
+  // back to the coverage's raw display if the practice hasn't set one yet.
+  const label = kind === "house" ? (config.housePlanLabel ?? planDisplay) : planDisplay;
+  return { kind, label };
 }
 
 function thresholdFor(stationId: string, config: FloorBoardConfig): LaneThreshold {
@@ -129,9 +138,18 @@ export function deriveFloorBoard(
 // and `defaultThreshold` mirror mcp/src/scheduling/floor-config.ts's
 // DEFAULT_FLOOR_STATIONS / DEFAULT_LANE_THRESHOLDS, and that mirroring is the sole
 // thing guarded by mcp/tests/floorConfigParity.test.ts. The `laneThresholds`
-// (waiting 10/20) and empty `payerMap` are ui-side MVP stand-ins with no mcp
-// counterpart yet — they'll be replaced when the persisted floor-config singleton
-// read lands (deferred fast-follow).
+// (waiting 10/20) and `payerMap` are ui-side MVP stand-ins with no mcp counterpart
+// yet — replaced when the persisted floor-config singleton read lands (deferred
+// fast-follow, where each practice configures its own plan roster).
+//
+// payerMap seeds only VSP/EyeMed (genuinely generic, cross-practice vision-plan
+// names) as a visible out-of-the-box demo. It deliberately has NO house-plan entry
+// and NO housePlanLabel default: this is shared open-source software every OSOD
+// practice runs, and a house plan's name is inherently practice-specific — baking
+// one practice's brand in here would be wrong for every other install. A practice
+// configures its own house-plan name + label via the (deferred) floor-config
+// singleton; until then the house chip simply stays dormant, same as any other
+// unconfigured plan.
 export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
   stations: [
     { id: "front-desk", label: "Front desk", order: 0 },
@@ -144,5 +162,5 @@ export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
   ],
   laneThresholds: { waiting: { amberMinutes: 10, redMinutes: 20 } },
   defaultThreshold: { amberMinutes: 20, redMinutes: 30 },
-  payerMap: {},
+  payerMap: { VSP: "vision", EyeMed: "vision" },
 };

@@ -89,6 +89,25 @@ test("payerCue maps a known plan name to its class; unknown/absent is unmarked",
   assert.equal(payerCue(undefined, CONFIG), undefined);
 });
 
+test("payerCue's house-kind label uses the practice's configured housePlanLabel, not the raw plan display", () => {
+  const configWithLabel: FloorBoardConfig = { ...CONFIG, housePlanLabel: "Our Vision Plan" };
+  assert.deepEqual(
+    payerCue("IVA House Plan", configWithLabel),
+    { kind: "house", label: "Our Vision Plan" },
+    "house chip shows the configured display label, not the coverage's raw plan-name text",
+  );
+  assert.deepEqual(
+    payerCue("VSP", configWithLabel),
+    { kind: "vision", label: "VSP" },
+    "vision-kind label is unaffected by housePlanLabel — it always shows the raw plan display",
+  );
+  assert.deepEqual(
+    payerCue("IVA House Plan", CONFIG),
+    { kind: "house", label: "IVA House Plan" },
+    "with no housePlanLabel configured, the house chip falls back to the raw plan display",
+  );
+});
+
 test("deriveFloorBoard groups by station, sorts longest-wait-first, applies lane thresholds", () => {
   const now = "2026-07-08T14:30:00.000Z";
   const appointments = [

@@ -30,8 +30,8 @@ export function FloorCard({ card, onClick }: { card: FloorCardModel; onClick: ()
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 text-white/40">
         {card.payerCue && (
-          <span className={clsx("rounded px-1.5 py-0.5 font-bold", PAYER_CUE_STYLE[card.payerCue.kind])}>
-            {card.payerCue.kind === "house" ? "HOUSE PLAN" : card.payerCue.label}
+          <span className={clsx("rounded px-1.5 py-0.5 font-bold uppercase", PAYER_CUE_STYLE[card.payerCue.kind])}>
+            {card.payerCue.label}
           </span>
         )}
         <span className="truncate">{card.content.insuranceLine}</span>
