@@ -190,7 +190,102 @@
   ],
   "stubs": {
     "findingDefinitions": [
-      { "key": "cup_disc_ratio", "display": "Cup/disc ratio", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
+      {
+        "key": "cup_disc_ratio",
+        "display": "Cup/disc ratio",
+        "status": "verified-seed",
+        "notBillReady": true,
+        "externalCode": null,
+        "valueSchema": {
+          "valueKind": "cup-disc-panel",
+          "operatorInputRequired": false,
+          "unit": "ratio",
+          "fields": {
+            "verticalCupDiscRatio": {
+              "display": "Vertical C/D ratio",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "step": 0.05,
+              "unit": "ratio",
+              "projectsToObservationValueQuantity": true
+            },
+            "horizontalCupDiscRatio": {
+              "display": "Horizontal C/D ratio",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "step": 0.05,
+              "unit": "ratio"
+            },
+            "cupDiscAsymmetry": {
+              "display": "C/D asymmetry",
+              "type": "derived-number",
+              "formula": "abs(verticalCupDiscRatioOd - verticalCupDiscRatioOs)",
+              "significantAt": 0.2,
+              "unit": "ratio"
+            },
+            "discNerveSize": {
+              "display": "Disc/nerve size",
+              "type": "single-select",
+              "editable": true,
+              "options": [
+                { "code": "small", "display": "Small", "active": true },
+                { "code": "average", "display": "Average", "active": true },
+                { "code": "large", "display": "Large", "active": true }
+              ]
+            },
+            "discAppearanceDescriptors": {
+              "display": "Disc appearance descriptors",
+              "type": "multi-select",
+              "editable": true,
+              "options": [
+                { "code": "notching", "display": "Notching", "active": true },
+                { "code": "inferior-thinning", "display": "Inferior thinning", "active": true, "highRiskDriver": true },
+                { "code": "splinter-heme", "display": "Splinter heme", "active": true, "highRiskDriver": true },
+                { "code": "ppa", "display": "Peripapillary atrophy (PPA)", "active": true },
+                { "code": "deep", "display": "Deep", "active": true },
+                { "code": "pallor", "display": "Pallor", "active": true, "highRiskDriver": true }
+              ]
+            },
+            "methodSource": {
+              "display": "Method/source",
+              "type": "single-select",
+              "editable": true,
+              "options": [
+                { "code": "78d", "display": "78D", "active": true },
+                { "code": "90d", "display": "90D", "active": true },
+                { "code": "20d", "display": "20D", "active": true },
+                { "code": "direct", "display": "Direct", "active": true }
+              ]
+            },
+            "notVisualized": {
+              "display": "Not visualized/deferred",
+              "type": "boolean",
+              "suppressesSuggestion": true
+            }
+          },
+          "modelFields": {
+            "laterality": "FindingInstance.laterality",
+            "interpretation": "FindingInstance.interpretation"
+          }
+        },
+        "normalSemantics": {
+          "riskPredicate": {
+            "key": "glaucoma_suspect_cup_disc_multisignal_v1",
+            "thresholdParameter": {
+              "key": "cupDiscHighRiskThreshold",
+              "defaultValue": 0.55,
+              "minimum": 0,
+              "maximum": 1,
+              "step": 0.05,
+              "priorDefaultValue": 0.6
+            },
+            "asymmetrySignificantAt": 0.2,
+            "descriptorHighRiskFlag": "highRiskDriver"
+          }
+        }
+      },
       { "key": "intraocular_pressure", "display": "Intraocular pressure", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
       { "key": "pachymetry_um", "display": "Pachymetry in micrometers", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
       { "key": "rnfl_gcc", "display": "RNFL/GCC", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null }

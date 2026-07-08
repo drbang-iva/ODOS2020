@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import {
   CPT_CODE_SYSTEM,
+  addGlaucomaCupDiscDescriptorOption,
   buildClinicalFindingDefinition,
   buildDiagnosisDefinition,
   buildEncounterDiagnosis,
@@ -12,6 +13,7 @@ import {
   buildGlaucomaOpenAngleDiagnosisDefinition,
   captureGlaucomaFinding,
   evaluateGlaucomaDiagnosisSuggestions,
+  getGlaucomaCupDiscDescriptorOptions,
   projectEncounterDiagnosisToCondition,
   projectFindingInstanceToObservation,
   rejectDiagnosisSuggestionEdge,
@@ -25,6 +27,16 @@ const provenance = {
   actorReference: "Practitioner/dr-bang",
   ledgerRefs: ["data/code-bindings/glaucoma-suspect-phase0-ledger.json"],
 };
+
+function glaucomaDefinitions() {
+  return buildGlaucomaFindingDefinitionStubs({ provenance });
+}
+
+function cupDiscDefinition() {
+  const definition = glaucomaDefinitions().find((row) => row.stableKey === "cup_disc_ratio");
+  assert.ok(definition);
+  return definition;
+}
 
 test("Phase 0 ledger carries verified glaucoma seeds and explicit not-bill-ready stubs", () => {
   const ledger = JSON.parse(
@@ -113,26 +125,43 @@ test("Phase 2 and 3 migration adds evidence capture and unreviewed suggestion fi
   assert.match(sql, /visit_state IN \('unreviewed', 'generated', 'shown', 'suppressed', 'accepted', 'rejected', 'expired', 'superseded'\)/);
 });
 
-test("glaucoma finding definitions stay operator-gated stubs except the canon cup-disc predicate", () => {
+test("glaucoma cup/disc definition seeds practice-editable fields while other findings stay operator-gated", () => {
   const definitions = buildGlaucomaFindingDefinitionStubs({ provenance });
   const byKey = new Map(definitions.map((definition) => [definition.stableKey, definition]));
   const cupDisc = byKey.get("cup_disc_ratio");
+  assert.ok(cupDisc);
+  const fields = cupDisc.valueSchema.fields as Record<string, { options?: Array<{ code: string; display: string; highRiskDriver?: boolean }> }>;
 
   assert.deepEqual(
     definitions.map((definition) => definition.stableKey),
     ["cup_disc_ratio", "intraocular_pressure", "pachymetry_um", "rnfl_gcc"],
   );
-  assert.equal(definitions.every((definition) => definition.sourceStatus === "unseeded-needs-operator-input"), true);
+  assert.equal(cupDisc.sourceStatus, "verified-seed");
+  assert.equal(
+    definitions
+      .filter((definition) => definition.stableKey !== "cup_disc_ratio")
+      .every((definition) => definition.sourceStatus === "unseeded-needs-operator-input"),
+    true,
+  );
   assert.equal(definitions.every((definition) => definition.notBillReady), true);
   assert.equal(definitions.every((definition) => definition.fhirObservationCode === undefined), true);
-  assert.match(String(cupDisc?.valueSchema.units), /TODO: operator input required/);
-  assert.deepEqual(cupDisc?.valueSchema.seededPredicateExamples, [
-    {
-      predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
-      threshold: 0.6,
-      source: "canon Phase-1 predicate example",
-    },
-  ]);
+  assert.equal(fields.verticalCupDiscRatio.minimum, 0);
+  assert.equal(fields.verticalCupDiscRatio.maximum, 1);
+  assert.equal(fields.verticalCupDiscRatio.step, 0.05);
+  assert.deepEqual(fields.discNerveSize.options?.map((option) => option.code), ["small", "average", "large"]);
+  assert.deepEqual(fields.methodSource.options?.map((option) => option.code), ["78d", "90d", "20d", "direct"]);
+  assert.deepEqual(
+    fields.discAppearanceDescriptors.options?.map((option) => option.code),
+    ["notching", "inferior-thinning", "splinter-heme", "ppa", "deep", "pallor"],
+  );
+  assert.deepEqual(
+    fields.discAppearanceDescriptors.options
+      ?.filter((option) => option.highRiskDriver)
+      .map((option) => option.code),
+    ["inferior-thinning", "splinter-heme", "pallor"],
+  );
+  assert.equal((cupDisc.normalSemantics?.riskPredicate as { thresholdParameter: { defaultValue: number; priorDefaultValue: number } }).thresholdParameter.defaultValue, 0.55);
+  assert.equal((cupDisc.normalSemantics?.riskPredicate as { thresholdParameter: { defaultValue: number; priorDefaultValue: number } }).thresholdParameter.priorDefaultValue, 0.6);
   assert.deepEqual(byKey.get("intraocular_pressure")?.valueSchema.seededPredicateExamples, []);
 });
 
@@ -281,6 +310,271 @@ test("Phase 3 pure evaluator turns large C/D into an unreviewed suggestion, not 
   assert.deepEqual(suggestions[0].suggestionEdge.evidenceFindingInstanceIds, ["finding-ms-cupping-od"]);
   assert.equal("resourceType" in suggestions[0].suggestionEdge, false);
   assert.equal(conditions.length, 0);
+});
+
+test("each cup/disc high-risk driver independently maps to H40.02x without confirming a diagnosis", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const cases = [
+    {
+      id: "vertical-threshold",
+      value: { type: "quantity" as const, value: 0.55, unit: "ratio", code: "1" },
+      signal: "vertical-cup-disc-ratio",
+    },
+    {
+      id: "splinter-heme",
+      value: { type: "json" as const, value: { verticalCupDiscRatio: 0.4, discAppearanceDescriptors: ["splinter-heme"] } },
+      signal: "descriptor:splinter-heme",
+    },
+    {
+      id: "inferior-thinning",
+      value: { type: "json" as const, value: { verticalCupDiscRatio: 0.4, discAppearanceDescriptors: ["inferior-thinning"] } },
+      signal: "descriptor:inferior-thinning",
+    },
+    {
+      id: "asymmetry",
+      value: {
+        type: "json" as const,
+        value: {
+          verticalCupDiscRatio: 0.4,
+          verticalCupDiscRatioOd: 0.3,
+          verticalCupDiscRatioOs: 0.5,
+        },
+      },
+      signal: "cup-disc-asymmetry",
+    },
+    {
+      id: "pallor",
+      value: { type: "json" as const, value: { verticalCupDiscRatio: 0.4, discAppearanceDescriptors: ["pallor"] } },
+      signal: "descriptor:pallor",
+    },
+  ];
+
+  for (const testCase of cases) {
+    const captured = captureGlaucomaFinding({
+      definition: cupDisc,
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      findingInstanceId: `finding-${testCase.id}`,
+      laterality: "OD",
+      value: testCase.value,
+      recordedAt: "2026-06-14T13:21:00.000Z",
+      provenance,
+    });
+    const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
+      findings: [captured.finding],
+      findingDefinitions: definitions,
+      provenance,
+    });
+    const signals = suggestion.suggestionEdge.predicateExpression.highRiskSignals as string[];
+
+    assert.equal(suggestion.diagnosisDefinition.icd10Code, "H40.021", testCase.id);
+    assert.equal(suggestion.suggestionEdge.visitState, "unreviewed");
+    assert.equal(signals.includes(testCase.signal), true, testCase.id);
+    assert.match(suggestion.suggestionEdge.explanation, /High-risk glaucoma-suspect suggestion/);
+    assert.equal("resourceType" in suggestion.suggestionEdge, false);
+  }
+});
+
+test("pure low-risk cup/disc path maps to H40.01x when no high-risk signal fires", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-low-risk-cup-disc",
+    laterality: "OS",
+    value: {
+      type: "json",
+      value: {
+        verticalCupDiscRatio: 0.5,
+        verticalCupDiscRatioOd: 0.35,
+        verticalCupDiscRatioOs: 0.5,
+        discAppearanceDescriptors: ["notching", "ppa", "deep"],
+      },
+    },
+    recordedAt: "2026-06-14T13:22:00.000Z",
+    provenance,
+  });
+  const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+
+  assert.equal(suggestion.diagnosisDefinition.icd10Code, "H40.012");
+  assert.deepEqual(suggestion.suggestionEdge.predicateExpression.highRiskSignals, []);
+  assert.equal(suggestion.suggestionEdge.predicateExpression.threshold, 0.55);
+  assert.match(suggestion.suggestionEdge.explanation, /Low-risk glaucoma-suspect suggestion/);
+});
+
+test("cup/disc asymmetry is auto-computed across OD and OS findings at the 0.2 boundary", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const od = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-asymmetry-od",
+    laterality: "OD",
+    value: { type: "quantity", value: 0.3, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:23:00.000Z",
+    provenance,
+  });
+  const os = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-asymmetry-os",
+    laterality: "OS",
+    value: { type: "quantity", value: 0.5, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:24:00.000Z",
+    provenance,
+  });
+  const suggestions = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [od.finding, os.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+
+  assert.deepEqual(
+    suggestions.map((suggestion) => suggestion.diagnosisDefinition.icd10Code).sort(),
+    ["H40.021", "H40.022"],
+  );
+  assert.equal(
+    suggestions.every((suggestion) =>
+      (suggestion.suggestionEdge.predicateExpression.highRiskSignals as string[]).includes("cup-disc-asymmetry")),
+    true,
+  );
+  assert.equal(
+    suggestions.every((suggestion) =>
+      (suggestion.suggestionEdge.predicateExpression.observed as { cupDiscAsymmetry: number }).cupDiscAsymmetry === 0.2),
+    true,
+  );
+});
+
+test("not-visualized cup/disc findings suppress suggestion-edge emission", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-cup-disc-not-visualized",
+    laterality: "OD",
+    value: {
+      type: "json",
+      value: {
+        verticalCupDiscRatio: 0.9,
+        discAppearanceDescriptors: ["pallor"],
+        notVisualized: true,
+      },
+    },
+    recordedAt: "2026-06-14T13:25:00.000Z",
+    provenance,
+  });
+  const suggestions = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+  const built = buildGlaucomaCupDiscSuggestion({
+    cupDiscRatio: 0.9,
+    notVisualized: true,
+    laterality: "OD",
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingDefinitionId: cupDisc.id,
+    findingInstanceId: "finding-cup-disc-not-visualized-builder",
+    recordedAt: "2026-06-14T13:26:00.000Z",
+    provenance,
+  });
+
+  assert.deepEqual(suggestions, []);
+  assert.equal(built.suggestionEdge, undefined);
+  assert.equal(built.diagnosisDefinition, undefined);
+});
+
+test("cup/disc threshold defaults to 0.55 and can be overridden by practice config", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const captured = captureGlaucomaFinding({
+    definition: cupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-threshold-config",
+    laterality: "OU",
+    value: { type: "quantity", value: 0.56, unit: "ratio", code: "1" },
+    recordedAt: "2026-06-14T13:27:00.000Z",
+    provenance,
+  });
+  const [defaultSuggestion] = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    provenance,
+  });
+  const [overriddenSuggestion] = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: definitions,
+    riskConfig: { cupDiscHighRiskThreshold: 0.6 },
+    provenance,
+  });
+
+  assert.equal(defaultSuggestion.diagnosisDefinition.icd10Code, "H40.023");
+  assert.equal(defaultSuggestion.suggestionEdge.predicateExpression.threshold, 0.55);
+  assert.equal(defaultSuggestion.suggestionEdge.predicateExpression.priorDefaultThreshold, 0.6);
+  assert.equal(overriddenSuggestion.diagnosisDefinition.icd10Code, "H40.013");
+  assert.equal(overriddenSuggestion.suggestionEdge.predicateExpression.threshold, 0.6);
+});
+
+test("practice-added cup/disc descriptor persists in editable option data and remains selectable", () => {
+  const definitions = glaucomaDefinitions();
+  const cupDisc = definitions.find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(cupDisc);
+  const editedCupDisc = addGlaucomaCupDiscDescriptorOption(cupDisc, {
+    code: "tilted-disc",
+    display: "Tilted disc",
+    active: true,
+  });
+  const editedDefinitions = definitions.map((definition) =>
+    definition.id === cupDisc.id ? editedCupDisc : definition);
+  const captured = captureGlaucomaFinding({
+    definition: editedCupDisc,
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    findingInstanceId: "finding-practice-added-descriptor",
+    laterality: "OD",
+    value: {
+      type: "json",
+      value: {
+        verticalCupDiscRatio: 0.4,
+        discAppearanceDescriptors: ["tilted-disc"],
+      },
+    },
+    recordedAt: "2026-06-14T13:28:00.000Z",
+    provenance,
+  });
+  const [suggestion] = evaluateGlaucomaDiagnosisSuggestions({
+    findings: [captured.finding],
+    findingDefinitions: editedDefinitions,
+    provenance,
+  });
+
+  assert.equal(
+    getGlaucomaCupDiscDescriptorOptions(editedCupDisc).some((option) => option.code === "tilted-disc"),
+    true,
+  );
+  assert.equal(suggestion.diagnosisDefinition.icd10Code, "H40.011");
+  assert.deepEqual(
+    (suggestion.suggestionEdge.predicateExpression.observed as { discAppearanceDescriptors: string[] }).discAppearanceDescriptors,
+    ["tilted-disc"],
+  );
 });
 
 test("rejecting the large-C/D glaucoma suggestion leaves the finding and no glaucoma Condition", () => {
