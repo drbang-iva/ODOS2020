@@ -219,3 +219,9 @@ code. Fable codes → Codex evaluates. Codex codes → Fable/Opus evaluates. Cod
 eval, never the last word on correctness-critical code. Scope: this gate fires on a
 shippable coding slice (PR-worthy diff), not brainstorming or micro-decisions.
 Nothing is "done" until an independent evaluation actually ran.
+
+**Every build→evaluate handoff returns a sealed bundle, not a transcript** — summary,
+files touched, checks run + the real command output (never a bare "tests pass"),
+risks/follow-ups, patch/diff/commands if needed, status (done/blocked/needs-review).
+Full pattern: `performance-od/core/sealed-bundle-handoff.md`. The bundle accompanies
+the diff; it never replaces the evaluator reading the actual code and check output.
