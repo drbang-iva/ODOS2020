@@ -6,6 +6,7 @@ import { SchedulerDayGrid } from "../SchedulerDayGrid";
 import { CockpitBadgeDock } from "./CockpitBadgeDock";
 import { CockpitGuestPanel } from "./CockpitGuestPanel";
 import { CockpitFloorBoard } from "./CockpitFloorBoard";
+import { CockpitFloorRail } from "./CockpitFloorRail";
 
 // The front-desk cockpit shell (design doc §2). Root is a <div> (not <main>) so
 // the embedded SchedulerDayGrid's own <main> stays the single landmark.
@@ -52,6 +53,9 @@ function CockpitTopBar({
           </button>
         ))}
       </div>
+      {centerView === "schedule" && (
+        <CockpitFloorRail onOpenFloor={() => onCenterViewChange("floor")} />
+      )}
     </header>
   );
 }
