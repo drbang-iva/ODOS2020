@@ -35,6 +35,7 @@ import { buildSchedulingAppointment } from "../mcp/src/fhir/schedulingAppointmen
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../mcp/src/authz/roles.js";
 import { buildSchedulingPracticeConfigResource } from "../ui/src/lib/scheduling-config.js";
 import type { SchedulingPracticeConfig } from "../ui/src/lib/scheduling.js";
+import { floorStateExtension } from "../ui/src/lib/floor-state.js";
 
 const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
@@ -54,7 +55,12 @@ function practiceTodayYmd(offset: string): string {
 const DAY = practiceTodayYmd(TZ);
 const at = (hhmm: string): string => `${DAY}T${hhmm}:00${TZ}`;
 
+/** ISO timestamp `minutes` ago from run time — for floor-state `since` fields. */
+const minutesAgoIso = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString();
+
 async function main(): Promise<void> {
+  const includeFloor = process.argv.includes("--floor");
+
   if (!EMAIL || !PASSWORD) {
     console.error("Missing MEDPLUM_ADMIN_EMAIL / MEDPLUM_ADMIN_PASSWORD. Copy .env.example to .env and fill it in.");
     process.exit(1);
@@ -230,6 +236,57 @@ async function main(): Promise<void> {
   }
   console.log(`✓ ${appts.length} appointments on ${DAY} (incl. a 07:30 out-of-hours booking)`);
 
+  if (includeFloor) {
+    // Floor-board demo (cockpit Phase 3a): checked-in patients spread across stations
+    // with varied since-timestamps so timers land in ok/amber/red bands. The VSP
+    // optical card renders its payer cue against the default payerMap (VSP/EyeMed are
+    // the only defaults seeded — see DEFAULT_FLOOR_BOARD_CONFIG); the house-plan card
+    // is forward-compatible data that stays dormant until a practice configures its
+    // own house-plan name via the floor-config singleton.
+    const floorPlan: Array<{
+      name: string;
+      station: string;
+      minutesAgo: number;
+      visionPlan?: string;
+    }> = [
+      { name: "TEST-Park, Sam", station: "waiting", minutesAgo: 5 },     // ok
+      { name: "TEST-Ruiz, Maria", station: "waiting", minutesAgo: 12 },  // amber (waiting 10/20)
+      { name: "TEST-Okafor, Joe", station: "waiting", minutesAgo: 25 },  // red (waiting 20+)
+      { name: "TEST-Diaz, Ana", station: "pretest", minutesAgo: 8 },     // ok (default 20/30)
+      { name: "TEST-Lee, Kim", station: "chair-1", minutesAgo: 18 },     // ok (default 20/30)
+      { name: "TEST-Wong, Tia", station: "optical", minutesAgo: 6, visionPlan: "VSP" },
+      { name: "TEST-Nguyen, Le", station: "optical", minutesAgo: 3, visionPlan: "IVA House Plan" },
+    ];
+    let floorSlot = 9; // arbitrary in-hours start hours for the appointment blocks
+    for (const card of floorPlan) {
+      const floorPatient = await client.create<Patient>({
+        resourceType: "Patient",
+        active: true,
+        name: [{ family: card.name.split(",")[0], given: [card.name.split(", ")[1] ?? ""], text: card.name }],
+        birthDate: "1900-01-01",
+        gender: "unknown",
+      });
+      const appt = buildSchedulingAppointment({
+        patient: { reference: `Patient/${floorPatient.id}`, display: card.name },
+        visitTypeCode: "routine-exam-established",
+        discipline: "eyecare",
+        resources: [ericRef],
+        start: at(`${String(floorSlot).padStart(2, "0")}:00`),
+        durationMinutes: 30,
+        status: "checked-in",
+        ...(card.visionPlan ? { visionCoverage: { display: card.visionPlan } } : {}),
+      });
+      appt.extension = [
+        ...(appt.extension ?? []),
+        // Static demo cards are freshly staged, so check-in time == since.
+        floorStateExtension(card.station, minutesAgoIso(card.minutesAgo), minutesAgoIso(card.minutesAgo)),
+      ];
+      await client.create<Appointment>(appt);
+      floorSlot += 1;
+    }
+    console.log(`✓ Floor demo: ${floorPlan.length} checked-in patients across waiting/pretest/chair-1/optical`);
+  }
+
   // 6. Front-desk AccessPolicy RESOURCE (ready to attach — no login user created).
   const frontDeskPolicy = await client.create<AccessPolicy>({
     ...buildMedplumAccessPolicy(getRoleDeclaration("front-desk")),
@@ -244,6 +301,7 @@ async function main(): Promise<void> {
   console.log(`  1. Medplum admin app -> Project -> Users -> Invite user (a front desk email).`);
   console.log(`  2. Attach AccessPolicy/${frontDeskPolicy.id} to that membership.`);
   console.log(`  3. Log into the ODOS UI as that user for the #27 RBAC walkthrough.`);
+  console.log("\nTip: re-run with --floor (npm run seed-scheduler -- --floor) to also stage a populated floor board.");
 }
 
 main().catch((e: unknown) => {

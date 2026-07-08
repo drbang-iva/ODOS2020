@@ -367,6 +367,18 @@
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-4a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "cockpit-phase-3a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "cockpit-phase-3a"
     }
   ]
 }

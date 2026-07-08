@@ -42,6 +42,7 @@ import {
   type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
+import { OSOD_FLOOR_STATE_EXTENSION_URL, floorStateExtension, parseFloorState } from "./floor-state";
 import {
   bucketAppointmentsByPracticeDay,
   reconcileWeekResourceReference,
@@ -132,6 +133,8 @@ export interface AppointmentChangeInput {
   urgent?: boolean;
   followUp?: boolean;
   allowDoubleBook?: boolean;
+  /** Floor board station id (cockpit Phase 3a). null clears the floor-state extension. */
+  floorStation?: string | null;
 }
 
 export interface MoveAppointmentInput {
@@ -715,7 +718,7 @@ async function writeAppointmentUpdate(
   try {
     const state = get();
     const current = currentAppointment(state, appointment);
-    const updated = rebuildAppointmentForUpdate(state, current, changes);
+    const updated = rebuildAppointmentForUpdate(state, current, changes, deps);
     if (shouldCheckUpdateConflicts(current, updated, changes)) {
       const conflicts = await fetchTargetConflictAppointmentsForAppointment(state, client, updated);
       assertNoAppointmentConflicts(updated, conflicts, current.id);
@@ -745,6 +748,7 @@ function rebuildAppointmentForUpdate(
   state: SchedulingStoreState,
   appointment: Appointment,
   changes: AppointmentChangeInput,
+  deps: SchedulingWriteDeps | undefined,
 ): Appointment {
   const updated: Appointment = {
     ...appointment,
@@ -791,6 +795,9 @@ function rebuildAppointmentForUpdate(
   }
   if (changes.medicalCoverage !== undefined) {
     applyCoverageChange(updated, OSOD_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
+  }
+  if (changes.floorStation !== undefined) {
+    applyFloorStationChange(updated, changes.floorStation, deps?.now);
   }
   if (changes.notes !== undefined) {
     setOptional(updated, "comment", cleanOptionalString(changes.notes));
@@ -1149,6 +1156,29 @@ function applyCoverageChange(
           },
         }
       : undefined,
+  );
+}
+
+function applyFloorStationChange(
+  appointment: Appointment,
+  station: string | null,
+  now: (() => string) | undefined,
+): void {
+  if (!station) {
+    // Checkout: clear the whole floor-state (station + since + checkedInAt).
+    replaceExtension(appointment, OSOD_FLOOR_STATE_EXTENSION_URL, undefined);
+    return;
+  }
+  const timestamp = (now ?? (() => new Date().toISOString()))();
+  // Preserve the original check-in time across station moves; set it fresh only on the
+  // first check-in (when no floor-state exists yet). `appointment` here is the update
+  // clone still carrying the pre-change extension, so parseFloorState reads the CURRENT
+  // (pre-move) state.
+  const existingCheckedInAt = parseFloorState(appointment)?.checkedInAt;
+  replaceExtension(
+    appointment,
+    OSOD_FLOOR_STATE_EXTENSION_URL,
+    floorStateExtension(station, timestamp, existingCheckedInAt ?? timestamp),
   );
 }
 

@@ -1,6 +1,7 @@
 import type { Appointment, Bundle, Encounter, Invoice, Patient, PaymentReconciliation } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
+import { useSchedulingStore } from "../../lib/scheduling-store";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
 
 export function PatientQuickCard({
@@ -24,6 +25,29 @@ export function PatientQuickCard({
   const [openInvoiceCount, setOpenInvoiceCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const visible = Boolean(appointment);
+
+  const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function handleCheckIn() {
+    if (!appointment) return;
+    setActionError(null);
+    try {
+      await updateAppointment(appointment, { status: "checked-in", floorStation: "waiting" });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function handleCheckOut() {
+    if (!appointment) return;
+    setActionError(null);
+    try {
+      await updateAppointment(appointment, { status: "checked-out", floorStation: null });
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   useEffect(() => {
     if (!patientReference) {
@@ -138,6 +162,23 @@ export function PatientQuickCard({
               }
             />
           </>
+        )}
+
+        {actionError && (
+          <div className="border border-red-400/40 bg-red-950/50 px-3 py-2 text-red-100">
+            {actionError}
+          </div>
+        )}
+
+        {patientReference && (
+          <div className="flex gap-2">
+            <button className="scheduler-button" type="button" onClick={() => void handleCheckIn()}>
+              Check In
+            </button>
+            <button className="scheduler-button" type="button" onClick={() => void handleCheckOut()}>
+              Check Out
+            </button>
+          </div>
         )}
 
         <button className="scheduler-button mt-2" type="button" onClick={() => onDetails(appointment)}>
