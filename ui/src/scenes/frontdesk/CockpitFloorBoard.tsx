@@ -1,22 +1,24 @@
 // ui/src/scenes/frontdesk/CockpitFloorBoard.tsx
 import { useEffect, useMemo, useState } from "react";
-import { DEFAULT_FLOOR_BOARD_CONFIG, deriveFloorBoard } from "../../lib/floor-board";
+import { deriveFloorBoard } from "../../lib/floor-board";
 import { parseFloorState } from "../../lib/floor-state";
 import { useSchedulingStore } from "../../lib/scheduling-store";
 import { PatientQuickCard } from "../scheduler/PatientQuickCard";
 import { FloorCard } from "./FloorCard";
+import { useFloorBoardConfig } from "./useFloorBoardConfig";
 
 // The floor board center stage (design doc §5): stations as horizontal swim-rows,
 // checked-in patients as draggable cards, honest-manual movement (drag rewrites the
 // osod-floor-state extension via updateAppointment). Renders its own PatientQuickCard
 // on card click, mirroring how SchedulerDayGrid owns its quick card. Config source is
-// the ui-side DEFAULT_FLOOR_BOARD_CONFIG until the floor-config singleton read lands
-// (deferred fast-follow).
+// the persisted floor-config singleton (read via useFloorBoardConfig), falling back to
+// the ui-side DEFAULT_FLOOR_BOARD_CONFIG until a practice configures its own.
 export function CockpitFloorBoard() {
   const appointments = useSchedulingStore((state) => state.appointments);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const date = useSchedulingStore((state) => state.date);
   const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
+  const floorConfig = useFloorBoardConfig();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pinned, setPinned] = useState(false);
   const [dragError, setDragError] = useState<string | null>(null);
@@ -29,8 +31,8 @@ export function CockpitFloorBoard() {
   }, []);
 
   const board = useMemo(
-    () => deriveFloorBoard(appointments, visitTypes, DEFAULT_FLOOR_BOARD_CONFIG, now),
-    [appointments, visitTypes, now],
+    () => deriveFloorBoard(appointments, visitTypes, floorConfig, now),
+    [appointments, visitTypes, floorConfig, now],
   );
 
   // Resolve the selected appointment against live store data so the quick card
@@ -66,7 +68,7 @@ export function CockpitFloorBoard() {
           Could not move patient: {dragError}
         </div>
       )}
-      {DEFAULT_FLOOR_BOARD_CONFIG.stations.map((station) => (
+      {floorConfig.stations.map((station) => (
         <div
           key={station.id}
           className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 p-2"

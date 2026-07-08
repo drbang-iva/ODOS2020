@@ -1,5 +1,5 @@
 // ui/src/lib/floor-board.ts
-import type { Appointment, HealthcareService } from "@medplum/fhirtypes";
+import type { Appointment, Basic, HealthcareService } from "@medplum/fhirtypes";
 import { buildAppointmentBlockContent, visionCoverageOf, type AppointmentBlockContent } from "./scheduling";
 import { parseFloorState } from "./floor-state";
 
@@ -50,10 +50,14 @@ export interface FloorCard {
 
 export type FloorBoard = Record<string, FloorCard[]>;
 
-/** Minutes between `since` and `now`, clamped to 0 (never negative on clock skew). */
+/**
+ * Minutes between `since` and `now`, clamped to 0 (never negative on clock skew).
+ * Floored (not rounded) so a 9m31s wait reads as 9 minutes, not 10 — thresholds are
+ * inclusive lower bounds and must not trigger early on a rounded-up partial minute.
+ */
 function minutesSince(since: string, now: string): number {
   const deltaMs = Date.parse(now) - Date.parse(since);
-  return Math.max(0, Math.round(deltaMs / 60_000));
+  return Math.max(0, Math.floor(deltaMs / 60_000));
 }
 
 export function timerState(since: string, threshold: LaneThreshold, now: string): TimerState {
@@ -164,3 +168,43 @@ export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
   defaultThreshold: { amberMinutes: 20, redMinutes: 30 },
   payerMap: { VSP: "vision", EyeMed: "vision" },
 };
+
+// Mirrors mcp/src/scheduling/floor-config.ts's constants (ui cannot import mcp
+// runtime code) — used only to locate the floor-config Basic singleton on read.
+export const OSOD_FLOOR_CONFIG_SYSTEM = "https://osod.dev/fhir/CodeSystem/floor-config";
+export const OSOD_FLOOR_CONFIG_CODE = "osod-floor-config";
+export const OSOD_FLOOR_CONFIG_EXTENSION_URL =
+  "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config";
+
+/**
+ * Parse the floor-config singleton off a Basic resource. Read-path parser: never
+ * throws — returns undefined on any absent/malformed data so a corrupt or missing
+ * singleton falls back to DEFAULT_FLOOR_BOARD_CONFIG rather than crashing the board.
+ */
+export function parseFloorConfigResource(basic: Basic): FloorBoardConfig | undefined {
+  const coding = basic.code?.coding?.find(
+    (c) => c.system === OSOD_FLOOR_CONFIG_SYSTEM && c.code === OSOD_FLOOR_CONFIG_CODE,
+  );
+  if (!coding) {
+    return undefined;
+  }
+  const raw = basic.extension?.find((e) => e.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString;
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<FloorBoardConfig>;
+    if (!Array.isArray(parsed.stations) || parsed.stations.length === 0) {
+      return undefined;
+    }
+    return {
+      stations: parsed.stations,
+      laneThresholds: parsed.laneThresholds ?? {},
+      defaultThreshold: parsed.defaultThreshold ?? DEFAULT_FLOOR_BOARD_CONFIG.defaultThreshold,
+      payerMap: parsed.payerMap ?? {},
+      ...(typeof parsed.housePlanLabel === "string" ? { housePlanLabel: parsed.housePlanLabel } : {}),
+    };
+  } catch {
+    return undefined;
+  }
+}
