@@ -5,6 +5,8 @@ import {
   isCompactBlock,
   buildCompactCues,
   type CompactCue,
+  HOVER_CARD_WIDTH,
+  hoverCardPosition,
 } from "../../ui/src/lib/scheduler-block-density.js";
 import { SCHEDULER_PALETTE, type AppointmentBlockContent } from "../../ui/src/lib/scheduling.js";
 
@@ -105,4 +107,24 @@ test("cues cap at three and status always leads", () => {
   const cues = buildCompactCues(everything);
   assert.equal(cues.length, 3);
   assert.equal(cues[0]?.key, "status");
+});
+
+test("hover card sits to the right of the block by default", () => {
+  const anchor = { top: 100, left: 200, right: 360 };
+  const pos = hoverCardPosition(anchor, { width: 1400, height: 900 });
+  assert.deepEqual(pos, { left: 368, top: 100 }); // right + 8
+});
+
+test("hover card flips to the left edge when the right side would clip", () => {
+  const anchor = { top: 100, left: 1200, right: 1380 };
+  const pos = hoverCardPosition(anchor, { width: 1400, height: 900 });
+  assert.equal(pos.left, 1200 - HOVER_CARD_WIDTH - 8);
+});
+
+test("hover card clamps inside the viewport vertically", () => {
+  const anchor = { top: 2, left: 200, right: 360 };
+  assert.equal(hoverCardPosition(anchor, { width: 1400, height: 900 }).top, 8);
+  const low = { top: 880, left: 200, right: 360 };
+  const pos = hoverCardPosition(low, { width: 1400, height: 900 }, 180);
+  assert.equal(pos.top, 900 - 180 - 8, "bottom-clamped by estimated card height");
 });

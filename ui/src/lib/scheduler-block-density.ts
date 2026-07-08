@@ -58,3 +58,27 @@ export function buildCompactCues(content: AppointmentBlockContent): CompactCue[]
   }
   return cues.slice(0, 3);
 }
+
+export const HOVER_CARD_WIDTH = 240;
+const HOVER_CARD_GAP = 8;
+const VIEWPORT_MARGIN = 8;
+
+export interface HoverAnchor {
+  top: number;
+  left: number;
+  right: number;
+}
+
+export function hoverCardPosition(
+  anchor: HoverAnchor,
+  viewport: { width: number; height: number },
+  estimatedHeight = 120,
+): { left: number; top: number } {
+  const fitsRight = anchor.right + HOVER_CARD_GAP + HOVER_CARD_WIDTH + VIEWPORT_MARGIN <= viewport.width;
+  const left = fitsRight
+    ? anchor.right + HOVER_CARD_GAP
+    : anchor.left - HOVER_CARD_WIDTH - HOVER_CARD_GAP;
+  const maxTop = viewport.height - estimatedHeight - VIEWPORT_MARGIN;
+  const top = Math.min(Math.max(anchor.top, VIEWPORT_MARGIN), maxTop);
+  return { left, top };
+}
