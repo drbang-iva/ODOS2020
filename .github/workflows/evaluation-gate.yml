@@ -1,0 +1,74 @@
+name: evaluation-gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [main]
+  issue_comment:
+    types: [created]
+
+# Belt-and-suspenders for the author-never-evaluates-own-code rule
+# (performance-od/core/model-routing-card.md). Every PR into main needs
+# an independent model review before it merges: the model/tool that wrote
+# the code cannot also be the one that grades it. CodeRabbit is a cheap
+# first pass, not a substitute for this.
+#
+# Passes when either is present on the PR:
+#   - label "evaluated"
+#   - a comment whose body starts with "Evaluated-by: <Model>"
+#
+# This repo has enforce_admins OFF (solo repo), so a failing check here
+# does not physically block an admin merge — it makes a skipped
+# evaluation impossible to miss (a visible red check on the PR) rather
+# than impossible to override.
+
+jobs:
+  check-evaluation:
+    if: github.event.pull_request != null || github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: check for an independent evaluation marker
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number ?? context.payload.issue?.number;
+            if (!prNumber) {
+              core.setFailed("evaluation-gate: could not resolve a PR number from this event.");
+              return;
+            }
+
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            if (labels.some((l) => l.name.toLowerCase() === "evaluated")) {
+              core.info(`PR #${prNumber}: "evaluated" label present — gate passes.`);
+              return;
+            }
+
+            const pattern = /^Evaluated-by:\s*\S+/im;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            if (comments.some((c) => pattern.test(c.body || ""))) {
+              core.info(`PR #${prNumber}: "Evaluated-by:" comment found — gate passes.`);
+              return;
+            }
+
+            core.setFailed(
+              [
+                "NOT EVALUATED — this PR has no independent model review yet.",
+                "",
+                "Author ≠ evaluator: the model/tool that wrote this code cannot also be the one that grades it.",
+                "CodeRabbit's automated review is a first pass, not a substitute for this.",
+                "",
+                "To clear this gate, once an independent model has reviewed the diff:",
+                "  - add a PR comment starting with 'Evaluated-by: <Model>' (e.g. 'Evaluated-by: Opus — reviewed, no blocking issues'), or",
+                "  - apply the 'evaluated' label to this PR.",
+              ].join("\n")
+            );
