@@ -238,9 +238,11 @@ async function main(): Promise<void> {
 
   if (includeFloor) {
     // Floor-board demo (cockpit Phase 3a): checked-in patients spread across stations
-    // with varied since-timestamps so timers land in ok/amber/red bands. Vision-plan
-    // coverage is seeded on two optical cards as forward-compatible data — the payer
-    // cue renders once a payerMap is configured (the board's MVP default map is empty).
+    // with varied since-timestamps so timers land in ok/amber/red bands. The VSP
+    // optical card renders its payer cue against the default payerMap (VSP/EyeMed are
+    // the only defaults seeded — see DEFAULT_FLOOR_BOARD_CONFIG); the house-plan card
+    // is forward-compatible data that stays dormant until a practice configures its
+    // own house-plan name via the floor-config singleton.
     const floorPlan: Array<{
       name: string;
       station: string;

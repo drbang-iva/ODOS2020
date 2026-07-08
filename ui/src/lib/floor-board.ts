@@ -141,22 +141,19 @@ export function deriveFloorBoard(
   return board;
 }
 
-// The MVP default board config (ui cannot import mcp runtime code). Only `stations`
-// and `defaultThreshold` mirror mcp/src/scheduling/floor-config.ts's
-// DEFAULT_FLOOR_STATIONS / DEFAULT_LANE_THRESHOLDS, and that mirroring is the sole
-// thing guarded by mcp/tests/floorConfigParity.test.ts. The `laneThresholds`
-// (waiting 10/20) and `payerMap` are ui-side MVP stand-ins with no mcp counterpart
-// yet — replaced when the persisted floor-config singleton read lands (deferred
-// fast-follow, where each practice configures its own plan roster).
+// The fallback board config, used when no osod-floor-config singleton has been
+// configured yet (or a read fails) — see useFloorBoardConfig, which reads the real
+// persisted singleton and falls back to this. Only `stations` and `defaultThreshold`
+// mirror mcp/src/scheduling/floor-config.ts's DEFAULT_FLOOR_STATIONS /
+// DEFAULT_LANE_THRESHOLDS (parity-tested in mcp/tests/floorConfigParity.test.ts).
 //
 // payerMap seeds only VSP/EyeMed (genuinely generic, cross-practice vision-plan
 // names) as a visible out-of-the-box demo. It deliberately has NO house-plan entry
 // and NO housePlanLabel default: this is shared open-source software every OSOD
 // practice runs, and a house plan's name is inherently practice-specific — baking
 // one practice's brand in here would be wrong for every other install. A practice
-// configures its own house-plan name + label via the (deferred) floor-config
-// singleton; until then the house chip simply stays dormant, same as any other
-// unconfigured plan.
+// configures its own house-plan name + label via the floor-config singleton; until
+// then the house chip simply stays dormant, same as any other unconfigured plan.
 export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
   stations: [
     { id: "front-desk", label: "Front desk", order: 0 },
@@ -183,7 +180,38 @@ export const OSOD_FLOOR_CONFIG_EXTENSION_URL =
  * Parse the floor-config singleton off a Basic resource. Read-path parser: never
  * throws — returns undefined on any absent/malformed data so a corrupt or missing
  * singleton falls back to DEFAULT_FLOOR_BOARD_CONFIG rather than crashing the board.
+ * Validates the SHAPE of every field, not just top-level presence — an
+ * Array.isArray(stations) check alone lets through garbage like [null] that later
+ * crashes deriveFloorBoard on station.id; every station/threshold entry is checked.
  */
+function isValidStation(value: unknown): value is FloorBoardConfig["stations"][number] {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { id?: unknown }).id === "string" &&
+    typeof (value as { label?: unknown }).label === "string" &&
+    typeof (value as { order?: unknown }).order === "number"
+  );
+}
+
+function isValidThreshold(value: unknown): value is LaneThreshold {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { amberMinutes?: unknown }).amberMinutes === "number" &&
+    typeof (value as { redMinutes?: unknown }).redMinutes === "number"
+  );
+}
+
+function isValidPayerMap(value: unknown): value is Record<string, PayerCueKind> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value as Record<string, unknown>).every((kind) => kind === "vision" || kind === "house")
+  );
+}
+
 export function parseFloorConfigResource(basic: Basic): FloorBoardConfig | undefined {
   const coding = basic.code?.coding?.find(
     (c) => c.system === OSOD_FLOOR_CONFIG_SYSTEM && c.code === OSOD_FLOOR_CONFIG_CODE,
@@ -197,12 +225,27 @@ export function parseFloorConfigResource(basic: Basic): FloorBoardConfig | undef
   }
   try {
     const parsed = JSON.parse(raw) as Partial<FloorBoardConfig>;
-    if (!Array.isArray(parsed.stations) || parsed.stations.length === 0) {
+    if (!Array.isArray(parsed.stations) || parsed.stations.length === 0 || !parsed.stations.every(isValidStation)) {
+      return undefined;
+    }
+    const laneThresholds = parsed.laneThresholds;
+    if (laneThresholds !== undefined) {
+      if (typeof laneThresholds !== "object" || laneThresholds === null || Array.isArray(laneThresholds)) {
+        return undefined;
+      }
+      if (!Object.values(laneThresholds).every(isValidThreshold)) {
+        return undefined;
+      }
+    }
+    if (parsed.defaultThreshold !== undefined && !isValidThreshold(parsed.defaultThreshold)) {
+      return undefined;
+    }
+    if (parsed.payerMap !== undefined && !isValidPayerMap(parsed.payerMap)) {
       return undefined;
     }
     return {
       stations: parsed.stations,
-      laneThresholds: parsed.laneThresholds ?? {},
+      laneThresholds: laneThresholds ?? {},
       defaultThreshold: parsed.defaultThreshold ?? DEFAULT_FLOOR_BOARD_CONFIG.defaultThreshold,
       payerMap: parsed.payerMap ?? {},
       ...(typeof parsed.housePlanLabel === "string" ? { housePlanLabel: parsed.housePlanLabel } : {}),
