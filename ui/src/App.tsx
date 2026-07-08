@@ -11,6 +11,7 @@ import { GrantsManagement } from "./smart/grants-management";
 import { OpticalFrames } from "./scenes/OpticalFrames";
 import { OpticalOrder } from "./scenes/OpticalOrder";
 import { SchedulerDayGrid } from "./scenes/SchedulerDayGrid";
+import { FrontDeskCockpit } from "./scenes/frontdesk/FrontDeskCockpit";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -87,6 +88,8 @@ function RouteSwitch({ view }: { view: ViewState }) {
     case "/schedule/day":
     case "/scheduler/day":
       return <SchedulerDayGrid />;
+    case "/frontdesk":
+      return <FrontDeskCockpit />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
     default:
