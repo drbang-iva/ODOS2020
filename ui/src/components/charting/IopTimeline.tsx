@@ -205,6 +205,10 @@ export function IopTimeline({ patientReference, refreshSignal }: Props) {
     [view, visibleReadings, visibleChReadings],
   );
   const xScale = useMemo(() => createLinearScale(xDomain.min, xDomain.max, PLOT_LEFT, PLOT_RIGHT), [xDomain]);
+  const timelineDateLabel = useMemo(
+    () => singleDateLabel([...visibleReadings, ...visibleChReadings]),
+    [visibleReadings, visibleChReadings],
+  );
   const yDomain = useMemo(
     () => iopYDomain(visibleReadings, history, eyeFilter),
     [visibleReadings, history, eyeFilter],
@@ -484,6 +488,7 @@ export function IopTimeline({ patientReference, refreshSignal }: Props) {
           >
             <Grid yScale={yScale} yDomain={yDomain} />
             <AxisLabels yDomain={yDomain} />
+            <XAxis view={view} xScale={xScale} xDomain={xDomain} timelineDateLabel={timelineDateLabel} />
             <ReferenceLayer
               history={history}
               eyeFilter={eyeFilter}
@@ -924,6 +929,47 @@ function AxisLabels({ yDomain }: { yDomain: { min: number; max: number } }) {
   );
 }
 
+function XAxis({
+  view,
+  xScale,
+  xDomain,
+  timelineDateLabel,
+}: {
+  view: ViewMode;
+  xScale: (value: number) => number;
+  xDomain: { min: number; max: number };
+  timelineDateLabel: string | null;
+}) {
+  const ticks = view === "diurnal"
+    ? [
+      { value: 0, label: "12a" },
+      { value: 360, label: "6a" },
+      { value: 720, label: "12p" },
+      { value: 1080, label: "6p" },
+      { value: 1440, label: "12a" },
+    ]
+    : timelineDateLabel || xDomain.min === xDomain.max
+      ? [{ value: (xDomain.min + xDomain.max) / 2, label: timelineDateLabel ?? formatDate(new Date(xDomain.min).toISOString()) }]
+      : Array.from({ length: 5 }, (_, index) => {
+        const value = xDomain.min + ((xDomain.max - xDomain.min) * index) / 4;
+        return { value, label: formatDate(new Date(value).toISOString()) };
+      });
+  return (
+    <g>
+      {ticks.map((tick, index) => {
+        const x = ticks.length === 1 ? (PLOT_LEFT + PLOT_RIGHT) / 2 : xScale(tick.value);
+        const textAnchor = ticks.length === 1 ? "middle" : index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle";
+        return (
+          <g key={tick.value}>
+            <line x1={x} x2={x} y1={MAIN_BOTTOM} y2={MAIN_BOTTOM + 4} stroke="rgba(255,255,255,0.18)" />
+            <text x={x} y={MAIN_BOTTOM + 14} textAnchor={textAnchor} fill="rgba(255,255,255,0.42)" fontSize={10}>{tick.label}</text>
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
 function IopHistoryTable({ rows }: { rows: Array<IopReading & { chValue: number | null }> }) {
   return (
     <div className="mt-4 overflow-x-auto rounded border border-white/10">
@@ -1151,6 +1197,12 @@ function dateKey(recordedAt: string): string {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
+}
+
+function singleDateLabel(items: ReadonlyArray<{ recordedAt: string }>): string | null {
+  if (items.length === 0) return null;
+  const dates = new Set(items.map((item) => dateKey(item.recordedAt)));
+  return dates.size === 1 ? formatDate(items[0].recordedAt) : null;
 }
 
 function recencyOpacity(rank: number, total: number): number {
