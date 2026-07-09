@@ -11,6 +11,7 @@ export default defineConfig({
       "/oauth2": { target: "http://localhost:8103", changeOrigin: true },
       // osod-core payment charge boundary (processor secrets live server-side only)
       "/payments": { target: "http://localhost:3333", changeOrigin: true },
+      "/claims": { target: "http://localhost:3333", changeOrigin: true },
     },
   },
 });

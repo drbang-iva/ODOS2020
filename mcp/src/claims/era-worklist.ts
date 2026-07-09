@@ -2,15 +2,23 @@ import type { Bundle, CodeableConcept, Task, TaskInput } from "@medplum/fhirtype
 import type { ClaimMdEraClaim, ClaimMdEraData } from "./claimmd-fhir.js";
 
 export const ERA_WORKLIST_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-worklist";
+export const CLAIM_REJECTED_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-claim-rejected-worklist";
 export const ERA_WORKLIST_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-status";
 export const ERA_WORKLIST_INPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-input";
 export const ERA_WORKLIST_OUTPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-output";
 
 export const ERA_WORKLIST_CODES = ["era-denial", "era-unmatched", "era-underpayment"] as const;
+export const CLAIM_REJECTED_CODES = ["claim-rejected"] as const;
+export const WORKLIST_CODE_REGISTRY = [
+  { system: ERA_WORKLIST_CODE_SYSTEM, codes: ERA_WORKLIST_CODES },
+  { system: CLAIM_REJECTED_CODE_SYSTEM, codes: CLAIM_REJECTED_CODES },
+] as const;
+export const WORKLIST_CODES = [...ERA_WORKLIST_CODES, ...CLAIM_REJECTED_CODES] as const;
 export const ERA_WORKLIST_STATUSES = ["new", "in-review", "resolved"] as const;
 export const ERA_WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok"] as const;
 
 export type EraWorklistCode = (typeof ERA_WORKLIST_CODES)[number];
+export type WorklistCode = (typeof WORKLIST_CODES)[number];
 export type EraWorklistStatus = (typeof ERA_WORKLIST_STATUSES)[number];
 export type EraWorklistDisposition = (typeof ERA_WORKLIST_DISPOSITIONS)[number];
 
@@ -30,12 +38,24 @@ export interface EraWorklistAttentionItem {
   id: string;
   taskReference: string;
   title: string;
+  code: WorklistCode;
   patientReference?: string;
+  focusReference?: string;
   severity: "high" | "medium";
   ageTimer: { startedAt: string; elapsedMinutes: number };
   action: "claim" | "resolve" | "none";
   owner?: string;
   status: EraWorklistStatus;
+  evidence: EraWorklistProjectedEvidence | ClaimRejectedProjectedEvidence;
+}
+
+export interface EraWorklistProjectedEvidence extends EraWorklistEvidence {
+  kind: "era";
+}
+
+export interface ClaimRejectedProjectedEvidence {
+  kind: "claim-rejected";
+  claimMdMessage: string;
 }
 
 export function eraWorklistEvidence(eraClaim: ClaimMdEraClaim, eraId: string): EraWorklistEvidence {
@@ -132,6 +152,28 @@ export function buildEraWorklistTask(input: {
   };
 }
 
+export function buildClaimRejectedWorklistTask(input: {
+  claimReference?: string;
+  patientReference?: string;
+  claimMdMessage: string;
+  authoredOn: string;
+}): Task {
+  return {
+    resourceType: "Task",
+    status: "ready",
+    intent: "order",
+    priority: "urgent",
+    code: codedConcept(CLAIM_REJECTED_CODE_SYSTEM, "claim-rejected", displayForWorklistCode("claim-rejected")),
+    businessStatus: eraWorklistStatusConcept("new"),
+    description: displayForWorklistCode("claim-rejected"),
+    authoredOn: input.authoredOn,
+    lastModified: input.authoredOn,
+    ...(input.claimReference ? { focus: { reference: input.claimReference } } : {}),
+    ...(input.patientReference ? { for: { reference: input.patientReference } } : {}),
+    input: [stringInput("claimmd-message", input.claimMdMessage)],
+  };
+}
+
 export function claimEraWorklistTask(task: Task, ownerReference: string, at: string): Task {
   assertEraWorklistTask(task);
   if (eraWorklistStatus(task) !== "new") {
@@ -200,7 +242,9 @@ export function projectEraWorklistTask(task: Task, at: string): EraWorklistAtten
     id: task.id,
     taskReference: `Task/${task.id}`,
     title: displayForWorklistCode(code),
+    code,
     ...(task.for?.reference ? { patientReference: task.for.reference } : {}),
+    ...(task.focus?.reference ? { focusReference: task.focus.reference } : {}),
     severity: code === "era-underpayment" ? "medium" : "high",
     ageTimer: {
       startedAt,
@@ -209,6 +253,7 @@ export function projectEraWorklistTask(task: Task, at: string): EraWorklistAtten
     action: status === "new" ? "claim" : status === "in-review" ? "resolve" : "none",
     ...(task.owner?.reference ? { owner: task.owner.reference } : {}),
     status,
+    evidence: projectedEvidence(task, code),
   };
 }
 
@@ -223,12 +268,14 @@ export function eraSnapshotFromTask(task: Task): ClaimMdEraData & { claim: Claim
   return parsed as ClaimMdEraData & { claim: ClaimMdEraClaim };
 }
 
-export function eraWorklistCode(task: Task): EraWorklistCode {
-  const code = task.code?.coding?.find((coding) => coding.system === ERA_WORKLIST_CODE_SYSTEM)?.code;
-  if (!ERA_WORKLIST_CODES.includes(code as EraWorklistCode)) {
-    throw new Error("Task is not coded as an OSOD ERA worklist item.");
+export function eraWorklistCode(task: Task): WorklistCode {
+  for (const entry of WORKLIST_CODE_REGISTRY) {
+    const code = task.code?.coding?.find((coding) => coding.system === entry.system)?.code;
+    if ((entry.codes as readonly string[]).includes(code ?? "")) {
+      return code as WorklistCode;
+    }
   }
-  return code as EraWorklistCode;
+  throw new Error("Task is not coded as a known OSOD claims worklist item.");
 }
 
 export function eraWorklistStatus(task: Task): EraWorklistStatus {
@@ -251,7 +298,12 @@ export class EraWorklistValidationError extends Error {}
 export class EraWorklistConflictError extends Error {}
 
 function isEraWorklistTask(task: Task): boolean {
-  return task.code?.coding?.some((coding) => coding.system === ERA_WORKLIST_CODE_SYSTEM) === true;
+  try {
+    eraWorklistCode(task);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function assertEraWorklistTask(task: Task): void {
@@ -280,10 +332,42 @@ function inputType(input: TaskInput): string | undefined {
   return input.type.coding?.find((coding) => coding.system === ERA_WORKLIST_INPUT_SYSTEM)?.code;
 }
 
-function displayForWorklistCode(code: EraWorklistCode): string {
+function displayForWorklistCode(code: WorklistCode): string {
   if (code === "era-denial") return "ERA denial requires review";
   if (code === "era-underpayment") return "ERA underpayment requires review";
+  if (code === "claim-rejected") return "Rejected claim requires correction";
   return "Unmatched ERA claim requires mapping";
+}
+
+function projectedEvidence(task: Task, code: WorklistCode): EraWorklistProjectedEvidence | ClaimRejectedProjectedEvidence {
+  if (code === "claim-rejected") {
+    return {
+      kind: "claim-rejected",
+      claimMdMessage: taskInputString(task, "claimmd-message") ?? "",
+    };
+  }
+  return {
+    kind: "era",
+    pcn: taskInputString(task, "pcn") ?? "",
+    ...(taskInputString(task, "payer-icn") ? { payerIcn: taskInputString(task, "payer-icn") } : {}),
+    eraId: taskInputString(task, "era-id") ?? "",
+    chargedCents: taskInputInteger(task, "charged-cents"),
+    allowedCents: taskInputInteger(task, "allowed-cents"),
+    paidCents: taskInputInteger(task, "paid-cents"),
+    patientResponsibilityCents: taskInputInteger(task, "patient-responsibility-cents"),
+    shortfallCents: taskInputInteger(task, "shortfall-cents"),
+    adjustments: (task.input ?? [])
+      .filter((entry) => inputType(entry) === "adjustment-group-code")
+      .map((entry) => JSON.parse(entry.valueString ?? "") as { group?: string; code?: string }),
+  };
+}
+
+function taskInputString(task: Task, code: string): string | undefined {
+  return task.input?.find((entry) => inputType(entry) === code)?.valueString;
+}
+
+function taskInputInteger(task: Task, code: string): number {
+  return task.input?.find((entry) => inputType(entry) === code)?.valueInteger ?? 0;
 }
 
 function isClaimReference(value: string | undefined): boolean {

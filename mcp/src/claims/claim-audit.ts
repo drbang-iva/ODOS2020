@@ -15,6 +15,7 @@ export const CLAIM_AUDIT_EVENT_TYPES = [
   "era.denial.flagged",
   "era.underpayment.flagged",
   "era.unmatched.flagged",
+  "claim.rejected.flagged",
   "claim.status.checked",
 ] as const satisfies readonly OsodAuditEventType[];
 

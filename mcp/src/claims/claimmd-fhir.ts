@@ -380,7 +380,7 @@ export function buildClaimResponseFromClaimMdStatus(input: {
     insurer: { reference: input.insurerReference },
     ...(input.providerReference ? { requestor: { reference: input.providerReference } } : {}),
     request: { reference: input.claimReference },
-    outcome: claimOutcome(String(claim.status ?? ""), message),
+    outcome: claimOutcome(String(claim.status_code ?? claim.status ?? ""), message),
     disposition: message || "Claim.MD status update",
     ...(claim.claimmd_id ? { preAuthRef: String(claim.claimmd_id) } : {}),
   };
