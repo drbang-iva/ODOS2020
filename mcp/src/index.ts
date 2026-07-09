@@ -43,6 +43,13 @@ import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
 } from "./payments/payment-endpoint.js";
+import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
+import {
+  handleClaimStatusRequest,
+  handleEligibilityCheckRequest,
+  handleEraImportRequest,
+  handleSubmitClaimRequest,
+} from "./claims/claimmd-handlers.js";
 import {
   SmartAuthorizationState,
   createSmartAuthorizationRouter,
@@ -5413,6 +5420,26 @@ async function main(): Promise<void> {
       // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
       // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
+      const claimMdConfig = claimMdConfigFromEnv(process.env);
+      const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
+      const authenticateClaimsRoute = async (header: string | undefined) => {
+        const resolved = await resolveStaffRole({
+          baseUrl: BASE_URL,
+          authHeader: header,
+          serviceClient: fhir,
+        });
+        if (!resolved || !header) {
+          return null;
+        }
+        return {
+          staffReference: resolved.staffReference,
+          actorRole: resolved.role,
+          fhir: createMedplumClient({
+            baseUrl: BASE_URL,
+            accessToken: header.slice("Bearer ".length),
+          }),
+        };
+      };
 
       app.post("/payments/charge", async (req, res) => {
         try {
@@ -5456,6 +5483,98 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /payments/charge failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "payment route failed" });
+          }
+        }
+      });
+
+      app.post("/claims/submit", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSubmitClaimRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/submit failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claim submission route failed" });
+          }
+        }
+      });
+
+      app.post("/eligibility/check", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEligibilityCheckRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /eligibility/check failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "eligibility route failed" });
+          }
+        }
+      });
+
+      app.get("/claims/:id/status", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const body = {
+            ...req.query,
+            ...(typeof req.body === "object" && req.body !== null ? req.body : {}),
+          };
+          const result = await handleClaimStatusRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), params: req.params, body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/:id/status failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claim status route failed" });
+          }
+        }
+      });
+
+      app.post("/claims/era/import", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEraImportRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/era/import failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "ERA import route failed" });
           }
         }
       });

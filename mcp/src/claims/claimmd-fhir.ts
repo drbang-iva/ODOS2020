@@ -1,0 +1,606 @@
+import type {
+  ChargeItem,
+  Claim,
+  ClaimResponse,
+  CodeableConcept,
+  CoverageEligibilityRequest,
+  CoverageEligibilityResponse,
+  Money,
+} from "@medplum/fhirtypes";
+
+export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
+
+export interface ClaimMdProviderInput {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  npi: string;
+  taxId?: string;
+  taxIdType?: "E" | "S";
+  taxonomy?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
+}
+
+export interface ClaimMdPersonInput {
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  dateOfBirth: string;
+  sex: "M" | "F" | "U";
+  memberId?: string;
+  relationshipCode?: string;
+  groupNumber?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
+export interface ProfessionalClaimDiagnosisInput {
+  system: string;
+  code: string;
+  display?: string;
+}
+
+export interface ProfessionalClaimInput {
+  created: string;
+  serviceDate: string;
+  patientReference: string;
+  providerReference: string;
+  insurerReference: string;
+  coverageReference: string;
+  patientAccountNumber: string;
+  payerId: string;
+  billingProvider: ClaimMdProviderInput;
+  renderingProvider: ClaimMdProviderInput;
+  subscriber: ClaimMdPersonInput;
+  patient: ClaimMdPersonInput;
+  diagnoses: ProfessionalClaimDiagnosisInput[];
+  chargeItems: ChargeItem[];
+  facilityReference?: string;
+}
+
+export interface ClaimMdProfessionalClaimPayload {
+  fileid: string;
+  claim: ClaimMdProfessionalClaim[];
+}
+
+export interface ClaimMdProfessionalClaim {
+  claim_form: "1500";
+  payerid: string;
+  pcn: string;
+  total_charge: string;
+  balance_due: string;
+  remote_claimid: string;
+  remote_fileid: string;
+  charge: ClaimMdProfessionalCharge[];
+  [key: string]: string | ClaimMdProfessionalCharge[];
+}
+
+export interface ClaimMdProfessionalCharge {
+  charge_record_type: "UN";
+  proc_code: string;
+  charge: string;
+  units: string;
+  from_date: string;
+  thru_date: string;
+  diag_ref: string;
+  remote_chgid?: string;
+  mod1?: string;
+  mod2?: string;
+  mod3?: string;
+  mod4?: string;
+}
+
+export interface ClaimMdEraAdjustment {
+  group?: string;
+  code?: string;
+  amount?: string;
+}
+
+export interface ClaimMdEraCharge {
+  chgid?: string;
+  proc_code?: string;
+  charge?: string;
+  allowed?: string;
+  paid?: string;
+  adjustment?: ClaimMdEraAdjustment | ClaimMdEraAdjustment[];
+}
+
+export interface ClaimMdEraClaim {
+  pcn?: string;
+  payer_icn?: string;
+  total_charge?: string;
+  total_paid?: string;
+  status_code?: string;
+  charge?: ClaimMdEraCharge | ClaimMdEraCharge[];
+}
+
+export interface ClaimMdEraData {
+  eraid?: string;
+  paid_date?: string;
+  payer_name?: string;
+  payment_method?: string;
+  claim?: ClaimMdEraClaim | ClaimMdEraClaim[];
+}
+
+export interface MedicalEligibilitySummary {
+  coverageStatus: "active" | "inactive" | "unknown";
+  deductibleRemainingCents?: number;
+  copayCents?: number;
+  coinsurancePercent?: number;
+  priorAuthRequired: boolean;
+}
+
+type CoverageEligibilityItem = NonNullable<
+  NonNullable<CoverageEligibilityResponse["insurance"]>[number]["item"]
+>[number];
+
+export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
+  if (!input.patientReference || !input.providerReference || !input.coverageReference) {
+    throw new Error("A professional Claim requires patient, provider, and coverage references.");
+  }
+  if (!input.diagnoses.length) {
+    throw new Error("A professional Claim requires at least one diagnosis supplied by the caller.");
+  }
+  if (!input.chargeItems.length) {
+    throw new Error("A professional Claim requires at least one billable ChargeItem.");
+  }
+
+  const items = input.chargeItems.map((chargeItem, index) => {
+    const coding = firstCoding(chargeItem);
+    const quantity = chargeItem.quantity?.value ?? 1;
+    const unitCents = moneyToCents(chargeItem.priceOverride);
+    return {
+      sequence: index + 1,
+      productOrService: {
+        coding: [
+          {
+            system: coding.system,
+            code: coding.code,
+            ...(coding.display ? { display: coding.display } : {}),
+          },
+        ],
+      },
+      diagnosisSequence: [1],
+      quantity: { value: quantity },
+      unitPrice: money(unitCents),
+      net: money(unitCents * quantity),
+    };
+  });
+
+  const totalCents = items.reduce((sum, item) => sum + moneyToCents(item.net), 0);
+
+  return {
+    resourceType: "Claim",
+    status: "active",
+    type: {
+      coding: [{ system: HL7_CLAIM_TYPE_SYSTEM, code: "professional", display: "Professional" }],
+    },
+    use: "claim",
+    patient: { reference: input.patientReference },
+    created: input.created,
+    insurer: { reference: input.insurerReference },
+    provider: { reference: input.providerReference },
+    ...(input.facilityReference ? { facility: { reference: input.facilityReference } } : {}),
+    priority: { text: "normal" },
+    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/osod-claim-pcn", value: input.patientAccountNumber }],
+    insurance: [
+      {
+        sequence: 1,
+        focal: true,
+        coverage: { reference: input.coverageReference },
+      },
+    ],
+    diagnosis: input.diagnoses.map((diagnosis, index) => ({
+      sequence: index + 1,
+      diagnosisCodeableConcept: {
+        coding: [{ system: diagnosis.system, code: diagnosis.code, ...(diagnosis.display ? { display: diagnosis.display } : {}) }],
+      },
+    })),
+    item: items,
+    total: money(totalCents),
+  };
+}
+
+export function buildClaimMdProfessionalClaimJson(
+  input: ProfessionalClaimInput,
+  claim: Claim,
+): ClaimMdProfessionalClaimPayload {
+  const totalCents = moneyToCents(claim.total);
+  const serviceDate = claimMdDate(input.serviceDate);
+  const lineItems = input.chargeItems.map((chargeItem): ClaimMdProfessionalCharge => {
+    const coding = firstCoding(chargeItem);
+    const modifierCodes = chargeItem.modifierExtension
+      ?.flatMap((extension) => extension.extension ?? [])
+      .map((extension) => String(extension.valueCode ?? ""))
+      .filter(Boolean)
+      .slice(0, 4) ?? [];
+    return {
+      charge_record_type: "UN",
+      proc_code: coding.code,
+      charge: centsString(moneyToCents(chargeItem.priceOverride)),
+      units: String(chargeItem.quantity?.value ?? 1),
+      from_date: serviceDate,
+      thru_date: serviceDate,
+      diag_ref: diagnosisRef(input.diagnoses.length),
+      ...(chargeItem.id ? { remote_chgid: chargeItem.id } : {}),
+      ...Object.fromEntries(modifierCodes.map((code, index) => [`mod${index + 1}`, code])),
+    };
+  });
+
+  const row: ClaimMdProfessionalClaim = {
+    claim_form: "1500",
+    payerid: input.payerId,
+    pcn: input.patientAccountNumber,
+    total_charge: centsString(totalCents),
+    balance_due: centsString(totalCents),
+    remote_claimid: claim.id ?? input.patientAccountNumber,
+    remote_fileid: `osod-${input.patientAccountNumber}`,
+    accept_assign: "Y",
+    auto_accident: "N",
+    employment_related: "N",
+    charge: lineItems,
+    ...claimMdDiagnosisFields(input.diagnoses),
+    ...claimMdBillingFields(input.billingProvider),
+    ...claimMdRenderingFields(input.renderingProvider),
+    ...claimMdSubscriberFields(input.subscriber),
+    ...claimMdPatientFields(input.patient, input.subscriber.relationshipCode ?? "18"),
+  };
+
+  return { fileid: `osod-${input.patientAccountNumber}`, claim: [row] };
+}
+
+export function buildCoverageEligibilityRequest(input: {
+  patientReference: string;
+  coverageReference: string;
+  insurerReference: string;
+  providerReference?: string;
+  created: string;
+  serviceDate: string;
+}): CoverageEligibilityRequest {
+  return {
+    resourceType: "CoverageEligibilityRequest",
+    status: "active",
+    purpose: ["validation", "benefits", "auth-requirements"],
+    patient: { reference: input.patientReference },
+    servicedDate: input.serviceDate,
+    created: input.created,
+    ...(input.providerReference ? { provider: { reference: input.providerReference } } : {}),
+    insurer: { reference: input.insurerReference },
+    insurance: [{ focal: true, coverage: { reference: input.coverageReference } }],
+  };
+}
+
+export function buildCoverageEligibilityResponseFromClaimMd(input: {
+  requestReference: string;
+  patientReference: string;
+  coverageReference: string;
+  insurerReference: string;
+  requestorReference?: string;
+  created: string;
+  claimMd: unknown;
+}): CoverageEligibilityResponse {
+  const benefits = claimMdBenefits(input.claimMd);
+  const inforce = benefits.some((benefit) =>
+    benefit.benefit_coverage_code === "1" ||
+    /active coverage/i.test(String(benefit.benefit_coverage_description ?? "")),
+  );
+
+  return {
+    resourceType: "CoverageEligibilityResponse",
+    status: "active",
+    purpose: ["validation", "benefits", "auth-requirements"],
+    patient: { reference: input.patientReference },
+    created: input.created,
+    ...(input.requestorReference ? { requestor: { reference: input.requestorReference } } : {}),
+    request: { reference: input.requestReference },
+    outcome: "complete",
+    insurer: { reference: input.insurerReference },
+    insurance: [
+      {
+        coverage: { reference: input.coverageReference },
+        inforce,
+        item: benefits.map((benefit) => eligibilityItem(benefit)),
+      },
+    ],
+  };
+}
+
+export function buildClaimResponseFromClaimMdEra(input: {
+  claimReference: string;
+  patientReference: string;
+  insurerReference: string;
+  providerReference?: string;
+  created: string;
+  era: ClaimMdEraData & { claim: ClaimMdEraClaim };
+}): ClaimResponse {
+  const claim = input.era.claim;
+  const charges = arrayOf(claim.charge);
+  const totalPaidCents = decimalStringToCents(claim.total_paid);
+
+  return {
+    resourceType: "ClaimResponse",
+    status: "active",
+    type: { coding: [{ system: HL7_CLAIM_TYPE_SYSTEM, code: "professional", display: "Professional" }] },
+    use: "claim",
+    patient: { reference: input.patientReference },
+    created: input.created,
+    insurer: { reference: input.insurerReference },
+    ...(input.providerReference ? { requestor: { reference: input.providerReference } } : {}),
+    request: { reference: input.claimReference },
+    outcome: claim.status_code === "4" ? "error" : "complete",
+    disposition: input.era.payer_name ? `Claim.MD ERA from ${input.era.payer_name}` : "Claim.MD ERA",
+    ...(claim.payer_icn ? { preAuthRef: claim.payer_icn } : {}),
+    item: charges.map((charge, index) => ({
+      itemSequence: index + 1,
+      adjudication: [
+        adjudication("submitted", decimalStringToCents(charge.charge)),
+        adjudication("allowed", decimalStringToCents(charge.allowed)),
+        adjudication("paid", decimalStringToCents(charge.paid)),
+        adjudication("patient responsibility", patientResponsibilityCents(charge)),
+        ...arrayOf(charge.adjustment).map((adjustment) =>
+          adjudication(
+            ["adjustment", adjustment.group, adjustment.code].filter(Boolean).join(" "),
+            decimalStringToCents(adjustment.amount),
+          ),
+        ),
+      ].filter((entry) => moneyToCents(entry.amount) > 0),
+    })),
+    payment: {
+      type: { text: input.era.payment_method ? `Claim.MD ERA ${input.era.payment_method}` : "Claim.MD ERA" },
+      date: isoDateFromClaimMd(input.era.paid_date) ?? input.created,
+      amount: money(totalPaidCents),
+      ...(input.era.eraid ? { identifier: { system: "https://osod.dev/fhir/NamingSystem/claimmd-era", value: input.era.eraid } } : {}),
+    },
+  };
+}
+
+export function buildClaimResponseFromClaimMdStatus(input: {
+  claimReference: string;
+  patientReference: string;
+  insurerReference: string;
+  providerReference?: string;
+  created: string;
+  status: unknown;
+}): ClaimResponse {
+  const claim = firstClaimMdClaim(input.status);
+  const message = claimMessage(claim);
+  return {
+    resourceType: "ClaimResponse",
+    status: "active",
+    type: { coding: [{ system: HL7_CLAIM_TYPE_SYSTEM, code: "professional", display: "Professional" }] },
+    use: "claim",
+    patient: { reference: input.patientReference },
+    created: input.created,
+    insurer: { reference: input.insurerReference },
+    ...(input.providerReference ? { requestor: { reference: input.providerReference } } : {}),
+    request: { reference: input.claimReference },
+    outcome: claimOutcome(String(claim.status ?? ""), message),
+    disposition: message || "Claim.MD status update",
+    ...(claim.claimmd_id ? { preAuthRef: String(claim.claimmd_id) } : {}),
+  };
+}
+
+export function medicalEligibilitySummary(response: Pick<CoverageEligibilityResponse, "insurance">): MedicalEligibilitySummary {
+  const insurance = response.insurance?.[0];
+  const items = insurance?.item ?? [];
+  return {
+    coverageStatus: insurance?.inforce === true ? "active" : insurance?.inforce === false ? "inactive" : "unknown",
+    deductibleRemainingCents: moneyBenefit(items, /deductible/i),
+    copayCents: moneyBenefit(items, /co-?payment|copay/i),
+    coinsurancePercent: unsignedBenefit(items, /co-?insurance|coinsurance/i),
+    priorAuthRequired: items.some((item) => item.authorizationRequired || /prior auth/i.test(`${item.name ?? ""} ${item.description ?? ""}`)),
+  };
+}
+
+function firstCoding(chargeItem: ChargeItem): { system: string; code: string; display?: string } {
+  const coding = chargeItem.code.coding?.[0];
+  if (!coding?.system || !coding.code) {
+    throw new Error("ChargeItem must carry a coded productOrService for Claim.MD submission.");
+  }
+  return { system: coding.system, code: coding.code, ...(coding.display ? { display: coding.display } : {}) };
+}
+
+function money(cents: number): Money {
+  return { value: cents / 100, currency: "USD" };
+}
+
+function moneyToCents(value: Money | undefined): number {
+  if (typeof value?.value !== "number" || value.value < 0) {
+    throw new Error("Expected a nonnegative USD Money value.");
+  }
+  return Math.round(value.value * 100);
+}
+
+function decimalStringToCents(value: string | undefined): number {
+  if (!value) return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.round(parsed * 100);
+}
+
+function centsString(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+function claimMdDate(date: string): string {
+  if (/^\d{8}$/.test(date)) return date;
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new Error("Claim.MD service dates must be YYYY-MM-DD or YYYYMMDD.");
+  }
+  return `${match[1]}${match[2]}${match[3]}`;
+}
+
+function isoDateFromClaimMd(date: string | undefined): string | undefined {
+  if (!date) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const match = date.match(/^(\d{4})(\d{2})(\d{2})$/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
+}
+
+function diagnosisRef(count: number): string {
+  return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, Math.min(count, 4));
+}
+
+function claimMdDiagnosisFields(diagnoses: ProfessionalClaimDiagnosisInput[]): Record<string, string> {
+  return Object.fromEntries(diagnoses.slice(0, 12).map((diagnosis, index) => [`diag_${index + 1}`, diagnosis.code]));
+}
+
+function claimMdBillingFields(provider: ClaimMdProviderInput): Record<string, string> {
+  return compact({
+    bill_name: provider.name,
+    bill_npi: provider.npi,
+    bill_taxid: provider.taxId,
+    bill_taxid_type: provider.taxIdType,
+    bill_addr_1: provider.address1,
+    bill_city: provider.city,
+    bill_state: provider.state,
+    bill_zip: provider.zip,
+    bill_phone: provider.phone,
+  });
+}
+
+function claimMdRenderingFields(provider: ClaimMdProviderInput): Record<string, string> {
+  return compact({
+    prov_name_f: provider.firstName,
+    prov_name_l: provider.lastName ?? provider.name,
+    prov_npi: provider.npi,
+    prov_taxonomy: provider.taxonomy,
+    prov_taxid: provider.taxId,
+    prov_taxid_type: provider.taxIdType,
+    prov_addr_1: provider.address1,
+    prov_city: provider.city,
+    prov_state: provider.state,
+    prov_zip: provider.zip,
+  });
+}
+
+function claimMdSubscriberFields(person: ClaimMdPersonInput): Record<string, string> {
+  return compact({
+    ins_name_f: person.firstName,
+    ins_name_l: person.lastName,
+    ins_name_m: person.middleName,
+    ins_number: person.memberId,
+    ins_group: person.groupNumber,
+    ins_dob: claimMdDate(person.dateOfBirth),
+    ins_sex: person.sex,
+    ins_addr_1: person.address1,
+    ins_city: person.city,
+    ins_state: person.state,
+    ins_zip: person.zip,
+  });
+}
+
+function claimMdPatientFields(person: ClaimMdPersonInput, relationshipCode: string): Record<string, string> {
+  return compact({
+    pat_rel: relationshipCode,
+    pat_name_f: person.firstName,
+    pat_name_l: person.lastName,
+    pat_name_m: person.middleName,
+    pat_dob: claimMdDate(person.dateOfBirth),
+    pat_sex: person.sex,
+    pat_addr_1: person.address1,
+    pat_city: person.city,
+    pat_state: person.state,
+    pat_zip: person.zip,
+  });
+}
+
+function compact(input: Record<string, string | undefined>): Record<string, string> {
+  return Object.fromEntries(Object.entries(input).filter((entry): entry is [string, string] => Boolean(entry[1])));
+}
+
+function claimMdBenefits(raw: unknown): Array<Record<string, string>> {
+  const record = raw as { result?: { elig?: { benefit?: unknown } } };
+  return arrayOf(record.result?.elig?.benefit).map((benefit) => benefit as Record<string, string>);
+}
+
+function eligibilityItem(benefit: Record<string, string>): CoverageEligibilityItem {
+  const description = benefit.benefit_coverage_description ?? benefit.benefit_description ?? "Eligibility benefit";
+  const amountCents = decimalStringToCents(benefit.benefit_amount);
+  const percent = numericPercent(benefit.benefit_percent);
+  const priorAuth = /prior auth/i.test(description);
+  return {
+    name: description,
+    description: benefit.benefit_description,
+    category: { text: benefit.benefit_description ?? "medical eligibility" },
+    authorizationRequired: priorAuth || undefined,
+    benefit: [
+      amountCents > 0
+        ? { type: { text: benefitTypeText(description) }, allowedMoney: money(amountCents) }
+        : undefined,
+      percent !== undefined
+        ? { type: { text: benefitTypeText(description) }, allowedUnsignedInt: percent }
+        : undefined,
+    ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+  };
+}
+
+function benefitTypeText(description: string): string {
+  if (/deductible/i.test(description)) return "remaining";
+  if (/co-?payment|copay/i.test(description)) return "copay";
+  if (/co-?insurance|coinsurance/i.test(description)) return "coinsurance";
+  return description.toLowerCase();
+}
+
+function numericPercent(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function adjudication(category: string, cents: number): NonNullable<ClaimResponse["item"]>[number]["adjudication"][number] {
+  return { category: { text: category }, amount: money(cents) };
+}
+
+function patientResponsibilityCents(charge: ClaimMdEraCharge): number {
+  return arrayOf(charge.adjustment)
+    .filter((adjustment) => adjustment.group === "PR")
+    .reduce((sum, adjustment) => sum + decimalStringToCents(adjustment.amount), 0);
+}
+
+function arrayOf<T>(value: T | T[] | undefined): T[] {
+  if (value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function firstClaimMdClaim(status: unknown): Record<string, unknown> {
+  const result = (status as { result?: { claim?: unknown } }).result;
+  return (arrayOf(result?.claim as Record<string, unknown> | Record<string, unknown>[])[0] ?? {}) as Record<string, unknown>;
+}
+
+function claimMessage(claim: Record<string, unknown>): string {
+  const messages = claim.messages ?? claim.message;
+  if (Array.isArray(messages)) return messages.map((m) => String((m as { message?: unknown }).message ?? m)).join("; ");
+  if (typeof messages === "object" && messages) return String((messages as { message?: unknown }).message ?? "");
+  return typeof messages === "string" ? messages : "";
+}
+
+function claimOutcome(status: string, message: string): ClaimResponse["outcome"] {
+  if (/reject|deny|error|failed/i.test(`${status} ${message}`)) return "error";
+  if (/paid|finalized|complete/i.test(message)) return "complete";
+  return "queued";
+}
+
+function moneyBenefit(
+  items: NonNullable<CoverageEligibilityResponse["insurance"]>[number]["item"],
+  pattern: RegExp,
+): number | undefined {
+  const item = items?.find((candidate) => pattern.test(`${candidate.name ?? ""} ${candidate.description ?? ""}`));
+  const value = item?.benefit?.find((benefit) => benefit.allowedMoney)?.allowedMoney;
+  return value ? moneyToCents(value) : undefined;
+}
+
+function unsignedBenefit(
+  items: NonNullable<CoverageEligibilityResponse["insurance"]>[number]["item"],
+  pattern: RegExp,
+): number | undefined {
+  const item = items?.find((candidate) => pattern.test(`${candidate.name ?? ""} ${candidate.description ?? ""}`));
+  return item?.benefit?.find((benefit) => benefit.allowedUnsignedInt !== undefined)?.allowedUnsignedInt;
+}
