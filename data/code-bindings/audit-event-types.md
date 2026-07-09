@@ -74,6 +74,9 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `eligibility.check.failed` | claim-event | Claim.MD eligibility check failed; audited against the CoverageEligibilityRequest when one was created. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.import.completed` | claim-event | Claim.MD ERA import completed; audited against the created PaymentReconciliation when payment posted. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.import.failed` | claim-event | Claim.MD ERA import failed; audited against the ERA id. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.denial.flagged` | claim-event | A matched zero-pay ERA claim created a claimable denial Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.underpayment.flagged` | claim-event | A paid ERA claim with a true allowed-minus-paid-minus-patient-responsibility shortfall created an underpayment Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.unmatched.flagged` | claim-event | An ERA claim without a local PCN mapping created a recoverable unmatched Task. Ledger: claimmd-clearinghouse-ledger.md. |
 | `claim.status.checked` | claim-event | Claim.MD status polling completed or failed; audited against the ClaimResponse or Claim. Ledger: claimmd-clearinghouse-ledger.md. |
 | `payment.refund.attempted` | payment-event | Refund initiated (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.refund.completed` | payment-event | Refund completed (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |

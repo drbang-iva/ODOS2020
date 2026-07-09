@@ -53,9 +53,13 @@ import {
 } from "./clinical-graph/iop-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
+  eraUnderpaymentThresholdCentsFromEnv,
+  handleClaimEraWorklistTaskRequest,
   handleClaimStatusRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
+  handleEraWorklistRequest,
+  handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
 } from "./claims/claimmd-handlers.js";
 import {
@@ -5430,6 +5434,7 @@ async function main(): Promise<void> {
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
       const claimMdConfig = claimMdConfigFromEnv(process.env);
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
+      const eraUnderpaymentThresholdCents = eraUnderpaymentThresholdCentsFromEnv(process.env);
       const authenticateStaffRoute = async (header: string | undefined) => {
         const resolved = await resolveStaffRole({
           baseUrl: BASE_URL,
@@ -5636,6 +5641,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              eraUnderpaymentThresholdCents,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -5647,6 +5653,73 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /claims/era/import failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "ERA import route failed" });
+          }
+        }
+      });
+
+      app.get("/claims/worklist", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEraWorklistRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/worklist failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claims worklist route failed" });
+          }
+        }
+      });
+
+      app.post("/claims/worklist/:id/claim", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleClaimEraWorklistTaskRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/worklist/:id/claim failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claims worklist claim route failed" });
+          }
+        }
+      });
+
+      app.post("/claims/worklist/:id/resolve", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleResolveEraWorklistTaskRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              eraUnderpaymentThresholdCents,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/worklist/:id/resolve failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claims worklist resolve route failed" });
           }
         }
       });

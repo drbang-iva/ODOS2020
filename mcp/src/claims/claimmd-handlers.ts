@@ -4,12 +4,29 @@ import type {
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
   PaymentReconciliation,
+  Task,
 } from "@medplum/fhirtypes";
-import type { OsodActorRole, OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { buildOsodAuditEventRow, type OsodActorRole, type OsodAuditEventRecord } from "../authz/osodAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import type { MedplumClient } from "../fhir-client.js";
 import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
+import {
+  ERA_WORKLIST_CODE_SYSTEM,
+  ERA_WORKLIST_STATUS_SYSTEM,
+  EraWorklistConflictError,
+  EraWorklistValidationError,
+  buildEraWorklistTask,
+  claimEraWorklistTask,
+  eraSnapshotFromTask,
+  eraWorklistEvidence,
+  isEraWorklistDisposition,
+  isEraWorklistStatus,
+  projectEraWorklistBundle,
+  resolveEraWorklistTask,
+  type EraWorklistCode,
+} from "./era-worklist.js";
 import {
   buildClaimMdProfessionalClaimJson,
   buildClaimResponseFromClaimMdEra,
@@ -26,15 +43,14 @@ import {
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OsodActorRole;
-  fhir: {
-    create<T extends Claim | ClaimResponse | CoverageEligibilityRequest | CoverageEligibilityResponse | PaymentReconciliation>(resource: T): Promise<T>;
-  };
+  fhir: Pick<MedplumClient, "create" | "search" | "read" | "update">;
 }
 
 export interface ClaimsHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedClaimsStaff | null>;
   adapter: ClaimMdAdapter | null;
   recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  eraUnderpaymentThresholdCents?: number;
   now?: () => string;
 }
 
@@ -219,6 +235,7 @@ export async function handleEraImportRequest(
     insurerReference?: string;
     providerReference?: string;
     practiceOrgReference?: string;
+    appealDeadlineByPcn?: Record<string, string>;
   };
   if (!body.eraId || !body.claimReferenceByPcn || !body.patientReferenceByPcn || !body.insurerReference) {
     return { status: 400, body: { error: "eraId, claimReferenceByPcn, patientReferenceByPcn, and insurerReference are required." } };
@@ -226,7 +243,10 @@ export async function handleEraImportRequest(
 
   const claimResponseIds: string[] = [];
   const paymentReconciliationIds: string[] = [];
+  const taskIds: string[] = [];
   let posted = 0;
+  let denied = 0;
+  let underpaid = 0;
   let flagged = 0;
   try {
     const era = await deps.adapter.retrieveEraData(body.eraId) as ClaimMdEraData;
@@ -235,40 +255,50 @@ export async function handleEraImportRequest(
       const claimReference = body.claimReferenceByPcn[pcn];
       const patientReference = body.patientReferenceByPcn[pcn];
       if (!claimReference || !patientReference) {
+        const task = await auth.fhir.create(buildEraWorklistTask({
+          code: "era-unmatched",
+          era: { ...era, eraid: era.eraid ?? body.eraId },
+          eraClaim,
+          authoredOn: now(deps),
+          appealDeadline: body.appealDeadlineByPcn?.[pcn],
+        }));
+        taskIds.push(requiredId(task));
+        await audit(deps, auth, "era.unmatched.flagged", "success", ref(task));
         flagged += 1;
         continue;
       }
 
-      const response = await auth.fhir.create(buildClaimResponseFromClaimMdEra({
+      const result = await persistMatchedEraClaim(deps, auth, {
+        era: { ...era, eraid: era.eraid ?? body.eraId },
+        eraClaim,
         claimReference,
         patientReference,
         insurerReference: body.insurerReference,
         providerReference: body.providerReference,
-        created: today(deps),
-        era: { ...era, claim: eraClaim },
-      }));
-      claimResponseIds.push(response.id!);
-
-      const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
-      if (paidCents > 0) {
-        const pr = await auth.fhir.create(buildInsurancePaymentReconciliation({
-          createdIso: now(deps),
-          paymentDate: response.payment?.date ?? today(deps),
-          amountCents: paidCents,
-          claimReference,
-          claimResponseReference: ref(response),
-          insurerReference: body.insurerReference,
-          practiceOrgReference: body.practiceOrgReference,
-          processorTransactionId: era.eraid ?? body.eraId,
-          processorTransactionSystem: CLAIMMD_ERA_PAYMENT_SYSTEM,
-          description: `Claim.MD ERA ${era.eraid ?? body.eraId}`,
-        }));
-        paymentReconciliationIds.push(pr.id!);
-      }
-      posted += 1;
+        practiceOrgReference: body.practiceOrgReference,
+        appealDeadline: body.appealDeadlineByPcn?.[pcn],
+      });
+      claimResponseIds.push(...result.claimResponseIds);
+      paymentReconciliationIds.push(...result.paymentReconciliationIds);
+      taskIds.push(...result.taskIds);
+      posted += result.posted;
+      denied += result.denied;
+      underpaid += result.underpaid;
     }
     await audit(deps, auth, "era.import.completed", "success", `PaymentReconciliation/${paymentReconciliationIds[0] ?? "none"}`);
-    return { status: 200, body: { eraId: body.eraId, posted, flagged, claimResponseIds, paymentReconciliationIds } };
+    return {
+      status: 200,
+      body: {
+        eraId: body.eraId,
+        posted,
+        denied,
+        underpaid,
+        flagged,
+        taskIds,
+        claimResponseIds,
+        paymentReconciliationIds,
+      },
+    };
   } catch (error) {
     await audit(
       deps,
@@ -281,6 +311,241 @@ export async function handleEraImportRequest(
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
   }
+}
+
+export async function handleEraWorklistRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; query?: { status?: unknown } },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const requestedStatus = stringValue(input.query?.status);
+  if (requestedStatus && !isEraWorklistStatus(requestedStatus)) {
+    return { status: 400, body: { error: "status must be new, in-review, or resolved." } };
+  }
+  const bundle = await auth.fhir.search<Task>("Task", {
+    code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
+    ...(requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
+    _count: "100",
+    _sort: "-authored-on",
+  });
+  return { status: 200, body: { items: projectEraWorklistBundle(bundle, now(deps)) } };
+}
+
+export async function handleClaimEraWorklistTaskRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; params: { id?: string } },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!input.params.id) return { status: 400, body: { error: "worklist Task id is required." } };
+  try {
+    const task = await auth.fhir.read<Task>("Task", input.params.id);
+    const updated = await auth.fhir.update<Task>(
+      "Task",
+      input.params.id,
+      claimEraWorklistTask(task, auth.staffReference, now(deps)),
+    );
+    await auditTaskWrite(deps, auth, updated, "ERA_WORKLIST claimed");
+    return { status: 200, body: { task: updated } };
+  } catch (error) {
+    if (error instanceof EraWorklistConflictError) return { status: 409, body: { error: error.message } };
+    if (error instanceof EraWorklistValidationError) return { status: 400, body: { error: error.message } };
+    throw error;
+  }
+}
+
+export async function handleResolveEraWorklistTaskRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; params: { id?: string }; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!input.params.id) return { status: 400, body: { error: "worklist Task id is required." } };
+  const body = input.body as {
+    disposition?: unknown;
+    claimReference?: unknown;
+    patientReference?: unknown;
+    insurerReference?: unknown;
+    providerReference?: unknown;
+    practiceOrgReference?: unknown;
+  };
+  if (!isEraWorklistDisposition(body.disposition)) {
+    return { status: 400, body: { error: "A coded resolution disposition is required." } };
+  }
+  const claimReference = stringValue(body.claimReference);
+  try {
+    const task = await auth.fhir.read<Task>("Task", input.params.id);
+    const resolvedTask = resolveEraWorklistTask(
+      task,
+      { disposition: body.disposition, claimReference },
+      now(deps),
+    );
+    let reimport: EraClaimPersistenceResult | undefined;
+    if (body.disposition === "matched") {
+      const patientReference = stringValue(body.patientReference);
+      const insurerReference = stringValue(body.insurerReference);
+      if (!claimReference || !patientReference || !insurerReference) {
+        return {
+          status: 400,
+          body: { error: "matched requires claimReference, patientReference, and insurerReference." },
+        };
+      }
+      const era = eraSnapshotFromTask(task);
+      reimport = await persistMatchedEraClaim(deps, auth, {
+        era,
+        eraClaim: era.claim,
+        claimReference,
+        patientReference,
+        insurerReference,
+        providerReference: stringValue(body.providerReference),
+        practiceOrgReference: stringValue(body.practiceOrgReference),
+      });
+    }
+    const updated = await auth.fhir.update<Task>(
+      "Task",
+      input.params.id,
+      resolvedTask,
+    );
+    await auditTaskWrite(deps, auth, updated, `ERA_WORKLIST resolved disposition=${body.disposition}`);
+    return { status: 200, body: { task: updated, ...(reimport ? { reimport } : {}) } };
+  } catch (error) {
+    if (error instanceof EraWorklistConflictError) return { status: 409, body: { error: error.message } };
+    if (error instanceof EraWorklistValidationError) return { status: 400, body: { error: error.message } };
+    throw error;
+  }
+}
+
+interface EraClaimPersistenceResult {
+  posted: number;
+  denied: number;
+  underpaid: number;
+  claimResponseIds: string[];
+  paymentReconciliationIds: string[];
+  taskIds: string[];
+}
+
+async function persistMatchedEraClaim(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  input: {
+    era: ClaimMdEraData;
+    eraClaim: ClaimMdEraClaim;
+    claimReference: string;
+    patientReference: string;
+    insurerReference: string;
+    providerReference?: string;
+    practiceOrgReference?: string;
+    appealDeadline?: string;
+  },
+): Promise<EraClaimPersistenceResult> {
+  const response = await auth.fhir.create(buildClaimResponseFromClaimMdEra({
+    claimReference: input.claimReference,
+    patientReference: input.patientReference,
+    insurerReference: input.insurerReference,
+    providerReference: input.providerReference,
+    created: today(deps),
+    era: { ...input.era, claim: input.eraClaim },
+  }));
+  const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
+  const evidence = eraWorklistEvidence(input.eraClaim, input.era.eraid ?? "");
+  const paymentReconciliationIds: string[] = [];
+  const taskIds: string[] = [];
+  let posted = 0;
+  let denied = 0;
+  let underpaid = 0;
+
+  if (paidCents > 0) {
+    const pr = await auth.fhir.create(buildInsurancePaymentReconciliation({
+      createdIso: now(deps),
+      paymentDate: response.payment?.date ?? today(deps),
+      amountCents: paidCents,
+      claimReference: input.claimReference,
+      claimResponseReference: ref(response),
+      insurerReference: input.insurerReference,
+      practiceOrgReference: input.practiceOrgReference,
+      processorTransactionId: input.era.eraid ?? "unknown-era",
+      processorTransactionSystem: CLAIMMD_ERA_PAYMENT_SYSTEM,
+      description: `Claim.MD ERA ${input.era.eraid ?? "unknown"}`,
+    }));
+    paymentReconciliationIds.push(requiredId(pr));
+    posted = 1;
+  }
+
+  if (paidCents === 0) {
+    const task = await createAndAuditEraWorklistTask(deps, auth, "era-denial", input, response);
+    taskIds.push(requiredId(task));
+    denied = 1;
+  } else if (
+    evidence.shortfallCents > 0
+    && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1)
+  ) {
+    const task = await createAndAuditEraWorklistTask(deps, auth, "era-underpayment", input, response);
+    taskIds.push(requiredId(task));
+    underpaid = 1;
+  }
+
+  return {
+    posted,
+    denied,
+    underpaid,
+    claimResponseIds: [requiredId(response)],
+    paymentReconciliationIds,
+    taskIds,
+  };
+}
+
+async function createAndAuditEraWorklistTask(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  code: Exclude<EraWorklistCode, "era-unmatched">,
+  input: {
+    era: ClaimMdEraData;
+    eraClaim: ClaimMdEraClaim;
+    patientReference: string;
+    appealDeadline?: string;
+  },
+  response: ClaimResponse,
+): Promise<Task> {
+  const task = await auth.fhir.create(buildEraWorklistTask({
+    code,
+    era: input.era,
+    eraClaim: input.eraClaim,
+    claimResponseReference: ref(response),
+    patientReference: input.patientReference,
+    authoredOn: now(deps),
+    appealDeadline: input.appealDeadline,
+  }));
+  const eventType = code === "era-denial" ? "era.denial.flagged" : "era.underpayment.flagged";
+  await audit(deps, auth, eventType, "success", ref(task), input.patientReference);
+  return task;
+}
+
+export function eraUnderpaymentThresholdCentsFromEnv(env: Record<string, string | undefined>): number {
+  const value = env.OSOD_ERA_UNDERPAYMENT_THRESHOLD_CENTS;
+  if (value === undefined || value === "") return 1;
+  if (!/^\d+$/.test(value)) {
+    throw new Error("OSOD_ERA_UNDERPAYMENT_THRESHOLD_CENTS must be a nonnegative whole number of cents.");
+  }
+  return Number(value);
+}
+
+async function auditTaskWrite(
+  deps: ClaimsHandlerDeps,
+  staff: AuthenticatedClaimsStaff,
+  task: Task,
+  actionReason: string,
+): Promise<void> {
+  await deps.recordAudit(buildOsodAuditEventRow({
+    eventType: "update",
+    actorReference: staff.staffReference,
+    actorRole: staff.actorRole,
+    patientReference: task.for?.reference,
+    targetReference: ref(task),
+    actionOutcome: "granted",
+    actionReason,
+    eventTime: now(deps),
+  }));
 }
 
 async function authenticateClaimsManager(
@@ -330,6 +595,11 @@ async function audit(
 function ref(resource: { resourceType: string; id?: string }): string {
   if (!resource.id) throw new Error(`${resource.resourceType} create did not return an id.`);
   return `${resource.resourceType}/${resource.id}`;
+}
+
+function requiredId(resource: { resourceType: string; id?: string }): string {
+  if (!resource.id) throw new Error(`${resource.resourceType} create did not return an id.`);
+  return resource.id;
 }
 
 function now(deps: Pick<ClaimsHandlerDeps, "now">): string {
