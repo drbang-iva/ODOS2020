@@ -83,7 +83,17 @@ test("claimMdConfigFromEnv gates live routes until an operator supplies the Acco
   assert.deepEqual(claimMdConfigFromEnv({ CLAIMMD_ACCOUNT_KEY: "key" }), {
     accountKey: "key",
     baseUrl: CLAIMMD_DEFAULT_BASE_URL,
+    mode: "test",
+  });
+  assert.deepEqual(claimMdConfigFromEnv({ CLAIMMD_ACCOUNT_KEY: "key", CLAIMMD_MODE: "production" }), {
+    accountKey: "key",
+    baseUrl: CLAIMMD_DEFAULT_BASE_URL,
     mode: "production",
+  });
+  assert.deepEqual(claimMdConfigFromEnv({ CLAIMMD_ACCOUNT_KEY: "key", CLAIMMD_MODE: "prod" }), {
+    accountKey: "key",
+    baseUrl: CLAIMMD_DEFAULT_BASE_URL,
+    mode: "test",
   });
   assert.deepEqual(
     claimMdConfigFromEnv({

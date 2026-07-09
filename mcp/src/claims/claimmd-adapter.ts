@@ -27,7 +27,7 @@ export function claimMdConfigFromEnv(env: Record<string, string | undefined>): C
   if (!env.CLAIMMD_ACCOUNT_KEY) {
     throw new Error("Claim.MD adapter is partially configured — missing CLAIMMD_ACCOUNT_KEY.");
   }
-  const mode = env.CLAIMMD_MODE === "test" ? "test" : "production";
+  const mode = env.CLAIMMD_MODE === "production" ? "production" : "test";
   return {
     accountKey: env.CLAIMMD_ACCOUNT_KEY,
     baseUrl: (env.CLAIMMD_BASE_URL ?? CLAIMMD_DEFAULT_BASE_URL).replace(/\/$/, ""),

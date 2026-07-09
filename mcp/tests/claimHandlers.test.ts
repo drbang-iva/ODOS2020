@@ -222,3 +222,29 @@ test("claims.manage denial happens before adapter calls or audit writes", async 
   assert.equal(called, false);
   assert.equal(audits.length, 0);
 });
+
+test("Claim.MD adapter failures audit a sanitized reason without response-body PHI", async () => {
+  const { audits, created, deps: d } = deps();
+  const phiToken = "MEMBER=JANE DOE";
+  d.adapter.submitProfessionalClaim = async () => {
+    throw new Error(`Claim.MD request failed with HTTP 502: ${phiToken}`);
+  };
+
+  const res = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+
+  assert.equal(res.status, 502);
+  assert.match((res.body as { error: string }).error, new RegExp(phiToken));
+  assert.equal(created.Claim.length, 1);
+  assert.equal(audits.length, 1);
+  assert.equal(audits[0].eventType, "claim.submit.failed");
+  assert.equal(audits[0].actionOutcome, "denied");
+  assert.equal(audits[0].resourceType, "Claim");
+  assert.equal(audits[0].resourceId, "claim-1");
+  assert.equal(audits[0].patientId, "pat-900");
+  assert.match(audits[0].actionReason ?? "", /submitProfessionalClaim/);
+  assert.match(audits[0].actionReason ?? "", /HTTP 502/);
+  assert.doesNotMatch(audits[0].actionReason ?? "", new RegExp(phiToken));
+});

@@ -81,7 +81,7 @@ export async function handleSubmitClaimRequest(
       "failure",
       createdClaim ? ref(createdClaim) : "Claim/uncreated",
       body.claim.patientReference,
-      messageOf(error),
+      claimMdFailureAuditReason("submitProfessionalClaim", error),
     );
     return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
   }
@@ -138,7 +138,15 @@ export async function handleEligibilityCheckRequest(
       },
     };
   } catch (error) {
-    await audit(deps, auth, "eligibility.check.failed", "failure", request ? ref(request) : "CoverageEligibilityRequest/uncreated", body.patientReference, messageOf(error));
+    await audit(
+      deps,
+      auth,
+      "eligibility.check.failed",
+      "failure",
+      request ? ref(request) : "CoverageEligibilityRequest/uncreated",
+      body.patientReference,
+      claimMdFailureAuditReason("checkEligibility", error),
+    );
     return { status: 502, body: { error: `Eligibility check failed: ${messageOf(error)}` } };
   }
 }
@@ -183,7 +191,15 @@ export async function handleClaimStatusRequest(
     await audit(deps, auth, "claim.status.checked", "success", ref(response), patientReference);
     return { status: 200, body: { claimResponseId: response.id, response } };
   } catch (error) {
-    await audit(deps, auth, "claim.status.checked", "failure", `Claim/${input.params.id}`, patientReference, messageOf(error));
+    await audit(
+      deps,
+      auth,
+      "claim.status.checked",
+      "failure",
+      `Claim/${input.params.id}`,
+      patientReference,
+      claimMdFailureAuditReason("checkClaimStatus", error),
+    );
     return { status: 502, body: { error: `Claim status check failed: ${messageOf(error)}` } };
   }
 }
@@ -254,7 +270,15 @@ export async function handleEraImportRequest(
     await audit(deps, auth, "era.import.completed", "success", `PaymentReconciliation/${paymentReconciliationIds[0] ?? "none"}`);
     return { status: 200, body: { eraId: body.eraId, posted, flagged, claimResponseIds, paymentReconciliationIds } };
   } catch (error) {
-    await audit(deps, auth, "era.import.failed", "failure", `Claim.MD/ERA/${body.eraId}`, undefined, messageOf(error));
+    await audit(
+      deps,
+      auth,
+      "era.import.failed",
+      "failure",
+      `Claim.MD/ERA/${body.eraId}`,
+      undefined,
+      claimMdFailureAuditReason("retrieveEraData", error),
+    );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
   }
 }
@@ -323,6 +347,20 @@ function arrayOf<T>(value: T | T[] | undefined): T[] {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function claimMdFailureAuditReason(operation: string, error: unknown): string {
+  const status = claimMdHttpStatus(error);
+  return status ? `Claim.MD ${operation} failed with HTTP ${status}` : `Claim.MD ${operation} failed`;
+}
+
+function claimMdHttpStatus(error: unknown): string | undefined {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number" && Number.isInteger(status)) return String(status);
+    if (typeof status === "string" && /^[1-5]\d{2}$/.test(status)) return status;
+  }
+  return messageOf(error).match(/\bHTTP\s+([1-5]\d{2})\b/i)?.[1];
 }
 
 function stringValue(value: unknown): string | undefined {
