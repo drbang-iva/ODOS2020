@@ -1431,7 +1431,7 @@ function iopEvidenceFromFindingValue(value: FindingValue): IopRiskEvidence {
   return { notVisualized: false };
 }
 
-function resolveIopRiskThreshold(
+export function resolveIopRiskThreshold(
   definition: ClinicalFindingDefinition,
   riskConfig?: GlaucomaIopRiskConfig,
 ): number {
