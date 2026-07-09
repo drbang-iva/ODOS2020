@@ -6,6 +6,7 @@ const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
   { id: "ortho-k", label: "Ortho-K" },
   { id: "dry-eye", label: "Dry Eye" },
   { id: "myopia-management", label: "Myopia Management" },
+  { id: "cup-disc", label: "Cup/Disc" },
   { id: "iop", label: "IOP" },
   { id: "assessment", label: "Assessment" },
 ];

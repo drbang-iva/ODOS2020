@@ -43,6 +43,10 @@ import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
 } from "./payments/payment-endpoint.js";
+import {
+  handleCupDiscCaptureRequest,
+  handleCupDiscDefinitionRequest,
+} from "./clinical-graph/cup-disc-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   handleClaimStatusRequest,
@@ -5422,7 +5426,7 @@ async function main(): Promise<void> {
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
       const claimMdConfig = claimMdConfigFromEnv(process.env);
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
-      const authenticateClaimsRoute = async (header: string | undefined) => {
+      const authenticateStaffRoute = async (header: string | undefined) => {
         const resolved = await resolveStaffRole({
           baseUrl: BASE_URL,
           authHeader: header,
@@ -5440,6 +5444,38 @@ async function main(): Promise<void> {
           }),
         };
       };
+
+      app.get("/clinical-graph/glaucoma/cup-disc/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCupDiscDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/glaucoma/cup-disc/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "cup/disc definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/glaucoma/cup-disc", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCupDiscCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/glaucoma/cup-disc failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "cup/disc clinical-graph route failed" });
+          }
+        }
+      });
 
       app.post("/payments/charge", async (req, res) => {
         try {
@@ -5492,7 +5528,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleSubmitClaimRequest(
             {
-              authenticate: authenticateClaimsRoute,
+              authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -5514,7 +5550,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEligibilityCheckRequest(
             {
-              authenticate: authenticateClaimsRoute,
+              authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -5540,7 +5576,7 @@ async function main(): Promise<void> {
           };
           const result = await handleClaimStatusRequest(
             {
-              authenticate: authenticateClaimsRoute,
+              authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -5562,7 +5598,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEraImportRequest(
             {
-              authenticate: authenticateClaimsRoute,
+              authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);

@@ -4,6 +4,7 @@ export type ChartSectionId =
   | "ortho-k"
   | "dry-eye"
   | "myopia-management"
+  | "cup-disc"
   | "iop"
   | "assessment";
 
