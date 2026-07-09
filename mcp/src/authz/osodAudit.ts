@@ -102,6 +102,13 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "payment.settle.batch",
   "payment.financing.preauthorized",
   "payment.financing.declined",
+  "claim.submit.completed",
+  "claim.submit.failed",
+  "eligibility.check.completed",
+  "eligibility.check.failed",
+  "era.import.completed",
+  "era.import.failed",
+  "claim.status.checked",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 

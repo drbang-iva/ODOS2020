@@ -21,6 +21,9 @@ export const OSOD_PAYMENT_SURFACE_EXTENSION_URL =
 /** HL7 payment-type CodeSystem for PaymentReconciliation.detail.type (payment | adjustment | advance). */
 export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/payment-type";
 
+/** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
+export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
+
 export interface ProcessorPaymentInput {
   /**
    * Only money that moved gets a PaymentReconciliation: success (settled) or pending
@@ -136,6 +139,71 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
           ]
         : []),
       surfaceExtension,
+    ],
+  };
+}
+
+export interface InsurancePaymentReconciliationInput {
+  createdIso: string;
+  paymentDate: string;
+  amountCents: number;
+  claimReference: string;
+  claimResponseReference: string;
+  insurerReference?: string;
+  practiceOrgReference?: string;
+  processorTransactionId: string;
+  processorTransactionSystem: string;
+  description?: string;
+}
+
+export function buildInsurancePaymentReconciliation(
+  input: InsurancePaymentReconciliationInput,
+): PaymentReconciliation {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    throw new Error("Insurance payment amount (amountCents) must be a positive integer number of cents.");
+  }
+  if (!/^Claim\//.test(input.claimReference)) {
+    throw new Error('Insurance PaymentReconciliation detail.request must reference a local "Claim/<id>".');
+  }
+  if (!/^ClaimResponse\//.test(input.claimResponseReference)) {
+    throw new Error('Insurance PaymentReconciliation detail.response must reference a local "ClaimResponse/<id>".');
+  }
+  if (!input.processorTransactionId || !input.processorTransactionSystem) {
+    throw new Error("Insurance PaymentReconciliation requires an ERA/payment identifier and namespace.");
+  }
+  if (!input.createdIso) {
+    throw new Error("Insurance PaymentReconciliation requires a created timestamp.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.paymentDate)) {
+    throw new Error("paymentDate must be an R4 date (YYYY-MM-DD).");
+  }
+
+  const amount = { value: input.amountCents / 100, currency: "USD" as const };
+
+  return {
+    resourceType: "PaymentReconciliation",
+    status: "active",
+    outcome: "complete",
+    created: input.createdIso,
+    paymentDate: input.paymentDate,
+    paymentAmount: amount,
+    paymentIdentifier: {
+      system: input.processorTransactionSystem,
+      value: input.processorTransactionId,
+    },
+    ...(input.insurerReference ? { paymentIssuer: { reference: input.insurerReference } } : {}),
+    ...(input.practiceOrgReference ? { requestor: { reference: input.practiceOrgReference } } : {}),
+    ...(input.description ? { disposition: input.description } : {}),
+    detail: [
+      {
+        type: {
+          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
+        },
+        request: { reference: input.claimReference },
+        response: { reference: input.claimResponseReference },
+        ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
+        amount,
+      },
     ],
   };
 }

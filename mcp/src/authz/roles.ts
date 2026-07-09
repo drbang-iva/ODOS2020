@@ -40,6 +40,7 @@ export const BUSINESS_ACTIONS = [
   "aesthetics.procedure.write",
   "break-glass.invoke",
   "payment.charge",
+  "claims.manage",
 ] as const;
 
 export type BusinessAction = (typeof BUSINESS_ACTIONS)[number];
@@ -124,6 +125,13 @@ const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
+const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "Claim", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "ClaimResponse", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "CoverageEligibilityRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "CoverageEligibilityResponse", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+];
+
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description:
@@ -196,7 +204,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "claims.manage"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {
@@ -251,7 +259,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Front Desk",
     description:
       "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge"],
+    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "claims.manage"],
     membershipParameters: [
       {
         name: "patient_compartment",
@@ -267,6 +275,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
       })),
       ...SCHEDULING_RESOURCE_RULES,
       ...DISPENSARY_RESOURCE_RULES,
+      ...CLAIMS_RESOURCE_RULES,
     ],
   },
   auditor: {
