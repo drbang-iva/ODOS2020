@@ -66,7 +66,7 @@ export function buildIopObservation(input: IopInput): BuildResult<import("./type
   };
 }
 
-function iopMethodConcept(method: CodeableConcept | undefined): CodeableConcept {
+export function iopMethodConcept(method: CodeableConcept | undefined): CodeableConcept {
   const normalizedMethod = method?.coding?.find(
     (coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
   )?.code as IopMethod | undefined;

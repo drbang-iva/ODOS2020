@@ -307,7 +307,147 @@
           }
         }
       },
-      { "key": "intraocular_pressure", "display": "Intraocular pressure", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
+      {
+        "key": "intraocular_pressure",
+        "display": "Intraocular pressure",
+        "status": "verified-seed",
+        "notBillReady": true,
+        "externalCode": null,
+        "valueSchema": {
+          "valueKind": "quantity",
+          "operatorInputRequired": false,
+          "unit": "mmHg",
+          "unitSystem": "http://unitsofmeasure.org",
+          "unitCode": "mm[Hg]",
+          "plausibilityGuard": {
+            "minimum": 3,
+            "maximum": 80,
+            "unit": "mmHg"
+          },
+          "fields": {
+            "value": {
+              "display": "IOP",
+              "type": "number",
+              "minimum": 3,
+              "maximum": 80,
+              "step": 1,
+              "unit": "mmHg",
+              "unitSystem": "http://unitsofmeasure.org",
+              "unitCode": "mm[Hg]",
+              "projectsToObservationValueQuantity": true
+            },
+            "method": {
+              "display": "Method",
+              "type": "single-select",
+              "editable": true,
+              "addNewCapable": true,
+              "options": [
+                { "code": "GAT", "display": "Goldmann", "active": true },
+                { "code": "NCT", "display": "NCT", "active": true },
+                { "code": "ICARE", "display": "iCare", "active": true },
+                { "code": "TONOPEN", "display": "Tonopen", "active": true },
+                { "code": "PALPATION", "display": "Palpation", "active": true },
+                { "code": "IOPCC", "display": "IOPcc", "active": true },
+                { "code": "IOPG", "display": "IOPg", "active": true }
+              ]
+            },
+            "date": {
+              "display": "Date",
+              "type": "date",
+              "required": true
+            },
+            "timeOfDay": {
+              "display": "Time",
+              "type": "time",
+              "required": true
+            },
+            "notVisualized": {
+              "display": "Not visualized/deferred",
+              "type": "boolean",
+              "suppressesSuggestion": true
+            }
+          },
+          "modelFields": {
+            "laterality": "FindingInstance.laterality",
+            "method": "FindingInstance.method",
+            "recordedAt": "FindingInstance.recordedAt",
+            "interpretation": "FindingInstance.interpretation"
+          }
+        },
+        "normalSemantics": {
+          "riskPredicate": {
+            "key": "ocular_hypertension_iop_single_tier_v1",
+            "thresholdParameters": {
+              "ohtnThreshold": {
+                "key": "ohtnThreshold",
+                "defaultValue": 22,
+                "minimum": 3,
+                "maximum": 80,
+                "step": 1,
+                "unit": "mmHg"
+              }
+            },
+            "diagnosisFamily": "H40.05-",
+            "normalWhen": "value < ohtnThreshold",
+            "suggestWhen": "value >= ohtnThreshold"
+          }
+        }
+      },
+      {
+        "key": "corneal_hysteresis",
+        "display": "Corneal hysteresis",
+        "status": "verified-seed",
+        "notBillReady": true,
+        "externalCode": null,
+        "valueSchema": {
+          "valueKind": "quantity",
+          "operatorInputRequired": false,
+          "unit": "corneobiomechanics score",
+          "plausibilityGuard": {
+            "minimum": 0,
+            "maximum": 15,
+            "unit": "corneobiomechanics score"
+          },
+          "normalBand": {
+            "minimumApproximate": 6,
+            "maximumApproximate": 12,
+            "unit": "corneobiomechanics score"
+          },
+          "fields": {
+            "value": {
+              "display": "CH",
+              "type": "number",
+              "minimum": 0,
+              "maximum": 15,
+              "step": 0.1,
+              "unit": "corneobiomechanics score",
+              "projectsToObservationValueQuantity": true
+            },
+            "date": {
+              "display": "Date",
+              "type": "date",
+              "required": true
+            },
+            "timeOfDay": {
+              "display": "Time",
+              "type": "time",
+              "required": true
+            },
+            "notVisualized": {
+              "display": "Not visualized/deferred",
+              "type": "boolean",
+              "suppressesSuggestion": true
+            }
+          },
+          "modelFields": {
+            "laterality": "FindingInstance.laterality",
+            "recordedAt": "FindingInstance.recordedAt"
+          }
+        },
+        "normalSemantics": {
+          "status": "Captured as a standalone corneal biomechanics finding; no diagnosis suggestion edge is seeded in this round."
+        }
+      },
       { "key": "pachymetry_um", "display": "Pachymetry in micrometers", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null },
       { "key": "rnfl_gcc", "display": "RNFL/GCC", "status": "unseeded-needs-operator-input", "notBillReady": true, "externalCode": null }
     ],

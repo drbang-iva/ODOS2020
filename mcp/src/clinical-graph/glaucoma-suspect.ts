@@ -51,6 +51,7 @@ export const CPT_CODE_SYSTEM = "urn:ama:cpt";
 export const GLAUCOMA_FINDING_DEFINITION_KEYS = [
   "cup_disc_ratio",
   "intraocular_pressure",
+  "corneal_hysteresis",
   "pachymetry_um",
   "rnfl_gcc",
 ] as const;
@@ -71,6 +72,11 @@ const GLAUCOMA_FINDING_STUB_METADATA: Record<
   intraocular_pressure: {
     sectionKey: "tonometry",
     anatomyTarget: "eye",
+    valueKind: "quantity",
+  },
+  corneal_hysteresis: {
+    sectionKey: "tonometry",
+    anatomyTarget: "cornea",
     valueKind: "quantity",
   },
   pachymetry_um: {
@@ -387,6 +393,10 @@ export interface GlaucomaCupDiscRiskConfig {
   asymmetryHigh?: number;
 }
 
+export interface GlaucomaIopRiskConfig {
+  ohtnThreshold?: number;
+}
+
 export interface CaptureGlaucomaFindingInput {
   definition: ClinicalFindingDefinition;
   patientReference: string;
@@ -420,6 +430,11 @@ export interface GlaucomaSuggestionEngineInput {
   riskConfig?: GlaucomaCupDiscRiskConfig;
 }
 
+export interface GlaucomaIopSuggestionEngineInput
+  extends Omit<GlaucomaSuggestionEngineInput, "riskConfig"> {
+  riskConfig?: GlaucomaIopRiskConfig;
+}
+
 export interface DiagnosisSuggestionEvaluation {
   diagnosisDefinition: DiagnosisDefinition;
   suggestionEdge: DiagnosisSuggestionEdge;
@@ -429,6 +444,16 @@ export interface GlaucomaCupDiscSuggestionResult {
   finding: FindingInstance;
   diagnosisDefinition?: DiagnosisDefinition;
   suggestionEdge?: DiagnosisSuggestionEdge;
+}
+
+export type GlaucomaIopRiskTier = "normal" | "ohtn";
+
+export interface GlaucomaIopRiskEvaluation {
+  riskTier: GlaucomaIopRiskTier;
+  threshold: number;
+  value?: number;
+  notVisualized: boolean;
+  signals: string[];
 }
 
 export interface ClinicalFindingOption {
@@ -801,7 +826,34 @@ export function glaucomaOperatorGatedValueSchema(
 export function getGlaucomaCupDiscDescriptorOptions(
   definition: ClinicalFindingDefinition,
 ): ClinicalFindingOption[] {
-  const options = getCupDiscDescriptorField(definition).options;
+  return getClinicalFindingFieldOptions(definition, "discAppearanceDescriptors");
+}
+
+export function addGlaucomaCupDiscDescriptorOption(
+  definition: ClinicalFindingDefinition,
+  option: ClinicalFindingOption,
+): ClinicalFindingDefinition {
+  return addClinicalFindingFieldOption(definition, "discAppearanceDescriptors", option);
+}
+
+export function getGlaucomaIopMethodOptions(
+  definition: ClinicalFindingDefinition,
+): ClinicalFindingOption[] {
+  return getClinicalFindingFieldOptions(definition, "method");
+}
+
+export function addGlaucomaIopMethodOption(
+  definition: ClinicalFindingDefinition,
+  option: ClinicalFindingOption,
+): ClinicalFindingDefinition {
+  return addClinicalFindingFieldOption(definition, "method", option);
+}
+
+function getClinicalFindingFieldOptions(
+  definition: ClinicalFindingDefinition,
+  fieldKey: string,
+): ClinicalFindingOption[] {
+  const options = asRecord(asRecord(definition.valueSchema.fields)[fieldKey]).options;
   return Array.isArray(options)
     ? options
         .map((option) => parseClinicalFindingOption(option))
@@ -809,19 +861,20 @@ export function getGlaucomaCupDiscDescriptorOptions(
     : [];
 }
 
-export function addGlaucomaCupDiscDescriptorOption(
+function addClinicalFindingFieldOption(
   definition: ClinicalFindingDefinition,
+  fieldKey: string,
   option: ClinicalFindingOption,
 ): ClinicalFindingDefinition {
   const valueSchema = { ...definition.valueSchema };
   const fields = { ...asRecord(valueSchema.fields) };
-  const descriptorField = { ...asRecord(fields.discAppearanceDescriptors) };
-  const options = getGlaucomaCupDiscDescriptorOptions(definition);
-  descriptorField.options = [
+  const field = { ...asRecord(fields[fieldKey]) };
+  const options = getClinicalFindingFieldOptions(definition, fieldKey);
+  field.options = [
     ...options.filter((candidate) => candidate.code !== option.code),
     option,
   ];
-  fields.discAppearanceDescriptors = descriptorField;
+  fields[fieldKey] = field;
   valueSchema.fields = fields;
   return {
     ...definition,
@@ -1003,6 +1056,139 @@ export function evaluateGlaucomaDiagnosisSuggestions(
         },
       });
 
+      return { diagnosisDefinition, suggestionEdge };
+    })
+    .filter((result): result is DiagnosisSuggestionEvaluation => Boolean(result))
+    .sort((a, b) =>
+      b.suggestionEdge.score - a.suggestionEdge.score ||
+      a.suggestionEdge.id.localeCompare(b.suggestionEdge.id));
+
+  return evaluations.map((evaluation, index) => ({
+    diagnosisDefinition: evaluation.diagnosisDefinition,
+    suggestionEdge: {
+      ...evaluation.suggestionEdge,
+      rank: index + 1,
+    },
+  }));
+}
+
+export function buildOcularHypertensionDiagnosisDefinition(input: {
+  laterality: EyeLaterality;
+  provenance: ClinicalGraphProvenance;
+  findingDefinitionIds?: string[];
+  id?: string;
+  ledger?: GlaucomaPhase0Ledger;
+}): DiagnosisDefinition {
+  const code = `H40.05${lateralityDigit(input.laterality)}`;
+  const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
+  if (!ledgerHit) {
+    throw new Error(`Ocular hypertension ICD-10-CM code ${code} is missing from the Phase 0 ledger.`);
+  }
+  return buildDiagnosisDefinition({
+    id: input.id,
+    stableKey: `ocular_hypertension_${input.laterality.toLowerCase()}`,
+    display: ledgerHit.display,
+    clinicalFamily: "ocular-hypertension",
+    icd10Family: "H40.05-",
+    icd10Code: ledgerHit.code,
+    icd10Display: ledgerHit.display,
+    codingStatus: "verified",
+    lateralityRequired: true,
+    applicableFindingDefinitionIds: input.findingDefinitionIds,
+    provenance: input.provenance,
+  });
+}
+
+export function evaluateIopFindingRisk(
+  finding: FindingInstance,
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaIopRiskConfig,
+): GlaucomaIopRiskEvaluation {
+  const evidence = iopEvidenceFromFindingValue(finding.value);
+  const threshold = resolveIopRiskThreshold(definition, riskConfig);
+  if (evidence.notVisualized || evidence.value === undefined) {
+    return {
+      riskTier: "normal",
+      threshold,
+      notVisualized: evidence.notVisualized,
+      signals: [],
+    };
+  }
+  const riskTier: GlaucomaIopRiskTier = evidence.value >= threshold ? "ohtn" : "normal";
+  return {
+    riskTier,
+    threshold,
+    value: evidence.value,
+    notVisualized: false,
+    signals: riskTier === "ohtn" ? ["iop-threshold"] : [],
+  };
+}
+
+export function evaluateIopDiagnosisSuggestions(
+  input: GlaucomaIopSuggestionEngineInput,
+): DiagnosisSuggestionEvaluation[] {
+  const definitionsById = new Map(input.findingDefinitions.map((definition) => [definition.id, definition]));
+  const iopFindings = input.findings
+    .filter((finding) => !input.encounterReference || finding.encounterReference === input.encounterReference)
+    .filter((finding) => definitionsById.get(finding.findingDefinitionId)?.stableKey === "intraocular_pressure")
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id));
+
+  const evaluations = iopFindings
+    .map((finding) => {
+      const definition = definitionsById.get(finding.findingDefinitionId);
+      if (!definition) {
+        return undefined;
+      }
+      const risk = evaluateIopFindingRisk(finding, definition, input.riskConfig);
+      if (risk.riskTier === "normal" || risk.value === undefined) {
+        return undefined;
+      }
+      const diagnosisDefinition = buildOcularHypertensionDiagnosisDefinition({
+        id: deterministicGraphId("dx-def", "ocular-hypertension", finding.laterality),
+        laterality: finding.laterality,
+        provenance: input.provenance,
+        findingDefinitionIds: [definition.id],
+        ledger: input.ledger,
+      });
+      const suggestionEdge = buildDiagnosisSuggestionEdge({
+        id: deterministicGraphId("suggestion", finding.id, "ocular-hypertension", finding.laterality),
+        sourceFindingDefinitionId: definition.id,
+        sourceFindingInstanceId: finding.id,
+        targetDiagnosisDefinitionId: diagnosisDefinition.id,
+        predicateKey: "ocular_hypertension_iop_single_tier_v1",
+        predicateExpression: {
+          finding: "intraocular_pressure",
+          predicate: "single-tier-ocular-hypertension-iop",
+          riskTier: risk.riskTier,
+          threshold: risk.threshold,
+          observed: definedRecord({
+            intraocularPressure: risk.value,
+            unit: "mmHg",
+            notVisualized: risk.notVisualized,
+          }),
+          signals: risk.signals,
+          deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
+        },
+        rank: 1,
+        score: 0.65,
+        confidence: 0.65,
+        explanation: `Ocular-hypertension suspect suggestion because IOP ${risk.value} mmHg is >= threshold ${risk.threshold} mmHg.`,
+        evidenceFindingInstanceIds: [finding.id],
+        ruleVersion: "ocular-hypertension-iop-v1",
+        visitState: "unreviewed",
+        provenance: {
+          ...input.provenance,
+          source: "rule",
+          sourceReferences: [
+            ...(finding.observationReference ? [finding.observationReference] : []),
+            ...(input.provenance.sourceReferences ?? []),
+          ],
+          note: [
+            input.provenance.note,
+            "Pure IOP evaluator: finding evidence in, ocular-hypertension suggestion edge out; no EncounterDiagnosis, Condition, charge, or coverage side effects.",
+          ].filter(Boolean).join(" "),
+        },
+      });
       return { diagnosisDefinition, suggestionEdge };
     })
     .filter((result): result is DiagnosisSuggestionEvaluation => Boolean(result))
@@ -1209,6 +1395,64 @@ export function encounterDiagnosisComponent(
   diagnosis: EncounterDiagnosis,
 ) {
   return buildEncounterDiagnosisComponent(conditionReference, diagnosis.rank);
+}
+
+interface IopRiskEvidence {
+  value?: number;
+  notVisualized: boolean;
+}
+
+function iopEvidenceFromFindingValue(value: FindingValue): IopRiskEvidence {
+  if (value.type === "quantity") {
+    return { value: value.value, notVisualized: false };
+  }
+  if (value.type === "json") {
+    return {
+      value: readNumber(value.value.value) ??
+        readNumber(value.value.intraocularPressure) ??
+        readNumber(value.value.iop),
+      notVisualized: readBoolean(value.value.notVisualized) ??
+        readBoolean(value.value.deferred) ??
+        false,
+    };
+  }
+  if (value.type === "components") {
+    const evidence: IopRiskEvidence = { notVisualized: false };
+    for (const component of value.components) {
+      const code = normalizeDescriptorCode(component.code);
+      if (code === "intraocular-pressure" || code === "iop") {
+        evidence.value = readNumber(component.value);
+      } else if (code === "not-visualized" || code === "deferred" || code === "not-visualized-deferred") {
+        evidence.notVisualized = readBoolean(component.value) ?? evidence.notVisualized;
+      }
+    }
+    return evidence;
+  }
+  return { notVisualized: false };
+}
+
+function resolveIopRiskThreshold(
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaIopRiskConfig,
+): number {
+  if (riskConfig?.ohtnThreshold !== undefined) {
+    return assertIopThreshold(riskConfig.ohtnThreshold, "ohtnThreshold");
+  }
+  const riskPredicate = asRecord(definition.normalSemantics?.riskPredicate);
+  const thresholdParameters = asRecord(riskPredicate.thresholdParameters);
+  const parameter = asRecord(thresholdParameters.ohtnThreshold);
+  const defaultValue = readNumber(parameter.defaultValue);
+  if (defaultValue === undefined) {
+    throw new Error("IOP risk parameter ohtnThreshold defaultValue is missing from the finding definition.");
+  }
+  return assertIopThreshold(defaultValue, "IOP risk parameter ohtnThreshold default");
+}
+
+function assertIopThreshold(value: number, name: string): number {
+  if (!Number.isFinite(value) || value < 3 || value > 80) {
+    throw new Error(`${name} must be a finite IOP value from 3 to 80 mmHg.`);
+  }
+  return value;
 }
 
 interface CupDiscRiskEvidence {
