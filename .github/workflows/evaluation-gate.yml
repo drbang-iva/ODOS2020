@@ -27,6 +27,10 @@ jobs:
     if: github.event.pull_request != null || github.event.issue.pull_request != null
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - name: check for an independent evaluation marker
         uses: actions/github-script@v7
