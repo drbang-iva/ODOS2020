@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { fhir } from "../../lib/fhir";
+import { IopTimeline } from "./IopTimeline";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -78,6 +79,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [timelineRefresh, setTimelineRefresh] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -176,6 +178,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
       };
       setSaved(status);
       onSaved(status);
+      setTimelineRefresh((current) => current + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -301,6 +304,7 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
           saving={saving || definitionLoading}
           onSave={save}
         />
+        <IopTimeline patientReference={patientReference} refreshSignal={timelineRefresh} />
       </div>
     </section>
   );

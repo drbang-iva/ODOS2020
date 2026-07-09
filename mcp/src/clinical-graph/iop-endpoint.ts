@@ -117,7 +117,7 @@ export async function handleIopDefinitionRequest(
     return { status: 403, body: { error: "chart.read role required" } };
   }
 
-  const definitions = iopDefinitions(deps.findingDefinitions?.());
+  const definitions = resolveIopDefinitions(deps.findingDefinitions?.());
   return { status: 200, body: iopDefinitionResponse(definitions) };
 }
 
@@ -138,7 +138,7 @@ export async function handleIopCaptureRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid IOP request." } };
   }
 
-  const definitions = iopDefinitions(deps.findingDefinitions?.());
+  const definitions = resolveIopDefinitions(deps.findingDefinitions?.());
   const validationError = validateIopRequest(parsed.data.eyes, definitions.intraocularPressure);
   if (validationError) {
     return { status: 400, body: { error: validationError } };
@@ -252,7 +252,7 @@ export async function handleIopCaptureRequest(
   };
 }
 
-function iopDefinitions(
+export function resolveIopDefinitions(
   suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
 ): { intraocularPressure: ClinicalFindingDefinition; cornealHysteresis: ClinicalFindingDefinition } {
   const definitions = suppliedDefinitions ??

@@ -51,6 +51,10 @@ import {
   handleIopCaptureRequest,
   handleIopDefinitionRequest,
 } from "./clinical-graph/iop-endpoint.js";
+import {
+  handleIopHistoryRequest,
+  handleIopTargetRequest,
+} from "./clinical-graph/iop-history-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   handleClaimStatusRequest,
@@ -5509,6 +5513,38 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/iop failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/iop/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleIopHistoryRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/iop/history failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "IOP history route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/iop/target", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleIopTargetRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/iop/target failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "IOP target route failed" });
           }
         }
       });
