@@ -48,10 +48,6 @@ export const ICD10_CM_CODE_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
  */
 export const CPT_CODE_SYSTEM = "urn:ama:cpt";
 
-export const DEFAULT_GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD = 0.55;
-export const PRIOR_GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD = 0.6;
-export const GLAUCOMA_CUP_DISC_SIGNIFICANT_ASYMMETRY = 0.2;
-
 export const GLAUCOMA_FINDING_DEFINITION_KEYS = [
   "cup_disc_ratio",
   "intraocular_pressure",
@@ -385,7 +381,10 @@ export interface GlaucomaPredicateInput {
 }
 
 export interface GlaucomaCupDiscRiskConfig {
-  cupDiscHighRiskThreshold?: number;
+  lowFloor?: number;
+  highFloor?: number;
+  asymmetryLow?: number;
+  asymmetryHigh?: number;
 }
 
 export interface CaptureGlaucomaFindingInput {
@@ -721,22 +720,22 @@ export function buildChargeProposal(
  */
 export function buildGlaucomaOpenAngleDiagnosisDefinition(input: {
   laterality: EyeLaterality;
-  riskBucket: "low" | "high";
+  riskTier: GlaucomaCupDiscSuspectRiskTier;
   provenance: ClinicalGraphProvenance;
   findingDefinitionIds?: string[];
   id?: string;
   ledger?: GlaucomaPhase0Ledger;
 }): DiagnosisDefinition {
-  const code = glaucomaOpenAngleBorderlineCode(input.riskBucket, input.laterality);
+  const code = glaucomaOpenAngleBorderlineCode(input.riskTier, input.laterality);
   const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
-  const display = ledgerHit?.display ?? `Glaucoma suspect open angle ${input.riskBucket} risk ${input.laterality}`;
+  const display = ledgerHit?.display ?? `Glaucoma suspect open angle ${input.riskTier} risk ${input.laterality}`;
   const codingStatus: CodingStatus = ledgerHit ? "verified" : "placeholder";
   return buildDiagnosisDefinition({
     id: input.id,
-    stableKey: `glaucoma_suspect_open_angle_${input.riskBucket}_${input.laterality.toLowerCase()}`,
+    stableKey: `glaucoma_suspect_open_angle_${input.riskTier}_${input.laterality.toLowerCase()}`,
     display,
     clinicalFamily: "glaucoma-suspect",
-    icd10Family: input.riskBucket === "high" ? "H40.02-" : "H40.01-",
+    icd10Family: input.riskTier === "high" ? "H40.02-" : "H40.01-",
     ...(ledgerHit ? { icd10Code: ledgerHit.code, icd10Display: ledgerHit.display } : {}),
     codingStatus,
     lateralityRequired: true,
@@ -903,16 +902,16 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
     encounterReference: input.encounterReference,
     laterality: input.laterality,
     value: cupDiscFindingValueFromPredicateInput(input),
-    interpretation: input.notVisualized ? "unknown" : risk.riskBucket === "high" ? "abnormal" : "borderline",
+    interpretation: evidence.notVisualized ? "unknown" : cupDiscInterpretationForRiskTier(risk.riskTier),
     recordedAt: input.recordedAt,
     provenance: input.provenance,
   });
-  if (evidence.notVisualized) {
+  if (evidence.notVisualized || risk.riskTier === "normal") {
     return { finding };
   }
   const diagnosisDefinition = buildGlaucomaOpenAngleDiagnosisDefinition({
     laterality: input.laterality,
-    riskBucket: risk.riskBucket,
+    riskTier: risk.riskTier,
     provenance: input.provenance,
     findingDefinitionIds: [input.findingDefinitionId],
     ledger: input.ledger,
@@ -923,8 +922,8 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
     predicateKey: "glaucoma_suspect_cup_disc_multisignal_v1",
     predicateExpression: cupDiscPredicateExpression(risk, evidence),
     rank: 1,
-    score: risk.riskBucket === "high" ? 0.8 : 0.55,
-    confidence: risk.riskBucket === "high" ? 0.8 : 0.55,
+    score: cupDiscSuggestionScore(risk.riskTier),
+    confidence: cupDiscSuggestionScore(risk.riskTier),
     explanation: cupDiscRiskExplanation(risk),
     ruleVersion: "glaucoma-cup-disc-multisignal-v1",
     provenance: input.provenance,
@@ -958,21 +957,24 @@ export function evaluateGlaucomaDiagnosisSuggestions(
         evidenceByFindingId,
       );
       const risk = evaluateCupDiscRisk(enrichedEvidence, definition, input.riskConfig);
+      if (risk.riskTier === "normal") {
+        return undefined;
+      }
       const diagnosisDefinition = buildGlaucomaOpenAngleDiagnosisDefinition({
-        id: deterministicGraphId("dx-def", "glaucoma-suspect-open-angle", risk.riskBucket, finding.laterality),
+        id: deterministicGraphId("dx-def", "glaucoma-suspect-open-angle", risk.riskTier, finding.laterality),
         laterality: finding.laterality,
-        riskBucket: risk.riskBucket,
+        riskTier: risk.riskTier,
         provenance: input.provenance,
         findingDefinitionIds: [definition.id],
         ledger: input.ledger,
       });
-      const score = risk.riskBucket === "high" ? 0.8 : 0.55;
+      const score = cupDiscSuggestionScore(risk.riskTier);
       const suggestionEdge = buildDiagnosisSuggestionEdge({
         id: deterministicGraphId(
           "suggestion",
           finding.id,
           "glaucoma-suspect-open-angle",
-          risk.riskBucket,
+          risk.riskTier,
           finding.laterality,
         ),
         sourceFindingDefinitionId: definition.id,
@@ -1227,11 +1229,21 @@ interface CupDiscRiskSignal {
   observedValue?: number | string;
 }
 
+export type GlaucomaCupDiscRiskTier = "normal" | "low" | "high";
+export type GlaucomaCupDiscSuspectRiskTier = Exclude<GlaucomaCupDiscRiskTier, "normal">;
+
+interface CupDiscRiskThresholds {
+  lowFloor: number;
+  highFloor: number;
+  asymmetryLow: number;
+  asymmetryHigh: number;
+}
+
 interface CupDiscRiskEvaluation {
-  riskBucket: "low" | "high";
-  threshold: number;
-  asymmetryThreshold: number;
-  signals: CupDiscRiskSignal[];
+  riskTier: GlaucomaCupDiscRiskTier;
+  thresholds: CupDiscRiskThresholds;
+  lowSignals: CupDiscRiskSignal[];
+  highSignals: CupDiscRiskSignal[];
 }
 
 function defaultGlaucomaCupDiscFindingDefinition(
@@ -1419,13 +1431,19 @@ function evaluateCupDiscRisk(
   definition: ClinicalFindingDefinition,
   riskConfig?: GlaucomaCupDiscRiskConfig,
 ): CupDiscRiskEvaluation {
-  const threshold = resolveCupDiscHighRiskThreshold(definition, riskConfig);
-  const asymmetryThreshold = resolveCupDiscAsymmetryThreshold(definition);
-  const signals: CupDiscRiskSignal[] = [];
-  if (evidence.verticalCupDiscRatio !== undefined && evidence.verticalCupDiscRatio >= threshold) {
-    signals.push({
+  const thresholds = resolveCupDiscRiskThresholds(definition, riskConfig);
+  const lowSignals: CupDiscRiskSignal[] = [];
+  const highSignals: CupDiscRiskSignal[] = [];
+  if (evidence.verticalCupDiscRatio !== undefined && evidence.verticalCupDiscRatio >= thresholds.highFloor) {
+    highSignals.push({
       key: "vertical-cup-disc-ratio",
-      display: `vertical C/D ${evidence.verticalCupDiscRatio.toFixed(2)} >= ${threshold.toFixed(2)}`,
+      display: `vertical C/D ${evidence.verticalCupDiscRatio.toFixed(2)} >= high floor ${thresholds.highFloor.toFixed(2)}`,
+      observedValue: evidence.verticalCupDiscRatio,
+    });
+  } else if (evidence.verticalCupDiscRatio !== undefined && evidence.verticalCupDiscRatio >= thresholds.lowFloor) {
+    lowSignals.push({
+      key: "vertical-cup-disc-ratio",
+      display: `vertical C/D ${evidence.verticalCupDiscRatio.toFixed(2)} >= low floor ${thresholds.lowFloor.toFixed(2)}`,
       observedValue: evidence.verticalCupDiscRatio,
     });
   }
@@ -1436,25 +1454,31 @@ function evaluateCupDiscRisk(
       option.highRiskDriver === true &&
       selectedDescriptorCodes.has(normalizeDescriptorCode(option.code))
     ) {
-      signals.push({
+      highSignals.push({
         key: `descriptor:${option.code}`,
         display: option.display,
         observedValue: option.code,
       });
     }
   }
-  if (evidence.asymmetry !== undefined && evidence.asymmetry >= asymmetryThreshold) {
-    signals.push({
+  if (evidence.asymmetry !== undefined && evidence.asymmetry >= thresholds.asymmetryHigh) {
+    highSignals.push({
       key: "cup-disc-asymmetry",
-      display: `C/D asymmetry ${evidence.asymmetry.toFixed(2)} >= ${asymmetryThreshold.toFixed(2)}`,
+      display: `C/D asymmetry ${evidence.asymmetry.toFixed(2)} >= high threshold ${thresholds.asymmetryHigh.toFixed(2)}`,
+      observedValue: evidence.asymmetry,
+    });
+  } else if (evidence.asymmetry !== undefined && evidence.asymmetry >= thresholds.asymmetryLow) {
+    lowSignals.push({
+      key: "cup-disc-asymmetry",
+      display: `C/D asymmetry ${evidence.asymmetry.toFixed(2)} >= low threshold ${thresholds.asymmetryLow.toFixed(2)}`,
       observedValue: evidence.asymmetry,
     });
   }
   return {
-    riskBucket: signals.length > 0 ? "high" : "low",
-    threshold,
-    asymmetryThreshold,
-    signals,
+    riskTier: highSignals.length > 0 ? "high" : lowSignals.length > 0 ? "low" : "normal",
+    thresholds,
+    lowSignals,
+    highSignals,
   };
 }
 
@@ -1464,11 +1488,9 @@ function cupDiscPredicateExpression(
 ): Record<string, unknown> {
   return {
     finding: "cup_disc_ratio",
-    predicate: "any-high-risk-driver",
-    riskBucket: risk.riskBucket,
-    threshold: risk.threshold,
-    priorDefaultThreshold: PRIOR_GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
-    asymmetrySignificantAt: risk.asymmetryThreshold,
+    predicate: "three-tier-borderline-suspect-cup-disc",
+    riskTier: risk.riskTier,
+    thresholds: risk.thresholds,
     observed: definedRecord({
       verticalCupDiscRatio: evidence.verticalCupDiscRatio,
       horizontalCupDiscRatio: evidence.horizontalCupDiscRatio,
@@ -1478,38 +1500,69 @@ function cupDiscPredicateExpression(
       discAppearanceDescriptors: evidence.descriptors,
       notVisualized: evidence.notVisualized,
     }),
-    highRiskSignals: risk.signals.map((signal) => signal.key),
+    lowRiskSignals: risk.lowSignals.map((signal) => signal.key),
+    highRiskSignals: risk.highSignals.map((signal) => signal.key),
     deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
   };
 }
 
 function cupDiscRiskExplanation(risk: CupDiscRiskEvaluation): string {
-  if (risk.riskBucket === "high") {
-    return `High-risk glaucoma-suspect suggestion because ${risk.signals.map((signal) => signal.display).join(", ")} fired.`;
+  if (risk.riskTier === "high") {
+    return `High-risk glaucoma-suspect suggestion because ${risk.highSignals.map((signal) => signal.display).join(", ")} fired.`;
   }
-  return `Low-risk glaucoma-suspect suggestion because vertical C/D is below ${risk.threshold.toFixed(2)}, no high-risk disc descriptors are selected, and C/D asymmetry is below ${risk.asymmetryThreshold.toFixed(2)}.`;
+  if (risk.riskTier === "low") {
+    return `Low-risk glaucoma-suspect suggestion because ${risk.lowSignals.map((signal) => signal.display).join(", ")} fired and no high-risk signal fired.`;
+  }
+  return "Normal cup/disc finding: no glaucoma-suspect suggestion edge emitted.";
 }
 
-function resolveCupDiscHighRiskThreshold(
+function cupDiscInterpretationForRiskTier(riskTier: GlaucomaCupDiscRiskTier): FindingInterpretation {
+  if (riskTier === "high") return "abnormal";
+  if (riskTier === "low") return "borderline";
+  return "normal";
+}
+
+function cupDiscSuggestionScore(riskTier: GlaucomaCupDiscSuspectRiskTier): number {
+  return riskTier === "high" ? 0.8 : 0.55;
+}
+
+function resolveCupDiscRiskThresholds(
   definition: ClinicalFindingDefinition,
   riskConfig?: GlaucomaCupDiscRiskConfig,
-): number {
-  if (riskConfig?.cupDiscHighRiskThreshold !== undefined) {
-    return assertRatio(riskConfig.cupDiscHighRiskThreshold, "cupDiscHighRiskThreshold");
-  }
+): CupDiscRiskThresholds {
   const riskPredicate = asRecord(definition.normalSemantics?.riskPredicate);
-  const thresholdParameter = asRecord(riskPredicate.thresholdParameter);
-  return assertRatio(
-    readNumber(thresholdParameter.defaultValue) ?? DEFAULT_GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
-    "cupDiscHighRiskThreshold default",
-  );
+  const thresholdParameters = asRecord(riskPredicate.thresholdParameters);
+  const thresholds = {
+    lowFloor: resolveCupDiscRiskParameter(thresholdParameters, "lowFloor", riskConfig?.lowFloor),
+    highFloor: resolveCupDiscRiskParameter(thresholdParameters, "highFloor", riskConfig?.highFloor),
+    asymmetryLow: resolveCupDiscRiskParameter(thresholdParameters, "asymmetryLow", riskConfig?.asymmetryLow),
+    asymmetryHigh: resolveCupDiscRiskParameter(thresholdParameters, "asymmetryHigh", riskConfig?.asymmetryHigh),
+  };
+  if (thresholds.lowFloor > thresholds.highFloor) {
+    throw new Error("lowFloor must be less than or equal to highFloor.");
+  }
+  if (thresholds.asymmetryLow > thresholds.asymmetryHigh) {
+    throw new Error("asymmetryLow must be less than or equal to asymmetryHigh.");
+  }
+  return thresholds;
 }
 
-function resolveCupDiscAsymmetryThreshold(definition: ClinicalFindingDefinition): number {
-  const riskPredicate = asRecord(definition.normalSemantics?.riskPredicate);
+function resolveCupDiscRiskParameter(
+  thresholdParameters: Record<string, unknown>,
+  key: keyof GlaucomaCupDiscRiskConfig,
+  override: number | undefined,
+): number {
+  if (override !== undefined) {
+    return assertRatio(override, key);
+  }
+  const parameter = asRecord(thresholdParameters[key]);
+  const defaultValue = readNumber(parameter.defaultValue);
+  if (defaultValue === undefined) {
+    throw new Error(`Cup/disc risk parameter ${key} defaultValue is missing from the finding definition.`);
+  }
   return assertRatio(
-    readNumber(riskPredicate.asymmetrySignificantAt) ?? GLAUCOMA_CUP_DISC_SIGNIFICANT_ASYMMETRY,
-    "cupDiscAsymmetry threshold",
+    defaultValue,
+    `cup/disc risk parameter ${key} default`,
   );
 }
 
@@ -1588,10 +1641,10 @@ function normalizeDescriptorCode(value: string): string {
 }
 
 function glaucomaOpenAngleBorderlineCode(
-  riskBucket: "low" | "high",
+  riskTier: GlaucomaCupDiscSuspectRiskTier,
   laterality: EyeLaterality,
 ): string {
-  const prefix = riskBucket === "high" ? "H40.02" : "H40.01";
+  const prefix = riskTier === "high" ? "H40.02" : "H40.01";
   return `${prefix}${lateralityDigit(laterality)}`;
 }
 

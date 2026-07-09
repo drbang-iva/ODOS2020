@@ -273,15 +273,36 @@
         "normalSemantics": {
           "riskPredicate": {
             "key": "glaucoma_suspect_cup_disc_multisignal_v1",
-            "thresholdParameter": {
-              "key": "cupDiscHighRiskThreshold",
-              "defaultValue": 0.55,
-              "minimum": 0,
-              "maximum": 1,
-              "step": 0.05,
-              "priorDefaultValue": 0.6
+            "thresholdParameters": {
+              "lowFloor": {
+                "key": "lowFloor",
+                "defaultValue": 0.5,
+                "minimum": 0,
+                "maximum": 1,
+                "step": 0.05
+              },
+              "highFloor": {
+                "key": "highFloor",
+                "defaultValue": 0.75,
+                "minimum": 0,
+                "maximum": 1,
+                "step": 0.05
+              },
+              "asymmetryLow": {
+                "key": "asymmetryLow",
+                "defaultValue": 0.2,
+                "minimum": 0,
+                "maximum": 1,
+                "step": 0.05
+              },
+              "asymmetryHigh": {
+                "key": "asymmetryHigh",
+                "defaultValue": 0.3,
+                "minimum": 0,
+                "maximum": 1,
+                "step": 0.05
+              }
             },
-            "asymmetrySignificantAt": 0.2,
             "descriptorHighRiskFlag": "highRiskDriver"
           }
         }
