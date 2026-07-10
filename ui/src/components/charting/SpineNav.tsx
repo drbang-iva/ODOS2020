@@ -1,6 +1,8 @@
 import type { ChartSectionId, SectionStatusMap } from "./types";
 
 const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
+  { id: "wearing", label: "Wearing (WRx)" },
+  { id: "auto-refraction", label: "Auto-Refraction / Auto-K" },
   { id: "va", label: "Visual Acuity" },
   { id: "refraction", label: "Refraction" },
   { id: "ortho-k", label: "Ortho-K" },

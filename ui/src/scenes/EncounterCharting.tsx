@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
+import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
@@ -10,6 +11,7 @@ import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
 import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
+import { WearingSection } from "../components/charting/WearingSection";
 import { useRole } from "../lib/role-context";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
@@ -19,6 +21,8 @@ interface Props {
 }
 
 const EMPTY_STATUSES: SectionStatusMap = {
+  wearing: { completed: false },
+  "auto-refraction": { completed: false },
   va: { completed: false },
   refraction: { completed: false },
   "ortho-k": { completed: false },
@@ -50,6 +54,20 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <SpineNav active={activeSection} statuses={statuses} onSelect={setActiveSection} />
         <main className="min-w-0 flex-1 bg-bg-deep">
+          {activeSection === "wearing" && (
+            <WearingSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("wearing", status)}
+            />
+          )}
+          {activeSection === "auto-refraction" && (
+            <AutoRefractionSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("auto-refraction", status)}
+            />
+          )}
           {activeSection === "va" && (
             <VaSection
               patientReference={patientReference}
