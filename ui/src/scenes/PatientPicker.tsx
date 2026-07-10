@@ -14,8 +14,13 @@ export function PatientPicker() {
             <div className="text-xs uppercase tracking-widest text-white/40">OSOD</div>
             <h1 className="mt-1 text-2xl font-semibold">Patient Picker</h1>
           </div>
-          <div className="rounded border border-white/10 px-3 py-1 text-xs text-white/50">
-            v0.3 clinical entry
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => window.location.assign("/patient/new")} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold text-white">
+              + New Patient
+            </button>
+            <div className="rounded border border-white/10 px-3 py-1 text-xs text-white/50">
+              v0.3 clinical entry
+            </div>
           </div>
         </header>
 
@@ -115,8 +120,9 @@ export function PatientSearch({
         )}
 
         {!loading && !error && patients.length === 0 && (
-          <div className="rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
-            No patients found.
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
+            <span>No patients found.</span>
+            <button type="button" onClick={() => window.location.assign("/patient/new")} className="rounded border border-blue-400/30 px-3 py-2 font-semibold text-blue-200">+ New Patient</button>
           </div>
         )}
 

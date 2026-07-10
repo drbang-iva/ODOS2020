@@ -56,3 +56,10 @@ test("the vision plan-template route reaches the insurance singleton settings sc
   assert.match(html, /Vision plan templates/);
   assert.match(html, /Loading vision plan templates/);
 });
+
+test("the new-patient route reaches the front-desk registration scene", () => {
+  const html = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/patient/new" />);
+  assert.match(html, /Front desk/);
+  assert.match(html, /New patient/);
+  assert.match(html, /Create patient/);
+});
