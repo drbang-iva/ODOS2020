@@ -19,6 +19,7 @@ import {
   type PayerMapRow,
 } from "../src/lib/floor-config-settings";
 import { DEFAULT_FLOOR_BOARD_CONFIG } from "../src/lib/floor-board";
+import { floorStateExtension } from "../src/lib/floor-state";
 import {
   publishFloorBoardConfig,
   useFloorBoardConfig,
@@ -28,7 +29,10 @@ import {
   CatalogSection,
   type CatalogDescriptor,
 } from "../src/scenes/settings/CatalogEditor";
-import { FloorConfigSettingsReady } from "../src/scenes/settings/FloorConfigSettings";
+import {
+  FloorConfigSettingsReady,
+  loadOnBoardStationIds,
+} from "../src/scenes/settings/FloorConfigSettings";
 
 const CONFIG: PersistedFloorConfig = {
   stations: [
@@ -142,6 +146,40 @@ test("station deactivation guard reports board-card and lane-threshold reference
     async () => boardGuard.stations.deactivate(optical),
     /patients currently on the board/,
   );
+});
+
+test("board-reference loading follows every Appointment search page before enabling deactivation", async () => {
+  const first = {
+    resourceType: "Appointment" as const,
+    id: "appt-1",
+    status: "checked-in" as const,
+    participant: [],
+    extension: [floorStateExtension("waiting", "2026-07-10T12:00:00.000Z")],
+  };
+  const second = {
+    resourceType: "Appointment" as const,
+    id: "appt-2",
+    status: "arrived" as const,
+    participant: [],
+    extension: [floorStateExtension("optical", "2026-07-10T12:05:00.000Z")],
+  };
+  const requested: string[] = [];
+  const stationIds = await loadOnBoardStationIds({
+    async search() {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: first }],
+        link: [{ relation: "next", url: "/fhir/R4/Appointment?page=2" }],
+      };
+    },
+    async searchUrl(url) {
+      requested.push(url);
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: second }] };
+    },
+  });
+  assert.deepEqual([...stationIds].sort(), ["optical", "waiting"]);
+  assert.deepEqual(requested, ["/fhir/R4/Appointment?page=2"]);
 });
 
 test("real floor singleton round-trips after projected station and payer edits", async () => {

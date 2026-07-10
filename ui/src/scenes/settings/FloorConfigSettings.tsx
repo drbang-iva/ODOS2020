@@ -30,12 +30,16 @@ import {
 } from "./CatalogEditor";
 
 type FloorSettingsClient = {
+  create<T extends Basic>(resource: T, sourceTag: string): Promise<T>;
+  update<T extends Basic>(resource: T, sourceTag: string): Promise<T>;
+};
+
+type AppointmentReader = {
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: URLSearchParams,
   ): Promise<Bundle<T>>;
-  create<T extends Basic>(resource: T, sourceTag: string): Promise<T>;
-  update<T extends Basic>(resource: T, sourceTag: string): Promise<T>;
+  searchUrl<T extends Resource>(url: string): Promise<Bundle<T>>;
 };
 
 type LoadedFloorSettings = {
@@ -54,22 +58,11 @@ export function FloorConfigSettings() {
     let cancelled = false;
     async function load() {
       try {
-        const [floorConfig, appointments] = await Promise.all([
+        const [floorConfig, onBoardStationIds] = await Promise.all([
           loadFloorConfigSingleton(),
-          fhir.search<Appointment>(
-            "Appointment",
-            new URLSearchParams([
-              ["status", "arrived,checked-in"],
-              ["_count", "200"],
-            ]),
-          ),
+          loadOnBoardStationIds(fhir),
         ]);
         if (cancelled) return;
-        const onBoardStationIds = new Set(
-          (appointments.entry ?? [])
-            .map((entry) => entry.resource && parseFloorState(entry.resource)?.station)
-            .filter((station): station is string => Boolean(station)),
-        );
         setLoaded({ ...floorConfig, onBoardStationIds });
         setError(null);
       } catch (loadError) {
@@ -111,6 +104,26 @@ export function FloorConfigSettings() {
       client={fhir}
     />
   );
+}
+
+export async function loadOnBoardStationIds(client: AppointmentReader): Promise<ReadonlySet<string>> {
+  let bundle = await client.search<Appointment>(
+    "Appointment",
+    new URLSearchParams([
+      ["status", "arrived,checked-in"],
+      ["_count", "200"],
+    ]),
+  );
+  const stationIds = new Set<string>();
+  for (;;) {
+    for (const entry of bundle.entry ?? []) {
+      const station = entry.resource && parseFloorState(entry.resource)?.station;
+      if (station) stationIds.add(station);
+    }
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return stationIds;
+    bundle = await client.searchUrl<Appointment>(next);
+  }
 }
 
 export function FloorConfigSettingsReady({
