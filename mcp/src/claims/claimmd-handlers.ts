@@ -65,6 +65,7 @@ export interface ClaimsHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedClaimsStaff | null>;
   adapter: ClaimMdAdapter | null;
   recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  queryAuditRows?(filters: { eventTypes: readonly ClaimAuditEventType[]; limit?: number }): Promise<OsodAuditEventRecord[]>;
   eraUnderpaymentThresholdCents?: number;
   now?: () => string;
 }
@@ -420,7 +421,7 @@ export async function handleClaimSearchRequest(
     return { status: 400, body: { error: "minAmount cannot exceed maxAmount." } };
   }
 
-  const [claimBundle, responseBundle, taskBundle] = await Promise.all([
+  const [claimBundle, responseBundle, taskBundle, submissionAudits] = await Promise.all([
     auth.fhir.search<Claim>("Claim", { _count: "100", _sort: "-created" }),
     auth.fhir.search<ClaimResponse>("ClaimResponse", { _count: "200", _sort: "-created" }),
     auth.fhir.search<Task>("Task", {
@@ -428,10 +429,15 @@ export async function handleClaimSearchRequest(
       _count: "200",
       _sort: "-authored-on",
     }),
+    deps.queryAuditRows?.({ eventTypes: ["claim.submit.completed"], limit: 5000 }) ?? [],
   ]);
   const claims = bundleResources(claimBundle);
   const responses = bundleResources(responseBundle);
   const tasks = bundleResources(taskBundle);
+  const submittedClaimReferences = new Set(submissionAudits.flatMap((row) =>
+    row.actionOutcome === "granted" && row.resourceType === "Claim" && row.resourceId
+      ? [`Claim/${row.resourceId}`]
+      : []));
   let patientReferences: Set<string> | undefined;
   const relatedResources: Resource[] = [];
   if (patient) {
@@ -468,7 +474,15 @@ export async function handleClaimSearchRequest(
   return {
     status: 200,
     body: {
-      items: projectClaimSearchResults({ claims, responses, tasks, relatedResources, filters, at: now(deps) }),
+      items: projectClaimSearchResults({
+        claims,
+        responses,
+        tasks,
+        relatedResources,
+        submittedClaimReferences,
+        filters,
+        at: now(deps),
+      }),
     },
   };
 }

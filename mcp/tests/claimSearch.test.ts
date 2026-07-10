@@ -29,6 +29,7 @@ test("claim search derives submitted, rejected, denied, underpaid, and paid with
     responses: [rejected, denied, underpaid, paid],
     tasks,
     relatedResources: relatedResources(),
+    submittedClaimReferences: new Set(["Claim/claim-1"]),
     at: AT,
   });
   const statusByClaim = Object.fromEntries(rows.map((row) => [row.claimReference, row.status]));
@@ -54,6 +55,7 @@ test("claim search filters real persisted Claim fields and resolved labels", () 
     responses,
     tasks: [] as Task[],
     relatedResources: relatedResources(),
+    submittedClaimReferences: new Set(["Claim/claim-1", "Claim/claim-2"]),
     at: AT,
   };
 
@@ -72,6 +74,17 @@ test("claim search filters real persisted Claim fields and resolved labels", () 
     }).map((row) => row.claimReference),
     ["Claim/claim-1", "Claim/claim-2", "Claim/claim-3"],
   );
+});
+
+test("claim search does not label an unaudited orphan Claim as submitted", () => {
+  assert.deepEqual(projectClaimSearchResults({
+    claims: [claim(1)],
+    responses: [],
+    tasks: [],
+    relatedResources: relatedResources(),
+    submittedClaimReferences: new Set(),
+    at: AT,
+  }), []);
 });
 
 function claim(number: number): Claim {

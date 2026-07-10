@@ -67,6 +67,7 @@ export function projectClaimSearchResults(input: {
   responses: readonly ClaimResponse[];
   tasks: readonly Task[];
   relatedResources: readonly Resource[];
+  submittedClaimReferences: ReadonlySet<string>;
   filters?: ClaimSearchFilters;
   at: string;
 }): ClaimSearchRow[] {
@@ -80,7 +81,14 @@ export function projectClaimSearchResults(input: {
   const taskStatusByClaim = deriveTaskStatuses(input.tasks, input.responses);
 
   return input.claims
-    .flatMap((claim) => projectClaim(claim, responsesByClaim, taskStatusByClaim, resources, input.at))
+    .flatMap((claim) => projectClaim(
+      claim,
+      responsesByClaim,
+      taskStatusByClaim,
+      resources,
+      input.submittedClaimReferences,
+      input.at,
+    ))
     .filter((row) => matchesFilters(row, filters))
     .sort((a, b) => b.daysSinceSubmission - a.daysSinceSubmission || a.claimNumber.localeCompare(b.claimNumber));
 }
@@ -90,6 +98,7 @@ function projectClaim(
   responsesByClaim: ReadonlyMap<string, ClaimResponse[]>,
   taskStatusByClaim: ReadonlyMap<string, ClaimSearchStatus>,
   resources: ReadonlyMap<string, Resource>,
+  submittedClaimReferences: ReadonlySet<string>,
   at: string,
 ): ClaimSearchRow[] {
   if (!claim.id || !claim.patient.reference || !claim.provider?.reference || !claim.insurer?.reference) return [];
@@ -98,6 +107,9 @@ function projectClaim(
   const paymentResponse = newestResponse(responses.filter((response) => response.payment?.amount));
   const latestResponse = newestResponse(responses);
   const facilityReference = claim.facility?.reference;
+  const status = taskStatusByClaim.get(claimReference)
+    ?? responseStatus(latestResponse, paymentResponse, submittedClaimReferences.has(claimReference));
+  if (!status) return [];
   return [{
     claimReference,
     claimNumber: claim.identifier?.find((identifier) => identifier.value)?.value ?? claim.id,
@@ -109,7 +121,7 @@ function projectClaim(
     totalChargedCents: moneyToCents(claim.total?.value),
     insurancePaidCents: moneyToCents(paymentResponse?.payment?.amount?.value),
     patientResponsibilityCents: patientResponsibilityCents(paymentResponse),
-    status: taskStatusByClaim.get(claimReference) ?? responseStatus(latestResponse, paymentResponse),
+    status,
     payerReference: claim.insurer.reference,
     payer: referenceLabel(claim.insurer.reference, claim.insurer.display, resources),
     ...(facilityReference ? {
@@ -175,9 +187,10 @@ function deriveTaskStatuses(
 function responseStatus(
   latestResponse: ClaimResponse | undefined,
   paymentResponse: ClaimResponse | undefined,
-): ClaimSearchStatus {
+  submitted: boolean,
+): ClaimSearchStatus | undefined {
   if (moneyToCents(paymentResponse?.payment?.amount?.value) > 0) return "paid";
-  if (!latestResponse) return "submitted";
+  if (!latestResponse) return submitted ? "submitted" : undefined;
   if (latestResponse.outcome === "error") return "rejected";
   if (latestResponse.outcome === "queued") return "queued";
   return "accepted";
