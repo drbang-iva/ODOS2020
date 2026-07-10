@@ -8,10 +8,12 @@ import {
   OSOD_INTAKE_FORM_EXTENSION_URL,
   OSOD_VISIT_DURATION_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM,
+  OSOD_VISIT_TYPE_CATEGORY_SYSTEM,
   SCHEDULER_PALETTE,
   buildVisitType,
   defaultVisitTypeCatalog,
   visitTypeCode,
+  visitTypeCategory,
   visitTypeColor,
   visitTypeDiscipline,
   visitTypeDurationMinutes,
@@ -134,6 +136,23 @@ test("readers recover code + discipline from a catalog entry (round-trip)", () =
   });
   assert.equal(visitTypeCode(hs), "routine-exam-established");
   assert.equal(visitTypeDiscipline(hs), "eyecare");
+});
+
+test("category is a second HealthcareService.category axis and discipline remains untouched", () => {
+  const hs = buildVisitType({
+    code: "dry-eye-consult",
+    name: "Dry Eye Consult",
+    discipline: "eyecare",
+    categoryCode: "dry-eye",
+    categoryLabel: "Dry Eye",
+    durationMinutes: 45,
+  });
+  assert.equal(hs.category?.length, 2);
+  assert.equal(hs.category?.[0]?.coding?.[0]?.system, OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(hs.category?.[0]?.coding?.[0]?.code, "eyecare");
+  assert.equal(hs.category?.[1]?.coding?.[0]?.system, OSOD_VISIT_TYPE_CATEGORY_SYSTEM);
+  assert.equal(visitTypeCategory(hs)?.code, "dry-eye");
+  assert.equal(visitTypeCategory(hs)?.display, "Dry Eye");
 });
 
 test("the default catalog filters by clinic mode — modularity exercised at the catalog layer (brief §1)", () => {

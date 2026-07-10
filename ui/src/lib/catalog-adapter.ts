@@ -1,4 +1,5 @@
-import type { Basic } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Resource } from "@medplum/fhirtypes";
+import { searchAll } from "./fhir-search";
 
 export type CatalogItemBase = {
   id: string;
@@ -21,6 +22,70 @@ export interface CatalogAdapter<Item> {
   deactivate(item: Item): Awaitable<Item>;
   reorder?(ids: string[]): Awaitable<void>;
   readonly capabilities: CatalogCapabilities;
+}
+
+type ResourceCatalogClient = {
+  search<T extends Resource>(
+    resourceType: T["resourceType"],
+    params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
+  ): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string): Promise<Bundle<T>>;
+  create<T extends Resource>(resource: T, sourceTag: string): Promise<T>;
+  update<T extends Resource>(resource: T, sourceTag: string): Promise<T>;
+};
+
+export function resourceCatalogAdapter<Item extends CatalogItemBase, R extends Resource>({
+  resourceType,
+  searchParams,
+  client,
+  sourceTag,
+  capabilities,
+  toItem,
+  includeResource,
+  buildResource,
+  deactivateResource,
+}: {
+  resourceType: R["resourceType"];
+  searchParams?: Record<string, string> | URLSearchParams | Array<[string, string]>;
+  client: ResourceCatalogClient;
+  sourceTag: string;
+  capabilities: CatalogCapabilities;
+  toItem: (resource: R) => Item;
+  includeResource?: (resource: R) => boolean;
+  buildResource: (item: Item) => R;
+  deactivateResource: (item: Item) => R;
+}): CatalogAdapter<Item> {
+  if (capabilities.reorder) {
+    throw new Error("Resource catalogs do not support reorder.");
+  }
+
+  async function write(resource: R): Promise<Item> {
+    const saved = resource.id
+      ? await client.update(resource, sourceTag)
+      : await client.create(resource, sourceTag);
+    return toItem(saved);
+  }
+
+  return {
+    capabilities,
+    async list() {
+      const resources = await searchAll<R>(client, resourceType, searchParams);
+      return resources.filter((resource) => includeResource?.(resource) ?? true).map(toItem);
+    },
+    async save(item) {
+      return write(buildResource(item));
+    },
+    async deactivate(item) {
+      if (!capabilities.deactivate) {
+        throw new Error("This catalog does not allow deactivation.");
+      }
+      const resource = deactivateResource(item);
+      if (!resource.id) {
+        throw new Error(`Catalog item "${item.id}" must be saved before it can be deactivated.`);
+      }
+      return write(resource);
+    },
+  };
 }
 
 type BasicWriter = {

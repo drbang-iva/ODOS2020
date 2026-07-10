@@ -25,6 +25,7 @@ import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableD
 import { SettingsIndex } from "./scenes/settings/SettingsIndex";
 import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
+import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -132,6 +133,8 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <FloorConfigSettings />;
     case "/settings/vision-plan-templates":
       return <VisionPlanTemplatesSettings />;
+    case "/settings/visit-types":
+      return <VisitTypeSettings />;
     default:
       return <ViewRouter view={view} />;
   }

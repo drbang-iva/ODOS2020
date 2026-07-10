@@ -108,6 +108,9 @@ function validateField(
       if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be a number.`);
       }
+      if (field.type === "duration" && !Number.isInteger(value)) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} must be a whole number of minutes.`);
+      }
       if (field.min !== undefined && value < field.min) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be at least ${field.min}.`);
       }

@@ -1,6 +1,8 @@
 import type { Appointment, Basic, Bundle, Extension, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
 import { create } from "zustand";
 import { fhir } from "./fhir";
+import { searchAll } from "./fhir-search";
+export { searchAll } from "./fhir-search";
 import {
   OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
   OSOD_DISCIPLINE_SYSTEM,
@@ -587,30 +589,6 @@ export function todayYmd(
     .slice(0, 10);
 }
 
-export async function searchAll<T extends Resource>(
-  client: SchedulingFhirClient,
-  resourceType: T["resourceType"],
-  params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
-): Promise<T[]> {
-  let bundle = await client.search<T>(resourceType, paramsWithCount(params));
-  const resources: T[] = [];
-  for (;;) {
-    resources.push(
-      ...(bundle.entry ?? [])
-        .map((entry) => entry.resource)
-        .filter((resource): resource is T => Boolean(resource)),
-    );
-    const nextUrl = bundle.link?.find((link) => link.relation === "next")?.url;
-    if (!nextUrl) {
-      return resources;
-    }
-    if (!client.searchUrl) {
-      throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
-    }
-    bundle = await client.searchUrl<T>(nextUrl);
-  }
-}
-
 async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
   config: SchedulingPracticeConfig;
   resource?: Basic;
@@ -684,16 +662,6 @@ function configStatePatch(
     slotMinutes: resolveSlotMinutes(config, officeId),
     ...extra,
   };
-}
-
-function paramsWithCount(
-  params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
-): URLSearchParams {
-  const searchParams = new URLSearchParams(params);
-  if (!searchParams.has("_count")) {
-    searchParams.set("_count", "100");
-  }
-  return searchParams;
 }
 
 function timezoneOffsetMinutes(timezoneOffset: string): number {

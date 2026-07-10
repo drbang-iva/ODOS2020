@@ -17,6 +17,8 @@ export type SchedulingDiscipline = (typeof SCHEDULING_DISCIPLINES)[number]["code
 
 export const OSOD_DISCIPLINE_SYSTEM = "https://osod.dev/fhir/CodeSystem/scheduling-discipline";
 export const OSOD_VISIT_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/visit-type";
+export const OSOD_VISIT_TYPE_CATEGORY_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/visit-type-category";
 export const OSOD_VISIT_DURATION_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-visit-duration";
 export const OSOD_DISPLAY_COLOR_EXTENSION_URL =
@@ -336,6 +338,7 @@ const DEFAULT_COLOR_BY_DISCIPLINE: Record<SchedulingDiscipline, string> = {
   eyecare: SCHEDULER_PALETTE.newExamBlue,
   aesthetics: SCHEDULER_PALETTE.aestheticsCyan,
 };
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const WEEKDAY_BY_UTC_DAY: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const ISO_WITH_OFFSET =
@@ -631,6 +634,157 @@ export function isDisciplineVisible(discipline: string, mode: string): boolean {
   return disciplinesForMode(mode).includes(discipline);
 }
 
+export interface VisitTypeInput {
+  code: string;
+  name: string;
+  discipline: string;
+  categoryCode?: string;
+  categoryLabel?: string;
+  durationMinutes: number;
+  color?: string;
+  eligibleResourceReferences?: string[];
+  intakeFormReference?: string;
+  active?: boolean;
+}
+
+export function buildVisitType(input: VisitTypeInput): HealthcareService {
+  if (!input.code) {
+    throw new Error("Visit type requires a stable catalog code.");
+  }
+  if (!input.name) {
+    throw new Error("Visit type requires a front-desk display name.");
+  }
+  assertDiscipline(input.discipline);
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
+    throw new Error("Visit type duration (durationMinutes) must be a positive integer.");
+  }
+  const color = input.color ?? DEFAULT_COLOR_BY_DISCIPLINE[input.discipline];
+  if (!HEX_COLOR.test(color)) {
+    throw new Error(`Visit type color must be a #rrggbb hex value, got "${color}".`);
+  }
+  if (input.categoryLabel && !input.categoryCode) {
+    throw new Error("Visit type categoryLabel requires categoryCode.");
+  }
+
+  return {
+    resourceType: "HealthcareService",
+    active: input.active ?? true,
+    appointmentRequired: true,
+    name: input.name,
+    category: [
+      {
+        coding: [
+          {
+            system: OSOD_DISCIPLINE_SYSTEM,
+            code: input.discipline,
+            display: SCHEDULING_DISCIPLINES.find((entry) => entry.code === input.discipline)?.display,
+          },
+        ],
+      },
+      ...(input.categoryCode
+        ? [
+            {
+              coding: [
+                {
+                  system: OSOD_VISIT_TYPE_CATEGORY_SYSTEM,
+                  code: input.categoryCode,
+                  ...(input.categoryLabel ? { display: input.categoryLabel } : {}),
+                },
+              ],
+              ...(input.categoryLabel ? { text: input.categoryLabel } : {}),
+            },
+          ]
+        : []),
+    ],
+    type: [
+      {
+        coding: [{ system: OSOD_VISIT_TYPE_SYSTEM, code: input.code, display: input.name }],
+        text: input.name,
+      },
+    ],
+    extension: [
+      { url: OSOD_VISIT_DURATION_EXTENSION_URL, valuePositiveInt: input.durationMinutes },
+      { url: OSOD_DISPLAY_COLOR_EXTENSION_URL, valueString: color },
+      ...(input.eligibleResourceReferences ?? []).map((reference) => ({
+        url: OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
+        valueReference: { reference },
+      })),
+      ...(input.intakeFormReference
+        ? [
+            {
+              url: OSOD_INTAKE_FORM_EXTENSION_URL,
+              valueReference: { reference: input.intakeFormReference },
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+const DEFAULT_VISIT_TYPES: VisitTypeInput[] = [
+  {
+    code: "routine-exam-new",
+    name: "Routine Exam (New)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.newExamBlue,
+  },
+  {
+    code: "routine-exam-established",
+    name: "Routine Exam (Established)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.establishedTeal,
+  },
+  {
+    code: "medicaid-exam",
+    name: "Medicaid Exam",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.lightSurfaceBright,
+  },
+  {
+    code: "office-visit",
+    name: "Office Visit (Medical)",
+    discipline: "eyecare",
+    durationMinutes: 20,
+    color: SCHEDULER_PALETTE.officeVisitOrange,
+  },
+  {
+    code: "special-testing",
+    name: "Special Testing (VF / OCT / Dry Eye)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.specialTestingPurple,
+  },
+  {
+    code: "aesthetics-consult",
+    name: "Aesthetics Consult",
+    discipline: "aesthetics",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.aestheticsCyan,
+  },
+  {
+    code: "aesthetics-treatment",
+    name: "Aesthetics Treatment",
+    discipline: "aesthetics",
+    durationMinutes: 60,
+    color: SCHEDULER_PALETTE.aestheticsRose,
+  },
+  {
+    code: "aesthetics-follow-up",
+    name: "Aesthetics Follow-Up",
+    discipline: "aesthetics",
+    durationMinutes: 15,
+    color: SCHEDULER_PALETTE.aestheticsSky,
+  },
+];
+
+export function defaultVisitTypeCatalog(mode: string): HealthcareService[] {
+  const visible = new Set<string>(disciplinesForMode(mode));
+  return DEFAULT_VISIT_TYPES.filter((visitType) => visible.has(visitType.discipline)).map(buildVisitType);
+}
+
 export function visitTypeCode(hs: HealthcareService): string | undefined {
   return hs.type?.[0]?.coding?.find((coding) => coding.system === OSOD_VISIT_TYPE_SYSTEM)?.code;
 }
@@ -640,6 +794,12 @@ export function visitTypeDiscipline(hs: HealthcareService): SchedulingDiscipline
     ?.flatMap((concept) => concept.coding ?? [])
     .find((coding) => coding.system === OSOD_DISCIPLINE_SYSTEM)?.code;
   return code as SchedulingDiscipline | undefined;
+}
+
+export function visitTypeCategory(hs: HealthcareService) {
+  return hs.category
+    ?.flatMap((concept) => concept.coding ?? [])
+    .find((coding) => coding.system === OSOD_VISIT_TYPE_CATEGORY_SYSTEM);
 }
 
 export function visitTypeDurationMinutes(hs: HealthcareService): number | undefined {
