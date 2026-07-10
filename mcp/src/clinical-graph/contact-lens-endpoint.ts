@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
-import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import {
+  assertBusinessActionAllowed,
+  type BusinessAction,
+  type PracticeRoleId,
+} from "../authz/roles.js";
 import {
   CONTACT_LENS_MATERIAL_CODES,
   CONTACT_LENS_TYPE_CODES,
@@ -22,6 +26,12 @@ import {
   type SpecialtyAdditionalFieldOption,
 } from "./contact-lens-definition.js";
 import { AUTO_KERATOMETRY_SEARCH_CODE } from "./pretest-endpoint.js";
+import {
+  codeCustomFieldComponents,
+  customFieldComponents,
+  customFieldValueSchema,
+  validateCustomFieldValues,
+} from "./custom-fields.js";
 import {
   captureGlaucomaFinding,
   type CapturedGlaucomaFinding,
@@ -105,6 +115,7 @@ const softContactLensEyeSchema = z.object({
   other: z.string().trim().max(500).optional(),
   manualEntry: z.boolean().default(false),
   overRefraction: overRefractionSchema.optional(),
+  customFields: z.array(customFieldValueSchema).max(64).default([]),
 }).strict();
 
 const softContactLensRequestSchema = z.object({
@@ -147,7 +158,8 @@ const specialtyContactLensEyeSchema = z.object({
   distancePinholeVisualAcuity: z.string().trim().min(1).max(100).optional(),
   other: z.string().trim().max(500).optional(),
   manualEntry: z.boolean().default(false),
-  additionalFields: z.array(specialtyAdditionalFieldSchema).max(17).default([]),
+  additionalFields: z.array(specialtyAdditionalFieldSchema).max(64).default([]),
+  customFields: z.array(customFieldValueSchema).max(64).default([]),
   overRefraction: overRefractionSchema.optional(),
 }).strict();
 
@@ -270,7 +282,10 @@ export async function handleSpecialtyContactLensDefinitionRequest(
   }
   return {
     status: 200,
-    body: { definition: definitionSummary(resolveSpecialtyContactLensDefinition(deps.findingDefinitions?.())) },
+    body: {
+      definition: definitionSummary(resolveSpecialtyContactLensDefinition(deps.findingDefinitions?.())),
+      canManageFields: staffMay(staff.actorRole, "finding-definitions.write"),
+    },
   };
 }
 
@@ -399,7 +414,13 @@ function captureSoftContactLensFinding(input: {
     patientReference: input.request.patientReference,
     encounterReference: input.request.encounterReference,
     laterality: input.eye,
-    value: { type: "components", components: softContactLensComponents(input.request, input.payload, input.lensEntryId) },
+    value: {
+      type: "components",
+      components: [
+        ...softContactLensComponents(input.request, input.payload, input.lensEntryId),
+        ...customFieldComponents(input.payload.customFields, input.definition),
+      ],
+    },
     recordedAt: input.provenance.recordedAt,
     provenance: input.provenance,
     findingInstanceId: findingId,
@@ -409,7 +430,10 @@ function captureSoftContactLensFinding(input: {
   });
   return {
     ...capture,
-    observation: codeLensParameterComponents(capture.observation),
+    observation: codeCustomFieldComponents(
+      codeLensParameterComponents(capture.observation),
+      input.definition,
+    ),
     provenance: {
       ...capture.provenance,
       activity: osodConcept("CREATE", "Capture soft contact lens prescription evidence"),
@@ -439,7 +463,7 @@ function captureSpecialtyContactLensFinding(input: {
         input.payload,
         input.lensEntryId,
         additionalOptions,
-      ),
+      ).concat(customFieldComponents(input.payload.customFields, input.definition)),
     },
     recordedAt: input.provenance.recordedAt,
     provenance: input.provenance,
@@ -453,8 +477,11 @@ function captureSpecialtyContactLensFinding(input: {
     .map((option) => [option.localCode, { code: option.parameterCode as ContactLensParameterCode, unit: option.unit }]));
   return {
     ...capture,
-    observation: codeSpecialtyLensComponents(
-      codeLensParameterComponents(capture.observation, additionalParameters),
+    observation: codeCustomFieldComponents(
+      codeSpecialtyLensComponents(
+        codeLensParameterComponents(capture.observation, additionalParameters),
+      ),
+      input.definition,
     ),
     provenance: {
       ...capture.provenance,
@@ -659,6 +686,8 @@ function validateRequest(request: SoftContactLensRequest, definition: ClinicalFi
         if (error) return error;
       }
     }
+    const customFieldError = validateCustomFieldValues(payload.customFields, definition, eye);
+    if (customFieldError) return customFieldError;
   }
   return undefined;
 }
@@ -718,6 +747,8 @@ function validateSpecialtyRequest(
       if (seenAdditional.has(field.code)) return `${eye} additional field ${field.code} was supplied more than once.`;
       seenAdditional.add(field.code);
     }
+    const customFieldError = validateCustomFieldValues(payload.customFields, definition, eye);
+    if (customFieldError) return customFieldError;
     if (payload.overRefraction) {
       if ((payload.overRefraction.cylinder === undefined) !== (payload.overRefraction.axis === undefined)) {
         return `${eye} over-refraction cylinder and axis must be saved together.`;
@@ -877,6 +908,7 @@ function specialtyEyeTouched(payload: SpecialtyContactLensEyePayload | undefined
   return Boolean(payload && Object.entries(payload).some(([key, value]) => {
     if (key === "manualEntry") return value === true;
     if (key === "additionalFields") return Array.isArray(value) && value.length > 0;
+    if (key === "customFields") return Array.isArray(value) && value.length > 0;
     return value !== undefined && value !== "" && (typeof value !== "object" || overRefractionTouched(value));
   }));
 }
@@ -934,7 +966,7 @@ function pushString(
   if (value) components.push({ code, display, value });
 }
 
-function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
+function staffMay(role: PracticeRoleId, action: BusinessAction): boolean {
   try {
     assertBusinessActionAllowed(role, action);
     return true;

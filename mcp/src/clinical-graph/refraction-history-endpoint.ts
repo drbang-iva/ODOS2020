@@ -3,6 +3,12 @@ import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { CONTACT_LENS_PARAMETER_CODE_SYSTEM } from "../fhir/contactLens.js";
 import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import {
+  customFieldEntries,
+  observationCustomValue,
+  pickerFieldOptions,
+} from "./custom-fields.js";
+import type { ClinicalFindingDefinition } from "./glaucoma-suspect.js";
 
 type Eye = "OD" | "OS";
 
@@ -19,6 +25,14 @@ export interface RefractionHistoryEndpointDeps {
     actorRole: PracticeRoleId;
     fhir: RefractionHistoryFhirClient;
   } | null>;
+  findingDefinitions?: () => ClinicalFindingDefinition[];
+}
+
+export interface RefractionHistoryExtra {
+  code: string;
+  label: string;
+  value: number | string;
+  unit?: string;
 }
 
 export interface GlassesHistoryRow {
@@ -32,6 +46,7 @@ export interface GlassesHistoryRow {
   distVA?: string;
   nearVA?: string;
   purpose?: string;
+  extras?: RefractionHistoryExtra[];
 }
 
 export interface SoftContactLensHistoryRow {
@@ -49,6 +64,7 @@ export interface SoftContactLensHistoryRow {
   distVA?: string;
   nearVA?: string;
   status?: string;
+  extras?: RefractionHistoryExtra[];
 }
 
 export interface SpecialtyContactLensHistoryRow {
@@ -65,6 +81,7 @@ export interface SpecialtyContactLensHistoryRow {
   add?: number;
   distVA?: string;
   nearVA?: string;
+  extras?: RefractionHistoryExtra[];
 }
 
 export interface RefractionHistoryResponse {
@@ -107,14 +124,23 @@ export async function handleRefractionHistoryRequest(
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.softCl),
     searchHistory(staff.fhir, parsed.data.patient, SEARCH_CODES.specialtyCl),
   ]);
+  const definitions = deps.findingDefinitions?.() ?? [];
+  const refractionDefinition = definitionByKey(definitions, "refraction");
+  const wearingDefinition = definitionByKey(definitions, "wearing_rx");
+  const softClDefinition = definitionByKey(definitions, "soft_contact_lens");
+  const specialtyClDefinition = definitionByKey(definitions, "specialty_contact_lens");
 
   const body: RefractionHistoryResponse = {
     glasses: [
-      ...bundleResources(refractionBundle).flatMap(refractionRows),
-      ...bundleResources(wearingBundle).flatMap(wearingRows),
+      ...bundleResources(refractionBundle).flatMap((observation) => refractionRows(observation, refractionDefinition)),
+      ...bundleResources(wearingBundle).flatMap((observation) => wearingRows(observation, wearingDefinition)),
     ].sort(compareRowsNewestFirst),
-    softCl: bundleResources(softClBundle).flatMap(softContactLensRows).sort(compareRowsNewestFirst),
-    specialtyCl: bundleResources(specialtyClBundle).flatMap(specialtyContactLensRows).sort(compareRowsNewestFirst),
+    softCl: bundleResources(softClBundle)
+      .flatMap((observation) => softContactLensRows(observation, softClDefinition))
+      .sort(compareRowsNewestFirst),
+    specialtyCl: bundleResources(specialtyClBundle)
+      .flatMap((observation) => specialtyContactLensRows(observation, specialtyClDefinition))
+      .sort(compareRowsNewestFirst),
   };
 
   return { status: 200, body };
@@ -133,7 +159,10 @@ function searchHistory(
   });
 }
 
-function refractionRows(observation: Observation): GlassesHistoryRow[] {
+function refractionRows(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+): GlassesHistoryRow[] {
   const eye = observationEye(observation);
   const date = observation.effectiveDateTime;
   const typeComponent = component(observation, "REFRACTION_TYPE");
@@ -152,10 +181,14 @@ function refractionRows(observation: Observation): GlassesHistoryRow[] {
     distVA: componentString(observation, "DISTANCE_VA"),
     nearVA: componentString(observation, "NEAR_VA"),
     purpose: componentString(observation, "PURPOSE"),
+    extras: extrasOrUndefined(customExtras(observation, definition)),
   })];
 }
 
-function wearingRows(observation: Observation): GlassesHistoryRow[] {
+function wearingRows(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+): GlassesHistoryRow[] {
   const date = observation.effectiveDateTime;
   if (!date) return [];
   return (["OD", "OS"] as const).flatMap((eye) => {
@@ -169,12 +202,16 @@ function wearingRows(observation: Observation): GlassesHistoryRow[] {
       add: componentNumber(observation, `${eye}_ADD`),
       distVA: componentString(observation, `${eye}_DISTANCE_VA`),
       nearVA: componentString(observation, `${eye}_NEAR_VA`),
+      extras: extrasOrUndefined(customExtras(observation, definition, `${eye}_`)),
     });
     return hasMeasuredValue(row) ? [row] : [];
   });
 }
 
-function softContactLensRows(observation: Observation): SoftContactLensHistoryRow[] {
+function softContactLensRows(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+): SoftContactLensHistoryRow[] {
   const eye = observationEye(observation);
   const date = observation.effectiveDateTime;
   if (!eye || !date) return [];
@@ -193,10 +230,14 @@ function softContactLensRows(observation: Observation): SoftContactLensHistoryRo
     distVA: componentString(observation, "DISTANCE_VA"),
     nearVA: componentString(observation, "NEAR_VA"),
     status: componentString(observation, "STATUS"),
+    extras: extrasOrUndefined(customExtras(observation, definition)),
   })];
 }
 
-function specialtyContactLensRows(observation: Observation): SpecialtyContactLensHistoryRow[] {
+function specialtyContactLensRows(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+): SpecialtyContactLensHistoryRow[] {
   const eye = observationEye(observation);
   const date = observation.effectiveDateTime;
   if (!eye || !date) return [];
@@ -214,6 +255,7 @@ function specialtyContactLensRows(observation: Observation): SpecialtyContactLen
     add: contactLensParameterNumber(observation, "add-power"),
     distVA: componentString(observation, "DISTANCE_VA"),
     nearVA: componentString(observation, "NEAR_VA"),
+    extras: extrasOrUndefined(specialtyExtras(observation, definition)),
   })];
 }
 
@@ -248,6 +290,65 @@ function componentConceptCode(observation: Observation, code: string): string | 
   const matched = component(observation, code);
   return matched?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code
     ?? matched?.valueString;
+}
+
+function customExtras(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+  codePrefix = "",
+): RefractionHistoryExtra[] {
+  if (!definition) return [];
+  return customFieldEntries(definition, true).flatMap((field) => {
+    const value = observationCustomValue(observation, field, codePrefix);
+    return value === undefined ? [] : [{
+      code: field.localCode,
+      label: field.display,
+      value,
+      ...(field.unit ? { unit: field.unit } : {}),
+    }];
+  });
+}
+
+function specialtyExtras(
+  observation: Observation,
+  definition: ClinicalFindingDefinition | undefined,
+): RefractionHistoryExtra[] {
+  if (!definition) return [];
+  return pickerFieldOptions(definition, true).flatMap((field) => {
+    if (field.origin === "practice") {
+      const custom = customFieldEntries(definition, true)
+        .find((candidate) => candidate.localCode === field.localCode);
+      const value = custom ? observationCustomValue(observation, custom) : undefined;
+      return value === undefined ? [] : [{
+        code: field.localCode,
+        label: field.display,
+        value,
+        ...(field.unit ? { unit: field.unit } : {}),
+      }];
+    }
+    const localValue = componentNumber(observation, field.localCode);
+    const canonicalValue = field.parameterCode
+      ? contactLensParameterNumber(observation, field.parameterCode)
+      : undefined;
+    const value = localValue ?? canonicalValue;
+    return value === undefined ? [] : [{
+      code: field.localCode,
+      label: field.display,
+      value,
+      ...(field.unit ? { unit: field.unit } : {}),
+    }];
+  });
+}
+
+function extrasOrUndefined(extras: RefractionHistoryExtra[]): RefractionHistoryExtra[] | undefined {
+  return extras.length ? extras : undefined;
+}
+
+function definitionByKey(
+  definitions: readonly ClinicalFindingDefinition[],
+  stableKey: string,
+): ClinicalFindingDefinition | undefined {
+  return definitions.find((definition) => definition.stableKey === stableKey);
 }
 
 function hasMeasuredValue(row: GlassesHistoryRow): boolean {
