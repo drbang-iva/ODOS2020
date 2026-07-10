@@ -126,6 +126,7 @@ test("specialty CL capture persists per eye with existing type, material, and pa
     assert.equal(provenance.target[1]?.reference, BODY.patientReference);
   }
   const observations = created.map((entry) => entry.resource).filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.every((observation) => observation.status === "preliminary"), true);
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   const od = observations[0];
   assert.equal(od?.code.coding?.some((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "specialty_contact_lens"), true);

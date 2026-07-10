@@ -226,8 +226,7 @@ function authHeaders(): Record<string, string> {
 }
 
 function clinicalGraphApiBase(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 function formatDate(value: string): string {

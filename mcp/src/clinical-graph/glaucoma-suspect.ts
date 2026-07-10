@@ -513,7 +513,7 @@ export function projectFindingInstanceToObservation(
     id: finding.observationReference?.startsWith("Observation/")
       ? finding.observationReference.slice("Observation/".length)
       : undefined,
-    status: "final",
+    status: "preliminary",
     code: definition.fhirObservationCode ?? osodConcept(definition.stableKey, definition.display),
     ...(findingValueToObservationValue(finding.value)),
   };

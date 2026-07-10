@@ -69,6 +69,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   });
   assert.equal(capture.status, 200, JSON.stringify(capture.body));
   assert.equal(fhir.observations.length, 1);
+  assert.equal(fhir.observations[0]?.status, "preliminary");
   assert.equal(component(fhir.observations[0], localCode)?.valueQuantity?.value, 72);
   assert.equal(component(fhir.observations[0], "REMARKS")?.valueString, "Discussed nutrition.");
   assert.deepEqual(fhir.captureWrites.map((write) => write.resourceType), ["Observation", "Provenance"]);

@@ -127,6 +127,7 @@ test("soft CL capture persists one Observation per eye using existing CL paramet
     assert.equal(provenance.target[1]?.reference, BODY.patientReference);
   }
   const observations = created.map((entry) => entry.resource).filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.every((observation) => observation.status === "preliminary"), true);
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   for (const observation of observations) {
     assert.equal(observation.code.coding?.some((coding) =>

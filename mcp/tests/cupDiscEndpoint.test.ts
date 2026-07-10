@@ -90,6 +90,7 @@ test("cup/disc endpoint persists neutral Observation and returns normal without 
   assert.deepEqual(body.eyes.OD.signals, []);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Observation", "Provenance"]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  assert.equal((created[0]?.resource as Observation).status, "preliminary");
   const targets = (created[1]?.resource as Provenance).target;
   assert.equal(targets[0]?.reference?.startsWith("Observation/"), true);
   assert.equal(targets[1]?.reference, BODY.patientReference);

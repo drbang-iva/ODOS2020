@@ -201,7 +201,7 @@ function isCustomSection(definition: FindingDefinition): boolean {
 }
 
 function clinicalGraphApiBase(): string {
-  return (import.meta.env.VITE_MCP_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8103";
+  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 function authHeaders(): Record<string, string> {

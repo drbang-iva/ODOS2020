@@ -133,6 +133,7 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
     assert.equal(provenance.target[1]?.reference, BODY.patientReference);
   }
   const observation = created[0]?.resource as Observation;
+  assert.equal(observation.status, "preliminary");
   assert.equal(componentValue(observation, "REFRACTION_TYPE", "code"), "FINAL_RX");
   assert.match(String(componentValue(observation, "REFRACTION_BLOCK_ID", "string")), /^refraction-block-/);
   assert.equal(componentValue(observation, "PURPOSE", "string"), "General wear");
