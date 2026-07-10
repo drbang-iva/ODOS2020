@@ -1,12 +1,13 @@
 import type { ChartSectionId, SectionStatusMap } from "./types";
 
-const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
+const SECTIONS: Array<{ id: ChartSectionId; label: string; readOnly?: boolean }> = [
   { id: "wearing", label: "Wearing (WRx)" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K" },
   { id: "va", label: "Visual Acuity" },
   { id: "refraction", label: "Refraction" },
   { id: "soft-contact-lens", label: "Soft Contact Lenses" },
   { id: "specialty-contact-lens", label: "Specialty Contact Lens" },
+  { id: "refraction-history", label: "Refraction History", readOnly: true },
   { id: "ortho-k", label: "Ortho-K" },
   { id: "dry-eye", label: "Dry Eye" },
   { id: "myopia-management", label: "Myopia Management" },
@@ -41,13 +42,13 @@ export function SpineNav({ active, statuses, onSelect }: Props) {
               <span
                 className={[
                   "mt-1 h-3 w-3 rounded-full",
-                  completed ? "bg-emerald-400" : "bg-white/25",
+                  completed ? "bg-emerald-400" : section.readOnly ? "bg-brand/70" : "bg-white/25",
                 ].join(" ")}
               />
               <span>
                 <span className="block text-sm font-semibold text-white">{section.label}</span>
                 <span className="mt-1 block text-xs text-white/45">
-                  {completed ? statuses[section.id].summary ?? "Saved" : "Incomplete"}
+                  {section.readOnly ? "Read only" : completed ? statuses[section.id].summary ?? "Saved" : "Incomplete"}
                 </span>
               </span>
             </button>

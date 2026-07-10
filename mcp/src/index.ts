@@ -72,6 +72,7 @@ import {
   handleIopHistoryRequest,
   handleIopTargetRequest,
 } from "./clinical-graph/iop-history-endpoint.js";
+import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
@@ -5733,6 +5734,22 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/iop/history failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP history route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/refraction/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleRefractionHistoryRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/refraction/history failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Refraction history route failed" });
           }
         }
       });
