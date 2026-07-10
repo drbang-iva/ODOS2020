@@ -59,6 +59,7 @@ import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-ada
 import {
   eraUnderpaymentThresholdCentsFromEnv,
   handleClaimEraWorklistTaskRequest,
+  handleClaimSearchRequest,
   handleClaimStatusRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
@@ -5641,6 +5642,28 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /eligibility/check failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "eligibility route failed" });
+          }
+        }
+      });
+
+      app.get("/claims/search", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleClaimSearchRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/search failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "claim search route failed" });
           }
         }
       });
