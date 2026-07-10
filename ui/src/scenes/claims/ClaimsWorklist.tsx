@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
 import { fhir } from "../../lib/fhir";
+import { downloadCsvExport, queryPath } from "../../lib/reporting";
 import {
   WORKLIST_LANES,
   claimWorklistItem,
@@ -11,8 +12,8 @@ import {
   type ClaimsApiOptions,
   type ClaimsWorklistItem,
   type ResolveWorklistInput,
+  type WorklistFilterStatus,
   type WorklistDisposition,
-  type WorklistStatus,
 } from "../../lib/claims-worklist";
 
 const LANE_COLOR = {
@@ -24,10 +25,11 @@ const LANE_COLOR = {
 
 export function ClaimsWorklist() {
   const [items, setItems] = useState<ClaimsWorklistItem[]>([]);
-  const [status, setStatus] = useState<WorklistStatus | undefined>();
+  const [status, setStatus] = useState<WorklistFilterStatus | undefined>(() => worklistStatusFromQuery(window.location.search));
   const [selectedId, setSelectedId] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [exporting, setExporting] = useState(false);
   const api = claimsApiOptions();
 
   const load = useCallback(async () => {
@@ -57,6 +59,22 @@ export function ClaimsWorklist() {
     }
   };
 
+  const exportRows = async () => {
+    setExporting(true);
+    setError(undefined);
+    try {
+      await downloadCsvExport(
+        queryPath("/claims/worklist/export", { status }),
+        "claims-worklist.csv",
+        api,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-bg-deep p-5 text-white">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -65,11 +83,17 @@ export function ClaimsWorklist() {
           <h1 className="text-2xl font-semibold">Claims worklist</h1>
           <p className="mt-1 text-sm text-white/50">Oldest and most urgent items appear first.</p>
         </div>
-        <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
-          <FilterButton active={status === undefined} label="All" onClick={() => setStatus(undefined)} />
-          <FilterButton active={status === "new"} label="New" onClick={() => setStatus("new")} />
-          <FilterButton active={status === "in-review"} label="In review" onClick={() => setStatus("in-review")} />
-          <FilterButton active={status === "resolved"} label="Resolved" onClick={() => setStatus("resolved")} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1 text-xs">
+            <FilterButton active={status === undefined} label="All" onClick={() => setStatus(undefined)} />
+            <FilterButton active={status === "open"} label="Open" onClick={() => setStatus("open")} />
+            <FilterButton active={status === "new"} label="New" onClick={() => setStatus("new")} />
+            <FilterButton active={status === "in-review"} label="In review" onClick={() => setStatus("in-review")} />
+            <FilterButton active={status === "resolved"} label="Resolved" onClick={() => setStatus("resolved")} />
+          </div>
+          <button type="button" disabled={exporting || loading} onClick={() => void exportRows()} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200 disabled:opacity-50">
+            {exporting ? "Exporting…" : "Export CSV"}
+          </button>
         </div>
       </header>
 
@@ -306,4 +330,11 @@ function claimsApiOptions(): ClaimsApiOptions {
     authorization: fhir.authHeader(),
     baseUrl: meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
   };
+}
+
+function worklistStatusFromQuery(search: string): WorklistFilterStatus | undefined {
+  const status = new URLSearchParams(search).get("status");
+  return status === "open" || status === "new" || status === "in-review" || status === "resolved"
+    ? status
+    : undefined;
 }

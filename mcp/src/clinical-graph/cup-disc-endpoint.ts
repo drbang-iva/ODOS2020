@@ -29,6 +29,7 @@ export interface CupDiscAuthenticatedStaff {
 
 export interface CupDiscEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<CupDiscAuthenticatedStaff | null>;
+  findingDefinitions?: () => ClinicalFindingDefinition[];
   now?: () => string;
 }
 
@@ -86,7 +87,7 @@ type Eye = typeof EYES[number];
 type CupDiscEyePayload = z.infer<typeof eyePayloadSchema>;
 
 export async function handleCupDiscDefinitionRequest(
-  deps: Pick<CupDiscEndpointDeps, "authenticate">,
+  deps: Pick<CupDiscEndpointDeps, "authenticate" | "findingDefinitions">,
   input: { authHeader: string | undefined },
 ): Promise<CupDiscEndpointResult> {
   const staff = await deps.authenticate(input.authHeader);
@@ -97,7 +98,7 @@ export async function handleCupDiscDefinitionRequest(
     return { status: 403, body: { error: "chart.read role required" } };
   }
 
-  const definition = cupDiscDefinition();
+  const definition = resolveCupDiscDefinition(deps.findingDefinitions?.());
   return { status: 200, body: cupDiscDefinitionResponse(definition) };
 }
 
@@ -118,7 +119,7 @@ export async function handleCupDiscCaptureRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid cup/disc request." } };
   }
 
-  const definition = cupDiscDefinition();
+  const definition = resolveCupDiscDefinition(deps.findingDefinitions?.());
   const validationError = validateCupDiscRequest(parsed.data.eyes, definition);
   if (validationError) {
     return { status: 400, body: { error: validationError } };
@@ -193,10 +194,13 @@ export async function handleCupDiscCaptureRequest(
   };
 }
 
-function cupDiscDefinition(): ClinicalFindingDefinition {
-  const definition = buildGlaucomaFindingDefinitionStubs({
+export function resolveCupDiscDefinition(
+  suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
+): ClinicalFindingDefinition {
+  const definitions = suppliedDefinitions ?? buildGlaucomaFindingDefinitionStubs({
     provenance: cupDiscProvenance("Practitioner/osod-system", new Date(0).toISOString()),
-  }).find((row) => row.stableKey === "cup_disc_ratio");
+  });
+  const definition = definitions.find((row) => row.stableKey === "cup_disc_ratio");
   if (!definition) {
     throw new Error("Glaucoma cup/disc finding definition seed is missing.");
   }

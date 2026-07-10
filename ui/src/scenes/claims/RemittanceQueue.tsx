@@ -11,6 +11,7 @@ import {
   type EraBatchLane,
 } from "../../lib/claims-worklist";
 import { ClaimsWorklistBoard } from "./ClaimsWorklist";
+import { downloadCsvExport, queryPath } from "../../lib/reporting";
 
 export function RemittanceQueue() {
   const [batches, setBatches] = useState<EraBatchItem[]>([]);
@@ -19,6 +20,7 @@ export function RemittanceQueue() {
   const [selectedEraId, setSelectedEraId] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [exporting, setExporting] = useState(false);
   const api = claimsApiOptions();
 
   const load = useCallback(async () => {
@@ -42,13 +44,34 @@ export function RemittanceQueue() {
     void load();
   }, [load]);
 
+  const exportRows = async () => {
+    setExporting(true);
+    setError(undefined);
+    try {
+      await downloadCsvExport(
+        queryPath("/claims/era/export", { lane }),
+        "remittance-queue.csv",
+        api,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const selected = batches.find((batch) => batch.eraId === selectedEraId);
   return (
     <main className="min-h-screen bg-bg-deep p-5 text-white">
-      <header className="mb-5">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
-        <h1 className="text-2xl font-semibold">Remittance queue</h1>
-        <p className="mt-1 text-sm text-white/50">Claim.MD ERA batches, composed with import and worklist state.</p>
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
+          <h1 className="text-2xl font-semibold">Remittance queue</h1>
+          <p className="mt-1 text-sm text-white/50">Claim.MD ERA batches, composed with import and worklist state.</p>
+        </div>
+        <button type="button" disabled={exporting || loading} onClick={() => void exportRows()} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200 disabled:opacity-50">
+          {exporting ? "Exporting…" : "Export CSV"}
+        </button>
       </header>
 
       {error && (
