@@ -5,6 +5,7 @@ export type ChartSectionId =
   | "refraction"
   | "soft-contact-lens"
   | "specialty-contact-lens"
+  | "refraction-history"
   | "ortho-k"
   | "dry-eye"
   | "myopia-management"
