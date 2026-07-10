@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { Bundle, Invoice, Patient } from "@medplum/fhirtypes";
 import type { ClaimsApiOptions } from "../../lib/claims-worklist";
 import { fhir } from "../../lib/fhir";
@@ -14,6 +14,7 @@ import {
 } from "../../lib/patient-payments";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import { PatientSearch } from "../PatientPicker";
+import { downloadCsvExport, queryPath } from "../../lib/reporting";
 
 type View = "all" | "unapplied";
 type CreditAction =
@@ -31,14 +32,20 @@ export function PatientPayments() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [dateFilters, setDateFilters] = useState<{ startDate?: string; endDate?: string }>({});
+  const [appliedDateFilters, setAppliedDateFilters] = useState<{ startDate?: string; endDate?: string }>({});
+  const [exporting, setExporting] = useState(false);
   const api = patientPaymentApiOptions();
 
-  const load = async (patientReference: string) => {
+  const load = async (
+    patientReference: string,
+    dates: { startDate?: string; endDate?: string } = appliedDateFilters,
+  ) => {
     setLoading(true);
     setError(undefined);
     try {
       const [nextPayments, nextCredits, invoiceBundle] = await Promise.all([
-        fetchPatientPayments({ patientReference }, api),
+        fetchPatientPayments({ patientReference, ...dates }, api),
         fetchUnappliedCredits(patientReference, api),
         fhir.search<Invoice>("Invoice", {
           subject: patientReference,
@@ -64,7 +71,9 @@ export function PatientPayments() {
     setPayments([]);
     setCredits([]);
     setOpenInvoices([]);
-    void load(`Patient/${selected.id}`);
+    setDateFilters({});
+    setAppliedDateFilters({});
+    void load(`Patient/${selected.id}`, {});
   };
 
   const submitAction = async (input: CreditActionInput) => {
@@ -75,7 +84,7 @@ export function PatientPayments() {
       if (input.kind === "transfer") await transferPatientCredit(input.body, api);
       if (input.kind === "void") await voidPatientCredit(input.body, api);
       setAction(undefined);
-      if (patient?.id) await load(`Patient/${patient.id}`);
+      if (patient?.id) await load(`Patient/${patient.id}`, appliedDateFilters);
     } catch (cause) {
       setError(messageOf(cause));
     } finally {
@@ -87,6 +96,34 @@ export function PatientPayments() {
     () => new Map(payments.map((payment) => [payment.paymentReconciliationReference, payment])),
     [payments],
   );
+
+  const filterPayments = (event: FormEvent) => {
+    event.preventDefault();
+    if (!patient?.id) return;
+    const next = { ...dateFilters };
+    setAppliedDateFilters(next);
+    void load(`Patient/${patient.id}`, next);
+  };
+
+  const exportPayments = async () => {
+    if (!patient?.id) return;
+    setExporting(true);
+    setError(undefined);
+    try {
+      await downloadCsvExport(
+        queryPath("/payments/reconciliations/export", {
+          patientReference: `Patient/${patient.id}`,
+          ...appliedDateFilters,
+        }),
+        "patient-payments.csv",
+        api,
+      );
+    } catch (cause) {
+      setError(messageOf(cause));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-bg-deep p-5 text-white">
@@ -120,6 +157,15 @@ export function PatientPayments() {
               <Tab active={view === "unapplied"} onClick={() => setView("unapplied")}>Unapplied credit ({credits.length})</Tab>
             </div>
           </section>
+
+          <form onSubmit={filterPayments} className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-white/10 bg-bg-panel/80 p-4">
+            <Field label="Payment date from" type="date" value={dateFilters.startDate ?? ""} onChange={(startDate) => setDateFilters({ ...dateFilters, startDate: startDate || undefined })} />
+            <Field label="Payment date through" type="date" value={dateFilters.endDate ?? ""} onChange={(endDate) => setDateFilters({ ...dateFilters, endDate: endDate || undefined })} />
+            <button type="submit" disabled={loading} className="h-10 rounded bg-blue-600 px-4 text-sm font-bold disabled:opacity-50">Apply dates</button>
+            <button type="button" disabled={exporting || loading} onClick={() => void exportPayments()} className="h-10 rounded border border-blue-400/30 bg-blue-950/30 px-4 text-sm font-bold text-blue-200 disabled:opacity-50">
+              {exporting ? "Exporting…" : "Export CSV"}
+            </button>
+          </form>
 
           {loading ? (
             <div className="grid min-h-52 place-items-center text-sm text-white/50">Loading patient payments…</div>
@@ -302,7 +348,7 @@ function InvoiceSelect({ label, value, invoices, onChange }: { label: string; va
   return <label className="block text-xs font-bold text-white/55">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white"><option value="">Select Invoice</option>{invoices.map((invoice) => <option key={invoice.id} value={`Invoice/${invoice.id}`}>{invoiceLabel(invoice)}</option>)}</select></label>;
 }
 
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: "text" | "number" }) {
+function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: "text" | "number" | "date" }) {
   return <label className="block text-xs font-bold text-white/55">{label}<input type={type} min={type === "number" ? "0.01" : undefined} step={type === "number" ? "0.01" : undefined} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white" /></label>;
 }
 

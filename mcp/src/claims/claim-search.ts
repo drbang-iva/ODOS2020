@@ -37,6 +37,9 @@ export interface ClaimSearchFilters {
   cpt?: string;
   minAmountCents?: number;
   maxAmountCents?: number;
+  minDaysOutstanding?: number;
+  maxDaysOutstanding?: number;
+  outstandingOnly?: boolean;
 }
 
 export interface ClaimSearchRow {
@@ -140,6 +143,9 @@ function matchesFilters(row: ClaimSearchRow, filters: ClaimSearchFilters): boole
   if (filters.cpt && !row.cptCodes.some((code) => normalized(code) === normalized(filters.cpt ?? ""))) return false;
   if (filters.minAmountCents !== undefined && row.totalChargedCents < filters.minAmountCents) return false;
   if (filters.maxAmountCents !== undefined && row.totalChargedCents > filters.maxAmountCents) return false;
+  if (filters.minDaysOutstanding !== undefined && row.daysSinceSubmission < filters.minDaysOutstanding) return false;
+  if (filters.maxDaysOutstanding !== undefined && row.daysSinceSubmission > filters.maxDaysOutstanding) return false;
+  if (filters.outstandingOnly && row.status === "paid") return false;
   return true;
 }
 
