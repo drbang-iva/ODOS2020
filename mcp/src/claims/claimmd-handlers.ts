@@ -13,10 +13,12 @@ import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from 
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
+  CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
   ERA_WORKLIST_STATUS_SYSTEM,
   EraWorklistConflictError,
   EraWorklistValidationError,
+  buildClaimRejectedWorklistTask,
   buildEraWorklistTask,
   claimEraWorklistTask,
   eraSnapshotFromTask,
@@ -99,6 +101,15 @@ export async function handleSubmitClaimRequest(
       body.claim.patientReference,
       claimMdFailureAuditReason("submitProfessionalClaim", error),
     );
+    try {
+      await createAndAuditClaimRejectedTask(deps, auth, {
+        claimReference: createdClaim ? ref(createdClaim) : undefined,
+        patientReference: body.claim.patientReference,
+        claimMdMessage: messageOf(error),
+      });
+    } catch {
+      // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
+    }
     return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
   }
 }
@@ -205,6 +216,13 @@ export async function handleClaimStatusRequest(
       status,
     }));
     await audit(deps, auth, "claim.status.checked", "success", ref(response), patientReference);
+    if (response.outcome === "error") {
+      await createAndAuditClaimRejectedTask(deps, auth, {
+        claimReference: `Claim/${input.params.id}`,
+        patientReference,
+        claimMdMessage: response.disposition ?? "",
+      });
+    }
     return { status: 200, body: { claimResponseId: response.id, response } };
   } catch (error) {
     await audit(
@@ -324,12 +342,29 @@ export async function handleEraWorklistRequest(
     return { status: 400, body: { error: "status must be new, in-review, or resolved." } };
   }
   const bundle = await auth.fhir.search<Task>("Task", {
-    code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
+    code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
     ...(requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
     _count: "100",
     _sort: "-authored-on",
   });
   return { status: 200, body: { items: projectEraWorklistBundle(bundle, now(deps)) } };
+}
+
+async function createAndAuditClaimRejectedTask(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  input: {
+    claimReference?: string;
+    patientReference?: string;
+    claimMdMessage: string;
+  },
+): Promise<Task> {
+  const task = await auth.fhir.create(buildClaimRejectedWorklistTask({
+    ...input,
+    authoredOn: now(deps),
+  }));
+  await audit(deps, auth, "claim.rejected.flagged", "success", ref(task), input.patientReference);
+  return task;
 }
 
 export async function handleClaimEraWorklistTaskRequest(

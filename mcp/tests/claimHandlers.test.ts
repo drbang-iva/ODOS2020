@@ -25,6 +25,7 @@ import {
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
 import {
+  CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
   ERA_WORKLIST_INPUT_SYSTEM,
   ERA_WORKLIST_OUTPUT_SYSTEM,
@@ -76,8 +77,10 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     PaymentReconciliation: [] as PaymentReconciliation[],
     Task: [] as Task[],
   };
+  let claimCreateError: Error | undefined;
   const fhir = {
     create: async <T extends Resource>(resource: T): Promise<T> => {
+      if (resource.resourceType === "Claim" && claimCreateError) throw claimCreateError;
       const resources = created[resource.resourceType as keyof typeof created] as Resource[] | undefined;
       if (!resources) throw new Error(`Unexpected test resource ${resource.resourceType}`);
       const id = `${resource.resourceType.toLowerCase()}-${resources.length + 1}`;
@@ -160,7 +163,15 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     },
     now: () => "2026-07-09T12:00:00.000Z",
   };
-  return { audits, created, deps: base, searchCalls: () => searchCalls };
+  return {
+    audits,
+    created,
+    deps: base,
+    searchCalls: () => searchCalls,
+    failClaimCreate: (error: Error) => {
+      claimCreateError = error;
+    },
+  };
 }
 
 test("front-desk and practice-admin hold claims.manage; non-billing roles do not", () => {
@@ -228,6 +239,42 @@ test("claim status check returns a ClaimResponse projection and audits claim.sta
   assert.equal(res.status, 200);
   assert.equal(created.ClaimResponse.length, 1);
   assert.equal(audits[0].eventType, "claim.status.checked");
+});
+
+test("claim status error creates a claim-rejected Task with Claim focus and verbatim message", async () => {
+  const { audits, created, deps: d } = deps();
+  const message = "A7: claim rejected by synthetic payer edit";
+  d.adapter!.checkClaimStatus = async () => ({
+    result: {
+      claim: {
+        claimid: "claimmd-1",
+        status_code: "4",
+        messages: { message },
+      },
+    },
+  });
+
+  const res = await handleClaimStatusRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "claim-1" },
+    body: {
+      claimMdClaimId: "claimmd-1",
+      patientReference: "Patient/pat-900",
+      insurerReference: "Organization/payer-1",
+    },
+  });
+
+  assert.equal(res.status, 200);
+  assert.equal(created.ClaimResponse[0].outcome, "error");
+  assert.equal(created.Task.length, 1);
+  assert.equal(worklistCode(created.Task[0]), "claim-rejected");
+  assert.equal(created.Task[0].focus?.reference, "Claim/claim-1");
+  assert.equal(taskInput(created.Task[0], "claimmd-message")?.valueString, message);
+  assert.equal(audits.some((row) => row.eventType === "claim.rejected.flagged"), true);
+  const worklist = await handleEraWorklistRequest(d, { authHeader: "Bearer good" });
+  const item = (worklist.body as { items: Array<{ code: string; evidence: { claimMdMessage?: string } }> }).items[0];
+  assert.equal(item.code, "claim-rejected");
+  assert.equal(item.evidence.claimMdMessage, message);
 });
 
 test("ERA clean-paid claim preserves auto-post behavior and creates zero worklist Tasks", async () => {
@@ -431,6 +478,52 @@ test("ERA worklist resolve-as-rebilled records the Claim reference and rejects m
   assert.equal(taskOutput(created.Task[0], "claim-reference")?.valueReference?.reference, "Claim/claim-2");
 });
 
+test("claim-rejected uses the shared claim and resolve lifecycle with the same conflict semantics", async () => {
+  const { created, deps: d } = deps();
+  d.adapter!.submitProfessionalClaim = async () => {
+    throw new Error("Claim.MD edit rejection R-17");
+  };
+  await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+
+  const claimed = await handleClaimEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+  });
+  assert.equal(claimed.status, 200);
+  assert.equal(created.Task[0].status, "in-progress");
+
+  const duplicateClaim = await handleClaimEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+  });
+  assert.equal(duplicateClaim.status, 409);
+
+  const missingDisposition = await handleResolveEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: {},
+  });
+  assert.equal(missingDisposition.status, 400);
+
+  const resolved = await handleResolveEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "rebilled", claimReference: "Claim/claim-1" },
+  });
+  assert.equal(resolved.status, 200);
+  assert.equal(taskOutput(created.Task[0], "disposition")?.valueCode, "rebilled");
+
+  const duplicateResolve = await handleResolveEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "written-off" },
+  });
+  assert.equal(duplicateResolve.status, 409);
+});
+
 test("ERA unmatched resolution validates in-review lifecycle before any matched re-import side effect", async () => {
   const { created, deps: d } = deps();
   await handleEraImportRequest(d, {
@@ -483,9 +576,9 @@ test("claims.manage protects GET /claims/worklist with the existing claims 401/4
   assert.equal(allowed.searchCalls(), 1);
 });
 
-test("ERA audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
+test("claims audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
   const sql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-07-09-era-worklist-events.sql"),
+    resolve(process.cwd(), "../data/migrations/2026-07-09-claim-rejected-event.sql"),
     "utf8",
   );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
@@ -527,7 +620,10 @@ test("Claim.MD adapter failures audit a sanitized reason without response-body P
   assert.equal(res.status, 502);
   assert.match((res.body as { error: string }).error, new RegExp(phiToken));
   assert.equal(created.Claim.length, 1);
-  assert.equal(audits.length, 1);
+  assert.equal(created.Task.length, 1);
+  assert.equal(created.Task[0].focus?.reference, "Claim/claim-1");
+  assert.equal(taskInput(created.Task[0], "claimmd-message")?.valueString, `Claim.MD request failed with HTTP 502: ${phiToken}`);
+  assert.equal(audits.length, 2);
   assert.equal(audits[0].eventType, "claim.submit.failed");
   assert.equal(audits[0].actionOutcome, "denied");
   assert.equal(audits[0].resourceType, "Claim");
@@ -536,6 +632,23 @@ test("Claim.MD adapter failures audit a sanitized reason without response-body P
   assert.match(audits[0].actionReason ?? "", /submitProfessionalClaim/);
   assert.match(audits[0].actionReason ?? "", /HTTP 502/);
   assert.doesNotMatch(audits[0].actionReason ?? "", new RegExp(phiToken));
+  assert.equal(audits[1].eventType, "claim.rejected.flagged");
+});
+
+test("Claim FHIR create failure returns the failure response without fabricating a focus", async () => {
+  const fixture = deps();
+  fixture.failClaimCreate(new Error("FHIR Claim create rejected the resource"));
+
+  const res = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+
+  assert.equal(res.status, 502);
+  assert.equal(fixture.created.Claim.length, 0);
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(fixture.created.Task[0].focus, undefined);
+  assert.equal(worklistCode(fixture.created.Task[0]), "claim-rejected");
 });
 
 function eraImportBody(): Record<string, unknown> {
@@ -573,7 +686,9 @@ function pickCounts(body: unknown): {
 }
 
 function worklistCode(task: Task): string | undefined {
-  return task.code?.coding?.find((coding) => coding.system === ERA_WORKLIST_CODE_SYSTEM)?.code;
+  return task.code?.coding?.find((coding) =>
+    coding.system === ERA_WORKLIST_CODE_SYSTEM || coding.system === CLAIM_REJECTED_CODE_SYSTEM,
+  )?.code;
 }
 
 function taskInputs(task: Task, code: string): NonNullable<Task["input"]> {

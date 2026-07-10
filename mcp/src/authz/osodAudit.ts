@@ -111,6 +111,7 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "era.denial.flagged",
   "era.underpayment.flagged",
   "era.unmatched.flagged",
+  "claim.rejected.flagged",
   "claim.status.checked",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
