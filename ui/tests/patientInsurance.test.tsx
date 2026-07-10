@@ -188,6 +188,48 @@ test("applying a plan template copies only plan-level facts and keeps the 7a bun
   );
 });
 
+test("applying an incomplete plan template leaves an undefined benefit kind untouched", () => {
+  const coverage = { ...LEGACY_COVERAGE, id: "coverage-1" };
+  const draft = emptyManualBenefitsDraft("Patient/patient-1", coverage, "2026-07-10");
+  draft.benefits = draft.benefits.map((benefit) => ({
+    ...benefit,
+    allowanceDollars: "25",
+    usedDollars: "5",
+    lastUsed: "2026-01-15",
+  }));
+  const missingFrame = draft.benefits.find((benefit) => benefit.kind === "frame")!;
+  const template: PlanTemplate = {
+    id: "incomplete-template",
+    label: "Incomplete example",
+    benefits: Object.fromEntries(
+      BENEFIT_KINDS
+        .filter((kind) => kind !== "frame")
+        .map((kind) => [
+          kind,
+          {
+            excluded: true,
+            allowanceDollars: 150,
+            copayDollars: 10,
+            frequencyMonths: 12,
+          },
+        ]),
+    ) as PlanTemplate["benefits"],
+  };
+
+  const applied = applyPlanTemplate(draft, template);
+  assert.deepEqual(
+    applied.benefits.find((benefit) => benefit.kind === "frame"),
+    missingFrame,
+  );
+  const exam = applied.benefits.find((benefit) => benefit.kind === "exam")!;
+  assert.equal(exam.excluded, true);
+  assert.equal(exam.allowanceDollars, "150");
+  assert.equal(exam.copayDollars, "10");
+  assert.equal(exam.frequencyMonths, "12");
+  assert.equal(exam.usedDollars, "5");
+  assert.equal(exam.lastUsed, "2026-01-15");
+});
+
 test("all six benefit statuses are derived from period, authorization, exclusion, and used facts", () => {
   const base = responseFixture();
   const item = benefitItem(base, "exam");

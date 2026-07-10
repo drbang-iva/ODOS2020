@@ -177,6 +177,7 @@ export function applyPlanTemplate(
     ...draft,
     benefits: draft.benefits.map((benefit) => {
       const plan = template.benefits[benefit.kind];
+      if (!plan) return benefit;
       return {
         ...benefit,
         excluded: plan.excluded,
