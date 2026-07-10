@@ -79,8 +79,13 @@ import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-hist
 import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
 import {
   handleFindingDefinitionCatalogRequest,
+  handleFindingDefinitionCreationRequest,
   handleFindingDefinitionMutationRequest,
 } from "./clinical-graph/finding-definition-endpoint.js";
+import {
+  handleCustomSectionCaptureRequest,
+  handleCustomSectionHistoryRequest,
+} from "./clinical-graph/custom-section-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
@@ -5521,6 +5526,20 @@ async function main(): Promise<void> {
         }
       });
 
+      app.post("/clinical-graph/finding-definitions", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingDefinitionCreationRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: POST /clinical-graph/finding-definitions failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding-definition creation route failed" });
+        }
+      });
+
       app.post("/clinical-graph/finding-definitions/:stableKey", async (req, res) => {
         try {
           await authenticateWithMedplum();
@@ -5536,6 +5555,34 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/custom/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCustomSectionCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/custom/:stableKey failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "custom section capture route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/custom/:stableKey/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCustomSectionHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization"), params: req.params, query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/custom/:stableKey/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "custom section history route failed" });
         }
       });
 

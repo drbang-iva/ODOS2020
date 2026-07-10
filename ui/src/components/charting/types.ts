@@ -1,4 +1,4 @@
-export type ChartSectionId =
+export type BuiltInSectionId =
   | "wearing"
   | "auto-refraction"
   | "va"
@@ -13,6 +13,8 @@ export type ChartSectionId =
   | "iop"
   | "assessment";
 
+export type ChartSectionId = BuiltInSectionId | `custom:${string}`;
+
 export interface SectionSaveStatus {
   completed: boolean;
   summary?: string;
@@ -20,4 +22,10 @@ export interface SectionSaveStatus {
   operator?: string;
 }
 
-export type SectionStatusMap = Record<ChartSectionId, SectionSaveStatus>;
+export type SectionStatusMap = Partial<Record<ChartSectionId, SectionSaveStatus>>;
+
+const INCOMPLETE_STATUS: SectionSaveStatus = { completed: false };
+
+export function sectionStatus(statuses: SectionStatusMap, id: ChartSectionId): SectionSaveStatus {
+  return statuses[id] ?? INCOMPLETE_STATUS;
+}
