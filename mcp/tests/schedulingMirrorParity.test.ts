@@ -121,6 +121,16 @@ import {
   buildSchedulingPracticeConfigResource as uiBuildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig as uiParseSchedulingPracticeConfig,
 } from "../../ui/src/lib/scheduling-config.js";
+import {
+  buildCatalogFields as mcpBuildCatalogFields,
+  parseCatalogFields as mcpParseCatalogFields,
+  type CatalogFieldDefinition as McpCatalogFieldDefinition,
+} from "../src/settings/catalog-field-kernel.js";
+import {
+  buildCatalogFields as uiBuildCatalogFields,
+  parseCatalogFields as uiParseCatalogFields,
+  type CatalogFieldDefinition as UiCatalogFieldDefinition,
+} from "../../ui/src/lib/catalog-field-kernel.js";
 
 function defaultMirrorCatalog(): HealthcareService[] {
   return defaultVisitTypeCatalog("both").map((visitType, index) => ({
@@ -372,6 +382,74 @@ test("UI scheduler practice-config mirror parse drops unknown forward-compat key
 
   assert.deepEqual(uiParseSchedulingPracticeConfig(uiBasic), mcpParseSchedulingPracticeConfig(mcpBasic));
   assert.equal("futureKnob" in uiParseSchedulingPracticeConfig(uiBasic), false);
+});
+
+test("UI catalog field build/parse pair matches the settings kernel", () => {
+  const fields = [
+    { type: "text", key: "label", label: "Label", required: true, unique: true },
+    { type: "color", key: "color", label: "Color", palette: ["#4a7dff", "#44ddaa"] },
+    { type: "duration", key: "duration", label: "Duration", min: 5, max: 120 },
+    {
+      type: "select",
+      key: "kind",
+      label: "Kind",
+      options: [{ value: "house", label: "House" }],
+    },
+    { type: "reference-picker", key: "plan", label: "Plan" },
+    { type: "toggle", key: "active", label: "Active" },
+    { type: "weekly-hours", key: "hours", label: "Hours" },
+    { type: "time-window-weekdays", key: "window", label: "Window" },
+  ] as const satisfies readonly McpCatalogFieldDefinition[] & readonly UiCatalogFieldDefinition[];
+  const item = {
+    id: "fixture-1",
+    label: "  Comprehensive  ",
+    color: "#4a7dff",
+    duration: 30,
+    kind: "house",
+    plan: "InsurancePlan/fixture-plan",
+    active: true,
+    hours: { mon: [{ start: "09:00", end: "17:00" }] },
+    window: { weekdays: ["tue", "thu"], start: "10:00", end: "12:00" },
+  };
+
+  assert.deepEqual(uiParseCatalogFields(item, fields), mcpParseCatalogFields(item, fields));
+  assert.deepEqual(
+    uiBuildCatalogFields(item, fields, [], item.id),
+    mcpBuildCatalogFields(item, fields, [], item.id),
+  );
+});
+
+test("UI catalog field validation errors match the settings kernel verbatim", () => {
+  const cases: Array<{ field: McpCatalogFieldDefinition & UiCatalogFieldDefinition; value: unknown }> = [
+    { field: { type: "text", key: "value", label: "Label", required: true }, value: "" },
+    { field: { type: "color", key: "value", label: "Color", palette: ["#4a7dff"] }, value: "#fff" },
+    { field: { type: "number", key: "value", label: "Count", min: 1 }, value: 0 },
+    {
+      field: { type: "select", key: "value", label: "Kind", options: [{ value: "a", label: "A" }] },
+      value: "b",
+    },
+    { field: { type: "reference-picker", key: "value", label: "Plan" }, value: "not-a-reference" },
+    { field: { type: "toggle", key: "value", label: "Active" }, value: "yes" },
+    {
+      field: { type: "weekly-hours", key: "value", label: "Hours" },
+      value: { mon: [{ start: "17:00", end: "09:00" }] },
+    },
+    {
+      field: { type: "time-window-weekdays", key: "value", label: "Window" },
+      value: { weekdays: ["funday"] },
+    },
+  ];
+
+  for (const { field, value } of cases) {
+    assert.throws(
+      () => uiBuildCatalogFields({ value }, [field]),
+      (error) => {
+        assert.ok(error instanceof Error);
+        assert.throws(() => mcpBuildCatalogFields({ value }, [field]), { message: error.message });
+        return true;
+      },
+    );
+  }
 });
 
 test("UI scheduler mirror clinic-mode helpers match the kernel", () => {

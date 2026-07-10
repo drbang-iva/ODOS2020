@@ -11,3 +11,12 @@ test("the Accounts Receivable dashboard UI route reaches the dashboard without r
   assert.match(html, /Accounts receivable/);
   assert.match(html, /Loading accounts receivable/);
 });
+
+test("the settings index route reaches the shared settings stub", () => {
+  const html = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/settings" />);
+  assert.match(html, /Practice Admin/);
+  assert.match(html, /Settings sections/);
+  assert.match(html, /Chart fields and sections/);
+  assert.match(html, /Frames data/);
+  assert.doesNotMatch(html, /Floor config|Visit types/);
+});
