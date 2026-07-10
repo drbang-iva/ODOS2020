@@ -3,6 +3,7 @@ import { EncounterCharting } from "./scenes/EncounterCharting";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientPicker } from "./scenes/PatientPicker";
+import { NewPatient } from "./scenes/NewPatient";
 import { fhir } from "./lib/fhir";
 import { RoleProvider } from "./lib/role-context";
 import { useViewState, type ViewState } from "./lib/view-state";
@@ -118,6 +119,8 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <PatientPayments />;
     case "/patient/insurance":
       return <PatientInsurance initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
+    case "/patient/new":
+      return <NewPatient />;
     case "/patient/vision-benefits":
       return <VisionPlanBenefits initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
     case "/billing/claims/reports/accounts-receivable":

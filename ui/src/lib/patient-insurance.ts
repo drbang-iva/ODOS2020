@@ -444,7 +444,7 @@ function updateEntry(resource: Resource): BundleEntry {
   };
 }
 
-function subscriberFromPatient(patient: Patient): SubscriberDemographics {
+export function subscriberFromPatient(patient: Patient): SubscriberDemographics {
   const name = patient.name?.find((candidate) => candidate.use === "official") ?? patient.name?.[0];
   const address = patient.address?.find((candidate) => candidate.use === "home") ?? patient.address?.[0];
   return {
@@ -460,7 +460,7 @@ function subscriberFromPatient(patient: Patient): SubscriberDemographics {
   };
 }
 
-function subscriberFromRelatedPerson(person: RelatedPerson | undefined): SubscriberDemographics {
+export function subscriberFromRelatedPerson(person: RelatedPerson | undefined): SubscriberDemographics {
   if (!person) return emptySubscriber();
   const name = person.name?.[0];
   const address = person.address?.[0];
@@ -477,7 +477,7 @@ function subscriberFromRelatedPerson(person: RelatedPerson | undefined): Subscri
   };
 }
 
-function emptySubscriber(): SubscriberDemographics {
+export function emptySubscriber(): SubscriberDemographics {
   return { firstName: "", middleName: "", lastName: "", birthDate: "", gender: "unknown", address: "", city: "", state: "", postalCode: "" };
 }
 

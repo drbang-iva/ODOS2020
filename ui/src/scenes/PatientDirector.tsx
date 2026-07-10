@@ -11,13 +11,14 @@
 
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Stars, Float } from "@react-three/drei";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { PatientOrb } from "../components/PatientOrb";
 import { Orbital } from "../components/Orbital";
 import { OrbitalDetail } from "../components/OrbitalDetail";
 import { Hud } from "../components/Hud";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { PatientDemographicsEditor } from "../components/patient/PatientDemographicsEditor";
 import { useRole } from "../lib/role-context";
 import type { OrbitalId } from "../types/orbital";
 
@@ -43,7 +44,10 @@ function polar(angleDeg: number, radius: number): [number, number, number] {
 
 export function PatientDirector({ patient }: { patient: Patient }) {
   const [selected, setSelected] = useState<OrbitalId | null>(null);
+  const [currentPatient, setCurrentPatient] = useState(patient);
+  const [editingDemographics, setEditingDemographics] = useState(false);
   const { config } = useRole();
+  useEffect(() => setCurrentPatient(patient), [patient]);
   const orbitalSystems = ORBITAL_SYSTEMS.filter((system) =>
     config.directorOrbitalFilters.includes(system.id),
   );
@@ -51,10 +55,11 @@ export function PatientDirector({ patient }: { patient: Patient }) {
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg-deep lg:flex-row">
       <div className="relative min-h-[520px] min-w-0 flex-1 lg:min-h-0">
-        <Hud patient={patient} selected={selected} onClearSelection={() => setSelected(null)} />
+        <Hud patient={currentPatient} selected={selected} onClearSelection={() => setSelected(null)} />
         <div className="absolute right-4 top-4 z-10 flex gap-2">
-          <button type="button" onClick={() => window.location.assign(`/patient/insurance?patientId=${patient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Insurance</button>
-          <button type="button" onClick={() => window.location.assign(`/patient/vision-benefits?patientId=${patient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Vision benefits</button>
+          <button type="button" onClick={() => setEditingDemographics(true)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Edit demographics</button>
+          <button type="button" onClick={() => window.location.assign(`/patient/insurance?patientId=${currentPatient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Insurance</button>
+          <button type="button" onClick={() => window.location.assign(`/patient/vision-benefits?patientId=${currentPatient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Vision benefits</button>
         </div>
 
         <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
@@ -65,7 +70,7 @@ export function PatientDirector({ patient }: { patient: Patient }) {
             <Stars radius={100} depth={50} count={2000} factor={3} fade speed={0.5} />
 
             <Float floatIntensity={0.3} speed={1.5}>
-              <PatientOrb patient={patient} />
+              <PatientOrb patient={currentPatient} />
             </Float>
 
             {orbitalSystems.map((s) => (
@@ -90,10 +95,11 @@ export function PatientDirector({ patient }: { patient: Patient }) {
         </Canvas>
 
         {selected && (
-          <OrbitalDetail orbitalId={selected} patient={patient} onClose={() => setSelected(null)} />
+          <OrbitalDetail orbitalId={selected} patient={currentPatient} onClose={() => setSelected(null)} />
         )}
       </div>
-      <ChartSidebar patient={patient} />
+      <ChartSidebar patient={currentPatient} />
+      {editingDemographics && <PatientDemographicsEditor patient={currentPatient} onSaved={(updated) => { setCurrentPatient(updated); setEditingDemographics(false); }} onDiscard={() => setEditingDemographics(false)} />}
     </div>
   );
 }
