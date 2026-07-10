@@ -23,9 +23,28 @@ export function buildRefractionObservation(
 
   const components = [
     component("REFRACTION_TYPE", "Refraction type", {
-      valueCodeableConcept: osodConcept(input.refractionType, input.refractionType),
+      valueCodeableConcept: osodConcept(
+        input.refractionType,
+        input.refractionTypeDisplay ?? input.refractionType,
+      ),
     }),
   ];
+
+  if (input.blockId) {
+    components.push(
+      component("REFRACTION_BLOCK_ID", "Refraction block ID", {
+        valueString: input.blockId,
+      }),
+    );
+  }
+
+  if (input.purpose) {
+    components.push(
+      component("PURPOSE", "Purpose", {
+        valueString: input.purpose,
+      }),
+    );
+  }
 
   if (input.sphere !== undefined) {
     components.push(
@@ -55,6 +74,30 @@ export function buildRefractionObservation(
     components.push(
       component("ADD", "Near add", {
         valueQuantity: quantity(input.add, "D", "http://unitsofmeasure.org", "[diop]"),
+      }),
+    );
+  }
+
+  if (input.visualAcuity?.distance) {
+    components.push(
+      component("DISTANCE_VA", "Distance visual acuity", {
+        valueString: input.visualAcuity.distance,
+      }),
+    );
+  }
+
+  if (input.visualAcuity?.near) {
+    components.push(
+      component("NEAR_VA", "Near visual acuity", {
+        valueString: input.visualAcuity.near,
+      }),
+    );
+  }
+
+  if (input.visualAcuity?.distancePinhole) {
+    components.push(
+      component("DISTANCE_PH_VA", "Distance pinhole visual acuity", {
+        valueString: input.visualAcuity.distancePinhole,
       }),
     );
   }
@@ -90,7 +133,10 @@ export function buildRefractionObservation(
     },
     {
       ...input,
-      method: input.method ?? osodConcept(input.refractionType, input.refractionType),
+      method: input.method ?? osodConcept(
+        input.refractionType,
+        input.refractionTypeDisplay ?? input.refractionType,
+      ),
     },
   );
 

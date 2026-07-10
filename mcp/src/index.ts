@@ -52,6 +52,10 @@ import {
   handleIopDefinitionRequest,
 } from "./clinical-graph/iop-endpoint.js";
 import {
+  handleRefractionCaptureRequest,
+  handleRefractionDefinitionRequest,
+} from "./clinical-graph/refraction-endpoint.js";
+import {
   handleIopHistoryRequest,
   handleIopTargetRequest,
 } from "./clinical-graph/iop-history-endpoint.js";
@@ -5518,6 +5522,38 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/iop failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/refraction/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleRefractionDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/refraction/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Refraction definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/refraction", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleRefractionCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/refraction failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Refraction clinical-graph route failed" });
           }
         }
       });
