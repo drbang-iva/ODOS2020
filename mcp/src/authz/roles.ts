@@ -231,6 +231,18 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
         "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
     },
   },
+  // Visit-type categories singleton: READ-only for the desk. The settings read-only
+  // contract requires the categories section to render for front-desk while write
+  // stays practice-admin-only (settings-catalog RBAC review, 2026-07-10).
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://osod.dev/fhir/CodeSystem/visit-type-config|osod-visit-type-config",
+    },
+  },
 ];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
