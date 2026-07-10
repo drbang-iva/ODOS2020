@@ -109,7 +109,7 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
 
 export const OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION = [
   "(%before.exists().not() implies status = 'preliminary')",
-  "(%before.exists() implies (",
+  "and (%before.exists() implies (",
   "(%before.status = 'preliminary' and (status = 'preliminary' or status = 'final'))",
   "or (%before.status = 'final' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
   "or (%before.status = 'amended' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",

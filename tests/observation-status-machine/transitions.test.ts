@@ -81,7 +81,7 @@ test("v0.5c Observation AccessPolicy emits the status-machine writeConstraint", 
   );
   assert.match(
     OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION,
-    /%before\.exists\(\) implies/,
+    / and \(%before\.exists\(\) implies/,
   );
   assert.doesNotMatch(OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION, /not\(%before\.exists/);
   assert.match(OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION, /status = 'entered-in-error'/);
