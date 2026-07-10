@@ -1,6 +1,6 @@
-import type { ChartSectionId, SectionStatusMap } from "./types";
+import { sectionStatus, type BuiltInSectionId, type ChartSectionId, type SectionStatusMap } from "./types";
 
-const SECTIONS: Array<{ id: ChartSectionId; label: string; readOnly?: boolean }> = [
+const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean }> = [
   { id: "wearing", label: "Wearing (WRx)" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K" },
   { id: "va", label: "Visual Acuity" },
@@ -20,16 +20,21 @@ interface Props {
   active: ChartSectionId;
   statuses: SectionStatusMap;
   onSelect: (section: ChartSectionId) => void;
+  customSections?: Array<{ id: ChartSectionId; label: string }>;
+  onAddSection?: () => void;
 }
 
-export function SpineNav({ active, statuses, onSelect }: Props) {
+export function SpineNav({ active, statuses, onSelect, customSections = [], onAddSection }: Props) {
+  const sections = [...SECTIONS, ...customSections];
   return (
     <nav className="shrink-0 border-b border-white/10 bg-bg-panel/70 p-3 md:w-60 md:border-b-0 md:border-r md:p-4">
       <div className="text-xs uppercase tracking-widest text-white/35">Spine</div>
       <div className="mt-3 flex gap-2 overflow-x-auto md:mt-4 md:block md:space-y-2 md:overflow-visible">
-        {SECTIONS.map((section) => {
-          const completed = statuses[section.id].completed;
+        {sections.map((section) => {
+          const status = sectionStatus(statuses, section.id);
+          const completed = status.completed;
           const focused = active === section.id;
+          const readOnly = "readOnly" in section && section.readOnly;
           return (
             <button
               key={section.id}
@@ -42,18 +47,27 @@ export function SpineNav({ active, statuses, onSelect }: Props) {
               <span
                 className={[
                   "mt-1 h-3 w-3 rounded-full",
-                  completed ? "bg-emerald-400" : section.readOnly ? "bg-brand/70" : "bg-white/25",
+                  completed ? "bg-emerald-400" : readOnly ? "bg-brand/70" : "bg-white/25",
                 ].join(" ")}
               />
               <span>
                 <span className="block text-sm font-semibold text-white">{section.label}</span>
                 <span className="mt-1 block text-xs text-white/45">
-                  {section.readOnly ? "Read only" : completed ? statuses[section.id].summary ?? "Saved" : "Incomplete"}
+                  {readOnly ? "Read only" : completed ? status.summary ?? "Saved" : "Incomplete"}
                 </span>
               </span>
             </button>
           );
         })}
+        {onAddSection && (
+          <button
+            type="button"
+            onClick={onAddSection}
+            className="min-h-12 w-44 shrink-0 rounded border border-dashed border-brand/45 px-3 py-2 text-left text-sm font-semibold text-brand-light transition hover:bg-brand/10 md:w-full"
+          >
+            + Add section
+          </button>
+        )}
       </div>
     </nav>
   );

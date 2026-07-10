@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
+import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
+import { CustomSectionEditor, type CustomSectionEditorValue } from "../components/charting/CustomSectionEditor";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
@@ -16,6 +18,7 @@ import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
 import { useRole } from "../lib/role-context";
+import { fhir } from "../lib/fhir";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
 interface Props {
@@ -23,26 +26,53 @@ interface Props {
   encounterId: string;
 }
 
-const EMPTY_STATUSES: SectionStatusMap = {
-  wearing: { completed: false },
-  "auto-refraction": { completed: false },
-  va: { completed: false },
-  refraction: { completed: false },
-  "soft-contact-lens": { completed: false },
-  "specialty-contact-lens": { completed: false },
-  "refraction-history": { completed: false },
-  "ortho-k": { completed: false },
-  "dry-eye": { completed: false },
-  "myopia-management": { completed: false },
-  "cup-disc": { completed: false },
-  iop: { completed: false },
-  assessment: { completed: false },
-};
+interface CatalogResponse {
+  canWrite: boolean;
+  definitions: CustomFindingDefinition[];
+  error?: string;
+}
 
 export function EncounterCharting({ patient, encounterId }: Props) {
   const { config } = useRole();
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
-  const [statuses, setStatuses] = useState<SectionStatusMap>(EMPTY_STATUSES);
+  const [statuses, setStatuses] = useState<SectionStatusMap>({});
+  const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
+  const [creatingSection, setCreatingSection] = useState(false);
+  const [savingSection, setSavingSection] = useState(false);
+
+  async function loadCatalog() {
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions`, { headers: authHeaders() });
+      const body = await response.json() as CatalogResponse;
+      if (!response.ok) throw new Error(body.error ?? `Finding-definition catalog failed: ${response.status}`);
+      setCatalog(body);
+    } catch (caught) {
+      console.error("Custom section catalog unavailable; charting built-ins only.", caught);
+      setCatalog({ canWrite: false, definitions: [] });
+    }
+  }
+
+  useEffect(() => {
+    void loadCatalog();
+  }, []);
+
+  async function createSection(value: CustomSectionEditorValue) {
+    setSavingSection(true);
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create-definition", ...value }),
+      });
+      const body = await response.json() as { definition?: CustomFindingDefinition; error?: string };
+      if (!response.ok || !body.definition) throw new Error(body.error ?? `Section creation failed: ${response.status}`);
+      setCreatingSection(false);
+      await loadCatalog();
+      setActiveSection(body.definition.stableKey);
+    } finally {
+      setSavingSection(false);
+    }
+  }
 
   function markSaved(section: ChartSectionId, status: SectionSaveStatus) {
     setStatuses((current) => ({
@@ -53,12 +83,25 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   const patientReference = `Patient/${patient.id}`;
   const encounterReference = `Encounter/${encounterId}`;
+  const customDefinitions = catalog.definitions.filter((definition) =>
+    definition.sectionKey?.startsWith("custom:") && definition.active
+  );
+  const customSections = customDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
+  const customDefinition = activeSection.startsWith("custom:")
+    ? customDefinitions.find((definition) => definition.stableKey === activeSection)
+    : undefined;
 
   return (
     <div className={["flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader patient={patient} encounterId={encounterId} />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <SpineNav active={activeSection} statuses={statuses} onSelect={setActiveSection} />
+        <SpineNav
+          active={activeSection}
+          statuses={statuses}
+          onSelect={setActiveSection}
+          customSections={customSections}
+          onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
+        />
         <main className="min-w-0 flex-1 bg-bg-deep">
           {activeSection === "wearing" && (
             <WearingSection
@@ -147,8 +190,33 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("assessment", status)}
             />
           )}
+          {activeSection.startsWith("custom:") && customDefinition && (
+            <CustomFindingSection
+              definition={customDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved(activeSection, status)}
+            />
+          )}
         </main>
       </div>
+      {creatingSection && (
+        <CustomSectionEditor
+          saving={savingSection}
+          onCancel={() => setCreatingSection(false)}
+          onSave={createSection}
+        />
+      )}
     </div>
   );
+}
+
+function authHeaders(): Record<string, string> {
+  const authorization = fhir.authHeader();
+  return authorization ? { Authorization: authorization } : {};
+}
+
+function clinicalGraphApiBase(): string {
+  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
+  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
