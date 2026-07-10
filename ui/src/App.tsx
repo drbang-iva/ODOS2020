@@ -23,6 +23,7 @@ import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
 import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
 import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableDashboard";
 import { SettingsIndex } from "./scenes/settings/SettingsIndex";
+import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -126,6 +127,8 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <ChartFieldsSettings />;
     case "/settings":
       return <SettingsIndex />;
+    case "/settings/floor-config":
+      return <FloorConfigSettings />;
     default:
       return <ViewRouter view={view} />;
   }

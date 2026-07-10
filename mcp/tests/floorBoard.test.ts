@@ -157,6 +157,29 @@ test("deriveFloorBoard ignores a floor-state station absent from config (stale c
   assert.equal(Object.values(board).flat().length, 0);
 });
 
+test("deriveFloorBoard excludes an inactive station while reactivation restores its retained lane", () => {
+  const now = "2026-07-08T14:30:00.000Z";
+  const optical = appt("a-inactive", "optical", "2026-07-08T14:20:00.000Z");
+  const inactive: FloorBoardConfig = {
+    ...CONFIG,
+    stations: CONFIG.stations.map((station) =>
+      station.id === "optical" ? { ...station, active: false } : station,
+    ),
+    laneThresholds: { ...CONFIG.laneThresholds, optical: { amberMinutes: 15, redMinutes: 25 } },
+  };
+  const hidden = deriveFloorBoard([optical], [], inactive, now);
+  assert.equal(hidden.optical, undefined);
+  assert.deepEqual(inactive.laneThresholds.optical, { amberMinutes: 15, redMinutes: 25 });
+
+  const reactivated: FloorBoardConfig = {
+    ...inactive,
+    stations: inactive.stations.map((station) =>
+      station.id === "optical" ? { ...station, active: true } : station,
+    ),
+  };
+  assert.equal(deriveFloorBoard([optical], [], reactivated, now).optical.length, 1);
+});
+
 test("deriveFloorBoard treats a walk-in (raw status arrived + WALKIN type) as on-the-floor", () => {
   const now = "2026-07-08T14:10:00.000Z";
   const walkIn: Appointment = {
