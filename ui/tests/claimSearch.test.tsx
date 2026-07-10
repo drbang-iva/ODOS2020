@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { failedClaimsCount, fetchClaimSearch, type ClaimSearchRow } from "../src/lib/claim-search";
+import {
+  claimSearchFiltersFromQuery,
+  failedClaimsCount,
+  fetchClaimSearch,
+  type ClaimSearchRow,
+} from "../src/lib/claim-search";
 import type { ClaimsWorklistItem } from "../src/lib/claims-worklist";
 import { ClaimSearchContent } from "../src/scenes/claims/ClaimSearch";
 
@@ -61,6 +66,13 @@ test("claim search client sends supported filters and authorization to the bespo
   assert.match(request?.url ?? "", /status=paid/);
   assert.match(request?.url ?? "", /cpt=PROC-A/);
   assert.equal((request?.init?.headers as Record<string, string>).Authorization, "Bearer test");
+});
+
+test("claim search restores AR drill-down filters from the dashboard URL", () => {
+  assert.deepEqual(
+    claimSearchFiltersFromQuery("?outstanding=true&minDays=31&maxDays=60"),
+    { outstanding: "true", minDays: "31", maxDays: "60" },
+  );
 });
 
 function row(): ClaimSearchRow {

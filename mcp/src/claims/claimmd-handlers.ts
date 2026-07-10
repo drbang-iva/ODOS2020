@@ -389,6 +389,9 @@ export async function handleEraListRequest(
       _count: "100",
     }),
   ]);
+  if (hasNextPage(importBundle) || hasNextPage(openTaskBundle)) {
+    return { status: 409, body: { error: "ERA query exceeded one FHIR page; no partial queue was returned." } };
+  }
   return { status: 200, body: { items: projectEraBatchReadModel(rawEraList, importBundle, openTaskBundle) } };
 }
 
@@ -399,15 +402,20 @@ export async function handleEraWorklistRequest(
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
   const requestedStatus = stringValue(input.query?.status);
-  if (requestedStatus && !isEraWorklistStatus(requestedStatus)) {
-    return { status: 400, body: { error: "status must be new, in-review, or resolved." } };
+  if (requestedStatus && requestedStatus !== "open" && !isEraWorklistStatus(requestedStatus)) {
+    return { status: 400, body: { error: "status must be open, new, in-review, or resolved." } };
   }
   const bundle = await auth.fhir.search<Task>("Task", {
     code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
-    ...(requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
+    ...(requestedStatus === "open"
+      ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review` }
+      : requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
     _count: "100",
     _sort: "-authored-on",
   });
+  if (hasNextPage(bundle)) {
+    return { status: 409, body: { error: "Worklist query exceeded one FHIR page; no partial worklist was returned." } };
+  }
   return { status: 200, body: { items: projectEraWorklistBundle(bundle, now(deps)) } };
 }
 
@@ -425,11 +433,23 @@ export async function handleClaimSearchRequest(
   const requestedStatus = status && isClaimSearchStatus(status) ? status : undefined;
   const minAmountCents = amountCents(input.query?.minAmount);
   const maxAmountCents = amountCents(input.query?.maxAmount);
+  const minDaysOutstanding = wholeNumber(input.query?.minDays);
+  const maxDaysOutstanding = wholeNumber(input.query?.maxDays);
+  const outstandingOnly = trimmedValue(input.query?.outstanding);
   if (minAmountCents === null || maxAmountCents === null) {
     return { status: 400, body: { error: "minAmount and maxAmount must be non-negative dollar amounts." } };
   }
   if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
     return { status: 400, body: { error: "minAmount cannot exceed maxAmount." } };
+  }
+  if (minDaysOutstanding === null || maxDaysOutstanding === null) {
+    return { status: 400, body: { error: "minDays and maxDays must be non-negative whole numbers." } };
+  }
+  if (minDaysOutstanding !== undefined && maxDaysOutstanding !== undefined && minDaysOutstanding > maxDaysOutstanding) {
+    return { status: 400, body: { error: "minDays cannot exceed maxDays." } };
+  }
+  if (outstandingOnly && outstandingOnly !== "true") {
+    return { status: 400, body: { error: "outstanding must be true when supplied." } };
   }
 
   const [claimBundle, responseBundle, taskBundle] = await Promise.all([
@@ -441,6 +461,9 @@ export async function handleClaimSearchRequest(
       _sort: "-authored-on",
     }),
   ]);
+  if (hasNextPage(claimBundle) || hasNextPage(responseBundle) || hasNextPage(taskBundle)) {
+    return { status: 409, body: { error: "Claim query exceeded one FHIR page; no partial search was returned." } };
+  }
   const claims = bundleResources(claimBundle);
   const responses = bundleResources(responseBundle);
   const tasks = bundleResources(taskBundle);
@@ -476,6 +499,9 @@ export async function handleClaimSearchRequest(
     ...(trimmedValue(input.query?.cpt) ? { cpt: trimmedValue(input.query?.cpt) } : {}),
     ...(minAmountCents !== undefined ? { minAmountCents } : {}),
     ...(maxAmountCents !== undefined ? { maxAmountCents } : {}),
+    ...(minDaysOutstanding !== undefined ? { minDaysOutstanding } : {}),
+    ...(maxDaysOutstanding !== undefined ? { maxDaysOutstanding } : {}),
+    ...(outstandingOnly === "true" ? { outstandingOnly: true } : {}),
   };
   return {
     status: 200,
@@ -1051,6 +1077,16 @@ function amountCents(value: unknown): number | undefined | null {
   if (text === undefined) return undefined;
   const amount = Number(text);
   return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null;
+}
+
+function wholeNumber(value: unknown): number | undefined | null {
+  const text = trimmedValue(value);
+  if (text === undefined) return undefined;
+  return /^\d+$/.test(text) ? Number(text) : null;
+}
+
+function hasNextPage(bundle: { link?: Array<{ relation?: string }> }): boolean {
+  return bundle.link?.some((link) => link.relation === "next") ?? false;
 }
 
 function integerValue(value: unknown): number | undefined {
