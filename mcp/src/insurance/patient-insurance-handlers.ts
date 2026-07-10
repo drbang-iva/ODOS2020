@@ -6,7 +6,12 @@ import type {
   RelatedPerson,
   Resource,
 } from "@medplum/fhirtypes";
-import type { OsodActorRole } from "../authz/osodAudit.js";
+import {
+  buildOsodAuditEventRow,
+  type OsodActorRole,
+  type OsodAuditEventRecord,
+  type OsodAuditEventType,
+} from "../authz/osodAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 
@@ -18,6 +23,7 @@ export interface AuthenticatedInsuranceStaff {
 
 export interface PatientInsuranceHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedInsuranceStaff | null>;
+  recordAudit(row: OsodAuditEventRecord): Promise<void>;
 }
 
 export interface PatientInsuranceHandlerResult {
@@ -59,10 +65,14 @@ export async function handlePatientInsuranceWrite(
   if (!bundle) return { status: 400, body: { error: "A FHIR transaction bundle is required." } };
   const error = validateCoverageBundle(bundle);
   if (error) return { status: 400, body: { error } };
+  const patientReference = coveragePatientReference(bundle);
+  const fallbackTarget = bundleTargetReference(bundle, "Coverage");
   try {
     const response = await auth.fhir.executeTransaction(bundle);
+    await auditWrite(deps, auth, "coverage.write", "success", patientReference, transactionTargetReference(response, bundle, "Coverage"));
     return { status: 200, body: response };
   } catch (cause) {
+    await auditWrite(deps, auth, "coverage.write", "failure", patientReference, fallbackTarget, cause);
     return fhirFailure(cause, "Unable to save patient insurance.");
   }
 }
@@ -96,12 +106,56 @@ export async function handleVisionBenefitsWrite(
   if (!bundle) return { status: 400, body: { error: "A FHIR transaction bundle is required." } };
   const error = validateBenefitsBundle(bundle);
   if (error) return { status: 400, body: { error } };
+  const patientReference = benefitsPatientReference(bundle);
+  const fallbackTarget = bundleTargetReference(bundle, "CoverageEligibilityResponse");
   try {
     const response = await auth.fhir.executeTransaction(bundle);
+    await auditWrite(deps, auth, "benefits.manual-entry", "success", patientReference, transactionTargetReference(response, bundle, "CoverageEligibilityResponse"));
     return { status: 200, body: response };
   } catch (cause) {
+    await auditWrite(deps, auth, "benefits.manual-entry", "failure", patientReference, fallbackTarget, cause);
     return fhirFailure(cause, "Unable to save vision-plan benefits.");
   }
+}
+
+async function auditWrite(
+  deps: PatientInsuranceHandlerDeps,
+  staff: AuthenticatedInsuranceStaff,
+  eventType: Extract<OsodAuditEventType, "coverage.write" | "benefits.manual-entry">,
+  outcome: "success" | "failure",
+  patientReference: string,
+  targetReference: string,
+  error?: unknown,
+): Promise<void> {
+  await deps.recordAudit(buildOsodAuditEventRow({
+    eventType,
+    actorReference: staff.staffReference,
+    actorRole: staff.actorRole,
+    patientReference,
+    targetReference,
+    actionOutcome: outcome === "success" ? "granted" : "denied",
+    actionReason: [eventType, outcome, error ? messageOf(error) : undefined].filter(Boolean).join(" "),
+  }));
+}
+
+function coveragePatientReference(bundle: Bundle): string {
+  return (bundle.entry?.find((entry) => entry.resource?.resourceType === "Coverage")?.resource as Coverage).beneficiary.reference!;
+}
+
+function benefitsPatientReference(bundle: Bundle): string {
+  return (bundle.entry?.find((entry) => entry.resource?.resourceType === "CoverageEligibilityResponse")?.resource as CoverageEligibilityResponse).patient.reference!;
+}
+
+function bundleTargetReference(bundle: Bundle, resourceType: Resource["resourceType"]): string {
+  const entry = bundle.entry?.find((candidate) => candidate.resource?.resourceType === resourceType);
+  return entry?.resource?.id ? `${resourceType}/${entry.resource.id}` : `${resourceType}/uncreated`;
+}
+
+function transactionTargetReference(response: Bundle, request: Bundle, resourceType: Resource["resourceType"]): string {
+  const index = request.entry?.findIndex((entry) => entry.resource?.resourceType === resourceType) ?? -1;
+  const location = index >= 0 ? response.entry?.[index]?.response?.location : undefined;
+  const match = location?.match(new RegExp(`^${resourceType}/[^/]+`));
+  return match?.[0] ?? bundleTargetReference(request, resourceType);
 }
 
 function validateCoverageBundle(bundle: Bundle): string | undefined {

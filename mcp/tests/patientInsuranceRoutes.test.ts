@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Bundle, Coverage, CoverageEligibilityRequest, CoverageEligibilityResponse, Resource } from "@medplum/fhirtypes";
 import express from "express";
+import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import { registerPatientInsuranceRoutes } from "../src/insurance/patient-insurance-routes.js";
 
 test("all four patient-insurance HTTP routes reach their handlers", async () => {
@@ -20,6 +21,18 @@ test("all four patient-insurance HTTP routes reach their handlers", async () => 
     }
     assert.equal(fixture.serviceAuthCalls(), cases.length);
     assert.equal(fixture.transactions(), 2);
+    assert.deepEqual(fixture.audits().map((row) => ({
+      eventType: row.eventType,
+      actorId: row.actorId,
+      actorRole: row.actorRole,
+      patientId: row.patientId,
+      resourceType: row.resourceType,
+      resourceId: row.resourceId,
+      actionOutcome: row.actionOutcome,
+    })), [
+      { eventType: "coverage.write", actorId: "staff-1", actorRole: "front-desk", patientId: "patient-1", resourceType: "Coverage", resourceId: "coverage-created", actionOutcome: "granted" },
+      { eventType: "benefits.manual-entry", actorId: "staff-1", actorRole: "front-desk", patientId: "patient-1", resourceType: "CoverageEligibilityResponse", resourceId: "benefits-created", actionOutcome: "granted" },
+    ]);
   } finally {
     await fixture.close();
   }
@@ -60,9 +73,22 @@ test("Coverage transactions reject dangling subscriber URNs and map concurrent e
 
   const conflict = await server(true);
   try {
-    const response = await call(conflict.baseUrl, "POST", "/insurance/coverages", "Bearer good", { bundle: coverageBundle() });
-    assert.equal(response.status, 409);
-    assert.match(await response.text(), /changed while you were editing/);
+    const coverageResponse = await call(conflict.baseUrl, "POST", "/insurance/coverages", "Bearer good", { bundle: coverageBundle() });
+    assert.equal(coverageResponse.status, 409);
+    assert.match(await coverageResponse.text(), /changed while you were editing/);
+    const benefitsResponse = await call(conflict.baseUrl, "POST", "/insurance/vision-benefits", "Bearer good", { bundle: benefitsBundle() });
+    assert.equal(benefitsResponse.status, 409);
+    assert.match(await benefitsResponse.text(), /changed while you were editing/);
+    assert.deepEqual(conflict.audits().map((row) => ({
+      eventType: row.eventType,
+      patientId: row.patientId,
+      resourceType: row.resourceType,
+      resourceId: row.resourceId,
+      actionOutcome: row.actionOutcome,
+    })), [
+      { eventType: "coverage.write", patientId: "patient-1", resourceType: "Coverage", resourceId: "uncreated", actionOutcome: "denied" },
+      { eventType: "benefits.manual-entry", patientId: "patient-1", resourceType: "CoverageEligibilityResponse", resourceId: "uncreated", actionOutcome: "denied" },
+    ]);
   } finally {
     await conflict.close();
   }
@@ -71,12 +97,24 @@ test("Coverage transactions reject dangling subscriber URNs and map concurrent e
 async function server(conflict = false) {
   let serviceAuthCalls = 0;
   let transactions = 0;
+  const audits: OsodAuditEventRecord[] = [];
   const fhir = {
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       transactions += 1;
       if (conflict) throw Object.assign(new Error("FHIR 409 Conflict"), { status: 409 });
-      return { ...bundle, type: "transaction-response" };
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: (bundle.entry ?? []).map((entry) => ({ response: {
+          status: "201 Created",
+          location: entry.resource?.resourceType === "Coverage"
+            ? "Coverage/coverage-created/_history/1"
+            : entry.resource?.resourceType === "CoverageEligibilityResponse"
+              ? "CoverageEligibilityResponse/benefits-created/_history/1"
+              : `${entry.resource?.resourceType}/request-created/_history/1`,
+        } })),
+      };
     },
   };
   const app = express();
@@ -87,6 +125,7 @@ async function server(conflict = false) {
       : header === "Bearer forbidden"
         ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", fhir }
         : null,
+    recordAudit: async (row) => { audits.push(row); },
   });
   const listener = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve, reject) => {
@@ -98,6 +137,7 @@ async function server(conflict = false) {
     baseUrl: `http://127.0.0.1:${port}`,
     serviceAuthCalls: () => serviceAuthCalls,
     transactions: () => transactions,
+    audits: () => audits,
     close: () => new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve())),
   };
 }

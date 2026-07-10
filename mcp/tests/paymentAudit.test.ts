@@ -30,9 +30,9 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
   );
 });
 
-test("the Phase 6a audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
+test("the latest audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
   const sql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-07-10-payment-credit-event.sql"),
+    resolve(process.cwd(), "../data/migrations/2026-07-10-phase7a-insurance-audit-events.sql"),
     "utf8",
   );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");

@@ -5832,6 +5832,9 @@ async function main(): Promise<void> {
       });
       registerPatientInsuranceRoutes(app, authenticateWithMedplum, {
         authenticate: authenticateStaffRoute,
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
       });
 
       app.post("/claims/submit", async (req, res) => {
