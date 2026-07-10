@@ -43,6 +43,7 @@ export interface MedplumClient {
     rt: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   history<T extends Resource>(
     rt: T["resourceType"],
     id?: string,
@@ -229,6 +230,35 @@ export function createMedplumClient(opts: {
           const res = await fetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, {
             headers: headers(),
           });
+          if (!res.ok) throw await toError(res);
+          return (await res.json()) as Bundle<T>;
+        },
+      );
+    },
+
+    async searchUrl<T extends Resource>(url: string, expectedResourceType: T["resourceType"]): Promise<Bundle<T>> {
+      const resolved = new URL(url, `${base}/fhir/R4/${expectedResourceType}`);
+      const fhirRoot = new URL(`${base}/fhir/R4/`);
+      if (resolved.origin !== fhirRoot.origin || !resolved.pathname.startsWith(fhirRoot.pathname)) {
+        throw new Error("FHIR next link must stay within the configured FHIR endpoint.");
+      }
+      const resourceType = resolved.pathname.slice(fhirRoot.pathname.length).split("/")[0];
+      if (!resourceType) {
+        throw new Error("FHIR next link does not identify a resource search.");
+      }
+      if (resourceType !== expectedResourceType) {
+        throw new Error(`FHIR next link changed resource type from ${expectedResourceType} to ${resourceType}.`);
+      }
+      const params = Object.fromEntries(resolved.searchParams);
+      return audited(
+        {
+          eventType: "search",
+          resourceType,
+          patientId: patientIdFromSearch(resourceType, params),
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await fetch(resolved, { headers: headers() });
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },

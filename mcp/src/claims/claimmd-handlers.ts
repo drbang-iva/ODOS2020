@@ -1,5 +1,6 @@
 import type {
   Basic,
+  Bundle,
   Claim,
   ClaimResponse,
   CoverageEligibilityRequest,
@@ -11,6 +12,7 @@ import type {
 import { buildOsodAuditEventRow, type OsodActorRole, type OsodAuditEventRecord } from "../authz/osodAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
 import {
@@ -70,7 +72,7 @@ import {
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OsodActorRole;
-  fhir: Pick<MedplumClient, "create" | "search" | "read" | "update">;
+  fhir: Pick<MedplumClient, "create" | "search" | "searchUrl" | "read" | "update">;
 }
 
 export interface ClaimsHandlerDeps {
@@ -377,22 +379,25 @@ export async function handleEraListRequest(
   if ("status" in auth) return auth;
   if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
 
-  const [rawEraList, importBundle, openTaskBundle] = await Promise.all([
-    deps.adapter.listEras(),
-    auth.fhir.search<Basic>("Basic", {
-      code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
-      _count: "100",
-    }),
-    auth.fhir.search<Task>("Task", {
-      code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
-      "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review`,
-      _count: "100",
-    }),
-  ]);
-  if (hasNextPage(importBundle) || hasNextPage(openTaskBundle)) {
-    return { status: 409, body: { error: "ERA query exceeded one FHIR page; no partial queue was returned." } };
+  try {
+    const [rawEraList, imports, openTasks] = await Promise.all([
+      deps.adapter.listEras(),
+      searchAll<Basic>(auth.fhir, "Basic", {
+        code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
+        _count: "100",
+      }),
+      searchAll<Task>(auth.fhir, "Task", {
+        code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
+        "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review`,
+        _count: "100",
+      }),
+    ]);
+    return { status: 200, body: { items: projectEraBatchReadModel(rawEraList, searchBundle(imports), searchBundle(openTasks)) } };
+  } catch (error) {
+    const conflict = paginationConflict(error, "ERA");
+    if (conflict) return conflict;
+    throw error;
   }
-  return { status: 200, body: { items: projectEraBatchReadModel(rawEraList, importBundle, openTaskBundle) } };
 }
 
 export async function handleEraWorklistRequest(
@@ -405,18 +410,21 @@ export async function handleEraWorklistRequest(
   if (requestedStatus && requestedStatus !== "open" && !isEraWorklistStatus(requestedStatus)) {
     return { status: 400, body: { error: "status must be open, new, in-review, or resolved." } };
   }
-  const bundle = await auth.fhir.search<Task>("Task", {
-    code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
-    ...(requestedStatus === "open"
-      ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review` }
-      : requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
-    _count: "100",
-    _sort: "-authored-on",
-  });
-  if (hasNextPage(bundle)) {
-    return { status: 409, body: { error: "Worklist query exceeded one FHIR page; no partial worklist was returned." } };
+  try {
+    const tasks = await searchAll<Task>(auth.fhir, "Task", {
+      code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
+      ...(requestedStatus === "open"
+        ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review` }
+        : requestedStatus ? { "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|${requestedStatus}` } : {}),
+      _count: "100",
+      _sort: "-authored-on",
+    });
+    return { status: 200, body: { items: projectEraWorklistBundle(searchBundle(tasks), now(deps)) } };
+  } catch (error) {
+    const conflict = paginationConflict(error, "Worklist");
+    if (conflict) return conflict;
+    throw error;
   }
-  return { status: 200, body: { items: projectEraWorklistBundle(bundle, now(deps)) } };
 }
 
 export async function handleClaimSearchRequest(
@@ -452,70 +460,70 @@ export async function handleClaimSearchRequest(
     return { status: 400, body: { error: "outstanding must be true when supplied." } };
   }
 
-  const [claimBundle, responseBundle, taskBundle] = await Promise.all([
-    auth.fhir.search<Claim>("Claim", { _count: "100", _sort: "-created" }),
-    auth.fhir.search<ClaimResponse>("ClaimResponse", { _count: "200", _sort: "-created" }),
-    auth.fhir.search<Task>("Task", {
-      code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
-      _count: "200",
-      _sort: "-authored-on",
-    }),
-  ]);
-  if (hasNextPage(claimBundle) || hasNextPage(responseBundle) || hasNextPage(taskBundle)) {
-    return { status: 409, body: { error: "Claim query exceeded one FHIR page; no partial search was returned." } };
-  }
-  const claims = bundleResources(claimBundle);
-  const responses = bundleResources(responseBundle);
-  const tasks = bundleResources(taskBundle);
-  let patientReferences: Set<string> | undefined;
-  const relatedResources: Resource[] = [];
-  if (patient) {
-    if (/^Patient\/[A-Za-z0-9.-]+$/.test(patient)) {
-      patientReferences = new Set([patient]);
-    } else {
-      const patientBundle = await auth.fhir.search<Resource>("Patient", { name: patient, _count: "100" });
-      const patients = bundleResources(patientBundle).filter(isRelatedClaimResource);
-      relatedResources.push(...patients);
-      patientReferences = new Set(patients.flatMap((resource) => resource.id ? [`Patient/${resource.id}`] : []));
-    }
-  }
-
-  const referenceBundles = await Promise.all(
-    (["Patient", "Practitioner", "PractitionerRole", "Organization", "Location"] as const).map(async (resourceType) => {
-      const ids = claimReferenceIds(claims, resourceType);
-      if (ids.length === 0) return [];
-      const bundle = await auth.fhir.search<Resource>(resourceType, { _id: ids.join(","), _count: String(ids.length) });
-      return bundleResources(bundle).filter(isRelatedClaimResource);
-    }),
-  );
-  relatedResources.push(...referenceBundles.flat());
-
-  const filters: ClaimSearchFilters = {
-    ...(patientReferences ? { patientReferences } : {}),
-    ...(trimmedValue(input.query?.claim) ? { claim: trimmedValue(input.query?.claim) } : {}),
-    ...(requestedStatus ? { status: requestedStatus } : {}),
-    ...(trimmedValue(input.query?.carrier) ? { carrier: trimmedValue(input.query?.carrier) } : {}),
-    ...(trimmedValue(input.query?.office) ? { office: trimmedValue(input.query?.office) } : {}),
-    ...(trimmedValue(input.query?.cpt) ? { cpt: trimmedValue(input.query?.cpt) } : {}),
-    ...(minAmountCents !== undefined ? { minAmountCents } : {}),
-    ...(maxAmountCents !== undefined ? { maxAmountCents } : {}),
-    ...(minDaysOutstanding !== undefined ? { minDaysOutstanding } : {}),
-    ...(maxDaysOutstanding !== undefined ? { maxDaysOutstanding } : {}),
-    ...(outstandingOnly === "true" ? { outstandingOnly: true } : {}),
-  };
-  return {
-    status: 200,
-    body: {
-      items: projectClaimSearchResults({
-        claims,
-        responses,
-        tasks,
-        relatedResources,
-        filters,
-        at: now(deps),
+  try {
+    const [claims, responses, tasks] = await Promise.all([
+      searchAll<Claim>(auth.fhir, "Claim", { _count: "100", _sort: "-created" }),
+      searchAll<ClaimResponse>(auth.fhir, "ClaimResponse", { _count: "200", _sort: "-created" }),
+      searchAll<Task>(auth.fhir, "Task", {
+        code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
+        _count: "200",
+        _sort: "-authored-on",
       }),
-    },
-  };
+    ]);
+    let patientReferences: Set<string> | undefined;
+    const relatedResources: Resource[] = [];
+    if (patient) {
+      if (/^Patient\/[A-Za-z0-9.-]+$/.test(patient)) {
+        patientReferences = new Set([patient]);
+      } else {
+        const patients = (await searchAll<Resource>(auth.fhir, "Patient", { name: patient, _count: "100" }))
+          .filter(isRelatedClaimResource);
+        relatedResources.push(...patients);
+        patientReferences = new Set(patients.flatMap((resource) => resource.id ? [`Patient/${resource.id}`] : []));
+      }
+    }
+
+    const referenceResources = await Promise.all(
+      (["Patient", "Practitioner", "PractitionerRole", "Organization", "Location"] as const).map(async (resourceType) => {
+        const ids = claimReferenceIds(claims, resourceType);
+        if (ids.length === 0) return [];
+        return (await searchAll<Resource>(auth.fhir, resourceType, { _id: ids.join(","), _count: String(ids.length) }))
+          .filter(isRelatedClaimResource);
+      }),
+    );
+    relatedResources.push(...referenceResources.flat());
+
+    const filters: ClaimSearchFilters = {
+      ...(patientReferences ? { patientReferences } : {}),
+      ...(trimmedValue(input.query?.claim) ? { claim: trimmedValue(input.query?.claim) } : {}),
+      ...(requestedStatus ? { status: requestedStatus } : {}),
+      ...(trimmedValue(input.query?.carrier) ? { carrier: trimmedValue(input.query?.carrier) } : {}),
+      ...(trimmedValue(input.query?.office) ? { office: trimmedValue(input.query?.office) } : {}),
+      ...(trimmedValue(input.query?.cpt) ? { cpt: trimmedValue(input.query?.cpt) } : {}),
+      ...(minAmountCents !== undefined ? { minAmountCents } : {}),
+      ...(maxAmountCents !== undefined ? { maxAmountCents } : {}),
+      ...(minDaysOutstanding !== undefined ? { minDaysOutstanding } : {}),
+      ...(maxDaysOutstanding !== undefined ? { maxDaysOutstanding } : {}),
+      ...(outstandingOnly === "true" ? { outstandingOnly: true } : {}),
+    };
+    return {
+      status: 200,
+      body: {
+        items: projectClaimSearchResults({
+          claims,
+          responses,
+          tasks,
+          relatedResources,
+          filters,
+          at: now(deps),
+        }),
+      },
+    };
+  } catch (error) {
+    const conflict = paginationConflict(error, "Claim");
+    if (conflict) return conflict;
+    throw error;
+  }
 }
 
 export async function handleCreateManualEobRequest(
@@ -567,12 +575,18 @@ export async function handleManualEobListRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  const bundle = await auth.fhir.search<Basic>("Basic", {
-    code: `${MANUAL_EOB_CODE_SYSTEM}|${MANUAL_EOB_CODE}`,
-    _count: "100",
-    _sort: "-_lastUpdated",
-  });
-  return { status: 200, body: { items: bundleResources(bundle).map(parseManualEobHeader) } };
+  try {
+    const headers = await searchAll<Basic>(auth.fhir, "Basic", {
+      code: `${MANUAL_EOB_CODE_SYSTEM}|${MANUAL_EOB_CODE}`,
+      _count: "100",
+      _sort: "-_lastUpdated",
+    });
+    return { status: 200, body: { items: headers.map(parseManualEobHeader) } };
+  } catch (error) {
+    const conflict = paginationConflict(error, "Manual EOB");
+    if (conflict) return conflict;
+    throw error;
+  }
 }
 
 export async function handlePostManualEobClaimRequest(
@@ -1085,8 +1099,20 @@ function wholeNumber(value: unknown): number | undefined | null {
   return /^\d+$/.test(text) ? Number(text) : null;
 }
 
-function hasNextPage(bundle: { link?: Array<{ relation?: string }> }): boolean {
-  return bundle.link?.some((link) => link.relation === "next") ?? false;
+function searchBundle<T extends Resource>(resources: T[]): Bundle<T> {
+  return {
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: resources.map((resource) => ({ resource })),
+  };
+}
+
+function paginationConflict(error: unknown, label: string): ClaimsHandlerResult | undefined {
+  if (!(error instanceof FhirSearchLimitError)) return undefined;
+  return {
+    status: 409,
+    body: { error: `${label} query exceeded ${error.maxRows} rows; no partial result was returned.` },
+  };
 }
 
 function integerValue(value: unknown): number | undefined {
