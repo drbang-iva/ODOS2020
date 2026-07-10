@@ -7,6 +7,10 @@ import {
   handleCupDiscDefinitionRequest,
   type CupDiscEndpointDeps,
 } from "../src/clinical-graph/cup-disc-endpoint.js";
+import {
+  addGlaucomaCupDiscDescriptorOption,
+  buildGlaucomaFindingDefinitionStubs,
+} from "../src/clinical-graph/glaucoma-suspect.js";
 
 const AUTH = "Bearer good";
 const BODY = {
@@ -14,9 +18,13 @@ const BODY = {
   encounterReference: "Encounter/e1",
 };
 
-function deps(role: PracticeRoleId = "clinician") {
+function deps(
+  role: PracticeRoleId = "clinician",
+  findingDefinitions?: CupDiscEndpointDeps["findingDefinitions"],
+) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
   const d: CupDiscEndpointDeps = {
+    findingDefinitions,
     authenticate: async (authHeader) =>
       authHeader === AUTH
         ? {
@@ -129,6 +137,38 @@ test("cup/disc endpoint relies on the evaluator for cross-eye asymmetry", async 
   assert.equal(body.eyes.OS.cupDiscAsymmetry, 0.3);
   assert.equal(body.eyes.OD.signals.includes("cup-disc-asymmetry"), true);
   assert.equal(body.eyes.OS.signals.includes("cup-disc-asymmetry"), true);
+});
+
+test("cup/disc capture validates against a practice-edited runtime definition", async () => {
+  const seed = buildGlaucomaFindingDefinitionStubs({
+    provenance: {
+      source: "manual",
+      recordedAt: "2026-07-10T15:00:00.000Z",
+      actorReference: "Practitioner/admin-1",
+    },
+  }).find((definition) => definition.stableKey === "cup_disc_ratio");
+  assert.ok(seed);
+  const edited = addGlaucomaCupDiscDescriptorOption(seed, {
+    code: "practice-custom",
+    display: "Practice custom",
+    active: true,
+  });
+  const { deps: d } = deps("clinician", () => [edited]);
+
+  const result = await handleCupDiscCaptureRequest(d, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      eyes: {
+        OD: {
+          verticalCupDiscRatio: 0.3,
+          discAppearanceDescriptors: ["practice-custom"],
+        },
+      },
+    },
+  });
+
+  assert.equal(result.status, 200);
 });
 
 test("cup/disc endpoint rejects unauthenticated and non-chart-write saves", async () => {
