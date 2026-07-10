@@ -56,6 +56,12 @@ import {
   handleRefractionDefinitionRequest,
 } from "./clinical-graph/refraction-endpoint.js";
 import {
+  handleAutoRefractionCaptureRequest,
+  handleAutoRefractionDefinitionRequest,
+  handleWearingCaptureRequest,
+  handleWearingDefinitionRequest,
+} from "./clinical-graph/pretest-endpoint.js";
+import {
   handleIopHistoryRequest,
   handleIopTargetRequest,
 } from "./clinical-graph/iop-history-endpoint.js";
@@ -5556,6 +5562,70 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/refraction failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Refraction clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/wearing/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleWearingDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/wearing/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Wearing definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/wearing", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleWearingCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/wearing failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Wearing clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/auto-refraction/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleAutoRefractionDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/auto-refraction/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Auto-refraction definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/auto-refraction", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleAutoRefractionCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/auto-refraction failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Auto-refraction clinical-graph route failed" });
           }
         }
       });

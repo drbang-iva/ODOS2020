@@ -1,4 +1,6 @@
 export type ChartSectionId =
+  | "wearing"
+  | "auto-refraction"
   | "va"
   | "refraction"
   | "ortho-k"

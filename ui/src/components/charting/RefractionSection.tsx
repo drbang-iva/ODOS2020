@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import type { SectionSaveStatus } from "./types";
+import { formatPowerOption, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
@@ -511,27 +512,6 @@ function eyeTouched(row: EyeState): boolean {
 
 function parseOptionalNumber(value: string): number | undefined {
   return value ? Number(value) : undefined;
-}
-
-function numericOptions(
-  field: DefinitionField | undefined,
-  fallbackMinimum: number,
-  fallbackMaximum: number,
-  fallbackStep: number,
-): string[] {
-  const minimum = field?.minimum ?? fallbackMinimum;
-  const maximum = field?.maximum ?? fallbackMaximum;
-  const step = field?.step ?? fallbackStep;
-  const count = Math.round((maximum - minimum) / step);
-  return Array.from({ length: count + 1 }, (_, index) => {
-    const value = minimum + index * step;
-    return (Math.abs(value) < 1e-9 ? 0 : value).toFixed(step < 1 ? 2 : 0);
-  });
-}
-
-function formatPowerOption(value: number): string {
-  if (value === 0) return "Plano";
-  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 }
 
 function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
