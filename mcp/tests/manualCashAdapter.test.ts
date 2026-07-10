@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Invoice } from "@medplum/fhirtypes";
+import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
 import { createManualCashAdapter } from "../src/payments/adapters/manual-cash-adapter.js";
@@ -8,7 +8,7 @@ import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js
 
 /** In-memory FHIR client double covering the Pick<MedplumClient, "read" | "update"> the adapter takes. */
 function fakeFhir(invoice: Invoice) {
-  const store = { invoice: structuredClone(invoice), updates: 0 };
+  const store = { invoice: structuredClone(invoice), updates: 0, created: [] as PaymentReconciliation[] };
   return {
     store,
     read: async <T>(resourceType: string, id: string): Promise<T> => {
@@ -21,6 +21,10 @@ function fakeFhir(invoice: Invoice) {
       store.invoice = structuredClone(next) as Invoice;
       store.updates += 1;
       return structuredClone(next);
+    },
+    create: async <T>(resource: T): Promise<T> => {
+      store.created.push(structuredClone(resource) as PaymentReconciliation);
+      return { ...(resource as object), id: "prepay-pr-1" } as T;
     },
   };
 }
@@ -85,6 +89,23 @@ test("a partial cash payment (deposit) records the tender but leaves the Invoice
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
 });
 
+test("cash collected before an Invoice exists emits an unallocated PaymentReconciliation", async () => {
+  const fhir = fakeFhir(untenderedInvoice());
+  const adapter = createManualCashAdapter(fhir, { now: () => "2026-07-10T13:00:00.000Z" });
+
+  const result = await adapter.charge(chargeRequest({ invoiceReference: undefined, amountCents: 7500 }));
+
+  assert.deepEqual(result.paymentRecord, { resourceType: "PaymentReconciliation", id: "prepay-pr-1" });
+  assert.equal(fhir.store.updates, 0);
+  assert.equal(fhir.store.created.length, 1);
+  assert.deepEqual(fhir.store.created[0].detail, []);
+  assert.equal(fhir.store.created[0].paymentAmount?.value, 75);
+  assert.equal(fhir.store.created[0].extension?.find((extension) =>
+    extension.url.endsWith("/osod-payment-subject"))?.valueReference?.reference, "Patient/p1");
+  assert.equal(fhir.store.created[0].extension?.find((extension) =>
+    extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
+});
+
 test("manual-cash charge refuses an Invoice that already carries a tender (exactly-one-source anti-drift guard)", async () => {
   const alreadyTendered: Invoice = {
     ...buildOpticalInvoice({
@@ -119,13 +140,13 @@ test("manual-cash charge validates the amount and the invoice reference", async 
   assert.equal(fhir.store.updates, 0);
 });
 
-test("refund / void / settle / status are explicit v0.7 deferrals (scope fence)", async () => {
+test("same-day void is available while refund / settle / status remain v0.7 deferrals", async () => {
   const adapter = createManualCashAdapter(fakeFhir(untenderedInvoice()));
   await assert.rejects(
     () => adapter.refund({ transactionId: "t", amountCents: 1, reason: "r", staffReference: "s" }),
     /v0\.7/,
   );
-  await assert.rejects(() => adapter.void({ transactionId: "t", staffReference: "s" }), /v0\.7/);
+  assert.deepEqual(await adapter.void({ transactionId: "t", staffReference: "s" }), { outcome: "success" });
   await assert.rejects(() => adapter.settle({ settlementDate: "2026-07-05" }), /v0\.7/);
   await assert.rejects(() => adapter.status("t"), /v0\.7/);
 });

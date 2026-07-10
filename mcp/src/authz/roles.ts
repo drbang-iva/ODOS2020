@@ -114,8 +114,8 @@ const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
  * Dispensary order + financial resources granted to front-desk at practice scope (v0.6c payments
  * authorization model, decision 2026-07-05 §2). Practice-scope not patient-compartment: the
  * dispensary is a walk-up counter, and PaymentReconciliation is not a Patient-compartment resource.
- * PaymentReconciliation is create-only (payment records are immutable; refunds are new records, v0.7);
- * Task/Invoice also need update (status advance / manual-cash balancing).
+ * PaymentReconciliation stays create/read-only for staff; Phase 6a mutations cross the guarded
+ * osod-core lifecycle handlers. Task/Invoice also need update (status advance / manual cash).
  */
 const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },

@@ -6,8 +6,9 @@
  * (adapter pattern, three surfaces, PCI scope minimization via processor-side tokenization).
  * Seam refinements: performance-od decisions/2026-07-05-odos-payment-reconciliation-seam-spec.md —
  * the Invoice is the bill, the PaymentReconciliation is the settling payment; a charge therefore
- * requires the Invoice it settles, and the canonical payment record is a PaymentReconciliation for
- * processor adapters but the tendered Invoice itself for the manual adapter (no PR for cash).
+ * normally settles an Invoice, while a pre-payment omits invoiceReference and creates an
+ * unallocated PaymentReconciliation. The manual adapter keeps the tendered Invoice as its record
+ * except for that no-Invoice-yet cash/check exception.
  */
 
 export type PaymentSurface = "in-clinic-pos" | "online" | "patient-financing" | "manual";
@@ -17,8 +18,8 @@ export interface ChargeRequest {
   amountCents: number;
   currency: "USD";
   patientReference: string;
-  /** The bill this payment settles — PaymentReconciliation.detail.request target (seam spec §2). */
-  invoiceReference: string;
+  /** The bill this payment settles. Omit only for pay-before-bill collection. */
+  invoiceReference?: string;
   encounterReference?: string;
   /** The order's 17-status lifecycle Task (PaymentReconciliation.request). */
   taskReference?: string;

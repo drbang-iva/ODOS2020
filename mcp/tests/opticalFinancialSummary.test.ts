@@ -168,6 +168,7 @@ function processorPayment(amountCents: number, display?: string) {
     createdIso: "2026-07-05T14:30:00.000Z",
     paymentDate: "2026-07-05",
     amountCents,
+    subjectReference: "Patient/p1",
     invoiceReference: "Invoice/inv1",
     processorTransactionId: `txn-${amountCents}`,
     processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/stripe-transaction",

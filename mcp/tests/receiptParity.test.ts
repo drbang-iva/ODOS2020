@@ -74,6 +74,7 @@ const CARD_PAYMENT = buildPaymentReconciliation({
   createdIso: "2026-07-05T15:00:00.000Z",
   paymentDate: "2026-07-05",
   amountCents: 25600,
+  subjectReference: "Patient/receipt-patient",
   invoiceReference: "Invoice/receipt-parity-card-invoice",
   taskReference: "Task/receipt-parity-task",
   staffReference: "Practitioner/receipt-staff",

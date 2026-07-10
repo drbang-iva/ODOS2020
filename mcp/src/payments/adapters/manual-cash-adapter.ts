@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Invoice } from "@medplum/fhirtypes";
+import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../../fhir-client.js";
 import {
   OSOD_PAYMENT_TENDER_EXTENSION_URL,
@@ -18,6 +18,9 @@ import type {
   VoidRequest,
   VoidResult,
 } from "../payment-processor-adapter.js";
+import { buildPaymentReconciliation } from "../payment-reconciliation.js";
+
+export const MANUAL_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-payment";
 
 /**
  * The manual cash/check adapter — the shipped Slice-3 cash path formalized behind the
@@ -37,7 +40,7 @@ export interface ManualCashAdapterOptions {
 }
 
 export function createManualCashAdapter(
-  fhir: Pick<MedplumClient, "read" | "update">,
+  fhir: Pick<MedplumClient, "read" | "update" | "create">,
   options?: ManualCashAdapterOptions,
 ): PaymentProcessorAdapter {
   const now = options?.now ?? (() => new Date().toISOString());
@@ -54,6 +57,33 @@ export function createManualCashAdapter(
       assertPaymentTender(args.tender.code);
       if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
         throw new Error("Charge amount (amountCents) must be a positive integer number of cents.");
+      }
+      if (args.invoiceReference === undefined) {
+        const transactionId = `manual-${randomUUID()}`;
+        const chargedAt = now();
+        const created = await fhir.create<PaymentReconciliation>(
+          buildPaymentReconciliation({
+            outcome: "success",
+            createdIso: chargedAt,
+            paymentDate: chargedAt.slice(0, 10),
+            amountCents: args.amountCents,
+            subjectReference: args.patientReference,
+            staffReference: args.staffReference,
+            processorTransactionId: transactionId,
+            processorTransactionSystem: MANUAL_PAYMENT_SYSTEM,
+            surface: "manual",
+            tender: args.tender,
+            description: args.description,
+          }),
+        );
+        return {
+          transactionId,
+          paymentRecord: { resourceType: "PaymentReconciliation", id: created.id! },
+          outcome: "success",
+          amountChargedCents: args.amountCents,
+          feesCents: 0,
+          settlementDate: chargedAt.slice(0, 10),
+        };
       }
       const invoiceId = invoiceIdFromReference(args.invoiceReference);
 
@@ -96,7 +126,7 @@ export function createManualCashAdapter(
     },
 
     async void(_args: VoidRequest): Promise<VoidResult> {
-      throw new Error("Manual voids are deferred to the v0.7 refund authorization workflow.");
+      return { outcome: "success" };
     },
 
     async settle(_args: SettleRequest): Promise<SettlementBatch> {

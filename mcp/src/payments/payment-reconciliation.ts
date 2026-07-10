@@ -3,13 +3,12 @@ import { paymentTenderExtensionForReconciliation } from "../fhir/osodPaymentTend
 import type { PaymentSurface } from "./payment-processor-adapter.js";
 
 /**
- * FHIR R4 PaymentReconciliation emitter — the settling payment for a processor charge.
+ * FHIR R4 PaymentReconciliation emitter — the collected patient payment.
  *
- * The Invoice is the bill; this resource is the payment that settles it, linked via
- * detail[0].request → Invoice (R4-verified: detail.request targets Any). Manual cash/check tenders
- * do NOT come through here — they live on the Invoice's osod-payment-tender extension (Slice-3
- * trap #2 preserved). Contract: performance-od
- * decisions/2026-07-05-odos-payment-reconciliation-seam-spec.md §5.
+ * An immediate payment links to its Invoice through detail[].request. A pre-payment has an empty
+ * detail[] until charges post. Manual cash/check still lives on the Invoice when the bill already
+ * exists; only the no-Invoice-yet exception emits a PaymentReconciliation. Contract: performance-od
+ * decisions/2026-07-09-odos-unapplied-credit-seam-addendum.md §2-§3.
  */
 
 export const OSOD_PROCESSOR_FEES_EXTENSION_URL =
@@ -18,11 +17,19 @@ export const OSOD_PROCESSOR_FEES_EXTENSION_URL =
 export const OSOD_PAYMENT_SURFACE_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-payment-surface";
 
+export const OSOD_PAYMENT_SUBJECT_EXTENSION_URL =
+  "https://osod.dev/fhir/StructureDefinition/osod-payment-subject";
+
 /** HL7 payment-type CodeSystem for PaymentReconciliation.detail.type (payment | adjustment | advance). */
 export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/payment-type";
 
 /** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
 export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
+
+export interface PatientPaymentAllocationInput {
+  invoiceReference: string;
+  amountCents: number;
+}
 
 export interface ProcessorPaymentInput {
   /**
@@ -37,8 +44,12 @@ export interface ProcessorPaymentInput {
   paymentDate: string;
   /** Amount charged in whole cents. */
   amountCents: number;
-  /** The bill this payment settles — detail[0].request (THE LINK, seam spec §2). */
-  invoiceReference: string;
+  /** The Patient account that owns the payment or unapplied credit. */
+  subjectReference: string;
+  /** Existing bill settled immediately. Omit for a pre-payment with no Invoice yet. */
+  invoiceReference?: string;
+  /** Explicit plural allocations. Omit to use invoiceReference or to collect fully unapplied. */
+  allocations?: PatientPaymentAllocationInput[];
   /** The order's 17-status lifecycle Task (PaymentReconciliation.request). */
   taskReference?: string;
   /** The staff member who initiated the transaction (PaymentReconciliation.requestor). */
@@ -74,8 +85,14 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
   if (input.feesCents !== undefined && (!Number.isInteger(input.feesCents) || input.feesCents < 0)) {
     throw new Error("Processor fees (feesCents) must be a nonnegative integer number of cents.");
   }
-  if (!input.invoiceReference) {
-    throw new Error("A PaymentReconciliation requires the Invoice reference it settles (the bill).");
+  if (!/^Patient\/[^/]+$/.test(input.subjectReference)) {
+    throw new Error('Payment subject must be a local "Patient/<id>" reference.');
+  }
+  if (input.invoiceReference !== undefined && !/^Invoice\/[^/]+$/.test(input.invoiceReference)) {
+    throw new Error('invoiceReference must be a local "Invoice/<id>" reference when supplied.');
+  }
+  if (input.invoiceReference !== undefined && input.allocations !== undefined) {
+    throw new Error("Supply invoiceReference or allocations, not both.");
   }
   if (!input.processorTransactionId || !input.processorTransactionSystem) {
     throw new Error("A PaymentReconciliation requires the processor transaction id and its namespace.");
@@ -88,6 +105,24 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
   }
 
   const amount = { value: input.amountCents / 100, currency: "USD" as const };
+  const allocations = input.allocations ?? (input.invoiceReference
+    ? [{ invoiceReference: input.invoiceReference, amountCents: input.amountCents }]
+    : []);
+  let allocatedCents = 0;
+  for (const allocation of allocations) {
+    if (!/^Invoice\/[^/]+$/.test(allocation.invoiceReference)) {
+      throw new Error('Every payment allocation must reference a local "Invoice/<id>".');
+    }
+    if (!Number.isInteger(allocation.amountCents) || allocation.amountCents <= 0) {
+      throw new Error("Payment allocation amountCents must be a positive integer number of cents.");
+    }
+    allocatedCents += allocation.amountCents;
+  }
+  if (allocatedCents > input.amountCents) {
+    throw new Error(
+      `Payment allocations total ${allocatedCents} cents but paymentAmount is only ${input.amountCents} cents.`,
+    );
+  }
 
   const surfaceExtension: Extension = {
     url: OSOD_PAYMENT_SURFACE_EXTENSION_URL,
@@ -119,16 +154,18 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
       ? { paymentIssuer: { reference: input.practiceOrgReference } }
       : {}),
     ...(input.description ? { disposition: input.description } : {}),
-    detail: [
-      {
-        type: {
-          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
-        },
-        request: { reference: input.invoiceReference },
-        amount,
+    detail: allocations.map((allocation) => ({
+      type: {
+        coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
       },
-    ],
+      request: { reference: allocation.invoiceReference },
+      amount: { value: allocation.amountCents / 100, currency: "USD" },
+    })),
     extension: [
+      {
+        url: OSOD_PAYMENT_SUBJECT_EXTENSION_URL,
+        valueReference: { reference: input.subjectReference },
+      },
       paymentTenderExtensionForReconciliation(input.tender),
       ...(input.feesCents !== undefined
         ? [

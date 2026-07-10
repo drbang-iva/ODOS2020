@@ -432,7 +432,10 @@ export function OpticalOrder() {
       invoice,
       chargeItems,
       ...(paymentReconciliations.length
-        ? { payments: paymentReconciliationsToTenderLines(paymentReconciliations) }
+        ? { payments: paymentReconciliationsToTenderLines(
+            paymentReconciliations,
+            `Invoice/${invoice.id}`,
+          ) }
         : {}),
     });
     const printed = openPrintWindow(`Receipt ${summary.header.orderId}`, renderReceiptSheet(summary));

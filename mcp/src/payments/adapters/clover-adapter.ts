@@ -92,7 +92,7 @@ export function createCloverAdapter(
       if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
         throw new Error("Charge amount (amountCents) must be a positive integer number of cents.");
       }
-      if (!/^Invoice\//.test(args.invoiceReference ?? "")) {
+      if (args.invoiceReference !== undefined && !/^Invoice\/[^/]+$/.test(args.invoiceReference)) {
         throw new Error(
           `Charge invoiceReference must be a local "Invoice/<id>" reference; got "${args.invoiceReference}".`,
         );
@@ -149,6 +149,7 @@ export function createCloverAdapter(
         createdIso: chargedAt,
         paymentDate: (payment.createdTime ? new Date(payment.createdTime).toISOString() : chargedAt).slice(0, 10),
         amountCents: amountChargedCents,
+        subjectReference: args.patientReference,
         invoiceReference: args.invoiceReference,
         taskReference: args.taskReference,
         staffReference: args.staffReference,
@@ -180,8 +181,26 @@ export function createCloverAdapter(
       );
     },
 
-    async void(_args: VoidRequest): Promise<VoidResult> {
-      throw new Error("Clover voids are deferred to the v0.7 refund authorization workflow.");
+    async void(args: VoidRequest): Promise<VoidResult> {
+      if (!args.transactionId) {
+        throw new Error("A Clover void requires the processor transaction id.");
+      }
+      const response = await fetchImpl(
+        `${config.baseUrl}/connect/v1/payments/${encodeURIComponent(args.transactionId)}/void`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${config.accessToken}`,
+            "X-Clover-Device-Id": config.deviceId,
+            "X-POS-Id": config.posId,
+            "Idempotency-Key": generateId(),
+            "User-Agent": "OSOD/0.6c",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ voidReason: "USER_CANCEL" }),
+        },
+      );
+      return { outcome: response.status === 200 ? "success" : "failed" };
     },
 
     async settle(_args: SettleRequest): Promise<SettlementBatch> {
