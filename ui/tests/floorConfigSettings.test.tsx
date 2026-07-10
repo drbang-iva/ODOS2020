@@ -132,13 +132,22 @@ test("Discard restores edits across projected sections and payer-map none remove
   assert.equal("VSP" in draft.current().payerMap, false);
 });
 
-test("station deactivation guard reports board-card and lane-threshold references", async () => {
-  const thresholdGuard = createFloorConfigAdapters(fixture().draft, new Set());
-  const waiting = (await thresholdGuard.stations.list()).find((row) => row.id === "waiting")!;
-  await assert.rejects(
-    async () => thresholdGuard.stations.deactivate(waiting),
-    /lane threshold still references it/,
-  );
+test("station deactivation retains custom thresholds for reactivation while board cards remain guarded", async () => {
+  const thresholdFixture = fixture();
+  const thresholdAdapter = createFloorConfigAdapters(thresholdFixture.draft, new Set());
+  const waiting = (await thresholdAdapter.stations.list()).find((row) => row.id === "waiting")!;
+  const deactivated = await thresholdAdapter.stations.deactivate(waiting);
+  assert.equal(deactivated.active, false);
+  assert.deepEqual(thresholdFixture.draft.current().laneThresholds.waiting, {
+    amberMinutes: 10,
+    redMinutes: 20,
+  });
+  const reactivated = await thresholdAdapter.stations.save({ ...deactivated, active: true });
+  assert.equal(reactivated.active, true);
+  assert.deepEqual(thresholdFixture.draft.current().laneThresholds.waiting, {
+    amberMinutes: 10,
+    redMinutes: 20,
+  });
 
   const boardGuard = createFloorConfigAdapters(fixture().draft, new Set(["optical"]));
   const optical = (await boardGuard.stations.list()).find((row) => row.id === "optical")!;

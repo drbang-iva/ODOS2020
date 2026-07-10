@@ -55,9 +55,6 @@ export function configFromFloorStationRows(
       if (onBoardStationIds.has(row.id)) {
         throw new Error(`Station "${row.label}" cannot be deactivated because it has patients currently on the board.`);
       }
-      if (config.laneThresholds[row.id]) {
-        throw new Error(`Station "${row.label}" cannot be deactivated because its lane threshold still references it.`);
-      }
     }
   }
 
