@@ -63,6 +63,7 @@ interface BlockState {
   id: string;
   type: string;
   purpose: string;
+  remarks: string;
   OD: EyeState;
   OS: EyeState;
 }
@@ -80,6 +81,7 @@ interface EyePayload {
 interface BlockPayload {
   type: string;
   purpose?: string;
+  remarks?: string;
   OD?: EyePayload;
   OS?: EyePayload;
 }
@@ -255,6 +257,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     value={block.purpose}
                     onChange={(event) => updateBlock(block.id, { purpose: event.target.value })}
                     placeholder={block.type === "FINAL_RX" ? "General wear" : "Optional"}
+                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
+                  />
+                </label>
+                <label className="block min-w-[260px] flex-1">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>
+                  <input
+                    value={block.remarks}
+                    onChange={(event) => updateBlock(block.id, { remarks: event.target.value })}
+                    maxLength={2000}
+                    placeholder="Optional clinical remarks"
                     className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
                   />
                 </label>
@@ -444,6 +456,7 @@ function emptyBlock(type = ""): BlockState {
     id: crypto.randomUUID(),
     type,
     purpose: "",
+    remarks: "",
     OD: emptyEye(),
     OS: emptyEye(),
   };
@@ -486,6 +499,7 @@ function buildPayload(blocks: BlockState[]): BlockPayload[] {
     return [{
       type: block.type,
       ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
+      ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
       ...eyes,
     }];
   });

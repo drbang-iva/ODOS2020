@@ -8,7 +8,7 @@ import {
 } from "./extensions.js";
 
 export function buildRefractionObservation(
-  input: RefractionInput,
+  input: RefractionInput & { remarks?: string },
 ): BuildResult<import("./types.js").Observation> {
   validateOptionalNumber("sphere", input.sphere);
   validateOptionalNumber("cylinder", input.cylinder);
@@ -42,6 +42,14 @@ export function buildRefractionObservation(
     components.push(
       component("PURPOSE", "Purpose", {
         valueString: input.purpose,
+      }),
+    );
+  }
+
+  if (input.remarks) {
+    components.push(
+      component("REMARKS", "Remarks", {
+        valueString: input.remarks,
       }),
     );
   }

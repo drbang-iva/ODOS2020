@@ -98,7 +98,7 @@ test("refraction endpoints enforce authentication and chart permissions", async 
   assert.equal(forbiddenWrite.status, 403);
 });
 
-test("refraction capture persists typed per-eye graph Observations with VA, Purpose, and Provenance", async () => {
+test("refraction capture persists typed per-eye graph Observations with VA, Purpose, Remarks, and Provenance", async () => {
   const { created, deps: d } = deps();
   const res = await handleRefractionCaptureRequest(d, {
     authHeader: AUTH,
@@ -107,6 +107,7 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
       blocks: [{
         type: "FINAL_RX",
         purpose: "General wear",
+        remarks: "Reduce cylinder if adaptation is difficult.",
         OD: {
           sphere: -1.25,
           cylinder: -0.5,
@@ -130,6 +131,7 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   assert.equal(componentValue(observation, "REFRACTION_TYPE", "code"), "FINAL_RX");
   assert.match(String(componentValue(observation, "REFRACTION_BLOCK_ID", "string")), /^refraction-block-/);
   assert.equal(componentValue(observation, "PURPOSE", "string"), "General wear");
+  assert.equal(componentValue(observation, "REMARKS", "string"), "Reduce cylinder if adaptation is difficult.");
   assert.equal(componentValue(observation, "DISTANCE_VA", "string"), "20/20 +1");
   assert.equal(componentValue(observation, "NEAR_VA", "string"), "J1 (20/25) 4pt 0.50M");
   assert.equal(componentValue(observation, "DISTANCE_PH_VA", "string"), "20/15");

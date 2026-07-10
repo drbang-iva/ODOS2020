@@ -25,13 +25,13 @@ const NEAR_VALUES = [
   "J1+ (20/20) 3pt 0.40M",
   "J1 (20/25) 4pt 0.50M",
   "J2 (20/30) 5pt 0.60M",
-  "J3 (20/40) 6pt 0.80M",
-  "J4 (20/50) 8pt 1.00M",
-  "J5 (20/60) 10pt 1.20M",
-  "J6 (20/70) 12pt 1.40M",
-  "J7 (20/80) 14pt 1.60M",
-  "J8 (20/100) 16pt 2.00M",
-  "J9 (20/125) 20pt 2.50M",
+  "J3 (20/32) 6pt 0.64M",
+  "J4 (20/40) 7pt 0.80M",
+  "J5 (20/50) 8pt 1.00M",
+  "J6 (20/60) 9pt 1.20M",
+  "J7 (20/63) 10pt 1.30M",
+  "J8 (20/80) 11pt 1.60M",
+  "J9 (20/100) 12pt 2.00M",
 ] as const;
 
 // VaSection can adopt this curated selector in a later slice without changing this refraction contract.

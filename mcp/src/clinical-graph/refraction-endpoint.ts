@@ -60,6 +60,7 @@ const eyePayloadSchema = z.object({
 const blockPayloadSchema = z.object({
   type: z.string().trim().min(1),
   purpose: z.string().trim().max(200).optional(),
+  remarks: z.string().trim().max(2000).optional(),
   OD: eyePayloadSchema.optional(),
   OS: eyePayloadSchema.optional(),
 }).strict();
@@ -232,6 +233,7 @@ function captureBlocks(
             blockId,
             refractionType: block.type,
             purpose: block.purpose,
+            remarks: block.remarks,
             sphere: payload.sphere,
             cylinder: payload.cylinder,
             axis: payload.axis,
@@ -257,6 +259,7 @@ function captureBlocks(
         refractionTypeDisplay: typeDisplay,
         blockId,
         purpose: block.purpose,
+        remarks: block.remarks,
         sphere: payload.sphere,
         cylinder: payload.cylinder,
         axis: payload.axis,
