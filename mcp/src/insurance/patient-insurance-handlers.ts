@@ -1,0 +1,210 @@
+import type {
+  Bundle,
+  Coverage,
+  CoverageEligibilityRequest,
+  CoverageEligibilityResponse,
+  RelatedPerson,
+  Resource,
+} from "@medplum/fhirtypes";
+import type { OsodActorRole } from "../authz/osodAudit.js";
+import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import type { MedplumClient } from "../fhir-client.js";
+
+export interface AuthenticatedInsuranceStaff {
+  staffReference: string;
+  actorRole: OsodActorRole;
+  fhir: Pick<MedplumClient, "search" | "executeTransaction">;
+}
+
+export interface PatientInsuranceHandlerDeps {
+  authenticate(authHeader: string | undefined): Promise<AuthenticatedInsuranceStaff | null>;
+}
+
+export interface PatientInsuranceHandlerResult {
+  status: number;
+  body: unknown;
+}
+
+export async function handlePatientInsuranceRead(
+  deps: PatientInsuranceHandlerDeps,
+  input: { authHeader: string | undefined; patientReference?: string },
+): Promise<PatientInsuranceHandlerResult> {
+  const auth = await authenticateInsuranceStaff(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!isPatientReference(input.patientReference)) return invalidPatientReference();
+  try {
+    const [coverages, relatedPeople] = await Promise.all([
+      auth.fhir.search<Coverage>("Coverage", { beneficiary: input.patientReference, _count: "100" }),
+      auth.fhir.search<RelatedPerson>("RelatedPerson", { patient: input.patientReference, _count: "100" }),
+    ]);
+    return {
+      status: 200,
+      body: {
+        coverages: resources(coverages),
+        relatedPeople: resources(relatedPeople),
+      },
+    };
+  } catch (error) {
+    return fhirFailure(error, "Unable to load patient insurance.");
+  }
+}
+
+export async function handlePatientInsuranceWrite(
+  deps: PatientInsuranceHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<PatientInsuranceHandlerResult> {
+  const auth = await authenticateInsuranceStaff(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const bundle = bodyBundle(input.body);
+  if (!bundle) return { status: 400, body: { error: "A FHIR transaction bundle is required." } };
+  const error = validateCoverageBundle(bundle);
+  if (error) return { status: 400, body: { error } };
+  try {
+    const response = await auth.fhir.executeTransaction(bundle);
+    return { status: 200, body: response };
+  } catch (cause) {
+    return fhirFailure(cause, "Unable to save patient insurance.");
+  }
+}
+
+export async function handleVisionBenefitsRead(
+  deps: PatientInsuranceHandlerDeps,
+  input: { authHeader: string | undefined; patientReference?: string },
+): Promise<PatientInsuranceHandlerResult> {
+  const auth = await authenticateInsuranceStaff(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!isPatientReference(input.patientReference)) return invalidPatientReference();
+  try {
+    const responses = await auth.fhir.search<CoverageEligibilityResponse>("CoverageEligibilityResponse", {
+      patient: input.patientReference,
+      _count: "100",
+      _sort: "-created",
+    });
+    return { status: 200, body: { responses: resources(responses) } };
+  } catch (error) {
+    return fhirFailure(error, "Unable to load vision-plan benefits.");
+  }
+}
+
+export async function handleVisionBenefitsWrite(
+  deps: PatientInsuranceHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<PatientInsuranceHandlerResult> {
+  const auth = await authenticateInsuranceStaff(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const bundle = bodyBundle(input.body);
+  if (!bundle) return { status: 400, body: { error: "A FHIR transaction bundle is required." } };
+  const error = validateBenefitsBundle(bundle);
+  if (error) return { status: 400, body: { error } };
+  try {
+    const response = await auth.fhir.executeTransaction(bundle);
+    return { status: 200, body: response };
+  } catch (cause) {
+    return fhirFailure(cause, "Unable to save vision-plan benefits.");
+  }
+}
+
+function validateCoverageBundle(bundle: Bundle): string | undefined {
+  if (bundle.type !== "transaction") return "Patient insurance writes require a transaction bundle.";
+  const entries = bundle.entry ?? [];
+  const coverages = entries.filter((entry) => entry.resource?.resourceType === "Coverage");
+  const relatedPeople = entries.filter((entry) => entry.resource?.resourceType === "RelatedPerson");
+  if (coverages.length !== 1) return "Patient insurance writes require exactly one Coverage.";
+  if (relatedPeople.length > 1) return "Patient insurance writes allow at most one RelatedPerson.";
+  if (entries.some((entry) => entry.resource?.resourceType !== "Coverage" && entry.resource?.resourceType !== "RelatedPerson")) {
+    return "Patient insurance writes may contain only Coverage and RelatedPerson resources.";
+  }
+  if (entries.some((entry) => entry.request?.method !== "POST" && entry.request?.method !== "PUT")) {
+    return "Patient insurance transaction entries must use POST or PUT.";
+  }
+  const coverage = coverages[0].resource as Coverage;
+  if (!isPatientReference(coverage.beneficiary.reference)) return "Coverage.beneficiary must reference a Patient.";
+  const subscriber = coverage.subscriber?.reference;
+  if (subscriber?.startsWith("urn:uuid:") && !relatedPeople.some((entry) => entry.fullUrl === subscriber)) {
+    return "Coverage.subscriber cannot point at a missing transaction RelatedPerson.";
+  }
+  const relatedPerson = relatedPeople[0]?.resource as RelatedPerson | undefined;
+  if (relatedPerson && relatedPerson.patient.reference !== coverage.beneficiary.reference) {
+    return "RelatedPerson.patient must match Coverage.beneficiary.";
+  }
+  return undefined;
+}
+
+function validateBenefitsBundle(bundle: Bundle): string | undefined {
+  if (bundle.type !== "transaction") return "Vision-benefit writes require a transaction bundle.";
+  const entries = bundle.entry ?? [];
+  const requests = entries.filter((entry) => entry.resource?.resourceType === "CoverageEligibilityRequest");
+  const responses = entries.filter((entry) => entry.resource?.resourceType === "CoverageEligibilityResponse");
+  if (entries.length !== 2 || requests.length !== 1 || responses.length !== 1) {
+    return "Vision-benefit writes require one CoverageEligibilityRequest and one CoverageEligibilityResponse.";
+  }
+  if (entries.some((entry) => entry.request?.method !== "POST")) return "Manual benefit history entries must be newly created.";
+  const request = requests[0].resource as CoverageEligibilityRequest;
+  const response = responses[0].resource as CoverageEligibilityResponse;
+  if (!isPatientReference(request.patient.reference) || request.patient.reference !== response.patient.reference) {
+    return "Eligibility request and response must reference the same Patient.";
+  }
+  if (response.request.reference !== requests[0].fullUrl) {
+    return "CoverageEligibilityResponse.request must reference its transaction request entry.";
+  }
+  const requestedCoverage = request.insurance?.[0]?.coverage.reference;
+  const responseCoverage = response.insurance?.[0]?.coverage.reference;
+  if (!requestedCoverage || requestedCoverage !== responseCoverage) {
+    return "Eligibility request and response must reference the same Coverage.";
+  }
+  return undefined;
+}
+
+async function authenticateInsuranceStaff(
+  deps: PatientInsuranceHandlerDeps,
+  authHeader: string | undefined,
+): Promise<AuthenticatedInsuranceStaff | PatientInsuranceHandlerResult> {
+  const staff = await deps.authenticate(authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to manage patient insurance." } };
+  if (!PRACTICE_ROLE_IDS.includes(staff.actorRole as PracticeRoleId)) {
+    return { status: 403, body: { error: "claims.manage role required" } };
+  }
+  try {
+    assertBusinessActionAllowed(staff.actorRole as PracticeRoleId, "claims.manage");
+  } catch {
+    return { status: 403, body: { error: "claims.manage role required" } };
+  }
+  return staff;
+}
+
+function bodyBundle(body: unknown): Bundle | undefined {
+  if (typeof body !== "object" || body === null || !("bundle" in body)) return undefined;
+  const bundle = (body as { bundle?: unknown }).bundle;
+  if (typeof bundle !== "object" || bundle === null || (bundle as { resourceType?: unknown }).resourceType !== "Bundle") return undefined;
+  return bundle as Bundle;
+}
+
+function resources<T extends Resource>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function isPatientReference(value: string | undefined): value is string {
+  return Boolean(value && /^Patient\/[^/]+$/.test(value));
+}
+
+function invalidPatientReference(): PatientInsuranceHandlerResult {
+  return { status: 400, body: { error: "patientReference must be a Patient/{id} reference." } };
+}
+
+function fhirFailure(error: unknown, fallback: string): PatientInsuranceHandlerResult {
+  const status = errorStatus(error);
+  if (status === 409) return { status: 409, body: { error: "This record changed while you were editing it. Reload and try again." } };
+  return { status: status && status >= 400 && status < 500 ? status : 502, body: { error: messageOf(error) || fallback } };
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error === "object" && error !== null && "status" in error && typeof (error as { status?: unknown }).status === "number") {
+    return (error as { status: number }).status;
+  }
+  const match = messageOf(error).match(/FHIR\s+(\d{3})/);
+  return match ? Number(match[1]) : undefined;
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

@@ -18,6 +18,8 @@ import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
 import { SubmitClaims } from "./scenes/claims/SubmitClaims";
 import { CarrierPayments } from "./scenes/claims/CarrierPayments";
 import { PatientPayments } from "./scenes/claims/PatientPayments";
+import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
+import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -108,6 +110,10 @@ function RouteSwitch({ view }: { view: ViewState }) {
       return <CarrierPayments />;
     case "/billing/claims/patient-payments":
       return <PatientPayments />;
+    case "/patient/insurance":
+      return <PatientInsurance initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
+    case "/patient/vision-benefits":
+      return <VisionPlanBenefits initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
     default:
