@@ -50,7 +50,6 @@ const eyePayloadSchema = z.object({
 const captureSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
-  recordedAt: z.string().datetime().optional(),
   customFields: z.array(customFieldValueSchema).max(64).optional(),
   eyes: z.object({
     OD: eyePayloadSchema.optional(),
@@ -99,7 +98,7 @@ export async function handleCustomSectionCaptureRequest(
     if (validationError) return { status: 400, body: { error: validationError } };
   }
 
-  const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();
+  const recordedAt = deps.now?.() ?? new Date().toISOString();
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt,

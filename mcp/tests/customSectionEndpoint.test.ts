@@ -44,6 +44,19 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   const definition = definitions.find((row) => row.stableKey === stableKey);
   assert.equal(definition?.notBillReady, true);
 
+  const backdated = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey },
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      recordedAt: "2020-01-01T00:00:00.000Z",
+      customFields: [{ code: localCode, value: 72 }],
+    },
+  });
+  assert.equal(backdated.status, 400);
+  assert.equal(fhir.observations.length, 0);
+
   const capture = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey },
