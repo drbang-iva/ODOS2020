@@ -34,6 +34,7 @@ import {
 } from "./custom-fields.js";
 import {
   captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
   type CapturedGlaucomaFinding,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
@@ -258,7 +259,7 @@ export async function handleSoftContactLensCaptureRequest(
       lensEntryId,
       provenance,
     });
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     eyes[eye] = {
       lensEntryId,
       observationReference: persisted.observationReference,
@@ -325,7 +326,7 @@ export async function handleSpecialtyContactLensCaptureRequest(
       lensEntryId,
       provenance,
     });
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     eyes[eye] = {
       lensEntryId,
       observationReference: persisted.observationReference,
@@ -858,12 +859,19 @@ function validateNumberField(
   return undefined;
 }
 
-async function persistCapture(fhir: ContactLensFhirClient, capture: CapturedGlaucomaFinding) {
+async function persistCapture(
+  fhir: ContactLensFhirClient,
+  capture: CapturedGlaucomaFinding,
+  patientReference: string,
+) {
   const observation = await fhir.create<Observation>(capture.observation, WRITE_HEADERS);
   const observationReference = resourceReference("Observation", observation.id, capture.observation.id);
   const provenance = await fhir.create<Provenance>({
     ...capture.provenance,
-    target: [{ reference: observationReference }],
+    target: patientScopedProvenanceTargets(
+      observationReference,
+      patientReference,
+    ),
   }, WRITE_HEADERS);
   return {
     observationReference,

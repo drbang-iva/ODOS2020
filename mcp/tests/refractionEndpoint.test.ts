@@ -127,6 +127,11 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  for (const provenance of created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
+    assert.equal(provenance.target[1]?.reference, BODY.patientReference);
+  }
   const observation = created[0]?.resource as Observation;
   assert.equal(componentValue(observation, "REFRACTION_TYPE", "code"), "FINAL_RX");
   assert.match(String(componentValue(observation, "REFRACTION_BLOCK_ID", "string")), /^refraction-block-/);

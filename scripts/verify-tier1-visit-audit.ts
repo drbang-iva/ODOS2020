@@ -11,6 +11,7 @@ type EncounterBundleModule = {
   assertTransactionSuccess(bundle: unknown): void;
   buildEncounterStatusPatchBundle(input: {
     encounterId: string;
+    patientId: string;
     recorded: string;
     operatorDisplay: string;
     ops: Array<{ op: "add" | "replace"; path: string; value: unknown }>;
@@ -85,6 +86,7 @@ try {
   const finishBundle = await fhir.executeTransaction(
     encounterBundles.buildEncounterStatusPatchBundle({
       encounterId,
+      patientId: patient.id,
       recorded: new Date().toISOString(),
       operatorDisplay: "OSOD Tier-1 audit verification",
       ops: [

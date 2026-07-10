@@ -12,6 +12,7 @@ import {
 } from "./custom-fields.js";
 import {
   captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
   type CapturedGlaucomaFinding,
@@ -132,7 +133,12 @@ export async function handleCustomSectionCaptureRequest(
         perEye ? `${row.eye}_` : "",
       ),
     };
-    results.push(await persistCapture(staff.fhir, coded, row.eye));
+    results.push(await persistCapture(
+      staff.fhir,
+      coded,
+      row.eye,
+      parsed.data.patientReference,
+    ));
   }
   return { status: 200, body: perEye ? { eyes: Object.fromEntries(results.map((row) => [row.eye, row])) } : results[0] };
 }
@@ -201,12 +207,16 @@ async function persistCapture(
   fhir: CustomSectionFhirClient,
   captured: CapturedGlaucomaFinding,
   eye: Eye | "UNKNOWN",
+  patientReference: string,
 ) {
   const observation = await fhir.create(captured.observation, WRITE_HEADERS);
   const observationReference = `Observation/${observation.id ?? captured.observation.id}`;
   const provenance = await fhir.create({
     ...captured.provenance,
-    target: [{ reference: observationReference }],
+    target: patientScopedProvenanceTargets(
+      observationReference,
+      patientReference,
+    ),
   }, WRITE_HEADERS);
   return {
     eye,

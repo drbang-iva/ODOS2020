@@ -277,13 +277,14 @@ test("a handler still receives working definitions when one stored row is garbag
   assert.equal(errors.some((message) => message.includes("Basic/row-garbage skipped")), true);
 });
 
-test("every clinical-graph HTTP closure receives the persistent finding-definition dependency", () => {
+test("every definition-backed clinical-graph HTTP closure receives the persistent dependency", () => {
   const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
   const clinicalRoutes = source.match(/app\.(?:get|post)\("\/clinical-graph\//g) ?? [];
   const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\)\)/g) ?? [];
 
-  assert.equal(clinicalRoutes.length, 23);
-  assert.equal(routeDependencies.length, clinicalRoutes.length);
+  assert.equal(clinicalRoutes.length, 24);
+  assert.equal(routeDependencies.length, clinicalRoutes.length - 1);
+  assert.match(source, /handleProviderAssignmentRequest\([\s\S]*serviceFhir: fhir/);
 });
 
 function endpointDeps(

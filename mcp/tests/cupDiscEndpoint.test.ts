@@ -90,6 +90,9 @@ test("cup/disc endpoint persists neutral Observation and returns normal without 
   assert.deepEqual(body.eyes.OD.signals, []);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Observation", "Provenance"]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  const targets = (created[1]?.resource as Provenance).target;
+  assert.equal(targets[0]?.reference?.startsWith("Observation/"), true);
+  assert.equal(targets[1]?.reference, BODY.patientReference);
 });
 
 test("cup/disc endpoint returns high-risk H40.02x suggestion metadata without creating a Condition", async () => {

@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import type { Encounter } from "@medplum/fhirtypes";
-import { buildStartEncounterCreateBundle } from "../../ui/src/lib/encounter-bundles.js";
+import type { Encounter, Provenance } from "@medplum/fhirtypes";
+import {
+  buildEncounterStatusPatchBundle,
+  buildStartEncounterCreateBundle,
+} from "../../ui/src/lib/encounter-bundles.js";
 import { ROLE_CONFIG, ROLE_IDS } from "../../ui/src/lib/roles.js";
 import { CHART_CARD_REGISTRY, cardDensity } from "../../ui/src/lib/card-registry.js";
 import {
@@ -78,10 +81,30 @@ test("start encounter bundle can attach a visit to a clinical Program", () => {
     episodeReference: "EpisodeOfCare/e1",
   });
   const encounter = bundle.entry?.[0]?.resource as Encounter;
+  const provenance = bundle.entry?.[1]?.resource as Provenance;
 
   assert.equal(encounter.episodeOfCare?.[0]?.reference, "EpisodeOfCare/e1");
+  assert.equal(provenance.target[0]?.reference, bundle.entry?.[0]?.fullUrl);
+  assert.equal(provenance.target[1]?.reference, "Patient/p1");
+  const statusProvenance = buildEncounterStatusPatchBundle({
+    encounterId: "e1",
+    patientId: "p1",
+    recorded: "2026-04-25T12:01:00.000Z",
+    operatorDisplay: "test",
+    ops: [{ op: "replace", path: "/status", value: "in-progress" }],
+  }).entry?.[1]?.resource as Provenance;
+  assert.deepEqual(
+    statusProvenance.target.map((target) => target.reference),
+    ["Encounter/e1", "Patient/p1"],
+  );
+  const hudSource = readUi("src/components/Hud.tsx");
+  assert.ok(
+    hudSource.indexOf("await assignProvider(patient.id)") <
+      hudSource.indexOf("const episodeReference = await resolveProgramReference()"),
+    "Provider assignment must precede every patient-compartment clinical write.",
+  );
   assert.equal(
-    readUi("src/components/Hud.tsx").includes(">EpisodeOfCare<"),
+    hudSource.includes(">EpisodeOfCare<"),
     false,
     "The visible label should be Program, not the FHIR resource name.",
   );

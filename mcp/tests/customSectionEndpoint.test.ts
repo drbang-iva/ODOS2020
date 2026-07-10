@@ -75,6 +75,7 @@ test("Skin Carotenoid Score creates, captures, reads, renames, and deactivates w
   assert.equal(fhir.captureWrites.every((write) => write.header === "mcp/save_section_observations"), true);
   const provenance = fhir.captureWrites.find((write) => write.resourceType === "Provenance")?.resource as Provenance;
   assert.equal(provenance.target?.[0]?.reference?.startsWith("Observation/"), true);
+  assert.equal(provenance.target?.[1]?.reference, "Patient/p1");
 
   const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,

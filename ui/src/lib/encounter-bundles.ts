@@ -47,6 +47,7 @@ export function buildStartEncounterCreateBundle(input: {
         fullUrl: `urn:uuid:provenance-start-${crypto.randomUUID()}`,
         resource: buildProvenance({
           targetReference: encounterFullUrl,
+          patientReference,
           recorded: input.now,
           activityCode: "CREATE",
           activityDisplay: "Create",
@@ -61,6 +62,7 @@ export function buildStartEncounterCreateBundle(input: {
 
 export function buildEncounterStatusPatchBundle(input: {
   encounterId: string;
+  patientId: string;
   ops: JsonPatchOperation[];
   recorded: string;
   operatorDisplay: string;
@@ -69,6 +71,9 @@ export function buildEncounterStatusPatchBundle(input: {
   const encounterReference = input.encounterId.startsWith("Encounter/")
     ? input.encounterId
     : `Encounter/${input.encounterId}`;
+  const patientReference = input.patientId.startsWith("Patient/")
+    ? input.patientId
+    : `Patient/${input.patientId}`;
 
   return {
     resourceType: "Bundle",
@@ -85,6 +90,7 @@ export function buildEncounterStatusPatchBundle(input: {
         fullUrl: `urn:uuid:provenance-encounter-${crypto.randomUUID()}`,
         resource: buildProvenance({
           targetReference: encounterReference,
+          patientReference,
           recorded: input.recorded,
           activityCode: "UPDATE",
           activityDisplay: "Update",
@@ -133,6 +139,7 @@ export function createdIdFromEntry(
 
 function buildProvenance(input: {
   targetReference: string;
+  patientReference: string;
   recorded: string;
   activityCode: "CREATE" | "UPDATE";
   activityDisplay: string;
@@ -141,7 +148,10 @@ function buildProvenance(input: {
 }): Provenance {
   return {
     resourceType: "Provenance",
-    target: [{ reference: input.targetReference }],
+    target: [
+      { reference: input.targetReference },
+      { reference: input.patientReference },
+    ],
     recorded: input.recorded,
     activity: {
       coding: [

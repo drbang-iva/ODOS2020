@@ -136,6 +136,11 @@ test("Wearing persists one complete Observation per glasses pair with both eyes,
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  for (const provenance of created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
+    assert.equal(provenance.target[1]?.reference, BODY.patientReference);
+  }
   const observation = created[0]?.resource as Observation;
   assert.equal(codingCode(observation), "wearing_rx");
   assert.equal(observation.bodySite?.coding?.some((coding) => coding.code === "OU"), true);

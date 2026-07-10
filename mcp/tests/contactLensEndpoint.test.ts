@@ -121,6 +121,11 @@ test("soft CL capture persists one Observation per eye using existing CL paramet
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  for (const provenance of created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
+    assert.equal(provenance.target[1]?.reference, BODY.patientReference);
+  }
   const observations = created.map((entry) => entry.resource).filter((resource): resource is Observation => resource.resourceType === "Observation");
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   for (const observation of observations) {

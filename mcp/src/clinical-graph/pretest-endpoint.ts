@@ -7,6 +7,7 @@ import { osodConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildClinicalFindingDefinition,
   captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
   type CapturedGlaucomaFinding,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
@@ -180,7 +181,7 @@ export async function handleWearingCaptureRequest(
       provenance,
       sourceType: parsed.data.sourceType,
     });
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     return {
       status: 200,
       body: {
@@ -216,7 +217,7 @@ export async function handleWearingCaptureRequest(
         capture.observation,
       ),
     };
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     pairs.push({
       pairIndex,
       pairId,
@@ -276,7 +277,7 @@ export async function handleAutoRefractionCaptureRequest(
         ...capture,
         observation: codeCustomFieldComponents(capture.observation, definitions.autoRefraction),
       };
-      const persisted = await persistCapture(staff.fhir, capture);
+      const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
       result.autoRefractionObservationReference = persisted.observationReference;
       result.autoRefractionProvenanceReference = persisted.provenanceReference;
     }
@@ -300,7 +301,7 @@ export async function handleAutoRefractionCaptureRequest(
         observation: codeCustomFieldComponents(capture.observation, definitions.autoKeratometry),
       };
       // Slice C query: Observation?subject=Patient/{id}&code=https://osod.dev/fhir/CodeSystem/ophthalmology|auto_keratometry&body-site=https://osod.dev/fhir/CodeSystem/ophthalmology|{OD|OS}&_sort=-date&_count=1
-      const persisted = await persistCapture(staff.fhir, capture);
+      const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
       result.autoKeratometryObservationReference = persisted.observationReference;
       result.autoKeratometryProvenanceReference = persisted.provenanceReference;
     }
@@ -658,12 +659,19 @@ function capturePretestFinding(input: {
   };
 }
 
-async function persistCapture(fhir: PretestFhirClient, capture: CapturedGlaucomaFinding) {
+async function persistCapture(
+  fhir: PretestFhirClient,
+  capture: CapturedGlaucomaFinding,
+  patientReference: string,
+) {
   const observation = await fhir.create<Observation>(capture.observation, WRITE_HEADERS);
   const observationReference = resourceReference("Observation", observation.id, capture.observation.id);
   const provenance = await fhir.create<Provenance>({
     ...capture.provenance,
-    target: [{ reference: observationReference }],
+    target: patientScopedProvenanceTargets(
+      observationReference,
+      patientReference,
+    ),
   }, WRITE_HEADERS);
   return {
     observationReference,

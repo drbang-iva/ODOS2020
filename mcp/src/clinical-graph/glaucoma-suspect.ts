@@ -151,6 +151,13 @@ export interface ClinicalGraphProvenance {
   note?: string;
 }
 
+export function patientScopedProvenanceTargets(
+  primaryReference: string,
+  patientReference: string,
+): Reference[] {
+  return [reference(primaryReference), reference(patientReference)];
+}
+
 /** Practice-editable definition for a neutral clinical finding that can project to Observation. */
 export interface ClinicalFindingDefinition {
   id: string;
