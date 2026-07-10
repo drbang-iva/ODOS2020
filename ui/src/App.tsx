@@ -15,6 +15,7 @@ import { FrontDeskCockpit } from "./scenes/frontdesk/FrontDeskCockpit";
 import { ClaimsWorklist } from "./scenes/claims/ClaimsWorklist";
 import { ClaimSearch } from "./scenes/claims/ClaimSearch";
 import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
+import { SubmitClaims } from "./scenes/claims/SubmitClaims";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -99,6 +100,8 @@ function RouteSwitch({ view }: { view: ViewState }) {
       return <ClaimSearch />;
     case "/billing/claims/remittances":
       return <RemittanceQueue />;
+    case "/billing/claims/submit":
+      return <SubmitClaims />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
     default:
