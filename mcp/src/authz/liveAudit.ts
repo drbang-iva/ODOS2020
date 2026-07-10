@@ -26,6 +26,10 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-05-02-v055c-cds-service-keys.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-04-v055d-agentops-records.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-04-v055d-agentops-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-05-v055e-bulk-data-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-05-09-v06a-frames-data.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-09-era-worklist-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-09-claim-rejected-event.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
 
 export interface LiveAuditRuntimeOptions {
