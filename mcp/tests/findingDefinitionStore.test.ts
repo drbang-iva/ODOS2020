@@ -282,7 +282,7 @@ test("every clinical-graph HTTP closure receives the persistent finding-definiti
   const clinicalRoutes = source.match(/app\.(?:get|post)\("\/clinical-graph\//g) ?? [];
   const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\)\)/g) ?? [];
 
-  assert.equal(clinicalRoutes.length, 20);
+  assert.equal(clinicalRoutes.length, 23);
   assert.equal(routeDependencies.length, clinicalRoutes.length);
 });
 
