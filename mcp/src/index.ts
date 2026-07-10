@@ -56,6 +56,10 @@ import {
   handleRefractionDefinitionRequest,
 } from "./clinical-graph/refraction-endpoint.js";
 import {
+  handleSoftContactLensCaptureRequest,
+  handleSoftContactLensDefinitionRequest,
+} from "./clinical-graph/contact-lens-endpoint.js";
+import {
   handleAutoRefractionCaptureRequest,
   handleAutoRefractionDefinitionRequest,
   handleWearingCaptureRequest,
@@ -5562,6 +5566,38 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/refraction failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Refraction clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/contact-lens/soft/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSoftContactLensDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/contact-lens/soft/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Soft contact lens definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/contact-lens/soft", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSoftContactLensCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/contact-lens/soft failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Soft contact lens clinical-graph route failed" });
           }
         }
       });

@@ -5,6 +5,7 @@ const SECTIONS: Array<{ id: ChartSectionId; label: string }> = [
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K" },
   { id: "va", label: "Visual Acuity" },
   { id: "refraction", label: "Refraction" },
+  { id: "soft-contact-lens", label: "Soft Contact Lenses" },
   { id: "ortho-k", label: "Ortho-K" },
   { id: "dry-eye", label: "Dry Eye" },
   { id: "myopia-management", label: "Myopia Management" },
