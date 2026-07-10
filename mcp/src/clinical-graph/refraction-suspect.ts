@@ -114,6 +114,14 @@ export function buildRefractionFindingDefinitionStub(
           display: "Distance PH",
           type: "visual-acuity-select",
         },
+        sourceType: {
+          display: "Source type",
+          type: "single-select",
+          options: [
+            { code: "manual", display: "Manual", active: true },
+            { code: "device", display: "Device", active: true },
+          ],
+        },
       },
     },
     normalSemantics: {

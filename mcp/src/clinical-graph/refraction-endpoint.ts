@@ -18,6 +18,11 @@ import {
   loadRefractiveErrorPhase0Ledger,
   resolveRefractiveErrorThreshold,
 } from "./refraction-suspect.js";
+import {
+  appendCustomFieldComponentsToObservation,
+  customFieldValueSchema,
+  validateCustomFieldValues,
+} from "./custom-fields.js";
 
 export interface RefractionFhirClient {
   create<T extends Observation | Provenance>(
@@ -46,6 +51,7 @@ export interface RefractionEndpointResult {
 const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
 const LEDGER_REF = "data/code-bindings/refractive-error-phase0-ledger.json";
 const EYES = ["OD", "OS"] as const;
+const SOURCE_TYPES = ["manual", "device"] as const;
 
 const eyePayloadSchema = z.object({
   sphere: z.number().optional(),
@@ -55,6 +61,7 @@ const eyePayloadSchema = z.object({
   distanceVisualAcuity: z.string().trim().min(1).max(100).optional(),
   nearVisualAcuity: z.string().trim().min(1).max(100).optional(),
   distancePinholeVisualAcuity: z.string().trim().min(1).max(100).optional(),
+  customFields: z.array(customFieldValueSchema).max(64).default([]),
 }).strict();
 
 const blockPayloadSchema = z.object({
@@ -68,6 +75,7 @@ const blockPayloadSchema = z.object({
 const refractionRequestSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+  sourceType: z.enum(SOURCE_TYPES).default("manual"),
   blocks: z.array(blockPayloadSchema).min(1),
 }).strict();
 
@@ -122,7 +130,7 @@ export async function handleRefractionCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const provenance = refractionProvenance(staff.staffReference, recordedAt);
+  const provenance = refractionProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
   const captured = captureBlocks(parsed.data, definition, provenance);
   const persisted: Array<{
     blockIndex: number;
@@ -165,6 +173,7 @@ export async function handleRefractionCaptureRequest(
   return {
     status: 200,
     body: {
+      sourceType: parsed.data.sourceType,
       blocks: parsed.data.blocks.map((block, blockIndex) => {
         const items = persisted.filter((item) => item.blockIndex === blockIndex);
         return {
@@ -199,7 +208,7 @@ export function resolveRefractionDefinition(
 ): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? [
     buildRefractionFindingDefinitionStub(
-      refractionProvenance("Practitioner/osod-system", new Date(0).toISOString()),
+      refractionProvenance("Practitioner/osod-system", new Date(0).toISOString(), "manual"),
     ),
   ];
   const definition = definitions.find((candidate) => candidate.stableKey === "refraction");
@@ -241,16 +250,17 @@ function captureBlocks(
             distanceVisualAcuity: payload.distanceVisualAcuity,
             nearVisualAcuity: payload.nearVisualAcuity,
             distancePinholeVisualAcuity: payload.distancePinholeVisualAcuity,
+            customFields: payload.customFields,
           }),
         },
         recordedAt: provenance.recordedAt,
         provenance,
         findingInstanceId,
         observationId: findingInstanceId,
-        sourceType: "manual",
+        sourceType: request.sourceType,
         performerReferences: provenance.actorReference ? [provenance.actorReference] : [],
       });
-      const observation = buildRefractionObservation({
+      const observation = appendCustomFieldComponentsToObservation(buildRefractionObservation({
         patientReference: request.patientReference,
         encounterReference: request.encounterReference,
         eye,
@@ -270,8 +280,8 @@ function captureBlocks(
           distancePinhole: payload.distancePinholeVisualAcuity,
         },
         performerReferences: provenance.actorReference ? [provenance.actorReference] : [],
-        sourceType: "manual",
-      }).resource;
+        sourceType: request.sourceType,
+      }).resource, payload.customFields, definition);
       return [{
         blockIndex,
         blockId,
@@ -313,6 +323,12 @@ function validateRequest(request: RefractionRequest, definition: ClinicalFinding
       if (payload.axis !== undefined && (payload.axis < 0 || payload.axis > 180)) {
         return `Block ${index + 1} ${eye} axis must be an integer from 0 to 180.`;
       }
+      const customFieldError = validateCustomFieldValues(
+        payload.customFields,
+        definition,
+        `Block ${index + 1} ${eye}`,
+      );
+      if (customFieldError) return customFieldError;
     }
   }
   return undefined;
@@ -340,7 +356,10 @@ function validatePower(
 }
 
 function eyeTouched(payload: RefractionEyePayload): boolean {
-  return Object.values(payload).some((value) => value !== undefined && value !== "");
+  return Object.entries(payload).some(([key, value]) =>
+    key === "customFields"
+      ? Array.isArray(value) && value.length > 0
+      : value !== undefined && value !== "");
 }
 
 function definitionSummary(definition: ClinicalFindingDefinition) {
@@ -368,9 +387,10 @@ function fieldOptions(definition: ClinicalFindingDefinition, fieldKey: string): 
 function refractionProvenance(
   staffReference: string,
   recordedAt: string,
+  sourceType: "manual" | "device",
 ): ClinicalGraphProvenance {
   return {
-    source: "manual",
+    source: sourceType,
     recordedAt,
     actorReference: staffReference,
     ledgerRefs: [LEDGER_REF],

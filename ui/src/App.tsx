@@ -18,6 +18,7 @@ import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
 import { SubmitClaims } from "./scenes/claims/SubmitClaims";
 import { CarrierPayments } from "./scenes/claims/CarrierPayments";
 import { PatientPayments } from "./scenes/claims/PatientPayments";
+import { ChartFieldsSettings } from "./scenes/ChartFieldsSettings";
 import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
 import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
 import { AccountsReceivableDashboard } from "./scenes/claims/AccountsReceivableDashboard";
@@ -119,6 +120,9 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <AccountsReceivableDashboard />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
+    case "/settings/chart-fields-sections":
+    case "/admin/practice/settings/chart-fields":
+      return <ChartFieldsSettings />;
     default:
       return <ViewRouter view={view} />;
   }

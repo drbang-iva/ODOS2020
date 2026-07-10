@@ -13,6 +13,13 @@ import {
   type ClinicalGraphProvenance,
   type FindingValue,
 } from "./glaucoma-suspect.js";
+import {
+  codeCustomFieldComponents,
+  customFieldComponents,
+  customFieldEntries,
+  customFieldValueSchema,
+  validateCustomFieldValues,
+} from "./custom-fields.js";
 
 export interface PretestFhirClient {
   create<T extends Observation | Provenance>(
@@ -51,6 +58,7 @@ const wearingEyeSchema = z.object({
   prismBase: z.string().trim().min(1).optional(),
   distanceVisualAcuity: z.string().trim().min(1).max(100).optional(),
   nearVisualAcuity: z.string().trim().min(1).max(100).optional(),
+  customFields: z.array(customFieldValueSchema).max(64).default([]),
 }).strict();
 
 const wearingPairSchema = z.object({
@@ -63,6 +71,7 @@ const wearingPairSchema = z.object({
 const wearingRequestSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+  sourceType: z.enum(SOURCE_TYPES).default("manual"),
   leftGlassesAtHome: z.boolean().default(false),
   pairs: z.array(wearingPairSchema).default([]),
 }).strict();
@@ -75,6 +84,7 @@ const autoEyeSchema = z.object({
   flatAxis: z.number().int().optional(),
   steepK: z.number().optional(),
   steepAxis: z.number().int().optional(),
+  customFields: z.array(customFieldValueSchema).max(64).default([]),
 }).strict();
 
 const autoRefractionRequestSchema = z.object({
@@ -156,7 +166,7 @@ export async function handleWearingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const provenance = pretestProvenance(staff.staffReference, recordedAt, "manual");
+  const provenance = pretestProvenance(staff.staffReference, recordedAt, parsed.data.sourceType);
   if (parsed.data.leftGlassesAtHome) {
     const capture = capturePretestFinding({
       definition,
@@ -168,12 +178,13 @@ export async function handleWearingCaptureRequest(
         components: [{ code: "LEFT_GLASSES_AT_HOME", display: "Left glasses at home", value: true }],
       },
       provenance,
-      sourceType: "manual",
+      sourceType: parsed.data.sourceType,
     });
     const persisted = await persistCapture(staff.fhir, capture);
     return {
       status: 200,
       body: {
+        sourceType: parsed.data.sourceType,
         leftGlassesAtHome: true,
         pairs: [],
         observationReference: persisted.observationReference,
@@ -185,15 +196,26 @@ export async function handleWearingCaptureRequest(
   const pairs = [];
   for (const [pairIndex, pair] of parsed.data.pairs.entries()) {
     const pairId = `wearing-pair-${randomUUID()}`;
-    const capture = capturePretestFinding({
+    let capture = capturePretestFinding({
       definition,
       patientReference: parsed.data.patientReference,
       encounterReference: parsed.data.encounterReference,
       laterality: "OU",
-      value: { type: "components", components: wearingComponents(pairId, pair) },
+      value: {
+        type: "components",
+        components: wearingComponents(pairId, pair).concat(EYES.flatMap((eye) =>
+          customFieldComponents(pair[eye]?.customFields ?? [], definition, `${eye}_`))),
+      },
       provenance,
-      sourceType: "manual",
+      sourceType: parsed.data.sourceType,
     });
+    capture = {
+      ...capture,
+      observation: EYES.reduce(
+        (observation, eye) => codeCustomFieldComponents(observation, definition, `${eye}_`),
+        capture.observation,
+      ),
+    };
     const persisted = await persistCapture(staff.fhir, capture);
     pairs.push({
       pairIndex,
@@ -204,7 +226,7 @@ export async function handleWearingCaptureRequest(
     });
   }
 
-  return { status: 200, body: { leftGlassesAtHome: false, pairs } };
+  return { status: 200, body: { sourceType: parsed.data.sourceType, leftGlassesAtHome: false, pairs } };
 }
 
 export async function handleAutoRefractionCaptureRequest(
@@ -235,30 +257,48 @@ export async function handleAutoRefractionCaptureRequest(
     const payload = parsed.data.eyes[eye];
     if (!payload) continue;
     const result: Record<string, string | undefined> = {};
-    if (autoRefractionTouched(payload)) {
-      const capture = capturePretestFinding({
+    if (autoRefractionTouched(payload, definitions.autoRefraction)) {
+      let capture = capturePretestFinding({
         definition: definitions.autoRefraction,
         patientReference: parsed.data.patientReference,
         encounterReference: parsed.data.encounterReference,
         laterality: eye,
-        value: { type: "components", components: autoRefractionComponents(payload, parsed.data.remarks) },
+        value: {
+          type: "components",
+          components: autoRefractionComponents(payload, parsed.data.remarks).concat(
+            customFieldComponents(customValuesForDefinition(payload, definitions.autoRefraction), definitions.autoRefraction),
+          ),
+        },
         provenance,
         sourceType: parsed.data.sourceType,
       });
+      capture = {
+        ...capture,
+        observation: codeCustomFieldComponents(capture.observation, definitions.autoRefraction),
+      };
       const persisted = await persistCapture(staff.fhir, capture);
       result.autoRefractionObservationReference = persisted.observationReference;
       result.autoRefractionProvenanceReference = persisted.provenanceReference;
     }
-    if (autoKeratometryTouched(payload)) {
-      const capture = capturePretestFinding({
+    if (autoKeratometryTouched(payload, definitions.autoKeratometry)) {
+      let capture = capturePretestFinding({
         definition: definitions.autoKeratometry,
         patientReference: parsed.data.patientReference,
         encounterReference: parsed.data.encounterReference,
         laterality: eye,
-        value: { type: "components", components: autoKeratometryComponents(payload, parsed.data.remarks) },
+        value: {
+          type: "components",
+          components: autoKeratometryComponents(payload, parsed.data.remarks).concat(
+            customFieldComponents(customValuesForDefinition(payload, definitions.autoKeratometry), definitions.autoKeratometry),
+          ),
+        },
         provenance,
         sourceType: parsed.data.sourceType,
       });
+      capture = {
+        ...capture,
+        observation: codeCustomFieldComponents(capture.observation, definitions.autoKeratometry),
+      };
       // Slice C query: Observation?subject=Patient/{id}&code=https://osod.dev/fhir/CodeSystem/ophthalmology|auto_keratometry&body-site=https://osod.dev/fhir/CodeSystem/ophthalmology|{OD|OS}&_sort=-date&_count=1
       const persisted = await persistCapture(staff.fhir, capture);
       result.autoKeratometryObservationReference = persisted.observationReference;
@@ -339,6 +379,15 @@ function buildWearingDefinition(provenance: ClinicalGraphProvenance): ClinicalFi
         nearVisualAcuity: { display: "Near VA", type: "visual-acuity-select" },
         remarks: { display: "Remarks", type: "string", maximumLength: 2000 },
         leftGlassesAtHome: { display: "Left glasses at home", type: "boolean" },
+        sourceType: {
+          display: "Source type",
+          type: "single-select",
+          options: SOURCE_TYPES.map((code) => ({
+            code,
+            display: code === "manual" ? "Manual" : "Device",
+            active: true,
+          })),
+        },
       },
     },
     normalSemantics: { diagnosisSuggestions: false },
@@ -444,6 +493,12 @@ function validateWearingRequest(request: WearingRequest, definition: ClinicalFin
       if (payload.prismBase && !prismBases.has(payload.prismBase)) {
         return `Pair ${index + 1} ${eye} prismBase contains an unknown option: ${payload.prismBase}.`;
       }
+      const customFieldError = validateCustomFieldValues(
+        payload.customFields,
+        definition,
+        `Pair ${index + 1} ${eye}`,
+      );
+      if (customFieldError) return customFieldError;
     }
   }
   return undefined;
@@ -458,11 +513,13 @@ function validateAutoRefractionRequest(
   for (const eye of populatedEyes) {
     const payload = request.eyes[eye];
     if (!payload) continue;
-    if (autoRefractionTouched(payload)) {
+    const customFieldError = validateAutoCustomFields(payload, definitions, eye);
+    if (customFieldError) return customFieldError;
+    if (autoRefractionTouched(payload, definitions.autoRefraction)) {
       const error = validateRefractionEye(payload, definitions.autoRefraction, eye);
       if (error) return error;
     }
-    if (autoKeratometryTouched(payload)) {
+    if (autoKeratometryMeasurementsTouched(payload)) {
       const fields = [payload.flatK, payload.flatAxis, payload.steepK, payload.steepAxis];
       if (fields.some((value) => value === undefined)) {
         return `${eye} Auto-K requires flat K, flat axis, steep K, and steep axis together.`;
@@ -657,19 +714,56 @@ function fieldOptions(definition: ClinicalFindingDefinition, fieldKey: string): 
 }
 
 function wearingEyeTouched(payload: WearingEyePayload | undefined): boolean {
-  return Boolean(payload && Object.values(payload).some((value) => value !== undefined && value !== ""));
+  return Boolean(payload && Object.entries(payload).some(([key, value]) =>
+    key === "customFields"
+      ? Array.isArray(value) && value.length > 0
+      : value !== undefined && value !== ""));
 }
 
 function autoEyeTouched(payload: AutoEyePayload | undefined): boolean {
-  return Boolean(payload && Object.values(payload).some((value) => value !== undefined));
+  return Boolean(payload && Object.entries(payload).some(([key, value]) =>
+    key === "customFields"
+      ? Array.isArray(value) && value.length > 0
+      : value !== undefined));
 }
 
-function autoRefractionTouched(payload: AutoEyePayload): boolean {
-  return payload.sphere !== undefined || payload.cylinder !== undefined || payload.axis !== undefined;
+function autoRefractionTouched(payload: AutoEyePayload, definition: ClinicalFindingDefinition): boolean {
+  return payload.sphere !== undefined || payload.cylinder !== undefined || payload.axis !== undefined
+    || customValuesForDefinition(payload, definition).length > 0;
 }
 
-function autoKeratometryTouched(payload: AutoEyePayload): boolean {
+function autoKeratometryTouched(payload: AutoEyePayload, definition: ClinicalFindingDefinition): boolean {
+  return autoKeratometryMeasurementsTouched(payload)
+    || customValuesForDefinition(payload, definition).length > 0;
+}
+
+function autoKeratometryMeasurementsTouched(payload: AutoEyePayload): boolean {
   return payload.flatK !== undefined || payload.flatAxis !== undefined || payload.steepK !== undefined || payload.steepAxis !== undefined;
+}
+
+function customValuesForDefinition(payload: AutoEyePayload, definition: ClinicalFindingDefinition) {
+  const codes = new Set(customFieldEntries(definition, true).map((field) => field.localCode));
+  return payload.customFields.filter((field) => codes.has(field.code));
+}
+
+function validateAutoCustomFields(
+  payload: AutoEyePayload,
+  definitions: { autoRefraction: ClinicalFindingDefinition; autoKeratometry: ClinicalFindingDefinition },
+  eye: Eye,
+): string | undefined {
+  const seen = new Set<string>();
+  for (const value of payload.customFields) {
+    if (seen.has(value.code)) return `${eye} custom field ${value.code} was supplied more than once.`;
+    seen.add(value.code);
+    const owners = [definitions.autoRefraction, definitions.autoKeratometry]
+      .filter((definition) => customFieldEntries(definition, true).some((field) => field.localCode === value.code));
+    if (owners.length !== 1) return `${eye} custom field contains an unknown or ambiguous code: ${value.code}.`;
+  }
+  for (const definition of [definitions.autoRefraction, definitions.autoKeratometry]) {
+    const error = validateCustomFieldValues(customValuesForDefinition(payload, definition), definition, eye);
+    if (error) return error;
+  }
+  return undefined;
 }
 
 function pushNumber(

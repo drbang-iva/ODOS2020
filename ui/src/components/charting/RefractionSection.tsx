@@ -101,6 +101,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [sourceType, setSourceType] = useState("manual");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -119,6 +120,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       .then((body) => {
         setDefinition(body);
         const options = activeOptions(body.definition.fields.type);
+        setSourceType((current) => current || activeOptions(body.definition.fields.sourceType)[0]?.code || "manual");
         setBlocks((current) => current.map((block, index) => ({
           ...block,
           type: block.type || options[index]?.code || options[0]?.code || "",
@@ -137,6 +139,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
 
   const fields = definition?.definition.fields ?? {};
   const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
+  const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
   const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
 
@@ -180,7 +183,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ patientReference, encounterReference, blocks: payloadBlocks }),
+        body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadBlocks }),
       });
       const body = (await response.json()) as {
         blocks?: unknown[];
@@ -218,14 +221,17 @@ export function RefractionSection({ patientReference, encounterReference, onSave
             <h2 className="text-lg font-semibold text-white">Refraction</h2>
             <p className="mt-1 text-sm text-white/45">Typed OD/OS blocks with Manifest-only diagnosis suggestions</p>
           </div>
-          <button
-            type="button"
-            onClick={addBlock}
-            disabled={definitionLoading || typeOptions.length === 0}
-            className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
-          >
-            ＋ Add refraction
-          </button>
+          <div className="flex items-end gap-3">
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span><select value={sourceType} onChange={(event) => setSourceType(event.target.value)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white">{sourceTypes.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}</select></label>
+            <button
+              type="button"
+              onClick={addBlock}
+              disabled={definitionLoading || typeOptions.length === 0}
+              className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
+            >
+              ＋ Add refraction
+            </button>
+          </div>
         </div>
 
         {definitionError && (

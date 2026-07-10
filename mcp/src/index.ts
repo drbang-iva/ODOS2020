@@ -77,6 +77,10 @@ import {
 } from "./clinical-graph/iop-history-endpoint.js";
 import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
 import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
+import {
+  handleFindingDefinitionCatalogRequest,
+  handleFindingDefinitionMutationRequest,
+} from "./clinical-graph/finding-definition-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
@@ -5502,6 +5506,38 @@ async function main(): Promise<void> {
           await auditRuntime.record(row, () => undefined);
         },
       };
+
+      app.get("/clinical-graph/finding-definitions", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingDefinitionCatalogRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/finding-definitions failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding-definition catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/finding-definitions/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingDefinitionMutationRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
 
       app.get("/clinical-graph/glaucoma/cup-disc/definition", async (req, res) => {
         try {

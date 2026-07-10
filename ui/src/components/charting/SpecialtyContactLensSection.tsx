@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
+import {
+  CustomFieldEditor,
+  type CustomFieldEditorValue,
+} from "./CustomFieldEditor";
 
 interface Props {
   patientReference: string;
@@ -20,6 +24,13 @@ interface DefinitionOption {
   localCode?: string;
   parameterCode?: string;
   unit?: string;
+  origin?: "practice";
+  valueType?: "number" | "select";
+  options?: DefinitionOption[];
+  order?: number;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 interface DefinitionField {
@@ -29,12 +40,23 @@ interface DefinitionField {
   step?: number;
   options?: DefinitionOption[];
   visibleCodes?: string[];
+  allowCreate?: boolean;
+  localCode?: string;
+  origin?: "practice";
+  valueType?: "number" | "select";
+  unit?: string;
+  min?: number;
+  max?: number;
+  order?: number;
+  active?: boolean;
 }
 
 interface DefinitionResponse {
   definition: {
+    stableKey?: string;
     fields: Record<string, DefinitionField>;
   };
+  canManageFields?: boolean;
 }
 
 interface KeratometryReading {
@@ -96,6 +118,7 @@ interface EyePayload {
   other?: string;
   manualEntry: boolean;
   additionalFields: Array<{ code: string; value: number }>;
+  customFields: Array<{ code: string; value: number | string }>;
   overRefraction?: {
     sphere?: number;
     cylinder?: number;
@@ -130,6 +153,9 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [definitionSaving, setDefinitionSaving] = useState(false);
+  const [layoutSaved, setLayoutSaved] = useState(false);
   const pickerInitialized = useRef(false);
 
   useEffect(() => {
@@ -187,7 +213,27 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
       lensTypeCode: entry.lensType,
     })),
   ]), [catalogProducts, manualCatalog]);
-  const additionalOptions = useMemo(() => activeOptions(fields.additionalFields), [fields.additionalFields]);
+  const customOptions = useMemo(() => Object.values(fields).flatMap((field) =>
+    field.origin === "practice" && field.active !== false && field.localCode && field.display && field.valueType
+      ? [{
+          code: field.localCode,
+          localCode: field.localCode,
+          display: field.display,
+          active: true,
+          origin: "practice" as const,
+          valueType: field.valueType,
+          unit: field.unit,
+          options: field.options,
+          order: field.order,
+          min: field.min,
+          max: field.max,
+          step: field.step,
+        }]
+      : []), [fields]);
+  const additionalOptions = useMemo(() => [
+    ...activeOptions(fields.additionalFields).map((option) => ({ ...option, valueType: "number" as const })),
+    ...customOptions,
+  ], [customOptions, fields.additionalFields]);
   const visibleAdditional = visibleAdditionalCodes.flatMap((code) => {
     const option = additionalOptions.find((candidate) => candidate.code === code);
     return option ? [option] : [];
@@ -252,6 +298,61 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
       [next[index], next[destination]] = [next[destination], next[index]];
       return next;
     });
+  }
+
+  async function mutateDefinition(body: Record<string, unknown>) {
+    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions/specialty_contact_lens`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json() as { definition?: DefinitionResponse["definition"]; field?: DefinitionOption; error?: string };
+    if (!response.ok) throw new Error(result.error ?? `Finding-definition update failed: ${response.status}`);
+    if (result.definition) setDefinition((current) => ({
+      definition: result.definition!,
+      canManageFields: current?.canManageFields,
+    }));
+    return result;
+  }
+
+  async function enableCreation() {
+    setDefinitionSaving(true);
+    setError(null);
+    try {
+      await mutateDefinition({ action: "set-picker-config", allowCreate: true });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDefinitionSaving(false);
+    }
+  }
+
+  async function saveLayout() {
+    setDefinitionSaving(true);
+    setError(null);
+    setLayoutSaved(false);
+    try {
+      await mutateDefinition({ action: "set-picker-config", visibleCodes: visibleAdditionalCodes });
+      setLayoutSaved(true);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setDefinitionSaving(false);
+    }
+  }
+
+  async function createField(value: CustomFieldEditorValue) {
+    setDefinitionSaving(true);
+    setError(null);
+    try {
+      const result = await mutateDefinition({ action: "create-custom-field", ...value });
+      const code = result.field?.localCode ?? result.field?.code;
+      if (code) addAdditionalField(code);
+      setEditorOpen(false);
+      setLayoutSaved(false);
+    } finally {
+      setDefinitionSaving(false);
+    }
   }
 
   async function save() {
@@ -346,14 +447,28 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                 </button>
               </div>
               {pickerOpen && (
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                  <PickerList
-                    title="Visible"
-                    options={visibleAdditional}
-                    onRemove={removeAdditionalField}
-                    onMove={moveAdditionalField}
-                  />
-                  <PickerList title="Hidden" options={hiddenAdditional} onAdd={addAdditionalField} />
+                <div className="mt-4 space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <PickerList
+                      title="Visible"
+                      options={visibleAdditional}
+                      onRemove={removeAdditionalField}
+                      onMove={moveAdditionalField}
+                    />
+                    <PickerList title="Hidden" options={hiddenAdditional} onAdd={addAdditionalField} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {definition.canManageFields && fields.additionalFields?.allowCreate && (
+                      <button type="button" onClick={() => setEditorOpen(true)} className="rounded border border-brand/60 px-3 py-2 text-sm text-brand-light hover:bg-brand/10">+ Create field…</button>
+                    )}
+                    {definition.canManageFields && !fields.additionalFields?.allowCreate && (
+                      <button type="button" onClick={enableCreation} disabled={definitionSaving} className="rounded border border-brand/60 px-3 py-2 text-sm text-brand-light hover:bg-brand/10 disabled:opacity-50">Enable field creation</button>
+                    )}
+                    {definition.canManageFields && (
+                      <button type="button" onClick={saveLayout} disabled={definitionSaving} className="rounded bg-brand px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Save field layout</button>
+                    )}
+                    {layoutSaved && <span className="text-sm text-emerald-300">Practice field layout saved</span>}
+                  </div>
                 </div>
               )}
             </div>
@@ -412,7 +527,15 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                       <div className="mt-5 rounded border border-white/10 bg-bg-deep/50 p-4">
                         <h4 className="text-sm font-semibold text-white">Additional lens geometry</h4>
                         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {visibleAdditional.map((field) => (
+                          {visibleAdditional.map((field) => field.valueType === "select" ? (
+                            <SelectField
+                              key={field.code}
+                              label={field.display}
+                              value={state.additionalValues[field.code] ?? ""}
+                              onChange={(value) => updateAdditionalValue(eye, field.code, value)}
+                              options={activeOptions({ options: field.options })}
+                            />
+                          ) : (
                             <TextField
                               key={field.code}
                               label={`${field.display}${field.unit ? ` (${field.unit})` : ""}`}
@@ -452,6 +575,7 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
           {error && <span className="text-sm text-red-300">{error}</span>}
         </div>
       </div>
+      {editorOpen && <CustomFieldEditor saving={definitionSaving} onCancel={() => setEditorOpen(false)} onSave={createField} />}
     </section>
   );
 }
@@ -612,13 +736,21 @@ function emptyEye(): EyeState {
 }
 
 function buildEyePayload(state: EyeState, eye: Eye, visibleAdditional: DefinitionOption[]): EyePayload | undefined {
-  const additionalFields = visibleAdditional.flatMap((field) => {
+  const additionalFields = visibleAdditional.filter((field) => field.origin !== "practice").flatMap((field) => {
     const raw = state.additionalValues[field.code] ?? "";
     return raw === "" ? [] : [{ code: field.code, value: requiredNumber(raw, `${eye} ${field.display}`) }];
   });
+  const customFields = visibleAdditional.filter((field) => field.origin === "practice").flatMap((field) => {
+    const raw = state.additionalValues[field.code] ?? "";
+    if (raw === "") return [];
+    return [{
+      code: field.localCode ?? field.code,
+      value: field.valueType === "select" ? raw : requiredNumber(raw, `${eye} ${field.display}`),
+    }];
+  });
   const touched = state.manualEntry || Object.entries(state).some(([key, value]) =>
     !["manualEntry", "additionalValues", "overRefraction"].includes(key) && value !== "") ||
-    additionalFields.length > 0 || Object.values(state.overRefraction).some(Boolean);
+    additionalFields.length > 0 || customFields.length > 0 || Object.values(state.overRefraction).some(Boolean);
   if (!touched) return undefined;
   if ((state.cylinder === "") !== (state.axis === "")) throw new Error(`${eye} cylinder and axis must be entered together.`);
   if ((state.overRefraction.cylinder === "") !== (state.overRefraction.axis === "")) {
@@ -649,6 +781,7 @@ function buildEyePayload(state: EyeState, eye: Eye, visibleAdditional: Definitio
     other: state.other,
     manualEntry: state.manualEntry,
     additionalFields,
+    customFields,
     overRefraction: Object.keys(overRefraction).length > 0 ? overRefraction : undefined,
   }) as EyePayload;
 }
