@@ -25,12 +25,15 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   facts?: (item: Item) => readonly string[];
   chips?: (item: Item) => readonly string[];
   color?: (item: Item) => string | undefined;
+  readOnlyFacts?: (item: Item) => readonly { label: string; value: string }[];
   groupBy?: {
     label: string;
     value: (item: Item) => string;
+    order?: (group: string) => number;
   };
   presetSeedOffer?: ReactNode;
   transaction?: CatalogDraftTransaction;
+  immediateCommit?: boolean;
 };
 
 export type CatalogInitialState<Item> = {
@@ -70,12 +73,14 @@ export function CatalogScene({
   transaction,
   children,
   onCommitted,
+  onChanged,
 }: {
   title: string;
   canWrite: boolean;
   transaction?: CatalogDraftTransaction;
   children: ReactNode;
   onCommitted?: (resource: Basic) => void;
+  onChanged?: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +89,7 @@ export function CatalogScene({
 
   function touch() {
     setRevision((current) => current + 1);
+    onChanged?.();
   }
 
   async function commitTransaction() {
@@ -159,7 +165,9 @@ export function CatalogSection<Item extends CatalogItemBase>({
   hideTitle?: boolean;
 }) {
   const scene = useContext(CatalogSceneContext);
-  const transaction = scene?.transaction ?? descriptor.transaction;
+  const transaction = descriptor.immediateCommit
+    ? undefined
+    : scene?.transaction ?? descriptor.transaction;
   const [items, setItems] = useState<Item[]>(() => initialState?.items ?? []);
   const [loading, setLoading] = useState(initialState?.loading ?? initialState?.items === undefined);
   const [loadError, setLoadError] = useState<string | null>(initialState?.error ?? null);
@@ -175,6 +183,9 @@ export function CatalogSection<Item extends CatalogItemBase>({
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [expandedInactiveGroups, setExpandedInactiveGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     if (initialState) return;
@@ -197,6 +208,13 @@ export function CatalogSection<Item extends CatalogItemBase>({
       cancelled = true;
     };
   }, [descriptor, initialState, scene?.revision]);
+
+  useEffect(() => {
+    if (!initialState?.items) return;
+    setItems(initialState.items);
+    setLoading(initialState.loading ?? false);
+    setLoadError(initialState.error ?? null);
+  }, [initialState?.error, initialState?.items, initialState?.loading]);
 
   const groups = useMemo(() => groupItems(items, descriptor), [descriptor, items]);
 
@@ -304,12 +322,31 @@ export function CatalogSection<Item extends CatalogItemBase>({
           <div className="grid gap-4">
             {groups.map((group) => (
               <section key={group.name}>
-                {descriptor.groupBy && (
+                {descriptor.groupBy && group.hasActive && (
                   <h2 className="sticky top-0 z-10 border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur">
                     {group.name}
                   </h2>
                 )}
-                <div className="grid gap-2 pt-2">
+                {descriptor.groupBy && !group.hasActive && (
+                  <button
+                    type="button"
+                    className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur"
+                    aria-expanded={expandedInactiveGroups.has(group.name)}
+                    onClick={() =>
+                      setExpandedInactiveGroups((current) => {
+                        const next = new Set(current);
+                        if (next.has(group.name)) next.delete(group.name);
+                        else next.add(group.name);
+                        return next;
+                      })
+                    }
+                  >
+                    <span>{group.name}</span>
+                    <span>{expandedInactiveGroups.has(group.name) ? "Collapse" : "Inactive · expand"}</span>
+                  </button>
+                )}
+                {(group.hasActive || expandedInactiveGroups.has(group.name)) && (
+                  <div className="grid gap-2 pt-2">
                   {group.items.map((item) => (
                     <CatalogRow
                       key={item.id}
@@ -321,7 +358,8 @@ export function CatalogSection<Item extends CatalogItemBase>({
                       onDrop={() => void reorder(item.id)}
                     />
                   ))}
-                </div>
+                  </div>
+                )}
               </section>
             ))}
           </div>
@@ -453,6 +491,14 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
         </button>
       </header>
       <div className="flex-1 overflow-y-auto p-4">
+        {(descriptor.readOnlyFacts?.(item) ?? []).map((fact) => (
+          <div key={fact.label} className="mb-4 grid gap-1">
+            <div className="text-sm font-medium text-white/75">{fact.label}</div>
+            <div className="scheduler-input bg-white/[0.03] text-white/45" aria-readonly="true">
+              {fact.value}
+            </div>
+          </div>
+        ))}
         <CatalogFieldKit fields={descriptor.fields} values={values} errors={errors} onChange={onChange} />
       </div>
       <footer className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
@@ -492,15 +538,24 @@ function CatalogEmptyState({ title, presetSeedOffer }: { title: string; presetSe
 }
 
 function groupItems<Item extends CatalogItemBase>(items: Item[], descriptor: CatalogDescriptor<Item>) {
-  if (!descriptor.groupBy) return [{ name: "All", items }];
+  if (!descriptor.groupBy) return [{ name: "All", items, hasActive: true }];
   const grouped = new Map<string, Item[]>();
   for (const item of items) {
     const group = descriptor.groupBy.value(item) || "Other";
     grouped.set(group, [...(grouped.get(group) ?? []), item]);
   }
   return [...grouped.entries()]
-    .filter(([, groupItems]) => groupItems.some((item) => item.active))
-    .map(([name, groupItems]) => ({ name, items: groupItems }));
+    .map(([name, groupItems]) => ({
+      name,
+      items: groupItems,
+      hasActive: groupItems.some((item) => item.active),
+    }))
+    .sort((a, b) => {
+      const byOrder =
+        (descriptor.groupBy?.order?.(a.name) ?? Number.MAX_SAFE_INTEGER) -
+        (descriptor.groupBy?.order?.(b.name) ?? Number.MAX_SAFE_INTEGER);
+      return byOrder || a.name.localeCompare(b.name);
+    });
 }
 
 function toRecord<Item extends CatalogItemBase>(item: Item): Record<string, unknown> {

@@ -22,6 +22,9 @@ import {
 
 export const OSOD_VISIT_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/visit-type";
 
+export const OSOD_VISIT_TYPE_CATEGORY_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/visit-type-category";
+
 export const OSOD_VISIT_DURATION_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-visit-duration";
 
@@ -94,6 +97,8 @@ export interface VisitTypeInput {
   /** Front-desk display name. */
   name: string;
   discipline: string;
+  categoryCode?: string;
+  categoryLabel?: string;
   /** Default booking duration in whole minutes. */
   durationMinutes: number;
   /** Block color (#rrggbb). Defaults to the discipline's primary band color. */
@@ -121,13 +126,32 @@ export function buildVisitType(input: VisitTypeInput): HealthcareService {
   if (!HEX_COLOR.test(color)) {
     throw new Error(`Visit type color must be a #rrggbb hex value, got "${color}".`);
   }
+  if (input.categoryLabel && !input.categoryCode) {
+    throw new Error("Visit type categoryLabel requires categoryCode.");
+  }
 
   return {
     resourceType: "HealthcareService",
     active: input.active ?? true,
     appointmentRequired: true,
     name: input.name,
-    category: [{ coding: [disciplineCoding(input.discipline)] }],
+    category: [
+      { coding: [disciplineCoding(input.discipline)] },
+      ...(input.categoryCode
+        ? [
+            {
+              coding: [
+                {
+                  system: OSOD_VISIT_TYPE_CATEGORY_SYSTEM,
+                  code: input.categoryCode,
+                  ...(input.categoryLabel ? { display: input.categoryLabel } : {}),
+                },
+              ],
+              ...(input.categoryLabel ? { text: input.categoryLabel } : {}),
+            },
+          ]
+        : []),
+    ],
     type: [
       {
         coding: [{ system: OSOD_VISIT_TYPE_SYSTEM, code: input.code, display: input.name }],
@@ -164,6 +188,13 @@ export function visitTypeDiscipline(hs: HealthcareService): SchedulingDiscipline
     ?.flatMap((c) => c.coding ?? [])
     .find((c) => c.system === OSOD_DISCIPLINE_SYSTEM)?.code;
   return code as SchedulingDiscipline | undefined;
+}
+
+/** The practice-defined category coding used to group a visit-type entry. */
+export function visitTypeCategory(hs: HealthcareService) {
+  return hs.category
+    ?.flatMap((concept) => concept.coding ?? [])
+    .find((coding) => coding.system === OSOD_VISIT_TYPE_CATEGORY_SYSTEM);
 }
 
 /** Default booking duration in minutes. */

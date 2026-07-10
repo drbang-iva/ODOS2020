@@ -21,7 +21,18 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Frames data/);
   assert.match(html, /Floor config/);
   assert.match(html, /Vision plan templates/);
-  assert.doesNotMatch(html, /Visit types/);
+  assert.match(html, /Visit types/);
+});
+
+test("the visit-type route reaches the mixed singleton and resource settings scene", () => {
+  const html = renderToStaticMarkup(
+    <RoleProvider>
+      <RouteSwitch view={{ kind: "picker" }} path="/settings/visit-types" />
+    </RoleProvider>,
+  );
+  assert.match(html, /Practice Settings/);
+  assert.match(html, /Visit types/);
+  assert.match(html, /Loading visit types/);
 });
 
 test("the floor-config settings route reaches the real singleton settings scene", () => {

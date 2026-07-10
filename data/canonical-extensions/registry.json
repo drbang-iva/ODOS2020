@@ -421,6 +421,12 @@
       "namespace": "insurance",
       "status": "active",
       "sliceConsumer": "claims-phase-7b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-type-config",
+      "namespace": "scheduling",
+      "status": "active",
+      "sliceConsumer": "settings-s3"
     }
   ]
 }

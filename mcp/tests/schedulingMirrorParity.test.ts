@@ -22,10 +22,12 @@ import {
   OSOD_INTAKE_FORM_EXTENSION_URL as MCP_OSOD_INTAKE_FORM_EXTENSION_URL,
   OSOD_VISIT_DURATION_EXTENSION_URL as MCP_OSOD_VISIT_DURATION_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM as MCP_OSOD_VISIT_TYPE_SYSTEM,
+  OSOD_VISIT_TYPE_CATEGORY_SYSTEM as MCP_OSOD_VISIT_TYPE_CATEGORY_SYSTEM,
   SCHEDULER_PALETTE as MCP_SCHEDULER_PALETTE,
   buildVisitType,
   defaultVisitTypeCatalog,
   visitTypeCode as mcpVisitTypeCode,
+  visitTypeCategory as mcpVisitTypeCategory,
   visitTypeColor as mcpVisitTypeColor,
   visitTypeDiscipline as mcpVisitTypeDiscipline,
   visitTypeDurationMinutes as mcpVisitTypeDurationMinutes,
@@ -87,6 +89,7 @@ import {
   OSOD_VISION_COVERAGE_EXTENSION_URL as UI_OSOD_VISION_COVERAGE_EXTENSION_URL,
   OSOD_VISIT_DURATION_EXTENSION_URL as UI_OSOD_VISIT_DURATION_EXTENSION_URL,
   OSOD_VISIT_TYPE_SYSTEM as UI_OSOD_VISIT_TYPE_SYSTEM,
+  OSOD_VISIT_TYPE_CATEGORY_SYSTEM as UI_OSOD_VISIT_TYPE_CATEGORY_SYSTEM,
   NON_BLOCKING_APPOINTMENT_STATUSES as UI_NON_BLOCKING_APPOINTMENT_STATUSES,
   RESOURCE_KINDS as UI_RESOURCE_KINDS,
   SCHEDULER_PALETTE as UI_SCHEDULER_PALETTE,
@@ -94,6 +97,8 @@ import {
   V2_0276_APPOINTMENT_TYPE_SYSTEM as UI_V2_0276_APPOINTMENT_TYPE_SYSTEM,
   appointmentVisitTypeCode as uiAppointmentVisitTypeCode,
   blockedTimeKindOf as uiBlockedTimeKindOf,
+  buildVisitType as uiBuildVisitType,
+  defaultVisitTypeCatalog as uiDefaultVisitTypeCatalog,
   buildSchedulingAppointment as uiBuildSchedulingAppointment,
   confirmationStatusOf as uiConfirmationStatusOf,
   disciplinesForMode as uiDisciplinesForMode,
@@ -107,6 +112,7 @@ import {
   resourceDisciplines as uiResourceDisciplines,
   resourceKind as uiResourceKind,
   visitTypeCode as uiVisitTypeCode,
+  visitTypeCategory as uiVisitTypeCategory,
   visitTypeColor as uiVisitTypeColor,
   visitTypeDiscipline as uiVisitTypeDiscipline,
   visitTypeDisplayColor as uiVisitTypeDisplayColor,
@@ -195,6 +201,7 @@ test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.equal(UI_OSOD_DISCIPLINE_SYSTEM, MCP_OSOD_DISCIPLINE_SYSTEM);
   assert.deepEqual(UI_RESOURCE_KINDS, MCP_RESOURCE_KINDS);
   assert.equal(UI_OSOD_VISIT_TYPE_SYSTEM, MCP_OSOD_VISIT_TYPE_SYSTEM);
+  assert.equal(UI_OSOD_VISIT_TYPE_CATEGORY_SYSTEM, MCP_OSOD_VISIT_TYPE_CATEGORY_SYSTEM);
   assert.equal(UI_OSOD_VISIT_DURATION_EXTENSION_URL, MCP_OSOD_VISIT_DURATION_EXTENSION_URL);
   assert.equal(UI_OSOD_DISPLAY_COLOR_EXTENSION_URL, MCP_OSOD_DISPLAY_COLOR_EXTENSION_URL);
   assert.equal(UI_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL, MCP_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL);
@@ -216,6 +223,23 @@ test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.equal(UI_OSOD_BLOCKED_TIME_KIND_SYSTEM, MCP_OSOD_BLOCKED_TIME_KIND_SYSTEM);
   assert.deepEqual(UI_BLOCKED_TIME_KINDS, MCP_BLOCKED_TIME_KINDS);
   assert.deepEqual(UI_NON_BLOCKING_APPOINTMENT_STATUSES, ["cancelled", "entered-in-error"]);
+});
+
+test("UI visit-type builder mirrors category mapping and the unchanged default catalog", () => {
+  const input = {
+    code: "dry-eye-consult",
+    name: "Dry Eye Consult",
+    discipline: "eyecare",
+    categoryCode: "dry-eye",
+    categoryLabel: "Dry Eye",
+    durationMinutes: 45,
+    color: MCP_SCHEDULER_PALETTE.specialTestingPurple,
+  };
+  const mcp = buildVisitType(input);
+  const ui = uiBuildVisitType(input);
+  assert.deepEqual(ui, mcp);
+  assert.deepEqual(uiVisitTypeCategory(ui), mcpVisitTypeCategory(mcp));
+  assert.deepEqual(uiDefaultVisitTypeCatalog("both"), defaultVisitTypeCatalog("both"));
 });
 
 test("UI scheduler practice-config mirror constants match the Phase-4a kernel", () => {
@@ -424,6 +448,7 @@ test("UI catalog field validation errors match the settings kernel verbatim", ()
     { field: { type: "text", key: "value", label: "Label", required: true }, value: "" },
     { field: { type: "color", key: "value", label: "Color", palette: ["#4a7dff"] }, value: "#fff" },
     { field: { type: "number", key: "value", label: "Count", min: 1 }, value: 0 },
+    { field: { type: "duration", key: "value", label: "Duration", min: 1 }, value: 12.5 },
     {
       field: { type: "select", key: "value", label: "Kind", options: [{ value: "a", label: "A" }] },
       value: "b",

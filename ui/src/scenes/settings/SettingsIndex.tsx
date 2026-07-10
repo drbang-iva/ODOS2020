@@ -1,5 +1,10 @@
 const SETTINGS_LINKS = [
   {
+    href: "/settings/visit-types",
+    title: "Visit types",
+    description: "Manage scheduling categories, labels, colors, durations, and availability.",
+  },
+  {
     href: "/settings/floor-config",
     title: "Floor config",
     description: "Manage floor stations, lane thresholds, and payer cues.",

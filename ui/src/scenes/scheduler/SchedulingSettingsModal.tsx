@@ -112,6 +112,9 @@ export function SchedulingSettingsModal({
           <div>
             <div className="text-xs uppercase text-white/45">Scheduler Settings</div>
             <h2 className="text-lg font-semibold">Hours, Blocks, Offices</h2>
+            <a className="mt-1 inline-block text-xs text-blue-300 hover:text-blue-200" href="/settings/visit-types">
+              Manage visit types
+            </a>
           </div>
           <button className="scheduler-icon-button" type="button" aria-label="Close" onClick={onClose}>
             x
