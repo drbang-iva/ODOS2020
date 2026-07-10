@@ -415,6 +415,12 @@
       "namespace": "insurance",
       "status": "active",
       "sliceConsumer": "claims-phase-7a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-insurance-practice-config",
+      "namespace": "insurance",
+      "status": "active",
+      "sliceConsumer": "claims-phase-7b"
     }
   ]
 }

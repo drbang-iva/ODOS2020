@@ -5,6 +5,11 @@ const SETTINGS_LINKS = [
     description: "Manage floor stations, lane thresholds, and payer cues.",
   },
   {
+    href: "/settings/vision-plan-templates",
+    title: "Vision plan templates",
+    description: "Manage reusable plan-level values for manual vision benefit entry.",
+  },
+  {
     href: "/settings/chart-fields-sections",
     title: "Chart fields and sections",
     description: "Manage practice-created chart fields and section placement.",
