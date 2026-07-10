@@ -130,6 +130,14 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "ClaimResponse", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "CoverageEligibilityRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "CoverageEligibilityResponse", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
+    },
+  },
 ];
 
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [

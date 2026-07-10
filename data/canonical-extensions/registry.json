@@ -379,6 +379,12 @@
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "cockpit-phase-3a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-era-import-summary",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claims-phase-2b"
     }
   ]
 }

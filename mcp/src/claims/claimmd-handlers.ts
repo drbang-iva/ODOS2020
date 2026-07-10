@@ -1,4 +1,5 @@
 import type {
+  Basic,
   Claim,
   ClaimResponse,
   CoverageEligibilityRequest,
@@ -15,17 +16,22 @@ import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
+  ERA_IMPORT_CODE,
+  ERA_IMPORT_CODE_SYSTEM,
   ERA_WORKLIST_STATUS_SYSTEM,
   EraWorklistConflictError,
   EraWorklistValidationError,
   buildClaimRejectedWorklistTask,
+  buildEraImportRecord,
   buildEraWorklistTask,
   claimEraWorklistTask,
   eraSnapshotFromTask,
+  eraWorklistStatus,
   eraWorklistEvidence,
   isEraWorklistDisposition,
   isEraWorklistStatus,
   projectEraWorklistBundle,
+  projectEraBatchReadModel,
   resolveEraWorklistTask,
   type EraWorklistCode,
 } from "./era-worklist.js";
@@ -266,8 +272,10 @@ export async function handleEraImportRequest(
   let denied = 0;
   let underpaid = 0;
   let flagged = 0;
+  let paidTotalCents = 0;
   try {
     const era = await deps.adapter.retrieveEraData(body.eraId) as ClaimMdEraData;
+    const eraId = era.eraid ?? body.eraId;
     for (const eraClaim of arrayOf(era.claim)) {
       const pcn = eraClaim.pcn ?? "";
       const claimReference = body.claimReferenceByPcn[pcn];
@@ -275,7 +283,7 @@ export async function handleEraImportRequest(
       if (!claimReference || !patientReference) {
         const task = await auth.fhir.create(buildEraWorklistTask({
           code: "era-unmatched",
-          era: { ...era, eraid: era.eraid ?? body.eraId },
+          era: { ...era, eraid: eraId },
           eraClaim,
           authoredOn: now(deps),
           appealDeadline: body.appealDeadlineByPcn?.[pcn],
@@ -287,7 +295,7 @@ export async function handleEraImportRequest(
       }
 
       const result = await persistMatchedEraClaim(deps, auth, {
-        era: { ...era, eraid: era.eraid ?? body.eraId },
+        era: { ...era, eraid: eraId },
         eraClaim,
         claimReference,
         patientReference,
@@ -302,7 +310,18 @@ export async function handleEraImportRequest(
       posted += result.posted;
       denied += result.denied;
       underpaid += result.underpaid;
+      paidTotalCents += result.paidCents;
     }
+    await upsertEraImportRecord(auth, eraId, {
+      importedAt: now(deps),
+      posted,
+      denied,
+      underpaid,
+      flagged,
+      ...(era.payer_name ? { payerName: era.payer_name } : {}),
+      ...(era.paid_date ? { paidDate: era.paid_date } : {}),
+      paidTotalCents,
+    });
     await audit(deps, auth, "era.import.completed", "success", `PaymentReconciliation/${paymentReconciliationIds[0] ?? "none"}`);
     return {
       status: 200,
@@ -329,6 +348,29 @@ export async function handleEraImportRequest(
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
   }
+}
+
+export async function handleEraListRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
+
+  const [rawEraList, importBundle, openTaskBundle] = await Promise.all([
+    deps.adapter.listEras(),
+    auth.fhir.search<Basic>("Basic", {
+      code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
+      _count: "100",
+    }),
+    auth.fhir.search<Task>("Task", {
+      code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
+      "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review`,
+      _count: "100",
+    }),
+  ]);
+  return { status: 200, body: { items: projectEraBatchReadModel(rawEraList, importBundle, openTaskBundle) } };
 }
 
 export async function handleEraWorklistRequest(
@@ -359,6 +401,21 @@ async function createAndAuditClaimRejectedTask(
     claimMdMessage: string;
   },
 ): Promise<Task> {
+  if (input.claimReference) {
+    const existing = await auth.fhir.search<Task>("Task", {
+      code: `${CLAIM_REJECTED_CODE_SYSTEM}|claim-rejected`,
+      focus: input.claimReference,
+      "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review`,
+      _count: "1",
+    });
+    const open = (existing.entry ?? [])
+      .flatMap((entry) => entry.resource ? [entry.resource] : [])
+      .find((task) =>
+        task.focus?.reference === input.claimReference
+        && (eraWorklistStatus(task) === "new" || eraWorklistStatus(task) === "in-review"),
+      );
+    if (open) return open;
+  }
   const task = await auth.fhir.create(buildClaimRejectedWorklistTask({
     ...input,
     authoredOn: now(deps),
@@ -458,6 +515,7 @@ interface EraClaimPersistenceResult {
   claimResponseIds: string[];
   paymentReconciliationIds: string[];
   taskIds: string[];
+  paidCents: number;
 }
 
 async function persistMatchedEraClaim(
@@ -527,7 +585,25 @@ async function persistMatchedEraClaim(
     claimResponseIds: [requiredId(response)],
     paymentReconciliationIds,
     taskIds,
+    paidCents,
   };
+}
+
+async function upsertEraImportRecord(
+  auth: AuthenticatedClaimsStaff,
+  eraId: string,
+  summary: Parameters<typeof buildEraImportRecord>[1],
+): Promise<Basic> {
+  const bundle = await auth.fhir.search<Basic>("Basic", {
+    code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
+    identifier: `${CLAIMMD_ERA_PAYMENT_SYSTEM}|${eraId}`,
+    _count: "1",
+  });
+  const existing = bundle.entry?.find((entry) => entry.resource)?.resource;
+  const resource = buildEraImportRecord(eraId, summary, existing);
+  return existing?.id
+    ? auth.fhir.update<Basic>("Basic", existing.id, resource)
+    : auth.fhir.create(resource);
 }
 
 async function createAndAuditEraWorklistTask(

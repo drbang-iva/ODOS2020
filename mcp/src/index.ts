@@ -62,6 +62,7 @@ import {
   handleClaimStatusRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
+  handleEraListRequest,
   handleEraWorklistRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
@@ -5689,6 +5690,28 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /claims/era/import failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "ERA import route failed" });
+          }
+        }
+      });
+
+      app.get("/claims/era", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEraListRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/era failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "ERA list route failed" });
           }
         }
       });

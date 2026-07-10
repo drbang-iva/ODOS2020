@@ -6,5 +6,6 @@
 | Payment tender (CASH/CHECK on Invoice — Slice 3; reused leniently on PaymentReconciliation — v0.6c seam) | `https://osod.dev/fhir/StructureDefinition/osod-payment-tender` | `0..1` on Invoice; `0..1` on PaymentReconciliation | Required on a manually tendered Invoice; stamped on every processor PaymentReconciliation | optical-order-kernel-ledger.md; payment-reconciliation-seam-ledger.md |
 | Processor fees | `https://osod.dev/fhir/StructureDefinition/osod-processor-fees` | `0..1` on PaymentReconciliation | valueMoney (USD); v0.7 settlement reconciliation input | payment-reconciliation-seam-ledger.md |
 | Payment surface (complex: `surface` valueCode + optional `terminal-id` / `financing-application-id` valueString) | `https://osod.dev/fhir/StructureDefinition/osod-payment-surface` | `0..1` on PaymentReconciliation | Non-secret adapter metadata only | payment-reconciliation-seam-ledger.md |
+| ERA import summary (complex: imported timestamp, outcome counters, payer/date, paid total cents) | `https://osod.dev/fhir/StructureDefinition/osod-era-import-summary` | `0..1` on the coded ERA-import Basic | Required on every persisted ERA import record | claimmd-clearinghouse-ledger.md |
 
 Clinical attestation, amendment routing, audit classification, and Information Blocking logic consume `Observation.status`, not this extension.

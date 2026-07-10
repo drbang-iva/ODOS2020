@@ -5,6 +5,22 @@ export const WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "ma
 export type WorklistCode = (typeof WORKLIST_CODES)[number];
 export type WorklistStatus = (typeof WORKLIST_STATUSES)[number];
 export type WorklistDisposition = (typeof WORKLIST_DISPOSITIONS)[number];
+export type EraBatchLane = "new" | "imported" | "fully-worked";
+
+export interface EraBatchItem {
+  eraId: string;
+  lane: EraBatchLane;
+  importedAt?: string;
+  posted: number;
+  denied: number;
+  underpaid: number;
+  flagged: number;
+  payerName?: string;
+  paidDate?: string;
+  paidTotalCents: number;
+  claimCount?: number;
+  openTaskCount: number;
+}
 
 export interface EraEvidence {
   kind: "era";
@@ -59,6 +75,12 @@ export const WORKLIST_LANES: ReadonlyArray<{ code: WorklistCode; label: string }
   { code: "claim-rejected", label: "Rejected claims" },
 ];
 
+export const ERA_BATCH_LANES: ReadonlyArray<{ code: EraBatchLane; label: string }> = [
+  { code: "new", label: "New" },
+  { code: "imported", label: "Imported" },
+  { code: "fully-worked", label: "Fully worked" },
+];
+
 export function groupWorklistItems(items: readonly ClaimsWorklistItem[]): Record<WorklistCode, ClaimsWorklistItem[]> {
   const grouped: Record<WorklistCode, ClaimsWorklistItem[]> = {
     "era-denial": [],
@@ -82,6 +104,18 @@ export async function fetchClaimsWorklist(
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
   const body = await requestJson<{ items?: ClaimsWorklistItem[] }>(`/claims/worklist${query}`, {}, options);
   return body.items ?? [];
+}
+
+export async function fetchEraBatches(options: ClaimsApiOptions = {}): Promise<EraBatchItem[]> {
+  const body = await requestJson<{ items?: EraBatchItem[] }>("/claims/era", {}, options);
+  return body.items ?? [];
+}
+
+export function worklistItemsForEra(
+  items: readonly ClaimsWorklistItem[],
+  eraId: string,
+): ClaimsWorklistItem[] {
+  return items.filter((item) => item.evidence.kind === "era" && item.evidence.eraId === eraId);
 }
 
 export async function claimWorklistItem(id: string, options: ClaimsApiOptions = {}): Promise<void> {
