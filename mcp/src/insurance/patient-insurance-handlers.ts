@@ -14,11 +14,12 @@ import {
 } from "../authz/osodAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 
 export interface AuthenticatedInsuranceStaff {
   staffReference: string;
   actorRole: OsodActorRole;
-  fhir: Pick<MedplumClient, "search" | "executeTransaction">;
+  fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
 }
 
 export interface PatientInsuranceHandlerDeps {
@@ -40,17 +41,18 @@ export async function handlePatientInsuranceRead(
   if (!isPatientReference(input.patientReference)) return invalidPatientReference();
   try {
     const [coverages, relatedPeople] = await Promise.all([
-      auth.fhir.search<Coverage>("Coverage", { beneficiary: input.patientReference, _count: "100" }),
-      auth.fhir.search<RelatedPerson>("RelatedPerson", { patient: input.patientReference, _count: "100" }),
+      searchAll<Coverage>(auth.fhir, "Coverage", { beneficiary: input.patientReference, _count: "100" }),
+      searchAll<RelatedPerson>(auth.fhir, "RelatedPerson", { patient: input.patientReference, _count: "100" }),
     ]);
     return {
       status: 200,
       body: {
-        coverages: resources(coverages),
-        relatedPeople: resources(relatedPeople),
+        coverages,
+        relatedPeople,
       },
     };
   } catch (error) {
+    if (error instanceof FhirSearchLimitError) return paginationConflict(error, "Patient insurance");
     return fhirFailure(error, "Unable to load patient insurance.");
   }
 }
@@ -85,13 +87,14 @@ export async function handleVisionBenefitsRead(
   if ("status" in auth) return auth;
   if (!isPatientReference(input.patientReference)) return invalidPatientReference();
   try {
-    const responses = await auth.fhir.search<CoverageEligibilityResponse>("CoverageEligibilityResponse", {
+    const responses = await searchAll<CoverageEligibilityResponse>(auth.fhir, "CoverageEligibilityResponse", {
       patient: input.patientReference,
       _count: "100",
       _sort: "-created",
     });
-    return { status: 200, body: { responses: resources(responses) } };
+    return { status: 200, body: { responses } };
   } catch (error) {
+    if (error instanceof FhirSearchLimitError) return paginationConflict(error, "Vision benefits");
     return fhirFailure(error, "Unable to load vision-plan benefits.");
   }
 }
@@ -233,16 +236,19 @@ function bodyBundle(body: unknown): Bundle | undefined {
   return bundle as Bundle;
 }
 
-function resources<T extends Resource>(bundle: Bundle<T>): T[] {
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
-}
-
 function isPatientReference(value: string | undefined): value is string {
   return Boolean(value && /^Patient\/[^/]+$/.test(value));
 }
 
 function invalidPatientReference(): PatientInsuranceHandlerResult {
   return { status: 400, body: { error: "patientReference must be a Patient/{id} reference." } };
+}
+
+function paginationConflict(error: FhirSearchLimitError, label: string): PatientInsuranceHandlerResult {
+  return {
+    status: 409,
+    body: { error: `${label} query exceeded ${error.maxRows} rows; no partial result was returned.` },
+  };
 }
 
 function fhirFailure(error: unknown, fallback: string): PatientInsuranceHandlerResult {
