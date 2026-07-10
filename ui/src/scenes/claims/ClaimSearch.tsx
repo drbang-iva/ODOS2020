@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import {
   CLAIM_SEARCH_STATUSES,
+  claimSearchFiltersFromQuery,
   failedClaimsCount,
   fetchClaimSearch,
   type ClaimSearchFilters,
@@ -9,15 +10,17 @@ import {
 } from "../../lib/claim-search";
 import { fetchClaimsWorklist, type ClaimsApiOptions } from "../../lib/claims-worklist";
 import { fhir } from "../../lib/fhir";
-
-const EMPTY_FILTERS: ClaimSearchFilters = {};
+import { downloadCsvExport, queryPath } from "../../lib/reporting";
 
 export function ClaimSearch() {
-  const [filters, setFilters] = useState<ClaimSearchFilters>(EMPTY_FILTERS);
+  const initialFilters = claimSearchFiltersFromQuery(window.location.search);
+  const [filters, setFilters] = useState<ClaimSearchFilters>(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState<ClaimSearchFilters>(initialFilters);
   const [items, setItems] = useState<ClaimSearchRow[]>([]);
   const [failedCount, setFailedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [exporting, setExporting] = useState(false);
   const api = claimsApiOptions();
 
   useEffect(() => {
@@ -27,7 +30,7 @@ export function ClaimSearch() {
       setError(undefined);
       try {
         const [nextItems, worklistItems] = await Promise.all([
-          fetchClaimSearch(EMPTY_FILTERS, api),
+          fetchClaimSearch(appliedFilters, api),
           fetchClaimsWorklist(undefined, api),
         ]);
         if (!cancelled) {
@@ -44,17 +47,19 @@ export function ClaimSearch() {
     return () => {
       cancelled = true;
     };
-  }, [api.authorization, api.baseUrl]);
+  }, [appliedFilters, api.authorization, api.baseUrl]);
 
-  const search = async () => {
-    setLoading(true);
+  const search = () => setAppliedFilters({ ...filters });
+
+  const exportRows = async () => {
+    setExporting(true);
     setError(undefined);
     try {
-      setItems(await fetchClaimSearch(filters, api));
+      await downloadCsvExport(queryPath("/claims/search/export", appliedFilters), "claim-search.csv", api);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setLoading(false);
+      setExporting(false);
     }
   };
 
@@ -67,6 +72,8 @@ export function ClaimSearch() {
       error={error}
       onFiltersChange={setFilters}
       onSearch={search}
+      onExport={() => void exportRows()}
+      exporting={exporting}
       onOpenWorklist={() => window.location.assign("/billing/claims/worklist")}
     />
   );
@@ -80,6 +87,8 @@ export function ClaimSearchContent({
   error,
   onFiltersChange,
   onSearch,
+  onExport,
+  exporting = false,
   onOpenWorklist,
 }: {
   filters: ClaimSearchFilters;
@@ -89,6 +98,8 @@ export function ClaimSearchContent({
   error?: string;
   onFiltersChange: (filters: ClaimSearchFilters) => void;
   onSearch: () => Promise<void> | void;
+  onExport?: () => void;
+  exporting?: boolean;
   onOpenWorklist: () => void;
 }) {
   const submit = (event: FormEvent) => {
@@ -122,7 +133,7 @@ export function ClaimSearchContent({
       {loading ? (
         <div className="grid min-h-52 place-items-center text-sm text-white/50">Searching claims…</div>
       ) : (
-        <ClaimSearchResults items={items} />
+        <ClaimSearchResults items={items} onExport={onExport} exporting={exporting} />
       )}
     </main>
   );
@@ -159,11 +170,21 @@ export function ClaimSearchForm({
       </div>
       <details className="mt-4 border-t border-white/10 pt-3">
         <summary className="cursor-pointer text-sm font-bold text-blue-300">Additional Search Criteria</summary>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <div className="mt-3 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
           <SearchField label="CPT code" value={filters.cpt ?? ""} placeholder="Procedure code" onChange={(value) => set("cpt", value)} />
           <SearchField label="Minimum charged" value={filters.minAmount ?? ""} placeholder="0.00" type="number" onChange={(value) => set("minAmount", value)} />
           <SearchField label="Maximum charged" value={filters.maxAmount ?? ""} placeholder="500.00" type="number" onChange={(value) => set("maxAmount", value)} />
+          <SearchField label="Minimum days outstanding" value={filters.minDays ?? ""} placeholder="0" type="number" step="1" onChange={(value) => set("minDays", value)} />
+          <SearchField label="Maximum days outstanding" value={filters.maxDays ?? ""} placeholder="90" type="number" step="1" onChange={(value) => set("maxDays", value)} />
         </div>
+        <label className="mt-3 flex items-center gap-2 text-xs font-bold text-white/55">
+          <input
+            type="checkbox"
+            checked={filters.outstanding === "true"}
+            onChange={(event) => onChange({ ...filters, outstanding: event.target.checked ? "true" : undefined })}
+          />
+          Outstanding claims only
+        </label>
       </details>
       <div className="mt-4 flex justify-end">
         <button type="submit" className="rounded bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-500">Search claims</button>
@@ -172,11 +193,20 @@ export function ClaimSearchForm({
   );
 }
 
-export function ClaimSearchResults({ items }: { items: readonly ClaimSearchRow[] }) {
+export function ClaimSearchResults({
+  items,
+  onExport,
+  exporting = false,
+}: {
+  items: readonly ClaimSearchRow[];
+  onExport?: () => void;
+  exporting?: boolean;
+}) {
   return (
     <section className="overflow-hidden rounded-lg border border-white/10 bg-bg-panel/80">
-      <div className="border-b border-white/10 px-4 py-3 text-sm text-white/50">
-        {items.length === 1 ? "1 claim" : `${items.length} claims`}
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-sm text-white/50">
+        <span>{items.length === 1 ? "1 claim" : `${items.length} claims`}</span>
+        {onExport && <ExportButton exporting={exporting} onClick={onExport} />}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1280px] text-left text-sm">
@@ -224,12 +254,14 @@ function SearchField({
   value,
   placeholder,
   type = "text",
+  step,
   onChange,
 }: {
   label: string;
   value: string;
   placeholder: string;
   type?: "text" | "number";
+  step?: string;
   onChange: (value: string) => void;
 }) {
   return (
@@ -238,13 +270,26 @@ function SearchField({
       <input
         type={type}
         min={type === "number" ? "0" : undefined}
-        step={type === "number" ? "0.01" : undefined}
+        step={type === "number" ? step ?? "0.01" : undefined}
         value={value}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white placeholder:text-white/25"
       />
     </label>
+  );
+}
+
+function ExportButton({ exporting, onClick }: { exporting: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={exporting}
+      onClick={onClick}
+      className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-1.5 text-xs font-bold text-blue-200 disabled:opacity-50"
+    >
+      {exporting ? "Exporting…" : "Export CSV"}
+    </button>
   );
 }
 

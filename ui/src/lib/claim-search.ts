@@ -21,6 +21,9 @@ export interface ClaimSearchFilters {
   cpt?: string;
   minAmount?: string;
   maxAmount?: string;
+  minDays?: string;
+  maxDays?: string;
+  outstanding?: "true";
 }
 
 export interface ClaimSearchRow {
@@ -71,4 +74,29 @@ export function failedClaimsCount(items: readonly ClaimsWorklistItem[]): number 
     (item.code === "claim-rejected" || item.code === "era-denial")
     && (item.status === "new" || item.status === "in-review"),
   ).length;
+}
+
+export function claimSearchFiltersFromQuery(search: string): ClaimSearchFilters {
+  const query = new URLSearchParams(search);
+  const status = query.get("status") ?? undefined;
+  return {
+    ...queryFilter(query, "patient"),
+    ...queryFilter(query, "claim"),
+    ...(status && CLAIM_SEARCH_STATUSES.includes(status as ClaimSearchStatus)
+      ? { status: status as ClaimSearchStatus }
+      : {}),
+    ...queryFilter(query, "carrier"),
+    ...queryFilter(query, "office"),
+    ...queryFilter(query, "cpt"),
+    ...queryFilter(query, "minAmount"),
+    ...queryFilter(query, "maxAmount"),
+    ...queryFilter(query, "minDays"),
+    ...queryFilter(query, "maxDays"),
+    ...(query.get("outstanding") === "true" ? { outstanding: "true" as const } : {}),
+  };
+}
+
+function queryFilter(query: URLSearchParams, key: keyof ClaimSearchFilters): Partial<ClaimSearchFilters> {
+  const value = query.get(key)?.trim();
+  return value ? { [key]: value } : {};
 }

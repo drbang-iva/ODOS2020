@@ -77,6 +77,17 @@ test("claim search filters real persisted Claim fields and resolved labels", () 
     }).map((row) => row.claimReference),
     ["Claim/claim-1", "Claim/claim-2", "Claim/claim-3"],
   );
+  assert.deepEqual(
+    projectClaimSearchResults({
+      ...base,
+      filters: { minDaysOutstanding: 8, maxDaysOutstanding: 8 },
+    }).map((row) => row.claimReference),
+    ["Claim/claim-2"],
+  );
+  assert.deepEqual(
+    projectClaimSearchResults({ ...base, filters: { outstandingOnly: true } }).map((row) => row.claimReference),
+    ["Claim/claim-1", "Claim/claim-2"],
+  );
 });
 
 test("a resolved claim-rejected Task remains the persistent rejected signal", () => {

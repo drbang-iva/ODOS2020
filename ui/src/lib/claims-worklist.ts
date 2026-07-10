@@ -4,6 +4,7 @@ export const WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "ma
 
 export type WorklistCode = (typeof WORKLIST_CODES)[number];
 export type WorklistStatus = (typeof WORKLIST_STATUSES)[number];
+export type WorklistFilterStatus = WorklistStatus | "open";
 export type WorklistDisposition = (typeof WORKLIST_DISPOSITIONS)[number];
 export type EraBatchLane = "new" | "imported" | "fully-worked";
 
@@ -98,7 +99,7 @@ export function dispositionsForLane(code: WorklistCode): WorklistDisposition[] {
 }
 
 export async function fetchClaimsWorklist(
-  status: WorklistStatus | undefined,
+  status: WorklistFilterStatus | undefined,
   options: ClaimsApiOptions = {},
 ): Promise<ClaimsWorklistItem[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
