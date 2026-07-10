@@ -1,4 +1,5 @@
-import type { Bundle, CodeableConcept, Task, TaskInput } from "@medplum/fhirtypes";
+import type { Basic, Bundle, CodeableConcept, Extension, Task, TaskInput } from "@medplum/fhirtypes";
+import { CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import type { ClaimMdEraClaim, ClaimMdEraData } from "./claimmd-fhir.js";
 
 export const ERA_WORKLIST_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-worklist";
@@ -6,6 +7,10 @@ export const CLAIM_REJECTED_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod
 export const ERA_WORKLIST_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-status";
 export const ERA_WORKLIST_INPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-input";
 export const ERA_WORKLIST_OUTPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-output";
+export const ERA_IMPORT_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-import";
+export const ERA_IMPORT_CODE = "osod-era-import";
+export const ERA_IMPORT_SUMMARY_EXTENSION_URL =
+  "https://osod.dev/fhir/StructureDefinition/osod-era-import-summary";
 
 export const ERA_WORKLIST_CODES = ["era-denial", "era-unmatched", "era-underpayment"] as const;
 export const CLAIM_REJECTED_CODES = ["claim-rejected"] as const;
@@ -21,6 +26,33 @@ export type EraWorklistCode = (typeof ERA_WORKLIST_CODES)[number];
 export type WorklistCode = (typeof WORKLIST_CODES)[number];
 export type EraWorklistStatus = (typeof ERA_WORKLIST_STATUSES)[number];
 export type EraWorklistDisposition = (typeof ERA_WORKLIST_DISPOSITIONS)[number];
+export type EraBatchLane = "new" | "imported" | "fully-worked";
+
+export interface EraImportSummary {
+  importedAt: string;
+  posted: number;
+  denied: number;
+  underpaid: number;
+  flagged: number;
+  payerName?: string;
+  paidDate?: string;
+  paidTotalCents: number;
+}
+
+export interface EraBatchItem {
+  eraId: string;
+  lane: EraBatchLane;
+  importedAt?: string;
+  posted: number;
+  denied: number;
+  underpaid: number;
+  flagged: number;
+  payerName?: string;
+  paidDate?: string;
+  paidTotalCents: number;
+  claimCount?: number;
+  openTaskCount: number;
+}
 
 export interface EraWorklistEvidence {
   pcn: string;
@@ -56,6 +88,99 @@ export interface EraWorklistProjectedEvidence extends EraWorklistEvidence {
 export interface ClaimRejectedProjectedEvidence {
   kind: "claim-rejected";
   claimMdMessage: string;
+}
+
+export function buildEraImportRecord(
+  eraId: string,
+  summary: EraImportSummary,
+  existing?: Basic,
+): Basic {
+  return {
+    resourceType: "Basic",
+    ...(existing?.id ? { id: existing.id } : {}),
+    ...(existing?.meta ? { meta: existing.meta } : {}),
+    identifier: [{ system: CLAIMMD_ERA_PAYMENT_SYSTEM, value: eraId }],
+    code: codedConcept(ERA_IMPORT_CODE_SYSTEM, ERA_IMPORT_CODE, "OSOD ERA import"),
+    extension: [{
+      url: ERA_IMPORT_SUMMARY_EXTENSION_URL,
+      extension: [
+        { url: "importedAt", valueDateTime: summary.importedAt },
+        { url: "posted", valueInteger: summary.posted },
+        { url: "denied", valueInteger: summary.denied },
+        { url: "underpaid", valueInteger: summary.underpaid },
+        { url: "flagged", valueInteger: summary.flagged },
+        ...(summary.payerName ? [{ url: "payerName", valueString: summary.payerName }] : []),
+        ...(summary.paidDate ? [{ url: "paidDate", valueDate: summary.paidDate }] : []),
+        { url: "paidTotalCents", valueInteger: summary.paidTotalCents },
+      ],
+    }],
+  };
+}
+
+export function parseEraImportRecord(basic: Basic): { eraId: string; summary: EraImportSummary } {
+  const code = basic.code?.coding?.find((coding) =>
+    coding.system === ERA_IMPORT_CODE_SYSTEM && coding.code === ERA_IMPORT_CODE,
+  );
+  if (!code) throw new Error("Basic resource is not an OSOD ERA import record.");
+  const eraId = basic.identifier?.find((identifier) => identifier.system === CLAIMMD_ERA_PAYMENT_SYSTEM)?.value;
+  if (!eraId) throw new Error("ERA import record is missing its Claim.MD ERA identifier.");
+  const summary = basic.extension?.find((extension) => extension.url === ERA_IMPORT_SUMMARY_EXTENSION_URL)?.extension;
+  if (!summary) throw new Error("ERA import record is missing its summary extension.");
+  const payerName = extensionString(summary, "payerName", "valueString");
+  const paidDate = extensionString(summary, "paidDate", "valueDate");
+  return {
+    eraId,
+    summary: {
+      importedAt: requiredExtensionString(summary, "importedAt", "valueDateTime"),
+      posted: requiredExtensionInteger(summary, "posted"),
+      denied: requiredExtensionInteger(summary, "denied"),
+      underpaid: requiredExtensionInteger(summary, "underpaid"),
+      flagged: requiredExtensionInteger(summary, "flagged"),
+      ...(payerName ? { payerName } : {}),
+      ...(paidDate ? { paidDate } : {}),
+      paidTotalCents: requiredExtensionInteger(summary, "paidTotalCents"),
+    },
+  };
+}
+
+export function projectEraBatchReadModel(
+  rawEraList: unknown,
+  importBundle: Bundle<Basic>,
+  openTaskBundle: Bundle<Task>,
+): EraBatchItem[] {
+  const imports = new Map(
+    resources(importBundle).map((basic) => {
+      const parsed = parseEraImportRecord(basic);
+      return [parsed.eraId, parsed.summary] as const;
+    }),
+  );
+  const openTaskCounts = new Map<string, number>();
+  for (const task of resources(openTaskBundle)) {
+    if (!isOpenWorklistTask(task)) continue;
+    const eraId = task.groupIdentifier?.system === CLAIMMD_ERA_PAYMENT_SYSTEM
+      ? task.groupIdentifier.value
+      : taskInputString(task, "era-id");
+    if (eraId) openTaskCounts.set(eraId, (openTaskCounts.get(eraId) ?? 0) + 1);
+  }
+
+  return claimMdEraListRows(rawEraList).map((row) => {
+    const summary = imports.get(row.eraId);
+    const openTaskCount = openTaskCounts.get(row.eraId) ?? 0;
+    return {
+      eraId: row.eraId,
+      lane: !summary ? "new" : openTaskCount > 0 ? "imported" : "fully-worked",
+      ...(summary ? { importedAt: summary.importedAt } : {}),
+      posted: summary?.posted ?? 0,
+      denied: summary?.denied ?? 0,
+      underpaid: summary?.underpaid ?? 0,
+      flagged: summary?.flagged ?? 0,
+      ...(summary ? { claimCount: summary.posted + summary.denied + summary.flagged } : {}),
+      ...(summary?.payerName ?? row.payerName ? { payerName: summary?.payerName ?? row.payerName } : {}),
+      ...(summary?.paidDate ?? row.paidDate ? { paidDate: summary?.paidDate ?? row.paidDate } : {}),
+      paidTotalCents: summary?.paidTotalCents ?? row.paidTotalCents ?? 0,
+      openTaskCount,
+    };
+  });
 }
 
 export function eraWorklistEvidence(eraClaim: ClaimMdEraClaim, eraId: string): EraWorklistEvidence {
@@ -137,6 +262,7 @@ export function buildEraWorklistTask(input: {
 
   return {
     resourceType: "Task",
+    groupIdentifier: { system: CLAIMMD_ERA_PAYMENT_SYSTEM, value: eraId },
     status: "ready",
     intent: "order",
     priority: input.code === "era-underpayment" ? "routine" : "urgent",
@@ -368,6 +494,69 @@ function taskInputString(task: Task, code: string): string | undefined {
 
 function taskInputInteger(task: Task, code: string): number {
   return task.input?.find((entry) => inputType(entry) === code)?.valueInteger ?? 0;
+}
+
+function isOpenWorklistTask(task: Task): boolean {
+  const status = task.businessStatus?.coding?.find((coding) => coding.system === ERA_WORKLIST_STATUS_SYSTEM)?.code;
+  return status === "new" || status === "in-review";
+}
+
+function claimMdEraListRows(raw: unknown): Array<{
+  eraId: string;
+  payerName?: string;
+  paidDate?: string;
+  paidTotalCents?: number;
+}> {
+  const era = (raw as { result?: { era?: unknown } }).result?.era;
+  return arrayOf(era)
+    .filter((row): row is Record<string, unknown> => typeof row === "object" && row !== null)
+    .flatMap((row) => {
+      const eraId = scalarString(row.eraid);
+      if (!eraId) return [];
+      const payerName = scalarString(row.payer_name);
+      const paidDate = scalarString(row.paid_date);
+      const paidAmount = scalarString(row.paid_amount);
+      return [{
+        eraId,
+        ...(payerName ? { payerName } : {}),
+        ...(paidDate ? { paidDate } : {}),
+        ...(paidAmount ? { paidTotalCents: decimalStringToCents(paidAmount) } : {}),
+      }];
+    });
+}
+
+function resources<T extends Basic | Task>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function requiredExtensionInteger(extensions: Extension[], url: string): number {
+  const value = extensions.find((extension) => extension.url === url)?.valueInteger;
+  if (value === undefined || !Number.isInteger(value) || value < 0) {
+    throw new Error(`ERA import record ${url} must be a nonnegative integer.`);
+  }
+  return value;
+}
+
+function requiredExtensionString(
+  extensions: Extension[],
+  url: string,
+  field: "valueDateTime" | "valueDate" | "valueString",
+): string {
+  const value = extensionString(extensions, url, field);
+  if (!value) throw new Error(`ERA import record is missing ${url}.`);
+  return value;
+}
+
+function extensionString(
+  extensions: Extension[],
+  url: string,
+  field: "valueDateTime" | "valueDate" | "valueString",
+): string | undefined {
+  return extensions.find((extension) => extension.url === url)?.[field];
+}
+
+function scalarString(value: unknown): string | undefined {
+  return typeof value === "string" || typeof value === "number" ? String(value) : undefined;
 }
 
 function isClaimReference(value: string | undefined): boolean {

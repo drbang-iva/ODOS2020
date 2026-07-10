@@ -81,6 +81,9 @@ jobs:
       - name: typecheck ui
         working-directory: ui
         run: npx tsc --noEmit
+      - name: run ui tests
+        working-directory: ui
+        run: npm test
       - name: build ui
         working-directory: ui
         run: npm run build

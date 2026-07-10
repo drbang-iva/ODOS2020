@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import type {
+  Basic,
   Bundle,
   Claim,
   ClaimResponse,
@@ -19,6 +20,7 @@ import {
   handleClaimStatusRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
+  handleEraListRequest,
   handleEraWorklistRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
@@ -30,6 +32,7 @@ import {
   ERA_WORKLIST_INPUT_SYSTEM,
   ERA_WORKLIST_OUTPUT_SYSTEM,
   eraSnapshotFromTask,
+  parseEraImportRecord,
 } from "../src/claims/era-worklist.js";
 import type { ClaimMdEraData, ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
 
@@ -70,6 +73,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
   const audits: OsodAuditEventRecord[] = [];
   let searchCalls = 0;
   const created = {
+    Basic: [] as Basic[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
     CoverageEligibilityRequest: [] as CoverageEligibilityRequest[],
@@ -94,13 +98,17 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
       if (!found) throw new Error(`${resourceType}/${id} not found`);
       return found as T;
     },
-    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
+    search: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      params: Record<string, string> = {},
+    ): Promise<Bundle<T>> => {
       searchCalls += 1;
       const resources = created[resourceType as keyof typeof created] as Resource[] | undefined;
+      const filtered = (resources ?? []).filter((resource) => matchesSearch(resource, params));
       return {
         resourceType: "Bundle",
         type: "searchset",
-        entry: (resources ?? []).map((resource) => ({ resource: resource as T })),
+        entry: filtered.map((resource) => ({ resource: resource as T })),
       };
     },
     update: async <T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T> => {
@@ -143,7 +151,16 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
           },
         },
       }),
-      listEras: async () => ({ result: { era: [{ eraid: "era-900" }] } }),
+      listEras: async () => ({
+        result: {
+          era: [{
+            eraid: "era-900",
+            payer_name: "SYNTHETIC PAYER",
+            paid_date: "2026-07-09",
+            paid_amount: "80.00",
+          }],
+        },
+      }),
       retrieveEraData: async () => ({
         eraid: "era-900",
         paid_date: "2026-07-09",
@@ -299,15 +316,74 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   assert.equal(created.ClaimResponse.length, 1);
   assert.equal(created.PaymentReconciliation.length, 1);
   assert.equal(created.Task.length, 0);
+  assert.equal(created.Basic.length, 1);
+  assert.deepEqual(parseEraImportRecord(created.Basic[0]), {
+    eraId: "era-900",
+    summary: {
+      importedAt: "2026-07-09T12:00:00.000Z",
+      posted: 1,
+      denied: 0,
+      underpaid: 0,
+      flagged: 0,
+      payerName: "SYNTHETIC PAYER",
+      paidDate: "2026-07-09",
+      paidTotalCents: 8_000,
+    },
+  });
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.response?.reference, "ClaimResponse/claimresponse-1");
   assert.equal(audits[0].eventType, "era.import.completed");
+
+  const batches = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  assert.deepEqual(batches, {
+    status: 200,
+    body: {
+      items: [{
+        eraId: "era-900",
+        lane: "fully-worked",
+        importedAt: "2026-07-09T12:00:00.000Z",
+        posted: 1,
+        denied: 0,
+        underpaid: 0,
+        flagged: 0,
+        claimCount: 1,
+        payerName: "SYNTHETIC PAYER",
+        paidDate: "2026-07-09",
+        paidTotalCents: 8_000,
+        openTaskCount: 0,
+      }],
+    },
+  });
+});
+
+test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
+  const { created, deps: d } = deps();
+  const first = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
+  const second = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
+
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  assert.equal(created.Basic.length, 1);
+  assert.equal(created.Basic[0].id, "basic-1");
+  assert.equal(parseEraImportRecord(created.Basic[0]).summary.posted, 1);
+});
+
+test("an eralist row with no import record is returned in the New lane without inventing a claim count", async () => {
+  const { deps: d } = deps();
+  const result = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  const item = (result.body as { items: Array<Record<string, unknown>> }).items[0];
+
+  assert.equal(result.status, 200);
+  assert.equal(item.lane, "new");
+  assert.equal(item.eraId, "era-900");
+  assert.equal(item.paidTotalCents, 8_000);
+  assert.equal("claimCount" in item, false);
 });
 
 test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit", async () => {
   const { audits, created, deps: d } = deps();
   d.adapter!.retrieveEraData = async () => ({
-    eraid: "era-zero",
+    eraid: "era-900",
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
@@ -342,6 +418,10 @@ test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment 
   assert.equal(created.Task.length, 1);
   const task = created.Task[0];
   assert.equal(worklistCode(task), "era-denial");
+  assert.deepEqual(task.groupIdentifier, {
+    system: "https://osod.dev/fhir/NamingSystem/claimmd-era",
+    value: "era-900",
+  });
   assert.equal(task.focus?.reference, "ClaimResponse/claimresponse-1");
   assert.equal(task.for?.reference, "Patient/pat-900");
   assert.deepEqual(
@@ -349,6 +429,23 @@ test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment 
     [{ group: "CO", code: "45" }, { group: "OA", code: "23" }],
   );
   assert.equal(audits.some((row) => row.eventType === "era.denial.flagged" && row.resourceType === "Task"), true);
+
+  d.adapter!.listEras = async () => ({
+    result: { era: [{ eraid: "era-900", payer_name: "SYNTHETIC PAYER", paid_date: "2026-07-09", paid_amount: "0.00" }] },
+  });
+  const imported = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  assert.equal((imported.body as { items: Array<{ lane: string; openTaskCount: number }> }).items[0].lane, "imported");
+  assert.equal((imported.body as { items: Array<{ lane: string; openTaskCount: number }> }).items[0].openTaskCount, 1);
+
+  await handleClaimEraWorklistTaskRequest(d, { authHeader: "Bearer good", params: { id: "task-1" } });
+  await handleResolveEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "written-off" },
+  });
+  const fullyWorked = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  assert.equal((fullyWorked.body as { items: Array<{ lane: string; openTaskCount: number }> }).items[0].lane, "fully-worked");
+  assert.equal((fullyWorked.body as { items: Array<{ lane: string; openTaskCount: number }> }).items[0].openTaskCount, 0);
 });
 
 test("ERA underpayment posts moved money, creates a shortfall Task, and honors the configured threshold", async () => {
@@ -524,6 +621,37 @@ test("claim-rejected uses the shared claim and resolve lifecycle with the same c
   assert.equal(duplicateResolve.status, 409);
 });
 
+test("claim-rejected polling deduplicates only while the same Claim has an open Task", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapter!.checkClaimStatus = async () => ({
+    result: { claim: { claimid: "claimmd-1", status_code: "4", messages: { message: "Rejected" } } },
+  });
+  const request = {
+    authHeader: "Bearer good",
+    params: { id: "claim-1" },
+    body: {
+      claimMdClaimId: "claimmd-1",
+      patientReference: "Patient/pat-900",
+      insurerReference: "Organization/payer-1",
+    },
+  };
+
+  await handleClaimStatusRequest(d, request);
+  await handleClaimStatusRequest(d, request);
+  assert.equal(created.Task.length, 1);
+  assert.equal(audits.filter((row) => row.eventType === "claim.rejected.flagged").length, 1);
+
+  await handleClaimEraWorklistTaskRequest(d, { authHeader: "Bearer good", params: { id: "task-1" } });
+  await handleResolveEraWorklistTaskRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "task-1" },
+    body: { disposition: "written-off" },
+  });
+  await handleClaimStatusRequest(d, request);
+  assert.equal(created.Task.length, 2);
+  assert.equal(audits.filter((row) => row.eventType === "claim.rejected.flagged").length, 2);
+});
+
 test("ERA unmatched resolution validates in-review lifecycle before any matched re-import side effect", async () => {
   const { created, deps: d } = deps();
   await handleEraImportRequest(d, {
@@ -574,6 +702,30 @@ test("claims.manage protects GET /claims/worklist with the existing claims 401/4
   const ok = await handleEraWorklistRequest(allowed.deps, { authHeader: "Bearer good" });
   assert.deepEqual(ok, { status: 200, body: { items: [] } });
   assert.equal(allowed.searchCalls(), 1);
+});
+
+test("claims.manage protects GET /claims/era with the existing claims 401/403 shapes", async () => {
+  const unauthenticated = deps();
+  assert.deepEqual(await handleEraListRequest(unauthenticated.deps, { authHeader: undefined }), {
+    status: 401,
+    body: { error: "Authentication required to manage claims." },
+  });
+  assert.equal(unauthenticated.searchCalls(), 0);
+
+  const forbidden = deps("clinician");
+  assert.deepEqual(await handleEraListRequest(forbidden.deps, { authHeader: "Bearer good" }), {
+    status: 403,
+    body: { error: "claims.manage role required" },
+  });
+  assert.equal(forbidden.searchCalls(), 0);
+
+  const unavailable = deps();
+  unavailable.deps.adapter = null;
+  assert.deepEqual(await handleEraListRequest(unavailable.deps, { authHeader: "Bearer good" }), {
+    status: 503,
+    body: { error: "Claim.MD adapter is not configured." },
+  });
+  assert.equal(unavailable.searchCalls(), 0);
 });
 
 test("claims audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
@@ -705,4 +857,39 @@ function taskOutput(task: Task, code: string): NonNullable<Task["output"]>[numbe
   return task.output?.find((entry) =>
     entry.type.coding?.some((coding) => coding.system === ERA_WORKLIST_OUTPUT_SYSTEM && coding.code === code),
   );
+}
+
+function matchesSearch(resource: Resource, params: Record<string, string>): boolean {
+  if (resource.resourceType === "Basic") {
+    const basic = resource as Basic;
+    if (params.code && !matchesCodingToken(basic.code?.coding, params.code)) return false;
+    if (params.identifier && !matchesIdentifierToken(basic.identifier, params.identifier)) return false;
+  }
+  if (resource.resourceType === "Task") {
+    const task = resource as Task;
+    if (params.code && !matchesCodingToken(task.code?.coding, params.code)) return false;
+    if (params.focus && task.focus?.reference !== params.focus) return false;
+    if (params["business-status"] && !matchesCodingToken(task.businessStatus?.coding, params["business-status"])) return false;
+  }
+  return true;
+}
+
+function matchesCodingToken(
+  codings: Array<{ system?: string; code?: string }> | undefined,
+  token: string,
+): boolean {
+  return token.split(",").some((candidate) => {
+    const [system, code] = candidate.split("|");
+    return codings?.some((coding) => coding.system === system && (!code || coding.code === code));
+  });
+}
+
+function matchesIdentifierToken(
+  identifiers: Array<{ system?: string; value?: string }> | undefined,
+  token: string,
+): boolean {
+  const separator = token.indexOf("|");
+  const system = token.slice(0, separator);
+  const value = token.slice(separator + 1);
+  return identifiers?.some((identifier) => identifier.system === system && identifier.value === value) ?? false;
 }
