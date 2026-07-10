@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Claim, ClaimResponse, Resource, Task } from "@medplum/fhirtypes";
 import { projectClaimSearchResults } from "../src/claims/claim-search.js";
-import { buildEraWorklistTask } from "../src/claims/era-worklist.js";
+import {
+  buildClaimRejectedWorklistTask,
+  buildEraWorklistTask,
+  claimEraWorklistTask,
+  resolveEraWorklistTask,
+} from "../src/claims/era-worklist.js";
 import {
   buildClaimResponseFromClaimMdEra,
   buildClaimResponseFromClaimMdStatus,
@@ -29,7 +34,6 @@ test("claim search derives submitted, rejected, denied, underpaid, and paid with
     responses: [rejected, denied, underpaid, paid],
     tasks,
     relatedResources: relatedResources(),
-    submittedClaimReferences: new Set(["Claim/claim-1"]),
     at: AT,
   });
   const statusByClaim = Object.fromEntries(rows.map((row) => [row.claimReference, row.status]));
@@ -55,7 +59,6 @@ test("claim search filters real persisted Claim fields and resolved labels", () 
     responses,
     tasks: [] as Task[],
     relatedResources: relatedResources(),
-    submittedClaimReferences: new Set(["Claim/claim-1", "Claim/claim-2"]),
     at: AT,
   };
 
@@ -76,15 +79,25 @@ test("claim search filters real persisted Claim fields and resolved labels", () 
   );
 });
 
-test("claim search does not label an unaudited orphan Claim as submitted", () => {
-  assert.deepEqual(projectClaimSearchResults({
+test("a resolved claim-rejected Task remains the persistent rejected signal", () => {
+  const ready = buildClaimRejectedWorklistTask({
+    claimReference: "Claim/claim-1",
+    patientReference: "Patient/patient-1",
+    claimMdMessage: "Claim.MD transmission failed",
+    authoredOn: AT,
+  });
+  const claimed = claimEraWorklistTask(ready, "Practitioner/staff-1", AT);
+  const resolved = resolveEraWorklistTask(claimed, { disposition: "written-off" }, AT);
+  const rows = projectClaimSearchResults({
     claims: [claim(1)],
     responses: [],
-    tasks: [],
+    tasks: [resolved],
     relatedResources: relatedResources(),
-    submittedClaimReferences: new Set(),
     at: AT,
-  }), []);
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].status, "rejected");
 });
 
 function claim(number: number): Claim {

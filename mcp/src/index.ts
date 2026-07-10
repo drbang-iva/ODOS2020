@@ -5656,7 +5656,6 @@ async function main(): Promise<void> {
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
-              queryAuditRows: (filters) => auditRuntime.queryRows(filters),
             },
             { authHeader: req.header("authorization"), query: req.query },
           );

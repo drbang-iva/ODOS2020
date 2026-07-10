@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, Claim, ClaimResponse, Resource } from "@medplum/fhirtypes";
-import { buildClaimAuditRecord } from "../src/claims/claim-audit.js";
 import { handleClaimSearchRequest, type ClaimsHandlerDeps } from "../src/claims/claimmd-handlers.js";
 import {
   buildClaimResponseFromClaimMdStatus,
@@ -103,16 +102,6 @@ function fixture(role: "front-desk" | "clinician" | undefined) {
       : null,
     adapter: null,
     recordAudit: async () => undefined,
-    queryAuditRows: async () => [1, 2].map((number) => buildClaimAuditRecord({
-      eventType: "claim.submit.completed",
-      staffReference: "Practitioner/staff-1",
-      actorRole: "front-desk",
-      patientReference: `Patient/patient-${number}`,
-      targetReference: `Claim/claim-${number}`,
-      adapterName: "claimmd",
-      outcome: "success",
-      timestamp: "2026-07-09T12:00:00.000Z",
-    })),
     now: () => "2026-07-10T12:00:00.000Z",
   };
   return { deps, searchCalls: () => calls };

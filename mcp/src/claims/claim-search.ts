@@ -67,7 +67,6 @@ export function projectClaimSearchResults(input: {
   responses: readonly ClaimResponse[];
   tasks: readonly Task[];
   relatedResources: readonly Resource[];
-  submittedClaimReferences: ReadonlySet<string>;
   filters?: ClaimSearchFilters;
   at: string;
 }): ClaimSearchRow[] {
@@ -78,15 +77,14 @@ export function projectClaimSearchResults(input: {
       : []),
   );
   const responsesByClaim = groupResponsesByClaim(input.responses);
-  const taskStatusByClaim = deriveTaskStatuses(input.tasks, input.responses);
+  const taskSignals = deriveTaskSignals(input.tasks, input.responses);
 
   return input.claims
     .flatMap((claim) => projectClaim(
       claim,
       responsesByClaim,
-      taskStatusByClaim,
+      taskSignals,
       resources,
-      input.submittedClaimReferences,
       input.at,
     ))
     .filter((row) => matchesFilters(row, filters))
@@ -96,9 +94,8 @@ export function projectClaimSearchResults(input: {
 function projectClaim(
   claim: Claim,
   responsesByClaim: ReadonlyMap<string, ClaimResponse[]>,
-  taskStatusByClaim: ReadonlyMap<string, ClaimSearchStatus>,
+  taskSignals: TaskSignals,
   resources: ReadonlyMap<string, Resource>,
-  submittedClaimReferences: ReadonlySet<string>,
   at: string,
 ): ClaimSearchRow[] {
   if (!claim.id || !claim.patient.reference || !claim.provider?.reference || !claim.insurer?.reference) return [];
@@ -107,9 +104,11 @@ function projectClaim(
   const paymentResponse = newestResponse(responses.filter((response) => response.payment?.amount));
   const latestResponse = newestResponse(responses);
   const facilityReference = claim.facility?.reference;
-  const status = taskStatusByClaim.get(claimReference)
-    ?? responseStatus(latestResponse, paymentResponse, submittedClaimReferences.has(claimReference));
-  if (!status) return [];
+  // If transmission and claim-rejected Task persistence both fail, the remaining resources
+  // cannot distinguish that rare failure from an in-flight submission; submitted is the honest residual.
+  const status = taskSignals.openStatusByClaim.get(claimReference)
+    ?? responseStatus(latestResponse, paymentResponse)
+    ?? (taskSignals.rejectedClaimReferences.has(claimReference) ? "rejected" : "submitted");
   return [{
     claimReference,
     claimNumber: claim.identifier?.find((identifier) => identifier.value)?.value ?? claim.id,
@@ -154,22 +153,29 @@ function groupResponsesByClaim(responses: readonly ClaimResponse[]): Map<string,
   return grouped;
 }
 
-function deriveTaskStatuses(
+interface TaskSignals {
+  openStatusByClaim: Map<string, ClaimSearchStatus>;
+  rejectedClaimReferences: Set<string>;
+}
+
+function deriveTaskSignals(
   tasks: readonly Task[],
   responses: readonly ClaimResponse[],
-): Map<string, ClaimSearchStatus> {
+): TaskSignals {
   const claimByResponse = new Map<string, string>(
     responses.flatMap((response) => response.id && response.request?.reference
       ? [[`ClaimResponse/${response.id}`, response.request.reference] as const]
       : []),
   );
-  const statuses = new Map<string, ClaimSearchStatus>();
+  const openStatusByClaim = new Map<string, ClaimSearchStatus>();
+  const rejectedClaimReferences = new Set<string>();
   for (const task of tasks) {
-    if (!isOpenTask(task)) continue;
     const code = worklistCode(task);
     const focus = task.focus?.reference;
     const claimReference = focus?.startsWith("Claim/") ? focus : focus ? claimByResponse.get(focus) : undefined;
     if (!claimReference || !code) continue;
+    if (code === "claim-rejected") rejectedClaimReferences.add(claimReference);
+    if (!isOpenTask(task)) continue;
     const status = code === "era-denial"
       ? "denied"
       : code === "era-underpayment"
@@ -177,20 +183,19 @@ function deriveTaskStatuses(
         : code === "claim-rejected"
           ? "rejected"
           : undefined;
-    if (status && statusPriority(status) > statusPriority(statuses.get(claimReference))) {
-      statuses.set(claimReference, status);
+    if (status && statusPriority(status) > statusPriority(openStatusByClaim.get(claimReference))) {
+      openStatusByClaim.set(claimReference, status);
     }
   }
-  return statuses;
+  return { openStatusByClaim, rejectedClaimReferences };
 }
 
 function responseStatus(
   latestResponse: ClaimResponse | undefined,
   paymentResponse: ClaimResponse | undefined,
-  submitted: boolean,
 ): ClaimSearchStatus | undefined {
   if (moneyToCents(paymentResponse?.payment?.amount?.value) > 0) return "paid";
-  if (!latestResponse) return submitted ? "submitted" : undefined;
+  if (!latestResponse) return undefined;
   if (latestResponse.outcome === "error") return "rejected";
   if (latestResponse.outcome === "queued") return "queued";
   return "accepted";
