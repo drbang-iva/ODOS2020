@@ -21,7 +21,12 @@ import {
   nextEligibleDate,
   savePatientInsurance,
   saveVisionBenefits,
+  validateManualBenefitsDraft,
 } from "../src/lib/patient-insurance";
+import {
+  applyPlanTemplate,
+  type PlanTemplate,
+} from "../src/lib/insurance-config";
 import { coverageGroupName, coverageGroupNumber, SUBSCRIBER_RELATIONSHIP_SYSTEM } from "../src/lib/submit-claims";
 import { CoverageEditor, InsuranceGrid } from "../src/scenes/insurance/PatientInsurance";
 import { BenefitsTable } from "../src/scenes/insurance/VisionPlanBenefits";
@@ -134,6 +139,95 @@ test("manual benefit entry emits the required request-response history pair and 
   assert.equal(exam?.extension?.find((extension) => extension.url === OSOD_BENEFIT_LAST_USED_EXTENSION_URL)?.valueDate, "2026-01-15");
   assert.equal(exam?.extension?.find((extension) => extension.url === OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL)?.valueUnsignedInt, 12);
   assert.equal(nextEligibleDate(exam), "2027-01-15");
+});
+
+test("applying a plan template copies only plan-level facts and keeps the 7a bundle path unchanged", () => {
+  const coverage = { ...LEGACY_COVERAGE, id: "coverage-1" };
+  const draft = emptyManualBenefitsDraft("Patient/patient-1", coverage, "2026-07-10");
+  draft.benefits = draft.benefits.map((benefit) => ({
+    ...benefit,
+    usedDollars: benefit.kind === "exam" ? "25.00" : "",
+    lastUsed: benefit.kind === "exam" ? "2026-01-15" : "",
+  }));
+  const template: PlanTemplate = {
+    id: "template-1",
+    label: "Example plan",
+    benefits: Object.fromEntries(
+      BENEFIT_KINDS.map((kind) => [
+        kind,
+        {
+          excluded: kind === "medical",
+          allowanceDollars: 150,
+          copayDollars: 10,
+          frequencyMonths: 12,
+        },
+      ]),
+    ) as PlanTemplate["benefits"],
+  };
+
+  const applied = applyPlanTemplate(draft, template);
+  for (const benefit of applied.benefits) {
+    assert.equal(benefit.excluded, benefit.kind === "medical");
+    assert.equal(benefit.allowanceDollars, "150");
+    assert.equal(benefit.copayDollars, "10");
+    assert.equal(benefit.frequencyMonths, "12");
+  }
+  const exam = applied.benefits.find((benefit) => benefit.kind === "exam")!;
+  assert.equal(exam.usedDollars, "25.00");
+  assert.equal(exam.lastUsed, "2026-01-15");
+  assert.deepEqual(validateManualBenefitsDraft(applied), []);
+  const ids = ["request-prefill", "response-prefill"];
+  const bundle = buildManualBenefitsBundle(applied, {
+    created: "2026-07-10T12:00:00Z",
+    uuid: () => ids.shift() ?? "unused",
+  });
+  assert.equal(bundle.type, "transaction");
+  assert.deepEqual(
+    bundle.entry?.map((entry) => entry.resource?.resourceType),
+    ["CoverageEligibilityRequest", "CoverageEligibilityResponse"],
+  );
+});
+
+test("applying an incomplete plan template leaves an undefined benefit kind untouched", () => {
+  const coverage = { ...LEGACY_COVERAGE, id: "coverage-1" };
+  const draft = emptyManualBenefitsDraft("Patient/patient-1", coverage, "2026-07-10");
+  draft.benefits = draft.benefits.map((benefit) => ({
+    ...benefit,
+    allowanceDollars: "25",
+    usedDollars: "5",
+    lastUsed: "2026-01-15",
+  }));
+  const missingFrame = draft.benefits.find((benefit) => benefit.kind === "frame")!;
+  const template: PlanTemplate = {
+    id: "incomplete-template",
+    label: "Incomplete example",
+    benefits: Object.fromEntries(
+      BENEFIT_KINDS
+        .filter((kind) => kind !== "frame")
+        .map((kind) => [
+          kind,
+          {
+            excluded: true,
+            allowanceDollars: 150,
+            copayDollars: 10,
+            frequencyMonths: 12,
+          },
+        ]),
+    ) as PlanTemplate["benefits"],
+  };
+
+  const applied = applyPlanTemplate(draft, template);
+  assert.deepEqual(
+    applied.benefits.find((benefit) => benefit.kind === "frame"),
+    missingFrame,
+  );
+  const exam = applied.benefits.find((benefit) => benefit.kind === "exam")!;
+  assert.equal(exam.excluded, true);
+  assert.equal(exam.allowanceDollars, "150");
+  assert.equal(exam.copayDollars, "10");
+  assert.equal(exam.frequencyMonths, "12");
+  assert.equal(exam.usedDollars, "5");
+  assert.equal(exam.lastUsed, "2026-01-15");
 });
 
 test("all six benefit statuses are derived from period, authorization, exclusion, and used facts", () => {

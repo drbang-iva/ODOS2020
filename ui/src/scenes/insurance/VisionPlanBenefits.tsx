@@ -2,6 +2,11 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { Coverage, CoverageEligibilityResponse, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
+  applyPlanTemplate,
+  loadInsuranceConfigSingleton,
+  type PlanTemplate,
+} from "../../lib/insurance-config";
+import {
   BENEFIT_KINDS,
   benefitAllowanceDollars,
   benefitCopayDollars,
@@ -35,6 +40,8 @@ export function VisionPlanBenefits({ initialPatientId }: { initialPatientId?: st
   const [expandedCoverage, setExpandedCoverage] = useState<string>();
   const [historyCoverage, setHistoryCoverage] = useState<string>();
   const [draft, setDraft] = useState<ManualBenefitsDraft>();
+  const [planTemplates, setPlanTemplates] = useState<PlanTemplate[]>([]);
+  const [templateError, setTemplateError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
@@ -48,6 +55,23 @@ export function VisionPlanBenefits({ initialPatientId }: { initialPatientId?: st
       .catch((cause) => { if (!cancelled) setError(messageOf(cause)); });
     return () => { cancelled = true; };
   }, [initialPatientId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadInsuranceConfigSingleton(fhir)
+      .then(({ config }) => {
+        if (!cancelled) {
+          setPlanTemplates(config.planTemplates.filter((template) => template.active !== false));
+          setTemplateError(undefined);
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setTemplateError(messageOf(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = async (selected: Patient) => {
     if (!selected.id) return;
@@ -133,7 +157,7 @@ export function VisionPlanBenefits({ initialPatientId }: { initialPatientId?: st
         </>
       )}
 
-      {draft && <ManualBenefitsEditor draft={draft} saving={saving} onChange={setDraft} onCancel={() => setDraft(undefined)} onSave={() => void save()} />}
+      {draft && <ManualBenefitsEditor draft={draft} planTemplates={planTemplates} templateError={templateError} saving={saving} onChange={setDraft} onCancel={() => setDraft(undefined)} onSave={() => void save()} />}
     </main>
   );
 }
@@ -202,11 +226,32 @@ function History({ responses }: { responses: readonly CoverageEligibilityRespons
   return <div className="grid gap-2">{[...responses].sort((a, b) => b.created.localeCompare(a.created)).map((response) => <div key={response.id ?? response.request.reference} className="flex flex-wrap justify-between gap-2 rounded border border-white/10 px-3 py-2 text-sm text-white/60"><span>{response.created}</span><span>{response.insurance?.[0]?.inforce ? "Eligibility active" : "Eligibility expired"}</span><span>{response.request.reference}</span></div>)}</div>;
 }
 
-function ManualBenefitsEditor({ draft, saving, onChange, onCancel, onSave }: { draft: ManualBenefitsDraft; saving: boolean; onChange: (draft: ManualBenefitsDraft) => void; onCancel: () => void; onSave: () => void }) {
+function ManualBenefitsEditor({ draft, planTemplates, templateError, saving, onChange, onCancel, onSave }: { draft: ManualBenefitsDraft; planTemplates: readonly PlanTemplate[]; templateError?: string; saving: boolean; onChange: (draft: ManualBenefitsDraft) => void; onCancel: () => void; onSave: () => void }) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const set = <K extends keyof ManualBenefitsDraft>(key: K, value: ManualBenefitsDraft[K]) => onChange({ ...draft, [key]: value });
   const setBenefit = (index: number, next: BenefitEntryDraft) => set("benefits", draft.benefits.map((benefit, candidate) => candidate === index ? next : benefit));
   return <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4"><section className="mx-auto max-w-6xl rounded-xl border border-white/15 bg-bg-panel p-5 shadow-2xl">
     <div className="mb-5 flex justify-between gap-3"><div><p className="text-xs uppercase tracking-wide text-white/40">Staff-authored eligibility history</p><h2 className="text-xl font-semibold">Manual vision benefits</h2></div><button type="button" onClick={onCancel} className="text-white/50">Close</button></div>
+    <div className="mb-5 flex flex-wrap items-end gap-3 rounded border border-blue-400/20 bg-blue-950/20 p-3">
+      <label className="min-w-64 flex-1 text-xs font-semibold text-blue-100/75">Apply template
+        <select
+          value={selectedTemplateId}
+          onChange={(event) => {
+            const templateId = event.target.value;
+            setSelectedTemplateId(templateId);
+            const template = planTemplates.find((candidate) => candidate.id === templateId);
+            if (template) onChange(applyPlanTemplate(draft, template));
+          }}
+          className="mt-1 w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white"
+        >
+          <option value="">Choose an active template…</option>
+          {planTemplates.map((template) => <option key={template.id} value={template.id}>{template.label}{template.payerDisplay ? ` · ${template.payerDisplay}` : ""}</option>)}
+        </select>
+      </label>
+      <a href="/settings/vision-plan-templates" className="rounded border border-blue-400/30 px-3 py-2 text-sm text-blue-200">Manage templates</a>
+      <p className="w-full text-xs text-white/45">Copies plan-level values into this manual draft. Used amounts and last-used dates stay patient-specific.</p>
+      {templateError && <p role="alert" className="w-full text-xs text-amber-200">Templates unavailable: {templateError}</p>}
+    </div>
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"><Field label="Effective date" type="date" value={draft.effectiveDate} onChange={(value) => set("effectiveDate", value)} /><Field label="Expiration date" type="date" value={draft.endDate} onChange={(value) => set("endDate", value)} /><Field label="Authorization reference" value={draft.authorizationReference} onChange={(value) => set("authorizationReference", value)} /><label className="flex items-center gap-2 pt-6 text-sm text-white/70"><input type="checkbox" checked={draft.eligibilityActive} onChange={(event) => set("eligibilityActive", event.target.checked)} />Eligibility active</label></div>
     <div className="mt-5 grid gap-3 lg:grid-cols-2">{draft.benefits.map((benefit, index) => <BenefitEditor key={benefit.kind} benefit={benefit} onChange={(next) => setBenefit(index, next)} />)}</div>
     <div className="mt-6 flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded border border-white/15 px-4 py-2 text-sm">Cancel</button><button type="button" disabled={saving} onClick={onSave} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save manual entry"}</button></div>

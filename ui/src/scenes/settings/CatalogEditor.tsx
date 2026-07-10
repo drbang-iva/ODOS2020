@@ -23,6 +23,7 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   validateItem?: (item: Item, items: Item[]) => void;
   label: (item: Item) => string;
   facts?: (item: Item) => readonly string[];
+  chips?: (item: Item) => readonly string[];
   color?: (item: Item) => string | undefined;
   groupBy?: {
     label: string;
@@ -376,6 +377,15 @@ function CatalogRow<Item extends CatalogItemBase>({
         <span className="block truncate text-sm font-semibold text-white/90">{descriptor.label(item)}</span>
         {(descriptor.facts?.(item) ?? []).length > 0 && (
           <span className="mt-1 block text-xs text-white/45">{descriptor.facts?.(item).join(" · ")}</span>
+        )}
+        {(descriptor.chips?.(item) ?? []).length > 0 && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {descriptor.chips?.(item).map((chip) => (
+              <span key={chip} className="rounded-full bg-blue-400/10 px-2 py-0.5 text-[11px] text-blue-200">
+                {chip}
+              </span>
+            ))}
+          </span>
         )}
       </span>
       <span className={`mr-3 rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
