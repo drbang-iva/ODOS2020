@@ -34,12 +34,16 @@ const PROVENANCE: ClinicalGraphProvenance = {
 
 class MemoryFindingDefinitionFhir implements FindingDefinitionFhirClient {
   readonly rows: Basic[] = [];
+  searchCount = 0;
+  beforeSearch?: (searchCount: number) => void;
   readonly writes: Array<{
     operation: "create" | "update";
     headers?: Record<string, string>;
   }> = [];
 
   async search<T extends Basic>(): Promise<Bundle<T>> {
+    this.searchCount += 1;
+    this.beforeSearch?.(this.searchCount);
     return {
       resourceType: "Bundle",
       type: "searchset",
@@ -165,23 +169,112 @@ test("saving again updates the same Basic and deactivation materializes active f
   assert.equal((await store.list()).find((definition) => definition.stableKey === "refraction")?.active, false);
 });
 
-test("the store fails closed on malformed and duplicate persisted rows", async () => {
+test("save re-searches before create and updates a competing row that appeared", async () => {
+  const fhir = new MemoryFindingDefinitionFhir();
+  const seeds = buildFindingDefinitionSeeds();
+  const refraction = seeds.find((definition) => definition.stableKey === "refraction");
+  assert.ok(refraction);
+  const competing = buildFindingDefinitionResource({
+    ...refraction,
+    display: "Competing write",
+    sourceStatus: "local-practice",
+    provenance: PROVENANCE,
+  });
+  competing.id = "row-race";
+  fhir.beforeSearch = (searchCount) => {
+    if (searchCount === 2) fhir.rows.push(competing);
+  };
+
+  const saved = await new FhirFindingDefinitionStore(fhir, seeds).save({
+    ...refraction,
+    display: "Requested write",
+  }, PROVENANCE);
+
+  assert.equal(fhir.searchCount, 2);
+  assert.deepEqual(fhir.writes.map((write) => write.operation), ["update"]);
+  assert.equal(saved.display, "Requested write");
+  assert.equal(fhir.rows.length, 1);
+});
+
+test("bad rows are skipped and duplicates resolve by lastUpdated then id", async () => {
   const fhir = new MemoryFindingDefinitionFhir();
   const seeds = buildFindingDefinitionSeeds();
   const refraction = seeds.find((definition) => definition.stableKey === "refraction");
   assert.ok(refraction);
   const local = { ...refraction, sourceStatus: "local-practice" as const, provenance: PROVENANCE };
-  const first = buildFindingDefinitionResource(local);
-  first.id = "row-1";
-  const duplicate = buildFindingDefinitionResource(local);
-  duplicate.id = "row-2";
-  fhir.rows.push(first, duplicate);
+  const older = buildFindingDefinitionResource({ ...local, display: "Older" });
+  older.id = "row-old";
+  older.meta = { lastUpdated: "2026-07-10T12:00:00.000Z" };
+  const tiedLowerId = buildFindingDefinitionResource({ ...local, display: "Tied lower id" });
+  tiedLowerId.id = "row-a";
+  tiedLowerId.meta = { lastUpdated: "2026-07-10T13:00:00.000Z" };
+  const winner = buildFindingDefinitionResource({ ...local, display: "Deterministic winner" });
+  winner.id = "row-z";
+  winner.meta = { lastUpdated: "2026-07-10T13:00:00.000Z" };
+  const garbage = buildFindingDefinitionResource(local);
+  garbage.id = "row-garbage";
+  garbage.extension![0]!.valueString = "{not-json";
+  fhir.rows.push(garbage, older, winner, tiedLowerId);
 
-  await assert.rejects(() => new FhirFindingDefinitionStore(fhir, seeds).list(), /Duplicate stableKey refraction/);
+  const { value: merged, errors } = await captureConsoleErrors(
+    () => new FhirFindingDefinitionStore(fhir, seeds).list(),
+  );
 
-  fhir.rows.splice(0, fhir.rows.length, first);
-  first.extension![0]!.valueString = "{not-json";
-  await assert.rejects(() => new FhirFindingDefinitionStore(fhir, seeds).list(), /JSON is malformed/);
+  assert.equal(merged.length, seeds.length);
+  assert.equal(
+    merged.find((definition) => definition.stableKey === "refraction")?.display,
+    "Deterministic winner",
+  );
+  assert.equal(errors.some((message) => message.includes("Basic/row-garbage skipped")), true);
+  assert.equal(
+    errors.some((message) => message.includes("Basic/row-old skipped") && message.includes("Basic/row-z")),
+    true,
+  );
+  assert.equal(
+    errors.some((message) => message.includes("Basic/row-a skipped") && message.includes("Basic/row-z")),
+    true,
+  );
+});
+
+test("a handler still receives working definitions when one stored row is garbage", async () => {
+  const fhir = new MemoryFindingDefinitionFhir();
+  const seeds = buildFindingDefinitionSeeds();
+  const refraction = seeds.find((definition) => definition.stableKey === "refraction");
+  assert.ok(refraction);
+  const edited = addRefractionTypeOption(refraction, {
+    code: "SURVIVES_GARBAGE",
+    display: "Survives garbage",
+    active: true,
+  });
+  const good = buildFindingDefinitionResource({
+    ...edited,
+    sourceStatus: "local-practice",
+    provenance: PROVENANCE,
+  });
+  good.id = "row-good";
+  const garbage = buildFindingDefinitionResource({
+    ...refraction,
+    sourceStatus: "local-practice",
+    provenance: PROVENANCE,
+  });
+  garbage.id = "row-garbage";
+  garbage.extension![0]!.valueString = "{not-json";
+  fhir.rows.push(garbage, good);
+
+  const { value: definitions, errors } = await captureConsoleErrors(
+    () => new FhirFindingDefinitionStore(fhir, seeds).list(),
+  );
+  const result = await handleRefractionCaptureRequest(endpointDeps("clinician", definitions), {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      blocks: [{ type: "SURVIVES_GARBAGE", OD: { sphere: -1 } }],
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(errors.some((message) => message.includes("Basic/row-garbage skipped")), true);
 });
 
 test("every clinical-graph HTTP closure receives the persistent finding-definition dependency", () => {
@@ -223,4 +316,18 @@ function fieldOptions(
   if (!field || typeof field !== "object" || Array.isArray(field)) return [];
   const options = (field as Record<string, unknown>).options;
   return Array.isArray(options) ? options as Array<{ code?: string }> : [];
+}
+
+async function captureConsoleErrors<T>(operation: () => Promise<T>): Promise<{
+  value: T;
+  errors: string[];
+}> {
+  const original = console.error;
+  const errors: string[] = [];
+  console.error = (...values: unknown[]) => errors.push(values.map(String).join(" "));
+  try {
+    return { value: await operation(), errors };
+  } finally {
+    console.error = original;
+  }
 }

@@ -61,12 +61,18 @@ export class FhirFindingDefinitionStore {
     provenance: ClinicalGraphProvenance = definition.provenance,
   ): Promise<ClinicalFindingDefinition> {
     const stored = await this.readStoredRows();
-    const existing = stored.find((row) => row.definition.stableKey === definition.stableKey)?.resource;
+    let existing = stored.find((row) => row.definition.stableKey === definition.stableKey)?.resource;
     const localDefinition = assertClinicalFindingDefinition({
       ...definition,
       sourceStatus: "local-practice",
       provenance,
     });
+    if (!existing?.id) {
+      const refreshed = await this.readStoredRows();
+      existing = refreshed.find((row) => row.definition.stableKey === definition.stableKey)?.resource;
+    }
+    // A competing row can still appear after the second search and before create; conditional
+    // create can close that residual race when the FHIR client exposes response status semantics.
     const resource = buildFindingDefinitionResource(localDefinition, existing);
     const persisted = existing?.id
       ? await this.fhir.update("Basic", existing.id, resource, FINDING_DEFINITION_WRITE_HEADERS)
@@ -95,10 +101,15 @@ export class FhirFindingDefinitionStore {
     });
     const rows = (bundle.entry ?? []).flatMap((entry) => {
       const resource = entry.resource;
-      return resource ? [{ resource, definition: parseFindingDefinitionResource(resource) }] : [];
+      if (!resource) return [];
+      try {
+        return [{ resource, definition: parseFindingDefinitionResource(resource) }];
+      } catch (error) {
+        console.error(`${basicReference(resource)} skipped: ${errorMessage(error)}`);
+        return [];
+      }
     });
-    assertUniqueStableKeys(rows.map((row) => row.definition), "stored finding-definition rows");
-    return rows;
+    return resolveStoredDuplicates(rows);
   }
 }
 
@@ -226,6 +237,47 @@ function assertUniqueStableKeys(
     }
     seen.add(definition.stableKey);
   }
+}
+
+function resolveStoredDuplicates(
+  rows: Array<{ resource: Basic; definition: ClinicalFindingDefinition }>,
+): Array<{ resource: Basic; definition: ClinicalFindingDefinition }> {
+  const grouped = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const group = grouped.get(row.definition.stableKey) ?? [];
+    group.push(row);
+    grouped.set(row.definition.stableKey, group);
+  }
+  return [...grouped.values()].map((group) => {
+    const winner = group.reduce((current, candidate) =>
+      compareStoredRows(candidate, current) > 0 ? candidate : current
+    );
+    for (const loser of group) {
+      if (loser === winner) continue;
+      console.error(
+        `Duplicate finding-definition stableKey ${winner.definition.stableKey}: ` +
+        `${basicReference(loser.resource)} skipped in favor of ${basicReference(winner.resource)}.`,
+      );
+    }
+    return winner;
+  });
+}
+
+function compareStoredRows(
+  left: { resource: Basic },
+  right: { resource: Basic },
+): number {
+  const lastUpdated = (left.resource.meta?.lastUpdated ?? "")
+    .localeCompare(right.resource.meta?.lastUpdated ?? "");
+  return lastUpdated || (left.resource.id ?? "").localeCompare(right.resource.id ?? "");
+}
+
+function basicReference(resource: Basic): string {
+  return `Finding-definition Basic/${resource.id ?? "unknown"}`;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function requiredString(value: unknown, field: string): asserts value is string {
