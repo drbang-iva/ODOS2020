@@ -60,6 +60,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
+  const [sourceType, setSourceType] = useState("manual");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -74,6 +75,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
       .then((body) => {
         setDefinition(body);
         const firstType = activeOptions(body.definition.fields.eyeglassType)[0]?.code ?? "";
+        setSourceType(activeOptions(body.definition.fields.sourceType)[0]?.code ?? "manual");
         setPairs((current) => current.map((pair) => ({
           ...pair,
           eyeglassType: pair.eyeglassType || firstType,
@@ -92,6 +94,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
 
   const fields = definition?.definition.fields ?? {};
   const eyeglassTypes = useMemo(() => activeOptions(fields.eyeglassType), [fields.eyeglassType]);
+  const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
   const prismBases = useMemo(() => activeOptions(fields.prismBase), [fields.prismBase]);
   const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
@@ -134,6 +137,7 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
         body: JSON.stringify({
           patientReference,
           encounterReference,
+          sourceType,
           leftGlassesAtHome,
           pairs: payloadPairs,
         }),
@@ -166,14 +170,17 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
             <h2 className="text-lg font-semibold text-white">Wearing (WRx)</h2>
             <p className="mt-1 text-sm text-white/45">Pretest lensometer capture for glasses worn into the visit</p>
           </div>
-          <button
-            type="button"
-            onClick={addPair}
-            disabled={definitionLoading || leftGlassesAtHome || eyeglassTypes.length === 0}
-            className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
-          >
-            ＋ Add pair
-          </button>
+          <div className="flex items-end gap-3">
+            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span><select value={sourceType} onChange={(event) => setSourceType(event.target.value)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white">{sourceTypes.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}</select></label>
+            <button
+              type="button"
+              onClick={addPair}
+              disabled={definitionLoading || leftGlassesAtHome || eyeglassTypes.length === 0}
+              className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
+            >
+              ＋ Add pair
+            </button>
+          </div>
         </div>
 
         <label className="mt-5 flex items-center gap-3 rounded border border-white/10 bg-white/[0.03] p-4 text-sm text-white/80">

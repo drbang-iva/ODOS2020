@@ -18,6 +18,7 @@ import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
 import { SubmitClaims } from "./scenes/claims/SubmitClaims";
 import { CarrierPayments } from "./scenes/claims/CarrierPayments";
 import { PatientPayments } from "./scenes/claims/PatientPayments";
+import { ChartFieldsSettings } from "./scenes/ChartFieldsSettings";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -110,6 +111,9 @@ function RouteSwitch({ view }: { view: ViewState }) {
       return <PatientPayments />;
     case "/admin/practice/settings/frames-data":
       return <OpticalFrames route="settings" />;
+    case "/settings/chart-fields-sections":
+    case "/admin/practice/settings/chart-fields":
+      return <ChartFieldsSettings />;
     default:
       return <ViewRouter view={view} />;
   }

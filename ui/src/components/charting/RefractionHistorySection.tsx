@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { fhir } from "../../lib/fhir";
 import { formatPowerOption } from "./power-options";
 
@@ -8,6 +8,13 @@ type SortKey = "date" | "type" | "eye";
 
 interface Props {
   patientReference: string;
+}
+
+interface HistoryExtra {
+  code: string;
+  label: string;
+  value: number | string;
+  unit?: string;
 }
 
 interface GlassesRow {
@@ -21,6 +28,7 @@ interface GlassesRow {
   distVA?: string;
   nearVA?: string;
   purpose?: string;
+  extras?: HistoryExtra[];
 }
 
 interface SoftContactLensRow {
@@ -38,6 +46,7 @@ interface SoftContactLensRow {
   distVA?: string;
   nearVA?: string;
   status?: string;
+  extras?: HistoryExtra[];
 }
 
 interface SpecialtyContactLensRow {
@@ -54,6 +63,7 @@ interface SpecialtyContactLensRow {
   add?: number;
   distVA?: string;
   nearVA?: string;
+  extras?: HistoryExtra[];
 }
 
 interface RefractionHistoryResponse {
@@ -173,6 +183,8 @@ export function RefractionHistorySection({ patientReference }: Props) {
 }
 
 function GlassesTable({ rows, sort, onSort }: TableProps<GlassesRow>) {
+  const extras = extraColumns(rows);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <Table>
       <thead><tr>
@@ -180,55 +192,68 @@ function GlassesTable({ rows, sort, onSort }: TableProps<GlassesRow>) {
         <SortableHeader label="Date" sortKey="date" sort={sort} onSort={onSort} />
         <SortableHeader label="Eye" sortKey="eye" sort={sort} onSort={onSort} />
         {plainHeaders(["Sphere", "Cyl", "Axis", "Add", "DVA", "NVA", "Purpose"])}
+        <ExtraHeaders extras={extras} />
       </tr></thead>
-      <tbody>{rows.map((row, index) => (
-        <tr key={`${row.date}-${row.type}-${row.eye}-${index}`}>
+      <tbody>{rows.map((row, index) => {
+        const key = `${row.date}-${row.type}-${row.eye}-${index}`;
+        return <Fragment key={key}><tr>
           <Cell>{humanize(row.type)}</Cell><Cell>{formatDate(row.date)}</Cell><Cell>{row.eye}</Cell>
           <Cell>{power(row.sphere)}</Cell><Cell>{power(row.cylinder)}</Cell><Cell>{value(row.axis)}</Cell>
           <Cell>{power(row.add)}</Cell><Cell>{row.distVA}</Cell><Cell>{row.nearVA}</Cell><Cell>{row.purpose}</Cell>
-        </tr>
-      ))}</tbody>
+          <ExtraCells row={row} extras={extras} expanded={expanded === key} onToggle={() => setExpanded(expanded === key ? null : key)} />
+        </tr><ExtraDetailRow row={row} extras={extras} expanded={expanded === key} colSpan={10} /></Fragment>;
+      })}</tbody>
     </Table>
   );
 }
 
 function SoftContactLensTable({ rows, sort, onSort }: TableProps<SoftContactLensRow>) {
+  const extras = extraColumns(rows);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <Table>
       <thead><tr>
         <SortableHeader label="Date" sortKey="date" sort={sort} onSort={onSort} />
         <SortableHeader label="Eye" sortKey="eye" sort={sort} onSort={onSort} />
         {plainHeaders(["Manufacturer", "Product", "BC", "Dia", "Sphere", "Cyl", "Axis", "Add", "Color/MF-PWR", "DVA", "NVA", "Status"])}
+        <ExtraHeaders extras={extras} />
       </tr></thead>
-      <tbody>{rows.map((row, index) => (
-        <tr key={`${row.date}-${row.eye}-${index}`}>
+      <tbody>{rows.map((row, index) => {
+        const key = `${row.date}-${row.eye}-${index}`;
+        return <Fragment key={key}><tr>
           <Cell>{formatDate(row.date)}</Cell><Cell>{row.eye}</Cell><Cell>{humanize(row.manufacturer)}</Cell>
           <Cell>{humanize(row.product)}</Cell><Cell>{value(row.baseCurve)}</Cell><Cell>{value(row.diameter)}</Cell>
           <Cell>{power(row.sphere)}</Cell><Cell>{power(row.cylinder)}</Cell><Cell>{value(row.axis)}</Cell>
           <Cell>{power(row.add)}</Cell><Cell>{humanize(row.colorMfPower)}</Cell><Cell>{row.distVA}</Cell>
           <Cell>{row.nearVA}</Cell><Cell>{humanize(row.status)}</Cell>
-        </tr>
-      ))}</tbody>
+          <ExtraCells row={row} extras={extras} expanded={expanded === key} onToggle={() => setExpanded(expanded === key ? null : key)} />
+        </tr><ExtraDetailRow row={row} extras={extras} expanded={expanded === key} colSpan={14} /></Fragment>;
+      })}</tbody>
     </Table>
   );
 }
 
 function SpecialtyContactLensTable({ rows, sort, onSort }: TableProps<SpecialtyContactLensRow>) {
+  const extras = extraColumns(rows);
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <Table>
       <thead><tr>
         <SortableHeader label="Date" sortKey="date" sort={sort} onSort={onSort} />
         <SortableHeader label="Eye" sortKey="eye" sort={sort} onSort={onSort} />
         {plainHeaders(["Product", "Lens Type", "Material", "BC", "Dia", "Sphere", "Cyl", "Axis", "Add", "DVA", "NVA"])}
+        <ExtraHeaders extras={extras} />
       </tr></thead>
-      <tbody>{rows.map((row, index) => (
-        <tr key={`${row.date}-${row.eye}-${index}`}>
+      <tbody>{rows.map((row, index) => {
+        const key = `${row.date}-${row.eye}-${index}`;
+        return <Fragment key={key}><tr>
           <Cell>{formatDate(row.date)}</Cell><Cell>{row.eye}</Cell><Cell>{humanize(row.product)}</Cell>
           <Cell>{humanize(row.lensType)}</Cell><Cell>{humanize(row.material)}</Cell><Cell>{value(row.baseCurve)}</Cell>
           <Cell>{value(row.diameter)}</Cell><Cell>{power(row.sphere)}</Cell><Cell>{power(row.cylinder)}</Cell>
           <Cell>{value(row.axis)}</Cell><Cell>{power(row.add)}</Cell><Cell>{row.distVA}</Cell><Cell>{row.nearVA}</Cell>
-        </tr>
-      ))}</tbody>
+          <ExtraCells row={row} extras={extras} expanded={expanded === key} onToggle={() => setExpanded(expanded === key ? null : key)} />
+        </tr><ExtraDetailRow row={row} extras={extras} expanded={expanded === key} colSpan={13} /></Fragment>;
+      })}</tbody>
     </Table>
   );
 }
@@ -272,6 +297,65 @@ function plainHeaders(labels: string[]) {
   return labels.map((label) => (
     <th key={label} className="whitespace-nowrap bg-bg-mid/80 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-white/45">{label}</th>
   ));
+}
+
+function ExtraHeaders({ extras }: { extras: Array<{ code: string; label: string }> }) {
+  if (extras.length === 0) return null;
+  return extras.length <= 4
+    ? <>{plainHeaders(extras.map((extra) => extra.label))}</>
+    : <>{plainHeaders(["Additional fields"])}</>;
+}
+
+function ExtraCells({ row, extras, expanded, onToggle }: {
+  row: { extras?: HistoryExtra[] };
+  extras: Array<{ code: string; label: string }>;
+  expanded: boolean;
+  onToggle(): void;
+}) {
+  if (extras.length === 0) return null;
+  if (extras.length > 4) {
+    return <Cell><button type="button" onClick={onToggle} className="rounded border border-white/15 px-2 py-1 text-xs text-brand-light hover:bg-brand/10">{expanded ? "Hide" : "Show"}</button></Cell>;
+  }
+  const values = new Map((row.extras ?? []).map((extra) => [extra.code, extra]));
+  return <>{extras.map((extra) => {
+    const item = values.get(extra.code);
+    return <Cell key={extra.code}>{formatExtra(item)}</Cell>;
+  })}</>;
+}
+
+function ExtraDetailRow({ row, extras, expanded, colSpan }: {
+  row: { extras?: HistoryExtra[] };
+  extras: Array<{ code: string; label: string }>;
+  expanded: boolean;
+  colSpan: number;
+}) {
+  if (extras.length <= 4 || !expanded) return null;
+  return (
+    <tr>
+      <td colSpan={colSpan + 1} className="border-t border-white/10 bg-bg-deep/55 px-4 py-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {(row.extras ?? []).map((extra) => (
+            <div key={extra.code}><div className="text-xs uppercase tracking-wide text-white/35">{extra.label}</div><div className="mt-1 text-sm text-white/75">{formatExtra(extra)}</div></div>
+          ))}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function extraColumns(rows: Array<{ extras?: HistoryExtra[] }>): Array<{ code: string; label: string }> {
+  const columns = new Map<string, string>();
+  for (const row of rows) {
+    for (const extra of row.extras ?? []) {
+      if (!columns.has(extra.code)) columns.set(extra.code, extra.label);
+    }
+  }
+  return [...columns].map(([code, label]) => ({ code, label }));
+}
+
+function formatExtra(extra: HistoryExtra | undefined): string {
+  if (!extra) return "";
+  return `${extra.value}${extra.unit ? ` ${extra.unit}` : ""}`;
 }
 
 function sortRows<T extends { date: string; eye: Eye }>(rows: T[], key: SortKey, direction: "asc" | "desc"): T[] {
