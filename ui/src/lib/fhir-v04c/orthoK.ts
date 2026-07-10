@@ -190,7 +190,7 @@ export function buildOrthoKFitObservation(input: BuildOrthoKFitObservationInput)
 
   return {
     resourceType: "Observation",
-    status: "final",
+    status: "preliminary",
     meta: { profile: [OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL] },
     code: clinicalObservationConcept(input.findingCode),
     category: [

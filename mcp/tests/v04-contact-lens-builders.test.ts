@@ -181,6 +181,7 @@ test("contact lens fit finding observations are patient-subject and lens-focused
   });
 
   assert.equal(observation.meta?.profile?.[0], OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL);
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.subject.reference, "Patient/p1");
   assert.equal(observation.focus?.[0]?.reference, "Device/lens1");
   assert.equal(observation.component?.[0]?.valueQuantity?.code, "ms");

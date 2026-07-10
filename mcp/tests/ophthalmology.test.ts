@@ -45,6 +45,7 @@ test("visual acuity 20/20 creates structured logMAR 0", () => {
   assert.equal(component(resource, "VA_LOGMAR").valueQuantity?.value, 0);
   assertCoding(resource.code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "VISUAL_ACUITY");
   assertCoding(resource.code.coding, SNOMED_CT_CODE_SYSTEM, "397536007");
+  assert.equal(resource.status, "preliminary");
   assertExamCategory(resource);
   assert.equal(resource.valueString, undefined);
 });
@@ -110,6 +111,7 @@ test("IOP stores numeric valueQuantity, UCUM mm[Hg], laterality, and method", ()
   assert.equal(resource.valueQuantity?.code, "mm[Hg]");
   assert.equal(resource.bodySite?.coding?.[0]?.code, "OD");
   assert.equal(resource.method?.coding?.[0]?.code, "GAT");
+  assert.equal(resource.status, "preliminary");
   assertCoding(resource.code.coding, OSOD_OPHTHALMOLOGY_CODE_SYSTEM, "INTRAOCULAR_PRESSURE");
   assertCoding(resource.code.coding, SNOMED_CT_CODE_SYSTEM, "41633001");
   assertCoding(resource.method?.coding, SNOMED_CT_CODE_SYSTEM, "389152008");

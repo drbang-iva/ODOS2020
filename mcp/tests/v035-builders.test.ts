@@ -237,6 +237,7 @@ test("Smoking Status Observation uses US Core profile and LOINC 72166-2", () => 
   });
 
   assert.equal(observation.meta?.profile?.[0], US_CORE_SMOKING_STATUS_PROFILE);
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.code.coding?.[0]?.system, LOINC_CODE_SYSTEM);
   assert.equal(observation.code.coding?.[0]?.code, TOBACCO_SMOKING_STATUS_LOINC_CODE);
 });

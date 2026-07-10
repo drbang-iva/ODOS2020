@@ -25,7 +25,7 @@ export function buildMeibographyObservation(input: {
   return {
     resourceType: "Observation",
     meta: { profile: [OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL] },
-    status: "final",
+    status: "preliminary",
     category: [
       {
         coding: [

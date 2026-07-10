@@ -603,7 +603,7 @@ export function buildLensFitObservation(input: BuildLensFitObservationInput): Ob
 
   return {
     resourceType: "Observation",
-    status: "final",
+    status: "preliminary",
     meta: { profile: [OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL] },
     code: contactLensClinicalObservationConcept(input.findingCode),
     category: [

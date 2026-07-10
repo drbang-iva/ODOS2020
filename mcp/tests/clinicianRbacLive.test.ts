@@ -129,7 +129,7 @@ test("live scoped-clinician exam-start RBAC matrix", { timeout: 90_000 }, async 
 
   const otherHeaders = fhirHeaders(otherClinicianToken);
   const otherRead = await fetch(`${fhirBase}/${patientReference}`, { headers: otherHeaders });
-  assert.equal(otherRead.status, 403, await otherRead.text());
+  assert.equal(otherRead.status, 404, await otherRead.text());
   const otherWrite = await createObservation(
     fhirBase,
     otherHeaders,

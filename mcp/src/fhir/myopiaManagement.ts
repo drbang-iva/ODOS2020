@@ -227,7 +227,7 @@ export function buildMyopiaAxialLengthObservation(
   return applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
+      status: "preliminary",
       meta: { profile: [OBSERVATION_AXIAL_LENGTH_PROFILE_URL] },
       code: axialLengthConcept(input.eye),
       valueQuantity: quantity(input.valueMm, "mm", UCUM_CODE_SYSTEM, "mm"),

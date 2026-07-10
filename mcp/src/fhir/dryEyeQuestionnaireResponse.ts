@@ -81,7 +81,7 @@ export function buildDryEyeQuestionnaireScoreObservation(
     meta: {
       profile: [`${OSOD_FHIR_BASE}/StructureDefinition/Observation-DryEyeQuestionnaireScore`],
     },
-    status: "final",
+    status: "preliminary",
     category: [
       {
         coding: [

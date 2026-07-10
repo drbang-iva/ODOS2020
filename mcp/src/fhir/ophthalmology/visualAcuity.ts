@@ -108,7 +108,7 @@ export function buildVisualAcuityObservation(
   const observation = applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
+      status: "preliminary",
       code: {
         coding: dualCoding(
           "VISUAL_ACUITY",

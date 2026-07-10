@@ -81,6 +81,7 @@ function assertSectionBundle(
     assert.equal(observation.resource?.resourceType, "Observation");
 
     const obs = observation.resource as Observation;
+    assert.equal(obs.status, "preliminary");
     assert.equal(obs.subject?.reference, "Patient/p1");
     assert.equal(obs.encounter?.reference, "Encounter/e1");
     assert.equal(obs.effectiveDateTime, baseInput.measuredAt);
