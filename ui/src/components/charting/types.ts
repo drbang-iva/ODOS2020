@@ -3,6 +3,7 @@ export type ChartSectionId =
   | "auto-refraction"
   | "va"
   | "refraction"
+  | "soft-contact-lens"
   | "ortho-k"
   | "dry-eye"
   | "myopia-management"

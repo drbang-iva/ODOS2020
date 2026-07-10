@@ -9,6 +9,7 @@ import { IopSection } from "../components/charting/IopSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
+import { SoftContactLensSection } from "../components/charting/SoftContactLensSection";
 import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
@@ -25,6 +26,7 @@ const EMPTY_STATUSES: SectionStatusMap = {
   "auto-refraction": { completed: false },
   va: { completed: false },
   refraction: { completed: false },
+  "soft-contact-lens": { completed: false },
   "ortho-k": { completed: false },
   "dry-eye": { completed: false },
   "myopia-management": { completed: false },
@@ -87,6 +89,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("refraction", status)}
+            />
+          )}
+          {activeSection === "soft-contact-lens" && (
+            <SoftContactLensSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("soft-contact-lens", status)}
             />
           )}
           {activeSection === "ortho-k" && (
