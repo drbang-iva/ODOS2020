@@ -92,11 +92,24 @@ export interface CoverageEntryInput {
   patientReference: string;
   payorReference: string;
   payorDisplay?: string;
+  payerId?: string;
+  planName?: string;
+  coverageType?: "medical" | "vision";
   memberId: string;
   groupNumber: string;
-  relationship: "self" | "other";
+  groupName?: string;
+  relationship: SubscriberRelationship;
+  relationshipSystem?: string;
+  subscriberReference?: string;
   effectiveDate: string;
+  endDate?: string;
+  primary?: boolean;
+  active?: boolean;
 }
+
+export type SubscriberRelationship = "child" | "parent" | "spouse" | "common" | "other" | "self" | "injured";
+
+export const SUBSCRIBER_RELATIONSHIP_SYSTEM = "http://terminology.hl7.org/CodeSystem/subscriber-relationship";
 
 export interface ClaimsApiOptions {
   authorization?: string;
@@ -181,25 +194,48 @@ export function claimPersonFromPatient(patient: Patient): ClaimMdPersonInput {
 }
 
 export function buildCoverageResource(input: CoverageEntryInput): Coverage {
+  const groupNumber = input.groupNumber.trim();
+  const groupName = input.groupName?.trim();
+  const planName = input.planName?.trim();
+  const subscriberReference = input.subscriberReference?.trim()
+    || (input.relationship === "self" ? input.patientReference : "");
   return {
     resourceType: "Coverage",
-    status: "active",
+    status: input.active === false ? "cancelled" : "active",
     subscriberId: input.memberId.trim(),
     identifier: [{ value: input.memberId.trim() }],
     beneficiary: { reference: input.patientReference },
-    ...(input.relationship === "self" ? { subscriber: { reference: input.patientReference } } : {}),
+    ...(subscriberReference ? { subscriber: { reference: subscriberReference } } : {}),
     relationship: {
       coding: [{
+        system: input.relationshipSystem ?? SUBSCRIBER_RELATIONSHIP_SYSTEM,
         code: input.relationship,
-        display: input.relationship === "self" ? "Self" : "Other",
+        display: relationshipDisplay(input.relationship),
       }],
     },
+    ...(input.coverageType ? { type: { text: coverageTypeDisplay(input.coverageType) } } : {}),
     payor: [{
       reference: input.payorReference.trim(),
       ...(input.payorDisplay?.trim() ? { display: input.payorDisplay.trim() } : {}),
+      ...(input.payerId?.trim() ? { identifier: { value: input.payerId.trim() } } : {}),
     }],
-    class: [{ type: { coding: [{ code: "group", display: "Group" }] }, value: input.groupNumber.trim() }],
-    period: { start: input.effectiveDate },
+    class: [
+      ...(groupNumber || groupName ? [{
+        type: { coding: [{ code: "group", display: "Group" }] },
+        value: groupNumber,
+        ...(groupName ? { name: groupName } : {}),
+      }] : []),
+      ...(planName ? [{
+        type: { coding: [{ code: "plan", display: "Plan" }] },
+        value: planName,
+        name: planName,
+      }] : []),
+    ],
+    period: {
+      start: input.effectiveDate,
+      ...(input.endDate ? { end: input.endDate } : {}),
+    },
+    ...(input.primary !== undefined ? { order: input.primary ? 1 : 2 } : {}),
   };
 }
 
@@ -211,6 +247,35 @@ export function coverageGroupNumber(coverage: Coverage): string {
   return coverage.class?.find((entry) =>
     entry.type.coding?.some((coding) => coding.code === "group") || entry.type.text?.toLowerCase() === "group"
   )?.value ?? "";
+}
+
+export function coverageGroupName(coverage: Coverage): string {
+  return coverage.class?.find((entry) =>
+    entry.type.coding?.some((coding) => coding.code === "group") || entry.type.text?.toLowerCase() === "group"
+  )?.name ?? "";
+}
+
+export function coveragePlanName(coverage: Coverage): string {
+  const plan = coverage.class?.find((entry) =>
+    entry.type.coding?.some((coding) => coding.code === "plan") || entry.type.text?.toLowerCase() === "plan"
+  );
+  return plan?.name ?? plan?.value ?? "";
+}
+
+export function coveragePayerId(coverage: Coverage): string {
+  return coverage.payor[0]?.identifier?.value ?? "";
+}
+
+export function coverageRelationship(coverage: Coverage): SubscriberRelationship {
+  const code = coverage.relationship?.coding?.find((coding) => coding.code)?.code
+    ?? coverage.relationship?.text?.toLowerCase();
+  return isSubscriberRelationship(code) ? code : "other";
+}
+
+export function coverageType(coverage: Coverage): "medical" | "vision" | "" {
+  const value = coverage.type?.coding?.find((coding) => coding.code)?.code
+    ?? coverage.type?.text?.toLowerCase();
+  return value === "medical" || value === "vision" ? value : "";
 }
 
 export function coverageIsSelf(coverage: Coverage): boolean {
@@ -240,6 +305,19 @@ export function coverageLabel(coverage: Coverage): string {
   return [payor?.display ?? payor?.reference ?? "Unknown payor", member && `Member ${member}`, group && `Group ${group}`]
     .filter(Boolean)
     .join(" · ");
+}
+
+function isSubscriberRelationship(value: string | undefined): value is SubscriberRelationship {
+  return value === "child" || value === "parent" || value === "spouse" || value === "common"
+    || value === "other" || value === "self" || value === "injured";
+}
+
+function relationshipDisplay(value: SubscriberRelationship): string {
+  return value === "common" ? "Common law spouse" : `${value[0].toUpperCase()}${value.slice(1)}`;
+}
+
+function coverageTypeDisplay(value: "medical" | "vision"): string {
+  return value === "medical" ? "Medical" : "Vision";
 }
 
 export function dollarsToCents(value: string): number {

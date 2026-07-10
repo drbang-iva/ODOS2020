@@ -403,6 +403,18 @@
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claims-phase-5"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-last-used",
+      "namespace": "insurance",
+      "status": "active",
+      "sliceConsumer": "claims-phase-7a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-frequency-months",
+      "namespace": "insurance",
+      "status": "active",
+      "sliceConsumer": "claims-phase-7a"
     }
   ]
 }

@@ -52,6 +52,10 @@ export function PatientDirector({ patient }: { patient: Patient }) {
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-bg-deep lg:flex-row">
       <div className="relative min-h-[520px] min-w-0 flex-1 lg:min-h-0">
         <Hud patient={patient} selected={selected} onClearSelection={() => setSelected(null)} />
+        <div className="absolute right-4 top-4 z-10 flex gap-2">
+          <button type="button" onClick={() => window.location.assign(`/patient/insurance?patientId=${patient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Insurance</button>
+          <button type="button" onClick={() => window.location.assign(`/patient/vision-benefits?patientId=${patient.id}`)} className="rounded border border-blue-400/30 bg-bg-panel/90 px-3 py-2 text-xs font-semibold text-blue-200">Vision benefits</button>
+        </div>
 
         <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
           <Suspense fallback={null}>

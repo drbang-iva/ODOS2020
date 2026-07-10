@@ -30,9 +30,10 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
   );
 });
 
-test("the Phase 6a audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
+test("the latest audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
+  const migrationFile = "2026-07-10-phase7a-insurance-audit-events.sql";
   const sql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-07-10-payment-credit-event.sql"),
+    resolve(process.cwd(), "../data/migrations", migrationFile),
     "utf8",
   );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
@@ -41,6 +42,8 @@ test("the Phase 6a audit migration drop-and-re-add constraint exactly matches th
   assert.ok(addIndex > dropIndex);
   const sqlTypes = [...sql.matchAll(/'([^']+)'/g)].map((match) => match[1]);
   assert.deepEqual(sqlTypes, [...OSOD_AUDIT_EVENT_TYPES]);
+  const liveAuditSource = readFileSync(resolve(process.cwd(), "src/authz/liveAudit.ts"), "utf8");
+  assert.match(liveAuditSource, new RegExp(`AUDIT_DDL_FILES[\\s\\S]*${migrationFile.replaceAll(".", "\\.")}`));
 });
 
 test("buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record", () => {

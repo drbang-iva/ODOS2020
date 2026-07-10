@@ -40,6 +40,7 @@ import {
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
+import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import {
   paymentAdapterRegistrationsFromEnv,
@@ -5839,6 +5840,12 @@ async function main(): Promise<void> {
       registerPatientPaymentRoutes(app, {
         authenticateService: authenticateWithMedplum,
         handlers: paymentCreditDeps,
+      });
+      registerPatientInsuranceRoutes(app, authenticateWithMedplum, {
+        authenticate: authenticateStaffRoute,
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
       });
       registerReportingRoutes(app, {
         authenticateService: authenticateWithMedplum,
