@@ -232,6 +232,19 @@ export function paymentMethodForReconciliation(
   throw new Error(`No Phase 6a void adapter is registered for payment tender "${code}".`);
 }
 
+export function canVoidPaymentCredit(pr: PaymentReconciliation, nowIso: string): boolean {
+  try {
+    assertMutable(pr);
+    if (unappliedPaymentCents(pr) <= 0 || !pr.paymentIdentifier?.value) {
+      return false;
+    }
+    assertVoidWindow(pr, nowIso, paymentMethodForReconciliation(pr));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertAllocationInvariant(
   pr: PaymentReconciliation,
   detail: PaymentReconciliationDetail[],
@@ -312,7 +325,7 @@ function assertVoidWindow(
   }
 }
 
-function paymentAmountCents(pr: PaymentReconciliation): number {
+export function paymentAmountCents(pr: PaymentReconciliation): number {
   const value = pr.paymentAmount?.value;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new Error("PaymentReconciliation has no positive paymentAmount.");
@@ -328,7 +341,7 @@ function detailAmountCents(detail: PaymentReconciliationDetail): number {
   return Math.round(value * 100);
 }
 
-function paymentTenderCode(pr: PaymentReconciliation): string {
+export function paymentTenderCode(pr: PaymentReconciliation): string {
   const code = pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0]?.code;
   if (!code) {
@@ -337,7 +350,7 @@ function paymentTenderCode(pr: PaymentReconciliation): string {
   return code;
 }
 
-function paymentTenderLabel(pr: PaymentReconciliation): string {
+export function paymentTenderLabel(pr: PaymentReconciliation): string {
   const coding = pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0];
   const tender = coding?.display ?? coding?.code;

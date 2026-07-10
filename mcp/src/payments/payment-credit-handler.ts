@@ -1,11 +1,17 @@
-import type { PaymentReconciliation } from "@medplum/fhirtypes";
+import type { Bundle, Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import {
   applyPaymentCredit,
+  canVoidPaymentCredit,
+  paymentAmountCents,
+  paymentMethodForReconciliation,
   paymentSubjectReference,
+  paymentTenderCode,
+  paymentTenderLabel,
   queryUnappliedCredits,
   transferPaymentCredit,
+  unappliedPaymentCents,
   voidPaymentCredit,
 } from "./payment-credit-service.js";
 import type { PaymentCreditFhirClient } from "./payment-credit-service.js";
@@ -22,6 +28,28 @@ export interface PaymentCreditHandlerDeps {
   dispatch: PaymentDispatch;
   recordAudit(row: OsodAuditEventRecord): Promise<void>;
   now?: () => string;
+}
+
+export interface PatientPaymentInvoice {
+  reference: string;
+  label: string;
+  status?: Invoice["status"];
+}
+
+export interface PatientPaymentRow {
+  paymentReconciliationReference: string;
+  status: PaymentReconciliation["status"];
+  date: string;
+  created: string;
+  tenderCode: string;
+  tender: string;
+  amountCents: number;
+  allocatedCents: number;
+  unappliedCents: number;
+  patientReference: string;
+  invoices: PatientPaymentInvoice[];
+  method?: "manual-cash" | "clover";
+  canVoid: boolean;
 }
 
 export async function handleApplyCreditRequest(
@@ -153,6 +181,113 @@ export async function handleUnappliedCreditsRequest(
   }
 }
 
+export async function handlePaymentReconciliationsRequest(
+  deps: Pick<PaymentCreditHandlerDeps, "authenticate" | "now">,
+  input: {
+    authHeader: string | undefined;
+    query?: Record<string, unknown>;
+  },
+): Promise<ChargeHandlerResult> {
+  const staff = await authorizedStaff(deps, input.authHeader);
+  if ("result" in staff) return staff.result;
+  const patientReference = queryValue(input.query?.patientReference);
+  const startDate = queryValue(input.query?.startDate);
+  const endDate = queryValue(input.query?.endDate);
+  if (!patientReference || !/^Patient\/[A-Za-z0-9.-]+$/.test(patientReference)) {
+    return badRequest('A local "Patient/<id>" patientReference is required.');
+  }
+  if ((startDate && !isR4Date(startDate)) || (endDate && !isR4Date(endDate))) {
+    return badRequest("startDate and endDate must be R4 dates (YYYY-MM-DD).");
+  }
+  if (startDate && endDate && startDate > endDate) {
+    return badRequest("startDate must not be after endDate.");
+  }
+
+  try {
+    const bundle = await staff.staff.fhir.search<PaymentReconciliation>("PaymentReconciliation", {
+      _count: "1000",
+      _sort: "-_lastUpdated",
+    });
+    if (bundle.link?.some((link) => link.relation === "next")) {
+      return badRequest("Payment query exceeded one FHIR page; no partial ledger was returned.");
+    }
+    const payments = bundleResources(bundle)
+      .filter((payment) => {
+        if (paymentSubjectReference(payment) !== patientReference) return false;
+        const date = payment.paymentDate;
+        return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+      })
+      .sort((a, b) => b.paymentDate.localeCompare(a.paymentDate) || b.created.localeCompare(a.created));
+    const invoiceReferences = unique(payments.flatMap((payment) =>
+      (payment.detail ?? []).flatMap((detail) => {
+        const reference = detail.request?.reference;
+        return reference && /^Invoice\/[A-Za-z0-9.-]+$/.test(reference) ? [reference] : [];
+      }),
+    ));
+    const invoices = invoiceReferences.length === 0
+      ? []
+      : bundleResources(await staff.staff.fhir.search<Invoice>("Invoice", {
+          _id: invoiceReferences.map((reference) => reference.slice("Invoice/".length)).join(","),
+          _count: String(invoiceReferences.length),
+        }));
+    const invoiceByReference = new Map(invoices.flatMap((invoice) => invoice.id
+      ? [[`Invoice/${invoice.id}`, invoice] as const]
+      : []));
+    const nowIso = deps.now?.() ?? new Date().toISOString();
+    return {
+      status: 200,
+      body: {
+        items: payments.map((payment) => patientPaymentRow(payment, invoiceByReference, nowIso)),
+      },
+    };
+  } catch (error) {
+    return badRequest(messageOf(error));
+  }
+}
+
+export function patientPaymentRow(
+  payment: PaymentReconciliation,
+  invoiceByReference: ReadonlyMap<string, Invoice>,
+  nowIso: string,
+): PatientPaymentRow {
+  if (!payment.id) throw new Error("PaymentReconciliation is missing its id.");
+  const patientReference = paymentSubjectReference(payment);
+  if (!patientReference) throw new Error("PaymentReconciliation is missing its patient subject.");
+  const amountCents = paymentAmountCents(payment);
+  const unappliedCents = unappliedPaymentCents(payment);
+  let method: "manual-cash" | "clover" | undefined;
+  try {
+    method = paymentMethodForReconciliation(payment);
+  } catch {
+    method = undefined;
+  }
+  return {
+    paymentReconciliationReference: `PaymentReconciliation/${payment.id}`,
+    status: payment.status,
+    date: payment.paymentDate,
+    created: payment.created,
+    tenderCode: paymentTenderCode(payment),
+    tender: paymentTenderLabel(payment),
+    amountCents,
+    allocatedCents: amountCents - unappliedCents,
+    unappliedCents,
+    patientReference,
+    invoices: unique((payment.detail ?? []).flatMap((detail) => {
+      const reference = detail.request?.reference;
+      return reference && /^Invoice\/[A-Za-z0-9.-]+$/.test(reference) ? [reference] : [];
+    })).map((reference) => {
+      const invoice = invoiceByReference.get(reference);
+      return {
+        reference,
+        label: invoice?.identifier?.find((identifier) => identifier.value)?.value ?? reference,
+        ...(invoice ? { status: invoice.status } : {}),
+      };
+    }),
+    ...(method ? { method } : {}),
+    canVoid: canVoidPaymentCredit(payment, nowIso),
+  };
+}
+
 async function authorizedStaff(
   deps: Pick<PaymentCreditHandlerDeps, "authenticate">,
   authHeader: string | undefined,
@@ -201,6 +336,27 @@ function localReference(value: unknown, resourceType: string): string | undefine
 
 function positiveCents(value: unknown): number | undefined {
   return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function queryValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function isR4Date(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.getUTCFullYear() === Number(match[1])
+    && date.getUTCMonth() === Number(match[2]) - 1
+    && date.getUTCDate() === Number(match[3]);
+}
+
+function bundleResources<T extends PaymentReconciliation | Invoice>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function unique(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }
 
 function badRequest(error: string): ChargeHandlerResult {
