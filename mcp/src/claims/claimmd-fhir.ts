@@ -128,6 +128,16 @@ export interface ClaimMdEraData {
   claim?: ClaimMdEraClaim | ClaimMdEraClaim[];
 }
 
+export interface ManualClaimResponseLineInput {
+  itemSequence: number;
+  submittedCents: number;
+  allowedCents: number;
+  paidCents: number;
+  deductibleCents: number;
+  coinsuranceCents: number;
+  copayCents: number;
+}
+
 export interface MedicalEligibilitySummary {
   coverageStatus: "active" | "inactive" | "unknown";
   deductibleRemainingCents?: number;
@@ -356,6 +366,92 @@ export function buildClaimResponseFromClaimMdEra(input: {
       date: isoDateFromClaimMd(input.era.paid_date) ?? input.created,
       amount: money(totalPaidCents),
       ...(input.era.eraid ? { identifier: { system: "https://osod.dev/fhir/NamingSystem/claimmd-era", value: input.era.eraid } } : {}),
+    },
+  };
+}
+
+export function buildManualClaimResponse(input: {
+  claimReference: string;
+  patientReference: string;
+  insurerReference: string;
+  providerReference?: string;
+  created: string;
+  paymentDate: string;
+  paymentReference: string;
+  paymentIdentifierSystem: string;
+  lines: ManualClaimResponseLineInput[];
+}): ClaimResponse {
+  if (!/^Claim\/[A-Za-z0-9.-]+$/.test(input.claimReference)) {
+    throw new Error("Manual ClaimResponse request must reference Claim/<id>.");
+  }
+  if (!/^Patient\/[A-Za-z0-9.-]+$/.test(input.patientReference)) {
+    throw new Error("Manual ClaimResponse patient must reference Patient/<id>.");
+  }
+  if (!/^Organization\/[A-Za-z0-9.-]+$/.test(input.insurerReference)) {
+    throw new Error("Manual ClaimResponse insurer must reference Organization/<id>.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.paymentDate)) {
+    throw new Error("Manual ClaimResponse paymentDate must be an R4 date (YYYY-MM-DD).");
+  }
+  if (!input.created || !input.paymentReference || !input.paymentIdentifierSystem) {
+    throw new Error("Manual ClaimResponse requires created, paymentReference, and paymentIdentifierSystem.");
+  }
+  if (input.lines.length === 0) {
+    throw new Error("Manual ClaimResponse requires at least one adjudicated claim line.");
+  }
+  const sequences = new Set<number>();
+  for (const line of input.lines) {
+    if (!Number.isInteger(line.itemSequence) || line.itemSequence <= 0 || sequences.has(line.itemSequence)) {
+      throw new Error("Manual ClaimResponse itemSequence values must be unique positive integers.");
+    }
+    sequences.add(line.itemSequence);
+    for (const [field, value] of Object.entries(line).filter(([field]) => field !== "itemSequence")) {
+      if (!Number.isInteger(value) || value < 0) {
+        throw new Error(`Manual ClaimResponse ${field} must be a nonnegative integer number of cents.`);
+      }
+    }
+    const patientResponsibilityCents = line.deductibleCents + line.coinsuranceCents + line.copayCents;
+    if (line.paidCents + patientResponsibilityCents > line.allowedCents) {
+      throw new Error("Manual ClaimResponse paid plus patient responsibility cannot exceed allowed.");
+    }
+  }
+  const totalPaidCents = input.lines.reduce((sum, line) => sum + line.paidCents, 0);
+  if (totalPaidCents <= 0) {
+    throw new Error("Manual ClaimResponse requires a positive paid amount.");
+  }
+
+  return {
+    resourceType: "ClaimResponse",
+    status: "active",
+    type: { coding: [{ system: HL7_CLAIM_TYPE_SYSTEM, code: "professional", display: "Professional" }] },
+    use: "claim",
+    patient: { reference: input.patientReference },
+    created: input.created,
+    insurer: { reference: input.insurerReference },
+    ...(input.providerReference ? { requestor: { reference: input.providerReference } } : {}),
+    request: { reference: input.claimReference },
+    outcome: "complete",
+    disposition: "Manual EOB posting",
+    item: input.lines.map((line) => {
+      const patientResponsibilityCents = line.deductibleCents + line.coinsuranceCents + line.copayCents;
+      return {
+        itemSequence: line.itemSequence,
+        adjudication: [
+          adjudication("submitted", line.submittedCents),
+          adjudication("allowed", line.allowedCents),
+          adjudication("paid", line.paidCents),
+          adjudication("patient responsibility", patientResponsibilityCents),
+          adjudication(["adjustment", "PR", "1"].filter(Boolean).join(" "), line.deductibleCents),
+          adjudication(["adjustment", "PR", "2"].filter(Boolean).join(" "), line.coinsuranceCents),
+          adjudication(["adjustment", "PR", "3"].filter(Boolean).join(" "), line.copayCents),
+        ],
+      };
+    }),
+    payment: {
+      type: { text: "Manual EOB" },
+      date: input.paymentDate,
+      amount: money(totalPaidCents),
+      identifier: { system: input.paymentIdentifierSystem, value: input.paymentReference },
     },
   };
 }

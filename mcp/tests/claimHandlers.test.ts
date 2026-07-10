@@ -18,10 +18,14 @@ import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import {
   handleClaimEraWorklistTaskRequest,
   handleClaimStatusRequest,
+  handleCloseManualEobRequest,
+  handleCreateManualEobRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
   handleEraListRequest,
   handleEraWorklistRequest,
+  handleManualEobListRequest,
+  handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
   type ClaimsHandlerDeps,
@@ -34,7 +38,8 @@ import {
   eraSnapshotFromTask,
   parseEraImportRecord,
 } from "../src/claims/era-worklist.js";
-import type { ClaimMdEraData, ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
+import { buildProfessionalClaim, type ClaimMdEraData, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
+import { parseManualEobHeader } from "../src/claims/manual-eob.js";
 
 const professionalClaim: ProfessionalClaimInput = {
   created: "2026-07-09",
@@ -728,9 +733,112 @@ test("claims.manage protects GET /claims/era with the existing claims 401/403 sh
   assert.equal(unavailable.searchCalls(), 0);
 });
 
+test("manual EOB routes preserve claims.manage 401/403 parity before FHIR access", async () => {
+  const unauthenticated = deps();
+  assert.deepEqual(await handleCreateManualEobRequest(unauthenticated.deps, {
+    authHeader: undefined,
+    body: {},
+  }), {
+    status: 401,
+    body: { error: "Authentication required to manage claims." },
+  });
+  assert.deepEqual(await handlePostManualEobClaimRequest(unauthenticated.deps, {
+    authHeader: undefined,
+    params: { id: "eob-1" },
+    body: {},
+  }), {
+    status: 401,
+    body: { error: "Authentication required to manage claims." },
+  });
+
+  const forbidden = deps("clinician");
+  assert.deepEqual(await handleManualEobListRequest(forbidden.deps, { authHeader: "Bearer good" }), {
+    status: 403,
+    body: { error: "claims.manage role required" },
+  });
+  assert.deepEqual(await handleCloseManualEobRequest(forbidden.deps, {
+    authHeader: "Bearer good",
+    params: { id: "eob-1" },
+  }), {
+    status: 403,
+    body: { error: "claims.manage role required" },
+  });
+  assert.equal(unauthenticated.searchCalls(), 0);
+  assert.equal(forbidden.searchCalls(), 0);
+});
+
+test("manual EOB posts ClaimResponse and insurance payment while retaining a resumable partial header", async () => {
+  const { audits, created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const createdHeader = await handleCreateManualEobRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      payerReference: "Organization/payer-1",
+      paymentReference: "EFT-900",
+      paymentDate: "2026-07-10",
+      depositDate: "2026-07-11",
+      totalAmountCents: 10_000,
+    },
+  });
+  assert.equal(createdHeader.status, 201);
+
+  const posted = await handlePostManualEobClaimRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "basic-1" },
+    body: {
+      claimReference: "Claim/claim-1",
+      lines: [{
+        itemSequence: 1,
+        allowedCents: 10_000,
+        paidCents: 7_000,
+        deductibleCents: 1_000,
+        coinsuranceCents: 1_200,
+        copayCents: 800,
+      }],
+    },
+  });
+
+  assert.equal(posted.status, 201);
+  assert.equal(created.ClaimResponse.length, 1);
+  assert.equal(created.PaymentReconciliation.length, 1);
+  assert.equal(created.Basic.length, 1);
+  const adjudications = created.ClaimResponse[0].item?.[0]?.adjudication ?? [];
+  assert.equal(adjudications.find((entry) => entry.category.text === "patient responsibility")?.amount?.value, 30);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 1")?.amount?.value, 10);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 2")?.amount?.value, 12);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 3")?.amount?.value, 8);
+  assert.equal(created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[0]?.response?.reference, "ClaimResponse/claimresponse-1");
+  assert.deepEqual(parseManualEobHeader(created.Basic[0]), {
+    id: "basic-1",
+    payerReference: "Organization/payer-1",
+    paymentReference: "EFT-900",
+    paymentDate: "2026-07-10",
+    depositDate: "2026-07-11",
+    totalAmountCents: 10_000,
+    appliedAmountCents: 7_000,
+    remainingAmountCents: 3_000,
+    status: "draft",
+    createdAt: "2026-07-09T12:00:00.000Z",
+    postings: [{
+      claimReference: "Claim/claim-1",
+      claimResponseReference: "ClaimResponse/claimresponse-1",
+      paymentReconciliationReference: "PaymentReconciliation/paymentreconciliation-1",
+      amountCents: 7_000,
+      postedAt: "2026-07-09T12:00:00.000Z",
+    }],
+  });
+  assert.equal(audits.at(-1)?.eventType, "claim.manual-eob.posted");
+
+  const resumed = await handleManualEobListRequest(d, { authHeader: "Bearer good" });
+  const item = (resumed.body as { items: Array<{ appliedAmountCents: number; status: string }> }).items[0];
+  assert.equal(item.appliedAmountCents, 7_000);
+  assert.equal(item.status, "draft");
+});
+
 test("claims audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
   const sql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-07-09-claim-rejected-event.sql"),
+    resolve(process.cwd(), "../data/migrations/2026-07-10-manual-eob-event.sql"),
     "utf8",
   );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");

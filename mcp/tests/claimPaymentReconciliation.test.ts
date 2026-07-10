@@ -26,3 +26,20 @@ test("buildInsurancePaymentReconciliation adds the v0.6d insurance row: request 
   assert.equal(pr.detail?.[0]?.response?.reference, "ClaimResponse/cr-1");
   assert.equal(pr.detail?.[0]?.amount?.value, 170);
 });
+
+test("buildInsurancePaymentReconciliation retains its amount, reference, and date guards", () => {
+  const valid = {
+    createdIso: "2026-07-10T12:00:00.000Z",
+    paymentDate: "2026-07-10",
+    amountCents: 100,
+    claimReference: "Claim/claim-1",
+    claimResponseReference: "ClaimResponse/response-1",
+    processorTransactionId: "EFT-1",
+    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/manual-eob",
+  };
+  assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, amountCents: 0 }), /positive integer number of cents/);
+  assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, amountCents: -1 }), /positive integer number of cents/);
+  assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, claimReference: "Invoice/claim-1" }), /Claim\/<id>/);
+  assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, claimResponseReference: "Claim/response-1" }), /ClaimResponse\/<id>/);
+  assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, paymentDate: "" }), /paymentDate must be an R4 date/);
+});

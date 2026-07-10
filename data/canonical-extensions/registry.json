@@ -385,6 +385,12 @@
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claims-phase-2b"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-manual-eob-header",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claims-phase-5"
     }
   ]
 }

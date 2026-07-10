@@ -84,12 +84,13 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
   assert.equal(rulesFor("clinician", "Schedule").length, 0);
 });
 
-test("front-desk Basic grants stay criteria-scoped to scheduling config and ERA import records", () => {
+test("front-desk Basic grants stay criteria-scoped to scheduling, ERA import, and manual EOB records", () => {
   const rules = rulesFor("front-desk", "Basic");
   assert.deepEqual(
     rules.map((rule) => rule.criteria).sort(),
     [
       "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
+      "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
       "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
     ],
   );

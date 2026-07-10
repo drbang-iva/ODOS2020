@@ -138,6 +138,14 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
       criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
     },
   },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
+    },
+  },
 ];
 
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [

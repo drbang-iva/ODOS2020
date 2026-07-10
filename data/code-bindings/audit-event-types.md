@@ -79,6 +79,7 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `era.unmatched.flagged` | claim-event | An ERA claim without a local PCN mapping created a recoverable unmatched Task. Ledger: claimmd-clearinghouse-ledger.md. |
 | `claim.rejected.flagged` | claim-event | A pre-remittance Claim.MD rejection created a claimable correction Task. Ledger: claimmd-clearinghouse-ledger.md. |
 | `claim.status.checked` | claim-event | Claim.MD status polling completed or failed; audited against the ClaimResponse or Claim. Ledger: claimmd-clearinghouse-ledger.md. |
+| `claim.manual-eob.posted` | claim-event | Staff posted a manual payer EOB claim allocation; audited against the created ClaimResponse. Ledger: claimmd-clearinghouse-ledger.md. |
 | `payment.refund.attempted` | payment-event | Refund initiated (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.refund.completed` | payment-event | Refund completed (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.void.attempted` | payment-event | Transaction void initiated (workflow deferred to v0.7). Ledger: payment-reconciliation-seam-ledger.md. |
