@@ -3,6 +3,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RouteSwitch } from "../src/App";
+import { RoleProvider } from "../src/lib/role-context";
 
 test("the Accounts Receivable dashboard UI route reaches the dashboard without replacing existing routing", () => {
   const html = renderToStaticMarkup(
@@ -18,5 +19,17 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Settings sections/);
   assert.match(html, /Chart fields and sections/);
   assert.match(html, /Frames data/);
-  assert.doesNotMatch(html, /Floor config|Visit types/);
+  assert.match(html, /Floor config/);
+  assert.doesNotMatch(html, /Visit types/);
+});
+
+test("the floor-config settings route reaches the real singleton settings scene", () => {
+  const html = renderToStaticMarkup(
+    <RoleProvider>
+      <RouteSwitch view={{ kind: "picker" }} path="/settings/floor-config" />
+    </RoleProvider>,
+  );
+  assert.match(html, /Practice Settings/);
+  assert.match(html, /Floor config/);
+  assert.match(html, /Loading floor config/);
 });

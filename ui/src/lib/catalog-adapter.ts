@@ -111,18 +111,39 @@ export function singletonListAdapter<Item extends CatalogItemBase, Config extend
     throw new Error("Catalog adapter list path is required.");
   }
 
+  return projectedListAdapter(draft, {
+    capabilities,
+    toRows(config) {
+      const value = readPath(config as Record<string, unknown>, path);
+      if (!Array.isArray(value)) {
+        throw new Error(`Catalog list path "${listPath}" is not an array.`);
+      }
+      return clone(value) as Item[];
+    },
+    fromRows(config, items) {
+      return writePath(config as Record<string, unknown>, path, clone(items)) as Config;
+    },
+  });
+}
+
+export function projectedListAdapter<Item extends CatalogItemBase, Config extends object>(
+  draft: SingletonConfigDraft<Config>,
+  {
+    toRows,
+    fromRows,
+    capabilities,
+  }: {
+    toRows: (config: Config) => Item[];
+    fromRows: (config: Config, items: Item[]) => Config;
+    capabilities: CatalogCapabilities;
+  },
+): CatalogAdapter<Item> {
   function readItems(): Item[] {
-    const value = readPath(draft.current() as Record<string, unknown>, path);
-    if (!Array.isArray(value)) {
-      throw new Error(`Catalog list path "${listPath}" is not an array.`);
-    }
-    return clone(value) as Item[];
+    return clone(toRows(draft.current()));
   }
 
   function writeItems(items: Item[]): void {
-    draft.replace(
-      writePath(draft.current() as Record<string, unknown>, path, clone(items)) as Config,
-    );
+    draft.replace(fromRows(draft.current(), clone(items)));
   }
 
   return {

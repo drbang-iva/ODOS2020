@@ -1,18 +1,7 @@
 import type { Basic } from "@medplum/fhirtypes";
 
-/**
- * Persisted floor-board settings (cockpit Phase 3a) — a sibling singleton to the
- * scheduling-config `Basic` (practice-config.ts), same design call: practice-owned
- * config, not clinical data, readable/writable through the plain-fetch FHIR client
- * under AccessPolicy. Kept as a separate resource (not merged into scheduling
- * config) because it is owned by a different concern (floor operations vs booking
- * rules) and grows independently (station catalog, thresholds, payer map).
- */
-
 export const OSOD_FLOOR_CONFIG_SYSTEM = "https://osod.dev/fhir/CodeSystem/floor-config";
-
 export const OSOD_FLOOR_CONFIG_CODE = "osod-floor-config";
-
 export const OSOD_FLOOR_CONFIG_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config";
 
@@ -83,14 +72,7 @@ function assertConfig(config: PersistedFloorConfig): void {
   }
 }
 
-/**
- * Build the singleton Basic carrying the floor board config. Pass the existing
- * resource to preserve id + meta (update-in-place; the config is a singleton, never a second copy).
- */
-export function buildFloorConfigResource(
-  config: PersistedFloorConfig,
-  existing?: Basic,
-): Basic {
+export function buildFloorConfigResource(config: PersistedFloorConfig, existing?: Basic): Basic {
   assertConfig(config);
   const persistedConfig: PersistedFloorConfig = {
     ...config,
@@ -116,11 +98,6 @@ export function buildFloorConfigResource(
   };
 }
 
-/**
- * Parse the stored config back out of the singleton Basic. Forward-compatible: only the known
- * top-level keys are read, so future config knobs written by a newer OSOD never break an older
- * reader. The parsed config is re-validated before it is returned.
- */
 export function parseFloorConfig(basic: Basic): PersistedFloorConfig {
   const coding = basic.code?.coding?.find(
     (candidate) =>

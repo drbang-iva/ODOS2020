@@ -39,6 +39,40 @@ test("buildFloorConfigResource round-trips through parseFloorConfig", () => {
   assert.deepEqual(parseFloorConfig(resource), CONFIG);
 });
 
+test("pre-amendment station fixtures remain active and round-trip without writing active true", () => {
+  const resource = buildFloorConfigResource(CONFIG);
+  const parsed = parseFloorConfig(resource);
+  assert.ok(parsed.stations.every((station) => station.active !== false));
+  const raw = JSON.parse(
+    resource.extension?.find((extension) => extension.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
+  ) as PersistedFloorConfig;
+  assert.ok(raw.stations.every((station) => !("active" in station)));
+  assert.deepEqual(parseFloorConfig(buildFloorConfigResource(parsed)), CONFIG);
+});
+
+test("inactive stations remain persisted with their thresholds and reactivation omits active true", () => {
+  const inactive: PersistedFloorConfig = {
+    ...CONFIG,
+    stations: CONFIG.stations.map((station) =>
+      station.id === "waiting" ? { ...station, active: false } : station,
+    ),
+  };
+  const parsed = parseFloorConfig(buildFloorConfigResource(inactive));
+  assert.equal(parsed.stations.find((station) => station.id === "waiting")?.active, false);
+  assert.deepEqual(parsed.laneThresholds.waiting, CONFIG.laneThresholds.waiting);
+
+  const reactivated = buildFloorConfigResource({
+    ...parsed,
+    stations: parsed.stations.map((station) =>
+      station.id === "waiting" ? { ...station, active: true } : station,
+    ),
+  });
+  const raw = JSON.parse(
+    reactivated.extension?.find((extension) => extension.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
+  ) as PersistedFloorConfig;
+  assert.equal("active" in raw.stations.find((station) => station.id === "waiting")!, false);
+});
+
 test("buildFloorConfigResource preserves id + meta when updating in place", () => {
   const existing = buildFloorConfigResource(CONFIG);
   existing.id = "floor-config-1";

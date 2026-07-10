@@ -63,12 +63,22 @@ export function CockpitFloorBoard() {
 
   return (
     <div className="flex min-h-[60vh] flex-col gap-2 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-sm font-bold uppercase tracking-wide text-white/55">Floor board</h1>
+        <a
+          href="/settings/floor-config"
+          aria-label="Floor settings"
+          className="rounded border border-white/15 bg-black/30 px-2 py-1 text-sm text-white/60 hover:bg-white/10 hover:text-white"
+        >
+          ⚙
+        </a>
+      </div>
       {dragError && (
         <div className="rounded border border-red-400/40 bg-red-950/50 px-3 py-2 text-xs text-red-100">
           Could not move patient: {dragError}
         </div>
       )}
-      {floorConfig.stations.map((station) => (
+      {floorConfig.stations.filter((station) => station.active !== false).map((station) => (
         <div
           key={station.id}
           className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 p-2"

@@ -69,6 +69,28 @@ test("parseFloorConfigResource rejects a stations array containing a malformed e
   );
 });
 
+test("parseFloorConfigResource accepts optional active=false and rejects malformed active values", () => {
+  const inactive = buildBasic({
+    ...REAL_CONFIG,
+    stations: REAL_CONFIG.stations.map((station) =>
+      station.id === "waiting" ? { ...station, active: false } : station,
+    ),
+  });
+  assert.equal(
+    parseFloorConfigResource(inactive)?.stations.find((station) => station.id === "waiting")?.active,
+    false,
+  );
+  assert.equal(
+    parseFloorConfigResource(
+      buildBasic({
+        ...REAL_CONFIG,
+        stations: REAL_CONFIG.stations.map((station) => ({ ...station, active: "no" })),
+      }),
+    ),
+    undefined,
+  );
+});
+
 test("parseFloorConfigResource never lets a malformed config reach deriveFloorBoard — falls back safely instead of crashing", () => {
   const basic = buildBasic({ ...REAL_CONFIG, stations: [null, { id: "x" }] });
   const parsed = parseFloorConfigResource(basic) ?? DEFAULT_FLOOR_BOARD_CONFIG;

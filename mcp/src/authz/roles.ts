@@ -213,6 +213,15 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
         "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
     },
   },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
+    },
+  },
 ];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {

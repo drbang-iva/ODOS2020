@@ -2,6 +2,23 @@
 import type { Appointment, Basic, HealthcareService } from "@medplum/fhirtypes";
 import { buildAppointmentBlockContent, visionCoverageOf, type AppointmentBlockContent } from "./scheduling";
 import { parseFloorState } from "./floor-state";
+import {
+  DEFAULT_FLOOR_STATIONS,
+  DEFAULT_LANE_THRESHOLDS,
+  OSOD_FLOOR_CONFIG_CODE,
+  OSOD_FLOOR_CONFIG_EXTENSION_URL,
+  OSOD_FLOOR_CONFIG_SYSTEM,
+  type LaneThreshold,
+  type PayerCueKind,
+  type PersistedFloorConfig,
+} from "./floor-config";
+
+export {
+  OSOD_FLOOR_CONFIG_CODE,
+  OSOD_FLOOR_CONFIG_EXTENSION_URL,
+  OSOD_FLOOR_CONFIG_SYSTEM,
+} from "./floor-config";
+export type { LaneThreshold, PayerCueKind } from "./floor-config";
 
 // The floor board's derivation (cockpit floor-board MVP doc §3): turns raw
 // Appointments + config into sorted lanes. Pure logic only — no React.
@@ -13,21 +30,7 @@ import { parseFloorState } from "./floor-state";
 // PersistedFloorConfig from Task 1 satisfies FloorBoardConfig below with no
 // import needed — callers just pass it straight through.
 
-export interface LaneThreshold {
-  amberMinutes: number;
-  redMinutes: number;
-}
-
-export type PayerCueKind = "vision" | "house";
-
-export interface FloorBoardConfig {
-  stations: { id: string; label: string; order: number }[];
-  laneThresholds: Record<string, LaneThreshold>;
-  defaultThreshold: LaneThreshold;
-  payerMap: Record<string, PayerCueKind>;
-  /** Display label for the practice's own house plan (config, not hardcoded). */
-  housePlanLabel?: string;
-}
+export type FloorBoardConfig = PersistedFloorConfig;
 
 export interface TimerState {
   minutes: number;
@@ -111,8 +114,9 @@ export function deriveFloorBoard(
   config: FloorBoardConfig,
   now: string,
 ): FloorBoard {
-  const stationIds = new Set(config.stations.map((station) => station.id));
-  const board: FloorBoard = Object.fromEntries(config.stations.map((station) => [station.id, []]));
+  const activeStations = config.stations.filter((station) => station.active !== false);
+  const stationIds = new Set(activeStations.map((station) => station.id));
+  const board: FloorBoard = Object.fromEntries(activeStations.map((station) => [station.id, []]));
 
   for (const appointment of appointments) {
     const floorState = parseFloorState(appointment);
@@ -155,26 +159,11 @@ export function deriveFloorBoard(
 // configures its own house-plan name + label via the floor-config singleton; until
 // then the house chip simply stays dormant, same as any other unconfigured plan.
 export const DEFAULT_FLOOR_BOARD_CONFIG: FloorBoardConfig = {
-  stations: [
-    { id: "front-desk", label: "Front desk", order: 0 },
-    { id: "waiting", label: "Waiting", order: 1 },
-    { id: "pretest", label: "Pretest", order: 2 },
-    { id: "chair-1", label: "Chair 1", order: 3 },
-    { id: "chair-2", label: "Chair 2", order: 4 },
-    { id: "optical", label: "Optical", order: 5 },
-    { id: "checkout", label: "Checkout", order: 6 },
-  ],
+  stations: DEFAULT_FLOOR_STATIONS,
   laneThresholds: { waiting: { amberMinutes: 10, redMinutes: 20 } },
-  defaultThreshold: { amberMinutes: 20, redMinutes: 30 },
+  defaultThreshold: DEFAULT_LANE_THRESHOLDS,
   payerMap: { VSP: "vision", EyeMed: "vision" },
 };
-
-// Mirrors mcp/src/scheduling/floor-config.ts's constants (ui cannot import mcp
-// runtime code) — used only to locate the floor-config Basic singleton on read.
-export const OSOD_FLOOR_CONFIG_SYSTEM = "https://osod.dev/fhir/CodeSystem/floor-config";
-export const OSOD_FLOOR_CONFIG_CODE = "osod-floor-config";
-export const OSOD_FLOOR_CONFIG_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config";
 
 /**
  * Parse the floor-config singleton off a Basic resource. Read-path parser: never
@@ -190,7 +179,9 @@ function isValidStation(value: unknown): value is FloorBoardConfig["stations"][n
     value !== null &&
     typeof (value as { id?: unknown }).id === "string" &&
     typeof (value as { label?: unknown }).label === "string" &&
-    typeof (value as { order?: unknown }).order === "number"
+    typeof (value as { order?: unknown }).order === "number" &&
+    ((value as { active?: unknown }).active === undefined ||
+      typeof (value as { active?: unknown }).active === "boolean")
   );
 }
 

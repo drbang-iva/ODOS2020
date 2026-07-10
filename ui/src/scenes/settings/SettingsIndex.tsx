@@ -1,5 +1,10 @@
 const SETTINGS_LINKS = [
   {
+    href: "/settings/floor-config",
+    title: "Floor config",
+    description: "Manage floor stations, lane thresholds, and payer cues.",
+  },
+  {
     href: "/settings/chart-fields-sections",
     title: "Chart fields and sections",
     description: "Manage practice-created chart fields and section placement.",

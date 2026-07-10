@@ -20,7 +20,7 @@ export type CatalogFieldDefinition =
   | (FieldBase & { type: "color"; palette: readonly string[] })
   | (FieldBase & { type: "duration" | "number"; min?: number; max?: number })
   | (FieldBase & { type: "select"; options: readonly { value: string; label: string }[] })
-  | (FieldBase & { type: "reference-picker" })
+  | (FieldBase & { type: "reference-picker"; valueKind?: "reference" | "text" })
   | (FieldBase & { type: "toggle" })
   | (FieldBase & { type: "weekly-hours" })
   | (FieldBase & { type: "time-window-weekdays" });
@@ -122,10 +122,16 @@ function validateField(
       }
       return value;
     case "reference-picker":
-      if (typeof value !== "string" || !FHIR_REFERENCE.test(value)) {
+      if (typeof value !== "string") {
+        throw new CatalogFieldValidationError(
+          field.key,
+          field.valueKind === "text" ? `${field.label} must be text.` : `${field.label} must be a FHIR reference.`,
+        );
+      }
+      if (field.valueKind !== "text" && !FHIR_REFERENCE.test(value)) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be a FHIR reference.`);
       }
-      return value;
+      return value.trim();
     case "toggle":
       if (typeof value !== "boolean") {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be on or off.`);

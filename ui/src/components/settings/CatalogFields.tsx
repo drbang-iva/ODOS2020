@@ -146,6 +146,7 @@ function CatalogFieldControl({
           <ReferencePicker
             label={field.label}
             value={typeof value === "string" ? value : ""}
+            valueKind={field.valueKind ?? "reference"}
             search={field.search}
             describedBy={describedBy}
             onChange={onChange}
@@ -214,12 +215,14 @@ function FieldFrame({
 function ReferencePicker({
   label,
   value,
+  valueKind,
   search,
   describedBy,
   onChange,
 }: {
   label: string;
   value: string;
+  valueKind: "reference" | "text";
   search?: (query: string) => Promise<ReferencePickerOption[]>;
   describedBy?: string;
   onChange: (value: unknown) => void;
@@ -291,7 +294,11 @@ function ReferencePicker({
           ))}
         </div>
       )}
-      {value && <div className="text-xs text-white/45">Stored reference: {value}</div>}
+      {value && (
+        <div className="text-xs text-white/45">
+          Stored {valueKind === "text" ? "value" : "reference"}: {value}
+        </div>
+      )}
     </div>
   );
 }

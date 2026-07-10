@@ -1,5 +1,6 @@
+import type { Basic } from "@medplum/fhirtypes";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { CatalogFieldKit, type CatalogFieldDescriptor } from "../../components/settings/CatalogFields";
 import {
   CatalogFieldValidationError,
@@ -18,6 +19,8 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   adapter: CatalogAdapter<Item>;
   fields: readonly CatalogFieldDescriptor[];
   createItem: () => Item;
+  canCreate?: boolean;
+  validateItem?: (item: Item, items: Item[]) => void;
   label: (item: Item) => string;
   facts?: (item: Item) => readonly string[];
   color?: (item: Item) => string | undefined;
@@ -29,12 +32,20 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   transaction?: CatalogDraftTransaction;
 };
 
-type InitialState<Item> = {
+export type CatalogInitialState<Item> = {
   items?: Item[];
   loading?: boolean;
   error?: string;
   selectedId?: string;
 };
+
+type CatalogSceneContextValue = {
+  transaction?: CatalogDraftTransaction;
+  revision: number;
+  touch(): void;
+};
+
+const CatalogSceneContext = createContext<CatalogSceneContextValue | undefined>(undefined);
 
 export function CatalogEditor<Item extends CatalogItemBase>({
   descriptor,
@@ -43,8 +54,111 @@ export function CatalogEditor<Item extends CatalogItemBase>({
 }: {
   descriptor: CatalogDescriptor<Item>;
   canWrite: boolean;
-  initialState?: InitialState<Item>;
+  initialState?: CatalogInitialState<Item>;
 }) {
+  return (
+    <CatalogScene title={descriptor.title} canWrite={canWrite} transaction={descriptor.transaction}>
+      <CatalogSection descriptor={descriptor} canWrite={canWrite} initialState={initialState} hideTitle />
+    </CatalogScene>
+  );
+}
+
+export function CatalogScene({
+  title,
+  canWrite,
+  transaction,
+  children,
+  onCommitted,
+}: {
+  title: string;
+  canWrite: boolean;
+  transaction?: CatalogDraftTransaction;
+  children: ReactNode;
+  onCommitted?: (resource: Basic) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+
+  function touch() {
+    setRevision((current) => current + 1);
+  }
+
+  async function commitTransaction() {
+    if (!transaction) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = await transaction.commit();
+      touch();
+      onCommitted?.(saved);
+      setToast("Settings saved successfully.");
+    } catch (commitError) {
+      setError(errorMessage(commitError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function discardTransaction() {
+    if (!transaction) return;
+    transaction.discard();
+    touch();
+    setToast("Draft changes discarded.");
+  }
+
+  return (
+    <CatalogSceneContext.Provider value={{ transaction, revision, touch }}>
+      <main className="min-h-screen bg-[#060610] p-6 pb-24 text-white">
+        <div className="mx-auto max-w-5xl">
+          <header className="mb-5">
+            <div className="text-xs uppercase tracking-wide text-white/45">Practice Settings</div>
+            <h1 className="text-2xl font-semibold">{title}</h1>
+          </header>
+          {error && (
+            <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
+              {error}
+            </div>
+          )}
+          <div className="grid gap-8">{children}</div>
+        </div>
+
+        {transaction?.dirty && canWrite && (
+          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl">
+            <span className="mr-auto text-sm text-white/55">Unsaved settings changes</span>
+            <button className="scheduler-button" type="button" disabled={saving} onClick={discardTransaction}>
+              Discard
+            </button>
+            <button className="scheduler-button" type="button" disabled={saving} onClick={() => void commitTransaction()}>
+              Save
+            </button>
+          </div>
+        )}
+
+        {toast && (
+          <div role="status" className="fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
+            {toast}
+          </div>
+        )}
+      </main>
+    </CatalogSceneContext.Provider>
+  );
+}
+
+export function CatalogSection<Item extends CatalogItemBase>({
+  descriptor,
+  canWrite,
+  initialState,
+  hideTitle = false,
+}: {
+  descriptor: CatalogDescriptor<Item>;
+  canWrite: boolean;
+  initialState?: CatalogInitialState<Item>;
+  hideTitle?: boolean;
+}) {
+  const scene = useContext(CatalogSceneContext);
+  const transaction = scene?.transaction ?? descriptor.transaction;
   const [items, setItems] = useState<Item[]>(() => initialState?.items ?? []);
   const [loading, setLoading] = useState(initialState?.loading ?? initialState?.items === undefined);
   const [loadError, setLoadError] = useState<string | null>(initialState?.error ?? null);
@@ -81,7 +195,7 @@ export function CatalogEditor<Item extends CatalogItemBase>({
     return () => {
       cancelled = true;
     };
-  }, [descriptor, initialState]);
+  }, [descriptor, initialState, scene?.revision]);
 
   const groups = useMemo(() => groupItems(items, descriptor), [descriptor, items]);
 
@@ -109,6 +223,7 @@ export function CatalogEditor<Item extends CatalogItemBase>({
         selected.id,
       );
       const next = { ...selected, ...built } as Item;
+      descriptor.validateItem?.(next, items);
       const saved = await descriptor.adapter.save(next);
       setItems((current) => {
         const index = current.findIndex((item) => item.id === saved.id);
@@ -116,8 +231,9 @@ export function CatalogEditor<Item extends CatalogItemBase>({
           ? [...current, saved]
           : current.map((item) => (item.id === saved.id ? saved : item));
       });
+      scene?.touch();
       closeEditor();
-      setToast(descriptor.transaction ? "Draft updated. Save all changes to commit." : "Saved successfully.");
+      setToast(transaction ? "Draft updated. Save all changes to commit." : "Saved successfully.");
     } catch (error) {
       if (error instanceof CatalogFieldValidationError) {
         setFieldErrors({ [error.fieldKey]: error.message });
@@ -135,8 +251,9 @@ export function CatalogEditor<Item extends CatalogItemBase>({
     try {
       const saved = await descriptor.adapter.deactivate(selected);
       setItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      scene?.touch();
       closeEditor();
-      setToast(descriptor.transaction ? "Item deactivated in draft." : "Item deactivated.");
+      setToast(transaction ? "Item deactivated in draft." : "Item deactivated.");
     } catch (error) {
       setLoadError(errorMessage(error));
     } finally {
@@ -155,38 +272,14 @@ export function CatalogEditor<Item extends CatalogItemBase>({
     await descriptor.adapter.reorder(next.map((item) => item.id));
     setItems(next);
     setDraggedId(null);
-  }
-
-  async function commitTransaction() {
-    if (!descriptor.transaction) return;
-    setSaving(true);
-    try {
-      await descriptor.transaction.commit();
-      setToast("Settings saved successfully.");
-    } catch (error) {
-      setLoadError(errorMessage(error));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function discardTransaction() {
-    if (!descriptor.transaction) return;
-    descriptor.transaction.discard();
-    void Promise.resolve(descriptor.adapter.list()).then(setItems);
-    closeEditor();
-    setToast("Draft changes discarded.");
+    scene?.touch();
   }
 
   return (
-    <main className="min-h-screen bg-[#060610] p-6 text-white">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-5 flex items-center justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-white/45">Practice Settings</div>
-            <h1 className="text-2xl font-semibold">{descriptor.title}</h1>
-          </div>
-          {canWrite && (
+    <section aria-label={`${descriptor.title} section`}>
+        <header className="mb-3 flex items-center justify-between">
+          {!hideTitle && <h2 className="text-lg font-semibold text-white/90">{descriptor.title}</h2>}
+          {canWrite && descriptor.canCreate !== false && (
             <button className="scheduler-button" type="button" onClick={() => openEditor(descriptor.createItem())}>
               + Add {descriptor.singularLabel}
             </button>
@@ -232,8 +325,6 @@ export function CatalogEditor<Item extends CatalogItemBase>({
             ))}
           </div>
         )}
-      </div>
-
       {canWrite && selected && (
         <CatalogEditorDrawer
           descriptor={descriptor}
@@ -241,7 +332,7 @@ export function CatalogEditor<Item extends CatalogItemBase>({
           values={draftFields}
           errors={fieldErrors}
           saving={saving}
-          saveLabel={descriptor.transaction ? "Apply to draft" : "Save"}
+          saveLabel={transaction ? "Apply to draft" : "Save"}
           onChange={(key, value) => setDraftFields((current) => ({ ...current, [key]: value }))}
           onSave={() => void saveItem()}
           onDeactivate={() => void deactivateSelected()}
@@ -249,24 +340,12 @@ export function CatalogEditor<Item extends CatalogItemBase>({
         />
       )}
 
-      {descriptor.transaction?.dirty && canWrite && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl">
-          <span className="mr-auto text-sm text-white/55">Unsaved settings changes</span>
-          <button className="scheduler-button" type="button" disabled={saving} onClick={discardTransaction}>
-            Discard
-          </button>
-          <button className="scheduler-button" type="button" disabled={saving} onClick={() => void commitTransaction()}>
-            Save
-          </button>
-        </div>
-      )}
-
       {toast && (
         <div role="status" className="fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
           {toast}
         </div>
       )}
-    </main>
+    </section>
   );
 }
 
