@@ -72,12 +72,31 @@ test("a successful card charge returns 200 with the transaction result and audit
   assert.equal(result.outcome, "success");
   assert.equal(result.paymentRecord?.id, "pr-server-1");
   assert.equal(created.length, 1);
+  assert.equal(created[0].extension?.find((extension) =>
+    extension.url.endsWith("/osod-payment-subject"))?.valueReference?.reference, "Patient/p1");
 
   assert.equal(audits.length, 1);
   assert.equal(audits[0].eventType, "payment.charge.completed");
   assert.equal(audits[0].actorId, "staff1");
   assert.equal(audits[0].resourceType, "PaymentReconciliation");
   assert.equal(audits[0].actionOutcome, "granted");
+});
+
+test("omitting invoiceReference selects pay-before-bill mode and preserves the existing charge endpoint", async () => {
+  const { created, fetchImpl, fhir } = cloverTransport({
+    payment: { id: "PREPAY1", result: "SUCCESS", amount: 7500 },
+  });
+  const { audits, deps: d } = deps({ fetchImpl, fhir });
+
+  const res = await handleChargeRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...BODY, amountCents: 7500, invoiceReference: undefined },
+  });
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(created[0].detail, []);
+  assert.equal(audits[0].eventType, "payment.charge.completed");
+  assert.equal(audits[0].resourceType, "PaymentReconciliation");
 });
 
 test("the charge is attributed to the AUTHENTICATED staff, never a staffReference from the request body", async () => {

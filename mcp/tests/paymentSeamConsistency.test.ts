@@ -108,6 +108,7 @@ test("the same order paid by cash vs by processor renders identical money — on
     createdIso: "2026-07-05T15:00:00.000Z",
     paymentDate: "2026-07-05",
     amountCents: 24400,
+    subjectReference: "Patient/p1",
     invoiceReference: "Invoice/inv-card",
     taskReference: "Task/task1",
     staffReference: "Practitioner/staff1",

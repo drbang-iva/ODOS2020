@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { OSOD_AUDIT_EVENT_TYPES, buildAuditEventProjection } from "../src/authz/osodAudit.js";
 import {
@@ -6,7 +8,7 @@ import {
   buildPaymentAuditRecord,
 } from "../src/payments/payment-audit.js";
 
-test("the 9 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)", () => {
+test("the 10 payment.* audit event types are registered — count and enumeration match (v0.55c Lesson 10)", () => {
   const expected = [
     "payment.charge.attempted",
     "payment.charge.completed",
@@ -14,17 +16,31 @@ test("the 9 payment.* audit event types are registered — count and enumeration
     "payment.refund.attempted",
     "payment.refund.completed",
     "payment.void.attempted",
+    "payment.credit.applied",
     "payment.settle.batch",
     "payment.financing.preauthorized",
     "payment.financing.declined",
   ];
-  assert.equal(PAYMENT_AUDIT_EVENT_TYPES.length, 9);
+  assert.equal(PAYMENT_AUDIT_EVENT_TYPES.length, 10);
   assert.deepEqual([...PAYMENT_AUDIT_EVENT_TYPES], expected);
   // and the registry carries exactly this payment.* family — no drift in either direction
   assert.deepEqual(
     OSOD_AUDIT_EVENT_TYPES.filter((t) => t.startsWith("payment.")),
     expected,
   );
+});
+
+test("the Phase 6a audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
+  const sql = readFileSync(
+    resolve(process.cwd(), "../data/migrations/2026-07-10-payment-credit-event.sql"),
+    "utf8",
+  );
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  assert.ok(dropIndex >= 0);
+  assert.ok(addIndex > dropIndex);
+  const sqlTypes = [...sql.matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  assert.deepEqual(sqlTypes, [...OSOD_AUDIT_EVENT_TYPES]);
 });
 
 test("buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record", () => {

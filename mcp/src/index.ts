@@ -40,6 +40,12 @@ import {
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import {
+  handleApplyCreditRequest,
+  handleTransferCreditRequest,
+  handleUnappliedCreditsRequest,
+  handleVoidCreditRequest,
+} from "./payments/payment-credit-handler.js";
+import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
 } from "./payments/payment-endpoint.js";
@@ -5480,6 +5486,14 @@ async function main(): Promise<void> {
           }),
         };
       };
+      const paymentCreditDeps = {
+        authenticate: authenticateStaffRoute,
+        lifecycleFhir: fhir,
+        dispatch: paymentDispatch,
+        recordAudit: async (row: OsodAuditEventRecord) => {
+          await auditRuntime.record(row, () => undefined);
+        },
+      };
 
       app.get("/clinical-graph/glaucoma/cup-disc/definition", async (req, res) => {
         try {
@@ -5796,6 +5810,64 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "payment route failed" });
           }
+        }
+      });
+
+      app.post("/payments/credits/apply", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleApplyCreditRequest(paymentCreditDeps, {
+            authHeader: req.header("authorization"),
+            body: req.body,
+          });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /payments/credits/apply failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "payment credit apply route failed" });
+        }
+      });
+
+      app.post("/payments/credits/transfer", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleTransferCreditRequest(paymentCreditDeps, {
+            authHeader: req.header("authorization"),
+            body: req.body,
+          });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /payments/credits/transfer failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "payment credit transfer route failed" });
+        }
+      });
+
+      app.post("/payments/credits/void", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleVoidCreditRequest(paymentCreditDeps, {
+            authHeader: req.header("authorization"),
+            body: req.body,
+          });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /payments/credits/void failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "payment credit void route failed" });
+        }
+      });
+
+      app.get("/payments/credits/unapplied", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleUnappliedCreditsRequest(paymentCreditDeps, {
+            authHeader: req.header("authorization"),
+            patientReference: typeof req.query.patientReference === "string"
+              ? req.query.patientReference
+              : undefined,
+          });
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /payments/credits/unapplied failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "unapplied-credit query route failed" });
         }
       });
 

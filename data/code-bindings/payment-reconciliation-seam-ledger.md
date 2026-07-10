@@ -77,3 +77,18 @@ Access date: 2026-07-05. Decision: performance-od `decisions/2026-07-05-odos-pay
 | Identity->role resolver | caller-token `GET /auth/me` -> profile; osod-core service client `ProjectMembership?profile=` -> bound AccessPolicy `meta.tag` -> PracticeRoleId | Medplum auth/search API | `mcp/src/payments/payment-endpoint.ts` `resolveStaffRole` + tests | 2026-07-05 | verified |
 
 Also fixes the pre-existing latent gap: front-desk now holds the grants to run the **cash** order flow too (previously admin-only). Forward gate: re-seed AccessPolicies so existing policies carry the `practice-role` tag (pre-pilot: safe). Bug fixed en route: the "no Clover config in UI" guard used a cwd-relative `ui/src` path that failed under the full mcp suite; now resolved from the test file.
+
+## Unapplied-credit lifecycle (Patient Payments Phase 6a)
+
+Access date: 2026-07-10. No medical codes are added or asserted in this phase.
+
+| Artifact | Chosen value | Source 1 | Source 2 | Access date | Status |
+|---|---|---|---|---|---|
+| R4 payment total and plural allocation model | `PaymentReconciliation.paymentAmount`; `detail` 0..*; `detail.request` Reference(Any); `detail.amount` Money | https://hl7.org/fhir/R4/paymentreconciliation.html | `@medplum/fhirtypes/dist/PaymentReconciliation.d.ts` | 2026-07-10 | verified |
+| R4 cancellation lifecycle value | `PaymentReconciliation.status = cancelled` | https://hl7.org/fhir/R4/paymentreconciliation.html | https://hl7.org/fhir/R4/valueset-fm-status.html | 2026-07-10 | verified |
+| R4 extension shape for patient account ownership | absolute canonical URL plus `valueReference` | https://hl7.org/fhir/R4/extensibility.html | https://hl7.org/fhir/R4/references.html | 2026-07-10 | verified |
+| ODOS patient-payment subject extension | `https://osod.dev/fhir/StructureDefinition/osod-payment-subject` with `Reference(Patient)` | accepted `2026-07-09-odos-unapplied-credit-seam-addendum.md` §2.2 | `mcp/src/payments/payment-reconciliation.ts`; `data/canonical-extensions/registry.json` | 2026-07-10 | verified (local) |
+| Clover pre-settlement void endpoint | `POST /connect/v1/payments/{paymentId}/void`, `voidReason = USER_CANCEL`, 25-minute sale window | https://docs.clover.com/dev/reference/void | https://docs.clover.com/dev/docs/making-a-sale | 2026-07-10 | verified |
+| ODOS manual payment identifier namespace | `https://osod.dev/fhir/NamingSystem/manual-payment` | accepted addendum §2.1 cash pre-payment exception | `mcp/src/payments/adapters/manual-cash-adapter.ts` | 2026-07-10 | verified (local) |
+| Phase 6a audit vocabulary | adds `payment.credit.applied`; uses registered `payment.void.attempted` for same-day void outcomes | accepted addendum §3 | `mcp/src/payments/payment-audit.ts`; `data/migrations/2026-07-10-payment-credit-event.sql` | 2026-07-10 | verified (local) |
+| Front-desk PaymentReconciliation mutation boundary | direct create/read/search/history/vread only; no direct update/delete; version-aware mutations cross guarded osod-core Phase 6a handlers | accepted addendum §3 invariants | `mcp/src/authz/roles.ts`; `mcp/tests/v05a-authz.test.ts`; `mcp/tests/paymentCreditService.test.ts` | 2026-07-10 | verified (local) |

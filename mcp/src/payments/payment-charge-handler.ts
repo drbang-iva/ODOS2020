@@ -41,7 +41,7 @@ interface ChargeBody {
   method: string;
   amountCents: number;
   patientReference: string;
-  invoiceReference: string;
+  invoiceReference?: string;
   taskReference?: string;
   encounterReference?: string;
   description: string;
@@ -82,7 +82,7 @@ export async function handleChargeRequest(
     amountCents: body.amountCents,
     currency: "USD",
     patientReference: body.patientReference,
-    invoiceReference: body.invoiceReference,
+    ...(body.invoiceReference ? { invoiceReference: body.invoiceReference } : {}),
     ...(body.taskReference ? { taskReference: body.taskReference } : {}),
     ...(body.encounterReference ? { encounterReference: body.encounterReference } : {}),
     // The verified caller is the payer of record — a body-supplied staffReference is ignored.
@@ -99,14 +99,22 @@ export async function handleChargeRequest(
   try {
     result = await adapter.charge(chargeRequest);
   } catch (error) {
-    await audit(deps, staff, body, "payment.charge.failed", "failure", body.invoiceReference, messageOf(error));
+    await audit(
+      deps,
+      staff,
+      body,
+      "payment.charge.failed",
+      "failure",
+      body.invoiceReference ?? body.patientReference,
+      messageOf(error),
+    );
     return { status: 502, body: { error: `Payment charge failed: ${messageOf(error)}` } };
   }
 
   const succeeded = result.outcome === "success" || result.outcome === "pending";
   const paymentRecordReference = result.paymentRecord
     ? `${result.paymentRecord.resourceType}/${result.paymentRecord.id}`
-    : body.invoiceReference;
+    : body.invoiceReference ?? body.patientReference;
   await audit(
     deps,
     staff,
@@ -157,11 +165,13 @@ function parseChargeBody(raw: unknown): { body: ChargeBody } | { error: string }
   if (typeof b.amountCents !== "number" || !Number.isInteger(b.amountCents) || b.amountCents <= 0) {
     return { error: "amountCents must be a positive integer number of cents." };
   }
-  if (typeof b.invoiceReference !== "string" || !/^Invoice\/[^/]+$/.test(b.invoiceReference)) {
-    return { error: 'invoiceReference must be a local "Invoice/<id>" reference.' };
+  if (b.invoiceReference !== undefined && (
+    typeof b.invoiceReference !== "string" || !/^Invoice\/[^/]+$/.test(b.invoiceReference)
+  )) {
+    return { error: 'invoiceReference must be a local "Invoice/<id>" reference when supplied.' };
   }
-  if (typeof b.patientReference !== "string" || b.patientReference.length === 0) {
-    return { error: "patientReference is required." };
+  if (typeof b.patientReference !== "string" || !/^Patient\/[^/]+$/.test(b.patientReference)) {
+    return { error: 'patientReference must be a local "Patient/<id>" reference.' };
   }
   if (typeof b.description !== "string" || b.description.length === 0) {
     return { error: "description is required." };
@@ -172,7 +182,7 @@ function parseChargeBody(raw: unknown): { body: ChargeBody } | { error: string }
   return { body: b as unknown as ChargeBody };
 }
 
-function staffMayCharge(actorRole: OsodActorRole): boolean {
+export function staffMayCharge(actorRole: OsodActorRole): boolean {
   if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) {
     return false;
   }

@@ -7,7 +7,10 @@ import {
 } from "../src/payments/adapters/clover-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
 import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
-import { OSOD_PAYMENT_SURFACE_EXTENSION_URL } from "../src/payments/payment-reconciliation.js";
+import {
+  OSOD_PAYMENT_SUBJECT_EXTENSION_URL,
+  OSOD_PAYMENT_SURFACE_EXTENSION_URL,
+} from "../src/payments/payment-reconciliation.js";
 
 /**
  * Clover REST Pay Display (cloud) adapter tests. Endpoint shapes doc-verified 2026-07-05 against
@@ -142,6 +145,8 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(pr.resourceType, "PaymentReconciliation");
   assert.equal(pr.outcome, "complete");
   assert.equal(pr.detail?.[0]?.request?.reference, "Invoice/inv1");
+  assert.equal(pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_SUBJECT_EXTENSION_URL)
+    ?.valueReference?.reference, "Patient/p1");
   assert.equal(pr.request?.reference, "Task/task1");
   assert.equal(pr.requestor?.reference, "Practitioner/staff1");
   assert.equal(pr.paymentIdentifier?.system, CLOVER_TRANSACTION_SYSTEM);
@@ -181,6 +186,21 @@ test("a declined device charge creates NO PaymentReconciliation (money that did 
   assert.equal(fhir.created.length, 0);
 });
 
+test("a successful pre-payment omits the Invoice and creates an empty allocation list", async () => {
+  const { fetchImpl } = fakeTransport(200, CLOVER_SUCCESS_RESPONSE);
+  const fhir = fakeFhir();
+  const adapter = createCloverAdapter(CONFIG, fhir, {
+    fetchImpl,
+    now: () => "2026-07-10T14:00:00.000Z",
+  });
+
+  await adapter.charge(chargeRequest({ invoiceReference: undefined, amountCents: 7500 }));
+
+  assert.deepEqual(fhir.created[0].detail, []);
+  assert.equal(fhir.created[0].extension?.find((extension) =>
+    extension.url === OSOD_PAYMENT_SUBJECT_EXTENSION_URL)?.valueReference?.reference, "Patient/p1");
+});
+
 test("a transport/auth failure maps to outcome failed with the HTTP status, and no record is written", async () => {
   const { fetchImpl } = fakeTransport(401, { message: "401 Unauthorized" });
   const fhir = fakeFhir();
@@ -214,13 +234,34 @@ test("two charges use distinct idempotency keys and external payment ids", async
   assert.notEqual(captured[0].body.externalPaymentId, captured[1].body.externalPaymentId);
 });
 
-test("refund / void / settle / status are explicit v0.7 deferrals (scope fence)", async () => {
-  const adapter = createCloverAdapter(CONFIG, fakeFhir());
+test("same-day void calls Clover while refund / settle / status remain v0.7 deferrals", async () => {
+  const { captured, fetchImpl } = fakeTransport(200, {
+    paymentId: "75MYGBEV8EM3Y",
+    voidReason: "USER_CANCEL",
+    voidStatus: "SENT_TO_SERVER",
+  });
+  const adapter = createCloverAdapter(CONFIG, fakeFhir(), { fetchImpl, generateId: () => "void-id" });
   await assert.rejects(
     () => adapter.refund({ transactionId: "t", amountCents: 1, reason: "r", staffReference: "s" }),
     /v0\.7/,
   );
-  await assert.rejects(() => adapter.void({ transactionId: "t", staffReference: "s" }), /v0\.7/);
+  assert.deepEqual(
+    await adapter.void({ transactionId: "75MYGBEV8EM3Y", staffReference: "s" }),
+    { outcome: "success" },
+  );
+  assert.equal(captured[0].url, "https://apisandbox.dev.clover.com/connect/v1/payments/75MYGBEV8EM3Y/void");
+  assert.equal(captured[0].method, "POST");
+  assert.equal(captured[0].body.voidReason, "USER_CANCEL");
+  assert.equal(captured[0].headers["Idempotency-Key"], "void-id");
   await assert.rejects(() => adapter.settle({ settlementDate: "2026-07-05" }), /v0\.7/);
   await assert.rejects(() => adapter.status("t"), /v0\.7/);
+});
+
+test("Clover's HTTP 209 operation-canceled response does not cancel the local ledger", async () => {
+  const { fetchImpl } = fakeTransport(209, { message: "Operation was canceled" });
+  const adapter = createCloverAdapter(CONFIG, fakeFhir(), { fetchImpl });
+  assert.deepEqual(
+    await adapter.void({ transactionId: "75MYGBEV8EM3Y", staffReference: "s" }),
+    { outcome: "failed" },
+  );
 });

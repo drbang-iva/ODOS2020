@@ -154,8 +154,12 @@ export function buildFinancialSummary(input: BuildFinancialSummaryInput): Financ
  */
 export function paymentReconciliationsToTenderLines(
   paymentReconciliations: PaymentReconciliation[],
+  invoiceReference?: string,
 ): FinancialSummaryTenderLine[] {
-  return paymentReconciliations.map((pr) => {
+  return paymentReconciliations.flatMap((pr) => {
+    if (pr.status === "cancelled") {
+      return [];
+    }
     const coding = pr.extension?.find((ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
       ?.valueCodeableConcept?.coding?.[0];
     const tender = coding?.display ?? coding?.code;
@@ -164,7 +168,12 @@ export function paymentReconciliationsToTenderLines(
         "PaymentReconciliation is missing the osod-payment-tender extension — cannot derive the receipt tender label.",
       );
     }
-    return { tender, amountCents: toCents(pr.paymentAmount?.value ?? NaN) };
+    const amountCents = invoiceReference
+      ? sum((pr.detail ?? [])
+          .filter((detail) => detail.request?.reference === invoiceReference)
+          .map((detail) => toCents(detail.amount?.value ?? NaN)))
+      : toCents(pr.paymentAmount?.value ?? NaN);
+    return amountCents > 0 ? [{ tender, amountCents }] : [];
   });
 }
 

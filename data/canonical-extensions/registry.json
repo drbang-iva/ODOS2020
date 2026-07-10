@@ -309,6 +309,12 @@
       "sliceConsumer": "v0.6c"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-subject",
+      "namespace": "payments",
+      "status": "active",
+      "sliceConsumer": "patient-payments-phase-6a"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-duration",
       "namespace": "scheduling",
       "status": "active",

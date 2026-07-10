@@ -84,11 +84,12 @@ test("front-desk can create the dispensary order + financial resources at practi
   }
 });
 
-test("front-desk can create but NOT update a PaymentReconciliation (payment records are immutable)", () => {
+test("front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers", () => {
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
   const pr = policy.resource?.find((r) => r.resourceType === "PaymentReconciliation");
   assert.deepEqual(pr?.interaction, ["create", "read", "search", "history", "vread"]);
   assert.equal(pr?.interaction?.includes("update"), false);
+  assert.equal(pr?.interaction?.includes("delete"), false);
   assert.equal(pr?.criteria, undefined);
 });
 

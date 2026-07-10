@@ -99,6 +99,7 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "payment.refund.attempted",
   "payment.refund.completed",
   "payment.void.attempted",
+  "payment.credit.applied",
   "payment.settle.batch",
   "payment.financing.preauthorized",
   "payment.financing.declined",
