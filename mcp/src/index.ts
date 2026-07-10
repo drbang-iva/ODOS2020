@@ -74,6 +74,7 @@ import {
   handleIopTargetRequest,
 } from "./clinical-graph/iop-history-endpoint.js";
 import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
+import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
@@ -392,6 +393,7 @@ const fhir = createMedplumClient({
     sessionId: process.env.OSOD_AUDIT_SESSION_ID,
   },
 });
+const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
@@ -5482,6 +5484,14 @@ async function main(): Promise<void> {
           }),
         };
       };
+      const clinicalGraphRouteDeps = async (authHeader: string | undefined) => {
+        const staff = await authenticateStaffRoute(authHeader);
+        const findingDefinitions = staff ? await findingDefinitionStore.list() : [];
+        return {
+          authenticate: async () => staff,
+          findingDefinitions: () => findingDefinitions,
+        };
+      };
       const paymentCreditDeps = {
         authenticate: authenticateStaffRoute,
         lifecycleFhir: fhir,
@@ -5495,7 +5505,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCupDiscDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5511,7 +5521,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCupDiscCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5527,7 +5537,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5543,7 +5553,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5559,7 +5569,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5575,7 +5585,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5591,7 +5601,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSoftContactLensDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5607,7 +5617,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSoftContactLensCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5623,7 +5633,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyContactLensDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5639,7 +5649,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyContactLensCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5655,7 +5665,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyKeratometryRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -5671,7 +5681,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleWearingDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5687,7 +5697,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleWearingCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5703,7 +5713,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleAutoRefractionDefinitionRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5719,7 +5729,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleAutoRefractionCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5735,7 +5745,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopHistoryRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -5751,7 +5761,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionHistoryRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -5767,7 +5777,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopTargetRequest(
-            { authenticate: authenticateStaffRoute },
+            await clinicalGraphRouteDeps(req.header("authorization")),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
