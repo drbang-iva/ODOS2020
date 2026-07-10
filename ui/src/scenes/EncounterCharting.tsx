@@ -17,8 +17,8 @@ import { SpecialtyContactLensSection } from "../components/charting/SpecialtyCon
 import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
+import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { useRole } from "../lib/role-context";
-import { fhir } from "../lib/fhir";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
 interface Props {
@@ -209,13 +209,4 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       )}
     </div>
   );
-}
-
-function authHeaders(): Record<string, string> {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }

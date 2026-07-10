@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { formatPowerOption, numericOptions } from "./power-options";
 import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
@@ -394,13 +394,4 @@ function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
 
 function definedRecord<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
-}
-
-function authHeaders(): HeadersInit {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }

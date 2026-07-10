@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 
 type Eye = "OD" | "OS";
 type ViewMode = "timeline" | "diurnal" | "table";
@@ -1240,13 +1240,4 @@ function computedDraftTarget(draft: TargetDraft, history: IopHistoryResponse | n
   return average === null || average === undefined || !Number.isFinite(percent)
     ? null
     : targetValueFromAverage(average, percent);
-}
-
-function authHeaders(): HeadersInit {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }

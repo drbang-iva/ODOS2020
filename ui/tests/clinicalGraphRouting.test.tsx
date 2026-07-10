@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import { authHeaders } from "../src/lib/clinical-graph-client";
+import { fhir } from "../src/lib/fhir";
 
 const UI_ROOT = join(process.cwd(), "src");
 
@@ -10,18 +12,65 @@ test("Vite proxies relative clinical-graph requests to the MCP server", () => {
   assert.match(config, /"\/clinical-graph": \{ target: "http:\/\/localhost:3333", changeOrigin: true \}/);
 });
 
-test("every clinicalGraphApiBase helper uses Vite's literal MCP environment access", () => {
-  const sources = sourceFiles(UI_ROOT)
-    .map((path) => ({ path, source: readFileSync(path, "utf8") }))
-    .filter(({ source }) => source.includes("function clinicalGraphApiBase"));
+test("clinical-graph requests share the literal Vite route and Medplum authorization helpers", () => {
+  const clientPath = join(UI_ROOT, "lib", "clinical-graph-client.ts");
+  const client = readFileSync(clientPath, "utf8");
+  assert.match(client, /import\.meta\.env\.VITE_OSOD_MCP_BASE_URL/);
+  assert.match(client, /fhir\.authHeader\(\)/);
 
-  assert.equal(sources.length, 13);
-  for (const { path, source } of sources) {
-    const helper = source.match(/function clinicalGraphApiBase\(\): string \{[\s\S]*?\n\}/)?.[0] ?? "";
-    assert.match(helper, /import\.meta\.env\.VITE_OSOD_MCP_BASE_URL/, path);
-    assert.doesNotMatch(helper, /const meta = import\.meta|VITE_MCP_URL/, path);
+  const callers = sourceFiles(UI_ROOT)
+    .filter((path) => path !== clientPath)
+    .map((path) => ({ path, source: readFileSync(path, "utf8") }))
+    .filter(({ source }) => source.includes("clinicalGraphApiBase()"));
+
+  assert.equal(callers.length, 13);
+  for (const { path, source } of callers) {
+    assert.match(source, /from "\.\.\/(?:\.\.\/)?lib\/clinical-graph-client";/, path);
+    assert.doesNotMatch(source, /function (?:authHeaders|clinicalGraphApiBase)\(/, path);
   }
 });
+
+test("authHeaders returns the live Medplum client authorization", () => {
+  const original = fhir.authHeader;
+  fhir.authHeader = () => "Bearer scoped-clinician";
+  try {
+    assert.deepEqual(authHeaders(), { Authorization: "Bearer scoped-clinician" });
+  } finally {
+    fhir.authHeader = original;
+  }
+});
+
+test("soft and specialty contact lens definition and save requests use shared authorization", () => {
+  assertAuthenticatedDefinitionAndSave(
+    join(UI_ROOT, "components", "charting", "SoftContactLensSection.tsx"),
+    "soft",
+  );
+  assertAuthenticatedDefinitionAndSave(
+    join(UI_ROOT, "components", "charting", "SpecialtyContactLensSection.tsx"),
+    "specialty",
+  );
+});
+
+test("no UI source references the obsolete osod_access_token key", () => {
+  for (const path of sourceFiles(UI_ROOT)) {
+    assert.doesNotMatch(readFileSync(path, "utf8"), /osod_access_token/, path);
+  }
+});
+
+function assertAuthenticatedDefinitionAndSave(path: string, kind: "soft" | "specialty"): void {
+  const source = readFileSync(path, "utf8");
+  assert.match(source, /import \{ authHeaders, clinicalGraphApiBase \} from "\.\.\/\.\.\/lib\/clinical-graph-client";/);
+  assert.match(
+    source,
+    new RegExp(`contact-lens/${kind}/definition[\\s\\S]{0,120}headers: authHeaders\\(\\)`),
+    `${kind} definition request`,
+  );
+  assert.match(
+    source,
+    new RegExp(`contact-lens/${kind}\`[\\s\\S]{0,160}method: "POST"[\\s\\S]{0,120}headers: \\{ \\.\\.\\.authHeaders\\(\\)`),
+    `${kind} save request`,
+  );
+}
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

@@ -8,6 +8,7 @@ import {
   buildStartEncounterCreateBundle,
   createdIdFromEntry,
 } from "../lib/encounter-bundles";
+import { clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { createProgram } from "../lib/clinical-actions";
 import {
   EPISODE_OF_CARE_TYPE_CODES,
@@ -223,10 +224,6 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
       </footer>
     </div>
   );
-}
-
-function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 function StartModeButton({

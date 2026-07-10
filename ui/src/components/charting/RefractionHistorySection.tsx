@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { formatPowerOption } from "./power-options";
 
 type Eye = "OD" | "OS";
@@ -394,13 +394,4 @@ function emptyMessage(tab: Tab): string {
   if (tab === "glasses") return "No glasses history yet";
   if (tab === "softCl") return "No soft contact lens history yet";
   return "No specialty contact lens history yet";
-}
-
-function authHeaders(): HeadersInit {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
