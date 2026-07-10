@@ -1,11 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
-import { assertTransactionSuccess } from "../../lib/encounter-bundles";
-import {
-  buildSectionSaveBundle,
-  type RefractionSectionSaveEntry,
-} from "../../lib/fhir-ophthalmology/save-section-bundle";
 import type { SectionSaveStatus } from "./types";
+import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
   patientReference: string;
@@ -13,79 +9,199 @@ interface Props {
   onSaved: (status: SectionSaveStatus) => void;
 }
 
-interface RefractionRowState {
-  refractionType: RefractionSectionSaveEntry["refractionType"];
+type Eye = "OD" | "OS";
+
+interface DefinitionOption {
+  code: string;
+  display: string;
+  active?: boolean;
+}
+
+interface DefinitionField {
+  display?: string;
+  minimum?: number;
+  maximum?: number;
+  step?: number;
+  options?: DefinitionOption[];
+}
+
+interface RefractionDefinitionResponse {
+  definition: {
+    fields: Record<string, DefinitionField>;
+  };
+  diagnosisOptions: DiagnosisOption[];
+  refractiveThreshold: number;
+}
+
+interface DiagnosisOption {
+  code: string;
+  display: string;
+  family: string;
+  laterality: string;
+}
+
+interface Suggestion {
+  id: string;
+  code: string;
+  display: string;
+  family: string;
+  explanation: string;
+  visitState: string;
+}
+
+interface EyeState {
   sphere: string;
   cylinder: string;
   axis: string;
   add: string;
+  distanceVisualAcuity: string;
+  nearVisualAcuity: string;
+  distancePinholeVisualAcuity: string;
 }
 
-const OPERATOR = "OSOD UI save_refraction";
+interface BlockState {
+  id: string;
+  type: string;
+  purpose: string;
+  remarks: string;
+  OD: EyeState;
+  OS: EyeState;
+}
+
+interface EyePayload {
+  sphere?: number;
+  cylinder?: number;
+  axis?: number;
+  add?: number;
+  distanceVisualAcuity?: string;
+  nearVisualAcuity?: string;
+  distancePinholeVisualAcuity?: string;
+}
+
+interface BlockPayload {
+  type: string;
+  purpose?: string;
+  remarks?: string;
+  OD?: EyePayload;
+  OS?: EyePayload;
+}
+
+const EYES: Eye[] = ["OD", "OS"];
+const OPERATOR = "OSOD UI clinical_graph_refraction";
 
 export function RefractionSection({ patientReference, encounterReference, onSaved }: Props) {
-  const [rows, setRows] = useState<Record<"OD" | "OS", RefractionRowState>>({
-    OD: { refractionType: "MANIFEST", sphere: "", cylinder: "", axis: "", add: "" },
-    OS: { refractionType: "MANIFEST", sphere: "", cylinder: "", axis: "", add: "" },
-  });
+  const [definition, setDefinition] = useState<RefractionDefinitionResponse | null>(null);
+  const [definitionError, setDefinitionError] = useState<string | null>(null);
+  const [definitionLoading, setDefinitionLoading] = useState(true);
+  const [definitionRefresh, setDefinitionRefresh] = useState(0);
+  const [blocks, setBlocks] = useState<BlockState[]>(() => [emptyBlock(), emptyBlock()]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionSelections, setSuggestionSelections] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
 
-  async function save() {
-    let entries: RefractionSectionSaveEntry[];
-    try {
-      entries = (["OD", "OS"] as const).flatMap((laterality) => {
-        const row = rows[laterality];
-        if (![row.sphere, row.cylinder, row.axis, row.add].some((value) => value.trim())) {
-          return [];
+  useEffect(() => {
+    const controller = new AbortController();
+    setDefinitionLoading(true);
+    setDefinitionError(null);
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction/definition`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Refraction definition request failed: ${response.status}`);
         }
-        if ((row.cylinder.trim() && !row.axis.trim()) || (!row.cylinder.trim() && row.axis.trim())) {
-          throw new Error(`${laterality} cylinder and axis must be saved together.`);
+        return (await response.json()) as RefractionDefinitionResponse;
+      })
+      .then((body) => {
+        setDefinition(body);
+        const options = activeOptions(body.definition.fields.type);
+        setBlocks((current) => current.map((block, index) => ({
+          ...block,
+          type: block.type || options[index]?.code || options[0]?.code || "",
+        })));
+      })
+      .catch((err) => {
+        if ((err as Error).name !== "AbortError") {
+          setDefinitionError(err instanceof Error ? err.message : String(err));
         }
-        return [
-          {
-            laterality,
-            refractionType: row.refractionType,
-            sphere: parseOptionalNumber(row.sphere, `${laterality} sphere`),
-            cylinder: parseOptionalNumber(row.cylinder, `${laterality} cylinder`),
-            axis: parseOptionalNumber(row.axis, `${laterality} axis`),
-            add: parseOptionalNumber(row.add, `${laterality} add`),
-          },
-        ];
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDefinitionLoading(false);
       });
+    return () => controller.abort();
+  }, [definitionRefresh]);
+
+  const fields = definition?.definition.fields ?? {};
+  const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
+  const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
+  const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
+
+  function updateBlock(blockId: string, next: Partial<BlockState>) {
+    setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, ...next } : block));
+  }
+
+  function updateEye(blockId: string, eye: Eye, next: Partial<EyeState>) {
+    setBlocks((current) => current.map((block) =>
+      block.id === blockId
+        ? { ...block, [eye]: { ...block[eye], ...next } }
+        : block));
+  }
+
+  function addBlock() {
+    const manifest = typeOptions.find((option) => option.code === "MANIFEST")?.code;
+    setBlocks((current) => [...current, emptyBlock(manifest ?? typeOptions[0]?.code ?? "")]);
+  }
+
+  function copyOdToOs(blockId: string) {
+    setBlocks((current) => current.map((block) =>
+      block.id === blockId ? { ...block, OS: { ...block.OD } } : block));
+  }
+
+  async function save() {
+    let payloadBlocks: BlockPayload[];
+    try {
+      payloadBlocks = buildPayload(blocks);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
-
-    if (entries.length === 0) {
-      setError("Enter at least one refraction row before saving.");
+    if (payloadBlocks.length === 0) {
+      setError("Enter at least one refraction block before saving.");
       return;
     }
 
     setSaving(true);
     setError(null);
     try {
-      const response = await fhir.executeTransaction(
-        buildSectionSaveBundle({
-          patientReference,
-          encounterReference,
-          section: "refraction",
-          entries,
-          operatorDisplay: OPERATOR,
-        }),
-        "save_refraction",
-      );
-      assertTransactionSuccess(response);
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ patientReference, encounterReference, blocks: payloadBlocks }),
+      });
+      const body = (await response.json()) as {
+        blocks?: unknown[];
+        suggestions?: Suggestion[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(body.error ?? `Refraction save failed: ${response.status}`);
+      }
+      const nextSuggestions = body.suggestions ?? [];
+      setSuggestions(nextSuggestions);
+      setSuggestionSelections(Object.fromEntries(nextSuggestions.map((suggestion) => [suggestion.id, suggestion.code])));
+      const savedBlockCount = body.blocks?.length ?? payloadBlocks.length;
       const status = {
         completed: true,
-        summary: entries.map(formatEntrySummary).join(" - "),
+        summary: `${savedBlockCount} refraction block${savedBlockCount === 1 ? "" : "s"} saved`,
         savedAt: new Date().toISOString(),
         operator: OPERATOR,
       };
       setSaved(status);
       onSaved(status);
+      setDefinitionRefresh((current) => current + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -95,85 +211,208 @@ export function RefractionSection({ patientReference, encounterReference, onSave
 
   return (
     <section className="h-full overflow-y-auto p-6">
-      <div className="max-w-5xl">
-        <h2 className="text-lg font-semibold text-white">Refraction</h2>
-        <div className="mt-5 overflow-hidden rounded border border-white/10">
-          <div className="grid grid-cols-[72px_170px_repeat(4,minmax(110px,1fr))] bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/35">
-            <div>Eye</div>
-            <div>Type</div>
-            <div>Sphere</div>
-            <div>Cyl</div>
-            <div>Axis</div>
-            <div>Add</div>
+      <div className="max-w-[1500px]">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-white">Refraction</h2>
+            <p className="mt-1 text-sm text-white/45">Typed OD/OS blocks with Manifest-only diagnosis suggestions</p>
           </div>
-          {(["OD", "OS"] as const).map((laterality) => (
-            <div key={laterality} className="grid grid-cols-[72px_170px_repeat(4,minmax(110px,1fr))] gap-3 border-t border-white/10 p-4">
-              <div className="pt-3 text-sm font-semibold text-white">{laterality}</div>
-              <select
-                value={rows[laterality].refractionType}
-                onChange={(event) =>
-                  setRows((current) => ({
-                    ...current,
-                    [laterality]: {
-                      ...current[laterality],
-                      refractionType: event.target.value as RefractionRowState["refractionType"],
-                    },
-                  }))
-                }
-                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
-              >
-                {["AUTOREFRACTION", "MANIFEST", "CYCLOPLEGIC", "FINAL_RX", "OTHER"].map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-              {(["sphere", "cylinder", "axis", "add"] as const).map((field) => (
-                <input
-                  key={field}
-                  value={rows[laterality][field]}
-                  onChange={(event) =>
-                    setRows((current) => ({
-                      ...current,
-                      [laterality]: { ...current[laterality], [field]: event.target.value },
-                    }))
-                  }
-                  inputMode="decimal"
-                  placeholder={field === "axis" ? "180" : "0.00"}
-                  className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
-                />
-              ))}
+          <button
+            type="button"
+            onClick={addBlock}
+            disabled={definitionLoading || typeOptions.length === 0}
+            className="rounded border border-brand/50 bg-brand/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand/20 disabled:opacity-45"
+          >
+            ＋ Add refraction
+          </button>
+        </div>
+
+        {definitionError && (
+          <div className="mt-5 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">
+            {definitionError}
+          </div>
+        )}
+
+        <div className="mt-5 space-y-5">
+          {blocks.map((block, blockIndex) => (
+            <div key={block.id} className="overflow-hidden rounded border border-white/10 bg-white/[0.02]">
+              <div className="flex flex-wrap items-end gap-3 border-b border-white/10 bg-white/[0.03] p-4">
+                <label className="block min-w-[220px]">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Refraction Type</span>
+                  <select
+                    value={block.type}
+                    onChange={(event) => updateBlock(block.id, { type: event.target.value })}
+                    disabled={definitionLoading}
+                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
+                  >
+                    <option value="">Select</option>
+                    {typeOptions.map((option) => (
+                      <option key={option.code} value={option.code}>{option.display}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block min-w-[260px] flex-1">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Purpose</span>
+                  <input
+                    value={block.purpose}
+                    onChange={(event) => updateBlock(block.id, { purpose: event.target.value })}
+                    placeholder={block.type === "FINAL_RX" ? "General wear" : "Optional"}
+                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
+                  />
+                </label>
+                <label className="block min-w-[260px] flex-1">
+                  <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>
+                  <input
+                    value={block.remarks}
+                    onChange={(event) => updateBlock(block.id, { remarks: event.target.value })}
+                    maxLength={2000}
+                    placeholder="Optional clinical remarks"
+                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
+                  />
+                </label>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs uppercase tracking-widest text-white/25">Block {blockIndex + 1}</span>
+                  {blocks.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setBlocks((current) => current.filter((candidate) => candidate.id !== block.id))}
+                      className="rounded border border-white/10 px-2 py-1 text-xs text-white/45 hover:border-red-400/40 hover:text-red-100"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <div className="min-w-[1320px]">
+                  <div className="grid grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+                    <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div><div>Add</div>
+                    <div>Dist VA</div><div>Near VA</div><div>Dist PH</div><div />
+                  </div>
+                  {EYES.map((eye) => (
+                    <div key={eye} className="grid grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px] items-center gap-2 border-t border-white/10 px-4 py-3">
+                      <div className="text-sm font-semibold text-white">{eye}</div>
+                      {(["sphere", "cylinder", "add"] as const).slice(0, 2).map((field) => (
+                        <PowerSelect
+                          key={field}
+                          value={block[eye][field]}
+                          onChange={(value) => updateEye(block.id, eye, { [field]: value })}
+                          options={powerOptions}
+                          ariaLabel={`${eye} ${field}`}
+                        />
+                      ))}
+                      <select
+                        value={block[eye].axis}
+                        onChange={(event) => updateEye(block.id, eye, { axis: event.target.value })}
+                        aria-label={`${eye} axis`}
+                        className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
+                      >
+                        <option value="">Select</option>
+                        {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
+                      </select>
+                      <PowerSelect
+                        value={block[eye].add}
+                        onChange={(value) => updateEye(block.id, eye, { add: value })}
+                        options={powerOptions}
+                        ariaLabel={`${eye} add`}
+                      />
+                      <VaValueSelect
+                        value={block[eye].distanceVisualAcuity}
+                        onChange={(value) => updateEye(block.id, eye, { distanceVisualAcuity: value })}
+                        ariaLabel={`${eye} distance visual acuity`}
+                      />
+                      <VaValueSelect
+                        value={block[eye].nearVisualAcuity}
+                        onChange={(value) => updateEye(block.id, eye, { nearVisualAcuity: value })}
+                        ariaLabel={`${eye} near visual acuity`}
+                      />
+                      <VaValueSelect
+                        value={block[eye].distancePinholeVisualAcuity}
+                        onChange={(value) => updateEye(block.id, eye, { distancePinholeVisualAcuity: value })}
+                        ariaLabel={`${eye} distance pinhole visual acuity`}
+                      />
+                      <div>
+                        {eye === "OD" && (
+                          <button
+                            type="button"
+                            onClick={() => copyOdToOs(block.id)}
+                            className="rounded border border-white/15 px-2 py-2 text-xs text-white/65 hover:border-brand/50 hover:text-white"
+                          >
+                            Copy OD→OS
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
         </div>
 
-        <SectionFooter error={error} saved={saved} saving={saving} onSave={save} />
+        {suggestions.length > 0 && definition && (
+          <div className="mt-6 rounded border border-amber-300/25 bg-amber-400/[0.06] p-4">
+            <div className="text-sm font-semibold text-amber-100">Non-committal diagnosis suggestions</div>
+            <div className="mt-1 text-xs text-amber-100/60">
+              Review, override, or reject each suggestion. No diagnosis is confirmed by this list.
+            </div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {suggestions.map((suggestion) => {
+                const options = definition.diagnosisOptions.filter((option) => option.family === suggestion.family);
+                return (
+                  <label key={suggestion.id} className="rounded border border-white/10 bg-bg-deep/60 p-3">
+                    <span className="block text-sm text-white/80">{suggestion.explanation}</span>
+                    <select
+                      value={suggestionSelections[suggestion.id] ?? ""}
+                      onChange={(event) => setSuggestionSelections((current) => ({
+                        ...current,
+                        [suggestion.id]: event.target.value,
+                      }))}
+                      className="mt-3 h-10 w-full rounded border border-amber-300/25 bg-bg-deep px-3 text-sm text-white outline-none focus:border-amber-300/60"
+                    >
+                      <option value="">Reject suggestion</option>
+                      {options.map((option) => (
+                        <option key={option.code} value={option.code}>{option.code} — {option.display}</option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <SectionFooter error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />
       </div>
     </section>
   );
 }
 
-function parseOptionalNumber(value: string, label: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    throw new Error(`${label} must be numeric.`);
-  }
-  return parsed;
-}
-
-function formatEntrySummary(entry: RefractionSectionSaveEntry): string {
-  return [
-    entry.laterality,
-    formatDiopter(entry.sphere),
-    formatDiopter(entry.cylinder),
-    entry.axis !== undefined ? `x${entry.axis}` : undefined,
-    entry.add !== undefined ? `add ${formatDiopter(entry.add)}` : undefined,
-  ].filter(Boolean).join(" ");
-}
-
-function formatDiopter(value: number | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  if (value === 0) return "plano";
-  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+function PowerSelect({
+  value,
+  onChange,
+  options,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      aria-label={ariaLabel}
+      className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
+    >
+      <option value="">Select</option>
+      {options.map((option) => (
+        <option key={option} value={option}>{formatPowerOption(Number(option))}</option>
+      ))}
+    </select>
+  );
 }
 
 function SectionFooter({
@@ -201,6 +440,7 @@ function SectionFooter({
         )}
       </div>
       <button
+        type="button"
         onClick={onSave}
         disabled={saving}
         className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:cursor-not-allowed disabled:opacity-50"
@@ -209,4 +449,105 @@ function SectionFooter({
       </button>
     </div>
   );
+}
+
+function emptyBlock(type = ""): BlockState {
+  return {
+    id: crypto.randomUUID(),
+    type,
+    purpose: "",
+    remarks: "",
+    OD: emptyEye(),
+    OS: emptyEye(),
+  };
+}
+
+function emptyEye(): EyeState {
+  return {
+    sphere: "",
+    cylinder: "",
+    axis: "",
+    add: "",
+    distanceVisualAcuity: "",
+    nearVisualAcuity: "",
+    distancePinholeVisualAcuity: "",
+  };
+}
+
+function buildPayload(blocks: BlockState[]): BlockPayload[] {
+  return blocks.flatMap((block, blockIndex) => {
+    const eyes = Object.fromEntries(EYES.flatMap((eye) => {
+      const row = block[eye];
+      if (!eyeTouched(row)) return [];
+      if ((row.cylinder && !row.axis) || (!row.cylinder && row.axis)) {
+        throw new Error(`Block ${blockIndex + 1} ${eye} cylinder and axis must be saved together.`);
+      }
+      return [[eye, definedRecord({
+        sphere: parseOptionalNumber(row.sphere),
+        cylinder: parseOptionalNumber(row.cylinder),
+        axis: parseOptionalNumber(row.axis),
+        add: parseOptionalNumber(row.add),
+        distanceVisualAcuity: row.distanceVisualAcuity || undefined,
+        nearVisualAcuity: row.nearVisualAcuity || undefined,
+        distancePinholeVisualAcuity: row.distancePinholeVisualAcuity || undefined,
+      })]];
+    })) as Partial<Record<Eye, EyePayload>>;
+    if (Object.keys(eyes).length === 0) return [];
+    if (!block.type) {
+      throw new Error(`Block ${blockIndex + 1} requires a refraction type.`);
+    }
+    return [{
+      type: block.type,
+      ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
+      ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
+      ...eyes,
+    }];
+  });
+}
+
+function eyeTouched(row: EyeState): boolean {
+  return Object.values(row).some((value) => value.trim());
+}
+
+function parseOptionalNumber(value: string): number | undefined {
+  return value ? Number(value) : undefined;
+}
+
+function numericOptions(
+  field: DefinitionField | undefined,
+  fallbackMinimum: number,
+  fallbackMaximum: number,
+  fallbackStep: number,
+): string[] {
+  const minimum = field?.minimum ?? fallbackMinimum;
+  const maximum = field?.maximum ?? fallbackMaximum;
+  const step = field?.step ?? fallbackStep;
+  const count = Math.round((maximum - minimum) / step);
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const value = minimum + index * step;
+    return (Math.abs(value) < 1e-9 ? 0 : value).toFixed(step < 1 ? 2 : 0);
+  });
+}
+
+function formatPowerOption(value: number): string {
+  if (value === 0) return "Plano";
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
+}
+
+function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {
+  return (field?.options ?? []).filter((option) => option.active !== false);
+}
+
+function definedRecord<T extends Record<string, unknown>>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as Partial<T>;
+}
+
+function authHeaders(): HeadersInit {
+  const authorization = fhir.authHeader();
+  return authorization ? { Authorization: authorization } : {};
+}
+
+function clinicalGraphApiBase(): string {
+  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
+  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
