@@ -58,6 +58,9 @@ import {
 import {
   handleSoftContactLensCaptureRequest,
   handleSoftContactLensDefinitionRequest,
+  handleSpecialtyContactLensCaptureRequest,
+  handleSpecialtyContactLensDefinitionRequest,
+  handleSpecialtyKeratometryRequest,
 } from "./clinical-graph/contact-lens-endpoint.js";
 import {
   handleAutoRefractionCaptureRequest,
@@ -5602,6 +5605,54 @@ async function main(): Promise<void> {
           console.error("osod-mcp: /clinical-graph/contact-lens/soft failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Soft contact lens clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/contact-lens/specialty/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSpecialtyContactLensDefinitionRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/contact-lens/specialty/definition failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Specialty contact lens definition route failed" });
+          }
+        }
+      });
+
+      app.post("/clinical-graph/contact-lens/specialty", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSpecialtyContactLensCaptureRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/contact-lens/specialty failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Specialty contact lens clinical-graph route failed" });
+          }
+        }
+      });
+
+      app.get("/clinical-graph/contact-lens/keratometry", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleSpecialtyKeratometryRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/contact-lens/keratometry failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Specialty contact lens keratometry route failed" });
           }
         }
       });

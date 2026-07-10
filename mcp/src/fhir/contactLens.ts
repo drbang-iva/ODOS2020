@@ -174,6 +174,8 @@ export type ContactLensClinicalObservationCode =
 export const CONTACT_LENS_MATERIAL_CODES = [
   "Boston-XO",
   "Boston-XO2",
+  "Boston-ES",
+  "Fluoroperm",
   "Optimum-Extra",
   "Optimum-Infinite",
   "Menicon-Z",
