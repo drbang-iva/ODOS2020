@@ -5,6 +5,7 @@ import type {
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
   PaymentReconciliation,
+  Resource,
   Task,
 } from "@medplum/fhirtypes";
 import { buildOsodAuditEventRow, type OsodActorRole, type OsodAuditEventRecord } from "../authz/osodAudit.js";
@@ -12,6 +13,12 @@ import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } f
 import type { MedplumClient } from "../fhir-client.js";
 import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
+import {
+  isClaimSearchStatus,
+  isRelatedClaimResource,
+  projectClaimSearchResults,
+  type ClaimSearchFilters,
+} from "./claim-search.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
@@ -392,6 +399,87 @@ export async function handleEraWorklistRequest(
   return { status: 200, body: { items: projectEraWorklistBundle(bundle, now(deps)) } };
 }
 
+export async function handleClaimSearchRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; query?: Record<string, unknown> },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const patient = trimmedValue(input.query?.patient);
+  const status = trimmedValue(input.query?.status);
+  if (status && !isClaimSearchStatus(status)) {
+    return { status: 400, body: { error: "status must be submitted, accepted, queued, rejected, paid, denied, or underpaid." } };
+  }
+  const requestedStatus = status && isClaimSearchStatus(status) ? status : undefined;
+  const minAmountCents = amountCents(input.query?.minAmount);
+  const maxAmountCents = amountCents(input.query?.maxAmount);
+  if (minAmountCents === null || maxAmountCents === null) {
+    return { status: 400, body: { error: "minAmount and maxAmount must be non-negative dollar amounts." } };
+  }
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    return { status: 400, body: { error: "minAmount cannot exceed maxAmount." } };
+  }
+
+  const [claimBundle, responseBundle, taskBundle] = await Promise.all([
+    auth.fhir.search<Claim>("Claim", { _count: "100", _sort: "-created" }),
+    auth.fhir.search<ClaimResponse>("ClaimResponse", { _count: "200", _sort: "-created" }),
+    auth.fhir.search<Task>("Task", {
+      code: `${ERA_WORKLIST_CODE_SYSTEM}|,${CLAIM_REJECTED_CODE_SYSTEM}|`,
+      _count: "200",
+      _sort: "-authored-on",
+    }),
+  ]);
+  const claims = bundleResources(claimBundle);
+  const responses = bundleResources(responseBundle);
+  const tasks = bundleResources(taskBundle);
+  let patientReferences: Set<string> | undefined;
+  const relatedResources: Resource[] = [];
+  if (patient) {
+    if (/^Patient\/[A-Za-z0-9.-]+$/.test(patient)) {
+      patientReferences = new Set([patient]);
+    } else {
+      const patientBundle = await auth.fhir.search<Resource>("Patient", { name: patient, _count: "100" });
+      const patients = bundleResources(patientBundle).filter(isRelatedClaimResource);
+      relatedResources.push(...patients);
+      patientReferences = new Set(patients.flatMap((resource) => resource.id ? [`Patient/${resource.id}`] : []));
+    }
+  }
+
+  const referenceBundles = await Promise.all(
+    (["Patient", "Practitioner", "PractitionerRole", "Organization", "Location"] as const).map(async (resourceType) => {
+      const ids = claimReferenceIds(claims, resourceType);
+      if (ids.length === 0) return [];
+      const bundle = await auth.fhir.search<Resource>(resourceType, { _id: ids.join(","), _count: String(ids.length) });
+      return bundleResources(bundle).filter(isRelatedClaimResource);
+    }),
+  );
+  relatedResources.push(...referenceBundles.flat());
+
+  const filters: ClaimSearchFilters = {
+    ...(patientReferences ? { patientReferences } : {}),
+    ...(trimmedValue(input.query?.claim) ? { claim: trimmedValue(input.query?.claim) } : {}),
+    ...(requestedStatus ? { status: requestedStatus } : {}),
+    ...(trimmedValue(input.query?.carrier) ? { carrier: trimmedValue(input.query?.carrier) } : {}),
+    ...(trimmedValue(input.query?.office) ? { office: trimmedValue(input.query?.office) } : {}),
+    ...(trimmedValue(input.query?.cpt) ? { cpt: trimmedValue(input.query?.cpt) } : {}),
+    ...(minAmountCents !== undefined ? { minAmountCents } : {}),
+    ...(maxAmountCents !== undefined ? { maxAmountCents } : {}),
+  };
+  return {
+    status: 200,
+    body: {
+      items: projectClaimSearchResults({
+        claims,
+        responses,
+        tasks,
+        relatedResources,
+        filters,
+        at: now(deps),
+      }),
+    },
+  };
+}
+
 async function createAndAuditClaimRejectedTask(
   deps: ClaimsHandlerDeps,
   auth: AuthenticatedClaimsStaff,
@@ -748,4 +836,36 @@ function stringValue(value: unknown): string | undefined {
   if (typeof value === "string" && value.length > 0) return value;
   if (Array.isArray(value)) return stringValue(value[0]);
   return undefined;
+}
+
+function trimmedValue(value: unknown): string | undefined {
+  const text = stringValue(value)?.trim();
+  return text || undefined;
+}
+
+function amountCents(value: unknown): number | undefined | null {
+  const text = trimmedValue(value);
+  if (text === undefined) return undefined;
+  const amount = Number(text);
+  return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null;
+}
+
+function bundleResources<T extends Resource>(bundle: { entry?: Array<{ resource?: T }> }): T[] {
+  return bundle.entry?.flatMap((entry) => entry.resource ? [entry.resource] : []) ?? [];
+}
+
+function claimReferenceIds(
+  claims: readonly Claim[],
+  resourceType: "Patient" | "Practitioner" | "PractitionerRole" | "Organization" | "Location",
+): string[] {
+  const references = claims.flatMap((claim) => [
+    claim.patient.reference,
+    claim.provider?.reference,
+    claim.insurer?.reference,
+    claim.facility?.reference,
+  ]).filter((reference): reference is string => Boolean(reference));
+  return [...new Set(references.flatMap((reference) => {
+    const match = reference.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]+)$`));
+    return match ? [match[1]] : [];
+  }))];
 }
