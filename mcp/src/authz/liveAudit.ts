@@ -30,6 +30,7 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-05-09-v06a-frames-data.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-09-era-worklist-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-09-claim-rejected-event.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-10-manual-eob-event.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
 
 export interface LiveAuditRuntimeOptions {

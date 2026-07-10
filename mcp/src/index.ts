@@ -75,10 +75,14 @@ import {
   handleClaimEraWorklistTaskRequest,
   handleClaimSearchRequest,
   handleClaimStatusRequest,
+  handleCloseManualEobRequest,
+  handleCreateManualEobRequest,
   handleEligibilityCheckRequest,
   handleEraImportRequest,
   handleEraListRequest,
   handleEraWorklistRequest,
+  handleManualEobListRequest,
+  handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
 } from "./claims/claimmd-handlers.js";
@@ -5807,6 +5811,86 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "claim search route failed" });
           }
+        }
+      });
+
+      app.get("/claims/manual-eob", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleManualEobListRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/manual-eob failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "manual EOB list route failed" });
+        }
+      });
+
+      app.post("/claims/manual-eob", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCreateManualEobRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: POST /claims/manual-eob failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "manual EOB create route failed" });
+        }
+      });
+
+      app.post("/claims/manual-eob/:id/post", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handlePostManualEobClaimRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/manual-eob/:id/post failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "manual EOB posting route failed" });
+        }
+      });
+
+      app.post("/claims/manual-eob/:id/close", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCloseManualEobRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              adapter: claimMdAdapter,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /claims/manual-eob/:id/close failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "manual EOB close route failed" });
         }
       });
 

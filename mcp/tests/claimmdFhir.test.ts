@@ -4,6 +4,7 @@ import type { ChargeItem } from "@medplum/fhirtypes";
 import {
   buildClaimMdProfessionalClaimJson,
   buildClaimResponseFromClaimMdEra,
+  buildManualClaimResponse,
   buildCoverageEligibilityRequest,
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
@@ -165,6 +166,39 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
     response.item?.[0]?.adjudication.find((a) => a.category.text === "patient responsibility")?.amount?.value,
     15,
   );
+});
+
+test("buildManualClaimResponse preserves paid, allowed, and distinct PR-1/2/3 adjudications", () => {
+  const response = buildManualClaimResponse({
+    claimReference: "Claim/claim-1",
+    patientReference: "Patient/pat-900",
+    insurerReference: "Organization/payer-1",
+    providerReference: "Practitioner/prov-1",
+    created: "2026-07-10",
+    paymentDate: "2026-07-10",
+    paymentReference: "EFT-900",
+    paymentIdentifierSystem: "https://osod.dev/fhir/NamingSystem/manual-eob",
+    lines: [{
+      itemSequence: 1,
+      submittedCents: 12_500,
+      allowedCents: 10_000,
+      paidCents: 7_000,
+      deductibleCents: 1_000,
+      coinsuranceCents: 1_200,
+      copayCents: 800,
+    }],
+  });
+
+  const adjudications = response.item?.[0]?.adjudication ?? [];
+  assert.equal(response.disposition, "Manual EOB posting");
+  assert.equal(response.payment?.amount.value, 70);
+  assert.equal(adjudications.find((entry) => entry.category.text === "submitted")?.amount?.value, 125);
+  assert.equal(adjudications.find((entry) => entry.category.text === "allowed")?.amount?.value, 100);
+  assert.equal(adjudications.find((entry) => entry.category.text === "paid")?.amount?.value, 70);
+  assert.equal(adjudications.find((entry) => entry.category.text === "patient responsibility")?.amount?.value, 30);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 1")?.amount?.value, 10);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 2")?.amount?.value, 12);
+  assert.equal(adjudications.find((entry) => entry.category.text === "adjustment PR 3")?.amount?.value, 8);
 });
 
 test("buildCoverageEligibilityRequest and response mapper capture medical eligibility fields", () => {

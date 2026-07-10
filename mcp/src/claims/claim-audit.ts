@@ -17,6 +17,7 @@ export const CLAIM_AUDIT_EVENT_TYPES = [
   "era.unmatched.flagged",
   "claim.rejected.flagged",
   "claim.status.checked",
+  "claim.manual-eob.posted",
 ] as const satisfies readonly OsodAuditEventType[];
 
 export type ClaimAuditEventType = (typeof CLAIM_AUDIT_EVENT_TYPES)[number];
@@ -27,7 +28,7 @@ export function buildClaimAuditRecord(input: {
   actorRole: OsodActorRole;
   patientReference?: string;
   targetReference: string;
-  adapterName: "claimmd";
+  adapterName: "claimmd" | "manual-eob";
   outcome: "success" | "failure";
   reason?: string;
   timestamp?: string;
@@ -39,7 +40,11 @@ export function buildClaimAuditRecord(input: {
     patientReference: input.patientReference,
     targetReference: input.targetReference,
     actionOutcome: input.outcome === "success" ? "granted" : "denied",
-    actionReason: ["CLAIM_CLEARINGHOUSE", `adapter=${input.adapterName}`, input.reason]
+    actionReason: [
+      input.adapterName === "claimmd" ? "CLAIM_CLEARINGHOUSE" : "CLAIM_MANUAL_EOB",
+      `adapter=${input.adapterName}`,
+      input.reason,
+    ]
       .filter(Boolean)
       .join(" "),
     eventTime: input.timestamp,

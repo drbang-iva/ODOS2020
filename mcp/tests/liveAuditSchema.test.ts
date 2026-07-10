@@ -38,6 +38,7 @@ test("live audit boot schema matches every supported audit event type", async (t
     const eventTypes = [
       ...result.rows[0].definition.matchAll(/'((?:''|[^'])*)'::text/g),
     ].map((match) => match[1].replaceAll("''", "'"));
+    assert.equal(eventTypes.length, OSOD_AUDIT_EVENT_TYPES.length);
     assert.deepEqual(eventTypes, [...OSOD_AUDIT_EVENT_TYPES]);
   } finally {
     if (probeConnected) {

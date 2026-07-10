@@ -44,6 +44,7 @@ import {
 } from "./era-worklist.js";
 import {
   buildClaimMdProfessionalClaimJson,
+  buildManualClaimResponse,
   buildClaimResponseFromClaimMdEra,
   buildClaimResponseFromClaimMdStatus,
   buildCoverageEligibilityRequest,
@@ -52,8 +53,19 @@ import {
   medicalEligibilitySummary,
   type ClaimMdEraClaim,
   type ClaimMdEraData,
+  type ManualClaimResponseLineInput,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
+import {
+  MANUAL_EOB_CODE,
+  MANUAL_EOB_CODE_SYSTEM,
+  MANUAL_EOB_IDENTIFIER_SYSTEM,
+  ManualEobValidationError,
+  appendManualEobPosting,
+  buildManualEobHeader,
+  closeManualEobHeader,
+  parseManualEobHeader,
+} from "./manual-eob.js";
 
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
@@ -480,6 +492,196 @@ export async function handleClaimSearchRequest(
   };
 }
 
+export async function handleCreateManualEobRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const body = input.body as Record<string, unknown>;
+  const payerReference = stringValue(body.payerReference);
+  const paymentReference = trimmedValue(body.paymentReference);
+  const paymentDate = stringValue(body.paymentDate);
+  const depositDate = stringValue(body.depositDate);
+  const totalAmountCents = integerValue(body.totalAmountCents);
+  if (!payerReference || !paymentReference || !paymentDate || !depositDate || totalAmountCents === undefined) {
+    return {
+      status: 400,
+      body: { error: "payerReference, paymentReference, paymentDate, depositDate, and totalAmountCents are required." },
+    };
+  }
+
+  const existing = await auth.fhir.search<Basic>("Basic", {
+    code: `${MANUAL_EOB_CODE_SYSTEM}|${MANUAL_EOB_CODE}`,
+    identifier: `${MANUAL_EOB_IDENTIFIER_SYSTEM}|${paymentReference}`,
+    _count: "1",
+  });
+  if (bundleResources(existing).length > 0) {
+    return { status: 409, body: { error: "A manual EOB with this payment reference already exists." } };
+  }
+  try {
+    const created = await auth.fhir.create(buildManualEobHeader({
+      payerReference,
+      paymentReference,
+      paymentDate,
+      depositDate,
+      totalAmountCents,
+      createdAt: now(deps),
+    }));
+    return { status: 201, body: { header: parseManualEobHeader(created) } };
+  } catch (error) {
+    if (error instanceof ManualEobValidationError) return { status: 400, body: { error: error.message } };
+    throw error;
+  }
+}
+
+export async function handleManualEobListRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const bundle = await auth.fhir.search<Basic>("Basic", {
+    code: `${MANUAL_EOB_CODE_SYSTEM}|${MANUAL_EOB_CODE}`,
+    _count: "100",
+    _sort: "-_lastUpdated",
+  });
+  return { status: 200, body: { items: bundleResources(bundle).map(parseManualEobHeader) } };
+}
+
+export async function handlePostManualEobClaimRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; params: { id?: string }; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!input.params.id) return { status: 400, body: { error: "manual EOB id is required." } };
+  const body = input.body as Record<string, unknown>;
+  const claimReference = stringValue(body.claimReference);
+  const lineInputs = manualLineInputs(body.lines);
+  if (!claimReference || !/^Claim\/[A-Za-z0-9.-]+$/.test(claimReference) || !lineInputs) {
+    return { status: 400, body: { error: "claimReference and a complete lines array are required." } };
+  }
+
+  const [headerResource, claim] = await Promise.all([
+    auth.fhir.read<Basic>("Basic", input.params.id),
+    auth.fhir.read<Claim>("Claim", claimReference.slice("Claim/".length)),
+  ]);
+  let header;
+  try {
+    header = parseManualEobHeader(headerResource);
+  } catch (error) {
+    if (error instanceof ManualEobValidationError) return { status: 400, body: { error: error.message } };
+    throw error;
+  }
+  if (header.status !== "draft") {
+    return { status: 409, body: { error: "Only a draft manual EOB can receive claim postings." } };
+  }
+  if (header.postings.some((posting) => posting.claimReference === claimReference)) {
+    return { status: 409, body: { error: `${claimReference} is already posted on this manual EOB.` } };
+  }
+  if (claim.insurer?.reference !== header.payerReference) {
+    return { status: 400, body: { error: "The selected Claim insurer does not match the manual EOB payer." } };
+  }
+  const patientReference = claim.patient.reference;
+  if (!patientReference || !claim.provider?.reference) {
+    return { status: 400, body: { error: "The selected Claim is missing its patient or provider reference." } };
+  }
+  const claimItems = claim.item ?? [];
+  const sequences = new Set(lineInputs.map((line) => line.itemSequence));
+  if (
+    lineInputs.length !== claimItems.length
+    || sequences.size !== claimItems.length
+    || claimItems.some((item) => !sequences.has(item.sequence))
+  ) {
+    return { status: 400, body: { error: "Every Claim item must be adjudicated exactly once." } };
+  }
+  let responseResource: ClaimResponse;
+  try {
+    const lines: ManualClaimResponseLineInput[] = lineInputs.map((line) => {
+      const item = claimItems.find((candidate) => candidate.sequence === line.itemSequence)!;
+      return { ...line, submittedCents: claimItemSubmittedCents(item) };
+    });
+    responseResource = buildManualClaimResponse({
+      claimReference,
+      patientReference,
+      insurerReference: header.payerReference,
+      providerReference: claim.provider.reference,
+      created: today(deps),
+      paymentDate: header.paymentDate,
+      paymentReference: header.paymentReference,
+      paymentIdentifierSystem: MANUAL_EOB_IDENTIFIER_SYSTEM,
+      lines,
+    });
+    const paidCents = Math.round((responseResource.payment?.amount.value ?? 0) * 100);
+    if (paidCents > header.remainingAmountCents) {
+      return { status: 400, body: { error: "Claim payment exceeds the manual EOB remaining amount." } };
+    }
+  } catch (error) {
+    return { status: 400, body: { error: messageOf(error) } };
+  }
+
+  const response = await auth.fhir.create(responseResource);
+  const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
+  const reconciliation = await auth.fhir.create(buildInsurancePaymentReconciliation({
+    createdIso: now(deps),
+    paymentDate: header.paymentDate,
+    amountCents: paidCents,
+    claimReference,
+    claimResponseReference: ref(response),
+    insurerReference: header.payerReference,
+    processorTransactionId: header.paymentReference,
+    processorTransactionSystem: MANUAL_EOB_IDENTIFIER_SYSTEM,
+    description: `Manual EOB ${header.paymentReference}`,
+  }));
+  const updatedHeaderResource = await auth.fhir.update<Basic>(
+    "Basic",
+    header.id,
+    appendManualEobPosting(headerResource, {
+      claimReference,
+      claimResponseReference: ref(response),
+      paymentReconciliationReference: ref(reconciliation),
+      amountCents: paidCents,
+      postedAt: now(deps),
+    }),
+  );
+  await audit(
+    deps,
+    auth,
+    "claim.manual-eob.posted",
+    "success",
+    ref(response),
+    patientReference,
+    `manual-eob=${header.id}`,
+    "manual-eob",
+  );
+  return {
+    status: 201,
+    body: {
+      header: parseManualEobHeader(updatedHeaderResource),
+      claimResponseId: requiredId(response),
+      paymentReconciliationId: requiredId(reconciliation),
+    },
+  };
+}
+
+export async function handleCloseManualEobRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; params: { id?: string } },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  if (!input.params.id) return { status: 400, body: { error: "manual EOB id is required." } };
+  const existing = await auth.fhir.read<Basic>("Basic", input.params.id);
+  try {
+    const updated = await auth.fhir.update<Basic>("Basic", input.params.id, closeManualEobHeader(existing));
+    return { status: 200, body: { header: parseManualEobHeader(updated) } };
+  } catch (error) {
+    if (error instanceof ManualEobValidationError) return { status: 400, body: { error: error.message } };
+    throw error;
+  }
+}
+
 async function createAndAuditClaimRejectedTask(
   deps: ClaimsHandlerDeps,
   auth: AuthenticatedClaimsStaff,
@@ -777,6 +979,7 @@ async function audit(
   targetReference: string,
   patientReference?: string,
   reason?: string,
+  adapterName: "claimmd" | "manual-eob" = "claimmd",
 ): Promise<void> {
   await deps.recordAudit(buildClaimAuditRecord({
     eventType,
@@ -784,7 +987,7 @@ async function audit(
     actorRole: staff.actorRole,
     patientReference,
     targetReference,
-    adapterName: "claimmd",
+    adapterName,
     outcome,
     reason,
     timestamp: now(deps),
@@ -848,6 +1051,49 @@ function amountCents(value: unknown): number | undefined | null {
   if (text === undefined) return undefined;
   const amount = Number(text);
   return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null;
+}
+
+function integerValue(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) ? value : undefined;
+}
+
+function manualLineInputs(value: unknown): Array<Omit<ManualClaimResponseLineInput, "submittedCents">> | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const fields = [
+    "itemSequence",
+    "allowedCents",
+    "paidCents",
+    "deductibleCents",
+    "coinsuranceCents",
+    "copayCents",
+  ] as const;
+  if (value.some((entry) =>
+    typeof entry !== "object"
+    || entry === null
+    || fields.some((field) => !Number.isInteger((entry as Record<string, unknown>)[field])),
+  )) return undefined;
+  return value.map((entry) => {
+    const row = entry as Record<(typeof fields)[number], number>;
+    return {
+      itemSequence: row.itemSequence,
+      allowedCents: row.allowedCents,
+      paidCents: row.paidCents,
+      deductibleCents: row.deductibleCents,
+      coinsuranceCents: row.coinsuranceCents,
+      copayCents: row.copayCents,
+    };
+  });
+}
+
+function claimItemSubmittedCents(item: NonNullable<Claim["item"]>[number]): number {
+  const net = item.net?.value;
+  if (net !== undefined && Number.isFinite(net)) return Math.round(net * 100);
+  const unitPrice = item.unitPrice?.value;
+  const quantity = item.quantity?.value ?? 1;
+  if (unitPrice === undefined || !Number.isFinite(unitPrice) || !Number.isFinite(quantity)) {
+    throw new ManualEobValidationError(`Claim item ${item.sequence} is missing its submitted amount.`);
+  }
+  return Math.round(unitPrice * quantity * 100);
 }
 
 function bundleResources<T extends Resource>(bundle: { entry?: Array<{ resource?: T }> }): T[] {
