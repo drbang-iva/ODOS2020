@@ -1,0 +1,423 @@
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CatalogFieldKit, type CatalogFieldDescriptor } from "../../components/settings/CatalogFields";
+import {
+  CatalogFieldValidationError,
+  buildCatalogFields,
+  parseCatalogFields,
+} from "../../lib/catalog-field-kernel";
+import type {
+  CatalogAdapter,
+  CatalogDraftTransaction,
+  CatalogItemBase,
+} from "../../lib/catalog-adapter";
+
+export type CatalogDescriptor<Item extends CatalogItemBase> = {
+  title: string;
+  singularLabel: string;
+  adapter: CatalogAdapter<Item>;
+  fields: readonly CatalogFieldDescriptor[];
+  createItem: () => Item;
+  label: (item: Item) => string;
+  facts?: (item: Item) => readonly string[];
+  color?: (item: Item) => string | undefined;
+  groupBy?: {
+    label: string;
+    value: (item: Item) => string;
+  };
+  presetSeedOffer?: ReactNode;
+  transaction?: CatalogDraftTransaction;
+};
+
+type InitialState<Item> = {
+  items?: Item[];
+  loading?: boolean;
+  error?: string;
+  selectedId?: string;
+};
+
+export function CatalogEditor<Item extends CatalogItemBase>({
+  descriptor,
+  canWrite,
+  initialState,
+}: {
+  descriptor: CatalogDescriptor<Item>;
+  canWrite: boolean;
+  initialState?: InitialState<Item>;
+}) {
+  const [items, setItems] = useState<Item[]>(() => initialState?.items ?? []);
+  const [loading, setLoading] = useState(initialState?.loading ?? initialState?.items === undefined);
+  const [loadError, setLoadError] = useState<string | null>(initialState?.error ?? null);
+  const [selected, setSelected] = useState<Item | null>(() =>
+    initialState?.selectedId
+      ? initialState.items?.find((item) => item.id === initialState.selectedId) ?? null
+      : null,
+  );
+  const [draftFields, setDraftFields] = useState<Record<string, unknown>>(() =>
+    selected ? parseCatalogFields(toRecord(selected), descriptor.fields) : {},
+  );
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialState) return;
+    let cancelled = false;
+    setLoading(true);
+    Promise.resolve(descriptor.adapter.list())
+      .then((loaded) => {
+        if (!cancelled) {
+          setItems(loaded);
+          setLoadError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setLoadError(errorMessage(error));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [descriptor, initialState]);
+
+  const groups = useMemo(() => groupItems(items, descriptor), [descriptor, items]);
+
+  function openEditor(item: Item) {
+    setSelected(item);
+    setDraftFields(parseCatalogFields(toRecord(item), descriptor.fields));
+    setFieldErrors({});
+  }
+
+  function closeEditor() {
+    setSelected(null);
+    setDraftFields({});
+    setFieldErrors({});
+  }
+
+  async function saveItem() {
+    if (!selected) return;
+    setSaving(true);
+    setFieldErrors({});
+    try {
+      const built = buildCatalogFields(
+        draftFields,
+        descriptor.fields,
+        items.map(toRecord),
+        selected.id,
+      );
+      const next = { ...selected, ...built } as Item;
+      const saved = await descriptor.adapter.save(next);
+      setItems((current) => {
+        const index = current.findIndex((item) => item.id === saved.id);
+        return index === -1
+          ? [...current, saved]
+          : current.map((item) => (item.id === saved.id ? saved : item));
+      });
+      closeEditor();
+      setToast(descriptor.transaction ? "Draft updated. Save all changes to commit." : "Saved successfully.");
+    } catch (error) {
+      if (error instanceof CatalogFieldValidationError) {
+        setFieldErrors({ [error.fieldKey]: error.message });
+      } else {
+        setLoadError(errorMessage(error));
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deactivateSelected() {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      const saved = await descriptor.adapter.deactivate(selected);
+      setItems((current) => current.map((item) => (item.id === saved.id ? saved : item)));
+      closeEditor();
+      setToast(descriptor.transaction ? "Item deactivated in draft." : "Item deactivated.");
+    } catch (error) {
+      setLoadError(errorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function reorder(targetId: string) {
+    if (!draggedId || draggedId === targetId || !descriptor.adapter.reorder) return;
+    const next = [...items];
+    const from = next.findIndex((item) => item.id === draggedId);
+    const to = next.findIndex((item) => item.id === targetId);
+    if (from === -1 || to === -1) return;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    await descriptor.adapter.reorder(next.map((item) => item.id));
+    setItems(next);
+    setDraggedId(null);
+  }
+
+  async function commitTransaction() {
+    if (!descriptor.transaction) return;
+    setSaving(true);
+    try {
+      await descriptor.transaction.commit();
+      setToast("Settings saved successfully.");
+    } catch (error) {
+      setLoadError(errorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function discardTransaction() {
+    if (!descriptor.transaction) return;
+    descriptor.transaction.discard();
+    void Promise.resolve(descriptor.adapter.list()).then(setItems);
+    closeEditor();
+    setToast("Draft changes discarded.");
+  }
+
+  return (
+    <main className="min-h-screen bg-[#060610] p-6 text-white">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-5 flex items-center justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-white/45">Practice Settings</div>
+            <h1 className="text-2xl font-semibold">{descriptor.title}</h1>
+          </div>
+          {canWrite && (
+            <button className="scheduler-button" type="button" onClick={() => openEditor(descriptor.createItem())}>
+              + Add {descriptor.singularLabel}
+            </button>
+          )}
+        </header>
+
+        {loadError && (
+          <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
+            {loadError}
+          </div>
+        )}
+
+        {loading ? (
+          <CatalogLoadingSkeleton />
+        ) : items.length === 0 ? (
+          <CatalogEmptyState
+            title={`No ${descriptor.title.toLocaleLowerCase()} yet`}
+            presetSeedOffer={descriptor.adapter.capabilities.presetSeed ? descriptor.presetSeedOffer : undefined}
+          />
+        ) : (
+          <div className="grid gap-4">
+            {groups.map((group) => (
+              <section key={group.name}>
+                {descriptor.groupBy && (
+                  <h2 className="sticky top-0 z-10 border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur">
+                    {group.name}
+                  </h2>
+                )}
+                <div className="grid gap-2 pt-2">
+                  {group.items.map((item) => (
+                    <CatalogRow
+                      key={item.id}
+                      item={item}
+                      descriptor={descriptor}
+                      canWrite={canWrite}
+                      onOpen={() => openEditor(item)}
+                      onDragStart={() => setDraggedId(item.id)}
+                      onDrop={() => void reorder(item.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {canWrite && selected && (
+        <CatalogEditorDrawer
+          descriptor={descriptor}
+          item={selected}
+          values={draftFields}
+          errors={fieldErrors}
+          saving={saving}
+          saveLabel={descriptor.transaction ? "Apply to draft" : "Save"}
+          onChange={(key, value) => setDraftFields((current) => ({ ...current, [key]: value }))}
+          onSave={() => void saveItem()}
+          onDeactivate={() => void deactivateSelected()}
+          onClose={closeEditor}
+        />
+      )}
+
+      {descriptor.transaction?.dirty && canWrite && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-end gap-2 border-t border-white/15 bg-[#10111c] px-6 py-3 shadow-2xl">
+          <span className="mr-auto text-sm text-white/55">Unsaved settings changes</span>
+          <button className="scheduler-button" type="button" disabled={saving} onClick={discardTransaction}>
+            Discard
+          </button>
+          <button className="scheduler-button" type="button" disabled={saving} onClick={() => void commitTransaction()}>
+            Save
+          </button>
+        </div>
+      )}
+
+      {toast && (
+        <div role="status" className="fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
+          {toast}
+        </div>
+      )}
+    </main>
+  );
+}
+
+function CatalogRow<Item extends CatalogItemBase>({
+  item,
+  descriptor,
+  canWrite,
+  onOpen,
+  onDragStart,
+  onDrop,
+}: {
+  item: Item;
+  descriptor: CatalogDescriptor<Item>;
+  canWrite: boolean;
+  onOpen: () => void;
+  onDragStart: () => void;
+  onDrop: () => void;
+}) {
+  const content = (
+    <>
+      <span className="h-full w-1 shrink-0" style={{ backgroundColor: descriptor.color?.(item) ?? "#666678" }} />
+      {descriptor.adapter.capabilities.reorder && canWrite && (
+        <span className="cursor-grab px-2 text-white/35" aria-label={`Reorder ${descriptor.label(item)}`}>
+          ⋮⋮
+        </span>
+      )}
+      <span className="min-w-0 flex-1 px-3 py-2">
+        <span className="block truncate text-sm font-semibold text-white/90">{descriptor.label(item)}</span>
+        {(descriptor.facts?.(item) ?? []).length > 0 && (
+          <span className="mt-1 block text-xs text-white/45">{descriptor.facts?.(item).join(" · ")}</span>
+        )}
+      </span>
+      <span className={`mr-3 rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
+        item.active ? "bg-emerald-400/15 text-emerald-200" : "bg-white/10 text-white/45"
+      }`}>
+        {item.active ? "Active" : "Inactive"}
+      </span>
+    </>
+  );
+
+  const className = "flex min-h-14 items-stretch overflow-hidden border border-white/10 bg-white/[0.035] text-left";
+  if (!canWrite) return <div className={className}>{content}</div>;
+  return (
+    <button
+      type="button"
+      className={`${className} hover:border-white/25 hover:bg-white/[0.06]`}
+      draggable={descriptor.adapter.capabilities.reorder}
+      onDragStart={onDragStart}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={onDrop}
+      onClick={onOpen}
+    >
+      {content}
+    </button>
+  );
+}
+
+function CatalogEditorDrawer<Item extends CatalogItemBase>({
+  descriptor,
+  item,
+  values,
+  errors,
+  saving,
+  saveLabel,
+  onChange,
+  onSave,
+  onDeactivate,
+  onClose,
+}: {
+  descriptor: CatalogDescriptor<Item>;
+  item: Item;
+  values: Record<string, unknown>;
+  errors: Record<string, string>;
+  saving: boolean;
+  saveLabel: string;
+  onChange: (key: string, value: unknown) => void;
+  onSave: () => void;
+  onDeactivate: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <aside
+      role="dialog"
+      aria-label={`Edit ${descriptor.singularLabel}`}
+      aria-modal="true"
+      className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md translate-x-0 flex-col border-l border-white/15 bg-[#0c0c18] shadow-2xl transition-transform duration-200"
+    >
+      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div>
+          <div className="text-xs uppercase text-white/45">{descriptor.singularLabel}</div>
+          <span className="text-sm font-bold text-white">{descriptor.label(item) || `New ${descriptor.singularLabel}`}</span>
+        </div>
+        <button type="button" aria-label="Close editor" onClick={onClose} className="text-white/60 hover:text-white">
+          ✕
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4">
+        <CatalogFieldKit fields={descriptor.fields} values={values} errors={errors} onChange={onChange} />
+      </div>
+      <footer className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
+        {item.active && descriptor.adapter.capabilities.deactivate && (
+          <button className="scheduler-button" type="button" disabled={saving} onClick={onDeactivate}>
+            Deactivate
+          </button>
+        )}
+        <button className="scheduler-button ml-auto" type="button" disabled={saving} onClick={onSave}>
+          {saveLabel}
+        </button>
+      </footer>
+    </aside>
+  );
+}
+
+function CatalogLoadingSkeleton() {
+  return (
+    <div aria-label="Loading catalog" className="grid animate-pulse gap-2">
+      {[0, 1, 2].map((index) => (
+        <div key={index} className="h-14 border border-white/10 bg-white/[0.05]" />
+      ))}
+    </div>
+  );
+}
+
+function CatalogEmptyState({ title, presetSeedOffer }: { title: string; presetSeedOffer?: ReactNode }) {
+  return (
+    <section className="grid min-h-48 place-items-center border border-dashed border-white/15 bg-white/[0.02] p-8 text-center">
+      <div>
+        <h2 className="font-semibold text-white/75">{title}</h2>
+        <p className="mt-1 text-sm text-white/45">Add a custom item to start this catalog.</p>
+        {presetSeedOffer && <div className="mt-4">{presetSeedOffer}</div>}
+      </div>
+    </section>
+  );
+}
+
+function groupItems<Item extends CatalogItemBase>(items: Item[], descriptor: CatalogDescriptor<Item>) {
+  if (!descriptor.groupBy) return [{ name: "All", items }];
+  const grouped = new Map<string, Item[]>();
+  for (const item of items) {
+    const group = descriptor.groupBy.value(item) || "Other";
+    grouped.set(group, [...(grouped.get(group) ?? []), item]);
+  }
+  return [...grouped.entries()]
+    .filter(([, groupItems]) => groupItems.some((item) => item.active))
+    .map(([name, groupItems]) => ({ name, items: groupItems }));
+}
+
+function toRecord<Item extends CatalogItemBase>(item: Item): Record<string, unknown> {
+  return item as unknown as Record<string, unknown>;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
