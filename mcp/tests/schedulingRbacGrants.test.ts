@@ -86,20 +86,37 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
 
 test("front-desk Basic grants stay criteria-scoped to the approved config and billing singletons", () => {
   const rules = rulesFor("front-desk", "Basic");
+  const writeTierCriteria = [
+    "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
+    "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
+    "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
+    "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
+    "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
+  ];
+  const readTierCriteria = [
+    "Basic?code=https://osod.dev/fhir/CodeSystem/visit-type-config|osod-visit-type-config",
+  ];
   assert.deepEqual(
     rules.map((rule) => rule.criteria).sort(),
-    [
-      "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
-      "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
-      "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
-      "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
-      "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
-    ],
+    [...writeTierCriteria, ...readTierCriteria].sort(),
   );
-  for (const rule of rules) {
+
+  for (const criteria of writeTierCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
     for (const interaction of ["create", "read", "update", "search"]) {
       assert.ok(rule.interaction?.includes(interaction as never), `Basic resource needs ${interaction}`);
     }
+    assert.ok(!rule.interaction?.includes("delete"));
+  }
+
+  for (const criteria of readTierCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
+    assert.ok(rule.interaction?.includes("read"));
+    assert.ok(rule.interaction?.includes("search"));
+    assert.ok(!rule.interaction?.includes("create"));
+    assert.ok(!rule.interaction?.includes("update"));
     assert.ok(!rule.interaction?.includes("delete"));
   }
 });
