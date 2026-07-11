@@ -5,6 +5,7 @@ import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/a
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  resolveStaffRoles,
   StaffRoleServiceUnavailableError,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
@@ -291,4 +292,46 @@ test("resolveStaffRole also reads the legacy single accessPolicy binding", async
   const svc = serviceClient({ membership: legacyMembership, policy: frontDeskPolicy() });
   const staff = await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl });
   assert.equal(staff?.role, "front-desk");
+});
+
+test("resolveStaffRoles returns every recognized practice-role tag across the caller's policy bindings", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const membership: ProjectMembership = {
+    ...MEMBERSHIP_FRONT_DESK,
+    access: [
+      { policy: { reference: "AccessPolicy/ap-clinical" } },
+      { policy: { reference: "AccessPolicy/ap-desk" } },
+    ],
+  };
+  const policies: Record<string, AccessPolicy> = {
+    "ap-clinical": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
+      ] },
+    },
+    "ap-desk": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: "https://example.test/unrelated", code: "front-desk" },
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+      ] },
+    },
+  };
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset", entry: [{ resource: membership as unknown as T }] }),
+    read: async <T,>(_resourceType: string, id: string): Promise<T> => policies[id] as unknown as T,
+  };
+
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    roles: ["clinician", "front-desk", "aesthetics-provider"],
+  });
 });
