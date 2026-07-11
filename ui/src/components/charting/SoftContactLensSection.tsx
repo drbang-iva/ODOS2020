@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
@@ -571,13 +572,4 @@ function activeNestedOptions(options: DefinitionOption[] | undefined): Definitio
 
 function compact<T extends Record<string, unknown>>(value: T): T {
   return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined && item !== "")) as T;
-}
-
-function clinicalGraphApiBase(): string {
-  return (import.meta.env.VITE_MCP_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8103";
-}
-
-function authHeaders(): Record<string, string> {
-  const token = window.localStorage.getItem("osod_access_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }

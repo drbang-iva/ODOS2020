@@ -75,6 +75,15 @@ test("v0.5c Observation AccessPolicy emits the status-machine writeConstraint", 
     ),
   );
   assert.match(JSON.stringify(observationRule.writeConstraint), /%before\.status != 'final'/);
+  assert.match(
+    OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION,
+    /%before\.exists\(\)\.not\(\) implies status = 'preliminary'/,
+  );
+  assert.match(
+    OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION,
+    / and \(%before\.exists\(\) implies/,
+  );
+  assert.doesNotMatch(OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION, /not\(%before\.exists/);
   assert.match(OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION, /status = 'entered-in-error'/);
 });
 

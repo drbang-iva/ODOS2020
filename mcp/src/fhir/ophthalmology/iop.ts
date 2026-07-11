@@ -53,7 +53,7 @@ export function buildIopObservation(input: IopInput): BuildResult<import("./type
     resource: applyCommonObservationFields(
       {
         resourceType: "Observation",
-        status: "final",
+        status: "preliminary",
         code: osodConcept("INTRAOCULAR_PRESSURE", "Intraocular pressure"),
         valueQuantity: quantity(input.value, input.unit ?? "mm[Hg]", "http://unitsofmeasure.org", "mm[Hg]"),
       },

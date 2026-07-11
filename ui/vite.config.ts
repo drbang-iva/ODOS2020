@@ -12,6 +12,7 @@ export default defineConfig({
       // osod-core payment charge boundary (processor secrets live server-side only)
       "/payments": { target: "http://localhost:3333", changeOrigin: true },
       "/claims": { target: "http://localhost:3333", changeOrigin: true },
+      "/clinical-graph": { target: "http://localhost:3333", changeOrigin: true },
     },
   },
 });

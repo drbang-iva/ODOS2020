@@ -95,6 +95,7 @@ test("clinical MCP write tools default Provenance ON", { timeout: 90_000 }, asyn
     }),
   );
   assert.ok(observationOutput.provenance, "create_observation should default Provenance ON.");
+  assert.equal(observationOutput.observation.status, "preliminary");
   assert.equal(
     observationOutput.provenance.target[0]?.reference,
     `Observation/${observationOutput.observation.id}`,

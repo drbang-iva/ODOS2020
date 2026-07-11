@@ -136,7 +136,13 @@ test("Wearing persists one complete Observation per glasses pair with both eyes,
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  for (const provenance of created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
+    assert.equal(provenance.target[1]?.reference, BODY.patientReference);
+  }
   const observation = created[0]?.resource as Observation;
+  assert.equal(observation.status, "preliminary");
   assert.equal(codingCode(observation), "wearing_rx");
   assert.equal(observation.bodySite?.coding?.some((coding) => coding.code === "OU"), true);
   assert.match(String(componentValue(observation, "PAIR_ID")), /^wearing-pair-/);
@@ -184,6 +190,7 @@ test("Auto-Refraction POST persists ARx and Auto-K per eye and round-trips devic
   const observations = created
     .map((entry) => entry.resource)
     .filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.every((observation) => observation.status === "preliminary"), true);
   assert.deepEqual(observations.map(codingCode), [
     "auto_refraction", "auto_keratometry", "auto_refraction", "auto_keratometry",
   ]);

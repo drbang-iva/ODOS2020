@@ -42,8 +42,9 @@ services:
     networks:
       - osod-internal
 
+  # Upgrade server + app together only after the scoped-clinician live RBAC gates pass.
   medplum-server:
-    image: medplum/medplum-server:latest
+    image: medplum/medplum-server:5.1.8
     restart: unless-stopped
     depends_on:
       postgres:
@@ -61,7 +62,7 @@ services:
       - osod-internal
 
   medplum-app:
-    image: medplum/medplum-app:latest
+    image: medplum/medplum-app:5.1.8
     restart: unless-stopped
     depends_on:
       - medplum-server

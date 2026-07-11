@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
@@ -819,13 +820,4 @@ function compact<T extends Record<string, unknown>>(value: T): T {
 function formatRecordedAt(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-}
-
-function clinicalGraphApiBase(): string {
-  return (import.meta.env.VITE_MCP_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8103";
-}
-
-function authHeaders(): Record<string, string> {
-  const token = window.localStorage.getItem("osod_access_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }

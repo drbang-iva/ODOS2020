@@ -34,6 +34,7 @@ import {
 } from "./custom-fields.js";
 import {
   captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
   type CapturedGlaucomaFinding,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
@@ -258,7 +259,7 @@ export async function handleSoftContactLensCaptureRequest(
       lensEntryId,
       provenance,
     });
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     eyes[eye] = {
       lensEntryId,
       observationReference: persisted.observationReference,
@@ -325,7 +326,7 @@ export async function handleSpecialtyContactLensCaptureRequest(
       lensEntryId,
       provenance,
     });
-    const persisted = await persistCapture(staff.fhir, capture);
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
     eyes[eye] = {
       lensEntryId,
       observationReference: persisted.observationReference,
@@ -359,16 +360,16 @@ export async function handleSpecialtyKeratometryRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid keratometry request." } };
   }
 
-  const bundles = await Promise.all(EYES.map((eye) => staff.fhir.search<Observation>("Observation", {
+  const bundle = await staff.fhir.search<Observation>("Observation", {
     subject: parsed.data.patient,
     code: AUTO_KERATOMETRY_SEARCH_CODE,
-    "body-site": `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|${eye}`,
     _sort: "-date",
-    _count: "1",
-  })));
-  const eyes = Object.fromEntries(EYES.map((eye, index) => [
+    _count: "200",
+  });
+  const observations = bundleResources(bundle);
+  const eyes = Object.fromEntries(EYES.map((eye) => [
     eye,
-    latestKeratometryReading(bundleResources(bundles[index]), eye),
+    latestKeratometryReading(observations, eye),
   ])) as Record<Eye, SpecialtyKeratometryReading | null>;
 
   return { status: 200, body: { eyes } };
@@ -858,12 +859,19 @@ function validateNumberField(
   return undefined;
 }
 
-async function persistCapture(fhir: ContactLensFhirClient, capture: CapturedGlaucomaFinding) {
+async function persistCapture(
+  fhir: ContactLensFhirClient,
+  capture: CapturedGlaucomaFinding,
+  patientReference: string,
+) {
   const observation = await fhir.create<Observation>(capture.observation, WRITE_HEADERS);
   const observationReference = resourceReference("Observation", observation.id, capture.observation.id);
   const provenance = await fhir.create<Provenance>({
     ...capture.provenance,
-    target: [{ reference: observationReference }],
+    target: patientScopedProvenanceTargets(
+      observationReference,
+      patientReference,
+    ),
   }, WRITE_HEADERS);
   return {
     observationReference,
@@ -918,7 +926,8 @@ function latestKeratometryReading(
   eye: Eye,
 ): SpecialtyKeratometryReading | null {
   const observation = observations
-    .filter((candidate) => candidate.bodySite?.coding?.some((coding) => coding.code === eye))
+    .filter((candidate) => candidate.bodySite?.coding?.some((coding) =>
+      coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === eye))
     .filter((candidate) => candidate.effectiveDateTime && candidate.id)
     .sort((a, b) => String(b.effectiveDateTime).localeCompare(String(a.effectiveDateTime)))[0];
   if (!observation?.effectiveDateTime || !observation.id) return null;

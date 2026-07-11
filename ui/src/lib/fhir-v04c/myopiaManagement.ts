@@ -188,7 +188,7 @@ export function buildMyopiaAxialLengthObservation(input: {
 }): Observation {
   return {
     resourceType: "Observation",
-    status: "final",
+    status: "preliminary",
     meta: { profile: [OBSERVATION_AXIAL_LENGTH_PROFILE_URL] },
     code: axialLengthConcept(input.eye),
     valueQuantity: { value: input.valueMm, unit: "mm", system: UCUM_CODE_SYSTEM, code: "mm" },

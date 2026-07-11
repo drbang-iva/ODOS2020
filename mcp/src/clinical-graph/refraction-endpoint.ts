@@ -7,6 +7,7 @@ import { buildRefractionObservation } from "../fhir/ophthalmology/refraction.js"
 import type { RefractionType } from "../fhir/ophthalmology/types.js";
 import {
   captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
   type ClinicalGraphProvenance,
@@ -148,7 +149,10 @@ export async function handleRefractionCaptureRequest(
     const provenanceResource = await staff.fhir.create<Provenance>(
       {
         ...item.provenance,
-        target: [{ reference: observationReference }],
+        target: patientScopedProvenanceTargets(
+          observationReference,
+          parsed.data.patientReference,
+        ),
       },
       WRITE_HEADERS,
     );

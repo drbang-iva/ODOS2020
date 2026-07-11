@@ -8,6 +8,7 @@ import {
   buildStartEncounterCreateBundle,
   createdIdFromEntry,
 } from "../lib/encounter-bundles";
+import { clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { createProgram } from "../lib/clinical-actions";
 import {
   EPISODE_OF_CARE_TYPE_CODES,
@@ -72,6 +73,7 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
     setStartError(null);
     try {
       const now = new Date();
+      await assignProvider(patient.id);
       const episodeReference = await resolveProgramReference();
       const createResponse = await fhir.executeTransaction(
         buildStartEncounterCreateBundle({
@@ -87,6 +89,7 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
       const inProgressResponse = await fhir.executeTransaction(
         buildEncounterStatusPatchBundle({
           encounterId,
+          patientId: patient.id,
           recorded: new Date(now.getTime() + 1).toISOString(),
           operatorDisplay: "OSOD UI start_encounter",
           ops: [{ op: "replace", path: "/status", value: "in-progress" }],
@@ -100,6 +103,23 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
       setStartError(err instanceof Error ? err.message : String(err));
     } finally {
       setStarting(false);
+    }
+  }
+
+  async function assignProvider(patientId: string): Promise<void> {
+    const response = await fetch(
+      `${clinicalGraphApiBase()}/clinical-graph/patients/${encodeURIComponent(patientId)}/assign-provider`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: fhir.authHeader() ?? "",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error ?? `Provider assignment failed (${response.status}).`);
     }
   }
 

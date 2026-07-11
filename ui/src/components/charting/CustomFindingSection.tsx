@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -220,15 +220,6 @@ function historyUrl(stableKey: string, patientReference: string): string {
   return `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(stableKey)}/history?${new URLSearchParams({ patient: patientReference })}`;
 }
 
-function authHeaders(): Record<string, string> {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
-}
 
 function formatDate(value: string): string {
   const date = new Date(value);

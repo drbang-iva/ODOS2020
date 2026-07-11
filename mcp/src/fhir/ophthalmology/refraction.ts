@@ -132,7 +132,7 @@ export function buildRefractionObservation(
   const observation = applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
+      status: "preliminary",
       code: osodConcept("REFRACTION", "Refraction"),
       component: components,
       ...(input.visualAcuityWithCorrectionReference

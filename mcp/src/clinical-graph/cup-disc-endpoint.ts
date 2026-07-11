@@ -6,6 +6,7 @@ import {
   buildGlaucomaFindingDefinitionStubs,
   captureGlaucomaFinding,
   evaluateGlaucomaDiagnosisSuggestions,
+  patientScopedProvenanceTargets,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
   type ClinicalGraphProvenance,
@@ -155,7 +156,10 @@ export async function handleCupDiscCaptureRequest(
     const provenance = await staff.fhir.create<Provenance>(
       {
         ...item.captured.provenance,
-        target: [{ reference: observationReference }],
+        target: patientScopedProvenanceTargets(
+          observationReference,
+          parsed.data.patientReference,
+        ),
       },
       WRITE_HEADERS,
     );

@@ -7,6 +7,7 @@ import {
   CustomSectionEditor,
   type CustomSectionEditorValue,
 } from "../components/charting/CustomSectionEditor";
+import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 interface CustomField extends CustomFieldEditorValue {
   localCode: string;
@@ -198,13 +199,4 @@ export function ChartFieldsSettings() {
 
 function isCustomSection(definition: FindingDefinition): boolean {
   return definition.stableKey.startsWith("custom:") && definition.sectionKey === definition.stableKey;
-}
-
-function clinicalGraphApiBase(): string {
-  return (import.meta.env.VITE_MCP_URL as string | undefined)?.replace(/\/$/, "") ?? "http://localhost:8103";
-}
-
-function authHeaders(): Record<string, string> {
-  const token = window.localStorage.getItem("osod_access_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
 }

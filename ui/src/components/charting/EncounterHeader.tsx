@@ -85,6 +85,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       const response = await fhir.executeTransaction(
         buildEncounterStatusPatchBundle({
           encounterId,
+          patientId: patient.id,
           recorded: now,
           operatorDisplay: "OSOD UI finish_encounter",
           ops: [
@@ -111,6 +112,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       const response = await fhir.executeTransaction(
         buildEncounterStatusPatchBundle({
           encounterId,
+          patientId: patient.id,
           recorded: new Date().toISOString(),
           operatorDisplay: "OSOD UI abandon_encounter",
           ops: [

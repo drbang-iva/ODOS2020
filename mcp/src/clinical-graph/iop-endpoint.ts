@@ -8,6 +8,7 @@ import {
   captureGlaucomaFinding,
   evaluateIopDiagnosisSuggestions,
   evaluateIopFindingRisk,
+  patientScopedProvenanceTargets,
   type ClinicalFindingDefinition,
   type ClinicalFindingOption,
   type ClinicalGraphProvenance,
@@ -190,7 +191,10 @@ export async function handleIopCaptureRequest(
     const provenance = await staff.fhir.create<Provenance>(
       {
         ...item.iop.provenance,
-        target: [{ reference: observationReference }],
+        target: patientScopedProvenanceTargets(
+          observationReference,
+          parsed.data.patientReference,
+        ),
       },
       WRITE_HEADERS,
     );
@@ -206,7 +210,10 @@ export async function handleIopCaptureRequest(
       const chProvenance = await staff.fhir.create<Provenance>(
         {
           ...item.cornealHysteresis.provenance,
-          target: [{ reference: cornealHysteresisObservationReference }],
+          target: patientScopedProvenanceTargets(
+            cornealHysteresisObservationReference,
+            parsed.data.patientReference,
+          ),
         },
         WRITE_HEADERS,
       );

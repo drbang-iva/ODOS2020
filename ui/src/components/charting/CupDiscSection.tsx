@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -435,14 +435,4 @@ function resultBadgeText(result: CupDiscEyeResult): string {
   const tier = result.riskTier === "high" ? "High-risk" : "Low-risk";
   const code = result.icd10Code ? ` (${result.icd10Code})` : "";
   return `Suggested: ${tier} glaucoma suspect${code} - ${result.explanation}`;
-}
-
-function authHeaders(): HeadersInit {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }

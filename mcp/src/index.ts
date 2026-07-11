@@ -86,6 +86,7 @@ import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
+import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
@@ -5511,6 +5512,26 @@ async function main(): Promise<void> {
           await auditRuntime.record(row, () => undefined);
         },
       };
+
+      app.post("/clinical-graph/patients/:patientId/assign-provider", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProviderAssignmentRequest(
+            {
+              authenticate: authenticateStaffRoute,
+              serviceFhir: fhir,
+            },
+            {
+              authHeader: req.header("authorization"),
+              patientId: req.params.patientId,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: assign-provider route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "provider assignment failed" });
+        }
+      });
 
       app.get("/clinical-graph/finding-definitions", async (req, res) => {
         try {

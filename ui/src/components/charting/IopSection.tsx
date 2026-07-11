@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { fhir } from "../../lib/fhir";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { IopTimeline } from "./IopTimeline";
 import type { SectionSaveStatus } from "./types";
 
@@ -457,15 +457,6 @@ function resultBadgeText(result: IopEyeResult): string {
   return `Suggested: Ocular hypertension${code}`;
 }
 
-function authHeaders(): HeadersInit {
-  const authorization = fhir.authHeader();
-  return authorization ? { Authorization: authorization } : {};
-}
-
-function clinicalGraphApiBase(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
-}
 
 function dateInputValue(date: Date): string {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);

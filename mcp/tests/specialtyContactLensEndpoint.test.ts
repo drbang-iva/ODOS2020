@@ -29,7 +29,7 @@ const BODY = {
 function deps(input: {
   role?: PracticeRoleId;
   findingDefinitions?: SpecialtyContactLensEndpointDeps["findingDefinitions"];
-  searchBundles?: Partial<Record<"OD" | "OS", Bundle<Observation>>>;
+  searchBundle?: Bundle<Observation>;
 } = {}) {
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
   const searches: Array<{ resourceType: string; params?: Record<string, string> }> = [];
@@ -52,8 +52,7 @@ function deps(input: {
               params?: Record<string, string>,
             ): Promise<Bundle<T>> => {
               searches.push({ resourceType, params });
-              const eye = params?.["body-site"]?.endsWith("|OS") ? "OS" : "OD";
-              return (input.searchBundles?.[eye] ?? { resourceType: "Bundle", type: "searchset", entry: [] }) as Bundle<T>;
+              return (input.searchBundle ?? { resourceType: "Bundle", type: "searchset", entry: [] }) as Bundle<T>;
             },
           },
         }
@@ -120,7 +119,13 @@ test("specialty CL capture persists per eye with existing type, material, and pa
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
   assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  for (const provenance of created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
+    assert.equal(provenance.target[1]?.reference, BODY.patientReference);
+  }
   const observations = created.map((entry) => entry.resource).filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.every((observation) => observation.status === "preliminary"), true);
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   const od = observations[0];
   assert.equal(od?.code.coding?.some((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "specialty_contact_lens"), true);
@@ -209,30 +214,29 @@ test("embedded over-refraction remains linked to its specialty lens entry", asyn
 });
 
 test("keratometry read searches Slice B auto-K and returns the latest observation per eye", async () => {
-  const searchBundles = {
-    OD: bundle([
-      autoK("od-old", "OD", "2026-07-09T10:00:00.000Z", 42, 180, 43, 90),
-      autoK("od-latest", "OD", "2026-07-10T10:00:00.000Z", 42.5, 115, 43.25, 25),
-    ]),
-    OS: bundle([
-      autoK("os-latest", "OS", "2026-07-10T09:00:00.000Z", 41.75, 52, 42.5, 142),
-    ]),
-  };
-  const { deps: d, searches } = deps({ searchBundles });
+  const searchBundle = bundle([
+    autoK("od-old", "OD", "2026-07-09T10:00:00.000Z", 42, 180, 43, 90),
+    autoK("os-latest", "OS", "2026-07-10T09:00:00.000Z", 41.75, 52, 42.5, 142),
+    autoK("od-latest", "OD", "2026-07-10T10:00:00.000Z", 42.5, 115, 43.25, 25),
+  ]);
+  const { deps: d, searches } = deps({ searchBundle });
   const response = await handleSpecialtyKeratometryRequest(d, {
     authHeader: AUTH,
     query: { patient: BODY.patientReference },
   });
 
   assert.equal(response.status, 200);
-  assert.equal(searches.length, 2);
-  for (const search of searches) {
-    assert.equal(search.params?.subject, BODY.patientReference);
-    assert.equal(search.params?.code, AUTO_KERATOMETRY_SEARCH_CODE);
-    assert.equal(search.params?._sort, "-date");
-    assert.equal(search.params?._count, "1");
-  }
-  const eyes = (response.body as { eyes: Record<string, Record<string, unknown>> }).eyes;
+  assert.deepEqual(searches, [{
+    resourceType: "Observation",
+    params: {
+      subject: BODY.patientReference,
+      code: AUTO_KERATOMETRY_SEARCH_CODE,
+      _sort: "-date",
+      _count: "200",
+    },
+  }]);
+  assert.equal("body-site" in (searches[0]?.params ?? {}), false);
+  const eyes = (response.body as { eyes: Record<string, Record<string, unknown> | null> }).eyes;
   assert.deepEqual(eyes.OD, {
     flatK: 42.5,
     flatAxis: 115,
@@ -241,7 +245,25 @@ test("keratometry read searches Slice B auto-K and returns the latest observatio
     recordedAt: "2026-07-10T10:00:00.000Z",
     observationReference: "Observation/od-latest",
   });
-  assert.equal(eyes.OS?.flatK, 41.75);
+  assert.deepEqual(eyes.OS, {
+    flatK: 41.75,
+    flatAxis: 52,
+    steepK: 42.5,
+    steepAxis: 142,
+    recordedAt: "2026-07-10T09:00:00.000Z",
+    observationReference: "Observation/os-latest",
+  });
+});
+
+test("keratometry read returns null when the bounded result has no matching eye", async () => {
+  const response = await handleSpecialtyKeratometryRequest(
+    deps({ searchBundle: bundle([autoK("od-only", "OD", "2026-07-10T10:00:00.000Z", 42, 180, 43, 90)]) }).deps,
+    { authHeader: AUTH, query: { patient: BODY.patientReference } },
+  );
+
+  assert.equal(response.status, 200);
+  const eyes = (response.body as { eyes: Record<string, Record<string, unknown> | null> }).eyes;
+  assert.equal(eyes.OS, null);
 });
 
 test("high-power specialty CL capture never returns suggestion or edge payloads", async () => {

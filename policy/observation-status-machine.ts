@@ -108,12 +108,14 @@ export const ALLOWED_OBSERVATION_STATUS_TRANSITIONS: readonly ObservationStatusT
 ] as const;
 
 export const OBSERVATION_STATUS_WRITE_CONSTRAINT_EXPRESSION = [
-  "(not(%before.exists()) and status = 'preliminary')",
+  "(%before.exists().not() implies status = 'preliminary')",
+  "and (%before.exists() implies (",
   "(%before.status = 'preliminary' and (status = 'preliminary' or status = 'final'))",
-  "(%before.status = 'final' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
-  "(%before.status = 'amended' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
-  "(%before.status = 'corrected' and (status = 'corrected' or status = 'entered-in-error'))",
-].join(" or ");
+  "or (%before.status = 'final' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
+  "or (%before.status = 'amended' and (status = 'amended' or status = 'corrected' or status = 'entered-in-error'))",
+  "or (%before.status = 'corrected' and (status = 'corrected' or status = 'entered-in-error'))",
+  "))",
+].join(" ");
 
 export function isObservationStatus(value: string | undefined): value is ObservationStatus {
   return FHIR_OBSERVATION_STATUSES.includes(value as ObservationStatus);
