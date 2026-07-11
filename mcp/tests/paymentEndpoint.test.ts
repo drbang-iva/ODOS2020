@@ -79,6 +79,21 @@ test("a Stripe base URL without its secret fails fast at service start", () => {
   );
 });
 
+test("Stripe env registration rejects live keys and non-HTTPS secret destinations", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_SECRET_KEY: "sk_live_forbidden" }),
+    /test-mode/,
+  );
+  assert.throws(
+    () =>
+      paymentAdapterRegistrationsFromEnv({
+        STRIPE_SECRET_KEY: "sk_test_env_fixture",
+        STRIPE_BASE_URL: "http://stripe-proxy.test",
+      }),
+    /HTTPS/,
+  );
+});
+
 // --- Medplum token verification (authn: the forwarded UI token → staff identity) ---
 
 function meTransport(status: number, body: unknown) {

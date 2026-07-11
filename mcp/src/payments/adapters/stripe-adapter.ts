@@ -83,7 +83,23 @@ function stripeHeaders(secretKey: string, idempotencyKey?: string): Record<strin
 }
 
 function normalizedBaseUrl(baseUrl: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new Error("Stripe baseUrl must be a valid HTTPS URL.");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("Stripe baseUrl must use HTTPS because it receives the Stripe secret key.");
+  }
   return baseUrl.replace(/\/$/, "");
+}
+
+export function assertStripeAdapterConfig(config: StripeAdapterConfig): void {
+  if (!config.secretKey.startsWith("sk_test_")) {
+    throw new Error("Stripe adapter requires a test-mode secret key beginning with sk_test_.");
+  }
+  normalizedBaseUrl(config.baseUrl);
 }
 
 export function createStripeAdapter(
@@ -91,9 +107,7 @@ export function createStripeAdapter(
   fhir: Pick<MedplumClient, "create">,
   deps?: StripeAdapterDeps,
 ): PaymentProcessorAdapter {
-  if (!config.secretKey.startsWith("sk_test_")) {
-    throw new Error("Stripe adapter requires a test-mode secret key beginning with sk_test_.");
-  }
+  assertStripeAdapterConfig(config);
 
   const fetchImpl = deps?.fetchImpl ?? fetch;
   const now = deps?.now ?? (() => new Date().toISOString());

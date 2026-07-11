@@ -13,11 +13,12 @@ do not traverse authentication or account-management flows.
 | Env var | Required | Value |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | Yes | Test secret key beginning `sk_test_`; never commit it |
-| `STRIPE_BASE_URL` | No | Defaults to `https://api.stripe.com`; useful only for an operator-controlled test proxy |
+| `STRIPE_BASE_URL` | No | Defaults to `https://api.stripe.com`; any override must be a trusted, operator-controlled HTTPS test proxy |
 
 The key is runtime-injected and sent only as an `Authorization: Bearer ...` header. The adapter
-rejects live keys. Stripe documents the `sk_test_` / `sk_live_` prefixes and Bearer authentication:
-https://docs.stripe.com/api/authentication
+rejects live keys and non-HTTPS base URLs. Because `STRIPE_SECRET_KEY` is sent to the configured
+base URL, never point `STRIPE_BASE_URL` at an untrusted endpoint. Stripe documents the `sk_test_` /
+`sk_live_` prefixes and Bearer authentication: https://docs.stripe.com/api/authentication
 
 ## Human operator steps
 
@@ -50,7 +51,8 @@ card details in test mode. Source: https://docs.stripe.com/testing
   `requires_capture` intent releases/refunds the remaining capturable amount. Source:
   https://docs.stripe.com/api/payment_intents/cancel
 - Status: `GET /v1/payment_intents/:id`; OSOD maps `requires_capture` to authorized, `succeeded` to
-  captured, `canceled` to voided, and a failed `requires_payment_method` attempt to declined.
+  captured, `canceled` to voided, and `requires_payment_method` to declined only when
+  `last_payment_error` is present. The initial state without an error is failed, not declined.
   Sources: https://docs.stripe.com/api/payment_intents/retrieve and
   https://docs.stripe.com/api/payment_intents/object
 - Settlement: Stripe PaymentIntents do not return an honest daily `SettlementBatch`. `settle()`
@@ -58,11 +60,12 @@ card details in test mode. Source: https://docs.stripe.com/testing
 
 ## PHI and BAA boundary
 
-`vendorBaaRequired` is `false`: this adapter treats Stripe strictly as a payment processor, not a
-PHI vendor. It sends no patient reference, invoice reference, encounter reference, staff reference,
-clinical description, or metadata to Stripe. Stripe's current agreement defines Protected Health
-Information and restricts providing PHI in covered data pathways:
-https://stripe.com/legal/ssa
+`vendorBaaRequired` is `false` for this adapter's deliberately PHI-free data flow. It sends no
+patient reference, invoice reference, encounter reference, staff reference, clinical description,
+or metadata to Stripe. That field is not a general legal determination: each deployment owner must
+determine its applicable contract and BAA requirements without adding PHI or credentials to Stripe
+requests. Stripe's current agreement defines Protected Health Information and restricts providing
+PHI in covered data pathways: https://stripe.com/legal/ssa
 
 ## Deliberate limits
 

@@ -6,7 +6,7 @@ import {
   type PracticeRoleId,
 } from "../authz/roles.js";
 import type { AdapterRegistration } from "./payment-config.js";
-import { STRIPE_BASE_URL } from "./adapters/stripe-adapter.js";
+import { assertStripeAdapterConfig, STRIPE_BASE_URL } from "./adapters/stripe-adapter.js";
 
 /**
  * osod-core payment endpoint helpers — the env-driven adapter registrations built at service
@@ -53,12 +53,14 @@ export function paymentAdapterRegistrationsFromEnv(
   }
 
   if (env.STRIPE_SECRET_KEY) {
+    const config = {
+      baseUrl: env.STRIPE_BASE_URL || STRIPE_BASE_URL,
+      secretKey: env.STRIPE_SECRET_KEY,
+    };
+    assertStripeAdapterConfig(config);
     registrations.push({
       method: "stripe",
-      config: {
-        baseUrl: env.STRIPE_BASE_URL || STRIPE_BASE_URL,
-        secretKey: env.STRIPE_SECRET_KEY,
-      },
+      config,
     });
   } else if (env.STRIPE_BASE_URL) {
     throw new Error(

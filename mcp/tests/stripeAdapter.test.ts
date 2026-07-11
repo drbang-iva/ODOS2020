@@ -76,6 +76,10 @@ test("adapter is test-mode online Stripe and does not require a PHI-vendor BAA",
     () => createStripeAdapter({ ...CONFIG, secretKey: "sk_live_forbidden" }, fakeFhir()),
     /test-mode/,
   );
+  assert.throws(
+    () => createStripeAdapter({ ...CONFIG, baseUrl: "http://stripe-proxy.test" }, fakeFhir()),
+    /HTTPS/,
+  );
 });
 
 test("successful create+confirm charge persists only the Stripe PaymentIntent id", async () => {
