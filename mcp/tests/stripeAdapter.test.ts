@@ -187,6 +187,23 @@ test("successful partial refund uses the PaymentIntent id and amount", async () 
   assert.equal(captured[0].headers["Idempotency-Key"], "idem-refund-1");
 });
 
+test("refund rejects a blank PaymentIntent id before calling Stripe", async () => {
+  const { captured, fetchImpl } = fakeTransport([]);
+  const adapter = createStripeAdapter(CONFIG, fakeFhir(), { fetchImpl });
+
+  await assert.rejects(
+    () =>
+      adapter.refund({
+        transactionId: "  ",
+        amountCents: 1200,
+        reason: "Patient returned item",
+        staffReference: "Practitioner/staff1",
+      }),
+    /PaymentIntent id/,
+  );
+  assert.equal(captured.length, 0);
+});
+
 test("void cancels an uncaptured PaymentIntent", async () => {
   const { captured, fetchImpl } = fakeTransport([
     { status: 200, body: { id: "pi_uncaptured", status: "canceled" } },

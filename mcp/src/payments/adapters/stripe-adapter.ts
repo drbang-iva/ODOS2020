@@ -227,6 +227,9 @@ export function createStripeAdapter(
     },
 
     async refund(args: RefundRequest): Promise<RefundResult> {
+      if (!args.transactionId.trim()) {
+        throw new Error("A Stripe refund requires the PaymentIntent id.");
+      }
       if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
         throw new Error("Refund amount (amountCents) must be a positive integer number of cents.");
       }
