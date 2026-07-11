@@ -1,19 +1,19 @@
 import { sectionStatus, type BuiltInSectionId, type ChartSectionId, type SectionStatusMap } from "./types";
 
-const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean }> = [
-  { id: "wearing", label: "Wearing (WRx)" },
-  { id: "auto-refraction", label: "Auto-Refraction / Auto-K" },
-  { id: "va", label: "Visual Acuity" },
-  { id: "refraction", label: "Refraction" },
-  { id: "soft-contact-lens", label: "Soft Contact Lenses" },
-  { id: "specialty-contact-lens", label: "Specialty Contact Lens" },
-  { id: "refraction-history", label: "Refraction History", readOnly: true },
-  { id: "ortho-k", label: "Ortho-K" },
-  { id: "dry-eye", label: "Dry Eye" },
-  { id: "myopia-management", label: "Myopia Management" },
-  { id: "cup-disc", label: "Cup/Disc" },
-  { id: "iop", label: "IOP" },
-  { id: "assessment", label: "Assessment" },
+const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean; group?: string }> = [
+  { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
+  { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
+  { id: "va", label: "Visual Acuity", group: "PRETEST" },
+  { id: "iop", label: "IOP", group: "PRETEST" },
+  { id: "refraction", label: "Refraction", group: "REFRACTION" },
+  { id: "refraction-history", label: "Refraction History", readOnly: true, group: "REFRACTION" },
+  { id: "soft-contact-lens", label: "Soft Contact Lenses", group: "CONTACT LENSES" },
+  { id: "specialty-contact-lens", label: "Specialty Contact Lens", group: "CONTACT LENSES" },
+  { id: "ortho-k", label: "Ortho-K", group: "CONTACT LENSES" },
+  { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
+  { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH" },
+  { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
+  { id: "assessment", label: "Assessment", group: "ASSESSMENT & PLAN" },
 ];
 
 interface Props {
@@ -25,38 +25,52 @@ interface Props {
 }
 
 export function SpineNav({ active, statuses, onSelect, customSections = [], onAddSection }: Props) {
-  const sections = [...SECTIONS, ...customSections];
+  const sections: Array<{
+    id: ChartSectionId;
+    label: string;
+    readOnly?: boolean;
+    group?: string;
+  }> = [...SECTIONS, ...customSections];
   return (
     <nav className="shrink-0 border-b border-white/10 bg-bg-panel/70 p-3 md:w-60 md:border-b-0 md:border-r md:p-4">
       <div className="text-xs uppercase tracking-widest text-white/35">Spine</div>
       <div className="mt-3 flex gap-2 overflow-x-auto md:mt-4 md:block md:space-y-2 md:overflow-visible">
-        {sections.map((section) => {
+        {sections.map((section, index) => {
           const status = sectionStatus(statuses, section.id);
           const completed = status.completed;
           const focused = active === section.id;
-          const readOnly = "readOnly" in section && section.readOnly;
+          const readOnly = section.readOnly;
+          const group = section.group;
+          const previousSection = sections[index - 1];
+          const previousGroup = previousSection?.group;
           return (
-            <button
-              key={section.id}
-              onClick={() => onSelect(section.id)}
-              className={[
-                "grid min-h-20 w-44 shrink-0 grid-cols-[10px_1fr] gap-3 rounded border p-3 text-left transition md:w-full",
-                focused ? "border-brand/70 bg-brand/15" : "border-white/10 bg-bg-mid/70 hover:border-white/25",
-              ].join(" ")}
-            >
-              <span
+            <div key={section.id} className="w-44 shrink-0 md:w-full">
+              {group && group !== previousGroup && (
+                <div className="mb-2 px-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 md:pt-3">
+                  {group}
+                </div>
+              )}
+              <button
+                onClick={() => onSelect(section.id)}
                 className={[
-                  "mt-1 h-3 w-3 rounded-full",
-                  completed ? "bg-emerald-400" : readOnly ? "bg-brand/70" : "bg-white/25",
+                  "grid min-h-20 w-full grid-cols-[10px_1fr] gap-3 rounded border p-3 text-left transition",
+                  focused ? "border-brand/70 bg-brand/15" : "border-white/10 bg-bg-mid/70 hover:border-white/25",
                 ].join(" ")}
-              />
-              <span>
-                <span className="block text-sm font-semibold text-white">{section.label}</span>
-                <span className="mt-1 block text-xs text-white/45">
-                  {readOnly ? "Read only" : completed ? status.summary ?? "Saved" : "Incomplete"}
+              >
+                <span
+                  className={[
+                    "mt-1 h-3 w-3 rounded-full",
+                    completed ? "bg-emerald-400" : readOnly ? "bg-brand/70" : "bg-white/25",
+                  ].join(" ")}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-white">{section.label}</span>
+                  <span className="mt-1 block text-xs text-white/45">
+                    {readOnly ? "Read only" : status.summary ?? (completed ? "Saved" : "Incomplete")}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+            </div>
           );
         })}
         {onAddSection && (

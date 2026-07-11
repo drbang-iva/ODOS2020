@@ -213,7 +213,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
 
   function markSaved(summary: string) {
     const next = {
-      completed: true,
+      completed: false,
       summary,
       savedAt: new Date().toISOString(),
       operator: "OSOD UI myopia_management",

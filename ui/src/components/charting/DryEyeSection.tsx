@@ -222,7 +222,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
 
   function markSaved(summary: string) {
     const next = {
-      completed: true,
+      completed: false,
       summary,
       savedAt: new Date().toISOString(),
       operator: "OSOD UI dry_eye",
