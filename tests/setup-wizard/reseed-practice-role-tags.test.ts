@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicy } from "@medplum/fhirtypes";
 import {
+  assertLocalMedplumBaseUrl,
   decidePracticeRoleTag,
   reseedPracticeRoleTags,
   type PracticeRoleReseedAdapter,
@@ -12,7 +13,8 @@ import type { JsonPatchOperation } from "../../mcp/src/fhir-client.ts";
 type AccessPolicyTag = NonNullable<NonNullable<AccessPolicy["meta"]>["tag"]>[number];
 
 class FakePracticeRoleReseedAdapter implements PracticeRoleReseedAdapter {
-  readonly writes: { id: string; operations: JsonPatchOperation[] }[] = [];
+  readonly writes: { id: string; operations: JsonPatchOperation[]; versionId: string }[] = [];
+  stalePolicyId?: string;
 
   constructor(readonly policies: AccessPolicy[]) {}
 
@@ -20,10 +22,14 @@ class FakePracticeRoleReseedAdapter implements PracticeRoleReseedAdapter {
     return this.policies.filter((policy) => policy.name === name);
   }
 
-  async patchPolicy(id: string, operations: JsonPatchOperation[]): Promise<AccessPolicy> {
-    this.writes.push({ id, operations });
+  async patchPolicy(id: string, operations: JsonPatchOperation[], versionId: string): Promise<AccessPolicy> {
+    this.writes.push({ id, operations, versionId });
+    if (id === this.stalePolicyId) {
+      throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+    }
     const policy = this.policies.find((candidate) => candidate.id === id);
     assert.ok(policy);
+    assert.equal(policy.meta?.versionId, versionId);
     applyPatch(policy, operations);
     return policy;
   }
@@ -87,7 +93,12 @@ test("wrong OSOD role tag is a conflict with no write and a non-zero exit path",
   assert.equal(adapter.writes.length, 0);
   assert.equal(roleCount(result, "auditor").conflicted, 1);
   assert.deepEqual(result.conflicts, [
-    { roleId: "auditor", policyId: "auditor-policy", conflictingCodes: ["clinician"] },
+    {
+      roleId: "auditor",
+      policyId: "auditor-policy",
+      reason: "role-tag",
+      conflictingCodes: ["clinician"],
+    },
   ]);
   assert.deepEqual(decidePracticeRoleTag(adapter.policies[0]?.meta?.tag, "auditor"), {
     kind: "CONFLICT",
@@ -115,6 +126,37 @@ test("unrelated tag is preserved and the practice-role tag is appended", async (
       value: { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
     },
   ]);
+  assert.equal(adapter.writes[0]?.versionId, "1");
+});
+
+test("a stale version is reported as a conflict without applying the patch", async () => {
+  const policy: AccessPolicy = {
+    resourceType: "AccessPolicy",
+    id: "stale-clinician-policy",
+    name: "OSOD Clinician",
+    meta: { versionId: "7" },
+  };
+  const adapter = new FakePracticeRoleReseedAdapter([policy]);
+  adapter.stalePolicyId = policy.id;
+
+  const result = await reseedPracticeRoleTags(adapter);
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(roleCount(result, "clinician").conflicted, 1);
+  assert.deepEqual(result.conflicts, [
+    { roleId: "clinician", policyId: "stale-clinician-policy", reason: "stale-version" },
+  ]);
+  assert.equal(policy.meta?.tag, undefined);
+});
+
+test("the live migration target must be local or private", () => {
+  assert.doesNotThrow(() => assertLocalMedplumBaseUrl("http://localhost:8103"));
+  assert.doesNotThrow(() => assertLocalMedplumBaseUrl("https://osod.local"));
+  assert.doesNotThrow(() => assertLocalMedplumBaseUrl("http://192.168.1.20:8103"));
+  assert.throws(
+    () => assertLocalMedplumBaseUrl("https://medplum.example.com"),
+    /must target a local or private/,
+  );
 });
 
 function roleCount(
@@ -127,7 +169,7 @@ function roleCount(
 }
 
 function policyWithTags(id: string, name: string, tag: NonNullable<AccessPolicy["meta"]>["tag"]): AccessPolicy {
-  return { resourceType: "AccessPolicy", id, name, meta: { tag } };
+  return { resourceType: "AccessPolicy", id, name, meta: { versionId: "1", tag } };
 }
 
 function applyPatch(policy: AccessPolicy, operations: JsonPatchOperation[]): void {

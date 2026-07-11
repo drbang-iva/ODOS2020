@@ -18,7 +18,7 @@ export type PracticeRoleTagDecision =
 
 export interface PracticeRoleReseedAdapter {
   findPoliciesByName(name: string): Promise<AccessPolicy[]>;
-  patchPolicy(id: string, operations: JsonPatchOperation[]): Promise<AccessPolicy>;
+  patchPolicy(id: string, operations: JsonPatchOperation[], versionId: string): Promise<AccessPolicy>;
 }
 
 export interface PracticeRoleReseedCount {
@@ -34,7 +34,8 @@ export interface PracticeRoleReseedResult {
   readonly conflicts: readonly {
     readonly roleId: PracticeRoleId;
     readonly policyId: string | undefined;
-    readonly conflictingCodes: readonly (string | undefined)[];
+    readonly reason: "role-tag" | "missing-version" | "stale-version";
+    readonly conflictingCodes?: readonly (string | undefined)[];
   }[];
   readonly exitCode: 0 | 1;
 }
@@ -89,6 +90,7 @@ export async function reseedPracticeRoleTags(
         conflicts.push({
           roleId,
           policyId: policy.id,
+          reason: "role-tag",
           conflictingCodes: decision.conflictingCodes,
         });
         continue;
@@ -96,8 +98,20 @@ export async function reseedPracticeRoleTags(
       if (!policy.id) {
         throw new Error(`Matched ${expectedName} AccessPolicy has no id.`);
       }
-      await adapter.patchPolicy(policy.id, practiceRoleTagPatch(policy, decision.tag));
-      tagged += 1;
+      const versionId = policy.meta?.versionId;
+      if (!versionId) {
+        conflicted += 1;
+        conflicts.push({ roleId, policyId: policy.id, reason: "missing-version" });
+        continue;
+      }
+      try {
+        await adapter.patchPolicy(policy.id, practiceRoleTagPatch(policy, decision.tag), versionId);
+        tagged += 1;
+      } catch (error) {
+        if (!isPreconditionFailure(error)) throw error;
+        conflicted += 1;
+        conflicts.push({ roleId, policyId: policy.id, reason: "stale-version" });
+      }
     }
 
     roles.push({ roleId, matched: policies.length, tagged, alreadyCorrect, conflicted });
@@ -127,17 +141,25 @@ class LivePracticeRoleReseedAdapter implements PracticeRoleReseedAdapter {
     return searchAll<AccessPolicy>(this.fhir, "AccessPolicy", { "name:exact": name });
   }
 
-  async patchPolicy(id: string, operations: JsonPatchOperation[]): Promise<AccessPolicy> {
-    return this.fhir.patch<AccessPolicy>("AccessPolicy", id, operations);
+  async patchPolicy(
+    id: string,
+    operations: JsonPatchOperation[],
+    versionId: string,
+  ): Promise<AccessPolicy> {
+    return this.fhir.patch<AccessPolicy>("AccessPolicy", id, operations, {
+      "If-Match": `W/"${versionId}"`,
+    });
   }
 }
 
 function printSummary(result: PracticeRoleReseedResult): void {
   for (const conflict of result.conflicts) {
-    console.error(
-      `CONFLICT ${conflict.roleId} AccessPolicy/${conflict.policyId ?? "unknown"}: ` +
-        `found practice-role code(s) ${conflict.conflictingCodes.map((code) => code ?? "(missing)").join(", ")}`,
-    );
+    const detail = conflict.reason === "role-tag"
+      ? `found practice-role code(s) ${(conflict.conflictingCodes ?? []).map((code) => code ?? "(missing)").join(", ")}`
+      : conflict.reason === "missing-version"
+        ? "search result had no meta.versionId; no safe conditional write was possible"
+        : "policy changed after search; rerun to re-evaluate its current tags";
+    console.error(`CONFLICT ${conflict.roleId} AccessPolicy/${conflict.policyId ?? "unknown"}: ${detail}`);
   }
   console.log("role\tmatched\ttagged\talready-correct\tconflicted");
   for (const role of result.roles) {
@@ -148,15 +170,56 @@ function printSummary(result: PracticeRoleReseedResult): void {
 }
 
 async function runCli(): Promise<void> {
-  const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
-  const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
+  const baseUrl = process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL;
+  assertLocalMedplumBaseUrl(baseUrl);
   const fhir = createMedplumClient({
-    baseUrl: process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL,
+    baseUrl,
+    accessToken: requireEnv("MEDPLUM_ACCESS_TOKEN"),
   });
-  await fhir.login(email, password);
   const result = await reseedPracticeRoleTags(new LivePracticeRoleReseedAdapter(fhir));
   printSummary(result);
   process.exitCode = result.exitCode;
+}
+
+export function assertLocalMedplumBaseUrl(value: string): void {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("MEDPLUM_BASE_URL must be a valid local or private HTTP(S) URL.");
+  }
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    !isLocalOrPrivateHostname(url.hostname)
+  ) {
+    throw new Error("MEDPLUM_BASE_URL must target a local or private HTTP(S) Medplum server.");
+  }
+}
+
+function isLocalOrPrivateHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (
+    normalized === "localhost" ||
+    normalized === "::1" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local")
+  ) {
+    return true;
+  }
+  const octets = normalized.split(".").map(Number);
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return false;
+  }
+  return octets[0] === 10 ||
+    (octets[0] === 172 && octets[1]! >= 16 && octets[1]! <= 31) ||
+    (octets[0] === 192 && octets[1] === 168) ||
+    octets[0] === 127;
+}
+
+function isPreconditionFailure(error: unknown): boolean {
+  return (error as { status?: number }).status === 412;
 }
 
 function requireEnv(name: string): string {
