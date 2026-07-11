@@ -55,7 +55,7 @@ test("diagnosis settings render grouped mappings, provisional catalog state, and
   assert.doesNotMatch(html, /\+ Add diagnosis/);
 });
 
-test("existing mapping saves stay locked to their persisted finding", async () => {
+test("existing mapping saves reject finding changes and keep unchanged saves on their persisted finding", async () => {
   let requestedPath = "";
   const request = async <T,>(path: string): Promise<T> => {
     requestedPath = path;
@@ -75,7 +75,7 @@ test("existing mapping saves stay locked to their persisted finding", async () =
     diagnosisCandidates: [],
   }];
   const descriptor = diagnosisMappingDescriptor(findings, [], request);
-  const saved = await descriptor.adapter.save({
+  const changedRow = {
     id: "MAP_1",
     findingKey: "refraction",
     findingDisplay: "Refraction",
@@ -86,6 +86,17 @@ test("existing mapping saves stay locked to their persisted finding", async () =
     triggerValue: "",
     priority: false,
     active: true,
+  };
+  await assert.rejects(
+    descriptor.adapter.save(changedRow),
+    /Changing the finding for an existing mapping isn't supported/,
+  );
+  assert.equal(requestedPath, "");
+
+  const saved = await descriptor.adapter.save({
+    ...changedRow,
+    findingKey: "tear_film",
+    findingDisplay: "Tear Film",
   });
   assert.match(requestedPath, /finding-definitions\/tear_film$/);
   assert.equal(saved.findingKey, "tear_film");

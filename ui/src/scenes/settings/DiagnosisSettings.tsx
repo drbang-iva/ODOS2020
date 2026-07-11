@@ -265,6 +265,9 @@ function mappingAdapter(
       const findingKey = isNew
         ? row.findingKey
         : row.persistedFindingKey ?? persistedFinding?.stableKey ?? row.findingKey;
+      if (!isNew && row.findingKey !== findingKey) {
+        throw new Error("Changing the finding for an existing mapping isn't supported — deactivate this mapping and create a new one.");
+      }
       const body = {
         action: isNew ? "create-diagnosis-candidate" : "update-diagnosis-candidate",
         ...(!isNew ? { id: row.id } : {}),

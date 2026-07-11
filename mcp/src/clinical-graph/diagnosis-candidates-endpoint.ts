@@ -117,10 +117,11 @@ export async function handleDiagnosisCandidatesRequest(
           if (!mapping.active || !evaluateMappingTrigger(mapping.trigger, finding)) return [];
           const row = activeCatalog.get(mapping.diagnosisKey);
           if (!row) return [];
+          const icd10 = resolvedIcd10(row, finding.laterality);
           return [{
             diagnosisKey: row.stableKey,
             display: row.display,
-            ...(resolvedIcd10(row, finding.laterality) ? { icd10: resolvedIcd10(row, finding.laterality) } : {}),
+            ...(icd10 ? { icd10 } : {}),
             codingStatus: row.codingStatus,
             priority: mapping.priority === true,
             source: "mapping" as const,
