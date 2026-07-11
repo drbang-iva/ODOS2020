@@ -1,4 +1,4 @@
-import type { CodeableConcept, Condition, Encounter, Extension, Reference } from "@medplum/fhirtypes";
+import type { CodeableConcept, Condition, Encounter, Extension, Identifier, Reference } from "@medplum/fhirtypes";
 
 export const US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS_PROFILE =
   "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-encounter-diagnosis";
@@ -61,6 +61,8 @@ export interface ConditionBaseInput {
   recordedDate?: string;
   bodyStructureReference?: string;
   bodySiteText?: string;
+  identifiers?: Identifier[];
+  evidenceObservationReferences?: string[];
 }
 
 export interface EncounterDiagnosisConditionInput extends ConditionBaseInput {
@@ -230,6 +232,10 @@ function buildCondition(
       ? { clinicalStatus: clinicalStatusConcept(input.clinicalStatus ?? "active") }
       : {}),
     verificationStatus: verificationStatusConcept(verificationStatus),
+    ...(input.identifiers?.length ? { identifier: input.identifiers } : {}),
+    ...(input.evidenceObservationReferences?.length
+      ? { evidence: [{ detail: input.evidenceObservationReferences.map(reference) }] }
+      : {}),
     ...(input.onsetDateTime ? { onsetDateTime: input.onsetDateTime } : {}),
     ...(input.abatementDateTime ? { abatementDateTime: input.abatementDateTime } : {}),
     ...(input.recordedDate ? { recordedDate: input.recordedDate } : {}),
@@ -253,7 +259,7 @@ function codeableConcept(input: ConditionCodeInput): CodeableConcept {
 }
 
 function isCodeableConcept(input: ConditionCodeInput | CodeableConcept): input is CodeableConcept {
-  return "coding" in input;
+  return !("system" in input);
 }
 
 function categoryDisplay(category: ConditionCategoryCode): string {

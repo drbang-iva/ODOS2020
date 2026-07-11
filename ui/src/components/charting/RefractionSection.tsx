@@ -3,6 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { VaValueSelect } from "./VaValueSelect";
+import { DiagnosisPicker } from "./DiagnosisPicker";
 
 interface Props {
   patientReference: string;
@@ -39,15 +40,6 @@ interface DiagnosisOption {
   display: string;
   family: string;
   laterality: string;
-}
-
-interface Suggestion {
-  id: string;
-  code: string;
-  display: string;
-  family: string;
-  explanation: string;
-  visitState: string;
 }
 
 interface EyeState {
@@ -96,8 +88,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [definitionLoading, setDefinitionLoading] = useState(true);
   const [definitionRefresh, setDefinitionRefresh] = useState(0);
   const [blocks, setBlocks] = useState<BlockState[]>(() => [emptyBlock(), emptyBlock()]);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [suggestionSelections, setSuggestionSelections] = useState<Record<string, string>>({});
+  const [savedObservationReferences, setSavedObservationReferences] = useState<Record<number, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
@@ -186,16 +177,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
         body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadBlocks }),
       });
       const body = (await response.json()) as {
-        blocks?: unknown[];
-        suggestions?: Suggestion[];
+        blocks?: Array<{ eyes?: Partial<Record<Eye, { observationReference?: string }>> }>;
         error?: string;
       };
       if (!response.ok) {
         throw new Error(body.error ?? `Refraction save failed: ${response.status}`);
       }
-      const nextSuggestions = body.suggestions ?? [];
-      setSuggestions(nextSuggestions);
-      setSuggestionSelections(Object.fromEntries(nextSuggestions.map((suggestion) => [suggestion.id, suggestion.code])));
+      setSavedObservationReferences(Object.fromEntries((body.blocks ?? []).map((savedBlock, index) => [
+        index,
+        Object.values(savedBlock.eyes ?? {}).flatMap((eye) => eye?.observationReference ? [eye.observationReference] : []),
+      ])));
       const savedBlockCount = body.blocks?.length ?? payloadBlocks.length;
       const status = {
         completed: true,
@@ -354,41 +345,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   ))}
                 </div>
               </div>
+              <div className="px-4 pb-4">
+                <DiagnosisPicker
+                  encounterReference={encounterReference}
+                  observationReferences={savedObservationReferences[blockIndex] ?? []}
+                  findingDefinitionKey="refraction"
+                />
+              </div>
             </div>
           ))}
         </div>
-
-        {suggestions.length > 0 && definition && (
-          <div className="mt-6 rounded border border-amber-300/25 bg-amber-400/[0.06] p-4">
-            <div className="text-sm font-semibold text-amber-100">Non-committal diagnosis suggestions</div>
-            <div className="mt-1 text-xs text-amber-100/60">
-              Review, override, or reject each suggestion. No diagnosis is confirmed by this list.
-            </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {suggestions.map((suggestion) => {
-                const options = definition.diagnosisOptions.filter((option) => option.family === suggestion.family);
-                return (
-                  <label key={suggestion.id} className="rounded border border-white/10 bg-bg-deep/60 p-3">
-                    <span className="block text-sm text-white/80">{suggestion.explanation}</span>
-                    <select
-                      value={suggestionSelections[suggestion.id] ?? ""}
-                      onChange={(event) => setSuggestionSelections((current) => ({
-                        ...current,
-                        [suggestion.id]: event.target.value,
-                      }))}
-                      className="mt-3 h-10 w-full rounded border border-amber-300/25 bg-bg-deep px-3 text-sm text-white outline-none focus:border-amber-300/60"
-                    >
-                      <option value="">Reject suggestion</option>
-                      {options.map((option) => (
-                        <option key={option.code} value={option.code}>{option.code} — {option.display}</option>
-                      ))}
-                    </select>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         <SectionFooter error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />
       </div>

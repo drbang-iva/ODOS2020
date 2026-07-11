@@ -89,6 +89,7 @@ import {
   handleDiagnosisCatalogMutationRequest,
 } from "./clinical-graph/diagnosis-catalog-endpoint.js";
 import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
+import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
@@ -5654,6 +5655,20 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: encounter diagnosis candidates route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisPickRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis pick route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis pick route failed" });
         }
       });
 

@@ -2,6 +2,7 @@ import type { Basic, Bundle, Observation } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { OSOD_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
+import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { evaluateMappingTrigger } from "./diagnosis-mapping.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import {
@@ -47,7 +48,7 @@ export interface DiagnosisCandidateRow {
   source: "rule" | "mapping";
 }
 
-interface OrderedCandidate extends DiagnosisCandidateRow {
+export interface OrderedCandidate extends DiagnosisCandidateRow {
   order: number;
 }
 
@@ -70,10 +71,11 @@ export async function handleDiagnosisCandidatesRequest(
   const encounterId = readEncounterId(input.params);
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const encounterReference = `Encounter/${encounterId}`;
-  const [definitions, catalog, observations] = await Promise.all([
+  const [definitions, catalog, observations, tally] = await Promise.all([
     new FhirFindingDefinitionStore(staff.fhir).list(),
     new FhirDiagnosisCatalogStore(staff.fhir).list(),
     staff.fhir.search<Observation>("Observation", { encounter: encounterReference, _count: "500" }),
+    new FhirDiagnosisPickTallyStore(staff.fhir).read(staff.staffReference),
   ]);
   const findings = (observations.entry ?? []).flatMap((entry) =>
     entry.resource ? observationToFinding(entry.resource, definitions) : []
@@ -132,11 +134,31 @@ export async function handleDiagnosisCandidatesRequest(
           findingInstanceId: finding.id,
           findingDefinitionKey: definition?.stableKey,
           observationReference: finding.observationReference,
-          candidates: orderDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
+          candidates: orderDiagnosisCandidates(
+            deduplicateDiagnosisCandidates([...ruleCandidates, ...mappingCandidates]),
+            definition?.stableKey ? tally?.counts[definition.stableKey] : undefined,
+          ),
         };
       }),
     },
   };
+}
+
+export function deduplicateDiagnosisCandidates(candidates: readonly OrderedCandidate[]): OrderedCandidate[] {
+  const byDiagnosisKey = new Map<string, OrderedCandidate>();
+  for (const candidate of candidates) {
+    const current = byDiagnosisKey.get(candidate.diagnosisKey);
+    if (!current || candidate.source === "rule" && current.source !== "rule") {
+      byDiagnosisKey.set(candidate.diagnosisKey, candidate);
+      continue;
+    }
+    if (current.source === "rule" && candidate.source !== "rule") continue;
+    if (Number(candidate.priority) > Number(current.priority) ||
+      candidate.priority === current.priority && candidate.order < current.order) {
+      byDiagnosisKey.set(candidate.diagnosisKey, candidate);
+    }
+  }
+  return [...byDiagnosisKey.values()];
 }
 
 export function orderDiagnosisCandidates(

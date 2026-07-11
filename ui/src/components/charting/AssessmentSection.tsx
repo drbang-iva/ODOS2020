@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Condition, Encounter } from "@medplum/fhirtypes";
+import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import { useRole } from "../../lib/role-context";
 import {
@@ -19,6 +19,11 @@ import {
   isEncounterDiagnosisCondition,
 } from "../../lib/clinical-view-model";
 import type { SectionSaveStatus } from "./types";
+import { submitDiagnosisPick } from "../../lib/clinical-graph-client";
+import { OSOD_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
+
+const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key";
+const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 
 interface Props {
   patientReference: string;
@@ -45,6 +50,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const canShowEditing = role !== "front-desk";
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -59,16 +65,39 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       _count: "40",
     });
     setEncounter(loadedEncounter);
-    setConditions(
-      (conditionBundle.entry ?? [])
+    const loadedConditions = (conditionBundle.entry ?? [])
         .flatMap((entry) => (entry.resource ? [entry.resource] : []))
-        .filter(isEncounterDiagnosisCondition),
-    );
+        .filter(isEncounterDiagnosisCondition)
+        .filter((condition) => !["refuted", "entered-in-error"].includes(verificationStatus(condition)));
+    setConditions(loadedConditions);
+    const evidenceReferences = [...new Set(loadedConditions.flatMap((condition) =>
+      (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []))
+    ))];
+    const observations = await Promise.all(evidenceReferences.map(async (reference) =>
+      fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
+    ));
+    const observationsByReference = new Map(observations.map((observation) => [`Observation/${observation.id}`, observation]));
+    setProvenanceLines(Object.fromEntries(loadedConditions.flatMap((condition) => {
+      if (!condition.id) return [];
+      const observation = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
+        .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
+        .find(Boolean);
+      return observation ? [[condition.id, findingProvenanceLine(observation)]] : [];
+    })));
   }
 
   useEffect(() => {
     void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [encounterId, encounterReference]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
+      if (detail?.encounterReference === encounterReference) void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    };
+    window.addEventListener("osod:diagnosis-picked", refresh);
+    return () => window.removeEventListener("osod:diagnosis-picked", refresh);
+  }, [encounterReference]);
 
   const sortedConditions = useMemo(
     () => {
@@ -150,6 +179,17 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     });
   }
 
+  async function decidePossible(condition: Condition, action: "confirm" | "discard") {
+    const diagnosisKey = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
+    if (!diagnosisKey) {
+      setError("This possible diagnosis is missing its diagnosis catalog link.");
+      return;
+    }
+    await runEdit(action, async () => {
+      await submitDiagnosisPick({ encounterReference, diagnosisKey, action });
+    });
+  }
+
   async function runEdit(label: string, action: () => Promise<void>) {
     setBusy(label);
     setError(null);
@@ -215,12 +255,16 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                 editing={editingId === condition.id}
                 canShowEditing={canShowEditing}
                 busy={busy}
+                provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
+                possible={verificationStatus(condition) === "provisional"}
                 onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                 onLaterality={(laterality) => saveLaterality(condition, laterality)}
                 onCode={(code, display) => saveCode(condition, code, display)}
                 onTier={(rank) => saveTier(condition, rank)}
                 onStatus={(status) => saveStatus(condition, status)}
                 onEnteredInError={() => markEnteredInError(condition)}
+                onConfirm={() => decidePossible(condition, "confirm")}
+                onDiscard={() => decidePossible(condition, "discard")}
               />
             ))
           )}
@@ -236,24 +280,32 @@ function DiagnosisCard({
   editing,
   canShowEditing,
   busy,
+  provenanceLine,
+  possible,
   onToggle,
   onLaterality,
   onCode,
   onTier,
   onStatus,
   onEnteredInError,
+  onConfirm,
+  onDiscard,
 }: {
   condition: Condition;
   rank: number | undefined;
   editing: boolean;
   canShowEditing: boolean;
   busy: string | null;
+  provenanceLine?: string;
+  possible: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
   onTier: (rank: number) => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
   onEnteredInError: () => void;
+  onConfirm: () => void;
+  onDiscard: () => void;
 }) {
   const [laterality, setLaterality] = useState<EyeChoice>("OU");
   const [code, setCode] = useState(condition.code?.coding?.[0]?.code ?? "");
@@ -264,7 +316,7 @@ function DiagnosisCard({
   );
 
   return (
-    <div data-testid="diagnosis-card" className="rounded border border-white/10 bg-bg-panel/70 p-4">
+    <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-amber-300/30 bg-amber-400/[0.06] px-4 py-3" : "rounded border border-white/10 bg-bg-panel/70 p-4"}>
       <button
         type="button"
         onClick={canShowEditing ? onToggle : undefined}
@@ -274,14 +326,22 @@ function DiagnosisCard({
           <div>
             <div className="text-base font-semibold text-white">{displayCode(condition.code)}</div>
             <div className="mt-1 text-xs text-white/45">
-              {rank === 1 ? "Principal" : `Secondary rank ${rank ?? "unranked"}`} · {clinicalStatus(condition)}
+              {possible ? "Possible" : rank === 1 ? "Principal" : `Secondary rank ${rank ?? "unranked"}`} · {clinicalStatus(condition)}
             </div>
+            {provenanceLine && <div className="mt-1 text-xs text-brand/75">← from {provenanceLine}</div>}
           </div>
-          {canShowEditing && <span className="text-xs text-brand">Edit</span>}
+          {canShowEditing && !possible && <span className="text-xs text-brand">Edit</span>}
         </div>
       </button>
 
-      {editing && (
+      {possible && canShowEditing && (
+        <div className="mt-2 flex gap-2">
+          <button disabled={busy !== null} onClick={onConfirm} className="rounded border border-emerald-300/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 disabled:opacity-45">Confirm</button>
+          <button disabled={busy !== null} onClick={onDiscard} className="rounded border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-100 disabled:opacity-45">Discard</button>
+        </div>
+      )}
+
+      {editing && !possible && (
         <div className="mt-4 grid gap-3 border-t border-white/10 pt-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_auto]">
             <select value={laterality} onChange={(event) => setLaterality(event.target.value as EyeChoice)} className="sidebar-input">
@@ -323,4 +383,35 @@ function DiagnosisCard({
 function normalizeClinicalStatus(value: string): "active" | "recurrence" | "resolved" {
   if (value === "recurrence" || value === "resolved") return value;
   return "active";
+}
+
+function verificationStatus(condition: Condition): string {
+  return condition.verificationStatus?.coding?.find((coding) => coding.system === VERIFICATION_STATUS_SYSTEM)?.code ??
+    condition.verificationStatus?.text ?? "unknown";
+}
+
+function findingProvenanceLine(observation: Observation): string {
+  const stableCode = observation.code.coding?.find((coding) => coding.code)?.code;
+  const label = stableCode === "cup_disc_ratio"
+    ? "Cup/Disc"
+    : observation.code.text ?? observation.code.coding?.find((coding) => coding.display)?.display ?? stableCode ?? "Finding";
+  const laterality = observation.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+    ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
+  const value = findingValue(observation);
+  return [label, value, laterality].filter(Boolean).join(" ");
+}
+
+function findingValue(observation: Observation): string | undefined {
+  if (observation.valueQuantity?.value !== undefined) return String(observation.valueQuantity.value);
+  if (observation.valueString) {
+    try {
+      const parsed = JSON.parse(observation.valueString) as Record<string, unknown>;
+      const ratio = parsed.verticalCupDiscRatio ?? parsed.cupDiscRatio;
+      if (typeof ratio === "number") return ratio.toFixed(2);
+    } catch {
+      return observation.valueString;
+    }
+  }
+  const sphere = observation.component?.find((component) => component.code.coding?.some((coding) => coding.code === "SPHERE"))?.valueQuantity?.value;
+  return sphere !== undefined ? `${sphere >= 0 ? "+" : ""}${sphere.toFixed(2)} D` : undefined;
 }
