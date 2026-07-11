@@ -34,6 +34,17 @@ test("front-desk reads the visit-type catalog (HealthcareService) at practice sc
   assert.ok(!rule.interaction?.includes("delete"));
 });
 
+test("front-desk reads the frame catalog but cannot manage DeviceDefinition", () => {
+  const rules = rulesFor("front-desk", "DeviceDefinition");
+  assert.equal(rules.length, 1);
+  const rule = rules[0]!;
+  assert.equal(rule.criteria, undefined);
+  assert.deepEqual(rule.interaction, ["read", "search", "history", "vread"]);
+  assert.ok(!rule.interaction?.includes("create"));
+  assert.ok(!rule.interaction?.includes("update"));
+  assert.ok(!rule.interaction?.includes("delete"));
+});
+
 test("front-desk reads Schedule and Slot (the resource columns + availability) at practice scope", () => {
   for (const resourceType of ["Schedule", "Slot"]) {
     const rules = rulesFor("front-desk", resourceType);
@@ -84,13 +95,14 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
   assert.equal(rulesFor("clinician", "Schedule").length, 0);
 });
 
-test("front-desk Basic grants stay criteria-scoped to the approved config and billing singletons", () => {
+test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
   const writeTierCriteria = [
     "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
     "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
     "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
     "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
+    "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory",
     "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
   ];
   const readTierCriteria = [
@@ -119,6 +131,22 @@ test("front-desk Basic grants stay criteria-scoped to the approved config and bi
     assert.ok(!rule.interaction?.includes("update"));
     assert.ok(!rule.interaction?.includes("delete"));
   }
+
+  const inventoryCriteria =
+    "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory";
+  const inventoryRule = rules.find((candidate) => candidate.criteria === inventoryCriteria);
+  assert.ok(inventoryRule?.interaction?.includes("read"));
+  assert.ok(inventoryRule?.interaction?.includes("update"));
+  assert.equal(
+    rules.some(
+      (candidate) =>
+        candidate.criteria === undefined ||
+        candidate.criteria ===
+          "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|frames-data-subscription",
+    ),
+    false,
+    "no blanket Basic or frames-data-subscription grant may bypass the inventory criteria fence",
+  );
 });
 
 test("clinician and auditor get no Basic grant (regression guard)", () => {
