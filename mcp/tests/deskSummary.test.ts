@@ -122,6 +122,29 @@ test("desk tone rules fire exactly at their zero-to-one boundaries", () => {
 test("needs-attention is exactly all-clear when every available target is met", () => {
   const summary = projectDeskSummary(emptyInput());
   assert.deepEqual(summary.cards.attention.items, []);
+  assert.equal(summary.pulse.itemsNeedingYou, 0);
+  assert.equal(summary.pulse.everythingElseAtTarget, true);
+});
+
+test("practice pulse counts only canonical attention rows", () => {
+  const summary = projectDeskSummary({
+    ...emptyInput(),
+    appointments: [
+      appointmentFixture("pending"),
+      {
+        ...appointmentFixture("booked"),
+        start: "2026-07-11T16:00:00.000Z",
+        end: "2026-07-11T16:30:00.000Z",
+      },
+    ],
+    terminalMode: "TEST MODE",
+  });
+
+  assert.equal(summary.cards.schedule.confirmed.tone, "warn");
+  assert.equal(summary.cards.payments.terminalMode.tone, "warn");
+  assert.equal(summary.cards.attention.items.length, 1);
+  assert.equal(summary.pulse.itemsNeedingYou, summary.cards.attention.items.length);
+  assert.equal(summary.pulse.everythingElseAtTarget, false);
 });
 
 test("last claim transmission is ok for the previous business day and warns when stale", () => {

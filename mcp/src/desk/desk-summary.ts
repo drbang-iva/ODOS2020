@@ -248,13 +248,11 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
       lastStatement: unavailable("Statement generation is not shipped yet."),
     },
   };
-  const { attention: _attention, ...sourceCards } = cards;
-  const breachTones = collectTones(sourceCards).filter((tone) => tone === "warn" || tone === "alert");
   return {
     cards,
     pulse: {
-      itemsNeedingYou: breachTones.length,
-      everythingElseAtTarget: breachTones.length === 0,
+      itemsNeedingYou: attention.length,
+      everythingElseAtTarget: attention.length === 0,
       lastClaimTransmission: lastTransmission,
       lastClaimTransmissionTone: lastTransmissionTone,
     },
@@ -388,12 +386,6 @@ function practiceDate(now: string, timeZone?: string): string {
   }).formatToParts(new Date(now));
   const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
-}
-
-function collectTones(value: unknown): DeskTone[] {
-  if (!value || typeof value !== "object") return [];
-  if ("tone" in value && typeof (value as { tone?: unknown }).tone === "string") return [(value as { tone: DeskTone }).tone];
-  return Object.values(value).flatMap(collectTones);
 }
 
 function unique(values: string[]): string[] {
