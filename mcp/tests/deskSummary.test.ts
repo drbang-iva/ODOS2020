@@ -158,7 +158,7 @@ test("last claim transmission is ok for the previous business day and warns when
 });
 
 function emptyInput(): DeskSummaryInput {
-  return { appointments: [], patients: [], tasks: [], claims: [], claimResponses: [], paymentReconciliations: [], invoices: [], now: NOW, terminalMode: "LIVE" };
+  return { appointments: [], patients: [], tasks: [], claims: [], claimResponses: [], paymentReconciliations: [], invoices: [], now: NOW, timeZone: "America/New_York", terminalMode: "LIVE" };
 }
 
 function appointmentFixture(status: Appointment["status"]): Appointment {

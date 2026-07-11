@@ -119,6 +119,7 @@ export interface DeskSummaryInput {
   paymentReconciliations: PaymentReconciliation[];
   invoices: Invoice[];
   now: string;
+  timeZone?: string;
   terminalMode: string;
 }
 
@@ -140,7 +141,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
       .sort((a, b) => Date.parse(a.start ?? "") - Date.parse(b.start ?? ""))
       .slice(0, 4)
       .map((appointment) => ({
-        time: timeLabel(appointment.start),
+        time: timeLabel(appointment.start, input.timeZone),
         patient: appointmentPatientName(appointment, patients),
         visitType: appointment.serviceType?.[0]?.text
           ?? appointment.serviceType?.[0]?.coding?.[0]?.display
@@ -287,6 +288,7 @@ export async function loadDeskSummary(
     paymentReconciliations,
     invoices,
     now,
+    timeZone: options.timeZone,
     terminalMode: options.terminalMode,
   });
 }
@@ -340,9 +342,9 @@ function appointmentPatientName(appointment: Appointment, patients: ReadonlyMap<
   return participant?.actor?.display ?? (resolvedName || "Patient");
 }
 
-function timeLabel(value: string | undefined): string {
+function timeLabel(value: string | undefined, timeZone: string | undefined): string {
   if (!value) return "Time unavailable";
-  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(new Date(value));
 }
 
 function oldestAgeDays(tasks: Task[], nowMs: number): number | null {
