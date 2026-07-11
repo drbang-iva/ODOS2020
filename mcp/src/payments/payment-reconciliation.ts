@@ -25,6 +25,7 @@ export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/pa
 
 /** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
 export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
+export const STEDI_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/stedi-era";
 
 export interface PatientPaymentAllocationInput {
   invoiceReference: string;

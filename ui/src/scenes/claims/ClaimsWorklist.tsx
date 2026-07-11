@@ -269,7 +269,7 @@ function Evidence({ item }: { item: ClaimsWorklistItem }) {
   if (item.evidence.kind === "claim-rejected") {
     return (
       <section>
-        <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-white/45">Claim.MD message</h3>
+        <h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-white/45">Clearinghouse message</h3>
         <pre className="whitespace-pre-wrap rounded bg-black/30 p-2 text-xs text-white/75">{item.evidence.claimMdMessage || "No message supplied"}</pre>
       </section>
     );

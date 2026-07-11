@@ -115,12 +115,16 @@ export interface ClaimsApiOptions {
   authorization?: string;
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  clearinghouse?: "claimmd" | "stedi";
 }
 
 export interface SubmitClaimResult {
   claimId?: string;
+  clearinghouse?: "claimmd" | "stedi";
   claimMdClaimId?: string;
   claimMdTrackingNumber?: string;
+  stediCorrelationId?: string;
+  stediTrackingNumber?: string;
   status?: string;
 }
 
@@ -414,7 +418,7 @@ export async function submitProfessionalClaim(
       "Content-Type": "application/json",
       ...(options.authorization ? { Authorization: options.authorization } : {}),
     },
-    body: JSON.stringify({ claim }),
+    body: JSON.stringify({ claim, ...(options.clearinghouse ? { clearinghouse: options.clearinghouse } : {}) }),
   });
   const text = await response.text();
   const body = text ? JSON.parse(text) as SubmitClaimResult & { error?: string } : {};

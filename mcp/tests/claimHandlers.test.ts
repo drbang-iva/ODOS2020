@@ -51,7 +51,16 @@ const professionalClaim: ProfessionalClaimInput = {
   coverageReference: "Coverage/cov-1",
   patientAccountNumber: "OSOD-CLAIM-900",
   payerId: "PAYERTEST",
-  billingProvider: { name: "OSOD TEST CLINIC", npi: "1111111112", taxId: "900000001", taxIdType: "E" },
+  billingProvider: {
+    name: "OSOD TEST CLINIC",
+    npi: "1111111112",
+    taxId: "900000001",
+    taxIdType: "E",
+    address1: "900 TEST AVE",
+    city: "TESTVILLE",
+    state: "NY",
+    zip: "100010000",
+  },
   renderingProvider: { firstName: "ALEX", lastName: "SYNTHETIC", npi: "1111111112" },
   subscriber: {
     firstName: "JAMIE",
@@ -218,6 +227,35 @@ test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.co
   assert.equal(audits[0].resourceType, "Claim");
 });
 
+test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {
+  const { audits, deps: d } = deps();
+  let submitted: unknown;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async (input: unknown) => {
+        submitted = input;
+        return { claimReference: { correlationId: "stedi-1", customerClaimNumber: "track-1" } };
+      },
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    } as any,
+  };
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: professionalClaim },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as any).stediCorrelationId, "stedi-1");
+  assert.equal((submitted as any).payload.usageIndicator, "T");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
 test("eligibility check creates request/response resources and audits eligibility.check.completed", async () => {
   const { audits, created, deps: d } = deps();
   const res = await handleEligibilityCheckRequest(d, {
@@ -246,6 +284,35 @@ test("eligibility check creates request/response resources and audits eligibilit
   assert.equal(audits[0].eventType, "eligibility.check.completed");
 });
 
+test("Stedi eligibility uses the parallel 271 mapper with unchanged RBAC and audit event type", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      checkEligibility: async () => ({ planStatus: [{ statusCode: "1", status: "Active Coverage" }], benefitsInformation: [] }),
+      submitProfessionalClaim: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    },
+  };
+  const result = await handleEligibilityCheckRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      clearinghouse: "stedi",
+      patientReference: "Patient/pat-900",
+      coverageReference: "Coverage/cov-1",
+      insurerReference: "Organization/payer-1",
+      serviceDate: "2026-07-09",
+      stedi: { tradingPartnerServiceId: "STEDITEST" },
+    },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.CoverageEligibilityResponse[0].insurance?.[0].inforce, true);
+  assert.equal(audits[0].eventType, "eligibility.check.completed");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
 test("claim status check returns a ClaimResponse projection and audits claim.status.checked", async () => {
   const { audits, created, deps: d } = deps();
   const res = await handleClaimStatusRequest(d, {
@@ -262,6 +329,34 @@ test("claim status check returns a ClaimResponse projection and audits claim.sta
   assert.equal(res.status, 200);
   assert.equal(created.ClaimResponse.length, 1);
   assert.equal(audits[0].eventType, "claim.status.checked");
+});
+
+test("Stedi claim status maps fixture 277 data and keeps the shared audit event", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      checkClaimStatus: async () => ({ claims: [{ claimStatus: { statusCategoryCode: "F1", statusCodeValue: "Claim has been paid." } }] }),
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    },
+  };
+  const result = await handleClaimStatusRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "claim-1" },
+    body: {
+      clearinghouse: "stedi",
+      patientReference: "Patient/pat-900",
+      insurerReference: "Organization/payer-1",
+      stedi: { tradingPartnerServiceId: "STEDITEST" },
+    },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.ClaimResponse[0].outcome, "complete");
+  assert.equal(audits[0].eventType, "claim.status.checked");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
 });
 
 test("claim status error creates a claim-rejected Task with Claim focus and verbatim message", async () => {
@@ -362,6 +457,51 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   });
 });
 
+test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({
+        meta: { transactionId: "7647d644-9348-4596-a3b4-6830b8b48cc8" },
+        transactions: [{
+          payer: { name: "SYNTHETIC PAYER" },
+          financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
+          paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: "TRACE900" },
+          detailInfo: [{ paymentInfo: [{
+            claimPaymentInfo: {
+              patientControlNumber: "OSOD-CLAIM-900",
+              totalClaimChargeAmount: "125",
+              claimPaymentAmount: "80",
+              patientResponsibilityAmount: "20",
+              payerClaimControlNumber: "PAYER900",
+              claimStatusCode: "1",
+            },
+            serviceLines: [{
+              servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "PROC-A" },
+              serviceSupplementalAmounts: { allowedActual: "100" },
+              serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
+            }],
+          }] }],
+        }],
+      }),
+    },
+  };
+  const result = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), clearinghouse: "stedi" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
+  assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
+  assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
 test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
   const { created, deps: d } = deps();
   const first = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
@@ -384,6 +524,41 @@ test("an eralist row with no import record is returned in the New lane without i
   assert.equal(item.eraId, "era-900");
   assert.equal(item.paidTotalCents, 8_000);
   assert.equal("claimCount" in item, false);
+});
+
+test("Stedi ERA routing projects inbound 835 polling rows into the shared remittance queue", async () => {
+  const { deps: d } = deps();
+  d.routingDefaults = { transaction: "claimmd", era: "stedi" };
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      retrieveEraData: async () => ({}),
+      listEras: async () => ({
+        items: [{
+          transactionId: "7647d644-9348-4596-a3b4-6830b8b48cc8",
+          direction: "INBOUND",
+          x12: { metadata: { transaction: { transactionSetIdentifier: "835" } } },
+        }],
+      }),
+    },
+  };
+  const result = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  assert.deepEqual(result, {
+    status: 200,
+    body: { items: [{
+      eraId: "7647d644-9348-4596-a3b4-6830b8b48cc8",
+      lane: "new",
+      posted: 0,
+      denied: 0,
+      underpaid: 0,
+      flagged: 0,
+      paidTotalCents: 0,
+      openTaskCount: 0,
+    }] },
+  });
 });
 
 test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit", async () => {
