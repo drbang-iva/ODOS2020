@@ -593,8 +593,8 @@ export function OpticalOrder() {
               <thead className="bg-white/[0.03] text-white/55">
                 <tr>
                   {RX_COLUMNS.map((column) => (
-                    <th key={column} className="border-r border-white/10 px-2 py-2 last:border-r-0">
-                      {column}
+                    <th key={column.key} className="border-r border-white/10 px-2 py-2 last:border-r-0">
+                      {column.label}
                     </th>
                   ))}
                 </tr>
@@ -603,8 +603,8 @@ export function OpticalOrder() {
                 {rxRows.map((row) => (
                   <tr key={row.eye} className="border-t border-white/10 text-white/80">
                     {RX_COLUMNS.map((column) => (
-                      <td key={`${row.eye}-${column}`} className="border-r border-white/10 px-2 py-2 last:border-r-0">
-                        {row.values[column]}
+                      <td key={`${row.eye}-${column.key}`} className="border-r border-white/10 px-2 py-2 last:border-r-0">
+                        {row.values[column.key]}
                       </td>
                     ))}
                   </tr>

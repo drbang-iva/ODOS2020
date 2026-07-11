@@ -17,10 +17,7 @@ export interface LabOrderRxEye {
   cylinder?: number;
   axis?: number;
   add?: number;
-  /** Prism magnitude (VisionPrescription prism amount). */
-  prism?: number;
-  /** Prism base direction (up|down|in|out). */
-  base?: "up" | "down" | "in" | "out";
+  prisms?: Array<{ amount: number; base: "up" | "down" | "in" | "out" }>;
   /** Distance PD (fitting measurement, caller-supplied). */
   distPd?: number;
   /** Near PD (fitting measurement, caller-supplied). */
@@ -167,7 +164,7 @@ function escapeHtml(s: string): string {
 }
 
 function rxRow(label: string, eye: LabOrderRxEye): string {
-  const prism = eye.prism !== undefined ? `${eye.prism} ${eye.base ?? ""}`.trim() : undefined;
+  const prism = eye.prisms?.map((entry) => `${entry.amount} ${entry.base}`).join(" / ");
   return `<tr><th>${label}</th><td>${cell(eye.sphere)}</td><td>${cell(eye.cylinder)}</td><td>${cell(eye.axis)}</td><td>${cell(eye.add)}</td><td>${cell(prism)}</td><td>${cell(eye.distPd)}</td><td>${cell(eye.nearPd)}</td><td>${cell(eye.segHeight)}</td></tr>`;
 }
 
@@ -240,14 +237,12 @@ function rxEye(
   spec: VisionPrescriptionLensSpecification | undefined,
   fitting: Pick<LabOrderRxEye, "distPd" | "nearPd" | "segHeight"> | undefined,
 ): LabOrderRxEye {
-  const prism = spec?.prism?.[0];
   return {
     ...(spec?.sphere !== undefined ? { sphere: spec.sphere } : {}),
     ...(spec?.cylinder !== undefined ? { cylinder: spec.cylinder } : {}),
     ...(spec?.axis !== undefined ? { axis: spec.axis } : {}),
     ...(spec?.add !== undefined ? { add: spec.add } : {}),
-    ...(prism?.amount !== undefined ? { prism: prism.amount } : {}),
-    ...(prism?.base !== undefined ? { base: prism.base } : {}),
+    ...(spec?.prism?.length ? { prisms: spec.prism.map(({ amount, base }) => ({ amount, base })) } : {}),
     ...(fitting?.distPd !== undefined ? { distPd: fitting.distPd } : {}),
     ...(fitting?.nearPd !== undefined ? { nearPd: fitting.nearPd } : {}),
     ...(fitting?.segHeight !== undefined ? { segHeight: fitting.segHeight } : {}),

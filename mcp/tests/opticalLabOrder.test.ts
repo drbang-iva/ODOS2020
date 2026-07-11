@@ -19,7 +19,10 @@ const RX: VisionPrescription = {
       cylinder: -0.5,
       axis: 175,
       add: 2.0,
-      prism: [{ amount: 1.5, base: "in" }],
+      prism: [
+        { amount: 1.5, base: "in" },
+        { amount: 0.5, base: "up" },
+      ],
     },
   ],
 };
@@ -68,13 +71,15 @@ test("buildLabOrder assembles header, OD/OS Rx from the VisionPrescription, lens
   assert.equal(order.rx.od.cylinder, -0.75);
   assert.equal(order.rx.od.axis, 180);
   assert.equal(order.rx.od.add, 2.0);
-  assert.equal(order.rx.od.prism, undefined);
+  assert.equal(order.rx.od.prisms, undefined);
 
   // OS (left), incl. prism
   assert.equal(order.rx.os.sphere, -2.5);
   assert.equal(order.rx.os.cylinder, -0.5);
-  assert.equal(order.rx.os.prism, 1.5);
-  assert.equal(order.rx.os.base, "in");
+  assert.deepEqual(order.rx.os.prisms, [
+    { amount: 1.5, base: "in" },
+    { amount: 0.5, base: "up" },
+  ]);
 
   // lens spec (caller-supplied, order-level)
   assert.equal(order.lensSpec.jobType, "Frame To Come");
@@ -147,6 +152,7 @@ test("renderLabOrderSheet renders every group with its values", () => {
   assert.match(html, /Wanda Walkthrough/); // patient
   assert.match(html, /-2\.25/); // OD sphere from the VisionPrescription
   assert.match(html, /180/); // OD axis
+  assert.match(html, /1\.5 in \/ 0\.5 up/); // compound OS prism
   assert.match(html, /Frame To Come/); // job type
   assert.match(html, /Polycarbonate/); // material
   assert.match(html, /AR/); // a treatment
