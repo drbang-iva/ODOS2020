@@ -110,6 +110,27 @@ test("payment credit reads map an unavailable staff-role service to a clean 503"
   assert.equal(fixture.downstreamCalls(), 0);
 });
 
+test("payment credit mutations map an unavailable staff-role service to a clean 503", async () => {
+  const fixture = setup();
+  fixture.deps.authenticate = async () => {
+    throw new StaffRoleServiceUnavailableError(new Error("refresh failed"));
+  };
+
+  const result = await handleApplyCreditRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      paymentReconciliationReference: "PaymentReconciliation/credit-1",
+      invoiceReference: "Invoice/first",
+      amountCents: 7500,
+    },
+  });
+  assert.deepEqual(result, {
+    status: 503,
+    body: { error: "Payment service temporarily unavailable." },
+  });
+  assert.equal(fixture.downstreamCalls(), 0);
+});
+
 test("apply and transfer handlers audit payment.credit.applied with the transfer reason", async () => {
   const apply = setup();
   const applyResult = await handleApplyCreditRequest(apply.deps, {
