@@ -17,6 +17,7 @@
     "seed-scheduler": "tsx scripts/seed-scheduler-demo.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
+    "reseed-role-tags": "tsx scripts/reseed-practice-role-tags.ts",
     "preflight": "tsx scripts/preflight-lint.ts",
     "dr-drill": "tsx scripts/dr-drill.ts",
     "audit-verify": "tsx scripts/verify-tier1-visit-audit.ts",
