@@ -2,6 +2,7 @@ import type { OsodActorRole, OsodAuditEventRecord } from "../authz/osodAudit.js"
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-audit.js";
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
+import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 import type { ChargeRequest, PaymentSurface, TransactionResult } from "./payment-processor-adapter.js";
 
 /**
@@ -56,7 +57,15 @@ export async function handleChargeRequest(
   deps: ChargeHandlerDeps,
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<ChargeHandlerResult> {
-  const staff = await deps.authenticate(input.authHeader);
+  let staff: AuthenticatedStaff | null;
+  try {
+    staff = await deps.authenticate(input.authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { status: 503, body: { error: "Payment service temporarily unavailable." } };
+    }
+    throw error;
+  }
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to take a payment." } };
   }

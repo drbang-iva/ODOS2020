@@ -4,11 +4,14 @@ import type { Bundle, PaymentReconciliation, Resource } from "@medplum/fhirtypes
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import {
   handleApplyCreditRequest,
+  handlePaymentReconciliationsRequest,
   handleTransferCreditRequest,
+  handleUnappliedCreditsRequest,
   handleVoidCreditRequest,
   type PaymentCreditHandlerDeps,
 } from "../src/payments/payment-credit-handler.js";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
+import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 
 function storedPayment(invoiceReference?: string): PaymentReconciliation {
@@ -34,20 +37,31 @@ function storedPayment(invoiceReference?: string): PaymentReconciliation {
 function setup(initial = storedPayment()) {
   let resource = structuredClone(initial);
   const audits: OsodAuditEventRecord[] = [];
+  let downstreamCalls = 0;
   const fhir = {
-    read: async <T extends Resource>(): Promise<T> => structuredClone(resource) as T,
-    search: async <T extends Resource>(): Promise<Bundle<T>> => ({
-      resourceType: "Bundle",
-      type: "searchset",
-      entry: [{ resource: structuredClone(resource) as T }],
-    }),
-    create: async <T extends Resource>(next: T): Promise<T> => next,
+    read: async <T extends Resource>(): Promise<T> => {
+      downstreamCalls += 1;
+      return structuredClone(resource) as T;
+    },
+    search: async <T extends Resource>(): Promise<Bundle<T>> => {
+      downstreamCalls += 1;
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(resource) as T }],
+      };
+    },
+    create: async <T extends Resource>(next: T): Promise<T> => {
+      downstreamCalls += 1;
+      return next;
+    },
     update: async <T extends Resource>(
       _resourceType: T["resourceType"],
       _id: string,
       next: T,
       headers?: Record<string, string>,
     ): Promise<T> => {
+      downstreamCalls += 1;
       assert.equal(headers?.["If-Match"], `W/"${resource.meta?.versionId}"`);
       resource = { ...(next as PaymentReconciliation), meta: { versionId: "2" } };
       return structuredClone(resource) as T;
@@ -63,11 +77,38 @@ function setup(initial = storedPayment()) {
       : null,
     lifecycleFhir: fhir,
     dispatch: createPaymentDispatch([{ method: "manual-cash" }]),
-    recordAudit: async (row) => { audits.push(row); },
+    recordAudit: async (row) => {
+      downstreamCalls += 1;
+      audits.push(row);
+    },
     now: () => "2026-07-10T14:00:00.000Z",
   };
-  return { audits, deps, current: () => resource };
+  return { audits, deps, current: () => resource, downstreamCalls: () => downstreamCalls };
 }
+
+test("payment credit reads map an unavailable staff-role service to a clean 503", async () => {
+  const fixture = setup();
+  fixture.deps.authenticate = async () => {
+    throw new StaffRoleServiceUnavailableError(new Error("refresh failed"));
+  };
+
+  for (const result of [
+    await handleUnappliedCreditsRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      patientReference: "Patient/p1",
+    }),
+    await handlePaymentReconciliationsRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      query: { patientReference: "Patient/p1" },
+    }),
+  ]) {
+    assert.deepEqual(result, {
+      status: 503,
+      body: { error: "Payment service temporarily unavailable." },
+    });
+  }
+  assert.equal(fixture.downstreamCalls(), 0);
+});
 
 test("apply and transfer handlers audit payment.credit.applied with the transfer reason", async () => {
   const apply = setup();
