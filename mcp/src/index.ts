@@ -95,6 +95,7 @@ import {
   handleDiagnosisCatalogMutationRequest,
 } from "./clinical-graph/diagnosis-catalog-endpoint.js";
 import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
+import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
   handleCustomSectionCaptureRequest,
@@ -5672,6 +5673,20 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: encounter diagnosis candidates route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-completeness", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCompletenessRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis completeness route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis completeness route failed" });
         }
       });
 
