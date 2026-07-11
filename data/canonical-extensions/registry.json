@@ -3,6 +3,24 @@
   "generatedAt": "2026-05-02",
   "extensions": [
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/agent-identity",
       "namespace": "agentops",
       "status": "active",

@@ -28,6 +28,7 @@ import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
 import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
+import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { LoginScreen } from "./scenes/LoginScreen";
 import type { Patient } from "@medplum/fhirtypes";
@@ -118,6 +119,8 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <VisitTypeSettings />;
     case "/settings/suggested-diagnoses":
       return <DiagnosisSettings />;
+    case "/settings/optical-pricing":
+      return <OpticalPricingSettings />;
     default:
       return <ViewRouter view={view} />;
   }

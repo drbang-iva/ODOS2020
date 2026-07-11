@@ -305,6 +305,7 @@ function buildPerMutationFhirArtifacts(
     practiceId,
     catalogCanonicalUrl: frameCanonicalUrl(row.skuId),
     practiceSalePriceCents: row.msrpCents ?? 0,
+    ...(row.labCostCents === null ? {} : { wholesaleCostCents: row.labCostCents }),
     hcpcsBaseCode: "V2020",
   });
   if (eventType === "catalog_sync.frames.bulk.retired") {

@@ -24,6 +24,20 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Vision plan templates/);
   assert.match(html, /Visit types/);
   assert.match(html, /Suggested diagnoses/);
+  assert.match(html, /Optical pricing/);
+});
+
+test("the optical-pricing route reaches all three shared catalog sections", () => {
+  const html = renderToStaticMarkup(
+    <RoleProvider>
+      <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" />
+    </RoleProvider>,
+  );
+  assert.match(html, /Optical pricing/);
+  assert.match(html, /Frame pricing/);
+  assert.match(html, /Lens pricing/);
+  assert.match(html, /Contact lens pricing/);
+  assert.match(html, /Read only. Practice-admin access is required/);
 });
 
 test("the suggested-diagnoses route reaches the shared catalog editor scene", () => {

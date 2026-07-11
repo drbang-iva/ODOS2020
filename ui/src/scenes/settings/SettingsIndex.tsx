@@ -25,6 +25,11 @@ const SETTINGS_LINKS = [
     description: "Manage the diagnosis catalog and finding-to-diagnosis suggestion mappings.",
   },
   {
+    href: "/settings/optical-pricing",
+    title: "Optical pricing",
+    description: "Manage frame, per-lab lens, and contact lens wholesale and retail prices.",
+  },
+  {
     href: "/admin/practice/settings/frames-data",
     title: "Frames data",
     description: "Manage frame catalog and inventory data sources.",

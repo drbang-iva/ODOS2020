@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "osod-optical-lab",
+  "url": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab",
+  "version": "optical-pricing-1",
+  "name": "OSODOpticalLab",
+  "title": "OSOD Optical Lab Identifier",
+  "status": "active",
+  "date": "2026-07-11",
+  "publisher": "OSOD",
+  "description": "Practice-local optical lab identifier matching the string identity used by the OSOD lab-order header.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ChargeItemDefinition"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Practice-local optical lab identifier",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      }
+    ]
+  }
+}
