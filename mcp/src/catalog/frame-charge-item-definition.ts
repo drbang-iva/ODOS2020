@@ -11,17 +11,34 @@ export interface FrameChargeItemDefinitionInput {
   readonly practiceId: string;
   readonly catalogCanonicalUrl: string;
   readonly practiceSalePriceCents: number;
+  readonly wholesaleCostCents?: number;
   readonly hcpcsBaseCode: Extract<FrameHcpcsCode, "V2020">;
 }
+
+export const OSOD_WHOLESALE_COST_EXTENSION_URL =
+  "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost";
 
 export function buildFrameChargeItemDefinition(
   input: FrameChargeItemDefinitionInput,
 ): ChargeItemDefinition {
+  if (input.wholesaleCostCents !== undefined && input.wholesaleCostCents < 0) {
+    throw new Error("buildFrameChargeItemDefinition: wholesaleCostCents must be nonnegative");
+  }
   return {
     resourceType: "ChargeItemDefinition",
     url: `https://osod.dev/practice/${encodeURIComponent(input.practiceId)}/charge-rules/frames/${encodeURIComponent(input.catalogCanonicalUrl)}`,
     version: "1",
     status: "active",
+    ...(input.wholesaleCostCents === undefined
+      ? {}
+      : {
+          extension: [
+            {
+              url: OSOD_WHOLESALE_COST_EXTENSION_URL,
+              valueMoney: { value: input.wholesaleCostCents / 100, currency: "USD" },
+            },
+          ],
+        }),
     code: {
       coding: [
         {

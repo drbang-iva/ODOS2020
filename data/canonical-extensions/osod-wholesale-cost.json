@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "osod-wholesale-cost",
+  "url": "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost",
+  "version": "optical-pricing-1",
+  "name": "OSODWholesaleCost",
+  "title": "OSOD Wholesale Cost",
+  "status": "active",
+  "date": "2026-07-11",
+  "publisher": "OSOD",
+  "description": "Practice-internal wholesale acquisition cost. This value is metadata and is never a component of a patient-facing line-item price.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ChargeItemDefinition"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Practice-internal wholesale acquisition cost",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Money"
+          }
+        ]
+      }
+    ]
+  }
+}

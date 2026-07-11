@@ -7,6 +7,7 @@ import { performance } from "node:perf_hooks";
 import { test } from "node:test";
 import type { AuditEvent, ChargeItemDefinition, DeviceDefinition, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import {
+  OSOD_WHOLESALE_COST_EXTENSION_URL,
   buildFrameChargeItemDefinition,
   emitFrameClaimLines,
   validateFrameClaimModifiers,
@@ -82,6 +83,66 @@ test("Frame FHIR builders keep physical identity and billing rules split", () =>
   assert.equal("useContext" in charge, false);
 });
 
+test("frame retail-only ChargeItemDefinition output is byte-for-byte unchanged when wholesale is omitted", () => {
+  const input = {
+    practiceId: "practice-a",
+    catalogCanonicalUrl: "https://osod.dev/catalog/frames/SKU-REGRESSION",
+    practiceSalePriceCents: 19900,
+    hcpcsBaseCode: "V2020" as const,
+  };
+  const withoutField = buildFrameChargeItemDefinition(input);
+  const explicitlyUndefined = buildFrameChargeItemDefinition({
+    ...input,
+    wholesaleCostCents: undefined,
+  });
+
+  assert.equal(JSON.stringify(explicitlyUndefined), JSON.stringify(withoutField));
+  assert.deepEqual(withoutField.propertyGroup?.[0]?.priceComponent, [
+    {
+      type: "base",
+      code: {
+        coding: [
+          { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "CHRG" },
+        ],
+      },
+      amount: { value: 199, currency: "USD" },
+    },
+  ]);
+  assert.equal(withoutField.extension, undefined);
+});
+
+test("frame wholesale cost is isolated outside every patient-facing price component and claim line", () => {
+  const definition = buildFrameChargeItemDefinition({
+    practiceId: "practice-a",
+    catalogCanonicalUrl: "https://osod.dev/catalog/frames/SKU-ISOLATION",
+    practiceSalePriceCents: 19900,
+    wholesaleCostCents: 4700,
+    hcpcsBaseCode: "V2020",
+  });
+
+  assert.deepEqual(definition.extension, [
+    {
+      url: OSOD_WHOLESALE_COST_EXTENSION_URL,
+      valueMoney: { value: 47, currency: "USD" },
+    },
+  ]);
+  assert.equal(definition.propertyGroup?.[0]?.priceComponent?.length, 1);
+  assert.equal(definition.propertyGroup?.[0]?.priceComponent?.[0]?.amount?.value, 199);
+  assert.equal(
+    JSON.stringify(definition.propertyGroup).includes(OSOD_WHOLESALE_COST_EXTENSION_URL),
+    false,
+  );
+
+  const claimLines = emitFrameClaimLines({
+    practiceId: "practice-a",
+    catalogCanonicalUrl: definition.url,
+    isDeluxe: false,
+    standardFrameCostCents: 10000,
+  });
+  assert.deepEqual(claimLines.map((line) => line.unitPrice.value), [100]);
+  assert.equal(JSON.stringify(claimLines).includes("47"), false);
+});
+
 test("UCUM quantity builder rejects string-valued numeric inputs", () => {
   assert.throws(
     () => buildFrameDeviceDefinition({ catalogRow: sampleRow("SKU-Q", { eyesizeMm: "54" as unknown as number }) }),
@@ -128,9 +189,9 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
   writeFileSync(
     file,
     [
-      "skuId,brandName,modelName,colorName,sourceColorRaw,sourceMaterialRaw,eyesizeMm,dblMm,templeMm,gtin14,msrpCents",
-      ...Array.from({ length: 5 }, (_, i) => `MOD-${i},Brand,Model ${i},Black,Black,Acetate,54,18,145,12345678901${i},19900`),
-      ...Array.from({ length: 3 }, (_, i) => `NEW-${i},Brand,New ${i},Blue,Blue,Metal,52,17,140,22345678901${i},15900`),
+      "skuId,brandName,modelName,colorName,sourceColorRaw,sourceMaterialRaw,eyesizeMm,dblMm,templeMm,gtin14,msrpCents,labCostCents",
+      ...Array.from({ length: 5 }, (_, i) => `MOD-${i},Brand,Model ${i},Black,Black,Acetate,54,18,145,12345678901${i},19900,4700`),
+      ...Array.from({ length: 3 }, (_, i) => `NEW-${i},Brand,New ${i},Blue,Blue,Metal,52,17,140,22345678901${i},15900,4700`),
     ].join("\n"),
   );
 
@@ -182,6 +243,17 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
     assert.equal(written.filter((resource) => resource.resourceType === "Task").length, 1);
     assert.equal(written.filter((resource) => resource.resourceType === "DeviceDefinition").length, 13);
     assert.equal(written.filter((resource) => resource.resourceType === "ChargeItemDefinition").length, 13);
+    assert.equal(
+      written
+        .filter((resource): resource is ChargeItemDefinition => resource.resourceType === "ChargeItemDefinition")
+        .every((resource) => {
+          const wholesale = resource.extension?.find(
+            (extension) => extension.url === OSOD_WHOLESALE_COST_EXTENSION_URL,
+          )?.valueMoney?.value;
+          return wholesale === 47 || wholesale === 89;
+        }),
+      true,
+    );
     assert.equal(written.filter((resource) => resource.resourceType === "AuditEvent").length, 27);
     assert.equal(written.filter((resource) => resource.resourceType === "Provenance").length, 27);
     assert.equal(
