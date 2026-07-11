@@ -37,7 +37,7 @@ test("Rx grid projects horizontal and vertical prism entries without overwriting
   assert.equal(row.verticalPrism, "1");
   assert.equal(row.verticalBase, "UP");
   assert.equal(row.base, "in / up");
-  assert.equal(row.prismUnits, "3");
+  assert.equal(row.prismUnits, "PD");
   assert.equal(row.prismPoints, "");
 });
 

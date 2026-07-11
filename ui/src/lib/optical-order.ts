@@ -463,7 +463,7 @@ function rxValues(
     add: formatNumber(lens?.add),
     segHt: "",
     eye,
-    prismUnits: prisms.length ? formatNumber(prisms.reduce((total, prism) => total + prism.amount, 0)) : "",
+    prismUnits: prisms.length ? "PD" : "",
     prismPoints: "",
   };
 }
