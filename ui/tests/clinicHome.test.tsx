@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -33,6 +34,11 @@ test("results review renders the honest wiring state because no reviewed event i
   const card = html.match(/data-testid="clinic-review-card"[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.match(card, /do not yet persist a clinician-reviewed event/);
   assert.doesNotMatch(card, /waiting<\/span>/);
+});
+
+test("Vite proxies the Clinic aggregate to the MCP server", () => {
+  const config = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
+  assert.match(config, /"\/clinic": \{ target: "http:\/\/localhost:3333"/);
 });
 
 function fixture(flow: ClinicFlowRow[]): ClinicSummary {

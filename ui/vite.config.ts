@@ -13,6 +13,7 @@ export default defineConfig({
       "/payments": { target: "http://localhost:3333", changeOrigin: true },
       "/claims": { target: "http://localhost:3333", changeOrigin: true },
       "/desk": { target: "http://localhost:3333", changeOrigin: true },
+      "/clinic": { target: "http://localhost:3333", changeOrigin: true },
       "/clinical-graph": { target: "http://localhost:3333", changeOrigin: true },
     },
   },
