@@ -14,6 +14,7 @@ import {
   type DiagnosisSuggestionEvaluation,
   type FindingInstance,
 } from "./glaucoma-suspect.js";
+import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const REFRACTIVE_ERROR_LEDGER_PATH = resolve(
@@ -268,6 +269,8 @@ function buildEvaluation(
   explanation: string,
   evidenceFindingInstanceIds = [finding.id],
 ): DiagnosisSuggestionEvaluation {
+  const catalogRow = buildDiagnosisCatalogSeeds().find((candidate) => candidate.stableKey === kind);
+  if (!catalogRow) throw new Error(`Refractive diagnosis catalog seed ${kind} is missing.`);
   const row = ledger.diagnosisCodes.find((candidate) => candidate.code === code);
   if (!row) {
     throw new Error(`Refractive-error ICD-10-CM code ${code} is missing from the Phase 0 ledger.`);
@@ -276,11 +279,11 @@ function buildEvaluation(
     id: graphId("dx-def", kind, code),
     stableKey: `${kind}_${row.laterality.toLowerCase()}`,
     display: row.display,
-    clinicalFamily: kind,
+    clinicalFamily: catalogRow.clinicalFamily,
     icd10Family: row.family,
     icd10Code: row.code,
     icd10Display: row.display,
-    codingStatus: "verified",
+    codingStatus: catalogRow.codingStatus,
     lateralityRequired: kind === "hyperopia" || kind === "myopia" || kind === "astigmatism",
     applicableFindingDefinitionIds: [definition.id],
     provenance: input.provenance,

@@ -23,6 +23,14 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Floor config/);
   assert.match(html, /Vision plan templates/);
   assert.match(html, /Visit types/);
+  assert.match(html, /Suggested diagnoses/);
+});
+
+test("the suggested-diagnoses route reaches the shared catalog editor scene", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/suggested-diagnoses" />,
+  );
+  assert.match(html, /Loading diagnosis settings/);
 });
 
 test("the visit-type route reaches the mixed singleton and resource settings scene", () => {

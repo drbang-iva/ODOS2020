@@ -23,7 +23,7 @@ test("clinical-graph requests share the literal Vite route and Medplum authoriza
     .map((path) => ({ path, source: readFileSync(path, "utf8") }))
     .filter(({ source }) => source.includes("clinicalGraphApiBase()"));
 
-  assert.equal(callers.length, 13);
+  assert.equal(callers.length, 14);
   for (const { path, source } of callers) {
     assert.match(source, /from "\.\.\/(?:\.\.\/)?lib\/clinical-graph-client";/, path);
     assert.doesNotMatch(source, /function (?:authHeaders|clinicalGraphApiBase)\(/, path);

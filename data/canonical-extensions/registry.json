@@ -57,6 +57,12 @@
       "sliceConsumer": "tier3-d1"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-diagnosis-definition-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "dx-link-l1"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",

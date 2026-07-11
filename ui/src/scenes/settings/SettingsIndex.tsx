@@ -20,6 +20,11 @@ const SETTINGS_LINKS = [
     description: "Manage practice-created chart fields and section placement.",
   },
   {
+    href: "/settings/suggested-diagnoses",
+    title: "Suggested diagnoses",
+    description: "Manage the diagnosis catalog and finding-to-diagnosis suggestion mappings.",
+  },
+  {
     href: "/admin/practice/settings/frames-data",
     title: "Frames data",
     description: "Manage frame catalog and inventory data sources.",
