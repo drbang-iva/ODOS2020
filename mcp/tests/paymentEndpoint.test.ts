@@ -59,6 +59,26 @@ test("a partially configured clover fails fast at service start, naming the miss
   );
 });
 
+test("stripe registers from a test secret, defaulting its API base URL", () => {
+  const registrations = paymentAdapterRegistrationsFromEnv({
+    STRIPE_SECRET_KEY: "sk_test_env_fixture",
+  });
+  assert.deepEqual(registrations.find((r) => r.method === "stripe"), {
+    method: "stripe",
+    config: {
+      baseUrl: "https://api.stripe.com",
+      secretKey: "sk_test_env_fixture",
+    },
+  });
+});
+
+test("a Stripe base URL without its secret fails fast at service start", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_BASE_URL: "https://api.stripe.com" }),
+    /STRIPE_SECRET_KEY/,
+  );
+});
+
 // --- Medplum token verification (authn: the forwarded UI token → staff identity) ---
 
 function meTransport(status: number, body: unknown) {

@@ -6,6 +6,7 @@ import {
   type PracticeRoleId,
 } from "../authz/roles.js";
 import type { AdapterRegistration } from "./payment-config.js";
+import { STRIPE_BASE_URL } from "./adapters/stripe-adapter.js";
 
 /**
  * osod-core payment endpoint helpers — the env-driven adapter registrations built at service
@@ -18,7 +19,8 @@ import type { AdapterRegistration } from "./payment-config.js";
  * Build the practice's adapter registrations from env. The manual-cash adapter is always
  * registered (zero config — cash exists at every practice). Clover registers when its env vars
  * are present; a partial Clover config fails fast at service start rather than silently
- * disabling card payments. Env names match docs/payments-clover-sandbox.md.
+ * disabling card payments. Stripe registers from a test secret key; an explicit base URL without
+ * that key is also a partial configuration error. Env names match the payment sandbox docs.
  */
 export function paymentAdapterRegistrationsFromEnv(
   env: Record<string, string | undefined>,
@@ -47,6 +49,21 @@ export function paymentAdapterRegistrationsFromEnv(
     throw new Error(
       `Clover payment adapter is partially configured — missing ${missing.join(", ")}. ` +
         "Set all four CLOVER_* vars or none (see docs/payments-clover-sandbox.md).",
+    );
+  }
+
+  if (env.STRIPE_SECRET_KEY) {
+    registrations.push({
+      method: "stripe",
+      config: {
+        baseUrl: env.STRIPE_BASE_URL || STRIPE_BASE_URL,
+        secretKey: env.STRIPE_SECRET_KEY,
+      },
+    });
+  } else if (env.STRIPE_BASE_URL) {
+    throw new Error(
+      "Stripe payment adapter is partially configured — missing STRIPE_SECRET_KEY. " +
+        "Set STRIPE_SECRET_KEY or remove STRIPE_BASE_URL (see docs/payments-stripe-sandbox.md).",
     );
   }
 
