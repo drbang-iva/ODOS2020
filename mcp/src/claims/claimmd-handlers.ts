@@ -373,7 +373,6 @@ export async function handleEraImportRequest(
           eraClaim,
           authoredOn: now(deps),
           appealDeadline: body.appealDeadlineByPcn?.[pcn],
-          identifierSystem: STEDI_ERA_PAYMENT_SYSTEM,
         }));
         taskIds.push(requiredId(task));
         await audit(deps, auth, "era.unmatched.flagged", "success", ref(task));
@@ -480,6 +479,7 @@ async function importStediEra(
           eraClaim,
           authoredOn: now(deps),
           appealDeadline: body.appealDeadlineByPcn?.[pcn],
+          identifierSystem: STEDI_ERA_PAYMENT_SYSTEM,
         }));
         taskIds.push(requiredId(task));
         await audit(deps, auth, "era.unmatched.flagged", "success", ref(task), undefined, undefined, "stedi");

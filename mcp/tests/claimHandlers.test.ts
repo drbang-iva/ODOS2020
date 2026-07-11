@@ -17,6 +17,10 @@ import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 import {
+  CLAIMMD_ERA_PAYMENT_SYSTEM,
+  STEDI_ERA_PAYMENT_SYSTEM,
+} from "../src/payments/payment-reconciliation.js";
+import {
   handleClaimEraWorklistTaskRequest,
   handleClaimStatusRequest,
   handleCloseManualEobRequest,
@@ -500,6 +504,18 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+
+  const unmatched = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      clearinghouse: "stedi",
+      claimReferenceByPcn: {},
+      patientReferenceByPcn: {},
+    },
+  });
+  assert.equal(unmatched.status, 200);
+  assert.equal(created.Task[0].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
 });
 
 test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
@@ -705,6 +721,7 @@ test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", a
   assert.equal(created.Task.length, 1);
   const task = created.Task[0];
   assert.equal(worklistCode(task), "era-unmatched");
+  assert.equal(task.groupIdentifier?.system, CLAIMMD_ERA_PAYMENT_SYSTEM);
   assert.equal(task.focus, undefined);
   assert.equal(task.for, undefined);
   assert.equal(taskInput(task, "pcn")?.valueString, "OSOD-CLAIM-900");
