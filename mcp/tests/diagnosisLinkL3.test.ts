@@ -8,7 +8,10 @@ import {
   handleDiagnosisCatalogListRequest,
   handleDiagnosisCatalogMutationRequest,
 } from "../src/clinical-graph/diagnosis-catalog-endpoint.js";
-import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
+import {
+  buildDiagnosisCatalogResource,
+  buildDiagnosisCatalogSeeds,
+} from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { handleDiagnosisCompletenessRequest } from "../src/clinical-graph/diagnosis-completeness-endpoint.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 
@@ -17,6 +20,32 @@ const AUTH_CLINICIAN = "Bearer clinician";
 
 test("L3 ships empty-tolerant with no seeded clinical key findings or windows", () => {
   assert.equal(buildDiagnosisCatalogSeeds().every((row) => row.keyFindings?.length === 0), true);
+});
+
+test("persisted diagnosis rows enforce the same key-finding bounds as mutations", () => {
+  const seed = buildDiagnosisCatalogSeeds()[0]!;
+  const entry = {
+    findingKey: "finding",
+    satisfiedBy: "any-on-file" as const,
+    withinMonths: 12,
+    origin: "practice" as const,
+    active: true,
+  };
+  assert.throws(
+    () => buildDiagnosisCatalogResource({
+      ...seed,
+      keyFindings: Array.from({ length: 65 }, (_, index) => ({ ...entry, findingKey: `finding_${index}` })),
+    }),
+    /more than 64/,
+  );
+  assert.throws(
+    () => buildDiagnosisCatalogResource({ ...seed, keyFindings: [{ ...entry, label: "x".repeat(161) }] }),
+    /label is invalid/,
+  );
+  assert.throws(
+    () => buildDiagnosisCatalogResource({ ...seed, keyFindings: [{ ...entry, withinMonths: 1_201 }] }),
+    /between 1 and 1,200/,
+  );
 });
 
 class MemoryFhir {
@@ -152,6 +181,14 @@ test("real HTTP L3 routes persist ordered key findings and report only unsatisfi
 
   const historical = fhir.resources.find((row) => row.id === "history-pachymetry") as Observation;
   historical.effectiveDateTime = "2026-02-01T12:00:00.000Z";
+  assert.deepEqual((await completeness(base) as CompletenessResponse).diagnoses, []);
+
+  delete historical.effectiveDateTime;
+  historical.effectiveInstant = "2026-02-02T12:00:00.000Z";
+  assert.deepEqual((await completeness(base) as CompletenessResponse).diagnoses, []);
+
+  delete historical.effectiveInstant;
+  historical.effectiveTiming = { event: ["2026-02-03T12:00:00.000Z"] };
   assert.deepEqual((await completeness(base) as CompletenessResponse).diagnoses, []);
 
   await post(base, "/clinical-graph/diagnosis-catalog/glaucoma_suspect_open_angle_low", {

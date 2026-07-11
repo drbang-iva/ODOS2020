@@ -20,14 +20,25 @@ export type DiagnosisCompleteness = {
   }>;
 };
 
-export async function readDiagnosisCompleteness(encounterId: string): Promise<DiagnosisCompleteness> {
-  const response = await fetch(
-    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-completeness`,
-    { headers: authHeaders() },
-  );
-  const body = await response.json() as DiagnosisCompleteness & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Diagnosis completeness failed: ${response.status}`);
-  return body;
+export const DIAGNOSIS_COMPLETENESS_TIMEOUT_MS = 5_000;
+
+export async function readDiagnosisCompleteness(
+  encounterId: string,
+  timeoutMs = DIAGNOSIS_COMPLETENESS_TIMEOUT_MS,
+): Promise<DiagnosisCompleteness> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(
+      `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-completeness`,
+      { headers: authHeaders(), signal: controller.signal },
+    );
+    const body = await response.json() as DiagnosisCompleteness & { error?: string };
+    if (!response.ok) throw new Error(body.error ?? `Diagnosis completeness failed: ${response.status}`);
+    return body;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function submitDiagnosisPick(input: {

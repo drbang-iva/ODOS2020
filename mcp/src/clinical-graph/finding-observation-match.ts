@@ -5,6 +5,7 @@ export function observationMatchesFindingDefinition(
   observation: Observation,
   definition: ClinicalFindingDefinition,
 ): boolean {
+  // System-aware matching is intentionally deferred to a cross-slice L1/L2/L3 hardening pass.
   const expected = new Set([
     definition.stableKey.toLowerCase(),
     ...(definition.fhirObservationCode?.coding ?? []).flatMap((coding) =>

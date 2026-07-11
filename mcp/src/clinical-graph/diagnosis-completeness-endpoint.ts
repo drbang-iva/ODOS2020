@@ -125,12 +125,23 @@ function keyFindingSatisfied(
 
 function observationWithinMonths(observation: Observation, months: number, now: Date): boolean {
   const recorded = observation.effectiveDateTime ?? observation.effectivePeriod?.end ??
-    observation.effectivePeriod?.start ?? observation.issued ?? observation.meta?.lastUpdated;
+    observation.effectivePeriod?.start ?? observation.effectiveInstant ??
+    latestTimingDate(observation) ?? observation.issued ?? observation.meta?.lastUpdated;
   if (!recorded) return false;
   const recordedAt = new Date(recorded);
   if (Number.isNaN(recordedAt.getTime()) || recordedAt > now) return false;
   const cutoff = monthsBefore(now, months);
   return recordedAt >= cutoff;
+}
+
+function latestTimingDate(observation: Observation): string | undefined {
+  const timing = observation.effectiveTiming;
+  const candidates = [
+    ...(timing?.event ?? []),
+    timing?.repeat?.boundsPeriod?.end,
+    timing?.repeat?.boundsPeriod?.start,
+  ].filter((value): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value)));
+  return candidates.sort((left, right) => Date.parse(right) - Date.parse(left))[0];
 }
 
 function monthsBefore(value: Date, months: number): Date {

@@ -346,12 +346,22 @@ function keyFindingAdapter(
   onSaved: ((row: DiagnosisRow) => void) | undefined,
   request: typeof postJson,
 ): CatalogAdapter<KeyFindingRow> {
+  const currentByDiagnosis = new Map(diagnoses.map((diagnosis) => [diagnosis.stableKey, diagnosis]));
+  let mutationQueue: Promise<void> = Promise.resolve();
+
+  function serialize<T>(operation: () => Promise<T>): Promise<T> {
+    const result = mutationQueue.then(operation, operation);
+    mutationQueue = result.then(() => undefined, () => undefined);
+    return result;
+  }
+
   async function persist(diagnosis: DiagnosisRow, entries: DiagnosisRow["keyFindings"]): Promise<DiagnosisRow> {
     const result = await request<{ diagnosis: Record<string, unknown> }>(
       `/clinical-graph/diagnosis-catalog/${encodeURIComponent(diagnosis.stableKey)}`,
       { keyFindings: entries.map(keyFindingPayload) },
     );
     const saved = diagnosisFromApi(result.diagnosis);
+    currentByDiagnosis.set(saved.stableKey, saved);
     onSaved?.(saved);
     return saved;
   }
@@ -365,37 +375,43 @@ function keyFindingAdapter(
       )) {
         throw new Error("Changing the diagnosis or finding on an existing key finding isn't supported — deactivate it and create a new one.");
       }
-      const diagnosis = diagnoses.find((candidate) => candidate.stableKey === row.diagnosisKey);
-      if (!diagnosis) throw new Error(`Diagnosis ${row.diagnosisKey} is no longer available.`);
-      const entry = keyFindingEntry(row);
-      const index = diagnosis.keyFindings.findIndex((candidate) => candidate.findingKey === row.findingKey);
-      const entries = index === -1
-        ? [...diagnosis.keyFindings, entry]
-        : diagnosis.keyFindings.map((candidate) => candidate.findingKey === row.findingKey ? entry : candidate);
-      const saved = await persist(diagnosis, entries);
-      return keyFindingRows([saved]).find((candidate) => candidate.findingKey === row.findingKey)!;
+      return serialize(async () => {
+        const diagnosis = currentByDiagnosis.get(row.diagnosisKey);
+        if (!diagnosis) throw new Error(`Diagnosis ${row.diagnosisKey} is no longer available.`);
+        const entry = keyFindingEntry(row);
+        const index = diagnosis.keyFindings.findIndex((candidate) => candidate.findingKey === row.findingKey);
+        const entries = index === -1
+          ? [...diagnosis.keyFindings, entry]
+          : diagnosis.keyFindings.map((candidate) => candidate.findingKey === row.findingKey ? entry : candidate);
+        const saved = await persist(diagnosis, entries);
+        return keyFindingRows([saved]).find((candidate) => candidate.findingKey === row.findingKey)!;
+      });
     },
     async deactivate(row) {
-      const diagnosis = diagnoses.find((candidate) => candidate.stableKey === row.diagnosisKey);
-      if (!diagnosis) throw new Error(`Diagnosis ${row.diagnosisKey} is no longer available.`);
-      const entries = diagnosis.keyFindings.map((entry) =>
-        entry.findingKey === row.findingKey ? { ...entry, active: false } : entry
-      );
-      const saved = await persist(diagnosis, entries);
-      return keyFindingRows([saved]).find((candidate) => candidate.findingKey === row.findingKey)!;
+      return serialize(async () => {
+        const diagnosis = currentByDiagnosis.get(row.diagnosisKey);
+        if (!diagnosis) throw new Error(`Diagnosis ${row.diagnosisKey} is no longer available.`);
+        const entries = diagnosis.keyFindings.map((entry) =>
+          entry.findingKey === row.findingKey ? { ...entry, active: false } : entry
+        );
+        const saved = await persist(diagnosis, entries);
+        return keyFindingRows([saved]).find((candidate) => candidate.findingKey === row.findingKey)!;
+      });
     },
     async reorder(ids) {
-      const order = new Map(ids.map((id, index) => [id, index]));
-      for (const diagnosis of diagnoses) {
-        if (diagnosis.keyFindings.length < 2) continue;
-        const entries = [...diagnosis.keyFindings].sort((left, right) =>
-          (order.get(keyFindingId(diagnosis.stableKey, left.findingKey)) ?? Number.MAX_SAFE_INTEGER) -
-          (order.get(keyFindingId(diagnosis.stableKey, right.findingKey)) ?? Number.MAX_SAFE_INTEGER)
-        );
-        if (entries.some((entry, index) => entry.findingKey !== diagnosis.keyFindings[index]?.findingKey)) {
-          await persist(diagnosis, entries);
+      await serialize(async () => {
+        const order = new Map(ids.map((id, index) => [id, index]));
+        for (const diagnosis of currentByDiagnosis.values()) {
+          if (diagnosis.keyFindings.length < 2) continue;
+          const entries = [...diagnosis.keyFindings].sort((left, right) =>
+            (order.get(keyFindingId(diagnosis.stableKey, left.findingKey)) ?? Number.MAX_SAFE_INTEGER) -
+            (order.get(keyFindingId(diagnosis.stableKey, right.findingKey)) ?? Number.MAX_SAFE_INTEGER)
+          );
+          if (entries.some((entry, index) => entry.findingKey !== diagnosis.keyFindings[index]?.findingKey)) {
+            await persist(diagnosis, entries);
+          }
         }
-      }
+      });
     },
   };
 }

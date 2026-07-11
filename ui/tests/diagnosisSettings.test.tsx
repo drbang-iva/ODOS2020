@@ -188,3 +188,72 @@ test("key-finding settings save ordered practice rows and deactivate instead of 
   assert.equal(deactivated?.active, false);
   assert.match(requests[1]?.path ?? "", /diagnosis-catalog\/glaucoma$/);
 });
+
+test("rapid key-finding edits serialize against the latest saved array", async () => {
+  const requests: Array<{ keyFindings: Array<Record<string, unknown>> }> = [];
+  let releaseFirst!: () => void;
+  const firstBlocked = new Promise<void>((resolve) => { releaseFirst = resolve; });
+  const diagnosis = {
+    id: "glaucoma",
+    stableKey: "glaucoma",
+    display: "POAG",
+    clinicalFamily: "glaucoma",
+    codingStatus: "verified" as const,
+    origin: "seed" as const,
+    lateralityRequired: false,
+    code: "",
+    unspecifiedEye: "",
+    right: "",
+    left: "",
+    bilateral: "",
+    keyFindings: [
+      { findingKey: "cup_disc_ratio", satisfiedBy: "this-encounter" as const, origin: "practice" as const, active: true },
+      { findingKey: "pachymetry_um", satisfiedBy: "any-on-file" as const, withinMonths: 12, origin: "practice" as const, active: true },
+    ],
+    active: true,
+  };
+  const request = async <T,>(_path: string, body: unknown): Promise<T> => {
+    const payload = body as { keyFindings: Array<Record<string, unknown>> };
+    requests.push(payload);
+    if (requests.length === 1) await firstBlocked;
+    return {
+      diagnosis: {
+        ...diagnosis,
+        keyFindings: payload.keyFindings.map((entry) => ({ ...entry, origin: "practice" })),
+      },
+    } as T;
+  };
+  const adapter = keyFindingDescriptor([], [diagnosis], undefined, request).adapter;
+  const first = adapter.save({
+    id: "key-finding:glaucoma:cup_disc_ratio",
+    diagnosisKey: "glaucoma",
+    persistedDiagnosisKey: "glaucoma",
+    findingKey: "cup_disc_ratio",
+    persistedFindingKey: "cup_disc_ratio",
+    label: "Disc appearance",
+    satisfiedBy: "this-encounter",
+    origin: "practice",
+    active: true,
+  });
+  const second = adapter.save({
+    id: "key-finding:glaucoma:pachymetry_um",
+    diagnosisKey: "glaucoma",
+    persistedDiagnosisKey: "glaucoma",
+    findingKey: "pachymetry_um",
+    persistedFindingKey: "pachymetry_um",
+    label: "Corneal thickness",
+    satisfiedBy: "any-on-file",
+    withinMonths: 12,
+    origin: "practice",
+    active: true,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(requests.length, 1);
+  releaseFirst();
+  await Promise.all([first, second]);
+  assert.equal(requests.length, 2);
+  assert.deepEqual(
+    requests[1]?.keyFindings.map((entry) => [entry.findingKey, entry.label]),
+    [["cup_disc_ratio", "Disc appearance"], ["pachymetry_um", "Corneal thickness"]],
+  );
+});

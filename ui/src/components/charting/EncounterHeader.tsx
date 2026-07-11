@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
@@ -31,9 +31,13 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   const [busy, setBusy] = useState<"checking" | "finish" | "abandon" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
+  const completenessCheckVersion = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    completenessCheckVersion.current += 1;
+    setCompletenessAdvisories([]);
+    setBusy((current) => current === "checking" ? null : current);
 
     async function loadEncounter() {
       try {
@@ -69,6 +73,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     void loadEncounter();
     return () => {
       cancelled = true;
+      completenessCheckVersion.current += 1;
     };
   }, [encounterId, patient.id]);
 
@@ -82,7 +87,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   );
 
   async function finishEncounter() {
-    if (!patient.id) return;
+    if (!patient.id || busy === "finish" || busy === "abandon") return;
     setBusy("finish");
     setError(null);
     try {
@@ -111,12 +116,16 @@ export function EncounterHeader({ patient, encounterId }: Props) {
 
   async function requestFinishEncounter() {
     if (!patient.id || busy) return;
+    const requestVersion = ++completenessCheckVersion.current;
     setBusy("checking");
     setError(null);
     await runSignTimeCompletenessCheck(
       () => readDiagnosisCompleteness(encounterId),
-      finishEncounter,
+      async () => {
+        if (requestVersion === completenessCheckVersion.current) await finishEncounter();
+      },
       (diagnoses) => {
+        if (requestVersion !== completenessCheckVersion.current) return;
         setCompletenessAdvisories(diagnoses);
         setBusy(null);
       },
@@ -218,7 +227,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       {completenessAdvisories.length > 0 && (
         <DiagnosisCompletenessDialog
           diagnoses={completenessAdvisories}
-          signing={busy === "finish"}
+          signing={busy !== null}
           onSignAnyway={() => void finishEncounter()}
           onAddFindings={() => setCompletenessAdvisories([])}
         />
@@ -255,26 +264,93 @@ export function DiagnosisCompletenessDialog({
   onSignAnyway: () => void;
   onAddFindings: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstActionRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    firstActionRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, []);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onAddFindings();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? [])];
+    if (!focusable.length) {
+      event.preventDefault();
+      dialogRef.current?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Diagnosis key findings advisory">
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Diagnosis key findings advisory"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
       <div className="w-full max-w-lg rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
         <div className="text-xs uppercase tracking-widest text-white/35">Before signing</div>
         <div className="mt-3 grid gap-2 text-sm text-white/70">
-          {diagnoses.map((diagnosis) => (
-            <div key={diagnosis.conditionReference ?? `${diagnosis.diagnosisKey}:${diagnosis.laterality}`}>
+          {diagnoses.map((diagnosis, index) => (
+            <div key={diagnosis.conditionReference ?? `${diagnosis.diagnosisKey}:${diagnosis.laterality}:${index}`}>
               {diagnosis.display} is active without: {diagnosis.missing.map((finding) => finding.display).join(" · ")}
             </div>
           ))}
         </div>
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" className="scheduler-button" disabled={signing} onClick={onAddFindings}>
-            Add findings
-          </button>
-          <button type="button" className="scheduler-button" disabled={signing} onClick={onSignAnyway}>
-            {signing ? "Signing..." : "Sign anyway"}
-          </button>
+          <DiagnosisCompletenessDialogActions
+            signing={signing}
+            firstActionRef={firstActionRef}
+            onAddFindings={onAddFindings}
+            onSignAnyway={onSignAnyway}
+          />
         </div>
       </div>
     </div>
+  );
+}
+
+export function DiagnosisCompletenessDialogActions({
+  signing,
+  firstActionRef,
+  onSignAnyway,
+  onAddFindings,
+}: {
+  signing: boolean;
+  firstActionRef?: Ref<HTMLButtonElement>;
+  onSignAnyway: () => void;
+  onAddFindings: () => void;
+}) {
+  return (
+    <>
+      <button ref={firstActionRef} type="button" className="scheduler-button" disabled={signing} onClick={onAddFindings}>
+        Add findings
+      </button>
+      <button type="button" className="scheduler-button" disabled={signing} onClick={onSignAnyway}>
+        {signing ? "Signing..." : "Sign anyway"}
+      </button>
+    </>
   );
 }
