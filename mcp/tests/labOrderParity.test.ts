@@ -29,7 +29,10 @@ const RX: VisionPrescription = {
       cylinder: -0.5,
       axis: 175,
       add: 2,
-      prism: [{ amount: 1.5, base: "in" }],
+      prism: [
+        { amount: 1.5, base: "in" },
+        { amount: 0.5, base: "up" },
+      ],
     },
   ],
 };
