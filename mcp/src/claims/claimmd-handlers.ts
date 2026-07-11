@@ -14,6 +14,7 @@ import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } f
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
+import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
 import {
   isClaimSearchStatus,
@@ -993,7 +994,15 @@ async function authenticateClaimsManager(
   deps: ClaimsHandlerDeps,
   authHeader: string | undefined,
 ): Promise<AuthenticatedClaimsStaff | ClaimsHandlerResult> {
-  const staff = await deps.authenticate(authHeader);
+  let staff: AuthenticatedClaimsStaff | null;
+  try {
+    staff = await deps.authenticate(authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { status: 503, body: { error: "Claims service temporarily unavailable." } };
+    }
+    throw error;
+  }
   if (!staff) return { status: 401, body: { error: "Authentication required to manage claims." } };
   if (!staffMayManageClaims(staff.actorRole)) {
     return { status: 403, body: { error: "claims.manage role required" } };

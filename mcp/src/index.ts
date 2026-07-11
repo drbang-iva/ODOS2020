@@ -5350,7 +5350,7 @@ function requestIp(req: express.Request): string | undefined {
   return req.ip?.replace(/^::ffff:/, "");
 }
 
-async function authenticateWithMedplum(): Promise<void> {
+async function authenticateWithMedplum(force = false): Promise<void> {
   if (ACCESS_TOKEN) {
     return;
   }
@@ -5361,12 +5361,17 @@ async function authenticateWithMedplum(): Promise<void> {
     );
   }
 
+  if (force) authPromise = undefined;
   authPromise ??= (async () => {
     await fhir.login(EMAIL, PASSWORD);
     console.error("osod-mcp: authenticated with Medplum");
   })();
-
-  return authPromise;
+  try {
+    await authPromise;
+  } catch (error) {
+    authPromise = undefined;
+    throw error;
+  }
 }
 
 async function main(): Promise<void> {
@@ -5483,6 +5488,7 @@ async function main(): Promise<void> {
           baseUrl: BASE_URL,
           authHeader: header,
           serviceClient: fhir,
+          refreshServiceClient: () => authenticateWithMedplum(true),
         });
         if (!resolved || !header) {
           return null;
@@ -5910,6 +5916,7 @@ async function main(): Promise<void> {
                   baseUrl: BASE_URL,
                   authHeader: header,
                   serviceClient: fhir,
+                  refreshServiceClient: () => authenticateWithMedplum(true),
                 });
                 if (!resolved) {
                   return null;

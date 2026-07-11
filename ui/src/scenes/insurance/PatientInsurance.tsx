@@ -294,8 +294,7 @@ function emptyDemographics(): SubscriberDemographics {
 }
 
 function insuranceApiOptions() {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return { authorization: fhir.authHeader(), baseUrl: meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "" };
+  return { authorization: fhir.authHeader(), baseUrl: import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "" };
 }
 
 function messageOf(error: unknown): string {

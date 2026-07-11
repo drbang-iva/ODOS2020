@@ -15,6 +15,7 @@ import type {
 } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import { assertBusinessActionAllowed } from "../src/authz/roles.js";
+import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 import {
   handleClaimEraWorklistTaskRequest,
   handleClaimStatusRequest,
@@ -707,6 +708,20 @@ test("claims.manage protects GET /claims/worklist with the existing claims 401/4
   const ok = await handleEraWorklistRequest(allowed.deps, { authHeader: "Bearer good" });
   assert.deepEqual(ok, { status: 200, body: { items: [] } });
   assert.equal(allowed.searchCalls(), 1);
+});
+
+test("claims worklist maps an unavailable staff-role service to a clean 503", async () => {
+  const fixture = deps();
+  const result = await handleEraWorklistRequest({
+    ...fixture.deps,
+    authenticate: async () => { throw new StaffRoleServiceUnavailableError(new Error("refresh failed")); },
+  }, { authHeader: "Bearer good" });
+
+  assert.deepEqual(result, {
+    status: 503,
+    body: { error: "Claims service temporarily unavailable." },
+  });
+  assert.equal(fixture.searchCalls(), 0);
 });
 
 test("claims.manage protects GET /claims/era with the existing claims 401/403 shapes", async () => {
