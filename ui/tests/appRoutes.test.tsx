@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -62,4 +63,12 @@ test("the new-patient route reaches the front-desk registration scene", () => {
   assert.match(html, /Front desk/);
   assert.match(html, /New patient/);
   assert.match(html, /Create patient/);
+});
+
+test("insurance screens expose the MCP base URL as a literal Vite environment reference", () => {
+  for (const scene of ["PatientInsurance.tsx", "VisionPlanBenefits.tsx"]) {
+    const source = readFileSync(new URL(`../src/scenes/insurance/${scene}`, import.meta.url), "utf8");
+    assert.match(source, /import\.meta\.env\.VITE_OSOD_MCP_BASE_URL/);
+    assert.doesNotMatch(source, /const meta = import\.meta as/);
+  }
 });
