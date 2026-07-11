@@ -27,6 +27,7 @@ import { SettingsIndex } from "./scenes/settings/SettingsIndex";
 import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
 import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
+import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -138,6 +139,8 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <VisionPlanTemplatesSettings />;
     case "/settings/visit-types":
       return <VisitTypeSettings />;
+    case "/settings/suggested-diagnoses":
+      return <DiagnosisSettings />;
     default:
       return <ViewRouter view={view} />;
   }

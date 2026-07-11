@@ -19,6 +19,13 @@ import {
   FhirFindingDefinitionStore,
   type FindingDefinitionFhirClient,
 } from "./finding-definition-store.js";
+import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
+import {
+  createDiagnosisCandidate,
+  createDiagnosisCandidateSchema,
+  updateDiagnosisCandidate,
+  updateDiagnosisCandidateSchema,
+} from "./diagnosis-mapping.js";
 import {
   buildClinicalFindingDefinition,
   type ClinicalFindingDefinition,
@@ -61,6 +68,13 @@ const mutationSchema = z.discriminatedUnion("action", [
     display: z.string().trim().min(1).max(120).optional(),
     active: z.boolean().optional(),
   }).strict(),
+  createDiagnosisCandidateSchema.extend({
+    action: z.literal("create-diagnosis-candidate"),
+  }),
+  updateDiagnosisCandidateSchema.extend({
+    action: z.literal("update-diagnosis-candidate"),
+    id: z.string().trim().min(1).max(100),
+  }),
 ]);
 
 export async function handleFindingDefinitionCreationRequest(
@@ -164,6 +178,26 @@ export async function handleFindingDefinitionMutationRequest(
   if (!definition) return { status: 404, body: { error: `Finding definition ${stableKey} does not exist.` } };
   const provenance = mutationProvenance(staff.staffReference, deps.now?.());
   try {
+    if (parsed.data.action === "create-diagnosis-candidate") {
+      const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();
+      const { action: _action, ...candidateInput } = parsed.data;
+      const created = createDiagnosisCandidate(
+        definition,
+        candidateInput,
+        catalog,
+        provenance,
+        deps.shortId,
+      );
+      const saved = await store.save(created.definition, provenance);
+      return { status: 200, body: { definition: definitionSummary(saved), candidate: created.candidate } };
+    }
+    if (parsed.data.action === "update-diagnosis-candidate") {
+      const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();
+      const { action: _action, id, ...candidateInput } = parsed.data;
+      const updated = updateDiagnosisCandidate(definition, id, candidateInput, catalog, provenance);
+      const saved = await store.save(updated.definition, provenance);
+      return { status: 200, body: { definition: definitionSummary(saved), candidate: updated.candidate } };
+    }
     if (parsed.data.action === "create-custom-field") {
       if (hasPicker(definition) && !pickerAllowsCreate(definition)) {
         return { status: 409, body: { error: "This definition does not currently grant custom-field creation." } };
@@ -209,6 +243,8 @@ function definitionSummary(definition: ClinicalFindingDefinition) {
     perEye: definition.valueSchema.perEye === true,
     fields: asRecord(definition.valueSchema.fields),
     customFields: customFieldEntries(definition, true),
+    allowDiagnosisMapping: definition.allowDiagnosisMapping !== false,
+    diagnosisCandidates: definition.diagnosisCandidates ?? [],
   };
 }
 

@@ -83,6 +83,12 @@ import {
   handleFindingDefinitionMutationRequest,
 } from "./clinical-graph/finding-definition-endpoint.js";
 import {
+  handleDiagnosisCatalogCreationRequest,
+  handleDiagnosisCatalogListRequest,
+  handleDiagnosisCatalogMutationRequest,
+} from "./clinical-graph/diagnosis-catalog-endpoint.js";
+import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
+import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
@@ -5582,6 +5588,62 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/diagnosis-catalog", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogListRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/diagnosis-catalog failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/diagnosis-catalog", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogCreationRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: POST /clinical-graph/diagnosis-catalog failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog creation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/diagnosis-catalog/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogMutationRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/diagnosis-catalog/:stableKey failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-candidates", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCandidatesRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis candidates route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
         }
       });
 
