@@ -73,6 +73,24 @@ test("the new-patient route reaches the front-desk registration scene", () => {
   assert.match(html, /Create patient/);
 });
 
+test("the Desk home and existing front-desk cockpit remain separate routes", () => {
+  const desk = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk" />);
+  const cockpit = renderToStaticMarkup(
+    <RoleProvider><RouteSwitch view={{ kind: "picker" }} path="/frontdesk" /></RoleProvider>,
+  );
+  assert.match(desk, /The Desk/);
+  assert.match(desk, /Customize/);
+  assert.match(cockpit, /Front desk/);
+  assert.match(cockpit, /schedule/);
+  assert.doesNotMatch(cockpit, /The Desk/);
+});
+
+test("the Clinic alias opens the existing patient picker flow", () => {
+  const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/clinic" />);
+  assert.match(clinic, /Patient Picker/);
+  assert.doesNotMatch(clinic, /The Desk/);
+});
+
 test("insurance screens expose the MCP base URL as a literal Vite environment reference", () => {
   for (const scene of ["PatientInsurance.tsx", "VisionPlanBenefits.tsx"]) {
     const source = readFileSync(new URL(`../src/scenes/insurance/${scene}`, import.meta.url), "utf8");

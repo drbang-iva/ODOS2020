@@ -28,6 +28,8 @@ import { FloorConfigSettings } from "./scenes/settings/FloorConfigSettings";
 import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplatesSettings";
 import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
+import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
+import { LoginScreen } from "./scenes/LoginScreen";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -39,52 +41,23 @@ export function App() {
   }
 
   const [authed, setAuthed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [path, setPath] = useState(window.location.pathname);
   const view = useViewState((state) => state.view);
 
   useEffect(() => {
-    async function boot() {
-      const email = import.meta.env.VITE_MEDPLUM_ADMIN_EMAIL;
-      const password = import.meta.env.VITE_MEDPLUM_ADMIN_PASSWORD;
-      if (!email || !password) {
-        setError(
-          "Missing VITE_MEDPLUM_ADMIN_EMAIL / VITE_MEDPLUM_ADMIN_PASSWORD. " +
-            "Copy ui/.env.example to ui/.env and fill in, then restart `npm run dev`.",
-        );
-        return;
-      }
-      try {
-        await fhir.login(email, password);
-        setAuthed(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-      }
-    }
-    boot();
+    const updatePath = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", updatePath);
+    return () => window.removeEventListener("popstate", updatePath);
   }, []);
 
-  if (error) {
-    return (
-      <div className="h-screen grid place-items-center p-8">
-        <div className="bg-bg-panel border border-red-500/50 rounded-lg p-6 max-w-xl">
-          <h1 className="text-red-400 text-lg font-semibold mb-2">OSOD UI failed to boot</h1>
-          <pre className="text-sm text-red-200 whitespace-pre-wrap">{error}</pre>
-        </div>
-      </div>
-    );
-  }
-
   if (!authed) {
-    return (
-      <div className="h-screen grid place-items-center">
-        <div className="text-white/60">Connecting to FHIR…</div>
-      </div>
-    );
+    const returnTo = window.location.pathname === CLINIC_PATH ? CLINIC_PATH : DESK_HOME_PATH;
+    return <LoginScreen returnTo={returnTo} onAuthenticated={() => setAuthed(true)} />;
   }
 
   return (
     <RoleProvider>
-      <RouteSwitch view={view} />
+      <RouteSwitch view={view} path={path} />
     </RoleProvider>
   );
 }
@@ -106,6 +79,10 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
       return <SchedulerDayGrid />;
     case "/frontdesk":
       return <FrontDeskCockpit />;
+    case DESK_HOME_PATH:
+      return <DeskHome />;
+    case CLINIC_PATH:
+      return <ViewRouter view={view} />;
     case "/billing/claims/worklist":
       return <ClaimsWorklist />;
     case "/billing/claims/search":
