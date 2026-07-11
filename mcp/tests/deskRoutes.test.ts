@@ -20,6 +20,7 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
     authenticate: async (header) => header === "Bearer good"
       ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }
       : null,
+    resolveRoles: async () => ["front-desk"],
     terminalMode: "TEST MODE",
     now: () => "2026-07-11T14:00:00.000Z",
   });
@@ -36,6 +37,28 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
     assert.ok(body.pulse);
     assert.deepEqual(searched, ["Appointment", "Task", "Claim", "ClaimResponse", "PaymentReconciliation", "Invoice"]);
     assert.equal(serviceAuthCalls, 2);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("GET /desk/whoami returns the authenticated staff member's practice-role tags", async () => {
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => null,
+    resolveRoles: async (header) => header === "Bearer good" ? ["clinician", "front-desk"] : null,
+    terminalMode: "TEST MODE",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const unauthorized = await fetch(`http://127.0.0.1:${port}/desk/whoami`);
+    assert.equal(unauthorized.status, 401);
+    const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, { headers: { Authorization: "Bearer good" } });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { roles: ["clinician", "front-desk"] });
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }

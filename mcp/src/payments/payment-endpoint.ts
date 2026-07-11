@@ -119,6 +119,11 @@ export interface ResolvedStaffRole {
   role: PracticeRoleId;
 }
 
+export interface ResolvedStaffRoles {
+  staffReference: string;
+  roles: PracticeRoleId[];
+}
+
 export class StaffRoleServiceUnavailableError extends Error {
   constructor(cause: unknown) {
     super("Staff role service is temporarily unavailable.", { cause });
@@ -165,6 +170,76 @@ export async function resolveStaffRole(opts: {
       throw new StaffRoleServiceUnavailableError(retryError);
     }
   }
+}
+
+export async function resolveStaffRoles(opts: {
+  baseUrl: string;
+  authHeader: string | undefined;
+  serviceClient: Pick<MedplumClient, "search" | "read">;
+  refreshServiceClient?: () => Promise<void>;
+  fetchImpl?: typeof fetch;
+}): Promise<ResolvedStaffRoles | null> {
+  const verified = await verifyMedplumStaffToken({
+    baseUrl: opts.baseUrl,
+    authHeader: opts.authHeader,
+    fetchImpl: opts.fetchImpl,
+  });
+  if (!verified) return null;
+
+  try {
+    return await resolveRolesWithServiceClient(opts.serviceClient, verified.staffReference);
+  } catch (error) {
+    if (!isUnauthorizedServiceError(error)) throw error;
+    if (!opts.refreshServiceClient) throw new StaffRoleServiceUnavailableError(error);
+    try {
+      await opts.refreshServiceClient();
+      return await resolveRolesWithServiceClient(opts.serviceClient, verified.staffReference);
+    } catch (retryError) {
+      throw new StaffRoleServiceUnavailableError(retryError);
+    }
+  }
+}
+
+async function resolveRolesWithServiceClient(
+  serviceClient: Pick<MedplumClient, "search" | "read">,
+  staffReference: string,
+): Promise<ResolvedStaffRoles | null> {
+  const memberships = await serviceClient.search<ProjectMembership>("ProjectMembership", {
+    profile: staffReference,
+  });
+  const policyIds = new Set<string>();
+  for (const entry of memberships.entry ?? []) {
+    const membership = entry.resource;
+    if (!membership) continue;
+    for (const access of membership.access ?? []) {
+      const id = access.policy.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+      if (id) policyIds.add(id);
+    }
+    const legacyId = membership.accessPolicy?.reference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
+    if (legacyId) policyIds.add(legacyId);
+  }
+
+  const found = new Set<PracticeRoleId>();
+  for (const policyId of policyIds) {
+    let policy: AccessPolicy;
+    try {
+      policy = await serviceClient.read<AccessPolicy>("AccessPolicy", policyId);
+    } catch (error) {
+      if (isUnauthorizedServiceError(error)) throw error;
+      continue;
+    }
+    for (const tag of policy.meta?.tag ?? []) {
+      if (
+        tag.system === OSOD_PRACTICE_ROLE_SYSTEM &&
+        tag.code &&
+        PRACTICE_ROLE_IDS.includes(tag.code as PracticeRoleId)
+      ) {
+        found.add(tag.code as PracticeRoleId);
+      }
+    }
+  }
+  const roles = PRACTICE_ROLE_IDS.filter((role) => found.has(role));
+  return roles.length > 0 ? { staffReference, roles } : null;
 }
 
 async function resolveRoleWithServiceClient(

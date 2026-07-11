@@ -44,6 +44,7 @@
 .odos-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--odos-line-2); border-radius: 999px; background: transparent; color: var(--odos-muted); font-size: 12.5px; letter-spacing: .04em; text-decoration: none; }
 .odos-pill:hover { background: rgba(154,178,224,.06); color: var(--odos-text); }
 .odos-clinic-pill { border-color: rgba(157,113,240,.45); background: rgba(157,113,240,.08); color: var(--odos-amethyst); }
+.odos-clinic-switch { position: fixed; top: 13px; right: 26px; z-index: 30; }
 .odos-desk-body { position: relative; max-width: 1380px; margin: 0 auto; padding: 26px 74px 80px 26px; }
 .odos-desk-greeting { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
 .odos-desk-greeting h1 { font-size: 27px; }

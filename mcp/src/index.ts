@@ -46,6 +46,7 @@ import { registerDeskRoutes } from "./desk/desk-routes.js";
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  resolveStaffRoles,
 } from "./payments/payment-endpoint.js";
 import {
   handleCupDiscCaptureRequest,
@@ -6044,6 +6045,15 @@ async function main(): Promise<void> {
       registerDeskRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+        resolveRoles: async (header) => {
+          const resolved = await resolveStaffRoles({
+            baseUrl: BASE_URL,
+            authHeader: header,
+            serviceClient: fhir,
+            refreshServiceClient: () => authenticateWithMedplum(true),
+          });
+          return resolved?.roles ?? null;
+        },
         terminalMode: process.env.OSOD_PAYMENT_TERMINAL_MODE
           ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"
             : paymentDispatch.methods().includes("clover") ? "LIVE"

@@ -74,7 +74,7 @@ const SECTIONS = [
   ] },
 ] as const;
 
-export function DeskHome({ initialSummary }: { initialSummary?: DeskSummary } = {}) {
+export function DeskHome({ initialSummary, switchPill }: { initialSummary?: DeskSummary; switchPill?: ReactNode } = {}) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
@@ -108,7 +108,7 @@ export function DeskHome({ initialSummary }: { initialSummary?: DeskSummary } = 
         <span className="odos-location">Practice home</span><div className="odos-topbar-spacer" />
         <button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button>
         <button className="odos-pill" type="button" onClick={() => setSectionsOpen(true)}>Sections</button>
-        <a className="odos-pill odos-clinic-pill" href={CLINIC_PATH} target="_blank" rel="noopener noreferrer">Clinic <span aria-hidden>↗</span></a>
+        {switchPill === undefined ? <a className="odos-pill odos-clinic-pill" href={CLINIC_PATH} target="_blank" rel="noopener noreferrer">Clinic <span aria-hidden>↗</span></a> : switchPill}
       </header>
 
       <section className="odos-desk-body">

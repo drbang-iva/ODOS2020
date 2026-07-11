@@ -31,6 +31,7 @@ import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { LoginScreen } from "./scenes/LoginScreen";
+import { resolveSessionRoles, type PracticeRoleId } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App() {
@@ -42,6 +43,8 @@ export function App() {
   }
 
   const [authed, setAuthed] = useState(false);
+  const [roles, setRoles] = useState<PracticeRoleId[]>();
+  const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
   const view = useViewState((state) => state.view);
 
@@ -51,19 +54,54 @@ export function App() {
     return () => window.removeEventListener("popstate", updatePath);
   }, []);
 
+  useEffect(() => {
+    if (!authed) return;
+    let active = true;
+    resolveSessionRoles()
+      .then((whoami) => {
+        if (!active) return;
+        const destination = defaultHomePath(whoami.roles);
+        setRoles(whoami.roles);
+        window.history.replaceState({}, "", destination);
+        setPath(destination);
+      })
+      .catch((error) => active && setRoleError(error instanceof Error ? error.message : "Practice role lookup failed."));
+    return () => { active = false; };
+  }, [authed]);
+
   if (!authed) {
-    const returnTo = window.location.pathname === CLINIC_PATH ? CLINIC_PATH : DESK_HOME_PATH;
-    return <LoginScreen returnTo={returnTo} onAuthenticated={() => setAuthed(true)} />;
+    return <LoginScreen returnTo="/" onAuthenticated={() => setAuthed(true)} />;
   }
+
+  if (roleError) return <main role="alert">Unable to open your practice home: {roleError}</main>;
+  if (!roles) return <main>Opening your practice home…</main>;
 
   return (
     <RoleProvider>
-      <RouteSwitch view={view} path={path} />
+      <RouteSwitch view={view} path={path} roles={roles} />
     </RoleProvider>
   );
 }
 
-export function RouteSwitch({ view, path = window.location.pathname }: { view: ViewState; path?: string }) {
+export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC_PATH | typeof DESK_HOME_PATH {
+  return roles.includes("clinician") || roles.includes("aesthetics-provider") ? CLINIC_PATH : DESK_HOME_PATH;
+}
+
+export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
+  return roles.includes("front-desk") && defaultHomePath(roles) === CLINIC_PATH;
+}
+
+export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {
+  open(path, "_blank", "noopener,noreferrer");
+}
+
+export function RoleSwitchPill({ target, open }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH; open?: typeof window.open }) {
+  const label = target === CLINIC_PATH ? "Clinic" : "Desk";
+  return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => openOtherSide(target, open ?? window.open)}>Switch to {label} <span aria-hidden>↗</span></button>;
+}
+
+export function RouteSwitch({ view, path = window.location.pathname, roles = [] }: { view: ViewState; path?: string; roles?: readonly PracticeRoleId[] }) {
+  const showSwitch = hasCrossSideAccess(roles);
   switch (path) {
     case "/audit/log":
       return <AuditLog />;
@@ -81,9 +119,9 @@ export function RouteSwitch({ view, path = window.location.pathname }: { view: V
     case "/frontdesk":
       return <FrontDeskCockpit />;
     case DESK_HOME_PATH:
-      return <DeskHome />;
+      return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
     case CLINIC_PATH:
-      return <ViewRouter view={view} />;
+      return <><div className="odos-clinic-switch">{showSwitch && <RoleSwitchPill target={DESK_HOME_PATH} />}</div><ViewRouter view={view} /></>;
     case "/billing/claims/worklist":
       return <ClaimsWorklist />;
     case "/billing/claims/search":
