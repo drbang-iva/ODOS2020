@@ -6,6 +6,7 @@ import {
   defaultHomePath,
   RoleSwitchPill,
   RouteSwitch,
+  shouldResetClinicView,
 } from "../src/App";
 import {
   fetchWhoAmI,
@@ -66,4 +67,10 @@ test("practice roles resolve only once for the same bearer-token session", async
   assert.equal(first, second);
   assert.deepEqual(await second, { roles: ["front-desk"] });
   assert.equal(calls, 1);
+});
+
+test("leaving the Clinic route resets its patient view while in-Clinic view changes do not", () => {
+  assert.equal(shouldResetClinicView(CLINIC_PATH, "/billing/claims/worklist"), true);
+  assert.equal(shouldResetClinicView(CLINIC_PATH, CLINIC_PATH), false);
+  assert.equal(shouldResetClinicView(DESK_HOME_PATH, CLINIC_PATH), false);
 });

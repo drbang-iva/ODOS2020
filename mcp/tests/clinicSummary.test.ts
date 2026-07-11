@@ -11,6 +11,7 @@ test("clinic summary derives every Encounter state and sorts actionable flow fro
     appointment("scheduled", "booked", "15:00:00.000Z"),
     appointment("checked-out", "fulfilled", "13:00:00.000Z"),
     appointment("waiting", "checked-in", "14:30:00.000Z"),
+    appointment("waiting-no-floor", "checked-in", "14:45:00.000Z"),
     appointment("with-you", "checked-in", "14:00:00.000Z"),
     appointment("roomed", "checked-in", "14:15:00.000Z"),
   ];
@@ -23,10 +24,11 @@ test("clinic summary derives every Encounter state and sorts actionable flow fro
   const patients = appointments.map((item) => patient(item.id!));
   const summary = projectClinicSummary(input({ appointments, encounters, patients }));
 
-  assert.deepEqual(summary.flow.map((row) => row.state), ["with-you", "roomed", "waiting", "checked-out", "scheduled"]);
-  assert.deepEqual(summary.flow.map((row) => row.appointmentId), ["with-you", "roomed", "waiting", "checked-out", "scheduled"]);
+  assert.deepEqual(summary.flow.map((row) => row.state), ["with-you", "roomed", "waiting", "waiting", "checked-out", "scheduled"]);
+  assert.deepEqual(summary.flow.map((row) => row.appointmentId), ["with-you", "roomed", "waiting", "waiting-no-floor", "checked-out", "scheduled"]);
   assert.equal(summary.flow.find((row) => row.appointmentId === "waiting")?.arrivedLateMinutes, 5);
   assert.equal(summary.flow.find((row) => row.appointmentId === "roomed")?.room, "Room 1");
+  assert.equal(summary.flow.find((row) => row.appointmentId === "waiting-no-floor")?.waitingMinutes, undefined);
   assert.equal(summary.flow.find((row) => row.appointmentId === "checked-out")?.flags.unsigned, true);
   assert.equal("dilated" in (summary.flow[0]?.flags ?? {}), false);
 });
@@ -41,7 +43,7 @@ test("signature debt uses the existing finish event and treats exactly 24h as in
     resourceType: "Provenance",
     target: [{ reference: "Encounter/signed" }],
     recorded: "2026-07-09T15:00:00.000Z",
-    agent: [{ who: { display: "OSOD UI finish_encounter" } }],
+    agent: [{ who: { display: "A label that is not used for matching" } }],
   }];
   const summary = projectClinicSummary(input({ encounters, provenances }));
 

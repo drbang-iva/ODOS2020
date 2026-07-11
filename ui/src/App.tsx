@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
@@ -49,12 +49,19 @@ export function App() {
   const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
   const view = useViewState((state) => state.view);
+  const setView = useViewState((state) => state.setView);
+  const previousPath = useRef(path);
 
   useEffect(() => {
     const updatePath = () => setPath(window.location.pathname);
     window.addEventListener("popstate", updatePath);
     return () => window.removeEventListener("popstate", updatePath);
   }, []);
+
+  useEffect(() => {
+    if (shouldResetClinicView(previousPath.current, path)) setView({ kind: "picker" });
+    previousPath.current = path;
+  }, [path, setView]);
 
   useEffect(() => {
     if (!authed) return;
@@ -91,6 +98,10 @@ export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC
 
 export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
   return roles.includes("front-desk") && defaultHomePath(roles) === CLINIC_PATH;
+}
+
+export function shouldResetClinicView(previousPath: string, nextPath: string): boolean {
+  return previousPath === CLINIC_PATH && nextPath !== CLINIC_PATH;
 }
 
 export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {

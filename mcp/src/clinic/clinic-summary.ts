@@ -8,7 +8,6 @@ import type {
 import type { MedplumClient } from "../fhir-client.js";
 
 const FLOOR_STATE_URL = "https://osod.dev/fhir/StructureDefinition/osod-floor-state";
-const FINISH_ENCOUNTER_AGENT = "OSOD UI finish_encounter";
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -81,11 +80,18 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
     }
   }
 
-  const signedEncounterIds = new Set(input.provenances.flatMap((provenance) => {
-    const isFinishEvent = provenance.agent?.some((agent) => agent.who.display === FINISH_ENCOUNTER_AGENT);
-    if (!isFinishEvent) return [];
-    return (provenance.target ?? []).flatMap((target) => target.reference?.match(/^Encounter\/([^/]+)$/)?.[1] ?? []);
-  }));
+  const checkoutTimes = new Map(input.encounters.flatMap((encounter) =>
+    encounter.id && encounter.status === "finished" && encounter.period?.end
+      ? [[encounter.id, encounter.period.end] as const]
+      : [],
+  ));
+  const signedEncounterIds = new Set(input.provenances.flatMap((provenance) =>
+    (provenance.target ?? []).flatMap((target) => {
+      const encounterId = target.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+      const checkoutAt = encounterId ? checkoutTimes.get(encounterId) : undefined;
+      return encounterId && checkoutAt && sameInstant(provenance.recorded, checkoutAt) ? [encounterId] : [];
+    }),
+  ));
 
   const flow = currentAppointments.map((appointment) => {
     const patientReference = patientReferenceOf(appointment);
@@ -97,8 +103,9 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
     const checkoutAt = encounter?.status === "finished" ? encounter.period?.end : undefined;
     const endMs = checkoutAt ? Date.parse(checkoutAt) : nowMs;
     const timeInOfficeMinutes = checkedInAt ? minutesBetween(Date.parse(checkedInAt), endMs) : undefined;
-    const waitingMinutes = state === "waiting" || state === "roomed"
-      ? minutesBetween(Date.parse(floorState?.since ?? checkedInAt ?? ""), nowMs)
+    const waitingSince = floorState?.since ?? checkedInAt;
+    const waitingMinutes = (state === "waiting" || state === "roomed") && waitingSince
+      ? minutesBetween(Date.parse(waitingSince), nowMs)
       : undefined;
     const arrivedLateMinutes = checkedInAt && appointment.start
       ? Math.max(0, minutesBetween(Date.parse(appointment.start), Date.parse(checkedInAt)))
@@ -174,19 +181,21 @@ export async function loadClinicSummary(
     searchOnePage<Encounter>(fhir, "Encounter", { date, _count: "1000", _sort: "date" }),
   ]);
   const encounterReferences = encounters.flatMap((encounter) => encounter.id ? [`Encounter/${encounter.id}`] : []);
-  const provenances = encounterReferences.length === 0 ? [] : await searchOnePage<Provenance>(fhir, "Provenance", {
-    target: encounterReferences.join(","),
-    _count: "1000",
-    _sort: "-recorded",
-  });
   const patientIds = unique([
     ...appointments.flatMap((appointment) => patientReferenceOf(appointment)?.match(/^Patient\/([^/]+)$/)?.[1] ?? []),
     ...encounters.flatMap((encounter) => encounter.subject?.reference?.match(/^Patient\/([^/]+)$/)?.[1] ?? []),
   ]);
-  const patients = patientIds.length === 0 ? [] : await searchOnePage<Patient>(fhir, "Patient", {
-    _id: patientIds.join(","),
-    _count: String(patientIds.length),
-  });
+  const [provenances, patients] = await Promise.all([
+    encounterReferences.length === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
+      target: encounterReferences.join(","),
+      _count: "1000",
+      _sort: "-recorded",
+    }),
+    patientIds.length === 0 ? Promise.resolve([]) : searchOnePage<Patient>(fhir, "Patient", {
+      _id: patientIds.join(","),
+      _count: String(patientIds.length),
+    }),
+  ]);
   return projectClinicSummary({ appointments, encounters, patients, provenances, now, date, timeZone: options.timeZone });
 }
 
@@ -301,6 +310,12 @@ function timeLabel(value: string | undefined, timeZone: string | undefined): str
 
 function minutesBetween(startMs: number, endMs: number): number {
   return Math.max(0, Math.floor((endMs - startMs) / 60_000));
+}
+
+function sameInstant(left: string | undefined, right: string): boolean {
+  const leftMs = Date.parse(left ?? "");
+  const rightMs = Date.parse(right);
+  return Number.isFinite(leftMs) && leftMs === rightMs;
 }
 
 function practiceDate(now: string, timeZone?: string): string {
