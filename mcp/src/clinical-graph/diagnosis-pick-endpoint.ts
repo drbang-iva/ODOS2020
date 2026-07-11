@@ -11,7 +11,8 @@ import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
-import type { ClinicalFindingDefinition, DiagnosisCatalogRow } from "./glaucoma-suspect.js";
+import { findingDefinitionForObservation } from "./finding-observation-match.js";
+import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
 
 export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key";
 export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-OSOD-Source": "diagnosis-pick" } as const;
@@ -71,7 +72,7 @@ export async function handleDiagnosisPickRequest(
       return { status: 409, body: { error: "The finding does not belong to this encounter." } };
     }
     const definitions = await new FhirFindingDefinitionStore(staff.fhir).list();
-    findingDefinitionStableKey = definitionForObservation(observation, definitions)?.stableKey;
+    findingDefinitionStableKey = findingDefinitionForObservation(observation, definitions)?.stableKey;
     if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
   }
 
@@ -234,17 +235,6 @@ function diagnosisLateralityBucket(
 ): LateralityBucket {
   if (!row.icd10 || "code" in row.icd10) return "none";
   return laterality ?? "unspecified";
-}
-
-function definitionForObservation(
-  observation: Observation,
-  definitions: readonly ClinicalFindingDefinition[],
-): ClinicalFindingDefinition | undefined {
-  const codes = new Set((observation.code.coding ?? []).flatMap((coding) => coding.code ? [coding.code.toLowerCase()] : []));
-  return definitions.find((definition) =>
-    codes.has(definition.stableKey.toLowerCase()) ||
-    (definition.fhirObservationCode?.coding ?? []).some((coding) => coding.code && codes.has(coding.code.toLowerCase()))
-  );
 }
 
 function observationLaterality(observation: Observation | undefined): string | undefined {

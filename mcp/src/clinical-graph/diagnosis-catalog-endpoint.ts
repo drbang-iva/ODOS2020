@@ -5,7 +5,12 @@ import {
   FhirDiagnosisCatalogStore,
   type DiagnosisCatalogFhirClient,
 } from "./diagnosis-catalog-store.js";
-import type { ClinicalGraphProvenance, DiagnosisCatalogRow } from "./glaucoma-suspect.js";
+import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
+import type {
+  ClinicalGraphProvenance,
+  DiagnosisCatalogRow,
+  KeyFindingEntry,
+} from "./glaucoma-suspect.js";
 
 export interface DiagnosisCatalogEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{
@@ -32,6 +37,17 @@ const snomedSchema = z.object({
   display: z.string().trim().min(1).max(160),
 }).strict();
 
+const keyFindingSchema = z.object({
+  findingKey: z.string().trim().min(1).max(160),
+  label: z.string().trim().min(1).max(160).optional(),
+  satisfiedBy: z.enum(["this-encounter", "any-on-file"]),
+  withinMonths: z.number().int().positive().max(1_200).optional(),
+  active: z.boolean(),
+}).strict().refine(
+  (value) => value.satisfiedBy === "any-on-file" || value.withinMonths === undefined,
+  "withinMonths is only valid for any-on-file key findings.",
+);
+
 const createSchema = z.object({
   display: z.string().trim().min(1).max(160),
   clinicalFamily: z.string().trim().min(1).max(120).optional(),
@@ -47,6 +63,7 @@ const updateSchema = z.object({
   snomed: snomedSchema.nullable().optional(),
   lateralityRequired: z.boolean().optional(),
   active: z.boolean().optional(),
+  keyFindings: z.array(keyFindingSchema).max(64).optional(),
 }).strict().refine((value) => Object.keys(value).length > 0, "At least one diagnosis field is required.");
 
 export async function handleDiagnosisCatalogListRequest(
@@ -118,6 +135,22 @@ export async function handleDiagnosisCatalogMutationRequest(
   const store = new FhirDiagnosisCatalogStore(staff.fhir);
   const current = (await store.list()).find((row) => row.stableKey === stableKey);
   if (!current) return { status: 404, body: { error: `Diagnosis definition ${stableKey} does not exist.` } };
+  if (parsed.data.keyFindings) {
+    const findingKeys = parsed.data.keyFindings.map((row) => row.findingKey);
+    if (new Set(findingKeys).size !== findingKeys.length) {
+      return { status: 400, body: { error: "A diagnosis cannot contain duplicate key findings." } };
+    }
+    const removedKey = (current.keyFindings ?? []).find((entry) => !findingKeys.includes(entry.findingKey))?.findingKey;
+    if (removedKey) {
+      return { status: 400, body: { error: `Key finding ${removedKey} must be deactivated instead of deleted.` } };
+    }
+    const definitions = await new FhirFindingDefinitionStore(staff.fhir).list();
+    const knownKeys = new Set(definitions.map((definition) => definition.stableKey));
+    const unknownKey = findingKeys.find((findingKey) => !knownKeys.has(findingKey));
+    if (unknownKey) {
+      return { status: 400, body: { error: `Finding definition ${unknownKey} does not exist.` } };
+    }
+  }
   const codingChanged =
     (parsed.data.icd10 !== undefined && !sameIcd10(parsed.data.icd10, current.icd10)) ||
     (parsed.data.snomed !== undefined && JSON.stringify(parsed.data.snomed) !== JSON.stringify(current.snomed));
@@ -127,6 +160,9 @@ export async function handleDiagnosisCatalogMutationRequest(
     ...(parsed.data.clinicalFamily !== undefined ? { clinicalFamily: parsed.data.clinicalFamily } : {}),
     ...(parsed.data.lateralityRequired !== undefined ? { lateralityRequired: parsed.data.lateralityRequired } : {}),
     ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
+    ...(parsed.data.keyFindings !== undefined
+      ? { keyFindings: normalizeKeyFindings(parsed.data.keyFindings, current.keyFindings ?? []) }
+      : {}),
     ...(
       codingChanged
         ? { codingStatus: "provisional" as const }
@@ -143,6 +179,21 @@ export async function handleDiagnosisCatalogMutationRequest(
   } catch (error) {
     return { status: 400, body: { error: errorMessage(error) } };
   }
+}
+
+function normalizeKeyFindings(
+  entries: z.infer<typeof keyFindingSchema>[],
+  current: readonly KeyFindingEntry[],
+): KeyFindingEntry[] {
+  const currentByKey = new Map(current.map((entry) => [entry.findingKey, entry]));
+  return entries.map((entry) => ({
+    findingKey: entry.findingKey,
+    ...(entry.label ? { label: entry.label } : {}),
+    satisfiedBy: entry.satisfiedBy,
+    ...(entry.withinMonths !== undefined ? { withinMonths: entry.withinMonths } : {}),
+    origin: currentByKey.get(entry.findingKey)?.origin ?? "practice",
+    active: entry.active,
+  }));
 }
 
 function mutationProvenance(staffReference: string, recordedAt?: string): ClinicalGraphProvenance {

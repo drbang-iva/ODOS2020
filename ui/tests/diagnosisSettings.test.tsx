@@ -6,6 +6,7 @@ import {
   DiagnosisSettingsReady,
   diagnosisDescriptor,
   diagnosisMappingDescriptor,
+  keyFindingDescriptor,
 } from "../src/scenes/settings/DiagnosisSettings";
 
 test("diagnosis settings render grouped mappings, provisional catalog state, and read-only posture", () => {
@@ -25,6 +26,7 @@ test("diagnosis settings render grouped mappings, provisional catalog state, and
         right: "",
         left: "",
         bilateral: "",
+        keyFindings: [],
         active: true,
       }]}
       findings={[{
@@ -129,4 +131,60 @@ test("newly saved diagnoses appear in mapping options without a reload", async (
     value: "custom:kcs-live",
     label: "Keratoconjunctivitis sicca · provisional",
   }]);
+});
+
+test("key-finding settings save ordered practice rows and deactivate instead of deleting", async () => {
+  const requests: Array<{ path: string; body: unknown }> = [];
+  const diagnoses = [{
+    id: "glaucoma",
+    stableKey: "glaucoma",
+    display: "POAG",
+    clinicalFamily: "glaucoma",
+    codingStatus: "verified" as const,
+    origin: "seed" as const,
+    lateralityRequired: false,
+    code: "",
+    unspecifiedEye: "",
+    right: "",
+    left: "",
+    bilateral: "",
+    keyFindings: [
+      { findingKey: "cup_disc_ratio", satisfiedBy: "this-encounter" as const, origin: "practice" as const, active: true },
+      { findingKey: "pachymetry_um", satisfiedBy: "any-on-file" as const, withinMonths: 12, origin: "practice" as const, active: true },
+    ],
+    active: true,
+  }];
+  const request = async <T,>(path: string, body: unknown): Promise<T> => {
+    requests.push({ path, body });
+    return { diagnosis: { ...diagnoses[0], keyFindings: (body as { keyFindings: unknown[] }).keyFindings } } as T;
+  };
+  const descriptor = keyFindingDescriptor([
+    { stableKey: "cup_disc_ratio", display: "Cup/disc ratio", active: true, allowDiagnosisMapping: true, diagnosisCandidates: [] },
+    { stableKey: "pachymetry_um", display: "Pachymetry", active: true, allowDiagnosisMapping: true, diagnosisCandidates: [] },
+  ], diagnoses, undefined, request);
+
+  await descriptor.adapter.reorder?.([
+    "key-finding:glaucoma:pachymetry_um",
+    "key-finding:glaucoma:cup_disc_ratio",
+  ]);
+  assert.deepEqual((requests[0]?.body as { keyFindings: Array<{ findingKey: string }> }).keyFindings.map((row) => row.findingKey), [
+    "pachymetry_um",
+    "cup_disc_ratio",
+  ]);
+
+  await descriptor.adapter.deactivate({
+    id: "key-finding:glaucoma:cup_disc_ratio",
+    diagnosisKey: "glaucoma",
+    persistedDiagnosisKey: "glaucoma",
+    findingKey: "cup_disc_ratio",
+    persistedFindingKey: "cup_disc_ratio",
+    label: "",
+    satisfiedBy: "this-encounter",
+    origin: "practice",
+    active: true,
+  });
+  const deactivated = (requests[1]?.body as { keyFindings: Array<{ findingKey: string; active: boolean }> }).keyFindings
+    .find((row) => row.findingKey === "cup_disc_ratio");
+  assert.equal(deactivated?.active, false);
+  assert.match(requests[1]?.path ?? "", /diagnosis-catalog\/glaucoma$/);
 });

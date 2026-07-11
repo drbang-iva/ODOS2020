@@ -148,7 +148,24 @@ function assertDiagnosisCatalogRow(value: unknown): DiagnosisCatalogRow {
   if (value.snomed !== undefined && (!isRecord(value.snomed) || !stringValue(value.snomed.code) || !stringValue(value.snomed.display))) {
     throw new Error("Diagnosis definition SNOMED coding is invalid.");
   }
-  if (value.keyFindings !== undefined && !Array.isArray(value.keyFindings)) throw new Error("Diagnosis definition keyFindings must be an array.");
+  if (value.keyFindings !== undefined) {
+    if (!Array.isArray(value.keyFindings)) throw new Error("Diagnosis definition keyFindings must be an array.");
+    const findingKeys = new Set<string>();
+    for (const entry of value.keyFindings) {
+      if (!isRecord(entry) || !stringValue(entry.findingKey)) throw new Error("Diagnosis key finding must name a findingKey.");
+      if (findingKeys.has(entry.findingKey)) throw new Error("Diagnosis key findings must use unique findingKeys.");
+      findingKeys.add(entry.findingKey);
+      if (entry.label !== undefined && !stringValue(entry.label)) throw new Error("Diagnosis key finding label must be a non-empty string.");
+      if (!['this-encounter', 'any-on-file'].includes(String(entry.satisfiedBy))) throw new Error("Diagnosis key finding satisfiedBy is invalid.");
+      if (entry.withinMonths !== undefined && (!Number.isInteger(entry.withinMonths) || Number(entry.withinMonths) <= 0)) {
+        throw new Error("Diagnosis key finding withinMonths must be a positive integer.");
+      }
+      if (entry.satisfiedBy !== "any-on-file" && entry.withinMonths !== undefined) throw new Error("withinMonths is only valid for any-on-file key findings.");
+      if (!['seed', 'practice'].includes(String(entry.origin)) || typeof entry.active !== "boolean") {
+        throw new Error("Diagnosis key finding origin and active state are invalid.");
+      }
+    }
+  }
   return value as unknown as DiagnosisCatalogRow;
 }
 

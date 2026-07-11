@@ -13,6 +13,10 @@ import {
   isProblemListCondition,
 } from "../../lib/clinical-view-model";
 import { patientName } from "../../lib/scheduler-appointment-ui";
+import {
+  readDiagnosisCompleteness,
+  type DiagnosisCompleteness,
+} from "../../lib/clinical-graph-client";
 
 interface Props {
   patient: Patient;
@@ -24,8 +28,9 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [encounterConditions, setEncounterConditions] = useState<Condition[]>([]);
   const [problemListConditions, setProblemListConditions] = useState<Condition[]>([]);
-  const [busy, setBusy] = useState<"finish" | "abandon" | null>(null);
+  const [busy, setBusy] = useState<"checking" | "finish" | "abandon" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +82,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   );
 
   async function finishEncounter() {
-    if (!patient.id || busy) return;
+    if (!patient.id) return;
     setBusy("finish");
     setError(null);
     try {
@@ -102,6 +107,20 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function requestFinishEncounter() {
+    if (!patient.id || busy) return;
+    setBusy("checking");
+    setError(null);
+    await runSignTimeCompletenessCheck(
+      () => readDiagnosisCompleteness(encounterId),
+      finishEncounter,
+      (diagnoses) => {
+        setCompletenessAdvisories(diagnoses);
+        setBusy(null);
+      },
+    );
   }
 
   async function abandonEncounter() {
@@ -159,11 +178,11 @@ export function EncounterHeader({ patient, encounterId }: Props) {
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
           </button>
           <button
-            onClick={finishEncounter}
+            onClick={requestFinishEncounter}
             disabled={busy !== null}
             className="rounded border border-emerald-400/60 bg-emerald-400/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy === "finish" ? "Signing..." : "Sign & finish"}
+            {busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
           </button>
         </div>
       </div>
@@ -196,6 +215,66 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           {error}
         </div>
       )}
+      {completenessAdvisories.length > 0 && (
+        <DiagnosisCompletenessDialog
+          diagnoses={completenessAdvisories}
+          signing={busy === "finish"}
+          onSignAnyway={() => void finishEncounter()}
+          onAddFindings={() => setCompletenessAdvisories([])}
+        />
+      )}
     </header>
+  );
+}
+
+export async function runSignTimeCompletenessCheck(
+  readCompleteness: () => Promise<DiagnosisCompleteness>,
+  sign: () => Promise<void>,
+  showAdvisories: (diagnoses: DiagnosisCompleteness["diagnoses"]) => void,
+): Promise<void> {
+  try {
+    const result = await readCompleteness();
+    if (result.diagnoses.length) {
+      showAdvisories(result.diagnoses);
+      return;
+    }
+  } catch {
+    // The completeness read is advisory-only; signing remains available when it fails.
+  }
+  await sign();
+}
+
+export function DiagnosisCompletenessDialog({
+  diagnoses,
+  signing,
+  onSignAnyway,
+  onAddFindings,
+}: {
+  diagnoses: DiagnosisCompleteness["diagnoses"];
+  signing: boolean;
+  onSignAnyway: () => void;
+  onAddFindings: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Diagnosis key findings advisory">
+      <div className="w-full max-w-lg rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
+        <div className="text-xs uppercase tracking-widest text-white/35">Before signing</div>
+        <div className="mt-3 grid gap-2 text-sm text-white/70">
+          {diagnoses.map((diagnosis) => (
+            <div key={diagnosis.conditionReference ?? `${diagnosis.diagnosisKey}:${diagnosis.laterality}`}>
+              {diagnosis.display} is active without: {diagnosis.missing.map((finding) => finding.display).join(" · ")}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="scheduler-button" disabled={signing} onClick={onAddFindings}>
+            Add findings
+          </button>
+          <button type="button" className="scheduler-button" disabled={signing} onClick={onSignAnyway}>
+            {signing ? "Signing..." : "Sign anyway"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

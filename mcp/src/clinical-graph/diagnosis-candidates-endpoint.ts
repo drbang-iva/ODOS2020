@@ -5,6 +5,7 @@ import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { evaluateMappingTrigger } from "./diagnosis-mapping.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
+import { observationMatchesFindingDefinition } from "./finding-observation-match.js";
 import {
   evaluateGlaucomaDiagnosisSuggestions,
   evaluateIopDiagnosisSuggestions,
@@ -179,7 +180,7 @@ function observationToFinding(
   observation: Observation,
   definitions: readonly ClinicalFindingDefinition[],
 ): FindingInstance[] {
-  const definition = definitions.find((row) => observationMatchesDefinition(observation, row));
+  const definition = definitions.find((row) => observationMatchesFindingDefinition(observation, row));
   const id = observation.id;
   const encounterReference = observation.encounter?.reference;
   const patientReference = observation.subject?.reference;
@@ -203,14 +204,6 @@ function observationToFinding(
     recordedAt,
     provenance: { source: "manual", recordedAt },
   }];
-}
-
-function observationMatchesDefinition(observation: Observation, definition: ClinicalFindingDefinition): boolean {
-  const expected = new Set([
-    definition.stableKey.toLowerCase(),
-    ...(definition.fhirObservationCode?.coding ?? []).flatMap((coding) => coding.code ? [coding.code.toLowerCase()] : []),
-  ]);
-  return observation.code.coding?.some((coding) => coding.code && expected.has(coding.code.toLowerCase())) === true;
 }
 
 function findingValueFromObservation(
