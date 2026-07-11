@@ -137,6 +137,11 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
       ...current,
       [eye]: { ...current[eye], ...next },
     }));
+    setResults((current) => {
+      const nextResults = { ...current };
+      delete nextResults[eye];
+      return nextResults;
+    });
   }
 
   function toggleDescriptor(eye: Eye, code: string) {

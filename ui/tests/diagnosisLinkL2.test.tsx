@@ -14,6 +14,8 @@ test("diagnosis picker stays collapsed until clicked and exposes paired Possible
   assert.match(source, /Search full diagnosis catalog/);
   assert.match(source, /catalog-search/);
   assert.match(source, /finding\.candidates\.length > 0/);
+  assert.match(source, /loadVersion/);
+  assert.match(source, /code=\{catalogCode\(candidate\)\}/);
 });
 
 test("cup-disc and refraction charted rows use the shared picker route", () => {
@@ -21,7 +23,8 @@ test("cup-disc and refraction charted rows use the shared picker route", () => {
   const refraction = readFileSync(join(CHARTING, "RefractionSection.tsx"), "utf8");
   assert.match(cupDisc, /observationReferences=\{\[result\.observationReference\]\}/);
   assert.match(cupDisc, /findingDefinitionKey="cup_disc_ratio"/);
-  assert.match(refraction, /savedObservationReferences\[blockIndex\]/);
+  assert.match(refraction, /savedObservationReferences\[block\.id\]/);
+  assert.match(refraction, /clearSavedObservationReferences\(blockId\)/);
   assert.match(refraction, /findingDefinitionKey="refraction"/);
   assert.doesNotMatch(refraction, /Reject suggestion/);
 });

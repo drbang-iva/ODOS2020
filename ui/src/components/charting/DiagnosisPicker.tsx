@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase, submitDiagnosisPick } from "../../lib/clinical-graph-client";
 
 interface Candidate {
@@ -42,33 +42,50 @@ export function DiagnosisPicker({
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const loadVersion = useRef(0);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
   const observationKey = observationReferences?.join("|") ?? "";
 
-  async function load() {
-    const [candidateResponse, catalogResponse] = await Promise.all([
-      fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-candidates`, { headers: authHeaders() }),
-      fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders() }),
-    ]);
-    const candidateBody = await candidateResponse.json() as { findings?: CandidateFinding[]; error?: string };
-    const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; error?: string };
-    if (!candidateResponse.ok) throw new Error(candidateBody.error ?? `Diagnosis candidates request failed: ${candidateResponse.status}`);
-    if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
-    const allowedObservations = new Set(observationReferences ?? []);
-    setFindings((candidateBody.findings ?? []).filter((finding) =>
-      finding.candidates.length > 0 &&
-      (!findingDefinitionKey || finding.findingDefinitionKey === findingDefinitionKey) &&
-      (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
-    ));
-    setCatalog((catalogBody.diagnoses ?? []).filter((row) => row.active));
+  async function load(signal?: AbortSignal) {
+    const requestVersion = ++loadVersion.current;
+    try {
+      const [candidateResponse, catalogResponse] = await Promise.all([
+        fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-candidates`, { headers: authHeaders(), signal }),
+        fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, { headers: authHeaders(), signal }),
+      ]);
+      const candidateBody = await candidateResponse.json() as { findings?: CandidateFinding[]; error?: string };
+      const catalogBody = await catalogResponse.json() as { diagnoses?: CatalogRow[]; error?: string };
+      if (!candidateResponse.ok) throw new Error(candidateBody.error ?? `Diagnosis candidates request failed: ${candidateResponse.status}`);
+      if (!catalogResponse.ok) throw new Error(catalogBody.error ?? `Diagnosis catalog request failed: ${catalogResponse.status}`);
+      if (signal?.aborted || requestVersion !== loadVersion.current) return;
+      const allowedObservations = new Set(observationReferences ?? []);
+      setFindings((candidateBody.findings ?? []).filter((finding) =>
+        finding.candidates.length > 0 &&
+        (!findingDefinitionKey || finding.findingDefinitionKey === findingDefinitionKey) &&
+        (allowedObservations.size === 0 || Boolean(finding.observationReference && allowedObservations.has(finding.observationReference)))
+      ));
+      setCatalog((catalogBody.diagnoses ?? []).filter((row) => row.active));
+      setError(null);
+    } catch (err) {
+      if (!signal?.aborted && requestVersion === loadVersion.current) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    }
   }
 
   useEffect(() => {
+    const controller = new AbortController();
     if (!encounterId || observationReferences && observationReferences.length === 0) {
+      loadVersion.current += 1;
       setFindings([]);
-      return;
+      setError(null);
+      return () => controller.abort();
     }
-    void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    void load(controller.signal);
+    return () => {
+      controller.abort();
+      loadVersion.current += 1;
+    };
   }, [encounterId, findingDefinitionKey, observationKey, refreshKey]);
 
   const searchRows = useMemo(() => {
@@ -98,7 +115,7 @@ export function DiagnosisPicker({
     }
   }
 
-  if (findings.length === 0) return null;
+  if (findings.length === 0) return error ? <div className="mt-3 text-xs text-red-200">{error}</div> : null;
 
   return (
     <div className="mt-3 space-y-2">
@@ -119,7 +136,7 @@ export function DiagnosisPicker({
                   <DiagnosisChoice
                     key={candidate.diagnosisKey}
                     display={candidate.display}
-                    code={candidate.icd10?.code}
+                    code={catalogCode(candidate)}
                     codingStatus={candidate.codingStatus}
                     busy={busy !== null}
                     onPossible={() => pick(finding, candidate.diagnosisKey, "possible", candidate.source)}
@@ -191,7 +208,7 @@ function DiagnosisChoice({
   );
 }
 
-function catalogCode(row: CatalogRow): string | undefined {
+function catalogCode(row: Pick<CatalogRow, "icd10">): string | undefined {
   if (!row.icd10) return undefined;
   if (row.icd10.code) return row.icd10.code;
   return row.icd10.pattern?.unspecifiedEye;

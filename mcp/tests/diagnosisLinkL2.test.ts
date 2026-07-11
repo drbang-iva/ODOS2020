@@ -10,6 +10,7 @@ import {
   deduplicateDiagnosisCandidates,
   handleDiagnosisCandidatesRequest,
 } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
+import { buildDiagnosisCatalogSeeds } from "../src/clinical-graph/diagnosis-catalog-store.js";
 import { handleDiagnosisPickRequest } from "../src/clinical-graph/diagnosis-pick-endpoint.js";
 import {
   DX_PICK_TALLY_CODE,
@@ -43,6 +44,14 @@ class MemoryFhir {
   }
 
   async create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> {
+    const conditionalIdentifier = headers?.["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+    if (conditionalIdentifier) {
+      const existing = this.resources.find((candidate) => candidate.resourceType === resource.resourceType &&
+        "identifier" in candidate && candidate.identifier?.some((identifier) =>
+          identifier.system === conditionalIdentifier[1] && identifier.value === conditionalIdentifier[2]
+        ));
+      if (existing) return structuredClone(existing as T);
+    }
     const id = resource.id ?? `${resource.resourceType.toLowerCase()}-${this.resources.length + 1}`;
     const persisted = { ...resource, id, meta: { ...(resource.meta ?? {}), versionId: "1", lastUpdated: "2026-07-11T16:00:00.000Z" } } as T;
     this.resources.push(persisted);
@@ -61,7 +70,8 @@ class MemoryFhir {
       throw error;
     }
     const versionId = String(Number(current.meta?.versionId ?? "0") + 1);
-    const persisted = { ...resource, id, meta: { ...(resource.meta ?? {}), versionId, lastUpdated: `2026-07-11T16:0${versionId}:00.000Z` } } as T;
+    const lastUpdated = new Date(Date.parse("2026-07-11T16:00:00.000Z") + Number(versionId) * 60_000).toISOString();
+    const persisted = { ...resource, id, meta: { ...(resource.meta ?? {}), versionId, lastUpdated } } as T;
     this.resources[index] = persisted;
     this.writes.push({ operation: "update", resourceType, id, headers });
     return structuredClone(persisted);
@@ -132,9 +142,11 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
   }, "Bearer doctor-1", 201);
   const condition = fhir.resources.find((row): row is Condition => row.resourceType === "Condition")!;
   assert.equal(condition.verificationStatus?.coding?.[0]?.code, "confirmed");
-  assert.equal(condition.code?.coding?.[0]?.code, "H40.011");
+  assert.equal(condition.code?.coding?.[0]?.code, sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "right"));
   assert.equal(condition.evidence?.[0]?.detail?.[0]?.reference, observationReference);
-  assert.equal(fhir.resources.some((row): row is Provenance => row.resourceType === "Provenance" && row.target.some((target) => target.reference === `Condition/${condition.id}`)), true);
+  assert.equal(fhir.resources.some((row): row is Provenance => row.resourceType === "Provenance" &&
+    row.target.some((target) => target.reference === `Condition/${condition.id}`) &&
+    row.entity?.some((entity) => entity.what.reference === observationReference)), true);
 
   for (let index = 0; index < 2; index += 1) {
     await post(base, "/clinical-graph/encounters/e1/diagnosis-picks", {
@@ -153,6 +165,7 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
   await post(base, "/clinical-graph/encounters/e1/diagnosis-picks", {
     diagnosisKey: "ocular_hypertension",
     action: "discard",
+    laterality: "OD",
   }, "Bearer doctor-1", 200);
   const discarded = fhir.resources.find((row): row is Condition => row.resourceType === "Condition" && row.code?.text === "Ocular hypertension")!;
   assert.equal(discarded.verificationStatus?.coding?.[0]?.code, "refuted");
@@ -185,12 +198,89 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   });
   assert.equal(explicit.status, 201);
   const directCondition = (explicit.body as { condition: Condition }).condition;
-  assert.equal(directCondition.code?.coding?.[0]?.code, "H52.11");
+  assert.equal(directCondition.code?.coding?.[0]?.code, sourcedDiagnosisCode("myopia", "right"));
   assert.equal(directCondition.evidence, undefined);
   for (const file of ["glaucoma-suspect.ts", "refraction-suspect.ts", "diagnosis-mapping.ts"]) {
     const source = readFileSync(new URL(`../src/clinical-graph/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /handleDiagnosisPickRequest|diagnosis-picks/);
   }
+});
+
+test("laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition", async () => {
+  const fhir = diagnosisPickFhir();
+  const pick = (body: Record<string, unknown>) => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    now: () => "2026-07-11T16:00:00.000Z",
+  }, { authHeader: "Bearer doctor-1", params: { encounterId: "e1" }, body });
+
+  const possibleOd = await pick({
+    findingInstanceId: "Observation/finding-od",
+    diagnosisKey: "glaucoma_suspect_open_angle_low",
+    action: "possible",
+  });
+  assert.equal(possibleOd.status, 201);
+  assert.equal((possibleOd.body as { condition: Condition }).condition.verificationStatus?.coding?.[0]?.code, "provisional");
+
+  const confirmOd = await pick({
+    findingInstanceId: "Observation/finding-od",
+    diagnosisKey: "glaucoma_suspect_open_angle_low",
+    action: "confirm",
+  });
+  assert.equal(confirmOd.status, 200);
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Condition").length, 1);
+
+  const confirmOs = await pick({
+    findingInstanceId: "Observation/finding-os",
+    diagnosisKey: "glaucoma_suspect_open_angle_low",
+    action: "confirm",
+  });
+  assert.equal(confirmOs.status, 201);
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 2);
+  assert.deepEqual(new Set(conditions.map((condition) => condition.code?.coding?.[0]?.code)), new Set([
+    sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "right"),
+    sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "left"),
+  ]));
+  assert.equal(conditions.find((condition) => condition.code?.coding?.[0]?.code === sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "right"))
+    ?.evidence?.some((evidence) => evidence.detail?.some((detail) => detail.reference === "Observation/finding-od")), true);
+  assert.equal(conditions.find((condition) => condition.code?.coding?.[0]?.code === sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "left"))
+    ?.evidence?.some((evidence) => evidence.detail?.some((detail) => detail.reference === "Observation/finding-os")), true);
+
+  const discardOd = await pick({
+    findingInstanceId: "Observation/finding-od",
+    diagnosisKey: "glaucoma_suspect_open_angle_low",
+    action: "discard",
+  });
+  assert.equal(discardOd.status, 200);
+  const discardedConditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(discardedConditions.find((condition) => condition.code?.coding?.[0]?.code === sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "right"))
+    ?.verificationStatus?.coding?.[0]?.code, "refuted");
+  assert.equal(discardedConditions.find((condition) => condition.code?.coding?.[0]?.code === sourcedDiagnosisCode("glaucoma_suspect_open_angle_low", "left"))
+    ?.verificationStatus?.coding?.[0]?.code, "confirmed");
+});
+
+test("conditional create makes identical same-eye Possible double-submit idempotent", async () => {
+  const fhir = diagnosisPickFhir();
+  const request = () => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    now: () => "2026-07-11T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      findingInstanceId: "Observation/finding-od",
+      diagnosisKey: "glaucoma_suspect_open_angle_low",
+      action: "possible",
+    },
+  });
+
+  await Promise.all([request(), request()]);
+  const conditions = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition");
+  assert.equal(conditions.length, 1);
+  assert.equal(conditions[0]?.verificationStatus?.coding?.[0]?.code, "provisional");
+  assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "create").length, 1);
+  assert.equal(fhir.writes.find((write) => write.resourceType === "Condition")?.headers?.["If-None-Exist"],
+    "identifier=https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key|glaucoma_suspect_open_angle_low::right");
 });
 
 test("a failed tally side effect never fails a successful explicit diagnosis pick", async () => {
@@ -248,6 +338,37 @@ test("dedup keeps rule evidence and the higher-priority mapping when no rule exi
 type CandidateResponse = {
   findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string; source: string }> }>;
 };
+
+function diagnosisPickFhir(): MemoryFhir {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter", id: "e1", status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    subject: { reference: "Patient/p1" },
+  } as Encounter, ...(["OD", "OS"] as const).map((eye) => ({
+    resourceType: "Observation",
+    id: `finding-${eye.toLowerCase()}`,
+    status: "preliminary",
+    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/osod", code: "cup_disc_ratio" }], text: "Cup/Disc" },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/e1" },
+    effectiveDateTime: "2026-07-11T16:00:00.000Z",
+    valueQuantity: { value: 0.6, unit: "ratio" },
+    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code: eye }] } }],
+  } as Observation)));
+  return fhir;
+}
+
+function sourcedDiagnosisCode(
+  stableKey: string,
+  laterality: "right" | "left" | "bilateral" | "unspecifiedEye",
+): string {
+  const row = buildDiagnosisCatalogSeeds().find((candidate) => candidate.stableKey === stableKey);
+  if (!row?.icd10 || "code" in row.icd10) throw new Error(`Diagnosis ${stableKey} has no sourced laterality pattern.`);
+  const code = row.icd10.pattern[laterality];
+  if (!code || (row.provenance.ledgerRefs?.length ?? 0) < 2) throw new Error(`Diagnosis ${stableKey} is not backed by two ledger sources.`);
+  return code;
+}
 
 async function candidates(base: string, authorization: string): Promise<CandidateResponse> {
   const response = await fetch(`${base}/clinical-graph/encounters/e1/diagnosis-candidates`, { headers: { Authorization: authorization } });

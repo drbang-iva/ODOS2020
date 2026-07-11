@@ -17,6 +17,7 @@ export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSyst
 export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-OSOD-Source": "diagnosis-pick" } as const;
 
 type PickResource = Basic | Condition | Encounter | Observation | Provenance;
+type LateralityBucket = "right" | "left" | "bilateral" | "unspecified" | "none";
 
 export interface DiagnosisPickFhirClient {
   read<T extends PickResource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -74,15 +75,16 @@ export async function handleDiagnosisPickRequest(
     if (!findingDefinitionStableKey) return { status: 422, body: { error: "The finding does not resolve to an active finding definition." } };
   }
 
-  const existing = await findEncounterDiagnosis(staff.fhir, encounterReference, diagnosis.stableKey);
-  if (parsed.data.action === "discard" && !existing) {
-    return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
-  }
-
   const laterality = normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
   const code = resolveConditionCode(diagnosis, laterality);
   if (diagnosis.lateralityRequired && (!laterality || !code) && parsed.data.action !== "discard") {
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
+  }
+  const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality);
+  const compositeIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
+  const existing = await findEncounterDiagnosis(staff.fhir, encounterReference, compositeIdentifierValue);
+  if (parsed.data.action === "discard" && !existing) {
+    return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
   }
 
   let encounter: Encounter | undefined;
@@ -101,7 +103,7 @@ export async function handleDiagnosisPickRequest(
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const evidenceReference = observation?.id ? `Observation/${observation.id}` : undefined;
   const condition = existing
-    ? await updateCondition(staff.fhir, existing, diagnosis, code, verificationStatus, evidenceReference)
+    ? await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, code, verificationStatus, evidenceReference)
     : await staff.fhir.create<Condition>(
         buildEncounterDiagnosisCondition({
           patientReference,
@@ -111,10 +113,13 @@ export async function handleDiagnosisPickRequest(
             : { text: diagnosis.display },
           verificationStatus,
           recordedDate: recordedAt,
-          identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: diagnosis.stableKey }],
+          identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue }],
           ...(evidenceReference ? { evidenceObservationReferences: [evidenceReference] } : {}),
         }),
-        DIAGNOSIS_PICK_WRITE_HEADERS,
+        {
+          ...DIAGNOSIS_PICK_WRITE_HEADERS,
+          "If-None-Exist": `identifier=${DIAGNOSIS_KEY_IDENTIFIER_SYSTEM}|${compositeIdentifierValue}`,
+        },
       );
 
   const conditionReference = `Condition/${condition.id}`;
@@ -160,11 +165,11 @@ export async function handleDiagnosisPickRequest(
 async function findEncounterDiagnosis(
   fhir: DiagnosisPickFhirClient,
   encounterReference: string,
-  diagnosisKey: string,
+  compositeIdentifierValue: string,
 ): Promise<Condition | undefined> {
   const bundle = await fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" });
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).find((condition) =>
-    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === diagnosisKey)
+    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === compositeIdentifierValue)
   );
 }
 
@@ -172,6 +177,7 @@ async function updateCondition(
   fhir: DiagnosisPickFhirClient,
   existing: Condition,
   diagnosis: DiagnosisCatalogRow,
+  compositeIdentifierValue: string,
   code: string | undefined,
   verificationStatus: ConditionVerificationStatusCode,
   evidenceReference: string | undefined,
@@ -182,8 +188,8 @@ async function updateCondition(
     evidence.push({ detail: [{ reference: evidenceReference }] });
   }
   const identifiers = [...(existing.identifier ?? [])];
-  if (!identifiers.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === diagnosis.stableKey)) {
-    identifiers.push({ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: diagnosis.stableKey });
+  if (!identifiers.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === compositeIdentifierValue)) {
+    identifiers.push({ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue });
   }
   const next: Condition = {
     ...existing,
@@ -210,6 +216,14 @@ function resolveConditionCode(row: DiagnosisCatalogRow, laterality: "right" | "l
   if ("code" in row.icd10) return row.icd10.code;
   if (laterality) return row.icd10.pattern[laterality];
   return row.icd10.pattern.unspecifiedEye;
+}
+
+function diagnosisLateralityBucket(
+  row: DiagnosisCatalogRow,
+  laterality: "right" | "left" | "bilateral" | undefined,
+): LateralityBucket {
+  if (!row.icd10 || "code" in row.icd10) return "none";
+  return laterality ?? "unspecified";
 }
 
 function definitionForObservation(

@@ -88,7 +88,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [definitionLoading, setDefinitionLoading] = useState(true);
   const [definitionRefresh, setDefinitionRefresh] = useState(0);
   const [blocks, setBlocks] = useState<BlockState[]>(() => [emptyBlock(), emptyBlock()]);
-  const [savedObservationReferences, setSavedObservationReferences] = useState<Record<number, string[]>>({});
+  const [savedObservationReferences, setSavedObservationReferences] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
@@ -136,6 +136,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
 
   function updateBlock(blockId: string, next: Partial<BlockState>) {
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, ...next } : block));
+    clearSavedObservationReferences(blockId);
   }
 
   function updateEye(blockId: string, eye: Eye, next: Partial<EyeState>) {
@@ -143,6 +144,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       block.id === blockId
         ? { ...block, [eye]: { ...block[eye], ...next } }
         : block));
+    clearSavedObservationReferences(blockId);
   }
 
   function addBlock() {
@@ -153,17 +155,32 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   function copyOdToOs(blockId: string) {
     setBlocks((current) => current.map((block) =>
       block.id === blockId ? { ...block, OS: { ...block.OD } } : block));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function removeBlock(blockId: string) {
+    setBlocks((current) => current.filter((candidate) => candidate.id !== blockId));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function clearSavedObservationReferences(blockId: string) {
+    setSavedObservationReferences((current) => {
+      if (!(blockId in current)) return current;
+      const next = { ...current };
+      delete next[blockId];
+      return next;
+    });
   }
 
   async function save() {
-    let payloadBlocks: BlockPayload[];
+    let payloadEntries: Array<{ blockId: string; payload: BlockPayload }>;
     try {
-      payloadBlocks = buildPayload(blocks);
+      payloadEntries = buildPayload(blocks);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
-    if (payloadBlocks.length === 0) {
+    if (payloadEntries.length === 0) {
       setError("Enter at least one refraction block before saving.");
       return;
     }
@@ -174,7 +191,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadBlocks }),
+        body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadEntries.map((entry) => entry.payload) }),
       });
       const body = (await response.json()) as {
         blocks?: Array<{ eyes?: Partial<Record<Eye, { observationReference?: string }>> }>;
@@ -183,11 +200,14 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       if (!response.ok) {
         throw new Error(body.error ?? `Refraction save failed: ${response.status}`);
       }
-      setSavedObservationReferences(Object.fromEntries((body.blocks ?? []).map((savedBlock, index) => [
-        index,
-        Object.values(savedBlock.eyes ?? {}).flatMap((eye) => eye?.observationReference ? [eye.observationReference] : []),
-      ])));
-      const savedBlockCount = body.blocks?.length ?? payloadBlocks.length;
+      setSavedObservationReferences(Object.fromEntries((body.blocks ?? []).flatMap((savedBlock, index) => {
+        const blockId = payloadEntries[index]?.blockId;
+        return blockId ? [[
+          blockId,
+          Object.values(savedBlock.eyes ?? {}).flatMap((eye) => eye?.observationReference ? [eye.observationReference] : []),
+        ]] : [];
+      })));
+      const savedBlockCount = body.blocks?.length ?? payloadEntries.length;
       const status = {
         completed: true,
         summary: `${savedBlockCount} refraction block${savedBlockCount === 1 ? "" : "s"} saved`,
@@ -273,7 +293,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   {blocks.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => setBlocks((current) => current.filter((candidate) => candidate.id !== block.id))}
+                      onClick={() => removeBlock(block.id)}
                       className="rounded border border-white/10 px-2 py-1 text-xs text-white/45 hover:border-red-400/40 hover:text-red-100"
                     >
                       Remove
@@ -348,7 +368,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
               <div className="px-4 pb-4">
                 <DiagnosisPicker
                   encounterReference={encounterReference}
-                  observationReferences={savedObservationReferences[blockIndex] ?? []}
+                  observationReferences={savedObservationReferences[block.id] ?? []}
                   findingDefinitionKey="refraction"
                 />
               </div>
@@ -447,7 +467,7 @@ function emptyEye(): EyeState {
   };
 }
 
-function buildPayload(blocks: BlockState[]): BlockPayload[] {
+function buildPayload(blocks: BlockState[]): Array<{ blockId: string; payload: BlockPayload }> {
   return blocks.flatMap((block, blockIndex) => {
     const eyes = Object.fromEntries(EYES.flatMap((eye) => {
       const row = block[eye];
@@ -470,10 +490,13 @@ function buildPayload(blocks: BlockState[]): BlockPayload[] {
       throw new Error(`Block ${blockIndex + 1} requires a refraction type.`);
     }
     return [{
-      type: block.type,
-      ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
-      ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
-      ...eyes,
+      blockId: block.id,
+      payload: {
+        type: block.type,
+        ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
+        ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
+        ...eyes,
+      },
     }];
   });
 }

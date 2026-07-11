@@ -73,16 +73,17 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     const evidenceReferences = [...new Set(loadedConditions.flatMap((condition) =>
       (condition.evidence ?? []).flatMap((evidence) => (evidence.detail ?? []).flatMap((detail) => detail.reference?.startsWith("Observation/") ? [detail.reference] : []))
     ))];
-    const observations = await Promise.all(evidenceReferences.map(async (reference) =>
+    const observationResults = await Promise.allSettled(evidenceReferences.map(async (reference) =>
       fhir.read<Observation>("Observation", reference.replace(/^Observation\//, ""))
     ));
+    const observations = observationResults.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
     const observationsByReference = new Map(observations.map((observation) => [`Observation/${observation.id}`, observation]));
     setProvenanceLines(Object.fromEntries(loadedConditions.flatMap((condition) => {
       if (!condition.id) return [];
-      const observation = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
+      const lines = (condition.evidence ?? []).flatMap((evidence) => evidence.detail ?? [])
         .flatMap((detail) => detail.reference ? [observationsByReference.get(detail.reference)] : [])
-        .find(Boolean);
-      return observation ? [[condition.id, findingProvenanceLine(observation)]] : [];
+        .flatMap((observation) => observation ? [findingProvenanceLine(observation)] : []);
+      return lines.length ? [[condition.id, lines.join(" · ")]] : [];
     })));
   }
 
@@ -180,22 +181,30 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   }
 
   async function decidePossible(condition: Condition, action: "confirm" | "discard") {
-    const diagnosisKey = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
-    if (!diagnosisKey) {
+    const identifierValue = condition.identifier?.find((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM)?.value;
+    if (!identifierValue) {
       setError("This possible diagnosis is missing its diagnosis catalog link.");
       return;
     }
+    const [diagnosisKey = "", lateralityBucket] = identifierValue.split("::");
     await runEdit(action, async () => {
-      await submitDiagnosisPick({ encounterReference, diagnosisKey, action });
-    });
+      await submitDiagnosisPick({
+        encounterReference,
+        diagnosisKey,
+        action,
+        ...(lateralityBucket === "right" ? { laterality: "OD" as const } : {}),
+        ...(lateralityBucket === "left" ? { laterality: "OS" as const } : {}),
+        ...(lateralityBucket === "bilateral" ? { laterality: "OU" as const } : {}),
+      });
+    }, false);
   }
 
-  async function runEdit(label: string, action: () => Promise<void>) {
+  async function runEdit(label: string, action: () => Promise<void>, refreshAfter = true) {
     setBusy(label);
     setError(null);
     try {
       await action();
-      await load();
+      if (refreshAfter) await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
