@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { DiagnosisSettingsReady } from "../src/scenes/settings/DiagnosisSettings";
+import {
+  DiagnosisSettingsReady,
+  diagnosisDescriptor,
+  diagnosisMappingDescriptor,
+} from "../src/scenes/settings/DiagnosisSettings";
 
 test("diagnosis settings render grouped mappings, provisional catalog state, and read-only posture", () => {
   const html = renderToStaticMarkup(
@@ -49,4 +53,69 @@ test("diagnosis settings render grouped mappings, provisional catalog state, and
   assert.match(html, /PROVISIONAL/);
   assert.match(html, /Read only/);
   assert.doesNotMatch(html, /\+ Add diagnosis/);
+});
+
+test("existing mapping saves stay locked to their persisted finding", async () => {
+  let requestedPath = "";
+  const request = async <T,>(path: string): Promise<T> => {
+    requestedPath = path;
+    return {
+      candidate: { id: "MAP_1", diagnosisKey: "myopia", trigger: { kind: "always" }, active: true },
+    } as T;
+  };
+  const findings = [{
+    stableKey: "tear_film",
+    display: "Tear Film",
+    allowDiagnosisMapping: true,
+    diagnosisCandidates: [{ id: "MAP_1", diagnosisKey: "myopia", trigger: { kind: "always" }, active: true }],
+  }, {
+    stableKey: "refraction",
+    display: "Refraction",
+    allowDiagnosisMapping: true,
+    diagnosisCandidates: [],
+  }];
+  const descriptor = diagnosisMappingDescriptor(findings, [], request);
+  const saved = await descriptor.adapter.save({
+    id: "MAP_1",
+    findingKey: "refraction",
+    findingDisplay: "Refraction",
+    diagnosisKey: "myopia",
+    triggerKind: "always",
+    field: "",
+    operator: ">=",
+    triggerValue: "",
+    priority: false,
+    active: true,
+  });
+  assert.match(requestedPath, /finding-definitions\/tear_film$/);
+  assert.equal(saved.findingKey, "tear_film");
+});
+
+test("newly saved diagnoses appear in mapping options without a reload", async () => {
+  let liveDiagnoses: Parameters<typeof diagnosisMappingDescriptor>[1] = [];
+  const request = async <T,>(): Promise<T> => ({ diagnosis: {
+      stableKey: "custom:kcs-live",
+      display: "Keratoconjunctivitis sicca",
+      clinicalFamily: "ocular-surface",
+      codingStatus: "provisional",
+      origin: "practice",
+      lateralityRequired: false,
+      active: true,
+    } } as T);
+  const catalog = diagnosisDescriptor(
+    (saved) => { liveDiagnoses = [...liveDiagnoses, saved]; },
+    request,
+  );
+  await catalog.adapter.save({
+    ...catalog.createItem(),
+    display: "Keratoconjunctivitis sicca",
+    clinicalFamily: "ocular-surface",
+  });
+  const mapping = diagnosisMappingDescriptor([], liveDiagnoses);
+  const diagnosisField = mapping.fields.find((field) => field.key === "diagnosisKey");
+  assert.equal(diagnosisField?.type, "select");
+  assert.deepEqual(diagnosisField?.type === "select" ? diagnosisField.options : [], [{
+    value: "custom:kcs-live",
+    label: "Keratoconjunctivitis sicca · provisional",
+  }]);
 });

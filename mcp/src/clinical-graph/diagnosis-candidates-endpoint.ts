@@ -102,12 +102,11 @@ export async function handleDiagnosisCandidatesRequest(
           const diagnosisKey = catalogKeyForRule(evaluation.diagnosisDefinition.stableKey);
           const row = activeCatalog.get(diagnosisKey);
           if (!row) return [];
+          const icd10 = resolvedIcd10(row, finding.laterality);
           return [{
             diagnosisKey,
-            display: evaluation.diagnosisDefinition.icd10Display ?? evaluation.diagnosisDefinition.display,
-            ...(evaluation.diagnosisDefinition.icd10Code
-              ? { icd10: { code: evaluation.diagnosisDefinition.icd10Code, ...(evaluation.diagnosisDefinition.icd10Display ? { display: evaluation.diagnosisDefinition.icd10Display } : {}) } }
-              : {}),
+            display: row.display,
+            ...(icd10 ? { icd10 } : {}),
             codingStatus: row.codingStatus,
             priority: true,
             source: "rule" as const,

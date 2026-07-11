@@ -100,6 +100,8 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     left: "H52.12",
     bilateral: "H52.13",
   });
+  seeds[0]!.display = "Mutated caller copy";
+  assert.equal(buildDiagnosisCatalogSeeds()[0]?.display, "Open angle with borderline findings, low risk");
   const practice = {
     ...seeds[0]!,
     id: "diagnosis-def-practice-kcs",
@@ -149,9 +151,9 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
   const fhir = new MemoryFhir();
   const app = express();
   app.use(express.json());
-  const authenticate = async (header: string | undefined) => header === AUTH || header === "Bearer chart" ? {
+  const authenticate = async (header: string | undefined) => header === AUTH || header === "Bearer chart" || header === "Bearer no-grant" ? {
     staffReference: "Practitioner/admin-1",
-    actorRole: (header === AUTH ? "practice-admin" : "clinician") as PracticeRoleId,
+    actorRole: (header === AUTH ? "practice-admin" : header === "Bearer chart" ? "clinician" : "auditor") as PracticeRoleId,
     fhir,
   } : null;
   const findingDeps = () => ({ authenticate, now: () => "2026-07-11T12:00:00.000Z", shortId: () => "stable01" });
@@ -198,6 +200,11 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
   await new Promise<void>((resolve) => listener.once("listening", resolve));
   t.after(() => listener.close());
   const base = `http://127.0.0.1:${(listener.address() as AddressInfo).port}`;
+
+  await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", null, 401);
+  await request(base, "/clinical-graph/diagnosis-catalog", {}, 401, null);
+  await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", "Bearer no-grant", 403);
+  await request(base, "/clinical-graph/diagnosis-catalog", {}, 403, "Bearer no-grant");
 
   const section = await request(base, "/clinical-graph/finding-definitions", {
     action: "create-definition",
@@ -249,12 +256,19 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
     encounterReference: "Encounter/e1",
     blocks: [{ type: "MANIFEST", OD: { sphere: -1 } }],
   }, 200, "Bearer chart") as { suggestions: Array<{ code: string }> };
+  await request(base, "/clinical-graph/diagnosis-catalog/glaucoma_suspect_open_angle_high", {
+    display: "Practice-edited high-risk glaucoma suspect",
+  });
   const compiled = await get(base, "/clinical-graph/encounters/e1/diagnosis-candidates", "Bearer chart") as {
-    findings: Array<{ findingDefinitionKey: string; candidates: Array<{ icd10?: { code?: string }; source: string }> }>;
+    findings: Array<{ findingDefinitionKey: string; candidates: Array<{ display: string; icd10?: { code?: string }; source: string }> }>;
   };
   assert.equal(
     compiled.findings.find((row) => row.findingDefinitionKey === "cup_disc_ratio")?.candidates[0]?.icd10?.code,
     cupDisc.eyes.OD.icd10Code,
+  );
+  assert.equal(
+    compiled.findings.find((row) => row.findingDefinitionKey === "cup_disc_ratio")?.candidates[0]?.display,
+    "Practice-edited high-risk glaucoma suspect",
   );
   assert.deepEqual(
     compiled.findings.find((row) => row.findingDefinitionKey === "refraction")?.candidates.map((row) => row.icd10?.code),
@@ -288,10 +302,10 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
   assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Basic").some((resource) => (resource as Basic).code?.coding?.some((coding) => coding.system === DIAGNOSIS_DEFINITION_CODE_SYSTEM && coding.code === DIAGNOSIS_DEFINITION_CODE)), true);
 });
 
-async function request(base: string, path: string, body: unknown, expected = 200, auth = AUTH): Promise<Record<string, unknown>> {
+async function request(base: string, path: string, body: unknown, expected = 200, auth: string | null = AUTH): Promise<Record<string, unknown>> {
   const response = await fetch(`${base}${path}`, {
     method: "POST",
-    headers: { Authorization: auth, "Content-Type": "application/json" },
+    headers: { ...(auth ? { Authorization: auth } : {}), "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const result = await response.json() as Record<string, unknown>;
@@ -299,9 +313,9 @@ async function request(base: string, path: string, body: unknown, expected = 200
   return result;
 }
 
-async function get(base: string, path: string, auth = AUTH): Promise<unknown> {
-  const response = await fetch(`${base}${path}`, { headers: { Authorization: auth } });
+async function get(base: string, path: string, auth: string | null = AUTH, expected = 200): Promise<unknown> {
+  const response = await fetch(`${base}${path}`, { headers: auth ? { Authorization: auth } : {} });
   const result = await response.json();
-  assert.equal(response.status, 200, JSON.stringify(result));
+  assert.equal(response.status, expected, JSON.stringify(result));
   return result;
 }

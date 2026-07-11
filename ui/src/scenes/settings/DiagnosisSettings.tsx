@@ -19,6 +19,7 @@ type DiagnosisRow = CatalogItemBase & {
 
 type MappingRow = CatalogItemBase & {
   findingKey: string;
+  persistedFindingKey?: string;
   findingDisplay: string;
   diagnosisKey: string;
   triggerKind: "always" | "abnormal" | "numeric" | "option";
@@ -93,25 +94,33 @@ export function DiagnosisSettingsReady({
   mappings: MappingRow[];
   findings: FindingDefinition[];
 }) {
-  const catalogDescriptor = useMemo(() => diagnosisDescriptor(), []);
+  const [liveDiagnoses, setLiveDiagnoses] = useState(diagnoses);
+  useEffect(() => setLiveDiagnoses(diagnoses), [diagnoses]);
+  const catalogDescriptor = useMemo(
+    () => diagnosisDescriptor((saved) => setLiveDiagnoses((current) => upsertDiagnosis(current, saved))),
+    [],
+  );
   const mappingDescriptor = useMemo(
-    () => diagnosisMappingDescriptor(findings, diagnoses),
-    [diagnoses, findings],
+    () => diagnosisMappingDescriptor(findings, liveDiagnoses),
+    [findings, liveDiagnoses],
   );
   return (
     <CatalogScene title="Suggested diagnoses" canWrite={canWrite}>
       {!canWrite && <div className="border border-amber-300/25 bg-amber-300/10 p-4 text-sm text-amber-100">Read only. The finding-definitions.write grant is required to edit diagnosis settings.</div>}
       <CatalogSection descriptor={mappingDescriptor} canWrite={canWrite} initialState={{ items: mappings, loading: false }} />
-      <CatalogSection descriptor={catalogDescriptor} canWrite={canWrite} initialState={{ items: diagnoses, loading: false }} />
+      <CatalogSection descriptor={catalogDescriptor} canWrite={canWrite} initialState={{ items: liveDiagnoses, loading: false }} />
     </CatalogScene>
   );
 }
 
-function diagnosisDescriptor(): CatalogDescriptor<DiagnosisRow> {
+export function diagnosisDescriptor(
+  onSaved?: (row: DiagnosisRow) => void,
+  request: typeof postJson = postJson,
+): CatalogDescriptor<DiagnosisRow> {
   return {
     title: "Diagnosis catalog",
     singularLabel: "diagnosis",
-    adapter: diagnosisAdapter(),
+    adapter: diagnosisAdapter(onSaved, request),
     fields: [
       { type: "text", key: "display", label: "Display", required: true },
       { type: "text", key: "clinicalFamily", label: "Clinical family", required: true },
@@ -143,14 +152,15 @@ function diagnosisDescriptor(): CatalogDescriptor<DiagnosisRow> {
   };
 }
 
-function diagnosisMappingDescriptor(
+export function diagnosisMappingDescriptor(
   findings: FindingDefinition[],
   diagnoses: DiagnosisRow[],
+  request: typeof postJson = postJson,
 ): CatalogDescriptor<MappingRow> {
   return {
     title: "Suggested diagnoses by finding",
     singularLabel: "suggestion mapping",
-    adapter: mappingAdapter(findings),
+    adapter: mappingAdapter(findings, request),
     fields: [
       {
         type: "select",
@@ -191,6 +201,7 @@ function diagnosisMappingDescriptor(
     createItem: () => ({
       id: `new-${crypto.randomUUID()}`,
       findingKey: findings.find((row) => row.allowDiagnosisMapping)?.stableKey ?? "",
+      persistedFindingKey: undefined,
       findingDisplay: "",
       diagnosisKey: diagnoses.find((row) => row.active)?.stableKey ?? "",
       triggerKind: "always",
@@ -207,7 +218,10 @@ function diagnosisMappingDescriptor(
   };
 }
 
-function diagnosisAdapter(): CatalogAdapter<DiagnosisRow> {
+function diagnosisAdapter(
+  onSaved: ((row: DiagnosisRow) => void) | undefined,
+  request: typeof postJson,
+): CatalogAdapter<DiagnosisRow> {
   return {
     capabilities: { reorder: false, deactivate: true, presetSeed: false },
     list: () => [],
@@ -219,25 +233,38 @@ function diagnosisAdapter(): CatalogAdapter<DiagnosisRow> {
       const path = row.id.startsWith("new-")
         ? "/clinical-graph/diagnosis-catalog"
         : `/clinical-graph/diagnosis-catalog/${encodeURIComponent(row.stableKey)}`;
-      const result = await postJson<{ diagnosis: Record<string, unknown> }>(path, body);
-      return diagnosisFromApi(result.diagnosis);
+      const result = await request<{ diagnosis: Record<string, unknown> }>(path, body);
+      const saved = diagnosisFromApi(result.diagnosis);
+      onSaved?.(saved);
+      return saved;
     },
     async deactivate(row) {
-      const result = await postJson<{ diagnosis: Record<string, unknown> }>(
+      const result = await request<{ diagnosis: Record<string, unknown> }>(
         `/clinical-graph/diagnosis-catalog/${encodeURIComponent(row.stableKey)}`,
         { active: false },
       );
-      return diagnosisFromApi(result.diagnosis);
+      const saved = diagnosisFromApi(result.diagnosis);
+      onSaved?.(saved);
+      return saved;
     },
   };
 }
 
-function mappingAdapter(findings: FindingDefinition[]): CatalogAdapter<MappingRow> {
+function mappingAdapter(
+  findings: FindingDefinition[],
+  request: typeof postJson,
+): CatalogAdapter<MappingRow> {
   return {
     capabilities: { reorder: false, deactivate: true, presetSeed: false },
     list: () => [],
     async save(row) {
       const isNew = row.id.startsWith("new-");
+      const persistedFinding = isNew
+        ? undefined
+        : findings.find((finding) => finding.diagnosisCandidates.some((candidate) => candidate.id === row.id));
+      const findingKey = isNew
+        ? row.findingKey
+        : row.persistedFindingKey ?? persistedFinding?.stableKey ?? row.findingKey;
       const body = {
         action: isNew ? "create-diagnosis-candidate" : "update-diagnosis-candidate",
         ...(!isNew ? { id: row.id } : {}),
@@ -245,15 +272,15 @@ function mappingAdapter(findings: FindingDefinition[]): CatalogAdapter<MappingRo
         trigger: triggerFromRow(row),
         priority: row.priority,
       };
-      const result = await postJson<{ candidate: FindingDefinition["diagnosisCandidates"][number] }>(
-        `/clinical-graph/finding-definitions/${encodeURIComponent(row.findingKey)}`,
+      const result = await request<{ candidate: FindingDefinition["diagnosisCandidates"][number] }>(
+        `/clinical-graph/finding-definitions/${encodeURIComponent(findingKey)}`,
         body,
       );
-      const finding = findings.find((candidate) => candidate.stableKey === row.findingKey);
-      return mappingRow(finding?.display ?? row.findingDisplay, row.findingKey, result.candidate);
+      const finding = findings.find((candidate) => candidate.stableKey === findingKey);
+      return mappingRow(finding?.display ?? row.findingDisplay, findingKey, result.candidate);
     },
     async deactivate(row) {
-      const result = await postJson<{ candidate: FindingDefinition["diagnosisCandidates"][number] }>(
+      const result = await request<{ candidate: FindingDefinition["diagnosisCandidates"][number] }>(
         `/clinical-graph/finding-definitions/${encodeURIComponent(row.findingKey)}`,
         { action: "update-diagnosis-candidate", id: row.id, active: false },
       );
@@ -282,6 +309,13 @@ function diagnosisFromApi(value: Record<string, unknown>): DiagnosisRow {
   };
 }
 
+function upsertDiagnosis(rows: DiagnosisRow[], saved: DiagnosisRow): DiagnosisRow[] {
+  const index = rows.findIndex((row) => row.stableKey === saved.stableKey);
+  return index === -1
+    ? [...rows, saved]
+    : rows.map((row) => row.stableKey === saved.stableKey ? saved : row);
+}
+
 function mappingRows(definition: FindingDefinition): MappingRow[] {
   return definition.diagnosisCandidates.map((candidate) => mappingRow(definition.display, definition.stableKey, candidate));
 }
@@ -296,6 +330,7 @@ function mappingRow(
   return {
     id: candidate.id,
     findingKey,
+    persistedFindingKey: findingKey,
     findingDisplay,
     diagnosisKey: candidate.diagnosisKey,
     triggerKind: kind,

@@ -19,7 +19,14 @@ interface LedgerRow {
   sourceRefs: string[];
 }
 
+let cachedDiagnosisCatalogSeeds: DiagnosisCatalogRow[] | undefined;
+
 export function buildDiagnosisCatalogSeeds(): DiagnosisCatalogRow[] {
+  cachedDiagnosisCatalogSeeds ??= buildSeeds();
+  return structuredClone(cachedDiagnosisCatalogSeeds);
+}
+
+function buildSeeds(): DiagnosisCatalogRow[] {
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: new Date(0).toISOString(),
