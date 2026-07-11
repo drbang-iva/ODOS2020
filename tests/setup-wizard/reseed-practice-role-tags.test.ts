@@ -149,6 +149,25 @@ test("a stale version is reported as a conflict without applying the patch", asy
   assert.equal(policy.meta?.tag, undefined);
 });
 
+test("a missing version is reported as a conflict without attempting a write", async () => {
+  const policy: AccessPolicy = {
+    resourceType: "AccessPolicy",
+    id: "unversioned-clinician-policy",
+    name: "OSOD Clinician",
+    meta: {},
+  };
+  const adapter = new FakePracticeRoleReseedAdapter([policy]);
+
+  const result = await reseedPracticeRoleTags(adapter);
+
+  assert.equal(result.exitCode, 1);
+  assert.equal(adapter.writes.length, 0);
+  assert.equal(roleCount(result, "clinician").conflicted, 1);
+  assert.deepEqual(result.conflicts, [
+    { roleId: "clinician", policyId: "unversioned-clinician-policy", reason: "missing-version" },
+  ]);
+});
+
 test("the live migration target must be local or private", () => {
   assert.doesNotThrow(() => assertLocalMedplumBaseUrl("http://localhost:8103"));
   assert.doesNotThrow(() => assertLocalMedplumBaseUrl("https://osod.local"));
