@@ -5,6 +5,7 @@ import {
   createClaimMdAdapter,
   claimMdConfigFromEnv,
 } from "../src/claims/claimmd-adapter.js";
+import type { ClearinghouseAdapter } from "../src/claims/clearinghouse-adapter.js";
 
 function jsonTransport(body: unknown) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -41,6 +42,23 @@ test("Claim.MD adapter uploads professional JSON claims as a file with AccountKe
   assert.equal(form.get("AccountKey"), "secret-key");
   assert.equal(form.get("Filename"), "osod-claim-900.json");
   assert.equal((form.get("File") as File).name, "osod-claim-900.json");
+});
+
+test("Claim.MD interface extraction preserves the serialized adapter result", async () => {
+  const fixture = { result: { claim: [{ claimid: "claimmd-1", claimmd_id: "tracking-1", status: "A" }] } };
+  const { fetchImpl } = jsonTransport(fixture);
+  const adapter: ClearinghouseAdapter = createClaimMdAdapter({
+    config: { baseUrl: CLAIMMD_DEFAULT_BASE_URL, accountKey: "secret-key", mode: "test" },
+    fetchImpl,
+  });
+  const result = await adapter.submitProfessionalClaim({
+    fileName: "osod-claim-900.json",
+    payload: { fileid: "osod-file-1", claim: [{ pcn: "OSOD-CLAIM-900" }] },
+  });
+  assert.equal(JSON.stringify(result), JSON.stringify({
+    claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }],
+    raw: fixture,
+  }));
 });
 
 test("Claim.MD adapter uses eligdata, response, eralist, and eradata polling endpoints", async () => {

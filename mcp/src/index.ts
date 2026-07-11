@@ -88,6 +88,8 @@ import {
 } from "./clinical-graph/custom-section-endpoint.js";
 import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
+import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
+import { createStediAdapter, stediConfigFromEnv } from "./claims/stedi-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
   handleClaimEraWorklistTaskRequest,
@@ -5482,6 +5484,13 @@ async function main(): Promise<void> {
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
       const claimMdConfig = claimMdConfigFromEnv(process.env);
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
+      const stediConfig = stediConfigFromEnv(process.env);
+      const stediAdapter = stediConfig ? createStediAdapter({ config: stediConfig }) : null;
+      const clearinghouseAdapters = {
+        ...(claimMdAdapter ? { claimmd: claimMdAdapter } : {}),
+        ...(stediAdapter ? { stedi: stediAdapter } : {}),
+      };
+      const clearinghouseRouting = clearinghouseRoutingFromEnv(process.env);
       const eraUnderpaymentThresholdCents = eraUnderpaymentThresholdCentsFromEnv(process.env);
       const authenticateStaffRoute = async (header: string | undefined) => {
         const resolved = await resolveStaffRole({
@@ -5977,6 +5986,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -5999,6 +6010,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6127,6 +6140,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6149,6 +6164,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               eraUnderpaymentThresholdCents,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6172,6 +6189,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },

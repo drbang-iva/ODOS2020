@@ -171,7 +171,7 @@ export function SubmitClaims() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
             <h1 className="text-2xl font-semibold">Compose and submit claim</h1>
-            <p className="mt-1 text-sm text-white/50">Single professional claim · Claim.MD EDI</p>
+            <p className="mt-1 text-sm text-white/50">Single professional claim · configured clearinghouse</p>
           </div>
           <ol className="flex gap-2 text-xs font-bold uppercase tracking-wide text-white/40">
             <StepLabel active={step === "compose"} value="1 Compose" />
@@ -228,7 +228,7 @@ export function SubmitClaims() {
                   )}
                 </Section>
 
-                <Section title="Claim details" description="FHIR references and Claim.MD identifiers for this submission.">
+                <Section title="Claim details" description="FHIR references and clearinghouse identifiers for this submission.">
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     <Field label="FHIR provider reference" value={draft.providerReference} placeholder="Practitioner/123" onChange={(value) => setDraft((current) => ({ ...current, providerReference: value }))} />
                     <Field label="Payer ID" value={draft.payerId} onChange={(value) => setDraft((current) => ({ ...current, payerId: value }))} />
@@ -243,7 +243,7 @@ export function SubmitClaims() {
                   <ProviderFields provider={draft.billingProvider} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
                 </Section>
 
-                <Section title="Rendering provider" description="NPI is required; remaining Claim.MD fields are optional.">
+                <Section title="Rendering provider" description="NPI is required; remaining clearinghouse fields are optional.">
                   <ProviderFields provider={draft.renderingProvider} onChange={(renderingProvider) => setDraft((current) => ({ ...current, renderingProvider }))} />
                 </Section>
 
@@ -328,12 +328,13 @@ export function ClaimSubmissionResult({ result, onAnother }: { result: SubmitCla
   return (
     <section className="rounded-lg border border-emerald-400/30 bg-emerald-950/20 p-6">
       <p className="text-xs font-bold uppercase tracking-wide text-emerald-300">Submitted</p>
-      <h2 className="mt-1 text-xl font-semibold">Claim accepted for Claim.MD submission</h2>
+      <h2 className="mt-1 text-xl font-semibold">Claim accepted for clearinghouse submission</h2>
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
         <Detail label="FHIR Claim ID" value={result.claimId ?? "Not returned"} />
+        <Detail label="Clearinghouse" value={result.clearinghouse === "stedi" ? "Stedi" : "Claim.MD"} />
         <Detail label="Status" value={result.status ?? "Not returned"} />
-        <Detail label="Claim.MD claim ID" value={result.claimMdClaimId ?? "Not returned"} />
-        <Detail label="Tracking number" value={result.claimMdTrackingNumber ?? "Not returned"} />
+        <Detail label="Clearinghouse claim ID" value={result.claimMdClaimId ?? result.stediCorrelationId ?? "Not returned"} />
+        <Detail label="Tracking number" value={result.claimMdTrackingNumber ?? result.stediTrackingNumber ?? "Not returned"} />
       </dl>
       <button type="button" onClick={onAnother} className="mt-6 rounded bg-emerald-700 px-4 py-2 font-semibold">Compose another claim</button>
     </section>
@@ -444,7 +445,7 @@ function PersonFields({ person, onChange, includePolicy = false }: { person: Cla
       <Field label="ZIP" value={person.zip ?? ""} onChange={(value) => set("zip", value)} />
       {includePolicy && <Field label="Member ID" value={person.memberId ?? ""} onChange={(value) => set("memberId", value)} />}
       {includePolicy && <Field label="Group number" value={person.groupNumber ?? ""} onChange={(value) => set("groupNumber", value)} />}
-      {includePolicy && <Field label="Claim.MD relationship code" value={person.relationshipCode ?? ""} onChange={(value) => set("relationshipCode", value)} />}
+      {includePolicy && <Field label="Subscriber relationship code" value={person.relationshipCode ?? ""} onChange={(value) => set("relationshipCode", value)} />}
     </div>
   );
 }

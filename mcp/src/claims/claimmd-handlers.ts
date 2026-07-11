@@ -13,7 +13,11 @@ import { buildOsodAuditEventRow, type OsodActorRole, type OsodAuditEventRecord }
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
-import { buildInsurancePaymentReconciliation, CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
+import {
+  buildInsurancePaymentReconciliation,
+  CLAIMMD_ERA_PAYMENT_SYSTEM,
+  STEDI_ERA_PAYMENT_SYSTEM,
+} from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
 import {
@@ -23,6 +27,13 @@ import {
   type ClaimSearchFilters,
 } from "./claim-search.js";
 import type { ClaimMdAdapter } from "./claimmd-adapter.js";
+import {
+  isClearinghouseId,
+  selectClearinghouseAdapter,
+  type ClearinghouseAdapters,
+  type ClearinghouseId,
+  type ClearinghouseRoutingDefaults,
+} from "./clearinghouse-adapter.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
@@ -42,6 +53,7 @@ import {
   isEraWorklistStatus,
   projectEraWorklistBundle,
   projectEraBatchReadModel,
+  projectStediEraBatchReadModel,
   resolveEraWorklistTask,
   type EraWorklistCode,
 } from "./era-worklist.js";
@@ -59,6 +71,15 @@ import {
   type ManualClaimResponseLineInput,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
+import type { StediAdapter } from "./stedi-adapter.js";
+import {
+  buildClaimResponseFromStediEra,
+  buildClaimResponseFromStediStatus,
+  buildCoverageEligibilityResponseFromStedi,
+  buildStediProfessionalClaimJson,
+  readStediEra,
+  type StediEraClaim,
+} from "./stedi-fhir.js";
 import {
   MANUAL_EOB_CODE,
   MANUAL_EOB_CODE_SYSTEM,
@@ -79,6 +100,8 @@ export interface AuthenticatedClaimsStaff {
 export interface ClaimsHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedClaimsStaff | null>;
   adapter: ClaimMdAdapter | null;
+  adapters?: ClearinghouseAdapters;
+  routingDefaults?: ClearinghouseRoutingDefaults;
   recordAudit(row: OsodAuditEventRecord): Promise<void>;
   eraUnderpaymentThresholdCents?: number;
   now?: () => string;
@@ -95,28 +118,46 @@ export async function handleSubmitClaimRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
-
-  const body = input.body as { claim?: ProfessionalClaimInput };
+  const body = input.body as { claim?: ProfessionalClaimInput; clearinghouse?: unknown };
   if (!body.claim) return { status: 400, body: { error: "claim is required." } };
+  const selection = clearinghouseSelection(deps, body.clearinghouse, "transaction");
+  if ("status" in selection) return selection;
 
   let createdClaim: Claim | undefined;
   try {
     const claim = buildProfessionalClaim(body.claim);
     createdClaim = await auth.fhir.create(claim);
-    const payload = buildClaimMdProfessionalClaimJson(body.claim, createdClaim);
-    const result = await deps.adapter.submitProfessionalClaim({
-      fileName: `${body.claim.patientAccountNumber}.json`,
-      payload,
-    });
-    await audit(deps, auth, "claim.submit.completed", "success", ref(createdClaim), body.claim.patientReference);
+    const result = selection.id === "claimmd"
+      ? await (selection.adapter as ClaimMdAdapter).submitProfessionalClaim({
+        fileName: `${body.claim.patientAccountNumber}.json`,
+        payload: buildClaimMdProfessionalClaimJson(body.claim, createdClaim),
+      })
+      : await (selection.adapter as StediAdapter).submitProfessionalClaim({
+        idempotencyKey: body.claim.patientAccountNumber,
+        payload: buildStediProfessionalClaimJson(
+          body.claim,
+          createdClaim,
+          (selection.adapter as StediAdapter).mode,
+          (selection.adapter as StediAdapter).submitterId,
+        ),
+      });
+    await audit(deps, auth, "claim.submit.completed", "success", ref(createdClaim), body.claim.patientReference, undefined, selection.id);
+    const claimMdResult = selection.id === "claimmd" ? result as Awaited<ReturnType<ClaimMdAdapter["submitProfessionalClaim"]>> : undefined;
+    const stediResult = selection.id === "stedi" ? result as Awaited<ReturnType<StediAdapter["submitProfessionalClaim"]>> : undefined;
     return {
       status: 200,
       body: {
         claimId: createdClaim.id,
-        claimMdClaimId: result.claims[0]?.claimMdClaimId,
-        claimMdTrackingNumber: result.claims[0]?.claimMdId,
-        status: result.claims[0]?.status,
+        ...(claimMdResult ? {
+          claimMdClaimId: claimMdResult.claims[0]?.claimMdClaimId,
+          claimMdTrackingNumber: claimMdResult.claims[0]?.claimMdId,
+          status: claimMdResult.claims[0]?.status,
+        } : {
+          clearinghouse: "stedi",
+          stediCorrelationId: stediResult?.claimReference?.correlationId,
+          stediTrackingNumber: stediResult?.claimReference?.customerClaimNumber,
+          status: "submitted",
+        }),
       },
     };
   } catch (error) {
@@ -127,13 +168,15 @@ export async function handleSubmitClaimRequest(
       "failure",
       createdClaim ? ref(createdClaim) : "Claim/uncreated",
       body.claim.patientReference,
-      claimMdFailureAuditReason("submitProfessionalClaim", error),
+      clearinghouseFailureAuditReason(selection.id, "submitProfessionalClaim", error),
+      selection.id,
     );
     try {
       await createAndAuditClaimRejectedTask(deps, auth, {
         claimReference: createdClaim ? ref(createdClaim) : undefined,
         patientReference: body.claim.patientReference,
         claimMdMessage: messageOf(error),
+        adapterName: selection.id,
       });
     } catch {
       // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
@@ -148,8 +191,6 @@ export async function handleEligibilityCheckRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
-
   const body = input.body as {
     patientReference?: string;
     coverageReference?: string;
@@ -157,9 +198,14 @@ export async function handleEligibilityCheckRequest(
     providerReference?: string;
     serviceDate?: string;
     claimMd?: Record<string, string>;
+    stedi?: Record<string, unknown>;
+    clearinghouse?: unknown;
   };
-  if (!body.patientReference || !body.coverageReference || !body.insurerReference || !body.serviceDate || !body.claimMd) {
-    return { status: 400, body: { error: "patientReference, coverageReference, insurerReference, serviceDate, and claimMd are required." } };
+  const selection = clearinghouseSelection(deps, body.clearinghouse, "transaction");
+  if ("status" in selection) return selection;
+  const vendorRequest = selection.id === "claimmd" ? body.claimMd : body.stedi;
+  if (!body.patientReference || !body.coverageReference || !body.insurerReference || !body.serviceDate || !vendorRequest) {
+    return { status: 400, body: { error: `patientReference, coverageReference, insurerReference, serviceDate, and ${selection.id} are required.` } };
   }
 
   let request: CoverageEligibilityRequest | undefined;
@@ -172,17 +218,21 @@ export async function handleEligibilityCheckRequest(
       created: today(deps),
       serviceDate: body.serviceDate,
     }));
-    const claimMd = await deps.adapter.checkEligibility(body.claimMd);
-    const response = await auth.fhir.create(buildCoverageEligibilityResponseFromClaimMd({
+    const vendorResponse = selection.id === "claimmd"
+      ? await (selection.adapter as ClaimMdAdapter).checkEligibility(vendorRequest as Record<string, string>)
+      : await (selection.adapter as StediAdapter).checkEligibility(vendorRequest);
+    const responseInput = {
       requestReference: ref(request),
       patientReference: body.patientReference,
       coverageReference: body.coverageReference,
       insurerReference: body.insurerReference,
       requestorReference: body.providerReference,
       created: today(deps),
-      claimMd,
-    }));
-    await audit(deps, auth, "eligibility.check.completed", "success", ref(response), body.patientReference);
+    };
+    const response = await auth.fhir.create(selection.id === "claimmd"
+      ? buildCoverageEligibilityResponseFromClaimMd({ ...responseInput, claimMd: vendorResponse })
+      : buildCoverageEligibilityResponseFromStedi({ ...responseInput, stedi: vendorResponse }));
+    await audit(deps, auth, "eligibility.check.completed", "success", ref(response), body.patientReference, undefined, selection.id);
     return {
       status: 200,
       body: {
@@ -200,7 +250,8 @@ export async function handleEligibilityCheckRequest(
       "failure",
       request ? ref(request) : "CoverageEligibilityRequest/uncreated",
       body.patientReference,
-      claimMdFailureAuditReason("checkEligibility", error),
+      clearinghouseFailureAuditReason(selection.id, "checkEligibility", error),
+      selection.id,
     );
     return { status: 502, body: { error: `Eligibility check failed: ${messageOf(error)}` } };
   }
@@ -212,43 +263,48 @@ export async function handleClaimStatusRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
-
   const body = input.body as {
     claimMdClaimId?: unknown;
     patientReference?: unknown;
     insurerReference?: unknown;
     providerReference?: unknown;
     responseId?: unknown;
+    stedi?: unknown;
+    clearinghouse?: unknown;
   };
+  const selection = clearinghouseSelection(deps, body.clearinghouse, "transaction");
+  if ("status" in selection) return selection;
   const claimMdClaimId = stringValue(body.claimMdClaimId);
   const patientReference = stringValue(body.patientReference);
   const insurerReference = stringValue(body.insurerReference);
   const providerReference = stringValue(body.providerReference);
   const responseId = stringValue(body.responseId);
-  if (!input.params.id || !claimMdClaimId || !patientReference || !insurerReference) {
-    return { status: 400, body: { error: "claim id, claimMdClaimId, patientReference, and insurerReference are required." } };
+  if (!input.params.id || !patientReference || !insurerReference || (selection.id === "claimmd" && !claimMdClaimId) || (selection.id === "stedi" && !body.stedi)) {
+    return { status: 400, body: { error: `claim id, ${selection.id === "claimmd" ? "claimMdClaimId" : "stedi"}, patientReference, and insurerReference are required.` } };
   }
 
   try {
-    const status = await deps.adapter.checkClaimStatus({
-      claimMdClaimId,
-      responseId,
-    });
-    const response = await auth.fhir.create(buildClaimResponseFromClaimMdStatus({
+    const status = selection.id === "claimmd"
+      ? await (selection.adapter as ClaimMdAdapter).checkClaimStatus({ claimMdClaimId: claimMdClaimId!, responseId })
+      : await (selection.adapter as StediAdapter).checkClaimStatus(body.stedi);
+    const responseInput = {
       claimReference: `Claim/${input.params.id}`,
       patientReference,
       insurerReference,
       providerReference,
       created: today(deps),
       status,
-    }));
-    await audit(deps, auth, "claim.status.checked", "success", ref(response), patientReference);
+    };
+    const response = await auth.fhir.create(selection.id === "claimmd"
+      ? buildClaimResponseFromClaimMdStatus(responseInput)
+      : buildClaimResponseFromStediStatus(responseInput));
+    await audit(deps, auth, "claim.status.checked", "success", ref(response), patientReference, undefined, selection.id);
     if (response.outcome === "error") {
       await createAndAuditClaimRejectedTask(deps, auth, {
         claimReference: `Claim/${input.params.id}`,
         patientReference,
         claimMdMessage: response.disposition ?? "",
+        adapterName: selection.id,
       });
     }
     return { status: 200, body: { claimResponseId: response.id, response } };
@@ -260,7 +316,8 @@ export async function handleClaimStatusRequest(
       "failure",
       `Claim/${input.params.id}`,
       patientReference,
-      claimMdFailureAuditReason("checkClaimStatus", error),
+      clearinghouseFailureAuditReason(selection.id, "checkClaimStatus", error),
+      selection.id,
     );
     return { status: 502, body: { error: `Claim status check failed: ${messageOf(error)}` } };
   }
@@ -272,7 +329,6 @@ export async function handleEraImportRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
 
   const body = input.body as {
     eraId?: string;
@@ -282,9 +338,17 @@ export async function handleEraImportRequest(
     providerReference?: string;
     practiceOrgReference?: string;
     appealDeadlineByPcn?: Record<string, string>;
+    clearinghouse?: unknown;
   };
   if (!body.eraId || !body.claimReferenceByPcn || !body.patientReferenceByPcn || !body.insurerReference) {
     return { status: 400, body: { error: "eraId, claimReferenceByPcn, patientReferenceByPcn, and insurerReference are required." } };
+  }
+  const selection = clearinghouseSelection(deps, body.clearinghouse, "era");
+  if ("status" in selection) return selection;
+  if (selection.id === "stedi") {
+    return importStediEra(deps, auth, selection.adapter as StediAdapter, body as Required<Pick<typeof body,
+      "eraId" | "claimReferenceByPcn" | "patientReferenceByPcn" | "insurerReference"
+    >> & typeof body);
   }
 
   const claimResponseIds: string[] = [];
@@ -296,7 +360,7 @@ export async function handleEraImportRequest(
   let flagged = 0;
   let paidTotalCents = 0;
   try {
-    const era = await deps.adapter.retrieveEraData(body.eraId) as ClaimMdEraData;
+    const era = await (selection.adapter as ClaimMdAdapter).retrieveEraData(body.eraId) as ClaimMdEraData;
     const eraId = era.eraid ?? body.eraId;
     for (const eraClaim of arrayOf(era.claim)) {
       const pcn = eraClaim.pcn ?? "";
@@ -366,7 +430,135 @@ export async function handleEraImportRequest(
       "failure",
       `Claim.MD/ERA/${body.eraId}`,
       undefined,
-      claimMdFailureAuditReason("retrieveEraData", error),
+      clearinghouseFailureAuditReason("claimmd", "retrieveEraData", error),
+      "claimmd",
+    );
+    return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
+  }
+}
+
+async function importStediEra(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  adapter: StediAdapter,
+  body: {
+    eraId: string;
+    claimReferenceByPcn: Record<string, string>;
+    patientReferenceByPcn: Record<string, string>;
+    insurerReference: string;
+    providerReference?: string;
+    practiceOrgReference?: string;
+    appealDeadlineByPcn?: Record<string, string>;
+  },
+): Promise<ClaimsHandlerResult> {
+  const claimResponseIds: string[] = [];
+  const paymentReconciliationIds: string[] = [];
+  const taskIds: string[] = [];
+  let posted = 0;
+  let denied = 0;
+  let underpaid = 0;
+  let flagged = 0;
+  let paidTotalCents = 0;
+  try {
+    const era = readStediEra(await adapter.retrieveEraData(body.eraId), body.eraId);
+    for (const stediClaim of era.claims) {
+      const eraClaim = claimMdLikeStediEraClaim(stediClaim);
+      const pcn = eraClaim.pcn ?? "";
+      const claimReference = body.claimReferenceByPcn[pcn];
+      const patientReference = body.patientReferenceByPcn[pcn];
+      const taskEra: ClaimMdEraData = {
+        eraid: era.transactionId,
+        paid_date: era.paymentDate,
+        payer_name: era.payerName,
+        payment_method: "Stedi ERA",
+      };
+      if (!claimReference || !patientReference) {
+        const task = await auth.fhir.create(buildEraWorklistTask({
+          code: "era-unmatched",
+          era: taskEra,
+          eraClaim,
+          authoredOn: now(deps),
+          appealDeadline: body.appealDeadlineByPcn?.[pcn],
+          identifierSystem: STEDI_ERA_PAYMENT_SYSTEM,
+        }));
+        taskIds.push(requiredId(task));
+        await audit(deps, auth, "era.unmatched.flagged", "success", ref(task), undefined, undefined, "stedi");
+        flagged += 1;
+        continue;
+      }
+
+      const response = await auth.fhir.create(buildClaimResponseFromStediEra({
+        claimReference,
+        patientReference,
+        insurerReference: body.insurerReference,
+        providerReference: body.providerReference,
+        created: today(deps),
+        transactionId: era.transactionId,
+        payerName: era.payerName,
+        paymentDate: era.paymentDate,
+        traceNumber: era.traceNumber,
+        claim: stediClaim,
+      }));
+      claimResponseIds.push(requiredId(response));
+      const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
+      paidTotalCents += paidCents;
+      const evidence = eraWorklistEvidence(eraClaim, era.transactionId);
+      if (paidCents > 0) {
+        const reconciliation = await auth.fhir.create(buildInsurancePaymentReconciliation({
+          createdIso: now(deps),
+          paymentDate: response.payment?.date ?? today(deps),
+          amountCents: paidCents,
+          claimReference,
+          claimResponseReference: ref(response),
+          insurerReference: body.insurerReference,
+          practiceOrgReference: body.practiceOrgReference,
+          processorTransactionId: era.traceNumber ?? era.transactionId,
+          processorTransactionSystem: STEDI_ERA_PAYMENT_SYSTEM,
+          description: `Stedi ERA ${era.transactionId}`,
+        }));
+        paymentReconciliationIds.push(requiredId(reconciliation));
+        posted += 1;
+      }
+      if (paidCents === 0 || (evidence.shortfallCents > 0 && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))) {
+        const code = paidCents === 0 ? "era-denial" : "era-underpayment";
+        const task = await createAndAuditEraWorklistTask(
+          deps,
+          auth,
+          code,
+          { era: taskEra, eraClaim, patientReference, appealDeadline: body.appealDeadlineByPcn?.[pcn] },
+          response,
+          "stedi",
+        );
+        taskIds.push(requiredId(task));
+        if (code === "era-denial") denied += 1;
+        else underpaid += 1;
+      }
+    }
+    await upsertEraImportRecord(auth, era.transactionId, {
+      importedAt: now(deps),
+      posted,
+      denied,
+      underpaid,
+      flagged,
+      ...(era.payerName ? { payerName: era.payerName } : {}),
+      ...(isoStediDate(era.paymentDate) ? { paidDate: isoStediDate(era.paymentDate) } : {}),
+      paidTotalCents,
+    }, STEDI_ERA_PAYMENT_SYSTEM);
+    await audit(deps, auth, "era.import.completed", "success", `PaymentReconciliation/${paymentReconciliationIds[0] ?? "none"}`, undefined, undefined, "stedi");
+    return {
+      status: 200,
+      body: { eraId: era.transactionId, posted, denied, underpaid, flagged, taskIds, claimResponseIds, paymentReconciliationIds },
+    };
+  } catch (error) {
+    await audit(
+      deps,
+      auth,
+      "era.import.failed",
+      "failure",
+      `Stedi/ERA/${body.eraId}`,
+      undefined,
+      clearinghouseFailureAuditReason("stedi", "retrieveEraData", error),
+      "stedi",
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
   }
@@ -378,11 +570,12 @@ export async function handleEraListRequest(
 ): Promise<ClaimsHandlerResult> {
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
-  if (!deps.adapter) return { status: 503, body: { error: "Claim.MD adapter is not configured." } };
+  const selection = clearinghouseSelection(deps, undefined, "era");
+  if ("status" in selection) return selection;
 
   try {
     const [rawEraList, imports, openTasks] = await Promise.all([
-      deps.adapter.listEras(),
+      selection.adapter.listEras(),
       searchAll<Basic>(auth.fhir, "Basic", {
         code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
         _count: "100",
@@ -393,7 +586,8 @@ export async function handleEraListRequest(
         _count: "100",
       }),
     ]);
-    return { status: 200, body: { items: projectEraBatchReadModel(rawEraList, searchBundle(imports), searchBundle(openTasks)) } };
+    const project = selection.id === "stedi" ? projectStediEraBatchReadModel : projectEraBatchReadModel;
+    return { status: 200, body: { items: project(rawEraList, searchBundle(imports), searchBundle(openTasks)) } };
   } catch (error) {
     const conflict = paginationConflict(error, "ERA");
     if (conflict) return conflict;
@@ -730,6 +924,7 @@ async function createAndAuditClaimRejectedTask(
     claimReference?: string;
     patientReference?: string;
     claimMdMessage: string;
+    adapterName?: "claimmd" | "stedi";
   },
 ): Promise<Task> {
   if (input.claimReference) {
@@ -751,7 +946,7 @@ async function createAndAuditClaimRejectedTask(
     ...input,
     authoredOn: now(deps),
   }));
-  await audit(deps, auth, "claim.rejected.flagged", "success", ref(task), input.patientReference);
+  await audit(deps, auth, "claim.rejected.flagged", "success", ref(task), input.patientReference, undefined, input.adapterName ?? "claimmd");
   return task;
 }
 
@@ -924,14 +1119,15 @@ async function upsertEraImportRecord(
   auth: AuthenticatedClaimsStaff,
   eraId: string,
   summary: Parameters<typeof buildEraImportRecord>[1],
+  identifierSystem = CLAIMMD_ERA_PAYMENT_SYSTEM,
 ): Promise<Basic> {
   const bundle = await auth.fhir.search<Basic>("Basic", {
     code: `${ERA_IMPORT_CODE_SYSTEM}|${ERA_IMPORT_CODE}`,
-    identifier: `${CLAIMMD_ERA_PAYMENT_SYSTEM}|${eraId}`,
+    identifier: `${identifierSystem}|${eraId}`,
     _count: "1",
   });
   const existing = bundle.entry?.find((entry) => entry.resource)?.resource;
-  const resource = buildEraImportRecord(eraId, summary, existing);
+  const resource = buildEraImportRecord(eraId, summary, existing, identifierSystem);
   return existing?.id
     ? auth.fhir.update<Basic>("Basic", existing.id, resource)
     : auth.fhir.create(resource);
@@ -948,6 +1144,7 @@ async function createAndAuditEraWorklistTask(
     appealDeadline?: string;
   },
   response: ClaimResponse,
+  adapterName: "claimmd" | "stedi" = "claimmd",
 ): Promise<Task> {
   const task = await auth.fhir.create(buildEraWorklistTask({
     code,
@@ -957,9 +1154,10 @@ async function createAndAuditEraWorklistTask(
     patientReference: input.patientReference,
     authoredOn: now(deps),
     appealDeadline: input.appealDeadline,
+    identifierSystem: adapterName === "stedi" ? STEDI_ERA_PAYMENT_SYSTEM : CLAIMMD_ERA_PAYMENT_SYSTEM,
   }));
   const eventType = code === "era-denial" ? "era.denial.flagged" : "era.underpayment.flagged";
-  await audit(deps, auth, eventType, "success", ref(task), input.patientReference);
+  await audit(deps, auth, eventType, "success", ref(task), input.patientReference, undefined, adapterName);
   return task;
 }
 
@@ -1028,7 +1226,7 @@ async function audit(
   targetReference: string,
   patientReference?: string,
   reason?: string,
-  adapterName: "claimmd" | "manual-eob" = "claimmd",
+  adapterName: "claimmd" | "stedi" | "manual-eob" = "claimmd",
 ): Promise<void> {
   await deps.recordAudit(buildClaimAuditRecord({
     eventType,
@@ -1066,6 +1264,33 @@ function arrayOf<T>(value: T | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
+function claimMdLikeStediEraClaim(claim: StediEraClaim): ClaimMdEraClaim {
+  return {
+    pcn: claim.claimPaymentInfo.patientControlNumber,
+    payer_icn: claim.claimPaymentInfo.payerClaimControlNumber,
+    total_charge: claim.claimPaymentInfo.totalClaimChargeAmount,
+    total_paid: claim.claimPaymentInfo.claimPaymentAmount,
+    status_code: claim.claimPaymentInfo.claimStatusCode,
+    charge: (claim.serviceLines ?? []).map((line) => ({
+      proc_code: line.servicePaymentInformation?.adjudicatedProcedureCode,
+      charge: line.servicePaymentInformation?.lineItemChargeAmount,
+      allowed: line.serviceSupplementalAmounts?.allowedActual,
+      paid: line.servicePaymentInformation?.lineItemProviderPaymentAmount,
+      adjustment: (line.serviceAdjustments ?? []).map((adjustment) => ({
+        group: adjustment.claimAdjustmentGroupCode,
+        code: adjustment.adjustmentReasonCode1,
+        amount: adjustment.adjustmentAmount1,
+      })),
+    })),
+  };
+}
+
+function isoStediDate(value: string): string | undefined {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const match = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
+}
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -1073,6 +1298,33 @@ function messageOf(error: unknown): string {
 function claimMdFailureAuditReason(operation: string, error: unknown): string {
   const status = claimMdHttpStatus(error);
   return status ? `Claim.MD ${operation} failed with HTTP ${status}` : `Claim.MD ${operation} failed`;
+}
+
+function clearinghouseFailureAuditReason(id: ClearinghouseId, operation: string, error: unknown): string {
+  if (id === "claimmd") return claimMdFailureAuditReason(operation, error);
+  const status = claimMdHttpStatus(error);
+  return status ? `Stedi ${operation} failed with HTTP ${status}` : `Stedi ${operation} failed`;
+}
+
+function clearinghouseSelection(
+  deps: ClaimsHandlerDeps,
+  requested: unknown,
+  operation: "transaction" | "era",
+): { id: ClearinghouseId; adapter: ClaimMdAdapter | StediAdapter } | ClaimsHandlerResult {
+  if (requested !== undefined && !isClearinghouseId(requested)) {
+    return { status: 400, body: { error: "clearinghouse must be claimmd or stedi." } };
+  }
+  const adapters: ClearinghouseAdapters = {
+    ...(deps.adapter ? { claimmd: deps.adapter } : {}),
+    ...deps.adapters,
+  };
+  try {
+    const adapter = selectClearinghouseAdapter(adapters, requested, operation, deps.routingDefaults);
+    const id = requested ?? deps.routingDefaults?.[operation] ?? "claimmd";
+    return { id, adapter: adapter as ClaimMdAdapter | StediAdapter };
+  } catch (error) {
+    return { status: 503, body: { error: messageOf(error) } };
+  }
 }
 
 function claimMdHttpStatus(error: unknown): string | undefined {
