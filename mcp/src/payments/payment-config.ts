@@ -1,6 +1,7 @@
 import type { MedplumClient } from "../fhir-client.js";
 import { createManualCashAdapter } from "./adapters/manual-cash-adapter.js";
 import { createCloverAdapter, type CloverAdapterConfig } from "./adapters/clover-adapter.js";
+import { createStripeAdapter, type StripeAdapterConfig } from "./adapters/stripe-adapter.js";
 import type { PaymentProcessorAdapter } from "./payment-processor-adapter.js";
 
 /**
@@ -16,8 +17,8 @@ import type { PaymentProcessorAdapter } from "./payment-processor-adapter.js";
 
 export type AdapterRegistration =
   | { method: "manual-cash" }
-  | { method: "clover"; config: CloverAdapterConfig };
-// future: | { method: "stripe"; config: StripeAdapterConfig }
+  | { method: "clover"; config: CloverAdapterConfig }
+  | { method: "stripe"; config: StripeAdapterConfig };
 
 export interface PaymentDispatchDeps {
   fetchImpl?: typeof fetch;
@@ -58,6 +59,12 @@ export function createPaymentDispatch(
           return createManualCashAdapter(fhir, { now: deps.now });
         case "clover":
           return createCloverAdapter(registration.config, fhir, {
+            fetchImpl: deps.fetchImpl,
+            now: deps.now,
+            generateId: deps.generateId,
+          });
+        case "stripe":
+          return createStripeAdapter(registration.config, fhir, {
             fetchImpl: deps.fetchImpl,
             now: deps.now,
             generateId: deps.generateId,
