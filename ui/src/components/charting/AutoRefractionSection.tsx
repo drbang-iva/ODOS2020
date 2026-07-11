@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -88,7 +89,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const refractionFields = definition?.definitions.autoRefraction.fields ?? {};
   const keratometryFields = definition?.definitions.autoKeratometry.fields ?? {};
   const sourceTypes = useMemo(() => activeOptions(refractionFields.sourceType), [refractionFields.sourceType]);
-  const powerOptions = useMemo(() => numericOptions(refractionFields.sphere, -20, 20, 0.25), [refractionFields.sphere]);
+  const sphereOptions = useMemo(() => numericOptions(undefined, -16, 12, 0.25).reverse(), []);
+  const cylinderOptions = useMemo(() => numericOptions(undefined, -8, 0, 0.25).reverse(), []);
   const axisOptions = useMemo(() => numericOptions(refractionFields.axis, 0, 180, 1), [refractionFields.axis]);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
@@ -177,8 +179,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           {EYES.map((eye) => (
             <div key={eye} className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
               <div className="text-sm font-semibold text-white">{eye}</div>
-              <PowerSelect value={eyes[eye].sphere} options={powerOptions} onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} />
-              <PowerSelect value={eyes[eye].cylinder} options={powerOptions} onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} />
+              <PowerDropdown value={eyes[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} formatOption={formatDiopterOption} />
+              <PowerDropdown value={eyes[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} formatOption={formatDiopterOption} />
               <select
                 value={eyes[eye].axis}
                 onChange={(event) => updateEye(eye, { axis: event.target.value })}
@@ -242,25 +244,6 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   );
 }
 
-function PowerSelect({ value, onChange, options, ariaLabel }: {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  ariaLabel: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      aria-label={ariaLabel}
-      className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-    >
-      <option value="">Select</option>
-      {options.map((option) => <option key={option} value={option}>{formatPowerOption(Number(option))}</option>)}
-    </select>
-  );
-}
-
 function NumberInput({ value, onChange, field, fallback, ariaLabel }: {
   value: string;
   onChange: (value: string) => void;
@@ -280,6 +263,10 @@ function NumberInput({ value, onChange, field, fallback, ariaLabel }: {
       className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
     />
   );
+}
+
+function formatDiopterOption(option: string): string {
+  return formatPowerOption(Number(option));
 }
 
 function emptyEye(): EyeState {

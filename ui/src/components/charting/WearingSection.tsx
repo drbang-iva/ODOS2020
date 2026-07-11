@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
 
@@ -96,7 +97,9 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const eyeglassTypes = useMemo(() => activeOptions(fields.eyeglassType), [fields.eyeglassType]);
   const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
   const prismBases = useMemo(() => activeOptions(fields.prismBase), [fields.prismBase]);
-  const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
+  const sphereOptions = useMemo(() => numericOptions(undefined, -16, 12, 0.25).reverse(), []);
+  const cylinderOptions = useMemo(() => numericOptions(undefined, -8, 0, 0.25).reverse(), []);
+  const addOptions = useMemo(() => numericOptions(undefined, 0.5, 5, 0.25), []);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
   const prismOptions = useMemo(() => numericOptions(fields.prismAmount, 0.25, 20, 0.25), [fields.prismAmount]);
 
@@ -250,8 +253,8 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
                   {EYES.map((eye) => (
                     <div key={eye} className="grid grid-cols-[54px_repeat(4,105px)_110px_100px_repeat(2,minmax(220px,1fr))] items-center gap-2 border-t border-white/10 px-4 py-3">
                       <div className="text-sm font-semibold text-white">{eye}</div>
-                      <PowerSelect value={pair[eye].sphere} options={powerOptions} onChange={(value) => updateEye(pair.id, eye, { sphere: value })} ariaLabel={`${eye} sphere`} />
-                      <PowerSelect value={pair[eye].cylinder} options={powerOptions} onChange={(value) => updateEye(pair.id, eye, { cylinder: value })} ariaLabel={`${eye} cylinder`} />
+                      <PowerDropdown value={pair[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { sphere: value })} ariaLabel={`${eye} sphere`} formatOption={formatDiopterOption} />
+                      <PowerDropdown value={pair[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { cylinder: value })} ariaLabel={`${eye} cylinder`} formatOption={formatDiopterOption} />
                       <select
                         value={pair[eye].axis}
                         onChange={(event) => updateEye(pair.id, eye, { axis: event.target.value })}
@@ -261,8 +264,8 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
                         <option value="">Select</option>
                         {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
                       </select>
-                      <PowerSelect value={pair[eye].add} options={powerOptions} onChange={(value) => updateEye(pair.id, eye, { add: value })} ariaLabel={`${eye} add`} />
-                      <PowerSelect value={pair[eye].prismAmount} options={prismOptions} onChange={(value) => updateEye(pair.id, eye, { prismAmount: value })} ariaLabel={`${eye} prism amount`} />
+                      <PowerDropdown value={pair[eye].add} options={addOptions} defaultValue="0.50" onChange={(value) => updateEye(pair.id, eye, { add: value })} ariaLabel={`${eye} add`} formatOption={formatDiopterOption} />
+                      <PowerDropdown value={pair[eye].prismAmount} options={prismOptions} defaultValue="0.25" onChange={(value) => updateEye(pair.id, eye, { prismAmount: value })} ariaLabel={`${eye} prism amount`} />
                       <select
                         value={pair[eye].prismBase}
                         onChange={(event) => updateEye(pair.id, eye, { prismBase: event.target.value })}
@@ -288,25 +291,6 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   );
 }
 
-function PowerSelect({ value, onChange, options, ariaLabel }: {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  ariaLabel: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      aria-label={ariaLabel}
-      className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-    >
-      <option value="">Select</option>
-      {options.map((option) => <option key={option} value={option}>{formatPowerOption(Number(option))}</option>)}
-    </select>
-  );
-}
-
 function SectionFooter({ error, saved, saving, onSave }: {
   error: string | null;
   saved: SectionSaveStatus | null;
@@ -329,6 +313,10 @@ function SectionFooter({ error, saved, saving, onSave }: {
       </button>
     </div>
   );
+}
+
+function formatDiopterOption(option: string): string {
+  return formatPowerOption(Number(option));
 }
 
 function emptyPair(eyeglassType = ""): PairState {

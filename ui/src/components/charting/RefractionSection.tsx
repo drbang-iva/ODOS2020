@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
@@ -301,12 +302,14 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                     <div key={eye} className="grid grid-cols-[54px_repeat(4,105px)_repeat(3,minmax(220px,1fr))_100px] items-center gap-2 border-t border-white/10 px-4 py-3">
                       <div className="text-sm font-semibold text-white">{eye}</div>
                       {(["sphere", "cylinder", "add"] as const).slice(0, 2).map((field) => (
-                        <PowerSelect
+                        <PowerDropdown
                           key={field}
                           value={block[eye][field]}
                           onChange={(value) => updateEye(block.id, eye, { [field]: value })}
                           options={powerOptions}
+                          defaultValue="0.00"
                           ariaLabel={`${eye} ${field}`}
+                          formatOption={formatDiopterOption}
                         />
                       ))}
                       <select
@@ -318,11 +321,13 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                         <option value="">Select</option>
                         {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
                       </select>
-                      <PowerSelect
+                      <PowerDropdown
                         value={block[eye].add}
                         onChange={(value) => updateEye(block.id, eye, { add: value })}
                         options={powerOptions}
+                        defaultValue="0.00"
                         ariaLabel={`${eye} add`}
+                        formatOption={formatDiopterOption}
                       />
                       <VaValueSelect
                         value={block[eye].distanceVisualAcuity}
@@ -396,32 +401,6 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   );
 }
 
-function PowerSelect({
-  value,
-  onChange,
-  options,
-  ariaLabel,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  ariaLabel: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      aria-label={ariaLabel}
-      className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-    >
-      <option value="">Select</option>
-      {options.map((option) => (
-        <option key={option} value={option}>{formatPowerOption(Number(option))}</option>
-      ))}
-    </select>
-  );
-}
-
 function SectionFooter({
   error,
   saved,
@@ -456,6 +435,10 @@ function SectionFooter({
       </button>
     </div>
   );
+}
+
+function formatDiopterOption(option: string): string {
+  return formatPowerOption(Number(option));
 }
 
 function emptyBlock(type = ""): BlockState {
