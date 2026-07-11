@@ -44,6 +44,11 @@ import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-ro
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
 import {
+  createLabOrderDispatch,
+  labOrderRoutingFromEnv,
+} from "./lab-orders/lab-order-dispatch.js";
+import { registerLabOrderRoutes } from "./lab-orders/lab-order-routes.js";
+import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
 } from "./payments/payment-endpoint.js";
@@ -5489,6 +5494,12 @@ async function main(): Promise<void> {
       // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
       // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
+      const labOrderRouting = labOrderRoutingFromEnv(process.env);
+      const labOrderDispatch = createLabOrderDispatch([{ vendor: "manual" }], {
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
+      });
       const claimMdConfig = claimMdConfigFromEnv(process.env);
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
       const stediConfig = stediConfigFromEnv(process.env);
@@ -5533,6 +5544,11 @@ async function main(): Promise<void> {
         recordAudit: async (row: OsodAuditEventRecord) => {
           await auditRuntime.record(row, () => undefined);
         },
+      };
+      const labOrderHandlerDeps = {
+        authenticate: authenticateStaffRoute,
+        dispatch: labOrderDispatch,
+        routingDefaults: labOrderRouting,
       };
 
       app.post("/clinical-graph/patients/:patientId/assign-provider", async (req, res) => {
@@ -6023,6 +6039,10 @@ async function main(): Promise<void> {
       registerPatientPaymentRoutes(app, {
         authenticateService: authenticateWithMedplum,
         handlers: paymentCreditDeps,
+      });
+      registerLabOrderRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        handlers: labOrderHandlerDeps,
       });
       registerPatientInsuranceRoutes(app, authenticateWithMedplum, {
         authenticate: authenticateStaffRoute,
