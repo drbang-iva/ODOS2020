@@ -15,6 +15,7 @@ import {
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
+import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 
 export interface AuthenticatedInsuranceStaff {
   staffReference: string;
@@ -216,7 +217,15 @@ async function authenticateInsuranceStaff(
   deps: PatientInsuranceHandlerDeps,
   authHeader: string | undefined,
 ): Promise<AuthenticatedInsuranceStaff | PatientInsuranceHandlerResult> {
-  const staff = await deps.authenticate(authHeader);
+  let staff: AuthenticatedInsuranceStaff | null;
+  try {
+    staff = await deps.authenticate(authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { status: 503, body: { error: "Patient insurance service temporarily unavailable." } };
+    }
+    throw error;
+  }
   if (!staff) return { status: 401, body: { error: "Authentication required to manage patient insurance." } };
   if (!PRACTICE_ROLE_IDS.includes(staff.actorRole as PracticeRoleId)) {
     return { status: 403, body: { error: "claims.manage role required" } };

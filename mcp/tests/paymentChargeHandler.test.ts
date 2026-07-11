@@ -5,6 +5,7 @@ import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import { handleChargeRequest, type ChargeHandlerDeps } from "../src/payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { CLOVER_SANDBOX_BASE_URL } from "../src/payments/adapters/clover-adapter.js";
+import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 
 const STAFF = { staffReference: "Practitioner/staff1", actorRole: "front-desk" as const };
 
@@ -125,6 +126,30 @@ test("a missing/invalid token is rejected 401 before any adapter call or audit",
 
   assert.equal(res.status, 401);
   assert.equal(charged, false);
+  assert.equal(audits.length, 0);
+});
+
+test("payment charge maps an unavailable staff-role service to a clean 503", async () => {
+  let downstreamCalls = 0;
+  const { audits, deps: d } = deps({
+    authenticate: async () => { throw new StaffRoleServiceUnavailableError(new Error("refresh failed")); },
+    dispatch: {
+      methods: () => [],
+      getAdapter: () => {
+        downstreamCalls += 1;
+        throw new Error("unexpected adapter lookup");
+      },
+    },
+    recordAudit: async () => { downstreamCalls += 1; },
+  });
+
+  const res = await handleChargeRequest(d, { authHeader: "Bearer good", body: BODY });
+
+  assert.deepEqual(res, {
+    status: 503,
+    body: { error: "Payment service temporarily unavailable." },
+  });
+  assert.equal(downstreamCalls, 0);
   assert.equal(audits.length, 0);
 });
 

@@ -25,6 +25,7 @@ import {
   handleVisionBenefitsRead,
   type PatientInsuranceHandlerDeps,
 } from "../src/insurance/patient-insurance-handlers.js";
+import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 
 test("Claim Search completes multiple pages, 409s past 1,000, and fails on an unfollowable next link", async () => {
   const claims = [claim("claim-1", "patient-1"), claim("claim-2", "patient-2")];
@@ -186,6 +187,28 @@ test("patient insurance read completes both searches, 409s past 1,000, and fails
   assert.equal(failed.status, 502);
   assert.match((failed.body as { error: string }).error, /next link for Coverage, but the client cannot fetch it/);
   assert.equal("coverages" in (failed.body as object), false);
+});
+
+test("patient insurance read maps an unavailable staff-role service to a clean 503", async () => {
+  let downstreamCalls = 0;
+  const fixture = insuranceDeps(pagedFhir(() => {
+    downstreamCalls += 1;
+    return [[]];
+  }));
+  const result = await handlePatientInsuranceRead({
+    ...fixture,
+    authenticate: async () => { throw new StaffRoleServiceUnavailableError(new Error("refresh failed")); },
+    recordAudit: async () => { downstreamCalls += 1; },
+  }, {
+    authHeader: "Bearer good",
+    patientReference: "Patient/patient-1",
+  });
+
+  assert.deepEqual(result, {
+    status: 503,
+    body: { error: "Patient insurance service temporarily unavailable." },
+  });
+  assert.equal(downstreamCalls, 0);
 });
 
 test("vision benefits read completes multiple pages, 409s past 1,000, and fails closed without next-link support", async () => {

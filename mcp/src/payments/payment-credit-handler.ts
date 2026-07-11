@@ -21,6 +21,7 @@ import {
   type ChargeHandlerResult,
 } from "./payment-charge-handler.js";
 import type { PaymentDispatch } from "./payment-config.js";
+import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 
 export interface PaymentCreditHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
@@ -168,7 +169,15 @@ export async function handleUnappliedCreditsRequest(
   deps: Pick<PaymentCreditHandlerDeps, "authenticate">,
   input: { authHeader: string | undefined; patientReference?: string },
 ): Promise<ChargeHandlerResult> {
-  const staff = await deps.authenticate(input.authHeader);
+  let staff: AuthenticatedStaff | null;
+  try {
+    staff = await deps.authenticate(input.authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { status: 503, body: { error: "Payment service temporarily unavailable." } };
+    }
+    throw error;
+  }
   if (!staff) return { status: 401, body: { error: "Authentication required to view payments." } };
   if (!staffMayCharge(staff.actorRole)) {
     return { status: 403, body: { error: "payment.charge role required" } };
@@ -292,7 +301,15 @@ async function authorizedStaff(
   deps: Pick<PaymentCreditHandlerDeps, "authenticate">,
   authHeader: string | undefined,
 ): Promise<{ staff: AuthenticatedStaff } | { result: ChargeHandlerResult }> {
-  const staff = await deps.authenticate(authHeader);
+  let staff: AuthenticatedStaff | null;
+  try {
+    staff = await deps.authenticate(authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { result: { status: 503, body: { error: "Payment service temporarily unavailable." } } };
+    }
+    throw error;
+  }
   if (!staff) {
     return { result: { status: 401, body: { error: "Authentication required to manage payments." } } };
   }
