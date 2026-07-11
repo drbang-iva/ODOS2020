@@ -8,3 +8,28 @@ export function authHeaders(): Record<string, string> {
 export function clinicalGraphApiBase(): string {
   return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
+
+export async function submitDiagnosisPick(input: {
+  encounterReference: string;
+  diagnosisKey: string;
+  action: "possible" | "confirm" | "discard";
+  findingInstanceId?: string;
+  laterality?: "OD" | "OS" | "OU";
+  source?: "rule" | "mapping" | "catalog-search";
+}): Promise<void> {
+  const encounterId = input.encounterReference.replace(/^Encounter\//, "");
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      diagnosisKey: input.diagnosisKey,
+      action: input.action,
+      ...(input.findingInstanceId ? { findingInstanceId: input.findingInstanceId } : {}),
+      ...(input.laterality ? { laterality: input.laterality } : {}),
+      ...(input.source ? { source: input.source } : {}),
+    }),
+  });
+  const body = await response.json() as { error?: string };
+  if (!response.ok) throw new Error(body.error ?? `Diagnosis pick failed: ${response.status}`);
+  window.dispatchEvent(new CustomEvent("osod:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
+}

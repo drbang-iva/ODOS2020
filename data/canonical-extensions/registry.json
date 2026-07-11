@@ -81,6 +81,12 @@
       "sliceConsumer": "dx-link-l1"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-dx-pick-tally-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "dx-link-l2"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",
