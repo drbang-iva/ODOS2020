@@ -188,6 +188,15 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
   });
   assert.equal(result.status, 422);
   assert.match(String((result.body as { error: string }).error), /requires laterality/);
+  const discard = await handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: { diagnosisKey: "myopia", action: "discard" },
+  });
+  assert.equal(discard.status, 422);
+  assert.match(String((discard.body as { error: string }).error), /requires laterality/);
   const explicit = await handleDiagnosisPickRequest({
     authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
     now: () => "2026-07-11T16:00:00.000Z",
@@ -204,6 +213,46 @@ test("direct laterality-required picks ask once, then write no fabricated eviden
     const source = readFileSync(new URL(`../src/clinical-graph/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /handleDiagnosisPickRequest|diagnosis-picks/);
   }
+});
+
+test("a concurrent Condition update returns 409 without silently retrying the clinician decision", async () => {
+  class ConcurrentUpdateFhir extends MemoryFhir {
+    conflictOnConditionUpdate = false;
+
+    override async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
+      if (resourceType === "Condition" && this.conflictOnConditionUpdate) {
+        this.conflictOnConditionUpdate = false;
+        const current = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id)!;
+        current.meta = { ...(current.meta ?? {}), versionId: String(Number(current.meta?.versionId ?? "0") + 1) };
+      }
+      return super.update(resourceType, id, resource, headers);
+    }
+  }
+
+  const fhir = new ConcurrentUpdateFhir();
+  const seeded = diagnosisPickFhir();
+  fhir.resources.push(...seeded.resources);
+  const pick = (action: "possible" | "confirm") => handleDiagnosisPickRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir }),
+    now: () => "2026-07-11T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e1" },
+    body: {
+      findingInstanceId: "Observation/finding-od",
+      diagnosisKey: "glaucoma_suspect_open_angle_low",
+      action,
+    },
+  });
+
+  assert.equal((await pick("possible")).status, 201);
+  fhir.conflictOnConditionUpdate = true;
+  const result = await pick("confirm");
+  assert.equal(result.status, 409);
+  assert.match(String((result.body as { error: string }).error), /reload and retry/);
+  const condition = fhir.resources.find((resource): resource is Condition => resource.resourceType === "Condition")!;
+  assert.equal(condition.verificationStatus?.coding?.[0]?.code, "provisional");
+  assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "update").length, 0);
 });
 
 test("laterality-keyed picks keep both eyes distinct, escalate one eye, and discard only its Condition", async () => {

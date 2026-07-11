@@ -77,7 +77,7 @@ export async function handleDiagnosisPickRequest(
 
   const laterality = normalizeLaterality(observationLaterality(observation) ?? parsed.data.laterality);
   const code = resolveConditionCode(diagnosis, laterality);
-  if (diagnosis.lateralityRequired && (!laterality || !code) && parsed.data.action !== "discard") {
+  if (diagnosis.lateralityRequired && (!laterality || !code)) {
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
   }
   const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality);
@@ -102,25 +102,35 @@ export async function handleDiagnosisPickRequest(
     : parsed.data.action === "possible" ? "provisional" : "confirmed";
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const evidenceReference = observation?.id ? `Observation/${observation.id}` : undefined;
-  const condition = existing
-    ? await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, code, verificationStatus, evidenceReference)
-    : await staff.fhir.create<Condition>(
-        buildEncounterDiagnosisCondition({
-          patientReference,
-          encounterReference,
-          code: code
-            ? { system: "http://hl7.org/fhir/sid/icd-10-cm", code, display: diagnosis.icd10 && "code" in diagnosis.icd10 ? diagnosis.icd10.display ?? diagnosis.display : diagnosis.display }
-            : { text: diagnosis.display },
-          verificationStatus,
-          recordedDate: recordedAt,
-          identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue }],
-          ...(evidenceReference ? { evidenceObservationReferences: [evidenceReference] } : {}),
-        }),
-        {
-          ...DIAGNOSIS_PICK_WRITE_HEADERS,
-          "If-None-Exist": `identifier=${DIAGNOSIS_KEY_IDENTIFIER_SYSTEM}|${compositeIdentifierValue}`,
-        },
-      );
+  let condition: Condition;
+  if (existing) {
+    try {
+      condition = await updateCondition(staff.fhir, existing, diagnosis, compositeIdentifierValue, code, verificationStatus, evidenceReference);
+    } catch (error) {
+      if (isConflict(error)) {
+        return { status: 409, body: { error: "This diagnosis was modified concurrently — reload and retry." } };
+      }
+      throw error;
+    }
+  } else {
+    condition = await staff.fhir.create<Condition>(
+      buildEncounterDiagnosisCondition({
+        patientReference,
+        encounterReference,
+        code: code
+          ? { system: "http://hl7.org/fhir/sid/icd-10-cm", code, display: diagnosis.icd10 && "code" in diagnosis.icd10 ? diagnosis.icd10.display ?? diagnosis.display : diagnosis.display }
+          : { text: diagnosis.display },
+        verificationStatus,
+        recordedDate: recordedAt,
+        identifiers: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: compositeIdentifierValue }],
+        ...(evidenceReference ? { evidenceObservationReferences: [evidenceReference] } : {}),
+      }),
+      {
+        ...DIAGNOSIS_PICK_WRITE_HEADERS,
+        "If-None-Exist": `identifier=${DIAGNOSIS_KEY_IDENTIFIER_SYSTEM}|${compositeIdentifierValue}`,
+      },
+    );
+  }
 
   const conditionReference = `Condition/${condition.id}`;
   const provenance = await staff.fhir.create<Provenance>(buildProvenance({
@@ -271,6 +281,11 @@ function staffMay(role: PracticeRoleId, action: "chart.write"): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isConflict(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(errorMessage(error));
 }
 
 function errorMessage(error: unknown): string {
