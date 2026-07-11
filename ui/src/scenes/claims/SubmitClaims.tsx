@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Coverage, Patient } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
@@ -14,6 +14,7 @@ import {
   initialClaimDraft,
   removeChargeLine,
   removeDiagnosisLine,
+  resolveSubscriberFromCoverage,
   submitProfessionalClaim,
   subscriberFromCoverage,
   validateClaimDraft,
@@ -38,6 +39,9 @@ export function SubmitClaims() {
   const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [coverageLoading, setCoverageLoading] = useState(false);
   const [coverageError, setCoverageError] = useState<string>();
+  const [subscriberLoading, setSubscriberLoading] = useState(false);
+  const [subscriberError, setSubscriberError] = useState<string>();
+  const subscriberSelection = useRef(0);
   const [showCoverageEntry, setShowCoverageEntry] = useState(false);
   const [coverageEntry, setCoverageEntry] = useState<CoverageEntryInput>(() => emptyCoverageEntry(today));
   const [step, setStep] = useState<Step>("compose");
@@ -85,6 +89,9 @@ export function SubmitClaims() {
     setChoosingPatient(false);
     setCoverages([]);
     setShowCoverageEntry(false);
+    subscriberSelection.current += 1;
+    setSubscriberError(undefined);
+    setSubscriberLoading(false);
     setCoverageEntry(emptyCoverageEntry(today, `Patient/${selected.id}`));
     setDraft((current) => ({
       ...current,
@@ -96,14 +103,30 @@ export function SubmitClaims() {
     }));
   };
 
-  const selectCoverage = (coverage: Coverage) => {
+  const selectCoverage = async (coverage: Coverage) => {
     if (!coverage.id || !patient) return;
+    const selection = subscriberSelection.current + 1;
+    subscriberSelection.current = selection;
+    const coverageReference = `Coverage/${coverage.id}`;
+    setSubscriberLoading(true);
+    setSubscriberError(undefined);
     setDraft((current) => ({
       ...current,
-      coverageReference: `Coverage/${coverage.id}`,
+      coverageReference,
       insurerReference: coverage.payor[0]?.reference ?? "",
       subscriber: subscriberFromCoverage(coverage, patient),
     }));
+    const resolution = await resolveSubscriberFromCoverage(
+      coverage,
+      patient,
+      (id) => fhir.read<RelatedPerson>("RelatedPerson", id),
+    );
+    if (subscriberSelection.current !== selection) return;
+    setDraft((current) => current.coverageReference === coverageReference
+      ? { ...current, subscriber: resolution.subscriber }
+      : current);
+    setSubscriberError(resolution.error);
+    setSubscriberLoading(false);
   };
 
   const createCoverage = async () => {
@@ -116,7 +139,7 @@ export function SubmitClaims() {
     try {
       const created = await fhir.create(buildCoverageResource(coverageEntry), "submit-claims-coverage");
       setCoverages((current) => [created, ...current]);
-      selectCoverage(created);
+      await selectCoverage(created);
       setShowCoverageEntry(false);
     } catch (cause) {
       setCoverageError(cause instanceof Error ? cause.message : String(cause));
@@ -157,6 +180,9 @@ export function SubmitClaims() {
     setChoosingPatient(true);
     setCoverages([]);
     setCoverageEntry(emptyCoverageEntry(today));
+    subscriberSelection.current += 1;
+    setSubscriberError(undefined);
+    setSubscriberLoading(false);
     setReviewClaim(undefined);
     setErrors([]);
     setSubmissionError(undefined);
@@ -251,7 +277,9 @@ export function SubmitClaims() {
                   <PersonFields person={draft.patient} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
                 </Section>
 
-                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: enter the subscriber manually."}>
+                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
+                  {subscriberError && <div className="mb-3"><SubmissionAlert message={subscriberError} /></div>}
+                  {subscriberLoading && <p className="mb-3 text-sm text-white/45">Loading subscriber record…</p>}
                   {selectedCoverage && coverageIsSelf(selectedCoverage) ? (
                     <PersonSummary person={draft.subscriber} />
                   ) : (
@@ -305,7 +333,7 @@ export function CoverageChoices({
 }: {
   coverages: readonly Coverage[];
   selectedReference: string;
-  onSelect: (coverage: Coverage) => void;
+  onSelect: (coverage: Coverage) => void | Promise<void>;
 }) {
   return coverages.map((coverage) => (
     <label key={coverage.id} className="flex cursor-pointer items-start gap-3 rounded border border-white/10 bg-black/20 p-3">
@@ -430,7 +458,7 @@ function ProviderFields({ provider, onChange }: { provider: ClaimMdProviderInput
   );
 }
 
-function PersonFields({ person, onChange, includePolicy = false }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean }) {
+export function PersonFields({ person, onChange, includePolicy = false }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean }) {
   const set = (key: keyof ClaimMdPersonInput, value: string) => onChange({ ...person, [key]: value });
   return (
     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
