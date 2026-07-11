@@ -87,6 +87,12 @@
       "sliceConsumer": "dx-link-l2"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-weno-mapping-json",
+      "namespace": "weno",
+      "status": "active",
+      "sliceConsumer": "weno-ez-adapter"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",
