@@ -11,6 +11,7 @@ import { AuthorizeConsent } from "./smart/authorize-consent";
 import { GrantsManagement } from "./smart/grants-management";
 import { OpticalFrames } from "./scenes/OpticalFrames";
 import { OpticalOrder } from "./scenes/OpticalOrder";
+import { LabOrdersWorklist } from "./scenes/LabOrdersWorklist";
 import { SchedulerDayGrid } from "./scenes/SchedulerDayGrid";
 import { FrontDeskCockpit } from "./scenes/frontdesk/FrontDeskCockpit";
 import { ClaimsWorklist } from "./scenes/claims/ClaimsWorklist";
@@ -113,6 +114,8 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
       return <OpticalFrames route="lookup" />;
     case "/dispensary/orders":
       return <OpticalOrder />;
+    case "/dispensary/lab-orders":
+      return <LabOrdersWorklist />;
     case "/schedule/day":
     case "/scheduler/day":
       return <SchedulerDayGrid />;

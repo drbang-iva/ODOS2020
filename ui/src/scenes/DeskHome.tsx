@@ -61,6 +61,7 @@ const SECTIONS = [
   { label: "Every day", items: [
     ["Reports", "Sales, production, and aging", "/billing/claims/reports/accounts-receivable"],
     ["Claims workbench", "Transmission, remits, and denial worklists", "/billing/claims/worklist"],
+    ["Lab orders", "Track orders sent to the lab", "/dispensary/lab-orders"],
     ["Patient recall", "Recall workflow", ""],
     ["Statements & letters", "Patient statements and batch letters", ""],
     ["OpenDesk", "Connected communications workspace", ""],

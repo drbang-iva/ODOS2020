@@ -45,6 +45,7 @@ import {
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
 import { openPrintWindow } from "../lib/print-window";
+import { advanceLabOrderTransport, cancelLabOrder, submitLabOrder } from "../lib/lab-order-transport";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -158,6 +159,9 @@ export function OpticalOrder() {
   const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
   const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
+  const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
+  const [labTransportState, setLabTransportState] = useState<string | null>(null);
+  const [labOrderBusy, setLabOrderBusy] = useState(false);
   const [receiptSourceIds, setReceiptSourceIds] = useState<ReceiptSourceIds | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -570,6 +574,57 @@ export function OpticalOrder() {
     setStatus(`Lab order JSON downloaded for ${input.lab}.`);
   }
 
+  async function sendLabOrder() {
+    const input = assembleLabOrderInput();
+    if (!input || !createdTaskId) return;
+    setLabOrderBusy(true);
+    setStatus("");
+    try {
+      const result = await submitLabOrder({
+        order: buildLabOrder(input),
+        orderTaskReference: `Task/${createdTaskId}`,
+        lab: header.lab.trim(),
+      });
+      setLabOrderReference(result.labOrderReference);
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${result.labOrderReference} sent to ${input.lab}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
+  async function markLabOrderReceived() {
+    if (!labOrderReference) return;
+    setLabOrderBusy(true);
+    setError(null);
+    try {
+      const result = await advanceLabOrderTransport(labOrderReference, "received");
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${labOrderReference} marked received.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
+  async function cancelActiveLabOrder() {
+    if (!labOrderReference) return;
+    setLabOrderBusy(true);
+    setError(null);
+    try {
+      const result = await cancelLabOrder(labOrderReference);
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${labOrderReference} cancelled.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg-deep text-white">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4">
@@ -662,6 +717,10 @@ export function OpticalOrder() {
               attachedFrame={attachedLabFrame}
               capture={labOrderCapture}
               canPrint={canPrintLabSheet}
+              canSend={Boolean(canPrintLabSheet && createdTaskId)}
+              labOrderReference={labOrderReference}
+              labTransportState={labTransportState}
+              busy={labOrderBusy}
               onHeaderChange={setHeader}
               onCapturePatch={patchLabOrderCapture}
               onTreatmentChange={updateTreatment}
@@ -670,6 +729,9 @@ export function OpticalOrder() {
               onFittingChange={updateFitting}
               onPrint={printLabSheet}
               onDownload={downloadLabOrderJson}
+              onSend={() => void sendLabOrder()}
+              onMarkReceived={() => void markLabOrderReceived()}
+              onCancel={() => void cancelActiveLabOrder()}
             />
           </div>
         </div>
@@ -1029,6 +1091,10 @@ function LabOrderPanel({
   attachedFrame,
   capture,
   canPrint,
+  canSend,
+  labOrderReference,
+  labTransportState,
+  busy,
   onHeaderChange,
   onCapturePatch,
   onTreatmentChange,
@@ -1037,6 +1103,9 @@ function LabOrderPanel({
   onFittingChange,
   onPrint,
   onDownload,
+  onSend,
+  onMarkReceived,
+  onCancel,
 }: {
   header: OrderHeaderState;
   patientReference: string;
@@ -1044,6 +1113,10 @@ function LabOrderPanel({
   attachedFrame: AttachedFrame | undefined;
   capture: LabOrderCaptureState;
   canPrint: boolean;
+  canSend: boolean;
+  labOrderReference: string | null;
+  labTransportState: string | null;
+  busy: boolean;
   onHeaderChange: (next: OrderHeaderState) => void;
   onCapturePatch: (patch: Partial<LabOrderCaptureState>) => void;
   onTreatmentChange: (index: number, value: string) => void;
@@ -1052,7 +1125,13 @@ function LabOrderPanel({
   onFittingChange: (eye: "od" | "os", field: keyof LabOrderEyeFittingState, value: string) => void;
   onPrint: () => void;
   onDownload: () => void;
+  onSend: () => void;
+  onMarkReceived: () => void;
+  onCancel: () => void;
 }) {
+  const activeLabOrder = Boolean(
+    labOrderReference && labTransportState !== "received" && labTransportState !== "cancelled",
+  );
   return (
     <section className="rounded border border-white/10 p-3">
       <div className="mb-3 text-sm font-semibold">Lab Sheet</div>
@@ -1140,16 +1219,53 @@ function LabOrderPanel({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 md:grid-cols-2">
-        <button className="sidebar-button" disabled={!canPrint} onClick={onPrint}>
-          Print Lab Sheet
-        </button>
-        <button className="sidebar-button" disabled={!canPrint} onClick={onDownload}>
-          Download Order (JSON)
-        </button>
-      </div>
+      <LabOrderActionButtons
+        canPrint={canPrint}
+        canSend={canSend}
+        activeLabOrder={activeLabOrder}
+        busy={busy}
+        onPrint={onPrint}
+        onDownload={onDownload}
+        onSend={onSend}
+        onMarkReceived={onMarkReceived}
+        onCancel={onCancel}
+      />
     </section>
   );
+}
+
+export function LabOrderActionButtons({
+  canPrint,
+  canSend,
+  activeLabOrder,
+  busy,
+  onPrint,
+  onDownload,
+  onSend,
+  onMarkReceived,
+  onCancel,
+}: {
+  canPrint: boolean;
+  canSend: boolean;
+  activeLabOrder: boolean;
+  busy: boolean;
+  onPrint: () => void;
+  onDownload: () => void;
+  onSend: () => void;
+  onMarkReceived: () => void;
+  onCancel: () => void;
+}) {
+  return <>
+    <div className="mt-3 grid gap-2 md:grid-cols-3">
+      <button className="sidebar-button" disabled={!canPrint} onClick={onPrint}>Print Lab Sheet</button>
+      <button className="sidebar-button" disabled={!canPrint} onClick={onDownload}>Download Order (JSON)</button>
+      <button className="sidebar-button" disabled={!canSend || activeLabOrder || busy} onClick={onSend}>Send to Lab</button>
+    </div>
+    {activeLabOrder ? <div className="mt-2 grid gap-2 md:grid-cols-2">
+      <button className="sidebar-button py-1" disabled={busy} onClick={onMarkReceived}>Mark Received</button>
+      <button className="sidebar-button py-1" disabled={busy} onClick={onCancel}>Cancel Lab Order</button>
+    </div> : null}
+  </>;
 }
 
 function FittingEyeFields({
