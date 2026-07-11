@@ -100,6 +100,13 @@ export interface ResolvedStaffRole {
   role: PracticeRoleId;
 }
 
+export class StaffRoleServiceUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super("Staff role service is temporarily unavailable.", { cause });
+    this.name = "StaffRoleServiceUnavailableError";
+  }
+}
+
 /**
  * Resolve a caller to their verified staff identity AND their OSOD role (decision 2026-07-05 §3).
  *
@@ -115,6 +122,7 @@ export async function resolveStaffRole(opts: {
   baseUrl: string;
   authHeader: string | undefined;
   serviceClient: Pick<MedplumClient, "search" | "read">;
+  refreshServiceClient?: () => Promise<void>;
   fetchImpl?: typeof fetch;
 }): Promise<ResolvedStaffRole | null> {
   const verified = await verifyMedplumStaffToken({
@@ -126,22 +134,38 @@ export async function resolveStaffRole(opts: {
     return null;
   }
 
-  const memberships: Bundle<ProjectMembership> = await opts.serviceClient.search<ProjectMembership>(
+  try {
+    return await resolveRoleWithServiceClient(opts.serviceClient, verified.staffReference);
+  } catch (error) {
+    if (!isUnauthorizedServiceError(error)) throw error;
+    if (!opts.refreshServiceClient) throw new StaffRoleServiceUnavailableError(error);
+    try {
+      await opts.refreshServiceClient();
+      return await resolveRoleWithServiceClient(opts.serviceClient, verified.staffReference);
+    } catch (retryError) {
+      throw new StaffRoleServiceUnavailableError(retryError);
+    }
+  }
+}
+
+async function resolveRoleWithServiceClient(
+  serviceClient: Pick<MedplumClient, "search" | "read">,
+  staffReference: string,
+): Promise<ResolvedStaffRole | null> {
+  const memberships: Bundle<ProjectMembership> = await serviceClient.search<ProjectMembership>(
     "ProjectMembership",
-    { profile: verified.staffReference },
+    { profile: staffReference },
   );
   const membership = memberships.entry?.[0]?.resource;
-  const policyReference =
-    membership?.access?.[0]?.policy?.reference ?? membership?.accessPolicy?.reference;
+  const policyReference = membership?.access?.[0]?.policy?.reference ?? membership?.accessPolicy?.reference;
   const policyId = policyReference?.match(/^AccessPolicy\/([^/]+)$/)?.[1];
-  if (!policyId) {
-    return null;
-  }
+  if (!policyId) return null;
 
   let policy: AccessPolicy;
   try {
-    policy = await opts.serviceClient.read<AccessPolicy>("AccessPolicy", policyId);
-  } catch {
+    policy = await serviceClient.read<AccessPolicy>("AccessPolicy", policyId);
+  } catch (error) {
+    if (isUnauthorizedServiceError(error)) throw error;
     return null;
   }
 
@@ -149,5 +173,12 @@ export async function resolveStaffRole(opts: {
   if (!roleValue || !PRACTICE_ROLE_IDS.includes(roleValue as PracticeRoleId)) {
     return null;
   }
-  return { staffReference: verified.staffReference, role: roleValue as PracticeRoleId };
+  return { staffReference, role: roleValue as PracticeRoleId };
+}
+
+function isUnauthorizedServiceError(error: unknown): boolean {
+  if (typeof error === "object" && error !== null && "status" in error && (error as { status?: unknown }).status === 401) {
+    return true;
+  }
+  return error instanceof Error && /FHIR\s+401\b/.test(error.message);
 }

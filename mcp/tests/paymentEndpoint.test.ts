@@ -5,6 +5,7 @@ import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/a
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  StaffRoleServiceUnavailableError,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
 
@@ -163,6 +164,53 @@ test("resolveStaffRole derives the role from the caller's bound AccessPolicy ide
     params: { profile: "Practitioner/staff1" },
   });
   assert.deepEqual(svc.calls.read[0], { rt: "AccessPolicy", id: "ap-front-desk" });
+});
+
+test("resolveStaffRole refreshes an expired service client once and retries the shared role lookup", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  let expired = true;
+  let refreshes = 0;
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => {
+      if (expired) throw Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: MEMBERSHIP_FRONT_DESK as unknown as T }] };
+    },
+    read: async <T,>(): Promise<T> => frontDeskPolicy() as unknown as T,
+  };
+
+  const staff = await resolveStaffRole({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+    refreshServiceClient: async () => {
+      refreshes += 1;
+      expired = false;
+    },
+  });
+
+  assert.deepEqual(staff, { staffReference: "Practitioner/staff1", role: "front-desk" });
+  assert.equal(refreshes, 1);
+});
+
+test("resolveStaffRole reports a service outage when refresh cannot recover an expired token", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const unauthorized = Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => { throw unauthorized; },
+    read: async <T,>(): Promise<T> => { throw unauthorized; },
+  };
+
+  await assert.rejects(
+    resolveStaffRole({
+      baseUrl: "http://x",
+      authHeader: "Bearer good",
+      serviceClient,
+      fetchImpl,
+      refreshServiceClient: async () => undefined,
+    }),
+    StaffRoleServiceUnavailableError,
+  );
 });
 
 test("resolveStaffRole returns null for an invalid token and never reaches the service client", async () => {
