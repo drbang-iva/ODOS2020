@@ -42,6 +42,7 @@ import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
+import { registerDeskRoutes } from "./desk/desk-routes.js";
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
@@ -6039,6 +6040,15 @@ async function main(): Promise<void> {
           },
         },
         payments: paymentCreditDeps,
+      });
+      registerDeskRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        terminalMode: process.env.OSOD_PAYMENT_TERMINAL_MODE
+          ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"
+            : paymentDispatch.methods().includes("clover") ? "LIVE"
+              : "NOT CONFIGURED"),
+        timeZone: process.env.OSOD_TIMEZONE,
       });
 
       app.post("/claims/submit", async (req, res) => {
