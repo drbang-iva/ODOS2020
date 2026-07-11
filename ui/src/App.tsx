@@ -31,6 +31,7 @@ import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
+import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { resolveSessionRoles, type PracticeRoleId } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
@@ -124,7 +125,11 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
     case DESK_HOME_PATH:
       return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
     case CLINIC_PATH:
-      return <><div className="odos-clinic-switch">{showSwitch && <RoleSwitchPill target={DESK_HOME_PATH} />}</div><ViewRouter view={view} /></>;
+      return view.kind === "picker"
+        ? <ClinicHome switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null} />
+        : <ViewRouter view={view} />;
+    case CLINIC_PATIENTS_PATH:
+      return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":
       return <ClaimsWorklist />;
     case "/billing/claims/search":

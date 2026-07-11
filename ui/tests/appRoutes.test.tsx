@@ -99,9 +99,12 @@ test("the Desk home and existing front-desk cockpit remain separate routes", () 
   assert.doesNotMatch(cockpit, /The Desk/);
 });
 
-test("the Clinic alias opens the existing patient picker flow", () => {
+test("the Clinic route opens the real Clinic home while the patient picker stays reachable", () => {
   const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/clinic" />);
-  assert.match(clinic, /Patient Picker/);
+  const picker = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/clinic/patients" />);
+  assert.match(clinic, /The Clinic/);
+  assert.match(clinic, /Today&#x27;s flow/);
+  assert.match(picker, /Patient Picker/);
   assert.doesNotMatch(clinic, /The Desk/);
 });
 
