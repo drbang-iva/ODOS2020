@@ -46,6 +46,8 @@ const EYES: Eye[] = ["OD", "OS"];
 
 const eyePayloadSchema = z.object({
   customFields: z.array(customFieldValueSchema).max(64),
+  state: z.enum(["normal", "abnormal", "deferred"]).optional(),
+  other: z.string().trim().max(2000).optional(),
 }).strict();
 
 const captureSchema = z.object({
@@ -61,6 +63,7 @@ const captureSchema = z.object({
 
 const historyQuerySchema = z.object({
   patient: z.string().regex(/^Patient\/[^/]+$/),
+  encounter: z.string().regex(/^Encounter\/[^/]+$/).optional(),
 }).strict();
 
 export async function handleCustomSectionCaptureRequest(
@@ -79,19 +82,40 @@ export async function handleCustomSectionCaptureRequest(
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid custom section request." } };
   }
   const perEye = definition.valueSchema.perEye === true;
+  const ocularHealth = definition.valueSchema.type === "ocular-health-structure";
   if (perEye !== Boolean(parsed.data.eyes) || perEye === Boolean(parsed.data.customFields)) {
     return { status: 400, body: { error: perEye ? "This section requires eyes payloads." : "This section requires a per-record customFields payload." } };
   }
   const eyeRows = EYES.flatMap((eye) => parsed.data.eyes?.[eye]
-    ? [{ eye, values: parsed.data.eyes[eye]!.customFields }]
+    ? [{
+        eye,
+        values: parsed.data.eyes[eye]!.customFields,
+        state: parsed.data.eyes[eye]!.state,
+        other: parsed.data.eyes[eye]!.other,
+      }]
     : []);
   if (perEye && eyeRows.length === 0) {
     return { status: 400, body: { error: "At least one eye payload is required." } };
   }
   const rows = perEye
     ? eyeRows
-    : [{ eye: "UNKNOWN" as const, values: parsed.data.customFields ?? [] }];
-  if (rows.every((row) => row.values.length === 0) && !parsed.data.remarks) {
+    : [{ eye: "UNKNOWN" as const, values: parsed.data.customFields ?? [], state: undefined, other: undefined }];
+  if (ocularHealth && rows.some((row) => row.other && !row.state)) {
+    return { status: 400, body: { error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text." } };
+  }
+  if (ocularHealth && rows.some((row) => !row.state)) {
+    return { status: 400, body: { error: "Ocular-health eye payloads require an explicit normal, abnormal, or deferred state." } };
+  }
+  if (ocularHealth && rows.some((row) => row.state === "deferred") && definition.normalSemantics?.allowDeferred !== true) {
+    return { status: 400, body: { error: "Deferred is not enabled for this ocular-health structure." } };
+  }
+  if (ocularHealth && rows.some((row) => row.state !== "abnormal" && row.values.length > 0)) {
+    return { status: 400, body: { error: "Only an abnormal ocular-health state may carry abnormal findings." } };
+  }
+  if (!ocularHealth && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
+    return { status: 400, body: { error: "Exam state and other text are only supported for ocular-health structures." } };
+  }
+  if (rows.every((row) => row.values.length === 0 && !row.state && !row.other) && !parsed.data.remarks) {
     return { status: 400, body: { error: "Enter at least one custom field or note before saving." } };
   }
   for (const row of rows) {
@@ -115,9 +139,20 @@ export async function handleCustomSectionCaptureRequest(
       laterality: row.eye,
       value: {
         type: "components",
-        components: parsed.data.remarks
-          ? [{ code: "REMARKS", display: "Remarks", value: parsed.data.remarks }]
-          : [],
+        components: [
+          ...(parsed.data.remarks
+            ? [{ code: "REMARKS", display: "Remarks", value: parsed.data.remarks }]
+            : []),
+          ...(ocularHealth && row.state
+            ? [{ code: "EXAM_STATE", display: "Exam state", value: row.state }]
+            : []),
+          ...(ocularHealth && row.state === "normal" && typeof definition.normalSemantics?.template === "string"
+            ? [{ code: "NORMAL_TEMPLATE", display: "Normal template", value: definition.normalSemantics.template }]
+            : []),
+          ...(ocularHealth && row.other
+            ? [{ code: "OTHER", display: "Other", value: row.other }]
+            : []),
+        ],
       },
       sourceType: "manual",
       performerReferences: [staff.staffReference],
@@ -161,6 +196,7 @@ export async function handleCustomSectionHistoryRequest(
   const bundle = await staff.fhir.search<Observation>("Observation", {
     subject: parsed.data.patient,
     code: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`,
+    ...(parsed.data.encounter ? { encounter: parsed.data.encounter } : {}),
     _sort: "-date",
     _count: "200",
   });
@@ -183,6 +219,9 @@ export async function handleCustomSectionHistoryRequest(
       recordedAt: observation.effectiveDateTime ?? observation.issued ?? observation.meta?.lastUpdated ?? "",
       ...(perEye && (eye === "OD" || eye === "OS") ? { eye } : {}),
       values,
+      ...(componentString(observation, "EXAM_STATE") ? { state: componentString(observation, "EXAM_STATE") } : {}),
+      ...(componentString(observation, "NORMAL_TEMPLATE") ? { normalTemplate: componentString(observation, "NORMAL_TEMPLATE") } : {}),
+      ...(componentString(observation, "OTHER") ? { other: componentString(observation, "OTHER") } : {}),
       ...(componentString(observation, "REMARKS") ? { remarks: componentString(observation, "REMARKS") } : {}),
     }];
   });
@@ -195,7 +234,7 @@ function resolveCustomDefinition(
   requireActive: boolean,
 ): ClinicalFindingDefinition | undefined {
   const stableKey = readStableKey(params);
-  if (!stableKey?.startsWith("custom:")) return undefined;
+  if (!stableKey?.startsWith("custom:") && !stableKey?.startsWith("ocular-health:")) return undefined;
   return definitions?.find((definition) =>
     definition.stableKey === stableKey &&
     definition.sectionKey === stableKey &&

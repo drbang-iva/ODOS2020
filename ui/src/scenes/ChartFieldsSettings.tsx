@@ -24,6 +24,8 @@ interface FindingDefinition {
   perEye: boolean;
   fields: Record<string, { type?: string; allowCreate?: boolean }>;
   customFields: CustomField[];
+  normalTemplate?: string;
+  allowDeferred?: boolean;
 }
 
 interface CatalogResponse {
@@ -90,7 +92,7 @@ export function ChartFieldsSettings() {
       min: value.valueType === "number" ? value.min ?? null : null,
       max: value.valueType === "number" ? value.max ?? null : null,
       step: value.valueType === "number" ? value.step ?? null : null,
-      ...(value.valueType === "select" ? { options: value.options } : {}),
+      ...(value.valueType !== "number" ? { options: value.options } : {}),
     });
   }
 
@@ -165,6 +167,10 @@ export function ChartFieldsSettings() {
                 <section key={definition.stableKey} className="rounded border border-white/10 bg-bg-panel/70 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div><h2 className="font-semibold">{definition.display}</h2><div className="mt-1 font-mono text-xs text-white/35">{definition.stableKey}</div></div>
+                    {catalog.canWrite && definition.normalTemplate && <button type="button" onClick={() => {
+                      const template = window.prompt("Normal template", definition.normalTemplate)?.trim();
+                      if (template && template !== definition.normalTemplate) runMutation(definition.stableKey, { action: "update-normal-template", template });
+                    }} className="rounded border border-white/15 px-3 py-2 text-sm text-white/65">Edit normal template</button>}
                     {catalog.canWrite && canCreate && <button type="button" onClick={() => setEditing({ definition })} className="rounded border border-brand/60 px-3 py-2 text-sm text-brand-light hover:bg-brand/10">+ Create field…</button>}
                     {catalog.canWrite && picker && !canCreate && <button type="button" onClick={() => runMutation(definition.stableKey, { action: "set-picker-config", allowCreate: true })} className="rounded border border-brand/60 px-3 py-2 text-sm text-brand-light hover:bg-brand/10">Enable field creation</button>}
                   </div>
@@ -173,7 +179,7 @@ export function ChartFieldsSettings() {
                     {definition.customFields.map((field, index) => (
                       <div key={field.localCode} className="flex flex-wrap items-center gap-3 rounded border border-white/10 bg-bg-deep/55 px-3 py-3">
                         <div className="min-w-0 flex-1"><div className={field.active ? "text-sm text-white/80" : "text-sm text-white/35 line-through"}>{field.display}</div><div className="mt-1 truncate font-mono text-xs text-white/30">{field.localCode}</div></div>
-                        <span className="rounded bg-white/5 px-2 py-1 text-xs text-white/45">{field.valueType === "select" ? "Dropdown" : field.unit ?? "Unitless number"}</span>
+                        <span className="rounded bg-white/5 px-2 py-1 text-xs text-white/45">{field.valueType === "select" ? "Dropdown" : field.valueType === "multi-select" ? "Checkbox list" : field.unit ?? "Unitless number"}</span>
                         {catalog.canWrite && <>
                           <button type="button" onClick={() => runMutation(definition.stableKey, { action: "update-custom-field", localCode: field.localCode, order: Math.max(0, field.order - 1) })} disabled={index === 0} className="rounded px-2 py-1 text-white/50 disabled:opacity-20">↑</button>
                           <button type="button" onClick={() => runMutation(definition.stableKey, { action: "update-custom-field", localCode: field.localCode, order: field.order + 1 })} disabled={index === definition.customFields.length - 1} className="rounded px-2 py-1 text-white/50 disabled:opacity-20">↓</button>

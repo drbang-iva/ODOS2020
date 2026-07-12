@@ -68,6 +68,11 @@ const mutationSchema = z.discriminatedUnion("action", [
     display: z.string().trim().min(1).max(120).optional(),
     active: z.boolean().optional(),
   }).strict(),
+  z.object({
+    action: z.literal("update-normal-template"),
+    template: z.string().trim().min(1).max(500),
+    allowDeferred: z.boolean().optional(),
+  }).strict(),
   createDiagnosisCandidateSchema.extend({
     action: z.literal("create-diagnosis-candidate"),
   }),
@@ -225,6 +230,21 @@ export async function handleFindingDefinitionMutationRequest(
       }, provenance);
       return { status: 200, body: { definition: definitionSummary(saved) } };
     }
+    if (parsed.data.action === "update-normal-template") {
+      if (asRecord(definition.valueSchema).type !== "ocular-health-structure") {
+        return { status: 409, body: { error: "Only ocular-health structures have normal templates." } };
+      }
+      const saved = await store.save({
+        ...definition,
+        normalSemantics: {
+          ...asRecord(definition.normalSemantics),
+          template: parsed.data.template,
+          ...(parsed.data.allowDeferred !== undefined ? { allowDeferred: parsed.data.allowDeferred } : {}),
+        },
+        provenance,
+      }, provenance);
+      return { status: 200, body: { definition: definitionSummary(saved) } };
+    }
     const saved = await store.save(updatePickerConfiguration(definition, parsed.data, provenance), provenance);
     return { status: 200, body: { definition: definitionSummary(saved) } };
   } catch (error) {
@@ -243,6 +263,10 @@ function definitionSummary(definition: ClinicalFindingDefinition) {
     perEye: definition.valueSchema.perEye === true,
     fields: asRecord(definition.valueSchema.fields),
     customFields: customFieldEntries(definition, true),
+    normalTemplate: typeof definition.normalSemantics?.template === "string"
+      ? definition.normalSemantics.template
+      : undefined,
+    allowDeferred: definition.normalSemantics?.allowDeferred === true,
     allowDiagnosisMapping: definition.allowDiagnosisMapping !== false,
     diagnosisCandidates: definition.diagnosisCandidates ?? [],
   };
