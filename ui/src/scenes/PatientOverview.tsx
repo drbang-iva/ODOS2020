@@ -45,6 +45,7 @@ export function PatientOverview({
   const [history, setHistory] = useState<StickyNoteHistoryEntry[]>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const requestIdRef = useRef(0);
+  const historyRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (initialOverview) return;
@@ -80,7 +81,9 @@ export function PatientOverview({
         filter: nextFilter,
         ...(activeDiagnosis ? { diagnosisSystem: activeDiagnosis.system, diagnosisCode: activeDiagnosis.code } : {}),
       });
-      if (requestId === requestIdRef.current) setOverview(value);
+      if (requestId === requestIdRef.current) {
+        setOverview((current) => current?.stickyNote ? { ...value, stickyNote: current.stickyNote } : value);
+      }
     } catch (reason) {
       if (requestId === requestIdRef.current) setError(messageOf(reason));
     } finally {
@@ -96,7 +99,9 @@ export function PatientOverview({
       const stickyNote = await api.saveNote(patient.id, noteDraft);
       setOverview((current) => current ? { ...current, stickyNote } : current);
       setEditing(false);
+      historyRequestIdRef.current += 1;
       setHistory(undefined);
+      setHistoryOpen(false);
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -108,8 +113,10 @@ export function PatientOverview({
     if (!patient.id) return;
     setHistoryOpen(true);
     if (history) return;
+    const requestId = ++historyRequestIdRef.current;
     try {
-      setHistory(await api.fetchHistory(patient.id));
+      const entries = await api.fetchHistory(patient.id);
+      if (requestId === historyRequestIdRef.current) setHistory(entries);
     } catch (reason) {
       setError(messageOf(reason));
     }
