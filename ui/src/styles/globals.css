@@ -1,5 +1,6 @@
 @import "./desk-home.css";
 @import "./clinic-home.css";
+@import "./patient-overview.css";
 
 @tailwind base;
 @tailwind components;

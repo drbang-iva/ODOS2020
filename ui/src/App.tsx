@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
+import { PatientOverview } from "./scenes/PatientOverview";
 import { PatientPicker } from "./scenes/PatientPicker";
 import { NewPatient } from "./scenes/NewPatient";
 import { fhir } from "./lib/fhir";
@@ -192,6 +193,8 @@ function ViewRouter({ view }: { view: ViewState }) {
   switch (view.kind) {
     case "picker":
       return <PatientPicker />;
+    case "overview":
+      return <PatientRoute patientId={view.patientId} mode="overview" />;
     case "director":
       return <PatientRoute patientId={view.patientId} mode="director" />;
     case "encounter":
@@ -211,7 +214,7 @@ function PatientRoute({
   encounterId,
 }: {
   patientId: string;
-  mode: "director" | "encounter";
+  mode: "overview" | "director" | "encounter";
   encounterId?: string;
 }) {
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -258,6 +261,10 @@ function PatientRoute({
 
   if (mode === "encounter") {
     return <EncounterCharting patient={patient} encounterId={encounterId ?? ""} />;
+  }
+
+  if (mode === "overview") {
+    return <PatientOverview patient={patient} />;
   }
 
   return <PatientDirector patient={patient} />;

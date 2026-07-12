@@ -164,6 +164,18 @@ export function hasConditionCategory(condition: Condition, category: ConditionCa
   );
 }
 
+export function isConfirmedEncounterDiagnosis(condition: Condition): boolean {
+  return hasConditionCategory(condition, "encounter-diagnosis") &&
+    condition.verificationStatus?.coding?.some(
+      (coding) => coding.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM && coding.code === "confirmed",
+    ) === true &&
+    /^Encounter\/[^/]+$/.test(condition.encounter?.reference ?? "");
+}
+
+export function conditionEncounterId(condition: Condition): string | undefined {
+  return condition.encounter?.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+}
+
 export function conditionBodySiteReferenceExtension(bodyStructureReference: string): Extension {
   return {
     url: CONDITION_BODY_SITE_EXTENSION_URL,

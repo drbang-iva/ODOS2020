@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
-import { useViewState } from "../lib/view-state";
+import { patientOverviewView, useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
 
 export const CLINIC_PATIENTS_PATH = "/clinic/patients";
@@ -20,7 +20,7 @@ export function ClinicHome({ initialSummary, switchPill }: { initialSummary?: Cl
   }, [initialSummary]);
 
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
-  const openPatient = (patientId: string | undefined) => patientId && setView({ kind: "director", patientId });
+  const openPatient = (patientId: string | undefined) => patientId && setView(patientOverviewView(patientId));
 
   return (
     <main className="odos-clinic-home">
