@@ -1,10 +1,12 @@
 import type {
   Basic,
   Bundle,
+  ChargeItem,
   Claim,
   ClaimResponse,
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
+  Invoice,
   PaymentReconciliation,
   Resource,
   Task,
@@ -90,6 +92,12 @@ import {
   closeManualEobHeader,
   parseManualEobHeader,
 } from "./manual-eob.js";
+import {
+  PATIENT_RESPONSIBILITY_INVOICE_IDENTIFIER_SYSTEM,
+  PatientResponsibilityInvoiceUnavailableError,
+  buildPatientResponsibilityInvoice,
+  patientResponsibilityInvoiceMatches,
+} from "./patient-responsibility-invoice.js";
 
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
@@ -125,7 +133,8 @@ export async function handleSubmitClaimRequest(
 
   let createdClaim: Claim | undefined;
   try {
-    const claim = buildProfessionalClaim(body.claim);
+    const persistedChargeItems = await persistClaimChargeItems(auth, body.claim.chargeItems);
+    const claim = buildProfessionalClaim({ ...body.claim, chargeItems: persistedChargeItems });
     createdClaim = await auth.fhir.create(claim);
     const result = selection.id === "claimmd"
       ? await (selection.adapter as ClaimMdAdapter).submitProfessionalClaim({
@@ -503,6 +512,7 @@ async function importStediEra(
       const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
       paidTotalCents += paidCents;
       const evidence = eraWorklistEvidence(eraClaim, era.transactionId);
+      const invoiceResult = await ensurePatientResponsibilityInvoice(auth, claimReference, response);
       if (paidCents > 0) {
         const reconciliation = await auth.fhir.create(buildInsurancePaymentReconciliation({
           createdIso: now(deps),
@@ -519,7 +529,12 @@ async function importStediEra(
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
       }
-      if (paidCents === 0 || (evidence.shortfallCents > 0 && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))) {
+      if (
+        paidCents === 0
+        || invoiceResult === "different"
+        || invoiceResult === "unavailable"
+        || (evidence.shortfallCents > 0 && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))
+      ) {
         const code = paidCents === 0 ? "era-denial" : "era-underpayment";
         const task = await createAndAuditEraWorklistTask(
           deps,
@@ -1068,6 +1083,7 @@ async function persistMatchedEraClaim(
   }));
   const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
   const evidence = eraWorklistEvidence(input.eraClaim, input.era.eraid ?? "");
+  const invoiceResult = await ensurePatientResponsibilityInvoice(auth, input.claimReference, response);
   const paymentReconciliationIds: string[] = [];
   const taskIds: string[] = [];
   let posted = 0;
@@ -1096,8 +1112,10 @@ async function persistMatchedEraClaim(
     taskIds.push(requiredId(task));
     denied = 1;
   } else if (
-    evidence.shortfallCents > 0
-    && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1)
+    invoiceResult === "different"
+    || invoiceResult === "unavailable"
+    || (evidence.shortfallCents > 0
+      && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))
   ) {
     const task = await createAndAuditEraWorklistTask(deps, auth, "era-underpayment", input, response);
     taskIds.push(requiredId(task));
@@ -1113,6 +1131,56 @@ async function persistMatchedEraClaim(
     taskIds,
     paidCents,
   };
+}
+
+type PatientResponsibilityInvoiceResult = "none" | "created" | "unchanged" | "different" | "unavailable";
+
+async function ensurePatientResponsibilityInvoice(
+  auth: AuthenticatedClaimsStaff,
+  claimReference: string,
+  response: ClaimResponse,
+): Promise<PatientResponsibilityInvoiceResult> {
+  if (!(response.item ?? []).some((item) => item.adjudication.some((adjudication) =>
+    /^adjustment\s+PR(?:\s|$)/i.test(adjudication.category.text ?? "")
+    && (adjudication.amount?.value ?? 0) > 0,
+  ))) return "none";
+  const claimId = claimReference.match(/^Claim\/([A-Za-z0-9.-]+)$/)?.[1];
+  if (!claimId) throw new Error("Patient-responsibility Invoice requires a local Claim/<id> reference.");
+  const claim = await auth.fhir.read<Claim>("Claim", claimId);
+  let candidate: Invoice | undefined;
+  try {
+    candidate = buildPatientResponsibilityInvoice(claim, response);
+  } catch (error) {
+    if (error instanceof PatientResponsibilityInvoiceUnavailableError) return "unavailable";
+    throw error;
+  }
+  if (!candidate) return "none";
+  const existingBundle = await auth.fhir.search<Invoice>("Invoice", {
+    identifier: `${PATIENT_RESPONSIBILITY_INVOICE_IDENTIFIER_SYSTEM}|${claimReference}`,
+    _count: "2",
+  });
+  const existingInvoices = bundleResources(existingBundle);
+  if (existingInvoices.length > 1) {
+    throw new Error(`${claimReference} has duplicate patient-responsibility Invoices.`);
+  }
+  const existing = existingInvoices[0];
+  if (!existing) {
+    const condition = `identifier=${PATIENT_RESPONSIBILITY_INVOICE_IDENTIFIER_SYSTEM}|${claimReference}`;
+    const created = await auth.fhir.create(candidate, { "If-None-Exist": condition });
+    return patientResponsibilityInvoiceMatches(created, candidate) ? "created" : "different";
+  }
+  return patientResponsibilityInvoiceMatches(existing, candidate) ? "unchanged" : "different";
+}
+
+async function persistClaimChargeItems(
+  auth: AuthenticatedClaimsStaff,
+  chargeItems: ChargeItem[],
+): Promise<ChargeItem[]> {
+  const persisted: ChargeItem[] = [];
+  for (const chargeItem of chargeItems) {
+    persisted.push(chargeItem.id ? chargeItem : await auth.fhir.create(chargeItem));
+  }
+  return persisted;
 }
 
 async function upsertEraImportRecord(

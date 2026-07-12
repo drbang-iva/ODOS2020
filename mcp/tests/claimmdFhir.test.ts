@@ -9,6 +9,7 @@ import {
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
   medicalEligibilitySummary,
+  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
 
@@ -102,6 +103,18 @@ test("buildProfessionalClaim composes the existing ChargeItem lines into a profe
   assert.equal(claim.item?.[0]?.productOrService.coding?.[0]?.code, "PROC-A");
   assert.equal(claim.item?.[0]?.unitPrice?.value, 125);
   assert.deepEqual(claim.item?.[0]?.diagnosisSequence, [1]);
+  assert.equal(claim.item?.[0]?.servicedDate, "2026-07-09");
+  assert.equal(
+    claim.item?.[0]?.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+      ?.valueReference?.reference,
+    "ChargeItem/charge-1",
+  );
+});
+
+test("buildProfessionalClaim refuses an unpersisted ChargeItem instead of writing a fake provenance reference", () => {
+  const input = structuredClone(professionalClaimInput);
+  delete input.chargeItems[0].id;
+  assert.throws(() => buildProfessionalClaim(input), /must be persisted/);
 });
 
 test("buildClaimMdProfessionalClaimJson round-trips the FHIR claim to Claim.MD's JSON upload shape", () => {
@@ -119,6 +132,18 @@ test("buildClaimMdProfessionalClaimJson round-trips the FHIR claim to Claim.MD's
   assert.equal(payload.claim[0].charge[0].charge, "125.00");
   assert.equal(payload.claim[0].charge[0].remote_chgid, "charge-1");
   assert.equal(payload.claim[0].charge[1].units, "2");
+});
+
+test("Claim.MD payload stays byte-identical when only persisted Claim provenance and servicedDate change", () => {
+  const before = buildClaimMdProfessionalClaimJson(
+    professionalClaimInput,
+    {
+      ...buildProfessionalClaim(professionalClaimInput),
+      item: buildProfessionalClaim(professionalClaimInput).item?.map(({ extension: _extension, servicedDate: _servicedDate, ...item }) => item),
+    },
+  );
+  const after = buildClaimMdProfessionalClaimJson(professionalClaimInput, buildProfessionalClaim(professionalClaimInput));
+  assert.equal(JSON.stringify(after), JSON.stringify(before));
 });
 
 test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and patient responsibility amounts", () => {
