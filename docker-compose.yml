@@ -51,13 +51,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - .env
     volumes:
       - ./medplum.config.json:/config/medplum.config.json:ro
       - medplum-binary:/data/binary
       - ./backup:/backup
     ports:
       - "8103:8103"
-    command: ["file:/config/medplum.config.json"]
+    command: ["file:/config/medplum.config.json,env"]
     networks:
       - osod-internal
 
