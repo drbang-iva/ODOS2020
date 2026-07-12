@@ -3,7 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
-type Eye = "OD" | "OS";
+export type Eye = "OD" | "OS";
 type ExamState = "normal" | "abnormal" | "deferred";
 
 export interface EyeCapture {
@@ -105,6 +105,12 @@ export function OcularHealthSection({
   }
 
   async function save() {
+    const pending = pendingStateEyes(definitions, captures);
+    if (pending.length) {
+      setError(pending.map(({ display, eye }) => `${display} (${eye}): choose Normal, Abnormal, or Deferred, or clear the note before saving.`).join(" "));
+      setMessage(null);
+      return;
+    }
     setSaving(true);
     setError(null);
     setMessage(null);
@@ -274,6 +280,18 @@ function emptyEye(): EyeCapture {
 
 function touched(capture: EyeCapture): boolean {
   return Boolean(capture.state || capture.other.trim() || capture.selections.length);
+}
+
+export function pendingStateEyes(
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey" | "display">>,
+  captures: Record<string, Record<Eye, EyeCapture>>,
+): Array<{ stableKey: string; display: string; eye: Eye }> {
+  return definitions.flatMap((definition) => {
+    const row = captures[definition.stableKey] ?? emptyRow();
+    return EYES.flatMap((eye) => touched(row[eye]) && !row[eye].state
+      ? [{ stableKey: definition.stableKey, display: definition.display, eye }]
+      : []);
+  });
 }
 
 export function copyEyeCapture(source: EyeCapture): EyeCapture {

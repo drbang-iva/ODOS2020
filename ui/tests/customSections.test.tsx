@@ -9,6 +9,7 @@ import {
   OcularHealthSection,
   applyAnteriorAllNormal,
   copyEyeCapture,
+  pendingStateEyes,
 } from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
@@ -221,6 +222,28 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
   assert.deepEqual(source.selections, ["demodex", "demodex::collarettes"]);
   assert.equal(copied.state, "abnormal");
   assert.equal(copied.other, "trace");
+});
+
+test("pending-state eyes report touched notes without a state and ignore stated or untouched eyes", () => {
+  const pending = pendingStateEyes([
+    { stableKey: "ocular-health:anterior:cornea", display: "Cornea" },
+    { stableKey: "ocular-health:anterior:lens", display: "Lens" },
+  ], {
+    "ocular-health:anterior:cornea": {
+      OD: { state: "normal", selections: [], other: "clear" },
+      OS: { selections: [], other: "trace scar" },
+    },
+    "ocular-health:anterior:lens": {
+      OD: { selections: [], other: "" },
+      OS: { state: "abnormal", selections: ["cataract"], other: "mild" },
+    },
+  });
+
+  assert.deepEqual(pending, [{
+    stableKey: "ocular-health:anterior:cornea",
+    display: "Cornea",
+    eye: "OS",
+  }]);
 });
 
 test("EncounterCharting keeps exactly the 14 shipped built-in render branches plus one custom branch", () => {
