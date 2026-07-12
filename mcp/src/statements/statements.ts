@@ -428,15 +428,18 @@ async function deleteStatementChildren(
   references: readonly string[],
 ): Promise<void> {
   for (let index = 0; index < references.length; index += STATEMENT_TRANSACTION_CHILD_LIMIT) {
+    const batchReferences = references.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT);
     try {
       await fhir.executeTransaction({
         resourceType: "Bundle",
         type: "transaction",
-        entry: references.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT).map((reference) => ({
+        entry: batchReferences.map((reference) => ({
           request: { method: "DELETE", url: reference },
         })),
       });
-    } catch {}
+    } catch (error) {
+      console.error(`Statement cleanup failed for child Tasks ${batchReferences.join(", ")}: ${messageOf(error)}`);
+    }
   }
 }
 

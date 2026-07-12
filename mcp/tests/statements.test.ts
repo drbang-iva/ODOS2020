@@ -126,7 +126,6 @@ test("a failed child chunk leaves no completed run visible to either statement r
   const list = await handleStatementListRequest(deps, { authHeader: "Bearer good" });
   assert.deepEqual(list, { status: 200, body: { items: [] } });
   assert.equal(fixture.storedTasks.length, 0);
-  assert.equal(fixture.storedTasks.some((task) => code(task) === STATEMENT_RUN_CODE), false);
 });
 
 test("a cleanup failure never masks the original child-chunk error", async () => {
@@ -137,12 +136,21 @@ test("a cleanup failure never masks the original child-chunk error", async () =>
     payments: [],
   }, { failTransactionAt: 2, failCleanup: true });
 
-  await assert.rejects(handleRunStatementsRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
-    now: () => GENERATED_AT,
-    generateId: sequentialIds(),
-  }, { authHeader: "Bearer good" }), /chunk failed/);
+  const cleanupErrors: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...values: unknown[]) => { cleanupErrors.push(values); };
+  try {
+    await assert.rejects(handleRunStatementsRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+      now: () => GENERATED_AT,
+      generateId: sequentialIds(),
+    }, { authHeader: "Bearer good" }), /chunk failed/);
+  } finally {
+    console.error = originalConsoleError;
+  }
   assert.equal(fixture.storedTasks.some((task) => code(task) === STATEMENT_RUN_CODE), false);
+  assert.equal(fixture.storedTasks.length, STATEMENT_TRANSACTION_CHILD_LIMIT);
+  assert.match(String(cleanupErrors[0]?.[0]), /Statement cleanup failed for child Tasks Task\/stored-1/);
 });
 
 test("a failed completion marker cleans children only after confirming no completed run exists", async () => {
