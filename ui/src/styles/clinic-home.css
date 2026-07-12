@@ -1,0 +1,49 @@
+.odos-clinic-home { min-height: 100vh; position: relative; overflow-x: hidden; background: var(--odos-ground); color: var(--odos-text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; }
+.odos-clinic-body { position: relative; max-width: 1380px; margin: 0 auto; padding: 30px 26px 80px; }
+.odos-clinic-greeting { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.odos-clinic-greeting h1 { margin: 0; font-family: Didot, "Bodoni 72", "Bodoni MT", Georgia, serif; font-size: 36px; font-weight: 400; }
+.odos-clinic-greeting > span { color: var(--odos-faint); font-size: 13px; }
+.odos-clinic-greeting .odos-mode { margin-left: auto; padding: 5px 12px; border: 1px dashed var(--odos-line-2); border-radius: 999px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.odos-clinic-pulse { margin: 8px 0 26px; color: var(--odos-muted); font-size: 13px; letter-spacing: .02em; }
+.odos-clinic-pulse b { font-weight: 650; }
+.odos-clinic-pulse .is-alert, .odos-clinic-card .is-alert { color: var(--odos-alert); }
+.odos-clinic-pulse .is-ok, .odos-clinic-card .is-ok { color: var(--odos-emerald); }
+.odos-clinic-pulse .is-info { color: var(--odos-sapphire); }
+.odos-clinic-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.odos-clinic-card { position: relative; overflow: hidden; border: 1px solid var(--odos-line); border-radius: 16px; background: linear-gradient(180deg, var(--odos-surface-2), var(--odos-surface)); box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 20px; }
+.odos-clinic-flow-card { grid-column: span 7; min-height: 610px; }
+.odos-clinic-stack { grid-column: span 5; display: flex; flex-direction: column; gap: 14px; }
+.odos-clinic-card-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; color: var(--odos-muted); font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.odos-clinic-card-head > span:last-child { font-size: 10px; letter-spacing: .08em; }
+.odos-clinic-flow { margin-top: 16px; }
+.odos-clinic-flow-row { width: 100%; min-height: 86px; display: grid; grid-template-columns: 78px minmax(150px, .8fr) minmax(260px, 2fr) 28px; align-items: center; gap: 12px; padding: 15px 10px; border: 0; border-top: 1px solid var(--odos-line); background: transparent; color: var(--odos-text); text-align: left; }
+.odos-clinic-flow-row:not(:disabled):hover { background: rgba(76,127,232,.06); }
+.odos-clinic-flow-row:disabled { cursor: default; }
+.odos-clinic-flow-row time { color: var(--odos-faint); font-size: 16px; font-variant-numeric: tabular-nums; }
+.odos-clinic-who { font-size: 15px; }
+.odos-clinic-who small { margin-left: 5px; color: var(--odos-faint); font-size: 12px; }
+.odos-clinic-row-detail { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.odos-clinic-visit-type { padding: 3px 9px; border: 1px solid rgba(76,127,232,.2); border-radius: 999px; background: rgba(76,127,232,.09); color: #a9c2ff; font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
+.odos-clinic-state { font-size: 12px; }
+.odos-clinic-state.is-with-you { color: #9cb8ff; }
+.odos-clinic-state.is-roomed { color: #67d4ac; }
+.odos-clinic-state.is-waiting { color: #f0c76c; }
+.odos-clinic-state.is-checked-out, .odos-clinic-state.is-scheduled { color: var(--odos-faint); }
+.odos-clinic-late { color: var(--odos-alert); font-size: 11px; }
+.odos-clinic-wait { color: var(--odos-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.odos-clinic-glyphs { color: var(--odos-amber); font-size: 17px; text-align: center; }
+.odos-clinic-target { margin-top: 12px; color: var(--odos-faint); font-size: 10px; line-height: 1.4; }
+.odos-clinic-foot { display: inline-block; margin-top: 15px; color: currentcolor; font-size: 12px; text-decoration: none; }
+.odos-clinic-signature-stats { display: flex; gap: 42px; padding: 20px 0 13px; }
+.odos-clinic-signature-stats strong { color: var(--odos-text); font-family: Didot, "Bodoni 72", Georgia, serif; font-size: 31px; font-weight: 400; }
+.odos-clinic-signature-stats small { display: block; color: var(--odos-faint); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.odos-clinic-signatures { display: flex; flex-direction: column; }
+.odos-clinic-signatures button { display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 8px; padding: 10px; border: 0; border-top: 1px solid var(--odos-line); background: transparent; color: var(--odos-text); font-size: 11px; text-align: left; }
+.odos-clinic-signatures button span:nth-child(2) { color: var(--odos-muted); }
+.odos-clinic-signatures button span:last-child { color: var(--odos-faint); font-variant-numeric: tabular-nums; }
+.odos-clinic-signatures button.is-old { border-left: 2px solid var(--odos-alert); background: rgba(226,92,106,.055); }
+.odos-clinic-all-clear { padding: 26px 0; color: var(--odos-emerald); font-family: Didot, "Bodoni 72", Georgia, serif; font-size: 19px; }
+.odos-clinic-empty, .odos-clinic-error { padding: 38px 10px; color: var(--odos-faint); font-size: 13px; }
+.odos-clinic-error { color: #ff9aa5; }
+@media (max-width: 1100px) { .odos-clinic-flow-card, .odos-clinic-stack { grid-column: span 12; } }
+@media (max-width: 720px) { .odos-clinic-body { padding: 22px 16px 60px; } .odos-clinic-flow-row { grid-template-columns: 62px 1fr 24px; } .odos-clinic-row-detail { grid-column: 2; } .odos-clinic-glyphs { grid-column: 3; grid-row: 1 / span 2; } .odos-clinic-greeting .odos-mode { margin-left: 0; } }

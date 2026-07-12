@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
@@ -31,6 +31,7 @@ import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
+import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { resolveSessionRoles, type PracticeRoleId } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
@@ -48,12 +49,19 @@ export function App() {
   const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
   const view = useViewState((state) => state.view);
+  const setView = useViewState((state) => state.setView);
+  const previousPath = useRef(path);
 
   useEffect(() => {
-    const updatePath = () => setPath(window.location.pathname);
+    const updatePath = () => {
+      const nextPath = window.location.pathname;
+      setView(clinicViewAfterNavigation(previousPath.current, nextPath, useViewState.getState().view));
+      previousPath.current = nextPath;
+      setPath(nextPath);
+    };
     window.addEventListener("popstate", updatePath);
     return () => window.removeEventListener("popstate", updatePath);
-  }, []);
+  }, [setView]);
 
   useEffect(() => {
     if (!authed) return;
@@ -64,6 +72,7 @@ export function App() {
         const destination = defaultHomePath(whoami.roles);
         setRoles(whoami.roles);
         window.history.replaceState({}, "", destination);
+        previousPath.current = destination;
         setPath(destination);
       })
       .catch((error) => active && setRoleError(error instanceof Error ? error.message : "Practice role lookup failed."));
@@ -90,6 +99,14 @@ export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC
 
 export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
   return roles.includes("front-desk") && defaultHomePath(roles) === CLINIC_PATH;
+}
+
+export function shouldResetClinicView(previousPath: string, nextPath: string): boolean {
+  return (previousPath === CLINIC_PATH || previousPath === CLINIC_PATIENTS_PATH) && previousPath !== nextPath;
+}
+
+export function clinicViewAfterNavigation(previousPath: string, nextPath: string, view: ViewState): ViewState {
+  return shouldResetClinicView(previousPath, nextPath) ? { kind: "picker" } : view;
 }
 
 export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {
@@ -124,7 +141,11 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
     case DESK_HOME_PATH:
       return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
     case CLINIC_PATH:
-      return <><div className="odos-clinic-switch">{showSwitch && <RoleSwitchPill target={DESK_HOME_PATH} />}</div><ViewRouter view={view} /></>;
+      return view.kind === "picker"
+        ? <ClinicHome switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null} />
+        : <ViewRouter view={view} />;
+    case CLINIC_PATIENTS_PATH:
+      return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":
       return <ClaimsWorklist />;
     case "/billing/claims/search":
