@@ -101,10 +101,16 @@ export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstanc
     return finding.interpretation === "abnormal" || finding.interpretation === "borderline";
   }
   const value = findingFieldValue(finding, parsed.data.field);
-  if (value === undefined) return false;
   if (parsed.data.kind === "option") {
-    return typeof value === "string" && parsed.data.anyOf.includes(value);
+    if (typeof value === "string" && parsed.data.anyOf.includes(value)) return true;
+    if (finding.value.type !== "components") return false;
+    const { field, anyOf } = parsed.data;
+    return finding.value.components.some((component) => component.value === true && anyOf.some((option) =>
+      component.code === `${field}::${option}` ||
+      component.code.endsWith(`_${field}::${option}`)
+    ));
   }
+  if (value === undefined) return false;
   if (typeof value !== "number" || !Number.isFinite(value)) return false;
   if (parsed.data.op === ">=") return value >= parsed.data.value;
   if (parsed.data.op === "<=") return value <= parsed.data.value;

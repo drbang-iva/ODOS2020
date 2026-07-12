@@ -93,6 +93,23 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "astigmatism",
     "anisometropia",
     "presbyopia",
+    "kcs_not_sjogren",
+    "pinguecula",
+    "hypertensive_retinopathy",
+    "keratoconus_stable",
+    "keratoconus_unstable",
+    "keratoconus_unspecified_stability",
+    "ulcerative_blepharitis",
+    "squamous_blepharitis",
+    "meibomian_gland_dysfunction",
+    "pterygium_central",
+    "pterygium_peripheral_stationary",
+    "pterygium_peripheral_progressive",
+    "pterygium_recurrent",
+    "retinal_horseshoe_tear",
+    "retinal_round_hole",
+    "retinoschisis",
+    "retinal_detachment_single_break",
   ]);
   assert.deepEqual((seeds.find((row) => row.stableKey === "myopia")?.icd10 as { pattern: object }).pattern, {
     unspecifiedEye: "H52.10",
@@ -100,6 +117,17 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     left: "H52.12",
     bilateral: "H52.13",
   });
+  const ulcerative = seeds.find((row) => row.stableKey === "ulcerative_blepharitis");
+  assert.deepEqual((ulcerative?.icd10 as { pattern: object }).pattern, {
+    unspecifiedEye: "H01.019",
+    right: "H01.013",
+    left: "H01.016",
+  });
+  assert.equal(ulcerative?.codingStatus, "verified");
+  assert.deepEqual(ulcerative?.provenance.ledgerRefs, [
+    "cdcIcd10Cm2026CodeDescriptions",
+    "nlmClinicalTablesIcd10Cm",
+  ]);
   seeds[0]!.display = "Mutated caller copy";
   assert.equal(buildDiagnosisCatalogSeeds()[0]?.display, "Open angle with borderline findings, low risk");
   const practice = {
