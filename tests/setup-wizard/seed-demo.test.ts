@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Resource } from "@medplum/fhirtypes";
+import { addStatementDetail, buildStatementSnapshot } from "../../mcp/src/statements/statements.js";
 import {
   DEMO_SEED_SYSTEM,
+  assertInsuranceAwareDemoStatement,
   buildDemoStatementRun,
   demoAppointmentStart,
   seedDemo,
@@ -13,7 +15,7 @@ type SeedResource = Parameters<DemoSeedAdapter["create"]>[0];
 
 class FakeDemoSeedAdapter implements DemoSeedAdapter {
   readonly resources: SeedResource[] = [];
-  statementExists = false;
+  readonly statementPatients = new Set<string>();
   statementWrites = 0;
 
   async findByIdentifier<T extends SeedResource>(resourceType: T["resourceType"], value: string): Promise<T[]> {
@@ -28,14 +30,58 @@ class FakeDemoSeedAdapter implements DemoSeedAdapter {
     return created;
   }
 
-  async hasStatement(): Promise<boolean> {
-    return this.statementExists;
+  async hasStatement(patientReference: string): Promise<boolean> {
+    return this.statementPatients.has(patientReference);
   }
 
-  async generateStatement() {
-    this.statementExists = true;
+  async generateStatement(patientReference: string) {
+    this.statementPatients.add(patientReference);
     this.statementWrites += 1;
-    return { generatedCount: 1, statements: [{ unappliedCreditCents: 2_500 }] };
+    if (identifierValues(resourceByReference(this, patientReference)).includes("patient")) {
+      return {
+        generatedCount: 1,
+        statements: [{
+          generatedAt: "2026-07-12T12:00:00.000Z",
+          patientReference,
+          patientName: "TEST-Rivera, Alex",
+          paymentReconciliationReferences: [],
+          invoices: [],
+          totalGrossCents: 0,
+          totalNetCents: 0,
+          paymentsAppliedCents: 0,
+          balanceCents: 0,
+          unappliedCreditCents: 2_500,
+        }],
+      };
+    }
+    const patient = resourceByReference(this, patientReference) as Extract<SeedResource, { resourceType: "Patient" }>;
+    const invoices = resourcesOf(this, "Invoice").filter((invoice) => invoice.subject?.reference === patientReference);
+    const payments = resourcesOf(this, "PaymentReconciliation");
+    const snapshot = buildStatementSnapshot({
+      generatedAt: "2026-07-12T12:00:00.000Z",
+      patient,
+      invoices,
+      paymentReconciliations: payments,
+    });
+    const detailed = addStatementDetail({
+      snapshot,
+      patient,
+      invoices,
+      paymentReconciliations: payments,
+      claims: resourcesOf(this, "Claim"),
+      claimResponses: resourcesOf(this, "ClaimResponse"),
+      practitioners: resourcesOf(this, "Practitioner"),
+      practitionerRoles: resourcesOf(this, "PractitionerRole"),
+    });
+    return {
+      generatedCount: 1,
+      statements: [{
+        ...detailed,
+        unappliedCreditCents: 0,
+        balanceDueCents: detailed.balanceCents,
+        creditBalanceCents: 0,
+      }],
+    };
   }
 }
 
@@ -52,9 +98,19 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
     "Appointment",
     "Invoice",
     "PaymentReconciliation",
+    "Patient",
+    "Practitioner",
+    "PractitionerRole",
+    "ChargeItem",
+    "ChargeItem",
+    "Claim",
+    "ClaimResponse",
+    "Invoice",
+    "PaymentReconciliation",
   ]);
   assert.equal(result.statement, "CREATED");
-  assert.equal(adapter.statementWrites, 1);
+  assert.equal(result.insuredStatement, "CREATED");
+  assert.equal(adapter.statementWrites, 2);
   const patient = resource(adapter, "Patient");
   assert.match(JSON.stringify(patient), /TEST-Rivera/);
   assert.match(JSON.stringify(patient), /1900-01-01/);
@@ -69,6 +125,19 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
   assert.equal(credit.status, "active");
   assert.equal(credit.paymentAmount?.value, 25);
   assert.deepEqual(credit.detail, []);
+
+  const insuredPatient = resourcesOf(adapter, "Patient").find((candidate) =>
+    identifierValues(candidate).includes("insured-patient"),
+  );
+  assert.ok(insuredPatient?.address?.some((address) => address.use === "home"));
+  const claim = resourceWithMarker(adapter, "Claim", "insured-claim");
+  assert.equal(claim.item?.length, 2);
+  assert.ok(claim.item?.every((item) => item.extension?.some((extension) =>
+    extension.url === "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
+  )));
+  const insuredInvoice = resourceWithMarker(adapter, "Invoice", "insured-invoice");
+  assert.equal(insuredInvoice.lineItem?.length, 2);
+  assert.ok(insuredInvoice.lineItem?.every((line) => line.chargeItemReference?.reference?.startsWith("ChargeItem/")));
 });
 
 test("a second demo seed run is idempotent", async () => {
@@ -79,10 +148,24 @@ test("a second demo seed run is idempotent", async () => {
   const result = await seedDemo(adapter);
 
   assert.deepEqual(result.created, []);
-  assert.equal(result.existing.length, 7);
+  assert.equal(result.existing.length, 16);
   assert.equal(result.statement, "EXISTING");
+  assert.equal(result.insuredStatement, "EXISTING");
   assert.equal(adapter.resources.length, resourceCount);
-  assert.equal(adapter.statementWrites, 1);
+  assert.equal(adapter.statementWrites, 2);
+});
+
+test("insured demo seed passes the real insurance-aware statement acceptance assertion", async () => {
+  const adapter = new FakeDemoSeedAdapter();
+  const result = await seedDemo(adapter);
+
+  const generated = await adapter.generateStatement(result.insuredPatientReference);
+
+  assert.doesNotThrow(() => assertInsuranceAwareDemoStatement(generated));
+  const statement = generated.statements[0];
+  assert.equal(statement.detail?.orders[0]?.mode, "insurance-aware");
+  assert.equal(statement.balanceCents, 3_500);
+  assert.equal(statement.balanceDueCents, 3_500);
 });
 
 test("demo appointment uses the practice date and a real New York UTC offset", () => {
@@ -112,6 +195,32 @@ function identifierValues(resource: Resource): string[] {
 
 function resource(adapter: FakeDemoSeedAdapter, resourceType: string): SeedResource {
   const found = adapter.resources.find((candidate) => candidate.resourceType === resourceType);
+  assert.ok(found);
+  return found;
+}
+
+function resourceByReference(adapter: FakeDemoSeedAdapter, reference: string): SeedResource {
+  const [resourceType, id] = reference.split("/");
+  const found = adapter.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+  assert.ok(found);
+  return found;
+}
+
+function resourcesOf<T extends SeedResource["resourceType"]>(
+  adapter: FakeDemoSeedAdapter,
+  resourceType: T,
+): Array<Extract<SeedResource, { resourceType: T }>> {
+  return adapter.resources.filter((candidate): candidate is Extract<SeedResource, { resourceType: T }> =>
+    candidate.resourceType === resourceType,
+  );
+}
+
+function resourceWithMarker<T extends SeedResource["resourceType"]>(
+  adapter: FakeDemoSeedAdapter,
+  resourceType: T,
+  marker: string,
+): Extract<SeedResource, { resourceType: T }> {
+  const found = resourcesOf(adapter, resourceType).find((candidate) => identifierValues(candidate).includes(marker));
   assert.ok(found);
   return found;
 }

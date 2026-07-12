@@ -323,6 +323,26 @@ test("submit persists idless ChargeItems once while keeping the Claim.MD payload
   assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
 });
 
+test("submit validates the full ChargeItem batch before persisting an idless item", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem[0].subject.reference = "Patient/other";
+  const input = structuredClone(professionalClaim);
+  const idless = structuredClone(input.chargeItems[0]);
+  delete idless.id;
+  input.chargeItems = [idless, input.chargeItems[0]];
+
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /belongs to Patient\/other, not Patient\/pat-900/);
+  assert.equal(fixture.created.ChargeItem.length, 1);
+  assert.equal(fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").length, 0);
+  assert.equal(fixture.created.Claim.length, 0);
+});
+
 test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {
   const { audits, deps: d } = deps();
   let submitted: unknown;
