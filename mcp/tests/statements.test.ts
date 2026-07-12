@@ -6,10 +6,12 @@ import {
   buildStatementSnapshot,
   handleRunStatementsRequest,
   handleStatementListRequest,
+  latestStatementRun,
   PATIENT_STATEMENT_CODE,
   STATEMENT_OUTPUT_CODE_SYSTEM,
   STATEMENT_RUN_CODE,
   STATEMENT_TASK_CODE_SYSTEM,
+  STATEMENT_TRANSACTION_CHILD_LIMIT,
   type StatementRunResult,
 } from "../src/statements/statements.js";
 
@@ -58,7 +60,8 @@ test("batch persists one atomic run, generates every open balance, skips zero ba
   assert.equal(run.statements[0].patientReference, "Patient/p1");
   assert.equal(run.statements[0].balanceCents, 6_000);
   assert.match(run.rejects[0].reason, /does not reconcile/);
-  assert.equal(fixture.transactions.length, 1);
+  assert.equal(fixture.transactions.length, 2);
+  assert.equal(code(fixture.transactions.at(-1)?.entry?.[0]?.resource as Task), STATEMENT_RUN_CODE);
   assert.equal(fixture.storedTasks.filter((task) => code(task) === STATEMENT_RUN_CODE).length, 1);
   assert.equal(fixture.storedTasks.filter((task) => code(task) === PATIENT_STATEMENT_CODE && task.status === "completed").length, 1);
   assert.equal(fixture.storedTasks.filter((task) => code(task) === PATIENT_STATEMENT_CODE && task.status === "failed").length, 1);
@@ -70,7 +73,7 @@ test("batch persists one atomic run, generates every open balance, skips zero ba
 
 test("statement list returns completed snapshots newest-first and never exposes failed reject Tasks", async () => {
   const fixture = fakeFhir({ patients: [], invoices: [], payments: [] });
-  fixture.storedTasks.push(statementTask("old", "2026-07-11T10:00:00.000Z"), statementTask("new", GENERATED_AT), {
+  fixture.storedTasks.push(completedRunTask("run-1"), statementTask("old", "2026-07-11T10:00:00.000Z"), statementTask("new", GENERATED_AT), {
     ...statementTask("reject", "2026-07-13T10:00:00.000Z"), status: "failed",
   });
   const result = await handleStatementListRequest({
@@ -81,9 +84,68 @@ test("statement list returns completed snapshots newest-first and never exposes 
   assert.deepEqual(items.map((item) => item.statementReference), ["Task/new", "Task/old"]);
 });
 
-function fakeFhir(input: { patients: Patient[]; invoices: Invoice[]; payments: PaymentReconciliation[] }) {
+test("a run larger than the child ceiling commits in chunks and publishes its completed marker last", async () => {
+  const count = STATEMENT_TRANSACTION_CHILD_LIMIT + 1;
+  const fixture = fakeFhir({
+    patients: Array.from({ length: count }, (_, index) => patient(`p${index}`, `Patient ${index}`)),
+    invoices: Array.from({ length: count }, (_, index) => invoice(`i${index}`, `p${index}`, 1_000)),
+    payments: [],
+  });
+  const result = await handleRunStatementsRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    now: () => GENERATED_AT,
+    generateId: sequentialIds(),
+  }, { authHeader: "Bearer good" });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.transactions.length, 3);
+  assert.deepEqual(fixture.transactions.slice(0, -1).map((bundle) => bundle.entry?.length), [STATEMENT_TRANSACTION_CHILD_LIMIT, 1]);
+  assert.ok(fixture.transactions.slice(0, -1).every((bundle) => (bundle.entry?.length ?? 0) <= STATEMENT_TRANSACTION_CHILD_LIMIT));
+  assert.equal(code(fixture.transactions.at(-1)?.entry?.[0]?.resource as Task), STATEMENT_RUN_CODE);
+  assert.equal(latestStatementRun(fixture.storedTasks).generatedAt, GENERATED_AT);
+});
+
+test("a failed child chunk leaves no completed run visible to either statement reader", async () => {
+  const count = STATEMENT_TRANSACTION_CHILD_LIMIT + 1;
+  const fixture = fakeFhir({
+    patients: Array.from({ length: count }, (_, index) => patient(`p${index}`, `Patient ${index}`)),
+    invoices: Array.from({ length: count }, (_, index) => invoice(`i${index}`, `p${index}`, 1_000)),
+    payments: [],
+  }, { failTransactionAt: 2 });
+  const deps = {
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir: fixture.fhir }),
+    now: () => GENERATED_AT,
+    generateId: sequentialIds(),
+  };
+
+  await assert.rejects(handleRunStatementsRequest(deps, { authHeader: "Bearer good" }), /chunk failed/);
+  assert.deepEqual(latestStatementRun(fixture.storedTasks), { generatedAt: null, invalidRejects: 0 });
+  const list = await handleStatementListRequest(deps, { authHeader: "Bearer good" });
+  assert.deepEqual(list, { status: 200, body: { items: [] } });
+  assert.equal(fixture.storedTasks.some((task) => code(task) === STATEMENT_RUN_CODE), false);
+});
+
+test("statement list skips one corrupt Task while returning a valid statement from a completed run", async () => {
+  const fixture = fakeFhir({ patients: [], invoices: [], payments: [] });
+  const corrupt = statementTask("corrupt", GENERATED_AT);
+  corrupt.output![0].valueString = "not-json";
+  fixture.storedTasks.push(completedRunTask("run-1"), corrupt, statementTask("valid", GENERATED_AT));
+
+  const result = await handleStatementListRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+  }, { authHeader: "Bearer good" });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { items: Array<{ statementReference: string }> }).items.map((item) => item.statementReference), ["Task/valid"]);
+});
+
+function fakeFhir(
+  input: { patients: Patient[]; invoices: Invoice[]; payments: PaymentReconciliation[] },
+  options: { failTransactionAt?: number } = {},
+) {
   const transactions: Bundle[] = [];
   const storedTasks: Task[] = [];
+  let storedTaskCount = 0;
   const fhir = {
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
       const rows = resourceType === "Patient" ? input.patients
@@ -95,14 +157,18 @@ function fakeFhir(input: { patients: Patient[]; invoices: Invoice[]; payments: P
     },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       transactions.push(structuredClone(bundle));
+      if (transactions.length === options.failTransactionAt) throw new Error("chunk failed");
       const entries = bundle.entry ?? [];
-      entries.forEach((entry, index) => {
-        if (entry.resource?.resourceType === "Task") storedTasks.push({ ...(structuredClone(entry.resource) as Task), id: `stored-${index + 1}` });
+      const locations = entries.map((entry) => {
+        const task = structuredClone(entry.resource) as Task;
+        const id = task.id ?? `stored-${++storedTaskCount}`;
+        if (entry.resource?.resourceType === "Task") storedTasks.push({ ...task, id });
+        return `Task/${id}/_history/1`;
       });
       return {
         resourceType: "Bundle",
         type: "transaction-response",
-        entry: entries.map((_, index) => ({ response: { status: "201", location: `Task/stored-${index + 1}/_history/1` } })),
+        entry: locations.map((location) => ({ response: { status: "201", location } })),
       };
     },
   };
@@ -154,10 +220,23 @@ function statementTask(id: string, generatedAt: string): Task {
     resourceType: "Task", id, status: "completed", intent: "order", authoredOn: generatedAt,
     code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: PATIENT_STATEMENT_CODE }] },
     for: { reference: "Patient/p1" },
+    partOf: [{ reference: "Task/run-1" }],
     output: [
       { type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "snapshot" }] }, valueString: JSON.stringify(snapshot) },
       { type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "balance" }] }, valueMoney: { value: 100, currency: "USD" } },
     ],
+  };
+}
+
+function completedRunTask(id: string): Task {
+  return {
+    resourceType: "Task",
+    id,
+    status: "completed",
+    intent: "order",
+    authoredOn: GENERATED_AT,
+    code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
+    output: [{ type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "invalid-reject-count" }] }, valueInteger: 0 }],
   };
 }
 

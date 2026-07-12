@@ -130,6 +130,16 @@ test("needs-attention is exactly all-clear when every available target is met", 
   assert.equal(summary.pulse.everythingElseAtTarget, true);
 });
 
+test("a malformed latest statement run degrades without blocking any Desk card", () => {
+  const baseline = projectDeskSummary(emptyInput());
+  const summary = projectDeskSummary({ ...emptyInput(), tasks: [malformedStatementRunTask()] });
+
+  assert.deepEqual(Object.keys(summary.cards), Object.keys(baseline.cards));
+  assert.equal(summary.cards.statements.available, true);
+  assert.equal(summary.cards.statements.lastStatement.value, null);
+  assert.equal(summary.cards.statements.invalidRejects.value, 0);
+});
+
 test("practice pulse counts only canonical attention rows", () => {
   const summary = projectDeskSummary({
     ...emptyInput(),
@@ -182,5 +192,15 @@ function statementRunTask(authoredOn: string, invalidRejects: number): Task {
     resourceType: "Task", status: "completed", intent: "order", authoredOn,
     code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
     output: [{ type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "invalid-reject-count" }] }, valueInteger: invalidRejects }],
+  };
+}
+
+function malformedStatementRunTask(): Task {
+  return {
+    resourceType: "Task",
+    status: "completed",
+    intent: "order",
+    code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
+    output: [{ type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "invalid-reject-count" }] }, valueInteger: 1 }],
   };
 }
