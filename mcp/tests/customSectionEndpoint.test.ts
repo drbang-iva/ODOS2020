@@ -203,6 +203,134 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   assert.equal(deniedWrite.status, 403);
 });
 
+test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const anterior = definitions.filter((definition) => definition.stableKey.startsWith("ocular-health:anterior:"));
+  assert.equal(anterior.length, 9);
+  assert.equal(anterior.every((definition) => definition.valueSchema.perEye === true), true);
+  assert.equal(anterior.every((definition) => definition.diagnosisCandidates === undefined), true);
+
+  const lids = anterior.find((definition) => definition.stableKey.endsWith(":lids-lashes"));
+  assert.ok(lids);
+  const field = Object.values(lids.valueSchema.fields as Record<string, { valueType?: string; localCode?: string }>)
+    .find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode);
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+    authHeader: AUTH,
+    params: { stableKey: lids.stableKey },
+    body: {
+      patientReference: "Patient/p3",
+      encounterReference: "Encounter/e3",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [{ code: field.localCode, value: ["demodex", "demodex::collarettes"] }],
+          other: "Trace sleeves.",
+        },
+        OS: { state: "normal", customFields: [] },
+      },
+    },
+  });
+  assert.equal(captured.status, 200, JSON.stringify(captured.body));
+  assert.equal(component(fhir.observations[0], "EXAM_STATE")?.valueString, "abnormal");
+  assert.equal(component(fhir.observations[0], "OD_demodex")?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], "OD_demodex::collarettes")?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], "OTHER")?.valueString, "Trace sleeves.");
+  assert.equal(component(fhir.observations[1], "EXAM_STATE")?.valueString, "normal");
+  assert.equal(component(fhir.observations[1], "NORMAL_TEMPLATE")?.valueString, lids.normalSemantics?.template);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, anterior), {
+    authHeader: AUTH,
+    params: { stableKey: lids.stableKey },
+    query: { patient: "Patient/p3", encounter: "Encounter/e3" },
+  });
+  const rows = (history.body as { rows: Array<{ eye: string; state: string; values: Array<{ value: string[] }>; other?: string }> }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.state]), [["OD", "abnormal"], ["OS", "normal"]]);
+  assert.deepEqual(rows[0]?.values[0]?.value, ["demodex", "demodex::collarettes"]);
+  assert.equal(rows[0]?.other, "Trace sleeves.");
+
+  const palpebral = anterior.find((definition) => definition.stableKey.endsWith(":palpebral-conjunctiva"));
+  assert.ok(palpebral);
+  const deferred = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+    authHeader: AUTH,
+    params: { stableKey: palpebral.stableKey },
+    body: {
+      patientReference: "Patient/p3",
+      encounterReference: "Encounter/e3",
+      eyes: {
+        OD: { state: "deferred", customFields: [], other: "Patient declined lid eversion." },
+        OS: { state: "normal", customFields: [] },
+      },
+    },
+  });
+  assert.equal(deferred.status, 200, JSON.stringify(deferred.body));
+  assert.equal(component(fhir.observations[2], "EXAM_STATE")?.valueString, "deferred");
+
+  for (const definition of anterior.filter((candidate) => candidate !== lids && candidate !== palpebral)) {
+    const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p3",
+        encounterReference: "Encounter/e3",
+        eyes: {
+          OD: { state: "normal", customFields: [] },
+          OS: { state: "normal", customFields: [] },
+        },
+      },
+    });
+    assert.equal(result.status, 200, `${definition.display}: ${JSON.stringify(result.body)}`);
+  }
+  assert.equal(fhir.observations.length, 18);
+
+  const unknown = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+    authHeader: AUTH,
+    params: { stableKey: lids.stableKey },
+    body: {
+      patientReference: "Patient/p3",
+      encounterReference: "Encounter/e3",
+      eyes: { OD: { state: "abnormal", customFields: [{ code: field.localCode, value: ["invented-finding"] }] } },
+    },
+  });
+  assert.equal(unknown.status, 400);
+  assert.match(String((unknown.body as { error: string }).error), /unknown or inactive option/);
+});
+
+test("OH-1 finding options and normal templates are editable through finding-definition HTTP handlers", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cornea = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:cornea");
+  assert.ok(cornea);
+  const field = Object.values(cornea.valueSchema.fields as Record<string, { valueType?: string; localCode?: string; options?: Array<Record<string, unknown>> }>)
+    .find((candidate) => candidate.valueType === "multi-select");
+  assert.ok(field?.localCode && field.options);
+  const options = [
+    ...field.options.map((option) => option.code === "arcus" ? { ...option, active: false } : option),
+    { code: "practice-finding", display: "Practice finding", active: true },
+  ];
+  const updated = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: { action: "update-custom-field", localCode: field.localCode, options },
+  });
+  assert.equal(updated.status, 200, JSON.stringify(updated.body));
+  const templated = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: { action: "update-normal-template", template: "Practice-normal cornea." },
+  });
+  assert.equal(templated.status, 200, JSON.stringify(templated.body));
+
+  const stored = await catalog(fhir);
+  const storedCornea = stored.find((definition) => definition.stableKey === cornea.stableKey);
+  assert.equal(storedCornea?.normalSemantics?.template, "Practice-normal cornea.");
+  const storedField = Object.values(storedCornea?.valueSchema.fields as Record<string, { localCode?: string; options?: Array<{ code: string; active: boolean }> }>)
+    .find((candidate) => candidate.localCode === field.localCode);
+  assert.equal(storedField?.options?.find((option) => option.code === "arcus")?.active, false);
+  assert.equal(storedField?.options?.find((option) => option.code === "practice-finding")?.active, true);
+});
+
 class MemoryFhir {
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];

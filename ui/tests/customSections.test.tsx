@@ -5,6 +5,11 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
+import {
+  OcularHealthSection,
+  applyAnteriorAllNormal,
+  copyEyeCapture,
+} from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
 
@@ -129,6 +134,93 @@ test("the shared section editor composes fields through the shipped custom-field
   assert.match(html, /Chart OD and OS independently/);
   assert.match(html, /\+ Add field/);
   assert.match(html, /Create section/);
+});
+
+test("the anterior renderer exposes explicit all-normal, bilateral copy, deferred, priority, nesting, and Other controls", () => {
+  const html = renderToStaticMarkup(
+    <OcularHealthSection
+      definitions={[{
+        stableKey: "ocular-health:anterior:lids-lashes",
+        sectionKey: "ocular-health:anterior:lids-lashes",
+        display: "Lids & Lashes",
+        active: true,
+        perEye: true,
+        normalTemplate: "Normal lids.",
+        allowDeferred: true,
+        customFields: [{
+          localCode: "CUSTOM_ABNORMAL_FINDINGS_02",
+          display: "Abnormal findings",
+          valueType: "multi-select",
+          options: [
+            { code: "demodex", display: "Demodex", active: true, priority: true },
+            { code: "demodex::collarettes", display: "Collarettes", active: true, parentCode: "demodex", priority: true },
+            { code: "ptosis", display: "Ptosis", active: true },
+          ],
+          order: 0,
+          active: true,
+        }],
+      }]}
+      patientReference="Patient/p1"
+      encounterReference="Encounter/e1"
+      onSaved={() => undefined}
+    />,
+  );
+  assert.match(html, /Anterior All Normal/);
+  assert.match(html, /Nothing defaults to normal/);
+  assert.match(html, /Copy to OS/);
+  assert.match(html, /Copy to OD/);
+  assert.match(html, /Not performed \/ deferred/);
+  assert.equal((html.match(/>Other</g) ?? []).length, 2);
+  const source = readFileSync(new URL("../src/components/charting/OcularHealthSection.tsx", import.meta.url), "utf8");
+  assert.match(source, /More findings/);
+  assert.match(source, /parentCode/);
+});
+
+test("SpineNav nests definition-store anterior structures without moving Cup Disc or Dry Eye", () => {
+  const html = renderToStaticMarkup(
+    <SpineNav
+      active="ocular-health:anterior:cornea"
+      statuses={{}}
+      onSelect={() => undefined}
+      ocularHealthSections={[
+        { id: "ocular-health:anterior:periocular-adnexa", label: "Periocular Adnexa" },
+        { id: "ocular-health:anterior:cornea", label: "Cornea" },
+      ]}
+    />,
+  );
+  assert.ok(html.indexOf("ANTERIOR SEGMENT") < html.indexOf("Periocular Adnexa"));
+  assert.ok(html.indexOf("Periocular Adnexa") < html.indexOf("Cornea"));
+  assert.ok(html.indexOf("Cornea") < html.indexOf("Cup/Disc"));
+  assert.ok(html.indexOf("Cup/Disc") < html.indexOf("Dry Eye"));
+});
+
+test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
+  const captures = {
+    "ocular-health:anterior:cornea": {
+      OD: { state: "abnormal" as const, selections: ["staining"], other: "" },
+      OS: { selections: [], other: "" },
+    },
+    "ocular-health:anterior:lens": {
+      OD: { selections: [], other: "" },
+      OS: { selections: [], other: "" },
+    },
+  };
+  const result = applyAnteriorAllNormal([
+    { stableKey: "ocular-health:anterior:cornea" },
+    { stableKey: "ocular-health:anterior:lens" },
+  ], captures);
+  assert.equal(result.filled, 1);
+  assert.equal(result.skipped, 1);
+  assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.state, "abnormal");
+  assert.equal(result.captures["ocular-health:anterior:lens"]?.OD.state, "normal");
+  assert.equal(result.captures["ocular-health:anterior:lens"]?.OS.state, "normal");
+
+  const source = { state: "abnormal" as const, selections: ["demodex", "demodex::collarettes"], other: "trace" };
+  const copied = copyEyeCapture(source);
+  copied.selections.push("ptosis");
+  assert.deepEqual(source.selections, ["demodex", "demodex::collarettes"]);
+  assert.equal(copied.state, "abnormal");
+  assert.equal(copied.other, "trace");
 });
 
 test("EncounterCharting keeps exactly the 14 shipped built-in render branches plus one custom branch", () => {

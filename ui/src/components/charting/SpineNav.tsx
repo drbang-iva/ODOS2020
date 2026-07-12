@@ -1,6 +1,6 @@
 import { sectionStatus, type BuiltInSectionId, type ChartSectionId, type SectionStatusMap } from "./types";
 
-const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean; group?: string }> = [
+const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean; group?: string; subHeader?: string }> = [
   { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
   { id: "va", label: "Visual Acuity", group: "PRETEST" },
@@ -22,16 +22,23 @@ interface Props {
   statuses: SectionStatusMap;
   onSelect: (section: ChartSectionId) => void;
   customSections?: Array<{ id: ChartSectionId; label: string }>;
+  ocularHealthSections?: Array<{ id: ChartSectionId; label: string }>;
   onAddSection?: () => void;
 }
 
-export function SpineNav({ active, statuses, onSelect, customSections = [], onAddSection }: Props) {
+export function SpineNav({ active, statuses, onSelect, customSections = [], ocularHealthSections = [], onAddSection }: Props) {
   const sections: Array<{
     id: ChartSectionId;
     label: string;
     readOnly?: boolean;
     group?: string;
-  }> = [...SECTIONS, ...customSections];
+    subHeader?: string;
+  }> = [
+    ...SECTIONS.slice(0, SECTIONS.findIndex((section) => section.id === "cup-disc")),
+    ...ocularHealthSections.map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" })),
+    ...SECTIONS.slice(SECTIONS.findIndex((section) => section.id === "cup-disc")),
+    ...customSections,
+  ];
   return (
     <nav className="shrink-0 border-b border-white/10 bg-bg-panel/70 p-3 md:w-60 md:border-b-0 md:border-r md:p-4">
       <div className="text-xs uppercase tracking-widest text-white/35">Spine</div>
@@ -44,6 +51,8 @@ export function SpineNav({ active, statuses, onSelect, customSections = [], onAd
           const group = section.group;
           const previousSection = sections[index - 1];
           const previousGroup = previousSection?.group;
+          const subHeader = section.subHeader;
+          const previousSubHeader = previousSection?.subHeader;
           return (
             <div key={section.id} className="w-44 shrink-0 md:w-full">
               {group && group !== previousGroup && (
@@ -51,6 +60,12 @@ export function SpineNav({ active, statuses, onSelect, customSections = [], onAd
                   {group}
                 </div>
               )}
+              {subHeader && subHeader !== previousSubHeader && (
+                <div className="mb-2 border-l border-brand/40 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-light">
+                  {subHeader}
+                </div>
+              )}
+              {!subHeader && previousSubHeader && group === previousGroup && <div className="mb-3 border-t border-white/10" />}
               <button
                 onClick={() => onSelect(section.id)}
                 className={[

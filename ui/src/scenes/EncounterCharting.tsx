@@ -9,6 +9,7 @@ import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
+import { OcularHealthSection } from "../components/charting/OcularHealthSection";
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
@@ -69,7 +70,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       if (!response.ok || !body.definition) throw new Error(body.error ?? `Section creation failed: ${response.status}`);
       setCreatingSection(false);
       await loadCatalog();
-      setActiveSection(body.definition.stableKey);
+      setActiveSection(body.definition.stableKey as ChartSectionId);
     } finally {
       setSavingSection(false);
     }
@@ -87,6 +88,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const customDefinitions = catalog.definitions.filter((definition) =>
     definition.sectionKey?.startsWith("custom:") && definition.active
   );
+  const ocularHealthDefinitions = catalog.definitions.filter((definition) =>
+    definition.sectionKey?.startsWith("ocular-health:anterior:") && definition.active
+  );
+  const ocularHealthSections = ocularHealthDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
   const customSections = customDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
   const customDefinition = activeSection.startsWith("custom:")
     ? customDefinitions.find((definition) => definition.stableKey === activeSection)
@@ -101,6 +106,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           statuses={statuses}
           onSelect={setActiveSection}
           customSections={customSections}
+          ocularHealthSections={ocularHealthSections}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="min-w-0 flex-1 bg-bg-deep">
@@ -196,6 +202,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("prescription", status)}
+            />
+          )}
+          {activeSection.startsWith("ocular-health:anterior:") && (
+            <OcularHealthSection
+              definitions={ocularHealthDefinitions}
+              focusedStableKey={activeSection}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status, stableKeys) => stableKeys.forEach((stableKey) => markSaved(stableKey as ChartSectionId, status))}
             />
           )}
           {activeSection.startsWith("custom:") && customDefinition && (

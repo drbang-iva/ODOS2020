@@ -7,23 +7,25 @@ type Eye = "OD" | "OS";
 export interface CustomFindingField {
   localCode: string;
   display: string;
-  valueType: "number" | "select";
+  valueType: "number" | "select" | "multi-select";
   unit?: string;
   min?: number;
   max?: number;
   step?: number;
-  options?: Array<{ code: string; display: string; active: boolean }>;
+  options?: Array<{ code: string; display: string; active: boolean; parentCode?: string; priority?: boolean }>;
   order: number;
   active: boolean;
 }
 
 export interface CustomFindingDefinition {
-  stableKey: `custom:${string}`;
+  stableKey: string;
   sectionKey?: string;
   display: string;
   active: boolean;
   perEye: boolean;
   customFields: CustomFindingField[];
+  normalTemplate?: string;
+  allowDeferred?: boolean;
 }
 
 interface Props {
@@ -43,7 +45,7 @@ interface HistoryRow {
 const EYES: Eye[] = ["OD", "OS"];
 
 export function CustomFindingSection({ definition, patientReference, encounterReference, onSaved }: Props) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string | string[]>>({});
   const [remarks, setRemarks] = useState("");
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -74,7 +76,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
     return () => controller.abort();
   }, [definition.stableKey, patientReference, historyVersion]);
 
-  function update(key: string, value: string) {
+  function update(key: string, value: string | string[]) {
     setValues((current) => ({ ...current, [key]: value }));
   }
 
@@ -137,7 +139,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
                   <CustomFieldControl
                     key={field.localCode}
                     field={field}
-                    value={values[valueKey(field.localCode, eye)] ?? ""}
+                    value={values[valueKey(field.localCode, eye)] ?? (field.valueType === "multi-select" ? [] : "")}
                     onChange={(value) => update(valueKey(field.localCode, eye), value)}
                   />
                 ))}
@@ -177,8 +179,8 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
 
 function CustomFieldControl({ field, value, onChange }: {
   field: CustomFindingField;
-  value: string;
-  onChange(value: string): void;
+  value: string | string[];
+  onChange(value: string | string[]): void;
 }) {
   const hint = [
     field.min !== undefined ? `min ${field.min}` : "",
@@ -190,26 +192,39 @@ function CustomFieldControl({ field, value, onChange }: {
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
       {field.valueType === "number" ? (
         <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
-          <input type="number" value={value} min={field.min} max={field.max} step={field.step ?? "any"} onChange={(event) => onChange(event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-white outline-none" />
+          <input type="number" value={typeof value === "string" ? value : ""} min={field.min} max={field.max} step={field.step ?? "any"} onChange={(event) => onChange(event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-white outline-none" />
           {field.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{field.unit}</span>}
         </div>
-      ) : (
-        <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand">
+      ) : field.valueType === "select" ? (
+        <select value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand">
           <option value="">Select</option>
           {(field.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
         </select>
+      ) : (
+        <div className="space-y-2 rounded border border-white/10 p-3">
+          {(field.options ?? []).filter((option) => option.active && !option.parentCode).map((option) => {
+            const selected = Array.isArray(value) ? value : [];
+            return <label key={option.code} className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={selected.includes(option.code)} onChange={(event) => onChange(event.target.checked ? [...selected, option.code] : selected.filter((code) => code !== option.code && !code.startsWith(`${option.code}::`)))} className="accent-brand" />{option.display}</label>;
+          })}
+        </div>
       )}
       {hint && <span className="mt-1 block text-xs text-white/30">{hint}</span>}
     </label>
   );
 }
 
-function fieldValues(fields: CustomFindingField[], values: Record<string, string>, eye?: Eye) {
-  return fields.flatMap((field) => {
-    const raw = values[valueKey(field.localCode, eye)]?.trim();
-    if (!raw) return [];
-    return [{ code: field.localCode, value: field.valueType === "number" ? Number(raw) : raw }];
-  });
+function fieldValues(fields: CustomFindingField[], values: Record<string, string | string[]>, eye?: Eye) {
+  const result: Array<{ code: string; value: number | string | string[] }> = [];
+  for (const field of fields) {
+    const raw = values[valueKey(field.localCode, eye)];
+    if (Array.isArray(raw)) {
+      if (raw.length) result.push({ code: field.localCode, value: raw });
+      continue;
+    }
+    const trimmed = raw?.trim();
+    if (trimmed) result.push({ code: field.localCode, value: field.valueType === "number" ? Number(trimmed) : trimmed });
+  }
+  return result;
 }
 
 function valueKey(code: string, eye?: Eye): string {

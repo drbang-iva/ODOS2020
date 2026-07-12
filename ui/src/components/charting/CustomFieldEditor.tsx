@@ -2,12 +2,12 @@ import { useState } from "react";
 
 export interface CustomFieldEditorValue {
   display: string;
-  valueType: "number" | "select";
+  valueType: "number" | "select" | "multi-select";
   unit?: "[diop]" | "mm" | "um" | "ms" | "%" | "deg" | "mJ" | "nm";
   min?: number;
   max?: number;
   step?: number;
-  options?: Array<{ code: string; display: string; active: boolean }>;
+  options?: Array<{ code: string; display: string; active: boolean; parentCode?: string; priority?: boolean }>;
 }
 
 export function CustomFieldEditor({ title = "Create field", initial, saving, onSave, onCancel }: {
@@ -18,12 +18,12 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
   onCancel(): void;
 }) {
   const [display, setDisplay] = useState(initial?.display ?? "");
-  const [valueType, setValueType] = useState<"number" | "select">(initial?.valueType ?? "number");
+  const [valueType, setValueType] = useState<"number" | "select" | "multi-select">(initial?.valueType ?? "number");
   const [unit, setUnit] = useState<CustomFieldEditorValue["unit"] | "">(initial?.unit ?? "");
   const [min, setMin] = useState(initial?.min?.toString() ?? "");
   const [max, setMax] = useState(initial?.max?.toString() ?? "");
   const [step, setStep] = useState(initial?.step?.toString() ?? "");
-  const [options, setOptions] = useState(initial?.options?.map((option) => `${option.code} | ${option.display}`).join("\n") ?? "");
+  const [options, setOptions] = useState(initial?.options?.map((option) => `${option.active ? "" : "! "}${option.code} | ${option.display}`).join("\n") ?? "");
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
@@ -36,7 +36,7 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
         ...(valueType === "number" && min ? { min: finiteNumber(min, "Minimum") } : {}),
         ...(valueType === "number" && max ? { max: finiteNumber(max, "Maximum") } : {}),
         ...(valueType === "number" && step ? { step: positiveNumber(step, "Step") } : {}),
-        ...(valueType === "select" ? { options: parseOptions(options) } : {}),
+        ...(valueType !== "number" ? { options: parseOptions(options, initial?.options) } : {}),
       };
       setError(null);
       await onSave(value);
@@ -56,9 +56,10 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
           <EditorInput label="Label" value={display} onChange={setDisplay} />
           <label className="block">
             <span className="mb-1 block text-xs uppercase tracking-wide text-white/40">Type</span>
-            <select value={valueType} disabled={Boolean(initial)} onChange={(event) => setValueType(event.target.value as "number" | "select")} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-white disabled:opacity-50">
+            <select value={valueType} disabled={Boolean(initial)} onChange={(event) => setValueType(event.target.value as typeof valueType)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-white disabled:opacity-50">
               <option value="number">Number</option>
               <option value="select">Dropdown</option>
+              <option value="multi-select">Checkbox list</option>
             </select>
           </label>
           {valueType === "number" ? (
@@ -80,7 +81,7 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
             <label className="block">
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/40">Options, one per line</span>
               <textarea value={options} onChange={(event) => setOptions(event.target.value)} rows={8} placeholder={'Low\nMedium\nHigh'} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white" />
-              {initial && <span className="mt-1 block text-xs text-white/35">Keep each code before the | unchanged; edit the label after it.</span>}
+              {initial && <span className="mt-1 block text-xs text-white/35">Keep each code before the | unchanged. Prefix a line with ! to deactivate that option without erasing history.</span>}
             </label>
           )}
         </div>
@@ -103,15 +104,27 @@ function EditorInput({ label, value, onChange, inputMode }: {
   return <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/40">{label}</span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-white" /></label>;
 }
 
-function parseOptions(value: string): Array<{ code: string; display: string; active: boolean }> {
+function parseOptions(
+  value: string,
+  initial: CustomFieldEditorValue["options"] = [],
+): NonNullable<CustomFieldEditorValue["options"]> {
   const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
   if (lines.length === 0) throw new Error("Dropdown fields require at least one option.");
   const options = lines.map((line) => {
-    const separator = line.indexOf("|");
-    const code = separator >= 0 ? line.slice(0, separator).trim() : slug(line);
-    const display = separator >= 0 ? line.slice(separator + 1).trim() : line;
+    const active = !line.startsWith("!");
+    const content = active ? line : line.slice(1).trim();
+    const separator = content.indexOf("|");
+    const code = separator >= 0 ? content.slice(0, separator).trim() : slug(content);
+    const display = separator >= 0 ? content.slice(separator + 1).trim() : content;
     if (!code || !display) throw new Error("Each dropdown option needs both a code and label.");
-    return { code, display, active: true };
+    const existing = initial.find((option) => option.code === code);
+    return {
+      code,
+      display,
+      active,
+      ...(existing?.parentCode ? { parentCode: existing.parentCode } : {}),
+      ...(existing?.priority !== undefined ? { priority: existing.priority } : {}),
+    };
   });
   if (new Set(options.map((option) => option.code)).size !== options.length) {
     throw new Error("Dropdown option labels must produce distinct codes.");

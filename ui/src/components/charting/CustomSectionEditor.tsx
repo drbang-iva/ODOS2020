@@ -66,7 +66,7 @@ export function CustomSectionEditor({ saving, onSave, onCancel }: {
                 <div key={`${field.display}-${index}`} className="flex items-center gap-3 rounded border border-white/10 bg-bg-deep/55 px-3 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-sm text-white/80">{field.display}</div>
-                    <div className="mt-1 text-xs text-white/35">{field.valueType === "select" ? "Dropdown" : field.unit ?? "Unitless number"}</div>
+                    <div className="mt-1 text-xs text-white/35">{field.valueType === "select" ? "Dropdown" : field.valueType === "multi-select" ? "Checkbox list" : field.unit ?? "Unitless number"}</div>
                   </div>
                   <button type="button" onClick={() => setEditingField(index)} className="rounded border border-white/15 px-2 py-1 text-xs text-white/65">Edit</button>
                   <button type="button" onClick={() => setFields((current) => current.filter((_, candidate) => candidate !== index))} className="rounded border border-red-300/20 px-2 py-1 text-xs text-red-200">Remove</button>

@@ -13,7 +13,7 @@ import type {
   FindingValue,
 } from "./glaucoma-suspect.js";
 
-export const CUSTOM_FIELD_VALUE_TYPES = ["number", "select"] as const;
+export const CUSTOM_FIELD_VALUE_TYPES = ["number", "select", "multi-select"] as const;
 export type CustomFieldValueType = typeof CUSTOM_FIELD_VALUE_TYPES[number];
 
 export interface CustomFieldEntry {
@@ -25,25 +25,37 @@ export interface CustomFieldEntry {
   min?: number;
   max?: number;
   step?: number;
-  options?: Array<{ code: string; display: string; active: boolean }>;
+  options?: Array<{
+    code: string;
+    display: string;
+    active: boolean;
+    parentCode?: string;
+    priority?: boolean;
+  }>;
   order: number;
   active: boolean;
 }
 
 export interface CustomFieldValue {
   code: string;
-  value: number | string;
+  value: number | string | string[];
 }
 
 export const customFieldValueSchema = z.object({
   code: z.string().trim().min(1).max(100),
-  value: z.union([z.number(), z.string().trim().min(1).max(200)]),
+  value: z.union([
+    z.number(),
+    z.string().trim().min(1).max(200),
+    z.array(z.string().trim().min(1).max(100)).max(100),
+  ]),
 }).strict();
 
 export const customFieldOptionInputSchema = z.object({
-  code: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/),
+  code: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/),
   display: z.string().trim().min(1).max(120),
   active: z.boolean().default(true),
+  parentCode: z.string().trim().min(1).max(100).optional(),
+  priority: z.boolean().optional(),
 }).strict();
 
 export const createCustomFieldInputSchema = z.object({
@@ -129,7 +141,7 @@ export function updateCustomField(
     ...(input.active !== undefined ? { active: input.active } : {}),
     ...(input.options !== undefined ? { options: input.options } : {}),
   } as CustomFieldEntry;
-  if (current.valueType === "select" && input.options) {
+  if ((current.valueType === "select" || current.valueType === "multi-select") && input.options) {
     const nextCodes = new Set(input.options.map((option) => option.code));
     const removed = current.options?.find((option) => !nextCodes.has(option.code));
     if (removed) {
@@ -280,11 +292,31 @@ export function validateCustomFieldValues(
           return `${label} custom field ${item.code} must use ${field.step} increments.`;
         }
       }
-    } else {
+    } else if (field.valueType === "select") {
       if (typeof item.value !== "string") return `${label} custom field ${item.code} requires an option code.`;
       const option = field.options?.find((candidate) => candidate.code === item.value);
       if (!option || !option.active) {
         return `${label} custom field ${item.code} contains an unknown or inactive option: ${item.value}.`;
+      }
+    } else {
+      if (!Array.isArray(item.value)) return `${label} custom field ${item.code} requires an array of option codes.`;
+      const selected = item.value;
+      if (new Set(selected).size !== selected.length) {
+        return `${label} custom field ${item.code} contains duplicate option codes.`;
+      }
+      const unknown = selected.find((code) => {
+        const option = field.options?.find((candidate) => candidate.code === code);
+        return !option || !option.active;
+      });
+      if (unknown) {
+        return `${label} custom field ${item.code} contains an unknown or inactive option: ${unknown}.`;
+      }
+      const orphan = selected.find((code) => {
+        const option = field.options?.find((candidate) => candidate.code === code);
+        return option?.parentCode && !selected.includes(option.parentCode);
+      });
+      if (orphan) {
+        return `${label} custom field ${item.code} sub-option requires its parent selection: ${orphan}.`;
       }
     }
   }
@@ -297,18 +329,31 @@ export function customFieldComponents(
   codePrefix = "",
 ): Extract<FindingValue, { type: "components" }>["components"] {
   const fields = new Map(customFieldEntries(definition, true).map((field) => [field.localCode, field]));
-  return values.flatMap((item) => {
+  const components: Extract<FindingValue, { type: "components" }>["components"] = [];
+  for (const item of values) {
     const field = fields.get(item.code);
-    if (!field) return [];
-    return [{
+    if (!field) continue;
+    if (field.valueType === "multi-select" && Array.isArray(item.value)) {
+      for (const code of item.value) {
+        const option = field.options?.find((candidate) => candidate.code === code);
+        if (option) components.push({
+          code: `${codePrefix}${option.code}`,
+          display: option.display,
+          value: true,
+        });
+      }
+      continue;
+    }
+    components.push({
       code: `${codePrefix}${field.localCode}`,
       display: field.display,
-      value: item.value,
+      value: item.value as number | string,
       ...(field.valueType === "number" && field.unit
         ? { unit: field.unit, system: UCUM_CODE_SYSTEM, unitCode: field.unit }
         : {}),
-    }];
-  });
+    });
+  }
+  return components;
 }
 
 export function codeCustomFieldComponents(
@@ -364,7 +409,12 @@ export function observationCustomValue(
   observation: Observation,
   field: Pick<CustomFieldEntry, "localCode" | "valueType" | "options">,
   codePrefix = "",
-): number | string | undefined {
+): number | string | string[] | undefined {
+  if (field.valueType === "multi-select") {
+    return (field.options ?? []).filter((option) =>
+      findComponent(observation, `${codePrefix}${option.code}`)?.valueBoolean === true
+    ).map((option) => option.code);
+  }
   const matched = findComponent(observation, `${codePrefix}${field.localCode}`);
   if (!matched) return undefined;
   if (field.valueType === "number") {
@@ -387,7 +437,7 @@ function parseCustomField(row: Record<string, unknown>): CustomFieldEntry | unde
   ) return undefined;
   const valueType = row.valueType as CustomFieldValueType;
   const options = readCustomOptions(row.options);
-  if (valueType === "select" && !options) return undefined;
+  if ((valueType === "select" || valueType === "multi-select") && !options) return undefined;
   if (row.unit !== undefined && !UCUM_UNIT_CODES.includes(row.unit as UcumUnitCode)) return undefined;
   return {
     localCode: row.localCode,
@@ -415,13 +465,16 @@ function assertCustomFieldShape(input: {
   if (input.valueType === "number" && input.options !== undefined) {
     throw new Error("Number custom fields cannot define select options.");
   }
-  if (input.valueType === "select") {
+  if (input.valueType === "select" || input.valueType === "multi-select") {
     if (input.unit !== undefined || input.min !== undefined || input.max !== undefined || input.step !== undefined) {
       throw new Error("Select custom fields cannot define numeric constraints.");
     }
     if (!input.options?.length) throw new Error("Select custom fields require at least one option.");
     const codes = input.options.map((option) => option.code);
     if (new Set(codes).size !== codes.length) throw new Error("Select custom-field option codes must be unique.");
+    const codeSet = new Set(codes);
+    const invalidParent = input.options.find((option) => option.parentCode && !codeSet.has(option.parentCode));
+    if (invalidParent) throw new Error(`Select option ${invalidParent.code} has an unknown parent code.`);
   }
   if (input.min !== undefined && input.max !== undefined && input.min > input.max) {
     throw new Error("Custom field minimum cannot exceed maximum.");
@@ -467,7 +520,13 @@ function readCustomOptions(value: unknown): CustomFieldEntry["options"] | undefi
   const options = value.flatMap((raw) => {
     const row = asRecord(raw);
     return typeof row.code === "string" && typeof row.display === "string" && typeof row.active === "boolean"
-      ? [{ code: row.code, display: row.display, active: row.active }]
+      ? [{
+          code: row.code,
+          display: row.display,
+          active: row.active,
+          ...(typeof row.parentCode === "string" ? { parentCode: row.parentCode } : {}),
+          ...(typeof row.priority === "boolean" ? { priority: row.priority } : {}),
+        }]
       : [];
   });
   return options.length === value.length ? options : undefined;
