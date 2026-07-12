@@ -21,6 +21,10 @@ export interface StatementRow {
   totalNetCents: number;
   paymentsAppliedCents: number;
   balanceCents: number;
+  unappliedPaymentReconciliationReferences?: string[];
+  unappliedCreditCents?: number;
+  balanceDueCents?: number;
+  creditBalanceCents?: number;
 }
 
 export interface StatementRejectRow {
@@ -64,6 +68,7 @@ export function runStatements(options: ClaimsApiOptions = {}): Promise<Statement
 
 export function renderBalanceForwardStatement(statement: StatementRow): string {
   assertReconciled(statement);
+  const credit = accountCredit(statement);
   const invoiceRows = statement.invoices.map((invoice) => `<tr>
     <td>${escapeHtml(invoice.invoiceReference.replace("Invoice/", ""))}</td>
     <td>${invoice.date ? escapeHtml(formatDate(invoice.date)) : "—"}</td>
@@ -93,7 +98,10 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
 <table class="totals"><tbody>
   <tr><td>Total charges</td><td>${formatStatementMoney(statement.totalNetCents)}</td></tr>
   <tr><td>Payments applied</td><td>−${formatStatementMoney(statement.paymentsAppliedCents)}</td></tr>
-  <tr class="balance"><td>Balance forward</td><td>${formatStatementMoney(statement.balanceCents)}</td></tr>
+  <tr><td>Invoice balance</td><td>${formatStatementMoney(statement.balanceCents)}</td></tr>
+  <tr><td>Unapplied credit on account</td><td>−${formatStatementMoney(credit.unappliedCreditCents)}</td></tr>
+  <tr class="balance"><td>Balance due</td><td>${formatStatementMoney(credit.balanceDueCents)}</td></tr>
+  ${credit.creditBalanceCents > 0 ? `<tr class="credit"><td><strong>Credit balance</strong></td><td><strong>${formatStatementMoney(credit.creditBalanceCents)}</strong></td></tr>` : ""}
 </tbody></table>
 <p class="note">This balance is reconciled to the listed Invoice totals and recorded payment allocations as of the statement date.</p>
 </section></body></html>`;
@@ -112,6 +120,23 @@ function assertReconciled(statement: StatementRow): void {
     || balanceCents !== statement.balanceCents || balanceCents !== totalNetCents - paymentsAppliedCents) {
     throw new Error("Statement cannot print because its persisted totals do not reconcile.");
   }
+  accountCredit(statement);
+}
+
+export function accountCredit(statement: StatementRow): {
+  unappliedCreditCents: number;
+  balanceDueCents: number;
+  creditBalanceCents: number;
+} {
+  const unappliedCreditCents = statement.unappliedCreditCents ?? 0;
+  const balanceDueCents = statement.balanceDueCents ?? statement.balanceCents;
+  const creditBalanceCents = statement.creditBalanceCents ?? 0;
+  if (![unappliedCreditCents, balanceDueCents, creditBalanceCents].every((value) => Number.isInteger(value) && value >= 0)
+    || balanceDueCents !== Math.max(0, statement.balanceCents - unappliedCreditCents)
+    || creditBalanceCents !== Math.max(0, unappliedCreditCents - statement.balanceCents)) {
+    throw new Error("Statement account credit does not reconcile.");
+  }
+  return { unappliedCreditCents, balanceDueCents, creditBalanceCents };
 }
 
 async function requestJson<T>(path: string, init: RequestInit, options: ClaimsApiOptions): Promise<T> {

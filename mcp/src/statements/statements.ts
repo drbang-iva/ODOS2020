@@ -12,7 +12,12 @@ import type {
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
-import { paymentAmountCents, paymentSubjectReference } from "../payments/payment-credit-service.js";
+import {
+  filterUnappliedCredits,
+  paymentAmountCents,
+  paymentSubjectReference,
+  unappliedPaymentCents,
+} from "../payments/payment-credit-service.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 
@@ -50,6 +55,10 @@ export interface StatementSnapshot {
   totalNetCents: number;
   paymentsAppliedCents: number;
   balanceCents: number;
+  unappliedPaymentReconciliationReferences?: string[];
+  unappliedCreditCents?: number;
+  balanceDueCents?: number;
+  creditBalanceCents?: number;
 }
 
 export interface StatementRow extends StatementSnapshot {
@@ -354,7 +363,10 @@ async function runStatements(
         continue;
       }
       try {
-        const snapshot = buildStatementSnapshot({ patient, invoices: patientInvoices, paymentReconciliations: payments, generatedAt: options.generatedAt });
+        const snapshot = addAccountCredit(
+          buildStatementSnapshot({ patient, invoices: patientInvoices, paymentReconciliations: payments, generatedAt: options.generatedAt }),
+          payments,
+        );
         if (snapshot.balanceCents === 0) skippedZeroBalanceCount += 1;
         else statements.push(snapshot);
       } catch (error) {
@@ -509,6 +521,21 @@ function validateLinkedPayment(payment: PaymentReconciliation, patientReference:
   }
 }
 
+function addAccountCredit(
+  snapshot: StatementSnapshot,
+  paymentReconciliations: PaymentReconciliation[],
+): StatementSnapshot {
+  const credits = filterUnappliedCredits(paymentReconciliations, snapshot.patientReference);
+  const unappliedCreditCents = sum(credits.map((credit) => unappliedPaymentCents(credit.paymentReconciliation)));
+  return {
+    ...snapshot,
+    unappliedPaymentReconciliationReferences: credits.map((credit) => paymentReferenceOf(credit.paymentReconciliation)),
+    unappliedCreditCents,
+    balanceDueCents: Math.max(0, snapshot.balanceCents - unappliedCreditCents),
+    creditBalanceCents: Math.max(0, unappliedCreditCents - snapshot.balanceCents),
+  };
+}
+
 function allocationCents(payment: PaymentReconciliation, invoiceReference: string): number {
   return sum((payment.detail ?? [])
     .filter((detail) => detail.request?.reference === invoiceReference)
@@ -527,7 +554,8 @@ function statementTask(snapshot: StatementSnapshot, runReference: string): Task 
     executionPeriod: { start: snapshot.generatedAt, end: snapshot.generatedAt },
     input: [
       ...snapshot.invoices.map((invoice): TaskInput => ({ type: outputCode(STATEMENT_INPUTS.invoice), valueReference: { reference: invoice.invoiceReference } })),
-      ...snapshot.paymentReconciliationReferences.map((reference): TaskInput => ({ type: outputCode(STATEMENT_INPUTS.payment), valueReference: { reference } })),
+      ...unique([...snapshot.paymentReconciliationReferences, ...(snapshot.unappliedPaymentReconciliationReferences ?? [])])
+        .map((reference): TaskInput => ({ type: outputCode(STATEMENT_INPUTS.payment), valueReference: { reference } })),
     ],
     output: [
       { type: outputCode(STATEMENT_OUTPUTS.snapshot), valueString: JSON.stringify(snapshot) },
@@ -575,6 +603,21 @@ function validateSnapshot(snapshot: StatementSnapshot): void {
     || paymentsAppliedCents !== snapshot.paymentsAppliedCents || balanceCents !== snapshot.balanceCents
     || balanceCents !== totalNetCents - paymentsAppliedCents) {
     throw new StatementValidationError("Patient statement snapshot totals do not reconcile.");
+  }
+  validateAccountCredit(snapshot);
+}
+
+function validateAccountCredit(snapshot: StatementSnapshot): void {
+  const values = [snapshot.unappliedCreditCents, snapshot.balanceDueCents, snapshot.creditBalanceCents];
+  if (values.every((value) => value === undefined) && snapshot.unappliedPaymentReconciliationReferences === undefined) return;
+  if (!Array.isArray(snapshot.unappliedPaymentReconciliationReferences)
+    || snapshot.unappliedPaymentReconciliationReferences.some((reference) => !/^PaymentReconciliation\/[A-Za-z0-9.-]+$/.test(reference))
+    || values.some((value) => !Number.isInteger(value) || value! < 0)) {
+    throw new StatementValidationError("Patient statement account credit is incomplete.");
+  }
+  if (snapshot.balanceDueCents !== Math.max(0, snapshot.balanceCents - snapshot.unappliedCreditCents!)
+    || snapshot.creditBalanceCents !== Math.max(0, snapshot.unappliedCreditCents! - snapshot.balanceCents)) {
+    throw new StatementValidationError("Patient statement account credit does not reconcile.");
   }
 }
 

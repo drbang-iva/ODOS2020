@@ -30,9 +30,40 @@ test("printable statement renders only a reconciled balance-forward snapshot", (
   assert.match(html, /Balance-forward statement/);
   assert.match(html, /Total charges[\s\S]*\$100\.00/);
   assert.match(html, /Payments applied[\s\S]*\$40\.00/);
-  assert.match(html, /Balance forward[\s\S]*\$60\.00/);
+  assert.match(html, /Balance due[\s\S]*\$60\.00/);
   assert.match(html, /no mail or email was sent/i);
   assert.throws(() => renderBalanceForwardStatement({ ...statement("bad", "2026-07-12T15:00:00.000Z", 6_000), balanceCents: 6_001 }), /do not reconcile/);
+});
+
+test("statement screen and print show unapplied credit as a separate line and the net balance due", () => {
+  const row = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 10_000),
+    unappliedPaymentReconciliationReferences: ["PaymentReconciliation/credit-1"],
+    unappliedCreditCents: 2_500,
+    balanceDueCents: 7_500,
+    creditBalanceCents: 0,
+  };
+  const screen = renderToStaticMarkup(<StatementsContent statements={[row]} onPrint={() => undefined} />);
+  assert.match(screen, /Unapplied credit/);
+  assert.match(screen, /−\$25\.00/);
+  assert.match(screen, /\$75\.00/);
+  const print = renderBalanceForwardStatement(row);
+  assert.match(print, /Unapplied credit on account[\s\S]*−\$25\.00/);
+  assert.match(print, /Balance due[\s\S]*\$75\.00/);
+});
+
+test("credit above the Invoice balance prints zero due and a positive credit balance", () => {
+  const row = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 10_000),
+    unappliedPaymentReconciliationReferences: ["PaymentReconciliation/credit-1"],
+    unappliedCreditCents: 12_500,
+    balanceDueCents: 0,
+    creditBalanceCents: 2_500,
+  };
+  const html = renderBalanceForwardStatement(row);
+  assert.match(html, /Balance due[\s\S]*\$0\.00/);
+  assert.match(html, /Credit balance[\s\S]*\$25\.00/);
+  assert.doesNotMatch(html, /Balance due[\s\S]*−\$25\.00/);
 });
 
 test("shared statement money formatting is used by both screen and print output", () => {

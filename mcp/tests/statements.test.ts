@@ -42,6 +42,45 @@ test("an internally inconsistent Invoice is rejected instead of emitting a wrong
   }), /does not reconcile/);
 });
 
+test("an unapplied patient credit is displayed separately and reduces only the account-level balance due", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [unappliedPayment("credit-1", "p1", 2_500)],
+  });
+  const result = await handleGeneratePatientStatementRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    now: () => GENERATED_AT,
+    generateId: sequentialIds(),
+  }, { authHeader: "Bearer good", body: { patientReference: "Patient/p1" } });
+
+  assert.equal(result.status, 200);
+  const statement = (result.body as StatementRunResult).statements[0];
+  assert.equal(statement.balanceCents, 10_000);
+  assert.equal(statement.unappliedCreditCents, 2_500);
+  assert.equal(statement.balanceDueCents, 7_500);
+  assert.equal(statement.creditBalanceCents, 0);
+  assert.deepEqual(statement.unappliedPaymentReconciliationReferences, ["PaymentReconciliation/credit-1"]);
+});
+
+test("credit above the open Invoice balance produces zero due and an honest credit balance", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [unappliedPayment("credit-1", "p1", 12_500)],
+  });
+  const result = await handleGeneratePatientStatementRequest({
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    now: () => GENERATED_AT,
+    generateId: sequentialIds(),
+  }, { authHeader: "Bearer good", body: { patientReference: "Patient/p1" } });
+
+  const statement = (result.body as StatementRunResult).statements[0];
+  assert.equal(statement.balanceDueCents, 0);
+  assert.equal(statement.creditBalanceCents, 2_500);
+  assert.equal(statement.balanceCents, 10_000);
+});
+
 test("batch persists one atomic run, generates every open balance, skips zero balances, and records invalid rejects", async () => {
   const fixture = fakeFhir({
     patients: [patient("p1", "Alex Rivera"), patient("p2", "Jordan Lee"), patient("p3", "Sam Patel")],
@@ -292,6 +331,23 @@ function payment(id: string, patientId: string, invoiceId: string, amountCents: 
       amountCents,
       subjectReference: `Patient/${patientId}`,
       invoiceReference: `Invoice/${invoiceId}`,
+      processorTransactionId: id,
+      processorTransactionSystem: "https://osod.dev/test/payment",
+      surface: "in-clinic",
+      tender: { code: "CASH", display: "Cash" },
+    }),
+    id,
+  };
+}
+
+function unappliedPayment(id: string, patientId: string, amountCents: number): PaymentReconciliation {
+  return {
+    ...buildPaymentReconciliation({
+      outcome: "success",
+      createdIso: "2026-07-02T12:00:00.000Z",
+      paymentDate: "2026-07-02",
+      amountCents,
+      subjectReference: `Patient/${patientId}`,
       processorTransactionId: id,
       processorTransactionSystem: "https://osod.dev/test/payment",
       surface: "in-clinic",
