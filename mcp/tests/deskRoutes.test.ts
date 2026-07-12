@@ -42,13 +42,13 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
   }
 });
 
-test("GET /desk/summary stays available when the unscoped Task collection exceeds one page", async () => {
+test("GET /desk/summary keeps other cards available when one scoped Task category exceeds a page", async () => {
   const taskSearches: Array<Record<string, string>> = [];
   const fhir = {
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> => {
       if (resourceType === "Task") {
         taskSearches.push(params);
-        if (!params.code) {
+        if (params.code === "https://osod.dev/fhir/CodeSystem/optical-order-type|") {
           return {
             resourceType: "Bundle",
             type: "searchset",
@@ -74,8 +74,11 @@ test("GET /desk/summary stays available when the unscoped Task collection exceed
   try {
     const response = await fetch(`http://127.0.0.1:${port}/desk/summary`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
-    const body = await response.json() as { cards?: { statements?: { available?: boolean } } };
+    const body = await response.json() as { cards?: { pendingRx?: { spectacle?: { value?: number | null; unavailableReason?: string } }; statements?: { available?: boolean }; payments?: unknown } };
     assert.equal(body.cards?.statements?.available, true);
+    assert.ok(body.cards?.payments);
+    assert.equal(body.cards?.pendingRx?.spectacle?.value, null);
+    assert.match(body.cards?.pendingRx?.spectacle?.unavailableReason ?? "", /exceed the Desk card read limit/);
     assert.equal(taskSearches.length, 4);
     assert.ok(taskSearches.every((params) => Boolean(params.code)));
   } finally {
