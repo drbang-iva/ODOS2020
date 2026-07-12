@@ -5,7 +5,7 @@ import {
   assertTransactionSuccess,
   buildEncounterStatusPatchBundle,
 } from "../../lib/encounter-bundles";
-import { useViewState } from "../../lib/view-state";
+import { patientOverviewView, useViewState } from "../../lib/view-state";
 import { RoleSelector } from "../RoleSelector";
 import {
   computeMdmHint,
@@ -106,7 +106,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "finish_encounter",
       );
       assertTransactionSuccess(response);
-      setView({ kind: "director", patientId: patient.id });
+      setView(patientOverviewView(patient.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -155,7 +155,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "abandon_encounter",
       );
       assertTransactionSuccess(response);
-      setView({ kind: "director", patientId: patient.id });
+      setView(patientOverviewView(patient.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
