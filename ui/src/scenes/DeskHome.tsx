@@ -1,29 +1,29 @@
-import { useCallback, useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { CockpitBadgeDock } from "./frontdesk/CockpitBadgeDock";
 import { CockpitGuestPanel } from "./frontdesk/CockpitGuestPanel";
 import type { CockpitPanelId } from "../lib/cockpit-shell";
 import { fetchDeskSummary, type DeskStat, type DeskSummary, type DeskTone } from "../lib/desk-summary";
-import { fetchOfficeMessages, sendOfficeMessage, type OfficeMessage } from "../lib/office-channel";
-import { OfficePill } from "../components/OfficeChannel";
+import { fetchDeskOfficeMessages, sendOfficeMessage, type OfficeMessage, type OfficeTier } from "../lib/office-channel";
 import { PatientSearch } from "./PatientPicker";
 
 export const DESK_LABEL = "Desk";
 export const DESK_HOME_PATH = "/desk";
 export const CLINIC_PATH = "/clinic";
-export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v1";
+export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v2";
 
 export interface DeskOfficeApi {
-  list: typeof fetchOfficeMessages;
+  list: typeof fetchDeskOfficeMessages;
   send: typeof sendOfficeMessage;
 }
 
-const defaultDeskOfficeApi: DeskOfficeApi = { list: fetchOfficeMessages, send: sendOfficeMessage };
+const defaultDeskOfficeApi: DeskOfficeApi = { list: fetchDeskOfficeMessages, send: sendOfficeMessage };
 
 export const DESK_CARDS = [
   { id: "schedule", title: "Today's schedule", href: "/frontdesk", span: "wide" },
   { id: "attention", title: "Needs attention", href: "/billing/claims/worklist", span: "standard" },
   { id: "front-line", title: "Front Line", span: "standard" },
+  { id: "office", title: "Office", span: "full" },
   { id: "rx", title: "Pending Rx", href: "/dispensary/orders", span: "standard" },
   { id: "pickup", title: "Product pickup", href: "/dispensary/orders", span: "standard" },
   { id: "claims", title: "Claims", href: "/billing/claims/worklist", span: "standard" },
@@ -86,7 +86,7 @@ const SECTIONS = [
   ] },
 ] as const;
 
-export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, initialOfficeOpen = false, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; initialOfficeOpen?: boolean; officeApi?: DeskOfficeApi } = {}) {
+export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; officeApi?: DeskOfficeApi } = {}) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
@@ -94,17 +94,24 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
   const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
   const [summary, setSummary] = useState<DeskSummary | undefined>(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
-  const [officeOpen, setOfficeOpen] = useState(initialOfficeOpen);
   const [sentMessages, setSentMessages] = useState(initialOfficeMessages ?? []);
   const [officeError, setOfficeError] = useState<string>();
   const [messageText, setMessageText] = useState("");
-  const [urgent, setUrgent] = useState(false);
+  const [tier, setTier] = useState<OfficeTier>("ambient");
   const [pinnedPatient, setPinnedPatient] = useState<Patient>();
   const [sending, setSending] = useState(false);
+  const officeRequestIdRef = useRef(0);
 
   const refreshSent = useCallback(async () => {
-    try { setSentMessages(await officeApi.list("sent", "all")); setOfficeError(undefined); }
-    catch (reason) { setOfficeError(reason instanceof Error ? reason.message : "Office channel unavailable."); }
+    const requestId = ++officeRequestIdRef.current;
+    try {
+      const next = await officeApi.list();
+      if (requestId !== officeRequestIdRef.current) return;
+      setSentMessages(next);
+      setOfficeError(undefined);
+    } catch (reason) {
+      if (requestId === officeRequestIdRef.current) setOfficeError(reason instanceof Error ? reason.message : "Office channel unavailable.");
+    }
   }, [officeApi]);
 
   useEffect(() => { window.localStorage.setItem(DESK_CARD_STORAGE_KEY, JSON.stringify(cardIds)); }, [cardIds]);
@@ -118,7 +125,10 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
     if (initialOfficeMessages) return;
     void refreshSent();
     const handle = window.setInterval(() => void refreshSent(), 10_000);
-    return () => window.clearInterval(handle);
+    return () => {
+      window.clearInterval(handle);
+      officeRequestIdRef.current += 1;
+    };
   }, [initialOfficeMessages, refreshSent]);
   useEffect(() => {
     if (!sectionsOpen) return;
@@ -134,16 +144,16 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
     event.preventDefault();
     if (!messageText.trim()) return;
     setSending(true);
+    officeRequestIdRef.current += 1;
     try {
       const created = await officeApi.send({
-        recipientRole: "clinician",
         text: messageText,
-        urgent,
-        ...(pinnedPatient?.id ? { patientReference: `Patient/${pinnedPatient.id}` } : {}),
+        tier,
+        ...(tier === "patient-pinned" && pinnedPatient?.id ? { patientId: pinnedPatient.id } : {}),
       });
       setSentMessages((current) => [created, ...current]);
       setMessageText("");
-      setUrgent(false);
+      setTier("ambient");
       setPinnedPatient(undefined);
       setOfficeError(undefined);
     } catch (reason) { setOfficeError(reason instanceof Error ? reason.message : "Office message could not be sent."); }
@@ -156,32 +166,10 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
       <header className="odos-desk-topbar">
         <a className="odos-mark" href={DESK_HOME_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
         <span className="odos-location">Practice home</span><div className="odos-topbar-spacer" />
-        <OfficePill count={0} open={officeOpen} onClick={() => setOfficeOpen((value) => !value)} />
         <button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button>
         <button className="odos-pill" type="button" onClick={() => setSectionsOpen(true)}>Sections</button>
         {switchPill === undefined ? <a className="odos-pill odos-clinic-pill" href={CLINIC_PATH} target="_blank" rel="noopener noreferrer">Clinic <span aria-hidden>↗</span></a> : switchPill}
       </header>
-
-      {officeOpen && <aside className="odos-office-panel odos-office-compose-panel" aria-label="Office composer">
-        <div className="odos-office-panel-head"><div><strong>Office</strong><span>Internal staff → clinician</span></div><button type="button" onClick={() => setOfficeOpen(false)}>×</button></div>
-        <form onSubmit={submitOfficeMessage}>
-          <label>Recipient<select value="clinician" disabled><option value="clinician">Clinician role</option></select></label>
-          <label>Message<textarea aria-label="Office message" value={messageText} maxLength={2000} onChange={(event) => setMessageText(event.target.value)} /></label>
-          <label className="odos-office-urgent"><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> Urgent — show amber Clinic banner</label>
-          <details><summary>{pinnedPatient ? `📌 ${displayPatientName(pinnedPatient)}` : "📌 Pin to a patient (optional)"}</summary><PatientSearch actionLabel="Pin" onSelect={setPinnedPatient} /></details>
-          {pinnedPatient && <button type="button" className="odos-office-clear-pin" onClick={() => setPinnedPatient(undefined)}>Remove patient pin</button>}
-          <button type="submit" disabled={sending || !messageText.trim()}>{sending ? "Sending…" : "Send to Office"}</button>
-        </form>
-        {officeError && <p className="odos-office-error" role="alert">{officeError}</p>}
-        <section className="odos-office-sent" aria-label="Sent office messages"><h2>Sent</h2>
-          {sentMessages.length === 0 && !officeError && <p className="odos-office-empty">No sent office messages.</p>}
-          {sentMessages.map((message) => { const seen = message.acknowledgements[0]; return <article key={message.id} className={message.urgent ? "is-urgent" : ""}>
-            <div><strong>To {message.recipient.display}</strong><time>{officeDateTime(message.sentAt)}</time></div><p>{message.text}</p>
-            {message.patient && <span className="odos-office-pin">📌 {message.patient.display}</span>}
-            <small>{seen ? `Seen ✓ by ${seen.display} · ${officeDateTime(seen.at)}` : "Sent · awaiting acknowledgement"}</small>
-          </article>; })}
-        </section>
-      </aside>}
 
       <section className="odos-desk-body">
         <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span></div>
@@ -197,7 +185,9 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
         <div className="odos-card-grid">
           {cardIds.map((id) => {
             const card = DESK_CARDS.find((candidate) => candidate.id === id)!;
-            const model = cardModel(id, summary);
+            const model = id === "office"
+              ? { tone: sentMessages.some((message) => !message.acknowledgement) ? "warn" as const : "ok" as const, kicker: sentMessages.some((message) => !message.acknowledgement) ? "awaiting acknowledgement" : "closed loop", target: "every message acknowledged", content: <OfficeDeskCard /> }
+              : cardModel(id, summary);
             return (
               <article key={card.id} className={`odos-desk-card odos-live-tone-${model.tone} odos-span-${card.span}`} draggable={customizing}
                 onDragStart={() => setDragged(card.id)} onDragOver={(event) => customizing && event.preventDefault()}
@@ -206,7 +196,8 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
                   <span className="odos-card-edge" /><span className="odos-card-kicker">{card.title} <i>· {model.kicker}</i></span>
                   {model.content}
                   <span className="odos-card-target">Target: {model.target}</span>
-                  {id === "front-line" ? <button className="odos-card-link" type="button" onClick={() => setOpenPanel("messages")}>Open desk inbox →</button>
+                  {id === "office" ? null
+                    : id === "front-line" ? <button className="odos-card-link" type="button" onClick={() => setOpenPanel("messages")}>Open desk inbox →</button>
                     : "href" in card ? <a className="odos-card-link" href={card.href} onClick={navigateWithinApp}>Open section →</a>
                       : <span className="odos-card-link odos-card-link-off">Not yet available</span>}
                 </div>
@@ -229,6 +220,34 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, in
       </aside>
     </main>
   );
+
+  function OfficeDeskCard() {
+    const patientMissing = tier === "patient-pinned" && !pinnedPatient?.id;
+    return <div className="odos-office-card">
+      <form onSubmit={submitOfficeMessage}>
+        <div className="odos-office-tier" role="group" aria-label="Office message tier">
+          <button type="button" className={tier === "ambient" ? "is-active" : ""} onClick={() => { setTier("ambient"); setPinnedPatient(undefined); }}>Note</button>
+          <button type="button" className={tier === "urgent" ? "is-active" : ""} onClick={() => { setTier("urgent"); setPinnedPatient(undefined); }}>Urgent</button>
+          <button type="button" className={tier === "patient-pinned" ? "is-active" : ""} onClick={() => setTier("patient-pinned")}>📌 Patient</button>
+        </div>
+        <label>Message<textarea aria-label="Office message" value={messageText} maxLength={1000} onChange={(event) => setMessageText(event.target.value)} /></label>
+        {tier === "patient-pinned" && <details open={!pinnedPatient}>
+          <summary>{pinnedPatient ? `📌 ${displayPatientName(pinnedPatient)}` : "Choose the patient for this pin"}</summary>
+          <PatientSearch actionLabel="Pin" onSelect={setPinnedPatient} />
+        </details>}
+        <button type="submit" disabled={sending || !messageText.trim() || patientMissing}>{sending ? "Sending…" : tier === "urgent" ? "Send urgent" : tier === "patient-pinned" ? "Pin to patient" : "Send note"}</button>
+      </form>
+      <section className="odos-office-sent" aria-label="Sent Office messages"><h2>Sent</h2>
+        {officeError && <p className="odos-office-error" role="alert">{officeError}</p>}
+        {sentMessages.length === 0 && !officeError && <p className="odos-office-empty">No sent Office messages.</p>}
+        {sentMessages.map((message) => <article key={message.id} className={`is-${message.tier}`}>
+          <div><strong>{tierLabel(message)}</strong><time>{officeDateTime(message.sentAt)}</time></div><p>{message.text}</p>
+          {message.patient && <span className="odos-office-pin">📌 {message.patient.display}</span>}
+          <small>{message.acknowledgement ? `Seen ✓ by ${message.acknowledgement.display} · ${officeDateTime(message.acknowledgement.at)}` : "Sent · awaiting acknowledgement"}</small>
+        </article>)}
+      </section>
+    </div>;
+  }
 }
 
 function displayPatientName(patient: Patient): string {
@@ -237,6 +256,12 @@ function displayPatientName(patient: Patient): string {
 }
 
 function officeDateTime(value: string): string { return new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
+
+function tierLabel(message: OfficeMessage): string {
+  if (message.tier === "urgent") return "Urgent · Clinic side";
+  if (message.tier === "patient-pinned") return `Pinned · ${message.patient?.display ?? "patient"}`;
+  return "Note · Clinic side";
+}
 
 function PracticePulse({ summary, error }: { summary?: DeskSummary; error?: string }) {
   if (error) return <p className="odos-practice-pulse odos-pulse-off">Live practice pulse unavailable — {error}</p>;
@@ -249,6 +274,7 @@ function PracticePulse({ summary, error }: { summary?: DeskSummary; error?: stri
 function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kicker: string; target: string; content: ReactNode } {
   if (!summary) return { tone: "off", kicker: "loading", target: "live practice data", content: <WiringPanel>Loading live counts…</WiringPanel> };
   switch (id) {
+    case "office": throw new Error("Office card is rendered from live Office channel state.");
     case "schedule": { const value = summary.cards.schedule; return { tone: worstTone([value.today, value.confirmed, value.checkedIn, value.webRequests]), kicker: value.webRequests.value ? `${value.webRequests.value} web requests waiting` : "on track", target: "web requests 0 · confirmations match schedule", content: <><Stats stats={[["Today", value.today], ["Confirmed", value.confirmed], ["Checked in", value.checkedIn], ["Web requests", value.webRequests]]} /><div className="odos-agenda">{value.agenda.map((row, index) => <div key={`${row.time}-${index}`}><time>{row.time}</time><span>{row.patient}</span><em>{row.visitType}</em></div>)}</div></> }; }
     case "attention": { const items = summary.cards.attention.items; return { tone: items[0]?.tone ?? "ok", kicker: items.length ? `${items.length} item${items.length === 1 ? "" : "s"} need you` : "clear", target: "clear by EOD", content: items.length ? <div className="odos-attention-list">{items.map((item) => <div key={item.label} className={`odos-row-tone-${item.tone}`}><TonePip tone={item.tone} /><span><b>{item.label}</b><small>{item.detail}</small></span></div>)}</div> : <p className="odos-all-clear">All clear — nothing needs you.</p> }; }
     case "front-line": return { tone: "off", kicker: "wiring", target: "need reply 0 · urgent handled now", content: <WiringPanel>{summary.cards.frontLine.message}</WiringPanel> };

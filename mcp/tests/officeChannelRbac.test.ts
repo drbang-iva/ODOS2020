@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
 
-test("Clinic and Desk roles can exchange practice-scoped Office messages and acknowledgement events", () => {
+test("Clinic and Desk roles can exchange category-fenced Office messages and acknowledgement events", () => {
   for (const roleId of ["clinician", "front-desk"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const expectedCriteria = new Map([
+      ["Communication", "Communication?category=https://osod.dev/fhir/CodeSystem/communication-category|internal-office"],
+      ["Provenance", "Provenance?activity=https://osod.dev/fhir/CodeSystem/office-message-activity|acknowledged"],
+    ]);
     for (const resourceType of ["Communication", "Provenance"]) {
-      const rule = policy.resource?.find((candidate) => candidate.resourceType === resourceType && candidate.criteria === undefined);
-      assert.ok(rule, `${roleId} needs practice-scoped ${resourceType}`);
+      const rule = policy.resource?.find((candidate) => candidate.resourceType === resourceType && candidate.criteria === expectedCriteria.get(resourceType));
+      assert.ok(rule, `${roleId} needs fenced ${resourceType}`);
       for (const interaction of ["create", "read", "search", "history", "vread"]) {
         assert.ok(rule.interaction?.includes(interaction as never), `${roleId} ${resourceType} needs ${interaction}`);
       }

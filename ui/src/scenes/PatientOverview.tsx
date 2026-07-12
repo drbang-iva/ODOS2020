@@ -11,8 +11,7 @@ import {
 } from "../lib/patient-overview";
 import { useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
-import { OfficeInboxPanel, OfficePill, PinnedOfficeNote, UrgentOfficeBanner, useOfficeInbox, type OfficeInboxApi } from "../components/OfficeChannel";
-import type { OfficeMessage } from "../lib/office-channel";
+import { PinnedOfficeNote } from "../components/OfficeChannel";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -30,14 +29,10 @@ export function PatientOverview({
   patient,
   initialOverview,
   api = defaultPatientOverviewApi,
-  initialOfficeMessages,
-  officeApi,
 }: {
   patient: Patient;
   initialOverview?: PatientOverviewPayload;
   api?: PatientOverviewApi;
-  initialOfficeMessages?: OfficeMessage[];
-  officeApi?: OfficeInboxApi;
 }) {
   const setView = useViewState((state) => state.setView);
   const [overview, setOverview] = useState(initialOverview);
@@ -53,7 +48,6 @@ export function PatientOverview({
   const [historyOpen, setHistoryOpen] = useState(false);
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
-  const office = useOfficeInbox({ initialMessages: initialOfficeMessages, pollMs: 15_000, api: officeApi });
 
   useEffect(() => {
     if (initialOverview) return;
@@ -142,15 +136,6 @@ export function PatientOverview({
   return (
     <main className="odos-patient-overview">
       <div className="odos-ambient" aria-hidden="true" />
-      <header className="odos-desk-topbar">
-        <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-        <span className="odos-location">Patient · {name}</span>
-        <span className="odos-topbar-spacer" />
-        <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
-      </header>
-      <UrgentOfficeBanner message={office.unread.find((message) => message.urgent)} onAcknowledge={office.acknowledge} />
-      {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
-
       <section className="odos-overview-body">
         <nav className="odos-overview-crumb" aria-label="Breadcrumb">
           <a href={CLINIC_PATH} onClick={navigateWithinApp}>Clinic</a><span>›</span><span>{name}</span>
@@ -166,7 +151,7 @@ export function PatientOverview({
           <div className="odos-overview-actions">
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
           </div>
-          <PinnedOfficeNote messages={office.unread} patientId={patient.id} />
+          <PinnedOfficeNote patientId={patient.id} />
         </div>
 
         <section className="odos-sticky-note" aria-label="Patient sticky note">

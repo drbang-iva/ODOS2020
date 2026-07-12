@@ -163,8 +163,16 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
 const OFFICE_CHANNEL_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "Practitioner", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "PractitionerRole", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Communication", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
-  { resourceType: "Provenance", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  {
+    resourceType: "Communication",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "practice-search", criteria: "Communication?category=https://osod.dev/fhir/CodeSystem/communication-category|internal-office" },
+  },
+  {
+    resourceType: "Provenance",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "practice-search", criteria: "Provenance?activity=https://osod.dev/fhir/CodeSystem/office-message-activity|acknowledged" },
+  },
 ];
 
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [

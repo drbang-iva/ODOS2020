@@ -19,7 +19,7 @@ test("Clinic flow and unsigned-chart clicks both route through PatientOverview",
   });
   const root = renderer.root;
 
-  const flowButton = root.findByProps({ className: "odos-clinic-flow-row" });
+  const flowButton = root.findByProps({ className: "odos-clinic-flow-open" });
   act(() => flowButton.props.onClick());
   assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "flow-patient" });
 

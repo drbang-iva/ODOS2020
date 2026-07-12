@@ -1,17 +1,14 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { patientOverviewView, useViewState } from "../lib/view-state";
-import { CLINIC_PATH } from "./DeskHome";
-import { OfficeInboxPanel, OfficePill, PinnedOfficeNote, UrgentOfficeBanner, useOfficeInbox, type OfficeInboxApi } from "../components/OfficeChannel";
-import type { OfficeMessage } from "../lib/office-channel";
+import { PinnedOfficeNote } from "../components/OfficeChannel";
 
 export const CLINIC_PATIENTS_PATH = "/clinic/patients";
 
-export function ClinicHome({ initialSummary, switchPill, initialOfficeMessages, officeApi }: { initialSummary?: ClinicSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; officeApi?: OfficeInboxApi } = {}) {
+export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary } = {}) {
   const setView = useViewState((state) => state.setView);
   const [summary, setSummary] = useState(initialSummary);
   const [error, setError] = useState<string>();
-  const office = useOfficeInbox({ initialMessages: initialOfficeMessages, pollMs: 15_000, api: officeApi });
 
   useEffect(() => {
     if (initialSummary) return;
@@ -28,17 +25,6 @@ export function ClinicHome({ initialSummary, switchPill, initialOfficeMessages, 
   return (
     <main className="odos-clinic-home">
       <div className="odos-ambient" aria-hidden="true" />
-      <header className="odos-desk-topbar">
-        <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-        <span className="odos-location">Clinic home</span>
-        <span className="odos-topbar-spacer" />
-        <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
-        <a className="odos-pill" href={CLINIC_PATIENTS_PATH} onClick={navigateWithinApp}>Sections</a>
-        {switchPill}
-      </header>
-      <UrgentOfficeBanner message={office.unread.find((message) => message.urgent)} onAcknowledge={office.acknowledge} />
-      {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
-
       <section className="odos-clinic-body">
         <div className="odos-clinic-greeting">
           <h1>Good day.</h1>
@@ -59,19 +45,21 @@ export function ClinicHome({ initialSummary, switchPill, initialOfficeMessages, 
               {error && <div className="odos-clinic-error">{error}</div>}
               {summary?.flow.length === 0 && <div className="odos-clinic-empty">No active appointments today.</div>}
               {summary?.flow.map((row) => (
-                <button key={row.appointmentId ?? `${row.time}-${row.patient}`} type="button" className="odos-clinic-flow-row" disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
-                  <time>{row.time}</time>
-                  <span className="odos-clinic-who">{row.patient} <small>{[row.age, row.sex].filter((value) => value !== undefined).join(" ")}</small></span>
-                  <span className="odos-clinic-row-detail">
-                    <span className="odos-clinic-visit-type">{row.visitType}</span>
-                    <span className={`odos-clinic-state is-${row.state}`}>● {row.stateDetail}{row.room ? ` · ${row.room}` : ""}</span>
-                    {row.arrivedLateMinutes !== undefined && row.arrivedLateMinutes > 0 && <span className="odos-clinic-late">arrived {row.arrivedLateMinutes}m late</span>}
-                    {row.waitingMinutes !== undefined && <span className="odos-clinic-wait">waiting {row.waitingMinutes}m</span>}
-                    {row.timeInOfficeMinutes !== undefined && <span className="odos-clinic-wait">in office {row.timeInOfficeMinutes}m</span>}
-                    <PinnedOfficeNote messages={office.unread} patientId={row.patientId} />
-                  </span>
-                  <span className="odos-clinic-glyphs">{row.flags.unsigned && <span title="Chart not signed">✎</span>}</span>
-                </button>
+                <div key={row.appointmentId ?? `${row.time}-${row.patient}`} className="odos-clinic-flow-row">
+                  <button type="button" className="odos-clinic-flow-open" disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
+                    <time>{row.time}</time>
+                    <span className="odos-clinic-who">{row.patient} <small>{[row.age, row.sex].filter((value) => value !== undefined).join(" ")}</small></span>
+                    <span className="odos-clinic-row-detail">
+                      <span className="odos-clinic-visit-type">{row.visitType}</span>
+                      <span className={`odos-clinic-state is-${row.state}`}>● {row.stateDetail}{row.room ? ` · ${row.room}` : ""}</span>
+                      {row.arrivedLateMinutes !== undefined && row.arrivedLateMinutes > 0 && <span className="odos-clinic-late">arrived {row.arrivedLateMinutes}m late</span>}
+                      {row.waitingMinutes !== undefined && <span className="odos-clinic-wait">waiting {row.waitingMinutes}m</span>}
+                      {row.timeInOfficeMinutes !== undefined && <span className="odos-clinic-wait">in office {row.timeInOfficeMinutes}m</span>}
+                    </span>
+                    <span className="odos-clinic-glyphs">{row.flags.unsigned && <span title="Chart not signed">✎</span>}</span>
+                  </button>
+                  <PinnedOfficeNote patientId={row.patientId} compact />
+                </div>
               ))}
             </div>
             <div className="odos-clinic-target">Row order: with-you → roomed → waiting → unsigned check-outs → upcoming.</div>

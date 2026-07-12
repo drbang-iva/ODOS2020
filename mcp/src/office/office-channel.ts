@@ -1,164 +1,152 @@
 import type { Communication, Patient, Practitioner, PractitionerRole, Provenance, Resource } from "@medplum/fhirtypes";
-import { PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 
-const OFFICE_CATEGORY_SYSTEM = "https://osod.dev/fhir/CodeSystem/communication-category";
-const OFFICE_CATEGORY_CODE = "internal-office";
-const OFFICE_ROLE_SYSTEM = "https://osod.dev/fhir/NamingSystem/practice-role";
-const OFFICE_ACK_SYSTEM = "https://osod.dev/fhir/CodeSystem/office-message-activity";
-const OFFICE_ACK_CODE = "acknowledged";
+export const OFFICE_CATEGORY_SYSTEM = "https://osod.dev/fhir/CodeSystem/communication-category";
+export const OFFICE_CATEGORY_CODE = "internal-office";
+export const OFFICE_AUDIENCE_SYSTEM = "https://osod.dev/fhir/NamingSystem/office-channel-audience";
+export const OFFICE_AUDIENCE_CODE = "clinic-side";
+export const OFFICE_ACK_SYSTEM = "https://osod.dev/fhir/CodeSystem/office-message-activity";
+export const OFFICE_ACK_CODE = "acknowledged";
+export const OFFICE_TEXT_LIMIT = 1000;
+const RECENT_ACKNOWLEDGED_TAIL = 20;
 
 export type OfficeFhir = Pick<MedplumClient, "read" | "search" | "create">;
-export type OfficeBox = "inbox" | "sent";
-export type OfficeView = "unread" | "all";
+export type OfficeTier = "ambient" | "urgent" | "patient-pinned";
+export type OfficeMailbox = "clinic" | "desk";
 
 export interface OfficeMessageRow {
   id: string;
   text: string;
   sentAt: string;
   sender: { reference: string; display: string };
-  recipient: { reference?: string; role?: PracticeRoleId; display: string };
-  urgent: boolean;
+  tier: OfficeTier;
   patient?: { reference: string; id: string; display: string };
-  acknowledgements: Array<{ by: string; display: string; at: string }>;
+  acknowledgement?: { by: string; display: string; at: string };
 }
 
 export class OfficeMessageValidationError extends Error {}
 
 export async function sendOfficeMessage(
   fhir: OfficeFhir,
-  input: {
-    senderReference: string;
-    recipientReference?: string;
-    recipientRole?: PracticeRoleId;
-    text: string;
-    urgent?: boolean;
-    patientReference?: string;
-    now?: string;
-  },
+  input: { senderReference: string; text: string; tier: OfficeTier; patientId?: string; now?: string },
 ): Promise<OfficeMessageRow> {
   const text = input.text.trim();
-  if (!text || text.length > 2000) throw new OfficeMessageValidationError("Office message text must be 1-2000 characters.");
-  if (Boolean(input.recipientReference) === Boolean(input.recipientRole)) {
-    throw new OfficeMessageValidationError("Choose one practitioner or practice-role recipient.");
+  if (!text || text.length > OFFICE_TEXT_LIMIT) {
+    throw new OfficeMessageValidationError(`Office message text must be 1-${OFFICE_TEXT_LIMIT} characters.`);
   }
-  if (input.recipientRole && !PRACTICE_ROLE_IDS.includes(input.recipientRole)) throw new OfficeMessageValidationError("Office message practice-role recipient is invalid.");
-  if (input.recipientReference && !/^Practitioner(Role)?\/[A-Za-z0-9.-]{1,64}$/.test(input.recipientReference)) {
-    throw new OfficeMessageValidationError("Office message recipient is invalid.");
+  if (!isOfficeTier(input.tier)) throw new OfficeMessageValidationError("Office message tier is invalid.");
+  if (input.tier === "patient-pinned" && !input.patientId) {
+    throw new OfficeMessageValidationError("Pinned Office messages require a patientId.");
   }
-  if (input.patientReference && !/^Patient\/[A-Za-z0-9.-]{1,64}$/.test(input.patientReference)) {
-    throw new OfficeMessageValidationError("Pinned patient reference is invalid.");
+  if (input.tier !== "patient-pinned" && input.patientId !== undefined) {
+    throw new OfficeMessageValidationError("Only patient-pinned Office messages may include a patientId.");
+  }
+  if (input.patientId !== undefined && !resourceId(input.patientId)) {
+    throw new OfficeMessageValidationError("Pinned Office message patientId is invalid.");
   }
 
-  const [senderDisplay, recipientDisplay, patient] = await Promise.all([
+  const [senderDisplay, patient] = await Promise.all([
     staffDisplay(fhir, input.senderReference),
-    input.recipientReference ? staffDisplay(fhir, input.recipientReference) : Promise.resolve(roleDisplay(input.recipientRole!)),
-    input.patientReference ? readPatient(fhir, input.patientReference) : Promise.resolve(undefined),
+    input.patientId ? fhir.read<Patient>("Patient", input.patientId) : Promise.resolve(undefined),
   ]);
   const sentAt = input.now ?? new Date().toISOString();
   const created = await fhir.create<Communication>({
     resourceType: "Communication",
     status: "completed",
-    category: [{ coding: [{ system: OFFICE_CATEGORY_SYSTEM, code: OFFICE_CATEGORY_CODE, display: "Internal office message" }], text: "Internal office message" }],
-    priority: input.urgent ? "urgent" : "routine",
+    category: [{ coding: [{ system: OFFICE_CATEGORY_SYSTEM, code: OFFICE_CATEGORY_CODE, display: "Internal Office message" }], text: "Internal Office message" }],
+    priority: input.tier === "urgent" ? "urgent" : "routine",
     sent: sentAt,
     sender: { reference: input.senderReference, display: senderDisplay },
-    recipient: input.recipientReference
-      ? [{ reference: input.recipientReference, display: recipientDisplay }]
-      : [{ type: "PractitionerRole", identifier: { system: OFFICE_ROLE_SYSTEM, value: input.recipientRole }, display: recipientDisplay }],
-    ...(patient ? { subject: { reference: input.patientReference, display: patientName(patient) } } : {}),
+    recipient: [{ type: "PractitionerRole", identifier: { system: OFFICE_AUDIENCE_SYSTEM, value: OFFICE_AUDIENCE_CODE }, display: "Clinic side" }],
+    ...(patient ? { subject: { reference: `Patient/${input.patientId}`, display: patientName(patient) } } : {}),
     payload: [{ contentString: text }],
   });
-  if (!created.id) throw new Error("FHIR server did not assign an office message id.");
+  if (!created.id) throw new Error("FHIR server did not assign an Office message id.");
   return projectMessage(created, []);
 }
 
 export async function listOfficeMessages(
   fhir: OfficeFhir,
-  input: { staffReference: string; role: PracticeRoleId; box: OfficeBox; view: OfficeView },
+  input: { mailbox: OfficeMailbox; staffReference: string },
 ): Promise<OfficeMessageRow[]> {
   const communications = await searchOnePage<Communication>(fhir, "Communication", {
     category: `${OFFICE_CATEGORY_SYSTEM}|${OFFICE_CATEGORY_CODE}`,
     _count: "1000",
     _sort: "-sent",
   });
-  const visible = communications.filter((message) => input.box === "sent"
-    ? message.sender?.reference === input.staffReference
-    : isRecipient(message, input.staffReference, input.role));
+  const visible = communications
+    .filter(isOfficeMessage)
+    .filter((message) => input.mailbox === "clinic" ? isClinicAudience(message) : message.sender?.reference === input.staffReference)
+    .sort((left, right) => Date.parse(right.sent ?? "") - Date.parse(left.sent ?? ""));
   const targets = visible.flatMap((message) => message.id ? [`Communication/${message.id}`] : []);
   const acknowledgements = targets.length === 0 ? [] : await searchOnePage<Provenance>(fhir, "Provenance", {
+    activity: `${OFFICE_ACK_SYSTEM}|${OFFICE_ACK_CODE}`,
     target: targets.join(","),
     _count: "1000",
     _sort: "recorded",
   });
   const byMessage = groupAcknowledgements(acknowledgements);
-  return visible
-    .flatMap((message) => message.id ? [projectMessage(message, byMessage.get(message.id) ?? [])] : [])
-    .filter((message) => input.view === "all" || message.acknowledgements.length === 0);
+  const rows = visible.flatMap((message) => message.id ? [projectMessage(message, byMessage.get(message.id) ?? [])] : []);
+  if (input.mailbox === "desk") return rows;
+  const unacknowledged = rows.filter((message) => !message.acknowledgement);
+  const recentAcknowledged = rows.filter((message) => message.acknowledgement).slice(0, RECENT_ACKNOWLEDGED_TAIL);
+  return [...unacknowledged, ...recentAcknowledged].sort((left, right) => Date.parse(right.sentAt) - Date.parse(left.sentAt));
 }
 
 export async function acknowledgeOfficeMessage(
   fhir: OfficeFhir,
-  input: { messageId: string; staffReference: string; role: PracticeRoleId; now?: string },
+  input: { messageId: string; staffReference: string; now?: string },
 ): Promise<OfficeMessageRow> {
+  if (!resourceId(input.messageId)) throw new OfficeMessageValidationError("Office message id is invalid.");
   const message = await fhir.read<Communication>("Communication", input.messageId);
-  if (!isOfficeMessage(message) || !isRecipient(message, input.staffReference, input.role)) {
-    throw new OfficeMessageValidationError("Office message is not available to this caller.");
+  if (!isOfficeMessage(message) || !isClinicAudience(message)) {
+    throw new OfficeMessageValidationError("Office message is not available to the Clinic channel.");
   }
-  const existing = await searchOnePage<Provenance>(fhir, "Provenance", {
+  const existing = (await searchOnePage<Provenance>(fhir, "Provenance", {
+    activity: `${OFFICE_ACK_SYSTEM}|${OFFICE_ACK_CODE}`,
     target: `Communication/${input.messageId}`,
     _count: "1000",
     _sort: "recorded",
-  });
-  const alreadyAcknowledged = existing.some((event) => isAcknowledgement(event) && event.agent?.some((agent) => agent.who.reference === input.staffReference));
-  if (!alreadyAcknowledged) {
+  })).filter(isAcknowledgement);
+  if (existing.length === 0) {
     const at = input.now ?? new Date().toISOString();
     const display = await staffDisplay(fhir, input.staffReference);
-    const created = await fhir.create<Provenance>({
+    existing.push(await fhir.create<Provenance>({
       resourceType: "Provenance",
       target: [{ reference: `Communication/${input.messageId}` }],
       occurredDateTime: at,
       recorded: at,
       activity: { coding: [{ system: OFFICE_ACK_SYSTEM, code: OFFICE_ACK_CODE, display: "Office message acknowledged" }], text: "Office message acknowledged" },
       agent: [{ who: { reference: input.staffReference, display } }],
-    });
-    existing.push(created);
+    }));
   }
-  return projectMessage(message, existing.filter(isAcknowledgement));
+  return projectMessage(message, existing);
 }
 
 function projectMessage(message: Communication, acknowledgements: Provenance[]): OfficeMessageRow {
-  if (!message.id || !message.sent || !message.sender?.reference) throw new Error("Stored office message is missing required data.");
-  const recipient = message.recipient?.[0];
+  if (!message.id || !message.sent || !message.sender?.reference) throw new Error("Stored Office message is missing required data.");
   const patientReference = message.subject?.reference?.match(/^Patient\/([A-Za-z0-9.-]{1,64})$/);
+  const acknowledgement = acknowledgements.filter(isAcknowledgement).flatMap((event) => {
+    const agent = event.agent?.[0]?.who;
+    const at = event.occurredDateTime ?? event.recorded;
+    return agent?.reference && at ? [{ by: agent.reference, display: agent.display ?? agent.reference, at }] : [];
+  })[0];
   return {
     id: message.id,
     text: message.payload?.find((payload) => typeof payload.contentString === "string")?.contentString ?? "",
     sentAt: message.sent,
     sender: { reference: message.sender.reference, display: message.sender.display ?? message.sender.reference },
-    recipient: {
-      ...(recipient?.reference ? { reference: recipient.reference } : {}),
-      ...(recipient?.identifier?.system === OFFICE_ROLE_SYSTEM && recipient.identifier.value ? { role: recipient.identifier.value as PracticeRoleId } : {}),
-      display: recipient?.display ?? recipient?.reference ?? recipient?.identifier?.value ?? "Office recipient",
-    },
-    urgent: message.priority === "urgent" || message.priority === "asap" || message.priority === "stat",
+    tier: patientReference ? "patient-pinned" : message.priority === "urgent" ? "urgent" : "ambient",
     ...(patientReference ? { patient: { reference: message.subject!.reference!, id: patientReference[1], display: message.subject?.display ?? message.subject!.reference! } } : {}),
-    acknowledgements: acknowledgements.flatMap((event) => {
-      const agent = event.agent?.[0]?.who;
-      const at = event.occurredDateTime ?? event.recorded;
-      return agent?.reference && at ? [{ by: agent.reference, display: agent.display ?? agent.reference, at }] : [];
-    }),
+    ...(acknowledgement ? { acknowledgement } : {}),
   };
 }
 
-function isRecipient(message: Communication, staffReference: string, role: PracticeRoleId): boolean {
-  return (message.recipient ?? []).some((recipient) =>
-    recipient.reference === staffReference ||
-    (recipient.identifier?.system === OFFICE_ROLE_SYSTEM && recipient.identifier.value === role),
-  );
+function isClinicAudience(message: Communication): boolean {
+  return message.recipient?.some((recipient) => recipient.identifier?.system === OFFICE_AUDIENCE_SYSTEM && recipient.identifier.value === OFFICE_AUDIENCE_CODE) ?? false;
 }
 
-function isOfficeMessage(message: Communication): boolean {
+export function isOfficeMessage(message: Communication): boolean {
   return message.category?.some((category) => category.coding?.some((coding) => coding.system === OFFICE_CATEGORY_SYSTEM && coding.code === OFFICE_CATEGORY_CODE)) ?? false;
 }
 
@@ -178,20 +166,25 @@ function groupAcknowledgements(events: Provenance[]): Map<string, Provenance[]> 
   return grouped;
 }
 
+function isOfficeTier(value: unknown): value is OfficeTier {
+  return value === "ambient" || value === "urgent" || value === "patient-pinned";
+}
+
+function resourceId(value: string): boolean {
+  return /^[A-Za-z0-9.-]{1,64}$/.test(value);
+}
+
 async function searchOnePage<T extends Resource>(fhir: Pick<OfficeFhir, "search">, resourceType: T["resourceType"], params: Record<string, string>): Promise<T[]> {
   const bundle = await fhir.search<T>(resourceType, params);
-  if (bundle.link?.some((link) => link.relation === "next")) throw new Error(`${resourceType} office-message query exceeded one FHIR page; refusing partial state.`);
+  if (bundle.link?.some((link) => link.relation === "next")) throw new Error(`${resourceType} Office query exceeded one FHIR page; refusing partial state.`);
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
 }
 
-async function readPatient(fhir: Pick<OfficeFhir, "read">, reference: string): Promise<Patient> {
-  return fhir.read<Patient>("Patient", reference.split("/")[1]);
-}
-
 async function staffDisplay(fhir: Pick<OfficeFhir, "read">, reference: string): Promise<string> {
-  const [resourceType, id] = reference.split("/");
-  if (resourceType === "Practitioner") return practitionerName(await fhir.read<Practitioner>("Practitioner", id));
-  const role = await fhir.read<PractitionerRole>("PractitionerRole", id);
+  const match = reference.match(/^(Practitioner|PractitionerRole)\/([A-Za-z0-9.-]{1,64})$/);
+  if (!match) throw new OfficeMessageValidationError("Authenticated Office staff reference is invalid.");
+  if (match[1] === "Practitioner") return practitionerName(await fhir.read<Practitioner>("Practitioner", match[2]));
+  const role = await fhir.read<PractitionerRole>("PractitionerRole", match[2]);
   return role.practitioner?.display ?? role.code?.[0]?.text ?? role.code?.[0]?.coding?.[0]?.display ?? reference;
 }
 
@@ -203,8 +196,4 @@ function practitionerName(practitioner: Practitioner): string {
 function patientName(patient: Patient): string {
   const name = patient.name?.find((candidate) => candidate.use === "usual") ?? patient.name?.[0];
   return [name?.given?.join(" "), name?.family].filter(Boolean).join(" ") || `Patient/${patient.id}`;
-}
-
-function roleDisplay(role: PracticeRoleId): string {
-  return role === "clinician" ? "Clinician role" : role.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" ");
 }
