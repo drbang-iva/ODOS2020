@@ -293,10 +293,13 @@ function Stats({ stats }: { stats: Array<[string, DeskStat, string?]> }) {
 
 function TonePip({ tone }: { tone: DeskTone }) { return <i className={`odos-tone-pip odos-pip-${tone}`} aria-label={tone} />; }
 function WiringPanel({ children }: { children: ReactNode }) { return <div className="odos-wiring-panel">{children}</div>; }
-function displayStat(value: unknown, format?: string): string {
+export function displayStat(value: unknown, format?: string): string {
   if (value === null || value === undefined) return "—";
   if (format === "$") return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(value) / 100);
-  if (format === "date-time") return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(String(value)));
+  if (format === "date-time") {
+    const date = new Date(String(value));
+    return Number.isNaN(date.valueOf()) ? "—" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+  }
   return `${value}${format ?? ""}`;
 }
 function worstTone(stats: DeskStat[]): DeskTone {
