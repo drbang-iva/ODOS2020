@@ -581,6 +581,129 @@ test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal 
   ]);
 });
 
+test("anterior optional grades seed, validate, remain editable, and round-trip per eye", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const tearFilm = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:tear-film");
+  const anteriorChamber = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:anterior-chamber");
+  const lens = definitions.find((definition) => definition.stableKey === "ocular-health:anterior:lens");
+  assert.ok(tearFilm && anteriorChamber && lens);
+  const fields = (definition: ClinicalFindingDefinition) => Object.values(definition.valueSchema.fields as Record<string, {
+    localCode?: string;
+    display?: string;
+    valueType?: string;
+    unit?: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    options?: Array<{ code: string; display: string; active: boolean }>;
+  }>);
+  const tbut = fields(tearFilm).find((field) => field.display === "TBUT");
+  const vanHerick = fields(anteriorChamber).find((field) => field.display === "Van Herick");
+  const locs = fields(lens).filter((field) => field.display?.startsWith("LOCS III"));
+  assert.ok(tbut?.localCode && vanHerick?.localCode);
+  assert.deepEqual(tbut, {
+    localCode: "CUSTOM_GRADE_TBUT",
+    display: "TBUT",
+    origin: "practice",
+    valueType: "number",
+    unit: "s",
+    min: 0,
+    max: 60,
+    step: 1,
+    order: 1,
+    active: true,
+  });
+  assert.deepEqual(vanHerick?.options?.map((option) => option.display), [
+    "Grade 4 (wide open)",
+    "Grade 3",
+    "Grade 2",
+    "Grade 1 (narrow)",
+    "Grade 0 (closed)",
+  ]);
+  assert.deepEqual(locs.map((field) => [field.display, field.valueType, field.min, field.max, field.step]), [
+    ["LOCS III — NO (nuclear opalescence)", "number", 0.1, 6.9, 0.1],
+    ["LOCS III — NC (nuclear color)", "number", 0.1, 6.9, 0.1],
+    ["LOCS III — C (cortical)", "number", 0.1, 6.9, 0.1],
+    ["LOCS III — P (posterior subcapsular)", "number", 0.1, 6.9, 0.1],
+  ]);
+  assert.equal(anteriorChamber.allowDiagnosisMapping, false);
+  assert.equal(lens.allowDiagnosisMapping, false);
+  assert.equal(anteriorChamber.notBillReady && tearFilm.notBillReady && lens.notBillReady, true);
+
+  const invalidLocs = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [lens]), {
+    authHeader: AUTH,
+    params: { stableKey: lens.stableKey },
+    body: {
+      patientReference: "Patient/p-anterior-grades",
+      encounterReference: "Encounter/e-anterior-grades",
+      eyes: { OD: { state: "normal", customFields: [{ code: locs[0]!.localCode!, value: 0.15 }] } },
+    },
+  });
+  assert.equal(invalidLocs.status, 400);
+  assert.match(String((invalidLocs.body as { error: string }).error), /increments/);
+  assert.equal(fhir.observations.length, 0);
+
+  const vanHerickGrade2 = vanHerick.options!.find((option) => option.display === "Grade 2");
+  assert.ok(vanHerickGrade2);
+  assert.equal(vanHerickGrade2.code, "grade-2");
+  for (const [definition, eye, field, captureValue, historyValue] of [
+    [tearFilm, "OD", tbut, 6, 6],
+    [anteriorChamber, "OS", vanHerick, vanHerickGrade2.code, "Grade 2"],
+    [lens, "OD", locs[0], 6.9, 6.9],
+  ] as const) {
+    assert.ok(field?.localCode);
+    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-anterior-grades",
+        encounterReference: "Encounter/e-anterior-grades",
+        eyes: { [eye]: { state: "normal", customFields: [{ code: field.localCode, value: captureValue }] } },
+      },
+    });
+    assert.equal(captured.status, 200, JSON.stringify(captured.body));
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, [definition]), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-anterior-grades", encounter: "Encounter/e-anterior-grades" },
+    });
+    const rows = (history.body as { rows: Array<{ eye: string; values: Array<{ code: string; value: number | string }> }> }).rows;
+    assert.deepEqual(rows.map((row) => [row.eye, row.values.find((candidate) => candidate.code === field.localCode)?.value]), [[eye, historyValue]]);
+  }
+
+  const editedTbut = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: tearFilm.stableKey },
+    body: { action: "update-custom-field", localCode: tbut.localCode, min: 1, max: 45, step: 0.5 },
+  });
+  assert.equal(editedTbut.status, 200, JSON.stringify(editedTbut.body));
+  assert.deepEqual((editedTbut.body as { field: { localCode: string; min: number; max: number; step: number } }).field, {
+    ...tbut,
+    min: 1,
+    max: 45,
+    step: 0.5,
+  });
+  const editedVanHerick = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: anteriorChamber.stableKey },
+    body: {
+      action: "update-custom-field",
+      localCode: vanHerick.localCode,
+      options: vanHerick.options!.map((option) => option.code === "grade-3"
+        ? { ...option, display: "Practice Grade 3", active: false }
+        : option),
+    },
+  });
+  assert.equal(editedVanHerick.status, 200, JSON.stringify(editedVanHerick.body));
+  assert.deepEqual((editedVanHerick.body as { field: { options: Array<{ code: string; display: string; active: boolean }> } })
+    .field.options.find((option) => option.code === "grade-3"), {
+    code: "grade-3",
+    display: "Practice Grade 3",
+    active: false,
+  });
+});
+
 class MemoryFhir {
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];

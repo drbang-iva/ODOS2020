@@ -526,6 +526,59 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
   }
 });
 
+test("anterior optional selects and numbers render blank, persist typed values, and hydrate per eye", async () => {
+  const definitions = anteriorGradeDefinitions();
+  const posts: Array<{ url: string; body: { eyes: Record<string, { customFields: Array<{ code: string; value: number | string }> }> } }> = [];
+  const fetchImpl = (async (input, init) => {
+    const url = String(input);
+    if (init?.method === "POST") {
+      posts.push({ url, body: JSON.parse(String(init.body)) });
+      return jsonResponse({});
+    }
+    if (url.includes("tear-film")) {
+      return jsonResponse({ rows: [{ eye: "OD", state: "normal", values: [{ code: "CUSTOM_GRADE_TBUT", value: 6 }] }] });
+    }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={definitions}
+        patientReference="Patient/p-anterior-grades"
+        encounterReference="Encounter/e-anterior-grades"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const numbers = renderer.root.findAllByType("input").filter((input) => input.props.type === "number");
+    assert.equal(numbers.length, 10);
+    assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, ""]);
+    assert.deepEqual([numbers[2]!.props.min, numbers[2]!.props.max, numbers[2]!.props.step], [0.1, 6.9, 0.1]);
+    const selects = renderer.root.findAllByType("select");
+    assert.equal(selects.length, 2);
+    assert.deepEqual(selects.map((select) => select.props.value), ["", ""]);
+
+    act(() => numbers[0]!.props.onChange({ target: { value: "6" } }));
+    act(() => selects[1]!.props.onChange({ target: { value: "grade-2" } }));
+    act(() => numbers[2]!.props.onChange({ target: { value: "6.9" } }));
+    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
+    act(() => normalButtons[3]!.props.onClick());
+    act(() => normalButtons[4]!.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 3);
+    assert.deepEqual(posts[0]!.body.eyes.OD?.customFields, [{ code: "CUSTOM_GRADE_TBUT", value: 6 }]);
+    assert.deepEqual(posts[1]!.body.eyes.OS?.customFields, [{ code: "CUSTOM_GRADE_VAN_HERICK", value: "grade-2" }]);
+    assert.deepEqual(posts[2]!.body.eyes.OD?.customFields, [{ code: "CUSTOM_GRADE_LOCS_III_NO_NUCLEAR_OPALESCENCE", value: 6.9 }]);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
 test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
   const captures = {
     "ocular-health:anterior:cornea": {
@@ -650,6 +703,70 @@ function posteriorDefinitions() {
       active: true,
     }] : [])],
   }));
+}
+
+function anteriorGradeDefinitions() {
+  const abnormal = (name: string) => ({
+    localCode: `CUSTOM_${name.toUpperCase().replaceAll("-", "_")}_FINDINGS`,
+    display: "Abnormal findings",
+    valueType: "multi-select" as const,
+    options: [{ code: "finding", display: "Finding", active: true, priority: true }],
+    order: 0,
+    active: true,
+  });
+  return [{
+    stableKey: "ocular-health:anterior:tear-film",
+    sectionKey: "ocular-health:anterior:tear-film",
+    display: "Tear Film",
+    active: true,
+    perEye: true,
+    customFields: [abnormal("tear-film"), {
+      localCode: "CUSTOM_GRADE_TBUT",
+      display: "TBUT",
+      valueType: "number" as const,
+      unit: "s",
+      min: 0,
+      max: 60,
+      step: 1,
+      order: 1,
+      active: true,
+    }],
+  }, {
+    stableKey: "ocular-health:anterior:anterior-chamber",
+    sectionKey: "ocular-health:anterior:anterior-chamber",
+    display: "Anterior Chamber",
+    active: true,
+    perEye: true,
+    customFields: [abnormal("anterior-chamber"), {
+      localCode: "CUSTOM_GRADE_VAN_HERICK",
+      display: "Van Herick",
+      valueType: "select" as const,
+      options: ["Grade 4 (wide open)", "Grade 3", "Grade 2", "Grade 1 (narrow)", "Grade 0 (closed)"].map((value) => ({ code: value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""), display: value, active: true })),
+      order: 1,
+      active: true,
+    }],
+  }, {
+    stableKey: "ocular-health:anterior:lens",
+    sectionKey: "ocular-health:anterior:lens",
+    display: "Lens",
+    active: true,
+    perEye: true,
+    customFields: [abnormal("lens"), ...[
+      ["CUSTOM_GRADE_LOCS_III_NO_NUCLEAR_OPALESCENCE", "LOCS III — NO (nuclear opalescence)"],
+      ["CUSTOM_GRADE_LOCS_III_NC_NUCLEAR_COLOR", "LOCS III — NC (nuclear color)"],
+      ["CUSTOM_GRADE_LOCS_III_C_CORTICAL", "LOCS III — C (cortical)"],
+      ["CUSTOM_GRADE_LOCS_III_P_POSTERIOR_SUBCAPSULAR", "LOCS III — P (posterior subcapsular)"],
+    ].map(([localCode, display], index) => ({
+      localCode: localCode!,
+      display: display!,
+      valueType: "number" as const,
+      min: 0.1,
+      max: 6.9,
+      step: 0.1,
+      order: index + 1,
+      active: true,
+    }))],
+  }];
 }
 
 function jsonResponse(body: unknown): Response {
