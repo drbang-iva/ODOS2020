@@ -21,6 +21,7 @@ export const STATEMENT_RUN_CODE = "statement-run";
 export const PATIENT_STATEMENT_CODE = "patient-statement";
 export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/statement-run";
 export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/statement-output";
+export const STATEMENT_TRANSACTION_CHILD_LIMIT = 40;
 
 const RUN_OUTPUTS = {
   generated: "generated-count",
@@ -97,13 +98,29 @@ export async function handleStatementListRequest(
     return badRequest("patientReference must be a local Patient/<id> reference.");
   }
   try {
-    const tasks = await searchAll<Task>(staff.staff.fhir, "Task", {
-      code: `${STATEMENT_TASK_CODE_SYSTEM}|${PATIENT_STATEMENT_CODE}`,
-      _sort: "-authored-on",
-    });
+    const [tasks, runs] = await Promise.all([
+      searchAll<Task>(staff.staff.fhir, "Task", {
+        code: `${STATEMENT_TASK_CODE_SYSTEM}|${PATIENT_STATEMENT_CODE}`,
+        _sort: "-authored-on",
+      }),
+      searchAll<Task>(staff.staff.fhir, "Task", {
+        code: `${STATEMENT_TASK_CODE_SYSTEM}|${STATEMENT_RUN_CODE}`,
+        status: "completed",
+      }),
+    ]);
+    const completedRuns = new Set(runs.flatMap((task) =>
+      task.status === "completed" && taskCodeIs(task, STATEMENT_RUN_CODE) && task.id ? [`Task/${task.id}`] : [],
+    ));
     const items = tasks
       .filter((task) => task.status === "completed")
-      .map(parseStatementTask)
+      .flatMap((task) => {
+        try {
+          return [parseStatementTask(task)];
+        } catch {
+          return [];
+        }
+      })
+      .filter((statement) => statement.runReference && completedRuns.has(statement.runReference))
       .filter((statement) => !input.patientReference || statement.patientReference === input.patientReference)
       .sort((left, right) => right.generatedAt.localeCompare(left.generatedAt));
     return { status: 200, body: { items } };
@@ -208,12 +225,13 @@ export function buildStatementTransaction(input: {
   rejects: StatementRejectRow[];
   skippedZeroBalanceCount: number;
   generateId?: () => string;
-}): { bundle: Bundle; runFullUrl: string; statementFullUrls: string[] } {
+}): { childBundles: Bundle[]; completionBundle: Bundle; runReference: string } {
   const generateId = input.generateId ?? randomUUID;
   const runId = generateId();
-  const runFullUrl = `urn:uuid:${runId}`;
+  const runReference = `Task/${runId}`;
   const runTask: Task = {
     resourceType: "Task",
+    id: runId,
     identifier: [{ system: STATEMENT_RUN_IDENTIFIER_SYSTEM, value: runId }],
     status: "completed",
     intent: "order",
@@ -226,26 +244,34 @@ export function buildStatementTransaction(input: {
       integerOutput(RUN_OUTPUTS.skipped, input.skippedZeroBalanceCount),
     ],
   };
-  const statementFullUrls: string[] = [];
   const childTasks: Array<{ fullUrl: string; task: Task }> = [];
   for (const snapshot of input.statements) {
     const fullUrl = `urn:uuid:${generateId()}`;
-    statementFullUrls.push(fullUrl);
-    childTasks.push({ fullUrl, task: statementTask(snapshot, runFullUrl) });
+    childTasks.push({ fullUrl, task: statementTask(snapshot, runReference) });
   }
   for (const reject of input.rejects) {
-    childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: rejectTask(reject, input.generatedAt, runFullUrl) });
+    childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: rejectTask(reject, input.generatedAt, runReference) });
   }
-  return {
-    runFullUrl,
-    statementFullUrls,
-    bundle: {
+  const childEntries: BundleEntry[] = childTasks.map(({ fullUrl, task }) => ({
+    fullUrl,
+    resource: task,
+    request: { method: "POST", url: "Task" },
+  }));
+  const childBundles: Bundle[] = [];
+  for (let index = 0; index < childEntries.length; index += STATEMENT_TRANSACTION_CHILD_LIMIT) {
+    childBundles.push({
       resourceType: "Bundle",
       type: "transaction",
-      entry: [
-        { fullUrl: runFullUrl, resource: runTask, request: { method: "POST", url: "Task" } },
-        ...childTasks.map(({ fullUrl, task }) => ({ fullUrl, resource: task, request: { method: "POST" as const, url: "Task" } })),
-      ],
+      entry: childEntries.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT),
+    });
+  }
+  return {
+    childBundles,
+    runReference,
+    completionBundle: {
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [{ resource: runTask, request: { method: "PUT", url: runReference } }],
     },
   };
 }
@@ -281,12 +307,11 @@ export function latestStatementRun(tasks: readonly Task[]): {
   invalidRejects: number;
 } {
   const latest = tasks
-    .filter((task) => taskCodeIs(task, STATEMENT_RUN_CODE))
+    .filter((task) => task.status === "completed" && taskCodeIs(task, STATEMENT_RUN_CODE))
     .sort((left, right) => (right.authoredOn ?? "").localeCompare(left.authoredOn ?? ""))[0];
   if (!latest) return { generatedAt: null, invalidRejects: 0 };
-  if (!latest.authoredOn) throw new StatementValidationError("Latest statement run is missing authoredOn.");
-  const invalidRejects = integerOutputValue(latest.output, RUN_OUTPUTS.invalidRejects);
-  return { generatedAt: latest.authoredOn, invalidRejects };
+  if (!latest.authoredOn) return { generatedAt: null, invalidRejects: 0 };
+  return { generatedAt: latest.authoredOn, invalidRejects: integerOutputValue(latest.output, RUN_OUTPUTS.invalidRejects) };
 }
 
 export class StatementValidationError extends Error {}
@@ -339,11 +364,16 @@ async function runStatements(
       skippedZeroBalanceCount,
       generateId: options.generateId,
     });
-    const response = await fhir.executeTransaction(transaction.bundle);
-    const runReference = transactionReference(response.entry?.[0], "Task");
+    const childResponses: BundleEntry[] = [];
+    for (const bundle of transaction.childBundles) {
+      const response = await fhir.executeTransaction(bundle);
+      childResponses.push(...(response.entry ?? []));
+    }
+    await fhir.executeTransaction(transaction.completionBundle);
+    const runReference = transaction.runReference;
     const rows = statements.map((statement, index) => ({
       ...statement,
-      statementReference: transactionReference(response.entry?.[index + 1], "Task"),
+      statementReference: transactionReference(childResponses[index], "Task"),
       runReference,
     }));
     return {
