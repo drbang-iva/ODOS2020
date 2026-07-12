@@ -365,19 +365,23 @@ export function buildAutoRefractionRequestBody(input: {
   binocularPdNear: string;
   eyes: Record<Eye, EyeState>;
 }) {
+  const binocularPdDistance = parseOptionalNumber(input.binocularPdDistance);
+  const binocularPdNear = parseOptionalNumber(input.binocularPdNear);
   return {
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
     sourceType: input.sourceType,
     ...(input.remarks.trim() ? { remarks: input.remarks.trim() } : {}),
-    ...(input.binocularPdDistance ? { binocularPdDistance: Number(input.binocularPdDistance) } : {}),
-    ...(input.binocularPdNear ? { binocularPdNear: Number(input.binocularPdNear) } : {}),
+    ...(binocularPdDistance !== undefined ? { binocularPdDistance } : {}),
+    ...(binocularPdNear !== undefined ? { binocularPdNear } : {}),
     eyes: buildPayload(input.eyes),
   };
 }
 
 function parseOptionalNumber(value: string): number | undefined {
-  return value ? Number(value) : undefined;
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function activeOptions(field: DefinitionField | undefined): DefinitionOption[] {

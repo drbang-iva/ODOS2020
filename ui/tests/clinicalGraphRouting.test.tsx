@@ -77,16 +77,31 @@ test("Auto-Refraction renders directly typeable binocular PD fields and saves th
     binocularPdDistance: "63.50",
     binocularPdNear: "60.25",
     eyes: {
-      OD: emptyAutoEye(),
+      OD: { ...emptyAutoEye(), sphere: "-1" },
       OS: emptyAutoEye(),
     },
   });
   assert.equal(body.binocularPdDistance, 63.5);
   assert.equal(body.binocularPdNear, 60.25);
   assert.equal(body.remarks, "reliable fixation");
-  assert.deepEqual(body.eyes, {});
+  assert.deepEqual(body.eyes.OD, { sphere: -1 });
   assert.equal("binocularPdDistance" in (body.eyes.OD ?? {}), false);
-  assert.equal("binocularPdNear" in (body.eyes.OS ?? {}), false);
+  assert.equal("binocularPdNear" in (body.eyes.OD ?? {}), false);
+
+  for (const partial of ["-", "1e", "."]) {
+    const partialBody = buildAutoRefractionRequestBody({
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sourceType: "manual",
+      remarks: "",
+      binocularPdDistance: partial,
+      binocularPdNear: partial,
+      eyes: { OD: emptyAutoEye(), OS: emptyAutoEye() },
+    });
+    assert.equal("binocularPdDistance" in partialBody, false);
+    assert.equal("binocularPdNear" in partialBody, false);
+    assert.doesNotMatch(JSON.stringify(partialBody), /null/);
+  }
 });
 
 test("no UI source references the obsolete osod_access_token key", () => {
