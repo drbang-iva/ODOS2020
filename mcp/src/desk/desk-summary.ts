@@ -24,7 +24,11 @@ import {
   paymentSubjectReference,
   unappliedPaymentCents,
 } from "../payments/payment-credit-service.js";
-import { latestStatementRun } from "../statements/statements.js";
+import {
+  latestStatementRun,
+  STATEMENT_RUN_CODE,
+  STATEMENT_TASK_CODE_SYSTEM,
+} from "../statements/statements.js";
 
 export type DeskTone = "ok" | "warn" | "alert" | "info" | "off";
 
@@ -219,7 +223,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     waitingToPost: stat(openEraTasks.length, openEraTasks.length > 0 ? "warn" : "ok"),
     unpostedCents: stat(unpostedCents, openEraTasks.length > 0 ? "warn" : "ok"),
   };
-  const statementRun = latestStatementRun(input.tasks);
+  const statementRun = safeLatestStatementRun(input.tasks);
 
   const attention: DeskAttentionRow[] = [
     ...(failedRows.length > 0 ? [{ tone: "alert" as const, label: `${failedRows.length} failed claim${failedRows.length === 1 ? "" : "s"}`, detail: `${money(heldCents)} held`, href: "/billing/claims/worklist" }] : []),
@@ -272,9 +276,41 @@ export async function loadDeskSummary(
 ): Promise<DeskSummary> {
   const now = options.now ?? new Date().toISOString();
   const date = options.date ?? practiceDate(now, options.timeZone);
-  const [appointments, tasks, claims, claimResponses, paymentReconciliations, invoices] = await Promise.all([
+  const [
+    appointments,
+    opticalTasks,
+    claimRejectedTasks,
+    eraTasks,
+    statementTasks,
+    claims,
+    claimResponses,
+    paymentReconciliations,
+    invoices,
+  ] = await Promise.all([
     searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
-    searchOnePage<Task>(fhir, "Task", { _count: "1000", _sort: "-authored-on" }),
+    searchOnePage<Task>(fhir, "Task", {
+      status: "in-progress",
+      code: `${OSOD_OPTICAL_ORDER_TYPE_SYSTEM}|`,
+      _count: "1000",
+      _sort: "-authored-on",
+    }),
+    searchOnePage<Task>(fhir, "Task", {
+      code: `${CLAIM_REJECTED_CODE_SYSTEM}|claim-rejected`,
+      _count: "1000",
+      _sort: "-authored-on",
+    }),
+    searchOnePage<Task>(fhir, "Task", {
+      code: `${ERA_WORKLIST_CODE_SYSTEM}|`,
+      "business-status": `${ERA_WORKLIST_STATUS_SYSTEM}|new,${ERA_WORKLIST_STATUS_SYSTEM}|in-review`,
+      _count: "1000",
+      _sort: "-authored-on",
+    }),
+    searchFirstPage<Task>(fhir, "Task", {
+      status: "completed",
+      code: `${STATEMENT_TASK_CODE_SYSTEM}|${STATEMENT_RUN_CODE}`,
+      _count: "1",
+      _sort: "-authored-on",
+    }),
     searchOnePage<Claim>(fhir, "Claim", { _count: "1000", _sort: "-created" }),
     searchOnePage<ClaimResponse>(fhir, "ClaimResponse", { _count: "1000", _sort: "-created" }),
     searchOnePage<PaymentReconciliation>(fhir, "PaymentReconciliation", { _count: "1000", _sort: "-_lastUpdated" }),
@@ -288,7 +324,7 @@ export async function loadDeskSummary(
   return projectDeskSummary({
     appointments,
     patients,
-    tasks,
+    tasks: [...opticalTasks, ...claimRejectedTasks, ...eraTasks, ...statementTasks],
     claims,
     claimResponses,
     paymentReconciliations,
@@ -309,6 +345,23 @@ async function searchOnePage<T extends Resource>(
     throw new Error(`${resourceType} desk-summary query exceeded one FHIR page; refusing partial counts.`);
   }
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+async function searchFirstPage<T extends Resource>(
+  fhir: Pick<MedplumClient, "search">,
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<T[]> {
+  const bundle = await fhir.search<T>(resourceType, params);
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function safeLatestStatementRun(tasks: readonly Task[]): { generatedAt: string | null; invalidRejects: number } {
+  try {
+    return latestStatementRun(tasks);
+  } catch {
+    return { generatedAt: null, invalidRejects: 0 };
+  }
 }
 
 function stat<T>(value: T, tone: DeskTone, unavailableReason?: string): DeskStat<T> {

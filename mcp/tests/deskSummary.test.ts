@@ -200,7 +200,8 @@ function malformedStatementRunTask(): Task {
     resourceType: "Task",
     status: "completed",
     intent: "order",
+    authoredOn: "2026-07-11T13:00:00.000Z",
     code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
-    output: [{ type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "invalid-reject-count" }] }, valueInteger: 1 }],
+    output: [],
   };
 }

@@ -35,8 +35,49 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
     const body = await response.json() as { cards?: Record<string, unknown>; pulse?: unknown };
     assert.deepEqual(Object.keys(body.cards ?? {}), ["schedule", "attention", "frontLine", "pendingRx", "productPickup", "claims", "payments", "remits", "statements"]);
     assert.ok(body.pulse);
-    assert.deepEqual(searched, ["Appointment", "Task", "Claim", "ClaimResponse", "PaymentReconciliation", "Invoice"]);
+    assert.deepEqual(searched, ["Appointment", "Task", "Task", "Task", "Task", "Claim", "ClaimResponse", "PaymentReconciliation", "Invoice"]);
     assert.equal(serviceAuthCalls, 2);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("GET /desk/summary stays available when the unscoped Task collection exceeds one page", async () => {
+  const taskSearches: Array<Record<string, string>> = [];
+  const fhir = {
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> => {
+      if (resourceType === "Task") {
+        taskSearches.push(params);
+        if (!params.code) {
+          return {
+            resourceType: "Bundle",
+            type: "searchset",
+            total: 1_001,
+            link: [{ relation: "next", url: "Task?_page=2" }],
+          } as Bundle<T>;
+        }
+      }
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+  };
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
+    resolveRoles: async () => ["front-desk"],
+    terminalMode: "TEST MODE",
+    now: () => "2026-07-11T14:00:00.000Z",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/desk/summary`, { headers: { Authorization: "Bearer good" } });
+    assert.equal(response.status, 200);
+    const body = await response.json() as { cards?: { statements?: { available?: boolean } } };
+    assert.equal(body.cards?.statements?.available, true);
+    assert.equal(taskSearches.length, 4);
+    assert.ok(taskSearches.every((params) => Boolean(params.code)));
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
