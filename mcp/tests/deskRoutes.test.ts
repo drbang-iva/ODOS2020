@@ -74,17 +74,75 @@ test("GET /desk/summary keeps other cards available when one scoped Task categor
   try {
     const response = await fetch(`http://127.0.0.1:${port}/desk/summary`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
-    const body = await response.json() as { cards?: { pendingRx?: { spectacle?: { value?: number | null; unavailableReason?: string } }; statements?: { available?: boolean }; payments?: unknown } };
+    const body = await response.json() as { cards?: { pendingRx?: { spectacle?: { value?: number | null; unavailableReason?: string } }; claims?: { failed?: { value?: number | null } }; remits?: { waitingToPost?: { value?: number | null } }; statements?: { available?: boolean }; payments?: unknown } };
     assert.equal(body.cards?.statements?.available, true);
     assert.ok(body.cards?.payments);
     assert.equal(body.cards?.pendingRx?.spectacle?.value, null);
     assert.match(body.cards?.pendingRx?.spectacle?.unavailableReason ?? "", /exceed the Desk card read limit/);
+    assert.notEqual(body.cards?.claims?.failed?.value, null);
+    assert.notEqual(body.cards?.remits?.waitingToPost?.value, null);
     assert.equal(taskSearches.length, 4);
     assert.ok(taskSearches.every((params) => Boolean(params.code)));
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
 });
+
+for (const resourceType of ["Claim", "ClaimResponse", "PaymentReconciliation", "Invoice"] as const) {
+  test(`GET /desk/summary degrades only dependent cards when ${resourceType} exceeds a page`, async () => {
+    const fhir = {
+      search: async <T extends Resource>(requestedType: T["resourceType"]): Promise<Bundle<T>> => requestedType === resourceType
+        ? {
+            resourceType: "Bundle",
+            type: "searchset",
+            total: 1_001,
+            link: [{ relation: "next", url: `${resourceType}?_page=2` }],
+          } as Bundle<T>
+        : { resourceType: "Bundle", type: "searchset" },
+    };
+    const app = express();
+    registerDeskRoutes(app, {
+      authenticateService: async () => undefined,
+      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
+      resolveRoles: async () => ["front-desk"],
+      terminalMode: "TEST MODE",
+      now: () => "2026-07-11T14:00:00.000Z",
+    });
+    const listener = app.listen(0, "127.0.0.1");
+    await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+    const { port } = listener.address() as AddressInfo;
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/desk/summary`, { headers: { Authorization: "Bearer good" } });
+      assert.equal(response.status, 200);
+      const body = await response.json() as {
+        cards: {
+          claims: { failed: { value: number | null; unavailableReason?: string } };
+          payments: {
+            unappliedCount: { value: number | null; unavailableReason?: string };
+            patientOpenBalanceCents: { value: number | null; unavailableReason?: string };
+          };
+          remits: { waitingToPost: { value: number | null } };
+        };
+      };
+      assert.notEqual(body.cards.remits.waitingToPost.value, null);
+      if (resourceType === "Claim" || resourceType === "ClaimResponse") {
+        assert.equal(body.cards.claims.failed.value, null);
+        assert.match(body.cards.claims.failed.unavailableReason ?? "", /Claim records exceed/);
+        assert.notEqual(body.cards.payments.unappliedCount.value, null);
+      } else if (resourceType === "PaymentReconciliation") {
+        assert.equal(body.cards.payments.unappliedCount.value, null);
+        assert.match(body.cards.payments.unappliedCount.unavailableReason ?? "", /Payment records exceed/);
+        assert.notEqual(body.cards.payments.patientOpenBalanceCents.value, null);
+      } else {
+        assert.equal(body.cards.payments.patientOpenBalanceCents.value, null);
+        assert.match(body.cards.payments.patientOpenBalanceCents.unavailableReason ?? "", /Invoice records exceed/);
+        assert.notEqual(body.cards.payments.unappliedCount.value, null);
+      }
+    } finally {
+      await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+    }
+  });
+}
 
 test("GET /desk/whoami returns the authenticated staff member's practice-role tags", async () => {
   const app = express();
