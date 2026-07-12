@@ -450,6 +450,25 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
   assert.equal(posterior.every((definition) => definition.valueSchema.perEye === true), true);
   assert.equal(posterior.every((definition) => definition.diagnosisCandidates === undefined), true);
 
+  const expectedRefinements = new Map([
+    ["Fundus", {
+      priority: ["diabetic retinopathy (background/NPDR)", "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot", "choroidal nevus", "chorioretinal scar"],
+      additional: ["microaneurysm", "proliferative diabetic retinopathy (PDR)", "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal lesion", "RPE atrophy", "Roth spot", "myelinated nerve fiber", "drusen", "occasional drusen"],
+    }],
+    ["Periphery", {
+      priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
+      additional: ["retinal tear", "retinal detachment", "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
+    }],
+  ]);
+  for (const [display, expected] of expectedRefinements) {
+    const definition = posterior.find((candidate) => candidate.display === display);
+    assert.ok(definition);
+    const field = Object.values(definition.valueSchema.fields as Record<string, { valueType?: string; options?: Array<{ display: string; priority?: boolean }> }>)
+      .find((candidate) => candidate.valueType === "multi-select");
+    assert.deepEqual(field?.options?.filter((option) => option.priority).map((option) => option.display), expected.priority);
+    assert.deepEqual(field?.options?.filter((option) => !option.priority).map((option) => option.display), expected.additional);
+  }
+
   const expectedPriority = new Map([
     ["Vitreous", "posterior vitreous detachment (PVD)"],
     ["Fundus", "diabetic retinopathy (background/NPDR)"],
@@ -491,6 +510,50 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
     assert.equal(rows[0]!.values[0]!.value.length, 1);
     assert.equal(rows[1]!.normalTemplate, definition.normalSemantics?.template);
   }
+});
+
+test("OH-2b Vessels seeds and round-trips the per-eye A/V ratio grade on normal and abnormal eyes", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const vessels = definitions.find((definition) => definition.stableKey === "ocular-health:posterior:vessels");
+  assert.ok(vessels);
+  const grade = Object.values(vessels.valueSchema.fields as Record<string, { valueType?: string; localCode?: string; display?: string; options?: Array<{ code: string; display: string; active: boolean }> }>)
+    .find((candidate) => candidate.valueType === "select");
+  assert.ok(grade?.localCode);
+  assert.equal(grade.display, "A/V ratio");
+  assert.deepEqual(grade.options?.map((option) => [option.code, option.display, option.active]), [
+    ["2:3", "2:3", true],
+    ["1:2", "1:2", true],
+    ["1:3", "1:3", true],
+    ["1:4", "1:4", true],
+  ]);
+
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, [vessels]), {
+    authHeader: AUTH,
+    params: { stableKey: vessels.stableKey },
+    body: {
+      patientReference: "Patient/p-vessels-grade",
+      encounterReference: "Encounter/e-vessels-grade",
+      eyes: {
+        OD: { state: "normal", customFields: [{ code: grade.localCode, value: "2:3" }] },
+        OS: { state: "abnormal", customFields: [{ code: grade.localCode, value: "1:2" }] },
+      },
+    },
+  });
+  assert.equal(captured.status, 200, JSON.stringify(captured.body));
+  assert.equal(component(fhir.observations[0], `OD_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "2:3");
+  assert.equal(component(fhir.observations[1], `OS_${grade.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "1:2");
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, [vessels]), {
+    authHeader: AUTH,
+    params: { stableKey: vessels.stableKey },
+    query: { patient: "Patient/p-vessels-grade", encounter: "Encounter/e-vessels-grade" },
+  });
+  const rows = (history.body as { rows: Array<{ eye: string; state: string; values: Array<{ code: string; value: string }> }> }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.state, row.values.find((value) => value.code === grade.localCode)?.value]), [
+    ["OD", "normal", "2:3"],
+    ["OS", "abnormal", "1:2"],
+  ]);
 });
 
 class MemoryFhir {

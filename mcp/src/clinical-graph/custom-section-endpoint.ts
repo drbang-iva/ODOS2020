@@ -109,7 +109,10 @@ export async function handleCustomSectionCaptureRequest(
   if (ocularHealth && rows.some((row) => row.state === "deferred") && definition.normalSemantics?.allowDeferred !== true) {
     return { status: 400, body: { error: "Deferred is not enabled for this ocular-health structure." } };
   }
-  if (ocularHealth && rows.some((row) => row.state !== "abnormal" && row.values.length > 0)) {
+  const ocularFields = new Map(customFieldEntries(definition).map((field) => [field.localCode, field]));
+  if (ocularHealth && rows.some((row) => row.state !== "abnormal" && row.values.some((value) =>
+    ocularFields.get(value.code)?.valueType === "multi-select"
+  ))) {
     return { status: 400, body: { error: "Only an abnormal ocular-health state may carry abnormal findings." } };
   }
   if (!ocularHealth && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
