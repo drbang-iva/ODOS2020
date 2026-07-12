@@ -9,6 +9,8 @@ import type {
 } from "@medplum/fhirtypes";
 
 export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
+export const OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL =
+  "https://osod.dev/fhir/StructureDefinition/osod-charge-item";
 
 export interface ClaimMdProviderInput {
   name?: string;
@@ -162,11 +164,18 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
   }
 
   const items = input.chargeItems.map((chargeItem, index) => {
+    if (!chargeItem.id) {
+      throw new Error("Every professional Claim charge item must be persisted before the Claim is built.");
+    }
     const coding = firstCoding(chargeItem);
     const quantity = chargeItem.quantity?.value ?? 1;
     const unitCents = moneyToCents(chargeItem.priceOverride);
     return {
       sequence: index + 1,
+      extension: [{
+        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        valueReference: { reference: `ChargeItem/${chargeItem.id}` },
+      }],
       productOrService: {
         coding: [
           {
@@ -176,6 +185,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
           },
         ],
       },
+      servicedDate: input.serviceDate,
       diagnosisSequence: [1],
       quantity: { value: quantity },
       unitPrice: money(unitCents),

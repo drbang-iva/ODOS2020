@@ -5,10 +5,13 @@ import { test } from "node:test";
 import type {
   Basic,
   Bundle,
+  ChargeItem,
   Claim,
   ClaimResponse,
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
+  Invoice,
+  Patient,
   PaymentReconciliation,
   Resource,
   Task,
@@ -45,6 +48,8 @@ import {
 } from "../src/claims/era-worklist.js";
 import { buildProfessionalClaim, type ClaimMdEraData, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
+import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
 const professionalClaim: ProfessionalClaimInput = {
   created: "2026-07-09",
@@ -90,19 +95,24 @@ const professionalClaim: ProfessionalClaimInput = {
 
 function deps(role: "front-desk" | "clinician" = "front-desk") {
   const audits: OsodAuditEventRecord[] = [];
+  const createHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
   let searchCalls = 0;
   const created = {
     Basic: [] as Basic[],
+    ChargeItem: [] as ChargeItem[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
     CoverageEligibilityRequest: [] as CoverageEligibilityRequest[],
     CoverageEligibilityResponse: [] as CoverageEligibilityResponse[],
+    Invoice: [] as Invoice[],
+    Patient: [] as Patient[],
     PaymentReconciliation: [] as PaymentReconciliation[],
     Task: [] as Task[],
   };
   let claimCreateError: Error | undefined;
   const fhir = {
-    create: async <T extends Resource>(resource: T): Promise<T> => {
+    create: async <T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> => {
+      createHeaders.push({ resourceType: resource.resourceType, headers });
       if (resource.resourceType === "Claim" && claimCreateError) throw claimCreateError;
       const resources = created[resource.resourceType as keyof typeof created] as Resource[] | undefined;
       if (!resources) throw new Error(`Unexpected test resource ${resource.resourceType}`);
@@ -137,6 +147,17 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
       const saved = { ...resource, id } as T;
       resources[index] = saved;
       return saved;
+    },
+    executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
+      const responseEntries = (bundle.entry ?? []).map((entry) => {
+        const resource = entry.resource;
+        if (!resource || resource.resourceType !== "Task") throw new Error("Unexpected statement transaction resource");
+        const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
+        const id = requestedId ?? `task-${created.Task.length + 1}`;
+        created.Task.push({ ...structuredClone(resource), id });
+        return { response: { status: requestedId ? "200" : "201", location: `Task/${id}/_history/1` } };
+      });
+      return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
     },
   };
   const base: ClaimsHandlerDeps = {
@@ -203,6 +224,8 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     audits,
     created,
     deps: base,
+    fhir,
+    createHeaders,
     searchCalls: () => searchCalls,
     failClaimCreate: (error: Error) => {
       claimCreateError = error;
@@ -229,6 +252,29 @@ test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.co
   assert.equal((res.body as { claimMdTrackingNumber: string }).claimMdTrackingNumber, "tracking-1");
   assert.equal(audits[0].eventType, "claim.submit.completed");
   assert.equal(audits[0].resourceType, "Claim");
+});
+
+test("submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape", async () => {
+  const { created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  let submittedPayload: any;
+  d.adapter!.submitProfessionalClaim = async (request) => {
+    submittedPayload = request.payload;
+    return { claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }], raw: {} };
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.ChargeItem.length, 1);
+  assert.equal(created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-1");
+  assert.equal(created.Claim[0].item?.[0]?.servicedDate, input.serviceDate);
+  assert.equal(submittedPayload.claim[0].charge[0].remote_chgid, undefined);
+  assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
 });
 
 test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {
@@ -258,6 +304,34 @@ test("Stedi selector submits through the parallel adapter and attributes the exi
   assert.equal((result.body as any).stediCorrelationId, "stedi-1");
   assert.equal((submitted as any).payload.usageIndicator, "T");
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
+test("Stedi payload also remains on the original idless charge input after provenance persistence", async () => {
+  const { created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  let submitted: any;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async (request: unknown) => {
+        submitted = request;
+        return { claimReference: { correlationId: "stedi-1", customerClaimNumber: "track-1" } };
+      },
+      checkEligibility: async () => ({}), checkClaimStatus: async () => ({}), listEras: async () => ({}), retrieveEraData: async () => ({}),
+    } as any,
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.ChargeItem.length, 1);
+  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "OSOD-CLAIM-900-1");
 });
 
 test("eligibility check creates request/response resources and audits eligibility.check.completed", async () => {
@@ -463,6 +537,7 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
 
 test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects", async () => {
   const { audits, created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   d.adapters = {
     stedi: {
       id: "stedi",
@@ -503,6 +578,8 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
+  assert.equal(created.Invoice.length, 1);
+  assert.equal(created.Invoice[0].totalNet?.value, 20);
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
 
   const unmatched = await handleEraImportRequest(d, {
@@ -667,6 +744,7 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
     },
   };
   const flagged = deps();
+  flagged.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   flagged.deps.adapter!.retrieveEraData = async () => underpaidEra;
 
   const flaggedResult = await handleEraImportRequest(flagged.deps, {
@@ -685,6 +763,7 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
   assert.equal(flagged.audits.some((row) => row.eventType === "era.underpayment.flagged"), true);
 
   const belowThreshold = deps();
+  belowThreshold.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   belowThreshold.deps.adapter!.retrieveEraData = async () => underpaidEra;
   belowThreshold.deps.eraUnderpaymentThresholdCents = 1_001;
   const belowResult = await handleEraImportRequest(belowThreshold.deps, {
@@ -699,6 +778,81 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
   );
   assert.equal(belowThreshold.created.PaymentReconciliation.length, 1);
   assert.equal(belowThreshold.created.Task.length, 0);
+});
+
+test("patient-responsibility Invoice is create-once; a differing remit preserves money and opens one exception", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const era = (patientResponsibilityEra(17_189) as { claim: { charge: Array<{ adjustment: { amount: string } }> } });
+  fixture.deps.adapter!.retrieveEraData = async () => era as any;
+
+  const first = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  const repeated = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+
+  assert.equal(first.status, 200);
+  assert.equal(repeated.status, 200);
+  assert.equal(fixture.created.Invoice.length, 1);
+  assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
+  assert.equal(
+    fixture.createHeaders.find((write) => write.resourceType === "Invoice")?.headers?.["If-None-Exist"],
+    "identifier=https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice|Claim/claim-1",
+  );
+  assert.equal(fixture.created.Task.length, 0);
+
+  era.claim.charge[0].adjustment.amount = "170.00";
+  const differing = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+
+  assert.equal(differing.status, 200);
+  assert.equal(fixture.created.Invoice.length, 1);
+  assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-underpayment");
+});
+
+test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89", async () => {
+  const fixture = deps();
+  const claim = { ...buildProfessionalClaim(professionalClaim), id: "claim-1" };
+  fixture.created.Claim.push(claim);
+  fixture.created.Patient.push({ resourceType: "Patient", id: "pat-900", name: [{ text: "Jamie Synthetic" }] });
+  fixture.deps.adapter!.retrieveEraData = async () => patientResponsibilityEra(17_189);
+
+  const imported = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  const invoice = fixture.created.Invoice[0];
+  const statementResult = await handleGeneratePatientStatementRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "front-desk",
+      fhir: fixture.fhir,
+    }),
+    now: () => "2026-07-12T12:00:00.000Z",
+    generateId: (() => { let id = 0; return () => `statement-${++id}`; })(),
+  }, { authHeader: "Bearer good", body: { patientReference: "Patient/pat-900" } });
+
+  assert.equal(imported.status, 200);
+  assert.equal(statementResult.status, 200);
+  assert.equal(invoice.lineItem?.[0]?.chargeItemReference?.reference, "ChargeItem/charge-1");
+  assert.equal(invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+    ?.valueReference?.reference, "Claim/claim-1");
+  assert.equal(invoice.totalGross?.value, 171.89);
+  assert.equal(invoice.totalNet?.value, 171.89);
+  assert.equal((statementResult.body as StatementRunResult).statements[0].balanceCents, 17_189);
+});
+
+test("zero-PR and denied remits do not emit a patient-responsibility Invoice", async () => {
+  const zero = deps();
+  zero.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  await handleEraImportRequest(zero.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(zero.created.Invoice.length, 0);
+
+  const denied = deps();
+  denied.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const denial = patientResponsibilityEra(5_000) as any;
+  denial.claim.total_paid = "0.00";
+  denial.claim.status_code = "4";
+  denial.claim.charge[0].paid = "0.00";
+  denied.deps.adapter!.retrieveEraData = async () => denial;
+  await handleEraImportRequest(denied.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(denied.created.Invoice.length, 0);
 });
 
 test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", async () => {
@@ -1128,6 +1282,31 @@ function eraImportBody(): Record<string, unknown> {
   };
 }
 
+function patientResponsibilityEra(amountCents: number): ClaimMdEraData {
+  const amount = (amountCents / 100).toFixed(2);
+  const paid = 100;
+  return {
+    eraid: "era-pr",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      payer_icn: "ICN-PR",
+      total_charge: "300.00",
+      total_paid: paid.toFixed(2),
+      status_code: "1",
+      charge: [{
+        chgid: "charge-1",
+        proc_code: "PROC-A",
+        charge: "300.00",
+        allowed: ((paid * 100 + amountCents) / 100).toFixed(2),
+        paid: paid.toFixed(2),
+        adjustment: { group: "PR", code: "1", amount },
+      }],
+    },
+  };
+}
+
 function pickCounts(body: unknown): {
   posted: number;
   denied: number;
@@ -1184,6 +1363,20 @@ function matchesSearch(resource: Resource, params: Record<string, string>): bool
     if (params.code && !matchesCodingToken(task.code?.coding, params.code)) return false;
     if (params.focus && task.focus?.reference !== params.focus) return false;
     if (params["business-status"] && !matchesCodingToken(task.businessStatus?.coding, params["business-status"])) return false;
+  }
+  if (resource.resourceType === "Invoice") {
+    const invoice = resource as Invoice;
+    if (params.identifier && !matchesIdentifierToken(invoice.identifier, params.identifier)) return false;
+    if (params.status && invoice.status !== params.status) return false;
+    if (params.subject && invoice.subject?.reference !== params.subject) return false;
+  }
+  if (resource.resourceType === "Patient") {
+    const patient = resource as Patient;
+    if (params._id && !params._id.split(",").includes(patient.id ?? "")) return false;
+  }
+  if (resource.resourceType === "PaymentReconciliation") {
+    const payment = resource as PaymentReconciliation;
+    if (params.status && payment.status !== params.status) return false;
   }
   return true;
 }

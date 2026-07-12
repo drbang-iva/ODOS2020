@@ -129,6 +129,7 @@ function claim(number: number): Claim {
     facilityReference: "Location/main-office",
     chargeItems: [{
       resourceType: "ChargeItem",
+      id: `charge-${number}`,
       status: "billable",
       subject: { reference: `Patient/patient-${number}` },
       code: { coding: [{ system: "https://osod.test/fhir/CodeSystem/procedure", code: "PROC-A" }] },

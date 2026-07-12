@@ -369,6 +369,18 @@
       "sliceConsumer": "patient-payments-phase-6a"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claim-invoice-seam-phase-a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-source-claim",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claim-invoice-seam-phase-a"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-duration",
       "namespace": "scheduling",
       "status": "active",
