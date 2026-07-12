@@ -43,6 +43,7 @@ export function PatientOverview({
   const [noteDraft, setNoteDraft] = useState(initialOverview?.stickyNote?.text ?? "");
   const [savingNote, setSavingNote] = useState(false);
   const [history, setHistory] = useState<StickyNoteHistoryEntry[]>();
+  const [historyError, setHistoryError] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
@@ -108,6 +109,7 @@ export function PatientOverview({
       setEditing(false);
       historyRequestIdRef.current += 1;
       setHistory(undefined);
+      setHistoryError(undefined);
       setHistoryOpen(false);
     } catch (reason) {
       setError(messageOf(reason));
@@ -120,12 +122,13 @@ export function PatientOverview({
     if (!patient.id) return;
     setHistoryOpen(true);
     if (history) return;
+    setHistoryError(undefined);
     const requestId = ++historyRequestIdRef.current;
     try {
       const entries = await api.fetchHistory(patient.id);
       if (requestId === historyRequestIdRef.current) setHistory(entries);
     } catch (reason) {
-      if (requestId === historyRequestIdRef.current) setError(messageOf(reason));
+      if (requestId === historyRequestIdRef.current) setHistoryError(messageOf(reason));
     }
   }
 
@@ -170,15 +173,16 @@ export function PatientOverview({
           ) : (
             <React.Fragment>
               <button type="button" onClick={() => setEditing(true)}>Edit</button>
-              <button type="button" aria-expanded={historyOpen} onClick={showHistory}>History</button>
+              <button type="button" aria-expanded={historyOpen} aria-controls="patient-sticky-history" onClick={showHistory}>History</button>
             </React.Fragment>
           )}
         </section>
 
         {historyOpen && (
-          <section className="odos-sticky-history" aria-label="Sticky note history">
+          <section id="patient-sticky-history" className="odos-sticky-history" aria-label="Sticky note history">
             <div><h2>Sticky note history</h2><button type="button" onClick={() => setHistoryOpen(false)}>Close</button></div>
-            {!history && <p>Loading version history…</p>}
+            {!history && !historyError && <p>Loading version history…</p>}
+            {historyError && <p className="odos-overview-error" role="alert">{historyError}</p>}
             {history?.length === 0 && <p>No sticky-note versions recorded.</p>}
             {history?.map((entry) => (
               <article key={entry.versionId}>
