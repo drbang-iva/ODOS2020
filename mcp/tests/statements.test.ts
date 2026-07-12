@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, Invoice, Patient, PaymentReconciliation, Resource, Task } from "@medplum/fhirtypes";
+import type {
+  Bundle,
+  Claim,
+  ClaimResponse,
+  Invoice,
+  Patient,
+  PaymentReconciliation,
+  Practitioner,
+  PractitionerRole,
+  Resource,
+  Task,
+} from "@medplum/fhirtypes";
+import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
+import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
+  addStatementDetail,
   buildStatementSnapshot,
   handleGeneratePatientStatementRequest,
   handleRunStatementsRequest,
@@ -40,6 +54,62 @@ test("an internally inconsistent Invoice is rejected instead of emitting a wrong
     paymentReconciliations: [],
     generatedAt: GENERATED_AT,
   }), /does not reconcile/);
+});
+
+test("insurance detail passes through linked Claim diagnoses, ERA adjustments, provider identity, and patient payments", () => {
+  const sourceInvoice = seamInvoice("i1", "p1", 2_500);
+  const sourcePayment = payment("pay-1", "p1", "i1", 500);
+  const snapshot = buildStatementSnapshot({
+    patient: patientWithAddress(),
+    invoices: [sourceInvoice],
+    paymentReconciliations: [sourcePayment],
+    generatedAt: GENERATED_AT,
+  });
+  const detailed = addStatementDetail({
+    snapshot,
+    patient: patientWithAddress(),
+    invoices: [sourceInvoice],
+    paymentReconciliations: [sourcePayment],
+    claims: [postedClaim()],
+    claimResponses: [postedResponse()],
+    practitioners: [provider()],
+    practitionerRoles: [providerRole()],
+  });
+
+  assert.equal(detailed.balanceCents, snapshot.balanceCents);
+  assert.equal(detailed.detail?.header.practiceName, "Independent Eye Care");
+  assert.equal(detailed.detail?.header.providerNpi, "1234567893");
+  assert.equal(detailed.detail?.header.providerLicense, "OPT-1234");
+  assert.deepEqual(detailed.detail?.header.patientAddress, { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" });
+  const order = detailed.detail?.orders[0];
+  assert.equal(order?.mode, "insurance-aware");
+  assert.equal(order?.orderNumber, "i1");
+  assert.equal(order?.claimNumber, "ACCT-100");
+  assert.deepEqual(order?.lines[0].diagnosisCodes, ["DX-TEST-1", "DX-TEST-2"]);
+  assert.equal(order?.lines[0].retailCents, 10_000);
+  assert.equal(order?.lines[0].insurancePaidCents, 5_000);
+  assert.deepEqual(order?.lines[0].insuranceAdjustments, [{ group: "INS", code: "SOURCE", label: "adjustment INS SOURCE", amountCents: 2_500 }]);
+  assert.deepEqual(order?.lines[0].patientAdjustments, [{ group: "PR", code: "SOURCE", label: "Source patient reason", amountCents: 2_500 }]);
+  assert.deepEqual(order?.patientPayments, [{ paymentReference: "PaymentReconciliation/pay-1", date: "2026-07-02", amountCents: 500 }]);
+});
+
+test("a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance", () => {
+  const sourceInvoice = invoice("i1", "p1", 2_500);
+  sourceInvoice.extension = [{ url: OSOD_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }];
+  const snapshot = buildStatementSnapshot({ patient: patient("p1", "Alex Rivera"), invoices: [sourceInvoice], paymentReconciliations: [], generatedAt: GENERATED_AT });
+  const detailed = addStatementDetail({
+    snapshot,
+    patient: patient("p1", "Alex Rivera"),
+    invoices: [sourceInvoice],
+    paymentReconciliations: [],
+    claims: [{ ...postedClaim(), item: postedClaim().item?.map(({ extension: _extension, ...item }) => item) }],
+    claimResponses: [postedResponse()],
+    practitioners: [],
+    practitionerRoles: [],
+  });
+  assert.equal(detailed.detail?.orders[0].mode, "invoice-only");
+  assert.deepEqual(detailed.detail?.orders[0].lines, []);
+  assert.equal(detailed.balanceCents, 2_500);
 });
 
 test("an unapplied patient credit is displayed separately and reduces only the account-level balance due", async () => {
@@ -305,6 +375,13 @@ function patient(id: string, text: string): Patient {
   return { resourceType: "Patient", id, name: [{ text }] };
 }
 
+function patientWithAddress(): Patient {
+  return {
+    ...patient("p1", "Alex Rivera"),
+    address: [{ use: "home", line: ["10 Main St"], city: "Raleigh", state: "NC", postalCode: "27601" }],
+  };
+}
+
 function invoice(id: string, patientId: string, netCents: number): Invoice {
   return {
     resourceType: "Invoice",
@@ -315,6 +392,97 @@ function invoice(id: string, patientId: string, netCents: number): Invoice {
     lineItem: [{ sequence: 1, priceComponent: [{ type: "base", amount: { value: netCents / 100, currency: "USD" } }] }],
     totalGross: { value: netCents / 100, currency: "USD" },
     totalNet: { value: netCents / 100, currency: "USD" },
+  };
+}
+
+function seamInvoice(id: string, patientId: string, netCents: number): Invoice {
+  return {
+    ...invoice(id, patientId, netCents),
+    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice", value: `claim-pr-${id}` }],
+    extension: [{ url: OSOD_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }],
+    lineItem: [{
+      sequence: 1,
+      chargeItemReference: { reference: "ChargeItem/ch1" },
+      priceComponent: [{ type: "base", amount: { value: netCents / 100, currency: "USD" } }],
+    }],
+  };
+}
+
+function postedClaim(): Claim {
+  return {
+    resourceType: "Claim",
+    id: "c1",
+    status: "active",
+    type: { text: "Professional" },
+    use: "claim",
+    patient: { reference: "Patient/p1" },
+    created: "2026-07-01T12:00:00.000Z",
+    insurer: { reference: "Organization/payer-1", display: "Cigna Health Care" },
+    provider: { reference: "Practitioner/dr-1" },
+    priority: { text: "normal" },
+    identifier: [{ value: "ACCT-100" }],
+    diagnosis: [
+      { sequence: 1, diagnosisCodeableConcept: { coding: [{ code: "DX-TEST-1" }] } },
+      { sequence: 2, diagnosisCodeableConcept: { coding: [{ code: "DX-TEST-2" }] } },
+    ],
+    item: [{
+      sequence: 1,
+      extension: [{ url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL, valueReference: { reference: "ChargeItem/ch1" } }],
+      productOrService: { coding: [{ code: "PROC-TEST", display: "Source procedure display" }] },
+      servicedDate: "2026-07-01",
+      diagnosisSequence: [1, 2],
+      quantity: { value: 1 },
+      unitPrice: { value: 100, currency: "USD" },
+      net: { value: 100, currency: "USD" },
+    }],
+    total: { value: 100, currency: "USD" },
+  };
+}
+
+function postedResponse(): ClaimResponse {
+  return {
+    resourceType: "ClaimResponse",
+    id: "cr1",
+    status: "active",
+    type: { text: "Professional" },
+    use: "claim",
+    patient: { reference: "Patient/p1" },
+    created: "2026-07-02T12:00:00.000Z",
+    insurer: { reference: "Organization/payer-1", display: "Cigna Health Care" },
+    request: { reference: "Claim/c1" },
+    outcome: "complete",
+    item: [{
+      itemSequence: 1,
+      adjudication: [
+        { category: { text: "paid" }, amount: { value: 50, currency: "USD" } },
+        { category: { text: "patient responsibility" }, amount: { value: 25, currency: "USD" } },
+        { category: { text: "adjustment INS SOURCE" }, amount: { value: 25, currency: "USD" } },
+        { category: { text: "adjustment PR SOURCE" }, reason: { text: "Source patient reason" }, amount: { value: 25, currency: "USD" } },
+      ],
+    }],
+  };
+}
+
+function provider(): Practitioner {
+  return {
+    resourceType: "Practitioner",
+    id: "dr-1",
+    active: true,
+    name: [{ text: "Morgan Lee, OD" }],
+    address: [{ use: "work", line: ["20 Vision Way"], city: "Raleigh", state: "NC", postalCode: "27601" }],
+    telecom: [{ system: "phone", use: "work", value: "919-555-0100" }],
+    identifier: [{ system: "http://hl7.org/fhir/sid/us-npi", value: "1234567893" }],
+    qualification: [{ identifier: [{ system: "https://example.test/license", value: "OPT-1234" }], code: { text: "Optometrist" } }],
+  };
+}
+
+function providerRole(): PractitionerRole {
+  return {
+    resourceType: "PractitionerRole",
+    id: "role-1",
+    active: true,
+    practitioner: { reference: "Practitioner/dr-1" },
+    organization: { reference: "Organization/practice-1", display: "Independent Eye Care" },
   };
 }
 
