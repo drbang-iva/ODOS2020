@@ -203,6 +203,78 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   assert.equal(deniedWrite.status, 403);
 });
 
+test("per-eye multi-select fields namespace shared option codes and omit empty selections", async () => {
+  const fhir = new MemoryFhir();
+  const created = await handleFindingDefinitionCreationRequest(definitionDeps("practice-admin", fhir, "multi000"), {
+    authHeader: AUTH,
+    body: {
+      action: "create-definition",
+      display: "Shared option panel",
+      perEye: true,
+      fields: [
+        { display: "First findings", valueType: "multi-select", options: [{ code: "shared", display: "Shared first", active: true }] },
+        { display: "Second findings", valueType: "multi-select", options: [{ code: "shared", display: "Shared second", active: true }] },
+      ],
+    },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const body = created.body as { definition: { stableKey: string }; fields: Array<{ localCode: string }> };
+  const [first, second] = body.fields;
+  assert.ok(first && second);
+  const definitions = await catalog(fhir);
+  const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: body.definition.stableKey },
+    body: {
+      patientReference: "Patient/p-multi",
+      encounterReference: "Encounter/e-multi",
+      eyes: {
+        OD: { customFields: [{ code: first.localCode, value: ["shared"] }, { code: second.localCode, value: [] }] },
+        OS: { customFields: [{ code: first.localCode, value: [] }, { code: second.localCode, value: ["shared"] }] },
+      },
+    },
+  });
+  assert.equal(captured.status, 200, JSON.stringify(captured.body));
+  assert.equal(component(fhir.observations[0], `OD_${first.localCode}::shared`)?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], `OD_${second.localCode}::shared`), undefined);
+  assert.equal(component(fhir.observations[1], `OS_${first.localCode}::shared`), undefined);
+  assert.equal(component(fhir.observations[1], `OS_${second.localCode}::shared`)?.valueBoolean, true);
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: body.definition.stableKey },
+    query: { patient: "Patient/p-multi", encounter: "Encounter/e-multi" },
+  });
+  const rows = (history.body as { rows: Array<{ eye: string; values: Array<{ code: string; value: string[] }> }> }).rows;
+  assert.deepEqual(rows.map((row) => [row.eye, row.values]), [
+    ["OD", [{ code: first.localCode, label: "First findings", value: ["shared"] }]],
+    ["OS", [{ code: second.localCode, label: "Second findings", value: ["shared"] }]],
+  ]);
+
+  const rejectedState = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: body.definition.stableKey },
+    body: {
+      patientReference: "Patient/p-multi",
+      encounterReference: "Encounter/e-multi",
+      eyes: { OD: { state: "normal", customFields: [] } },
+    },
+  });
+  assert.equal(rejectedState.status, 400);
+  assert.deepEqual(rejectedState.body, { error: "Exam state and other text are only supported for ocular-health structures." });
+  const rejectedOther = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: body.definition.stableKey },
+    body: {
+      patientReference: "Patient/p-multi",
+      encounterReference: "Encounter/e-multi",
+      eyes: { OD: { customFields: [], other: "Clear." } },
+    },
+  });
+  assert.equal(rejectedOther.status, 400);
+  assert.equal(fhir.observations.length, 2);
+});
+
 test("OH-1 seeds nine editable structures and persists explicit normal, abnormal, nested, other, and deferred states", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
@@ -234,8 +306,8 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   });
   assert.equal(captured.status, 200, JSON.stringify(captured.body));
   assert.equal(component(fhir.observations[0], "EXAM_STATE")?.valueString, "abnormal");
-  assert.equal(component(fhir.observations[0], "OD_demodex")?.valueBoolean, true);
-  assert.equal(component(fhir.observations[0], "OD_demodex::collarettes")?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], `OD_${field.localCode}::demodex`)?.valueBoolean, true);
+  assert.equal(component(fhir.observations[0], `OD_${field.localCode}::demodex::collarettes`)?.valueBoolean, true);
   assert.equal(component(fhir.observations[0], "OTHER")?.valueString, "Trace sleeves.");
   assert.equal(component(fhir.observations[1], "EXAM_STATE")?.valueString, "normal");
   assert.equal(component(fhir.observations[1], "NORMAL_TEMPLATE")?.valueString, lids.normalSemantics?.template);

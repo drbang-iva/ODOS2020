@@ -109,6 +109,9 @@ export async function handleCustomSectionCaptureRequest(
   if (ocularHealth && rows.some((row) => row.state !== "abnormal" && row.values.length > 0)) {
     return { status: 400, body: { error: "Only an abnormal ocular-health state may carry abnormal findings." } };
   }
+  if (!ocularHealth && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
+    return { status: 400, body: { error: "Exam state and other text are only supported for ocular-health structures." } };
+  }
   if (rows.every((row) => row.values.length === 0 && !row.state && !row.other) && !parsed.data.remarks) {
     return { status: 400, body: { error: "Enter at least one custom field or note before saving." } };
   }
@@ -137,13 +140,13 @@ export async function handleCustomSectionCaptureRequest(
           ...(parsed.data.remarks
             ? [{ code: "REMARKS", display: "Remarks", value: parsed.data.remarks }]
             : []),
-          ...(row.state
+          ...(ocularHealth && row.state
             ? [{ code: "EXAM_STATE", display: "Exam state", value: row.state }]
             : []),
-          ...(row.state === "normal" && typeof definition.normalSemantics?.template === "string"
+          ...(ocularHealth && row.state === "normal" && typeof definition.normalSemantics?.template === "string"
             ? [{ code: "NORMAL_TEMPLATE", display: "Normal template", value: definition.normalSemantics.template }]
             : []),
-          ...(row.other
+          ...(ocularHealth && row.other
             ? [{ code: "OTHER", display: "Other", value: row.other }]
             : []),
         ],

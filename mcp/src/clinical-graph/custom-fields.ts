@@ -337,7 +337,7 @@ export function customFieldComponents(
       for (const code of item.value) {
         const option = field.options?.find((candidate) => candidate.code === code);
         if (option) components.push({
-          code: `${codePrefix}${option.code}`,
+          code: `${codePrefix}${field.localCode}::${option.code}`,
           display: option.display,
           value: true,
         });
@@ -411,9 +411,10 @@ export function observationCustomValue(
   codePrefix = "",
 ): number | string | string[] | undefined {
   if (field.valueType === "multi-select") {
-    return (field.options ?? []).filter((option) =>
-      findComponent(observation, `${codePrefix}${option.code}`)?.valueBoolean === true
+    const selected = (field.options ?? []).filter((option) =>
+      findComponent(observation, `${codePrefix}${field.localCode}::${option.code}`)?.valueBoolean === true
     ).map((option) => option.code);
+    return selected.length > 0 ? selected : undefined;
   }
   const matched = findComponent(observation, `${codePrefix}${field.localCode}`);
   if (!matched) return undefined;

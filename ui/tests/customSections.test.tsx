@@ -3,11 +3,14 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { CustomFieldEditor, type CustomFieldEditorValue } from "../src/components/charting/CustomFieldEditor";
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import {
   OcularHealthSection,
   applyAnteriorAllNormal,
+  changedDefinitions,
   copyEyeCapture,
   pendingStateEyes,
 } from "../src/components/charting/OcularHealthSection";
@@ -129,6 +132,90 @@ test("the generic renderer shows ordered fields, OD and OS columns, automatic no
   assert.match(html, /History/);
 });
 
+test("the generic renderer reaches and captures a nested child option under its parent", async () => {
+  const originalFetch = globalThis.fetch;
+  let postedBody: unknown;
+  globalThis.fetch = (async (_input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CustomFindingSection
+        definition={{
+          stableKey: "custom:nested-findings-nest0000",
+          display: "Nested Findings",
+          active: true,
+          perEye: false,
+          customFields: [{
+            localCode: "CUSTOM_NESTED_12345678",
+            display: "Findings",
+            valueType: "multi-select",
+            options: [
+              { code: "severity", display: "Severity", active: true },
+              { code: "severity::central", display: "Central", active: true, parentCode: "severity" },
+            ],
+            order: 0,
+            active: true,
+          }],
+        }}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        apiBase=""
+        onSaved={() => undefined}
+      />);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findAllByType("input").length, 1);
+    act(() => renderer.root.findByType("input").props.onChange({ target: { checked: true } }));
+    const checkboxes = renderer.root.findAllByType("input");
+    assert.equal(checkboxes.length, 2);
+    assert.equal(checkboxes[1]!.parent?.children.at(-1), "Central");
+    act(() => checkboxes[1]!.props.onChange({ target: { checked: true } }));
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Nested Findings");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody, {
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      customFields: [{ code: "CUSTOM_NESTED_12345678", value: ["severity", "severity::central"] }],
+    });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("the custom-field editor captures hierarchy and priority metadata for new options", async () => {
+  let saved: CustomFieldEditorValue | undefined;
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<CustomFieldEditor
+      onCancel={() => undefined}
+      onSave={(value) => { saved = value; }}
+    />);
+  });
+  const selects = renderer.root.findAllByType("select");
+  act(() => selects[0]!.props.onChange({ target: { value: "multi-select" } }));
+  const inputs = renderer.root.findAllByType("input");
+  act(() => inputs[0]!.props.onChange({ target: { value: "Findings" } }));
+  act(() => renderer.root.findByType("textarea").props.onChange({
+    target: { value: "severity | Severity | | priority\nseverity::central | Central | severity" },
+  }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save field");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+  assert.deepEqual(saved?.options, [
+    { code: "severity", display: "Severity", active: true, priority: true },
+    { code: "severity::central", display: "Central", active: true, parentCode: "severity" },
+  ]);
+  renderer.unmount();
+});
+
 test("the shared section editor composes fields through the shipped custom-field editor affordance", () => {
   const html = renderToStaticMarkup(<CustomSectionEditor onCancel={() => undefined} onSave={() => undefined} />);
   assert.match(html, /Create chart section/);
@@ -137,30 +224,31 @@ test("the shared section editor composes fields through the shipped custom-field
   assert.match(html, /Create section/);
 });
 
-test("the anterior renderer exposes explicit all-normal, bilateral copy, deferred, priority, nesting, and Other controls", () => {
+test("the anterior renderer exposes explicit all-normal, bilateral copy, deferred, priority, nesting, and Other controls", async () => {
+  const definition = {
+    stableKey: "ocular-health:anterior:lids-lashes",
+    sectionKey: "ocular-health:anterior:lids-lashes",
+    display: "Lids & Lashes",
+    active: true,
+    perEye: true,
+    normalTemplate: "Normal lids.",
+    allowDeferred: true,
+    customFields: [{
+      localCode: "CUSTOM_ABNORMAL_FINDINGS_02",
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [
+        { code: "demodex", display: "Demodex", active: true, priority: true },
+        { code: "demodex::collarettes", display: "Collarettes", active: true, parentCode: "demodex", priority: true },
+        { code: "ptosis", display: "Ptosis", active: true },
+      ],
+      order: 0,
+      active: true,
+    }],
+  };
   const html = renderToStaticMarkup(
     <OcularHealthSection
-      definitions={[{
-        stableKey: "ocular-health:anterior:lids-lashes",
-        sectionKey: "ocular-health:anterior:lids-lashes",
-        display: "Lids & Lashes",
-        active: true,
-        perEye: true,
-        normalTemplate: "Normal lids.",
-        allowDeferred: true,
-        customFields: [{
-          localCode: "CUSTOM_ABNORMAL_FINDINGS_02",
-          display: "Abnormal findings",
-          valueType: "multi-select",
-          options: [
-            { code: "demodex", display: "Demodex", active: true, priority: true },
-            { code: "demodex::collarettes", display: "Collarettes", active: true, parentCode: "demodex", priority: true },
-            { code: "ptosis", display: "Ptosis", active: true },
-          ],
-          order: 0,
-          active: true,
-        }],
-      }]}
+      definitions={[definition]}
       patientReference="Patient/p1"
       encounterReference="Encounter/e1"
       onSaved={() => undefined}
@@ -172,9 +260,110 @@ test("the anterior renderer exposes explicit all-normal, bilateral copy, deferre
   assert.match(html, /Copy to OD/);
   assert.match(html, /Not performed \/ deferred/);
   assert.equal((html.match(/>Other</g) ?? []).length, 2);
-  const source = readFileSync(new URL("../src/components/charting/OcularHealthSection.tsx", import.meta.url), "utf8");
-  assert.match(source, /More findings/);
-  assert.match(source, /parentCode/);
+  assert.equal((html.match(/Choose an exam state before entering Other\./g) ?? []).length, 2);
+
+  const fetchImpl = (async () => jsonResponse({
+    rows: [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_ABNORMAL_FINDINGS_02", value: ["demodex"] }] }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /Demodex/);
+    assert.match(rendered, /Collarettes/);
+    assert.equal(renderer.root.findByType("summary").children.join(""), "More findings (1)");
+    assert.ok(rendered.indexOf("Demodex") < rendered.indexOf('"type":"summary"'));
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("reopened history hydrates nine structures but posts only the one modified structure", async () => {
+  const posts: string[] = [];
+  const fetchImpl = (async (input, init) => {
+    const url = String(input);
+    if (init?.method === "POST") {
+      posts.push(url);
+      return jsonResponse({});
+    }
+    return jsonResponse({
+      rows: [
+        { eye: "OD", state: "normal", values: [], normalTemplate: "Saved OD normal." },
+        { eye: "OS", state: "normal", values: [], normalTemplate: "Saved OS normal." },
+      ],
+    });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={ocularDefinitions()}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const abnormalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal");
+    assert.equal(abnormalButtons.length, 18);
+    act(() => abnormalButtons[8]!.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Anterior Segment");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 1);
+    assert.match(posts[0]!, /ocular-health%3Aanterior%3Atear-film$/);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("a saved normal keeps its captured template snapshot after the live template changes", async () => {
+  const fetchImpl = (async () => jsonResponse({
+    rows: [{ eye: "OD", state: "normal", values: [], normalTemplate: "Saved normal snapshot." }],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    const [definition] = ocularDefinitions();
+    assert.ok(definition);
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[definition]}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    await act(async () => {
+      renderer.update(<OcularHealthSection
+        definitions={[{ ...definition, normalTemplate: "Later edited live template." }]}
+        patientReference="Patient/p1"
+        encounterReference="Encounter/e1"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+    });
+    const templates = renderer.root.findAllByProps({ className: "mt-3 text-sm text-white/45" }).map((node) => node.children.join(""));
+    assert.equal(templates[0], "Saved normal snapshot.");
+    assert.equal(templates[1], "Later edited live template.");
+  } finally {
+    renderer?.unmount();
+  }
 });
 
 test("SpineNav nests definition-store anterior structures without moving Cup Disc or Dry Eye", () => {
@@ -246,9 +435,52 @@ test("pending-state eyes report touched notes without a state and ignore stated 
   }]);
 });
 
+test("hydrated state is pristine until a capture differs from its baseline", () => {
+  const definitions = ocularDefinitions();
+  const hydrated = Object.fromEntries(definitions.map((definition) => [definition.stableKey, {
+    OD: { state: "normal" as const, selections: [], other: "", normalTemplate: definition.normalTemplate },
+    OS: { state: "normal" as const, selections: [], other: "", normalTemplate: definition.normalTemplate },
+  }]));
+  assert.equal(changedDefinitions(definitions, hydrated, hydrated).length, 0);
+  const edited = structuredClone(hydrated);
+  edited[definitions[4]!.stableKey]!.OD.state = "abnormal";
+  edited[definitions[4]!.stableKey]!.OD.normalTemplate = undefined;
+  assert.deepEqual(changedDefinitions(definitions, edited, hydrated).map((definition) => definition.stableKey), [
+    definitions[4]!.stableKey,
+  ]);
+});
+
 test("EncounterCharting keeps exactly the 14 shipped built-in render branches plus one custom branch", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   assert.equal((source.match(/activeSection === "/g) ?? []).length, 14);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
 });
+
+function ocularDefinitions() {
+  return ["periocular-adnexa", "lids-lashes", "palpebral-conjunctiva", "bulbar-conjunctiva", "tear-film", "cornea", "anterior-chamber", "iris-pupil", "lens"].map((name) => ({
+    stableKey: `ocular-health:anterior:${name}`,
+    sectionKey: `ocular-health:anterior:${name}`,
+    display: name.split("-").map((part) => `${part[0]!.toUpperCase()}${part.slice(1)}`).join(" "),
+    active: true,
+    perEye: true,
+    normalTemplate: `Live ${name} normal.`,
+    allowDeferred: true,
+    customFields: [{
+      localCode: `CUSTOM_${name.toUpperCase()}_FINDINGS`,
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{ code: "finding", display: "Finding", active: true, priority: true }],
+      order: 0,
+      active: true,
+    }],
+  }));
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+}
+
+async function flushEffects(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}

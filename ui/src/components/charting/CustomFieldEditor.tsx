@@ -23,7 +23,7 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
   const [min, setMin] = useState(initial?.min?.toString() ?? "");
   const [max, setMax] = useState(initial?.max?.toString() ?? "");
   const [step, setStep] = useState(initial?.step?.toString() ?? "");
-  const [options, setOptions] = useState(initial?.options?.map((option) => `${option.active ? "" : "! "}${option.code} | ${option.display}`).join("\n") ?? "");
+  const [options, setOptions] = useState(initial?.options?.map(formatOption).join("\n") ?? "");
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
@@ -80,8 +80,8 @@ export function CustomFieldEditor({ title = "Create field", initial, saving, onS
           ) : (
             <label className="block">
               <span className="mb-1 block text-xs uppercase tracking-wide text-white/40">Options, one per line</span>
-              <textarea value={options} onChange={(event) => setOptions(event.target.value)} rows={8} placeholder={'Low\nMedium\nHigh'} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white" />
-              {initial && <span className="mt-1 block text-xs text-white/35">Keep each code before the | unchanged. Prefix a line with ! to deactivate that option without erasing history.</span>}
+              <textarea value={options} onChange={(event) => setOptions(event.target.value)} rows={8} placeholder={'severity | Severity | | priority\ncentral | Central | severity'} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white" />
+              <span className="mt-1 block text-xs text-white/35">Format: code | label | parent code | priority. Leave hierarchy columns blank when unused. Prefix a line with ! to deactivate it without erasing history.</span>
             </label>
           )}
         </div>
@@ -113,23 +113,40 @@ function parseOptions(
   const options = lines.map((line) => {
     const active = !line.startsWith("!");
     const content = active ? line : line.slice(1).trim();
-    const separator = content.indexOf("|");
-    const code = separator >= 0 ? content.slice(0, separator).trim() : slug(content);
-    const display = separator >= 0 ? content.slice(separator + 1).trim() : content;
+    const columns = content.split("|").map((column) => column.trim());
+    const code = columns.length > 1 ? columns[0]! : slug(content);
+    const display = columns.length > 1 ? columns[1]! : content;
+    const parentCode = columns[2] || undefined;
+    const priority = columns[3] === "priority" ? true : undefined;
+    if (columns.length > 4 || (columns[3] && columns[3] !== "priority")) {
+      throw new Error("Option metadata must use: code | label | parent code | priority.");
+    }
     if (!code || !display) throw new Error("Each dropdown option needs both a code and label.");
     const existing = initial.find((option) => option.code === code);
+    const resolvedParentCode = parentCode ?? existing?.parentCode;
+    const resolvedPriority = priority ?? existing?.priority;
     return {
       code,
       display,
       active,
-      ...(existing?.parentCode ? { parentCode: existing.parentCode } : {}),
-      ...(existing?.priority !== undefined ? { priority: existing.priority } : {}),
+      ...(resolvedParentCode ? { parentCode: resolvedParentCode } : {}),
+      ...(resolvedPriority ? { priority: true } : {}),
     };
   });
   if (new Set(options.map((option) => option.code)).size !== options.length) {
     throw new Error("Dropdown option labels must produce distinct codes.");
   }
+  const codes = new Set(options.map((option) => option.code));
+  const invalidParent = options.find((option) => option.parentCode && !codes.has(option.parentCode));
+  if (invalidParent) throw new Error(`${invalidParent.display} references an unknown parent code.`);
   return options;
+}
+
+function formatOption(option: NonNullable<CustomFieldEditorValue["options"]>[number]): string {
+  const metadata = option.parentCode || option.priority
+    ? ` | ${option.parentCode ?? ""} | ${option.priority ? "priority" : ""}`
+    : "";
+  return `${option.active ? "" : "! "}${option.code} | ${option.display}${metadata}`;
 }
 
 function slug(value: string): string {

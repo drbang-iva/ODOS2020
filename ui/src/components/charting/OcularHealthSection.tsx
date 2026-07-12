@@ -10,6 +10,7 @@ export interface EyeCapture {
   state?: ExamState;
   selections: string[];
   other: string;
+  normalTemplate?: string;
 }
 
 interface HistoryRow {
@@ -17,6 +18,7 @@ interface HistoryRow {
   state?: ExamState;
   values: Array<{ code: string; value: number | string | string[] }>;
   other?: string;
+  normalTemplate?: string;
 }
 
 interface Props {
@@ -25,6 +27,8 @@ interface Props {
   patientReference: string;
   encounterReference: string;
   onSaved(status: SectionSaveStatus, stableKeys: string[]): void;
+  apiBase?: string;
+  fetchImpl?: typeof fetch;
 }
 
 const EYES: Eye[] = ["OD", "OS"];
@@ -35,8 +39,11 @@ export function OcularHealthSection({
   patientReference,
   encounterReference,
   onSaved,
+  apiBase,
+  fetchImpl = fetch,
 }: Props) {
   const [captures, setCaptures] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
+  const [pristine, setPristine] = useState<Record<string, Record<Eye, EyeCapture>>>(() => emptyCaptures(definitions));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -47,17 +54,22 @@ export function OcularHealthSection({
     const controller = new AbortController();
     setLoading(true);
     setError(null);
+    const base = apiBase ?? clinicalGraphApiBase();
     Promise.all(definitions.map(async (definition) => {
       const query = new URLSearchParams({ patient: patientReference, encounter: encounterReference });
-      const response = await fetch(
-        `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history?${query}`,
+      const response = await fetchImpl(
+        `${base}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}/history?${query}`,
         { headers: authHeaders(), signal: controller.signal },
       );
       const body = await response.json() as { rows?: HistoryRow[]; error?: string };
       if (!response.ok) throw new Error(body.error ?? `${definition.display} history failed: ${response.status}`);
       return [definition.stableKey, captureFromRows(definition, body.rows ?? [])] as const;
     }))
-      .then((rows) => setCaptures(Object.fromEntries(rows)))
+      .then((rows) => {
+        const hydrated = Object.fromEntries(rows);
+        setCaptures(hydrated);
+        setPristine(hydrated);
+      })
       .catch((caught) => {
         if ((caught as Error).name !== "AbortError") setError(caught instanceof Error ? caught.message : String(caught));
       })
@@ -65,7 +77,7 @@ export function OcularHealthSection({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [definitionKey, patientReference, encounterReference]);
+  }, [definitionKey, patientReference, encounterReference, apiBase, fetchImpl]);
 
   useEffect(() => {
     if (!focusedStableKey) return;
@@ -86,6 +98,7 @@ export function OcularHealthSection({
     updateEye(definition.stableKey, eye, (current) => ({
       ...current,
       state,
+      normalTemplate: undefined,
       ...(state === "abnormal" ? {} : { selections: [] }),
     }));
   }
@@ -105,7 +118,8 @@ export function OcularHealthSection({
   }
 
   async function save() {
-    const pending = pendingStateEyes(definitions, captures);
+    const dirtyDefinitions = changedDefinitions(definitions, captures, pristine);
+    const pending = pendingStateEyes(dirtyDefinitions, captures);
     if (pending.length) {
       setError(pending.map(({ display, eye }) => `${display} (${eye}): choose Normal, Abnormal, or Deferred, or clear the note before saving.`).join(" "));
       setMessage(null);
@@ -115,12 +129,8 @@ export function OcularHealthSection({
     setError(null);
     setMessage(null);
     try {
-      const touchedDefinitions = definitions.filter((definition) => {
-        const row = captures[definition.stableKey];
-        return row && (touched(row.OD) || touched(row.OS));
-      });
-      if (!touchedDefinitions.length) throw new Error("Capture at least one anterior structure before saving.");
-      for (const definition of touchedDefinitions) {
+      if (!dirtyDefinitions.length) throw new Error("Capture at least one anterior structure before saving.");
+      for (const definition of dirtyDefinitions) {
         const field = abnormalField(definition);
         const row = captures[definition.stableKey] ?? emptyRow();
         const eyes = Object.fromEntries(EYES.flatMap((eye) => {
@@ -134,8 +144,8 @@ export function OcularHealthSection({
             ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
           }]];
         }));
-        const response = await fetch(
-          `${clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,
+        const response = await fetchImpl(
+          `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`,
           {
             method: "POST",
             headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -144,15 +154,30 @@ export function OcularHealthSection({
         );
         const body = await response.json() as { error?: string };
         if (!response.ok) throw new Error(body.error ?? `${definition.display} save failed: ${response.status}`);
+        const savedRow = Object.fromEntries(EYES.map((eye) => {
+          const capture = row[eye] ?? emptyEye();
+          return [eye, {
+            ...capture,
+            normalTemplate: capture.state === "normal" ? definition.normalTemplate : undefined,
+          }];
+        })) as Record<Eye, EyeCapture>;
+        setPristine((current) => ({ ...current, [definition.stableKey]: savedRow }));
+        setCaptures((current) => ({
+          ...current,
+          [definition.stableKey]: Object.fromEntries(EYES.map((eye) => {
+            const capture = current[definition.stableKey]?.[eye] ?? emptyEye();
+            return [eye, sameCapture(capture, row[eye] ?? emptyEye()) ? savedRow[eye] : capture];
+          })) as Record<Eye, EyeCapture>,
+        }));
       }
       const status = {
         completed: true,
-        summary: `${touchedDefinitions.length}/9 anterior structures saved`,
+        summary: `${dirtyDefinitions.length}/9 anterior structures saved`,
         savedAt: new Date().toISOString(),
         operator: "OSOD UI ocular health",
       };
       setMessage(status.summary);
-      onSaved(status, touchedDefinitions.map((definition) => definition.stableKey));
+      onSaved(status, dirtyDefinitions.map((definition) => definition.stableKey));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -173,13 +198,14 @@ export function OcularHealthSection({
           const row = captures[definition.stableKey] ?? emptyRow();
           return (
             <article id={domId(definition.stableKey)} key={definition.stableKey} className="scroll-mt-24 rounded border border-white/10 bg-bg-panel/65 p-4">
-              <div className="mb-4"><h3 className="font-semibold text-white">{definition.display}</h3><p className="mt-1 text-sm text-white/45">{definition.normalTemplate}</p></div>
+              <div className="mb-4"><h3 className="font-semibold text-white">{definition.display}</h3></div>
               <div className="grid gap-4 xl:grid-cols-2">{EYES.map((eye) => (
                 <EyePanel
                   key={eye}
                   eye={eye}
                   capture={row[eye]}
                   field={field}
+                  normalTemplate={definition.normalTemplate}
                   allowDeferred={definition.allowDeferred === true}
                   onState={(state) => setExamState(definition, eye, state)}
                   onSelections={(selections) => updateEye(definition.stableKey, eye, (current) => ({ ...current, selections }))}
@@ -199,10 +225,11 @@ export function OcularHealthSection({
   );
 }
 
-function EyePanel({ eye, capture, field, allowDeferred, onState, onSelections, onOther, onCopy }: {
+function EyePanel({ eye, capture, field, normalTemplate, allowDeferred, onState, onSelections, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
   field?: CustomFindingField;
+  normalTemplate?: string;
   allowDeferred: boolean;
   onState(state: ExamState): void;
   onSelections(selections: string[]): void;
@@ -213,6 +240,7 @@ function EyePanel({ eye, capture, field, allowDeferred, onState, onSelections, o
   const parents = options.filter((option) => !option.parentCode);
   const priority = parents.filter((option) => option.priority);
   const additional = parents.filter((option) => !option.priority);
+  const displayedNormalTemplate = capture.state === "normal" && capture.normalTemplate ? capture.normalTemplate : normalTemplate;
   return (
     <div className="rounded border border-white/10 bg-bg-deep/60 p-4">
       <div className="flex items-center justify-between"><span className="text-sm font-semibold text-white">{eye}</span><button type="button" onClick={onCopy} className="rounded border border-white/15 px-2 py-1 text-xs text-white/55 hover:text-white">{eye === "OD" ? "Copy to OS →" : "← Copy to OD"}</button></div>
@@ -221,13 +249,14 @@ function EyePanel({ eye, capture, field, allowDeferred, onState, onSelections, o
         <StateButton label="Abnormal" selected={capture.state === "abnormal"} onClick={() => onState("abnormal")} />
         {allowDeferred && <StateButton label="Not performed / deferred" selected={capture.state === "deferred"} onClick={() => onState("deferred")} />}
       </div>
+      {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-3">
           <OptionList options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
           {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-white/40">More findings ({additional.length})</summary><div className="mt-3"><OptionList options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
         </div>
       )}
-      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand" /></label>
+      <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} disabled={!capture.state} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-45" />{!capture.state && <span className="mt-1 block text-xs text-amber-200/75">Choose an exam state before entering Other.</span>}</label>
     </div>
   );
 }
@@ -258,6 +287,7 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
       ...(row?.state ? { state: row.state } : {}),
       selections: Array.isArray(value) ? value : [],
       other: row?.other ?? "",
+      ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
     }];
   })) as Record<Eye, EyeCapture>;
 }
@@ -280,6 +310,26 @@ function emptyEye(): EyeCapture {
 
 function touched(capture: EyeCapture): boolean {
   return Boolean(capture.state || capture.other.trim() || capture.selections.length);
+}
+
+export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(
+  definitions: T[],
+  captures: Record<string, Record<Eye, EyeCapture>>,
+  pristine: Record<string, Record<Eye, EyeCapture>>,
+): T[] {
+  return definitions.filter((definition) => {
+    const current = captures[definition.stableKey] ?? emptyRow();
+    const baseline = pristine[definition.stableKey] ?? emptyRow();
+    return EYES.some((eye) => !sameCapture(current[eye], baseline[eye]));
+  });
+}
+
+function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
+  return left.state === right.state &&
+    left.other === right.other &&
+    left.normalTemplate === right.normalTemplate &&
+    left.selections.length === right.selections.length &&
+    left.selections.every((selection, index) => selection === right.selections[index]);
 }
 
 export function pendingStateEyes(
