@@ -4,6 +4,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   clinicViewAfterNavigation,
+  clinicViewFromSearch,
+  clinicRouteView,
   defaultHomePath,
   RoleSwitchPill,
   RouteSwitch,
@@ -85,4 +87,32 @@ test("selecting at Clinic patient search then navigating home renders ClinicHome
   assert.deepEqual(reset, { kind: "picker" });
   assert.match(clinic, /The Clinic/);
   assert.doesNotMatch(clinic, /Loading patient/);
+});
+
+test("Clinic initial URLs select a patient or encounter while an empty query keeps the home", () => {
+  assert.deepEqual(clinicViewFromSearch("?patientId=patient-1", { kind: "picker" }), {
+    kind: "overview",
+    patientId: "patient-1",
+  });
+  assert.deepEqual(clinicViewFromSearch("?patientId=patient-1&encounterId=encounter-1", { kind: "picker" }), {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "encounter-1",
+  });
+  assert.deepEqual(clinicViewFromSearch("", { kind: "picker" }), { kind: "picker" });
+
+  const patientRoute = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} search="?patientId=patient-1" />,
+  );
+  const emptyRoute = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} search="" />,
+  );
+  assert.match(patientRoute, /Loading patient/);
+  assert.doesNotMatch(patientRoute, /Today&#x27;s flow/);
+  assert.match(emptyRoute, /Today&#x27;s flow/);
+
+  assert.deepEqual(
+    clinicRouteView("?patientId=patient-1", { kind: "director", patientId: "patient-2" }),
+    { kind: "director", patientId: "patient-2" },
+  );
 });

@@ -17,7 +17,9 @@ import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-pract
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 export const DEV_ADMIN_ROLE: PracticeRoleId = "front-desk";
-export const DEV_ADMIN_GRANT_ROLES: readonly PracticeRoleId[] = [DEV_ADMIN_ROLE, "practice-admin"];
+export const DEV_ADMIN_GRANT_ROLES = [DEV_ADMIN_ROLE, "practice-admin", "clinician"] as const;
+export type DevAdminGrantRole = (typeof DEV_ADMIN_GRANT_ROLES)[number];
+export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "front-desk" | "clinician">;
 
 export interface AuthenticatedProjectIdentity {
   readonly profileReference: string;
@@ -40,11 +42,13 @@ export interface PracticeRoleRepairResult {
   readonly taggedPolicies: PracticeRoleId[];
   readonly existingPolicies: PracticeRoleId[];
   readonly membershipReference: string;
-  readonly membershipGrants: Readonly<Record<"front-desk" | "practice-admin", "ADDED" | "EXISTING">>;
+  readonly membershipGrants: Readonly<Record<DevAdminGrantRole, "ADDED" | "EXISTING">>;
+  readonly primaryRole: DevAdminPrimaryRole;
 }
 
 export async function repairPracticeRoles(
   adapter: PracticeRoleRepairAdapter,
+  primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
 ): Promise<PracticeRoleRepairResult> {
   const createdPolicies: PracticeRoleId[] = [];
   const taggedPolicies: PracticeRoleId[] = [];
@@ -109,16 +113,18 @@ export async function repairPracticeRoles(
     const policy = policies.get(roleId);
     if (!policy?.id) throw new Error(`${roleId} AccessPolicy is missing its id.`);
     return [roleId, `AccessPolicy/${policy.id}`];
-  })) as Record<"front-desk" | "practice-admin", string>;
+  })) as Record<DevAdminGrantRole, string>;
   const existingReferences = membershipPolicyReferences(membership);
   const membershipGrants = {
-    "front-desk": membership.access?.[0]?.policy.reference === grantReferences["front-desk"] ? "EXISTING" : "ADDED",
+    "front-desk": existingReferences.includes(grantReferences["front-desk"]) ? "EXISTING" : "ADDED",
     "practice-admin": existingReferences.includes(grantReferences["practice-admin"]) ? "EXISTING" : "ADDED",
+    clinician: existingReferences.includes(grantReferences.clinician) ? "EXISTING" : "ADDED",
   } as const;
-  if (Object.values(membershipGrants).includes("ADDED")) {
+  const membershipPatch = devMembershipAccessPatch(membership, grantReferences, primaryRole);
+  if (membershipPatch.length > 0) {
     await adapter.patchMembership(
       membership.id,
-      devMembershipAccessPatch(membership, grantReferences),
+      membershipPatch,
       membership.meta.versionId,
     );
   }
@@ -129,6 +135,7 @@ export async function repairPracticeRoles(
     existingPolicies,
     membershipReference: `ProjectMembership/${membership.id}`,
     membershipGrants,
+    primaryRole,
   };
 }
 
@@ -143,21 +150,26 @@ function practiceRoleTagPatch(
 
 export function devMembershipAccessPatch(
   membership: ProjectMembership,
-  policyReferences: Readonly<Record<"front-desk" | "practice-admin", string>>,
+  policyReferences: Readonly<Record<DevAdminGrantRole, string>>,
+  primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
 ): JsonPatchOperation[] {
-  const frontDesk = { policy: { reference: policyReferences["front-desk"] } };
-  const practiceAdmin = { policy: { reference: policyReferences["practice-admin"] } };
+  const roleOrder = [primaryRole, ...DEV_ADMIN_GRANT_ROLES.filter((roleId) => roleId !== primaryRole)];
+  const requiredReferences = new Set(DEV_ADMIN_GRANT_ROLES.map((roleId) => policyReferences[roleId]));
+  const existingByReference = new Map(
+    (membership.access ?? []).map((access) => [access.policy.reference, access]),
+  );
+  const desiredAccess = [
+    ...roleOrder.map((roleId) => existingByReference.get(policyReferences[roleId]) ?? {
+      policy: { reference: policyReferences[roleId] },
+    }),
+    ...(membership.access ?? []).filter((access) => !requiredReferences.has(access.policy.reference ?? "")),
+  ];
   if (!membership.access) {
-    return [{ op: "add", path: "/access", value: [frontDesk, practiceAdmin] }];
+    return [{ op: "add", path: "/access", value: desiredAccess }];
   }
-  const operations: JsonPatchOperation[] = [];
-  if (membership.access[0]?.policy.reference !== policyReferences["front-desk"]) {
-    operations.push({ op: "add", path: "/access/0", value: frontDesk });
-  }
-  if (!membershipPolicyReferences(membership).includes(policyReferences["practice-admin"])) {
-    operations.push({ op: "add", path: "/access/-", value: practiceAdmin });
-  }
-  return operations;
+  return JSON.stringify(membership.access) === JSON.stringify(desiredAccess)
+    ? []
+    : [{ op: "replace", path: "/access", value: desiredAccess }];
 }
 
 export function membershipPolicyReferences(membership: ProjectMembership): string[] {
@@ -293,15 +305,26 @@ async function runCli(): Promise<void> {
   const password = requireEnv("OSOD_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl, email, password });
   const fhir = createMedplumClient({ baseUrl, accessToken });
+  const primaryRole = devPrimaryRole(process.env.OSOD_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
     new LivePracticeRoleRepairAdapter(baseUrl, accessToken, fhir),
+    primaryRole,
   );
   console.log(`Role policies created: ${result.createdPolicies.length} [${result.createdPolicies.join(", ")}]`);
   console.log(`Role policies tagged: ${result.taggedPolicies.length} [${result.taggedPolicies.join(", ")}]`);
   console.log(`Role policies already correct: ${result.existingPolicies.length} [${result.existingPolicies.join(", ")}]`);
   console.log(`${result.membershipReference} ${DEV_ADMIN_ROLE} grant: ${result.membershipGrants[DEV_ADMIN_ROLE]}`);
   console.log(`${result.membershipReference} practice-admin grant: ${result.membershipGrants["practice-admin"]}`);
-  console.log(`Dev login primary role: ${DEV_ADMIN_ROLE}`);
+  console.log(`${result.membershipReference} clinician grant: ${result.membershipGrants.clinician}`);
+  console.log(`Dev login primary role: ${result.primaryRole}`);
+}
+
+export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {
+  const role = value?.trim() || DEV_ADMIN_ROLE;
+  if (role !== "front-desk" && role !== "clinician") {
+    throw new Error("OSOD_DEV_PRIMARY_ROLE must be front-desk or clinician.");
+  }
+  return role;
 }
 
 function requireEnv(primary: string, fallback: string): string {
