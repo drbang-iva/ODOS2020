@@ -412,7 +412,8 @@ export function observationCustomValue(
 ): number | string | string[] | undefined {
   if (field.valueType === "multi-select") {
     const selected = (field.options ?? []).filter((option) =>
-      findComponent(observation, `${codePrefix}${field.localCode}::${option.code}`)?.valueBoolean === true
+      findComponent(observation, `${codePrefix}${field.localCode}::${option.code}`)?.valueBoolean === true ||
+      findComponent(observation, `${codePrefix}${option.code}`)?.valueBoolean === true
     ).map((option) => option.code);
     return selected.length > 0 ? selected : undefined;
   }

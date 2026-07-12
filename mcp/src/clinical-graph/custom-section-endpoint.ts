@@ -100,6 +100,9 @@ export async function handleCustomSectionCaptureRequest(
   const rows = perEye
     ? eyeRows
     : [{ eye: "UNKNOWN" as const, values: parsed.data.customFields ?? [], state: undefined, other: undefined }];
+  if (ocularHealth && rows.some((row) => row.other && !row.state)) {
+    return { status: 400, body: { error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text." } };
+  }
   if (ocularHealth && rows.some((row) => !row.state)) {
     return { status: 400, body: { error: "Ocular-health eye payloads require an explicit normal, abnormal, or deferred state." } };
   }

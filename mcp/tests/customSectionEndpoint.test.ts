@@ -14,6 +14,7 @@ import {
   FhirFindingDefinitionStore,
   buildFindingDefinitionSeeds,
 } from "../src/clinical-graph/finding-definition-store.js";
+import { observationCustomValue } from "../src/clinical-graph/custom-fields.js";
 import type { ClinicalFindingDefinition } from "../src/clinical-graph/glaucoma-suspect.js";
 
 const AUTH = "Bearer good";
@@ -203,7 +204,7 @@ test("per-eye custom sections prefix field components and read OD and OS indepen
   assert.equal(deniedWrite.status, 403);
 });
 
-test("per-eye multi-select fields namespace shared option codes and omit empty selections", async () => {
+test("per-eye multi-select fields namespace shared option codes, preserve legacy rows, and omit empty selections", async () => {
   const fhir = new MemoryFhir();
   const created = await handleFindingDefinitionCreationRequest(definitionDeps("practice-admin", fhir, "multi000"), {
     authHeader: AUTH,
@@ -250,6 +251,29 @@ test("per-eye multi-select fields namespace shared option codes and omit empty s
     ["OD", [{ code: first.localCode, label: "First findings", value: ["shared"] }]],
     ["OS", [{ code: second.localCode, label: "Second findings", value: ["shared"] }]],
   ]);
+  const sharedOption = [{ code: "shared", display: "Shared", active: true }];
+  assert.deepEqual(observationCustomValue(fhir.observations[0]!, {
+    localCode: first.localCode,
+    valueType: "multi-select",
+    options: sharedOption,
+  }, "OD_"), ["shared"]);
+  assert.equal(observationCustomValue(fhir.observations[0]!, {
+    localCode: second.localCode,
+    valueType: "multi-select",
+    options: sharedOption,
+  }, "OD_"), undefined);
+  const legacy = {
+    ...fhir.observations[0]!,
+    component: [{
+      code: { coding: [{ code: "OD_shared" }] },
+      valueBoolean: true,
+    }],
+  };
+  assert.deepEqual(observationCustomValue(legacy, {
+    localCode: first.localCode,
+    valueType: "multi-select",
+    options: sharedOption,
+  }, "OD_"), ["shared"]);
 
   const rejectedState = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
@@ -321,6 +345,21 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   assert.deepEqual(rows.map((row) => [row.eye, row.state]), [["OD", "abnormal"], ["OS", "normal"]]);
   assert.deepEqual(rows[0]?.values[0]?.value, ["demodex", "demodex::collarettes"]);
   assert.equal(rows[0]?.other, "Trace sleeves.");
+
+  const missingOtherState = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, anterior), {
+    authHeader: AUTH,
+    params: { stableKey: lids.stableKey },
+    body: {
+      patientReference: "Patient/p3",
+      encounterReference: "Encounter/e3",
+      eyes: { OD: { customFields: [], other: "Trace sleeves." } },
+    },
+  });
+  assert.equal(missingOtherState.status, 400);
+  assert.deepEqual(missingOtherState.body, {
+    error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text.",
+  });
+  assert.equal(fhir.observations.length, 2);
 
   const palpebral = anterior.find((definition) => definition.stableKey.endsWith(":palpebral-conjunctiva"));
   assert.ok(palpebral);
