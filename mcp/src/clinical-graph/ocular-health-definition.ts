@@ -6,6 +6,7 @@ import {
 } from "./glaucoma-suspect.js";
 
 export const ANTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:anterior:";
+export const POSTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:posterior:";
 
 interface StructureSeed {
   key: string;
@@ -17,7 +18,7 @@ interface StructureSeed {
   nested?: Array<{ parent: string; children: string[] }>;
 }
 
-const STRUCTURES: StructureSeed[] = [
+const ANTERIOR_STRUCTURES: StructureSeed[] = [
   {
     key: "periocular-adnexa",
     display: "Periocular Adnexa",
@@ -89,11 +90,64 @@ const STRUCTURES: StructureSeed[] = [
   },
 ];
 
+// Source: performance-od/core/operations/open-source-od/segments/ocular-health-finding-definition.md § P1/P3-P6.
+const POSTERIOR_STRUCTURES: StructureSeed[] = [
+  {
+    key: "vitreous",
+    display: "Vitreous",
+    normalTemplate: "No vitreal hemorrhage, cells, or pigment.",
+    priority: ["posterior vitreous detachment (PVD)", "syneresis", "floaters"],
+    additional: ["asteroid hyalosis", "vitreous hemorrhage", "vitreous cells", "Shafer's sign (tobacco dust)", "vitreous opacities", "anterior hyaloid", "synchysis"],
+  },
+  {
+    key: "fundus",
+    display: "Fundus",
+    normalTemplate: "Normal retinal appearance; healthy background, no lesions.",
+    priority: ["diabetic retinopathy (background/NPDR)", "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot"],
+    additional: ["microaneurysm", "proliferative diabetic retinopathy (PDR)", "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal nevus", "choroidal lesion", "RPE atrophy", "Roth spot", "chorioretinal scar", "myelinated nerve fiber"],
+  },
+  {
+    key: "macula",
+    display: "Macula",
+    normalTemplate: "Healthy foveal reflex; no drusen, edema, or exudate.",
+    priority: ["drusen", "RPE changes", "dry AMD", "epiretinal membrane (ERM)", "pigment mottling"],
+    additional: ["wet AMD", "CNVM", "geographic atrophy", "macular hole (full/lamellar)", "cystoid macular edema (CME)", "diabetic macular edema", "vitreomacular traction", "subretinal fluid", "macular edema", "pigment clumping"],
+  },
+  {
+    key: "vessels",
+    display: "Vessels",
+    normalTemplate: "Normal caliber without tortuosity, AV nicking, or crossing changes.",
+    priority: ["AV nicking", "arteriolar attenuation", "tortuosity"],
+    additional: ["AV crossing changes", "sclerotic (copper/silver-wire) changes", "Hollenhorst plaque", "retinal embolus", "vascular sheathing", "venous beading", "neovascularization of the disc (NVD)"],
+  },
+  {
+    key: "periphery",
+    display: "Periphery",
+    normalTemplate: "Normal peripheral retina without tears, breaks, holes, or detachment.",
+    priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole"],
+    additional: ["retinal tear", "retinal detachment", "white-without-pressure", "retinoschisis", "chorioretinal scar", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear"],
+  },
+];
+
 export function buildAnteriorOcularHealthDefinitions(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition[] {
-  return STRUCTURES.map((structure, structureIndex) => {
-    const stableKey = `${ANTERIOR_OCULAR_HEALTH_PREFIX}${structure.key}`;
+  return buildOcularHealthDefinitions(ANTERIOR_STRUCTURES, ANTERIOR_OCULAR_HEALTH_PREFIX, provenance);
+}
+
+export function buildPosteriorOcularHealthDefinitions(
+  provenance: ClinicalGraphProvenance,
+): ClinicalFindingDefinition[] {
+  return buildOcularHealthDefinitions(POSTERIOR_STRUCTURES, POSTERIOR_OCULAR_HEALTH_PREFIX, provenance);
+}
+
+function buildOcularHealthDefinitions(
+  structures: StructureSeed[],
+  prefix: string,
+  provenance: ClinicalGraphProvenance,
+): ClinicalFindingDefinition[] {
+  return structures.map((structure, structureIndex) => {
+    const stableKey = `${prefix}${structure.key}`;
     const field = abnormalField(structure, structureIndex);
     return buildClinicalFindingDefinition({
       stableKey,

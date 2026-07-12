@@ -10,6 +10,7 @@ import { CustomSectionEditor } from "../src/components/charting/CustomSectionEdi
 import {
   OcularHealthSection,
   applyAnteriorAllNormal,
+  applyPosteriorAllNormal,
   changedDefinitions,
   copyEyeCapture,
   pendingStateEyes,
@@ -224,7 +225,7 @@ test("the shared section editor composes fields through the shipped custom-field
   assert.match(html, /Create section/);
 });
 
-test("the anterior renderer exposes explicit all-normal, bilateral copy, deferred, priority, nesting, and Other controls", async () => {
+test("the ocular-health renderer exposes segment headers, accelerators, bilateral copy, deferred, priority, nesting, and Other controls", async () => {
   const definition = {
     stableKey: "ocular-health:anterior:lids-lashes",
     sectionKey: "ocular-health:anterior:lids-lashes",
@@ -255,6 +256,7 @@ test("the anterior renderer exposes explicit all-normal, bilateral copy, deferre
     />,
   );
   assert.match(html, /Anterior All Normal/);
+  assert.match(html, /Anterior Segment/);
   assert.match(html, /Nothing defaults to normal/);
   assert.match(html, /Copy to OS/);
   assert.match(html, /Copy to OD/);
@@ -288,7 +290,7 @@ test("the anterior renderer exposes explicit all-normal, bilateral copy, deferre
   }
 });
 
-test("reopened history hydrates nine structures but posts only the one modified structure", async () => {
+test("reopened history hydrates structures but posts only the one modified structure", async () => {
   const posts: string[] = [];
   const fetchImpl = (async (input, init) => {
     const url = String(input);
@@ -319,7 +321,7 @@ test("reopened history hydrates nine structures but posts only the one modified 
     const abnormalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Abnormal");
     assert.equal(abnormalButtons.length, 18);
     act(() => abnormalButtons[8]!.props.onClick());
-    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Anterior Segment");
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
     assert.equal(posts.length, 1);
@@ -366,22 +368,119 @@ test("a saved normal keeps its captured template snapshot after the live templat
   }
 });
 
-test("SpineNav nests definition-store anterior structures without moving Cup Disc or Dry Eye", () => {
+test("SpineNav groups anterior and posterior definitions with Cup Disc in posterior", () => {
   const html = renderToStaticMarkup(
     <SpineNav
       active="ocular-health:anterior:cornea"
       statuses={{}}
       onSelect={() => undefined}
       ocularHealthSections={[
-        { id: "ocular-health:anterior:periocular-adnexa", label: "Periocular Adnexa" },
-        { id: "ocular-health:anterior:cornea", label: "Cornea" },
+        { id: "ocular-health:anterior:periocular-adnexa", label: "Periocular Adnexa", segment: "anterior" },
+        { id: "ocular-health:anterior:cornea", label: "Cornea", segment: "anterior" },
+        { id: "ocular-health:posterior:vitreous", label: "Vitreous", segment: "posterior" },
+        { id: "ocular-health:posterior:fundus", label: "Fundus", segment: "posterior" },
       ]}
     />,
   );
   assert.ok(html.indexOf("ANTERIOR SEGMENT") < html.indexOf("Periocular Adnexa"));
   assert.ok(html.indexOf("Periocular Adnexa") < html.indexOf("Cornea"));
-  assert.ok(html.indexOf("Cornea") < html.indexOf("Cup/Disc"));
-  assert.ok(html.indexOf("Cup/Disc") < html.indexOf("Dry Eye"));
+  assert.ok(html.indexOf("Cornea") < html.indexOf("POSTERIOR SEGMENT"));
+  assert.ok(html.indexOf("POSTERIOR SEGMENT") < html.indexOf("Vitreous"));
+  assert.ok(html.indexOf("Vitreous") < html.indexOf("Cup/Disc"));
+  assert.ok(html.indexOf("Cup/Disc") < html.indexOf("Fundus"));
+  assert.ok(html.indexOf("Fundus") < html.indexOf("Dry Eye"));
+});
+
+test("posterior seeded history renders honestly and zero-data eyes remain untouched", async () => {
+  const definitions = posteriorDefinitions();
+  const fetchImpl = (async (input) => String(input).includes("posterior%3Afundus")
+    ? jsonResponse({ rows: [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_FUNDUS_FINDINGS", value: ["dot-blot-hemorrhage"] }] }] })
+    : jsonResponse({ rows: [] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={definitions}
+        patientReference="Patient/p-posterior"
+        encounterReference="Encounter/e-posterior"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    for (const definition of definitions) assert.match(rendered, new RegExp(definition.display));
+    assert.match(rendered, /Posterior Segment/);
+    assert.match(rendered, /Fundus All Normal/);
+    assert.match(rendered, /Dot\/blot hemorrhage/);
+    assert.equal(renderer.root.findAllByProps({ checked: true }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ value: "" }).length, 10);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
+test("Fundus All Normal fills only the five posterior narratives and skips Cup Disc by construction", () => {
+  const definitions = [...ocularDefinitions(), ...posteriorDefinitions()];
+  const captures = Object.fromEntries(definitions.map((definition) => [definition.stableKey, {
+    OD: { selections: [], other: "" },
+    OS: { selections: [], other: "" },
+  }]));
+  const result = applyPosteriorAllNormal(definitions, captures);
+  assert.equal(result.filled, 5);
+  assert.equal(result.skipped, 0);
+  assert.equal(definitions.some((definition) => definition.stableKey === "cup-disc"), false);
+  for (const definition of posteriorDefinitions()) {
+    assert.equal(result.captures[definition.stableKey]?.OD.state, "normal");
+    assert.equal(result.captures[definition.stableKey]?.OS.state, "normal");
+  }
+  assert.equal(result.captures[ocularDefinitions()[0]!.stableKey]?.OD.state, undefined);
+});
+
+test("posterior re-save stays pristine, round-trips selections, and preserves the saved normal template snapshot", async () => {
+  const [vitreous, fundus] = posteriorDefinitions();
+  assert.ok(vitreous && fundus);
+  const posts: Array<{ url: string; body: string }> = [];
+  const fetchImpl = (async (input, init) => {
+    if (init?.method === "POST") {
+      posts.push({ url: String(input), body: String(init.body) });
+      return jsonResponse({});
+    }
+    if (String(input).includes("posterior%3Avitreous")) {
+      return jsonResponse({ rows: [{ eye: "OD", state: "abnormal", values: [{ code: "CUSTOM_VITREOUS_FINDINGS", value: ["floaters"] }] }] });
+    }
+    return jsonResponse({ rows: [{ eye: "OD", state: "normal", values: [], normalTemplate: "Saved fundus normal snapshot." }] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[vitreous, fundus]}
+        patientReference="Patient/p-posterior"
+        encounterReference="Encounter/e-posterior"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
+    act(() => normalButtons[1]!.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 1);
+    assert.match(posts[0]!.url, /ocular-health%3Aposterior%3Avitreous$/);
+    assert.match(posts[0]!.body, /CUSTOM_VITREOUS_FINDINGS/);
+    assert.match(posts[0]!.body, /floaters/);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 1);
+    const templates = renderer.root.findAllByProps({ className: "mt-3 text-sm text-white/45" }).map((node) => node.children.join(""));
+    assert.ok(templates.includes("Saved fundus normal snapshot."));
+  } finally {
+    renderer?.unmount();
+  }
 });
 
 test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
@@ -471,6 +570,32 @@ function ocularDefinitions() {
       display: "Abnormal findings",
       valueType: "multi-select" as const,
       options: [{ code: "finding", display: "Finding", active: true, priority: true }],
+      order: 0,
+      active: true,
+    }],
+  }));
+}
+
+function posteriorDefinitions() {
+  return [
+    ["vitreous", "Vitreous", "CUSTOM_VITREOUS_FINDINGS", "Floaters"],
+    ["fundus", "Fundus", "CUSTOM_FUNDUS_FINDINGS", "Dot/blot hemorrhage"],
+    ["macula", "Macula", "CUSTOM_MACULA_FINDINGS", "Drusen"],
+    ["vessels", "Vessels", "CUSTOM_VESSELS_FINDINGS", "AV nicking"],
+    ["periphery", "Periphery", "CUSTOM_PERIPHERY_FINDINGS", "Retinal hole"],
+  ].map(([name, display, localCode, finding]) => ({
+    stableKey: `ocular-health:posterior:${name}`,
+    sectionKey: `ocular-health:posterior:${name}`,
+    display: display!,
+    active: true,
+    perEye: true,
+    normalTemplate: `Live ${name} normal.`,
+    allowDeferred: false,
+    customFields: [{
+      localCode: localCode!,
+      display: "Abnormal findings",
+      valueType: "multi-select" as const,
+      options: [{ code: finding!.toLowerCase().replaceAll("/", "-").replaceAll(" ", "-"), display: finding!, active: true, priority: true }],
       order: 0,
       active: true,
     }],

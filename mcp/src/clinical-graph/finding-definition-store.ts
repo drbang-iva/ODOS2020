@@ -10,7 +10,10 @@ import {
   buildSpecialtyContactLensFindingDefinitionStub,
 } from "./contact-lens-definition.js";
 import { buildPretestFindingDefinitionStubs } from "./pretest-endpoint.js";
-import { buildAnteriorOcularHealthDefinitions } from "./ocular-health-definition.js";
+import {
+  buildAnteriorOcularHealthDefinitions,
+  buildPosteriorOcularHealthDefinitions,
+} from "./ocular-health-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
   "https://osod.dev/fhir/CodeSystem/osod-finding-definition";
@@ -127,6 +130,7 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
     buildSpecialtyContactLensFindingDefinitionStub(provenance),
     ...buildPretestFindingDefinitionStubs(provenance),
     ...buildAnteriorOcularHealthDefinitions(provenance),
+    ...buildPosteriorOcularHealthDefinitions(provenance),
   ];
 }
 
