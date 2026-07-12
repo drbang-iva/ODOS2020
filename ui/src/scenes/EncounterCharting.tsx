@@ -9,6 +9,7 @@ import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
+import { PrescriptionSection } from "../components/charting/PrescriptionSection";
 import { OrthoKSection } from "../components/charting/OrthoKSection";
 import { RefractionSection } from "../components/charting/RefractionSection";
 import { RefractionHistorySection } from "../components/charting/RefractionHistorySection";
@@ -188,6 +189,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("assessment", status)}
+            />
+          )}
+          {activeSection === "prescription" && (
+            <PrescriptionSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("prescription", status)}
             />
           )}
           {activeSection.startsWith("custom:") && customDefinition && (

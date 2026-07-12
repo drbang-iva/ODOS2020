@@ -96,7 +96,13 @@
       "url": "https://osod.dev/fhir/StructureDefinition/osod-transmission-method",
       "namespace": "medication-order",
       "status": "active",
-      "sliceConsumer": "weno-ez-adapter"
+      "sliceConsumer": "prescription-plan,weno-ez-adapter"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-controlled-substance-flag",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "prescription-plan"
     },
     {
       "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",

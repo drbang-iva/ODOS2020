@@ -1,4 +1,8 @@
 import type { Bundle, MedicationRequest } from "@medplum/fhirtypes";
+import {
+  buildMedicationRequest,
+  OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
+} from "../fhir/medicationOrder.js";
 import type { WenoEzIntegrationConfig } from "../integrations/weno/config.js";
 import {
   pullNewRxSyncReport,
@@ -8,8 +12,7 @@ import {
 
 export const WENO_MESSAGE_IDENTIFIER_SYSTEM =
   "https://osod.dev/fhir/NamingSystem/weno-new-rx-message-id";
-export const OSOD_TRANSMISSION_METHOD_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-transmission-method";
+export { OSOD_TRANSMISSION_METHOD_EXTENSION_URL };
 export const WENO_RX_SYNC_WRITE_HEADERS = {
   "X-OSOD-Source": "weno-new-rx-sync",
 } as const;
@@ -73,25 +76,18 @@ export function buildWenoMedicationRequest(row: NewRxSyncReportRow): MedicationR
   ] as const) {
     if (!row[field]?.trim()) throw new Error(`WENO Sync Report row is missing ${field}.`);
   }
-  return {
-    resourceType: "MedicationRequest",
+  return buildMedicationRequest({
     identifier: [{ system: WENO_MESSAGE_IDENTIFIER_SYSTEM, value: row.RelatestoNewRxMsgID }],
     status: "unknown",
-    intent: "order",
-    medicationCodeableConcept: {
-      text: "WENO prescription; structured medication detail pending signed-record retrieval",
-    },
-    subject: { reference: patientReference(row.PatientID) },
+    medicationText: "WENO prescription; structured medication detail pending signed-record retrieval",
+    patientReference: patientReference(row.PatientID),
     authoredOn: row.DateTimeofactionUTC,
     reportedBoolean: true,
-    extension: [{
-      url: OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
-      valueCode: "electronically-sent",
-    }],
+    transmissionMethod: "electronically-sent",
     note: [{
       text: `WENO sync type: ${row.SynchType}; delivery status: ${row.DeliveryStatus}`,
     }],
-  };
+  });
 }
 
 export function parseNewRxSyncReport(

@@ -14,6 +14,7 @@ const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean;
   { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
   { id: "assessment", label: "Assessment", group: "ASSESSMENT & PLAN" },
+  { id: "prescription", label: "Plan · Prescriptions", group: "ASSESSMENT & PLAN" },
 ];
 
 interface Props {
