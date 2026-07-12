@@ -102,6 +102,47 @@ Practice already provisioned. To re-provision, see docs/install.md §Re-provisio
 
 The no-op path emits an audit row with `event_type = noop` and `action_reason = "v0.5d setup wizard re-run, already provisioned"`.
 
+## Repair a Partially Provisioned Local Practice
+
+If the setup state says the practice is complete but one or more canonical OSOD role policies are missing, repair the local project without resetting Postgres:
+
+```bash
+npm run repair-practice-roles
+```
+
+The repair uses the existing human-provided admin email and password from `.env`; it does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and grants the current login's `ProjectMembership` both policies required by this developer-only account. `front-desk` is placed first as the primary routed role, so the complete Desk home including its Office card and Statements/payment screens work. The supplemental `practice-admin` grant lets this administrator seed local Schedule and visit-type configuration. Clinic summary and Schedule load; Clinic-side Office acknowledgement remains clinician-only by design.
+
+The repair preserves other membership grants and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting OSOD role tag, an ambiguous membership, or a stale resource version.
+
+This is the normal recovery path for partial local provisioning. A volume wipe is not required.
+
+## Developer Screen Bring-up
+
+After the Compose stack is running and `.env` contains the existing local developer credentials:
+
+```bash
+npm run repair-practice-roles
+```
+
+Start the two checked-in launch configurations in `.claude/launch.json`:
+
+| Launch | Address | Purpose |
+|---|---|---|
+| `osod-mcp` | `http://localhost:3333` | OSOD service routes used by Desk, Statements, and Clinic. |
+| `osod-ui` | `http://localhost:5173` | Browser UI. |
+
+Open `http://localhost:5173`, then sign in through the OSOD login screen with `OSOD_ADMIN_EMAIL` and `OSOD_ADMIN_PASSWORD` from the local `.env`. The default developer email is `admin@osod.local`; no password is stored in this repository.
+
+With both dev servers running, seed synthetic screen data:
+
+```bash
+npm run seed-demo
+```
+
+The idempotent seed creates one clearly synthetic `TEST-` patient, provider, visit type, schedule, current-day appointment, issued Invoice, and $25 unapplied prepaid credit. It also generates the patient's statement through the running MCP service, so the Statements table immediately shows the unapplied-credit line. Re-running the seed keeps the existing marked resources and statement.
+
+Regular bring-up after the one-time repair is: start Compose, start `osod-mcp` and `osod-ui`, open `http://localhost:5173`, and use the regular local login. Run `npm run seed-demo` only when the synthetic demo rows are missing.
+
 ## Re-provisioning
 
 For an empty test stack, reset compose volumes and remove the local setup state:
