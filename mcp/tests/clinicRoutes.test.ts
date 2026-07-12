@@ -86,9 +86,13 @@ test("patient overview routes issue filtered FHIR searches and expose native sti
     const overview = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?filter=office-visits`, { headers });
     assert.equal(overview.status, 200);
     assert.match(searched.find((row) => row.resourceType === "Encounter")?.params.type ?? "", /office-visit/);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?filter=all&filter=eye-exams`, { headers })).status, 400);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview?diagnosisSystem=&diagnosisCode=DX`, { headers })).status, 400);
 
-    await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note`, { method: "POST", headers, body: JSON.stringify({ text: "First route note" }) });
-    await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note`, { method: "POST", headers, body: JSON.stringify({ text: "Second route note" }) });
+    const firstSave = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note`, { method: "POST", headers, body: JSON.stringify({ text: "First route note" }) });
+    assert.equal(firstSave.status, 200);
+    const secondSave = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note`, { method: "POST", headers, body: JSON.stringify({ text: "Second route note" }) });
+    assert.equal(secondSave.status, 200);
     const history = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/sticky-note/history`, { headers });
     assert.equal(history.status, 200);
     assert.deepEqual((await history.json() as Array<{ text: string }>).map((row) => row.text), ["Second route note", "First route note"]);

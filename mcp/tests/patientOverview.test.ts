@@ -19,6 +19,7 @@ import {
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
 import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
+import { OSOD_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -55,15 +56,19 @@ test("patient overview projects real snapshot resources and newest-first encount
 test("empty snapshot stays honestly empty and visit filters issue distinct FHIR searches", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
+  fake.add(encounter("eye-visit", "2026-06-01T14:00:00Z", "routine-exam-new"));
+  fake.add(encounter("office-visit", "2026-05-01T14:00:00Z", "office-visit"));
 
   const eye = await loadPatientOverview(fake as never, "p1", { filter: "eye-exams" });
   assert.deepEqual(eye.snapshot, {
     ocularHistory: [], ocularSurgicalHistory: [], medicalConditions: [], socialHistory: [], ophthalmicMedications: [], systemicMedications: [],
   });
+  assert.deepEqual(eye.visits.map((visit) => visit.encounterId), ["eye-visit"]);
   assert.match(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type ?? "", /routine-exam-new/);
 
   fake.searches.length = 0;
-  await loadPatientOverview(fake as never, "p1", { filter: "office-visits" });
+  const office = await loadPatientOverview(fake as never, "p1", { filter: "office-visits" });
+  assert.deepEqual(office.visits.map((visit) => visit.encounterId), ["office-visit"]);
   assert.match(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type ?? "", /office-visit/);
 });
 
@@ -83,6 +88,14 @@ test("overview stays usable and reports honest wiring when role-scoped optional 
   });
 });
 
+test("overview does not disguise unexpected optional-source failures as unavailable wiring", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.failedTypes.set("Coverage", 500);
+
+  await assert.rejects(loadPatientOverview(fake as never, "p1"), /Coverage unavailable/);
+});
+
 test("diagnosis filtering searches Condition by code then searches only matching Encounter ids", async () => {
   const fake = new FakeFhir();
   fake.add(patient());
@@ -91,12 +104,14 @@ test("diagnosis filtering searches Condition by code then searches only matching
   fake.add(condition("dx-match", "Selected diagnosis", { category: "encounter-diagnosis", encounterId: "match", code: "DX-SELECTED" }));
 
   await loadPatientOverview(fake as never, "p1", {
+    filter: "eye-exams",
     diagnosisSystem: "https://example.test/diagnosis",
     diagnosisCode: "DX-SELECTED",
   });
 
   assert.equal(fake.searches.find((row) => row.resourceType === "Condition" && row.params.category === "encounter-diagnosis")?.params.code, "https://example.test/diagnosis|DX-SELECTED");
   assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params._id, "match");
+  assert.equal(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type, undefined);
 });
 
 test("sticky note create and second edit persist prior text in native DocumentReference history", async () => {
@@ -121,11 +136,37 @@ test("sticky note create and second edit persist prior text in native DocumentRe
   assert.deepEqual(history.map((entry) => entry.editedBy), ["Practitioner/two", "Practitioner/one"]);
 });
 
+test("sticky-note conditional-create races update the winning resource with this edit", async () => {
+  const fake = new FakeFhir();
+  fake.conditionalCreateResponse = {
+    resourceType: "DocumentReference",
+    id: "sticky-1",
+    meta: { versionId: "1" },
+    status: "current",
+    identifier: [{ system: "https://osod.dev/fhir/identifier/patient-sticky-note", value: "p1" }],
+    subject: { reference: "Patient/p1" },
+    content: [{ attachment: { data: Buffer.from("Concurrent edit", "utf8").toString("base64") } }],
+  };
+
+  const saved = await savePatientStickyNote(fake as never, {
+    patientId: "p1",
+    text: "This caller's edit",
+    authorReference: "Practitioner/one",
+    now: "2026-07-11T14:00:00Z",
+  });
+
+  assert.equal(saved.text, "This caller's edit");
+  assert.equal(fake.updateCalls, 1);
+});
+
 class FakeFhir {
   resources: Resource[] = [];
   searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
   documentHistory: DocumentReference[] = [];
   deniedTypes = new Set<string>();
+  failedTypes = new Map<string, number>();
+  conditionalCreateResponse?: DocumentReference;
+  updateCalls = 0;
 
   add(resource: Resource) { this.resources.push(resource); }
 
@@ -137,7 +178,17 @@ class FakeFhir {
 
   async search<T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> {
     this.searches.push({ resourceType, params: { ...params } });
-    if (this.deniedTypes.has(resourceType)) throw new Error(`${resourceType} unavailable`);
+    const failureStatus = this.failedTypes.get(resourceType);
+    if (failureStatus) {
+      const error = new Error(`${resourceType} unavailable`) as Error & { status?: number };
+      error.status = failureStatus;
+      throw error;
+    }
+    if (this.deniedTypes.has(resourceType)) {
+      const error = new Error(`${resourceType} unavailable`) as Error & { status?: number };
+      error.status = 403;
+      throw error;
+    }
     let rows = this.resources.filter((resource) => resource.resourceType === resourceType) as T[];
     if (resourceType === "DocumentReference" && params.identifier) {
       rows = rows.filter((resource) => (resource as DocumentReference).identifier?.some((identifier) => `${identifier.system}|${identifier.value}` === params.identifier));
@@ -150,10 +201,22 @@ class FakeFhir {
       rows = rows.filter((resource) => (resource as Condition).category?.some((category) => category.coding?.some((coding) => coding.code === "problem-list-item")));
     }
     if (resourceType === "Encounter" && params._id) rows = rows.filter((resource) => params._id.split(",").includes(resource.id ?? ""));
+    if (resourceType === "Encounter" && params.type) {
+      const requestedTypes = params.type.split(",");
+      rows = rows.filter((resource) => (resource as Encounter).type?.some((concept) =>
+        concept.coding?.some((coding) => requestedTypes.includes(`${coding.system}|${coding.code}`)),
+      ));
+    }
     return bundle(rows);
   }
 
   async create<T extends Resource>(resource: T): Promise<T> {
+    if (this.conditionalCreateResponse) {
+      const winner = structuredClone(this.conditionalCreateResponse);
+      this.resources.push(winner);
+      this.documentHistory.unshift(winner);
+      return winner as T;
+    }
     const version = { ...resource, id: "sticky-1", meta: { ...resource.meta, versionId: "1", lastUpdated: "2026-07-11T14:00:00Z" } } as T;
     this.resources.push(version);
     this.documentHistory.unshift(structuredClone(version as DocumentReference));
@@ -161,6 +224,7 @@ class FakeFhir {
   }
 
   async update<T extends Resource>(_resourceType: T["resourceType"], id: string, resource: T): Promise<T> {
+    this.updateCalls += 1;
     const versionId = String(this.documentHistory.length + 1);
     const updated = { ...resource, id, meta: { ...resource.meta, versionId, lastUpdated: "2026-07-11T15:00:00Z" } } as T;
     this.resources = this.resources.map((candidate) => candidate.resourceType === resource.resourceType && candidate.id === id ? updated : candidate);
@@ -177,7 +241,7 @@ function patient(): Patient {
   return { resourceType: "Patient", id: "p1", name: [{ given: ["Alex"], family: "Patient" }], birthDate: "1980-01-01", gender: "female" };
 }
 
-function encounter(id: string, start: string): Encounter {
+function encounter(id: string, start: string, visitCode?: string): Encounter {
   return {
     resourceType: "Encounter",
     id,
@@ -185,7 +249,7 @@ function encounter(id: string, start: string): Encounter {
     class: { code: "AMB" },
     subject: { reference: "Patient/p1" },
     period: { start, end: start },
-    type: [{ text: "Comprehensive exam" }],
+    type: [{ text: "Comprehensive exam", ...(visitCode ? { coding: [{ system: OSOD_VISIT_TYPE_SYSTEM, code: visitCode }] } : {}) }],
     participant: [{ individual: { display: "Dr. Clinician" } }],
     serviceProvider: { display: "Practice location" },
   };

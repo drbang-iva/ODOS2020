@@ -64,6 +64,7 @@ export async function fetchPatientOverview(
     `/clinic/patients/${encodeURIComponent(patientId)}/overview?${query}`,
     { method: "GET" },
     fetchImpl,
+    isPatientOverviewPayload,
   );
 }
 
@@ -76,6 +77,7 @@ export async function saveStickyNote(
     `/clinic/patients/${encodeURIComponent(patientId)}/sticky-note`,
     { method: "POST", body: JSON.stringify({ text }) },
     fetchImpl,
+    isStickyNote,
   );
 }
 
@@ -87,10 +89,16 @@ export async function fetchStickyNoteHistory(
     `/clinic/patients/${encodeURIComponent(patientId)}/sticky-note/history`,
     { method: "GET" },
     fetchImpl,
+    isStickyNoteHistory,
   );
 }
 
-async function request<T>(path: string, init: RequestInit, fetchImpl: typeof fetch): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+  isExpected: (body: unknown) => body is T,
+): Promise<T> {
   const response = await fetchImpl(path, {
     ...init,
     headers: {
@@ -99,7 +107,35 @@ async function request<T>(path: string, init: RequestInit, fetchImpl: typeof fet
       ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
     },
   });
-  const body = await response.json() as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Patient overview request failed with HTTP ${response.status}.`);
+  const body = await response.json().catch(() => undefined) as unknown;
+  if (!response.ok) {
+    const error = isRecord(body) && typeof body.error === "string" ? body.error : undefined;
+    throw new Error(error ?? `Patient overview request failed with HTTP ${response.status}.`);
+  }
+  if (!isExpected(body)) throw new Error("Patient overview request returned an invalid response.");
   return body;
+}
+
+function isPatientOverviewPayload(body: unknown): body is PatientOverviewPayload {
+  return isRecord(body) &&
+    isRecord(body.patient) &&
+    Array.isArray(body.insurance) &&
+    isRecord(body.snapshot) &&
+    Array.isArray(body.visits) &&
+    body.visits.every((visit) => isRecord(visit) && Array.isArray(visit.diagnoses)) &&
+    Array.isArray(body.diagnosisChoices);
+}
+
+function isStickyNote(body: unknown): body is NonNullable<PatientOverviewPayload["stickyNote"]> {
+  return isRecord(body) && typeof body.id === "string" && typeof body.text === "string";
+}
+
+function isStickyNoteHistory(body: unknown): body is StickyNoteHistoryEntry[] {
+  return Array.isArray(body) && body.every((entry) =>
+    isRecord(entry) && typeof entry.versionId === "string" && typeof entry.text === "string",
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

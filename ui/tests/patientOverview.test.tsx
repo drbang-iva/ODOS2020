@@ -87,6 +87,211 @@ test("visit and diagnosis filters produce a new server request instead of filter
   assert.match(calls[1] ?? "", /diagnosisCode=DX-NEW/);
 });
 
+test("sticky note edit persists and history reveals the returned FHIR versions", async () => {
+  const saved: Array<{ patientId: string; text: string }> = [];
+  let resolveHistory!: (entries: Array<{ versionId: string; text: string; editedAt?: string; editedBy?: string }>) => void;
+  const historyPromise = new Promise<Array<{ versionId: string; text: string; editedAt?: string; editedBy?: string }>>((resolve) => {
+    resolveHistory = resolve;
+  });
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async (patientId: string, text: string) => {
+      saved.push({ patientId, text });
+      return { id: "sticky-1", text, editedAt: "2026-07-11T16:00:00Z", editedBy: "Practitioner/one" };
+    },
+    fetchHistory: async () => historyPromise,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+
+  const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
+  assert.ok(editButton);
+  act(() => editButton.props.onClick());
+  const textarea = renderer.root.findByType("textarea");
+  act(() => textarea.props.onChange({ target: { value: "Updated chart-front note" } }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+  assert.deepEqual(saved, [{ patientId: "patient-1", text: "Updated chart-front note" }]);
+  assert.match(renderer.toJSON() ? JSON.stringify(renderer.toJSON()) : "", /Updated chart-front note/);
+
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  assert.ok(historyButton);
+  let historyRequest!: Promise<void>;
+  await act(async () => {
+    historyRequest = historyButton.props.onClick();
+    await Promise.resolve();
+  });
+  assert.match(JSON.stringify(renderer.toJSON()), /Loading version history/);
+  await act(async () => {
+    resolveHistory([{ versionId: "2", text: "Updated chart-front note", editedBy: "Practitioner\/one" }]);
+    await historyRequest;
+  });
+  assert.ok(renderer.root.findAllByType("small").some((row) => row.children.join("").startsWith("Version 2")));
+});
+
+test("non-JSON overview errors preserve their HTTP status", async () => {
+  const fetchImpl = async () => new Response("upstream unavailable", { status: 503 });
+  await assert.rejects(
+    fetchPatientOverview("patient-1", {}, fetchImpl as typeof fetch),
+    /Patient overview request failed with HTTP 503/,
+  );
+});
+
+test("successful overview responses must contain the expected payload shape", async () => {
+  const fetchImpl = async () => new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } });
+  await assert.rejects(
+    fetchPatientOverview("patient-1", {}, fetchImpl as typeof fetch),
+    /Patient overview request returned an invalid response/,
+  );
+
+  const malformed = fixture() as unknown as { visits: unknown[] };
+  malformed.visits = [{}];
+  const malformedFetch = async () => new Response(JSON.stringify(malformed), { status: 200, headers: { "Content-Type": "application/json" } });
+  await assert.rejects(
+    fetchPatientOverview("patient-1", {}, malformedFetch as typeof fetch),
+    /Patient overview request returned an invalid response/,
+  );
+});
+
+test("initial overview loading skips patients without a FHIR id", () => {
+  let fetchCalls = 0;
+  const api = {
+    fetchOverview: async () => { fetchCalls += 1; return fixture(); },
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={{ ...patient, id: undefined }} api={api} />);
+  });
+  assert.equal(fetchCalls, 0);
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Patient id is unavailable/);
+  assert.doesNotMatch(rendered, /Loading patient overview/);
+});
+
+test("rapid visit-filter requests cannot overwrite the latest result out of order", async () => {
+  const pending: Array<(value: PatientOverviewPayload) => void> = [];
+  const api = {
+    fetchOverview: async () => new Promise<PatientOverviewPayload>((resolve) => pending.push(resolve)),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const eyeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
+  const officeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Office visits");
+  assert.ok(eyeButton);
+  assert.ok(officeButton);
+  await act(async () => {
+    eyeButton.props.onClick();
+    await Promise.resolve();
+  });
+  await act(async () => {
+    officeButton.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(pending.length, 2);
+
+  const office = fixture();
+  office.visits[0]!.visitType = "Latest office result";
+  await act(async () => pending[1]!(office));
+  const eye = fixture();
+  eye.visits[0]!.visitType = "Stale eye result";
+  await act(async () => pending[0]!(eye));
+
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Latest office result/);
+  assert.doesNotMatch(rendered, /Stale eye result/);
+});
+
+test("filter and history responses started before a sticky save cannot restore stale note state", async () => {
+  let resolveOverview!: (value: PatientOverviewPayload) => void;
+  let resolveHistory!: (value: Array<{ versionId: string; text: string }>) => void;
+  const overviewPromise = new Promise<PatientOverviewPayload>((resolve) => { resolveOverview = resolve; });
+  const historyPromise = new Promise<Array<{ versionId: string; text: string }>>((resolve) => { resolveHistory = resolve; });
+  const api = {
+    fetchOverview: async () => overviewPromise,
+    saveNote: async (_patientId: string, text: string) => ({ id: "sticky-1", text }),
+    fetchHistory: async () => historyPromise,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+
+  const eyeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
+  assert.ok(eyeButton);
+  assert.ok(historyButton);
+  assert.ok(editButton);
+  await act(async () => {
+    eyeButton.props.onClick();
+    await Promise.resolve();
+  });
+  let historyRequest!: Promise<void>;
+  await act(async () => {
+    historyRequest = historyButton.props.onClick();
+    await Promise.resolve();
+  });
+  act(() => editButton.props.onClick());
+  act(() => renderer.root.findByType("textarea").props.onChange({ target: { value: "Saved after requests began" } }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+
+  const staleOverview = fixture();
+  staleOverview.stickyNote = { id: "sticky-1", text: "Stale server note" };
+  await act(async () => resolveOverview(staleOverview));
+  await act(async () => {
+    resolveHistory([{ versionId: "1", text: "Stale history note" }]);
+    await historyRequest;
+  });
+
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Saved after requests began/);
+  assert.doesNotMatch(rendered, /Stale server note|Stale history note|Sticky note history/);
+});
+
+test("a history failure invalidated by sticky save does not surface a stale error", async () => {
+  let rejectHistory!: (reason: Error) => void;
+  const historyPromise = new Promise<Array<{ versionId: string; text: string }>>((_resolve, reject) => { rejectHistory = reject; });
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async (_patientId: string, text: string) => ({ id: "sticky-1", text }),
+    fetchHistory: async () => historyPromise,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
+  assert.ok(historyButton);
+  assert.ok(editButton);
+  let historyRequest!: Promise<void>;
+  await act(async () => {
+    historyRequest = historyButton.props.onClick();
+    await Promise.resolve();
+  });
+  act(() => editButton.props.onClick());
+  act(() => renderer.root.findByType("textarea").props.onChange({ target: { value: "Saved note" } }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+  await act(async () => {
+    rejectHistory(new Error("stale history failure"));
+    await historyRequest;
+  });
+  assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+});
+
 const patient: Patient = {
   resourceType: "Patient",
   id: "patient-1",
