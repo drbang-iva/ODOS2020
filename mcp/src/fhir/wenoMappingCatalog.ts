@@ -14,13 +14,24 @@ export const WENO_MAPPING_WRITE_HEADERS = {
 
 export type WenoMappingKind = "prescriber" | "location";
 
-export interface WenoMappingRow {
+interface WenoMappingRowBase {
   stableKey: string;
-  kind: WenoMappingKind;
   localReference: string;
   wenoEntityId: string;
   syncStatus: string;
 }
+
+export interface WenoPrescriberMappingRow extends WenoMappingRowBase {
+  kind: "prescriber";
+  wenoUserEmail: string;
+  wenoPasswordRef: string;
+}
+
+export interface WenoLocationMappingRow extends WenoMappingRowBase {
+  kind: "location";
+}
+
+export type WenoMappingRow = WenoPrescriberMappingRow | WenoLocationMappingRow;
 
 export interface WenoMappingFhirClient {
   search<T extends Basic>(
@@ -161,6 +172,13 @@ function assertWenoMappingRow(value: unknown): WenoMappingRow {
   }
   if (value.kind !== "prescriber" && value.kind !== "location") {
     throw new Error("WENO mapping kind must be prescriber or location.");
+  }
+  if (value.kind === "prescriber") {
+    for (const field of ["wenoUserEmail", "wenoPasswordRef"] as const) {
+      if (!nonEmptyString(value[field])) {
+        throw new Error(`WENO prescriber mapping ${field} must be a non-empty string.`);
+      }
+    }
   }
   const expectedReference = value.kind === "prescriber" ? /^Practitioner\/[^/]+$/ : /^Location\/[^/]+$/;
   const localReference = value.localReference;
