@@ -305,7 +305,15 @@ test("OH-1 seeds nine editable structures and persists explicit normal, abnormal
   const anterior = definitions.filter((definition) => definition.stableKey.startsWith("ocular-health:anterior:"));
   assert.equal(anterior.length, 9);
   assert.equal(anterior.every((definition) => definition.valueSchema.perEye === true), true);
-  assert.equal(anterior.every((definition) => definition.diagnosisCandidates === undefined), true);
+  assert.deepEqual(anterior.filter((definition) => definition.allowDiagnosisMapping).map((definition) => definition.stableKey), [
+    "ocular-health:anterior:lids-lashes",
+    "ocular-health:anterior:conjunctiva",
+    "ocular-health:anterior:tear-film",
+    "ocular-health:anterior:cornea",
+  ]);
+  assert.equal(anterior.filter((definition) => !definition.allowDiagnosisMapping)
+    .every((definition) => definition.diagnosisCandidates === undefined), true);
+  assert.equal(anterior.every((definition) => definition.notBillReady), true);
 
   const lids = anterior.find((definition) => definition.stableKey.endsWith(":lids-lashes"));
   assert.ok(lids);
@@ -440,6 +448,17 @@ test("OH-1 finding options and normal templates are editable through finding-def
     .find((candidate) => candidate.localCode === field.localCode);
   assert.equal(storedField?.options?.find((option) => option.code === "arcus")?.active, false);
   assert.equal(storedField?.options?.find((option) => option.code === "practice-finding")?.active, true);
+
+  const seededCandidate = storedCornea?.diagnosisCandidates?.find((candidate) => candidate.diagnosisKey === "keratoconus_stable");
+  assert.ok(seededCandidate);
+  const mappingUpdate = await handleFindingDefinitionMutationRequest(definitionDeps("practice-admin", fhir, "unused000"), {
+    authHeader: AUTH,
+    params: { stableKey: cornea.stableKey },
+    body: { action: "update-diagnosis-candidate", id: seededCandidate.id, active: false },
+  });
+  assert.equal(mappingUpdate.status, 200, JSON.stringify(mappingUpdate.body));
+  const editedCornea = (await catalog(fhir)).find((definition) => definition.stableKey === cornea.stableKey);
+  assert.equal(editedCornea?.diagnosisCandidates?.find((candidate) => candidate.id === seededCandidate.id)?.active, false);
 });
 
 test("OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes", async () => {
@@ -448,7 +467,13 @@ test("OH-2 seeds five posterior structures and round-trips their worksheet findi
   const posterior = definitions.filter((definition) => definition.stableKey.startsWith("ocular-health:posterior:"));
   assert.deepEqual(posterior.map((definition) => definition.display), ["Vitreous", "Fundus", "Macula", "Vessels", "Periphery"]);
   assert.equal(posterior.every((definition) => definition.valueSchema.perEye === true), true);
-  assert.equal(posterior.every((definition) => definition.diagnosisCandidates === undefined), true);
+  assert.deepEqual(posterior.filter((definition) => definition.allowDiagnosisMapping).map((definition) => definition.stableKey), [
+    "ocular-health:posterior:fundus",
+    "ocular-health:posterior:periphery",
+  ]);
+  assert.equal(posterior.filter((definition) => !definition.allowDiagnosisMapping)
+    .every((definition) => definition.diagnosisCandidates === undefined), true);
+  assert.equal(posterior.every((definition) => definition.notBillReady), true);
 
   const expectedRefinements = new Map([
     ["Fundus", {

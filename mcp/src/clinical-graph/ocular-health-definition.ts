@@ -3,6 +3,7 @@ import {
   buildClinicalFindingDefinition,
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
+  type DiagnosisCandidateEntry,
 } from "./glaucoma-suspect.js";
 
 export const ANTERIOR_OCULAR_HEALTH_PREFIX = "ocular-health:anterior:";
@@ -131,6 +132,53 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
   },
 ];
 
+interface DiagnosisCandidateSeed {
+  option: string;
+  diagnosisKey: string;
+}
+
+const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[]> = {
+  "ocular-health:anterior:lids-lashes": [
+    { option: "anterior-blepharitis::ulcerative", diagnosisKey: "ulcerative_blepharitis" },
+    { option: "anterior-blepharitis::seborrheic", diagnosisKey: "squamous_blepharitis" },
+    { option: "posterior-blepharitis", diagnosisKey: "meibomian_gland_dysfunction" },
+    { option: "meibomian-gland-dysfunction", diagnosisKey: "meibomian_gland_dysfunction" },
+  ],
+  "ocular-health:anterior:conjunctiva": [
+    { option: "pinguecula", diagnosisKey: "pinguecula" },
+    { option: "pterygium", diagnosisKey: "pterygium_central" },
+    { option: "pterygium", diagnosisKey: "pterygium_peripheral_stationary" },
+    { option: "pterygium", diagnosisKey: "pterygium_peripheral_progressive" },
+    { option: "pterygium", diagnosisKey: "pterygium_recurrent" },
+  ],
+  "ocular-health:anterior:tear-film": [
+    { option: "reduced-tear-meniscus", diagnosisKey: "kcs_not_sjogren" },
+    { option: "rapid-tbut", diagnosisKey: "kcs_not_sjogren" },
+  ],
+  "ocular-health:anterior:cornea": [
+    { option: "keratoconus", diagnosisKey: "keratoconus_stable" },
+    { option: "keratoconus", diagnosisKey: "keratoconus_unstable" },
+    { option: "keratoconus", diagnosisKey: "keratoconus_unspecified_stability" },
+    { option: "superficial-punctate-keratitis-spk", diagnosisKey: "kcs_not_sjogren" },
+    { option: "dry-eye-keratopathy", diagnosisKey: "kcs_not_sjogren" },
+    { option: "pterygium-encroaching", diagnosisKey: "pterygium_central" },
+    { option: "pterygium-encroaching", diagnosisKey: "pterygium_peripheral_stationary" },
+    { option: "pterygium-encroaching", diagnosisKey: "pterygium_peripheral_progressive" },
+    { option: "pterygium-encroaching", diagnosisKey: "pterygium_recurrent" },
+  ],
+  "ocular-health:posterior:fundus": [
+    { option: "hypertensive-retinopathy", diagnosisKey: "hypertensive_retinopathy" },
+  ],
+  "ocular-health:posterior:periphery": [
+    { option: "horseshoe-tear", diagnosisKey: "retinal_horseshoe_tear" },
+    { option: "retinal-tear", diagnosisKey: "retinal_horseshoe_tear" },
+    { option: "retinal-hole", diagnosisKey: "retinal_round_hole" },
+    { option: "operculated-hole", diagnosisKey: "retinal_round_hole" },
+    { option: "retinoschisis", diagnosisKey: "retinoschisis" },
+    { option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
+  ],
+};
+
 export function buildAnteriorOcularHealthDefinitions(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition[] {
@@ -154,7 +202,7 @@ function buildOcularHealthDefinitions(
       abnormalField(structure, structureIndex),
       ...(structure.gradeFields ?? []).map((grade, gradeIndex) => gradeField(grade, gradeIndex)),
     ];
-    return buildClinicalFindingDefinition({
+    const definition = buildClinicalFindingDefinition({
       stableKey,
       display: structure.display,
       sectionKey: stableKey,
@@ -173,7 +221,31 @@ function buildOcularHealthDefinitions(
       notBillReady: true,
       provenance,
     });
+    const seeds = DIAGNOSIS_CANDIDATE_SEEDS[stableKey];
+    if (!seeds) return definition;
+    return {
+      ...definition,
+      allowDiagnosisMapping: true,
+      diagnosisCandidates: diagnosisCandidates(definition, seeds),
+    };
   });
+}
+
+function diagnosisCandidates(
+  definition: ClinicalFindingDefinition,
+  seeds: readonly DiagnosisCandidateSeed[],
+): DiagnosisCandidateEntry[] {
+  const abnormal = Object.values(definition.valueSchema.fields as Record<string, CustomFieldEntry>)
+    .find((field) => field.display === "Abnormal findings" && field.valueType === "multi-select");
+  if (!abnormal) throw new Error(`Ocular-health definition ${definition.stableKey} has no Abnormal findings field.`);
+  return seeds.map((seed, index) => ({
+    id: `SEED_${seed.diagnosisKey.toUpperCase()}_${index + 1}`,
+    diagnosisKey: seed.diagnosisKey,
+    trigger: { kind: "option", field: abnormal.localCode, anyOf: [seed.option] },
+    priority: true,
+    origin: "seed",
+    active: true,
+  }));
 }
 
 function gradeField(

@@ -6,6 +6,7 @@ import type { Basic, Bundle, Condition, Encounter, Observation, Provenance, Reso
 import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { handleCupDiscCaptureRequest } from "../src/clinical-graph/cup-disc-endpoint.js";
+import { handleCustomSectionCaptureRequest } from "../src/clinical-graph/custom-section-endpoint.js";
 import {
   deduplicateDiagnosisCandidates,
   handleDiagnosisCandidatesRequest,
@@ -170,6 +171,133 @@ test("real HTTP diagnosis picks persist right-eye evidence, Provenance, isolated
   const discarded = fhir.resources.find((row): row is Condition => row.resourceType === "Condition" && row.code?.text === "Ocular hypertension")!;
   assert.equal(discarded.verificationStatus?.coding?.[0]?.code, "refuted");
   assert.equal(fhir.resources.filter((row) => row.resourceType === "Basic").some((row) => (row as Basic).code.coding?.some((coding) => coding.system === DX_PICK_TALLY_CODE_SYSTEM && coding.code === DX_PICK_TALLY_CODE)), true);
+});
+
+test("OH-3 multi-select findings propose verified per-eye diagnoses and explicit picks create the right Conditions", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter", id: "e-oh3", status: "in-progress",
+    class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
+    subject: { reference: "Patient/p-oh3" },
+  } as Encounter);
+  const definitions = await new FhirFindingDefinitionStore(fhir).list();
+  const authenticate = async () => ({
+    staffReference: "Practitioner/doctor-1",
+    actorRole: "clinician" as PracticeRoleId,
+    fhir,
+  });
+  const fieldFor = (stableKey: string) => {
+    const definition = definitions.find((candidate) => candidate.stableKey === stableKey);
+    assert.ok(definition);
+    const field = Object.values(definition.valueSchema.fields as Record<string, { localCode?: string; valueType?: string }>)
+      .find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode);
+    return { definition, localCode: field.localCode };
+  };
+
+  const cornea = fieldFor("ocular-health:anterior:cornea");
+  const corneaCapture = await handleCustomSectionCaptureRequest({
+    authenticate,
+    findingDefinitions: () => definitions,
+    now: () => "2026-07-12T16:00:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { stableKey: cornea.definition.stableKey },
+    body: {
+      patientReference: "Patient/p-oh3",
+      encounterReference: "Encounter/e-oh3",
+      eyes: { OD: { state: "abnormal", customFields: [{ code: cornea.localCode, value: ["keratoconus"] }] } },
+    },
+  });
+  assert.equal(corneaCapture.status, 200, JSON.stringify(corneaCapture.body));
+  const corneaObservation = fhir.resources.find((resource): resource is Observation => resource.resourceType === "Observation" &&
+    resource.code.coding?.some((coding) => coding.code === cornea.definition.stableKey))!;
+
+  const corneaCandidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e-oh3" },
+  });
+  assert.equal(corneaCandidates.status, 200, JSON.stringify(corneaCandidates.body));
+  const corneaRow = (corneaCandidates.body as {
+    findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string; icd10?: { code?: string } }> }>;
+  }).findings.find((finding) => finding.observationReference === `Observation/${corneaObservation.id}`);
+  assert.deepEqual(corneaRow?.candidates.map((candidate) => candidate.diagnosisKey), [
+    "keratoconus_stable",
+    "keratoconus_unstable",
+    "keratoconus_unspecified_stability",
+  ]);
+  assert.equal(corneaRow?.candidates[0]?.icd10?.code, "H18.611");
+
+  const confirmedCornea = await handleDiagnosisPickRequest({
+    authenticate,
+    now: () => "2026-07-12T16:01:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e-oh3" },
+    body: {
+      findingInstanceId: `Observation/${corneaObservation.id}`,
+      diagnosisKey: "keratoconus_stable",
+      action: "confirm",
+      source: "mapping",
+    },
+  });
+  assert.equal(confirmedCornea.status, 201, JSON.stringify(confirmedCornea.body));
+  assert.equal((confirmedCornea.body as { condition: Condition }).condition.code?.coding?.[0]?.code, "H18.611");
+
+  const lids = fieldFor("ocular-health:anterior:lids-lashes");
+  const lidsCapture = await handleCustomSectionCaptureRequest({
+    authenticate,
+    findingDefinitions: () => definitions,
+    now: () => "2026-07-12T16:02:00.000Z",
+  }, {
+    authHeader: "Bearer doctor-1",
+    params: { stableKey: lids.definition.stableKey },
+    body: {
+      patientReference: "Patient/p-oh3",
+      encounterReference: "Encounter/e-oh3",
+      eyes: {
+        OD: { state: "abnormal", customFields: [{ code: lids.localCode, value: ["anterior-blepharitis", "anterior-blepharitis::ulcerative"] }] },
+        OS: { state: "abnormal", customFields: [{ code: lids.localCode, value: ["anterior-blepharitis", "anterior-blepharitis::ulcerative"] }] },
+      },
+    },
+  });
+  assert.equal(lidsCapture.status, 200, JSON.stringify(lidsCapture.body));
+  const lidsObservations = fhir.resources.filter((resource): resource is Observation => resource.resourceType === "Observation" &&
+    resource.code.coding?.some((coding) => coding.code === lids.definition.stableKey));
+  assert.equal(lidsObservations.length, 2);
+  const lidsCandidates = await handleDiagnosisCandidatesRequest({ authenticate }, {
+    authHeader: "Bearer doctor-1",
+    params: { encounterId: "e-oh3" },
+  });
+  const lidsRows = (lidsCandidates.body as {
+    findings: Array<{ observationReference?: string; candidates: Array<{ diagnosisKey: string }> }>;
+  }).findings.filter((finding) => lidsObservations.some((observation) => finding.observationReference === `Observation/${observation.id}`));
+  assert.deepEqual(lidsRows.map((row) => row.candidates.map((candidate) => candidate.diagnosisKey)), [
+    ["ulcerative_blepharitis"],
+    ["ulcerative_blepharitis"],
+  ]);
+
+  for (const observation of lidsObservations) {
+    const result = await handleDiagnosisPickRequest({
+      authenticate,
+      now: () => "2026-07-12T16:03:00.000Z",
+    }, {
+      authHeader: "Bearer doctor-1",
+      params: { encounterId: "e-oh3" },
+      body: {
+        findingInstanceId: `Observation/${observation.id}`,
+        diagnosisKey: "ulcerative_blepharitis",
+        action: "confirm",
+        source: "mapping",
+      },
+    });
+    assert.equal(result.status, 201, JSON.stringify(result.body));
+  }
+  const blepharitisCodes = fhir.resources.filter((resource): resource is Condition => resource.resourceType === "Condition" &&
+    resource.code?.text === "Ulcerative blepharitis")
+    .map((condition) => condition.code?.coding?.[0]?.code)
+    .sort();
+  assert.deepEqual(blepharitisCodes, ["H01.013", "H01.016"]);
 });
 
 test("direct laterality-required picks ask once, then write no fabricated evidence, and evaluators contain no pick call site", async () => {

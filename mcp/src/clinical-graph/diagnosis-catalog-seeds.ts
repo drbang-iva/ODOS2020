@@ -10,6 +10,7 @@ import type {
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-suspect-phase0-ledger.json");
 const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
+const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
 
 interface LedgerRow {
   code: string;
@@ -34,6 +35,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   };
   const glaucoma = loadLedger(GLAUCOMA_LEDGER_PATH);
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
+  const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
   return [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -43,6 +45,23 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("astigmatism", "Unspecified astigmatism", "astigmatism", "H52.20-", refractive, provenance),
     fixedSeed("anisometropia", "Anisometropia", "anisometropia", "H52.31", refractive, provenance),
     fixedSeed("presbyopia", "Presbyopia", "presbyopia", "H52.4", refractive, provenance),
+    familySeed("kcs_not_sjogren", "Keratoconjunctivitis sicca (dry eye)", "keratoconjunctivitis-sicca", "H16.22-", ocularHealth, provenance),
+    familySeed("pinguecula", "Pinguecula", "pinguecula", "H11.15-", ocularHealth, provenance),
+    familySeed("hypertensive_retinopathy", "Hypertensive retinopathy", "hypertensive-retinopathy", "H35.03-", ocularHealth, provenance),
+    familySeed("keratoconus_stable", "Keratoconus, stable", "keratoconus", "H18.61-", ocularHealth, provenance),
+    familySeed("keratoconus_unstable", "Keratoconus, unstable", "keratoconus", "H18.62-", ocularHealth, provenance),
+    familySeed("keratoconus_unspecified_stability", "Keratoconus (stability unspecified)", "keratoconus", "H18.60-", ocularHealth, provenance),
+    perEyeFamilySeed("ulcerative_blepharitis", "Ulcerative blepharitis", "blepharitis-ulcerative", "H01.01-", ocularHealth, provenance),
+    perEyeFamilySeed("squamous_blepharitis", "Squamous blepharitis", "blepharitis-squamous", "H01.02-", ocularHealth, provenance),
+    perEyeFamilySeed("meibomian_gland_dysfunction", "Meibomian gland dysfunction", "meibomian-gland-dysfunction", "H02.88-", ocularHealth, provenance),
+    familySeed("pterygium_central", "Central pterygium", "pterygium", "H11.02-", ocularHealth, provenance),
+    familySeed("pterygium_peripheral_stationary", "Peripheral pterygium, stationary", "pterygium", "H11.04-", ocularHealth, provenance),
+    familySeed("pterygium_peripheral_progressive", "Peripheral pterygium, progressive", "pterygium", "H11.05-", ocularHealth, provenance),
+    familySeed("pterygium_recurrent", "Recurrent pterygium", "pterygium", "H11.06-", ocularHealth, provenance),
+    familySeed("retinal_horseshoe_tear", "Horseshoe tear of retina", "retinal-break", "H33.31-", ocularHealth, provenance),
+    familySeed("retinal_round_hole", "Round hole of retina", "retinal-break", "H33.32-", ocularHealth, provenance),
+    familySeed("retinoschisis", "Retinoschisis", "retinoschisis", "H33.10-", ocularHealth, provenance),
+    familySeed("retinal_detachment_single_break", "Retinal detachment with single break", "retinal-detachment", "H33.01-", ocularHealth, provenance),
   ];
 }
 
@@ -67,6 +86,39 @@ function familySeed(
       right: matches.find((row) => row.laterality === "OD")?.code,
       left: matches.find((row) => row.laterality === "OS")?.code,
       bilateral: matches.find((row) => row.laterality === "OU")?.code,
+    },
+  };
+  const unspecified = matches.find((row) => row.laterality === "UNKNOWN") ?? matches[0];
+  if (!unspecified || Object.values(icd10.pattern).some((code) => !code)) {
+    throw new Error(`Verified diagnosis family ${family} is incomplete in its Phase 0 ledger.`);
+  }
+  return baseSeed({
+    stableKey,
+    display,
+    clinicalFamily,
+    icd10Family: family,
+    icd10Code: unspecified.code,
+    icd10Display: unspecified.display,
+    lateralityRequired: true,
+    icd10,
+    provenance: { ...provenance, ledgerRefs: [...new Set(matches.flatMap((row) => row.sourceRefs))] },
+  });
+}
+
+function perEyeFamilySeed(
+  stableKey: string,
+  display: string,
+  clinicalFamily: string,
+  family: string,
+  rows: readonly LedgerRow[],
+  provenance: ClinicalGraphProvenance,
+): DiagnosisCatalogRow {
+  const matches = rows.filter((row) => row.family === family);
+  const icd10: DiagnosisIcd10 = {
+    pattern: {
+      unspecifiedEye: matches.find((row) => row.laterality === "UNKNOWN")?.code,
+      right: matches.find((row) => row.laterality === "OD")?.code,
+      left: matches.find((row) => row.laterality === "OS")?.code,
     },
   };
   const unspecified = matches.find((row) => row.laterality === "UNKNOWN") ?? matches[0];
