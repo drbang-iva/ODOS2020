@@ -3,6 +3,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  clinicViewAfterNavigation,
   defaultHomePath,
   RoleSwitchPill,
   RouteSwitch,
@@ -15,6 +16,7 @@ import {
   type PracticeRoleId,
 } from "../src/lib/practice-roles";
 import { CLINIC_PATH, DESK_HOME_PATH } from "../src/scenes/DeskHome";
+import type { ViewState } from "../src/lib/view-state";
 
 test("every non-empty practice-role combination routes from its whoami response to the correct home", async () => {
   for (let mask = 1; mask < 2 ** PRACTICE_ROLE_IDS.length; mask += 1) {
@@ -72,5 +74,15 @@ test("practice roles resolve only once for the same bearer-token session", async
 test("leaving the Clinic route resets its patient view while in-Clinic view changes do not", () => {
   assert.equal(shouldResetClinicView(CLINIC_PATH, "/billing/claims/worklist"), true);
   assert.equal(shouldResetClinicView(CLINIC_PATH, CLINIC_PATH), false);
+  assert.equal(shouldResetClinicView("/clinic/patients", CLINIC_PATH), true);
   assert.equal(shouldResetClinicView(DESK_HOME_PATH, CLINIC_PATH), false);
+});
+
+test("selecting at Clinic patient search then navigating home renders ClinicHome, not the stale Director", () => {
+  const selected: ViewState = { kind: "director", patientId: "patient-1" };
+  const reset = clinicViewAfterNavigation("/clinic/patients", CLINIC_PATH, selected);
+  const clinic = renderToStaticMarkup(<RouteSwitch view={reset} path={CLINIC_PATH} roles={["clinician"]} />);
+  assert.deepEqual(reset, { kind: "picker" });
+  assert.match(clinic, /The Clinic/);
+  assert.doesNotMatch(clinic, /Loading patient/);
 });

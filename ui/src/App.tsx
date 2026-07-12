@@ -53,15 +53,15 @@ export function App() {
   const previousPath = useRef(path);
 
   useEffect(() => {
-    const updatePath = () => setPath(window.location.pathname);
+    const updatePath = () => {
+      const nextPath = window.location.pathname;
+      setView(clinicViewAfterNavigation(previousPath.current, nextPath, useViewState.getState().view));
+      previousPath.current = nextPath;
+      setPath(nextPath);
+    };
     window.addEventListener("popstate", updatePath);
     return () => window.removeEventListener("popstate", updatePath);
-  }, []);
-
-  useEffect(() => {
-    if (shouldResetClinicView(previousPath.current, path)) setView({ kind: "picker" });
-    previousPath.current = path;
-  }, [path, setView]);
+  }, [setView]);
 
   useEffect(() => {
     if (!authed) return;
@@ -101,7 +101,11 @@ export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
 }
 
 export function shouldResetClinicView(previousPath: string, nextPath: string): boolean {
-  return previousPath === CLINIC_PATH && nextPath !== CLINIC_PATH;
+  return (previousPath === CLINIC_PATH || previousPath === CLINIC_PATIENTS_PATH) && previousPath !== nextPath;
+}
+
+export function clinicViewAfterNavigation(previousPath: string, nextPath: string, view: ViewState): ViewState {
+  return shouldResetClinicView(previousPath, nextPath) ? { kind: "picker" } : view;
 }
 
 export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {

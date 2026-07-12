@@ -38,19 +38,29 @@ test("signature debt uses the existing finish event and treats exactly 24h as in
     finishedEncounter("exactly-24h", "2026-07-10T15:00:00.000Z"),
     finishedEncounter("older", "2026-07-10T14:59:00.000Z"),
     finishedEncounter("signed", "2026-07-09T15:00:00.000Z"),
+    finishedEncounter("off-by-ms", "2026-07-11T14:00:00.000Z"),
   ];
-  const provenances: Provenance[] = [{
-    resourceType: "Provenance",
-    target: [{ reference: "Encounter/signed" }],
-    recorded: "2026-07-09T15:00:00.000Z",
-    agent: [{ who: { display: "A label that is not used for matching" } }],
-  }];
+  const provenances: Provenance[] = [
+    {
+      resourceType: "Provenance",
+      target: [{ reference: "Encounter/signed" }],
+      recorded: "2026-07-09T15:00:00.000Z",
+      agent: [{ who: { display: "A label that is not used for matching" } }],
+    },
+    {
+      resourceType: "Provenance",
+      target: [{ reference: "Encounter/off-by-ms" }],
+      recorded: "2026-07-11T14:00:00.001Z",
+      agent: [{ who: { display: "Near checkout is not sign-off" } }],
+    },
+  ];
   const summary = projectClinicSummary(input({ encounters, provenances }));
 
-  assert.equal(summary.signatures.count, 2);
+  assert.equal(summary.signatures.count, 3);
   assert.equal(summary.signatures.olderThan24Hours, 1);
   assert.equal(summary.signatures.rows.find((row) => row.encounterId === "exactly-24h")?.olderThan24Hours, false);
   assert.equal(summary.signatures.rows.find((row) => row.encounterId === "older")?.olderThan24Hours, true);
+  assert.ok(summary.signatures.rows.some((row) => row.encounterId === "off-by-ms"));
 });
 
 test("flow rows within the same state stay chronological by Appointment instant", () => {

@@ -85,6 +85,9 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
       ? [[encounter.id, encounter.period.end] as const]
       : [],
   ));
+  // EncounterHeader passes one instant to both Encounter.period.end and the transaction's
+  // Provenance.recorded. Exact equality is the persisted sign-off contract; a nearby audit
+  // event must not silently sign a chart.
   const signedEncounterIds = new Set(input.provenances.flatMap((provenance) =>
     (provenance.target ?? []).flatMap((target) => {
       const encounterId = target.reference?.match(/^Encounter\/([^/]+)$/)?.[1];

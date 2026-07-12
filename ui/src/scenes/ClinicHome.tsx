@@ -95,7 +95,7 @@ function ClinicPulse({ summary, error }: { summary?: ClinicSummary; error?: stri
         ? <><b className="is-alert">{summary.signatures.count} chart{summary.signatures.count === 1 ? "" : "s"} await your signature</b> · </>
         : <><b className="is-ok">signatures clear ✓</b> · </>}
       <span>E-Rx queue not wired</span>
-      {next && <> · next patient <b className={next.state === "roomed" ? "is-ok" : "is-info"}>{next.state === "with-you" ? "with you" : next.state}{next.state === "roomed" ? " ✓" : ""}</b></>}
+      {next && <> · next patient <b className={next.state === "roomed" ? "is-ok" : "is-info"}>{next.state}{next.state === "roomed" ? " ✓" : ""}</b></>}
     </p>
   );
 }
