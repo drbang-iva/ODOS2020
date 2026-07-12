@@ -29,7 +29,7 @@ export const DESK_CARDS = [
   { id: "claims", title: "Claims", href: "/billing/claims/worklist", span: "standard" },
   { id: "payments", title: "Payments", href: "/billing/claims/patient-payments", span: "standard" },
   { id: "remits", title: "Electronic remits", href: "/billing/claims/remittances", span: "half" },
-  { id: "statements", title: "Statements", span: "half" },
+  { id: "statements", title: "Statements", href: "/billing/statements", span: "half" },
 ] as const;
 
 export type DeskCardId = (typeof DESK_CARDS)[number]["id"];
@@ -74,7 +74,7 @@ const SECTIONS = [
     ["Claims workbench", "Transmission, remits, and denial worklists", "/billing/claims/worklist"],
     ["Lab orders", "Track orders sent to the lab", "/dispensary/lab-orders"],
     ["Patient recall", "Recall workflow", ""],
-    ["Statements & letters", "Patient statements and batch letters", ""],
+    ["Statements & letters", "Patient statements and batch letters", "/billing/statements"],
     ["OpenDesk", "Connected communications workspace", ""],
   ] },
   { label: "Setup & admin", items: [
@@ -283,7 +283,7 @@ function cardModel(id: DeskCardId, summary?: DeskSummary): { tone: DeskTone; kic
     case "claims": { const value = summary.cards.claims; return { tone: worstTone([value.failed, value.inProcess, value.paperQueue, value.heldCents, value.lastTransmission]), kicker: value.failed.value ? `${value.failed.value} failed` : value.lastTransmission.tone === "warn" ? "transmission due" : "on track", target: "failed 0 · transmit each business day", content: <Stats stats={[["Failed", value.failed], ["In process", value.inProcess], ["Paper queue", value.paperQueue], ["Held", value.heldCents, "$"], ["Last transmission", value.lastTransmission]]} /> }; }
     case "payments": { const value = summary.cards.payments; return { tone: worstTone([value.unappliedCount, value.unappliedCents, value.patientCreditsOpen, value.patientOpenBalanceCents, value.terminalMode]), kicker: value.terminalMode.value === "TEST MODE" ? "test mode" : value.unappliedCount.value ? `${value.unappliedCount.value} unapplied` : "reconciled", target: "unapplied 0 · live terminal before launch", content: <Stats stats={[["Unapplied", value.unappliedCount], ["Unapplied $", value.unappliedCents, "$"], ["Credits open", value.patientCreditsOpen], ["Open balance", value.patientOpenBalanceCents, "$"], ["Terminal", value.terminalMode]]} /> }; }
     case "remits": { const value = summary.cards.remits; return { tone: worstTone([value.waitingToPost, value.unpostedCents]), kicker: value.waitingToPost.value ? `${value.waitingToPost.value} waiting` : "posted", target: "waiting-to-post 0", content: <Stats stats={[["Waiting to post", value.waitingToPost], ["Unposted", value.unpostedCents, "$"]]} /> }; }
-    case "statements": return { tone: "off", kicker: "not yet available", target: "weekly · Wednesday · invalid/rejects 0", content: <WiringPanel>{summary.cards.statements.cadence.value}<br />Last statement arrives with the shipped statement contract.</WiringPanel> };
+    case "statements": { const value = summary.cards.statements; return { tone: worstTone([value.cadence, value.invalidRejects, value.lastStatement]), kicker: value.invalidRejects.value ? `${value.invalidRejects.value} invalid` : value.lastStatement.value ? "run recorded" : "ready", target: "weekly · Wednesday · invalid/rejects 0", content: <Stats stats={[["Cadence", value.cadence], ["Invalid / rejects", value.invalidRejects], ["Last run", value.lastStatement, "date-time"]]} /> }; }
   }
 }
 
@@ -296,6 +296,7 @@ function WiringPanel({ children }: { children: ReactNode }) { return <div classN
 function displayStat(value: unknown, format?: string): string {
   if (value === null || value === undefined) return "—";
   if (format === "$") return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(value) / 100);
+  if (format === "date-time") return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(String(value)));
   return `${value}${format ?? ""}`;
 }
 function worstTone(stats: DeskStat[]): DeskTone {

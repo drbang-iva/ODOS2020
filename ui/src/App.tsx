@@ -21,6 +21,7 @@ import { RemittanceQueue } from "./scenes/claims/RemittanceQueue";
 import { SubmitClaims } from "./scenes/claims/SubmitClaims";
 import { CarrierPayments } from "./scenes/claims/CarrierPayments";
 import { PatientPayments } from "./scenes/claims/PatientPayments";
+import { Statements } from "./scenes/claims/Statements";
 import { ChartFieldsSettings } from "./scenes/ChartFieldsSettings";
 import { PatientInsurance } from "./scenes/insurance/PatientInsurance";
 import { VisionPlanBenefits } from "./scenes/insurance/VisionPlanBenefits";
@@ -162,6 +163,8 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
       return <CarrierPayments />;
     case "/billing/claims/patient-payments":
       return <PatientPayments />;
+    case "/billing/statements":
+      return <Statements />;
     case "/patient/insurance":
       return <PatientInsurance initialPatientId={new URLSearchParams(window.location.search).get("patientId") ?? undefined} />;
     case "/patient/new":

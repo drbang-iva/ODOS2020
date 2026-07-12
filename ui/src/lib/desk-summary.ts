@@ -12,7 +12,7 @@ export interface DeskSummary {
     claims: { failed: DeskStat<number>; inProcess: DeskStat<number>; paperQueue: DeskStat<null>; heldCents: DeskStat<number>; lastTransmission: DeskStat<string | null> };
     payments: { unappliedCount: DeskStat<number>; unappliedCents: DeskStat<number>; patientCreditsOpen: DeskStat<number>; patientOpenBalanceCents: DeskStat<number>; terminalMode: DeskStat<string> };
     remits: { waitingToPost: DeskStat<number>; unpostedCents: DeskStat<number> };
-    statements: { available: false; cadence: DeskStat<string>; invalidRejects: DeskStat<null>; lastStatement: DeskStat<null> };
+    statements: { available: true; cadence: DeskStat<string>; invalidRejects: DeskStat<number>; lastStatement: DeskStat<string | null> };
   };
   pulse: { itemsNeedingYou: number; everythingElseAtTarget: boolean; lastClaimTransmission: string | null; lastClaimTransmissionTone: DeskTone };
 }

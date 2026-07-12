@@ -14,6 +14,15 @@ test("the Accounts Receivable dashboard UI route reaches the dashboard without r
   assert.match(html, /Loading accounts receivable/);
 });
 
+test("the Statements route reaches the printable balance-forward scene", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/billing/statements" />,
+  );
+  assert.match(html, /Statements/);
+  assert.match(html, /Run statements/);
+  assert.match(html, /No mail or email transport is connected/);
+});
+
 test("the settings index route reaches the shared settings stub", () => {
   const html = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/settings" />);
   assert.match(html, /Practice Admin/);

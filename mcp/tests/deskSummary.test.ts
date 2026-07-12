@@ -10,6 +10,7 @@ import {
   buildEraWorklistTask,
 } from "../src/claims/era-worklist.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
+import { STATEMENT_OUTPUT_CODE_SYSTEM, STATEMENT_RUN_CODE, STATEMENT_TASK_CODE_SYSTEM } from "../src/statements/statements.js";
 
 const NOW = "2026-07-11T14:00:00.000Z";
 
@@ -66,7 +67,7 @@ test("desk summary projects every card stat from seeded resources with truthful 
     ...emptyInput(),
     appointments: [appointment],
     patients: [{ resourceType: "Patient", id: "patient-1", name: [{ given: ["Alex"], family: "Rivera" }] }],
-    tasks: [optical, rejected, era],
+    tasks: [optical, rejected, era, statementRunTask("2026-07-10T16:00:00.000Z", 2)],
     claims: [claim],
     paymentReconciliations: [payment],
     invoices: [invoice],
@@ -93,7 +94,10 @@ test("desk summary projects every card stat from seeded resources with truthful 
   assert.equal(summary.cards.payments.terminalMode.tone, "warn");
   assert.equal(summary.cards.remits.waitingToPost.value, 1);
   assert.equal(summary.cards.remits.unpostedCents.value, 4_000);
-  assert.equal(summary.cards.statements.available, false);
+  assert.equal(summary.cards.statements.available, true);
+  assert.equal(summary.cards.statements.lastStatement.value, "2026-07-10T16:00:00.000Z");
+  assert.equal(summary.cards.statements.invalidRejects.value, 2);
+  assert.equal(summary.cards.statements.invalidRejects.tone, "alert");
   assert.ok(summary.cards.attention.items.some((item) => item.label === "1 failed claim"));
   assert.ok(summary.cards.attention.items.some((item) => item.label === "1 web appointment waiting"));
 });
@@ -171,4 +175,12 @@ function claimFixture(id: string, dollars: number): Claim {
 
 function opticalFixture(authoredOn: string): Task {
   return { resourceType: "Task", status: "in-progress", intent: "order", authoredOn, code: opticalOrderTypeConcept("rx"), businessStatus: opticalOrderStatusConcept("quote") };
+}
+
+function statementRunTask(authoredOn: string, invalidRejects: number): Task {
+  return {
+    resourceType: "Task", status: "completed", intent: "order", authoredOn,
+    code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
+    output: [{ type: { coding: [{ system: STATEMENT_OUTPUT_CODE_SYSTEM, code: "invalid-reject-count" }] }, valueInteger: invalidRejects }],
+  };
 }

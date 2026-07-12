@@ -8,13 +8,21 @@ import {
   type ReportingHandlerDeps,
   type ReportingResult,
 } from "./reporting.js";
+import {
+  handleGeneratePatientStatementRequest,
+  handleRunStatementsRequest,
+  handleStatementListRequest,
+  type StatementHandlerDeps,
+  type StatementHandlerResult,
+} from "../statements/statements.js";
 
 export interface ReportingRouteDeps extends ReportingHandlerDeps {
   authenticateService(): Promise<void>;
+  statements: StatementHandlerDeps;
 }
 
 export function registerReportingRoutes(
-  app: Pick<Application, "get">,
+  app: Pick<Application, "get" | "post">,
   deps: ReportingRouteDeps,
 ): void {
   get(app, "/reports/accounts-receivable", deps, (req) => handleAccountsReceivableDashboardRequest(deps, {
@@ -36,6 +44,17 @@ export function registerReportingRoutes(
     authHeader: req.header("authorization"),
     query: req.query,
   }));
+  get(app, "/statements", deps, (req) => handleStatementListRequest(deps.statements, {
+    authHeader: req.header("authorization"),
+    patientReference: stringQuery(req.query.patientReference),
+  }));
+  post(app, "/statements/generate", deps, (req) => handleGeneratePatientStatementRequest(deps.statements, {
+    authHeader: req.header("authorization"),
+    body: req.body,
+  }));
+  post(app, "/statements/run", deps, (req) => handleRunStatementsRequest(deps.statements, {
+    authHeader: req.header("authorization"),
+  }));
 }
 
 function get(
@@ -47,17 +66,26 @@ function get(
   app.get(path, async (req, res) => route(path, deps, req, res, dispatch));
 }
 
+function post(
+  app: Pick<Application, "post">,
+  path: string,
+  deps: ReportingRouteDeps,
+  dispatch: (req: Request) => Promise<StatementHandlerResult>,
+): void {
+  app.post(path, async (req, res) => route(path, deps, req, res, dispatch));
+}
+
 async function route(
   path: string,
   deps: ReportingRouteDeps,
   req: Request,
   res: Response,
-  dispatch: (req: Request) => Promise<ReportingResult>,
+  dispatch: (req: Request) => Promise<ReportingResult | StatementHandlerResult>,
 ): Promise<void> {
   try {
     await deps.authenticateService();
     const result = await dispatch(req);
-    if (result.csvFilename && typeof result.body === "string") {
+    if ("csvFilename" in result && result.csvFilename && typeof result.body === "string") {
       res
         .status(result.status)
         .type("text/csv")
@@ -70,4 +98,10 @@ async function route(
     console.error(`osod-mcp: ${path} failed:`, error);
     if (!res.headersSent) res.status(500).json({ error: "reporting route failed" });
   }
+}
+
+function stringQuery(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return undefined;
 }
