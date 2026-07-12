@@ -29,6 +29,65 @@ test("SpineNav is unchanged for an empty custom registry and safely appends miss
   assert.deepEqual(sectionStatus({}, "custom:missing"), { completed: false });
 });
 
+test("SpineNav groups the traditional spine and appends custom sections after every built-in group", () => {
+  const html = renderToStaticMarkup(
+    <SpineNav
+      active="va"
+      statuses={{}}
+      onSelect={() => undefined}
+      customSections={[{ id: "custom:tear-pattern-eye00000", label: "Tear Pattern" }]}
+    />,
+  );
+  const labels = [
+    "PRETEST",
+    "Wearing (WRx)",
+    "Auto-Refraction / Auto-K",
+    "Visual Acuity",
+    "IOP",
+    "REFRACTION",
+    "Refraction History",
+    "CONTACT LENSES",
+    "Soft Contact Lenses",
+    "Specialty Contact Lens",
+    "Ortho-K",
+    "Myopia Management",
+    "OCULAR HEALTH",
+    "Cup/Disc",
+    "Dry Eye",
+    "ASSESSMENT &amp; PLAN",
+    "Assessment",
+    "Tear Pattern",
+  ];
+  let previousIndex = -1;
+  for (const label of labels) {
+    const index = html.indexOf(label);
+    assert.ok(index > previousIndex, `${label} should follow the prior spine entry`);
+    previousIndex = index;
+  }
+});
+
+test("ongoing Dry Eye and Myopia summaries stay visible without a completed dot", () => {
+  const html = renderToStaticMarkup(
+    <SpineNav
+      active="dry-eye"
+      statuses={{
+        "dry-eye": { completed: false, summary: "OSDI 34" },
+        "myopia-management": { completed: false, summary: "OD axial length 24.12 mm" },
+      }}
+      onSelect={() => undefined}
+    />,
+  );
+  assert.match(html, /OSDI 34/);
+  assert.match(html, /OD axial length 24\.12 mm/);
+  assert.doesNotMatch(html, /bg-emerald-400/);
+
+  for (const file of ["DryEyeSection.tsx", "MyopiaManagementSection.tsx"]) {
+    const source = readFileSync(new URL(`../src/components/charting/${file}`, import.meta.url), "utf8");
+    const markSaved = source.slice(source.indexOf("function markSaved"));
+    assert.match(markSaved, /completed: false/);
+  }
+});
+
 test("the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history", () => {
   const html = renderToStaticMarkup(
     <CustomFindingSection
