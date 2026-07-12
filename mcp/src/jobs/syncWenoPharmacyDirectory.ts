@@ -45,7 +45,7 @@ export async function syncWenoPharmacyDirectory(
   const rows = parsePharmacyDirectoryZip(bytes);
   const stored = await input.storage.store(
     rows,
-    input.request.Daily === "N" ? "replace" : "incremental",
+    pharmacyDirectoryStorageMode(input.request.Daily),
   );
   return {
     trigger: input.trigger,
@@ -53,6 +53,12 @@ export async function syncWenoPharmacyDirectory(
     parsed: rows.length,
     stored,
   };
+}
+
+export function pharmacyDirectoryStorageMode(
+  daily: PharmacyDirectoryRequest["Daily"],
+): "incremental" | "replace" {
+  return daily === "N" ? "replace" : "incremental";
 }
 
 // TODO WENO-SAMPLE: unzip and map the LITE workbook only after its real schema is verified.

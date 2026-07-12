@@ -25,6 +25,7 @@ import {
   type PharmacyDirectoryRequest,
 } from "../src/integrations/weno/wenoEzIntegrationClient.js";
 import {
+  pharmacyDirectoryStorageMode,
   parsePharmacyDirectoryZip,
   syncWenoPharmacyDirectory,
 } from "../src/jobs/syncWenoPharmacyDirectory.js";
@@ -184,14 +185,17 @@ test("pharmacy directory download builds the encrypted URL and returns raw ZIP b
   const originalFetch = globalThis.fetch;
   const expected = Uint8Array.from([0x50, 0x4b, 0x03, 0x04]);
   let requestedUrl = "";
-  globalThis.fetch = (async (input: string | URL | Request) => {
+  let requestedSignal: AbortSignal | null | undefined;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     requestedUrl = String(input);
+    requestedSignal = init?.signal;
     return new Response(expected, { status: 200 });
   }) as typeof fetch;
   try {
     const request = pharmacyDirectoryRequest();
     const bytes = await downloadPharmacyDirectory(CONFIG, request);
     assert.deepEqual(new Uint8Array(bytes), expected);
+    assert.equal(requestedSignal instanceof AbortSignal, true);
     assert.match(
       requestedUrl,
       /^https:\/\/online\.wenoexchange\.com\/en\/EPCS\/DownloadPharmacyDirectory\?/,
@@ -222,6 +226,11 @@ test("pharmacy directory parser fails loudly until a real WENO LITE workbook is 
     () => parsePharmacyDirectoryZip(new ArrayBuffer(0)),
     /not yet wired.*real WENO pharmacy directory sample file.*LITE Excel column schema/,
   );
+});
+
+test("pharmacy directory cadence selects incremental and full-replace storage modes", () => {
+  assert.equal(pharmacyDirectoryStorageMode("Y"), "incremental");
+  assert.equal(pharmacyDirectoryStorageMode("N"), "replace");
 });
 
 test("pharmacy directory sync downloads then surfaces the parser boundary", async () => {

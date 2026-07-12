@@ -106,6 +106,10 @@ export interface PharmacyDirectoryRequest {
   ExcludeNonWenoTest?: "Y";
 }
 
+export interface PharmacyDirectoryDownloadOptions {
+  timeoutMs?: number;
+}
+
 export interface NewRxSyncReportRow {
   PatientID: string;
   RelatestoNewRxMsgID: string;
@@ -153,18 +157,25 @@ export async function pullNewRxSyncReport(
 export async function downloadPharmacyDirectory(
   config: WenoEzIntegrationConfig,
   request: PharmacyDirectoryRequest,
+  options: PharmacyDirectoryDownloadOptions = {},
 ): Promise<ArrayBuffer> {
   const configured = assertWenoConfigured(config);
-  const response = await fetch(buildUrl(
-    configured,
-    "/en/EPCS/DownloadPharmacyDirectory",
-    request.UserEmail,
-    request,
-  ), { headers: { Accept: "application/zip" } });
-  if (!response.ok) {
-    throw new Error(`WENO Pharmacy Directory request failed with HTTP ${response.status}.`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 30_000);
+  try {
+    const response = await fetch(buildUrl(
+      configured,
+      "/en/EPCS/DownloadPharmacyDirectory",
+      request.UserEmail,
+      request,
+    ), { headers: { Accept: "application/zip" }, signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`WENO Pharmacy Directory request failed with HTTP ${response.status}.`);
+    }
+    return response.arrayBuffer();
+  } finally {
+    clearTimeout(timeout);
   }
-  return response.arrayBuffer();
 }
 
 function buildUrl(
