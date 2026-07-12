@@ -2,13 +2,19 @@ import { randomUUID } from "node:crypto";
 import type {
   Bundle,
   BundleEntry,
+  Claim,
+  ClaimResponse,
   Invoice,
   Patient,
   PaymentReconciliation,
+  Practitioner,
+  PractitionerRole,
   Task,
   TaskInput,
   TaskOutput,
 } from "@medplum/fhirtypes";
+import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
+import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibility-invoice.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
@@ -45,6 +51,64 @@ export interface StatementInvoiceRow {
   balanceCents: number;
 }
 
+export interface StatementAddress {
+  lines: string[];
+  cityStatePostal?: string;
+}
+
+export interface StatementHeader {
+  practiceName: string;
+  practiceAddress?: StatementAddress;
+  practicePhone?: string;
+  providerName?: string;
+  providerNpi?: string;
+  providerLicense?: string;
+  patientAddress?: StatementAddress;
+}
+
+export interface StatementAdjustmentRow {
+  group?: string;
+  code?: string;
+  label: string;
+  amountCents: number;
+}
+
+export interface StatementPaymentRow {
+  paymentReference: string;
+  date: string;
+  amountCents: number;
+}
+
+export interface StatementClaimLine {
+  sequence: number;
+  serviceDate?: string;
+  procedureCode?: string;
+  procedureDisplay?: string;
+  diagnosisCodes: string[];
+  quantity: number;
+  retailCents: number;
+  payerName: string;
+  insurancePaidCents: number;
+  insuranceAdjustments: StatementAdjustmentRow[];
+  patientAdjustments: StatementAdjustmentRow[];
+}
+
+export interface StatementOrderGroup {
+  invoiceReference: string;
+  orderNumber: string;
+  claimReference?: string;
+  claimNumber?: string;
+  payerName?: string;
+  mode: "insurance-aware" | "invoice-only";
+  lines: StatementClaimLine[];
+  patientPayments: StatementPaymentRow[];
+}
+
+export interface StatementDetail {
+  header: StatementHeader;
+  orders: StatementOrderGroup[];
+}
+
 export interface StatementSnapshot {
   generatedAt: string;
   patientReference: string;
@@ -59,6 +123,7 @@ export interface StatementSnapshot {
   unappliedCreditCents?: number;
   balanceDueCents?: number;
   creditBalanceCents?: number;
+  detail?: StatementDetail;
 }
 
 export interface StatementRow extends StatementSnapshot {
@@ -228,6 +293,92 @@ export function buildStatementSnapshot(input: {
   };
 }
 
+export function addStatementDetail(input: {
+  snapshot: StatementSnapshot;
+  patient: Patient;
+  invoices: Invoice[];
+  paymentReconciliations: PaymentReconciliation[];
+  claims: Claim[];
+  claimResponses: ClaimResponse[];
+  practitioners: Practitioner[];
+  practitionerRoles: PractitionerRole[];
+}): StatementSnapshot {
+  const claims = new Map<string, Claim>(input.claims.flatMap((claim) => claim.id ? [[`Claim/${claim.id}`, claim] as const] : []));
+  const practitioners = new Map(input.practitioners.flatMap((practitioner) =>
+    practitioner.id ? [[`Practitioner/${practitioner.id}`, practitioner] as const] : [],
+  ));
+  const responsesByClaim = new Map<string, ClaimResponse[]>();
+  for (const response of input.claimResponses) {
+    if (!response.request?.reference || response.status !== "active" || response.outcome === "error") continue;
+    responsesByClaim.set(response.request.reference, [...(responsesByClaim.get(response.request.reference) ?? []), response]);
+  }
+  const orders = input.invoices.map((invoice): StatementOrderGroup => {
+    const invoiceReference = invoiceReferenceOf(invoice);
+    const orderNumber = invoice.id!;
+    const patientPayments = input.paymentReconciliations.flatMap((payment) => {
+      if (payment.status !== "active" || !payment.id || !payment.paymentDate) return [];
+      const amountCents = allocationCents(payment, invoiceReference);
+      return amountCents > 0 ? [{
+        paymentReference: `PaymentReconciliation/${payment.id}`,
+        date: payment.paymentDate,
+        amountCents,
+      }] : [];
+    });
+    const claimReference = invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+      ?.valueReference?.reference;
+    const claim = claimReference ? claims.get(claimReference) : undefined;
+    const response = claimReference ? newestClaimResponse(responsesByClaim.get(claimReference) ?? []) : undefined;
+    if (!claimReference || !claim || !response || !hasCompleteChargeItemJoin(invoice, claim)) {
+      return { invoiceReference, orderNumber, mode: "invoice-only", lines: [], patientPayments };
+    }
+    const responseItems = new Map((response.item ?? []).map((item) => [item.itemSequence, item]));
+    const diagnoses = new Map((claim.diagnosis ?? []).map((diagnosis) => [diagnosis.sequence, diagnosis]));
+    const payerName = claim.insurer?.display ?? response.insurer.display ?? claim.insurer?.reference
+      ?? response.insurer.reference ?? "Payer not listed";
+    const lines = (claim.item ?? []).map((item): StatementClaimLine => {
+      const coding = item.productOrService.coding?.find((candidate) => candidate.code);
+      const adjudications = responseItems.get(item.sequence)?.adjudication ?? [];
+      const adjustmentRows = adjudications.flatMap((adjudication) => adjustmentRow(adjudication));
+      const patientAdjustments = adjustmentRows.filter((row) => row.group?.toUpperCase() === "PR");
+      const genericPatientResponsibility = patientAdjustments.length === 0
+        ? adjudications.flatMap((adjudication) => genericPatientResponsibilityRow(adjudication))
+        : [];
+      return {
+        sequence: item.sequence,
+        ...(item.servicedDate ? { serviceDate: item.servicedDate } : {}),
+        ...(coding?.code ? { procedureCode: coding.code } : {}),
+        ...(coding?.display ? { procedureDisplay: coding.display } : {}),
+        diagnosisCodes: (item.diagnosisSequence ?? []).flatMap((sequence) =>
+          diagnoses.get(sequence)?.diagnosisCodeableConcept?.coding?.flatMap((diagnosis) => diagnosis.code ? [diagnosis.code] : []) ?? [],
+        ),
+        quantity: item.quantity?.value ?? 1,
+        retailCents: claimLineRetailCents(item),
+        payerName,
+        insurancePaidCents: adjudicationCents(adjudications, "paid"),
+        insuranceAdjustments: adjustmentRows.filter((row) => row.group?.toUpperCase() !== "PR"),
+        patientAdjustments: [...patientAdjustments, ...genericPatientResponsibility],
+      };
+    });
+    return {
+      invoiceReference,
+      orderNumber,
+      claimReference,
+      claimNumber: claim.identifier?.find((identifier) => identifier.value)?.value ?? claim.id!,
+      payerName,
+      mode: "insurance-aware",
+      lines,
+      patientPayments,
+    };
+  });
+  return {
+    ...input.snapshot,
+    detail: {
+      header: statementHeader(input.patient, input.claims, practitioners, input.practitionerRoles),
+      orders,
+    },
+  };
+}
+
 export function buildStatementTransaction(input: {
   generatedAt: string;
   statements: StatementSnapshot[];
@@ -333,9 +484,17 @@ async function runStatements(
     const invoiceParams: Record<string, string> = options.patientReference
       ? { status: "issued", subject: options.patientReference, _sort: "date" }
       : { status: "issued", _sort: "subject,date" };
-    const [invoices, payments] = await Promise.all([
+    const [invoices, payments, claims, claimResponses] = await Promise.all([
       searchAll<Invoice>(fhir, "Invoice", invoiceParams),
       searchAll<PaymentReconciliation>(fhir, "PaymentReconciliation", { status: "active" }),
+      searchAll<Claim>(fhir, "Claim", {
+        status: "active",
+        ...(options.patientReference ? { patient: options.patientReference } : {}),
+      }),
+      searchAll<ClaimResponse>(fhir, "ClaimResponse", {
+        status: "active",
+        ...(options.patientReference ? { patient: options.patientReference } : {}),
+      }),
     ]);
     const patientReferences = options.patientReference
       ? [options.patientReference]
@@ -343,6 +502,10 @@ async function runStatements(
     const patients = patientReferences.length === 0
       ? []
       : await searchAll<Patient>(fhir, "Patient", { _id: patientReferences.map(referenceId).join(",") });
+    const [practitioners, practitionerRoles] = await Promise.all([
+      claims.length > 0 ? searchAll<Practitioner>(fhir, "Practitioner", { active: "true" }) : Promise.resolve([]),
+      claims.length > 0 ? searchAll<PractitionerRole>(fhir, "PractitionerRole", { active: "true" }) : Promise.resolve([]),
+    ]);
     const patientByReference = new Map(patients.map((patient) => [patientReferenceOf(patient), patient]));
     const statements: StatementSnapshot[] = [];
     const rejects: StatementRejectRow[] = [];
@@ -363,10 +526,19 @@ async function runStatements(
         continue;
       }
       try {
-        const snapshot = addAccountCredit(
-          buildStatementSnapshot({ patient, invoices: patientInvoices, paymentReconciliations: payments, generatedAt: options.generatedAt }),
-          payments,
-        );
+        const snapshot = addStatementDetail({
+          snapshot: addAccountCredit(
+            buildStatementSnapshot({ patient, invoices: patientInvoices, paymentReconciliations: payments, generatedAt: options.generatedAt }),
+            payments,
+          ),
+          patient,
+          invoices: patientInvoices,
+          paymentReconciliations: payments,
+          claims: claims.filter((claim) => claim.patient.reference === patientReference),
+          claimResponses: claimResponses.filter((response) => response.patient.reference === patientReference),
+          practitioners,
+          practitionerRoles,
+        });
         if (snapshot.balanceCents === 0) skippedZeroBalanceCount += 1;
         else statements.push(snapshot);
       } catch (error) {
@@ -542,6 +714,119 @@ function allocationCents(payment: PaymentReconciliation, invoiceReference: strin
     .map((detail) => moneyCents(detail.amount?.value, detail.amount?.currency, `${invoiceReference} payment allocation`)));
 }
 
+type ClaimAdjudication = NonNullable<NonNullable<ClaimResponse["item"]>[number]["adjudication"]>[number];
+type ClaimItem = NonNullable<Claim["item"]>[number];
+
+function newestClaimResponse(responses: ClaimResponse[]): ClaimResponse | undefined {
+  return responses.filter((response) => response.item?.some((item) => item.adjudication.length > 0))
+    .sort((left, right) => (right.created ?? "").localeCompare(left.created ?? ""))[0];
+}
+
+function hasCompleteChargeItemJoin(invoice: Invoice, claim: Claim): boolean {
+  const claimChargeItems = new Set((claim.item ?? []).flatMap((item) => {
+    const reference = item.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+      ?.valueReference?.reference;
+    return reference ? [reference] : [];
+  }));
+  return claimChargeItems.size > 0 && (invoice.lineItem ?? []).every((line) =>
+    Boolean(line.chargeItemReference?.reference && claimChargeItems.has(line.chargeItemReference.reference)),
+  );
+}
+
+function adjustmentRow(adjudication: ClaimAdjudication): StatementAdjustmentRow[] {
+  const label = conceptLabel(adjudication.reason) ?? conceptLabel(adjudication.category);
+  const match = conceptLabel(adjudication.category)?.match(/^adjustment\s+(\S+)(?:\s+(\S+))?/i);
+  if (!match || !label) return [];
+  return [{
+    group: match[1],
+    ...(match[2] ? { code: match[2] } : {}),
+    label,
+    amountCents: moneyCents(adjudication.amount?.value, adjudication.amount?.currency, `${label} adjudication`),
+  }];
+}
+
+function genericPatientResponsibilityRow(adjudication: ClaimAdjudication): StatementAdjustmentRow[] {
+  const label = conceptLabel(adjudication.reason) ?? conceptLabel(adjudication.category);
+  if (!label || !/^patient responsibility$/i.test(conceptLabel(adjudication.category) ?? "")) return [];
+  return [{
+    group: "PR",
+    label,
+    amountCents: moneyCents(adjudication.amount?.value, adjudication.amount?.currency, `${label} adjudication`),
+  }];
+}
+
+function adjudicationCents(adjudications: ClaimAdjudication[], category: string): number {
+  return sum(adjudications.flatMap((adjudication) =>
+    conceptLabel(adjudication.category)?.toLowerCase() === category
+      ? [moneyCents(adjudication.amount?.value, adjudication.amount?.currency, `${category} adjudication`)]
+      : [],
+  ));
+}
+
+function conceptLabel(concept: ClaimAdjudication["category"] | ClaimAdjudication["reason"]): string | undefined {
+  return concept?.text ?? concept?.coding?.find((coding) => coding.display)?.display
+    ?? concept?.coding?.find((coding) => coding.code)?.code;
+}
+
+function claimLineRetailCents(item: ClaimItem): number {
+  if (item.net) return moneyCents(item.net.value, item.net.currency, `Claim item ${item.sequence} net`);
+  const unitCents = moneyCents(item.unitPrice?.value, item.unitPrice?.currency, `Claim item ${item.sequence} unit price`);
+  const quantity = item.quantity?.value ?? 1;
+  if (!Number.isFinite(quantity) || quantity < 0) throw new StatementValidationError(`Claim item ${item.sequence} quantity is invalid.`);
+  return Math.round(unitCents * quantity);
+}
+
+function statementHeader(
+  patient: Patient,
+  claims: Claim[],
+  practitioners: Map<string, Practitioner>,
+  roles: PractitionerRole[],
+): StatementHeader {
+  const providerReference = claims.find((claim) => claim.provider?.reference)?.provider?.reference;
+  const role = roles.find((candidate) => candidate.practitioner?.reference === providerReference)
+    ?? roles.find((candidate) => candidate.id && `PractitionerRole/${candidate.id}` === providerReference);
+  const practitionerReference = providerReference?.startsWith("Practitioner/")
+    ? providerReference
+    : role?.practitioner?.reference;
+  const practitioner = practitionerReference ? practitioners.get(practitionerReference) : undefined;
+  const providerName = humanName(practitioner) ?? role?.practitioner?.display ?? claims[0]?.provider?.display;
+  const practiceName = role?.organization?.display ?? providerName ?? "Practice";
+  const practiceAddress = addressOf(practitioner?.address?.find((address) => address.use === "work") ?? practitioner?.address?.[0]);
+  const practicePhone = role?.telecom?.find((telecom) => telecom.system === "phone")?.value
+    ?? practitioner?.telecom?.find((telecom) => telecom.system === "phone" && telecom.use === "work")?.value
+    ?? practitioner?.telecom?.find((telecom) => telecom.system === "phone")?.value;
+  const providerNpi = practitioner?.identifier?.find((identifier) => /(?:^|[-/])npi$/i.test(identifier.system ?? ""))?.value;
+  const providerLicense = practitioner?.qualification?.flatMap((qualification) => qualification.identifier ?? [])
+    .find((identifier) => identifier.value)?.value;
+  return {
+    practiceName,
+    ...(practiceAddress ? { practiceAddress } : {}),
+    ...(practicePhone ? { practicePhone } : {}),
+    ...(providerName ? { providerName } : {}),
+    ...(providerNpi ? { providerNpi } : {}),
+    ...(providerLicense ? { providerLicense } : {}),
+    ...(addressOf(patient.address?.find((address) => address.use === "home") ?? patient.address?.[0])
+      ? { patientAddress: addressOf(patient.address?.find((address) => address.use === "home") ?? patient.address?.[0]) }
+      : {}),
+  };
+}
+
+function humanName(practitioner: Practitioner | undefined): string | undefined {
+  const name = practitioner?.name?.find((candidate) => candidate.use === "official") ?? practitioner?.name?.[0];
+  const assembled = [...(name?.prefix ?? []), ...(name?.given ?? []), name?.family, ...(name?.suffix ?? [])]
+    .filter(Boolean).join(" ");
+  return name?.text ?? (assembled || undefined);
+}
+
+function addressOf(address: NonNullable<Patient["address"]>[number] | undefined): StatementAddress | undefined {
+  if (!address) return undefined;
+  const lines = (address.line ?? []).filter(Boolean);
+  const cityStatePostal = [address.city, [address.state, address.postalCode].filter(Boolean).join(" ")]
+    .filter(Boolean).join(", ");
+  if (lines.length === 0 && !cityStatePostal) return undefined;
+  return { lines, ...(cityStatePostal ? { cityStatePostal } : {}) };
+}
+
 function statementTask(snapshot: StatementSnapshot, runReference: string): Task {
   return {
     resourceType: "Task",
@@ -605,6 +890,7 @@ function validateSnapshot(snapshot: StatementSnapshot): void {
     throw new StatementValidationError("Patient statement snapshot totals do not reconcile.");
   }
   validateAccountCredit(snapshot);
+  if (snapshot.detail) validateStatementDetail(snapshot);
 }
 
 function validateAccountCredit(snapshot: StatementSnapshot): void {
@@ -618,6 +904,40 @@ function validateAccountCredit(snapshot: StatementSnapshot): void {
   if (snapshot.balanceDueCents !== Math.max(0, snapshot.balanceCents - snapshot.unappliedCreditCents!)
     || snapshot.creditBalanceCents !== Math.max(0, snapshot.unappliedCreditCents! - snapshot.balanceCents)) {
     throw new StatementValidationError("Patient statement account credit does not reconcile.");
+  }
+}
+
+function validateStatementDetail(snapshot: StatementSnapshot): void {
+  const detail = snapshot.detail!;
+  if (!detail.header?.practiceName || !Array.isArray(detail.orders)
+    || detail.orders.length !== snapshot.invoices.length) {
+    throw new StatementValidationError("Patient statement detail is incomplete.");
+  }
+  const invoiceReferences = new Set(snapshot.invoices.map((invoice) => invoice.invoiceReference));
+  for (const order of detail.orders) {
+    if (!invoiceReferences.has(order.invoiceReference) || !order.orderNumber
+      || !["insurance-aware", "invoice-only"].includes(order.mode)
+      || !Array.isArray(order.lines) || !Array.isArray(order.patientPayments)) {
+      throw new StatementValidationError("Patient statement detail contains an invalid Order group.");
+    }
+    if (order.mode === "invoice-only" && order.lines.length > 0) {
+      throw new StatementValidationError("Invoice-only statement detail cannot contain adjudication lines.");
+    }
+    for (const line of order.lines) {
+      if (!Number.isInteger(line.sequence) || line.sequence < 1 || !Number.isFinite(line.quantity) || line.quantity < 0
+        || !Number.isInteger(line.retailCents) || line.retailCents < 0 || !Number.isInteger(line.insurancePaidCents)
+        || line.insurancePaidCents < 0 || !Array.isArray(line.diagnosisCodes)
+        || !Array.isArray(line.insuranceAdjustments) || !Array.isArray(line.patientAdjustments)
+        || [...line.insuranceAdjustments, ...line.patientAdjustments]
+          .some((adjustment) => !adjustment.label || !Number.isInteger(adjustment.amountCents) || adjustment.amountCents < 0)) {
+        throw new StatementValidationError("Patient statement detail contains an invalid Claim line.");
+      }
+    }
+    if (order.patientPayments.some((payment) =>
+      !/^PaymentReconciliation\/[A-Za-z0-9.-]+$/.test(payment.paymentReference)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(payment.date)
+      || !Number.isInteger(payment.amountCents) || payment.amountCents <= 0,
+    )) throw new StatementValidationError("Patient statement detail contains an invalid payment row.");
   }
 }
 

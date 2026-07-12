@@ -35,6 +35,73 @@ test("printable statement renders only a reconciled balance-forward snapshot", (
   assert.throws(() => renderBalanceForwardStatement({ ...statement("bad", "2026-07-12T15:00:00.000Z", 6_000), balanceCents: 6_001 }), /do not reconcile/);
 });
 
+test("insurance-aware mailer renders sourced line detail, addresses, provider identifiers, and static tear-off fields", () => {
+  const row: StatementRow = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    detail: {
+      header: {
+        practiceName: "Independent Eye Care",
+        practiceAddress: { lines: ["20 Vision Way"], cityStatePostal: "Raleigh, NC 27601" },
+        practicePhone: "919-555-0100",
+        providerName: "Morgan Lee, OD",
+        providerNpi: "1234567893",
+        providerLicense: "OPT-1234",
+        patientAddress: { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" },
+      },
+      orders: [{
+        invoiceReference: "Invoice/new",
+        orderNumber: "ORDER-TEST",
+        claimReference: "Claim/claim-test",
+        claimNumber: "CLAIM-TEST",
+        payerName: "Source Health Plan",
+        mode: "insurance-aware",
+        lines: [{
+          sequence: 1,
+          serviceDate: "2026-07-01",
+          procedureCode: "PROC-TEST",
+          procedureDisplay: "Source procedure display",
+          diagnosisCodes: ["DX-TEST"],
+          quantity: 1,
+          retailCents: 10_000,
+          payerName: "Source Health Plan",
+          insurancePaidCents: 2_000,
+          insuranceAdjustments: [{ group: "INS", code: "SOURCE", label: "adjustment INS SOURCE", amountCents: 2_000 }],
+          patientAdjustments: [{ group: "PR", code: "SOURCE", label: "Source patient reason", amountCents: 6_000 }],
+        }],
+        patientPayments: [{ paymentReference: "PaymentReconciliation/payment-new", date: "2026-07-02", amountCents: 4_000 }],
+      }],
+    },
+  };
+  const html = renderBalanceForwardStatement(row);
+  assert.match(html, /Order # ORDER-TEST/);
+  assert.match(html, /Claim # CLAIM-TEST/);
+  assert.match(html, /PROC-TEST\/ DX-TEST/);
+  assert.match(html, /Insurance adjustment: adjustment INS SOURCE/);
+  assert.match(html, /Patient adjustment: Source patient reason/);
+  assert.match(html, /Patient payment/);
+  assert.match(html, /Remit payment to/);
+  assert.match(html, /NPI 1234567893/);
+  assert.match(html, /License # OPT-1234/);
+  assert.match(html, /PAY THIS AMOUNT[\s\S]*\$60\.00/);
+  assert.match(html, /☐ VISA/);
+  assert.match(html, /Card number/);
+  assert.doesNotMatch(html, /<input|fetch\(|payment processor/i);
+});
+
+test("detailed mailer prints an invoice-only row for a pre-seam Order", () => {
+  const row: StatementRow = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    detail: {
+      header: { practiceName: "Independent Eye Care" },
+      orders: [{ invoiceReference: "Invoice/new", orderNumber: "LEGACY-1", mode: "invoice-only", lines: [], patientPayments: [] }],
+    },
+  };
+  const html = renderBalanceForwardStatement(row);
+  assert.match(html, /Invoice-only detail/);
+  assert.match(html, /pre-seam balance/);
+  assert.match(html, /PAY THIS AMOUNT[\s\S]*\$60\.00/);
+});
+
 test("statement screen and print show unapplied credit as a separate line and the net balance due", () => {
   const row = {
     ...statement("new", "2026-07-12T15:00:00.000Z", 10_000),
