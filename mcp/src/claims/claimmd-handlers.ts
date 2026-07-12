@@ -99,6 +99,9 @@ import {
   patientResponsibilityInvoiceMatches,
 } from "./patient-responsibility-invoice.js";
 
+const CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/claim-charge-item";
+const ERA_DISCREPANCY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/era-worklist-discrepancy";
+
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
   actorRole: OsodActorRole;
@@ -133,7 +136,12 @@ export async function handleSubmitClaimRequest(
 
   let createdClaim: Claim | undefined;
   try {
-    const persistedChargeItems = await persistClaimChargeItems(auth, body.claim.chargeItems);
+    const persistedChargeItems = await persistClaimChargeItems(
+      auth,
+      body.claim.chargeItems,
+      body.claim.patientReference,
+      body.claim.patientAccountNumber,
+    );
     const claim = buildProfessionalClaim({ ...body.claim, chargeItems: persistedChargeItems });
     createdClaim = await auth.fhir.create(claim);
     const result = selection.id === "claimmd"
@@ -180,17 +188,21 @@ export async function handleSubmitClaimRequest(
       clearinghouseFailureAuditReason(selection.id, "submitProfessionalClaim", error),
       selection.id,
     );
-    try {
-      await createAndAuditClaimRejectedTask(deps, auth, {
-        claimReference: createdClaim ? ref(createdClaim) : undefined,
-        patientReference: body.claim.patientReference,
-        claimMdMessage: messageOf(error),
-        adapterName: selection.id,
-      });
-    } catch {
-      // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
+    if (!(error instanceof ClaimSubmissionValidationError)) {
+      try {
+        await createAndAuditClaimRejectedTask(deps, auth, {
+          claimReference: createdClaim ? ref(createdClaim) : undefined,
+          patientReference: body.claim.patientReference,
+          claimMdMessage: messageOf(error),
+          adapterName: selection.id,
+        });
+      } catch {
+        // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
+      }
     }
-    return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
+    return error instanceof ClaimSubmissionValidationError
+      ? { status: 400, body: { error: error.message } }
+      : { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
   }
 }
 
@@ -1175,12 +1187,52 @@ async function ensurePatientResponsibilityInvoice(
 async function persistClaimChargeItems(
   auth: AuthenticatedClaimsStaff,
   chargeItems: ChargeItem[],
+  patientReference: string,
+  submissionKey: string,
 ): Promise<ChargeItem[]> {
   const persisted: ChargeItem[] = [];
-  for (const chargeItem of chargeItems) {
-    persisted.push(chargeItem.id ? chargeItem : await auth.fhir.create(chargeItem));
+  for (const [index, chargeItem] of chargeItems.entries()) {
+    if (chargeItem.id) {
+      if (!/^[A-Za-z0-9.-]+$/.test(chargeItem.id)) {
+        throw new ClaimSubmissionValidationError(`ChargeItem id ${chargeItem.id} is not a valid local FHIR id.`);
+      }
+      let stored: ChargeItem;
+      try {
+        stored = await auth.fhir.read<ChargeItem>("ChargeItem", chargeItem.id);
+      } catch {
+        throw new ClaimSubmissionValidationError(`ChargeItem/${chargeItem.id} could not be loaded for this Claim.`);
+      }
+      assertChargeItemPatient(stored, patientReference);
+      persisted.push(stored);
+      continue;
+    }
+    assertChargeItemPatient(chargeItem, patientReference);
+    const identifierValue = `${submissionKey}:${index + 1}`;
+    const candidate: ChargeItem = {
+      ...chargeItem,
+      identifier: [
+        ...(chargeItem.identifier ?? []).filter((identifier) => identifier.system !== CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM),
+        { system: CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM, value: identifierValue },
+      ],
+    };
+    const stored = await auth.fhir.create(candidate, {
+      "If-None-Exist": `identifier=${CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM}|${identifierValue}`,
+    });
+    assertChargeItemPatient(stored, patientReference);
+    persisted.push(stored);
   }
   return persisted;
+}
+
+class ClaimSubmissionValidationError extends Error {}
+
+function assertChargeItemPatient(chargeItem: ChargeItem, patientReference: string): void {
+  const reference = chargeItem.id ? `ChargeItem/${chargeItem.id}` : "Unpersisted ChargeItem";
+  if (chargeItem.subject.reference !== patientReference) {
+    throw new ClaimSubmissionValidationError(
+      `${reference} belongs to ${chargeItem.subject.reference || "no patient"}, not ${patientReference}.`,
+    );
+  }
 }
 
 async function upsertEraImportRecord(
@@ -1214,7 +1266,19 @@ async function createAndAuditEraWorklistTask(
   response: ClaimResponse,
   adapterName: "claimmd" | "stedi" = "claimmd",
 ): Promise<Task> {
-  const task = await auth.fhir.create(buildEraWorklistTask({
+  const claimReference = response.request?.reference;
+  if (!claimReference || !/^Claim\/[A-Za-z0-9.-]+$/.test(claimReference)) {
+    throw new Error("ERA discrepancy Task requires a local Claim/<id> reference.");
+  }
+  const identifierValue = `${input.era.eraid ?? "unknown-era"}:${claimReference}:${code}`;
+  const identifierToken = `${ERA_DISCREPANCY_IDENTIFIER_SYSTEM}|${identifierValue}`;
+  const existing = bundleResources(await auth.fhir.search<Task>("Task", {
+    identifier: identifierToken,
+    _count: "2",
+  }));
+  if (existing.length > 1) throw new Error(`Duplicate ERA discrepancy Tasks exist for ${claimReference}.`);
+  if (existing[0]) return existing[0];
+  const candidate = buildEraWorklistTask({
     code,
     era: input.era,
     eraClaim: input.eraClaim,
@@ -1223,7 +1287,9 @@ async function createAndAuditEraWorklistTask(
     authoredOn: now(deps),
     appealDeadline: input.appealDeadline,
     identifierSystem: adapterName === "stedi" ? STEDI_ERA_PAYMENT_SYSTEM : CLAIMMD_ERA_PAYMENT_SYSTEM,
-  }));
+  });
+  candidate.identifier = [{ system: ERA_DISCREPANCY_IDENTIFIER_SYSTEM, value: identifierValue }];
+  const task = await auth.fhir.create(candidate, { "If-None-Exist": `identifier=${identifierToken}` });
   const eventType = code === "era-denial" ? "era.denial.flagged" : "era.underpayment.flagged";
   await audit(deps, auth, eventType, "success", ref(task), input.patientReference, undefined, adapterName);
   return task;
