@@ -9,6 +9,7 @@ type ExamState = "normal" | "abnormal" | "deferred";
 export interface EyeCapture {
   state?: ExamState;
   selections: string[];
+  grades?: Record<string, string>;
   other: string;
   normalTemplate?: string;
 }
@@ -134,15 +135,22 @@ export function OcularHealthSection({
       if (!dirtyDefinitions.length) throw new Error("Capture at least one ocular-health structure before saving.");
       for (const definition of dirtyDefinitions) {
         const field = abnormalField(definition);
+        const grades = gradeFields(definition);
         const row = captures[definition.stableKey] ?? emptyRow();
         const eyes = Object.fromEntries(EYES.flatMap((eye) => {
           const capture = row[eye];
           if (!capture.state) return [];
           return [[eye, {
             state: capture.state,
-            customFields: capture.state === "abnormal" && field && capture.selections.length
-              ? [{ code: field.localCode, value: capture.selections }]
-              : [],
+            customFields: [
+              ...(capture.state === "abnormal" && field && capture.selections.length
+                ? [{ code: field.localCode, value: capture.selections }]
+                : []),
+              ...(capture.state === "deferred" ? [] : grades.flatMap((grade) => {
+                const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
+                return value ? [{ code: grade.localCode, value }] : [];
+              })),
+            ],
             ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
           }]];
         }));
@@ -202,6 +210,7 @@ export function OcularHealthSection({
           <div className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">{group.label}</div>
           {group.definitions.map((definition) => {
           const field = abnormalField(definition);
+          const grades = gradeFields(definition);
           const row = captures[definition.stableKey] ?? emptyRow();
           return (
             <article id={domId(definition.stableKey)} key={definition.stableKey} className="scroll-mt-24 rounded border border-white/10 bg-bg-panel/65 p-4">
@@ -212,10 +221,12 @@ export function OcularHealthSection({
                   eye={eye}
                   capture={row[eye]}
                   field={field}
+                  gradeFields={grades}
                   normalTemplate={definition.normalTemplate}
                   allowDeferred={definition.allowDeferred === true}
                   onState={(state) => setExamState(definition, eye, state)}
                   onSelections={(selections) => updateEye(definition.stableKey, eye, (current) => ({ ...current, selections }))}
+                  onGrade={(localCode, value) => updateEye(definition.stableKey, eye, (current) => ({ ...current, grades: { ...current.grades, [localCode]: value } }))}
                   onOther={(other) => updateEye(definition.stableKey, eye, (current) => ({ ...current, other }))}
                   onCopy={() => copyEye(definition, eye, eye === "OD" ? "OS" : "OD")}
                 />
@@ -233,14 +244,16 @@ export function OcularHealthSection({
   );
 }
 
-function EyePanel({ eye, capture, field, normalTemplate, allowDeferred, onState, onSelections, onOther, onCopy }: {
+function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDeferred, onState, onSelections, onGrade, onOther, onCopy }: {
   eye: Eye;
   capture: EyeCapture;
   field?: CustomFindingField;
+  gradeFields: CustomFindingField[];
   normalTemplate?: string;
   allowDeferred: boolean;
   onState(state: ExamState): void;
   onSelections(selections: string[]): void;
+  onGrade(localCode: string, value: string): void;
   onOther(other: string): void;
   onCopy(): void;
 }) {
@@ -258,6 +271,12 @@ function EyePanel({ eye, capture, field, normalTemplate, allowDeferred, onState,
         {allowDeferred && <StateButton label="Not performed / deferred" selected={capture.state === "deferred"} onClick={() => onState("deferred")} />}
       </div>
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
+      {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
+        <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
+        <select value={capture.grades?.[grade.localCode] ?? defaultGradeValue(grade)} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="w-full rounded border border-white/15 bg-bg-deep px-3 py-2 text-sm text-white outline-none focus:border-brand">
+          {(grade.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
+        </select>
+      </label>)}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-3">
           <OptionList options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
@@ -288,12 +307,19 @@ function StateButton({ label, selected, onClick }: { label: string; selected: bo
 
 function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]): Record<Eye, EyeCapture> {
   const field = abnormalField(definition);
+  const grades = gradeFields(definition);
   return Object.fromEntries(EYES.map((eye) => {
     const row = rows.find((candidate) => candidate.eye === eye);
     const value = row?.values.find((candidate) => candidate.code === field?.localCode)?.value;
     return [eye, {
       ...(row?.state ? { state: row.state } : {}),
       selections: Array.isArray(value) ? value : [],
+      grades: Object.fromEntries(grades.flatMap((grade) => {
+        const gradeValue = row?.values.find((candidate) => candidate.code === grade.localCode)?.value;
+        if (typeof gradeValue !== "string") return [];
+        const option = grade.options?.find((candidate) => candidate.code === gradeValue || candidate.display === gradeValue);
+        return option ? [[grade.localCode, option.code]] : [];
+      })),
       other: row?.other ?? "",
       ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
     }];
@@ -302,6 +328,14 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
 
 function abnormalField(definition: CustomFindingDefinition): CustomFindingField | undefined {
   return definition.customFields.find((field) => field.active && field.valueType === "multi-select");
+}
+
+function gradeFields(definition: CustomFindingDefinition): CustomFindingField[] {
+  return definition.customFields.filter((field) => field.active && field.valueType === "select");
+}
+
+function defaultGradeValue(field: CustomFindingField): string {
+  return field.options?.find((option) => option.active)?.code ?? "";
 }
 
 function emptyCaptures(definitions: CustomFindingDefinition[]) {
@@ -313,11 +347,11 @@ function emptyRow(): Record<Eye, EyeCapture> {
 }
 
 function emptyEye(): EyeCapture {
-  return { selections: [], other: "" };
+  return { selections: [], grades: {}, other: "" };
 }
 
 function touched(capture: EyeCapture): boolean {
-  return Boolean(capture.state || capture.other.trim() || capture.selections.length);
+  return Boolean(capture.state || capture.other.trim() || capture.selections.length || Object.keys(capture.grades ?? {}).length);
 }
 
 export function changedDefinitions<T extends Pick<CustomFindingDefinition, "stableKey">>(
@@ -336,8 +370,15 @@ function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
   return left.state === right.state &&
     left.other === right.other &&
     left.normalTemplate === right.normalTemplate &&
+    sameGrades(left.grades, right.grades) &&
     left.selections.length === right.selections.length &&
     left.selections.every((selection, index) => selection === right.selections[index]);
+}
+
+function sameGrades(left: Record<string, string> | undefined, right: Record<string, string> | undefined): boolean {
+  const leftEntries = Object.entries(left ?? {});
+  const rightEntries = Object.entries(right ?? {});
+  return leftEntries.length === rightEntries.length && leftEntries.every(([code, value]) => right?.[code] === value);
 }
 
 export function pendingStateEyes(
@@ -353,7 +394,7 @@ export function pendingStateEyes(
 }
 
 export function copyEyeCapture(source: EyeCapture): EyeCapture {
-  return { ...source, selections: [...source.selections] };
+  return { ...source, selections: [...source.selections], grades: { ...source.grades } };
 }
 
 export function applyAnteriorAllNormal(

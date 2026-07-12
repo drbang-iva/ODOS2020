@@ -483,6 +483,49 @@ test("posterior re-save stays pristine, round-trips selections, and preserves th
   }
 });
 
+test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POST again while pristine", async () => {
+  const vessels = posteriorDefinitions().find((definition) => definition.display === "Vessels");
+  assert.ok(vessels);
+  const posts: string[] = [];
+  const fetchImpl = (async (_input, init) => {
+    if (init?.method === "POST") {
+      posts.push(String(init.body));
+      return jsonResponse({});
+    }
+    return jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<OcularHealthSection
+        definitions={[vessels]}
+        patientReference="Patient/p-vessels-grade"
+        encounterReference="Encounter/e-vessels-grade"
+        onSaved={() => undefined}
+        apiBase="http://test"
+        fetchImpl={fetchImpl}
+      />);
+      await flushEffects();
+    });
+    const selects = renderer.root.findAllByType("select");
+    assert.equal(selects.length, 2);
+    assert.deepEqual(selects.map((select) => select.props.value), ["2:3", "2:3"]);
+    const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
+    act(() => normalButtons[0]!.props.onClick());
+    act(() => selects[0]!.props.onChange({ target: { value: "1:2" } }));
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 1);
+    assert.match(posts[0]!, /CUSTOM_GRADE_A_V_RATIO/);
+    assert.match(posts[0]!, /1:2/);
+    await act(async () => saveButton.props.onClick());
+    assert.equal(posts.length, 1);
+  } finally {
+    renderer?.unmount();
+  }
+});
+
 test("all-normal skips touched structures and copy-to-eye produces an independently editable clone", () => {
   const captures = {
     "ocular-health:anterior:cornea": {
@@ -598,7 +641,14 @@ function posteriorDefinitions() {
       options: [{ code: finding!.toLowerCase().replaceAll("/", "-").replaceAll(" ", "-"), display: finding!, active: true, priority: true }],
       order: 0,
       active: true,
-    }],
+    }, ...(name === "vessels" ? [{
+      localCode: "CUSTOM_GRADE_A_V_RATIO",
+      display: "A/V ratio",
+      valueType: "select" as const,
+      options: ["2:3", "1:2", "1:3", "1:4"].map((value) => ({ code: value, display: value, active: true })),
+      order: 1,
+      active: true,
+    }] : [])],
   }));
 }
 

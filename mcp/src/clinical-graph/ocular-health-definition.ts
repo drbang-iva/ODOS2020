@@ -16,6 +16,7 @@ interface StructureSeed {
   additional: string[];
   allowDeferred?: boolean;
   nested?: Array<{ parent: string; children: string[] }>;
+  gradeFields?: Array<{ display: string; options: string[] }>;
 }
 
 const ANTERIOR_STRUCTURES: StructureSeed[] = [
@@ -103,8 +104,8 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     key: "fundus",
     display: "Fundus",
     normalTemplate: "Normal retinal appearance; healthy background, no lesions.",
-    priority: ["diabetic retinopathy (background/NPDR)", "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot"],
-    additional: ["microaneurysm", "proliferative diabetic retinopathy (PDR)", "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal nevus", "choroidal lesion", "RPE atrophy", "Roth spot", "chorioretinal scar", "myelinated nerve fiber"],
+    priority: ["diabetic retinopathy (background/NPDR)", "hypertensive retinopathy", "dot/blot hemorrhage", "hard exudate", "cotton-wool spot", "choroidal nevus", "chorioretinal scar"],
+    additional: ["microaneurysm", "proliferative diabetic retinopathy (PDR)", "neovascularization elsewhere (NVE)", "preretinal hemorrhage", "choroidal lesion", "RPE atrophy", "Roth spot", "myelinated nerve fiber", "drusen", "occasional drusen"],
   },
   {
     key: "macula",
@@ -119,13 +120,14 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Normal caliber without tortuosity, AV nicking, or crossing changes.",
     priority: ["AV nicking", "arteriolar attenuation", "tortuosity"],
     additional: ["AV crossing changes", "sclerotic (copper/silver-wire) changes", "Hollenhorst plaque", "retinal embolus", "vascular sheathing", "venous beading", "neovascularization of the disc (NVD)"],
+    gradeFields: [{ display: "A/V ratio", options: ["2:3", "1:2", "1:3", "1:4"] }],
   },
   {
     key: "periphery",
     display: "Periphery",
     normalTemplate: "Normal peripheral retina without tears, breaks, holes, or detachment.",
-    priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole"],
-    additional: ["retinal tear", "retinal detachment", "white-without-pressure", "retinoschisis", "chorioretinal scar", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear"],
+    priority: ["lattice degeneration", "cobblestone/paving-stone degeneration", "retinal hole", "white-without-pressure", "chorioretinal scar"],
+    additional: ["retinal tear", "retinal detachment", "retinoschisis", "retinal tuft", "pigmentary changes", "cystoid degeneration", "operculated hole", "horseshoe tear", "drusen", "occasional drusen"],
   },
 ];
 
@@ -148,7 +150,10 @@ function buildOcularHealthDefinitions(
 ): ClinicalFindingDefinition[] {
   return structures.map((structure, structureIndex) => {
     const stableKey = `${prefix}${structure.key}`;
-    const field = abnormalField(structure, structureIndex);
+    const fields = [
+      abnormalField(structure, structureIndex),
+      ...(structure.gradeFields ?? []).map((grade, gradeIndex) => gradeField(grade, gradeIndex)),
+    ];
     return buildClinicalFindingDefinition({
       stableKey,
       display: structure.display,
@@ -157,7 +162,7 @@ function buildOcularHealthDefinitions(
       valueSchema: {
         type: "ocular-health-structure",
         perEye: true,
-        fields: { [field.localCode]: field },
+        fields: Object.fromEntries(fields.map((field) => [field.localCode, field])),
       },
       normalSemantics: {
         template: structure.normalTemplate,
@@ -169,6 +174,21 @@ function buildOcularHealthDefinitions(
       provenance,
     });
   });
+}
+
+function gradeField(
+  grade: NonNullable<StructureSeed["gradeFields"]>[number],
+  gradeIndex: number,
+): CustomFieldEntry {
+  return {
+    localCode: `CUSTOM_GRADE_${optionCode(grade.display).replaceAll("-", "_").toUpperCase()}`,
+    display: grade.display,
+    origin: "practice",
+    valueType: "select",
+    options: grade.options.map((display) => ({ code: display, display, active: true })),
+    order: gradeIndex + 1,
+    active: true,
+  };
 }
 
 function abnormalField(structure: StructureSeed, structureIndex: number): CustomFieldEntry {
