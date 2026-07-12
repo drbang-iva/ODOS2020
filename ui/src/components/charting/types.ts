@@ -11,7 +11,8 @@ export type BuiltInSectionId =
   | "myopia-management"
   | "cup-disc"
   | "iop"
-  | "assessment";
+  | "assessment"
+  | "prescription";
 
 export type ChartSectionId = BuiltInSectionId | `custom:${string}`;
 
