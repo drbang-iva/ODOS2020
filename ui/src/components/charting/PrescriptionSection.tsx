@@ -232,6 +232,10 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
     setSaving(true);
     setError(null);
     try {
+      const existing = editingId ? requests.find((request) => request.id === editingId) : undefined;
+      if (editingId && !existing) {
+        throw new Error("The prescription being edited could not be found. Reload the chart and try again.");
+      }
       const resource = buildMedicationRequest({
         patientReference,
         practitionerReference,
@@ -248,9 +252,8 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         isControlledSubstance: controlled,
         transmissionMethod,
       });
-      const existing = editingId ? requests.find((request) => request.id === editingId) : undefined;
       const saved = existing
-        ? await fhir.update<MedicationRequest>({ ...existing, ...resource, id: existing.id, meta: existing.meta }, "update_medication_request")
+        ? await fhir.update<MedicationRequest>(mergeMedicationRequestUpdate(existing, resource), "update_medication_request")
         : await fhir.create<MedicationRequest>(resource, "create_medication_request");
       setRequests((current) => existing
         ? current.map((request) => request.id === existing.id ? saved : request)
@@ -362,7 +365,24 @@ function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
   };
 }
 
-function formatDate(value: string | undefined): string {
+export function mergeMedicationRequestUpdate(
+  existing: MedicationRequest,
+  resource: MedicationRequest,
+): MedicationRequest {
+  return {
+    ...existing,
+    ...resource,
+    id: existing.id,
+    meta: existing.meta,
+    status: existing.status,
+    requester: existing.requester,
+  };
+}
+
+export function formatDate(value: string | undefined): string {
   if (!value) return "Date unknown";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 }
