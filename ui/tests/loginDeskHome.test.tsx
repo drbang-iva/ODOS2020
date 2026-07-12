@@ -48,6 +48,7 @@ test("Desk home is independent from the cockpit and Clinic opens the existing fl
   assert.match(html, /Sections/);
   assert.match(html, /Customize/);
   assert.match(html, /Electronic remits/);
+  assert.match(html, /href="\/billing\/statements"/);
 });
 
 test("Desk card configuration sanitizes and reorders only catalog cards", () => {
@@ -94,7 +95,7 @@ function emptyDeskSummary(): DeskSummary {
       claims: { failed: n, inProcess: { value: 0, tone: "info" }, paperQueue: off, heldCents: n, lastTransmission: { value: null, tone: "off" } },
       payments: { unappliedCount: n, unappliedCents: n, patientCreditsOpen: n, patientOpenBalanceCents: { value: 0, tone: "info" }, terminalMode: { value: "LIVE", tone: "ok" } },
       remits: { waitingToPost: n, unpostedCents: n },
-      statements: { available: false, cadence: { value: "Weekly · Wednesdays recommended", tone: "info" }, invalidRejects: off, lastStatement: off },
+      statements: { available: true, cadence: { value: "Weekly · Wednesdays recommended", tone: "info" }, invalidRejects: n, lastStatement: { value: null, tone: "off" } },
     },
     pulse: { itemsNeedingYou: 0, everythingElseAtTarget: true, lastClaimTransmission: null, lastClaimTransmissionTone: "off" },
   };

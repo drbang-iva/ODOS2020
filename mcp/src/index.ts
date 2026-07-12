@@ -6093,6 +6093,9 @@ async function main(): Promise<void> {
           },
         },
         payments: paymentCreditDeps,
+        statements: {
+          authenticate: authenticateStaffRoute,
+        },
       });
       registerDeskRoutes(app, {
         authenticateService: authenticateWithMedplum,

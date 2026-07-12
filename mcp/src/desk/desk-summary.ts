@@ -24,6 +24,7 @@ import {
   paymentSubjectReference,
   unappliedPaymentCents,
 } from "../payments/payment-credit-service.js";
+import { latestStatementRun } from "../statements/statements.js";
 
 export type DeskTone = "ok" | "warn" | "alert" | "info" | "off";
 
@@ -96,10 +97,10 @@ export interface DeskSummary {
       unpostedCents: DeskStat<number>;
     };
     statements: {
-      available: false;
+      available: true;
       cadence: DeskStat<string>;
-      invalidRejects: DeskStat<null>;
-      lastStatement: DeskStat<null>;
+      invalidRejects: DeskStat<number>;
+      lastStatement: DeskStat<string | null>;
     };
   };
   pulse: {
@@ -218,6 +219,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     waitingToPost: stat(openEraTasks.length, openEraTasks.length > 0 ? "warn" : "ok"),
     unpostedCents: stat(unpostedCents, openEraTasks.length > 0 ? "warn" : "ok"),
   };
+  const statementRun = latestStatementRun(input.tasks);
 
   const attention: DeskAttentionRow[] = [
     ...(failedRows.length > 0 ? [{ tone: "alert" as const, label: `${failedRows.length} failed claim${failedRows.length === 1 ? "" : "s"}`, detail: `${money(heldCents)} held`, href: "/billing/claims/worklist" }] : []),
@@ -243,10 +245,14 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     payments,
     remits,
     statements: {
-      available: false,
+      available: true,
       cadence: stat("Weekly · Wednesdays recommended", "info"),
-      invalidRejects: unavailable("Statement generation and reject persistence are not shipped yet."),
-      lastStatement: unavailable("Statement generation is not shipped yet."),
+      invalidRejects: stat(statementRun.invalidRejects, statementRun.invalidRejects > 0 ? "alert" : "ok"),
+      lastStatement: stat(
+        statementRun.generatedAt,
+        statementRun.generatedAt ? "info" : "off",
+        statementRun.generatedAt ? undefined : "No statement run is persisted yet.",
+      ),
     },
   };
   return {
