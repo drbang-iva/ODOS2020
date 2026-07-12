@@ -9,7 +9,7 @@ type ExamState = "normal" | "abnormal" | "deferred";
 export interface EyeCapture {
   state?: ExamState;
   selections: string[];
-  grades?: Record<string, string>;
+  grades?: Record<string, number | string>;
   other: string;
   normalTemplate?: string;
 }
@@ -148,7 +148,10 @@ export function OcularHealthSection({
                 : []),
               ...(capture.state === "deferred" ? [] : grades.flatMap((grade) => {
                 const value = capture.grades?.[grade.localCode] ?? defaultGradeValue(grade);
-                return value ? [{ code: grade.localCode, value }] : [];
+                return value === "" ? [] : [{
+                  code: grade.localCode,
+                  value: grade.valueType === "number" ? Number(value) : value,
+                }];
               })),
             ],
             ...(capture.other.trim() ? { other: capture.other.trim() } : {}),
@@ -273,9 +276,13 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
       {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
-        <select value={capture.grades?.[grade.localCode] ?? defaultGradeValue(grade)} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="w-full rounded border border-white/15 bg-bg-deep px-3 py-2 text-sm text-white outline-none focus:border-brand">
+        {grade.valueType === "number" ? <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
+          <input type="number" value={capture.grades?.[grade.localCode] ?? ""} min={grade.min} max={grade.max} step={grade.step ?? "any"} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none" />
+          {grade.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{grade.unit}</span>}
+        </div> : <select value={capture.grades?.[grade.localCode] ?? defaultGradeValue(grade)} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="w-full rounded border border-white/15 bg-bg-deep px-3 py-2 text-sm text-white outline-none focus:border-brand">
+          {defaultGradeValue(grade) === "" && <option value="">Select</option>}
           {(grade.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-        </select>
+        </select>}
       </label>)}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-3">
@@ -314,12 +321,17 @@ function captureFromRows(definition: CustomFindingDefinition, rows: HistoryRow[]
     return [eye, {
       ...(row?.state ? { state: row.state } : {}),
       selections: Array.isArray(value) ? value : [],
-      grades: Object.fromEntries(grades.flatMap((grade) => {
+      grades: Object.fromEntries(grades.reduce<Array<[string, number | string]>>((values, grade) => {
         const gradeValue = row?.values.find((candidate) => candidate.code === grade.localCode)?.value;
-        if (typeof gradeValue !== "string") return [];
+        if (grade.valueType === "number") {
+          if (typeof gradeValue === "number") values.push([grade.localCode, gradeValue]);
+          return values;
+        }
+        if (typeof gradeValue !== "string") return values;
         const option = grade.options?.find((candidate) => candidate.code === gradeValue || candidate.display === gradeValue);
-        return option ? [[grade.localCode, option.code]] : [];
-      })),
+        if (option) values.push([grade.localCode, option.code]);
+        return values;
+      }, [])),
       other: row?.other ?? "",
       ...(row?.normalTemplate ? { normalTemplate: row.normalTemplate } : {}),
     }];
@@ -331,11 +343,13 @@ function abnormalField(definition: CustomFindingDefinition): CustomFindingField 
 }
 
 function gradeFields(definition: CustomFindingDefinition): CustomFindingField[] {
-  return definition.customFields.filter((field) => field.active && field.valueType === "select");
+  return definition.customFields.filter((field) => field.active && (field.valueType === "select" || field.valueType === "number"));
 }
 
 function defaultGradeValue(field: CustomFindingField): string {
-  return field.options?.find((option) => option.active)?.code ?? "";
+  return field.localCode === "CUSTOM_GRADE_A_V_RATIO"
+    ? field.options?.find((option) => option.active)?.code ?? ""
+    : "";
 }
 
 function emptyCaptures(definitions: CustomFindingDefinition[]) {
@@ -375,7 +389,7 @@ function sameCapture(left: EyeCapture, right: EyeCapture): boolean {
     left.selections.every((selection, index) => selection === right.selections[index]);
 }
 
-function sameGrades(left: Record<string, string> | undefined, right: Record<string, string> | undefined): boolean {
+function sameGrades(left: Record<string, number | string> | undefined, right: Record<string, number | string> | undefined): boolean {
   const leftEntries = Object.entries(left ?? {});
   const rightEntries = Object.entries(right ?? {});
   return leftEntries.length === rightEntries.length && leftEntries.every(([code, value]) => right?.[code] === value);

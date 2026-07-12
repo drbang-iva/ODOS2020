@@ -17,7 +17,10 @@ interface StructureSeed {
   additional: string[];
   allowDeferred?: boolean;
   nested?: Array<{ parent: string; children: string[] }>;
-  gradeFields?: Array<{ display: string; options: string[] }>;
+  gradeFields?: Array<
+    | { display: string; kind: "select"; options: string[]; slugOptionCodes?: boolean }
+    | { display: string; kind: "number"; min: number; max: number; step: number; unit?: CustomFieldEntry["unit"] }
+  >;
 }
 
 const ANTERIOR_STRUCTURES: StructureSeed[] = [
@@ -61,6 +64,7 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Adequate tear film; normal meniscus and break-up.",
     priority: ["reduced tear meniscus", "rapid TBUT", "debris in tear film"],
     additional: ["mucus strands", "foam", "increased/decreased lake", "frothing"],
+    gradeFields: [{ display: "TBUT", kind: "number", min: 0, max: 60, step: 1, unit: "s" }],
   },
   {
     key: "cornea",
@@ -75,6 +79,12 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Deep and quiet; no cells or flare.",
     priority: ["cells", "flare", "shallow AC"],
     additional: ["hyphema", "hypopyon", "peripheral anterior synechiae", "pigment", "narrow angle (by exam)"],
+    gradeFields: [{
+      display: "Van Herick",
+      kind: "select",
+      options: ["Grade 4 (wide open)", "Grade 3", "Grade 2", "Grade 1 (narrow)", "Grade 0 (closed)"],
+      slugOptionCodes: true,
+    }],
   },
   {
     key: "iris",
@@ -89,6 +99,12 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Clear; no cataract.",
     priority: ["nuclear sclerosis", "cortical cataract", "posterior subcapsular (PSC)", "pseudophakia (PCIOL)", "posterior capsular opacification (PCO)"],
     additional: ["anterior polar", "posterior polar", "anterior subcapsular", "brunescent", "mature cataract", "pseudophakia (ACIOL)", "aphakia", "phacodonesis", "pseudoexfoliation", "dislocated lens/IOL", "IOL deposits", "polychromatic (Christmas-tree)"],
+    gradeFields: [
+      { display: "LOCS III — NO (nuclear opalescence)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
+      { display: "LOCS III — NC (nuclear color)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
+      { display: "LOCS III — C (cortical)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
+      { display: "LOCS III — P (posterior subcapsular)", kind: "number", min: 0.1, max: 6.9, step: 0.1 },
+    ],
   },
 ];
 
@@ -121,7 +137,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Normal caliber without tortuosity, AV nicking, or crossing changes.",
     priority: ["AV nicking", "arteriolar attenuation", "tortuosity"],
     additional: ["AV crossing changes", "sclerotic (copper/silver-wire) changes", "Hollenhorst plaque", "retinal embolus", "vascular sheathing", "venous beading", "neovascularization of the disc (NVD)"],
-    gradeFields: [{ display: "A/V ratio", options: ["2:3", "1:2", "1:3", "1:4"] }],
+    gradeFields: [{ display: "A/V ratio", kind: "select", options: ["2:3", "1:2", "1:3", "1:4"] }],
   },
   {
     key: "periphery",
@@ -252,15 +268,31 @@ function gradeField(
   grade: NonNullable<StructureSeed["gradeFields"]>[number],
   gradeIndex: number,
 ): CustomFieldEntry {
-  return {
+  const base = {
     localCode: `CUSTOM_GRADE_${optionCode(grade.display).replaceAll("-", "_").toUpperCase()}`,
     display: grade.display,
-    origin: "practice",
-    valueType: "select",
-    options: grade.options.map((display) => ({ code: display, display, active: true })),
+    origin: "practice" as const,
     order: gradeIndex + 1,
     active: true,
   };
+  return grade.kind === "select"
+    ? {
+        ...base,
+        valueType: "select",
+        options: grade.options.map((display) => ({
+          code: grade.slugOptionCodes ? optionCode(display) : display,
+          display,
+          active: true,
+        })),
+      }
+    : {
+        ...base,
+        valueType: "number",
+        min: grade.min,
+        max: grade.max,
+        step: grade.step,
+        ...(grade.unit ? { unit: grade.unit } : {}),
+      };
 }
 
 function abnormalField(structure: StructureSeed, structureIndex: number): CustomFieldEntry {
