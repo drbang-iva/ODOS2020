@@ -89,9 +89,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     definition.sectionKey?.startsWith("custom:") && definition.active
   );
   const ocularHealthDefinitions = catalog.definitions.filter((definition) =>
-    definition.sectionKey?.startsWith("ocular-health:anterior:") && definition.active
+    definition.sectionKey?.startsWith("ocular-health:") && definition.active
   );
-  const ocularHealthSections = ocularHealthDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
+  const ocularHealthSections = ocularHealthDefinitions.map((definition) => ({
+    id: definition.stableKey as ChartSectionId,
+    label: definition.display,
+    segment: definition.stableKey.startsWith("ocular-health:posterior:") ? "posterior" as const : "anterior" as const,
+  }));
   const customSections = customDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
   const customDefinition = activeSection.startsWith("custom:")
     ? customDefinitions.find((definition) => definition.stableKey === activeSection)
@@ -204,7 +208,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("prescription", status)}
             />
           )}
-          {activeSection.startsWith("ocular-health:anterior:") && (
+          {activeSection.startsWith("ocular-health:") && (
             <OcularHealthSection
               definitions={ocularHealthDefinitions}
               focusedStableKey={activeSection}

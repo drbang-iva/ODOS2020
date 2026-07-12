@@ -11,7 +11,7 @@ const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean;
   { id: "specialty-contact-lens", label: "Specialty Contact Lens", group: "CONTACT LENSES" },
   { id: "ortho-k", label: "Ortho-K", group: "CONTACT LENSES" },
   { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
-  { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH" },
+  { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
   { id: "assessment", label: "Assessment", group: "ASSESSMENT & PLAN" },
   { id: "prescription", label: "Plan · Prescriptions", group: "ASSESSMENT & PLAN" },
@@ -22,11 +22,14 @@ interface Props {
   statuses: SectionStatusMap;
   onSelect: (section: ChartSectionId) => void;
   customSections?: Array<{ id: ChartSectionId; label: string }>;
-  ocularHealthSections?: Array<{ id: ChartSectionId; label: string }>;
+  ocularHealthSections?: Array<{ id: ChartSectionId; label: string; segment?: "anterior" | "posterior" }>;
   onAddSection?: () => void;
 }
 
 export function SpineNav({ active, statuses, onSelect, customSections = [], ocularHealthSections = [], onAddSection }: Props) {
+  const cupDiscIndex = SECTIONS.findIndex((section) => section.id === "cup-disc");
+  const anterior = ocularHealthSections.filter((section) => section.segment !== "posterior");
+  const posterior = ocularHealthSections.filter((section) => section.segment === "posterior");
   const sections: Array<{
     id: ChartSectionId;
     label: string;
@@ -34,9 +37,12 @@ export function SpineNav({ active, statuses, onSelect, customSections = [], ocul
     group?: string;
     subHeader?: string;
   }> = [
-    ...SECTIONS.slice(0, SECTIONS.findIndex((section) => section.id === "cup-disc")),
-    ...ocularHealthSections.map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" })),
-    ...SECTIONS.slice(SECTIONS.findIndex((section) => section.id === "cup-disc")),
+    ...SECTIONS.slice(0, cupDiscIndex),
+    ...anterior.map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" })),
+    ...posterior.slice(0, 1).map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" })),
+    SECTIONS[cupDiscIndex]!,
+    ...posterior.slice(1).map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" })),
+    ...SECTIONS.slice(cupDiscIndex + 1),
     ...customSections,
   ];
   return (

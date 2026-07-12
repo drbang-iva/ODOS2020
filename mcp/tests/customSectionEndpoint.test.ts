@@ -442,6 +442,57 @@ test("OH-1 finding options and normal templates are editable through finding-def
   assert.equal(storedField?.options?.find((option) => option.code === "practice-finding")?.active, true);
 });
 
+test("OH-2 seeds five posterior structures and round-trips their worksheet findings per eye without diagnosis codes", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const posterior = definitions.filter((definition) => definition.stableKey.startsWith("ocular-health:posterior:"));
+  assert.deepEqual(posterior.map((definition) => definition.display), ["Vitreous", "Fundus", "Macula", "Vessels", "Periphery"]);
+  assert.equal(posterior.every((definition) => definition.valueSchema.perEye === true), true);
+  assert.equal(posterior.every((definition) => definition.diagnosisCandidates === undefined), true);
+
+  const expectedPriority = new Map([
+    ["Vitreous", "posterior vitreous detachment (PVD)"],
+    ["Fundus", "diabetic retinopathy (background/NPDR)"],
+    ["Macula", "drusen"],
+    ["Vessels", "AV nicking"],
+    ["Periphery", "lattice degeneration"],
+  ]);
+  for (const definition of posterior) {
+    const field = Object.values(definition.valueSchema.fields as Record<string, { valueType?: string; localCode?: string; options?: Array<{ code: string; display: string; priority?: boolean }> }>)
+      .find((candidate) => candidate.valueType === "multi-select");
+    assert.ok(field?.localCode && field.options);
+    const option = field.options.find((candidate) => candidate.display === expectedPriority.get(definition.display));
+    assert.ok(option?.priority, `${definition.display} should expose its worksheet priority finding`);
+    const captured = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, posterior), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      body: {
+        patientReference: "Patient/p-posterior",
+        encounterReference: "Encounter/e-posterior",
+        eyes: {
+          OD: { state: "abnormal", customFields: [{ code: field.localCode, value: [option.code] }] },
+          OS: { state: "normal", customFields: [] },
+        },
+      },
+    });
+    assert.equal(captured.status, 200, `${definition.display}: ${JSON.stringify(captured.body)}`);
+    assert.equal(component(fhir.observations.at(-2), `OD_${field.localCode}::${option.code}`)?.valueBoolean, true);
+  }
+  assert.equal(fhir.observations.length, 10);
+
+  for (const definition of posterior) {
+    const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, posterior), {
+      authHeader: AUTH,
+      params: { stableKey: definition.stableKey },
+      query: { patient: "Patient/p-posterior", encounter: "Encounter/e-posterior" },
+    });
+    const rows = (history.body as { rows: Array<{ eye: string; state: string; values: Array<{ value: string[] }>; normalTemplate?: string }> }).rows;
+    assert.deepEqual(rows.map((row) => row.state), ["abnormal", "normal"]);
+    assert.equal(rows[0]!.values[0]!.value.length, 1);
+    assert.equal(rows[1]!.normalTemplate, definition.normalSemantics?.template);
+  }
+});
+
 class MemoryFhir {
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];

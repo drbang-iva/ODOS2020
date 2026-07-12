@@ -32,6 +32,8 @@ interface Props {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
+const ANTERIOR_PREFIX = "ocular-health:anterior:";
+const POSTERIOR_PREFIX = "ocular-health:posterior:";
 
 export function OcularHealthSection({
   definitions,
@@ -110,11 +112,11 @@ export function OcularHealthSection({
     });
   }
 
-  function allNormal() {
-    const result = applyAnteriorAllNormal(definitions, captures);
+  function allNormal(prefix: string, label: string) {
+    const result = applySegmentAllNormal(definitions, captures, prefix);
     setCaptures(result.captures);
     const { filled, skipped } = result;
-    setMessage(`Marked ${filled} untouched ${filled === 1 ? "structure" : "structures"} normal${skipped ? `; skipped ${skipped} already touched` : ""}.`);
+    setMessage(`${label}: marked ${filled} untouched ${filled === 1 ? "structure" : "structures"} normal${skipped ? `; skipped ${skipped} already touched` : ""}.`);
   }
 
   async function save() {
@@ -129,7 +131,7 @@ export function OcularHealthSection({
     setError(null);
     setMessage(null);
     try {
-      if (!dirtyDefinitions.length) throw new Error("Capture at least one anterior structure before saving.");
+      if (!dirtyDefinitions.length) throw new Error("Capture at least one ocular-health structure before saving.");
       for (const definition of dirtyDefinitions) {
         const field = abnormalField(definition);
         const row = captures[definition.stableKey] ?? emptyRow();
@@ -172,7 +174,7 @@ export function OcularHealthSection({
       }
       const status = {
         completed: true,
-        summary: `${dirtyDefinitions.length}/9 anterior structures saved`,
+        summary: `${dirtyDefinitions.length}/${definitions.length} ocular-health structures saved`,
         savedAt: new Date().toISOString(),
         operator: "OSOD UI ocular health",
       };
@@ -189,11 +191,16 @@ export function OcularHealthSection({
     <section className="h-full overflow-y-auto p-6">
       <div className="mx-auto max-w-7xl">
         <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-bg-deep/95 pb-4 backdrop-blur">
-          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior Segment</h2><p className="mt-1 text-sm text-white/45">Choose an explicit state for each examined eye. Nothing defaults to normal.</p></div>
-          <button type="button" onClick={allNormal} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Anterior All Normal</button>
+          <div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Ocular Health</div><h2 className="mt-1 text-xl font-semibold text-white">Anterior &amp; Posterior Segments</h2><p className="mt-1 text-sm text-white/45">Choose an explicit state for each examined eye. Nothing defaults to normal.</p></div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => allNormal(ANTERIOR_PREFIX, "Anterior All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Anterior All Normal</button>
+            <button type="button" onClick={() => allNormal(POSTERIOR_PREFIX, "Fundus All Normal")} disabled={loading} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-300/15 disabled:opacity-40">Fundus All Normal</button>
+          </div>
         </div>
-        {loading && <div className="py-8 text-sm text-white/45">Loading anterior findings…</div>}
-        {!loading && <div className="mt-5 space-y-5">{definitions.map((definition) => {
+        {loading && <div className="py-8 text-sm text-white/45">Loading ocular-health findings…</div>}
+        {!loading && <div className="mt-5 space-y-5">{segmentGroups(definitions).map((group) => <div key={group.label} className="space-y-5">
+          <div className="border-b border-white/10 pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">{group.label}</div>
+          {group.definitions.map((definition) => {
           const field = abnormalField(definition);
           const row = captures[definition.stableKey] ?? emptyRow();
           return (
@@ -215,10 +222,11 @@ export function OcularHealthSection({
               ))}</div>
             </article>
           );
-        })}</div>}
+          })}
+        </div>)}</div>}
         <div className="sticky bottom-0 mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-bg-deep/95 py-4 backdrop-blur">
           <div className="min-h-6 text-sm">{error ? <span className="text-rose-200">{error}</span> : <span className="text-white/55">{message}</span>}</div>
-          <button type="button" onClick={save} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Anterior Segment"}</button>
+          <button type="button" onClick={save} disabled={saving || loading} className="rounded bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-45">{saving ? "Saving…" : "Save Ocular Health"}</button>
         </div>
       </div>
     </section>
@@ -352,19 +360,44 @@ export function applyAnteriorAllNormal(
   definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
   captures: Record<string, Record<Eye, EyeCapture>>,
 ): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
+  return applySegmentAllNormal(definitions, captures, ANTERIOR_PREFIX);
+}
+
+export function applyPosteriorAllNormal(
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  captures: Record<string, Record<Eye, EyeCapture>>,
+): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
+  return applySegmentAllNormal(definitions, captures, POSTERIOR_PREFIX);
+}
+
+function applySegmentAllNormal(
+  definitions: Array<Pick<CustomFindingDefinition, "stableKey">>,
+  captures: Record<string, Record<Eye, EyeCapture>>,
+  prefix: string,
+): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
   let skipped = 0;
-  const next = Object.fromEntries(definitions.map((definition) => {
+  const segmentDefinitions = definitions.filter((definition) => definition.stableKey.startsWith(prefix));
+  const next = { ...captures };
+  for (const definition of segmentDefinitions) {
     const row = captures[definition.stableKey] ?? emptyRow();
     if (touched(row.OD) || touched(row.OS)) {
       skipped += 1;
-      return [definition.stableKey, row];
+      next[definition.stableKey] = row;
+      continue;
     }
-    return [definition.stableKey, {
+    next[definition.stableKey] = {
       OD: { ...row.OD, state: "normal" as const },
       OS: { ...row.OS, state: "normal" as const },
-    }];
-  }));
-  return { captures: next, filled: definitions.length - skipped, skipped };
+    };
+  }
+  return { captures: next, filled: segmentDefinitions.length - skipped, skipped };
+}
+
+function segmentGroups(definitions: CustomFindingDefinition[]) {
+  return [
+    { label: "Anterior Segment", definitions: definitions.filter((definition) => definition.stableKey.startsWith(ANTERIOR_PREFIX)) },
+    { label: "Posterior Segment", definitions: definitions.filter((definition) => definition.stableKey.startsWith(POSTERIOR_PREFIX)) },
+  ].filter((group) => group.definitions.length > 0);
 }
 
 function domId(stableKey: string): string {
