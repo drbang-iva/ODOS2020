@@ -72,6 +72,7 @@ export function App() {
         const destination = defaultHomePath(whoami.roles);
         setRoles(whoami.roles);
         window.history.replaceState({}, "", destination);
+        previousPath.current = destination;
         setPath(destination);
       })
       .catch((error) => active && setRoleError(error instanceof Error ? error.message : "Practice role lookup failed."));
