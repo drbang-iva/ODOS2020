@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
@@ -7,7 +7,7 @@ import { PatientPicker } from "./scenes/PatientPicker";
 import { NewPatient } from "./scenes/NewPatient";
 import { fhir } from "./lib/fhir";
 import { RoleProvider } from "./lib/role-context";
-import { useViewState, type ViewState } from "./lib/view-state";
+import { patientOverviewView, useViewState, type ViewState } from "./lib/view-state";
 import { AuthorizeConsent } from "./smart/authorize-consent";
 import { GrantsManagement } from "./smart/grants-management";
 import { OpticalFrames } from "./scenes/OpticalFrames";
@@ -36,10 +36,18 @@ import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { ClinicOfficeShell } from "./components/OfficeChannel";
 import { LoginScreen } from "./scenes/LoginScreen";
-import { resolveSessionRoles, type PracticeRoleId } from "./lib/practice-roles";
+import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
 
-export function App() {
+export function App({
+  resolveRoles = resolveSessionRoles,
+  login = fhir.login,
+  RouteComponent = RouteSwitch,
+}: {
+  resolveRoles?: () => Promise<WhoAmIResponse>;
+  login?: (email: string, password: string) => Promise<void>;
+  RouteComponent?: ComponentType<RouteSwitchProps>;
+} = {}) {
   if (window.location.pathname === "/oauth2/authorize") {
     return <AuthorizeConsent />;
   }
@@ -54,6 +62,8 @@ export function App() {
   const view = useViewState((state) => state.view);
   const setView = useViewState((state) => state.setView);
   const previousPath = useRef(path);
+  const initialSearch = useRef(window.location.search);
+  const initialClinicView = useRef(clinicViewFromSearch(initialSearch.current, { kind: "picker" }));
 
   useEffect(() => {
     const updatePath = () => {
@@ -69,21 +79,26 @@ export function App() {
   useEffect(() => {
     if (!authed) return;
     let active = true;
-    resolveSessionRoles()
+    resolveRoles()
       .then((whoami) => {
         if (!active) return;
         const destination = defaultHomePath(whoami.roles);
+        const clinicDeepLink = initialClinicView.current.kind !== "picker";
+        const destinationUrl = clinicDeepLink ? `${CLINIC_PATH}${initialSearch.current}` : destination;
+        const renderedPath = clinicDeepLink ? CLINIC_PATH : destination;
         setRoles(whoami.roles);
-        window.history.replaceState({}, "", destination);
-        previousPath.current = destination;
-        setPath(destination);
+        if (clinicDeepLink) setView(initialClinicView.current);
+        window.history.replaceState({}, "", destinationUrl);
+        previousPath.current = renderedPath;
+        setPath(renderedPath);
       })
       .catch((error) => active && setRoleError(error instanceof Error ? error.message : "Practice role lookup failed."));
     return () => { active = false; };
-  }, [authed]);
+  }, [authed, resolveRoles, setView]);
 
   if (!authed) {
-    return <LoginScreen returnTo="/" onAuthenticated={() => setAuthed(true)} />;
+    const returnTo = initialClinicView.current.kind === "picker" ? "/" : `${CLINIC_PATH}${initialSearch.current}`;
+    return <LoginScreen returnTo={returnTo} onAuthenticated={() => setAuthed(true)} login={login} />;
   }
 
   if (roleError) return <main role="alert">Unable to open your practice home: {roleError}</main>;
@@ -91,7 +106,7 @@ export function App() {
 
   return (
     <RoleProvider>
-      <RouteSwitch view={view} path={path} roles={roles} />
+      <RouteComponent view={view} path={path} roles={roles} />
     </RoleProvider>
   );
 }
@@ -112,6 +127,20 @@ export function clinicViewAfterNavigation(previousPath: string, nextPath: string
   return shouldResetClinicView(previousPath, nextPath) ? { kind: "picker" } : view;
 }
 
+export function clinicViewFromSearch(search: string, fallback: ViewState): ViewState {
+  const params = new URLSearchParams(search);
+  const patientId = params.get("patientId")?.trim();
+  if (!patientId) return fallback;
+  const encounterId = params.get("encounterId")?.trim();
+  return encounterId
+    ? { kind: "encounter", patientId, encounterId }
+    : patientOverviewView(patientId);
+}
+
+export function clinicRouteView(search: string, view: ViewState): ViewState {
+  return view.kind === "picker" ? clinicViewFromSearch(search, view) : view;
+}
+
 export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {
   open(path, "_blank", "noopener,noreferrer");
 }
@@ -121,7 +150,19 @@ export function RoleSwitchPill({ target, open }: { target: typeof CLINIC_PATH | 
   return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => openOtherSide(target, open ?? window.open)}>Switch to {label} <span aria-hidden>↗</span></button>;
 }
 
-export function RouteSwitch({ view, path = window.location.pathname, roles = [] }: { view: ViewState; path?: string; roles?: readonly PracticeRoleId[] }) {
+export interface RouteSwitchProps {
+  view: ViewState;
+  path?: string;
+  roles?: readonly PracticeRoleId[];
+  search?: string;
+}
+
+export function RouteSwitch({
+  view,
+  path = window.location.pathname,
+  roles = [],
+  search = typeof window === "undefined" ? "" : window.location.search,
+}: RouteSwitchProps) {
   const showSwitch = hasCrossSideAccess(roles);
   switch (path) {
     case "/audit/log":
@@ -143,12 +184,14 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
       return <FrontDeskCockpit />;
     case DESK_HOME_PATH:
       return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
-    case CLINIC_PATH:
+    case CLINIC_PATH: {
+      const clinicView = clinicRouteView(search, view);
       return (
-        <ClinicOfficeShell location={clinicLocation(view)} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
-          {view.kind === "picker" ? <ClinicHome /> : <ViewRouter view={view} />}
+        <ClinicOfficeShell location={clinicLocation(clinicView)} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
+          {clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />}
         </ClinicOfficeShell>
       );
+    }
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":

@@ -110,7 +110,7 @@ If the setup state says the practice is complete but one or more canonical OSOD 
 npm run repair-practice-roles
 ```
 
-The repair uses the existing human-provided admin email and password from `.env`; it does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and grants the current login's `ProjectMembership` both policies required by this developer-only account. `front-desk` is placed first as the primary routed role, so the complete Desk home including its Office card and Statements/payment screens work. The supplemental `practice-admin` grant lets this administrator seed local Schedule and visit-type configuration. Clinic summary and Schedule load; Clinic-side Office acknowledgement remains clinician-only by design.
+The repair uses the existing human-provided admin email and password from `.env`; it does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and grants the current login's `ProjectMembership` the `front-desk`, `practice-admin`, and `clinician` policies required by this developer-only account. `front-desk` remains first by default, so Desk mutations keep their existing actor role. Run `OSOD_DEV_PRIMARY_ROLE=clinician npm run repair-practice-roles` before a charting session to place `clinician` first for `chart.write`; rerun the command without the override to restore `front-desk` first. The repair preserves unrelated membership grants and removes duplicates of these three developer grants when it orders them.
 
 The repair preserves other membership grants and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting OSOD role tag, an ambiguous membership, or a stale resource version.
 
@@ -132,6 +132,8 @@ Start the two checked-in launch configurations in `.claude/launch.json`:
 | `osod-ui` | `http://localhost:5173` | Browser UI. |
 
 Open `http://localhost:5173`, then sign in through the OSOD login screen with `OSOD_ADMIN_EMAIL` and `OSOD_ADMIN_PASSWORD` from the local `.env`. The default developer email is `admin@osod.local`; no password is stored in this repository.
+
+To open a patient chart directly, use `http://localhost:5173/clinic?patientId=<id>`; add `&encounterId=<id>` to open a specific encounter.
 
 With both dev servers running, seed synthetic screen data:
 

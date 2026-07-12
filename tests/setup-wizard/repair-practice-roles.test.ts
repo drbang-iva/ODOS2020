@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicy, ProjectMembership } from "@medplum/fhirtypes";
 import {
+  devPrimaryRole,
   membershipPolicyReferences,
   repairPracticeRoles,
   type PracticeRoleRepairAdapter,
@@ -70,7 +71,7 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
   }
 }
 
-test("missing role policies are created and front-desk is appended to the dev membership", async () => {
+test("missing role policies are created and all dev roles are granted front-desk first", async () => {
   const adapter = new FakeRepairAdapter({
     membership: membership({ accessPolicy: { reference: "AccessPolicy/keep-legacy" } }),
   });
@@ -78,7 +79,8 @@ test("missing role policies are created and front-desk is appended to the dev me
   const result = await repairPracticeRoles(adapter);
 
   assert.deepEqual(result.createdPolicies, PRACTICE_ROLE_IDS);
-  assert.deepEqual(result.membershipGrants, { "front-desk": "ADDED", "practice-admin": "ADDED" });
+  assert.deepEqual(result.membershipGrants, { "front-desk": "ADDED", "practice-admin": "ADDED", clinician: "ADDED" });
+  assert.equal(result.primaryRole, "front-desk");
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
   assert.equal(adapter.policyWrites, 5);
   assert.equal(adapter.membershipWrites, 1);
@@ -92,6 +94,7 @@ test("missing role policies are created and front-desk is appended to the dev me
     "AccessPolicy/keep-legacy",
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
+    "AccessPolicy/policy-2",
   ]);
 });
 
@@ -106,9 +109,43 @@ test("a second repair is a zero-write idempotent no-op", async () => {
   assert.deepEqual(result.createdPolicies, []);
   assert.deepEqual(result.taggedPolicies, []);
   assert.deepEqual(result.existingPolicies, PRACTICE_ROLE_IDS);
-  assert.deepEqual(result.membershipGrants, { "front-desk": "EXISTING", "practice-admin": "EXISTING" });
+  assert.deepEqual(result.membershipGrants, { "front-desk": "EXISTING", "practice-admin": "EXISTING", clinician: "EXISTING" });
   assert.equal(adapter.policyWrites, policyWrites);
   assert.equal(adapter.membershipWrites, membershipWrites);
+});
+
+test("clinician primary override reorders grants without duplicates and remains idempotent", async () => {
+  const adapter = new FakeRepairAdapter({
+    membership: membership({
+      access: [
+        { policy: { reference: "AccessPolicy/policy-3" } },
+        { policy: { reference: "AccessPolicy/unrelated" } },
+        { policy: { reference: "AccessPolicy/policy-2" } },
+        { policy: { reference: "AccessPolicy/policy-1" } },
+        { policy: { reference: "AccessPolicy/policy-2" } },
+      ],
+    }),
+  });
+
+  const first = await repairPracticeRoles(adapter, "clinician");
+  const writes = adapter.membershipWrites;
+  const second = await repairPracticeRoles(adapter, "clinician");
+
+  assert.equal(first.primaryRole, "clinician");
+  assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
+    "AccessPolicy/policy-2",
+    "AccessPolicy/policy-3",
+    "AccessPolicy/policy-1",
+    "AccessPolicy/unrelated",
+  ]);
+  assert.equal(adapter.membershipWrites, writes);
+  assert.deepEqual(second.membershipGrants, { "front-desk": "EXISTING", "practice-admin": "EXISTING", clinician: "EXISTING" });
+});
+
+test("the primary-role environment value defaults safely and rejects unsupported roles", () => {
+  assert.equal(devPrimaryRole(undefined), "front-desk");
+  assert.equal(devPrimaryRole(" clinician "), "clinician");
+  assert.throws(() => devPrimaryRole("practice-admin"), /must be front-desk or clinician/);
 });
 
 test("one untagged canonical policy is tagged without replacing unrelated metadata", async () => {
@@ -173,16 +210,19 @@ function policy(id: string, roleId: "practice-admin" | "clinician"): AccessPolic
 
 function applyPatch(target: AccessPolicy | ProjectMembership, operations: JsonPatchOperation[]): void {
   for (const operation of operations) {
-    assert.equal(operation.op, "add");
     if (operation.path === "/meta/tag/-") {
+      assert.equal(operation.op, "add");
       assert.ok(target.meta?.tag);
       target.meta.tag.push(operation.value as NonNullable<AccessPolicy["meta"]>["tag"][number]);
     } else if (operation.path === "/access") {
+      assert.ok(operation.op === "add" || operation.op === "replace");
       (target as ProjectMembership).access = operation.value as ProjectMembership["access"];
     } else if (operation.path === "/access/-") {
+      assert.equal(operation.op, "add");
       assert.ok((target as ProjectMembership).access);
       (target as ProjectMembership).access!.push(operation.value as NonNullable<ProjectMembership["access"]>[number]);
     } else if (operation.path === "/access/0") {
+      assert.equal(operation.op, "add");
       assert.ok((target as ProjectMembership).access);
       (target as ProjectMembership).access!.splice(0, 0, operation.value as NonNullable<ProjectMembership["access"]>[number]);
     } else {
