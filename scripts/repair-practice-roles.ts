@@ -155,6 +155,7 @@ export function devMembershipAccessPatch(
 ): JsonPatchOperation[] {
   const roleOrder = [primaryRole, ...DEV_ADMIN_GRANT_ROLES.filter((roleId) => roleId !== primaryRole)];
   const requiredReferences = new Set(DEV_ADMIN_GRANT_ROLES.map((roleId) => policyReferences[roleId]));
+  // A repeated grant resolves to its last access entry before the ordered list removes duplicates.
   const existingByReference = new Map(
     (membership.access ?? []).map((access) => [access.policy.reference, access]),
   );
