@@ -48,7 +48,14 @@ export function PatientOverview({
   const historyRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (initialOverview || !patient.id) return;
+    if (initialOverview) return;
+    if (!patient.id) {
+      setLoadingLedger(false);
+      setError("Patient id is unavailable.");
+      return;
+    }
+    setLoadingLedger(true);
+    setError(undefined);
     const requestId = ++requestIdRef.current;
     api.fetchOverview(patient.id)
       .then((value) => {

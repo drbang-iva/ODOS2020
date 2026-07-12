@@ -163,10 +163,14 @@ test("initial overview loading skips patients without a FHIR id", () => {
     saveNote: async () => fixture().stickyNote!,
     fetchHistory: async () => [],
   };
+  let renderer!: ReactTestRenderer;
   act(() => {
-    create(<PatientOverview patient={{ ...patient, id: undefined }} api={api} />);
+    renderer = create(<PatientOverview patient={{ ...patient, id: undefined }} api={api} />);
   });
   assert.equal(fetchCalls, 0);
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Patient id is unavailable/);
+  assert.doesNotMatch(rendered, /Loading patient overview/);
 });
 
 test("rapid visit-filter requests cannot overwrite the latest result out of order", async () => {
