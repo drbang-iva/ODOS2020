@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   fetchStatements,
+  formatStatementMoney,
   generatePatientStatement,
   renderBalanceForwardStatement,
   runStatements,
   type StatementRow,
 } from "../src/lib/statements";
-import { StatementsContent } from "../src/scenes/claims/Statements";
+import { Statements, StatementsContent, type StatementsServices } from "../src/scenes/claims/Statements";
 
 test("Statements list renders newest-first rows, real balances, print actions, and an honest empty state", () => {
   const rows = [statement("new", "2026-07-12T15:00:00.000Z", 6_000), statement("old", "2026-07-11T15:00:00.000Z", 10_000)];
@@ -31,6 +33,49 @@ test("printable statement renders only a reconciled balance-forward snapshot", (
   assert.match(html, /Balance forward[\s\S]*\$60\.00/);
   assert.match(html, /no mail or email was sent/i);
   assert.throws(() => renderBalanceForwardStatement({ ...statement("bad", "2026-07-12T15:00:00.000Z", 6_000), balanceCents: 6_001 }), /do not reconcile/);
+});
+
+test("shared statement money formatting is used by both screen and print output", () => {
+  assert.equal(formatStatementMoney(6_000), "$60.00");
+  const row = statement("new", "2026-07-12T15:00:00.000Z", 6_000);
+  assert.match(renderToStaticMarkup(<StatementsContent statements={[row]} onPrint={() => undefined} />), /\$60\.00/);
+  assert.match(renderBalanceForwardStatement(row), /\$60\.00/);
+});
+
+test("a blocked or failed print routes its error into the Statements alert", async () => {
+  let renderer: ReactTestRenderer;
+  const services = statementServices({
+    list: async () => [statement("new", "2026-07-12T15:00:00.000Z", 6_000)],
+    print: () => { throw new Error("The printable statement window was blocked."); },
+  });
+  await act(async () => { renderer = create(<Statements services={services} PatientSearchComponent={PatientSearchStub} />); });
+
+  act(() => renderer.root.findAllByType("button").find((button) => button.children.includes("Print"))!.props.onClick());
+  assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /printable statement window was blocked/);
+  act(() => renderer.unmount());
+});
+
+test("patient generation is blocked while a batch run is in flight", async () => {
+  let finishRun!: (result: ReturnType<typeof runResult>) => void;
+  let generateCalls = 0;
+  const pendingRun = new Promise<ReturnType<typeof runResult>>((resolve) => { finishRun = resolve; });
+  const services = statementServices({
+    run: () => pendingRun,
+    generate: async () => {
+      generateCalls += 1;
+      return runResult();
+    },
+  });
+  let renderer: ReactTestRenderer;
+  await act(async () => { renderer = create(<Statements services={services} PatientSearchComponent={PatientSearchStub} />); });
+
+  act(() => renderer.root.findAllByType("button").find((button) => button.children.includes("Run statements"))!.props.onClick());
+  assert.equal(renderer.root.findByType(PatientSearchStub).props.actionLabel, "Running…");
+  act(() => renderer.root.findByType(PatientSearchStub).props.onSelect({ resourceType: "Patient", id: "p1" }));
+  assert.equal(generateCalls, 0);
+
+  await act(async () => { finishRun(runResult()); await pendingRun; });
+  act(() => renderer.unmount());
 });
 
 test("statement API client lists, generates one patient, and runs the batch on the shipped routes", async () => {
@@ -64,4 +109,18 @@ function statement(id: string, generatedAt: string, balanceCents: number): State
 function runResult() {
   const row = statement("new", "2026-07-12T15:00:00.000Z", 6_000);
   return { runReference: "Task/run", generatedAt: row.generatedAt, generatedCount: 1, invalidRejects: 0, skippedZeroBalanceCount: 0, statements: [row], rejects: [] };
+}
+
+function statementServices(overrides: Partial<StatementsServices> = {}): StatementsServices {
+  return {
+    list: async () => [],
+    generate: async () => runResult(),
+    run: async () => runResult(),
+    print: () => undefined,
+    ...overrides,
+  };
+}
+
+function PatientSearchStub(): React.JSX.Element {
+  return <div />;
 }

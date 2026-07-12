@@ -346,7 +346,11 @@ async function runStatements(
         continue;
       }
       if (patientInvoices.length === 0) {
-        skippedZeroBalanceCount += 1;
+        if (options.patientReference) {
+          rejects.push({ patientReference, patientName: patientName(patient), reason: "No issued Invoices are available for this patient." });
+        } else {
+          skippedZeroBalanceCount += 1;
+        }
         continue;
       }
       try {
@@ -365,11 +369,36 @@ async function runStatements(
       generateId: options.generateId,
     });
     const childResponses: BundleEntry[] = [];
-    for (const bundle of transaction.childBundles) {
-      const response = await fhir.executeTransaction(bundle);
-      childResponses.push(...(response.entry ?? []));
+    const createdChildReferences: string[] = [];
+    try {
+      for (const bundle of transaction.childBundles) {
+        const response = await fhir.executeTransaction(bundle);
+        const responseEntries = response.entry ?? [];
+        childResponses.push(...responseEntries);
+        createdChildReferences.push(...responseEntries.flatMap((entry) => {
+          try {
+            return [transactionReference(entry, "Task")];
+          } catch {
+            return [];
+          }
+        }));
+      }
+    } catch (error) {
+      await deleteStatementChildren(fhir, createdChildReferences);
+      throw error;
     }
-    await fhir.executeTransaction(transaction.completionBundle);
+    try {
+      await fhir.executeTransaction(transaction.completionBundle);
+    } catch (error) {
+      let runCompleted = true;
+      try {
+        const runId = transaction.runReference.slice("Task/".length);
+        const runs = await searchAll<Task>(fhir, "Task", { _id: runId });
+        runCompleted = runs.some((task) => task.id === runId && task.status === "completed" && taskCodeIs(task, STATEMENT_RUN_CODE));
+      } catch {}
+      if (!runCompleted) await deleteStatementChildren(fhir, createdChildReferences);
+      throw error;
+    }
     const runReference = transaction.runReference;
     const rows = statements.map((statement, index) => ({
       ...statement,
@@ -391,6 +420,26 @@ async function runStatements(
   } catch (error) {
     if (error instanceof FhirSearchLimitError) return conflict(error.message);
     throw error;
+  }
+}
+
+async function deleteStatementChildren(
+  fhir: AuthenticatedStatementStaff["fhir"],
+  references: readonly string[],
+): Promise<void> {
+  for (let index = 0; index < references.length; index += STATEMENT_TRANSACTION_CHILD_LIMIT) {
+    const batchReferences = references.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT);
+    try {
+      await fhir.executeTransaction({
+        resourceType: "Bundle",
+        type: "transaction",
+        entry: batchReferences.map((reference) => ({
+          request: { method: "DELETE", url: reference },
+        })),
+      });
+    } catch (error) {
+      console.error(`Statement cleanup failed for child Tasks ${batchReferences.join(", ")}: ${messageOf(error)}`);
+    }
   }
 }
 
@@ -466,14 +515,14 @@ function allocationCents(payment: PaymentReconciliation, invoiceReference: strin
     .map((detail) => moneyCents(detail.amount?.value, detail.amount?.currency, `${invoiceReference} payment allocation`)));
 }
 
-function statementTask(snapshot: StatementSnapshot, runFullUrl: string): Task {
+function statementTask(snapshot: StatementSnapshot, runReference: string): Task {
   return {
     resourceType: "Task",
     status: "completed",
     intent: "order",
     code: taskCode(PATIENT_STATEMENT_CODE, "Patient balance-forward statement"),
     for: { reference: snapshot.patientReference, display: snapshot.patientName },
-    partOf: [{ reference: runFullUrl }],
+    partOf: [{ reference: runReference }],
     authoredOn: snapshot.generatedAt,
     executionPeriod: { start: snapshot.generatedAt, end: snapshot.generatedAt },
     input: [
@@ -487,7 +536,7 @@ function statementTask(snapshot: StatementSnapshot, runFullUrl: string): Task {
   };
 }
 
-function rejectTask(reject: StatementRejectRow, generatedAt: string, runFullUrl: string): Task {
+function rejectTask(reject: StatementRejectRow, generatedAt: string, runReference: string): Task {
   return {
     resourceType: "Task",
     status: "failed",
@@ -495,7 +544,7 @@ function rejectTask(reject: StatementRejectRow, generatedAt: string, runFullUrl:
     intent: "order",
     code: taskCode(PATIENT_STATEMENT_CODE, "Patient balance-forward statement"),
     for: { reference: reject.patientReference, display: reject.patientName },
-    partOf: [{ reference: runFullUrl }],
+    partOf: [{ reference: runReference }],
     authoredOn: generatedAt,
     executionPeriod: { start: generatedAt, end: generatedAt },
   };

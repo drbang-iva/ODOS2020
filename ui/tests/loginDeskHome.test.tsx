@@ -3,7 +3,7 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LoginScreen, submitLogin } from "../src/scenes/LoginScreen";
-import { CLINIC_PATH, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
+import { CLINIC_PATH, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import type { DeskSummary } from "../src/lib/desk-summary";
 
 test("login screen renders real email and password fields with no environment credential fallback", () => {
@@ -80,6 +80,10 @@ test("Front Line without a CommsProvider renders one wiring panel and no zero pl
 test("Needs attention renders the exact all-clear state when every target is met", () => {
   const html = renderToStaticMarkup(<DeskHome initialSummary={emptyDeskSummary()} />);
   assert.match(html, /All clear — nothing needs you\./);
+});
+
+test("Desk statement date-time formatting degrades malformed values to an em dash", () => {
+  assert.equal(displayStat("not-a-date", "date-time"), "—");
 });
 
 function emptyDeskSummary(): DeskSummary {

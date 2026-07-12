@@ -4,6 +4,7 @@ import type { Bundle, Invoice, Patient, PaymentReconciliation, Resource, Task } 
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
   buildStatementSnapshot,
+  handleGeneratePatientStatementRequest,
   handleRunStatementsRequest,
   handleStatementListRequest,
   latestStatementRun,
@@ -109,7 +110,9 @@ test("a failed child chunk leaves no completed run visible to either statement r
   const count = STATEMENT_TRANSACTION_CHILD_LIMIT + 1;
   const fixture = fakeFhir({
     patients: Array.from({ length: count }, (_, index) => patient(`p${index}`, `Patient ${index}`)),
-    invoices: Array.from({ length: count }, (_, index) => invoice(`i${index}`, `p${index}`, 1_000)),
+    invoices: Array.from({ length: count }, (_, index) => index < STATEMENT_TRANSACTION_CHILD_LIMIT - 1
+      ? invoice(`i${index}`, `p${index}`, 1_000)
+      : inconsistentInvoice(`i${index}`, `p${index}`)),
     payments: [],
   }, { failTransactionAt: 2 });
   const deps = {
@@ -122,7 +125,74 @@ test("a failed child chunk leaves no completed run visible to either statement r
   assert.deepEqual(latestStatementRun(fixture.storedTasks), { generatedAt: null, invalidRejects: 0 });
   const list = await handleStatementListRequest(deps, { authHeader: "Bearer good" });
   assert.deepEqual(list, { status: 200, body: { items: [] } });
+  assert.equal(fixture.storedTasks.length, 0);
+});
+
+test("a cleanup failure never masks the original child-chunk error", async () => {
+  const count = STATEMENT_TRANSACTION_CHILD_LIMIT + 1;
+  const fixture = fakeFhir({
+    patients: Array.from({ length: count }, (_, index) => patient(`p${index}`, `Patient ${index}`)),
+    invoices: Array.from({ length: count }, (_, index) => invoice(`i${index}`, `p${index}`, 1_000)),
+    payments: [],
+  }, { failTransactionAt: 2, failCleanup: true });
+
+  const cleanupErrors: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...values: unknown[]) => { cleanupErrors.push(values); };
+  try {
+    await assert.rejects(handleRunStatementsRequest({
+      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+      now: () => GENERATED_AT,
+      generateId: sequentialIds(),
+    }, { authHeader: "Bearer good" }), /chunk failed/);
+  } finally {
+    console.error = originalConsoleError;
+  }
   assert.equal(fixture.storedTasks.some((task) => code(task) === STATEMENT_RUN_CODE), false);
+  assert.equal(fixture.storedTasks.length, STATEMENT_TRANSACTION_CHILD_LIMIT);
+  assert.match(String(cleanupErrors[0]?.[0]), /Statement cleanup failed for child Tasks Task\/stored-1/);
+});
+
+test("a failed completion marker cleans children only after confirming no completed run exists", async () => {
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 1_000)],
+    payments: [],
+  }, { failTransactionAt: 2 });
+
+  await assert.rejects(handleRunStatementsRequest(statementDeps(fixture.fhir), { authHeader: "Bearer good" }), /chunk failed/);
+  assert.deepEqual(fixture.storedTasks, []);
+  assert.deepEqual(latestStatementRun(fixture.storedTasks), { generatedAt: null, invalidRejects: 0 });
+});
+
+test("generate-one distinguishes no issued Invoices from a paid-in-full balance", async () => {
+  const noInvoices = fakeFhir({ patients: [patient("p1", "Alex Rivera")], invoices: [], payments: [] });
+  const noInvoiceResult = await handleGeneratePatientStatementRequest(statementDeps(noInvoices.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/p1" },
+  });
+  const noInvoiceRun = noInvoiceResult.body as StatementRunResult;
+  assert.equal(noInvoiceResult.status, 200);
+  assert.equal(noInvoiceRun.generatedCount, 0);
+  assert.equal(noInvoiceRun.skippedZeroBalanceCount, 0);
+  assert.equal(noInvoiceRun.invalidRejects, 1);
+  assert.match(noInvoiceRun.rejects[0].reason, /No issued Invoices/);
+
+  const paid = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [payment("pay-1", "p1", "i1", 10_000)],
+  });
+  const paidResult = await handleGeneratePatientStatementRequest(statementDeps(paid.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/p1" },
+  });
+  const paidRun = paidResult.body as StatementRunResult;
+  assert.equal(paidResult.status, 200);
+  assert.equal(paidRun.generatedCount, 0);
+  assert.equal(paidRun.skippedZeroBalanceCount, 1);
+  assert.equal(paidRun.invalidRejects, 0);
+  assert.deepEqual(paidRun.rejects, []);
 });
 
 test("statement list skips one corrupt Task while returning a valid statement from a completed run", async () => {
@@ -141,7 +211,7 @@ test("statement list skips one corrupt Task while returning a valid statement fr
 
 function fakeFhir(
   input: { patients: Patient[]; invoices: Invoice[]; payments: PaymentReconciliation[] },
-  options: { failTransactionAt?: number } = {},
+  options: { failTransactionAt?: number; failCleanup?: boolean } = {},
 ) {
   const transactions: Bundle[] = [];
   const storedTasks: Task[] = [];
@@ -159,7 +229,16 @@ function fakeFhir(
       transactions.push(structuredClone(bundle));
       if (transactions.length === options.failTransactionAt) throw new Error("chunk failed");
       const entries = bundle.entry ?? [];
+      if (options.failCleanup && entries.some((entry) => entry.request?.method === "DELETE")) {
+        throw new Error("cleanup failed");
+      }
       const locations = entries.map((entry) => {
+        if (entry.request?.method === "DELETE") {
+          const id = entry.request.url.replace("Task/", "");
+          const storedIndex = storedTasks.findIndex((task) => task.id === id);
+          if (storedIndex >= 0) storedTasks.splice(storedIndex, 1);
+          return entry.request.url;
+        }
         const task = structuredClone(entry.resource) as Task;
         const id = task.id ?? `stored-${++storedTaskCount}`;
         if (entry.resource?.resourceType === "Task") storedTasks.push({ ...task, id });
@@ -173,6 +252,14 @@ function fakeFhir(
     },
   };
   return { fhir, transactions, storedTasks };
+}
+
+function statementDeps(fhir: ReturnType<typeof fakeFhir>["fhir"]) {
+  return {
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir }),
+    now: () => GENERATED_AT,
+    generateId: sequentialIds(),
+  };
 }
 
 function patient(id: string, text: string): Patient {

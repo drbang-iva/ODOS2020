@@ -39,6 +39,10 @@ export interface StatementRunResult {
   rejects: StatementRejectRow[];
 }
 
+export function formatStatementMoney(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
 export async function fetchStatements(options: ClaimsApiOptions = {}): Promise<StatementRow[]> {
   const body = await requestJson<{ items?: StatementRow[] }>("/statements", {}, options);
   return body.items ?? [];
@@ -63,9 +67,9 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
   const invoiceRows = statement.invoices.map((invoice) => `<tr>
     <td>${escapeHtml(invoice.invoiceReference.replace("Invoice/", ""))}</td>
     <td>${invoice.date ? escapeHtml(formatDate(invoice.date)) : "—"}</td>
-    <td>${money(invoice.netCents)}</td>
-    <td>${money(invoice.paymentsAppliedCents)}</td>
-    <td>${money(invoice.balanceCents)}</td>
+    <td>${formatStatementMoney(invoice.netCents)}</td>
+    <td>${formatStatementMoney(invoice.paymentsAppliedCents)}</td>
+    <td>${formatStatementMoney(invoice.balanceCents)}</td>
   </tr>`).join("\n");
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Balance-forward statement</title></head>
@@ -87,9 +91,9 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
 <div class="patient"><div><strong>Patient</strong><br>${escapeHtml(statement.patientName)}</div><div><strong>Statement date</strong><br>${escapeHtml(formatDate(statement.generatedAt))}</div></div>
 <table><thead><tr><th>Invoice</th><th>Date</th><th>Charges</th><th>Payments</th><th>Balance</th></tr></thead><tbody>${invoiceRows}</tbody></table>
 <table class="totals"><tbody>
-  <tr><td>Total charges</td><td>${money(statement.totalNetCents)}</td></tr>
-  <tr><td>Payments applied</td><td>−${money(statement.paymentsAppliedCents)}</td></tr>
-  <tr class="balance"><td>Balance forward</td><td>${money(statement.balanceCents)}</td></tr>
+  <tr><td>Total charges</td><td>${formatStatementMoney(statement.totalNetCents)}</td></tr>
+  <tr><td>Payments applied</td><td>−${formatStatementMoney(statement.paymentsAppliedCents)}</td></tr>
+  <tr class="balance"><td>Balance forward</td><td>${formatStatementMoney(statement.balanceCents)}</td></tr>
 </tbody></table>
 <p class="note">This balance is reconciled to the listed Invoice totals and recorded payment allocations as of the statement date.</p>
 </section></body></html>`;
@@ -124,10 +128,6 @@ async function requestJson<T>(path: string, init: RequestInit, options: ClaimsAp
   const body = text ? JSON.parse(text) as T & { error?: string } : {} as T & { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Statement request failed with HTTP ${response.status}.`);
   return body;
-}
-
-function money(cents: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 function formatDate(value: string): string {

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
   fetchStatements,
+  formatStatementMoney,
   generatePatientStatement,
   renderBalanceForwardStatement,
   runStatements,
@@ -11,18 +12,38 @@ import {
 } from "../../lib/statements";
 import { PatientSearch } from "../PatientPicker";
 
-export function Statements() {
+export interface StatementsServices {
+  list(): Promise<StatementRow[]>;
+  generate(patientReference: string): Promise<StatementRunResult>;
+  run(): Promise<StatementRunResult>;
+  print(statement: StatementRow): void;
+}
+
+export function Statements({
+  services: injectedServices,
+  PatientSearchComponent = PatientSearch,
+}: {
+  services?: StatementsServices;
+  PatientSearchComponent?: ComponentType<{ onSelect: (patient: Patient) => void; actionLabel?: string }>;
+} = {}) {
   const [statements, setStatements] = useState<StatementRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [error, setError] = useState<string>();
   const [lastRun, setLastRun] = useState<StatementRunResult>();
   const api = { authorization: fhir.authHeader() };
+  const services = injectedServices ?? {
+    list: () => fetchStatements(api),
+    generate: (patientReference: string) => generatePatientStatement(patientReference, api),
+    run: () => runStatements(api),
+    print: printStatement,
+  };
 
   const reload = async () => {
     setLoading(true);
     setError(undefined);
-    try { setStatements(await fetchStatements(api)); }
+    try { setStatements(await services.list()); }
     catch (cause) { setError(messageOf(cause)); }
     finally { setLoading(false); }
   };
@@ -31,12 +52,14 @@ export function Statements() {
 
   const generateOne = async (patient: Patient) => {
     if (!patient.id) return;
-    await execute(() => generatePatientStatement(`Patient/${patient.id}`, api));
+    await execute(() => services.generate(`Patient/${patient.id}`));
   };
 
-  const runBatch = async () => execute(() => runStatements(api));
+  const runBatch = async () => execute(() => services.run());
 
   const execute = async (operation: () => Promise<StatementRunResult>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError(undefined);
     try {
@@ -44,7 +67,16 @@ export function Statements() {
       setLastRun(result);
       await reload();
     } catch (cause) { setError(messageOf(cause)); }
-    finally { setBusy(false); }
+    finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
+  const printOne = (statement: StatementRow) => {
+    setError(undefined);
+    try { services.print(statement); }
+    catch (cause) { setError(messageOf(cause)); }
   };
 
   return (
@@ -57,9 +89,11 @@ export function Statements() {
       {lastRun && <RunNotice run={lastRun} />}
       <section className="mb-5 rounded-lg border border-white/10 bg-bg-panel/80 p-5">
         <h2 className="font-semibold">Generate one patient</h2><p className="mb-4 mt-1 text-sm text-white/45">Choose a patient to reconcile every issued Invoice and recorded payment allocation into one statement.</p>
-        <PatientSearch actionLabel="Generate statement" onSelect={(patient) => void generateOne(patient)} />
+        <PatientSearchComponent actionLabel={busy ? "Running…" : "Generate statement"} onSelect={(patient) => {
+          if (!busyRef.current) void generateOne(patient);
+        }} />
       </section>
-      {loading ? <div className="grid min-h-52 place-items-center text-sm text-white/50">Loading statements…</div> : <StatementsContent statements={statements} onPrint={printStatement} />}
+      {loading ? <div className="grid min-h-52 place-items-center text-sm text-white/50">Loading statements…</div> : <StatementsContent statements={statements} onPrint={printOne} />}
     </main>
   );
 }
@@ -67,7 +101,7 @@ export function Statements() {
 export function StatementsContent({ statements, onPrint }: { statements: readonly StatementRow[]; onPrint: (statement: StatementRow) => void }) {
   return <section className="overflow-hidden rounded-lg border border-white/10 bg-bg-panel/80">
     <div className="border-b border-white/10 px-4 py-3 text-sm text-white/50">{statements.length === 1 ? "1 generated statement" : `${statements.length} generated statements`} · newest first</div>
-    {statements.length === 0 ? <div className="px-5 py-14 text-center"><p className="font-semibold text-white/65">No statements generated yet.</p><p className="mt-1 text-sm text-white/35">Generate one patient or run the batch. No balance is shown until reconciliation succeeds.</p></div> : <div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left text-sm"><thead className="bg-black/20 text-xs uppercase tracking-wide text-white/40"><tr><th className="px-4 py-3">Generated</th><th className="px-4 py-3">Patient</th><th className="px-4 py-3">Invoices</th><th className="px-4 py-3 text-right">Charges</th><th className="px-4 py-3 text-right">Payments</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-white/10">{statements.map((statement) => <tr key={statement.statementReference} className="text-white/70"><td className="px-4 py-3">{dateTime(statement.generatedAt)}</td><td className="px-4 py-3"><strong className="text-white">{statement.patientName}</strong><div className="text-xs text-white/35">{statement.patientReference}</div></td><td className="px-4 py-3">{statement.invoices.length}</td><td className="px-4 py-3 text-right">{money(statement.totalNetCents)}</td><td className="px-4 py-3 text-right">{money(statement.paymentsAppliedCents)}</td><td className="px-4 py-3 text-right font-bold text-blue-200">{money(statement.balanceCents)}</td><td className="px-4 py-3 text-right"><button type="button" onClick={() => onPrint(statement)} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200">Print</button></td></tr>)}</tbody></table></div>}
+    {statements.length === 0 ? <div className="px-5 py-14 text-center"><p className="font-semibold text-white/65">No statements generated yet.</p><p className="mt-1 text-sm text-white/35">Generate one patient or run the batch. No balance is shown until reconciliation succeeds.</p></div> : <div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left text-sm"><thead className="bg-black/20 text-xs uppercase tracking-wide text-white/40"><tr><th className="px-4 py-3">Generated</th><th className="px-4 py-3">Patient</th><th className="px-4 py-3">Invoices</th><th className="px-4 py-3 text-right">Charges</th><th className="px-4 py-3 text-right">Payments</th><th className="px-4 py-3 text-right">Balance</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-white/10">{statements.map((statement) => <tr key={statement.statementReference} className="text-white/70"><td className="px-4 py-3">{dateTime(statement.generatedAt)}</td><td className="px-4 py-3"><strong className="text-white">{statement.patientName}</strong><div className="text-xs text-white/35">{statement.patientReference}</div></td><td className="px-4 py-3">{statement.invoices.length}</td><td className="px-4 py-3 text-right">{formatStatementMoney(statement.totalNetCents)}</td><td className="px-4 py-3 text-right">{formatStatementMoney(statement.paymentsAppliedCents)}</td><td className="px-4 py-3 text-right font-bold text-blue-200">{formatStatementMoney(statement.balanceCents)}</td><td className="px-4 py-3 text-right"><button type="button" onClick={() => onPrint(statement)} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200">Print</button></td></tr>)}</tbody></table></div>}
   </section>;
 }
 
@@ -88,6 +122,5 @@ function printStatement(statement: StatementRow): void {
   popup.print();
 }
 
-function money(cents: number): string { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100); }
 function dateTime(value: string): string { return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error); }
