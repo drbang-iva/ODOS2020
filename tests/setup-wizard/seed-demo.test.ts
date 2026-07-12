@@ -99,6 +99,8 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
     "Invoice",
     "PaymentReconciliation",
     "Patient",
+    "Organization",
+    "Coverage",
     "Practitioner",
     "PractitionerRole",
     "ChargeItem",
@@ -135,6 +137,21 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
   assert.ok(claim.item?.every((item) => item.extension?.some((extension) =>
     extension.url === "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
   )));
+  assert.ok(claim.insurance?.length);
+  assert.equal(claim.insurance[0]?.sequence, 1);
+  assert.equal(claim.insurance[0]?.focal, true);
+  const coverageReference = claim.insurance[0]?.coverage.reference;
+  assert.ok(coverageReference);
+  const coverage = resourceByReference(adapter, coverageReference);
+  assert.equal(coverage.resourceType, "Coverage");
+  assert.equal(coverage.status, "active");
+  assert.equal(coverage.beneficiary?.reference, `Patient/${insuredPatient.id}`);
+  const payer = resourceWithMarker(adapter, "Organization", "demo-payer");
+  assert.equal(payer.name, "OSOD Demo Insurance");
+  assert.ok(coverage.payor?.some((payor) => payor.reference === `Organization/${payer.id}`));
+  assert.equal(claim.insurer?.reference, `Organization/${payer.id}`);
+  const claimResponse = resourceWithMarker(adapter, "ClaimResponse", "insured-claim-response");
+  assert.equal(claimResponse.insurer?.reference, `Organization/${payer.id}`);
   const insuredInvoice = resourceWithMarker(adapter, "Invoice", "insured-invoice");
   assert.equal(insuredInvoice.lineItem?.length, 2);
   assert.ok(insuredInvoice.lineItem?.every((line) => line.chargeItemReference?.reference?.startsWith("ChargeItem/")));
@@ -148,7 +165,7 @@ test("a second demo seed run is idempotent", async () => {
   const result = await seedDemo(adapter);
 
   assert.deepEqual(result.created, []);
-  assert.equal(result.existing.length, 16);
+  assert.equal(result.existing.length, 18);
   assert.equal(result.statement, "EXISTING");
   assert.equal(result.insuredStatement, "EXISTING");
   assert.equal(adapter.resources.length, resourceCount);

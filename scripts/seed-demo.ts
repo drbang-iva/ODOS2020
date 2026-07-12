@@ -4,8 +4,10 @@ import type {
   ChargeItem,
   Claim,
   ClaimResponse,
+  Coverage,
   HealthcareService,
   Invoice,
+  Organization,
   Patient,
   PaymentReconciliation,
   Practitioner,
@@ -36,7 +38,7 @@ const DEFAULT_MCP_BASE_URL = "http://localhost:3333";
 export const DEMO_SEED_SYSTEM = "https://osod.dev/seed/operator-demo";
 
 type DemoResource = Patient | Practitioner | PractitionerRole | HealthcareService | Schedule | Appointment
-  | ChargeItem | Claim | ClaimResponse | Invoice | PaymentReconciliation;
+  | ChargeItem | Claim | ClaimResponse | Coverage | Invoice | Organization | PaymentReconciliation;
 type DemoResourceType = DemoResource["resourceType"];
 type GeneratedDemoStatement = StatementSnapshot & { statementReference?: string };
 
@@ -177,6 +179,20 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
       postalCode: "27601",
     }],
   }));
+  const demoPayer = await ensure<Organization>("Organization", "demo-payer", () => ({
+    resourceType: "Organization",
+    active: true,
+    identifier: [demoIdentifier("demo-payer")],
+    name: "OSOD Demo Insurance",
+  }));
+  const demoPayerReference = `Organization/${demoPayer.id}`;
+  const coverage = await ensure<Coverage>("Coverage", "insured-coverage", () => ({
+    resourceType: "Coverage",
+    status: "active",
+    identifier: [demoIdentifier("insured-coverage")],
+    beneficiary: { reference: `Patient/${insuredPatient.id}`, display: "TEST-Insured, Demo" },
+    payor: [{ reference: demoPayerReference, display: "OSOD Demo Insurance" }],
+  }));
   const insuredProvider = await ensure<Practitioner>("Practitioner", "insured-provider", () => ({
     resourceType: "Practitioner",
     active: true,
@@ -230,9 +246,10 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     identifier: [demoIdentifier("insured-claim")],
     patient: { reference: insuredPatientReference, display: "TEST-Insured, Demo" },
     created: "2026-07-10",
-    insurer: { reference: "Organization/demo-payer", display: "OSOD Demo Insurance" },
+    insurer: { reference: demoPayerReference, display: "OSOD Demo Insurance" },
     provider: { reference: `Practitioner/${insuredProvider.id}`, display: "Morgan TEST-Optometrist, OD" },
     priority: { text: "normal" },
+    insurance: [{ sequence: 1, focal: true, coverage: { reference: `Coverage/${coverage.id}` } }],
     diagnosis: [
       { sequence: 1, diagnosisCodeableConcept: { coding: [{
         system: `${DEMO_SEED_SYSTEM}/demo-diagnosis`,
@@ -269,7 +286,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     identifier: [demoIdentifier("insured-claim-response")],
     patient: { reference: insuredPatientReference },
     created: "2026-07-11T12:00:00.000Z",
-    insurer: { reference: "Organization/demo-payer", display: "OSOD Demo Insurance" },
+    insurer: { reference: demoPayerReference, display: "OSOD Demo Insurance" },
     request: { reference: claimReference },
     outcome: "complete",
     item: [
