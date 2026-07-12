@@ -1,13 +1,24 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import type { Patient } from "@medplum/fhirtypes";
 import { CockpitBadgeDock } from "./frontdesk/CockpitBadgeDock";
 import { CockpitGuestPanel } from "./frontdesk/CockpitGuestPanel";
 import type { CockpitPanelId } from "../lib/cockpit-shell";
 import { fetchDeskSummary, type DeskStat, type DeskSummary, type DeskTone } from "../lib/desk-summary";
+import { fetchOfficeMessages, sendOfficeMessage, type OfficeMessage } from "../lib/office-channel";
+import { OfficePill } from "../components/OfficeChannel";
+import { PatientSearch } from "./PatientPicker";
 
 export const DESK_LABEL = "Desk";
 export const DESK_HOME_PATH = "/desk";
 export const CLINIC_PATH = "/clinic";
 export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v1";
+
+export interface DeskOfficeApi {
+  list: typeof fetchOfficeMessages;
+  send: typeof sendOfficeMessage;
+}
+
+const defaultDeskOfficeApi: DeskOfficeApi = { list: fetchOfficeMessages, send: sendOfficeMessage };
 
 export const DESK_CARDS = [
   { id: "schedule", title: "Today's schedule", href: "/frontdesk", span: "wide" },
@@ -75,7 +86,7 @@ const SECTIONS = [
   ] },
 ] as const;
 
-export function DeskHome({ initialSummary, switchPill }: { initialSummary?: DeskSummary; switchPill?: ReactNode } = {}) {
+export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, initialOfficeOpen = false, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; initialOfficeOpen?: boolean; officeApi?: DeskOfficeApi } = {}) {
   const [sectionsOpen, setSectionsOpen] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
@@ -83,6 +94,18 @@ export function DeskHome({ initialSummary, switchPill }: { initialSummary?: Desk
   const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
   const [summary, setSummary] = useState<DeskSummary | undefined>(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
+  const [officeOpen, setOfficeOpen] = useState(initialOfficeOpen);
+  const [sentMessages, setSentMessages] = useState(initialOfficeMessages ?? []);
+  const [officeError, setOfficeError] = useState<string>();
+  const [messageText, setMessageText] = useState("");
+  const [urgent, setUrgent] = useState(false);
+  const [pinnedPatient, setPinnedPatient] = useState<Patient>();
+  const [sending, setSending] = useState(false);
+
+  const refreshSent = useCallback(async () => {
+    try { setSentMessages(await officeApi.list("sent", "all")); setOfficeError(undefined); }
+    catch (reason) { setOfficeError(reason instanceof Error ? reason.message : "Office channel unavailable."); }
+  }, [officeApi]);
 
   useEffect(() => { window.localStorage.setItem(DESK_CARD_STORAGE_KEY, JSON.stringify(cardIds)); }, [cardIds]);
   useEffect(() => {
@@ -91,6 +114,12 @@ export function DeskHome({ initialSummary, switchPill }: { initialSummary?: Desk
     fetchDeskSummary().then((value) => active && setSummary(value)).catch((error) => active && setSummaryError(error instanceof Error ? error.message : "Desk summary unavailable."));
     return () => { active = false; };
   }, [initialSummary]);
+  useEffect(() => {
+    if (initialOfficeMessages) return;
+    void refreshSent();
+    const handle = window.setInterval(() => void refreshSent(), 10_000);
+    return () => window.clearInterval(handle);
+  }, [initialOfficeMessages, refreshSent]);
   useEffect(() => {
     if (!sectionsOpen) return;
     const close = (event: KeyboardEvent) => event.key === "Escape" && setSectionsOpen(false);
@@ -101,16 +130,58 @@ export function DeskHome({ initialSummary, switchPill }: { initialSummary?: Desk
   const hiddenCards = DESK_CARDS.filter((card) => !cardIds.includes(card.id));
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
 
+  async function submitOfficeMessage(event: FormEvent) {
+    event.preventDefault();
+    if (!messageText.trim()) return;
+    setSending(true);
+    try {
+      const created = await officeApi.send({
+        recipientRole: "clinician",
+        text: messageText,
+        urgent,
+        ...(pinnedPatient?.id ? { patientReference: `Patient/${pinnedPatient.id}` } : {}),
+      });
+      setSentMessages((current) => [created, ...current]);
+      setMessageText("");
+      setUrgent(false);
+      setPinnedPatient(undefined);
+      setOfficeError(undefined);
+    } catch (reason) { setOfficeError(reason instanceof Error ? reason.message : "Office message could not be sent."); }
+    finally { setSending(false); }
+  }
+
   return (
     <main className="odos-desk">
       <div className="odos-ambient" aria-hidden="true" />
       <header className="odos-desk-topbar">
         <a className="odos-mark" href={DESK_HOME_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
         <span className="odos-location">Practice home</span><div className="odos-topbar-spacer" />
+        <OfficePill count={0} open={officeOpen} onClick={() => setOfficeOpen((value) => !value)} />
         <button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button>
         <button className="odos-pill" type="button" onClick={() => setSectionsOpen(true)}>Sections</button>
         {switchPill === undefined ? <a className="odos-pill odos-clinic-pill" href={CLINIC_PATH} target="_blank" rel="noopener noreferrer">Clinic <span aria-hidden>↗</span></a> : switchPill}
       </header>
+
+      {officeOpen && <aside className="odos-office-panel odos-office-compose-panel" aria-label="Office composer">
+        <div className="odos-office-panel-head"><div><strong>Office</strong><span>Internal staff → clinician</span></div><button type="button" onClick={() => setOfficeOpen(false)}>×</button></div>
+        <form onSubmit={submitOfficeMessage}>
+          <label>Recipient<select value="clinician" disabled><option value="clinician">Clinician role</option></select></label>
+          <label>Message<textarea aria-label="Office message" value={messageText} maxLength={2000} onChange={(event) => setMessageText(event.target.value)} /></label>
+          <label className="odos-office-urgent"><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> Urgent — show amber Clinic banner</label>
+          <details><summary>{pinnedPatient ? `📌 ${displayPatientName(pinnedPatient)}` : "📌 Pin to a patient (optional)"}</summary><PatientSearch actionLabel="Pin" onSelect={setPinnedPatient} /></details>
+          {pinnedPatient && <button type="button" className="odos-office-clear-pin" onClick={() => setPinnedPatient(undefined)}>Remove patient pin</button>}
+          <button type="submit" disabled={sending || !messageText.trim()}>{sending ? "Sending…" : "Send to Office"}</button>
+        </form>
+        {officeError && <p className="odos-office-error" role="alert">{officeError}</p>}
+        <section className="odos-office-sent" aria-label="Sent office messages"><h2>Sent</h2>
+          {sentMessages.length === 0 && !officeError && <p className="odos-office-empty">No sent office messages.</p>}
+          {sentMessages.map((message) => { const seen = message.acknowledgements[0]; return <article key={message.id} className={message.urgent ? "is-urgent" : ""}>
+            <div><strong>To {message.recipient.display}</strong><time>{officeDateTime(message.sentAt)}</time></div><p>{message.text}</p>
+            {message.patient && <span className="odos-office-pin">📌 {message.patient.display}</span>}
+            <small>{seen ? `Seen ✓ by ${seen.display} · ${officeDateTime(seen.at)}` : "Sent · awaiting acknowledgement"}</small>
+          </article>; })}
+        </section>
+      </aside>}
 
       <section className="odos-desk-body">
         <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span></div>
@@ -159,6 +230,13 @@ export function DeskHome({ initialSummary, switchPill }: { initialSummary?: Desk
     </main>
   );
 }
+
+function displayPatientName(patient: Patient): string {
+  const name = patient.name?.find((candidate) => candidate.use === "usual") ?? patient.name?.[0];
+  return [name?.given?.join(" "), name?.family].filter(Boolean).join(" ") || `Patient/${patient.id}`;
+}
+
+function officeDateTime(value: string): string { return new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
 
 function PracticePulse({ summary, error }: { summary?: DeskSummary; error?: string }) {
   if (error) return <p className="odos-practice-pulse odos-pulse-off">Live practice pulse unavailable — {error}</p>;

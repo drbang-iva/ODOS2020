@@ -2,13 +2,16 @@ import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { patientOverviewView, useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
+import { OfficeInboxPanel, OfficePill, PinnedOfficeNote, UrgentOfficeBanner, useOfficeInbox, type OfficeInboxApi } from "../components/OfficeChannel";
+import type { OfficeMessage } from "../lib/office-channel";
 
 export const CLINIC_PATIENTS_PATH = "/clinic/patients";
 
-export function ClinicHome({ initialSummary, switchPill }: { initialSummary?: ClinicSummary; switchPill?: ReactNode } = {}) {
+export function ClinicHome({ initialSummary, switchPill, initialOfficeMessages, officeApi }: { initialSummary?: ClinicSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; officeApi?: OfficeInboxApi } = {}) {
   const setView = useViewState((state) => state.setView);
   const [summary, setSummary] = useState(initialSummary);
   const [error, setError] = useState<string>();
+  const office = useOfficeInbox({ initialMessages: initialOfficeMessages, pollMs: 15_000, api: officeApi });
 
   useEffect(() => {
     if (initialSummary) return;
@@ -29,9 +32,12 @@ export function ClinicHome({ initialSummary, switchPill }: { initialSummary?: Cl
         <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
         <span className="odos-location">Clinic home</span>
         <span className="odos-topbar-spacer" />
+        <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
         <a className="odos-pill" href={CLINIC_PATIENTS_PATH} onClick={navigateWithinApp}>Sections</a>
         {switchPill}
       </header>
+      <UrgentOfficeBanner message={office.unread.find((message) => message.urgent)} onAcknowledge={office.acknowledge} />
+      {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
 
       <section className="odos-clinic-body">
         <div className="odos-clinic-greeting">
@@ -62,6 +68,7 @@ export function ClinicHome({ initialSummary, switchPill }: { initialSummary?: Cl
                     {row.arrivedLateMinutes !== undefined && row.arrivedLateMinutes > 0 && <span className="odos-clinic-late">arrived {row.arrivedLateMinutes}m late</span>}
                     {row.waitingMinutes !== undefined && <span className="odos-clinic-wait">waiting {row.waitingMinutes}m</span>}
                     {row.timeInOfficeMinutes !== undefined && <span className="odos-clinic-wait">in office {row.timeInOfficeMinutes}m</span>}
+                    <PinnedOfficeNote messages={office.unread} patientId={row.patientId} />
                   </span>
                   <span className="odos-clinic-glyphs">{row.flags.unsigned && <span title="Chart not signed">✎</span>}</span>
                 </button>

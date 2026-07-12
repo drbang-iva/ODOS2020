@@ -160,6 +160,13 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
   },
 ];
 
+const OFFICE_CHANNEL_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "Practitioner", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PractitionerRole", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Communication", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "Provenance", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+];
+
 const CLINICAL_WRITE_CONSTRAINTS: WriteConstraintDeclaration[] = [
   {
     description:
@@ -310,6 +317,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         interactions: ["read", "vread"],
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
+      ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],
   },
   "front-desk": {
@@ -334,6 +342,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
       ...SCHEDULING_RESOURCE_RULES,
       ...DISPENSARY_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
+      ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],
   },
   auditor: {
