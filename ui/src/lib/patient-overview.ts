@@ -122,6 +122,7 @@ function isPatientOverviewPayload(body: unknown): body is PatientOverviewPayload
     Array.isArray(body.insurance) &&
     isRecord(body.snapshot) &&
     Array.isArray(body.visits) &&
+    body.visits.every((visit) => isRecord(visit) && Array.isArray(visit.diagnoses)) &&
     Array.isArray(body.diagnosisChoices);
 }
 

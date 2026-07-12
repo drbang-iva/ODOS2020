@@ -48,9 +48,9 @@ export function PatientOverview({
   const historyRequestIdRef = useRef(0);
 
   useEffect(() => {
-    if (initialOverview) return;
+    if (initialOverview || !patient.id) return;
     const requestId = ++requestIdRef.current;
-    api.fetchOverview(patient.id ?? "")
+    api.fetchOverview(patient.id)
       .then((value) => {
         if (requestId !== requestIdRef.current) return;
         setOverview(value);
@@ -118,7 +118,7 @@ export function PatientOverview({
       const entries = await api.fetchHistory(patient.id);
       if (requestId === historyRequestIdRef.current) setHistory(entries);
     } catch (reason) {
-      setError(messageOf(reason));
+      if (requestId === historyRequestIdRef.current) setError(messageOf(reason));
     }
   }
 

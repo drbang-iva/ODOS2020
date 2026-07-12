@@ -146,6 +146,27 @@ test("successful overview responses must contain the expected payload shape", as
     fetchPatientOverview("patient-1", {}, fetchImpl as typeof fetch),
     /Patient overview request returned an invalid response/,
   );
+
+  const malformed = fixture() as unknown as { visits: unknown[] };
+  malformed.visits = [{}];
+  const malformedFetch = async () => new Response(JSON.stringify(malformed), { status: 200, headers: { "Content-Type": "application/json" } });
+  await assert.rejects(
+    fetchPatientOverview("patient-1", {}, malformedFetch as typeof fetch),
+    /Patient overview request returned an invalid response/,
+  );
+});
+
+test("initial overview loading skips patients without a FHIR id", () => {
+  let fetchCalls = 0;
+  const api = {
+    fetchOverview: async () => { fetchCalls += 1; return fixture(); },
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  act(() => {
+    create(<PatientOverview patient={{ ...patient, id: undefined }} api={api} />);
+  });
+  assert.equal(fetchCalls, 0);
 });
 
 test("rapid visit-filter requests cannot overwrite the latest result out of order", async () => {
@@ -232,6 +253,39 @@ test("filter and history responses started before a sticky save cannot restore s
   const rendered = JSON.stringify(renderer.toJSON());
   assert.match(rendered, /Saved after requests began/);
   assert.doesNotMatch(rendered, /Stale server note|Stale history note|Sticky note history/);
+});
+
+test("a history failure invalidated by sticky save does not surface a stale error", async () => {
+  let rejectHistory!: (reason: Error) => void;
+  const historyPromise = new Promise<Array<{ versionId: string; text: string }>>((_resolve, reject) => { rejectHistory = reject; });
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async (_patientId: string, text: string) => ({ id: "sticky-1", text }),
+    fetchHistory: async () => historyPromise,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
+  assert.ok(historyButton);
+  assert.ok(editButton);
+  let historyRequest!: Promise<void>;
+  await act(async () => {
+    historyRequest = historyButton.props.onClick();
+    await Promise.resolve();
+  });
+  act(() => editButton.props.onClick());
+  act(() => renderer.root.findByType("textarea").props.onChange({ target: { value: "Saved note" } }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+  await act(async () => {
+    rejectHistory(new Error("stale history failure"));
+    await historyRequest;
+  });
+  assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
 });
 
 const patient: Patient = {
