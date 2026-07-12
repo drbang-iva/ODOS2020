@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "osod-mcp",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "--env-file=../.env", "src/index.ts"],
+      "cwd": "mcp",
+      "port": 3333
+    },
+    {
+      "name": "osod-ui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "ui",
+      "port": 5173
+    }
+  ]
+}
