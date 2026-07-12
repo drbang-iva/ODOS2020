@@ -78,8 +78,11 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
       existing.push(resourceType);
       return matches[0];
     }
+    // PaymentReconciliation carries its demo marker in paymentIdentifier, which has no
+    // server-side search parameter in R4/Medplum; the findByIdentifier pre-check above already
+    // guards idempotency for this single-threaded seed, so skip the If-None-Exist guard here.
     const condition = resourceType === "PaymentReconciliation"
-      ? `payment-identifier=${DEMO_SEED_SYSTEM}|${marker}`
+      ? undefined
       : `identifier=${DEMO_SEED_SYSTEM}|${marker}`;
     const resource = await adapter.create(build(), condition);
     if (!resource.id) throw new Error(`${resourceType} demo seed create returned no id.`);
