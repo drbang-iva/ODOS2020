@@ -26,9 +26,17 @@ import {
 } from "../payments/payment-credit-service.js";
 import {
   latestStatementRun,
+  StatementValidationError,
   STATEMENT_RUN_CODE,
   STATEMENT_TASK_CODE_SYSTEM,
 } from "../statements/statements.js";
+
+const OPTICAL_TASKS_UNAVAILABLE = "Open optical Tasks exceed the Desk card read limit.";
+const CLAIM_TASKS_UNAVAILABLE = "Claim worklist Tasks exceed the Desk card read limit.";
+const ERA_TASKS_UNAVAILABLE = "Open ERA Tasks exceed the Desk card read limit.";
+const CLAIM_RESOURCES_UNAVAILABLE = "Claim records exceed the Desk card read limit.";
+const PAYMENT_RESOURCES_UNAVAILABLE = "Payment records exceed the Desk card read limit.";
+const INVOICE_RESOURCES_UNAVAILABLE = "Invoice records exceed the Desk card read limit.";
 
 export type DeskTone = "ok" | "warn" | "alert" | "info" | "off";
 
@@ -90,10 +98,10 @@ export interface DeskSummary {
       lastTransmission: DeskStat<string | null>;
     };
     payments: {
-      unappliedCount: DeskStat<number>;
-      unappliedCents: DeskStat<number>;
-      patientCreditsOpen: DeskStat<number>;
-      patientOpenBalanceCents: DeskStat<number>;
+      unappliedCount: DeskStat<number | null>;
+      unappliedCents: DeskStat<number | null>;
+      patientCreditsOpen: DeskStat<number | null>;
+      patientOpenBalanceCents: DeskStat<number | null>;
       terminalMode: DeskStat<string>;
     };
     remits: {
@@ -130,6 +138,12 @@ export interface DeskSummaryInput {
     optical?: boolean;
     claimRejected?: boolean;
     era?: boolean;
+  };
+  resourceAvailability?: {
+    claims?: boolean;
+    claimResponses?: boolean;
+    paymentReconciliations?: boolean;
+    invoices?: boolean;
   };
 }
 
@@ -170,19 +184,19 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const oldestOpticalDays = oldestAgeDays(opticalTasks, nowMs);
   const opticalTasksAvailable = input.taskAvailability?.optical !== false;
   const pendingRx = {
-    spectacle: opticalTasksAvailable ? stat(opticalTasks.length, "info") : unavailable("Open optical Tasks exceed the Desk card read limit."),
+    spectacle: opticalTasksAvailable ? stat(opticalTasks.length, "info") : unavailable(OPTICAL_TASKS_UNAVAILABLE),
     contactLens: unavailable("Contact-lens orders do not have a shipped order contract yet."),
     labOrdersUnsent: unavailable("Optical orders do not persist a lab-transmission state yet."),
     oldestWaiting: opticalTasksAvailable
       ? stat(oldestOpticalDays, oldestOpticalDays !== null && oldestOpticalDays > 1 ? "warn" : oldestOpticalDays === null ? "off" : "ok",
         oldestOpticalDays === null && opticalTasks.length > 0 ? "Open optical orders do not carry a created timestamp." : undefined)
-      : unavailable("Open optical Tasks exceed the Desk card read limit."),
+      : unavailable(OPTICAL_TASKS_UNAVAILABLE),
   };
   const productPickup = {
-    openOrders: opticalTasksAvailable ? stat(opticalTasks.length, "info") : unavailable("Open optical Tasks exceed the Desk card read limit."),
-    atLab: opticalTasksAvailable ? stat(atLab, "info") : unavailable("Open optical Tasks exceed the Desk card read limit."),
+    openOrders: opticalTasksAvailable ? stat(opticalTasks.length, "info") : unavailable(OPTICAL_TASKS_UNAVAILABLE),
+    atLab: opticalTasksAvailable ? stat(atLab, "info") : unavailable(OPTICAL_TASKS_UNAVAILABLE),
     readyNotNotified: unavailable("The optical status vocabulary has no received-but-not-notified state."),
-    awaitingPickup: opticalTasksAvailable ? stat(awaitingPickup, "info") : unavailable("Open optical Tasks exceed the Desk card read limit."),
+    awaitingPickup: opticalTasksAvailable ? stat(awaitingPickup, "info") : unavailable(OPTICAL_TASKS_UNAVAILABLE),
   };
 
   const claimRows = projectClaimSearchResults({
@@ -201,16 +215,22 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     .filter((created): created is string => Boolean(created))
     .sort()
     .at(-1) ?? null;
-  const lastTransmissionTone = lastTransmission ? previousBusinessDayTone(lastTransmission, input.now) : "off";
+  const claimResourcesAvailable = input.resourceAvailability?.claims !== false && input.resourceAvailability?.claimResponses !== false;
+  const lastTransmissionTone = claimResourcesAvailable && lastTransmission ? previousBusinessDayTone(lastTransmission, input.now) : "off";
   const claimTasksAvailable = input.taskAvailability?.claimRejected !== false && input.taskAvailability?.era !== false;
+  const claimsAvailable = claimResourcesAvailable && claimTasksAvailable;
   const claims = {
-    failed: claimTasksAvailable ? stat(failedRows.length, failedRows.length > 0 ? "alert" : "ok") : unavailable("Claim worklist Tasks exceed the Desk card read limit."),
-    inProcess: claimTasksAvailable ? stat(inProcessRows.length, "info") : unavailable("Claim worklist Tasks exceed the Desk card read limit."),
+    failed: claimsAvailable ? stat(failedRows.length, failedRows.length > 0 ? "alert" : "ok") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
+    inProcess: claimsAvailable ? stat(inProcessRows.length, "info") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
     paperQueue: unavailable("Claims do not persist an electronic-versus-paper queue marker yet."),
-    heldCents: claimTasksAvailable ? stat(heldCents, failedRows.length > 0 ? "alert" : "ok") : unavailable("Claim worklist Tasks exceed the Desk card read limit."),
-    lastTransmission: stat(lastTransmission, lastTransmissionTone, lastTransmission ? undefined : "No successful claim transmission is persisted yet."),
+    heldCents: claimsAvailable ? stat(heldCents, failedRows.length > 0 ? "alert" : "ok") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
+    lastTransmission: claimResourcesAvailable
+      ? stat(lastTransmission, lastTransmissionTone, lastTransmission ? undefined : "No successful claim transmission is persisted yet.")
+      : unavailable(CLAIM_RESOURCES_UNAVAILABLE),
   };
 
+  const paymentReconciliationsAvailable = input.resourceAvailability?.paymentReconciliations !== false;
+  const invoicesAvailable = input.resourceAvailability?.invoices !== false;
   const activePayments = input.paymentReconciliations.filter((payment) => payment.status === "active");
   const credits = filterUnappliedCredits(activePayments);
   const unappliedCents = credits.reduce((total, credit) => total + unappliedPaymentCents(credit.paymentReconciliation), 0);
@@ -219,10 +239,10 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const openBalanceCents = openInvoices.reduce((total, invoice) => total + moneyCents(invoice.totalNet?.value), 0);
   const terminalTone: DeskTone = input.terminalMode === "TEST MODE" ? "warn" : input.terminalMode === "NOT CONFIGURED" ? "off" : "ok";
   const payments = {
-    unappliedCount: stat(credits.length, credits.length > 0 ? "warn" : "ok"),
-    unappliedCents: stat(unappliedCents, credits.length > 0 ? "warn" : "ok"),
-    patientCreditsOpen: stat(creditPatients, creditPatients > 0 ? "warn" : "ok"),
-    patientOpenBalanceCents: stat(openBalanceCents, "info"),
+    unappliedCount: paymentReconciliationsAvailable ? stat(credits.length, credits.length > 0 ? "warn" : "ok") : unavailable(PAYMENT_RESOURCES_UNAVAILABLE),
+    unappliedCents: paymentReconciliationsAvailable ? stat(unappliedCents, credits.length > 0 ? "warn" : "ok") : unavailable(PAYMENT_RESOURCES_UNAVAILABLE),
+    patientCreditsOpen: paymentReconciliationsAvailable ? stat(creditPatients, creditPatients > 0 ? "warn" : "ok") : unavailable(PAYMENT_RESOURCES_UNAVAILABLE),
+    patientOpenBalanceCents: invoicesAvailable ? stat(openBalanceCents, "info") : unavailable(INVOICE_RESOURCES_UNAVAILABLE),
     terminalMode: stat(input.terminalMode, terminalTone),
   };
 
@@ -230,13 +250,13 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const unpostedCents = openEraTasks.reduce((total, task) => total + taskInputInteger(task, "shortfall-cents"), 0);
   const eraTasksAvailable = input.taskAvailability?.era !== false;
   const remits = {
-    waitingToPost: eraTasksAvailable ? stat(openEraTasks.length, openEraTasks.length > 0 ? "warn" : "ok") : unavailable("Open ERA Tasks exceed the Desk card read limit."),
-    unpostedCents: eraTasksAvailable ? stat(unpostedCents, openEraTasks.length > 0 ? "warn" : "ok") : unavailable("Open ERA Tasks exceed the Desk card read limit."),
+    waitingToPost: eraTasksAvailable ? stat(openEraTasks.length, openEraTasks.length > 0 ? "warn" : "ok") : unavailable(ERA_TASKS_UNAVAILABLE),
+    unpostedCents: eraTasksAvailable ? stat(unpostedCents, openEraTasks.length > 0 ? "warn" : "ok") : unavailable(ERA_TASKS_UNAVAILABLE),
   };
   const statementRun = safeLatestStatementRun(input.tasks);
 
   const attention: DeskAttentionRow[] = [
-    ...(claimTasksAvailable && failedRows.length > 0 ? [{ tone: "alert" as const, label: `${failedRows.length} failed claim${failedRows.length === 1 ? "" : "s"}`, detail: `${money(heldCents)} held`, href: "/billing/claims/worklist" }] : []),
+    ...(claimsAvailable && failedRows.length > 0 ? [{ tone: "alert" as const, label: `${failedRows.length} failed claim${failedRows.length === 1 ? "" : "s"}`, detail: `${money(heldCents)} held`, href: "/billing/claims/worklist" }] : []),
     ...(webAppointments.length > 0 ? [{ tone: "warn" as const, label: `${webAppointments.length} web appointment${webAppointments.length === 1 ? "" : "s"} waiting`, detail: sinceLabel(oldestAppointmentTime(webAppointments), nowMs), href: "/frontdesk" }] : []),
     ...(eraTasksAvailable && openEraTasks.length > 0 ? [{ tone: "warn" as const, label: `${openEraTasks.length} remit item${openEraTasks.length === 1 ? "" : "s"} waiting`, detail: `${money(unpostedCents)} unposted`, href: "/billing/claims/remittances" }] : []),
   ];
@@ -274,7 +294,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     pulse: {
       itemsNeedingYou: attention.length,
       everythingElseAtTarget: attention.length === 0,
-      lastClaimTransmission: lastTransmission,
+      lastClaimTransmission: claimResourcesAvailable ? lastTransmission : null,
       lastClaimTransmissionTone: lastTransmissionTone,
     },
   };
@@ -292,10 +312,10 @@ export async function loadDeskSummary(
     claimRejectedTaskRead,
     eraTaskRead,
     statementTasks,
-    claims,
-    claimResponses,
-    paymentReconciliations,
-    invoices,
+    claimRead,
+    claimResponseRead,
+    paymentReconciliationRead,
+    invoiceRead,
   ] = await Promise.all([
     searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
     searchScopedTasks(fhir, {
@@ -320,11 +340,11 @@ export async function loadDeskSummary(
       code: `${STATEMENT_TASK_CODE_SYSTEM}|${STATEMENT_RUN_CODE}`,
       _count: "1",
       _sort: "-authored-on",
-    }),
-    searchOnePage<Claim>(fhir, "Claim", { _count: "1000", _sort: "-created" }),
-    searchOnePage<ClaimResponse>(fhir, "ClaimResponse", { _count: "1000", _sort: "-created" }),
-    searchOnePage<PaymentReconciliation>(fhir, "PaymentReconciliation", { _count: "1000", _sort: "-_lastUpdated" }),
-    searchOnePage<Invoice>(fhir, "Invoice", { _count: "1000", _sort: "-_lastUpdated" }),
+    }).then((page) => page.resources),
+    searchAvailablePage<Claim>(fhir, "Claim", { _count: "1000", _sort: "-created" }),
+    searchAvailablePage<ClaimResponse>(fhir, "ClaimResponse", { _count: "1000", _sort: "-created" }),
+    searchAvailablePage<PaymentReconciliation>(fhir, "PaymentReconciliation", { _count: "1000", _sort: "-_lastUpdated" }),
+    searchAvailablePage<Invoice>(fhir, "Invoice", { _count: "1000", _sort: "-_lastUpdated" }),
   ]);
   const patientIds = unique(appointments.flatMap((appointment) => appointment.participant ?? [])
     .flatMap((participant) => participant.actor?.reference?.match(/^Patient\/([^/]+)$/)?.[1] ?? []));
@@ -335,10 +355,10 @@ export async function loadDeskSummary(
     appointments,
     patients,
     tasks: [...opticalTaskRead.tasks, ...claimRejectedTaskRead.tasks, ...eraTaskRead.tasks, ...statementTasks],
-    claims,
-    claimResponses,
-    paymentReconciliations,
-    invoices,
+    claims: claimRead.resources,
+    claimResponses: claimResponseRead.resources,
+    paymentReconciliations: paymentReconciliationRead.resources,
+    invoices: invoiceRead.resources,
     now,
     timeZone: options.timeZone,
     terminalMode: options.terminalMode,
@@ -347,6 +367,12 @@ export async function loadDeskSummary(
       claimRejected: claimRejectedTaskRead.complete,
       era: eraTaskRead.complete,
     },
+    resourceAvailability: {
+      claims: claimRead.complete,
+      claimResponses: claimResponseRead.complete,
+      paymentReconciliations: paymentReconciliationRead.complete,
+      invoices: invoiceRead.complete,
+    },
   });
 }
 
@@ -354,10 +380,19 @@ async function searchScopedTasks(
   fhir: Pick<MedplumClient, "search">,
   params: Record<string, string>,
 ): Promise<{ tasks: Task[]; complete: boolean }> {
+  const result = await searchAvailablePage<Task>(fhir, "Task", params);
+  return { tasks: result.resources, complete: result.complete };
+}
+
+async function searchAvailablePage<T extends Resource>(
+  fhir: Pick<MedplumClient, "search">,
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<{ resources: T[]; complete: boolean }> {
   try {
-    return { tasks: await searchOnePage<Task>(fhir, "Task", params), complete: true };
+    return { resources: await searchOnePage<T>(fhir, resourceType, params), complete: true };
   } catch (error) {
-    if (error instanceof DeskSummaryPageError) return { tasks: [], complete: false };
+    if (error instanceof DeskSummaryPageError) return { resources: [], complete: false };
     throw error;
   }
 }
@@ -367,11 +402,11 @@ async function searchOnePage<T extends Resource>(
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
-  const bundle = await fhir.search<T>(resourceType, params);
-  if (bundle.link?.some((link) => link.relation === "next")) {
+  const page = await searchFirstPage<T>(fhir, resourceType, params);
+  if (page.hasNext) {
     throw new DeskSummaryPageError(`${resourceType} desk-summary query exceeded one FHIR page; refusing partial counts.`);
   }
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  return page.resources;
 }
 
 class DeskSummaryPageError extends Error {}
@@ -380,15 +415,22 @@ async function searchFirstPage<T extends Resource>(
   fhir: Pick<MedplumClient, "search">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
-): Promise<T[]> {
+): Promise<{ resources: T[]; hasNext: boolean }> {
   const bundle = await fhir.search<T>(resourceType, params);
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  return {
+    resources: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
+    hasNext: bundle.link?.some((link) => link.relation === "next") ?? false,
+  };
 }
 
-function safeLatestStatementRun(tasks: readonly Task[]): { generatedAt: string | null; invalidRejects: number } {
+export function safeLatestStatementRun(
+  tasks: readonly Task[],
+  readLatest: typeof latestStatementRun = latestStatementRun,
+): { generatedAt: string | null; invalidRejects: number } {
   try {
-    return latestStatementRun(tasks);
-  } catch {
+    return readLatest(tasks);
+  } catch (error) {
+    if (!(error instanceof StatementValidationError)) throw error;
     return { generatedAt: null, invalidRejects: 0 };
   }
 }

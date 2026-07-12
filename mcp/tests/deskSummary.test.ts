@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Appointment, Claim, Invoice, PaymentReconciliation, Task } from "@medplum/fhirtypes";
-import { projectDeskSummary, type DeskSummaryInput } from "../src/desk/desk-summary.js";
+import { projectDeskSummary, safeLatestStatementRun, type DeskSummaryInput } from "../src/desk/desk-summary.js";
 import { appointmentConfirmationExtension } from "../src/fhir/appointmentConfirmation.js";
 import { opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
 import { opticalOrderTypeConcept } from "../src/fhir/opticalOrderType.js";
@@ -138,6 +138,13 @@ test("a malformed latest statement run degrades without blocking any Desk card",
   assert.equal(summary.cards.statements.available, true);
   assert.equal(summary.cards.statements.lastStatement.value, null);
   assert.equal(summary.cards.statements.invalidRejects.value, 0);
+});
+
+test("an unexpected latest-statement error is not silently degraded", () => {
+  assert.throws(
+    () => safeLatestStatementRun([], () => { throw new Error("unexpected statement reader bug"); }),
+    /unexpected statement reader bug/,
+  );
 });
 
 test("practice pulse counts only canonical attention rows", () => {
