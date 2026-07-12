@@ -38,6 +38,7 @@ export interface WenoMappingFhirClient {
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Basic>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Basic>(
     resourceType: T["resourceType"],
@@ -57,9 +58,11 @@ export class FhirWenoMappingCatalog {
 
   async list(kind?: WenoMappingKind): Promise<WenoMappingRow[]> {
     const stored = await this.readStoredRows(kind);
-    const storedKeys = new Set(stored.map((row) => row.mapping.stableKey));
+    const storedKeys = new Set(stored.map((row) => `${row.mapping.kind}:${row.mapping.stableKey}`));
     return [
-      ...this.seeds.filter((row) => (!kind || row.kind === kind) && !storedKeys.has(row.stableKey)),
+      ...this.seeds.filter((row) =>
+        (!kind || row.kind === kind) && !storedKeys.has(`${row.kind}:${row.stableKey}`)
+      ),
       ...stored.map((row) => row.mapping),
     ];
   }
@@ -77,7 +80,11 @@ export class FhirWenoMappingCatalog {
     const resource = buildWenoMappingResource(validated, existing);
     const persisted = existing?.id
       ? await this.fhir.update("Basic", existing.id, resource, WENO_MAPPING_WRITE_HEADERS)
-      : await this.fhir.create(resource, WENO_MAPPING_WRITE_HEADERS);
+      : await this.fhir.create(resource, {
+        ...WENO_MAPPING_WRITE_HEADERS,
+        "If-None-Exist":
+          `identifier=${WENO_MAPPING_IDENTIFIER_SYSTEM}|${validated.stableKey}`,
+      });
     return parseWenoMappingResource(persisted);
   }
 
@@ -89,17 +96,16 @@ export class FhirWenoMappingCatalog {
       WENO_LOCATION_MAPPING_CODE,
     ];
     const rows = await Promise.all(codes.map(async (code) => {
-      const bundle = await this.fhir.search<Basic>("Basic", {
+      const resources = await this.searchAllBasic({
         code: `${WENO_MAPPING_CODE_SYSTEM}|${code}`,
         _count: "200",
       });
-      return (bundle.entry ?? []).flatMap((entry) => {
-        if (!entry.resource) return [];
+      return resources.flatMap((resource) => {
         try {
-          return [{ resource: entry.resource, mapping: parseWenoMappingResource(entry.resource) }];
+          return [{ resource, mapping: parseWenoMappingResource(resource) }];
         } catch (error) {
           console.error(
-            `WENO mapping Basic/${entry.resource.id ?? "unknown"} skipped: ${errorMessage(error)}`,
+            `WENO mapping Basic/${resource.id ?? "unknown"} skipped: ${errorMessage(error)}`,
           );
           return [];
         }
@@ -108,6 +114,28 @@ export class FhirWenoMappingCatalog {
     return rows.flat().sort((left, right) =>
       left.mapping.stableKey.localeCompare(right.mapping.stableKey)
     );
+  }
+
+  private async searchAllBasic(params: Record<string, string>): Promise<Basic[]> {
+    let bundle = await this.fhir.search<Basic>("Basic", params);
+    const resources: Basic[] = [];
+    const followedLinks = new Set<string>();
+    for (;;) {
+      resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+      const nextLink = bundle.link?.find((link) => link.relation === "next");
+      if (!nextLink) return resources;
+      if (!nextLink.url) {
+        throw new Error("FHIR Basic search returned a next link without a URL.");
+      }
+      if (!this.fhir.searchUrl) {
+        throw new Error("FHIR Basic search returned more rows, but the client cannot fetch them.");
+      }
+      if (followedLinks.has(nextLink.url)) {
+        throw new Error("FHIR Basic search returned a repeated next link.");
+      }
+      followedLinks.add(nextLink.url);
+      bundle = await this.fhir.searchUrl<Basic>(nextLink.url, "Basic");
+    }
   }
 }
 

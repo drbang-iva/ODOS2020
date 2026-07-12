@@ -5,6 +5,7 @@ import {
   buildWenoMappingResource,
   FhirWenoMappingCatalog,
   parseWenoMappingResource,
+  WENO_MAPPING_IDENTIFIER_SYSTEM,
   WENO_MAPPING_SEEDS,
   type WenoMappingRow,
 } from "../src/fhir/wenoMappingCatalog.js";
@@ -190,6 +191,55 @@ test("prescriber credentials references round-trip through the mapping Basic", a
   assert.equal(resource.extension?.[0]?.valueString?.includes("ExamplePassWord"), false);
 });
 
+test("mapping save updates an existing stable key without creating a duplicate", async () => {
+  const fhir = new MemoryBasicFhir();
+  const catalog = new FhirWenoMappingCatalog(fhir);
+  const row = mapping();
+  await catalog.save(row);
+  const updated = { ...row, syncStatus: "pending" };
+
+  assert.deepEqual(await catalog.save(updated), updated);
+  assert.equal(fhir.rowCount, 1);
+  assert.equal(fhir.updateCount, 1);
+  assert.deepEqual(await catalog.list("prescriber"), [updated]);
+  assert.deepEqual(fhir.createHeaders, [{
+    "X-OSOD-Source": "weno-mapping-catalog",
+    "If-None-Exist":
+      `identifier=${WENO_MAPPING_IDENTIFIER_SYSTEM}|${row.stableKey}`,
+  }]);
+});
+
+test("mapping seed deduplication scopes stable keys by kind", async () => {
+  const fhir = new MemoryBasicFhir();
+  const prescriber = mapping();
+  const location: WenoMappingRow = {
+    stableKey: prescriber.stableKey,
+    kind: "location",
+    localReference: "Location/location-1",
+    wenoEntityId: "weno-location-1",
+    syncStatus: "synced",
+  };
+  const catalog = new FhirWenoMappingCatalog(fhir, [location]);
+
+  await catalog.save(prescriber);
+
+  assert.deepEqual(await catalog.list(), [location, prescriber]);
+});
+
+test("mapping catalog follows FHIR pagination links", async () => {
+  const first = { ...mapping(), stableKey: "prescriber-1" };
+  const second = {
+    ...mapping(),
+    stableKey: "prescriber-2",
+    localReference: "Practitioner/prescriber-2",
+  };
+  const fhir = new PaginatedBasicFhir(first, second);
+  const catalog = new FhirWenoMappingCatalog(fhir);
+
+  assert.deepEqual(await catalog.list("prescriber"), [first, second]);
+  assert.equal(fhir.nextPageRequests, 1);
+});
+
 test("sync parser reads the five verified CSV columns including quoted values", () => {
   const rows = parseNewRxSyncReport(
     "DateTimeofactionUTC,PatientID,SynchType,RelatestoNewRxMsgID,DeliveryStatus\n" +
@@ -265,6 +315,12 @@ function syncRow() {
 
 class MemoryBasicFhir {
   private rows: Basic[] = [];
+  readonly createHeaders: Array<Record<string, string> | undefined> = [];
+  updateCount = 0;
+
+  get rowCount(): number {
+    return this.rows.length;
+  }
 
   async search<T extends Basic>(
     _resourceType: T["resourceType"],
@@ -277,16 +333,47 @@ class MemoryBasicFhir {
     return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: resource as T })) };
   }
 
-  async create<T extends Basic>(resource: T): Promise<T> {
+  async create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T> {
+    this.createHeaders.push(extraHeaders);
     const saved = { ...resource, id: `mapping-${this.rows.length + 1}` } as T;
     this.rows.push(saved);
     return saved;
   }
 
   async update<T extends Basic>(_resourceType: "Basic", id: string, resource: T): Promise<T> {
+    this.updateCount += 1;
     const saved = { ...resource, id };
     this.rows = this.rows.map((row) => row.id === id ? saved : row);
     return saved;
+  }
+}
+
+class PaginatedBasicFhir extends MemoryBasicFhir {
+  nextPageRequests = 0;
+
+  constructor(
+    private readonly first: WenoMappingRow,
+    private readonly second: WenoMappingRow,
+  ) {
+    super();
+  }
+
+  override async search<T extends Basic>(): Promise<Bundle<T>> {
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: buildWenoMappingResource(this.first) as T }],
+      link: [{ relation: "next", url: "https://example.test/fhir/R4/Basic?page=2" }],
+    };
+  }
+
+  async searchUrl<T extends Basic>(): Promise<Bundle<T>> {
+    this.nextPageRequests += 1;
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: buildWenoMappingResource(this.second) as T }],
+    };
   }
 }
 
