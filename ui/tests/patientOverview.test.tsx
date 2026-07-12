@@ -87,6 +87,96 @@ test("visit and diagnosis filters produce a new server request instead of filter
   assert.match(calls[1] ?? "", /diagnosisCode=DX-NEW/);
 });
 
+test("sticky note edit persists and history reveals the returned FHIR versions", async () => {
+  const saved: Array<{ patientId: string; text: string }> = [];
+  let resolveHistory!: (entries: Array<{ versionId: string; text: string; editedAt?: string; editedBy?: string }>) => void;
+  const historyPromise = new Promise<Array<{ versionId: string; text: string; editedAt?: string; editedBy?: string }>>((resolve) => {
+    resolveHistory = resolve;
+  });
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async (patientId: string, text: string) => {
+      saved.push({ patientId, text });
+      return { id: "sticky-1", text, editedAt: "2026-07-11T16:00:00Z", editedBy: "Practitioner/one" };
+    },
+    fetchHistory: async () => historyPromise,
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+
+  const editButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Edit");
+  assert.ok(editButton);
+  act(() => editButton.props.onClick());
+  const textarea = renderer.root.findByType("textarea");
+  act(() => textarea.props.onChange({ target: { value: "Updated chart-front note" } }));
+  const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save");
+  assert.ok(saveButton);
+  await act(async () => saveButton.props.onClick());
+  assert.deepEqual(saved, [{ patientId: "patient-1", text: "Updated chart-front note" }]);
+  assert.match(renderer.toJSON() ? JSON.stringify(renderer.toJSON()) : "", /Updated chart-front note/);
+
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  assert.ok(historyButton);
+  let historyRequest!: Promise<void>;
+  await act(async () => {
+    historyRequest = historyButton.props.onClick();
+    await Promise.resolve();
+  });
+  assert.match(JSON.stringify(renderer.toJSON()), /Loading version history/);
+  await act(async () => {
+    resolveHistory([{ versionId: "2", text: "Updated chart-front note", editedBy: "Practitioner\/one" }]);
+    await historyRequest;
+  });
+  assert.ok(renderer.root.findAllByType("small").some((row) => row.children.join("").startsWith("Version 2")));
+});
+
+test("non-JSON overview errors preserve their HTTP status", async () => {
+  const fetchImpl = async () => new Response("upstream unavailable", { status: 503 });
+  await assert.rejects(
+    fetchPatientOverview("patient-1", {}, fetchImpl as typeof fetch),
+    /Patient overview request failed with HTTP 503/,
+  );
+});
+
+test("rapid visit-filter requests cannot overwrite the latest result out of order", async () => {
+  const pending: Array<(value: PatientOverviewPayload) => void> = [];
+  const api = {
+    fetchOverview: async () => new Promise<PatientOverviewPayload>((resolve) => pending.push(resolve)),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const eyeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Eye exams");
+  const officeButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Office visits");
+  assert.ok(eyeButton);
+  assert.ok(officeButton);
+  await act(async () => {
+    eyeButton.props.onClick();
+    await Promise.resolve();
+  });
+  await act(async () => {
+    officeButton.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(pending.length, 2);
+
+  const office = fixture();
+  office.visits[0]!.visitType = "Latest office result";
+  await act(async () => pending[1]!(office));
+  const eye = fixture();
+  eye.visits[0]!.visitType = "Stale eye result";
+  await act(async () => pending[0]!(eye));
+
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /Latest office result/);
+  assert.doesNotMatch(rendered, /Stale eye result/);
+});
+
 const patient: Patient = {
   resourceType: "Patient",
   id: "patient-1",

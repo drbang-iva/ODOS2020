@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, type MouseEvent } from "react";
+import React, { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import {
   fetchPatientOverview,
@@ -12,7 +12,27 @@ import {
 import { useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
 
-export function PatientOverview({ patient, initialOverview }: { patient: Patient; initialOverview?: PatientOverviewPayload }) {
+interface PatientOverviewApi {
+  fetchOverview: typeof fetchPatientOverview;
+  fetchHistory: typeof fetchStickyNoteHistory;
+  saveNote: typeof saveStickyNote;
+}
+
+const defaultPatientOverviewApi: PatientOverviewApi = {
+  fetchOverview: fetchPatientOverview,
+  fetchHistory: fetchStickyNoteHistory,
+  saveNote: saveStickyNote,
+};
+
+export function PatientOverview({
+  patient,
+  initialOverview,
+  api = defaultPatientOverviewApi,
+}: {
+  patient: Patient;
+  initialOverview?: PatientOverviewPayload;
+  api?: PatientOverviewApi;
+}) {
   const setView = useViewState((state) => state.setView);
   const [overview, setOverview] = useState(initialOverview);
   const [filter, setFilter] = useState<VisitLedgerFilter>("all");
@@ -24,20 +44,23 @@ export function PatientOverview({ patient, initialOverview }: { patient: Patient
   const [savingNote, setSavingNote] = useState(false);
   const [history, setHistory] = useState<StickyNoteHistoryEntry[]>();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     if (initialOverview) return;
-    let active = true;
-    fetchPatientOverview(patient.id ?? "")
+    const requestId = ++requestIdRef.current;
+    api.fetchOverview(patient.id ?? "")
       .then((value) => {
-        if (!active) return;
+        if (requestId !== requestIdRef.current) return;
         setOverview(value);
         setNoteDraft(value.stickyNote?.text ?? "");
       })
-      .catch((reason) => active && setError(messageOf(reason)))
-      .finally(() => active && setLoadingLedger(false));
-    return () => { active = false; };
-  }, [initialOverview, patient.id]);
+      .catch((reason) => requestId === requestIdRef.current && setError(messageOf(reason)))
+      .finally(() => requestId === requestIdRef.current && setLoadingLedger(false));
+    return () => {
+      if (requestId === requestIdRef.current) requestIdRef.current += 1;
+    };
+  }, [api, initialOverview, patient.id]);
 
   const name = patientName(patient);
   const age = patientAge(patient.birthDate);
@@ -51,16 +74,17 @@ export function PatientOverview({ patient, initialOverview }: { patient: Patient
     setFilter(nextFilter);
     setLoadingLedger(true);
     setError(undefined);
+    const requestId = ++requestIdRef.current;
     try {
-      const value = await fetchPatientOverview(patient.id, {
+      const value = await api.fetchOverview(patient.id, {
         filter: nextFilter,
         ...(activeDiagnosis ? { diagnosisSystem: activeDiagnosis.system, diagnosisCode: activeDiagnosis.code } : {}),
       });
-      setOverview(value);
+      if (requestId === requestIdRef.current) setOverview(value);
     } catch (reason) {
-      setError(messageOf(reason));
+      if (requestId === requestIdRef.current) setError(messageOf(reason));
     } finally {
-      setLoadingLedger(false);
+      if (requestId === requestIdRef.current) setLoadingLedger(false);
     }
   }
 
@@ -69,7 +93,7 @@ export function PatientOverview({ patient, initialOverview }: { patient: Patient
     setSavingNote(true);
     setError(undefined);
     try {
-      const stickyNote = await saveStickyNote(patient.id, noteDraft);
+      const stickyNote = await api.saveNote(patient.id, noteDraft);
       setOverview((current) => current ? { ...current, stickyNote } : current);
       setEditing(false);
       setHistory(undefined);
@@ -85,7 +109,7 @@ export function PatientOverview({ patient, initialOverview }: { patient: Patient
     setHistoryOpen(true);
     if (history) return;
     try {
-      setHistory(await fetchStickyNoteHistory(patient.id));
+      setHistory(await api.fetchHistory(patient.id));
     } catch (reason) {
       setError(messageOf(reason));
     }
@@ -132,7 +156,7 @@ export function PatientOverview({ patient, initialOverview }: { patient: Patient
           ) : (
             <React.Fragment>
               <button type="button" onClick={() => setEditing(true)}>Edit</button>
-              <button type="button" onClick={showHistory}>History</button>
+              <button type="button" aria-expanded={historyOpen} onClick={showHistory}>History</button>
             </React.Fragment>
           )}
         </section>

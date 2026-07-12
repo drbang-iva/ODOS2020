@@ -5,12 +5,16 @@ import {
   loadPatientOverview,
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
+  StickyNoteValidationError,
+  type OverviewFhir,
   type VisitLedgerFilter,
 } from "./patient-overview.js";
 
+type ClinicStaff = Omit<AuthenticatedStaff, "fhir"> & { fhir: OverviewFhir };
+
 export interface ClinicRouteDeps {
   authenticateService(): Promise<void>;
-  authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
+  authenticate(authHeader: string | undefined): Promise<ClinicStaff | null>;
   timeZone?: string;
   now?: () => string;
 }
@@ -50,18 +54,27 @@ async function handlePatientOverview(req: Request, res: Response, deps: ClinicRo
       res.status(400).json({ error: "Patient id is invalid." });
       return;
     }
-    const filter = stringQuery(req.query.filter) ?? "all";
+    const requestedFilter = stringQuery(req.query.filter);
+    if (requestedFilter === null) {
+      res.status(400).json({ error: "Visit-ledger filter must be a single non-empty value." });
+      return;
+    }
+    const filter = requestedFilter ?? "all";
     if (!isVisitLedgerFilter(filter)) {
       res.status(400).json({ error: "Unknown visit-ledger filter." });
       return;
     }
     const diagnosisSystem = stringQuery(req.query.diagnosisSystem);
     const diagnosisCode = stringQuery(req.query.diagnosisCode);
+    if (diagnosisSystem === null || diagnosisCode === null) {
+      res.status(400).json({ error: "Diagnosis system and code must be single non-empty values." });
+      return;
+    }
     if (Boolean(diagnosisSystem) !== Boolean(diagnosisCode)) {
       res.status(400).json({ error: "Diagnosis system and code must be supplied together." });
       return;
     }
-    res.json(await loadPatientOverview(staff.fhir as never, patientId, {
+    res.json(await loadPatientOverview(staff.fhir, patientId, {
       filter,
       ...(diagnosisSystem ? { diagnosisSystem } : {}),
       ...(diagnosisCode ? { diagnosisCode } : {}),
@@ -86,17 +99,21 @@ async function handleStickyNoteSave(req: Request, res: Response, deps: ClinicRou
       return;
     }
     const text = typeof req.body?.text === "string" ? req.body.text : "";
-    res.json(await savePatientStickyNote(staff.fhir as never, {
+    res.json(await savePatientStickyNote(staff.fhir, {
       patientId,
       text,
       authorReference: staff.staffReference,
       now: deps.now?.(),
     }));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Sticky note save failed.";
-    const status = /required|cannot exceed/.test(message) ? 400 : 500;
     console.error("osod-mcp: sticky note save failed:", error);
-    if (!res.headersSent) res.status(status).json({ error: message });
+    if (!res.headersSent) {
+      if (error instanceof StickyNoteValidationError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Sticky note save failed." });
+      }
+    }
   }
 }
 
@@ -113,15 +130,16 @@ async function handleStickyNoteHistory(req: Request, res: Response, deps: Clinic
       res.status(400).json({ error: "Patient id is invalid." });
       return;
     }
-    res.json(await loadPatientStickyNoteHistory(staff.fhir as never, patientId));
+    res.json(await loadPatientStickyNoteHistory(staff.fhir, patientId));
   } catch (error) {
     console.error("osod-mcp: sticky note history failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Sticky note history route failed." });
   }
 }
 
-function stringQuery(value: unknown): string | undefined {
-  return typeof value === "string" && value ? value : undefined;
+function stringQuery(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function routeParam(value: string | string[]): string {

@@ -13,7 +13,7 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis } from "../fhir/condition.js";
+import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
 import { OSOD_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
 
@@ -72,7 +72,9 @@ export interface StickyNoteHistoryEntry {
   editedBy?: string;
 }
 
-type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update">;
+export type OverviewFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "history" | "create" | "update">;
+
+export class StickyNoteValidationError extends Error {}
 
 const EYE_EXAM_VISIT_CODES = ["routine-exam-new", "routine-exam-established", "medicaid-exam"];
 
@@ -107,7 +109,7 @@ export async function loadPatientOverview(
   const [
     patient,
     coverageResult,
-    stickyNotes,
+    stickyNote,
     problemConditions,
     procedures,
     medicationStatements,
@@ -117,11 +119,7 @@ export async function loadPatientOverview(
   ] = await Promise.all([
     fhir.read<Patient>("Patient", patientId),
     optionalSearchAll<Coverage>(fhir, "Coverage", { beneficiary: patientReference, status: "active", _count: "100" }),
-    searchAll<DocumentReference>(fhir, "DocumentReference", {
-      subject: patientReference,
-      identifier: `${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|${patientId}`,
-      _count: "2",
-    }),
+    findPatientStickyNote(fhir, patientId, true),
     searchAll<Condition>(fhir, "Condition", { patient: patientId, category: "problem-list-item", _count: "100" }),
     searchAll<Procedure>(fhir, "Procedure", { patient: patientId, _count: "100", _sort: "-date" }),
     searchAll<MedicationStatement>(fhir, "MedicationStatement", { patient: patientId, status: "active", _count: "100" }),
@@ -129,10 +127,6 @@ export async function loadPatientOverview(
     searchAll<Observation>(fhir, "Observation", { patient: patientId, code: TOBACCO_SMOKING_STATUS_LOINC_CODE, _count: "1", _sort: "-date" }),
     searchAll<Condition>(fhir, "Condition", conditionParams),
   ]);
-  if (stickyNotes.length > 1) {
-    throw new Error("Patient has more than one sticky-note resource; refusing an ambiguous chart-front note.");
-  }
-
   const diagnosisEncounterIds = options.diagnosisSystem && options.diagnosisCode
     ? unique(encounterDiagnoses.flatMap((condition) => conditionEncounterId(condition) ?? []))
     : undefined;
@@ -141,7 +135,7 @@ export async function loadPatientOverview(
       patient,
       coverages: coverageResult.resources,
       unavailable: unavailableSources(coverageResult.available, medicationRequestResult.available),
-      stickyNote: stickyNotes[0],
+      stickyNote,
       problemConditions,
       procedures,
       medicationStatements,
@@ -151,7 +145,10 @@ export async function loadPatientOverview(
       encounterDiagnoses,
     });
   }
-  if (diagnosisEncounterIds) encounterParams._id = diagnosisEncounterIds.join(",");
+  if (diagnosisEncounterIds) {
+    delete encounterParams.type;
+    encounterParams._id = diagnosisEncounterIds.join(",");
+  }
   const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
   const encounterReferences = encounters.flatMap((encounter) => encounter.id ? [`Encounter/${encounter.id}`] : []);
   const provenances = encounterReferences.length
@@ -162,7 +159,7 @@ export async function loadPatientOverview(
     patient,
     coverages: coverageResult.resources,
     unavailable: unavailableSources(coverageResult.available, medicationRequestResult.available),
-    stickyNote: stickyNotes[0],
+    stickyNote,
     problemConditions,
     procedures,
     medicationStatements,
@@ -179,31 +176,40 @@ export async function savePatientStickyNote(
   input: { patientId: string; text: string; authorReference: string; now?: string },
 ): Promise<PatientOverviewPayload["stickyNote"]> {
   const text = input.text.trim();
-  if (!text) throw new Error("Sticky note text is required.");
-  if (text.length > 2000) throw new Error("Sticky note text cannot exceed 2000 characters.");
-  const existing = await searchAll<DocumentReference>(fhir, "DocumentReference", {
-    subject: `Patient/${input.patientId}`,
-    identifier: `${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|${input.patientId}`,
-    _count: "2",
-  });
-  if (existing.length > 1) throw new Error("Patient has more than one sticky-note resource.");
+  if (!text) throw new StickyNoteValidationError("Sticky note text is required.");
+  if (text.length > 2000) throw new StickyNoteValidationError("Sticky note text cannot exceed 2000 characters.");
+  const existing = await findPatientStickyNote(fhir, input.patientId);
   const resource = buildStickyNote({
     patientId: input.patientId,
     text,
     authorReference: input.authorReference,
     now: input.now ?? new Date().toISOString(),
-    existing: existing[0],
+    existing,
   });
-  const saved = existing[0]?.id
+  let saved = existing?.id
     ? await fhir.update<DocumentReference>(
         "DocumentReference",
-        existing[0].id,
+        existing.id,
         resource,
-        existing[0].meta?.versionId ? { "If-Match": `W/\"${existing[0].meta.versionId}\"` } : undefined,
+        existing.meta?.versionId ? { "If-Match": `W/\"${existing.meta.versionId}\"` } : undefined,
       )
     : await fhir.create<DocumentReference>(resource, {
         "If-None-Exist": `identifier=${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|${input.patientId}`,
       });
+  if (stickyNoteText(saved) !== text && saved.id) {
+    saved = await fhir.update<DocumentReference>(
+      "DocumentReference",
+      saved.id,
+      buildStickyNote({
+        patientId: input.patientId,
+        text,
+        authorReference: input.authorReference,
+        now: input.now ?? new Date().toISOString(),
+        existing: saved,
+      }),
+      saved.meta?.versionId ? { "If-Match": `W/\"${saved.meta.versionId}\"` } : undefined,
+    );
+  }
   return stickyNoteSummary(saved);
 }
 
@@ -211,15 +217,11 @@ export async function loadPatientStickyNoteHistory(
   fhir: OverviewFhir,
   patientId: string,
 ): Promise<StickyNoteHistoryEntry[]> {
-  const notes = await searchAll<DocumentReference>(fhir, "DocumentReference", {
-    subject: `Patient/${patientId}`,
-    identifier: `${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|${patientId}`,
-    _count: "2",
-  });
-  if (notes.length === 0) return [];
-  if (notes.length > 1 || !notes[0]?.id) throw new Error("Patient sticky-note resource is ambiguous.");
+  const note = await findPatientStickyNote(fhir, patientId);
+  if (!note) return [];
+  if (!note.id) throw new Error("Patient sticky-note resource is missing its id.");
   const resources: DocumentReference[] = [];
-  let bundle = await fhir.history<DocumentReference>("DocumentReference", notes[0].id, { _count: "100" });
+  let bundle = await fhir.history<DocumentReference>("DocumentReference", note.id, { _count: "100" });
   while (true) {
     resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
     const next = bundle.link?.find((link) => link.relation === "next")?.url;
@@ -290,15 +292,13 @@ function projectOverview(input: {
       id: resource.id,
       name: conceptText(resource.medicationCodeableConcept),
       sig: resource.dosage?.[0]?.text,
-      ophthalmic: /ophthalm/i.test(resource.dosage?.[0]?.route?.text ?? ""),
+      ophthalmic: isOphthalmicRoute(resource.dosage?.[0]?.route, resource.dosage?.[0]?.text),
     })),
     ...input.medicationRequests.map((resource) => ({
       id: resource.id,
       name: conceptText(resource.medicationCodeableConcept),
       sig: resource.dosageInstruction?.[0]?.text,
-      ophthalmic: /ophthalm|\beye\b|\bgtt\b|\bdrop/i.test(
-        [resource.dosageInstruction?.[0]?.route?.text, resource.dosageInstruction?.[0]?.text].filter(Boolean).join(" "),
-      ),
+      ophthalmic: isOphthalmicRoute(resource.dosageInstruction?.[0]?.route, resource.dosageInstruction?.[0]?.text),
     })),
   ].filter((medication) => medication.name);
   const diagnoses = input.encounterDiagnoses.filter(isConfirmedEncounterDiagnosis);
@@ -413,8 +413,30 @@ async function optionalSearchAll<T extends Resource>(
 ): Promise<{ resources: T[]; available: boolean }> {
   try {
     return { resources: await searchAll<T>(fhir, resourceType, params), available: true };
-  } catch {
-    return { resources: [], available: false };
+  } catch (error) {
+    const status = (error as { status?: unknown })?.status;
+    if (status === 401 || status === 403) return { resources: [], available: false };
+    throw error;
+  }
+}
+
+async function findPatientStickyNote(
+  fhir: OverviewFhir,
+  patientId: string,
+  optional = false,
+): Promise<DocumentReference | undefined> {
+  try {
+    const notes = await searchAll<DocumentReference>(fhir, "DocumentReference", {
+      subject: `Patient/${patientId}`,
+      identifier: `${PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM}|${patientId}`,
+      _count: "2",
+    });
+    if (notes.length > 1) throw new Error("Patient has more than one sticky-note resource.");
+    return notes[0];
+  } catch (error) {
+    if (!optional) throw error;
+    console.error("osod-mcp: patient sticky-note lookup omitted from overview:", error);
+    return undefined;
   }
 }
 
@@ -446,6 +468,16 @@ function isOcularBodySite(bodySite: Array<{ text?: string }> | undefined): boole
   return bodySite?.some((site) => /\b(eye|eyes|ocular|od|os|ou)\b/i.test(site.text ?? "")) === true;
 }
 
+function isOphthalmicRoute(
+  route: { text?: string; coding?: Array<{ code?: string; display?: string }> } | undefined,
+  dosageText: string | undefined,
+): boolean {
+  const codedRoute = route?.coding?.flatMap((coding) => [coding.display, coding.code]).filter(Boolean).join(" ");
+  return codedRoute
+    ? /ophthalm|\beye\b/i.test(codedRoute)
+    : /ophthalm|\beye\b|\bgtt\b|\bdrop/i.test([route?.text, dosageText].filter(Boolean).join(" "));
+}
+
 function signedEncounters(encounters: Encounter[], provenances: Provenance[]): Set<string> {
   const checkoutTimes = new Map(encounters.flatMap((encounter) =>
     encounter.id && encounter.status === "finished" && encounter.period?.end
@@ -454,7 +486,7 @@ function signedEncounters(encounters: Encounter[], provenances: Provenance[]): S
   ));
   return new Set(provenances.flatMap((provenance) =>
     (provenance.target ?? []).flatMap((target) => {
-      const encounterId = target.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+      const encounterId = referenceId(target.reference, "Encounter");
       const checkoutAt = encounterId ? checkoutTimes.get(encounterId) : undefined;
       return encounterId && checkoutAt && sameInstant(provenance.recorded, checkoutAt) ? [encounterId] : [];
     }),

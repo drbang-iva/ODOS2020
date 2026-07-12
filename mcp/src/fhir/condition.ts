@@ -173,7 +173,12 @@ export function isConfirmedEncounterDiagnosis(condition: Condition): boolean {
 }
 
 export function conditionEncounterId(condition: Condition): string | undefined {
-  return condition.encounter?.reference?.match(/^Encounter\/([^/]+)$/)?.[1];
+  return referenceId(condition.encounter?.reference, "Encounter");
+}
+
+export function referenceId(reference: string | undefined, resourceType: string): string | undefined {
+  const [type, id, extra] = reference?.split("/") ?? [];
+  return type === resourceType && id && !extra ? id : undefined;
 }
 
 export function conditionBodySiteReferenceExtension(bodyStructureReference: string): Extension {

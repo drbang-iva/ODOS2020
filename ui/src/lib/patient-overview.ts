@@ -99,7 +99,7 @@ async function request<T>(path: string, init: RequestInit, fetchImpl: typeof fet
       ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
     },
   });
-  const body = await response.json() as T & { error?: string };
+  const body = await response.json().catch(() => ({})) as T & { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Patient overview request failed with HTTP ${response.status}.`);
   return body;
 }
