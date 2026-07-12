@@ -385,53 +385,70 @@ export function buildStatementTransaction(input: {
   rejects: StatementRejectRow[];
   skippedZeroBalanceCount: number;
   generateId?: () => string;
-}): { childBundles: Bundle[]; completionBundle: Bundle; runReference: string } {
+}): {
+  startBundle: Bundle;
+  buildLinkedBundles(runReference: string): { childBundles: Bundle[]; completionBundle: Bundle };
+} {
   const generateId = input.generateId ?? randomUUID;
-  const runId = generateId();
-  const runReference = `Task/${runId}`;
+  const runIdentifier = generateId();
   const runTask: Task = {
     resourceType: "Task",
-    id: runId,
-    identifier: [{ system: STATEMENT_RUN_IDENTIFIER_SYSTEM, value: runId }],
-    status: "completed",
+    identifier: [{ system: STATEMENT_RUN_IDENTIFIER_SYSTEM, value: runIdentifier }],
+    status: "in-progress",
     intent: "order",
     code: taskCode(STATEMENT_RUN_CODE, "Statement run"),
     authoredOn: input.generatedAt,
-    executionPeriod: { start: input.generatedAt, end: input.generatedAt },
+    executionPeriod: { start: input.generatedAt },
     output: [
       integerOutput(RUN_OUTPUTS.generated, input.statements.length),
       integerOutput(RUN_OUTPUTS.invalidRejects, input.rejects.length),
       integerOutput(RUN_OUTPUTS.skipped, input.skippedZeroBalanceCount),
     ],
   };
-  const childTasks: Array<{ fullUrl: string; task: Task }> = [];
-  for (const snapshot of input.statements) {
-    const fullUrl = `urn:uuid:${generateId()}`;
-    childTasks.push({ fullUrl, task: statementTask(snapshot, runReference) });
-  }
-  for (const reject of input.rejects) {
-    childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: rejectTask(reject, input.generatedAt, runReference) });
-  }
-  const childEntries: BundleEntry[] = childTasks.map(({ fullUrl, task }) => ({
-    fullUrl,
-    resource: task,
-    request: { method: "POST", url: "Task" },
-  }));
-  const childBundles: Bundle[] = [];
-  for (let index = 0; index < childEntries.length; index += STATEMENT_TRANSACTION_CHILD_LIMIT) {
-    childBundles.push({
-      resourceType: "Bundle",
-      type: "transaction",
-      entry: childEntries.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT),
-    });
-  }
   return {
-    childBundles,
-    runReference,
-    completionBundle: {
+    startBundle: {
       resourceType: "Bundle",
       type: "transaction",
-      entry: [{ resource: runTask, request: { method: "PUT", url: runReference } }],
+      entry: [{ resource: runTask, request: { method: "POST", url: "Task" } }],
+    },
+    buildLinkedBundles(runReference) {
+      const runId = referenceId(runReference);
+      const childTasks: Array<{ fullUrl: string; task: Task }> = [];
+      for (const snapshot of input.statements) {
+        childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: statementTask(snapshot, runReference) });
+      }
+      for (const reject of input.rejects) {
+        childTasks.push({ fullUrl: `urn:uuid:${generateId()}`, task: rejectTask(reject, input.generatedAt, runReference) });
+      }
+      const childEntries: BundleEntry[] = childTasks.map(({ fullUrl, task }) => ({
+        fullUrl,
+        resource: task,
+        request: { method: "POST", url: "Task" },
+      }));
+      const childBundles: Bundle[] = [];
+      for (let index = 0; index < childEntries.length; index += STATEMENT_TRANSACTION_CHILD_LIMIT) {
+        childBundles.push({
+          resourceType: "Bundle",
+          type: "transaction",
+          entry: childEntries.slice(index, index + STATEMENT_TRANSACTION_CHILD_LIMIT),
+        });
+      }
+      return {
+        childBundles,
+        completionBundle: {
+          resourceType: "Bundle",
+          type: "transaction",
+          entry: [{
+            resource: {
+              ...runTask,
+              id: runId,
+              status: "completed",
+              executionPeriod: { start: input.generatedAt, end: input.generatedAt },
+            },
+            request: { method: "PUT", url: runReference },
+          }],
+        },
+      };
     },
   };
 }
@@ -552,10 +569,13 @@ async function runStatements(
       skippedZeroBalanceCount,
       generateId: options.generateId,
     });
+    const startResponse = await fhir.executeTransaction(transaction.startBundle);
+    const runReference = transactionReference(startResponse.entry?.[0], "Task");
+    const linkedBundles = transaction.buildLinkedBundles(runReference);
     const childResponses: BundleEntry[] = [];
     const createdChildReferences: string[] = [];
     try {
-      for (const bundle of transaction.childBundles) {
+      for (const bundle of linkedBundles.childBundles) {
         const response = await fhir.executeTransaction(bundle);
         const responseEntries = response.entry ?? [];
         childResponses.push(...responseEntries);
@@ -572,18 +592,17 @@ async function runStatements(
       throw error;
     }
     try {
-      await fhir.executeTransaction(transaction.completionBundle);
+      await fhir.executeTransaction(linkedBundles.completionBundle);
     } catch (error) {
       let runCompleted = true;
       try {
-        const runId = transaction.runReference.slice("Task/".length);
+        const runId = referenceId(runReference);
         const runs = await searchAll<Task>(fhir, "Task", { _id: runId });
         runCompleted = runs.some((task) => task.id === runId && task.status === "completed" && taskCodeIs(task, STATEMENT_RUN_CODE));
       } catch {}
       if (!runCompleted) await deleteStatementChildren(fhir, createdChildReferences);
       throw error;
     }
-    const runReference = transaction.runReference;
     const rows = statements.map((statement, index) => ({
       ...statement,
       statementReference: transactionReference(childResponses[index], "Task"),
