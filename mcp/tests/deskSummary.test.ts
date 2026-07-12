@@ -178,6 +178,20 @@ test("last claim transmission is ok for the previous business day and warns when
   assert.equal(stale.cards.claims.lastTransmission.tone, "warn");
 });
 
+test("last claim transmission is unavailable when claim worklist Tasks overflow", () => {
+  const summary = projectDeskSummary({
+    ...emptyInput(),
+    claims: [claimFixture("claim-current", 10)],
+    taskAvailability: { claimRejected: false, era: true, optical: true },
+  });
+
+  assert.equal(summary.cards.claims.lastTransmission.value, null);
+  assert.equal(summary.cards.claims.lastTransmission.tone, "off");
+  assert.equal(summary.cards.claims.lastTransmission.unavailableReason, "Claim worklist Tasks exceed the Desk card read limit.");
+  assert.equal(summary.pulse.lastClaimTransmission, null);
+  assert.equal(summary.pulse.lastClaimTransmissionTone, "off");
+});
+
 function emptyInput(): DeskSummaryInput {
   return { appointments: [], patients: [], tasks: [], claims: [], claimResponses: [], paymentReconciliations: [], invoices: [], now: NOW, timeZone: "America/New_York", terminalMode: "LIVE" };
 }

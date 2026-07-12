@@ -99,7 +99,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
   let searchCalls = 0;
   const created = {
     Basic: [] as Basic[],
-    ChargeItem: [] as ChargeItem[],
+    ChargeItem: [structuredClone(professionalClaim.chargeItems[0])] as ChargeItem[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
     CoverageEligibilityRequest: [] as CoverageEligibilityRequest[],
@@ -113,9 +113,21 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
   const fhir = {
     create: async <T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> => {
       createHeaders.push({ resourceType: resource.resourceType, headers });
-      if (resource.resourceType === "Claim" && claimCreateError) throw claimCreateError;
       const resources = created[resource.resourceType as keyof typeof created] as Resource[] | undefined;
       if (!resources) throw new Error(`Unexpected test resource ${resource.resourceType}`);
+      const conditionalIdentifier = headers?.["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+      if (conditionalIdentifier) {
+        const existing = resources.find((candidate) => matchesIdentifierToken(
+          "identifier" in candidate ? candidate.identifier as Array<{ system?: string; value?: string }> : undefined,
+          `${conditionalIdentifier[1]}|${conditionalIdentifier[2]}`,
+        ));
+        if (existing) return existing as T;
+      }
+      if (resource.resourceType === "Claim" && claimCreateError) {
+        const error = claimCreateError;
+        claimCreateError = undefined;
+        throw error;
+      }
       const id = `${resource.resourceType.toLowerCase()}-${resources.length + 1}`;
       const saved = { ...resource, id } as T;
       resources.push(saved);
@@ -254,6 +266,39 @@ test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.co
   assert.equal(audits[0].resourceType, "Claim");
 });
 
+test("client-supplied ChargeItem is re-read and must belong to the Claim patient", async () => {
+  const matching = deps();
+  const callerInput = structuredClone(professionalClaim);
+  callerInput.chargeItems[0].subject.reference = "Patient/caller-tampered";
+  const accepted = await handleSubmitClaimRequest(matching.deps, {
+    authHeader: "Bearer good",
+    body: { claim: callerInput },
+  });
+  assert.equal(accepted.status, 200);
+  assert.equal(matching.created.Claim[0].patient.reference, "Patient/pat-900");
+
+  const crossPatient = deps();
+  crossPatient.created.ChargeItem[0].subject.reference = "Patient/other";
+  const rejected = await handleSubmitClaimRequest(crossPatient.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+  assert.equal(rejected.status, 400);
+  assert.match((rejected.body as { error: string }).error, /belongs to Patient\/other, not Patient\/pat-900/);
+  assert.equal(crossPatient.created.Claim.length, 0);
+  assert.equal(crossPatient.created.Task.length, 0);
+
+  const missing = deps();
+  missing.created.ChargeItem.length = 0;
+  const notFound = await handleSubmitClaimRequest(missing.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+  assert.equal(notFound.status, 400);
+  assert.match((notFound.body as { error: string }).error, /ChargeItem\/charge-1 could not be loaded/);
+  assert.equal(missing.created.Claim.length, 0);
+});
+
 test("submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape", async () => {
   const { created, deps: d } = deps();
   const input = structuredClone(professionalClaim);
@@ -270,8 +315,9 @@ test("submit persists idless ChargeItems once while keeping the Claim.MD payload
   });
 
   assert.equal(result.status, 200);
-  assert.equal(created.ChargeItem.length, 1);
-  assert.equal(created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-1");
+  assert.equal(created.ChargeItem.length, 2);
+  assert.equal(created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-2");
+  assert.equal(created.ChargeItem[1].subject.reference, "Patient/pat-900");
   assert.equal(created.Claim[0].item?.[0]?.servicedDate, input.serviceDate);
   assert.equal(submittedPayload.claim[0].charge[0].remote_chgid, undefined);
   assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
@@ -330,7 +376,7 @@ test("Stedi payload also remains on the original idless charge input after prove
   });
 
   assert.equal(result.status, 200);
-  assert.equal(created.ChargeItem.length, 1);
+  assert.equal(created.ChargeItem.length, 2);
   assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "OSOD-CLAIM-900-1");
 });
 
@@ -807,6 +853,10 @@ test("patient-responsibility Invoice is create-once; a differing remit preserves
   assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
   assert.equal(fixture.created.Task.length, 1);
   assert.equal(worklistCode(fixture.created.Task[0]), "era-underpayment");
+
+  const retriedDifference = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(retriedDifference.status, 200);
+  assert.equal(fixture.created.Task.length, 1);
 });
 
 test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89", async () => {
@@ -1271,6 +1321,33 @@ test("Claim FHIR create failure returns the failure response without fabricating
   assert.equal(worklistCode(fixture.created.Task[0]), "claim-rejected");
 });
 
+test("claim-write failure and retry reuse the same conditionally-created ChargeItem", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem.length = 0;
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  fixture.failClaimCreate(new Error("FHIR Claim create rejected the resource"));
+
+  const failed = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+  const retried = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(failed.status, 502);
+  assert.equal(retried.status, 200);
+  assert.equal(fixture.created.ChargeItem.length, 1);
+  assert.equal(fixture.created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-1");
+  assert.equal(
+    fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").every((write) =>
+      write.headers?.["If-None-Exist"] === "identifier=https://osod.dev/fhir/NamingSystem/claim-charge-item|OSOD-CLAIM-900:1"),
+    true,
+  );
+});
+
 function eraImportBody(): Record<string, unknown> {
   return {
     eraId: "era-900",
@@ -1360,6 +1437,7 @@ function matchesSearch(resource: Resource, params: Record<string, string>): bool
   }
   if (resource.resourceType === "Task") {
     const task = resource as Task;
+    if (params.identifier && !matchesIdentifierToken(task.identifier, params.identifier)) return false;
     if (params.code && !matchesCodingToken(task.code?.coding, params.code)) return false;
     if (params.focus && task.focus?.reference !== params.focus) return false;
     if (params["business-status"] && !matchesCodingToken(task.businessStatus?.coding, params["business-status"])) return false;

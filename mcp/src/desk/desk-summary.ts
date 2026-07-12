@@ -216,17 +216,17 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     .sort()
     .at(-1) ?? null;
   const claimResourcesAvailable = input.resourceAvailability?.claims !== false && input.resourceAvailability?.claimResponses !== false;
-  const lastTransmissionTone = claimResourcesAvailable && lastTransmission ? previousBusinessDayTone(lastTransmission, input.now) : "off";
   const claimTasksAvailable = input.taskAvailability?.claimRejected !== false && input.taskAvailability?.era !== false;
   const claimsAvailable = claimResourcesAvailable && claimTasksAvailable;
+  const lastTransmissionTone = claimsAvailable && lastTransmission ? previousBusinessDayTone(lastTransmission, input.now) : "off";
   const claims = {
     failed: claimsAvailable ? stat(failedRows.length, failedRows.length > 0 ? "alert" : "ok") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
     inProcess: claimsAvailable ? stat(inProcessRows.length, "info") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
     paperQueue: unavailable("Claims do not persist an electronic-versus-paper queue marker yet."),
     heldCents: claimsAvailable ? stat(heldCents, failedRows.length > 0 ? "alert" : "ok") : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
-    lastTransmission: claimResourcesAvailable
+    lastTransmission: claimsAvailable
       ? stat(lastTransmission, lastTransmissionTone, lastTransmission ? undefined : "No successful claim transmission is persisted yet.")
-      : unavailable(CLAIM_RESOURCES_UNAVAILABLE),
+      : unavailable(claimResourcesAvailable ? CLAIM_TASKS_UNAVAILABLE : CLAIM_RESOURCES_UNAVAILABLE),
   };
 
   const paymentReconciliationsAvailable = input.resourceAvailability?.paymentReconciliations !== false;
@@ -294,7 +294,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     pulse: {
       itemsNeedingYou: attention.length,
       everythingElseAtTarget: attention.length === 0,
-      lastClaimTransmission: claimResourcesAvailable ? lastTransmission : null,
+      lastClaimTransmission: claimsAvailable ? lastTransmission : null,
       lastClaimTransmissionTone: lastTransmissionTone,
     },
   };
