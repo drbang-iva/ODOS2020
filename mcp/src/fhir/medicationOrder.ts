@@ -84,10 +84,12 @@ export function buildMedicationRequest(input: MedicationOrderInput): MedicationR
         url: OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
         valueCode: input.transmissionMethod,
       },
-      {
-        url: OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
-        valueBoolean: input.isControlledSubstance ?? false,
-      },
+      ...(input.isControlledSubstance === undefined
+        ? []
+        : [{
+            url: OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+            valueBoolean: input.isControlledSubstance,
+          }]),
     ],
     ...(input.note ? { note: input.note } : {}),
   };

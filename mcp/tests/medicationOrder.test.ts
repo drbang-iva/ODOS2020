@@ -19,6 +19,7 @@ test("buildMedicationRequest captures the prescription, linked diagnosis, and di
     routeText: "Ophthalmic",
     reasonReference: "Condition/c1",
     pharmacyText: "Main Street Pharmacy · 555-0100",
+    isControlledSubstance: false,
     transmissionMethod: "printed",
     authoredOn: "2026-07-11T14:00:00.000Z",
   });
@@ -46,6 +47,23 @@ test("buildMedicationRequest captures the prescription, linked diagnosis, and di
   assert.equal(
     request.extension?.find((extension) => extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL)?.valueBoolean,
     false,
+  );
+});
+
+test("buildMedicationRequest omits an unknown controlled-substance flag", () => {
+  const request = buildMedicationRequest({
+    patientReference: "Patient/p1",
+    medicationText: "Unknown WENO medication",
+    transmissionMethod: "electronically-sent",
+  });
+
+  assert.equal(
+    request.extension?.find((extension) => extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL),
+    undefined,
+  );
+  assert.equal(
+    request.extension?.find((extension) => extension.url === OSOD_TRANSMISSION_METHOD_EXTENSION_URL)?.valueCode,
+    "electronically-sent",
   );
 });
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Basic, Bundle, MedicationRequest } from "@medplum/fhirtypes";
+import { OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../src/fhir/medicationOrder.js";
 import {
   buildWenoMappingResource,
   FhirWenoMappingCatalog,
@@ -261,6 +262,12 @@ test("sync builds a new MedicationRequest matched to the echoed patient ID", () 
   assert.equal(resource.identifier?.[0]?.value, "msg-1");
   assert.equal(resource.status, "unknown");
   assert.equal(resource.extension?.[0]?.valueCode, "electronically-sent");
+  assert.equal(
+    resource.extension?.some((extension) =>
+      extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL
+    ),
+    false,
+  );
 });
 
 test("sync creates once and skips an already imported WENO message", async () => {
