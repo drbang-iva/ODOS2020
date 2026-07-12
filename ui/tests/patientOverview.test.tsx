@@ -292,6 +292,25 @@ test("a history failure invalidated by sticky save does not surface a stale erro
   assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
 });
 
+test("an active history failure replaces the loading placeholder", async () => {
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => { throw new Error("History unavailable"); },
+  };
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+  });
+  const historyButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "History");
+  assert.ok(historyButton);
+  assert.equal(historyButton.props["aria-controls"], "patient-sticky-history");
+  await act(async () => historyButton.props.onClick());
+  const rendered = JSON.stringify(renderer.toJSON());
+  assert.match(rendered, /History unavailable/);
+  assert.doesNotMatch(rendered, /Loading version history/);
+});
+
 const patient: Patient = {
   resourceType: "Patient",
   id: "patient-1",
