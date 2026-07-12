@@ -11,6 +11,7 @@ import {
 } from "../lib/patient-overview";
 import { useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
+import { PinnedOfficeNote } from "../components/OfficeChannel";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -135,11 +136,6 @@ export function PatientOverview({
   return (
     <main className="odos-patient-overview">
       <div className="odos-ambient" aria-hidden="true" />
-      <header className="odos-desk-topbar">
-        <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-        <span className="odos-location">Patient · {name}</span>
-      </header>
-
       <section className="odos-overview-body">
         <nav className="odos-overview-crumb" aria-label="Breadcrumb">
           <a href={CLINIC_PATH} onClick={navigateWithinApp}>Clinic</a><span>›</span><span>{name}</span>
@@ -155,6 +151,7 @@ export function PatientOverview({
           <div className="odos-overview-actions">
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
           </div>
+          <PinnedOfficeNote patientId={patient.id} />
         </div>
 
         <section className="odos-sticky-note" aria-label="Patient sticky note">

@@ -33,6 +33,7 @@ import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
+import { ClinicOfficeShell } from "./components/OfficeChannel";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { resolveSessionRoles, type PracticeRoleId } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
@@ -142,9 +143,11 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
     case DESK_HOME_PATH:
       return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
     case CLINIC_PATH:
-      return view.kind === "picker"
-        ? <ClinicHome switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null} />
-        : <ViewRouter view={view} />;
+      return (
+        <ClinicOfficeShell location={clinicLocation(view)} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
+          {view.kind === "picker" ? <ClinicHome /> : <ViewRouter view={view} />}
+        </ClinicOfficeShell>
+      );
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":
@@ -187,6 +190,13 @@ export function RouteSwitch({ view, path = window.location.pathname, roles = [] 
     default:
       return <ViewRouter view={view} />;
   }
+}
+
+function clinicLocation(view: ViewState): string {
+  if (view.kind === "picker") return "Clinic home";
+  if (view.kind === "overview") return "Patient overview";
+  if (view.kind === "director") return "Patient director";
+  return "Encounter";
 }
 
 function ViewRouter({ view }: { view: ViewState }) {

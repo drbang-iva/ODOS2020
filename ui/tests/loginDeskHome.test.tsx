@@ -55,10 +55,11 @@ test("Desk card configuration sanitizes and reorders only catalog cards", () => 
   assert.deepEqual(reorderDeskCards(["schedule", "attention", "claims"], "claims", "schedule"), ["claims", "schedule", "attention"]);
 });
 
-test("Desk customization persists reorder, remove, add-back, and Reset for all nine cards", () => {
+test("Desk customization persists reorder, remove, add-back, and Reset for all ten cards", () => {
   const defaults = loadDeskCardIds(undefined);
-  assert.equal(defaults.length, 9);
+  assert.equal(defaults.length, 10);
   assert.ok(defaults.includes("front-line"));
+  assert.ok(defaults.includes("office"));
   const reordered = reorderDeskCards(defaults, "statements", "schedule");
   const removed = reordered.filter((id) => id !== "front-line");
   const addedBack = [...removed, "front-line"];

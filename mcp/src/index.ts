@@ -44,6 +44,7 @@ import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-ro
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
+import { registerOfficeRoutes } from "./office/office-routes.js";
 import {
   createLabOrderDispatch,
   labOrderRoutingFromEnv,
@@ -6115,6 +6116,10 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         timeZone: process.env.OSOD_TIMEZONE,
+      });
+      registerOfficeRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
       });
 
       app.post("/claims/submit", async (req, res) => {
