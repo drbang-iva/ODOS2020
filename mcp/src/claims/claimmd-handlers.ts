@@ -1190,7 +1190,7 @@ async function persistClaimChargeItems(
   patientReference: string,
   submissionKey: string,
 ): Promise<ChargeItem[]> {
-  const persisted: ChargeItem[] = [];
+  const validated: Array<ChargeItem | { candidate: ChargeItem; identifierValue: string }> = [];
   for (const [index, chargeItem] of chargeItems.entries()) {
     if (chargeItem.id) {
       if (!/^[A-Za-z0-9.-]+$/.test(chargeItem.id)) {
@@ -1203,18 +1203,30 @@ async function persistClaimChargeItems(
         throw new ClaimSubmissionValidationError(`ChargeItem/${chargeItem.id} could not be loaded for this Claim.`);
       }
       assertChargeItemPatient(stored, patientReference);
-      persisted.push(stored);
+      validated.push(stored);
       continue;
     }
     assertChargeItemPatient(chargeItem, patientReference);
     const identifierValue = `${submissionKey}:${index + 1}`;
-    const candidate: ChargeItem = {
-      ...chargeItem,
-      identifier: [
-        ...(chargeItem.identifier ?? []).filter((identifier) => identifier.system !== CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM),
-        { system: CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM, value: identifierValue },
-      ],
-    };
+    validated.push({
+      identifierValue,
+      candidate: {
+        ...chargeItem,
+        identifier: [
+          ...(chargeItem.identifier ?? []).filter((identifier) => identifier.system !== CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM),
+          { system: CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM, value: identifierValue },
+        ],
+      },
+    });
+  }
+
+  const persisted: ChargeItem[] = [];
+  for (const item of validated) {
+    if ("resourceType" in item) {
+      persisted.push(item);
+      continue;
+    }
+    const { candidate, identifierValue } = item;
     const stored = await auth.fhir.create(candidate, {
       "If-None-Exist": `identifier=${CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM}|${identifierValue}`,
     });
