@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { LoginScreen, submitLogin } from "../src/scenes/LoginScreen";
+import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitLogin } from "../src/scenes/LoginScreen";
+import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
 import { CLINIC_PATH, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import type { DeskSummary } from "../src/lib/desk-summary";
 
@@ -39,6 +40,37 @@ test("failed login never navigates or authenticates", async () => {
     onAuthenticated: () => events.push("authenticated"),
   }), /Invalid credentials/);
   assert.deepEqual(events, []);
+});
+
+test("set-password submit passes the email-link credentials and new password", async () => {
+  const calls: unknown[][] = [];
+  await submitSetPassword({
+    id: "user-id",
+    secret: "email-secret",
+    password: "new-password",
+    confirmPassword: "new-password",
+    setPassword: async (...args) => { calls.push(args); },
+  });
+  assert.deepEqual(calls, [["user-id", "email-secret", "new-password"]]);
+});
+
+test("set-password submit surfaces server failures", async () => {
+  await assert.rejects(() => submitSetPassword({
+    id: "user-id",
+    secret: "expired-secret",
+    password: "new-password",
+    confirmPassword: "new-password",
+    setPassword: async () => { throw new Error("FHIR 400 Bad Request: Reset link expired"); },
+  }), /Reset link expired/);
+});
+
+test("forgot-password confirmation is neutral on success and failure", async () => {
+  const success = await requestPasswordReset("known@example.test", async () => undefined);
+  const failure = await requestPasswordReset("unknown@example.test", async () => {
+    throw new Error("Account not found");
+  });
+  assert.equal(success, PASSWORD_RESET_CONFIRMATION);
+  assert.equal(failure, PASSWORD_RESET_CONFIRMATION);
 });
 
 test("Desk home is independent from the cockpit and Clinic opens the existing flow in a new tab", () => {
