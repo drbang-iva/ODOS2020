@@ -106,10 +106,6 @@ export interface PharmacyDirectoryRequest {
   ExcludeNonWenoTest?: "Y";
 }
 
-export interface PharmacyDirectoryDownloadOptions {
-  timeoutMs?: number;
-}
-
 export interface NewRxSyncReportRow {
   PatientID: string;
   RelatestoNewRxMsgID: string;
@@ -157,11 +153,10 @@ export async function pullNewRxSyncReport(
 export async function downloadPharmacyDirectory(
   config: WenoEzIntegrationConfig,
   request: PharmacyDirectoryRequest,
-  options: PharmacyDirectoryDownloadOptions = {},
 ): Promise<ArrayBuffer> {
   const configured = assertWenoConfigured(config);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 30_000);
+  const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
     const response = await fetch(buildUrl(
       configured,
