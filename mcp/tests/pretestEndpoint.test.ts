@@ -67,7 +67,16 @@ test("pretest definition endpoints expose practice-editable Wearing and Auto-K o
 
   assert.equal(auto.status, 200);
   const autoBody = auto.body as {
-    definitions: Record<string, { stableKey: string; fields: Record<string, { options?: Array<{ code: string }>; precision?: number }> }>;
+    definitions: Record<string, {
+      stableKey: string;
+      fields: Record<string, {
+        options?: Array<{ code: string }>;
+        minimum?: number;
+        maximum?: number;
+        precision?: number;
+        unit?: string;
+      }>;
+    }>;
   };
   assert.equal(autoBody.definitions.autoRefraction?.stableKey, "auto_refraction");
   assert.equal(autoBody.definitions.autoKeratometry?.stableKey, "auto_keratometry");
@@ -75,6 +84,22 @@ test("pretest definition endpoints expose practice-editable Wearing and Auto-K o
     autoBody.definitions.autoRefraction?.fields.sourceType.options?.map((option) => option.code),
     ["manual", "device"],
   );
+  assert.deepEqual(autoBody.definitions.autoRefraction?.fields.binocularPdDistance, {
+    display: "Binocular PD Dist",
+    type: "decimal-input",
+    minimum: 35,
+    maximum: 90,
+    precision: 2,
+    unit: "mm",
+  });
+  assert.deepEqual(autoBody.definitions.autoRefraction?.fields.binocularPdNear, {
+    display: "Binocular PD Near",
+    type: "decimal-input",
+    minimum: 35,
+    maximum: 90,
+    precision: 2,
+    unit: "mm",
+  });
   assert.equal(autoBody.definitions.autoKeratometry?.fields.flatK.precision, 2);
 });
 
@@ -203,6 +228,73 @@ test("Auto-Refraction POST persists ARx and Auto-K per eye and round-trips devic
   assert.equal(componentValue(odK, "REMARKS"), "Reliable fixation.");
 });
 
+test("Auto-Refraction persists binocular distance and near PD in a separate OU Observation", async () => {
+  const { created, deps: d } = deps();
+  const res = await handleAutoRefractionCaptureRequest(d, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      binocularPdDistance: 63.5,
+      binocularPdNear: 60.25,
+      eyes: {
+        OD: { sphere: -1.25 },
+        OS: { sphere: -1 },
+      },
+    },
+  });
+
+  assert.equal(res.status, 200);
+  const observations = created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.length, 3);
+  const ou = observations.find((observation) => lateralityCode(observation) === "OU");
+  assert.ok(ou);
+  assert.equal(codingCode(ou), "auto_refraction");
+  assert.equal(componentValue(ou, "BINOCULAR_PD_DISTANCE"), 63.5);
+  assert.equal(componentValue(ou, "BINOCULAR_PD_NEAR"), 60.25);
+  for (const code of ["BINOCULAR_PD_DISTANCE", "BINOCULAR_PD_NEAR"]) {
+    const quantity = ou.component?.find((component) => component.code.coding?.some((coding) => coding.code === code))?.valueQuantity;
+    assert.equal(quantity?.unit, "mm");
+    assert.equal(quantity?.system, "http://unitsofmeasure.org");
+    assert.equal(quantity?.code, "mm");
+  }
+  const perEye = observations.filter((observation) => lateralityCode(observation) !== "OU");
+  assert.deepEqual(perEye.map(lateralityCode), ["OD", "OS"]);
+  assert.equal(perEye.every((observation) => componentValue(observation, "BINOCULAR_PD_DISTANCE") === undefined), true);
+  assert.equal(perEye.every((observation) => componentValue(observation, "BINOCULAR_PD_NEAR") === undefined), true);
+  assert.ok((res.body as { binocularPd?: { observationReference?: string } }).binocularPd?.observationReference);
+});
+
+test("Auto-Refraction rejects PD inside eyes and omits OU capture when top-level PD is empty", async () => {
+  const nested = await handleAutoRefractionCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      eyes: { OD: { sphere: -1, binocularPdDistance: 63.5 } },
+    },
+  });
+  const { created, deps: d } = deps();
+  const empty = await handleAutoRefractionCaptureRequest(d, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      binocularPdDistance: undefined,
+      binocularPdNear: undefined,
+      eyes: { OD: { sphere: -1 } },
+    },
+  });
+
+  assert.equal(nested.status, 400);
+  assert.equal(empty.status, 200);
+  const observations = created
+    .map((entry) => entry.resource)
+    .filter((resource): resource is Observation => resource.resourceType === "Observation");
+  assert.equal(observations.length, 1);
+  assert.equal(lateralityCode(observations[0]), "OD");
+  assert.equal((empty.body as { binocularPd?: unknown }).binocularPd, undefined);
+});
+
 test("Auto-K observations support a single latest-per-patient-and-eye FHIR search", async () => {
   const { created, deps: d } = deps();
   await handleAutoRefractionCaptureRequest(d, { authHeader: AUTH, body: autoBody() });
@@ -312,6 +404,10 @@ function autoBody(sourceType: "manual" | "device" = "manual") {
 
 function codingCode(observation: Observation): string | undefined {
   return observation.code.coding?.find((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
+}
+
+function lateralityCode(observation: Observation | undefined): string | undefined {
+  return observation?.bodySite?.coding?.find((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
 }
 
 function componentValue(observation: Observation | undefined, code: string): unknown {

@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  AutoRefractionSection,
+  buildAutoRefractionRequestBody,
+} from "../src/components/charting/AutoRefractionSection";
 import { authHeaders } from "../src/lib/clinical-graph-client";
 import { fhir } from "../src/lib/fhir";
 
@@ -51,6 +57,38 @@ test("soft and specialty contact lens definition and save requests use shared au
   );
 });
 
+test("Auto-Refraction renders directly typeable binocular PD fields and saves them at request top level", () => {
+  const html = renderToStaticMarkup(
+    <AutoRefractionSection
+      patientReference="Patient/p1"
+      encounterReference="Encounter/e1"
+      onSaved={() => undefined}
+    />,
+  );
+  assert.match(html, /Binocular PD \(OU\)/);
+  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD distance"/);
+  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD near"/);
+
+  const body = buildAutoRefractionRequestBody({
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    sourceType: "manual",
+    remarks: "  reliable fixation  ",
+    binocularPdDistance: "63.50",
+    binocularPdNear: "60.25",
+    eyes: {
+      OD: emptyAutoEye(),
+      OS: emptyAutoEye(),
+    },
+  });
+  assert.equal(body.binocularPdDistance, 63.5);
+  assert.equal(body.binocularPdNear, 60.25);
+  assert.equal(body.remarks, "reliable fixation");
+  assert.deepEqual(body.eyes, {});
+  assert.equal("binocularPdDistance" in (body.eyes.OD ?? {}), false);
+  assert.equal("binocularPdNear" in (body.eyes.OS ?? {}), false);
+});
+
 test("no UI source references the obsolete osod_access_token key", () => {
   for (const path of sourceFiles(UI_ROOT)) {
     assert.doesNotMatch(readFileSync(path, "utf8"), /osod_access_token/, path);
@@ -78,4 +116,8 @@ function sourceFiles(directory: string): string[] {
     if (entry.isDirectory()) return sourceFiles(path);
     return /\.tsx?$/.test(entry.name) ? [path] : [];
   });
+}
+
+function emptyAutoEye() {
+  return { sphere: "", cylinder: "", axis: "", flatK: "", flatAxis: "", steepK: "", steepAxis: "" };
 }

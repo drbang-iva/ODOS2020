@@ -55,6 +55,8 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const [definitionError, setDefinitionError] = useState<string | null>(null);
   const [sourceType, setSourceType] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [binocularPdDistance, setBinocularPdDistance] = useState("");
+  const [binocularPdNear, setBinocularPdNear] = useState("");
   const [eyes, setEyes] = useState<Record<Eye, EyeState>>(() => ({ OD: emptyEye(), OS: emptyEye() }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,15 +98,27 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   }
 
   async function save() {
-    let payloadEyes: Partial<Record<Eye, Record<string, number>>>;
+    let requestBody: ReturnType<typeof buildAutoRefractionRequestBody>;
     try {
-      payloadEyes = buildPayload(eyes);
+      requestBody = buildAutoRefractionRequestBody({
+        patientReference,
+        encounterReference,
+        sourceType,
+        remarks,
+        binocularPdDistance,
+        binocularPdNear,
+        eyes,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
-    if (Object.keys(payloadEyes).length === 0) {
-      setError("Enter at least one Auto-Refraction or Auto-K value before saving.");
+    if (
+      Object.keys(requestBody.eyes).length === 0
+      && requestBody.binocularPdDistance === undefined
+      && requestBody.binocularPdNear === undefined
+    ) {
+      setError("Enter at least one Auto-Refraction, Auto-K, or binocular PD value before saving.");
       return;
     }
     setSaving(true);
@@ -113,20 +127,23 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/auto-refraction`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientReference,
-          encounterReference,
-          sourceType,
-          ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
-          eyes: payloadEyes,
-        }),
+        body: JSON.stringify(requestBody),
       });
-      const body = await response.json() as { eyes?: Record<string, unknown>; error?: string };
+      const body = await response.json() as { eyes?: Record<string, unknown>; binocularPd?: unknown; error?: string };
       if (!response.ok) throw new Error(body.error ?? `Auto-refraction save failed: ${response.status}`);
-      const count = Object.keys(body.eyes ?? payloadEyes).length;
+      const count = Object.keys(body.eyes ?? requestBody.eyes).length;
+      const pdSaved = Boolean(
+        body.binocularPd
+        || requestBody.binocularPdDistance !== undefined
+        || requestBody.binocularPdNear !== undefined
+      );
+      const savedScope = [
+        count > 0 ? `${count} eye${count === 1 ? "" : "s"}` : "",
+        pdSaved ? "binocular PD" : "",
+      ].filter(Boolean).join(" and ");
       const status = {
         completed: true,
-        summary: `Auto-Refraction / Auto-K saved for ${count} eye${count === 1 ? "" : "s"}`,
+        summary: `Auto-Refraction / Auto-K saved for ${savedScope}`,
         savedAt: new Date().toISOString(),
         operator: OPERATOR,
       };
@@ -171,25 +188,55 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3">
             <h3 className="text-sm font-semibold text-white">Auto-Refraction (ARx)</h3>
           </div>
-          <div className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
-            <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div>
-          </div>
-          {EYES.map((eye) => (
-            <div key={eye} className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
-              <div className="text-sm font-semibold text-white">{eye}</div>
-              <PowerSelect value={eyes[eye].sphere} options={powerOptions} onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} />
-              <PowerSelect value={eyes[eye].cylinder} options={powerOptions} onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} />
-              <select
-                value={eyes[eye].axis}
-                onChange={(event) => updateEye(eye, { axis: event.target.value })}
-                aria-label={`${eye} auto-refraction axis`}
-                className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-              >
-                <option value="">Select</option>
-                {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-              </select>
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+            <div>
+              <div className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] gap-2 bg-white/[0.025] px-4 py-2 text-xs uppercase tracking-widest text-white/35">
+                <div>Eye</div><div>Sphere</div><div>Cylinder</div><div>Axis</div>
+              </div>
+              {EYES.map((eye) => (
+                <div key={eye} className="grid grid-cols-[54px_repeat(3,minmax(120px,180px))] items-center gap-2 border-t border-white/10 px-4 py-3">
+                  <div className="text-sm font-semibold text-white">{eye}</div>
+                  <PowerSelect value={eyes[eye].sphere} options={powerOptions} onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} />
+                  <PowerSelect value={eyes[eye].cylinder} options={powerOptions} onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} />
+                  <select
+                    value={eyes[eye].axis}
+                    onChange={(event) => updateEye(eye, { axis: event.target.value })}
+                    aria-label={`${eye} auto-refraction axis`}
+                    className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
+                  >
+                    <option value="">Select</option>
+                    {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
+                  </select>
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="border-t border-white/10 bg-white/[0.015] p-4 lg:border-l lg:border-t-0">
+              <div className="text-xs font-semibold uppercase tracking-widest text-white/45">Binocular PD (OU)</div>
+              <p className="mt-1 text-xs text-white/35">Single distance and near measurements in millimeters.</p>
+              <div className="mt-4 grid gap-3">
+                <label>
+                  <span className="mb-1 block text-xs text-white/55">Distance (mm)</span>
+                  <NumberInput
+                    value={binocularPdDistance}
+                    field={refractionFields.binocularPdDistance}
+                    fallback={{ min: 35, max: 90, step: 0.01 }}
+                    onChange={setBinocularPdDistance}
+                    ariaLabel="Binocular PD distance"
+                  />
+                </label>
+                <label>
+                  <span className="mb-1 block text-xs text-white/55">Near (mm)</span>
+                  <NumberInput
+                    value={binocularPdNear}
+                    field={refractionFields.binocularPdNear}
+                    fallback={{ min: 35, max: 90, step: 0.01 }}
+                    onChange={setBinocularPdNear}
+                    ariaLabel="Binocular PD near"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="mt-5 overflow-hidden rounded border border-white/10 bg-white/[0.02]">
@@ -277,7 +324,7 @@ function NumberInput({ value, onChange, field, fallback, ariaLabel }: {
       max={field?.maximum ?? fallback.max}
       step={field?.step ?? (field?.precision ? 10 ** -field.precision : fallback.step)}
       aria-label={ariaLabel}
-      className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
+      className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
     />
   );
 }
@@ -307,6 +354,26 @@ function buildPayload(eyes: Record<Eye, EyeState>): Partial<Record<Eye, Record<s
       steepAxis: parseOptionalNumber(row.steepAxis),
     })]];
   })) as Partial<Record<Eye, Record<string, number>>>;
+}
+
+export function buildAutoRefractionRequestBody(input: {
+  patientReference: string;
+  encounterReference: string;
+  sourceType: string;
+  remarks: string;
+  binocularPdDistance: string;
+  binocularPdNear: string;
+  eyes: Record<Eye, EyeState>;
+}) {
+  return {
+    patientReference: input.patientReference,
+    encounterReference: input.encounterReference,
+    sourceType: input.sourceType,
+    ...(input.remarks.trim() ? { remarks: input.remarks.trim() } : {}),
+    ...(input.binocularPdDistance ? { binocularPdDistance: Number(input.binocularPdDistance) } : {}),
+    ...(input.binocularPdNear ? { binocularPdNear: Number(input.binocularPdNear) } : {}),
+    eyes: buildPayload(input.eyes),
+  };
 }
 
 function parseOptionalNumber(value: string): number | undefined {

@@ -21,6 +21,7 @@ import {
   customFieldValueSchema,
   validateCustomFieldValues,
 } from "./custom-fields.js";
+import { decimalField } from "./contact-lens-definition.js";
 
 export interface PretestFhirClient {
   create<T extends Observation | Provenance>(
@@ -93,6 +94,8 @@ const autoRefractionRequestSchema = z.object({
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
   sourceType: z.enum(SOURCE_TYPES).default("manual"),
   remarks: z.string().trim().max(2000).optional(),
+  binocularPdDistance: z.number().optional(),
+  binocularPdNear: z.number().optional(),
   eyes: z.object({
     OD: autoEyeSchema.optional(),
     OS: autoEyeSchema.optional(),
@@ -308,7 +311,28 @@ export async function handleAutoRefractionCaptureRequest(
     eyes[eye] = result;
   }
 
-  return { status: 200, body: { sourceType: parsed.data.sourceType, eyes } };
+  let binocularPd: Record<string, string | undefined> | undefined;
+  if (binocularPdTouched(parsed.data)) {
+    const capture = capturePretestFinding({
+      definition: definitions.autoRefraction,
+      patientReference: parsed.data.patientReference,
+      encounterReference: parsed.data.encounterReference,
+      laterality: "OU",
+      value: {
+        type: "components",
+        components: binocularPdComponents(parsed.data),
+      },
+      provenance,
+      sourceType: parsed.data.sourceType,
+    });
+    const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
+    binocularPd = {
+      observationReference: persisted.observationReference,
+      provenanceReference: persisted.provenanceReference,
+    };
+  }
+
+  return { status: 200, body: { sourceType: parsed.data.sourceType, eyes, ...(binocularPd ? { binocularPd } : {}) } };
 }
 
 export function buildPretestFindingDefinitionStubs(
@@ -423,6 +447,8 @@ function buildAutoDefinitions(provenance: ClinicalGraphProvenance): ClinicalFind
         sphere: powerField("Sphere"),
         cylinder: powerField("Cylinder"),
         axis: axisField("Axis"),
+        binocularPdDistance: decimalField("Binocular PD Dist", 35, 90, 2, "mm"),
+        binocularPdNear: decimalField("Binocular PD Near", 35, 90, 2, "mm"),
         sourceType,
         remarks: { display: "Remarks", type: "string", maximumLength: 2000 },
       },
@@ -512,7 +538,16 @@ function validateAutoRefractionRequest(
   definitions: { autoRefraction: ClinicalFindingDefinition; autoKeratometry: ClinicalFindingDefinition },
 ): string | undefined {
   const populatedEyes = EYES.filter((eye) => request.eyes[eye] && autoEyeTouched(request.eyes[eye]));
-  if (populatedEyes.length === 0) return "At least one populated eye is required.";
+  if (populatedEyes.length === 0 && !binocularPdTouched(request)) {
+    return "At least one populated eye or binocular PD value is required.";
+  }
+  for (const field of ["binocularPdDistance", "binocularPdNear"] as const) {
+    const error = validateNumberField(request[field], definitions.autoRefraction, field, field);
+    if (error) return error;
+    if (request[field] !== undefined && !hasAtMostTwoDecimals(request[field])) {
+      return `${field} must use no more than two decimal places.`;
+    }
+  }
   for (const eye of populatedEyes) {
     const payload = request.eyes[eye];
     if (!payload) continue;
@@ -619,6 +654,15 @@ function autoRefractionComponents(
   pushNumber(components, "CYLINDER", "Cylinder", payload.cylinder, "D");
   pushNumber(components, "AXIS", "Axis", payload.axis, "degrees");
   pushString(components, "REMARKS", "Remarks", remarks);
+  return components;
+}
+
+function binocularPdComponents(
+  request: Pick<AutoRefractionRequest, "binocularPdDistance" | "binocularPdNear">,
+): Extract<FindingValue, { type: "components" }>["components"] {
+  const components: Extract<FindingValue, { type: "components" }>["components"] = [];
+  pushNumber(components, "BINOCULAR_PD_DISTANCE", "Binocular PD distance", request.binocularPdDistance, "mm", "mm");
+  pushNumber(components, "BINOCULAR_PD_NEAR", "Binocular PD near", request.binocularPdNear, "mm", "mm");
   return components;
 }
 
@@ -742,6 +786,12 @@ function autoRefractionTouched(payload: AutoEyePayload, definition: ClinicalFind
     || customValuesForDefinition(payload, definition).length > 0;
 }
 
+function binocularPdTouched(
+  request: Pick<AutoRefractionRequest, "binocularPdDistance" | "binocularPdNear">,
+): boolean {
+  return request.binocularPdDistance !== undefined || request.binocularPdNear !== undefined;
+}
+
 function autoKeratometryTouched(payload: AutoEyePayload, definition: ClinicalFindingDefinition): boolean {
   return autoKeratometryMeasurementsTouched(payload)
     || customValuesForDefinition(payload, definition).length > 0;
@@ -782,8 +832,9 @@ function pushNumber(
   display: string,
   value: number | undefined,
   unit: string,
+  unitCode?: string,
 ) {
-  if (value !== undefined) components.push({ code, display, value, unit });
+  if (value !== undefined) components.push({ code, display, value, unit, ...(unitCode ? { unitCode } : {}) });
 }
 
 function pushString(
