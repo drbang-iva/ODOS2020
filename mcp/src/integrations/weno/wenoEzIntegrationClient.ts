@@ -1,6 +1,8 @@
 import { isWenoConfigured, type WenoEzIntegrationConfig } from "./config.js";
 import { encryptWenoPayload } from "./wenoCrypto.js";
 
+const PHARMACY_DIRECTORY_DOWNLOAD_TIMEOUT_MS = 30_000;
+
 export const WENO_ALTERNATIVE_CONTACT_RELATIONSHIP = {
   NOT_APPLICABLE: 0,
   SPOUSE: 1,
@@ -156,7 +158,7 @@ export async function downloadPharmacyDirectory(
 ): Promise<ArrayBuffer> {
   const configured = assertWenoConfigured(config);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  const timeout = setTimeout(() => controller.abort(), PHARMACY_DIRECTORY_DOWNLOAD_TIMEOUT_MS);
   try {
     const response = await fetch(buildUrl(
       configured,
@@ -168,6 +170,11 @@ export async function downloadPharmacyDirectory(
       throw new Error(`WENO Pharmacy Directory request failed with HTTP ${response.status}.`);
     }
     return response.arrayBuffer();
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("WENO Pharmacy Directory request timed out after 30 seconds.");
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

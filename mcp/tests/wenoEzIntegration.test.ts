@@ -221,6 +221,21 @@ test("pharmacy directory download surfaces HTTP failures", async () => {
   }
 });
 
+test("pharmacy directory download reports a clear timeout error", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw new DOMException("This operation was aborted", "AbortError");
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      downloadPharmacyDirectory(CONFIG, pharmacyDirectoryRequest()),
+      /WENO Pharmacy Directory request timed out after 30 seconds/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("pharmacy directory parser fails loudly until a real WENO LITE workbook is available", () => {
   assert.throws(
     () => parsePharmacyDirectoryZip(new ArrayBuffer(0)),
