@@ -17,11 +17,17 @@ import {
 } from "../src/integrations/weno/config.js";
 import { decryptWenoPayload, encryptWenoPayload } from "../src/integrations/weno/wenoCrypto.js";
 import {
+  downloadPharmacyDirectory,
   getComposeRxIframeUrl,
   getRxLogIframeUrl,
   pullNewRxSyncReport,
   type ComposeRxIframeRequest,
+  type PharmacyDirectoryRequest,
 } from "../src/integrations/weno/wenoEzIntegrationClient.js";
+import {
+  parsePharmacyDirectoryZip,
+  syncWenoPharmacyDirectory,
+} from "../src/jobs/syncWenoPharmacyDirectory.js";
 import {
   buildWenoMedicationRequest,
   parseNewRxSyncReport,
@@ -174,6 +180,103 @@ test("NewRx Sync Report surfaces HTTP failures without response-body secrets", a
   }
 });
 
+test("pharmacy directory download builds the encrypted URL and returns raw ZIP bytes", async () => {
+  const originalFetch = globalThis.fetch;
+  const expected = Uint8Array.from([0x50, 0x4b, 0x03, 0x04]);
+  let requestedUrl = "";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrl = String(input);
+    return new Response(expected, { status: 200 });
+  }) as typeof fetch;
+  try {
+    const request = pharmacyDirectoryRequest();
+    const bytes = await downloadPharmacyDirectory(CONFIG, request);
+    assert.deepEqual(new Uint8Array(bytes), expected);
+    assert.match(
+      requestedUrl,
+      /^https:\/\/online\.wenoexchange\.com\/en\/EPCS\/DownloadPharmacyDirectory\?/,
+    );
+    assert.match(requestedUrl, /[?&]useremail=admin%40example\.com(?:&|$)/);
+    const encrypted = decodeURIComponent(requestedUrl.match(/[?&]data=([^&]+)/)?.[1] ?? "");
+    assert.deepEqual(decryptWenoPayload(encrypted, CONFIG.encryptionKey), request);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pharmacy directory download surfaces HTTP failures", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("vendor detail", { status: 502 })) as typeof fetch;
+  try {
+    await assert.rejects(
+      downloadPharmacyDirectory(CONFIG, pharmacyDirectoryRequest()),
+      /WENO Pharmacy Directory request failed with HTTP 502/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pharmacy directory parser fails loudly until a real WENO LITE workbook is available", () => {
+  assert.throws(
+    () => parsePharmacyDirectoryZip(new ArrayBuffer(0)),
+    /not yet wired.*real WENO pharmacy directory sample file.*LITE Excel column schema/,
+  );
+});
+
+test("pharmacy directory sync downloads then surfaces the parser boundary", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  let storageCalls = 0;
+  globalThis.fetch = (async () => {
+    fetchCalls += 1;
+    return new Response(Uint8Array.from([0x50, 0x4b]), { status: 200 });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      syncWenoPharmacyDirectory({
+        trigger: "scheduled-daily",
+        config: CONFIG,
+        request: pharmacyDirectoryRequest(),
+        storage: {
+          async store() {
+            storageCalls += 1;
+            return 0;
+          },
+        },
+      }),
+      /not yet wired.*real WENO pharmacy directory sample file/,
+    );
+    assert.equal(fetchCalls, 1);
+    assert.equal(storageCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pharmacy directory sync blocks before HTTP when WENO is unconfigured", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = (async () => {
+    fetchCalls += 1;
+    return new Response();
+  }) as typeof fetch;
+  try {
+    await assert.rejects(
+      syncWenoPharmacyDirectory({
+        trigger: "manual",
+        config: {},
+        request: pharmacyDirectoryRequest(),
+        storage: { async store() { return 0; } },
+      }),
+      /WENO EZ Integration is not configured/,
+    );
+    assert.equal(fetchCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("WENO mapping catalog ships empty and excludes an unmapped prescriber", async () => {
   assert.deepEqual(WENO_MAPPING_SEEDS, []);
   const catalog = new FhirWenoMappingCatalog(new MemoryBasicFhir());
@@ -307,6 +410,15 @@ function syncRequest() {
     MD5Password: "resolved-admin-secret",
     FromDate: "2026-07-01",
     ToDate: "2026-07-08",
+  };
+}
+
+function pharmacyDirectoryRequest(): PharmacyDirectoryRequest {
+  return {
+    UserEmail: "admin@example.com",
+    MD5Password: "resolved-admin-secret",
+    Daily: "Y",
+    ExcludeNonWenoTest: "Y",
   };
 }
 

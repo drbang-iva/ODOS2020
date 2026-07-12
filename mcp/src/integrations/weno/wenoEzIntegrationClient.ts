@@ -99,6 +99,13 @@ export interface NewRxSyncReportRequest {
   ResponseFormat?: "CSV" | "JSON";
 }
 
+export interface PharmacyDirectoryRequest {
+  UserEmail: string;
+  MD5Password: string;
+  Daily: "Y" | "N";
+  ExcludeNonWenoTest?: "Y";
+}
+
 export interface NewRxSyncReportRow {
   PatientID: string;
   RelatestoNewRxMsgID: string;
@@ -141,6 +148,23 @@ export async function pullNewRxSyncReport(
     throw new Error(`WENO NewRx Sync Report request failed with HTTP ${response.status}.`);
   }
   return response.text();
+}
+
+export async function downloadPharmacyDirectory(
+  config: WenoEzIntegrationConfig,
+  request: PharmacyDirectoryRequest,
+): Promise<ArrayBuffer> {
+  const configured = assertWenoConfigured(config);
+  const response = await fetch(buildUrl(
+    configured,
+    "/en/EPCS/DownloadPharmacyDirectory",
+    request.UserEmail,
+    request,
+  ), { headers: { Accept: "application/zip" } });
+  if (!response.ok) {
+    throw new Error(`WENO Pharmacy Directory request failed with HTTP ${response.status}.`);
+  }
+  return response.arrayBuffer();
 }
 
 function buildUrl(
