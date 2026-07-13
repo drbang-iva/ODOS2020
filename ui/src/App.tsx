@@ -128,11 +128,14 @@ export function parseSetPasswordPath(pathname: string): { id: string; secret: st
 }
 
 export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC_PATH | typeof DESK_HOME_PATH {
+  if (roles.includes("front-desk") || roles.includes("practice-admin")) return DESK_HOME_PATH;
   return roles.includes("clinician") || roles.includes("aesthetics-provider") ? CLINIC_PATH : DESK_HOME_PATH;
 }
 
 export function hasCrossSideAccess(roles: readonly PracticeRoleId[]): boolean {
-  return roles.includes("front-desk") && defaultHomePath(roles) === CLINIC_PATH;
+  const hasDeskSideRole = roles.includes("front-desk") || roles.includes("practice-admin");
+  const hasClinicSideRole = roles.includes("clinician") || roles.includes("aesthetics-provider");
+  return hasDeskSideRole && hasClinicSideRole;
 }
 
 export function shouldResetClinicView(previousPath: string, nextPath: string): boolean {
