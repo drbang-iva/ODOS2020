@@ -46,6 +46,21 @@ export function formatPracticeRoleBootFailure(missing: readonly string[]): strin
   ].join("\n");
 }
 
+export async function logSsePracticeRoleBootVerification(input: {
+  authenticate(): Promise<void>;
+  verify(): Promise<void>;
+  log?: (message: string) => void;
+}): Promise<void> {
+  try {
+    await input.authenticate();
+    await input.verify();
+  } catch (error) {
+    (input.log ?? console.error)(formatPracticeRoleBootFailure([
+      `verification unavailable: ${error instanceof Error ? error.message : String(error)}`,
+    ]));
+  }
+}
+
 export async function logPracticeRoleBootVerification(
   fhir: Pick<MedplumClient, "search">,
   log: (message: string) => void = console.error,

@@ -27,7 +27,10 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOsodAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
-import { logPracticeRoleBootVerification } from "./authz/boot-role-verification.js";
+import {
+  logPracticeRoleBootVerification,
+  logSsePracticeRoleBootVerification,
+} from "./authz/boot-role-verification.js";
 import {
   buildOsodAuditEventRow,
   type OsodAuditEventRecord,
@@ -5397,8 +5400,15 @@ async function authenticateWithMedplum(force = false): Promise<void> {
 
 async function main(): Promise<void> {
   const transportMode = process.env.OSOD_MCP_TRANSPORT ?? "stdio";
-  await authenticateWithMedplum();
-  await logPracticeRoleBootVerification(fhir);
+  if (transportMode === "sse") {
+    await logSsePracticeRoleBootVerification({
+      authenticate: authenticateWithMedplum,
+      verify: () => logPracticeRoleBootVerification(fhir),
+    });
+  } else if (transportMode === "stdio") {
+    await authenticateWithMedplum();
+    await logPracticeRoleBootVerification(fhir);
+  }
 
   switch (transportMode) {
     case "stdio": {
