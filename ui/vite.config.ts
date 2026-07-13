@@ -13,8 +13,24 @@ export default defineConfig({
       "/payments": { target: "http://localhost:3333", changeOrigin: true },
       "/claims": { target: "http://localhost:3333", changeOrigin: true },
       "/statements": { target: "http://localhost:3333", changeOrigin: true },
-      "/desk": { target: "http://localhost:3333", changeOrigin: true },
-      "/clinic": { target: "http://localhost:3333", changeOrigin: true },
+      "/desk": {
+        target: "http://localhost:3333",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html")) {
+            return "/index.html";
+          }
+        },
+      },
+      "/clinic": {
+        target: "http://localhost:3333",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html")) {
+            return "/index.html";
+          }
+        },
+      },
       "/clinical-graph": { target: "http://localhost:3333", changeOrigin: true },
     },
   },
