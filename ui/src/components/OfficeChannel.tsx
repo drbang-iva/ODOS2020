@@ -268,7 +268,7 @@ function ClinicSectionsDrawer({ open, roles, summary, onClose }: { open: boolean
         </DrawerGroup>
         <DrawerGroup label="Clinic">
           <DrawerLink icon="▦" title="Full schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
-          <DrawerLink icon="⇄" title="Orders worklist" detail="persisted optical lab orders" href="/dispensary/lab-orders" count={summary?.orders.count} onClick={route} />
+          <DrawerLink icon="⇄" title="Orders worklist" detail="persisted optical lab orders" href="/dispensary/lab-orders" count={summary?.orders.activeCount} onClick={route} />
           <DrawerUnavailable icon="☰" title="Results review" detail="review queue not wired" />
           <DrawerUnavailable icon="℞" title="E-Rx queue" detail="not wired — honest state" />
         </DrawerGroup>

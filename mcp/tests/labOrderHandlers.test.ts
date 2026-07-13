@@ -5,6 +5,7 @@ import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { labTransportStateConcept, type LabTransportState } from "../src/fhir/labTransportState.js";
 import { labOrderToExport, type LabOrder } from "../src/fhir/opticalLabOrder.js";
+import { backfilledLabOrderStatusRecord, flagLabOrderProblem } from "../src/fhir/labOrderStatus.js";
 import {
   LAB_ORDER_EXPORT_INPUT_CODE,
   LAB_ORDER_TRANSMISSION_TASK_CODE,
@@ -14,7 +15,10 @@ import {
 import type { LabOrderAdapter } from "../src/lab-orders/lab-order-adapter.js";
 import { createLabOrderDispatch } from "../src/lab-orders/lab-order-dispatch.js";
 import {
+  handleFlagLabOrderProblemRequest,
   handleLabOrderSheetRequest,
+  handleResolveLabOrderProblemRequest,
+  handleSetLabOrderStatusRequest,
   handleLabOrderWorklistRequest,
   handleSubmitLabOrderRequest,
   type LabOrderHandlerDeps,
@@ -35,6 +39,8 @@ const ORDER: LabOrder = {
     lensMaterial: "Polycarbonate",
     treatments: [],
   },
+  frameSource: 4,
+  frameOwnership: "in-house",
 };
 
 function transmission(id: string, state: LabTransportState): Task {
@@ -49,8 +55,10 @@ function transmission(id: string, state: LabTransportState): Task {
         code: LAB_ORDER_TRANSMISSION_TASK_CODE,
       }],
     },
+    meta: { versionId: "1" },
     basedOn: [{ reference: "Task/order-1" }],
     businessStatus: labTransportStateConcept(state),
+    authoredOn: "2026-07-11T12:00:00.000Z",
     input: [{
       type: {
         coding: [{ system: OSOD_LAB_ORDER_TASK_INPUT_SYSTEM, code: LAB_ORDER_EXPORT_INPUT_CODE }],
@@ -63,10 +71,16 @@ function transmission(id: string, state: LabTransportState): Task {
 
 function setup() {
   const tasks = new Map<string, Task>([
+    ["lab-queued", transmission("lab-queued", "queued")],
     ["lab-sent", transmission("lab-sent", "sent")],
     ["lab-received", transmission("lab-received", "received")],
   ]);
   const calls: Array<{ operation: string; staff?: string; reference?: string }> = [];
+  const updates: Array<{ id: string; headers?: Record<string, string> }> = [];
+  const updateControls: {
+    before?: (input: { id: string; current: Task }) => void;
+    alwaysConflict?: boolean;
+  } = {};
   const fhir = {
     read: async <T extends Resource>(_resourceType: T["resourceType"], id: string): Promise<T> => {
       const task = tasks.get(id);
@@ -78,7 +92,32 @@ function setup() {
       type: "searchset",
       entry: [...tasks.values()].map((resource) => ({ resource: structuredClone(resource) as T })),
     }),
-    update: async <T extends Resource>(_rt: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
+    update: async <T extends Resource>(
+      _rt: T["resourceType"],
+      id: string,
+      resource: T,
+      headers?: Record<string, string>,
+    ): Promise<T> => {
+      updates.push({ id, headers });
+      let current = tasks.get(id);
+      if (!current) throw new Error(`Task/${id} not found`);
+      if (updateControls.before) {
+        const before = updateControls.before;
+        updateControls.before = undefined;
+        before({ id, current: structuredClone(current) });
+        current = tasks.get(id);
+      }
+      const version = headers?.["If-Match"]?.match(/"(.+)"/)?.[1];
+      if (updateControls.alwaysConflict || !version || version !== current?.meta?.versionId) {
+        throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+      }
+      const persisted = {
+        ...resource,
+        meta: { ...(resource.meta ?? {}), versionId: String(Number(version) + 1) },
+      } as T;
+      if (resource.resourceType === "Task") tasks.set(id, structuredClone(persisted as Task));
+      return structuredClone(persisted);
+    },
     create: async <T extends Resource>(resource: T): Promise<T> => resource,
   };
   const adapter: LabOrderAdapter = {
@@ -115,8 +154,9 @@ function setup() {
       ...dispatch,
       getAdapter: () => adapter,
     },
+    now: () => "2026-07-11T14:00:00.000Z",
   };
-  return { adapter, calls, deps, fhir };
+  return { adapter, calls, deps, fhir, tasks, updates, updateControls };
 }
 
 test("submit handler authenticates, uses the verified staff identity, and defaults routing to manual", async () => {
@@ -140,7 +180,7 @@ test("submit handler authenticates, uses the verified staff identity, and defaul
   assert.equal(fixture.calls[0].staff, "Practitioner/verified-staff");
 });
 
-test("sheet handler re-renders from the stored export and worklist filters by transport state", async () => {
+test("sheet handler renders stored export and board GET computes legacy statuses without writes", async () => {
   const fixture = setup();
   const sheet = await handleLabOrderSheetRequest(fixture.deps, {
     authHeader: "Bearer good",
@@ -149,22 +189,103 @@ test("sheet handler re-renders from the stored export and worklist filters by tr
   assert.equal(sheet.status, 200);
   assert.match(String((sheet.body as { content: string }).content), /ORD-HANDLER/);
 
+  const board = await handleLabOrderWorklistRequest(fixture.deps, {
+    authHeader: "Bearer good",
+  });
+  assert.equal(board.status, 200);
+  assert.deepEqual(Object.fromEntries((board.body as { items: Array<{ reference: string; status: string }> }).items
+    .map((item) => [item.reference, item.status])), {
+    "Task/lab-received": "received",
+    "Task/lab-queued": "in-office-not-sent",
+    "Task/lab-sent": "at-lab",
+  });
+  assert.equal((board.body as { unprojectableCount: number }).unprojectableCount, 0);
+  assert.equal(fixture.updates.length, 0);
+
   const worklist = await handleLabOrderWorklistRequest(fixture.deps, {
     authHeader: "Bearer good",
     state: "received",
   });
   assert.equal(worklist.status, 200);
-  assert.deepEqual((worklist.body as { items: Task[] }).items.map(({ id }) => id), ["lab-received"]);
+  assert.deepEqual((worklist.body as { items: Array<{ reference: string }> }).items.map(({ reference }) => reference), ["Task/lab-received"]);
 
   const invalid = await handleLabOrderWorklistRequest(fixture.deps, {
     authHeader: "Bearer good",
-    state: "at-lab",
+    state: "sent",
   });
   assert.equal(invalid.status, 400);
-  assert.match(String((invalid.body as { error: string }).error), /transport state/i);
+  assert.match(String((invalid.body as { error: string }).error), /status/i);
+  assert.equal(fixture.updates.length, 0);
 });
 
-test("all six lab-order HTTP endpoints reach handlers after service authentication", async () => {
+test("staff status and problem actions persist verified identity and resolve without losing history", async () => {
+  const fixture = setup();
+  const status = await handleSetLabOrderStatusRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { status: "received" },
+  });
+  assert.equal(status.status, 200);
+  const flagged = await handleFlagLabOrderProblemRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { reason: "lab-breakage-remake", note: "Lens broke during edging" },
+  });
+  assert.equal((flagged.body as { flag: { flaggedBy: string } }).flag.flaggedBy, "Practitioner/verified-staff");
+  const resolved = await handleResolveLabOrderProblemRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    flagId: "flag-1",
+  });
+  assert.equal(resolved.status, 200);
+  assert.ok(fixture.updates.every((update) => update.headers?.["If-Match"]));
+});
+
+test("problem flag retries one version conflict and preserves both concurrent append-only flags", async () => {
+  const fixture = setup();
+  fixture.updateControls.before = ({ id, current }) => {
+    const concurrent = flagLabOrderProblem(current, {
+      reason: "lab-lost",
+      note: "Lab reported the tray missing",
+      flaggedBy: "Practitioner/other-staff",
+      flaggedAt: "2026-07-11T13:59:00.000Z",
+    });
+    fixture.tasks.set(id, {
+      ...concurrent,
+      meta: { ...(concurrent.meta ?? {}), versionId: "2" },
+    });
+  };
+
+  const result = await handleFlagLabOrderProblemRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { reason: "other", note: "Practice follow-up" },
+  });
+  assert.equal(result.status, 200);
+  const saved = await fixture.fhir.read<Task>("Task", "lab-sent");
+  const record = backfilledLabOrderStatusRecord(saved);
+  assert.deepEqual(record.problemFlags.map((flag) => flag.note), [
+    "Lab reported the tray missing",
+    "Practice follow-up",
+  ]);
+  assert.deepEqual(fixture.updates.map((update) => update.headers?.["If-Match"]), ['W/"1"', 'W/"2"']);
+  assert.equal(saved.meta?.versionId, "3");
+});
+
+test("a second version conflict returns a clean 409 response", async () => {
+  const fixture = setup();
+  fixture.updateControls.alwaysConflict = true;
+  const result = await handleSetLabOrderStatusRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { status: "received" },
+  });
+  assert.equal(result.status, 409);
+  assert.match(String((result.body as { error: string }).error), /modified concurrently; reload and retry/);
+  assert.equal(fixture.updates.length, 2);
+});
+
+test("all nine lab-order HTTP endpoints reach handlers after service authentication", async () => {
   const fixture = setup();
   let serviceAuthCalls = 0;
   const app = express();
@@ -187,7 +308,10 @@ test("all six lab-order HTTP endpoints reach handlers after service authenticati
       ["POST", "/lab-orders/Task%2Flab-sent/cancel", {}],
       ["GET", "/lab-orders/Task%2Flab-sent/state", undefined],
       ["GET", "/lab-orders/Task%2Flab-sent/sheet", undefined],
-      ["GET", "/lab-orders?state=sent", undefined],
+      ["POST", "/lab-orders/Task%2Flab-sent/status", { status: "received" }],
+      ["POST", "/lab-orders/Task%2Flab-sent/flags", { reason: "other", note: "Needs review" }],
+      ["POST", "/lab-orders/Task%2Flab-sent/flags/flag-1/resolve", {}],
+      ["GET", "/lab-orders?state=at-lab", undefined],
     ];
     for (const [method, path, body] of cases) {
       const response = await fetch(`${baseUrl}${path}`, {

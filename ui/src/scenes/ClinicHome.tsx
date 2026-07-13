@@ -87,6 +87,8 @@ export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary 
 }
 
 function WaitingOnMe({ summary, error }: { summary?: ClinicSummary; error?: string }) {
+  const orders = summary?.orders as ClinicSummary["orders"] & { count?: number; agingCount?: number } | undefined;
+  const orderItems = orders?.items ?? [];
   if (error) return <div className="odos-clinic-waitstrip"><span className="odos-clinic-wait-chip is-unwired"><strong>Unavailable</strong><small>Clinic summary</small></span></div>;
   return (
     <div className="odos-clinic-waitstrip" aria-label="Waiting on me">
@@ -95,8 +97,8 @@ function WaitingOnMe({ summary, error }: { summary?: ClinicSummary; error?: stri
       </a>
       <button className="odos-clinic-wait-chip is-unwired" data-testid="clinic-wait-results" type="button" disabled><strong>Not wired</strong><small>Results to review</small></button>
       <button className="odos-clinic-wait-chip is-unwired" data-testid="clinic-wait-refills" type="button" disabled><strong>Not wired</strong><small>Refill requests</small></button>
-      <a className={`odos-clinic-wait-chip${summary?.orders.agingCount ? " is-alert" : " is-ok"}`} data-testid="clinic-wait-orders" href="/dispensary/lab-orders" onClick={navigateWithinApp}>
-        <strong>{summary ? summary.orders.count : "…"}</strong><small>Orders in flight</small>
+      <a className={`odos-clinic-wait-chip${orderItems.some((row) => row.needsAction) || orders?.agingCount ? " is-alert" : " is-ok"}`} data-testid="clinic-wait-orders" href="/dispensary/lab-orders" onClick={navigateWithinApp}>
+        <strong>{summary ? orders?.activeCount ?? orders?.count ?? 0 : "…"}</strong><small>Orders in flight</small>
       </a>
       <button className="odos-clinic-wait-chip is-unwired" data-testid="clinic-wait-erx" type="button" disabled><strong>E-Rx not wired</strong><small>Honest state</small></button>
     </div>
@@ -134,25 +136,37 @@ function SignatureCard({ summary, openPatient }: { summary?: ClinicSummary; open
 }
 
 function OrdersCard({ summary, openPatient }: { summary?: ClinicSummary; openPatient(patientId?: string): void }) {
+  const legacyOrders = summary?.orders as ClinicSummary["orders"] & { agingCount?: number } | undefined;
+  const orderItems = legacyOrders?.items ?? [];
+  const needsAttention = orderItems.filter((row) => row.needsAction).length || legacyOrders?.agingCount || 0;
   return (
     <section className="odos-clinic-card odos-tone-emerald" data-testid="clinic-orders-card">
       <span className="odos-card-edge" />
       <div className="odos-clinic-card-head">
         <span>Orders in flight</span>
-        <span className={summary?.orders.agingCount ? "is-alert" : "is-ok"}>{summary ? `${summary.orders.count} active · ${summary.orders.agingCount} aging` : "loading"}</span>
+        <span className={needsAttention ? "is-alert" : "is-ok"}>{summary ? `${needsAttention} need attention` : "loading"}</span>
       </div>
+      {summary?.orders.rollups && (
+        <div className="odos-clinic-order-phases" aria-label="Order phase counts">
+          <span className={summary.orders.rollups.preLab ? "is-warn" : ""}><b>{summary.orders.rollups.preLab}</b> pre-lab</span>
+          <span><b>{summary.orders.rollups.outbound}</b> outbound</span>
+          <span><b>{summary.orders.rollups.atLab}</b> at lab</span>
+          <span className={summary.orders.rollups.inbound ? "is-hot" : ""}><b>{summary.orders.rollups.inbound}</b> inbound</span>
+          <span><b>{summary.orders.rollups.notified}</b> notified</span>
+        </div>
+      )}
       <div className="odos-clinic-orders">
-        {summary?.orders.rows.length === 0 && <div className="odos-clinic-all-clear">No active lab orders ✓</div>}
-        {summary?.orders.rows.slice(0, 5).map((row) => (
-          <button key={row.reference} type="button" className={row.stale ? "is-old" : ""} disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
-            <span>{row.patient} <i className={row.state === "needs-attention" || row.state === "report-due" ? "is-alert" : ""}>{orderStateLabel(row.state)}</i></span>
-            <span>{row.description}</span>
-            <span>{row.ageMinutes === undefined ? "age unavailable" : compactAgeLabel(row.ageMinutes)}</span>
+        {orderItems.length === 0 && <div className="odos-clinic-all-clear">No active lab orders ✓</div>}
+        {orderItems.slice(0, 5).map((row) => (
+          <button key={row.reference} type="button" className={row.needsAction ? "is-old" : ""} disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
+            <span>{row.patientName} <i className={row.needsAction ? "is-alert" : ""}>{row.openFlag ? `⚑ ${problemLabel(row.openFlag.reason)}` : attentionLabel(row)}</i></span>
+            <span>{row.openFlag ? `${row.statusLabel} · flagged by ${staffLabel(row.openFlag.flaggedBy)}` : `${row.frame} · ${row.lenses}`}</span>
+            <span>{row.openFlag ? "⚑" : compactAgeLabel(row.ageMinutes)}</span>
           </button>
         ))}
       </div>
-      <div className="odos-clinic-target">Aging flag: older than {summary?.orders.agingThresholdDays ?? 5} days.</div>
-      <a className="odos-clinic-foot" href="/dispensary/lab-orders" onClick={navigateWithinApp}>Open orders worklist →</a>
+      <div className="odos-clinic-target">Family rollups use the Orders board's same counts and needs-attention sort.</div>
+      <a className="odos-clinic-foot" href="/dispensary/lab-orders" onClick={navigateWithinApp}>Open the Orders board →</a>
     </section>
   );
 }
@@ -201,11 +215,22 @@ function compactAgeLabel(minutes: number): string {
   return `${Math.floor(minutes / (24 * 60))}d`;
 }
 
-function orderStateLabel(state: "ordered" | "at-lab" | "report-due" | "needs-attention"): string {
-  if (state === "at-lab") return "at lab";
-  if (state === "report-due") return "report due";
-  if (state === "needs-attention") return "needs attention";
-  return "ordered";
+function attentionLabel(row: ClinicSummary["orders"]["items"][number]): string {
+  if (row.transportState === "error") return "didn't reach lab";
+  if (row.status === "received") return "received — notify";
+  if (row.overdue) return `${row.statusLabel} — overdue`;
+  return row.statusLabel;
+}
+
+function problemLabel(reason: string): string {
+  if (reason === "lab-lost") return "lab lost it";
+  if (reason === "lab-breakage-remake") return "lab breakage — remaking";
+  if (reason === "cannot-locate") return "can't locate";
+  return "other problem";
+}
+
+function staffLabel(reference: string): string {
+  return reference.split("/").pop() ?? reference;
 }
 
 function dateLabel(value: string): string {

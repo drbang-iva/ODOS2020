@@ -55,6 +55,8 @@ const INPUT: BuildLabOrderInput = {
     specialInstructions: "Edge and mount",
     commentsToLab: "Call before substitutions",
   },
+  frameSource: 3,
+  frameOwnership: "in-house",
   fitting: { od: { distPd: 31, nearPd: 28, segHeight: 18 }, os: { distPd: 30.5, nearPd: 27.5, segHeight: 18 } },
   frame: {
     brand: "Walkthrough",

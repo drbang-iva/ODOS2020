@@ -2,9 +2,12 @@ import type { Application, Request, Response } from "express";
 import {
   handleAdvanceLabOrderRequest,
   handleCancelLabOrderRequest,
+  handleFlagLabOrderProblemRequest,
   handleLabOrderSheetRequest,
   handleLabOrderStateRequest,
   handleLabOrderWorklistRequest,
+  handleResolveLabOrderProblemRequest,
+  handleSetLabOrderStatusRequest,
   handleSubmitLabOrderRequest,
   type LabOrderHandlerDeps,
   type LabOrderHandlerResult,
@@ -32,6 +35,21 @@ export function registerLabOrderRoutes(
     authHeader: req.header("authorization"),
     labOrderReference: routeParam(req.params.ref),
     body: req.body,
+  }));
+  post(app, "/lab-orders/:ref/status", deps, (req) => handleSetLabOrderStatusRequest(deps.handlers, {
+    authHeader: req.header("authorization"),
+    labOrderReference: routeParam(req.params.ref),
+    body: req.body,
+  }));
+  post(app, "/lab-orders/:ref/flags", deps, (req) => handleFlagLabOrderProblemRequest(deps.handlers, {
+    authHeader: req.header("authorization"),
+    labOrderReference: routeParam(req.params.ref),
+    body: req.body,
+  }));
+  post(app, "/lab-orders/:ref/flags/:flagId/resolve", deps, (req) => handleResolveLabOrderProblemRequest(deps.handlers, {
+    authHeader: req.header("authorization"),
+    labOrderReference: routeParam(req.params.ref),
+    flagId: routeParam(req.params.flagId),
   }));
   get(app, "/lab-orders/:ref/state", deps, (req) => handleLabOrderStateRequest(deps.handlers, {
     authHeader: req.header("authorization"),

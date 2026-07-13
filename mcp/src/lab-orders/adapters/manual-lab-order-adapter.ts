@@ -13,6 +13,12 @@ import {
   type LabTransportState,
 } from "../../fhir/labTransportState.js";
 import { labOrderToExport, renderLabOrderSheet } from "../../fhir/opticalLabOrder.js";
+import {
+  LAB_ORDER_EXPORT_INPUT_CODE,
+  OSOD_LAB_ORDER_TASK_INPUT_SYSTEM,
+  withLabOrderStatusRecord,
+  type LabOrderStatus,
+} from "../../fhir/labOrderStatus.js";
 import type {
   AdvanceLabTransportRequest,
   LabOrderAdapter,
@@ -22,14 +28,13 @@ import type {
 
 export const OSOD_LAB_ORDER_TASK_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/task-type";
 export const LAB_ORDER_TRANSMISSION_TASK_CODE = "lab-order-transmission";
-export const OSOD_LAB_ORDER_TASK_INPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/lab-order-task-input";
-export const LAB_ORDER_EXPORT_INPUT_CODE = "lab-order-export";
+export { LAB_ORDER_EXPORT_INPUT_CODE, OSOD_LAB_ORDER_TASK_INPUT_SYSTEM } from "../../fhir/labOrderStatus.js";
 
 export type LabOrderFhirClient = {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T): Promise<T>;
-  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T>;
+  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 };
 
 export interface ManualLabOrderAdapterOptions {
@@ -136,7 +141,10 @@ export function createManualLabOrderAdapter(
       }
 
       const submittedAt = now();
-      const transmission = await fhir.create<Task>({
+      const initialStatus: LabOrderStatus = req.order.frameSource === 0 || req.order.frameSource === 1
+        ? "at-lab"
+        : "in-office-not-sent";
+      const transmission = await fhir.create<Task>(withLabOrderStatusRecord({
         resourceType: "Task",
         status: taskStatusForLabTransportState("sent"),
         intent: "order",
@@ -165,7 +173,12 @@ export function createManualLabOrderAdapter(
           },
           valueString: JSON.stringify(labOrderToExport(req.order)),
         }],
-      });
+      }, {
+        version: 1,
+        currentStatus: initialStatus,
+        history: [{ status: initialStatus, enteredAt: submittedAt, setBy: req.staffReference }],
+        problemFlags: [],
+      }));
       if (!transmission.id) {
         throw new Error("FHIR create returned a lab transmission Task without an id.");
       }
