@@ -9,12 +9,14 @@ import {
   clinicViewFromSearch,
   clinicRouteView,
   defaultHomePath,
+  parseSetPasswordPath,
   RoleSwitchPill,
   RouteSwitch,
   shouldResetClinicView,
   type RouteSwitchProps,
 } from "../src/App";
 import { LoginScreen } from "../src/scenes/LoginScreen";
+import { SetPasswordScreen } from "../src/scenes/SetPasswordScreen";
 import {
   fetchWhoAmI,
   PRACTICE_ROLE_IDS,
@@ -28,6 +30,20 @@ import { useViewState } from "../src/lib/view-state";
 function RouteProbe(_props: RouteSwitchProps) {
   return <main>Route probe</main>;
 }
+
+test("set-password email links route before the authenticated app", () => {
+  const originalWindow = globalThis.window;
+  const windowStub = { location: { pathname: "/setpassword/user%2Did/secret%2Ftoken" } } as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  try {
+    const route = App() as React.ReactElement;
+    assert.equal(route.type, SetPasswordScreen);
+    assert.deepEqual(route.props, { id: "user-id", secret: "secret/token" });
+    assert.deepEqual(parseSetPasswordPath("/setpassword/id/secret"), { id: "id", secret: "secret" });
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
 
 test("every non-empty practice-role combination routes from its whoami response to the correct home", async () => {
   for (let mask = 1; mask < 2 ** PRACTICE_ROLE_IDS.length; mask += 1) {

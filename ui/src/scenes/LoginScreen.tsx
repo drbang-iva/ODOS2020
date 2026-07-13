@@ -5,7 +5,26 @@ export interface LoginScreenProps {
   returnTo: string;
   onAuthenticated: () => void;
   login?: (email: string, password: string) => Promise<void>;
+  resetPassword?: (email: string) => Promise<void>;
   navigate?: (path: string) => void;
+}
+
+export const PASSWORD_RESET_CONFIRMATION = "If that account exists, a reset email is on its way";
+
+export async function requestPasswordReset(
+  email: string,
+  resetPassword: (email: string) => Promise<void>,
+): Promise<string> {
+  await resetPassword(email).catch(() => undefined);
+  return PASSWORD_RESET_CONFIRMATION;
+}
+
+async function defaultResetPassword(email: string): Promise<void> {
+  await fetch("/auth/resetpassword", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
 }
 
 export async function submitLogin({
@@ -32,6 +51,7 @@ export function LoginScreen({
   returnTo,
   onAuthenticated,
   login = fhir.login,
+  resetPassword = defaultResetPassword,
   navigate = (path) => {
     window.history.replaceState({}, "", path);
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -41,6 +61,10 @@ export function LoginScreen({
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +76,14 @@ export function LoginScreen({
       setError(err instanceof Error ? err.message : "Sign in failed. Check your email and password.");
       setBusy(false);
     }
+  }
+
+  async function handlePasswordReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setResetBusy(true);
+    const confirmation = await requestPasswordReset(resetEmail, resetPassword);
+    setResetConfirmation(confirmation);
+    setResetBusy(false);
   }
 
   return (
@@ -94,6 +126,28 @@ export function LoginScreen({
           {error && <p className="odos-login-error" role="alert">{error}</p>}
           <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Enter"}</button>
         </form>
+        <div className="odos-forgot-password">
+          {!forgotOpen && !resetConfirmation && (
+            <button type="button" onClick={() => setForgotOpen(true)}>Forgot password?</button>
+          )}
+          {forgotOpen && !resetConfirmation && (
+            <form className="odos-login-form" onSubmit={(event) => void handlePasswordReset(event)}>
+              <label>
+                <span>Email</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  placeholder="Email address"
+                />
+              </label>
+              <button type="submit" disabled={resetBusy}>{resetBusy ? "Sending…" : "Send reset link"}</button>
+            </form>
+          )}
+          {resetConfirmation && <p className="odos-login-confirmation" role="status">{resetConfirmation}</p>}
+        </div>
         <p className="odos-login-foot">Your practice · Your hardware · Your data</p>
       </div>
     </main>

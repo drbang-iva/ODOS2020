@@ -36,6 +36,7 @@ import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { ClinicOfficeShell } from "./components/OfficeChannel";
 import { LoginScreen } from "./scenes/LoginScreen";
+import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
 import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
 import type { Patient } from "@medplum/fhirtypes";
 
@@ -48,6 +49,10 @@ export function App({
   login?: (email: string, password: string) => Promise<void>;
   RouteComponent?: ComponentType<RouteSwitchProps>;
 } = {}) {
+  const setPasswordRoute = parseSetPasswordPath(window.location.pathname);
+  if (setPasswordRoute) {
+    return <SetPasswordScreen id={setPasswordRoute.id} secret={setPasswordRoute.secret} />;
+  }
   if (window.location.pathname === "/oauth2/authorize") {
     return <AuthorizeConsent />;
   }
@@ -109,6 +114,16 @@ export function App({
       <RouteComponent view={view} path={path} roles={roles} />
     </RoleProvider>
   );
+}
+
+export function parseSetPasswordPath(pathname: string): { id: string; secret: string } | undefined {
+  const match = pathname.match(/^\/setpassword\/([^/]+)\/([^/]+)$/);
+  if (!match) return undefined;
+  try {
+    return { id: decodeURIComponent(match[1]), secret: decodeURIComponent(match[2]) };
+  } catch {
+    return undefined;
+  }
 }
 
 export function defaultHomePath(roles: readonly PracticeRoleId[]): typeof CLINIC_PATH | typeof DESK_HOME_PATH {

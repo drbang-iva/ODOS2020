@@ -35,6 +35,11 @@
 .odos-login-form > button { margin-top: 6px; padding: 15px; border: 0; border-radius: 14px; background: linear-gradient(135deg, #f0d6a4, var(--odos-gold) 55%, #c79e5c); color: #0b0e18; font-size: 14px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; box-shadow: 0 8px 28px rgba(224,188,126,.22); }
 .odos-login-form > button:disabled { opacity: .65; cursor: wait; }
 .odos-login-error { padding: 10px 12px; border: 1px solid rgba(226,92,106,.5); border-radius: 10px; background: rgba(226,92,106,.08); color: #ff9aa5; font-size: 12px; }
+.odos-login-confirmation { padding: 10px 12px; border: 1px solid rgba(47,191,143,.45); border-radius: 10px; background: rgba(47,191,143,.08); color: #8ce1c3; font-size: 12px; line-height: 1.5; }
+.odos-forgot-password { width: min(360px, 90vw); margin-top: 18px; text-align: center; }
+.odos-forgot-password > button { border: 0; background: transparent; color: var(--odos-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.odos-forgot-password > button:hover { color: var(--odos-text); }
+.odos-forgot-password .odos-login-form { margin-top: 12px; }
 .odos-login-foot { margin-top: 40px; color: var(--odos-faint); font-size: 11px; letter-spacing: .06em; }
 
 .odos-desk-topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 13px 26px; border-bottom: 1px solid var(--odos-line); background: rgba(10,14,26,.88); backdrop-filter: blur(16px); }
