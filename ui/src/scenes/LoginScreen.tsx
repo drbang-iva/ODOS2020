@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { fhir } from "../lib/fhir";
+import {
+  PasswordResetTransportError,
+  defaultResetPassword,
+} from "../lib/auth-api";
 
 export interface LoginScreenProps {
   returnTo: string;
@@ -15,16 +19,12 @@ export async function requestPasswordReset(
   email: string,
   resetPassword: (email: string) => Promise<void>,
 ): Promise<string> {
-  await resetPassword(email).catch(() => undefined);
+  try {
+    await resetPassword(email);
+  } catch (error) {
+    if (error instanceof PasswordResetTransportError) throw error;
+  }
   return PASSWORD_RESET_CONFIRMATION;
-}
-
-async function defaultResetPassword(email: string): Promise<void> {
-  await fetch("/auth/resetpassword", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
 }
 
 export async function submitLogin({
@@ -65,6 +65,7 @@ export function LoginScreen({
   const [resetEmail, setResetEmail] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,9 +82,15 @@ export function LoginScreen({
   async function handlePasswordReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setResetBusy(true);
-    const confirmation = await requestPasswordReset(resetEmail, resetPassword);
-    setResetConfirmation(confirmation);
-    setResetBusy(false);
+    setResetError(null);
+    try {
+      const confirmation = await requestPasswordReset(resetEmail, resetPassword);
+      setResetConfirmation(confirmation);
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : "The reset request could not reach ODOS.");
+    } finally {
+      setResetBusy(false);
+    }
   }
 
   return (
@@ -144,6 +151,7 @@ export function LoginScreen({
                 />
               </label>
               <button type="submit" disabled={resetBusy}>{resetBusy ? "Sending…" : "Send reset link"}</button>
+              {resetError && <p className="odos-login-error" role="alert">{resetError}</p>}
             </form>
           )}
           {resetConfirmation && <p className="odos-login-confirmation" role="status">{resetConfirmation}</p>}

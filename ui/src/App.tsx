@@ -32,6 +32,7 @@ import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplat
 import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
+import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { ClinicOfficeShell } from "./components/OfficeChannel";
@@ -237,7 +238,11 @@ export function RouteSwitch({
     case "/admin/practice/settings/chart-fields":
       return <ChartFieldsSettings />;
     case "/settings":
-      return <SettingsIndex />;
+      return <SettingsIndex roles={roles} />;
+    case "/settings/staff":
+      return roles.includes("practice-admin")
+        ? <StaffSettings />
+        : <main role="alert">Practice-admin access is required to manage staff.</main>;
     case "/settings/floor-config":
       return <FloorConfigSettings />;
     case "/settings/vision-plan-templates":

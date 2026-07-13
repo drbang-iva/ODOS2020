@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { createHash, randomBytes } from "node:crypto";
-import type { AccessPolicy, ProjectMembership, User } from "@medplum/fhirtypes";
+import type { AccessPolicy, Practitioner, ProjectMembership } from "@medplum/fhirtypes";
 import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOsodAuditEventRow } from "../mcp/src/authz/osodAudit.js";
 import {
@@ -166,34 +166,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
   }
 
   async resolveTarget(target: string): Promise<ResolvedRoleGrantTarget> {
-    const isPractitionerReference = /^Practitioner\/[^/]+$/.test(target);
-    let email: string | undefined;
-    let memberships: ProjectMembership[];
-    if (isPractitionerReference) {
-      memberships = await searchAll<ProjectMembership>(this.fhir, "ProjectMembership", {
-        profile: target,
-      });
-    } else {
-      const users = (await searchAll<User>(this.fhir, "User", { email: target })).filter(
-        (user) => user.email?.toLowerCase() === target.toLowerCase(),
-      );
-      if (users.length === 0) throw new Error(`No User found for ${target}.`);
-      email = target;
-      memberships = (await Promise.all(users.flatMap((user) => user.id
-        ? [searchAll<ProjectMembership>(this.fhir, "ProjectMembership", { user: `User/${user.id}` })]
-        : []))).flat();
-    }
-    if (memberships.length !== 1) {
-      throw new Error(`Expected one ProjectMembership for ${target}; found ${memberships.length}.`);
-    }
-    const membership = memberships[0]!;
-    if (!email) {
-      const userId = membership.user.reference?.match(/^User\/([^/]+)$/)?.[1];
-      if (!userId) throw new Error(`ProjectMembership/${membership.id ?? "unknown"} has no human User reference.`);
-      email = (await this.fhir.read<User>("User", userId)).email;
-    }
-    if (!email) throw new Error(`Could not resolve the target email for ${target}.`);
-    return { email, membership };
+    return resolvePracticeRoleTarget(this.fhir, target);
   }
 
   async patchMembership(
@@ -221,6 +194,38 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
       operation,
     );
   }
+}
+
+export async function resolvePracticeRoleTarget(
+  fhir: Pick<MedplumClient, "read" | "search" | "searchUrl">,
+  target: string,
+): Promise<ResolvedRoleGrantTarget> {
+  const practitionerReference = target.match(/^Practitioner\/([^/]+)$/);
+  let practitioners: Practitioner[];
+  if (practitionerReference) {
+    practitioners = [await fhir.read<Practitioner>("Practitioner", practitionerReference[1])];
+  } else {
+    practitioners = (await searchAll<Practitioner>(fhir, "Practitioner", { email: target })).filter(
+      (practitioner) => practitionerEmail(practitioner)?.toLowerCase() === target.toLowerCase(),
+    );
+  }
+  const candidates = (await Promise.all(practitioners.flatMap((practitioner) => practitioner.id
+    ? [searchAll<ProjectMembership>(fhir, "ProjectMembership", { profile: `Practitioner/${practitioner.id}` })
+        .then((memberships) => memberships.map((membership) => ({ practitioner, membership })))]
+    : []))).flat();
+  if (candidates.length !== 1) {
+    throw new Error(`Expected one Practitioner-backed ProjectMembership for ${target}; found ${candidates.length}.`);
+  }
+  const { practitioner, membership } = candidates[0]!;
+  const email = practitionerEmail(practitioner) ?? membership.user.display;
+  if (!email) {
+    throw new Error(`Could not resolve the target email from ${membership.profile.reference ?? target}.`);
+  }
+  return { email, membership };
+}
+
+function practitionerEmail(practitioner: Practitioner): string | undefined {
+  return practitioner.telecom?.find((telecom) => telecom.system === "email" && telecom.value)?.value;
 }
 
 export async function loginForLocalRepair(input: {
@@ -291,7 +296,7 @@ export function requiredEmailArgument(args: readonly string[]): string {
   const index = args.indexOf("--email");
   const value = index >= 0 ? args[index + 1]?.trim() : undefined;
   if (!value || value.startsWith("--")) {
-    throw new Error("repair-practice-roles requires --email <target>.");
+    throw new Error("repair-practice-roles requires --email <email-or-Practitioner-reference>.");
   }
   return value;
 }

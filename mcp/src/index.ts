@@ -38,15 +38,19 @@ import {
 } from "./authz/osodAudit.js";
 import {
   PRACTICE_ROLE_IDS,
+  OSOD_PRACTICE_ROLE_SYSTEM,
   assertBusinessActionAllowed,
+  getRoleDeclaration,
   type PracticeRoleId,
 } from "./authz/roles.js";
+import { grantPracticeRoles } from "./authz/role-grants.js";
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
+import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
 import {
@@ -290,6 +294,7 @@ import {
   type VisualAcuitySectionSaveEntry,
 } from "./fhir/ophthalmology/save-section-bundle.js";
 import type {
+  AccessPolicy,
   AllergyIntolerance,
   Binary,
   BodyStructure,
@@ -308,6 +313,7 @@ import type {
   MedicationStatement,
   Observation,
   Patient,
+  ProjectMembership,
   Procedure,
   Provenance,
   QuestionnaireResponse,
@@ -5338,6 +5344,7 @@ function isOsodAuditEventType(value: string): value is OsodAuditEventType {
     "role-change",
     "policy-change",
     "projectmembership-lifecycle",
+    "staff.invite",
     "backup-started",
     "backup-completed",
     "restore-started",
@@ -6124,6 +6131,56 @@ async function main(): Promise<void> {
             : paymentDispatch.methods().includes("clover") ? "LIVE"
               : "NOT CONFIGURED"),
         timeZone: process.env.OSOD_TIMEZONE,
+      });
+      registerStaffInviteRoute(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: async (header) => {
+          const resolved = await resolveStaffRoles({
+            baseUrl: BASE_URL,
+            authHeader: header,
+            serviceClient: fhir,
+          });
+          return resolved ? { staffReference: resolved.staffReference, roles: resolved.roles } : null;
+        },
+        invite: async (input) => {
+          const projectId = await fhir.getActiveProjectId();
+          return fhir.invitePractitioner(projectId, {
+            resourceType: "Practitioner",
+            ...input,
+            sendEmail: true,
+          });
+        },
+        grantRole: async (membership, email, roleId) => {
+          await grantPracticeRoles(
+            { target: `ProjectMembership/${membership.id ?? "invite-response"}`, roles: [roleId], primaryRole: roleId },
+            {
+              resolveTarget: async () => ({ email, membership }),
+              resolvePolicy: async (role) => {
+                const expectedName = `OSOD ${getRoleDeclaration(role).display}`;
+                const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
+                const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
+                  (policy): policy is AccessPolicy =>
+                    policy?.name === expectedName &&
+                    Boolean(policy.meta?.tag?.some(
+                      (tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM && tag.code === role,
+                    )),
+                );
+                if (matches.length !== 1) {
+                  throw new Error(`Expected one tagged ${role} AccessPolicy; found ${matches.length}.`);
+                }
+                return matches[0];
+              },
+              patchMembership: (id, operations, versionId) =>
+                fhir.patch<ProjectMembership>("ProjectMembership", id, operations, {
+                  "If-Match": `W/\"${versionId}\"`,
+                }),
+              recordMembershipChange: async (_target, operation) => operation(),
+            },
+          );
+        },
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
       });
       registerClinicRoutes(app, {
         authenticateService: authenticateWithMedplum,
