@@ -12,6 +12,8 @@ import {
   renderLabOrderSheet,
   type BuildLabOrderInput,
   type LabOrderFrame,
+  type LabOrderFrameOwnership,
+  type LabOrderFrameSource,
   type LabOrderRxEye,
 } from "../lib/optical-lab-order";
 import {
@@ -72,10 +74,11 @@ type FrameCriteriaKey = "upc" | "barcode" | "designer" | "material" | "category"
 const IVA_LABS = ["Best Price Digital Lab", "Cherry Optical Lab", "Zeiss (VISUSTORE)"] as const;
 const LAB_OTHER_OPTION = "Other";
 const LAB_ORDER_JOB_TYPES = ["Rx", "Frame To Come", "Frame Only", "Lenses Only"] as const;
-const FRAME_SOURCE_OPTIONS: Array<{ value: LabOrderFrame["source"]; label: string }> = [
-  { value: "frame-to-come", label: "Frame To Come" },
-  { value: "patient-own", label: "Patient Own" },
-  { value: "stock", label: "Stock" },
+const FRAME_SOURCE_OPTIONS: Array<{ value: LabOrderFrameSource; label: string }> = [
+  { value: 0, label: "0 — Lenses Only" },
+  { value: 1, label: "1 — Lab supply" },
+  { value: 3, label: "3 — Frame-to-come" },
+  { value: 4, label: "4 — Frame enclosed" },
 ];
 
 interface LabOrderEyeFittingState {
@@ -94,7 +97,8 @@ interface LabOrderCaptureState {
   specialInstructions: string;
   commentsToLab: string;
   lensCpt: string;
-  frameSource: LabOrderFrame["source"];
+  frameSource: LabOrderFrameSource;
+  frameOwnership?: LabOrderFrameOwnership;
   frameTraceRef: string;
   fitting: {
     od: LabOrderEyeFittingState;
@@ -537,7 +541,11 @@ export function OpticalOrder() {
         od: fittingEye(labOrderCapture.fitting.od),
         os: fittingEye(labOrderCapture.fitting.os),
       },
-      frame: labOrderFrameFromAttachedFrame(attachedLabFrame, labOrderCapture.frameSource),
+      frameSource: labOrderCapture.frameSource,
+      frameOwnership: labOrderCapture.frameOwnership,
+      frame: labOrderCapture.frameSource === 0 || labOrderCapture.frameSource === 1
+        ? undefined
+        : labOrderFrameFromAttachedFrame(attachedLabFrame, legacyFrameSource(labOrderCapture.frameSource, labOrderCapture.frameOwnership)),
       lensCpt: optionalString(labOrderCapture.lensCpt),
       frameTraceRef: optionalString(labOrderCapture.frameTraceRef),
     };
@@ -1163,7 +1171,13 @@ function LabOrderPanel({
           <select
             className="sidebar-input"
             value={capture.frameSource}
-            onChange={(event) => onCapturePatch({ frameSource: event.target.value as LabOrderFrame["source"] })}
+            onChange={(event) => {
+              const frameSource = Number(event.target.value) as LabOrderFrameSource;
+              onCapturePatch({
+                frameSource,
+                frameOwnership: frameSource === 3 || frameSource === 4 ? capture.frameOwnership ?? "in-house" : undefined,
+              });
+            }}
           >
             {FRAME_SOURCE_OPTIONS.map((source) => (
               <option key={source.value} value={source.value}>
@@ -1172,6 +1186,19 @@ function LabOrderPanel({
             ))}
           </select>
         </label>
+        {(capture.frameSource === 3 || capture.frameSource === 4) && (
+          <label className="grid gap-1 text-xs text-white/60">
+            <span>Frame Ownership</span>
+            <select
+              className="sidebar-input"
+              value={capture.frameOwnership ?? "in-house"}
+              onChange={(event) => onCapturePatch({ frameOwnership: event.target.value as LabOrderFrameOwnership })}
+            >
+              <option value="in-house">In-house</option>
+              <option value="patients-own">Patient's Own Frame (POF)</option>
+            </select>
+          </label>
+        )}
         <Field label="Frame Trace Ref" value={capture.frameTraceRef} onChange={(frameTraceRef) => onCapturePatch({ frameTraceRef })} />
         <Field label="Active Rx" value={activeRxLoaded ? "Loaded" : ""} readOnly onChange={() => undefined} />
         <Field label="Attached Frame" value={attachedFrame ? attachedFrame.model : ""} readOnly onChange={() => undefined} />
@@ -1586,13 +1613,22 @@ function initialLabOrderCapture(): LabOrderCaptureState {
     specialInstructions: "",
     commentsToLab: "",
     lensCpt: "",
-    frameSource: "stock",
+    frameSource: 4,
+    frameOwnership: "in-house",
     frameTraceRef: "",
     fitting: {
       od: emptyFittingEye(),
       os: emptyFittingEye(),
     },
   };
+}
+
+function legacyFrameSource(
+  frameSource: LabOrderFrameSource,
+  ownership: LabOrderFrameOwnership | undefined,
+): LabOrderFrame["source"] {
+  if (frameSource === 3) return "frame-to-come";
+  return ownership === "patients-own" ? "patient-own" : "stock";
 }
 
 function emptyFittingEye(): LabOrderEyeFittingState {

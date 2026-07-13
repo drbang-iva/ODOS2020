@@ -7,17 +7,13 @@ import type {
   Task,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { isTerminalLabTransportState } from "../fhir/labTransportState.js";
+import { projectLabOrderBoard, type LabOrderBoardSummary } from "../fhir/labOrderStatus.js";
 import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
   OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
-  isLabOrderTransmissionTask,
-  storedLabOrderExport,
-  transportStateFromTask,
 } from "../lab-orders/adapters/manual-lab-order-adapter.js";
 
 const FLOOR_STATE_URL = "https://osod.dev/fhir/StructureDefinition/osod-floor-state";
-export const CLINIC_ORDER_AGING_DAYS = 5;
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -49,18 +45,6 @@ export interface ClinicSignatureRow {
   olderThan24Hours: boolean;
 }
 
-export type ClinicOrderState = "ordered" | "at-lab" | "report-due" | "needs-attention";
-
-export interface ClinicOrderRow {
-  reference: string;
-  patientId?: string;
-  patient: string;
-  description: string;
-  state: ClinicOrderState;
-  ageMinutes?: number;
-  stale: boolean;
-}
-
 export interface ClinicSummary {
   flow: ClinicFlowRow[];
   signatures: {
@@ -68,12 +52,7 @@ export interface ClinicSummary {
     olderThan24Hours: number;
     rows: ClinicSignatureRow[];
   };
-  orders: {
-    count: number;
-    agingCount: number;
-    agingThresholdDays: number;
-    rows: ClinicOrderRow[];
-  };
+  orders: LabOrderBoardSummary;
   erx: { available: false; message: string };
   review: { available: false; message: string };
 }
@@ -184,27 +163,7 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
     })
     .sort((left, right) => right.ageMinutes - left.ageMinutes);
 
-  const orders = input.labOrders
-    .filter(isLabOrderTransmissionTask)
-    .flatMap((task): ClinicOrderRow[] => {
-      if (!task.id) return [];
-      const transportState = transportStateFromTask(task);
-      if (isTerminalLabTransportState(transportState)) return [];
-      const stored = storedLabOrderExport(task).order;
-      const authoredAt = task.authoredOn ? Date.parse(task.authoredOn) : Number.NaN;
-      const ageMinutes = Number.isFinite(authoredAt) ? Math.max(0, minutesBetween(authoredAt, nowMs)) : undefined;
-      const patientId = stored.header.patientRef?.match(/^Patient\/([^/]+)$/)?.[1];
-      return [{
-        reference: `Task/${task.id}`,
-        ...(patientId ? { patientId } : {}),
-        patient: stored.header.patientName,
-        description: [stored.lensSpec.lensDesign, stored.lensSpec.lensMaterial].filter(Boolean).join(" · ") || "Optical lab order",
-        state: clinicOrderState(transportState, ageMinutes !== undefined && ageMinutes > CLINIC_ORDER_AGING_DAYS * 24 * 60),
-        ...(ageMinutes !== undefined ? { ageMinutes } : {}),
-        stale: ageMinutes !== undefined && ageMinutes > CLINIC_ORDER_AGING_DAYS * 24 * 60,
-      }];
-    })
-    .sort((left, right) => (right.ageMinutes ?? -1) - (left.ageMinutes ?? -1));
+  const orders = projectLabOrderBoard(input.labOrders, input.now);
 
   return {
     flow,
@@ -213,12 +172,7 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
       olderThan24Hours: signatures.filter((row) => row.olderThan24Hours).length,
       rows: signatures,
     },
-    orders: {
-      count: orders.length,
-      agingCount: orders.filter((row) => row.stale).length,
-      agingThresholdDays: CLINIC_ORDER_AGING_DAYS,
-      rows: orders,
-    },
+    orders,
     erx: {
       available: false,
       message: "E-prescribing and refill queues arrive with the WENO integration — not wired yet.",
@@ -262,13 +216,6 @@ export async function loadClinicSummary(
     }),
   ]);
   return projectClinicSummary({ appointments, encounters, patients, provenances, labOrders, now, date, timeZone: options.timeZone });
-}
-
-function clinicOrderState(state: ReturnType<typeof transportStateFromTask>, stale: boolean): ClinicOrderState {
-  if (stale) return "report-due";
-  if (state === "queued") return "ordered";
-  if (state === "error") return "needs-attention";
-  return "at-lab";
 }
 
 async function searchOnePage<T extends Resource>(

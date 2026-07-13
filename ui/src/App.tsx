@@ -195,7 +195,11 @@ export function RouteSwitch({
     case "/dispensary/orders":
       return <OpticalOrder />;
     case "/dispensary/lab-orders":
-      return <LabOrdersWorklist />;
+      return (
+        <ClinicOfficeShell location="The Clinic · Orders" roles={roles} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
+          <LabOrdersWorklist />
+        </ClinicOfficeShell>
+      );
     case "/schedule/day":
     case "/scheduler/day":
       return <SchedulerDayGrid />;

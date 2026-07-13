@@ -37,6 +37,8 @@ function order(): LabOrder {
       lensMaterial: "Polycarbonate",
       treatments: ["AR"],
     },
+    frameSource: 3,
+    frameOwnership: "in-house",
   });
 }
 

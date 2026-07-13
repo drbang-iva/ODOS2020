@@ -1,4 +1,5 @@
 import { fhir } from "./fhir";
+import type { LabOrderBoardSummary } from "./lab-order-transport";
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -30,22 +31,10 @@ export interface ClinicSignatureRow {
   olderThan24Hours: boolean;
 }
 
-export type ClinicOrderState = "ordered" | "at-lab" | "report-due" | "needs-attention";
-
-export interface ClinicOrderRow {
-  reference: string;
-  patientId?: string;
-  patient: string;
-  description: string;
-  state: ClinicOrderState;
-  ageMinutes?: number;
-  stale: boolean;
-}
-
 export interface ClinicSummary {
   flow: ClinicFlowRow[];
   signatures: { count: number; olderThan24Hours: number; rows: ClinicSignatureRow[] };
-  orders: { count: number; agingCount: number; agingThresholdDays: number; rows: ClinicOrderRow[] };
+  orders: LabOrderBoardSummary;
   erx: { available: false; message: string };
   review: { available: false; message: string };
 }

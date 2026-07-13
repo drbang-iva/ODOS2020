@@ -68,6 +68,13 @@
 .odos-clinic-signature-stats strong { color: var(--odos-text); font-family: Didot, "Bodoni 72", Georgia, serif; font-size: 31px; font-weight: 400; }
 .odos-clinic-signature-stats small { display: block; color: var(--odos-faint); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
 .odos-clinic-signatures, .odos-clinic-orders, .odos-clinic-office-list { display: flex; flex-direction: column; gap: 5px; }
+.odos-clinic-order-phases { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+.odos-clinic-order-phases span { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 11px; border: 1px solid var(--odos-line); border-radius: 999px; color: var(--odos-muted); font-size: 10.5px; }
+.odos-clinic-order-phases span b { color: var(--odos-text); font-variant-numeric: tabular-nums; }
+.odos-clinic-order-phases span.is-warn { border-color: rgba(231,169,76,.35); }
+.odos-clinic-order-phases span.is-warn b { color: var(--odos-amber); }
+.odos-clinic-order-phases span.is-hot { border-color: rgba(47,191,143,.35); }
+.odos-clinic-order-phases span.is-hot b { color: #6fd9b4; }
 .odos-clinic-signatures button, .odos-clinic-orders button { display: grid; gap: 2px 10px; padding: 8px; border: 0; border-radius: 10px; background: rgba(154,178,224,.04); color: var(--odos-text); font: inherit; font-size: 12.5px; text-align: left; }
 .odos-clinic-signatures button { grid-template-columns: 1fr 1.5fr auto; align-items: center; }
 .odos-clinic-signatures button span:nth-child(2), .odos-clinic-orders button span:nth-child(2) { color: var(--odos-faint); font-size: 11px; }

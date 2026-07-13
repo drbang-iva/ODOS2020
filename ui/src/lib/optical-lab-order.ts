@@ -51,6 +51,17 @@ export interface LabOrderFrame {
   source: "frame-to-come" | "patient-own" | "stock";
 }
 
+export const LAB_ORDER_FRAME_SOURCES = [0, 1, 3, 4] as const;
+export type LabOrderFrameSource = (typeof LAB_ORDER_FRAME_SOURCES)[number];
+export type LabOrderFrameOwnership = "in-house" | "patients-own";
+
+export const LAB_ORDER_FRAME_SOURCE_LABELS: Record<LabOrderFrameSource, string> = {
+  0: "Lenses Only",
+  1: "Lab supply",
+  3: "Frame-to-come",
+  4: "Frame enclosed",
+};
+
 export interface LabOrder {
   header: {
     orderId: string;
@@ -69,6 +80,8 @@ export interface LabOrder {
     lensCpt?: string;
   };
   lensSpec: LabOrderLensSpec;
+  frameSource: LabOrderFrameSource;
+  frameOwnership?: LabOrderFrameOwnership;
   frame?: LabOrderFrame;
   /** Optional OMA trace reference from an in-office tracer (present for T1; absent for pure print). */
   frameTraceRef?: string;
@@ -92,6 +105,8 @@ export interface BuildLabOrderInput {
   /** The signed spectacle Rx; OD/OS Rx values are read from its lensSpecification (never re-captured). */
   visionPrescription: VisionPrescription;
   lensSpec: LabOrderLensSpec;
+  frameSource: LabOrderFrameSource;
+  frameOwnership?: LabOrderFrameOwnership;
   fitting?: LabOrderFitting;
   frame?: LabOrderFrame;
   lensCpt?: string;
@@ -108,6 +123,7 @@ export function buildLabOrder(input: BuildLabOrderInput): LabOrder {
   if (!input.lab) {
     throw new Error("Lab order requires a destination lab.");
   }
+  assertLabOrderFrameSource(input.frameSource, input.frameOwnership);
 
   const specs = input.visionPrescription.lensSpecification ?? [];
   const right = specs.find((s) => s.eye === "right");
@@ -133,6 +149,8 @@ export function buildLabOrder(input: BuildLabOrderInput): LabOrder {
       ...(input.lensCpt ? { lensCpt: input.lensCpt } : {}),
     },
     lensSpec: input.lensSpec,
+    frameSource: input.frameSource,
+    ...(input.frameOwnership ? { frameOwnership: input.frameOwnership } : {}),
     ...(input.frame ? { frame: input.frame } : {}),
     ...(input.frameTraceRef ? { frameTraceRef: input.frameTraceRef } : {}),
   };
@@ -150,7 +168,26 @@ export interface LabOrderExport {
 }
 
 export function labOrderToExport(order: LabOrder): LabOrderExport {
+  assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
   return { format: "osod-lab-order", version: "0", order };
+}
+
+export function assertLabOrderFrameSource(
+  frameSource: number,
+  frameOwnership: string | undefined,
+): asserts frameSource is LabOrderFrameSource {
+  if (!(LAB_ORDER_FRAME_SOURCES as readonly number[]).includes(frameSource)) {
+    throw new Error("Lab order FSRC must be one of 0, 1, 3, or 4.");
+  }
+  if (frameSource === 3 || frameSource === 4) {
+    if (frameOwnership !== "in-house" && frameOwnership !== "patients-own") {
+      throw new Error(`Lab order frameOwnership is required when FSRC is ${frameSource}.`);
+    }
+    return;
+  }
+  if (frameOwnership !== undefined) {
+    throw new Error(`Lab order frameOwnership must be absent when FSRC is ${frameSource}.`);
+  }
 }
 
 const DASH = "—";
@@ -220,6 +257,8 @@ ${order.rx.lensCpt ? `<div class="kv"><div><b>Lens CPT:</b> ${cell(order.rx.lens
 </div>
 <h2>Frame</h2>
 <div class="kv">
+  <div><b>FSRC:</b> ${cell(`${order.frameSource} — ${LAB_ORDER_FRAME_SOURCE_LABELS[order.frameSource]}`)}</div>
+  <div><b>Ownership:</b> ${cell(order.frameOwnership)}</div>
   <div><b>Source:</b> ${cell(f?.source)}</div>
   <div><b>Brand:</b> ${cell(f?.brand)}</div>
   <div><b>Model:</b> ${cell(f?.model)}</div>

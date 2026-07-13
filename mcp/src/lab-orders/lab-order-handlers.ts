@@ -1,7 +1,21 @@
 import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
 import type { OsodActorRole } from "../authz/osodAudit.js";
 import { assertLabTransportState, type LabTransportState } from "../fhir/labTransportState.js";
-import { renderLabOrderSheet, type LabOrder } from "../fhir/opticalLabOrder.js";
+import { assertLabOrderFrameSource, renderLabOrderSheet, type LabOrder } from "../fhir/opticalLabOrder.js";
+import {
+  assertLabOrderNotificationReason,
+  assertLabOrderProblemReason,
+  assertLabOrderStatus,
+  backfilledLabOrderStatusRecord,
+  flagLabOrderProblem,
+  labOrderStatusRecordFromTask,
+  projectLabOrderBoard,
+  resolveLabOrderProblem,
+  setLabOrderStatus,
+  withLabOrderStatusRecord,
+  type LabOrderAgingConfig,
+  type LabOrderNotificationReason,
+} from "../fhir/labOrderStatus.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
@@ -28,6 +42,8 @@ export interface LabOrderHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedLabOrderStaff | null>;
   dispatch: LabOrderDispatch;
   routingDefaults?: LabOrderRoutingDefaults;
+  now?: () => string;
+  agingConfig?: LabOrderAgingConfig;
 }
 
 export interface LabOrderHandlerResult {
@@ -116,6 +132,98 @@ export async function handleCancelLabOrderRequest(
   }
 }
 
+export async function handleSetLabOrderStatusRequest(
+  deps: LabOrderHandlerDeps,
+  input: { authHeader: string | undefined; labOrderReference: string; body: unknown },
+): Promise<LabOrderHandlerResult> {
+  const authenticated = await authenticate(deps, input.authHeader);
+  if ("result" in authenticated) return authenticated.result;
+  const taskId = localTaskReference(input.labOrderReference);
+  if (!taskId) return badRequest('Lab order reference must be a local "Task/<id>" reference.');
+  const body = objectBody(input.body);
+  if ("error" in body) return badRequest(body.error);
+  if (typeof body.value.status !== "string") return badRequest("A lab-order status is required.");
+  try {
+    assertLabOrderStatus(body.value.status);
+    let notificationReason: LabOrderNotificationReason | undefined;
+    if (body.value.notificationReason !== undefined) {
+      if (typeof body.value.notificationReason !== "string") return badRequest("Notification reason must be a string.");
+      assertLabOrderNotificationReason(body.value.notificationReason);
+      notificationReason = body.value.notificationReason;
+    }
+    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
+    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
+    const enteredAt = now(deps);
+    const updated = setLabOrderStatus(
+      task,
+      body.value.status,
+      enteredAt,
+      authenticated.staff.staffReference,
+      notificationReason,
+    );
+    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
+    return { status: 200, body: { status: body.value.status, enteredAt, ...(notificationReason ? { notificationReason } : {}) } };
+  } catch (error) {
+    return badRequest(messageOf(error));
+  }
+}
+
+export async function handleFlagLabOrderProblemRequest(
+  deps: LabOrderHandlerDeps,
+  input: { authHeader: string | undefined; labOrderReference: string; body: unknown },
+): Promise<LabOrderHandlerResult> {
+  const authenticated = await authenticate(deps, input.authHeader);
+  if ("result" in authenticated) return authenticated.result;
+  const taskId = localTaskReference(input.labOrderReference);
+  if (!taskId) return badRequest('Lab order reference must be a local "Task/<id>" reference.');
+  const body = objectBody(input.body);
+  if ("error" in body) return badRequest(body.error);
+  if (typeof body.value.reason !== "string") return badRequest("A problem reason is required.");
+  const note = stringValue(body.value.note);
+  if (!note) return badRequest("A problem note is required.");
+  try {
+    assertLabOrderProblemReason(body.value.reason);
+    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
+    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
+    const updated = flagLabOrderProblem(task, {
+      reason: body.value.reason,
+      note,
+      flaggedBy: authenticated.staff.staffReference,
+      flaggedAt: now(deps),
+    });
+    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
+    const record = backfilledLabOrderStatusRecord(updated);
+    return { status: 200, body: { flag: record.problemFlags[record.problemFlags.length - 1] } };
+  } catch (error) {
+    return badRequest(messageOf(error));
+  }
+}
+
+export async function handleResolveLabOrderProblemRequest(
+  deps: LabOrderHandlerDeps,
+  input: { authHeader: string | undefined; labOrderReference: string; flagId: string },
+): Promise<LabOrderHandlerResult> {
+  const authenticated = await authenticate(deps, input.authHeader);
+  if ("result" in authenticated) return authenticated.result;
+  const taskId = localTaskReference(input.labOrderReference);
+  if (!taskId) return badRequest('Lab order reference must be a local "Task/<id>" reference.');
+  if (!/^flag-[A-Za-z0-9.-]+$/.test(input.flagId)) return badRequest("A valid problem flag id is required.");
+  try {
+    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
+    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
+    const resolvedAt = now(deps);
+    const updated = resolveLabOrderProblem(task, {
+      flagId: input.flagId,
+      resolvedBy: authenticated.staff.staffReference,
+      resolvedAt,
+    });
+    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
+    return { status: 200, body: { flagId: input.flagId, resolvedAt } };
+  } catch (error) {
+    return badRequest(messageOf(error));
+  }
+}
+
 export async function handleLabOrderStateRequest(
   deps: LabOrderHandlerDeps,
   input: { authHeader: string | undefined; labOrderReference: string; vendor?: unknown },
@@ -160,11 +268,11 @@ export async function handleLabOrderWorklistRequest(
 ): Promise<LabOrderHandlerResult> {
   const authenticated = await authenticate(deps, input.authHeader);
   if ("result" in authenticated) return authenticated.result;
-  let state: LabTransportState | undefined;
+  let state: string | undefined;
   if (input.state !== undefined) {
-    if (typeof input.state !== "string") return badRequest("Lab transport state filter must be a string.");
+    if (typeof input.state !== "string") return badRequest("Lab-order status filter must be a string.");
     try {
-      assertLabTransportState(input.state);
+      assertLabOrderStatus(input.state);
       state = input.state;
     } catch (error) {
       return badRequest(messageOf(error));
@@ -179,10 +287,20 @@ export async function handleLabOrderWorklistRequest(
     if (bundle.link?.some((link) => link.relation === "next")) {
       return badRequest("Lab-order worklist exceeded one FHIR page; no partial worklist was returned.");
     }
-    const items = resources(bundle)
-      .filter(isLabOrderTransmissionTask)
-      .filter((task) => state === undefined || transportStateFromTask(task) === state);
-    return { status: 200, body: { items } };
+    const tasks = resources(bundle).filter(isLabOrderTransmissionTask);
+    const migrated = await Promise.all(tasks.map(async (task) => {
+      if (labOrderStatusRecordFromTask(task) || !task.id) return task;
+      const transport = transportStateFromTask(task);
+      if (transport !== "queued" && transport !== "sent" && transport !== "received") return task;
+      const updated = withLabOrderStatusRecord(task, backfilledLabOrderStatusRecord(task));
+      await authenticated.staff.fhir.update<Task>("Task", task.id, updated);
+      return updated;
+    }));
+    const board = projectLabOrderBoard(migrated, now(deps), deps.agingConfig);
+    return {
+      status: 200,
+      body: state === undefined ? board : { ...board, items: board.items.filter((item) => item.status === state) },
+    };
   } catch (error) {
     return badRequest(messageOf(error));
   }
@@ -223,11 +341,18 @@ function objectBody(value: unknown): { value: Record<string, unknown> } | { erro
 function isLabOrder(value: unknown): value is LabOrder {
   if (typeof value !== "object" || value === null) return false;
   const order = value as Partial<LabOrder>;
-  return typeof order.header?.orderId === "string"
+  if (!(typeof order.header?.orderId === "string"
     && typeof order.header.lab === "string"
     && typeof order.header.patientName === "string"
     && typeof order.rx === "object"
-    && typeof order.lensSpec === "object";
+    && typeof order.lensSpec === "object"
+    && typeof order.frameSource === "number")) return false;
+  try {
+    assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function localTaskReference(value: unknown): string | undefined {
@@ -249,4 +374,8 @@ function badRequest(error: string): LabOrderHandlerResult {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function now(deps: LabOrderHandlerDeps): string {
+  return deps.now?.() ?? new Date().toISOString();
 }

@@ -1,0 +1,104 @@
+.odos-orders-page { position: relative; min-height: calc(100vh - 59px); overflow-x: hidden; background: var(--odos-ground); color: var(--odos-text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif; }
+.odos-orders-ambient { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(900px 600px at 12% -10%, rgba(47,191,143,.09), transparent 60%), radial-gradient(800px 600px at 95% 8%, rgba(76,127,232,.08), transparent 55%), radial-gradient(1000px 800px at 50% 115%, rgba(157,113,240,.06), transparent 55%); }
+.odos-orders-body { position: relative; max-width: 1380px; margin: 0 auto; padding: 20px 22px 60px; }
+.odos-orders-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+.odos-orders-head h1 { margin: 0; font-family: Didot, "Bodoni 72", "Bodoni MT", Georgia, serif; font-size: 25px; font-weight: 400; }
+.odos-orders-head span { color: var(--odos-faint); font-size: 12.5px; }
+.odos-orders-error { margin: 10px 0; padding: 10px 14px; border: 1px solid rgba(226,92,106,.45); border-radius: 12px; background: rgba(226,92,106,.08); color: #f2a3ac; font-size: 12px; }
+.odos-orders-loading, .odos-orders-empty { display: grid; min-height: 180px; place-items: center; color: var(--odos-faint); font-size: 13px; }
+
+.odos-orders-alarms { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 16px; }
+.odos-orders-alarms button { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border: 1px solid rgba(226,92,106,.4); border-radius: 999px; background: rgba(226,92,106,.08); color: #f2a3ac; font: inherit; font-size: 12px; }
+.odos-orders-alarms button > span { width: 7px; height: 7px; border-radius: 50%; background: var(--odos-alert); box-shadow: 0 0 6px rgba(226,92,106,.6); }
+.odos-orders-alarms button.is-amber { border-color: rgba(231,169,76,.4); background: rgba(231,169,76,.07); color: var(--odos-amber); }
+.odos-orders-alarms button.is-amber > span { background: var(--odos-amber); box-shadow: 0 0 6px rgba(231,169,76,.5); }
+
+.odos-orders-rail { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.odos-orders-rail button { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 13px; border: 1px solid var(--odos-line); border-radius: 12px; background: rgba(18,26,46,.6); color: var(--odos-muted); font: inherit; font-size: 12px; }
+.odos-orders-rail button b { color: var(--odos-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.odos-orders-rail button.is-active { border-color: rgba(224,188,126,.5); background: rgba(224,188,126,.07); color: var(--odos-gold); }
+.odos-orders-rail button.is-active b { color: var(--odos-gold); }
+.odos-orders-rail button.is-zero { opacity: .45; }
+.odos-orders-rail-sep { align-self: center; padding: 0 2px; color: var(--odos-faint); font-size: 10px; }
+.odos-orders-rail-note { margin: 2px 0 14px; color: var(--odos-faint); font-size: 10.5px; }
+
+.odos-orders-board { overflow: visible; border: 1px solid var(--odos-line); border-radius: 18px; background: linear-gradient(180deg, rgba(23,32,58,.75), rgba(18,26,46,.85)); }
+.odos-orders-row { position: relative; display: grid; grid-template-columns: 92px 1.15fr 1.5fr 110px 150px 92px 96px 170px; gap: 12px; align-items: center; padding: 11px 18px; border-top: 1px solid var(--odos-line); font-size: 12.5px; }
+.odos-orders-row:first-child { border-top: 0; }
+.odos-orders-row.is-head { padding: 9px 18px; background: rgba(154,178,224,.03); color: var(--odos-faint); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+.odos-orders-row:not(.is-head):hover { background: rgba(154,178,224,.04); }
+.odos-orders-row.is-alarm, .odos-orders-row.is-flagged { background: rgba(226,92,106,.05); box-shadow: inset 3px 0 0 var(--odos-alert); }
+.odos-orders-id { color: var(--odos-faint); font-variant-numeric: tabular-nums; }
+.odos-orders-who { color: var(--odos-text); }
+.odos-orders-what { color: var(--odos-muted); font-size: 12px; }
+.odos-orders-what small { display: block; margin-top: 2px; color: var(--odos-faint); font-size: 10.5px; }
+.odos-orders-what i { margin-right: 5px; padding: 1px 6px; border: 1px solid var(--odos-line); border-radius: 5px; color: var(--odos-faint); font-size: 8.5px; font-style: normal; letter-spacing: .1em; }
+.odos-orders-what i.is-pof { border-color: rgba(231,169,76,.45); background: rgba(231,169,76,.06); color: var(--odos-amber); }
+.odos-orders-lab { color: var(--odos-faint); font-size: 11.5px; }
+
+.odos-orders-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; white-space: nowrap; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; }
+.odos-orders-status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+.odos-orders-status.is-patients-frame, .odos-orders-status.is-in-office-not-sent { background: rgba(231,169,76,.16); color: #f0c27a; }
+.odos-orders-status.is-outbound, .odos-orders-status.is-at-lab, .odos-orders-status.is-lenses-on-order, .odos-orders-status.is-frame-on-order { background: rgba(76,127,232,.13); color: #8fb0f5; }
+.odos-orders-status.is-inbound, .odos-orders-status.is-received { background: rgba(47,191,143,.14); color: #6fd9b4; }
+.odos-orders-status.is-notified { background: rgba(157,113,240,.15); color: #c1a3f7; }
+.odos-orders-status sub { align-self: flex-end; font-size: 8.5px; letter-spacing: .02em; text-transform: none; opacity: .8; }
+.odos-orders-age { color: var(--odos-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.odos-orders-age small { display: block; color: var(--odos-faint); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; }
+.odos-orders-age.is-hot { color: var(--odos-alert); }
+.odos-orders-age.is-warm { color: var(--odos-amber); }
+.odos-orders-tx { display: inline-flex; align-items: center; gap: 5px; color: var(--odos-faint); font-size: 10px; letter-spacing: .04em; }
+.odos-orders-tx::before { color: var(--odos-muted); content: "⎙"; }
+.odos-orders-tx.is-oma::before { color: var(--odos-emerald); content: "✓"; }
+.odos-orders-tx.is-error { color: #f2a3ac; }
+.odos-orders-tx.is-error::before { color: var(--odos-alert); font-weight: 700; content: "!"; }
+.odos-orders-tx.is-none::before { content: ""; }
+
+.odos-orders-actions { position: relative; display: flex; justify-content: flex-end; gap: 7px; align-items: center; }
+.odos-orders-actions > button, .odos-orders-actions .odos-orders-pop > button { padding: 6px 13px; border: 1px solid var(--odos-line-2); border-radius: 999px; background: rgba(154,178,224,.06); color: var(--odos-text); font: inherit; font-size: 11.5px; white-space: nowrap; }
+.odos-orders-actions button.is-hot { border-color: rgba(47,191,143,.45); background: rgba(47,191,143,.1); color: #6fd9b4; }
+.odos-orders-actions button.is-warn { border-color: rgba(231,169,76,.45); background: rgba(231,169,76,.09); color: var(--odos-amber); }
+.odos-orders-actions > button.odos-orders-more { width: 27px; height: 27px; padding: 0; border-color: var(--odos-line); background: transparent; color: var(--odos-faint); font-size: 13px; }
+.odos-orders-menu, .odos-orders-notify { position: absolute; z-index: 15; top: calc(100% + 6px); right: 0; min-width: 205px; overflow: hidden; border: 1px solid var(--odos-line-2); border-radius: 12px; background: rgba(16,22,40,.98); box-shadow: 0 18px 50px rgba(0,0,0,.55); backdrop-filter: blur(20px); }
+.odos-orders-menu button, .odos-orders-notify button { display: block; width: 100%; padding: 9px 14px; border: 0; background: transparent; color: var(--odos-text); font: inherit; font-size: 12px; text-align: left; }
+.odos-orders-menu button:hover, .odos-orders-notify button:not(:disabled):hover { background: rgba(154,178,224,.07); }
+.odos-orders-notify button small { display: block; margin-top: 1px; color: var(--odos-faint); font-size: 10px; }
+.odos-orders-notify button:disabled { border-top: 1px solid var(--odos-line); color: var(--odos-faint); }
+.odos-orders-pop { position: relative; }
+.odos-orders-phone-action { display: none; }
+
+.odos-orders-flagline { grid-column: 1 / -1; display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; border: 1px solid rgba(226,92,106,.3); border-radius: 9px; background: rgba(226,92,106,.07); color: #f2a3ac; font-size: 11.5px; }
+.odos-orders-flagline b { color: var(--odos-alert); }
+.odos-orders-flagline small { margin-left: auto; color: var(--odos-faint); font-size: 10px; }
+.odos-orders-flagline button { flex: none; padding: 3px 10px; border: 1px solid rgba(226,92,106,.45); border-radius: 999px; background: transparent; color: #f2a3ac; font: inherit; font-size: 10.5px; }
+.odos-orders-flagform { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(160px,.5fr) minmax(240px,1fr) auto; gap: 10px; align-items: end; padding: 10px; border: 1px solid rgba(226,92,106,.3); border-radius: 10px; background: rgba(10,14,26,.7); }
+.odos-orders-flagform label { display: grid; gap: 4px; color: var(--odos-faint); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.odos-orders-flagform select, .odos-orders-flagform input { height: 36px; padding: 0 10px; border: 1px solid var(--odos-line-2); border-radius: 8px; background: var(--odos-surface); color: var(--odos-text); font: inherit; font-size: 12px; }
+.odos-orders-flagform button { height: 36px; padding: 0 14px; border: 1px solid rgba(226,92,106,.45); border-radius: 999px; background: rgba(226,92,106,.1); color: #f2a3ac; font: inherit; font-size: 11px; }
+.odos-orders-foot { padding: 11px 18px; border-top: 1px solid var(--odos-line); color: var(--odos-faint); font-size: 10.5px; letter-spacing: .04em; }
+.odos-orders-seam { margin-top: 14px; padding: 12px 16px; border: 1px dashed var(--odos-line-2); border-radius: 14px; color: var(--odos-faint); font-size: 11.5px; line-height: 1.55; }
+.odos-orders-seam b { color: var(--odos-muted); }
+
+@container (max-width: 1120px) {
+  .odos-orders-row { grid-template-columns: 1fr 130px 96px 150px; grid-template-rows: auto auto; row-gap: 3px; }
+  .odos-orders-id, .odos-orders-lab, .odos-orders-row.is-head > span:nth-child(1), .odos-orders-row.is-head > span:nth-child(3), .odos-orders-row.is-head > span:nth-child(4), .odos-orders-row.is-head > span:nth-child(7) { display: none; }
+  .odos-orders-what { grid-column: 1; grid-row: 2; }
+  .odos-orders-tx { grid-column: 2; grid-row: 2; }
+}
+
+@container (max-width: 700px) {
+  .odos-orders-body { padding: 16px 14px 40px; }
+  .odos-orders-head h1 { font-size: 20px; }
+  .odos-orders-row { grid-template-columns: 1fr auto; grid-template-rows: auto auto auto; padding: 10px 14px; }
+  .odos-orders-row.is-head { display: none; }
+  .odos-orders-what { grid-column: 1; grid-row: 3; }
+  .odos-orders-what small, .odos-orders-age small, .odos-orders-tx { display: none; }
+  .odos-orders-status sub { display: none; }
+  .odos-orders-actions { grid-column: 2; grid-row: 1 / span 3; }
+  .odos-orders-actions > button:not(.odos-orders-more), .odos-orders-actions > .odos-orders-pop { display: none; }
+  .odos-orders-phone-action { display: block; }
+  .odos-orders-flagline { flex-wrap: wrap; }
+  .odos-orders-flagline small { order: 3; width: 100%; margin-left: 0; }
+  .odos-orders-flagform { grid-template-columns: 1fr; }
+  .odos-orders-seam { display: none; }
+}

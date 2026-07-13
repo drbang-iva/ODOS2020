@@ -14,7 +14,10 @@ import {
 import type { LabOrderAdapter } from "../src/lab-orders/lab-order-adapter.js";
 import { createLabOrderDispatch } from "../src/lab-orders/lab-order-dispatch.js";
 import {
+  handleFlagLabOrderProblemRequest,
   handleLabOrderSheetRequest,
+  handleResolveLabOrderProblemRequest,
+  handleSetLabOrderStatusRequest,
   handleLabOrderWorklistRequest,
   handleSubmitLabOrderRequest,
   type LabOrderHandlerDeps,
@@ -35,6 +38,8 @@ const ORDER: LabOrder = {
     lensMaterial: "Polycarbonate",
     treatments: [],
   },
+  frameSource: 4,
+  frameOwnership: "in-house",
 };
 
 function transmission(id: string, state: LabTransportState): Task {
@@ -51,6 +56,7 @@ function transmission(id: string, state: LabTransportState): Task {
     },
     basedOn: [{ reference: "Task/order-1" }],
     businessStatus: labTransportStateConcept(state),
+    authoredOn: "2026-07-11T12:00:00.000Z",
     input: [{
       type: {
         coding: [{ system: OSOD_LAB_ORDER_TASK_INPUT_SYSTEM, code: LAB_ORDER_EXPORT_INPUT_CODE }],
@@ -78,7 +84,10 @@ function setup() {
       type: "searchset",
       entry: [...tasks.values()].map((resource) => ({ resource: structuredClone(resource) as T })),
     }),
-    update: async <T extends Resource>(_rt: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
+    update: async <T extends Resource>(_rt: T["resourceType"], id: string, resource: T): Promise<T> => {
+      if (resource.resourceType === "Task") tasks.set(id, structuredClone(resource));
+      return resource;
+    },
     create: async <T extends Resource>(resource: T): Promise<T> => resource,
   };
   const adapter: LabOrderAdapter = {
@@ -115,6 +124,7 @@ function setup() {
       ...dispatch,
       getAdapter: () => adapter,
     },
+    now: () => "2026-07-11T14:00:00.000Z",
   };
   return { adapter, calls, deps, fhir };
 }
@@ -140,7 +150,7 @@ test("submit handler authenticates, uses the verified staff identity, and defaul
   assert.equal(fixture.calls[0].staff, "Practitioner/verified-staff");
 });
 
-test("sheet handler re-renders from the stored export and worklist filters by transport state", async () => {
+test("sheet handler re-renders from the stored export and worklist filters by staff status", async () => {
   const fixture = setup();
   const sheet = await handleLabOrderSheetRequest(fixture.deps, {
     authHeader: "Bearer good",
@@ -154,17 +164,39 @@ test("sheet handler re-renders from the stored export and worklist filters by tr
     state: "received",
   });
   assert.equal(worklist.status, 200);
-  assert.deepEqual((worklist.body as { items: Task[] }).items.map(({ id }) => id), ["lab-received"]);
+  assert.deepEqual((worklist.body as { items: Array<{ reference: string }> }).items.map(({ reference }) => reference), ["Task/lab-received"]);
 
   const invalid = await handleLabOrderWorklistRequest(fixture.deps, {
     authHeader: "Bearer good",
-    state: "at-lab",
+    state: "sent",
   });
   assert.equal(invalid.status, 400);
-  assert.match(String((invalid.body as { error: string }).error), /transport state/i);
+  assert.match(String((invalid.body as { error: string }).error), /status/i);
 });
 
-test("all six lab-order HTTP endpoints reach handlers after service authentication", async () => {
+test("staff status and problem actions persist verified identity and resolve without losing history", async () => {
+  const fixture = setup();
+  const status = await handleSetLabOrderStatusRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { status: "received" },
+  });
+  assert.equal(status.status, 200);
+  const flagged = await handleFlagLabOrderProblemRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    body: { reason: "lab-breakage-remake", note: "Lens broke during edging" },
+  });
+  assert.equal((flagged.body as { flag: { flaggedBy: string } }).flag.flaggedBy, "Practitioner/verified-staff");
+  const resolved = await handleResolveLabOrderProblemRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    labOrderReference: "Task/lab-sent",
+    flagId: "flag-1",
+  });
+  assert.equal(resolved.status, 200);
+});
+
+test("all nine lab-order HTTP endpoints reach handlers after service authentication", async () => {
   const fixture = setup();
   let serviceAuthCalls = 0;
   const app = express();
@@ -187,7 +219,10 @@ test("all six lab-order HTTP endpoints reach handlers after service authenticati
       ["POST", "/lab-orders/Task%2Flab-sent/cancel", {}],
       ["GET", "/lab-orders/Task%2Flab-sent/state", undefined],
       ["GET", "/lab-orders/Task%2Flab-sent/sheet", undefined],
-      ["GET", "/lab-orders?state=sent", undefined],
+      ["POST", "/lab-orders/Task%2Flab-sent/status", { status: "received" }],
+      ["POST", "/lab-orders/Task%2Flab-sent/flags", { reason: "other", note: "Needs review" }],
+      ["POST", "/lab-orders/Task%2Flab-sent/flags/flag-1/resolve", {}],
+      ["GET", "/lab-orders?state=at-lab", undefined],
     ];
     for (const [method, path, body] of cases) {
       const response = await fetch(`${baseUrl}${path}`, {

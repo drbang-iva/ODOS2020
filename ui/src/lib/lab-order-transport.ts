@@ -14,6 +14,75 @@ export interface LabOrderTransportOptions {
   fetchImpl?: typeof fetch;
 }
 
+export const LAB_ORDER_STATUSES = [
+  "patients-frame",
+  "in-office-not-sent",
+  "outbound",
+  "at-lab",
+  "lenses-on-order",
+  "frame-on-order",
+  "inbound",
+  "received",
+  "notified",
+  "dispensed",
+] as const;
+
+export type LabOrderStatus = (typeof LAB_ORDER_STATUSES)[number];
+export type LabOrderNotificationReason = "reached" | "left-message" | "unable";
+export type LabOrderProblemReason = "lab-lost" | "lab-breakage-remake" | "cannot-locate" | "other";
+
+export interface LabOrderProblemFlag {
+  id: string;
+  reason: LabOrderProblemReason;
+  note: string;
+  flaggedBy: string;
+  flaggedAt: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+}
+
+export interface LabOrderBoardItem {
+  reference: string;
+  orderId: string;
+  patientId?: string;
+  patientName: string;
+  lab: string;
+  frame: string;
+  lenses: string;
+  frameSource?: 0 | 1 | 3 | 4;
+  frameSourceLabel: string;
+  frameOwnership?: "in-house" | "patients-own";
+  status: LabOrderStatus;
+  statusLabel: string;
+  notificationReason?: LabOrderNotificationReason;
+  enteredAt: string;
+  ageMinutes: number;
+  warningMinutes?: number;
+  limitMinutes?: number;
+  needsAction: boolean;
+  overdue: boolean;
+  transportState: string;
+  transmissionFact: { kind: "oma" | "manual" | "error" | "none"; label: string };
+  problemFlags: LabOrderProblemFlag[];
+  openFlag?: LabOrderProblemFlag;
+}
+
+export interface LabOrderBoardSummary {
+  items: LabOrderBoardItem[];
+  counts: Record<LabOrderStatus, number>;
+  activeCount: number;
+  alarms: { flaggedProblems: number; atLabOverdue: number; transmissionFailures: number; receivedNotNotified: number };
+  rollups: { preLab: number; outbound: number; atLab: number; inbound: number; notified: number };
+  agingConfig: {
+    outboundDays: number;
+    inboundDays: number;
+    atLabDays: number;
+    receivedNotifyHours: number;
+    notifiedRetryDays: number;
+    notifiedFollowUpDays: number;
+  };
+}
+
 export async function submitLabOrder(
   input: { order: LabOrder; orderTaskReference: string; lab: string },
   options: LabOrderTransportOptions = {},
@@ -46,12 +115,47 @@ export async function cancelLabOrder(
   }, options);
 }
 
+export async function setLabOrderStatus(
+  labOrderReference: string,
+  status: LabOrderStatus,
+  notificationReason?: LabOrderNotificationReason,
+  options: LabOrderTransportOptions = {},
+): Promise<{ status: LabOrderStatus; enteredAt: string; notificationReason?: LabOrderNotificationReason }> {
+  return requestJson(`/lab-orders/${encodedReference(labOrderReference)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status, ...(notificationReason ? { notificationReason } : {}) }),
+  }, options);
+}
+
+export async function flagLabOrderProblem(
+  labOrderReference: string,
+  reason: LabOrderProblemReason,
+  note: string,
+  options: LabOrderTransportOptions = {},
+): Promise<{ flag: LabOrderProblemFlag }> {
+  return requestJson(`/lab-orders/${encodedReference(labOrderReference)}/flags`, {
+    method: "POST",
+    body: JSON.stringify({ reason, note }),
+  }, options);
+}
+
+export async function resolveLabOrderProblem(
+  labOrderReference: string,
+  flagId: string,
+  options: LabOrderTransportOptions = {},
+): Promise<{ flagId: string; resolvedAt: string }> {
+  return requestJson(`/lab-orders/${encodedReference(labOrderReference)}/flags/${encodeURIComponent(flagId)}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  }, options);
+}
+
 export async function fetchLabOrderWorklist(
   state?: string,
   options: LabOrderTransportOptions = {},
-): Promise<{ items: unknown[] }> {
+): Promise<LabOrderBoardSummary> {
   const query = state ? `?state=${encodeURIComponent(state)}` : "";
-  return requestJson<{ items: unknown[] }>(`/lab-orders${query}`, { method: "GET" }, options);
+  return requestJson<LabOrderBoardSummary>(`/lab-orders${query}`, { method: "GET" }, options);
 }
 
 export async function fetchLabOrderSheet(

@@ -88,30 +88,38 @@ test("E-Rx and result review remain explicit wiring states with no invented coun
   assert.equal("count" in summary.review, false);
 });
 
-test("orders in flight reuse active lab-transmission Tasks, age-sort them, and flag the five-day threshold", () => {
+test("Clinic-home orders reuse the board projection, counts, status-specific aging, and flagged-first sort", () => {
   const summary = projectClinicSummary(input({
     labOrders: [
-      labTask("fresh", "sent", "2026-07-10T15:00:00.000Z", "Fresh Patient"),
-      labTask("received", "received", "2026-07-01T15:00:00.000Z", "Received Patient"),
-      labTask("aging", "queued", "2026-07-05T14:59:00.000Z", "Aging Patient"),
+      labTask("fresh", "sent", "2026-07-10T15:00:00.000Z", "Fresh Patient", "at-lab"),
+      labTask("received", "received", "2026-07-11T13:00:00.000Z", "Received Patient", "received"),
+      labTask("aging", "sent", "2026-07-05T14:59:00.000Z", "Aging Patient", "at-lab"),
+      labTask("flagged", "sent", "2026-07-11T14:00:00.000Z", "Flagged Patient", "at-lab", true),
     ],
   }));
 
-  assert.equal(summary.orders.count, 2);
-  assert.equal(summary.orders.agingCount, 1);
-  assert.equal(summary.orders.agingThresholdDays, 5);
-  assert.deepEqual(summary.orders.rows.map((row) => row.reference), ["Task/aging", "Task/fresh"]);
-  assert.deepEqual(summary.orders.rows.map((row) => row.state), ["report-due", "at-lab"]);
-  assert.equal(summary.orders.rows[0].patient, "Aging Patient");
-  assert.equal(summary.orders.rows[0].description, "Progressive · Poly");
-  assert.equal(summary.orders.rows[0].stale, true);
+  assert.equal(summary.orders.activeCount, 4);
+  assert.equal(summary.orders.counts["at-lab"], 3);
+  assert.equal(summary.orders.alarms.atLabOverdue, 1);
+  assert.equal(summary.orders.alarms.receivedNotNotified, 1);
+  assert.equal(summary.orders.alarms.flaggedProblems, 1);
+  assert.equal(summary.orders.items[0].reference, "Task/flagged");
+  assert.equal(summary.orders.items.find((row) => row.reference === "Task/aging")?.overdue, true);
+  assert.deepEqual(summary.orders.rollups, { preLab: 0, outbound: 0, atLab: 3, inbound: 1, notified: 0 });
 });
 
 function input(overrides: Partial<ClinicSummaryInput> = {}): ClinicSummaryInput {
   return { appointments: [], encounters: [], patients: [], provenances: [], labOrders: [], now: NOW, date: DATE, timeZone: "America/New_York", ...overrides };
 }
 
-function labTask(id: string, state: "queued" | "sent" | "received", authoredOn: string, patientName: string): Task {
+function labTask(
+  id: string,
+  state: "queued" | "sent" | "received",
+  authoredOn: string,
+  patientName: string,
+  status?: "at-lab" | "received",
+  flagged = false,
+): Task {
   return {
     resourceType: "Task",
     id,
@@ -129,9 +137,25 @@ function labTask(id: string, state: "queued" | "sent" | "received", authoredOn: 
           header: { orderId: id, orderDate: "2026-07-05", lab: "Example Lab", patientName, patientRef: `Patient/${id}` },
           rx: { od: {}, os: {} },
           lensSpec: { jobType: "Rx", lensDesign: "Progressive", lensMaterial: "Poly", treatments: [] },
+          frameSource: 4,
+          frameOwnership: "in-house",
         },
       }),
-    }],
+    }, ...(status ? [{
+      type: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-order-task-input", code: "lab-order-status" }] },
+      valueString: JSON.stringify({
+        version: 1,
+        currentStatus: status,
+        history: [{ status, enteredAt: authoredOn }],
+        problemFlags: flagged ? [{
+          id: "flag-1",
+          reason: "lab-breakage-remake",
+          note: "Remaking lens",
+          flaggedBy: "Practitioner/hannah",
+          flaggedAt: authoredOn,
+        }] : [],
+      }),
+    }] : [])],
   };
 }
 
