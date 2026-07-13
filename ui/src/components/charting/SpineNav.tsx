@@ -13,6 +13,7 @@ const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean;
   { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
   { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
+  { id: "imaging", label: "Manual imaging", group: "IMAGING" },
   { id: "assessment", label: "Assessment", group: "ASSESSMENT & PLAN" },
   { id: "prescription", label: "Plan · Prescriptions", group: "ASSESSMENT & PLAN" },
 ];

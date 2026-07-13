@@ -9,6 +9,7 @@ import { CustomSectionEditor, type CustomSectionEditorValue } from "../component
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
+import { ImagingSection } from "../components/charting/ImagingSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
 import { OcularHealthSection } from "../components/charting/OcularHealthSection";
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
@@ -193,6 +194,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("cup-disc", status)}
+            />
+          )}
+          {activeSection === "imaging" && (
+            <ImagingSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("imaging", status)}
             />
           )}
           {activeSection === "assessment" && (

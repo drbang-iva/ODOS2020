@@ -68,6 +68,10 @@ import {
   handleCupDiscDefinitionRequest,
 } from "./clinical-graph/cup-disc-endpoint.js";
 import {
+  handleImagingCaptureRequest,
+  MANUAL_IMAGING_CONTENT_TYPE,
+} from "./clinical-graph/imaging-endpoint.js";
+import {
   handleIopCaptureRequest,
   handleIopDefinitionRequest,
 } from "./clinical-graph/iop-endpoint.js";
@@ -5437,6 +5441,10 @@ async function main(): Promise<void> {
       const transports = new Map<string, SSEServerTransport>();
       const smartState = new SmartAuthorizationState();
 
+      app.use(
+        "/clinical-graph/imaging",
+        express.json({ type: MANUAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
+      );
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.OSOD_MCP_ALLOWED_ORIGIN ?? "*";
@@ -5782,6 +5790,20 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "cup/disc clinical-graph route failed" });
           }
+        }
+      });
+
+      app.post("/clinical-graph/imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleImagingCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/imaging failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "imaging upload route failed" });
         }
       });
 
