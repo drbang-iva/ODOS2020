@@ -34,7 +34,7 @@ export type LabOrderFhirClient = {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T): Promise<T>;
-  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T): Promise<T>;
+  update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 };
 
 export interface ManualLabOrderAdapterOptions {

@@ -8,11 +8,9 @@ import {
   assertLabOrderStatus,
   backfilledLabOrderStatusRecord,
   flagLabOrderProblem,
-  labOrderStatusRecordFromTask,
   projectLabOrderBoard,
   resolveLabOrderProblem,
   setLabOrderStatus,
-  withLabOrderStatusRecord,
   type LabOrderAgingConfig,
   type LabOrderNotificationReason,
 } from "../fhir/labOrderStatus.js";
@@ -22,7 +20,6 @@ import {
   OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
   isLabOrderTransmissionTask,
   storedLabOrderExport,
-  transportStateFromTask,
   type LabOrderFhirClient,
 } from "./adapters/manual-lab-order-adapter.js";
 import {
@@ -144,26 +141,30 @@ export async function handleSetLabOrderStatusRequest(
   if ("error" in body) return badRequest(body.error);
   if (typeof body.value.status !== "string") return badRequest("A lab-order status is required.");
   try {
-    assertLabOrderStatus(body.value.status);
+    const status = body.value.status;
+    assertLabOrderStatus(status);
     let notificationReason: LabOrderNotificationReason | undefined;
     if (body.value.notificationReason !== undefined) {
       if (typeof body.value.notificationReason !== "string") return badRequest("Notification reason must be a string.");
       assertLabOrderNotificationReason(body.value.notificationReason);
       notificationReason = body.value.notificationReason;
     }
-    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
-    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
     const enteredAt = now(deps);
-    const updated = setLabOrderStatus(
-      task,
-      body.value.status,
-      enteredAt,
-      authenticated.staff.staffReference,
-      notificationReason,
+    await updateLabOrderWithRetry(
+      authenticated.staff.fhir,
+      taskId,
+      input.labOrderReference,
+      (task) => setLabOrderStatus(
+        task,
+        status,
+        enteredAt,
+        authenticated.staff.staffReference,
+        notificationReason,
+      ),
     );
-    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
-    return { status: 200, body: { status: body.value.status, enteredAt, ...(notificationReason ? { notificationReason } : {}) } };
+    return { status: 200, body: { status, enteredAt, ...(notificationReason ? { notificationReason } : {}) } };
   } catch (error) {
+    if (error instanceof LabOrderVersionConflictError) return conflict(error.message);
     return badRequest(messageOf(error));
   }
 }
@@ -182,19 +183,24 @@ export async function handleFlagLabOrderProblemRequest(
   const note = stringValue(body.value.note);
   if (!note) return badRequest("A problem note is required.");
   try {
-    assertLabOrderProblemReason(body.value.reason);
-    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
-    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
-    const updated = flagLabOrderProblem(task, {
-      reason: body.value.reason,
-      note,
-      flaggedBy: authenticated.staff.staffReference,
-      flaggedAt: now(deps),
-    });
-    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
+    const reason = body.value.reason;
+    assertLabOrderProblemReason(reason);
+    const flaggedAt = now(deps);
+    const updated = await updateLabOrderWithRetry(
+      authenticated.staff.fhir,
+      taskId,
+      input.labOrderReference,
+      (task) => flagLabOrderProblem(task, {
+        reason,
+        note,
+        flaggedBy: authenticated.staff.staffReference,
+        flaggedAt,
+      }),
+    );
     const record = backfilledLabOrderStatusRecord(updated);
     return { status: 200, body: { flag: record.problemFlags[record.problemFlags.length - 1] } };
   } catch (error) {
+    if (error instanceof LabOrderVersionConflictError) return conflict(error.message);
     return badRequest(messageOf(error));
   }
 }
@@ -209,17 +215,20 @@ export async function handleResolveLabOrderProblemRequest(
   if (!taskId) return badRequest('Lab order reference must be a local "Task/<id>" reference.');
   if (!/^flag-[A-Za-z0-9.-]+$/.test(input.flagId)) return badRequest("A valid problem flag id is required.");
   try {
-    const task = await authenticated.staff.fhir.read<Task>("Task", taskId);
-    if (!isLabOrderTransmissionTask(task)) return badRequest(`${input.labOrderReference} is not a lab-order transmission Task.`);
     const resolvedAt = now(deps);
-    const updated = resolveLabOrderProblem(task, {
-      flagId: input.flagId,
-      resolvedBy: authenticated.staff.staffReference,
-      resolvedAt,
-    });
-    await authenticated.staff.fhir.update<Task>("Task", taskId, updated);
+    await updateLabOrderWithRetry(
+      authenticated.staff.fhir,
+      taskId,
+      input.labOrderReference,
+      (task) => resolveLabOrderProblem(task, {
+        flagId: input.flagId,
+        resolvedBy: authenticated.staff.staffReference,
+        resolvedAt,
+      }),
+    );
     return { status: 200, body: { flagId: input.flagId, resolvedAt } };
   } catch (error) {
+    if (error instanceof LabOrderVersionConflictError) return conflict(error.message);
     return badRequest(messageOf(error));
   }
 }
@@ -288,15 +297,7 @@ export async function handleLabOrderWorklistRequest(
       return badRequest("Lab-order worklist exceeded one FHIR page; no partial worklist was returned.");
     }
     const tasks = resources(bundle).filter(isLabOrderTransmissionTask);
-    const migrated = await Promise.all(tasks.map(async (task) => {
-      if (labOrderStatusRecordFromTask(task) || !task.id) return task;
-      const transport = transportStateFromTask(task);
-      if (transport !== "queued" && transport !== "sent" && transport !== "received") return task;
-      const updated = withLabOrderStatusRecord(task, backfilledLabOrderStatusRecord(task));
-      await authenticated.staff.fhir.update<Task>("Task", task.id, updated);
-      return updated;
-    }));
-    const board = projectLabOrderBoard(migrated, now(deps), deps.agingConfig);
+    const board = projectLabOrderBoard(tasks, now(deps), deps.agingConfig);
     return {
       status: 200,
       body: state === undefined ? board : { ...board, items: board.items.filter((item) => item.status === state) },
@@ -304,6 +305,41 @@ export async function handleLabOrderWorklistRequest(
   } catch (error) {
     return badRequest(messageOf(error));
   }
+}
+
+class LabOrderVersionConflictError extends Error {}
+
+async function updateLabOrderWithRetry(
+  fhir: LabOrderFhirClient,
+  taskId: string,
+  labOrderReference: string,
+  mutate: (task: Task) => Task,
+): Promise<Task> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const task = await fhir.read<Task>("Task", taskId);
+    if (!isLabOrderTransmissionTask(task)) {
+      throw new Error(`${labOrderReference} is not a lab-order transmission Task.`);
+    }
+    const versionId = task.meta?.versionId;
+    if (!versionId) {
+      throw new LabOrderVersionConflictError(`${labOrderReference} has no FHIR version; reload and retry.`);
+    }
+    const updated = mutate(task);
+    try {
+      return await fhir.update<Task>(
+        "Task",
+        taskId,
+        updated,
+        { "If-Match": `W/"${versionId}"` },
+      );
+    } catch (error) {
+      if (!isVersionConflict(error)) throw error;
+      if (attempt === 1) {
+        throw new LabOrderVersionConflictError(`${labOrderReference} was modified concurrently; reload and retry.`);
+      }
+    }
+  }
+  throw new LabOrderVersionConflictError(`${labOrderReference} was modified concurrently; reload and retry.`);
 }
 
 async function authenticate(
@@ -370,6 +406,15 @@ function resources<T extends Resource>(bundle: Bundle<T>): T[] {
 
 function badRequest(error: string): LabOrderHandlerResult {
   return { status: 400, body: { error } };
+}
+
+function conflict(error: string): LabOrderHandlerResult {
+  return { status: 409, body: { error } };
+}
+
+function isVersionConflict(error: unknown): boolean {
+  const status = (error as { status?: unknown })?.status;
+  return status === 409 || status === 412 || /FHIR (409|412)\b/.test(messageOf(error));
 }
 
 function messageOf(error: unknown): string {

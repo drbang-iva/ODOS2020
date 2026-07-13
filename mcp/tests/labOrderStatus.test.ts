@@ -111,6 +111,17 @@ test("problem flags append, breakage alone resets aging, pin open problems, and 
   assert.equal(projectLabOrderBoard([flagged], "2026-07-04T12:07:00Z").alarms.flaggedProblems, 0);
 });
 
+test("one unprojectable legacy task is counted and skipped without blanking the board", () => {
+  const valid = labTask("valid", "sent", "2026-07-01T12:00:00Z");
+  const invalid = labTask("missing-time", "queued", "2026-07-01T12:00:00Z");
+  delete invalid.authoredOn;
+  const board = projectLabOrderBoard([invalid, valid], "2026-07-02T12:00:00Z");
+  assert.deepEqual(board.items.map((item) => item.reference), ["Task/valid"]);
+  assert.equal(board.counts["at-lab"], 1);
+  assert.equal(board.counts["in-office-not-sent"], 0);
+  assert.equal(board.unprojectableCount, 1);
+});
+
 function labTask(id: string, transport: "queued" | "sent" | "received" | "error", authoredOn: string): Task {
   return {
     resourceType: "Task",

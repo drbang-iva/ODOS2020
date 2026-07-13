@@ -124,6 +124,7 @@ export interface LabOrderBoardSummary {
   items: LabOrderBoardItem[];
   counts: Record<LabOrderStatus, number>;
   activeCount: number;
+  unprojectableCount: number;
   alarms: {
     flaggedProblems: number;
     atLabOverdue: number;
@@ -315,57 +316,67 @@ export function projectLabOrderBoard(
   const nowMs = Date.parse(now);
   if (!Number.isFinite(nowMs)) throw new Error(`Invalid board projection instant "${now}".`);
   const counts = Object.fromEntries(LAB_ORDER_STATUSES.map((status) => [status, 0])) as Record<LabOrderStatus, number>;
+  let unprojectableCount = 0;
   const items = tasks.flatMap((task): LabOrderBoardItem[] => {
-    if (!task.id) return [];
-    const transportState = transportStateFromTask(task);
-    if (transportState === "cancelled") return [];
-    const record = backfilledLabOrderStatusRecord(task);
-    counts[record.currentStatus] += 1;
-    if (record.currentStatus === "dispensed") return [];
-    const currentEntry = record.history[record.history.length - 1];
-    const enteredMs = Date.parse(currentEntry.enteredAt);
-    const ageMinutes = Math.max(0, Math.floor((nowMs - enteredMs) / 60_000));
-    const thresholds = agingThresholds(record.currentStatus, agingConfig);
-    const openFlag = [...record.problemFlags].reverse().find((flag) => !flag.resolvedAt);
-    const stored = storedOrderFromTask(task);
-    const frameSource = stored.frameSource;
-    const warningReached = thresholds.warningMinutes !== undefined && ageMinutes >= thresholds.warningMinutes;
-    const overdue = thresholds.limitMinutes !== undefined && ageMinutes >= thresholds.limitMinutes;
-    const needsAction = Boolean(openFlag)
-      || transportState === "error"
-      || record.currentStatus === "received"
-      || warningReached;
-    const patientId = stored.header.patientRef?.match(/^Patient\/([^/]+)$/)?.[1];
-    return [{
-      reference: `Task/${task.id}`,
-      orderId: stored.header.orderId,
-      ...(patientId ? { patientId } : {}),
-      patientName: stored.header.patientName,
-      lab: stored.header.lab,
-      frame: [stored.frame?.brand, stored.frame?.model].filter(Boolean).join(" ") || "No frame",
-      lenses: [stored.lensSpec.lensDesign, stored.lensSpec.lensMaterial].filter(Boolean).join(" · ") || "Lens specification unavailable",
-      ...(frameSource !== undefined ? { frameSource } : {}),
-      frameSourceLabel: frameSource === undefined ? "FSRC unavailable" : LAB_ORDER_FRAME_SOURCE_LABELS[frameSource],
-      ...(stored.frameOwnership ? { frameOwnership: stored.frameOwnership } : {}),
-      status: record.currentStatus,
-      statusLabel: STATUS_LABELS[record.currentStatus],
-      ...(currentEntry.notificationReason ? { notificationReason: currentEntry.notificationReason } : {}),
-      enteredAt: currentEntry.enteredAt,
-      ageMinutes,
-      ...thresholds,
-      needsAction,
-      overdue,
-      transportState,
-      transmissionFact: transmissionFact(transportState),
-      problemFlags: record.problemFlags,
-      ...(openFlag ? { openFlag } : {}),
-    }];
+    try {
+      if (!task.id) throw new Error("Lab-order transmission Task is missing its id.");
+      const transportState = transportStateFromTask(task);
+      if (transportState === "cancelled") return [];
+      const record = backfilledLabOrderStatusRecord(task);
+      if (record.currentStatus === "dispensed") {
+        counts.dispensed += 1;
+        return [];
+      }
+      const currentEntry = record.history[record.history.length - 1];
+      const enteredMs = Date.parse(currentEntry.enteredAt);
+      const ageMinutes = Math.max(0, Math.floor((nowMs - enteredMs) / 60_000));
+      const thresholds = agingThresholds(record.currentStatus, agingConfig);
+      const openFlag = [...record.problemFlags].reverse().find((flag) => !flag.resolvedAt);
+      const stored = storedOrderFromTask(task);
+      const frameSource = stored.frameSource;
+      const warningReached = thresholds.warningMinutes !== undefined && ageMinutes >= thresholds.warningMinutes;
+      const overdue = thresholds.limitMinutes !== undefined && ageMinutes >= thresholds.limitMinutes;
+      const needsAction = Boolean(openFlag)
+        || transportState === "error"
+        || record.currentStatus === "received"
+        || warningReached;
+      const patientId = stored.header.patientRef?.match(/^Patient\/([^/]+)$/)?.[1];
+      counts[record.currentStatus] += 1;
+      return [{
+        reference: `Task/${task.id}`,
+        orderId: stored.header.orderId,
+        ...(patientId ? { patientId } : {}),
+        patientName: stored.header.patientName,
+        lab: stored.header.lab,
+        frame: [stored.frame?.brand, stored.frame?.model].filter(Boolean).join(" ") || "No frame",
+        lenses: [stored.lensSpec.lensDesign, stored.lensSpec.lensMaterial].filter(Boolean).join(" · ") || "Lens specification unavailable",
+        ...(frameSource !== undefined ? { frameSource } : {}),
+        frameSourceLabel: frameSource === undefined ? "FSRC unavailable" : LAB_ORDER_FRAME_SOURCE_LABELS[frameSource],
+        ...(stored.frameOwnership ? { frameOwnership: stored.frameOwnership } : {}),
+        status: record.currentStatus,
+        statusLabel: STATUS_LABELS[record.currentStatus],
+        ...(currentEntry.notificationReason ? { notificationReason: currentEntry.notificationReason } : {}),
+        enteredAt: currentEntry.enteredAt,
+        ageMinutes,
+        ...thresholds,
+        needsAction,
+        overdue,
+        transportState,
+        transmissionFact: transmissionFact(transportState),
+        problemFlags: record.problemFlags,
+        ...(openFlag ? { openFlag } : {}),
+      }];
+    } catch {
+      unprojectableCount += 1;
+      return [];
+    }
   }).sort(compareBoardItems);
   const activeCount = items.length;
   return {
     items,
     counts,
     activeCount,
+    unprojectableCount,
     alarms: {
       flaggedProblems: items.filter((item) => item.openFlag).length,
       atLabOverdue: items.filter((item) => isAtLabStatus(item.status) && item.overdue).length,
