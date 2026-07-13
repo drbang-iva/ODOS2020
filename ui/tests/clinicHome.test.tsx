@@ -104,9 +104,15 @@ test("container-query contracts stack tablet cards and fold phone detail cards",
   assert.match(phone, /\.odos-clinic-flow-open \{ grid-template-columns: 40px 1fr/);
 });
 
-test("Vite proxies the Clinic aggregate to the MCP server", () => {
+test("Vite serves Desk and Clinic navigations from the SPA while preserving their MCP proxies", () => {
   const config = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
-  assert.match(config, /"\/clinic": \{ target: "http:\/\/localhost:3333"/);
+  for (const route of ["desk", "clinic"]) {
+    const proxy = config.match(new RegExp(`"/${route}": \\{[\\s\\S]*?\\n      \\},`))?.[0] ?? "";
+    assert.match(proxy, /target: "http:\/\/localhost:3333"/);
+    assert.match(proxy, /req\.headers\["sec-fetch-dest"\] === "document"/);
+    assert.match(proxy, /req\.headers\.accept \|\| ""/);
+    assert.match(proxy, /return "\/index\.html"/);
+  }
 });
 
 function fixture(flow: ClinicFlowRow[]): ClinicSummary {
