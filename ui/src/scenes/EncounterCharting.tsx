@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
+import { ChartSidebar } from "../components/ChartSidebar";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
@@ -226,6 +227,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             />
           )}
         </main>
+        <ChartSidebar patient={patient} />
       </div>
       {creatingSection && (
         <CustomSectionEditor

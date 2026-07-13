@@ -652,6 +652,15 @@ test("EncounterCharting keeps exactly the 14 shipped built-in render branches pl
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
 });
 
+test("EncounterCharting renders the shared ChartSidebar without removing it from PatientDirector", () => {
+  const encounterCharting = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
+  const patientDirector = readFileSync(new URL("../src/scenes/PatientDirector.tsx", import.meta.url), "utf8");
+
+  assert.match(encounterCharting, /import \{ ChartSidebar \} from "\.\.\/components\/ChartSidebar";/);
+  assert.match(encounterCharting, /<ChartSidebar patient=\{patient\} \/>/);
+  assert.match(patientDirector, /<ChartSidebar patient=\{currentPatient\} \/>/);
+});
+
 function ocularDefinitions() {
   return ["periocular-adnexa", "lids-lashes", "palpebral-conjunctiva", "bulbar-conjunctiva", "tear-film", "cornea", "anterior-chamber", "iris-pupil", "lens"].map((name) => ({
     stableKey: `ocular-health:anterior:${name}`,
