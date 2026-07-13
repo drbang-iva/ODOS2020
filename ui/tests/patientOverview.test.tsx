@@ -344,6 +344,7 @@ const clinicSummary: ClinicSummary = {
       olderThan24Hours: false,
     }],
   },
+  orders: { count: 0, agingCount: 0, agingThresholdDays: 5, rows: [] },
   erx: { available: false, message: "Not wired" },
   review: { available: false, message: "Not wired" },
 };

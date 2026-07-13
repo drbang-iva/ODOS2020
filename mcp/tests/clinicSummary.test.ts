@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Appointment, Encounter, Patient, Provenance } from "@medplum/fhirtypes";
+import type { Appointment, Encounter, Patient, Provenance, Task } from "@medplum/fhirtypes";
 import { projectClinicSummary, type ClinicSummaryInput } from "../src/clinic/clinic-summary.js";
 
 const NOW = "2026-07-11T15:00:00.000Z";
@@ -88,8 +88,51 @@ test("E-Rx and result review remain explicit wiring states with no invented coun
   assert.equal("count" in summary.review, false);
 });
 
+test("orders in flight reuse active lab-transmission Tasks, age-sort them, and flag the five-day threshold", () => {
+  const summary = projectClinicSummary(input({
+    labOrders: [
+      labTask("fresh", "sent", "2026-07-10T15:00:00.000Z", "Fresh Patient"),
+      labTask("received", "received", "2026-07-01T15:00:00.000Z", "Received Patient"),
+      labTask("aging", "queued", "2026-07-05T14:59:00.000Z", "Aging Patient"),
+    ],
+  }));
+
+  assert.equal(summary.orders.count, 2);
+  assert.equal(summary.orders.agingCount, 1);
+  assert.equal(summary.orders.agingThresholdDays, 5);
+  assert.deepEqual(summary.orders.rows.map((row) => row.reference), ["Task/aging", "Task/fresh"]);
+  assert.deepEqual(summary.orders.rows.map((row) => row.state), ["report-due", "at-lab"]);
+  assert.equal(summary.orders.rows[0].patient, "Aging Patient");
+  assert.equal(summary.orders.rows[0].description, "Progressive · Poly");
+  assert.equal(summary.orders.rows[0].stale, true);
+});
+
 function input(overrides: Partial<ClinicSummaryInput> = {}): ClinicSummaryInput {
-  return { appointments: [], encounters: [], patients: [], provenances: [], now: NOW, date: DATE, timeZone: "America/New_York", ...overrides };
+  return { appointments: [], encounters: [], patients: [], provenances: [], labOrders: [], now: NOW, date: DATE, timeZone: "America/New_York", ...overrides };
+}
+
+function labTask(id: string, state: "queued" | "sent" | "received", authoredOn: string, patientName: string): Task {
+  return {
+    resourceType: "Task",
+    id,
+    status: state === "received" ? "completed" : state === "queued" ? "requested" : "in-progress",
+    intent: "order",
+    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/task-type", code: "lab-order-transmission" }] },
+    businessStatus: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-transport-state", code: state }] },
+    authoredOn,
+    input: [{
+      type: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-order-task-input", code: "lab-order-export" }] },
+      valueString: JSON.stringify({
+        format: "osod-lab-order",
+        version: "0",
+        order: {
+          header: { orderId: id, orderDate: "2026-07-05", lab: "Example Lab", patientName, patientRef: `Patient/${id}` },
+          rx: { od: {}, os: {} },
+          lensSpec: { jobType: "Rx", lensDesign: "Progressive", lensMaterial: "Poly", treatments: [] },
+        },
+      }),
+    }],
+  };
 }
 
 function appointment(id: string, status: Appointment["status"], time: string): Appointment {

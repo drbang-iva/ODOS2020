@@ -5,7 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Patient } from "@medplum/fhirtypes";
-import { ClinicOfficeShell, useOfficeInbox, type OfficeInboxApi } from "../src/components/OfficeChannel";
+import { ClinicOfficeShell, searchClinicPatients, useOfficeInbox, type OfficeInboxApi } from "../src/components/OfficeChannel";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import type { OfficeMessage } from "../src/lib/office-channel";
 import { ClinicHome } from "../src/scenes/ClinicHome";
@@ -26,6 +26,40 @@ test("Office pill badge and ambient panel reflect the real unacknowledged count"
   await act(async () => renderer.root.findByProps({ className: "odos-pill odos-office-pill" }).props.onClick());
   assert.equal(renderer.root.findAllByProps({ "aria-label": "Office messages" }).length, 1);
   assert.match(renderer.toJSON() ? JSON.stringify(renderer.toJSON()) : "", /Insurance question/);
+});
+
+test("Clinic Sections drawer routes every shipped item and gates Settings to practice admins", () => {
+  const clinician = renderToStaticMarkup(<ClinicOfficeShell location="Clinic home" roles={["clinician"]} initialMessages={[]} initialSummary={summary()}><ClinicHome /></ClinicOfficeShell>);
+  const admin = renderToStaticMarkup(<ClinicOfficeShell location="Clinic home" roles={["clinician", "practice-admin"]} initialMessages={[]} initialSummary={summary()}><ClinicHome /></ClinicOfficeShell>);
+  for (const href of ["/clinic/patients", "/patient/new", "/schedule/day", "/dispensary/lab-orders", "/settings/chart-fields-sections", "/settings/suggested-diagnoses", "/audit/log"]) {
+    assert.match(clinician, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
+  }
+  assert.doesNotMatch(clinician, /href="\/settings"/);
+  assert.match(admin, /href="\/settings"/);
+  assert.match(clinician, /Results review[\s\S]*review queue not wired/);
+  assert.match(clinician, /E-Rx queue[\s\S]*not wired/);
+  assert.match(clinician, /Orders worklist[\s\S]*>2<\/i>/);
+});
+
+test("Clinic patient search uses existing FHIR name, DOB, identifier, and id searches", async () => {
+  const calls: Record<string, string>[] = [];
+  const patient = { resourceType: "Patient", id: "chart-42", name: [{ given: ["Maya"], family: "Alvarez" }] } satisfies Patient;
+  const api = {
+    search: async (_resourceType: "Patient", params: Record<string, string>) => {
+      calls.push(params);
+      return { resourceType: "Bundle" as const, type: "searchset" as const, entry: [{ resource: patient }] };
+    },
+  };
+  const nameResults = await searchClinicPatients("chart-42", api as never);
+  assert.equal(nameResults.length, 1);
+  assert.deepEqual(calls, [
+    { name: "chart-42", _count: "8" },
+    { identifier: "chart-42", _count: "8" },
+    { _id: "chart-42", _count: "8" },
+  ]);
+  calls.length = 0;
+  await searchClinicPatients("07/13/1980", api as never);
+  assert.deepEqual(calls, [{ birthdate: "1980-07-13", _count: "8" }]);
 });
 
 test("urgent queue persists across Clinic views, dismisses globally, and reveals the next urgent", async () => {
@@ -139,6 +173,7 @@ function summary(): ClinicSummary {
       { appointmentId: "a2", patientId: "patient-2", time: "9:30 AM", patient: "Other Patient", visitType: "Medical", state: "roomed", stateDetail: "roomed", flags: { unsigned: false } },
     ],
     signatures: { count: 0, olderThan24Hours: 0, rows: [] },
+    orders: { count: 2, agingCount: 0, agingThresholdDays: 5, rows: [] },
     erx: { available: false, message: "not wired yet" },
     review: { available: false, message: "not wired yet" },
   };

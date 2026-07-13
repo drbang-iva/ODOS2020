@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Appointment, Bundle, DocumentReference, Encounter, Patient, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Appointment, Bundle, DocumentReference, Encounter, Patient, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import { PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM } from "../src/clinic/patient-overview.js";
@@ -13,6 +13,7 @@ test("GET /clinic/summary authenticates once and returns every section from seed
     Encounter: [{ resourceType: "Encounter", id: "e1", status: "finished", class: { code: "AMB" }, subject: { reference: "Patient/p1" }, appointment: [{ reference: "Appointment/a1" }], period: { end: "2026-07-11T14:30:00.000Z" } } satisfies Encounter],
     Provenance: [] as Provenance[],
     Patient: [{ resourceType: "Patient", id: "p1", name: [{ given: ["Alex"], family: "Rivera" }] } satisfies Patient],
+    Task: [] as Task[],
   };
   const fhir = {
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
@@ -38,8 +39,8 @@ test("GET /clinic/summary authenticates once and returns every section from seed
     const response = await fetch(`http://127.0.0.1:${port}/clinic/summary`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
     const body = await response.json() as Record<string, unknown>;
-    assert.deepEqual(Object.keys(body), ["flow", "signatures", "erx", "review"]);
-    assert.deepEqual(searched, ["Appointment", "Encounter", "Provenance", "Patient"]);
+    assert.deepEqual(Object.keys(body), ["flow", "signatures", "orders", "erx", "review"]);
+    assert.deepEqual(searched, ["Appointment", "Encounter", "Task", "Provenance", "Patient"]);
     assert.equal(serviceAuthCalls, 2);
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));

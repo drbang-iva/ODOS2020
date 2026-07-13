@@ -1,5 +1,11 @@
+import type { Patient } from "@medplum/fhirtypes";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, type OfficeMessage } from "../lib/office-channel";
+import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
+import { fhir } from "../lib/fhir";
+import type { PracticeRoleId } from "../lib/practice-roles";
+import { patientName } from "../lib/scheduler-appointment-ui";
+import { patientOverviewView, useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "../scenes/DeskHome";
 
 const CLINIC_PATIENTS_PATH = "/clinic/patients";
@@ -26,9 +32,14 @@ const emptyState: OfficeChannelState = {
   acknowledge: async () => undefined, refresh: async () => undefined,
 };
 const OfficeChannelContext = createContext<OfficeChannelState | undefined>(undefined);
+const ClinicSummaryContext = createContext<{ summary?: ClinicSummary; error?: string } | undefined>(undefined);
 
 export function useOfficeChannel(): OfficeChannelState {
   return useContext(OfficeChannelContext) ?? emptyState;
+}
+
+export function useClinicSummaryContext() {
+  return useContext(ClinicSummaryContext);
 }
 
 export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pollMs?: number; api?: OfficeInboxApi } = {}): OfficeChannelState {
@@ -87,6 +98,8 @@ export function ClinicOfficeShell({
   initialMessages,
   officeApi,
   pollMs = 15_000,
+  roles = [],
+  initialSummary,
 }: {
   location: string;
   switchPill?: ReactNode;
@@ -94,25 +107,210 @@ export function ClinicOfficeShell({
   initialMessages?: OfficeMessage[];
   officeApi?: OfficeInboxApi;
   pollMs?: number;
+  roles?: readonly PracticeRoleId[];
+  initialSummary?: ClinicSummary;
 }) {
   const office = useOfficeInbox({ initialMessages, pollMs, api: officeApi });
+  const [summary, setSummary] = useState(initialSummary);
+  const [summaryError, setSummaryError] = useState<string>();
+  const [sectionsOpen, setSectionsOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialSummary) return;
+    let active = true;
+    fetchClinicSummary()
+      .then((value) => active && setSummary(value))
+      .catch((reason) => active && setSummaryError(reason instanceof Error ? reason.message : "Clinic summary unavailable."));
+    return () => { active = false; };
+  }, [initialSummary]);
+
+  useEffect(() => {
+    if (!sectionsOpen || typeof document === "undefined") return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setSectionsOpen(false);
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [sectionsOpen]);
+
+  const summaryState = useMemo(() => ({ summary, error: summaryError }), [summary, summaryError]);
+
   return (
-    <OfficeChannelContext.Provider value={office}>
-      <div className="odos-clinic-shell">
-        <header className="odos-desk-topbar">
-          <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-          <span className="odos-location">{location}</span>
-          <span className="odos-topbar-spacer" />
-          <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
-          <a className="odos-pill" href={CLINIC_PATIENTS_PATH} onClick={navigateWithinApp}>Sections</a>
-          {switchPill}
-        </header>
-        <UrgentOfficeBanner messages={office.unread.filter((message) => message.tier === "urgent")} onAcknowledge={office.acknowledge} acknowledging={office.acknowledging} />
-        {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} acknowledging={office.acknowledging} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
-        {children}
-      </div>
-    </OfficeChannelContext.Provider>
+    <ClinicSummaryContext.Provider value={summaryState}>
+      <OfficeChannelContext.Provider value={office}>
+        <div className="odos-clinic-shell">
+          <header className="odos-desk-topbar">
+            <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
+            <span className="odos-location">{location}</span>
+            <ClinicPatientSearch />
+            <span className="odos-topbar-spacer" />
+            <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
+            <button className="odos-pill" type="button" aria-expanded={sectionsOpen} onClick={() => setSectionsOpen(true)}>Sections</button>
+            {switchPill}
+          </header>
+          <UrgentOfficeBanner messages={office.unread.filter((message) => message.tier === "urgent")} onAcknowledge={office.acknowledge} acknowledging={office.acknowledging} />
+          {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} acknowledging={office.acknowledging} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
+          {children}
+          <ClinicSectionsDrawer open={sectionsOpen} roles={roles} summary={summary} onClose={() => setSectionsOpen(false)} />
+        </div>
+      </OfficeChannelContext.Provider>
+    </ClinicSummaryContext.Provider>
   );
+}
+
+export function ClinicPatientSearch() {
+  const setView = useViewState((state) => state.setView);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        inputRef.current?.focus();
+        setOpen(true);
+      }
+    };
+    document.addEventListener("keydown", focusSearch);
+    return () => document.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setPatients([]);
+      setLoading(false);
+      setError(undefined);
+      return;
+    }
+    let active = true;
+    const handle = window.setTimeout(() => {
+      setLoading(true);
+      searchClinicPatients(trimmed)
+        .then((results) => { if (active) { setPatients(results); setError(undefined); } })
+        .catch((reason) => { if (active) { setPatients([]); setError(reason instanceof Error ? reason.message : "Patient search unavailable."); } })
+        .finally(() => active && setLoading(false));
+    }, 250);
+    return () => { active = false; window.clearTimeout(handle); };
+  }, [query]);
+
+  function selectPatient(patient: Patient) {
+    if (!patient.id) return;
+    setView(patientOverviewView(patient.id));
+    setQuery("");
+    setOpen(false);
+  }
+
+  return (
+    <div className={`odos-clinic-search${open ? " is-open" : ""}`}>
+      <span className="odos-clinic-search-glass" aria-hidden>⌕</span>
+      <input
+        ref={inputRef}
+        value={query}
+        aria-label="Find a patient"
+        aria-expanded={open && Boolean(query.trim())}
+        placeholder="Find a patient — name, DOB, chart #"
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 180)}
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
+      />
+      <span className="odos-clinic-search-kbd">⌘K</span>
+      {open && query.trim() && (
+        <div className="odos-clinic-search-pop" role="listbox" aria-label="Patient search results">
+          {loading && <div className="odos-clinic-search-state">Searching…</div>}
+          {error && <div className="odos-clinic-search-state is-error">Patient search unavailable</div>}
+          {!loading && !error && patients.length === 0 && <div className="odos-clinic-search-state">No matching patients</div>}
+          {!loading && !error && patients.map((patient) => (
+            <button key={patient.id} type="button" role="option" disabled={!patient.id} onMouseDown={(event) => event.preventDefault()} onClick={() => selectPatient(patient)}>
+              <span>{patientName(patient)}</span>
+              <small>DOB {patient.birthDate ?? "unknown"}</small>
+              <i>chart {shortId(patient.id)}</i>
+            </button>
+          ))}
+          <a className="odos-clinic-search-new" href="/patient/new" onMouseDown={(event) => event.preventDefault()} onClick={navigateWithinApp}>＋ New patient…</a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export async function searchClinicPatients(query: string, api: Pick<typeof fhir, "search"> = fhir): Promise<Patient[]> {
+  const birthDate = normalizedBirthDate(query);
+  const bundles = birthDate
+    ? [await api.search<Patient>("Patient", { birthdate: birthDate, _count: "8" })]
+    : await Promise.all([
+        api.search<Patient>("Patient", { name: query, _count: "8" }),
+        api.search<Patient>("Patient", { identifier: query.replace(/^#/, ""), _count: "8" }),
+        ...(isFhirId(query.replace(/^#/, "")) ? [api.search<Patient>("Patient", { _id: query.replace(/^#/, ""), _count: "8" })] : []),
+      ]);
+  const seen = new Set<string>();
+  return bundles.flatMap((bundle) => (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []))
+    .filter((patient) => patient.id && !seen.has(patient.id) && Boolean(seen.add(patient.id)))
+    .slice(0, 8);
+}
+
+function ClinicSectionsDrawer({ open, roles, summary, onClose }: { open: boolean; roles: readonly PracticeRoleId[]; summary?: ClinicSummary; onClose(): void }) {
+  const route = (event: MouseEvent<HTMLAnchorElement>) => { onClose(); navigateWithinApp(event); };
+  return (
+    <>
+      <button className={`odos-clinic-scrim${open ? " is-open" : ""}`} type="button" aria-label="Close sections" tabIndex={open ? 0 : -1} onClick={onClose} />
+      <aside ref={(node) => { node?.toggleAttribute("inert", !open); }} className={`odos-clinic-sections${open ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-label="Sections" aria-hidden={!open}>
+        <button className="odos-clinic-sections-close" type="button" aria-label="Close sections" onClick={onClose}>×</button>
+        <h2>Sections</h2>
+        <p>Everything you don't need every hour — one slide away, never in the way.</p>
+        <DrawerGroup label="Patients">
+          <DrawerLink icon="⌕" title="Patient directory" detail="find, open, or register a patient" href={CLINIC_PATIENTS_PATH} onClick={route} />
+          <DrawerLink icon="＋" title="New patient" detail="register with duplicate check" href="/patient/new" onClick={route} />
+        </DrawerGroup>
+        <DrawerGroup label="Clinic">
+          <DrawerLink icon="▦" title="Full schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
+          <DrawerLink icon="⇄" title="Orders worklist" detail="persisted optical lab orders" href="/dispensary/lab-orders" count={summary?.orders.count} onClick={route} />
+          <DrawerUnavailable icon="☰" title="Results review" detail="review queue not wired" />
+          <DrawerUnavailable icon="℞" title="E-Rx queue" detail="not wired — honest state" />
+        </DrawerGroup>
+        <DrawerGroup label="Chart setup">
+          <DrawerLink icon="✎" title="Chart fields & sections" detail="exam form configuration" href="/settings/chart-fields-sections" onClick={route} />
+          <DrawerLink icon="✳" title="Suggested diagnoses" detail="finding → diagnosis mapping" href="/settings/suggested-diagnoses" onClick={route} />
+        </DrawerGroup>
+        <DrawerGroup label="Practice">
+          {roles.includes("practice-admin") && <DrawerLink icon="⚙" title="Settings" detail="practice administration" href="/settings" onClick={route} />}
+          <DrawerLink icon="≡" title="Audit log" detail="every access, every change" href="/audit/log" onClick={route} />
+        </DrawerGroup>
+      </aside>
+    </>
+  );
+}
+
+function DrawerGroup({ label, children }: { label: string; children: ReactNode }) {
+  return <section className="odos-clinic-section-group"><h3>{label}</h3>{children}</section>;
+}
+
+function DrawerLink({ icon, title, detail, href, count, onClick }: { icon: string; title: string; detail: string; href: string; count?: number; onClick(event: MouseEvent<HTMLAnchorElement>): void }) {
+  return <a className="odos-clinic-section-item" href={href} onClick={onClick}><span className="odos-clinic-section-icon">{icon}</span><span>{title}<small>{detail}</small></span>{count !== undefined && <i>{count}</i>}</a>;
+}
+
+function DrawerUnavailable({ icon, title, detail }: { icon: string; title: string; detail: string }) {
+  return <div className="odos-clinic-section-item is-unavailable" aria-disabled="true"><span className="odos-clinic-section-icon">{icon}</span><span>{title}<small>{detail}</small></span></div>;
+}
+
+function normalizedBirthDate(value: string): string | undefined {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return undefined;
+  return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+}
+
+function isFhirId(value: string): boolean {
+  return /^[A-Za-z0-9.-]{1,64}$/.test(value);
+}
+
+function shortId(value: string | undefined): string {
+  if (!value) return "pending";
+  return value.length <= 8 ? value : value.slice(0, 8);
 }
 
 export function OfficePill({ count, open, onClick }: { count: number; open: boolean; onClick(): void }) {
