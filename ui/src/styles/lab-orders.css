@@ -37,7 +37,7 @@
 .odos-orders-lab { color: var(--odos-faint); font-size: 11.5px; }
 
 .odos-orders-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; white-space: nowrap; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; }
-.odos-orders-status::before { width: 6px; height: 6px; border-radius: 50%; background: currentColor; content: ""; }
+.odos-orders-status::before { width: 6px; height: 6px; border-radius: 50%; background: currentcolor; content: ""; }
 .odos-orders-status.is-patients-frame, .odos-orders-status.is-in-office-not-sent { background: rgba(231,169,76,.16); color: #f0c27a; }
 .odos-orders-status.is-outbound, .odos-orders-status.is-at-lab, .odos-orders-status.is-lenses-on-order, .odos-orders-status.is-frame-on-order { background: rgba(76,127,232,.13); color: #8fb0f5; }
 .odos-orders-status.is-inbound, .odos-orders-status.is-received { background: rgba(47,191,143,.14); color: #6fd9b4; }

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
+  LAB_ORDER_STATUSES,
   advanceLabOrderTransport,
   cancelLabOrder,
   fetchLabOrderSheet,
@@ -12,8 +14,9 @@ import {
   setLabOrderStatus,
   submitLabOrder,
   type LabOrderBoardItem,
+  type LabOrderBoardSummary,
 } from "../src/lib/lab-order-transport";
-import { OrdersBoard } from "../src/scenes/LabOrdersWorklist";
+import { FilterRail, OrdersBoard } from "../src/scenes/LabOrdersWorklist";
 import type { LabOrder } from "../src/lib/optical-lab-order";
 import { RouteSwitch } from "../src/App";
 import { DeskHome } from "../src/scenes/DeskHome";
@@ -116,6 +119,42 @@ test("Orders board renders DCS frame source, ownership, status age, transmission
   assert.match(html, /print \+ mail/);
 });
 
+test("Orders board busy state matches the exact Task reference, not a string-prefix neighbor", () => {
+  const html = renderToStaticMarkup(
+    <OrdersBoard
+      items={[
+        boardItem({ reference: "Task/1", orderId: "1", patientName: "Prefix Patient" }),
+        boardItem({ reference: "Task/10", orderId: "10", patientName: "Busy Patient" }),
+      ]}
+      busy="Task/10:status"
+      onStatus={() => undefined}
+      onFlag={async () => undefined}
+      onResolve={() => undefined}
+      onPrint={() => undefined}
+    />,
+  );
+  const prefixRow = html.match(/<div class="odos-orders-row"><span class="odos-orders-id">#1<\/span>[\s\S]*?<\/div>/)?.[0] ?? "";
+  const busyRow = html.match(/<div class="odos-orders-row"><span class="odos-orders-id">#10<\/span>[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.doesNotMatch(prefixRow, /disabled/);
+  assert.match(busyRow, /disabled/);
+});
+
+test("Done — dispensed remains visible but has no active filter action", async () => {
+  const selected: string[] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<FilterRail summary={boardSummary()} filter="all-active" setFilter={(filter) => selected.push(filter)} />);
+  });
+  const done = renderer.root.findAllByType("button")
+    .find((button) => button.children.flat().join("").includes("Done — dispensed"));
+  assert.ok(done);
+  assert.equal(done.props.disabled, true);
+  assert.equal(done.props.title, "Dispensed orders live on the patient record");
+  assert.equal(done.props.onClick, undefined);
+  assert.deepEqual(selected, []);
+  renderer.unmount();
+});
+
 test("lab-order worklist is reachable from its route and the Desk sections menu", () => {
   const route = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/dispensary/lab-orders" />);
   const desk = renderToStaticMarkup(<DeskHome />);
@@ -147,7 +186,7 @@ test("Send to Lab is gated by a created order and active transmissions expose on
   assert.match(active, /Cancel Lab Order/);
 });
 
-function boardItem(): LabOrderBoardItem {
+function boardItem(overrides: Partial<LabOrderBoardItem> = {}): LabOrderBoardItem {
   return {
     reference: "Task/lab-1",
     orderId: "order-1",
@@ -168,6 +207,19 @@ function boardItem(): LabOrderBoardItem {
     transportState: "sent",
     transmissionFact: { kind: "manual", label: "print + mail" },
     problemFlags: [],
+    ...overrides,
+  };
+}
+
+function boardSummary(): LabOrderBoardSummary {
+  const counts = Object.fromEntries(LAB_ORDER_STATUSES.map((status) => [status, status === "dispensed" ? 2 : 0])) as LabOrderBoardSummary["counts"];
+  return {
+    items: [],
+    counts,
+    activeCount: 0,
+    alarms: { flaggedProblems: 0, atLabOverdue: 0, transmissionFailures: 0, receivedNotNotified: 0 },
+    rollups: { preLab: 0, outbound: 0, atLab: 0, inbound: 0, notified: 0 },
+    agingConfig: { outboundDays: 3, inboundDays: 3, atLabDays: 5, receivedNotifyHours: 24, notifiedRetryDays: 2, notifiedFollowUpDays: 7 },
   };
 }
 

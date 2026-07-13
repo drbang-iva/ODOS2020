@@ -117,7 +117,7 @@ export function AlarmStrip({ summary, setFilter }: { summary: LabOrderBoardSumma
   );
 }
 
-function FilterRail({ summary, filter, setFilter }: { summary: LabOrderBoardSummary; filter: BoardFilter; setFilter(filter: BoardFilter): void }) {
+export function FilterRail({ summary, filter, setFilter }: { summary: LabOrderBoardSummary; filter: BoardFilter; setFilter(filter: BoardFilter): void }) {
   return (
     <>
       <div className="odos-orders-rail" aria-label="Order status filters">
@@ -127,15 +127,15 @@ function FilterRail({ summary, filter, setFilter }: { summary: LabOrderBoardSumm
         ))}
         <span className="odos-orders-rail-sep">·</span>
         <FilterChip label="Upstream — quote / pre-auth / payment" count={0} active={false} disabled />
-        <FilterChip label="Done — dispensed" count={summary.counts.dispensed} active={filter === "dispensed"} onClick={() => setFilter("dispensed")} />
+        <FilterChip label="Done — dispensed" count={summary.counts.dispensed} active={false} disabled title="Dispensed orders live on the patient record" />
       </div>
       <p className="odos-orders-rail-note">The whole status vocabulary stays visible. FSRC is the DCS frame-source value; ownership appears only for Frame-to-come and Frame enclosed. Status and transmission stay separate.</p>
     </>
   );
 }
 
-function FilterChip({ label, count, active, disabled, onClick }: { label: string; count: number; active: boolean; disabled?: boolean; onClick?(): void }) {
-  return <button type="button" className={`${active ? "is-active " : ""}${count === 0 ? "is-zero" : ""}`} disabled={disabled} onClick={onClick}>{label} <b>{count}</b></button>;
+function FilterChip({ label, count, active, disabled, title, onClick }: { label: string; count: number; active: boolean; disabled?: boolean; title?: string; onClick?(): void }) {
+  return <button type="button" className={`${active ? "is-active " : ""}${count === 0 ? "is-zero" : ""}`} disabled={disabled} title={title} onClick={onClick}>{label} <b>{count}</b></button>;
 }
 
 export function OrdersBoard({
@@ -160,7 +160,7 @@ export function OrdersBoard({
         <OrderRow
           key={item.reference}
           item={item}
-          busy={Boolean(busy?.startsWith(item.reference))}
+          busy={busy === item.reference || Boolean(busy?.startsWith(`${item.reference}:`))}
           onStatus={onStatus}
           onFlag={onFlag}
           onResolve={onResolve}
