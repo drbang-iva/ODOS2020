@@ -14,6 +14,7 @@ import {
   buildAnteriorOcularHealthDefinitions,
   buildPosteriorOcularHealthDefinitions,
 } from "./ocular-health-definition.js";
+import { buildHpiFindingDefinition } from "./hpi-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
   "https://osod.dev/fhir/CodeSystem/osod-finding-definition";
@@ -124,6 +125,7 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
     actorReference: "Practitioner/osod-system",
   };
   return [
+    buildHpiFindingDefinition(provenance),
     ...buildGlaucomaFindingDefinitionStubs({ provenance }),
     buildRefractionFindingDefinitionStub(provenance),
     buildSoftContactLensFindingDefinitionStub(provenance),

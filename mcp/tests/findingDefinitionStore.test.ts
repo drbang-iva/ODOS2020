@@ -282,8 +282,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   const clinicalRoutes = source.match(/app\.(?:get|post)\("\/clinical-graph\//g) ?? [];
   const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\)\)/g) ?? [];
 
-  assert.equal(clinicalRoutes.length, 31);
-  assert.equal(routeDependencies.length, 23);
+  assert.equal(clinicalRoutes.length, 33);
+  assert.equal(routeDependencies.length, 25);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRoute \}/);
   assert.match(source, /handleDiagnosisCatalogListRequest/);
   assert.match(source, /handleDiagnosisCandidatesRequest/);

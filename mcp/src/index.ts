@@ -72,6 +72,10 @@ import {
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
 import {
+  handleHpiCaptureRequest,
+  handleHpiDefinitionRequest,
+} from "./clinical-graph/hpi-endpoint.js";
+import {
   handleIopCaptureRequest,
   handleIopDefinitionRequest,
 } from "./clinical-graph/iop-endpoint.js";
@@ -5774,6 +5778,34 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "cup/disc definition route failed" });
           }
+        }
+      });
+
+      app.get("/clinical-graph/hpi/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleHpiDefinitionRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/hpi/definition failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "HPI definition route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/hpi", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleHpiCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/hpi failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "HPI capture route failed" });
         }
       });
 
