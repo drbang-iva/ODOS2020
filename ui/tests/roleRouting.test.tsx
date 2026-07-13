@@ -9,6 +9,7 @@ import {
   clinicViewFromSearch,
   clinicRouteView,
   defaultHomePath,
+  hasCrossSideAccess,
   parseSetPasswordPath,
   RoleSwitchPill,
   RouteSwitch,
@@ -53,16 +54,42 @@ test("every non-empty practice-role combination routes from its whoami response 
       headers: { "Content-Type": "application/json" },
     });
     const whoami = await fetchWhoAmI(fetchImpl as typeof fetch);
-    const expected = mockedRoles.includes("clinician") || mockedRoles.includes("aesthetics-provider")
-      ? CLINIC_PATH
-      : DESK_HOME_PATH;
+    const expected = mockedRoles.includes("front-desk") || mockedRoles.includes("practice-admin")
+      ? DESK_HOME_PATH
+      : mockedRoles.includes("clinician") || mockedRoles.includes("aesthetics-provider")
+        ? CLINIC_PATH
+        : DESK_HOME_PATH;
     assert.equal(defaultHomePath(whoami.roles), expected, mockedRoles.join(" + "));
   }
 });
 
-test("clinician plus front-desk lands in Clinic and renders a new-tab switch pill on both sides", () => {
+test("entry routing follows the Desk-wins precedence matrix", () => {
+  const cases: Array<[PracticeRoleId[], typeof CLINIC_PATH | typeof DESK_HOME_PATH]> = [
+    [["front-desk"], DESK_HOME_PATH],
+    [["practice-admin"], DESK_HOME_PATH],
+    [["clinician"], CLINIC_PATH],
+    [["aesthetics-provider"], CLINIC_PATH],
+    [["clinician", "front-desk", "practice-admin"], DESK_HOME_PATH],
+    [["clinician", "front-desk"], DESK_HOME_PATH],
+    [[], DESK_HOME_PATH],
+  ];
+
+  for (const [roles, expected] of cases) {
+    assert.equal(defaultHomePath(roles), expected, roles.join(" + ") || "roleless");
+  }
+});
+
+test("cross-side access requires at least one Desk role and one Clinic role", () => {
+  assert.equal(hasCrossSideAccess(["clinician", "front-desk"]), true);
+  assert.equal(hasCrossSideAccess(["practice-admin", "clinician"]), true);
+  assert.equal(hasCrossSideAccess(["front-desk"]), false);
+  assert.equal(hasCrossSideAccess(["clinician"]), false);
+  assert.equal(hasCrossSideAccess([]), false);
+});
+
+test("cross-side users get a new-tab switch pill on Desk and on a Clinic deep-link entry", () => {
   const roles: PracticeRoleId[] = ["clinician", "front-desk"];
-  assert.equal(defaultHomePath(roles), CLINIC_PATH);
+  assert.equal(defaultHomePath(roles), DESK_HOME_PATH);
 
   const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={roles} />);
   const desk = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={roles} />);
