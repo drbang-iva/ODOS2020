@@ -20,7 +20,7 @@ test("GET /desk/summary authenticates once and composes the screen from server-s
     authenticate: async (header) => header === "Bearer good"
       ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }
       : null,
-    resolveRoles: async () => ["front-desk"],
+    resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
     terminalMode: "TEST MODE",
     now: () => "2026-07-11T14:00:00.000Z",
   });
@@ -64,7 +64,7 @@ test("GET /desk/summary keeps other cards available when one scoped Task categor
   registerDeskRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
-    resolveRoles: async () => ["front-desk"],
+    resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
     terminalMode: "TEST MODE",
     now: () => "2026-07-11T14:00:00.000Z",
   });
@@ -104,7 +104,7 @@ for (const resourceType of ["Claim", "ClaimResponse", "PaymentReconciliation", "
     registerDeskRoutes(app, {
       authenticateService: async () => undefined,
       authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }),
-      resolveRoles: async () => ["front-desk"],
+      resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
       terminalMode: "TEST MODE",
       now: () => "2026-07-11T14:00:00.000Z",
     });
@@ -149,7 +149,9 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
   registerDeskRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async () => null,
-    resolveRoles: async (header) => header === "Bearer good" ? ["clinician", "front-desk"] : null,
+    resolveRoles: async (header) => header === "Bearer good"
+      ? { email: "clinician@example.test", roles: ["clinician", "front-desk"] }
+      : null,
     terminalMode: "TEST MODE",
   });
   const listener = app.listen(0, "127.0.0.1");
@@ -161,6 +163,53 @@ test("GET /desk/whoami returns the authenticated staff member's practice-role ta
     const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { roles: ["clinician", "front-desk"] });
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("GET /desk/whoami returns the named no-practice-role state for an authenticated role-less account", async () => {
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => null,
+    resolveRoles: async () => ({ email: "roleless@example.test", roles: [] }),
+    terminalMode: "TEST MODE",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, {
+      headers: { Authorization: "Bearer valid-roleless" },
+    });
+    assert.equal(response.status, 403);
+    assert.deepEqual(await response.json(), {
+      error: "no-practice-role",
+      detail: "Account roleless@example.test has no practice role. An administrator must grant one.",
+    });
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("GET /desk/whoami returns 503 when the service client fails", async () => {
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => { throw new Error("service token unavailable"); },
+    authenticate: async () => null,
+    resolveRoles: async () => null,
+    terminalMode: "TEST MODE",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/desk/whoami`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { error: "Practice role service unavailable." });
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }

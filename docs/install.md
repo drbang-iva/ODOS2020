@@ -62,7 +62,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | Variable | Required | Purpose |
 |---|---:|---|
 | `OSOD_PRACTICE_NAME` | yes | Practice/project name for first-run provisioning. |
-| `OSOD_ADMIN_EMAIL` | yes | Human-owned admin email. `MEDPLUM_ADMIN_EMAIL` is also accepted. |
+| `OSOD_ADMIN_EMAIL` | yes | Human-owned admin email; it must be distinct from the `MEDPLUM_ADMIN_EMAIL` service identity. |
 | `OSOD_ADMIN_NAME` | yes | First admin/practitioner display name. |
 | `OSOD_ADMIN_PASSWORD` | yes | Human-owned Medplum password. `MEDPLUM_ADMIN_PASSWORD` is also accepted. |
 | `MEDPLUM_BASE_URL` | no | Defaults to `http://localhost:8103`. |
@@ -90,7 +90,7 @@ The wizard:
 - Uses `auth/newuser` and `auth/newproject` for first-run admin/project creation.
 - Creates the first `Practitioner`.
 - Creates the canonical OSOD clinician `AccessPolicy`. (Since 2026-07-05, OSOD AccessPolicies carry a `practice-role` `meta.tag` — the payments endpoint derives a caller's role from it. Installs seeded before that date must run `npm run reseed-role-tags` with a human-provisioned, short-lived `MEDPLUM_ACCESS_TOKEN` set so existing policies gain the tag; the command conditionally patches only missing tags, reports role-tag or concurrent-write conflicts without overwriting them, and exits non-zero when conflicts exist.)
-- Binds the policy through the Medplum admin atomic project endpoint.
+- Reconciles the named human administrator's `ProjectMembership.access[]` through the shared explicit-target role grant helper.
 - Emits `osod_audit_events` rows with `actor_id = setup-wizard`, `actor_role = system`, and `action_reason = "v0.5d setup wizard first-run provisioning"`.
 - Records resumable progress in `.osod-setup-state.json`.
 
@@ -107,12 +107,12 @@ The no-op path emits an audit row with `event_type = noop` and `action_reason = 
 If the setup state says the practice is complete but one or more canonical OSOD role policies are missing, repair the local project without resetting Postgres:
 
 ```bash
-npm run repair-practice-roles
+npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
 ```
 
-The repair uses the existing human-provided admin email and password from `.env`; it does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and grants the current login's `ProjectMembership` the `front-desk`, `practice-admin`, and `clinician` policies required by this developer-only account. `front-desk` remains first by default, so Desk mutations keep their existing actor role. Run `OSOD_DEV_PRIMARY_ROLE=clinician npm run repair-practice-roles` before a charting session to place `clinician` first for `chart.write`; rerun the command without the override to restore `front-desk` first. The repair preserves unrelated membership grants and removes duplicates of these three developer grants when it orders them.
+The repair authenticates with the configured Medplum service credentials but grants only to the explicit `--email` target. It does not create or change credentials. It is restricted to local or private Medplum URLs. It creates any missing canonical policy from the shipped five-role registry, adds a missing role tag to one unambiguous canonical policy, and reconciles the target membership to exactly `front-desk`, `practice-admin`, and `clinician`. `front-desk` remains first by default, so Desk mutations keep their existing actor role. Run `OSOD_DEV_PRIMARY_ROLE=clinician npm run repair-practice-roles -- --email "$HUMAN_EMAIL"` before a charting session to place `clinician` first for `chart.write`; rerun without the override to restore `front-desk` first. The command refuses a target matching `MEDPLUM_ADMIN_EMAIL`.
 
-The repair preserves other membership grants and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting OSOD role tag, an ambiguous membership, or a stale resource version.
+The repair removes duplicate and unrelated policy bindings, migrates the legacy `accessPolicy` field into ordered `access[]`, clears the legacy field, and is idempotent. It stops without writing the membership when it finds duplicate canonical policy names, a conflicting OSOD role tag, an ambiguous membership, or a stale resource version.
 
 This is the normal recovery path for partial local provisioning. A volume wipe is not required.
 
@@ -121,7 +121,7 @@ This is the normal recovery path for partial local provisioning. A volume wipe i
 After the Compose stack is running and `.env` contains the existing local developer credentials:
 
 ```bash
-npm run repair-practice-roles
+npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
 ```
 
 Start the two checked-in launch configurations in `.claude/launch.json`:
@@ -131,7 +131,7 @@ Start the two checked-in launch configurations in `.claude/launch.json`:
 | `osod-mcp` | `http://localhost:3333` | OSOD service routes used by Desk, Statements, and Clinic. |
 | `osod-ui` | `http://localhost:5173` | Browser UI. |
 
-Open `http://localhost:5173`, then sign in through the OSOD login screen with `OSOD_ADMIN_EMAIL` and `OSOD_ADMIN_PASSWORD` from the local `.env`. The default developer email is `admin@osod.local`; no password is stored in this repository.
+Open `http://localhost:5173`, then sign in through the OSOD login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` service identity; no password is stored in this repository.
 
 To open a patient chart directly, use `http://localhost:5173/clinic?patientId=<id>`; add `&encounterId=<id>` to open a specific encounter.
 

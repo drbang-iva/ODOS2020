@@ -1,6 +1,12 @@
 #!/usr/bin/env tsx
 import { createHash, randomBytes } from "node:crypto";
-import type { AccessPolicy, ProjectMembership } from "@medplum/fhirtypes";
+import type { AccessPolicy, ProjectMembership, User } from "@medplum/fhirtypes";
+import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { buildOsodAuditEventRow } from "../mcp/src/authz/osodAudit.js";
+import {
+  grantPracticeRoles,
+  type ResolvedRoleGrantTarget,
+} from "../mcp/src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
@@ -16,25 +22,19 @@ import { searchAll } from "../mcp/src/fhir-search.js";
 import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
+const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 export const DEV_ADMIN_ROLE: PracticeRoleId = "front-desk";
 export const DEV_ADMIN_GRANT_ROLES = [DEV_ADMIN_ROLE, "practice-admin", "clinician"] as const;
 export type DevAdminGrantRole = (typeof DEV_ADMIN_GRANT_ROLES)[number];
 export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "front-desk" | "clinician">;
 
-export interface AuthenticatedProjectIdentity {
-  readonly profileReference: string;
-  readonly projectReference: string;
-  readonly membershipReference?: string;
-}
-
 export interface PracticeRoleRepairAdapter {
   findPoliciesByName(name: string): Promise<AccessPolicy[]>;
   createPolicy(policy: AccessPolicy): Promise<AccessPolicy>;
   patchPolicy(id: string, operations: JsonPatchOperation[], versionId: string): Promise<AccessPolicy>;
-  currentIdentity(): Promise<AuthenticatedProjectIdentity>;
-  findMemberships(profileReference: string, projectReference: string): Promise<ProjectMembership[]>;
-  readMembership(id: string): Promise<ProjectMembership>;
+  resolveTarget(target: string): Promise<ResolvedRoleGrantTarget>;
   patchMembership(id: string, operations: JsonPatchOperation[], versionId: string): Promise<ProjectMembership>;
+  recordMembershipChange<T>(target: ResolvedRoleGrantTarget, operation: () => Promise<T>): Promise<T>;
 }
 
 export interface PracticeRoleRepairResult {
@@ -42,13 +42,16 @@ export interface PracticeRoleRepairResult {
   readonly taggedPolicies: PracticeRoleId[];
   readonly existingPolicies: PracticeRoleId[];
   readonly membershipReference: string;
-  readonly membershipGrants: Readonly<Record<DevAdminGrantRole, "ADDED" | "EXISTING">>;
+  readonly targetEmail: string;
+  readonly membershipChanged: boolean;
   readonly primaryRole: DevAdminPrimaryRole;
 }
 
 export async function repairPracticeRoles(
   adapter: PracticeRoleRepairAdapter,
+  target: string,
   primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
+  serviceIdentityEmail?: string,
 ): Promise<PracticeRoleRepairResult> {
   const createdPolicies: PracticeRoleId[] = [];
   const taggedPolicies: PracticeRoleId[] = [];
@@ -94,47 +97,30 @@ export async function repairPracticeRoles(
     policies.set(roleId, policy);
   }
 
-  const identity = await adapter.currentIdentity();
-  const membership = await resolveCurrentMembership(adapter, identity);
-  if (!membership.id || !membership.meta?.versionId) {
-    throw new Error("Current ProjectMembership is missing id or meta.versionId; no safe conditional grant is possible.");
-  }
-  if (membership.active === false) {
-    throw new Error(`ProjectMembership/${membership.id} is inactive; repair stopped.`);
-  }
-  if (membership.profile.reference !== identity.profileReference) {
-    throw new Error(`ProjectMembership/${membership.id} does not belong to ${identity.profileReference}.`);
-  }
-  if (membership.project.reference !== identity.projectReference) {
-    throw new Error(`ProjectMembership/${membership.id} does not belong to ${identity.projectReference}.`);
-  }
-
-  const grantReferences = Object.fromEntries(DEV_ADMIN_GRANT_ROLES.map((roleId) => {
-    const policy = policies.get(roleId);
-    if (!policy?.id) throw new Error(`${roleId} AccessPolicy is missing its id.`);
-    return [roleId, `AccessPolicy/${policy.id}`];
-  })) as Record<DevAdminGrantRole, string>;
-  const existingReferences = membershipPolicyReferences(membership);
-  const membershipGrants = {
-    "front-desk": existingReferences.includes(grantReferences["front-desk"]) ? "EXISTING" : "ADDED",
-    "practice-admin": existingReferences.includes(grantReferences["practice-admin"]) ? "EXISTING" : "ADDED",
-    clinician: existingReferences.includes(grantReferences.clinician) ? "EXISTING" : "ADDED",
-  } as const;
-  const membershipPatch = devMembershipAccessPatch(membership, grantReferences, primaryRole);
-  if (membershipPatch.length > 0) {
-    await adapter.patchMembership(
-      membership.id,
-      membershipPatch,
-      membership.meta.versionId,
-    );
-  }
+  const grant = await grantPracticeRoles(
+    { target, roles: DEV_ADMIN_GRANT_ROLES, primaryRole },
+    {
+      serviceIdentityEmail,
+      resolveTarget: (requestedTarget) => adapter.resolveTarget(requestedTarget),
+      resolvePolicy: async (role) => {
+        const policy = policies.get(role);
+        if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
+        return policy;
+      },
+      patchMembership: (id, operations, versionId) =>
+        adapter.patchMembership(id, operations, versionId),
+      recordMembershipChange: (resolvedTarget, operation) =>
+        adapter.recordMembershipChange(resolvedTarget, operation),
+    },
+  );
 
   return {
     createdPolicies,
     taggedPolicies,
     existingPolicies,
-    membershipReference: `ProjectMembership/${membership.id}`,
-    membershipGrants,
+    membershipReference: grant.membershipReference,
+    targetEmail: grant.targetEmail,
+    membershipChanged: grant.changed,
     primaryRole,
   };
 }
@@ -148,31 +134,6 @@ function practiceRoleTagPatch(
   return [{ op: "add", path: "/meta/tag/-", value: tag }];
 }
 
-export function devMembershipAccessPatch(
-  membership: ProjectMembership,
-  policyReferences: Readonly<Record<DevAdminGrantRole, string>>,
-  primaryRole: DevAdminPrimaryRole = DEV_ADMIN_ROLE,
-): JsonPatchOperation[] {
-  const roleOrder = [primaryRole, ...DEV_ADMIN_GRANT_ROLES.filter((roleId) => roleId !== primaryRole)];
-  const requiredReferences = new Set(DEV_ADMIN_GRANT_ROLES.map((roleId) => policyReferences[roleId]));
-  // A repeated grant resolves to its last access entry before the ordered list removes duplicates.
-  const existingByReference = new Map(
-    (membership.access ?? []).map((access) => [access.policy.reference, access]),
-  );
-  const desiredAccess = [
-    ...roleOrder.map((roleId) => existingByReference.get(policyReferences[roleId]) ?? {
-      policy: { reference: policyReferences[roleId] },
-    }),
-    ...(membership.access ?? []).filter((access) => !requiredReferences.has(access.policy.reference ?? "")),
-  ];
-  if (!membership.access) {
-    return [{ op: "add", path: "/access", value: desiredAccess }];
-  }
-  return JSON.stringify(membership.access) === JSON.stringify(desiredAccess)
-    ? []
-    : [{ op: "replace", path: "/access", value: desiredAccess }];
-}
-
 export function membershipPolicyReferences(membership: ProjectMembership): string[] {
   return [
     membership.accessPolicy?.reference,
@@ -180,30 +141,13 @@ export function membershipPolicyReferences(membership: ProjectMembership): strin
   ].filter((reference): reference is string => Boolean(reference));
 }
 
-async function resolveCurrentMembership(
-  adapter: PracticeRoleRepairAdapter,
-  identity: AuthenticatedProjectIdentity,
-): Promise<ProjectMembership> {
-  if (identity.membershipReference) {
-    const id = identity.membershipReference.match(/^ProjectMembership\/([^/]+)$/)?.[1];
-    if (!id) throw new Error(`Invalid current membership reference ${identity.membershipReference}.`);
-    return adapter.readMembership(id);
-  }
-  const matches = await adapter.findMemberships(identity.profileReference, identity.projectReference);
-  if (matches.length !== 1) {
-    throw new Error(
-      `Expected one current ProjectMembership for ${identity.profileReference}; found ${matches.length}.`,
-    );
-  }
-  return matches[0]!;
-}
-
 class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
-  constructor(
-    private readonly baseUrl: string,
-    private readonly accessToken: string,
-    private readonly fhir: MedplumClient,
-  ) {}
+  private readonly audit = createLiveOsodAuditRuntime({
+    postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+    disabled: process.env.OSOD_ROLE_REPAIR_AUDIT_DISABLED === "true",
+  });
+
+  constructor(private readonly fhir: MedplumClient) {}
 
   async findPoliciesByName(name: string): Promise<AccessPolicy[]> {
     return searchAll<AccessPolicy>(this.fhir, "AccessPolicy", { "name:exact": name });
@@ -218,43 +162,38 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
     operations: JsonPatchOperation[],
     versionId: string,
   ): Promise<AccessPolicy> {
-    return this.fhir.patch("AccessPolicy", id, operations, { "If-Match": `W/"${versionId}"` });
+    return this.fhir.patch("AccessPolicy", id, operations, { "If-Match": `W/\"${versionId}\"` });
   }
 
-  async currentIdentity(): Promise<AuthenticatedProjectIdentity> {
-    const response = await fetch(`${this.baseUrl}/auth/me`, {
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-    });
-    if (!response.ok) throw new Error(`GET /auth/me failed: ${response.status} ${await response.text()}`);
-    const body = (await response.json()) as {
-      profile?: { resourceType?: string; id?: string };
-      project?: { resourceType?: string; id?: string };
-      membership?: { reference?: string; resourceType?: string; id?: string };
-    };
-    if (!body.profile?.resourceType || !body.profile.id || !body.project?.id) {
-      throw new Error("Authenticated login has no project Practitioner profile.");
+  async resolveTarget(target: string): Promise<ResolvedRoleGrantTarget> {
+    const isPractitionerReference = /^Practitioner\/[^/]+$/.test(target);
+    let email: string | undefined;
+    let memberships: ProjectMembership[];
+    if (isPractitionerReference) {
+      memberships = await searchAll<ProjectMembership>(this.fhir, "ProjectMembership", {
+        profile: target,
+      });
+    } else {
+      const users = (await searchAll<User>(this.fhir, "User", { email: target })).filter(
+        (user) => user.email?.toLowerCase() === target.toLowerCase(),
+      );
+      if (users.length === 0) throw new Error(`No User found for ${target}.`);
+      email = target;
+      memberships = (await Promise.all(users.flatMap((user) => user.id
+        ? [searchAll<ProjectMembership>(this.fhir, "ProjectMembership", { user: `User/${user.id}` })]
+        : []))).flat();
     }
-    const membershipReference = body.membership?.reference ??
-      (body.membership?.id ? `ProjectMembership/${body.membership.id}` : undefined);
-    return {
-      profileReference: `${body.profile.resourceType}/${body.profile.id}`,
-      projectReference: `Project/${body.project.id}`,
-      ...(membershipReference ? { membershipReference } : {}),
-    };
-  }
-
-  async findMemberships(
-    profileReference: string,
-    projectReference: string,
-  ): Promise<ProjectMembership[]> {
-    return searchAll<ProjectMembership>(this.fhir, "ProjectMembership", {
-      profile: profileReference,
-      project: projectReference,
-    });
-  }
-
-  async readMembership(id: string): Promise<ProjectMembership> {
-    return this.fhir.read("ProjectMembership", id);
+    if (memberships.length !== 1) {
+      throw new Error(`Expected one ProjectMembership for ${target}; found ${memberships.length}.`);
+    }
+    const membership = memberships[0]!;
+    if (!email) {
+      const userId = membership.user.reference?.match(/^User\/([^/]+)$/)?.[1];
+      if (!userId) throw new Error(`ProjectMembership/${membership.id ?? "unknown"} has no human User reference.`);
+      email = (await this.fhir.read<User>("User", userId)).email;
+    }
+    if (!email) throw new Error(`Could not resolve the target email for ${target}.`);
+    return { email, membership };
   }
 
   async patchMembership(
@@ -262,7 +201,25 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
     operations: JsonPatchOperation[],
     versionId: string,
   ): Promise<ProjectMembership> {
-    return this.fhir.patch("ProjectMembership", id, operations, { "If-Match": `W/"${versionId}"` });
+    return this.fhir.patch("ProjectMembership", id, operations, { "If-Match": `W/\"${versionId}\"` });
+  }
+
+  async recordMembershipChange<T>(
+    target: ResolvedRoleGrantTarget,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    return this.audit.record(
+      buildOsodAuditEventRow({
+        eventType: "role-change",
+        actorId: "repair-practice-roles",
+        actorRole: "system",
+        resourceType: "ProjectMembership",
+        resourceId: target.membership.id,
+        actionOutcome: "granted",
+        actionReason: `reconcile practice roles for ${target.email}`,
+      }),
+      operation,
+    );
   }
 }
 
@@ -302,21 +259,23 @@ export async function loginForLocalRepair(input: {
 async function runCli(): Promise<void> {
   const baseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(baseUrl);
-  const email = requireEnv("OSOD_ADMIN_EMAIL", "MEDPLUM_ADMIN_EMAIL");
-  const password = requireEnv("OSOD_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
+  const target = requiredEmailArgument(process.argv.slice(2));
+  const email = requireEnv("MEDPLUM_ADMIN_EMAIL");
+  const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl, email, password });
   const fhir = createMedplumClient({ baseUrl, accessToken });
   const primaryRole = devPrimaryRole(process.env.OSOD_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
-    new LivePracticeRoleRepairAdapter(baseUrl, accessToken, fhir),
+    new LivePracticeRoleRepairAdapter(fhir),
+    target,
     primaryRole,
+    email,
   );
   console.log(`Role policies created: ${result.createdPolicies.length} [${result.createdPolicies.join(", ")}]`);
   console.log(`Role policies tagged: ${result.taggedPolicies.length} [${result.taggedPolicies.join(", ")}]`);
   console.log(`Role policies already correct: ${result.existingPolicies.length} [${result.existingPolicies.join(", ")}]`);
-  console.log(`${result.membershipReference} ${DEV_ADMIN_ROLE} grant: ${result.membershipGrants[DEV_ADMIN_ROLE]}`);
-  console.log(`${result.membershipReference} practice-admin grant: ${result.membershipGrants["practice-admin"]}`);
-  console.log(`${result.membershipReference} clinician grant: ${result.membershipGrants.clinician}`);
+  console.log(`${result.membershipReference} target: ${result.targetEmail}`);
+  console.log(`Membership reconciliation: ${result.membershipChanged ? "CHANGED" : "ALREADY EXACT"}`);
   console.log(`Dev login primary role: ${result.primaryRole}`);
 }
 
@@ -328,9 +287,18 @@ export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {
   return role;
 }
 
-function requireEnv(primary: string, fallback: string): string {
-  const value = process.env[primary]?.trim() || process.env[fallback]?.trim();
-  if (!value) throw new Error(`${primary} or ${fallback} is required.`);
+export function requiredEmailArgument(args: readonly string[]): string {
+  const index = args.indexOf("--email");
+  const value = index >= 0 ? args[index + 1]?.trim() : undefined;
+  if (!value || value.startsWith("--")) {
+    throw new Error("repair-practice-roles requires --email <target>.");
+  }
+  return value;
+}
+
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required.`);
   return value;
 }
 

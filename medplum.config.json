@@ -24,6 +24,7 @@
   "maxBatchSize": "50mb",
   "allowedOrigins": "*",
   "introspectionEnabled": true,
+  "registerEnabled": false,
   "botLambdaLayerName": "",
   "botCustomFunctionsEnabled": true,
   "vmContextBotsEnabled": true,

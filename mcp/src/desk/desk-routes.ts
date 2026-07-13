@@ -6,7 +6,10 @@ import { loadDeskSummary } from "./desk-summary.js";
 export interface DeskRouteDeps {
   authenticateService(): Promise<void>;
   authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
-  resolveRoles(authHeader: string | undefined): Promise<PracticeRoleId[] | null>;
+  resolveRoles(authHeader: string | undefined): Promise<{
+    email: string;
+    roles: PracticeRoleId[];
+  } | null>;
   terminalMode: string;
   timeZone?: string;
   now?: () => string;
@@ -20,15 +23,22 @@ export function registerDeskRoutes(app: Pick<Application, "get">, deps: DeskRout
 async function handleDeskWhoAmI(req: Request, res: Response, deps: DeskRouteDeps): Promise<void> {
   try {
     await deps.authenticateService();
-    const roles = await deps.resolveRoles(req.header("authorization"));
-    if (!roles) {
-      res.status(401).json({ error: "A staff practice role is required." });
+    const resolved = await deps.resolveRoles(req.header("authorization"));
+    if (!resolved) {
+      res.status(401).json({ error: "Authentication required." });
       return;
     }
-    res.json({ roles });
+    if (resolved.roles.length === 0) {
+      res.status(403).json({
+        error: "no-practice-role",
+        detail: `Account ${resolved.email} has no practice role. An administrator must grant one.`,
+      });
+      return;
+    }
+    res.json({ roles: resolved.roles });
   } catch (error) {
     console.error("osod-mcp: /desk/whoami failed:", error);
-    if (!res.headersSent) res.status(500).json({ error: "Practice role lookup failed." });
+    if (!res.headersSent) res.status(503).json({ error: "Practice role service unavailable." });
   }
 }
 
