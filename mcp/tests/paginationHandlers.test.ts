@@ -285,7 +285,12 @@ function claimsDeps(fhir: ReturnType<typeof pagedFhir>, adapter: ClaimMdAdapter 
 
 function insuranceDeps(fhir: ReturnType<typeof pagedFhir>): PatientInsuranceHandlerDeps {
   return {
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir }),
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "front-desk",
+      roles: ["front-desk"],
+      fhir,
+    }),
     recordAudit: async () => undefined,
   };
 }

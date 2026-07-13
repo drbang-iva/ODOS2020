@@ -41,6 +41,8 @@ import {
   OSOD_PRACTICE_ROLE_SYSTEM,
   assertBusinessActionAllowed,
   getRoleDeclaration,
+  resolveBusinessActionRole,
+  type BusinessAction,
   type PracticeRoleId,
 } from "./authz/roles.js";
 import { grantPracticeRoles } from "./authz/role-grants.js";
@@ -60,7 +62,6 @@ import {
 import { registerLabOrderRoutes } from "./lab-orders/lab-order-routes.js";
 import {
   paymentAdapterRegistrationsFromEnv,
-  resolveStaffRole,
   resolveStaffRoles,
 } from "./payments/payment-endpoint.js";
 import {
@@ -5413,6 +5414,34 @@ async function authenticateWithMedplum(force = false): Promise<void> {
   }
 }
 
+async function authenticateStaffRoute(header: string | undefined) {
+  const resolved = await resolveStaffRoles({
+    baseUrl: BASE_URL,
+    authHeader: header,
+    serviceClient: fhir,
+  });
+  const actorRole = resolved?.roles[0];
+  if (!resolved || !actorRole || !header) return null;
+  return {
+    staffReference: resolved.staffReference,
+    actorRole,
+    roles: resolved.roles,
+    fhir: createMedplumClient({
+      baseUrl: BASE_URL,
+      accessToken: header.slice("Bearer ".length),
+    }),
+  };
+}
+
+function authenticateStaffRouteForAction(businessAction: BusinessAction) {
+  return async (header: string | undefined) => {
+    const staff = await authenticateStaffRoute(header);
+    if (!staff) return null;
+    const actorRole = resolveBusinessActionRole(staff.roles, businessAction);
+    return actorRole ? { ...staff, actorRole } : staff;
+  };
+}
+
 async function main(): Promise<void> {
   const transportMode = process.env.OSOD_MCP_TRANSPORT ?? "stdio";
   if (transportMode === "sse") {
@@ -5547,26 +5576,12 @@ async function main(): Promise<void> {
       };
       const clearinghouseRouting = clearinghouseRoutingFromEnv(process.env);
       const eraUnderpaymentThresholdCents = eraUnderpaymentThresholdCentsFromEnv(process.env);
-      const authenticateStaffRoute = async (header: string | undefined) => {
-        const resolved = await resolveStaffRole({
-          baseUrl: BASE_URL,
-          authHeader: header,
-          serviceClient: fhir,
-        });
-        if (!resolved || !header) {
-          return null;
-        }
-        return {
-          staffReference: resolved.staffReference,
-          actorRole: resolved.role,
-          fhir: createMedplumClient({
-            baseUrl: BASE_URL,
-            accessToken: header.slice("Bearer ".length),
-          }),
-        };
-      };
-      const clinicalGraphRouteDeps = async (authHeader: string | undefined) => {
-        const staff = await authenticateStaffRoute(authHeader);
+      const authenticateClaimsRoute = authenticateStaffRouteForAction("claims.manage");
+      const clinicalGraphRouteDeps = async (
+        authHeader: string | undefined,
+        businessAction: BusinessAction,
+      ) => {
+        const staff = await authenticateStaffRouteForAction(businessAction)(authHeader);
         const findingDefinitions = staff ? await findingDefinitionStore.list() : [];
         return {
           authenticate: async () => staff,
@@ -5592,7 +5607,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleProviderAssignmentRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateStaffRouteForAction("chart.write"),
               serviceFhir: fhir,
             },
             {
@@ -5611,7 +5626,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleFindingDefinitionCatalogRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5625,7 +5640,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleFindingDefinitionCreationRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "finding-definitions.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5639,7 +5654,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleFindingDefinitionMutationRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "finding-definitions.write"),
             {
               authHeader: req.header("authorization"),
               params: req.params,
@@ -5657,7 +5672,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisCatalogListRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5671,7 +5686,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisCatalogCreationRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("finding-definitions.write") },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5685,7 +5700,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisCatalogMutationRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("finding-definitions.write") },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5699,7 +5714,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisCandidatesRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
             { authHeader: req.header("authorization"), params: req.params },
           );
           res.status(result.status).json(result.body);
@@ -5713,7 +5728,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisCompletenessRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
             { authHeader: req.header("authorization"), params: req.params },
           );
           res.status(result.status).json(result.body);
@@ -5727,7 +5742,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisPickRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5741,7 +5756,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCustomSectionCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5755,7 +5770,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCustomSectionHistoryRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization"), params: req.params, query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -5769,7 +5784,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCupDiscDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5785,7 +5800,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleHpiDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5799,7 +5814,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleHpiCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5813,7 +5828,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleCupDiscCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5829,7 +5844,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingCaptureRequest(
-            { authenticate: authenticateStaffRoute },
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5843,7 +5858,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5859,7 +5874,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5875,7 +5890,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5891,7 +5906,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5907,7 +5922,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSoftContactLensDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5923,7 +5938,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSoftContactLensCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5939,7 +5954,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyContactLensDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -5955,7 +5970,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyContactLensCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -5971,7 +5986,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleSpecialtyKeratometryRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -5987,7 +6002,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleWearingDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -6003,7 +6018,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleWearingCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6019,7 +6034,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleAutoRefractionDefinitionRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization") },
           );
           res.status(result.status).json(result.body);
@@ -6035,7 +6050,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleAutoRefractionCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6051,7 +6066,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopHistoryRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -6067,7 +6082,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleRefractionHistoryRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -6083,7 +6098,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleIopTargetRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6103,28 +6118,7 @@ async function main(): Promise<void> {
           const authHeader = req.header("authorization");
           const result = await handleChargeRequest(
             {
-              // Role is derived from the caller's verified identity, not a client header
-              // (decision 2026-07-05 §3); the gate + 403 live inside the handler.
-              authenticate: async (header) => {
-                const resolved = await resolveStaffRole({
-                  baseUrl: BASE_URL,
-                  authHeader: header,
-                  serviceClient: fhir,
-                });
-                if (!resolved) {
-                  return null;
-                }
-                return {
-                  staffReference: resolved.staffReference,
-                  actorRole: resolved.role,
-                  // The PR write runs on the caller's token so Medplum AccessPolicy governs it
-                  // (decision 2026-07-05 §1); the role gate is defense in depth on top.
-                  fhir: createMedplumClient({
-                    baseUrl: BASE_URL,
-                    accessToken: header!.slice("Bearer ".length),
-                  }),
-                };
-              },
+              authenticate: authenticateStaffRoute,
               dispatch: paymentDispatch,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6158,7 +6152,7 @@ async function main(): Promise<void> {
       registerReportingRoutes(app, {
         authenticateService: authenticateWithMedplum,
         claims: {
-          authenticate: authenticateStaffRoute,
+          authenticate: authenticateClaimsRoute,
           adapter: claimMdAdapter,
           recordAudit: async (row) => {
             await auditRuntime.record(row, () => undefined);
@@ -6251,7 +6245,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleSubmitClaimRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               adapters: clearinghouseAdapters,
               routingDefaults: clearinghouseRouting,
@@ -6275,7 +6269,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEligibilityCheckRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               adapters: clearinghouseAdapters,
               routingDefaults: clearinghouseRouting,
@@ -6299,7 +6293,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleClaimSearchRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6321,7 +6315,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleManualEobListRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6341,7 +6335,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleCreateManualEobRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6361,7 +6355,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handlePostManualEobClaimRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6381,7 +6375,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleCloseManualEobRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6405,7 +6399,7 @@ async function main(): Promise<void> {
           };
           const result = await handleClaimStatusRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               adapters: clearinghouseAdapters,
               routingDefaults: clearinghouseRouting,
@@ -6429,7 +6423,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEraImportRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               adapters: clearinghouseAdapters,
               routingDefaults: clearinghouseRouting,
@@ -6454,7 +6448,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEraListRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               adapters: clearinghouseAdapters,
               routingDefaults: clearinghouseRouting,
@@ -6478,7 +6472,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleEraWorklistRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6500,7 +6494,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleClaimEraWorklistTaskRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6522,7 +6516,7 @@ async function main(): Promise<void> {
           await authenticateWithMedplum();
           const result = await handleResolveEraWorklistTaskRequest(
             {
-              authenticate: authenticateStaffRoute,
+              authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
               eraUnderpaymentThresholdCents,
               recordAudit: async (row) => {

@@ -86,9 +86,9 @@ async function server() {
     }),
   };
   const authenticate = async (header: string | undefined) => header === "Bearer good"
-    ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir }
+    ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, roles: ["front-desk"] as const, fhir }
     : header === "Bearer forbidden"
-      ? { staffReference: "Practitioner/staff-2", actorRole: "clinician" as const, fhir }
+      ? { staffReference: "Practitioner/staff-2", actorRole: "clinician" as const, roles: ["clinician"] as const, fhir }
       : null;
   const app = express();
   app.use(express.json());

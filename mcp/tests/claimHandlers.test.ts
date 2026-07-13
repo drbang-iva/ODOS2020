@@ -892,6 +892,7 @@ test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 state
     authenticate: async () => ({
       staffReference: "Practitioner/staff-1",
       actorRole: "front-desk",
+      roles: ["front-desk"],
       fhir: fixture.fhir,
     }),
     now: () => "2026-07-12T12:00:00.000Z",

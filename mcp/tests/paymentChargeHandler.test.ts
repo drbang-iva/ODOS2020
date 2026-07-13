@@ -7,7 +7,11 @@ import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { CLOVER_SANDBOX_BASE_URL } from "../src/payments/adapters/clover-adapter.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 
-const STAFF = { staffReference: "Practitioner/staff1", actorRole: "front-desk" as const };
+const STAFF = {
+  staffReference: "Practitioner/staff1",
+  actorRole: "front-desk" as const,
+  roles: ["front-desk"] as const,
+};
 
 function cloverTransport(response: unknown, ok = true, status = 200) {
   const created: PaymentReconciliation[] = [];
@@ -81,6 +85,27 @@ test("a successful card charge returns 200 with the transaction result and audit
   assert.equal(audits[0].actorId, "staff1");
   assert.equal(audits[0].resourceType, "PaymentReconciliation");
   assert.equal(audits[0].actionOutcome, "granted");
+});
+
+test("a multi-role clinician-primary caller charges as a deterministic granting role", async () => {
+  const { fetchImpl, fhir } = cloverTransport({
+    payment: { id: "CLOV1", result: "SUCCESS", amount: 24400 },
+  });
+  const { audits, deps: d } = deps({
+    fetchImpl,
+    fhir,
+    authenticate: async () => ({
+      staffReference: "Practitioner/owner",
+      actorRole: "clinician",
+      roles: ["clinician", "front-desk", "practice-admin"],
+      fhir: fhir as never,
+    }),
+  });
+
+  const result = await handleChargeRequest(d, { authHeader: "Bearer good", body: BODY });
+
+  assert.equal(result.status, 200);
+  assert.equal(audits[0].actorRole, "practice-admin");
 });
 
 test("omitting invoiceReference selects pay-before-bill mode and preserves the existing charge endpoint", async () => {
@@ -229,6 +254,7 @@ test("an authenticated staff whose role lacks payment.charge is rejected 403 bef
     authenticate: async () => ({
       staffReference: "Practitioner/doc1",
       actorRole: "clinician",
+      roles: ["clinician"],
       fhir: cloverTransport({}).fhir as never,
     }),
   });

@@ -159,7 +159,7 @@ function setup(options: { now?: string } = {}) {
   };
   const deps: PaymentCreditHandlerDeps = {
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: role, fhir: fhir as never }
+      ? { staffReference: "Practitioner/staff-1", actorRole: role, roles: [role], fhir: fhir as never }
       : null,
     lifecycleFhir: fhir,
     dispatch: createPaymentDispatch([{ method: "manual-cash" }]),

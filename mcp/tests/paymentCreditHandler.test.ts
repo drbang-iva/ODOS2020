@@ -72,6 +72,7 @@ function setup(initial = storedPayment()) {
       ? {
           staffReference: "Practitioner/staff1",
           actorRole: "front-desk",
+          roles: ["front-desk"],
           fhir,
         }
       : null,
@@ -133,6 +134,15 @@ test("payment credit mutations map an unavailable staff-role service to a clean 
 
 test("apply and transfer handlers audit payment.credit.applied with the transfer reason", async () => {
   const apply = setup();
+  const authenticate = apply.deps.authenticate;
+  apply.deps.authenticate = async (header) => {
+    const staff = await authenticate(header);
+    return staff ? {
+      ...staff,
+      actorRole: "clinician",
+      roles: ["clinician", "front-desk", "practice-admin"],
+    } : null;
+  };
   const applyResult = await handleApplyCreditRequest(apply.deps, {
     authHeader: "Bearer good",
     body: {
@@ -143,6 +153,7 @@ test("apply and transfer handlers audit payment.credit.applied with the transfer
   });
   assert.equal(applyResult.status, 200);
   assert.equal(apply.audits[0].eventType, "payment.credit.applied");
+  assert.equal(apply.audits[0].actorRole, "practice-admin");
   assert.match(apply.audits[0].actionReason ?? "", /apply/);
 
   const transfer = setup(storedPayment("Invoice/wrong"));

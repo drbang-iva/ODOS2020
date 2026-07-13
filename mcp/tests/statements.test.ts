@@ -119,7 +119,12 @@ test("an unapplied patient credit is displayed separately and reduces only the a
     payments: [unappliedPayment("credit-1", "p1", 2_500)],
   });
   const result = await handleGeneratePatientStatementRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "clinician",
+      roles: ["clinician", "front-desk", "practice-admin"],
+      fhir: fixture.fhir,
+    }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   }, { authHeader: "Bearer good", body: { patientReference: "Patient/p1" } });
@@ -140,7 +145,7 @@ test("credit above the open Invoice balance produces zero due and an honest cred
     payments: [unappliedPayment("credit-1", "p1", 12_500)],
   });
   const result = await handleGeneratePatientStatementRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   }, { authHeader: "Bearer good", body: { patientReference: "Patient/p1" } });
@@ -158,7 +163,7 @@ test("batch persists one atomic run, generates every open balance, skips zero ba
     payments: [payment("pay-1", "p1", "i1", 4_000), payment("pay-2", "p2", "i2", 5_000)],
   });
   const result = await handleRunStatementsRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   }, { authHeader: "Bearer good" });
@@ -188,7 +193,7 @@ test("statement list returns completed snapshots newest-first and never exposes 
     ...statementTask("reject", "2026-07-13T10:00:00.000Z"), status: "failed",
   });
   const result = await handleStatementListRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
   }, { authHeader: "Bearer good" });
   assert.equal(result.status, 200);
   const items = (result.body as { items: Array<{ statementReference: string }> }).items;
@@ -235,7 +240,7 @@ test("a run larger than the child ceiling commits in chunks and publishes its co
     payments: [],
   });
   const result = await handleRunStatementsRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   }, { authHeader: "Bearer good" });
@@ -258,7 +263,7 @@ test("a failed child chunk leaves no completed run visible to either statement r
     payments: [],
   }, { failTransactionAt: 3 });
   const deps = {
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, roles: ["front-desk"] as const, fhir: fixture.fhir }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   };
@@ -284,7 +289,7 @@ test("a cleanup failure never masks the original child-chunk error", async () =>
   console.error = (...values: unknown[]) => { cleanupErrors.push(values); };
   try {
     await assert.rejects(handleRunStatementsRequest({
-      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+      authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
       now: () => GENERATED_AT,
       generateId: sequentialIds(),
     }, { authHeader: "Bearer good" }), /chunk failed/);
@@ -347,7 +352,7 @@ test("statement list skips one corrupt Task while returning a valid statement fr
   fixture.storedTasks.push(completedRunTask("run-1"), corrupt, statementTask("valid", GENERATED_AT));
 
   const result = await handleStatementListRequest({
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fixture.fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fixture.fhir }),
   }, { authHeader: "Bearer good" });
 
   assert.equal(result.status, 200);
@@ -443,7 +448,7 @@ function rewriteReferences(value: unknown, references: ReadonlyMap<string, strin
 
 function statementDeps(fhir: ReturnType<typeof fakeFhir>["fhir"]) {
   return {
-    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir }),
+    authenticate: async () => ({ staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, roles: ["front-desk"] as const, fhir }),
     now: () => GENERATED_AT,
     generateId: sequentialIds(),
   };

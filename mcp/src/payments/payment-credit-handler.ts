@@ -1,5 +1,6 @@
 import type { Bundle, Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import {
   applyPaymentCredit,
@@ -16,7 +17,6 @@ import {
 } from "./payment-credit-service.js";
 import type { PaymentCreditFhirClient } from "./payment-credit-service.js";
 import {
-  staffMayCharge,
   type AuthenticatedStaff,
   type ChargeHandlerResult,
 } from "./payment-charge-handler.js";
@@ -179,9 +179,11 @@ export async function handleUnappliedCreditsRequest(
     throw error;
   }
   if (!staff) return { status: 401, body: { error: "Authentication required to view payments." } };
-  if (!staffMayCharge(staff.actorRole)) {
+  const actorRole = resolvePaymentActorRole(staff);
+  if (!actorRole) {
     return { status: 403, body: { error: "payment.charge role required" } };
   }
+  staff = { ...staff, actorRole };
   try {
     const credits = await queryUnappliedCredits(staff.fhir, input.patientReference);
     return { status: 200, body: { credits } };
@@ -313,10 +315,15 @@ async function authorizedStaff(
   if (!staff) {
     return { result: { status: 401, body: { error: "Authentication required to manage payments." } } };
   }
-  if (!staffMayCharge(staff.actorRole)) {
+  const actorRole = resolvePaymentActorRole(staff);
+  if (!actorRole) {
     return { result: { status: 403, body: { error: "payment.charge role required" } } };
   }
-  return { staff };
+  return { staff: { ...staff, actorRole } };
+}
+
+function resolvePaymentActorRole(staff: AuthenticatedStaff): PracticeRoleId | undefined {
+  return resolveBusinessActionRole(staff.roles ?? [], "payment.charge");
 }
 
 async function auditCredit(

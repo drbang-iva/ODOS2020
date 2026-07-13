@@ -482,6 +482,17 @@ export function assertBusinessActionAllowed(
   }
 }
 
+export function resolveBusinessActionRole(
+  roles: readonly PracticeRoleId[],
+  businessAction: BusinessAction,
+): PracticeRoleId | undefined {
+  return PRACTICE_ROLE_IDS.find(
+    (roleId) =>
+      roles.includes(roleId) &&
+      getRoleDeclaration(roleId).businessActions.includes(businessAction),
+  );
+}
+
 export function assertAestheticsProviderScope(input: AestheticsProviderScopeInput): void {
   if (input.roleId !== "aesthetics-provider") {
     return;

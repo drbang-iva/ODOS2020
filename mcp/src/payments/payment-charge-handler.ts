@@ -1,5 +1,5 @@
 import type { OsodActorRole, OsodAuditEventRecord } from "../authz/osodAudit.js";
-import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-audit.js";
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
@@ -21,6 +21,7 @@ export interface AuthenticatedStaff {
   /** Practitioner / PractitionerRole reference for requestor + audit attribution. */
   staffReference: string;
   actorRole: OsodActorRole;
+  roles?: readonly PracticeRoleId[];
   /** FHIR client bound to the caller (their token) so Medplum AccessPolicy governs the PR write. */
   fhir: DispatchFhirClient;
 }
@@ -69,10 +70,11 @@ export async function handleChargeRequest(
   if (!staff) {
     return { status: 401, body: { error: "Authentication required to take a payment." } };
   }
-  // Authorize on the caller's identity-derived role (decision 2026-07-05 §3), not a client header.
-  if (!staffMayCharge(staff.actorRole)) {
+  const actorRole = resolveBusinessActionRole(staff.roles ?? [], "payment.charge");
+  if (!actorRole) {
     return { status: 403, body: { error: "payment.charge role required" } };
   }
+  staff = { ...staff, actorRole };
 
   const parsed = parseChargeBody(input.body);
   if ("error" in parsed) {
@@ -191,16 +193,8 @@ function parseChargeBody(raw: unknown): { body: ChargeBody } | { error: string }
   return { body: b as unknown as ChargeBody };
 }
 
-export function staffMayCharge(actorRole: OsodActorRole): boolean {
-  if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) {
-    return false;
-  }
-  try {
-    assertBusinessActionAllowed(actorRole as PracticeRoleId, "payment.charge");
-    return true;
-  } catch {
-    return false;
-  }
+export function staffMayCharge(roles: readonly PracticeRoleId[]): boolean {
+  return resolveBusinessActionRole(roles, "payment.charge") !== undefined;
 }
 
 function messageOf(error: unknown): string {

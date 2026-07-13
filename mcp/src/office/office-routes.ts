@@ -3,7 +3,11 @@ import type { PracticeRoleId } from "../authz/roles.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import { acknowledgeOfficeMessage, listOfficeMessages, OfficeMessageValidationError, sendOfficeMessage, type OfficeFhir, type OfficeTier } from "./office-channel.js";
 
-type OfficeStaff = Omit<AuthenticatedStaff, "fhir" | "actorRole"> & { actorRole: PracticeRoleId; fhir: OfficeFhir };
+type OfficeStaff = Omit<AuthenticatedStaff, "fhir" | "actorRole" | "roles"> & {
+  actorRole: PracticeRoleId;
+  roles: readonly PracticeRoleId[];
+  fhir: OfficeFhir;
+};
 
 export interface OfficeRouteDeps {
   authenticateService(): Promise<void>;
@@ -52,10 +56,11 @@ async function withStaff(
       res.status(401).json({ error: "Authentication required to use the internal Office channel." });
       return;
     }
-    if ((side === "desk" && staff.actorRole !== "front-desk") || (side === "clinic" && staff.actorRole !== "clinician")) {
+    const actorRole = officeActingRole(staff.roles, side);
+    if (!actorRole) {
       throw new OfficeAuthorizationError(`${side === "desk" ? "Desk" : "Clinic"} role required for this Office channel action.`);
     }
-    await action(staff);
+    await action({ ...staff, actorRole });
   } catch (error) {
     console.error("osod-mcp: Office channel route failed:", error);
     if (res.headersSent) return;
@@ -67,6 +72,14 @@ async function withStaff(
       res.status(500).json({ error: "Office channel route failed." });
     }
   }
+}
+
+export function officeActingRole(
+  roles: readonly PracticeRoleId[],
+  side: "desk" | "clinic",
+): PracticeRoleId | undefined {
+  const role = side === "desk" ? "front-desk" : "clinician";
+  return roles.includes(role) ? role : undefined;
 }
 
 function rejectQuery(req: Request): void {
