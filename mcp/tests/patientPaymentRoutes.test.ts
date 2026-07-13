@@ -6,10 +6,11 @@ import express from "express";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "../src/payments/payment-routes.js";
 
-test("all five patient-payment HTTP routes reach their handlers", async () => {
+test("all six patient-payment HTTP routes reach their handlers", async () => {
   const fixture = await server();
   try {
     const cases: Array<["GET" | "POST", string, number, RegExp | undefined]> = [
+      ["GET", "/payments/methods", 200, undefined],
       ["POST", "/payments/credit/apply", 400, /paymentReconciliationReference/],
       ["POST", "/payments/credit/transfer", 400, /fromInvoiceReference/],
       ["POST", "/payments/credit/void", 400, /payment method/],
@@ -23,6 +24,18 @@ test("all five patient-payment HTTP routes reach their handlers", async () => {
       if (error) assert.match(body, error, path);
     }
     assert.equal(fixture.serviceAuthCalls(), cases.length);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("GET /payments/methods returns configured methods for staff and 401 without authentication", async () => {
+  const fixture = await server();
+  try {
+    const response = await call(fixture.baseUrl, "GET", "/payments/methods", "Bearer good");
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { methods: ["manual-cash"] });
+    assert.equal((await call(fixture.baseUrl, "GET", "/payments/methods")).status, 401);
   } finally {
     await fixture.close();
   }

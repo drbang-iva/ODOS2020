@@ -54,6 +54,7 @@ export const PAYMENT_TENDERS = [
 
 export const CHECKOUT_TENDERS = [
   ...PAYMENT_TENDERS,
+  { code: "CARD_MANUAL", display: "Card — manual entry" },
   { code: "CARD_TERMINAL", display: "Card (terminal)" },
 ] as const;
 
@@ -111,6 +112,7 @@ export type OpticalOrderStatusCode = (typeof OPTICAL_ORDER_STATUSES)[number]["co
 export type OpticalOrderTypeCode = (typeof OPTICAL_ORDER_TYPES)[number]["code"];
 export type PaymentTenderCode = (typeof PAYMENT_TENDERS)[number]["code"];
 export type CheckoutTenderCode = (typeof CHECKOUT_TENDERS)[number]["code"];
+export type RecordedCheckoutTenderCode = Exclude<CheckoutTenderCode, "CARD_TERMINAL">;
 
 export interface RxDisplayRow {
   eye: "OD" | "OS";
@@ -158,7 +160,7 @@ export interface OpticalCashOrderDraft {
   businessStatus: OpticalOrderStatusCode;
   orderType: OpticalOrderTypeCode;
   charges: OpticalChargeLineDraft[];
-  tender?: PaymentTenderCode;
+  tender?: RecordedCheckoutTenderCode;
 }
 
 export interface CreatedOpticalOrderIds {
@@ -277,6 +279,47 @@ export async function chargeOpticalCardPayment(
     throw new Error(paymentErrorMessage(response, body));
   }
   return body as TransactionResult;
+}
+
+export async function loadConfiguredPaymentMethods(
+  deps: { authHeader?: () => string | undefined; fetchImpl?: typeof fetch } = {},
+): Promise<string[]> {
+  const authHeader = (deps.authHeader ?? fhir.authHeader)();
+  if (!authHeader) {
+    throw new Error("A signed-in FHIR session is required to load payment methods.");
+  }
+  const response = await (deps.fetchImpl ?? fetch)("/payments/methods", {
+    headers: {
+      Authorization: authHeader,
+      Accept: "application/json",
+    },
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(paymentErrorMessage(response, body));
+  }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !Array.isArray((body as { methods?: unknown }).methods) ||
+    !(body as { methods: unknown[] }).methods.every((method) => typeof method === "string")
+  ) {
+    throw new Error("Payment methods response is invalid.");
+  }
+  return (body as { methods: string[] }).methods;
+}
+
+export async function routeCheckoutTender<T>(
+  tender: CheckoutTenderCode,
+  actions: {
+    createOpticalCashOrder(tender: RecordedCheckoutTenderCode): Promise<T>;
+    processCardPayment(): Promise<T>;
+  },
+): Promise<T> {
+  if (tender === "CARD_TERMINAL") {
+    return actions.processCardPayment();
+  }
+  return actions.createOpticalCashOrder(tender);
 }
 
 export function invoiceTotalNetCents(invoice: Invoice): number {
@@ -490,8 +533,8 @@ function opticalOrderTypeConcept(code: OpticalOrderTypeCode) {
   };
 }
 
-function paymentTenderExtension(code: PaymentTenderCode) {
-  const tender = PAYMENT_TENDERS.find((candidate) => candidate.code === code);
+function paymentTenderExtension(code: RecordedCheckoutTenderCode) {
+  const tender = CHECKOUT_TENDERS.find((candidate) => candidate.code === code);
   if (!tender) {
     throw new Error(`Unknown payment tender "${code}".`);
   }

@@ -28,7 +28,9 @@ import {
   createOpticalCashOrder,
   invoiceTotalNetCents,
   labOrderFrameFromAttachedFrame,
+  loadConfiguredPaymentMethods,
   loadVisionPrescription,
+  routeCheckoutTender,
   transitionOpticalOrderStatus,
   visionPrescriptionRows,
   type AttachedFrame,
@@ -313,29 +315,30 @@ export function OpticalOrder() {
       return;
     }
     try {
-      if (tender === "CARD_TERMINAL") {
-        await processCardPayment();
-        return;
-      }
-      const created = await createOpticalCashOrder({
-        patientReference,
-        visionPrescriptionReference: visionPrescriptionReference(rxReference),
-        encounterReference: encounterReference || undefined,
-        orderHcpcsCode: primaryOrderCode(selectedLines),
-        orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
-        businessStatus: header.orderStatus,
-        orderType: header.orderType,
-        charges: selectedLines,
-        tender,
+      await routeCheckoutTender(tender, {
+        processCardPayment,
+        createOpticalCashOrder: async (recordedTender) => {
+          const created = await createOpticalCashOrder({
+            patientReference,
+            visionPrescriptionReference: visionPrescriptionReference(rxReference),
+            encounterReference: encounterReference || undefined,
+            orderHcpcsCode: primaryOrderCode(selectedLines),
+            orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
+            businessStatus: header.orderStatus,
+            orderType: header.orderType,
+            charges: selectedLines,
+            tender: recordedTender,
+          });
+          setCreatedTaskId(created.taskId);
+          setReceiptSourceIds({
+            invoiceId: created.invoiceId,
+            chargeItemIds: created.chargeItemIds,
+            paymentKind: "invoice-tender",
+          });
+          setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
+          setStatus(`Order ${created.deviceRequestId} paid by ${recordedTender}.`);
+        },
       });
-      setCreatedTaskId(created.taskId);
-      setReceiptSourceIds({
-        invoiceId: created.invoiceId,
-        chargeItemIds: created.chargeItemIds,
-        paymentKind: "invoice-tender",
-      });
-      setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
-      setStatus(`Order ${created.deviceRequestId} paid by ${tender}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -983,7 +986,7 @@ function ChargeTable({
   );
 }
 
-function PaymentPanel({
+export function PaymentPanel({
   tender,
   paymentAmount,
   selectedTotalCents,
@@ -993,6 +996,7 @@ function PaymentPanel({
   onAmountChange,
   onProcess,
   onPrintReceipt,
+  loadPaymentMethods = loadConfiguredPaymentMethods,
 }: {
   tender: CheckoutTenderCode;
   paymentAmount: string;
@@ -1003,14 +1007,35 @@ function PaymentPanel({
   onAmountChange: (amount: string) => void;
   onProcess: () => void;
   onPrintReceipt: () => void;
+  loadPaymentMethods?: () => Promise<string[]>;
 }) {
+  const [configuredMethods, setConfiguredMethods] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadPaymentMethods()
+      .then((methods) => {
+        if (!cancelled) setConfiguredMethods(methods);
+      })
+      .catch(() => {
+        if (!cancelled) setConfiguredMethods([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadPaymentMethods]);
+
+  const availableTenders = CHECKOUT_TENDERS.filter(
+    (entry) => entry.code !== "CARD_TERMINAL" || configuredMethods.includes("clover"),
+  );
+
   return (
     <section className="rounded border border-white/10 p-3">
       <div className="grid gap-3 md:grid-cols-3">
         <label className="grid gap-1 text-xs text-white/60">
           <span>Tender</span>
           <select className="sidebar-input" value={tender} onChange={(event) => onTenderChange(event.target.value as CheckoutTenderCode)}>
-            {CHECKOUT_TENDERS.map((entry) => (
+            {availableTenders.map((entry) => (
               <option key={entry.code} value={entry.code}>
                 {entry.display}
               </option>

@@ -38,6 +38,25 @@ export interface ChargeHandlerResult {
   body: unknown;
 }
 
+export async function handlePaymentMethodsRequest(
+  deps: Pick<ChargeHandlerDeps, "authenticate" | "dispatch">,
+  input: { authHeader: string | undefined },
+): Promise<ChargeHandlerResult> {
+  let staff: AuthenticatedStaff | null;
+  try {
+    staff = await deps.authenticate(input.authHeader);
+  } catch (error) {
+    if (error instanceof StaffRoleServiceUnavailableError) {
+      return { status: 503, body: { error: "Payment service temporarily unavailable." } };
+    }
+    throw error;
+  }
+  if (!staff) {
+    return { status: 401, body: { error: "Authentication required to view payment methods." } };
+  }
+  return { status: 200, body: { methods: deps.dispatch.methods() } };
+}
+
 interface ChargeBody {
   method: string;
   amountCents: number;
