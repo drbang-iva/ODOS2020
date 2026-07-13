@@ -10,6 +10,7 @@ import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
+import { HpiSection } from "../components/charting/HpiSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
 import { OcularHealthSection } from "../components/charting/OcularHealthSection";
 import { PrescriptionSection } from "../components/charting/PrescriptionSection";
@@ -116,6 +117,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="min-w-0 flex-1 bg-bg-deep">
+          {activeSection === "hpi" && (
+            <HpiSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("hpi", status)}
+            />
+          )}
           {activeSection === "wearing" && (
             <WearingSection
               patientReference={patientReference}

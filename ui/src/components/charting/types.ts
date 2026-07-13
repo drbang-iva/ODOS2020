@@ -1,4 +1,5 @@
 export type BuiltInSectionId =
+  | "hpi"
   | "wearing"
   | "auto-refraction"
   | "va"

@@ -1,6 +1,7 @@
 import { sectionStatus, type BuiltInSectionId, type ChartSectionId, type SectionStatusMap } from "./types";
 
 const SECTIONS: Array<{ id: BuiltInSectionId; label: string; readOnly?: boolean; group?: string; subHeader?: string }> = [
+  { id: "hpi", label: "Chief Complaint / HPI / ROS", group: "HISTORY" },
   { id: "wearing", label: "Wearing (WRx)", group: "PRETEST" },
   { id: "auto-refraction", label: "Auto-Refraction / Auto-K", group: "PRETEST" },
   { id: "va", label: "Visual Acuity", group: "PRETEST" },

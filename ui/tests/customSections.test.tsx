@@ -22,7 +22,7 @@ test("SpineNav is unchanged for an empty custom registry and safely appends miss
   const before = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
   const emptyRegistry = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} customSections={[]} />);
   assert.equal(emptyRegistry, before);
-  assert.equal((before.match(/<button/g) ?? []).length, 15);
+  assert.equal((before.match(/<button/g) ?? []).length, 16);
   assert.match(before, /ASSESSMENT &amp; PLAN/);
   assert.ok(before.indexOf("Assessment") < before.indexOf("Plan · Prescriptions"));
 
@@ -37,7 +37,7 @@ test("SpineNav is unchanged for an empty custom registry and safely appends miss
   );
   assert.match(custom, /Skin Carotenoid Score/);
   assert.match(custom, /\+ Add section/);
-  assert.equal((custom.match(/<button/g) ?? []).length, 17);
+  assert.equal((custom.match(/<button/g) ?? []).length, 18);
   assert.deepEqual(sectionStatus({}, "custom:missing"), { completed: false });
 });
 
@@ -51,6 +51,8 @@ test("SpineNav groups the traditional spine and appends custom sections after ev
     />,
   );
   const labels = [
+    "HISTORY",
+    "Chief Complaint / HPI / ROS",
     "PRETEST",
     "Wearing (WRx)",
     "Auto-Refraction / Auto-K",
@@ -647,9 +649,9 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps exactly the 15 shipped built-in render branches plus one custom branch", () => {
+test("EncounterCharting keeps exactly the 16 shipped built-in render branches plus one custom branch", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 15);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 16);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
 });
