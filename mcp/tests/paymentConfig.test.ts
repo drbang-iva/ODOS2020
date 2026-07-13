@@ -10,6 +10,7 @@ const CLOVER_CONFIG = {
   deviceId: "DEV1",
   posId: "OSOD",
 };
+const STRIPE_CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_dispatch" };
 
 function fakeFhir() {
   return {
@@ -23,6 +24,7 @@ test("getAdapter resolves the configured method to its adapter instance (unified
   const dispatch = createPaymentDispatch([
     { method: "manual-cash" },
     { method: "clover", config: CLOVER_CONFIG },
+    { method: "stripe", config: STRIPE_CONFIG },
   ]);
 
   const cash = dispatch.getAdapter("manual-cash", fakeFhir());
@@ -32,14 +34,19 @@ test("getAdapter resolves the configured method to its adapter instance (unified
   const clover = dispatch.getAdapter("clover", fakeFhir());
   assert.equal(clover.name, "clover");
   assert.equal(clover.surface, "in-clinic-pos");
+
+  const stripe = dispatch.getAdapter("stripe", fakeFhir());
+  assert.equal(stripe.name, "stripe");
+  assert.equal(stripe.surface, "online");
 });
 
 test("methods() lists exactly the registered, enabled payment methods (drives the practice's checkout buttons)", () => {
   const dispatch = createPaymentDispatch([
     { method: "manual-cash" },
     { method: "clover", config: CLOVER_CONFIG },
+    { method: "stripe", config: STRIPE_CONFIG },
   ]);
-  assert.deepEqual(dispatch.methods().sort(), ["clover", "manual-cash"]);
+  assert.deepEqual(dispatch.methods().sort(), ["clover", "manual-cash", "stripe"]);
 });
 
 test("getAdapter throws for a method the practice has not configured", () => {

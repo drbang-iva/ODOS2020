@@ -10,6 +10,10 @@ import {
   buildSpecialtyContactLensFindingDefinitionStub,
 } from "./contact-lens-definition.js";
 import { buildPretestFindingDefinitionStubs } from "./pretest-endpoint.js";
+import {
+  buildAnteriorOcularHealthDefinitions,
+  buildPosteriorOcularHealthDefinitions,
+} from "./ocular-health-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
   "https://osod.dev/fhir/CodeSystem/osod-finding-definition";
@@ -125,6 +129,8 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
     buildSoftContactLensFindingDefinitionStub(provenance),
     buildSpecialtyContactLensFindingDefinitionStub(provenance),
     ...buildPretestFindingDefinitionStubs(provenance),
+    ...buildAnteriorOcularHealthDefinitions(provenance),
+    ...buildPosteriorOcularHealthDefinitions(provenance),
   ];
 }
 
@@ -211,6 +217,26 @@ function assertClinicalFindingDefinition(value: unknown): ClinicalFindingDefinit
   }
   if (value.fhirObservationCode !== undefined && !isRecord(value.fhirObservationCode)) {
     throw new Error("Finding definition fhirObservationCode must be an object.");
+  }
+  if (value.allowDiagnosisMapping !== undefined && typeof value.allowDiagnosisMapping !== "boolean") {
+    throw new Error("Finding definition allowDiagnosisMapping must be boolean.");
+  }
+  if (value.diagnosisCandidates !== undefined) {
+    if (!Array.isArray(value.diagnosisCandidates)) {
+      throw new Error("Finding definition diagnosisCandidates must be an array.");
+    }
+    const ids = new Set<string>();
+    for (const candidate of value.diagnosisCandidates) {
+      if (!isRecord(candidate)) throw new Error("Diagnosis mapping entries must be objects.");
+      requiredString(candidate.id, "diagnosisCandidates.id");
+      requiredString(candidate.diagnosisKey, "diagnosisCandidates.diagnosisKey");
+      if (!isRecord(candidate.trigger)) throw new Error("Diagnosis mapping trigger must be an object.");
+      if (!["seed", "practice"].includes(String(candidate.origin)) || typeof candidate.active !== "boolean") {
+        throw new Error("Diagnosis mapping origin or active state is invalid.");
+      }
+      if (ids.has(candidate.id)) throw new Error(`Duplicate diagnosis mapping id ${candidate.id}.`);
+      ids.add(candidate.id);
+    }
   }
   if (typeof value.notBillReady !== "boolean") {
     throw new Error("Finding definition notBillReady must be boolean.");

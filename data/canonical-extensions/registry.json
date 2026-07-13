@@ -3,6 +3,24 @@
   "generatedAt": "2026-05-02",
   "extensions": [
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity",
+      "namespace": "optical-pricing",
+      "status": "active",
+      "sliceConsumer": "optical-pricing"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/agent-identity",
       "namespace": "agentops",
       "status": "active",
@@ -55,6 +73,36 @@
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "tier3-d1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-diagnosis-definition-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "dx-link-l1"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-dx-pick-tally-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "dx-link-l2"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-weno-mapping-json",
+      "namespace": "weno",
+      "status": "active",
+      "sliceConsumer": "weno-ez-adapter"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-transmission-method",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "prescription-plan,weno-ez-adapter"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-controlled-substance-flag",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "prescription-plan"
     },
     {
       "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
@@ -319,6 +367,18 @@
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "patient-payments-phase-6a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claim-invoice-seam-phase-a"
+    },
+    {
+      "url": "https://osod.dev/fhir/StructureDefinition/osod-source-claim",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claim-invoice-seam-phase-a"
     },
     {
       "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-duration",

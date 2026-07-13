@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
 import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
   assertTransactionSuccess,
   buildEncounterStatusPatchBundle,
 } from "../../lib/encounter-bundles";
-import { useViewState } from "../../lib/view-state";
+import { patientOverviewView, useViewState } from "../../lib/view-state";
 import { RoleSelector } from "../RoleSelector";
 import {
   computeMdmHint,
@@ -13,6 +13,10 @@ import {
   isProblemListCondition,
 } from "../../lib/clinical-view-model";
 import { patientName } from "../../lib/scheduler-appointment-ui";
+import {
+  readDiagnosisCompleteness,
+  type DiagnosisCompleteness,
+} from "../../lib/clinical-graph-client";
 
 interface Props {
   patient: Patient;
@@ -24,11 +28,16 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [encounterConditions, setEncounterConditions] = useState<Condition[]>([]);
   const [problemListConditions, setProblemListConditions] = useState<Condition[]>([]);
-  const [busy, setBusy] = useState<"finish" | "abandon" | null>(null);
+  const [busy, setBusy] = useState<"checking" | "finish" | "abandon" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
+  const completenessCheckVersion = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    completenessCheckVersion.current += 1;
+    setCompletenessAdvisories([]);
+    setBusy((current) => current === "checking" ? null : current);
 
     async function loadEncounter() {
       try {
@@ -64,6 +73,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     void loadEncounter();
     return () => {
       cancelled = true;
+      completenessCheckVersion.current += 1;
     };
   }, [encounterId, patient.id]);
 
@@ -77,7 +87,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   );
 
   async function finishEncounter() {
-    if (!patient.id || busy) return;
+    if (!patient.id || busy === "finish" || busy === "abandon") return;
     setBusy("finish");
     setError(null);
     try {
@@ -96,12 +106,30 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "finish_encounter",
       );
       assertTransactionSuccess(response);
-      setView({ kind: "director", patientId: patient.id });
+      setView(patientOverviewView(patient.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(null);
     }
+  }
+
+  async function requestFinishEncounter() {
+    if (!patient.id || busy) return;
+    const requestVersion = ++completenessCheckVersion.current;
+    setBusy("checking");
+    setError(null);
+    await runSignTimeCompletenessCheck(
+      () => readDiagnosisCompleteness(encounterId),
+      async () => {
+        if (requestVersion === completenessCheckVersion.current) await finishEncounter();
+      },
+      (diagnoses) => {
+        if (requestVersion !== completenessCheckVersion.current) return;
+        setCompletenessAdvisories(diagnoses);
+        setBusy(null);
+      },
+    );
   }
 
   async function abandonEncounter() {
@@ -127,7 +155,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "abandon_encounter",
       );
       assertTransactionSuccess(response);
-      setView({ kind: "director", patientId: patient.id });
+      setView(patientOverviewView(patient.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -159,11 +187,11 @@ export function EncounterHeader({ patient, encounterId }: Props) {
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
           </button>
           <button
-            onClick={finishEncounter}
+            onClick={requestFinishEncounter}
             disabled={busy !== null}
             className="rounded border border-emerald-400/60 bg-emerald-400/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy === "finish" ? "Signing..." : "Sign & finish"}
+            {busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}
           </button>
         </div>
       </div>
@@ -196,6 +224,133 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           {error}
         </div>
       )}
+      {completenessAdvisories.length > 0 && (
+        <DiagnosisCompletenessDialog
+          diagnoses={completenessAdvisories}
+          signing={busy !== null}
+          onSignAnyway={() => void finishEncounter()}
+          onAddFindings={() => setCompletenessAdvisories([])}
+        />
+      )}
     </header>
+  );
+}
+
+export async function runSignTimeCompletenessCheck(
+  readCompleteness: () => Promise<DiagnosisCompleteness>,
+  sign: () => Promise<void>,
+  showAdvisories: (diagnoses: DiagnosisCompleteness["diagnoses"]) => void,
+): Promise<void> {
+  try {
+    const result = await readCompleteness();
+    if (result.diagnoses.length) {
+      showAdvisories(result.diagnoses);
+      return;
+    }
+  } catch {
+    // The completeness read is advisory-only; signing remains available when it fails.
+  }
+  await sign();
+}
+
+export function DiagnosisCompletenessDialog({
+  diagnoses,
+  signing,
+  onSignAnyway,
+  onAddFindings,
+}: {
+  diagnoses: DiagnosisCompleteness["diagnoses"];
+  signing: boolean;
+  onSignAnyway: () => void;
+  onAddFindings: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstActionRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    firstActionRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, []);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onAddFindings();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? [])];
+    if (!focusable.length) {
+      event.preventDefault();
+      dialogRef.current?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  return (
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Diagnosis key findings advisory"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="w-full max-w-lg rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
+        <div className="text-xs uppercase tracking-widest text-white/35">Before signing</div>
+        <div className="mt-3 grid gap-2 text-sm text-white/70">
+          {diagnoses.map((diagnosis, index) => (
+            <div key={diagnosis.conditionReference ?? `${diagnosis.diagnosisKey}:${diagnosis.laterality}:${index}`}>
+              {diagnosis.display} is active without: {diagnosis.missing.map((finding) => finding.display).join(" · ")}
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <DiagnosisCompletenessDialogActions
+            signing={signing}
+            firstActionRef={firstActionRef}
+            onAddFindings={onAddFindings}
+            onSignAnyway={onSignAnyway}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DiagnosisCompletenessDialogActions({
+  signing,
+  firstActionRef,
+  onSignAnyway,
+  onAddFindings,
+}: {
+  signing: boolean;
+  firstActionRef?: Ref<HTMLButtonElement>;
+  onSignAnyway: () => void;
+  onAddFindings: () => void;
+}) {
+  return (
+    <>
+      <button ref={firstActionRef} type="button" className="scheduler-button" disabled={signing} onClick={onAddFindings}>
+        Add findings
+      </button>
+      <button type="button" className="scheduler-button" disabled={signing} onClick={onSignAnyway}>
+        {signing ? "Signing..." : "Sign anyway"}
+      </button>
+    </>
   );
 }

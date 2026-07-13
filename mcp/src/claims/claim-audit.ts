@@ -28,7 +28,7 @@ export function buildClaimAuditRecord(input: {
   actorRole: OsodActorRole;
   patientReference?: string;
   targetReference: string;
-  adapterName: "claimmd" | "manual-eob";
+  adapterName: "claimmd" | "stedi" | "manual-eob";
   outcome: "success" | "failure";
   reason?: string;
   timestamp?: string;
@@ -41,7 +41,7 @@ export function buildClaimAuditRecord(input: {
     targetReference: input.targetReference,
     actionOutcome: input.outcome === "success" ? "granted" : "denied",
     actionReason: [
-      input.adapterName === "claimmd" ? "CLAIM_CLEARINGHOUSE" : "CLAIM_MANUAL_EOB",
+      input.adapterName === "manual-eob" ? "CLAIM_MANUAL_EOB" : "CLAIM_CLEARINGHOUSE",
       `adapter=${input.adapterName}`,
       input.reason,
     ]

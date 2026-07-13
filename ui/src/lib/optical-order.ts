@@ -67,26 +67,28 @@ export const OPTICAL_ADJUSTMENTS = [
 ] as const;
 
 export const RX_COLUMNS = [
-  "Sphere",
-  "Cylinder",
-  "Axis",
-  "Dist(PD)",
-  "Near(PD)",
-  "Form",
-  "I/O",
-  "Prism",
-  "U/D",
-  "Prism",
-  "BSize",
-  "Base",
-  "Lens CPT",
-  "Remarks",
-  "Add",
-  "Seght",
-  "Eye",
-  "Prism Units",
-  "Prism Pts",
+  { key: "sphere", label: "Sphere" },
+  { key: "cylinder", label: "Cylinder" },
+  { key: "axis", label: "Axis" },
+  { key: "distPd", label: "Dist(PD)" },
+  { key: "nearPd", label: "Near(PD)" },
+  { key: "form", label: "Form" },
+  { key: "horizontalBase", label: "I/O" },
+  { key: "horizontalPrism", label: "Prism" },
+  { key: "verticalBase", label: "U/D" },
+  { key: "verticalPrism", label: "Prism" },
+  { key: "bSize", label: "BSize" },
+  { key: "base", label: "Base" },
+  { key: "lensCpt", label: "Lens CPT" },
+  { key: "remarks", label: "Remarks" },
+  { key: "add", label: "Add" },
+  { key: "segHt", label: "Seght" },
+  { key: "eye", label: "Eye" },
+  { key: "prismUnits", label: "Prism Units" },
+  { key: "prismPoints", label: "Prism Pts" },
 ] as const;
+
+export type RxColumnKey = (typeof RX_COLUMNS)[number]["key"];
 
 export const CHARGE_COLUMNS = [
   "Procedure",
@@ -112,7 +114,7 @@ export type CheckoutTenderCode = (typeof CHECKOUT_TENDERS)[number]["code"];
 
 export interface RxDisplayRow {
   eye: "OD" | "OS";
-  values: Record<(typeof RX_COLUMNS)[number], string>;
+  values: Record<RxColumnKey, string>;
 }
 
 export interface OpticalChargeLineDraft {
@@ -439,27 +441,30 @@ function entry(fullUrl: string, resource: DeviceRequest | Task | ChargeItem | In
 function rxValues(
   lens: VisionPrescriptionLensSpecification | undefined,
   eye: "OD" | "OS",
-): Record<(typeof RX_COLUMNS)[number], string> {
-  const firstPrism = lens?.prism?.[0];
+): Record<RxColumnKey, string> {
+  const prisms = lens?.prism ?? [];
+  const horizontalPrism = prisms.find((prism) => prism.base === "in" || prism.base === "out");
+  const verticalPrism = prisms.find((prism) => prism.base === "up" || prism.base === "down");
   return {
-    Sphere: formatNumber(lens?.sphere),
-    Cylinder: formatNumber(lens?.cylinder),
-    Axis: formatNumber(lens?.axis),
-    "Dist(PD)": "",
-    "Near(PD)": "",
-    Form: lens?.product.text ?? "",
-    "I/O": firstPrism?.base === "in" || firstPrism?.base === "out" ? firstPrism.base.toUpperCase() : "",
-    Prism: formatNumber(firstPrism?.amount),
-    "U/D": firstPrism?.base === "up" || firstPrism?.base === "down" ? firstPrism.base.toUpperCase() : "",
-    BSize: "",
-    Base: firstPrism?.base ?? "",
-    "Lens CPT": "",
-    Remarks: lens?.note?.map((note) => note.text).filter(Boolean).join("; ") ?? "",
-    Add: formatNumber(lens?.add),
-    Seght: "",
-    Eye: eye,
-    "Prism Units": firstPrism?.amount === undefined ? "" : "PD",
-    "Prism Pts": formatNumber(firstPrism?.amount),
+    sphere: formatNumber(lens?.sphere),
+    cylinder: formatNumber(lens?.cylinder),
+    axis: formatNumber(lens?.axis),
+    distPd: "",
+    nearPd: "",
+    form: lens?.product.text ?? "",
+    horizontalBase: horizontalPrism?.base.toUpperCase() ?? "",
+    horizontalPrism: formatNumber(horizontalPrism?.amount),
+    verticalBase: verticalPrism?.base.toUpperCase() ?? "",
+    verticalPrism: formatNumber(verticalPrism?.amount),
+    bSize: "",
+    base: [horizontalPrism, verticalPrism].flatMap((prism) => prism?.base ?? []).join(" / "),
+    lensCpt: "",
+    remarks: lens?.note?.map((note) => note.text).filter(Boolean).join("; ") ?? "",
+    add: formatNumber(lens?.add),
+    segHt: "",
+    eye,
+    prismUnits: prisms.length ? "PD" : "",
+    prismPoints: "",
   };
 }
 

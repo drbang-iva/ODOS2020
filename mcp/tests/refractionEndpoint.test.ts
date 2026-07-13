@@ -298,6 +298,7 @@ test("refractive ledger contains only the 14 allowed Phase 0 diagnosis codes", (
     ],
   );
   const astigmatismRows = codes.filter((row) => row.family === "H52.20-");
+  assert.equal(codes.every((row) => row.sourceRefs.length >= 2), true);
   assert.equal(astigmatismRows.length, 4);
   assert.equal(astigmatismRows.every((row) => row.display.startsWith("Unspecified astigmatism")), true);
 });

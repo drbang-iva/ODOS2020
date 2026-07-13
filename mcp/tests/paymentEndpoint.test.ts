@@ -5,6 +5,7 @@ import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/a
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  resolveStaffRoles,
   StaffRoleServiceUnavailableError,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
@@ -56,6 +57,41 @@ test("a partially configured clover fails fast at service start, naming the miss
   assert.throws(
     () => paymentAdapterRegistrationsFromEnv({ CLOVER_BASE_URL: "https://apisandbox.dev.clover.com" }),
     /CLOVER_ACCESS_TOKEN/,
+  );
+});
+
+test("stripe registers from a test secret, defaulting its API base URL", () => {
+  const registrations = paymentAdapterRegistrationsFromEnv({
+    STRIPE_SECRET_KEY: "sk_test_env_fixture",
+  });
+  assert.deepEqual(registrations.find((r) => r.method === "stripe"), {
+    method: "stripe",
+    config: {
+      baseUrl: "https://api.stripe.com",
+      secretKey: "sk_test_env_fixture",
+    },
+  });
+});
+
+test("a Stripe base URL without its secret fails fast at service start", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_BASE_URL: "https://api.stripe.com" }),
+    /STRIPE_SECRET_KEY/,
+  );
+});
+
+test("Stripe env registration rejects live keys and non-HTTPS secret destinations", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_SECRET_KEY: "sk_live_forbidden" }),
+    /test-mode/,
+  );
+  assert.throws(
+    () =>
+      paymentAdapterRegistrationsFromEnv({
+        STRIPE_SECRET_KEY: "sk_test_env_fixture",
+        STRIPE_BASE_URL: "http://stripe-proxy.test",
+      }),
+    /HTTPS/,
   );
 });
 
@@ -256,4 +292,69 @@ test("resolveStaffRole also reads the legacy single accessPolicy binding", async
   const svc = serviceClient({ membership: legacyMembership, policy: frontDeskPolicy() });
   const staff = await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl });
   assert.equal(staff?.role, "front-desk");
+});
+
+test("resolveStaffRoles returns every recognized practice-role tag across the caller's policy bindings", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  const membership: ProjectMembership = {
+    ...MEMBERSHIP_FRONT_DESK,
+    access: [
+      { policy: { reference: "AccessPolicy/ap-clinical" } },
+      { policy: { reference: "AccessPolicy/ap-desk" } },
+    ],
+  };
+  const policies: Record<string, AccessPolicy> = {
+    "ap-clinical": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
+      ] },
+    },
+    "ap-desk": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: "https://example.test/unrelated", code: "front-desk" },
+        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+      ] },
+    },
+  };
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset", entry: [{ resource: membership as unknown as T }] }),
+    read: async <T,>(_resourceType: string, id: string): Promise<T> => policies[id] as unknown as T,
+  };
+
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "staff@example.test",
+    roles: ["clinician", "front-desk", "aesthetics-provider"],
+  });
+});
+
+test("resolveStaffRoles preserves authenticated identity when no role-bearing policy exists", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "roleless@example.test" },
+  });
+  const svc = serviceClient({ membership: null });
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: svc,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "roleless@example.test",
+    roles: [],
+  });
 });

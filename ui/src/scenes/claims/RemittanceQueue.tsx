@@ -67,7 +67,7 @@ export function RemittanceQueue() {
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
           <h1 className="text-2xl font-semibold">Remittance queue</h1>
-          <p className="mt-1 text-sm text-white/50">Claim.MD ERA batches, composed with import and worklist state.</p>
+          <p className="mt-1 text-sm text-white/50">Clearinghouse ERA batches, composed with import and worklist state.</p>
         </div>
         <button type="button" disabled={exporting || loading} onClick={() => void exportRows()} className="rounded border border-blue-400/30 bg-blue-950/30 px-3 py-2 text-xs font-bold text-blue-200 disabled:opacity-50">
           {exporting ? "Exporting…" : "Export CSV"}

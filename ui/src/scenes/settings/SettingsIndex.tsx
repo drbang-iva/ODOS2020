@@ -1,4 +1,12 @@
+import type { PracticeRoleId } from "../../lib/practice-roles";
+
 const SETTINGS_LINKS = [
+  {
+    href: "/settings/staff",
+    title: "Staff",
+    description: "Invite staff and assign practice roles.",
+    practiceAdminOnly: true,
+  },
   {
     href: "/settings/visit-types",
     title: "Visit types",
@@ -20,13 +28,24 @@ const SETTINGS_LINKS = [
     description: "Manage practice-created chart fields and section placement.",
   },
   {
+    href: "/settings/suggested-diagnoses",
+    title: "Suggested diagnoses",
+    description: "Manage the diagnosis catalog and finding-to-diagnosis suggestion mappings.",
+  },
+  {
+    href: "/settings/optical-pricing",
+    title: "Optical pricing",
+    description: "Manage frame, per-lab lens, and contact lens wholesale and retail prices.",
+  },
+  {
     href: "/admin/practice/settings/frames-data",
     title: "Frames data",
     description: "Manage frame catalog and inventory data sources.",
   },
 ] as const;
 
-export function SettingsIndex() {
+export function SettingsIndex({ roles = [] }: { roles?: readonly PracticeRoleId[] }) {
+  const links = SETTINGS_LINKS.filter((link) => !("practiceAdminOnly" in link) || roles.includes("practice-admin"));
   return (
     <main className="min-h-screen bg-[#060610] p-6 text-white">
       <div className="mx-auto max-w-3xl">
@@ -38,7 +57,7 @@ export function SettingsIndex() {
           </p>
         </header>
         <ul aria-label="Settings sections" className="grid gap-2">
-          {SETTINGS_LINKS.map((link) => (
+          {links.map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}

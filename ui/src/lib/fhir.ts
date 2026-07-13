@@ -29,7 +29,7 @@ async function pkce(): Promise<{ verifier: string; challenge: string }> {
   return { verifier, challenge };
 }
 
-async function toError(res: Response): Promise<Error> {
+export async function toError(res: Response): Promise<Error> {
   const body = await res.text();
   let detail = body;
   try {
@@ -188,7 +188,7 @@ function normalizeFhirSearchUrl(url: string): string {
   return url;
 }
 
-function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
+export function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
   return outcome.issue
     ?.map((issue) => {
       const expression = issue.expression?.length

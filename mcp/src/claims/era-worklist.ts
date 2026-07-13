@@ -1,5 +1,5 @@
 import type { Basic, Bundle, CodeableConcept, Extension, Task, TaskInput } from "@medplum/fhirtypes";
-import { CLAIMMD_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
+import { CLAIMMD_ERA_PAYMENT_SYSTEM, STEDI_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import type { ClaimMdEraClaim, ClaimMdEraData } from "./claimmd-fhir.js";
 
 export const ERA_WORKLIST_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-worklist";
@@ -94,12 +94,13 @@ export function buildEraImportRecord(
   eraId: string,
   summary: EraImportSummary,
   existing?: Basic,
+  identifierSystem = CLAIMMD_ERA_PAYMENT_SYSTEM,
 ): Basic {
   return {
     resourceType: "Basic",
     ...(existing?.id ? { id: existing.id } : {}),
     ...(existing?.meta ? { meta: existing.meta } : {}),
-    identifier: [{ system: CLAIMMD_ERA_PAYMENT_SYSTEM, value: eraId }],
+    identifier: [{ system: identifierSystem, value: eraId }],
     code: codedConcept(ERA_IMPORT_CODE_SYSTEM, ERA_IMPORT_CODE, "OSOD ERA import"),
     extension: [{
       url: ERA_IMPORT_SUMMARY_EXTENSION_URL,
@@ -122,8 +123,10 @@ export function parseEraImportRecord(basic: Basic): { eraId: string; summary: Er
     coding.system === ERA_IMPORT_CODE_SYSTEM && coding.code === ERA_IMPORT_CODE,
   );
   if (!code) throw new Error("Basic resource is not an OSOD ERA import record.");
-  const eraId = basic.identifier?.find((identifier) => identifier.system === CLAIMMD_ERA_PAYMENT_SYSTEM)?.value;
-  if (!eraId) throw new Error("ERA import record is missing its Claim.MD ERA identifier.");
+  const eraId = basic.identifier?.find((identifier) =>
+    identifier.system === CLAIMMD_ERA_PAYMENT_SYSTEM || identifier.system === STEDI_ERA_PAYMENT_SYSTEM,
+  )?.value;
+  if (!eraId) throw new Error("ERA import record is missing its clearinghouse ERA identifier.");
   const summary = basic.extension?.find((extension) => extension.url === ERA_IMPORT_SUMMARY_EXTENSION_URL)?.extension;
   if (!summary) throw new Error("ERA import record is missing its summary extension.");
   const payerName = extensionString(summary, "payerName", "valueString");
@@ -148,6 +151,27 @@ export function projectEraBatchReadModel(
   importBundle: Bundle<Basic>,
   openTaskBundle: Bundle<Task>,
 ): EraBatchItem[] {
+  return projectEraRows(claimMdEraListRows(rawEraList), importBundle, openTaskBundle);
+}
+
+export function projectStediEraBatchReadModel(
+  rawEraList: unknown,
+  importBundle: Bundle<Basic>,
+  openTaskBundle: Bundle<Task>,
+): EraBatchItem[] {
+  const rows = ((rawEraList as { items?: unknown[] }).items ?? [])
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .filter((item) => item.direction === "INBOUND"
+      && (item.x12 as any)?.metadata?.transaction?.transactionSetIdentifier === "835")
+    .flatMap((item) => typeof item.transactionId === "string" ? [{ eraId: item.transactionId }] : []);
+  return projectEraRows(rows, importBundle, openTaskBundle);
+}
+
+function projectEraRows(
+  rows: Array<{ eraId: string; payerName?: string; paidDate?: string; paidTotalCents?: number }>,
+  importBundle: Bundle<Basic>,
+  openTaskBundle: Bundle<Task>,
+): EraBatchItem[] {
   const imports = new Map(
     resources(importBundle).map((basic) => {
       const parsed = parseEraImportRecord(basic);
@@ -163,7 +187,7 @@ export function projectEraBatchReadModel(
     if (eraId) openTaskCounts.set(eraId, (openTaskCounts.get(eraId) ?? 0) + 1);
   }
 
-  return claimMdEraListRows(rawEraList).map((row) => {
+  return rows.map((row) => {
     const summary = imports.get(row.eraId);
     const openTaskCount = openTaskCounts.get(row.eraId) ?? 0;
     return {
@@ -231,6 +255,7 @@ export function buildEraWorklistTask(input: {
   patientReference?: string;
   authoredOn: string;
   appealDeadline?: string;
+  identifierSystem?: string;
 }): Task {
   if (input.code !== "era-unmatched" && (!input.claimResponseReference || !input.patientReference)) {
     throw new Error(`${input.code} Task requires ClaimResponse focus and Patient beneficiary references.`);
@@ -262,7 +287,7 @@ export function buildEraWorklistTask(input: {
 
   return {
     resourceType: "Task",
-    groupIdentifier: { system: CLAIMMD_ERA_PAYMENT_SYSTEM, value: eraId },
+    groupIdentifier: { system: input.identifierSystem ?? CLAIMMD_ERA_PAYMENT_SYSTEM, value: eraId },
     status: "ready",
     intent: "order",
     priority: input.code === "era-underpayment" ? "routine" : "urgent",

@@ -1,4 +1,5 @@
 import type { ClaimMdProfessionalClaimPayload } from "./claimmd-fhir.js";
+import type { ClearinghouseAdapter } from "./clearinghouse-adapter.js";
 
 export const CLAIMMD_DEFAULT_BASE_URL = "https://svc.claim.md";
 
@@ -13,7 +14,8 @@ export interface ClaimMdSubmitResult {
   raw: unknown;
 }
 
-export interface ClaimMdAdapter {
+export interface ClaimMdAdapter extends ClearinghouseAdapter {
+  readonly id: "claimmd";
   submitProfessionalClaim(input: { fileName: string; payload: ClaimMdProfessionalClaimPayload }): Promise<ClaimMdSubmitResult>;
   checkEligibility(params: Record<string, string>): Promise<unknown>;
   checkClaimStatus(input: { claimMdClaimId: string; responseId?: string }): Promise<unknown>;
@@ -43,6 +45,7 @@ export function createClaimMdAdapter(opts: {
   const baseUrl = opts.config.baseUrl.replace(/\/$/, "");
 
   return {
+    id: "claimmd",
     async submitProfessionalClaim(input) {
       const form = new FormData();
       form.set("AccountKey", opts.config.accountKey);

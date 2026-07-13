@@ -4,7 +4,7 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { Binary, Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import type { Binary, Bundle, OperationOutcome, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
   buildOsodAuditEventRow,
   type BuildOsodAuditEventInput,
@@ -64,18 +64,35 @@ export interface MedplumClient {
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
   executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  getActiveProjectId(): Promise<string>;
+  invitePractitioner(
+    projectId: string,
+    input: MedplumPractitionerInvite,
+  ): Promise<ProjectMembership>;
   deleteAttempt(rt: string, id: string, reason?: string): Promise<never>;
   nullifyAttempt(rt: string, id: string, reason?: string): Promise<never>;
+}
+
+export interface MedplumPractitionerInvite {
+  resourceType: "Practitioner";
+  email: string;
+  firstName: string;
+  lastName: string;
+  sendEmail: true;
 }
 
 export function createMedplumClient(opts: {
   baseUrl: string;
   accessToken?: string;
+  refreshAuthentication?: () => Promise<void>;
+  now?: () => number;
   audit?: FhirAuditRecorder;
   auditContext?: FhirAuditContext;
 }): MedplumClient {
   const base = opts.baseUrl.replace(/\/$/, "");
   let token: string | undefined = opts.accessToken;
+  let refreshPromise: Promise<void> | undefined;
+  let loginCredentials: { email: string; password: string } | undefined;
   const audit = opts.audit;
   const auditContext = opts.auditContext ?? {};
 
@@ -86,6 +103,33 @@ export function createMedplumClient(opts: {
     };
     if (token) h.Authorization = `Bearer ${token}`;
     return h;
+  }
+
+  async function refresh(): Promise<void> {
+    const operation = opts.refreshAuthentication ?? (loginCredentials
+      ? () => performLogin(loginCredentials!.email, loginCredentials!.password)
+      : undefined);
+    if (!operation) return;
+    refreshPromise ??= operation().finally(() => {
+      refreshPromise = undefined;
+    });
+    await refreshPromise;
+  }
+
+  async function authorizedFetch(
+    url: string | URL,
+    init: () => RequestInit,
+  ): Promise<Response> {
+    const canRefresh = Boolean(opts.refreshAuthentication || loginCredentials);
+    if (canRefresh && tokenExpiresSoon(token, opts.now?.() ?? Date.now())) {
+      await refresh();
+    }
+    let response = await fetch(url, init());
+    if (response.status === 401 && canRefresh) {
+      await refresh();
+      response = await fetch(url, init());
+    }
+    return response;
   }
 
   async function toError(res: Response): Promise<Error> {
@@ -162,38 +206,43 @@ export function createMedplumClient(opts: {
     }
   }
 
+  async function performLogin(email: string, password: string): Promise<void> {
+    await auditedLogin(email, async () => {
+      const verifier = randomBytes(32).toString("base64url");
+      const challenge = createHash("sha256").update(verifier).digest("base64url");
+
+      const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          codeChallenge: challenge,
+          codeChallengeMethod: "S256",
+        }),
+      });
+      if (!loginRes.ok) throw await toError(loginRes);
+      const { code } = (await loginRes.json()) as { login: string; code: string };
+
+      const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          code_verifier: verifier,
+        }),
+      });
+      if (!tokenRes.ok) throw await toError(tokenRes);
+      const { access_token } = (await tokenRes.json()) as { access_token: string };
+      token = access_token;
+    });
+  }
+
   return {
     async login(email: string, password: string): Promise<void> {
-      await auditedLogin(email, async () => {
-        const verifier = randomBytes(32).toString("base64url");
-        const challenge = createHash("sha256").update(verifier).digest("base64url");
-
-        const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            password,
-            codeChallenge: challenge,
-            codeChallengeMethod: "S256",
-          }),
-        });
-        if (!loginRes.ok) throw await toError(loginRes);
-        const { code } = (await loginRes.json()) as { login: string; code: string };
-
-        const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "authorization_code",
-            code,
-            code_verifier: verifier,
-          }),
-        });
-        if (!tokenRes.ok) throw await toError(tokenRes);
-        const { access_token } = (await tokenRes.json()) as { access_token: string };
-        token = access_token;
-      });
+      loginCredentials = { email, password };
+      await performLogin(email, password);
     },
 
     async read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T> {
@@ -207,7 +256,7 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, { headers: headers() });
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({ headers: headers() }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -227,9 +276,9 @@ export function createMedplumClient(opts: {
         },
         async () => {
           const qs = new URLSearchParams(params).toString();
-          const res = await fetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
@@ -258,7 +307,7 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(resolved, { headers: headers() });
+          const res = await authorizedFetch(resolved, () => ({ headers: headers() }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
@@ -282,9 +331,9 @@ export function createMedplumClient(opts: {
         async () => {
           const qs = new URLSearchParams(params).toString();
           const path = id ? `${rt}/${id}/_history` : `${rt}/_history`;
-          const res = await fetch(`${base}/fhir/R4/${path}${qs ? "?" + qs : ""}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${path}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
@@ -306,9 +355,9 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}/_history/${versionId}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}/_history/${versionId}`, () => ({
             headers: headers(),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -332,11 +381,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${r.resourceType}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${r.resourceType}`, () => ({
             method: "POST",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -362,11 +411,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({
             method: "PUT",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -392,7 +441,7 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({
             method: "PATCH",
             headers: {
               ...headers(),
@@ -400,7 +449,7 @@ export function createMedplumClient(opts: {
               ...extraHeaders,
             },
             body: JSON.stringify(operations),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -422,11 +471,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4`, {
+          const res = await authorizedFetch(`${base}/fhir/R4`, () => ({
             method: "POST",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(transactionBundle),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           const responseBundle = (await res.json()) as Bundle;
           if (hasEntryFailure(responseBundle)) {
@@ -435,6 +484,27 @@ export function createMedplumClient(opts: {
           return responseBundle;
         },
       );
+    },
+
+    async getActiveProjectId(): Promise<string> {
+      const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
+      if (!res.ok) throw await toError(res);
+      const body = (await res.json()) as { project?: { id?: string } };
+      if (!body.project?.id) throw new Error("The service session has no active Medplum project.");
+      return body.project.id;
+    },
+
+    async invitePractitioner(
+      projectId: string,
+      input: MedplumPractitionerInvite,
+    ): Promise<ProjectMembership> {
+      const res = await authorizedFetch(`${base}/admin/projects/${encodeURIComponent(projectId)}/invite`, () => ({
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }));
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as ProjectMembership;
     },
 
     async deleteAttempt(rt: string, id: string, reason = "mandate-8-boundary delete-attempt"): Promise<never> {
@@ -477,6 +547,18 @@ export function createMedplumClient(opts: {
 
 function isBinaryResource(resource: Resource): resource is Binary {
   return resource.resourceType === "Binary";
+}
+
+export function tokenExpiresSoon(token: string | undefined, nowMs: number): boolean {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as {
+      exp?: number;
+    };
+    return typeof payload.exp === "number" && payload.exp * 1000 <= nowMs + 5 * 60_000;
+  } catch {
+    return false;
+  }
 }
 
 function patientIdFromSearch(resourceType: string, params: Record<string, string>): string | undefined {

@@ -28,23 +28,40 @@ import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOsodAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
+  logPracticeRoleBootVerification,
+  logSsePracticeRoleBootVerification,
+} from "./authz/boot-role-verification.js";
+import {
   buildOsodAuditEventRow,
   type OsodAuditEventRecord,
   type OsodAuditEventType,
 } from "./authz/osodAudit.js";
 import {
   PRACTICE_ROLE_IDS,
+  OSOD_PRACTICE_ROLE_SYSTEM,
   assertBusinessActionAllowed,
+  getRoleDeclaration,
   type PracticeRoleId,
 } from "./authz/roles.js";
+import { grantPracticeRoles } from "./authz/role-grants.js";
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
+import { registerDeskRoutes } from "./desk/desk-routes.js";
+import { registerStaffInviteRoute } from "./desk/staff-invite.js";
+import { registerClinicRoutes } from "./clinic/clinic-routes.js";
+import { registerOfficeRoutes } from "./office/office-routes.js";
+import {
+  createLabOrderDispatch,
+  labOrderRoutingFromEnv,
+} from "./lab-orders/lab-order-dispatch.js";
+import { registerLabOrderRoutes } from "./lab-orders/lab-order-routes.js";
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  resolveStaffRoles,
 } from "./payments/payment-endpoint.js";
 import {
   handleCupDiscCaptureRequest,
@@ -83,11 +100,21 @@ import {
   handleFindingDefinitionMutationRequest,
 } from "./clinical-graph/finding-definition-endpoint.js";
 import {
+  handleDiagnosisCatalogCreationRequest,
+  handleDiagnosisCatalogListRequest,
+  handleDiagnosisCatalogMutationRequest,
+} from "./clinical-graph/diagnosis-catalog-endpoint.js";
+import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-candidates-endpoint.js";
+import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
+import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
+import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
 import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
+import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
+import { createStediAdapter, stediConfigFromEnv } from "./claims/stedi-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
   handleClaimEraWorklistTaskRequest,
@@ -267,6 +294,7 @@ import {
   type VisualAcuitySectionSaveEntry,
 } from "./fhir/ophthalmology/save-section-bundle.js";
 import type {
+  AccessPolicy,
   AllergyIntolerance,
   Binary,
   BodyStructure,
@@ -285,6 +313,7 @@ import type {
   MedicationStatement,
   Observation,
   Patient,
+  ProjectMembership,
   Procedure,
   Provenance,
   QuestionnaireResponse,
@@ -398,6 +427,7 @@ auditRuntime.startProjectionWorker();
 const fhir = createMedplumClient({
   baseUrl: BASE_URL,
   accessToken: ACCESS_TOKEN,
+  refreshAuthentication: () => authenticateWithMedplum(true),
   audit: auditRuntime,
   auditContext: {
     actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
@@ -5314,6 +5344,7 @@ function isOsodAuditEventType(value: string): value is OsodAuditEventType {
     "role-change",
     "policy-change",
     "projectmembership-lifecycle",
+    "staff.invite",
     "backup-started",
     "backup-completed",
     "restore-started",
@@ -5351,7 +5382,7 @@ function requestIp(req: express.Request): string | undefined {
 }
 
 async function authenticateWithMedplum(force = false): Promise<void> {
-  if (ACCESS_TOKEN) {
+  if (ACCESS_TOKEN && !force) {
     return;
   }
 
@@ -5376,10 +5407,18 @@ async function authenticateWithMedplum(force = false): Promise<void> {
 
 async function main(): Promise<void> {
   const transportMode = process.env.OSOD_MCP_TRANSPORT ?? "stdio";
+  if (transportMode === "sse") {
+    await logSsePracticeRoleBootVerification({
+      authenticate: authenticateWithMedplum,
+      verify: () => logPracticeRoleBootVerification(fhir),
+    });
+  } else if (transportMode === "stdio") {
+    await authenticateWithMedplum();
+    await logPracticeRoleBootVerification(fhir);
+  }
 
   switch (transportMode) {
     case "stdio": {
-      await authenticateWithMedplum();
       const server = createServer();
       const transport = new StdioServerTransport();
       await server.connect(transport);
@@ -5480,15 +5519,27 @@ async function main(): Promise<void> {
       // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
       // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
+      const labOrderRouting = labOrderRoutingFromEnv(process.env);
+      const labOrderDispatch = createLabOrderDispatch([{ vendor: "manual" }], {
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
+      });
       const claimMdConfig = claimMdConfigFromEnv(process.env);
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
+      const stediConfig = stediConfigFromEnv(process.env);
+      const stediAdapter = stediConfig ? createStediAdapter({ config: stediConfig }) : null;
+      const clearinghouseAdapters = {
+        ...(claimMdAdapter ? { claimmd: claimMdAdapter } : {}),
+        ...(stediAdapter ? { stedi: stediAdapter } : {}),
+      };
+      const clearinghouseRouting = clearinghouseRoutingFromEnv(process.env);
       const eraUnderpaymentThresholdCents = eraUnderpaymentThresholdCentsFromEnv(process.env);
       const authenticateStaffRoute = async (header: string | undefined) => {
         const resolved = await resolveStaffRole({
           baseUrl: BASE_URL,
           authHeader: header,
           serviceClient: fhir,
-          refreshServiceClient: () => authenticateWithMedplum(true),
         });
         if (!resolved || !header) {
           return null;
@@ -5517,6 +5568,11 @@ async function main(): Promise<void> {
         recordAudit: async (row: OsodAuditEventRecord) => {
           await auditRuntime.record(row, () => undefined);
         },
+      };
+      const labOrderHandlerDeps = {
+        authenticate: authenticateStaffRoute,
+        dispatch: labOrderDispatch,
+        routingDefaults: labOrderRouting,
       };
 
       app.post("/clinical-graph/patients/:patientId/assign-provider", async (req, res) => {
@@ -5582,6 +5638,90 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/diagnosis-catalog", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogListRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/diagnosis-catalog failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/diagnosis-catalog", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogCreationRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: POST /clinical-graph/diagnosis-catalog failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog creation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/diagnosis-catalog/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCatalogMutationRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/diagnosis-catalog/:stableKey failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-candidates", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCandidatesRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis candidates route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-completeness", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisCompletenessRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis completeness route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis completeness route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/diagnosis-picks", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisPickRequest(
+            { authenticate: authenticateStaffRoute },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: encounter diagnosis pick route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis pick route failed" });
         }
       });
 
@@ -5916,7 +6056,6 @@ async function main(): Promise<void> {
                   baseUrl: BASE_URL,
                   authHeader: header,
                   serviceClient: fhir,
-                  refreshServiceClient: () => authenticateWithMedplum(true),
                 });
                 if (!resolved) {
                   return null;
@@ -5952,6 +6091,10 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         handlers: paymentCreditDeps,
       });
+      registerLabOrderRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        handlers: labOrderHandlerDeps,
+      });
       registerPatientInsuranceRoutes(app, authenticateWithMedplum, {
         authenticate: authenticateStaffRoute,
         recordAudit: async (row) => {
@@ -5968,6 +6111,85 @@ async function main(): Promise<void> {
           },
         },
         payments: paymentCreditDeps,
+        statements: {
+          authenticate: authenticateStaffRoute,
+        },
+      });
+      registerDeskRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        resolveRoles: async (header) => {
+          const resolved = await resolveStaffRoles({
+            baseUrl: BASE_URL,
+            authHeader: header,
+            serviceClient: fhir,
+          });
+          return resolved ? { email: resolved.email, roles: resolved.roles } : null;
+        },
+        terminalMode: process.env.OSOD_PAYMENT_TERMINAL_MODE
+          ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"
+            : paymentDispatch.methods().includes("clover") ? "LIVE"
+              : "NOT CONFIGURED"),
+        timeZone: process.env.OSOD_TIMEZONE,
+      });
+      registerStaffInviteRoute(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: async (header) => {
+          const resolved = await resolveStaffRoles({
+            baseUrl: BASE_URL,
+            authHeader: header,
+            serviceClient: fhir,
+          });
+          return resolved ? { staffReference: resolved.staffReference, roles: resolved.roles } : null;
+        },
+        invite: async (input) => {
+          const projectId = await fhir.getActiveProjectId();
+          return fhir.invitePractitioner(projectId, {
+            resourceType: "Practitioner",
+            ...input,
+            sendEmail: true,
+          });
+        },
+        grantRole: async (membership, email, roleId) => {
+          await grantPracticeRoles(
+            { target: `ProjectMembership/${membership.id ?? "invite-response"}`, roles: [roleId], primaryRole: roleId },
+            {
+              resolveTarget: async () => ({ email, membership }),
+              resolvePolicy: async (role) => {
+                const expectedName = `OSOD ${getRoleDeclaration(role).display}`;
+                const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
+                const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
+                  (policy): policy is AccessPolicy =>
+                    policy?.name === expectedName &&
+                    Boolean(policy.meta?.tag?.some(
+                      (tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM && tag.code === role,
+                    )),
+                );
+                if (matches.length !== 1) {
+                  throw new Error(`Expected one tagged ${role} AccessPolicy; found ${matches.length}.`);
+                }
+                return matches[0];
+              },
+              patchMembership: (id, operations, versionId) =>
+                fhir.patch<ProjectMembership>("ProjectMembership", id, operations, {
+                  "If-Match": `W/\"${versionId}\"`,
+                }),
+              recordMembershipChange: async (_target, operation) => operation(),
+            },
+          );
+        },
+        recordAudit: async (row) => {
+          await auditRuntime.record(row, () => undefined);
+        },
+      });
+      registerClinicRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        timeZone: process.env.OSOD_TIMEZONE,
+      });
+      registerOfficeRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
       });
 
       app.post("/claims/submit", async (req, res) => {
@@ -5977,6 +6199,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -5999,6 +6223,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6127,6 +6353,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6149,6 +6377,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               eraUnderpaymentThresholdCents,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
@@ -6172,6 +6402,8 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateStaffRoute,
               adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },

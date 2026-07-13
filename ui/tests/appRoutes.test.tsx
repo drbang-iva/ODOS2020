@@ -14,6 +14,15 @@ test("the Accounts Receivable dashboard UI route reaches the dashboard without r
   assert.match(html, /Loading accounts receivable/);
 });
 
+test("the Statements route reaches the printable balance-forward scene", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/billing/statements" />,
+  );
+  assert.match(html, /Statements/);
+  assert.match(html, /Run statements/);
+  assert.match(html, /No mail or email transport is connected/);
+});
+
 test("the settings index route reaches the shared settings stub", () => {
   const html = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/settings" />);
   assert.match(html, /Practice Admin/);
@@ -23,6 +32,28 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Floor config/);
   assert.match(html, /Vision plan templates/);
   assert.match(html, /Visit types/);
+  assert.match(html, /Suggested diagnoses/);
+  assert.match(html, /Optical pricing/);
+});
+
+test("the optical-pricing route reaches all three shared catalog sections", () => {
+  const html = renderToStaticMarkup(
+    <RoleProvider>
+      <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" />
+    </RoleProvider>,
+  );
+  assert.match(html, /Optical pricing/);
+  assert.match(html, /Frame pricing/);
+  assert.match(html, /Lens pricing/);
+  assert.match(html, /Contact lens pricing/);
+  assert.match(html, /Read only. Practice-admin access is required/);
+});
+
+test("the suggested-diagnoses route reaches the shared catalog editor scene", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/suggested-diagnoses" />,
+  );
+  assert.match(html, /Loading diagnosis settings/);
 });
 
 test("the visit-type route reaches the mixed singleton and resource settings scene", () => {
@@ -63,6 +94,27 @@ test("the new-patient route reaches the front-desk registration scene", () => {
   assert.match(html, /Front desk/);
   assert.match(html, /New patient/);
   assert.match(html, /Create patient/);
+});
+
+test("the Desk home and existing front-desk cockpit remain separate routes", () => {
+  const desk = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/desk" />);
+  const cockpit = renderToStaticMarkup(
+    <RoleProvider><RouteSwitch view={{ kind: "picker" }} path="/frontdesk" /></RoleProvider>,
+  );
+  assert.match(desk, /The Desk/);
+  assert.match(desk, /Customize/);
+  assert.match(cockpit, /Front desk/);
+  assert.match(cockpit, /schedule/);
+  assert.doesNotMatch(cockpit, /The Desk/);
+});
+
+test("the Clinic route opens the real Clinic home while the patient picker stays reachable", () => {
+  const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/clinic" />);
+  const picker = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/clinic/patients" />);
+  assert.match(clinic, /The Clinic/);
+  assert.match(clinic, /Today&#x27;s flow/);
+  assert.match(picker, /Patient Picker/);
+  assert.doesNotMatch(clinic, /The Desk/);
 });
 
 test("insurance screens expose the MCP base URL as a literal Vite environment reference", () => {

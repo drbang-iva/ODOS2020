@@ -29,7 +29,10 @@ const RX: VisionPrescription = {
       cylinder: -0.5,
       axis: 175,
       add: 2,
-      prism: [{ amount: 1.5, base: "in" }],
+      prism: [
+        { amount: 1.5, base: "in" },
+        { amount: 0.5, base: "up" },
+      ],
     },
   ],
 };
@@ -52,6 +55,8 @@ const INPUT: BuildLabOrderInput = {
     specialInstructions: "Edge and mount",
     commentsToLab: "Call before substitutions",
   },
+  frameSource: 3,
+  frameOwnership: "in-house",
   fitting: { od: { distPd: 31, nearPd: 28, segHeight: 18 }, os: { distPd: 30.5, nearPd: 27.5, segHeight: 18 } },
   frame: {
     brand: "Walkthrough",

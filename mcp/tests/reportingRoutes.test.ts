@@ -51,6 +51,27 @@ test("AR dashboard and every export route preserve their underlying 401 and 403 
   }
 });
 
+test("statement list, generate-one, and batch routes use the same authenticated reporting boundary", async () => {
+  const fixture = await server();
+  try {
+    const list = await fetch(`${fixture.baseUrl}/statements`, { headers: { Authorization: "Bearer good" } });
+    assert.equal(list.status, 200);
+    assert.deepEqual(await list.json(), { items: [] });
+    const generate = await fetch(`${fixture.baseUrl}/statements/generate`, {
+      method: "POST",
+      headers: { Authorization: "Bearer good", "Content-Type": "application/json" },
+      body: JSON.stringify({ patientReference: "Patient/patient-1" }),
+    });
+    assert.equal(generate.status, 200);
+    const run = await fetch(`${fixture.baseUrl}/statements/run`, { method: "POST", headers: { Authorization: "Bearer good" } });
+    assert.equal(run.status, 200);
+    assert.equal((await fetch(`${fixture.baseUrl}/statements`)).status, 401);
+    assert.equal((await fetch(`${fixture.baseUrl}/statements`, { headers: { Authorization: "Bearer forbidden" } })).status, 403);
+  } finally {
+    await fixture.close();
+  }
+});
+
 async function server() {
   let serviceAuthCalls = 0;
   const fhir = {
@@ -58,6 +79,11 @@ async function server() {
     read: async <T extends Resource>(): Promise<T> => { throw new Error("not reached"); },
     update: async <T extends Resource>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
+    executeTransaction: async (bundle: Bundle): Promise<Bundle> => ({
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: (bundle.entry ?? []).map((_, index) => ({ response: { status: "201", location: `Task/statement-${index + 1}/_history/1` } })),
+    }),
   };
   const authenticate = async (header: string | undefined) => header === "Bearer good"
     ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, fhir }
@@ -65,6 +91,7 @@ async function server() {
       ? { staffReference: "Practitioner/staff-2", actorRole: "clinician" as const, fhir }
       : null;
   const app = express();
+  app.use(express.json());
   registerReportingRoutes(app, {
     authenticateService: async () => { serviceAuthCalls += 1; },
     claims: {
@@ -76,6 +103,11 @@ async function server() {
     payments: {
       authenticate,
       now: () => "2026-07-10T12:00:00.000Z",
+    },
+    statements: {
+      authenticate,
+      now: () => "2026-07-10T12:00:00.000Z",
+      generateId: (() => { let id = 0; return () => `statement-${++id}`; })(),
     },
   });
   const listener = app.listen(0, "127.0.0.1");

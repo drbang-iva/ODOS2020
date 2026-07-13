@@ -4,6 +4,7 @@ import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
+import { DiagnosisPicker } from "./DiagnosisPicker";
 
 interface Props {
   patientReference: string;
@@ -40,15 +41,6 @@ interface DiagnosisOption {
   display: string;
   family: string;
   laterality: string;
-}
-
-interface Suggestion {
-  id: string;
-  code: string;
-  display: string;
-  family: string;
-  explanation: string;
-  visitState: string;
 }
 
 interface EyeState {
@@ -97,8 +89,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const [definitionLoading, setDefinitionLoading] = useState(true);
   const [definitionRefresh, setDefinitionRefresh] = useState(0);
   const [blocks, setBlocks] = useState<BlockState[]>(() => [emptyBlock(), emptyBlock()]);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [suggestionSelections, setSuggestionSelections] = useState<Record<string, string>>({});
+  const [savedObservationReferences, setSavedObservationReferences] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
@@ -146,6 +137,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
 
   function updateBlock(blockId: string, next: Partial<BlockState>) {
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, ...next } : block));
+    clearSavedObservationReferences(blockId);
   }
 
   function updateEye(blockId: string, eye: Eye, next: Partial<EyeState>) {
@@ -153,6 +145,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       block.id === blockId
         ? { ...block, [eye]: { ...block[eye], ...next } }
         : block));
+    clearSavedObservationReferences(blockId);
   }
 
   function addBlock() {
@@ -163,17 +156,32 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   function copyOdToOs(blockId: string) {
     setBlocks((current) => current.map((block) =>
       block.id === blockId ? { ...block, OS: { ...block.OD } } : block));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function removeBlock(blockId: string) {
+    setBlocks((current) => current.filter((candidate) => candidate.id !== blockId));
+    clearSavedObservationReferences(blockId);
+  }
+
+  function clearSavedObservationReferences(blockId: string) {
+    setSavedObservationReferences((current) => {
+      if (!(blockId in current)) return current;
+      const next = { ...current };
+      delete next[blockId];
+      return next;
+    });
   }
 
   async function save() {
-    let payloadBlocks: BlockPayload[];
+    let payloadEntries: Array<{ blockId: string; payload: BlockPayload }>;
     try {
-      payloadBlocks = buildPayload(blocks);
+      payloadEntries = buildPayload(blocks);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       return;
     }
-    if (payloadBlocks.length === 0) {
+    if (payloadEntries.length === 0) {
       setError("Enter at least one refraction block before saving.");
       return;
     }
@@ -184,20 +192,23 @@ export function RefractionSection({ patientReference, encounterReference, onSave
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/refraction`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadBlocks }),
+        body: JSON.stringify({ patientReference, encounterReference, sourceType, blocks: payloadEntries.map((entry) => entry.payload) }),
       });
       const body = (await response.json()) as {
-        blocks?: unknown[];
-        suggestions?: Suggestion[];
+        blocks?: Array<{ eyes?: Partial<Record<Eye, { observationReference?: string }>> }>;
         error?: string;
       };
       if (!response.ok) {
         throw new Error(body.error ?? `Refraction save failed: ${response.status}`);
       }
-      const nextSuggestions = body.suggestions ?? [];
-      setSuggestions(nextSuggestions);
-      setSuggestionSelections(Object.fromEntries(nextSuggestions.map((suggestion) => [suggestion.id, suggestion.code])));
-      const savedBlockCount = body.blocks?.length ?? payloadBlocks.length;
+      setSavedObservationReferences(Object.fromEntries((body.blocks ?? []).flatMap((savedBlock, index) => {
+        const blockId = payloadEntries[index]?.blockId;
+        return blockId ? [[
+          blockId,
+          Object.values(savedBlock.eyes ?? {}).flatMap((eye) => eye?.observationReference ? [eye.observationReference] : []),
+        ]] : [];
+      })));
+      const savedBlockCount = body.blocks?.length ?? payloadEntries.length;
       const status = {
         completed: true,
         summary: `${savedBlockCount} refraction block${savedBlockCount === 1 ? "" : "s"} saved`,
@@ -283,7 +294,7 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   {blocks.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => setBlocks((current) => current.filter((candidate) => candidate.id !== block.id))}
+                      onClick={() => removeBlock(block.id)}
                       className="rounded border border-white/10 px-2 py-1 text-xs text-white/45 hover:border-red-400/40 hover:text-red-100"
                     >
                       Remove
@@ -359,41 +370,16 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                   ))}
                 </div>
               </div>
+              <div className="px-4 pb-4">
+                <DiagnosisPicker
+                  encounterReference={encounterReference}
+                  observationReferences={savedObservationReferences[block.id] ?? []}
+                  findingDefinitionKey="refraction"
+                />
+              </div>
             </div>
           ))}
         </div>
-
-        {suggestions.length > 0 && definition && (
-          <div className="mt-6 rounded border border-amber-300/25 bg-amber-400/[0.06] p-4">
-            <div className="text-sm font-semibold text-amber-100">Non-committal diagnosis suggestions</div>
-            <div className="mt-1 text-xs text-amber-100/60">
-              Review, override, or reject each suggestion. No diagnosis is confirmed by this list.
-            </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {suggestions.map((suggestion) => {
-                const options = definition.diagnosisOptions.filter((option) => option.family === suggestion.family);
-                return (
-                  <label key={suggestion.id} className="rounded border border-white/10 bg-bg-deep/60 p-3">
-                    <span className="block text-sm text-white/80">{suggestion.explanation}</span>
-                    <select
-                      value={suggestionSelections[suggestion.id] ?? ""}
-                      onChange={(event) => setSuggestionSelections((current) => ({
-                        ...current,
-                        [suggestion.id]: event.target.value,
-                      }))}
-                      className="mt-3 h-10 w-full rounded border border-amber-300/25 bg-bg-deep px-3 text-sm text-white outline-none focus:border-amber-300/60"
-                    >
-                      <option value="">Reject suggestion</option>
-                      {options.map((option) => (
-                        <option key={option.code} value={option.code}>{option.code} — {option.display}</option>
-                      ))}
-                    </select>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         <SectionFooter error={error} saved={saved} saving={saving || definitionLoading} onSave={save} />
       </div>
@@ -464,7 +450,7 @@ function emptyEye(): EyeState {
   };
 }
 
-function buildPayload(blocks: BlockState[]): BlockPayload[] {
+function buildPayload(blocks: BlockState[]): Array<{ blockId: string; payload: BlockPayload }> {
   return blocks.flatMap((block, blockIndex) => {
     const eyes = Object.fromEntries(EYES.flatMap((eye) => {
       const row = block[eye];
@@ -487,10 +473,13 @@ function buildPayload(blocks: BlockState[]): BlockPayload[] {
       throw new Error(`Block ${blockIndex + 1} requires a refraction type.`);
     }
     return [{
-      type: block.type,
-      ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
-      ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
-      ...eyes,
+      blockId: block.id,
+      payload: {
+        type: block.type,
+        ...(block.purpose.trim() ? { purpose: block.purpose.trim() } : {}),
+        ...(block.remarks.trim() ? { remarks: block.remarks.trim() } : {}),
+        ...eyes,
+      },
     }];
   });
 }

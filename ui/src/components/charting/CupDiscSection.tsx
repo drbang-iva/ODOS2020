@@ -3,6 +3,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
+import { DiagnosisPicker } from "./DiagnosisPicker";
 
 interface Props {
   patientReference: string;
@@ -146,6 +147,11 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
       ...current,
       [eye]: { ...current[eye], ...next },
     }));
+    setResults((current) => {
+      const nextResults = { ...current };
+      delete nextResults[eye];
+      return nextResults;
+    });
   }
 
   function toggleDescriptor(eye: Eye, code: string) {
@@ -335,15 +341,22 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
                 </div>
 
                 {result && (
-                  <div className={[
-                    "mt-4 rounded border px-3 py-2 text-sm",
-                    result.riskTier === "normal"
-                      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
-                      : result.riskTier === "high"
-                        ? "border-red-400/35 bg-red-500/10 text-red-100"
-                        : "border-amber-300/35 bg-amber-400/10 text-amber-100",
-                  ].join(" ")}>
-                    {resultBadgeText(result)}
+                  <div>
+                    <div className={[
+                      "mt-4 rounded border px-3 py-2 text-sm",
+                      result.riskTier === "normal"
+                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-100"
+                        : result.riskTier === "high"
+                          ? "border-red-400/35 bg-red-500/10 text-red-100"
+                          : "border-amber-300/35 bg-amber-400/10 text-amber-100",
+                    ].join(" ")}>
+                      {resultBadgeText(result)}
+                    </div>
+                    <DiagnosisPicker
+                      encounterReference={encounterReference}
+                      observationReferences={[result.observationReference]}
+                      findingDefinitionKey="cup_disc_ratio"
+                    />
                   </div>
                 )}
               </div>

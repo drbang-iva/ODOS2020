@@ -1,0 +1,59 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "osod-source-claim",
+  "url": "https://osod.dev/fhir/StructureDefinition/osod-source-claim",
+  "version": "claim-invoice-seam-phase-a",
+  "name": "OSODInvoiceSourceClaim",
+  "title": "OSOD Invoice Source Claim",
+  "status": "active",
+  "date": "2026-07-12",
+  "publisher": "OSOD",
+  "description": "Claim whose posted patient responsibility produced an Invoice.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Invoice"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Source Claim for patient responsibility",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-source-claim"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Claim"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

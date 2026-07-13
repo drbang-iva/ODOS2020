@@ -337,6 +337,6 @@ function powerField(display: string, minimum: number, maximum: number) {
   return { display, type: "quarter-diopter-select", minimum, maximum, step: 0.25, unit: "D" };
 }
 
-function decimalField(display: string, minimum: number, maximum: number, precision: number, unit: string) {
+export function decimalField(display: string, minimum: number, maximum: number, precision: number, unit: string) {
   return { display, type: "decimal-input", minimum, maximum, precision, unit };
 }

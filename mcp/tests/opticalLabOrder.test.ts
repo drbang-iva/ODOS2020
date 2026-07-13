@@ -19,7 +19,10 @@ const RX: VisionPrescription = {
       cylinder: -0.5,
       axis: 175,
       add: 2.0,
-      prism: [{ amount: 1.5, base: "in" }],
+      prism: [
+        { amount: 1.5, base: "in" },
+        { amount: 0.5, base: "up" },
+      ],
     },
   ],
 };
@@ -37,6 +40,8 @@ const BASE = {
     lensMaterial: "Polycarbonate",
     treatments: ["AR", "UV"],
   },
+  frameSource: 3,
+  frameOwnership: "in-house",
 } as const;
 
 test("buildLabOrder assembles header, OD/OS Rx from the VisionPrescription, lens spec, and frame", () => {
@@ -54,6 +59,8 @@ test("buildLabOrder assembles header, OD/OS Rx from the VisionPrescription, lens
       treatments: ["AR", "UV"],
       specialInstructions: "Rush",
     },
+    frameSource: 3,
+    frameOwnership: "in-house",
     frame: { brand: "Walkthrough", model: "Wayfarer", color: "Black", frameType: "Zyl", source: "frame-to-come" },
   });
 
@@ -68,13 +75,15 @@ test("buildLabOrder assembles header, OD/OS Rx from the VisionPrescription, lens
   assert.equal(order.rx.od.cylinder, -0.75);
   assert.equal(order.rx.od.axis, 180);
   assert.equal(order.rx.od.add, 2.0);
-  assert.equal(order.rx.od.prism, undefined);
+  assert.equal(order.rx.od.prisms, undefined);
 
   // OS (left), incl. prism
   assert.equal(order.rx.os.sphere, -2.5);
   assert.equal(order.rx.os.cylinder, -0.5);
-  assert.equal(order.rx.os.prism, 1.5);
-  assert.equal(order.rx.os.base, "in");
+  assert.deepEqual(order.rx.os.prisms, [
+    { amount: 1.5, base: "in" },
+    { amount: 0.5, base: "up" },
+  ]);
 
   // lens spec (caller-supplied, order-level)
   assert.equal(order.lensSpec.jobType, "Frame To Come");
@@ -112,6 +121,18 @@ test("buildLabOrder requires orderId, patientName, and lab", () => {
   assert.throws(() => buildLabOrder({ ...BASE, lab: "" }), /lab/i);
 });
 
+test("DCS FSRC accepts only 0, 1, 3, and 4 with ownership required exactly for 3 and 4", () => {
+  assert.equal(buildLabOrder({ ...BASE, frameSource: 0, frameOwnership: undefined }).frameSource, 0);
+  assert.equal(buildLabOrder({ ...BASE, frameSource: 1, frameOwnership: undefined }).frameSource, 1);
+  assert.equal(buildLabOrder({ ...BASE, frameSource: 3, frameOwnership: "patients-own" }).frameOwnership, "patients-own");
+  assert.equal(buildLabOrder({ ...BASE, frameSource: 4, frameOwnership: "in-house" }).frameOwnership, "in-house");
+  assert.throws(() => buildLabOrder({ ...BASE, frameSource: 3, frameOwnership: undefined }), /ownership.*required/i);
+  assert.throws(() => buildLabOrder({ ...BASE, frameSource: 4, frameOwnership: undefined }), /ownership.*required/i);
+  assert.throws(() => buildLabOrder({ ...BASE, frameSource: 0, frameOwnership: "in-house" }), /ownership.*absent/i);
+  assert.throws(() => buildLabOrder({ ...BASE, frameSource: 1, frameOwnership: "patients-own" }), /ownership.*absent/i);
+  assert.throws(() => buildLabOrder({ ...BASE, frameSource: 2 as 0 }), /0, 1, 3, or 4/);
+});
+
 test("buildLabOrder requires at least one eye's Rx in the VisionPrescription", () => {
   assert.throws(
     () => buildLabOrder({ ...BASE, visionPrescription: { ...RX, lensSpecification: [] } }),
@@ -147,10 +168,13 @@ test("renderLabOrderSheet renders every group with its values", () => {
   assert.match(html, /Wanda Walkthrough/); // patient
   assert.match(html, /-2\.25/); // OD sphere from the VisionPrescription
   assert.match(html, /180/); // OD axis
+  assert.match(html, /1\.5 in \/ 0\.5 up/); // compound OS prism
   assert.match(html, /Frame To Come/); // job type
   assert.match(html, /Polycarbonate/); // material
   assert.match(html, /AR/); // a treatment
   assert.match(html, /Wayfarer/); // frame model
+  assert.match(html, /FSRC:<\/b> 3 — Frame-to-come/);
+  assert.match(html, /Ownership:<\/b> in-house/);
   assert.match(html, /<table|<section|<div/i); // is HTML
 });
 

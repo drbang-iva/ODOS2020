@@ -112,13 +112,24 @@ const CREATE_READ_INTERACTIONS: FhirInteraction[] = ["create", "read", "search",
 const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
 
 /**
- * Dispensary order + financial resources granted to front-desk at practice scope (v0.6c payments
- * authorization model, decision 2026-07-05 §2). Practice-scope not patient-compartment: the
- * dispensary is a walk-up counter, and PaymentReconciliation is not a Patient-compartment resource.
+ * Dispensary catalog, inventory, order + financial resources granted to front-desk at practice
+ * scope (v0.6c payments authorization model, decision 2026-07-05 §2). Practice-scope not
+ * patient-compartment: the dispensary is a walk-up counter, and PaymentReconciliation is not a
+ * Patient-compartment resource. Frame inventory is code-fenced from every other Basic resource.
  * PaymentReconciliation stays create/read-only for staff; Phase 6a mutations cross the guarded
  * osod-core lifecycle handlers. Task/Invoice also need update (status advance / manual cash).
  */
 const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "DeviceDefinition", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+    },
+  },
   { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "ChargeItem", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "PaymentReconciliation", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -146,6 +157,21 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
       kind: "practice-search",
       criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
     },
+  },
+];
+
+const OFFICE_CHANNEL_RESOURCE_RULES: OsodResourceRule[] = [
+  { resourceType: "Practitioner", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  { resourceType: "PractitionerRole", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
+  {
+    resourceType: "Communication",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "practice-search", criteria: "Communication?category=https://osod.dev/fhir/CodeSystem/communication-category|internal-office" },
+  },
+  {
+    resourceType: "Provenance",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: { kind: "practice-search", criteria: "Provenance?activity=https://osod.dev/fhir/CodeSystem/office-message-activity|acknowledged" },
   },
 ];
 
@@ -299,6 +325,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         interactions: ["read", "vread"],
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
+      ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],
   },
   "front-desk": {
@@ -323,6 +350,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
       ...SCHEDULING_RESOURCE_RULES,
       ...DISPENSARY_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
+      ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],
   },
   auditor: {

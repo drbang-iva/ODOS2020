@@ -1,0 +1,95 @@
+.odos-patient-overview {
+  --overview-ground: #0a0e1a;
+  --overview-surface: #121a2e;
+  --overview-surface-2: #17203a;
+  --overview-line: rgba(154, 178, 224, 0.13);
+  --overview-line-2: rgba(154, 178, 224, 0.22);
+  --overview-text: #e9edf6;
+  --overview-muted: #97a1b8;
+  --overview-faint: #5e6880;
+  --overview-gold: #e0bc7e;
+  --overview-emerald: #2fbf8f;
+  --overview-amethyst: #9d71f0;
+
+  min-height: 100vh;
+  background: var(--overview-ground);
+  color: var(--overview-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+.odos-overview-body { position: relative; max-width: 1500px; margin: 0 auto; padding: 28px 30px 48px; }
+.odos-overview-crumb { display: flex; gap: 8px; margin-bottom: 12px; color: var(--overview-faint); font-size: 12px; letter-spacing: 0.04em; }
+.odos-overview-crumb a { color: var(--overview-muted); text-decoration: none; }
+.odos-overview-head { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+.odos-overview-head h1 { margin: 0; font-family: Didot, Georgia, serif; font-size: 30px; font-weight: 400; }
+.odos-overview-meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--overview-faint); font-size: 12.5px; }
+.odos-overview-meta b { color: var(--overview-muted); font-weight: 500; }
+.odos-overview-actions { margin-left: auto; }
+.odos-overview-button { padding: 8px 16px; border: 1px solid var(--overview-line-2); border-radius: 10px; background: none; color: var(--overview-muted); font: inherit; font-size: 12.5px; cursor: pointer; }
+.odos-overview-button.is-primary { border-color: rgba(47, 191, 143, 0.5); background: rgba(47, 191, 143, 0.1); color: var(--overview-emerald); }
+
+.odos-sticky-note { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; padding: 11px 16px; border: 1px solid rgba(224, 188, 126, 0.35); border-radius: 14px; background: linear-gradient(180deg, rgba(224, 188, 126, 0.09), rgba(224, 188, 126, 0.05)); }
+.odos-sticky-tag { flex: none; color: var(--overview-gold); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
+.odos-sticky-text, .odos-sticky-empty { font-size: 13.5px; }
+.odos-sticky-empty { color: var(--overview-faint); font-style: italic; }
+.odos-sticky-stamp { margin-left: auto; color: var(--overview-faint); font-size: 10.5px; white-space: nowrap; }
+.odos-sticky-note button { border: 0; background: none; color: var(--overview-gold); font: inherit; font-size: 11.5px; cursor: pointer; }
+.odos-sticky-note button:disabled { opacity: 0.45; cursor: default; }
+.odos-sticky-note textarea { flex: 1; min-height: 62px; resize: vertical; border: 1px solid rgba(224, 188, 126, 0.35); border-radius: 8px; background: rgba(10, 14, 26, 0.7); color: var(--overview-text); padding: 8px 10px; font: inherit; font-size: 13px; }
+.odos-sticky-history { margin: -7px 0 18px; padding: 14px 16px; border: 1px solid rgba(224, 188, 126, 0.25); border-radius: 12px; background: var(--overview-surface); }
+.odos-sticky-history > div { display: flex; justify-content: space-between; align-items: center; }
+.odos-sticky-history h2 { margin: 0; color: var(--overview-gold); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.odos-sticky-history button { border: 0; background: none; color: var(--overview-muted); cursor: pointer; }
+.odos-sticky-history article + article { border-top: 1px solid var(--overview-line); }
+.odos-sticky-history article { padding: 8px 0; }
+.odos-sticky-history article p { margin: 0 0 3px; font-size: 12.5px; }
+.odos-sticky-history article small { color: var(--overview-faint); }
+
+.odos-overview-grid { display: grid; grid-template-columns: minmax(300px, 5fr) minmax(520px, 7fr); gap: 18px; }
+.odos-overview-card { position: relative; overflow: hidden; padding: 18px 20px 14px; border: 1px solid var(--overview-line); border-radius: 18px; background: linear-gradient(180deg, rgba(23, 32, 58, 0.75), rgba(18, 26, 46, 0.85)); }
+.odos-overview-edge { position: absolute; top: 0; left: 18px; right: 18px; height: 2px; }
+.odos-snapshot-card .odos-overview-edge { background: linear-gradient(90deg, var(--overview-emerald), transparent 70%); }
+.odos-ledger-card .odos-overview-edge { background: linear-gradient(90deg, var(--overview-amethyst), transparent 70%); }
+.odos-overview-kicker { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--overview-muted); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; }
+.odos-overview-kicker span { color: #c1a3f7; letter-spacing: normal; text-transform: none; }
+.odos-snapshot-card h2 { margin: 12px 0 6px; color: var(--overview-muted); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
+.odos-snapshot-card section:first-of-type h2 { margin-top: 0; }
+.odos-snapshot-card ul { margin: 0; padding: 0; list-style: none; }
+.odos-snapshot-card li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; font-size: 12.5px; line-height: 1.5; }
+.odos-snapshot-card li small { margin-left: auto; color: var(--overview-faint); font-size: 11px; text-align: right; }
+.odos-overview-none, .odos-overview-loading { color: var(--overview-faint); font-size: 12px; font-style: italic; }
+.odos-overview-error { padding: 10px 12px; border: 1px solid rgba(226, 92, 106, 0.45); border-radius: 10px; color: #f2a5ad; }
+
+.odos-ledger-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.odos-ledger-filters > button, .odos-ledger-filters select { padding: 5px 12px; border: 1px solid var(--overview-line-2); border-radius: 999px; background: none; color: var(--overview-muted); font: inherit; font-size: 11.5px; cursor: pointer; }
+.odos-ledger-filters > button.is-active { border-color: rgba(157, 113, 240, 0.55); background: rgba(157, 113, 240, 0.12); color: #c1a3f7; }
+.odos-ledger-filters label { display: flex; align-items: center; gap: 6px; color: var(--overview-faint); font-size: 10.5px; }
+.odos-ledger-filters select { max-width: 190px; border-radius: 8px; background: var(--overview-ground); }
+.odos-ledger-query-note { margin-left: auto; color: var(--overview-faint); font-size: 10.5px; }
+.odos-visit-row { display: grid; grid-template-columns: 92px 1fr; gap: 4px 16px; padding: 13px 8px; border-radius: 12px; }
+.odos-visit-row + .odos-visit-row { border-top: 1px solid var(--overview-line); }
+.odos-visit-row:hover { background: rgba(154, 178, 224, 0.04); }
+.odos-visit-row time { font-family: Didot, Georgia, serif; font-size: 15px; line-height: 1.25; }
+.odos-visit-row time small { display: block; color: var(--overview-faint); font-family: -apple-system, "SF Pro Text", sans-serif; font-size: 10.5px; letter-spacing: 0.04em; }
+.odos-visit-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--overview-muted); font-size: 12px; }
+.odos-visit-type { padding: 3px 8px; border-radius: 6px; background: rgba(76, 127, 232, 0.13); color: #8fb0f5; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.odos-visit-head .is-final, .odos-visit-head .is-preliminary { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.odos-visit-head .is-final { color: var(--overview-emerald); }
+.odos-visit-head .is-preliminary { color: #e7a94c; }
+.odos-dx-row { grid-column: 2; display: flex; gap: 7px; flex-wrap: wrap; margin-top: 5px; }
+.odos-dx-chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid rgba(157, 113, 240, 0.3); border-radius: 999px; background: rgba(157, 113, 240, 0.08); color: #d9c8fb; font: inherit; font-size: 11.5px; cursor: pointer; }
+.odos-dx-chip small { padding: 1px 5px; border: 1px solid var(--overview-line); border-radius: 5px; color: var(--overview-faint); font-size: 9.5px; letter-spacing: 0.08em; }
+.odos-dx-chip code { color: #a98ef2; font-size: 10px; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 900px) {
+  .odos-overview-grid { grid-template-columns: 1fr; }
+  .odos-sticky-note { align-items: flex-start; flex-wrap: wrap; }
+  .odos-sticky-stamp { margin-left: 0; }
+}
+
+@media (max-width: 620px) {
+  .odos-overview-body { padding: 20px 14px 36px; }
+  .odos-overview-actions { width: 100%; margin-left: 0; }
+  .odos-visit-row { grid-template-columns: 1fr; }
+  .odos-dx-row { grid-column: 1; }
+}

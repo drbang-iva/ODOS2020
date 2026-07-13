@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, Patient } from "@medplum/fhirtypes";
+import type { Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -8,6 +8,7 @@ import {
   addDiagnosisLine,
   buildCoverageResource,
   buildProfessionalClaimInput,
+  coverageRelationshipCode,
   coverageGroupNumber,
   coverageIsSelf,
   coverageMemberId,
@@ -15,12 +16,13 @@ import {
   initialClaimDraft,
   removeChargeLine,
   removeDiagnosisLine,
+  resolveSubscriberFromCoverage,
   submitProfessionalClaim,
   subscriberFromCoverage,
   validateClaimDraft,
   type ClaimDraft,
 } from "../src/lib/submit-claims";
-import { ClaimReview, ClaimSubmissionResult, CoverageChoices } from "../src/scenes/claims/SubmitClaims";
+import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert } from "../src/scenes/claims/SubmitClaims";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -95,7 +97,7 @@ test("subscriber prefill uses patient demographics for self and stays editable f
   const self = coverageFixture("self");
   const other = coverageFixture("other");
   const selfSubscriber = subscriberFromCoverage(self, PATIENT);
-  const otherSubscriber = subscriberFromCoverage(other, PATIENT);
+  const otherSubscriber = subscriberFromCoverage(other, PATIENT, RELATED_PERSON);
 
   assert.equal(coverageIsSelf(self), true);
   assert.equal(selfSubscriber.firstName, "Jane");
@@ -104,10 +106,80 @@ test("subscriber prefill uses patient demographics for self and stays editable f
   assert.equal(selfSubscriber.memberId, "MEM-123");
   assert.equal(selfSubscriber.relationshipCode, "18");
   assert.equal(coverageIsSelf(other), false);
-  assert.equal(otherSubscriber.firstName, "");
-  assert.equal(otherSubscriber.lastName, "");
+  assert.equal(otherSubscriber.firstName, "Alex");
+  assert.equal(otherSubscriber.middleName, "R");
+  assert.equal(otherSubscriber.lastName, "Subscriber");
+  assert.equal(otherSubscriber.dateOfBirth, "1977-03-04");
+  assert.equal(otherSubscriber.sex, "M");
+  assert.equal(otherSubscriber.address1, "900 Test Ave");
+  assert.equal(otherSubscriber.city, "Greenville");
+  assert.equal(otherSubscriber.state, "SC");
+  assert.equal(otherSubscriber.zip, "29601");
   assert.equal(otherSubscriber.memberId, "MEM-123");
-  assert.equal(otherSubscriber.relationshipCode, undefined);
+  assert.equal(otherSubscriber.relationshipCode, "G8");
+
+  const html = renderToStaticMarkup(<PersonFields person={otherSubscriber} includePolicy onChange={() => undefined} />);
+  assert.match(html, /value="Alex"/);
+  assert.doesNotMatch(html, /readonly/);
+});
+
+test("all FHIR subscriber relationships map to verified Claim.MD 837P relationship codes", () => {
+  const expected = {
+    self: "18",
+    spouse: "01",
+    child: "19",
+    common: "53",
+    parent: "G8",
+    other: "G8",
+    injured: "G8",
+  } as const;
+  for (const [relationship, relationshipCode] of Object.entries(expected)) {
+    assert.equal(coverageRelationshipCode(coverageFixture(relationship as keyof typeof expected)), relationshipCode);
+  }
+});
+
+test("subscriber resolution fetches only valid non-self RelatedPerson references", async () => {
+  const calls: string[] = [];
+  const other = coverageFixture("other");
+  other.subscriber = { reference: "RelatedPerson/subscriber-1" };
+  const resolved = await resolveSubscriberFromCoverage(other, PATIENT, async (id) => {
+    calls.push(id);
+    return RELATED_PERSON;
+  });
+  assert.deepEqual(calls, ["subscriber-1"]);
+  assert.equal(resolved.error, undefined);
+  assert.equal(resolved.subscriber.firstName, "Alex");
+
+  const self = await resolveSubscriberFromCoverage(coverageFixture("self"), PATIENT, async () => {
+    throw new Error("self coverage must not read RelatedPerson");
+  });
+  assert.equal(self.error, undefined);
+  assert.equal(self.subscriber.firstName, "Jane");
+});
+
+test("missing or failed RelatedPerson resolution leaves an editable blank subscriber and surfaces an alert", async () => {
+  const missing = await resolveSubscriberFromCoverage(coverageFixture("other"), PATIENT, async () => RELATED_PERSON);
+  assert.match(missing.error ?? "", /does not reference a valid RelatedPerson/);
+  assert.equal(missing.subscriber.firstName, "");
+  assert.equal(missing.subscriber.relationshipCode, "G8");
+
+  const malformedCoverage = coverageFixture("other");
+  malformedCoverage.subscriber = { reference: "Patient/not-a-related-person" };
+  const malformed = await resolveSubscriberFromCoverage(malformedCoverage, PATIENT, async () => RELATED_PERSON);
+  assert.match(malformed.error ?? "", /does not reference a valid RelatedPerson/);
+
+  const failedCoverage = coverageFixture("other");
+  failedCoverage.subscriber = { reference: "RelatedPerson/missing" };
+  const failed = await resolveSubscriberFromCoverage(failedCoverage, PATIENT, async () => {
+    throw new Error("FHIR 404 Not Found");
+  });
+  assert.match(failed.error ?? "", /FHIR 404 Not Found/);
+  assert.equal(failed.subscriber.firstName, "");
+  const html = renderToStaticMarkup(
+    <><SubmissionAlert message={failed.error ?? ""} /><PersonFields person={failed.subscriber} includePolicy onChange={() => undefined} /></>,
+  );
+  assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /readonly/);
 });
 
 test("diagnosis and charge helpers add at least two rows and remove the selected row", () => {
@@ -224,7 +296,7 @@ function validDraft(): ClaimDraft {
   };
 }
 
-function coverageFixture(relationship: "self" | "other"): Coverage {
+function coverageFixture(relationship: "child" | "parent" | "spouse" | "common" | "other" | "self" | "injured"): Coverage {
   return {
     ...buildCoverageResource({
       patientReference: "Patient/pat-1",
@@ -237,6 +309,16 @@ function coverageFixture(relationship: "self" | "other"): Coverage {
     id: `cov-${relationship}`,
   };
 }
+
+const RELATED_PERSON: RelatedPerson = {
+  resourceType: "RelatedPerson",
+  id: "subscriber-1",
+  patient: { reference: "Patient/pat-1" },
+  name: [{ given: ["Alex", "R"], family: "Subscriber" }],
+  birthDate: "1977-03-04",
+  gender: "male",
+  address: [{ line: ["900 Test Ave"], city: "Greenville", state: "SC", postalCode: "29601" }],
+};
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

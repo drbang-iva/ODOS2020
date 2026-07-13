@@ -303,7 +303,7 @@ function customExtras(
     return value === undefined ? [] : [{
       code: field.localCode,
       label: field.display,
-      value,
+      value: Array.isArray(value) ? value.join(", ") : value,
       ...(field.unit ? { unit: field.unit } : {}),
     }];
   });
@@ -322,7 +322,7 @@ function specialtyExtras(
       return value === undefined ? [] : [{
         code: field.localCode,
         label: field.display,
-        value,
+        value: Array.isArray(value) ? value.join(", ") : value,
         ...(field.unit ? { unit: field.unit } : {}),
       }];
     }
@@ -334,7 +334,7 @@ function specialtyExtras(
     return value === undefined ? [] : [{
       code: field.localCode,
       label: field.display,
-      value,
+      value: Array.isArray(value) ? value.join(", ") : value,
       ...(field.unit ? { unit: field.unit } : {}),
     }];
   });

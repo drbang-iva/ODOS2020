@@ -49,6 +49,8 @@ import { buildDryEyeTreatmentProcedure as buildMcpDryEyeTreatmentProcedure } fro
 import { buildDryEyeTreatmentProcedure as buildUiDryEyeTreatmentProcedure } from "../../ui/src/lib/fhir-dry-eye/procedure.js";
 import { buildOphthalmicMedicationStatement as buildMcpOphthalmicMedicationStatement } from "../src/fhir/ophthalmicMedicationStatement.js";
 import { buildOphthalmicMedicationStatement as buildUiOphthalmicMedicationStatement } from "../../ui/src/lib/fhir-dry-eye/ophthalmicMedicationStatement.js";
+import { buildMedicationRequest as buildMcpMedicationRequest } from "../src/fhir/medicationOrder.js";
+import { buildMedicationRequest as buildUiMedicationRequest } from "../../ui/src/lib/fhir-medication-order.js";
 import { buildDryEyeAdverseEvent as buildMcpDryEyeAdverseEvent } from "../src/fhir/dryEyeAdverseEvent.js";
 import { buildDryEyeAdverseEvent as buildUiDryEyeAdverseEvent } from "../../ui/src/lib/fhir-dry-eye/adverseEvent.js";
 import {
@@ -87,6 +89,26 @@ const common = {
   eye: "OD" as const,
   measuredAt: "2026-04-25T12:00:00.000Z",
 };
+
+test("UI medication-order mirror matches the canonical MCP builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    practitionerReference: "Practitioner/dr1",
+    encounterReference: "Encounter/e1",
+    medicationText: "Prednisolone acetate 1%",
+    dosageText: "1 drop OU four times daily",
+    quantity: "5 mL",
+    refills: 1,
+    daysSupply: 30,
+    routeText: "Ophthalmic",
+    reasonReference: "Condition/c1",
+    pharmacyText: "Main Street Pharmacy · 555-0100",
+    transmissionMethod: "printed" as const,
+    authoredOn: "2026-07-11T14:00:00.000Z",
+  };
+
+  assertJsonEqual(buildMcpMedicationRequest(input), buildUiMedicationRequest(input));
+});
 
 test("UI ophthalmology mirror matches MCP IOP builder output", () => {
   assertJsonEqual(

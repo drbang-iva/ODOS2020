@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Coverage, Patient } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
@@ -14,6 +14,7 @@ import {
   initialClaimDraft,
   removeChargeLine,
   removeDiagnosisLine,
+  resolveSubscriberFromCoverage,
   submitProfessionalClaim,
   subscriberFromCoverage,
   validateClaimDraft,
@@ -38,6 +39,9 @@ export function SubmitClaims() {
   const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [coverageLoading, setCoverageLoading] = useState(false);
   const [coverageError, setCoverageError] = useState<string>();
+  const [subscriberLoading, setSubscriberLoading] = useState(false);
+  const [subscriberError, setSubscriberError] = useState<string>();
+  const subscriberSelection = useRef(0);
   const [showCoverageEntry, setShowCoverageEntry] = useState(false);
   const [coverageEntry, setCoverageEntry] = useState<CoverageEntryInput>(() => emptyCoverageEntry(today));
   const [step, setStep] = useState<Step>("compose");
@@ -85,6 +89,9 @@ export function SubmitClaims() {
     setChoosingPatient(false);
     setCoverages([]);
     setShowCoverageEntry(false);
+    subscriberSelection.current += 1;
+    setSubscriberError(undefined);
+    setSubscriberLoading(false);
     setCoverageEntry(emptyCoverageEntry(today, `Patient/${selected.id}`));
     setDraft((current) => ({
       ...current,
@@ -96,14 +103,30 @@ export function SubmitClaims() {
     }));
   };
 
-  const selectCoverage = (coverage: Coverage) => {
+  const selectCoverage = async (coverage: Coverage) => {
     if (!coverage.id || !patient) return;
+    const selection = subscriberSelection.current + 1;
+    subscriberSelection.current = selection;
+    const coverageReference = `Coverage/${coverage.id}`;
+    setSubscriberLoading(true);
+    setSubscriberError(undefined);
     setDraft((current) => ({
       ...current,
-      coverageReference: `Coverage/${coverage.id}`,
+      coverageReference,
       insurerReference: coverage.payor[0]?.reference ?? "",
       subscriber: subscriberFromCoverage(coverage, patient),
     }));
+    const resolution = await resolveSubscriberFromCoverage(
+      coverage,
+      patient,
+      (id) => fhir.read<RelatedPerson>("RelatedPerson", id),
+    );
+    if (subscriberSelection.current !== selection) return;
+    setDraft((current) => current.coverageReference === coverageReference
+      ? { ...current, subscriber: resolution.subscriber }
+      : current);
+    setSubscriberError(resolution.error);
+    setSubscriberLoading(false);
   };
 
   const createCoverage = async () => {
@@ -116,7 +139,7 @@ export function SubmitClaims() {
     try {
       const created = await fhir.create(buildCoverageResource(coverageEntry), "submit-claims-coverage");
       setCoverages((current) => [created, ...current]);
-      selectCoverage(created);
+      await selectCoverage(created);
       setShowCoverageEntry(false);
     } catch (cause) {
       setCoverageError(cause instanceof Error ? cause.message : String(cause));
@@ -157,6 +180,9 @@ export function SubmitClaims() {
     setChoosingPatient(true);
     setCoverages([]);
     setCoverageEntry(emptyCoverageEntry(today));
+    subscriberSelection.current += 1;
+    setSubscriberError(undefined);
+    setSubscriberLoading(false);
     setReviewClaim(undefined);
     setErrors([]);
     setSubmissionError(undefined);
@@ -171,7 +197,7 @@ export function SubmitClaims() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
             <h1 className="text-2xl font-semibold">Compose and submit claim</h1>
-            <p className="mt-1 text-sm text-white/50">Single professional claim · Claim.MD EDI</p>
+            <p className="mt-1 text-sm text-white/50">Single professional claim · configured clearinghouse</p>
           </div>
           <ol className="flex gap-2 text-xs font-bold uppercase tracking-wide text-white/40">
             <StepLabel active={step === "compose"} value="1 Compose" />
@@ -228,7 +254,7 @@ export function SubmitClaims() {
                   )}
                 </Section>
 
-                <Section title="Claim details" description="FHIR references and Claim.MD identifiers for this submission.">
+                <Section title="Claim details" description="FHIR references and clearinghouse identifiers for this submission.">
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     <Field label="FHIR provider reference" value={draft.providerReference} placeholder="Practitioner/123" onChange={(value) => setDraft((current) => ({ ...current, providerReference: value }))} />
                     <Field label="Payer ID" value={draft.payerId} onChange={(value) => setDraft((current) => ({ ...current, payerId: value }))} />
@@ -243,7 +269,7 @@ export function SubmitClaims() {
                   <ProviderFields provider={draft.billingProvider} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
                 </Section>
 
-                <Section title="Rendering provider" description="NPI is required; remaining Claim.MD fields are optional.">
+                <Section title="Rendering provider" description="NPI is required; remaining clearinghouse fields are optional.">
                   <ProviderFields provider={draft.renderingProvider} onChange={(renderingProvider) => setDraft((current) => ({ ...current, renderingProvider }))} />
                 </Section>
 
@@ -251,7 +277,9 @@ export function SubmitClaims() {
                   <PersonFields person={draft.patient} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
                 </Section>
 
-                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: enter the subscriber manually."}>
+                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
+                  {subscriberError && <div className="mb-3"><SubmissionAlert message={subscriberError} /></div>}
+                  {subscriberLoading && <p className="mb-3 text-sm text-white/45">Loading subscriber record…</p>}
                   {selectedCoverage && coverageIsSelf(selectedCoverage) ? (
                     <PersonSummary person={draft.subscriber} />
                   ) : (
@@ -305,7 +333,7 @@ export function CoverageChoices({
 }: {
   coverages: readonly Coverage[];
   selectedReference: string;
-  onSelect: (coverage: Coverage) => void;
+  onSelect: (coverage: Coverage) => void | Promise<void>;
 }) {
   return coverages.map((coverage) => (
     <label key={coverage.id} className="flex cursor-pointer items-start gap-3 rounded border border-white/10 bg-black/20 p-3">
@@ -328,12 +356,13 @@ export function ClaimSubmissionResult({ result, onAnother }: { result: SubmitCla
   return (
     <section className="rounded-lg border border-emerald-400/30 bg-emerald-950/20 p-6">
       <p className="text-xs font-bold uppercase tracking-wide text-emerald-300">Submitted</p>
-      <h2 className="mt-1 text-xl font-semibold">Claim accepted for Claim.MD submission</h2>
+      <h2 className="mt-1 text-xl font-semibold">Claim accepted for clearinghouse submission</h2>
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
         <Detail label="FHIR Claim ID" value={result.claimId ?? "Not returned"} />
+        <Detail label="Clearinghouse" value={result.clearinghouse === "stedi" ? "Stedi" : "Claim.MD"} />
         <Detail label="Status" value={result.status ?? "Not returned"} />
-        <Detail label="Claim.MD claim ID" value={result.claimMdClaimId ?? "Not returned"} />
-        <Detail label="Tracking number" value={result.claimMdTrackingNumber ?? "Not returned"} />
+        <Detail label="Clearinghouse claim ID" value={result.claimMdClaimId ?? result.stediCorrelationId ?? "Not returned"} />
+        <Detail label="Tracking number" value={result.claimMdTrackingNumber ?? result.stediTrackingNumber ?? "Not returned"} />
       </dl>
       <button type="button" onClick={onAnother} className="mt-6 rounded bg-emerald-700 px-4 py-2 font-semibold">Compose another claim</button>
     </section>
@@ -429,7 +458,7 @@ function ProviderFields({ provider, onChange }: { provider: ClaimMdProviderInput
   );
 }
 
-function PersonFields({ person, onChange, includePolicy = false }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean }) {
+export function PersonFields({ person, onChange, includePolicy = false }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean }) {
   const set = (key: keyof ClaimMdPersonInput, value: string) => onChange({ ...person, [key]: value });
   return (
     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -444,7 +473,7 @@ function PersonFields({ person, onChange, includePolicy = false }: { person: Cla
       <Field label="ZIP" value={person.zip ?? ""} onChange={(value) => set("zip", value)} />
       {includePolicy && <Field label="Member ID" value={person.memberId ?? ""} onChange={(value) => set("memberId", value)} />}
       {includePolicy && <Field label="Group number" value={person.groupNumber ?? ""} onChange={(value) => set("groupNumber", value)} />}
-      {includePolicy && <Field label="Claim.MD relationship code" value={person.relationshipCode ?? ""} onChange={(value) => set("relationshipCode", value)} />}
+      {includePolicy && <Field label="Subscriber relationship code" value={person.relationshipCode ?? ""} onChange={(value) => set("relationshipCode", value)} />}
     </div>
   );
 }

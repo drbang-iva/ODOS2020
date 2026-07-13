@@ -11,9 +11,10 @@ export type BuiltInSectionId =
   | "myopia-management"
   | "cup-disc"
   | "iop"
-  | "assessment";
+  | "assessment"
+  | "prescription";
 
-export type ChartSectionId = BuiltInSectionId | `custom:${string}`;
+export type ChartSectionId = BuiltInSectionId | `custom:${string}` | `ocular-health:${string}`;
 
 export interface SectionSaveStatus {
   completed: boolean;

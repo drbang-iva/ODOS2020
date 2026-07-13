@@ -1,4 +1,4 @@
-import type { ChargeItem, Coverage, Patient } from "@medplum/fhirtypes";
+import type { ChargeItem, Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
 
 export const ICD10_CM_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
 export const CPT_SYSTEM = "urn:ama:cpt";
@@ -115,12 +115,16 @@ export interface ClaimsApiOptions {
   authorization?: string;
   baseUrl?: string;
   fetchImpl?: typeof fetch;
+  clearinghouse?: "claimmd" | "stedi";
 }
 
 export interface SubmitClaimResult {
   claimId?: string;
+  clearinghouse?: "claimmd" | "stedi";
   claimMdClaimId?: string;
   claimMdTrackingNumber?: string;
+  stediCorrelationId?: string;
+  stediTrackingNumber?: string;
   status?: string;
 }
 
@@ -186,6 +190,22 @@ export function claimPersonFromPatient(patient: Patient): ClaimMdPersonInput {
     lastName: name?.family ?? "",
     dateOfBirth: patient.birthDate ?? "",
     sex: patient.gender === "male" ? "M" : patient.gender === "female" ? "F" : "U",
+    address1: address?.line?.join(" "),
+    city: address?.city,
+    state: address?.state,
+    zip: address?.postalCode,
+  });
+}
+
+export function claimPersonFromRelatedPerson(person: RelatedPerson): ClaimMdPersonInput {
+  const name = person.name?.[0];
+  const address = person.address?.[0];
+  return cleanPerson({
+    firstName: name?.given?.[0] ?? "",
+    middleName: name?.given?.slice(1).join(" ") || undefined,
+    lastName: name?.family ?? "",
+    dateOfBirth: person.birthDate ?? "",
+    sex: person.gender === "male" ? "M" : person.gender === "female" ? "F" : "U",
     address1: address?.line?.join(" "),
     city: address?.city,
     state: address?.state,
@@ -287,15 +307,61 @@ export function coverageIsSelf(coverage: Coverage): boolean {
   );
 }
 
-export function subscriberFromCoverage(coverage: Coverage, patient: Patient): ClaimMdPersonInput {
+export function coverageRelationshipCode(coverage: Coverage): string {
+  const relationship = coverageRelationship(coverage);
+  if (relationship === "self") return "18";
+  if (relationship === "spouse") return "01";
+  if (relationship === "child") return "19";
+  if (relationship === "common") return "53";
+  return "G8";
+}
+
+export function subscriberFromCoverage(
+  coverage: Coverage,
+  patient: Patient,
+  relatedPerson?: RelatedPerson,
+): ClaimMdPersonInput {
   const policy = {
     memberId: coverageMemberId(coverage) || undefined,
     groupNumber: coverageGroupNumber(coverage) || undefined,
+    relationshipCode: coverageRelationshipCode(coverage),
   };
   if (coverageIsSelf(coverage)) {
-    return cleanPerson({ ...claimPersonFromPatient(patient), ...policy, relationshipCode: "18" });
+    return cleanPerson({ ...claimPersonFromPatient(patient), ...policy });
   }
-  return cleanPerson({ ...emptyPerson(), ...policy, relationshipCode: "" });
+  return cleanPerson({ ...(relatedPerson ? claimPersonFromRelatedPerson(relatedPerson) : emptyPerson()), ...policy });
+}
+
+export interface SubscriberResolution {
+  subscriber: ClaimMdPersonInput;
+  error?: string;
+}
+
+export async function resolveSubscriberFromCoverage(
+  coverage: Coverage,
+  patient: Patient,
+  readRelatedPerson: (id: string) => Promise<RelatedPerson>,
+): Promise<SubscriberResolution> {
+  if (coverageIsSelf(coverage)) {
+    return { subscriber: subscriberFromCoverage(coverage, patient) };
+  }
+  const match = coverage.subscriber?.reference?.match(/^RelatedPerson\/([^/]+)$/);
+  if (!match) {
+    return {
+      subscriber: subscriberFromCoverage(coverage, patient),
+      error: "The selected non-self Coverage does not reference a valid RelatedPerson subscriber. Enter subscriber demographics manually or repair the Coverage record.",
+    };
+  }
+  try {
+    const relatedPerson = await readRelatedPerson(match[1]);
+    return { subscriber: subscriberFromCoverage(coverage, patient, relatedPerson) };
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return {
+      subscriber: subscriberFromCoverage(coverage, patient),
+      error: `Unable to load the selected Coverage subscriber: ${detail}. Enter subscriber demographics manually or repair the Coverage record.`,
+    };
+  }
 }
 
 export function coverageLabel(coverage: Coverage): string {
@@ -414,7 +480,7 @@ export async function submitProfessionalClaim(
       "Content-Type": "application/json",
       ...(options.authorization ? { Authorization: options.authorization } : {}),
     },
-    body: JSON.stringify({ claim }),
+    body: JSON.stringify({ claim, ...(options.clearinghouse ? { clearinghouse: options.clearinghouse } : {}) }),
   });
   const text = await response.text();
   const body = text ? JSON.parse(text) as SubmitClaimResult & { error?: string } : {};

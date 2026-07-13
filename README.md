@@ -150,6 +150,19 @@ Expected output:
 Admin UI: http://localhost:8100
 ```
 
+### Pull up the working screens
+
+For an already-created local practice, run the non-destructive role repair once, then use the checked-in `.claude/launch.json` entries to start `osod-mcp` on `:3333` and `osod-ui` on `:5173`:
+
+```bash
+npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
+npm run seed-demo
+```
+
+Open `http://localhost:5173` and use the regular OSOD login for the named human account. The repaired membership deliberately routes as `front-desk`, so the complete Desk home, Statements, Clinic summary, Schedule, and payment-facing screens load without token copying or role-related FHIR 403 responses. The configured Medplum service identity is not eligible for these human practice roles. `seed-demo` is idempotent and provides a synthetic patient, current appointment, visit type, issued Invoice, unapplied credit, and generated statement.
+
+See [`docs/install.md`](docs/install.md#developer-screen-bring-up) for the complete bring-up and partial-provision repair behavior.
+
 ## Licensing
 
 - **Application code:** AGPL v3 (copyleft — prevents closed-source forks).

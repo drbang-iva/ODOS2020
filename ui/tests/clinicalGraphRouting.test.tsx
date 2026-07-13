@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  AutoRefractionSection,
+  buildAutoRefractionRequestBody,
+} from "../src/components/charting/AutoRefractionSection";
 import { authHeaders } from "../src/lib/clinical-graph-client";
 import { fhir } from "../src/lib/fhir";
 
@@ -23,7 +29,7 @@ test("clinical-graph requests share the literal Vite route and Medplum authoriza
     .map((path) => ({ path, source: readFileSync(path, "utf8") }))
     .filter(({ source }) => source.includes("clinicalGraphApiBase()"));
 
-  assert.equal(callers.length, 13);
+  assert.equal(callers.length, 16);
   for (const { path, source } of callers) {
     assert.match(source, /from "\.\.\/(?:\.\.\/)?lib\/clinical-graph-client";/, path);
     assert.doesNotMatch(source, /function (?:authHeaders|clinicalGraphApiBase)\(/, path);
@@ -49,6 +55,53 @@ test("soft and specialty contact lens definition and save requests use shared au
     join(UI_ROOT, "components", "charting", "SpecialtyContactLensSection.tsx"),
     "specialty",
   );
+});
+
+test("Auto-Refraction renders directly typeable binocular PD fields and saves them at request top level", () => {
+  const html = renderToStaticMarkup(
+    <AutoRefractionSection
+      patientReference="Patient/p1"
+      encounterReference="Encounter/e1"
+      onSaved={() => undefined}
+    />,
+  );
+  assert.match(html, /Binocular PD \(OU\)/);
+  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD distance"/);
+  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD near"/);
+
+  const body = buildAutoRefractionRequestBody({
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    sourceType: "manual",
+    remarks: "  reliable fixation  ",
+    binocularPdDistance: "63.50",
+    binocularPdNear: "60.25",
+    eyes: {
+      OD: { ...emptyAutoEye(), sphere: "-1" },
+      OS: emptyAutoEye(),
+    },
+  });
+  assert.equal(body.binocularPdDistance, 63.5);
+  assert.equal(body.binocularPdNear, 60.25);
+  assert.equal(body.remarks, "reliable fixation");
+  assert.deepEqual(body.eyes.OD, { sphere: -1 });
+  assert.equal("binocularPdDistance" in (body.eyes.OD ?? {}), false);
+  assert.equal("binocularPdNear" in (body.eyes.OD ?? {}), false);
+
+  for (const partial of ["-", "1e", "."]) {
+    const partialBody = buildAutoRefractionRequestBody({
+      patientReference: "Patient/p1",
+      encounterReference: "Encounter/e1",
+      sourceType: "manual",
+      remarks: "",
+      binocularPdDistance: partial,
+      binocularPdNear: partial,
+      eyes: { OD: emptyAutoEye(), OS: emptyAutoEye() },
+    });
+    assert.equal("binocularPdDistance" in partialBody, false);
+    assert.equal("binocularPdNear" in partialBody, false);
+    assert.doesNotMatch(JSON.stringify(partialBody), /null/);
+  }
 });
 
 test("no UI source references the obsolete osod_access_token key", () => {
@@ -78,4 +131,8 @@ function sourceFiles(directory: string): string[] {
     if (entry.isDirectory()) return sourceFiles(path);
     return /\.tsx?$/.test(entry.name) ? [path] : [];
   });
+}
+
+function emptyAutoEye() {
+  return { sphere: "", cylinder: "", axis: "", flatK: "", flatAxis: "", steepK: "", steepAxis: "" };
 }

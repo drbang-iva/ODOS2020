@@ -5,10 +5,13 @@ import { test } from "node:test";
 import type {
   Basic,
   Bundle,
+  ChargeItem,
   Claim,
   ClaimResponse,
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
+  Invoice,
+  Patient,
   PaymentReconciliation,
   Resource,
   Task,
@@ -16,6 +19,10 @@ import type {
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
+import {
+  CLAIMMD_ERA_PAYMENT_SYSTEM,
+  STEDI_ERA_PAYMENT_SYSTEM,
+} from "../src/payments/payment-reconciliation.js";
 import {
   handleClaimEraWorklistTaskRequest,
   handleClaimStatusRequest,
@@ -41,6 +48,8 @@ import {
 } from "../src/claims/era-worklist.js";
 import { buildProfessionalClaim, type ClaimMdEraData, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
+import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
 const professionalClaim: ProfessionalClaimInput = {
   created: "2026-07-09",
@@ -51,7 +60,16 @@ const professionalClaim: ProfessionalClaimInput = {
   coverageReference: "Coverage/cov-1",
   patientAccountNumber: "OSOD-CLAIM-900",
   payerId: "PAYERTEST",
-  billingProvider: { name: "OSOD TEST CLINIC", npi: "1111111112", taxId: "900000001", taxIdType: "E" },
+  billingProvider: {
+    name: "OSOD TEST CLINIC",
+    npi: "1111111112",
+    taxId: "900000001",
+    taxIdType: "E",
+    address1: "900 TEST AVE",
+    city: "TESTVILLE",
+    state: "NY",
+    zip: "100010000",
+  },
   renderingProvider: { firstName: "ALEX", lastName: "SYNTHETIC", npi: "1111111112" },
   subscriber: {
     firstName: "JAMIE",
@@ -77,22 +95,39 @@ const professionalClaim: ProfessionalClaimInput = {
 
 function deps(role: "front-desk" | "clinician" = "front-desk") {
   const audits: OsodAuditEventRecord[] = [];
+  const createHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
   let searchCalls = 0;
   const created = {
     Basic: [] as Basic[],
+    ChargeItem: [structuredClone(professionalClaim.chargeItems[0])] as ChargeItem[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
     CoverageEligibilityRequest: [] as CoverageEligibilityRequest[],
     CoverageEligibilityResponse: [] as CoverageEligibilityResponse[],
+    Invoice: [] as Invoice[],
+    Patient: [] as Patient[],
     PaymentReconciliation: [] as PaymentReconciliation[],
     Task: [] as Task[],
   };
   let claimCreateError: Error | undefined;
   const fhir = {
-    create: async <T extends Resource>(resource: T): Promise<T> => {
-      if (resource.resourceType === "Claim" && claimCreateError) throw claimCreateError;
+    create: async <T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> => {
+      createHeaders.push({ resourceType: resource.resourceType, headers });
       const resources = created[resource.resourceType as keyof typeof created] as Resource[] | undefined;
       if (!resources) throw new Error(`Unexpected test resource ${resource.resourceType}`);
+      const conditionalIdentifier = headers?.["If-None-Exist"]?.match(/^identifier=([^|]+)\|(.+)$/);
+      if (conditionalIdentifier) {
+        const existing = resources.find((candidate) => matchesIdentifierToken(
+          "identifier" in candidate ? candidate.identifier as Array<{ system?: string; value?: string }> : undefined,
+          `${conditionalIdentifier[1]}|${conditionalIdentifier[2]}`,
+        ));
+        if (existing) return existing as T;
+      }
+      if (resource.resourceType === "Claim" && claimCreateError) {
+        const error = claimCreateError;
+        claimCreateError = undefined;
+        throw error;
+      }
       const id = `${resource.resourceType.toLowerCase()}-${resources.length + 1}`;
       const saved = { ...resource, id } as T;
       resources.push(saved);
@@ -124,6 +159,17 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
       const saved = { ...resource, id } as T;
       resources[index] = saved;
       return saved;
+    },
+    executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
+      const responseEntries = (bundle.entry ?? []).map((entry) => {
+        const resource = entry.resource;
+        if (!resource || resource.resourceType !== "Task") throw new Error("Unexpected statement transaction resource");
+        const requestedId = entry.request?.method === "PUT" ? entry.request.url.replace("Task/", "") : undefined;
+        const id = requestedId ?? `task-${created.Task.length + 1}`;
+        created.Task.push({ ...structuredClone(resource), id });
+        return { response: { status: requestedId ? "200" : "201", location: `Task/${id}/_history/1` } };
+      });
+      return { resourceType: "Bundle", type: "transaction-response", entry: responseEntries };
     },
   };
   const base: ClaimsHandlerDeps = {
@@ -190,6 +236,8 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     audits,
     created,
     deps: base,
+    fhir,
+    createHeaders,
     searchCalls: () => searchCalls,
     failClaimCreate: (error: Error) => {
       claimCreateError = error;
@@ -216,6 +264,140 @@ test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.co
   assert.equal((res.body as { claimMdTrackingNumber: string }).claimMdTrackingNumber, "tracking-1");
   assert.equal(audits[0].eventType, "claim.submit.completed");
   assert.equal(audits[0].resourceType, "Claim");
+});
+
+test("client-supplied ChargeItem is re-read and must belong to the Claim patient", async () => {
+  const matching = deps();
+  const callerInput = structuredClone(professionalClaim);
+  callerInput.chargeItems[0].subject.reference = "Patient/caller-tampered";
+  const accepted = await handleSubmitClaimRequest(matching.deps, {
+    authHeader: "Bearer good",
+    body: { claim: callerInput },
+  });
+  assert.equal(accepted.status, 200);
+  assert.equal(matching.created.Claim[0].patient.reference, "Patient/pat-900");
+
+  const crossPatient = deps();
+  crossPatient.created.ChargeItem[0].subject.reference = "Patient/other";
+  const rejected = await handleSubmitClaimRequest(crossPatient.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+  assert.equal(rejected.status, 400);
+  assert.match((rejected.body as { error: string }).error, /belongs to Patient\/other, not Patient\/pat-900/);
+  assert.equal(crossPatient.created.Claim.length, 0);
+  assert.equal(crossPatient.created.Task.length, 0);
+
+  const missing = deps();
+  missing.created.ChargeItem.length = 0;
+  const notFound = await handleSubmitClaimRequest(missing.deps, {
+    authHeader: "Bearer good",
+    body: { claim: professionalClaim },
+  });
+  assert.equal(notFound.status, 400);
+  assert.match((notFound.body as { error: string }).error, /ChargeItem\/charge-1 could not be loaded/);
+  assert.equal(missing.created.Claim.length, 0);
+});
+
+test("submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape", async () => {
+  const { created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  let submittedPayload: any;
+  d.adapter!.submitProfessionalClaim = async (request) => {
+    submittedPayload = request.payload;
+    return { claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }], raw: {} };
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.ChargeItem.length, 2);
+  assert.equal(created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-2");
+  assert.equal(created.ChargeItem[1].subject.reference, "Patient/pat-900");
+  assert.equal(created.Claim[0].item?.[0]?.servicedDate, input.serviceDate);
+  assert.equal(submittedPayload.claim[0].charge[0].remote_chgid, undefined);
+  assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
+});
+
+test("submit validates the full ChargeItem batch before persisting an idless item", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem[0].subject.reference = "Patient/other";
+  const input = structuredClone(professionalClaim);
+  const idless = structuredClone(input.chargeItems[0]);
+  delete idless.id;
+  input.chargeItems = [idless, input.chargeItems[0]];
+
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /belongs to Patient\/other, not Patient\/pat-900/);
+  assert.equal(fixture.created.ChargeItem.length, 1);
+  assert.equal(fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").length, 0);
+  assert.equal(fixture.created.Claim.length, 0);
+});
+
+test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {
+  const { audits, deps: d } = deps();
+  let submitted: unknown;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async (input: unknown) => {
+        submitted = input;
+        return { claimReference: { correlationId: "stedi-1", customerClaimNumber: "track-1" } };
+      },
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    } as any,
+  };
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: professionalClaim },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as any).stediCorrelationId, "stedi-1");
+  assert.equal((submitted as any).payload.usageIndicator, "T");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
+test("Stedi payload also remains on the original idless charge input after provenance persistence", async () => {
+  const { created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  let submitted: any;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async (request: unknown) => {
+        submitted = request;
+        return { claimReference: { correlationId: "stedi-1", customerClaimNumber: "track-1" } };
+      },
+      checkEligibility: async () => ({}), checkClaimStatus: async () => ({}), listEras: async () => ({}), retrieveEraData: async () => ({}),
+    } as any,
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.ChargeItem.length, 2);
+  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "OSOD-CLAIM-900-1");
 });
 
 test("eligibility check creates request/response resources and audits eligibility.check.completed", async () => {
@@ -246,6 +428,35 @@ test("eligibility check creates request/response resources and audits eligibilit
   assert.equal(audits[0].eventType, "eligibility.check.completed");
 });
 
+test("Stedi eligibility uses the parallel 271 mapper with unchanged RBAC and audit event type", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      checkEligibility: async () => ({ planStatus: [{ statusCode: "1", status: "Active Coverage" }], benefitsInformation: [] }),
+      submitProfessionalClaim: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    },
+  };
+  const result = await handleEligibilityCheckRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      clearinghouse: "stedi",
+      patientReference: "Patient/pat-900",
+      coverageReference: "Coverage/cov-1",
+      insurerReference: "Organization/payer-1",
+      serviceDate: "2026-07-09",
+      stedi: { tradingPartnerServiceId: "STEDITEST" },
+    },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.CoverageEligibilityResponse[0].insurance?.[0].inforce, true);
+  assert.equal(audits[0].eventType, "eligibility.check.completed");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
 test("claim status check returns a ClaimResponse projection and audits claim.status.checked", async () => {
   const { audits, created, deps: d } = deps();
   const res = await handleClaimStatusRequest(d, {
@@ -262,6 +473,34 @@ test("claim status check returns a ClaimResponse projection and audits claim.sta
   assert.equal(res.status, 200);
   assert.equal(created.ClaimResponse.length, 1);
   assert.equal(audits[0].eventType, "claim.status.checked");
+});
+
+test("Stedi claim status maps fixture 277 data and keeps the shared audit event", async () => {
+  const { audits, created, deps: d } = deps();
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      checkClaimStatus: async () => ({ claims: [{ claimStatus: { statusCategoryCode: "F1", statusCodeValue: "Claim has been paid." } }] }),
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    },
+  };
+  const result = await handleClaimStatusRequest(d, {
+    authHeader: "Bearer good",
+    params: { id: "claim-1" },
+    body: {
+      clearinghouse: "stedi",
+      patientReference: "Patient/pat-900",
+      insurerReference: "Organization/payer-1",
+      stedi: { tradingPartnerServiceId: "STEDITEST" },
+    },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.ClaimResponse[0].outcome, "complete");
+  assert.equal(audits[0].eventType, "claim.status.checked");
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
 });
 
 test("claim status error creates a claim-rejected Task with Claim focus and verbatim message", async () => {
@@ -362,6 +601,66 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   });
 });
 
+test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects", async () => {
+  const { audits, created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({
+        meta: { transactionId: "7647d644-9348-4596-a3b4-6830b8b48cc8" },
+        transactions: [{
+          payer: { name: "SYNTHETIC PAYER" },
+          financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
+          paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: "TRACE900" },
+          detailInfo: [{ paymentInfo: [{
+            claimPaymentInfo: {
+              patientControlNumber: "OSOD-CLAIM-900",
+              totalClaimChargeAmount: "125",
+              claimPaymentAmount: "80",
+              patientResponsibilityAmount: "20",
+              payerClaimControlNumber: "PAYER900",
+              claimStatusCode: "1",
+            },
+            serviceLines: [{
+              servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "PROC-A" },
+              serviceSupplementalAmounts: { allowedActual: "100" },
+              serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
+            }],
+          }] }],
+        }],
+      }),
+    },
+  };
+  const result = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), clearinghouse: "stedi" },
+  });
+  assert.equal(result.status, 200);
+  assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
+  assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
+  assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
+  assert.equal(created.Invoice.length, 1);
+  assert.equal(created.Invoice[0].totalNet?.value, 20);
+  assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+
+  const unmatched = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      clearinghouse: "stedi",
+      claimReferenceByPcn: {},
+      patientReferenceByPcn: {},
+    },
+  });
+  assert.equal(unmatched.status, 200);
+  assert.equal(created.Task[0].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
+});
+
 test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
   const { created, deps: d } = deps();
   const first = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
@@ -384,6 +683,41 @@ test("an eralist row with no import record is returned in the New lane without i
   assert.equal(item.eraId, "era-900");
   assert.equal(item.paidTotalCents, 8_000);
   assert.equal("claimCount" in item, false);
+});
+
+test("Stedi ERA routing projects inbound 835 polling rows into the shared remittance queue", async () => {
+  const { deps: d } = deps();
+  d.routingDefaults = { transaction: "claimmd", era: "stedi" };
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      submitProfessionalClaim: async () => ({}),
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      retrieveEraData: async () => ({}),
+      listEras: async () => ({
+        items: [{
+          transactionId: "7647d644-9348-4596-a3b4-6830b8b48cc8",
+          direction: "INBOUND",
+          x12: { metadata: { transaction: { transactionSetIdentifier: "835" } } },
+        }],
+      }),
+    },
+  };
+  const result = await handleEraListRequest(d, { authHeader: "Bearer good" });
+  assert.deepEqual(result, {
+    status: 200,
+    body: { items: [{
+      eraId: "7647d644-9348-4596-a3b4-6830b8b48cc8",
+      lane: "new",
+      posted: 0,
+      denied: 0,
+      underpaid: 0,
+      flagged: 0,
+      paidTotalCents: 0,
+      openTaskCount: 0,
+    }] },
+  });
 });
 
 test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit", async () => {
@@ -476,6 +810,7 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
     },
   };
   const flagged = deps();
+  flagged.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   flagged.deps.adapter!.retrieveEraData = async () => underpaidEra;
 
   const flaggedResult = await handleEraImportRequest(flagged.deps, {
@@ -494,6 +829,7 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
   assert.equal(flagged.audits.some((row) => row.eventType === "era.underpayment.flagged"), true);
 
   const belowThreshold = deps();
+  belowThreshold.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   belowThreshold.deps.adapter!.retrieveEraData = async () => underpaidEra;
   belowThreshold.deps.eraUnderpaymentThresholdCents = 1_001;
   const belowResult = await handleEraImportRequest(belowThreshold.deps, {
@@ -508,6 +844,85 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
   );
   assert.equal(belowThreshold.created.PaymentReconciliation.length, 1);
   assert.equal(belowThreshold.created.Task.length, 0);
+});
+
+test("patient-responsibility Invoice is create-once; a differing remit preserves money and opens one exception", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const era = (patientResponsibilityEra(17_189) as { claim: { charge: Array<{ adjustment: { amount: string } }> } });
+  fixture.deps.adapter!.retrieveEraData = async () => era as any;
+
+  const first = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  const repeated = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+
+  assert.equal(first.status, 200);
+  assert.equal(repeated.status, 200);
+  assert.equal(fixture.created.Invoice.length, 1);
+  assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
+  assert.equal(
+    fixture.createHeaders.find((write) => write.resourceType === "Invoice")?.headers?.["If-None-Exist"],
+    "identifier=https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice|Claim/claim-1",
+  );
+  assert.equal(fixture.created.Task.length, 0);
+
+  era.claim.charge[0].adjustment.amount = "170.00";
+  const differing = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+
+  assert.equal(differing.status, 200);
+  assert.equal(fixture.created.Invoice.length, 1);
+  assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-underpayment");
+
+  const retriedDifference = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(retriedDifference.status, 200);
+  assert.equal(fixture.created.Task.length, 1);
+});
+
+test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 statement at $171.89", async () => {
+  const fixture = deps();
+  const claim = { ...buildProfessionalClaim(professionalClaim), id: "claim-1" };
+  fixture.created.Claim.push(claim);
+  fixture.created.Patient.push({ resourceType: "Patient", id: "pat-900", name: [{ text: "Jamie Synthetic" }] });
+  fixture.deps.adapter!.retrieveEraData = async () => patientResponsibilityEra(17_189);
+
+  const imported = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  const invoice = fixture.created.Invoice[0];
+  const statementResult = await handleGeneratePatientStatementRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "front-desk",
+      fhir: fixture.fhir,
+    }),
+    now: () => "2026-07-12T12:00:00.000Z",
+    generateId: (() => { let id = 0; return () => `statement-${++id}`; })(),
+  }, { authHeader: "Bearer good", body: { patientReference: "Patient/pat-900" } });
+
+  assert.equal(imported.status, 200);
+  assert.equal(statementResult.status, 200);
+  assert.equal(invoice.lineItem?.[0]?.chargeItemReference?.reference, "ChargeItem/charge-1");
+  assert.equal(invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+    ?.valueReference?.reference, "Claim/claim-1");
+  assert.equal(invoice.totalGross?.value, 171.89);
+  assert.equal(invoice.totalNet?.value, 171.89);
+  assert.equal((statementResult.body as StatementRunResult).statements[0].balanceCents, 17_189);
+});
+
+test("zero-PR and denied remits do not emit a patient-responsibility Invoice", async () => {
+  const zero = deps();
+  zero.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  await handleEraImportRequest(zero.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(zero.created.Invoice.length, 0);
+
+  const denied = deps();
+  denied.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const denial = patientResponsibilityEra(5_000) as any;
+  denial.claim.total_paid = "0.00";
+  denial.claim.status_code = "4";
+  denial.claim.charge[0].paid = "0.00";
+  denied.deps.adapter!.retrieveEraData = async () => denial;
+  await handleEraImportRequest(denied.deps, { authHeader: "Bearer good", body: eraImportBody() });
+  assert.equal(denied.created.Invoice.length, 0);
 });
 
 test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", async () => {
@@ -530,6 +945,7 @@ test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", a
   assert.equal(created.Task.length, 1);
   const task = created.Task[0];
   assert.equal(worklistCode(task), "era-unmatched");
+  assert.equal(task.groupIdentifier?.system, CLAIMMD_ERA_PAYMENT_SYSTEM);
   assert.equal(task.focus, undefined);
   assert.equal(task.for, undefined);
   assert.equal(taskInput(task, "pcn")?.valueString, "OSOD-CLAIM-900");
@@ -925,6 +1341,33 @@ test("Claim FHIR create failure returns the failure response without fabricating
   assert.equal(worklistCode(fixture.created.Task[0]), "claim-rejected");
 });
 
+test("claim-write failure and retry reuse the same conditionally-created ChargeItem", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem.length = 0;
+  const input = structuredClone(professionalClaim);
+  delete input.chargeItems[0].id;
+  fixture.failClaimCreate(new Error("FHIR Claim create rejected the resource"));
+
+  const failed = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+  const retried = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(failed.status, 502);
+  assert.equal(retried.status, 200);
+  assert.equal(fixture.created.ChargeItem.length, 1);
+  assert.equal(fixture.created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-1");
+  assert.equal(
+    fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").every((write) =>
+      write.headers?.["If-None-Exist"] === "identifier=https://osod.dev/fhir/NamingSystem/claim-charge-item|OSOD-CLAIM-900:1"),
+    true,
+  );
+});
+
 function eraImportBody(): Record<string, unknown> {
   return {
     eraId: "era-900",
@@ -933,6 +1376,31 @@ function eraImportBody(): Record<string, unknown> {
     insurerReference: "Organization/payer-1",
     providerReference: "Practitioner/prov-1",
     practiceOrgReference: "Organization/practice-1",
+  };
+}
+
+function patientResponsibilityEra(amountCents: number): ClaimMdEraData {
+  const amount = (amountCents / 100).toFixed(2);
+  const paid = 100;
+  return {
+    eraid: "era-pr",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      payer_icn: "ICN-PR",
+      total_charge: "300.00",
+      total_paid: paid.toFixed(2),
+      status_code: "1",
+      charge: [{
+        chgid: "charge-1",
+        proc_code: "PROC-A",
+        charge: "300.00",
+        allowed: ((paid * 100 + amountCents) / 100).toFixed(2),
+        paid: paid.toFixed(2),
+        adjustment: { group: "PR", code: "1", amount },
+      }],
+    },
   };
 }
 
@@ -989,9 +1457,24 @@ function matchesSearch(resource: Resource, params: Record<string, string>): bool
   }
   if (resource.resourceType === "Task") {
     const task = resource as Task;
+    if (params.identifier && !matchesIdentifierToken(task.identifier, params.identifier)) return false;
     if (params.code && !matchesCodingToken(task.code?.coding, params.code)) return false;
     if (params.focus && task.focus?.reference !== params.focus) return false;
     if (params["business-status"] && !matchesCodingToken(task.businessStatus?.coding, params["business-status"])) return false;
+  }
+  if (resource.resourceType === "Invoice") {
+    const invoice = resource as Invoice;
+    if (params.identifier && !matchesIdentifierToken(invoice.identifier, params.identifier)) return false;
+    if (params.status && invoice.status !== params.status) return false;
+    if (params.subject && invoice.subject?.reference !== params.subject) return false;
+  }
+  if (resource.resourceType === "Patient") {
+    const patient = resource as Patient;
+    if (params._id && !params._id.split(",").includes(patient.id ?? "")) return false;
+  }
+  if (resource.resourceType === "PaymentReconciliation") {
+    const payment = resource as PaymentReconciliation;
+    if (params.status && payment.status !== params.status) return false;
   }
   return true;
 }

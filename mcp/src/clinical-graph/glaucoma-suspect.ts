@@ -31,6 +31,7 @@ import {
   reference,
 } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const GLAUCOMA_PHASE0_LEDGER_PATH = resolve(
@@ -169,9 +170,53 @@ export interface ClinicalFindingDefinition {
   normalSemantics?: Record<string, unknown>;
   sourceStatus: "verified-seed" | "unseeded-needs-operator-input" | "local-practice";
   fhirObservationCode?: CodeableConcept;
+  diagnosisCandidates?: DiagnosisCandidateEntry[];
+  allowDiagnosisMapping?: boolean;
   notBillReady: boolean;
   active: boolean;
   provenance: ClinicalGraphProvenance;
+}
+
+export type MappingTrigger =
+  | { kind: "always" }
+  | { kind: "abnormal" }
+  | { kind: "numeric"; field: string; op: ">=" | "<=" | ">" | "<" | "=="; value: number }
+  | { kind: "option"; field: string; anyOf: string[] };
+
+export interface DiagnosisCandidateEntry {
+  id: string;
+  diagnosisKey: string;
+  trigger: MappingTrigger;
+  priority?: boolean;
+  origin: "seed" | "practice";
+  active: boolean;
+}
+
+export interface KeyFindingEntry {
+  findingKey: string;
+  label?: string;
+  satisfiedBy: "this-encounter" | "any-on-file";
+  withinMonths?: number;
+  origin: "seed" | "practice";
+  active: boolean;
+}
+
+export type DiagnosisIcd10 =
+  | { code: string; display?: string }
+  | {
+      pattern: {
+        unspecifiedEye?: string;
+        right?: string;
+        left?: string;
+        bilateral?: string;
+      };
+    };
+
+export interface DiagnosisCatalogRow extends DiagnosisDefinition {
+  icd10?: DiagnosisIcd10;
+  snomed?: { code: string; display: string };
+  keyFindings?: KeyFindingEntry[];
+  origin: "seed" | "practice";
 }
 
 /** A patient encounter finding instance; it remains independent of diagnoses until linked as evidence. */
@@ -481,6 +526,7 @@ export function buildClinicalFindingDefinition(
     ...input,
     id: input.id ?? randomUUID(),
     active: input.active ?? true,
+    allowDiagnosisMapping: input.allowDiagnosisMapping ?? true,
     notBillReady: input.notBillReady ?? input.sourceStatus !== "verified-seed",
   };
 }
@@ -758,7 +804,11 @@ export function buildGlaucomaOpenAngleDiagnosisDefinition(input: {
   id?: string;
   ledger?: GlaucomaPhase0Ledger;
 }): DiagnosisDefinition {
-  const code = glaucomaOpenAngleBorderlineCode(input.riskTier, input.laterality);
+  const catalogRow = buildDiagnosisCatalogSeeds().find((row) =>
+    row.stableKey === `glaucoma_suspect_open_angle_${input.riskTier}`
+  );
+  if (!catalogRow) throw new Error(`Glaucoma ${input.riskTier}-risk diagnosis catalog seed is missing.`);
+  const code = diagnosisCatalogCode(catalogRow, input.laterality);
   const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
   const display = ledgerHit?.display ?? `Glaucoma suspect open angle ${input.riskTier} risk ${input.laterality}`;
   const codingStatus: CodingStatus = ledgerHit ? "verified" : "placeholder";
@@ -1086,7 +1136,9 @@ export function buildOcularHypertensionDiagnosisDefinition(input: {
   id?: string;
   ledger?: GlaucomaPhase0Ledger;
 }): DiagnosisDefinition {
-  const code = `H40.05${lateralityDigit(input.laterality)}`;
+  const catalogRow = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "ocular_hypertension");
+  if (!catalogRow) throw new Error("Ocular-hypertension diagnosis catalog seed is missing.");
+  const code = diagnosisCatalogCode(catalogRow, input.laterality);
   const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
   if (!ledgerHit) {
     throw new Error(`Ocular hypertension ICD-10-CM code ${code} is missing from the Phase 0 ledger.`);
@@ -1908,7 +1960,7 @@ function resolveGlaucomaLedgerDiagnosis(
   return ledger.diagnosisCodes.find((row) => row.code === code);
 }
 
-function loadGlaucomaPhase0Ledger(): GlaucomaPhase0Ledger {
+export function loadGlaucomaPhase0Ledger(): GlaucomaPhase0Ledger {
   cachedGlaucomaPhase0Ledger ??= JSON.parse(
     readFileSync(GLAUCOMA_PHASE0_LEDGER_PATH, "utf8"),
   ) as GlaucomaPhase0Ledger;
@@ -1932,6 +1984,17 @@ function lateralityDigit(laterality: EyeLaterality): "1" | "2" | "3" | "9" {
   if (laterality === "OS") return "2";
   if (laterality === "OU") return "3";
   return "9";
+}
+
+function diagnosisCatalogCode(definition: DiagnosisCatalogRow, laterality: EyeLaterality): string {
+  if (!definition.icd10) throw new Error(`Diagnosis catalog seed ${definition.stableKey} has no ICD-10-CM coding.`);
+  if ("code" in definition.icd10) return definition.icd10.code;
+  const code = laterality === "OD" ? definition.icd10.pattern.right
+    : laterality === "OS" ? definition.icd10.pattern.left
+    : laterality === "OU" ? definition.icd10.pattern.bilateral
+    : definition.icd10.pattern.unspecifiedEye;
+  if (!code) throw new Error(`Diagnosis catalog seed ${definition.stableKey} lacks ${laterality} coding.`);
+  return code;
 }
 
 function lateralityDisplay(laterality: EyeLaterality): string {
