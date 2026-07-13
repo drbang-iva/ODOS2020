@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { DiagnosisPicker } from "./DiagnosisPicker";
 
@@ -123,6 +125,14 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
   const fields = definition?.fields ?? {};
   const verticalField = fields.verticalCupDiscRatio ?? {};
   const horizontalField = fields.horizontalCupDiscRatio ?? {};
+  const verticalOptions = useMemo(
+    () => numericOptions(verticalField, 0, 1, 0.05),
+    [verticalField.maximum, verticalField.minimum, verticalField.step],
+  );
+  const horizontalOptions = useMemo(
+    () => numericOptions(horizontalField, 0, 1, 0.05),
+    [horizontalField.maximum, horizontalField.minimum, horizontalField.step],
+  );
   const sizeOptions = useMemo(() => activeOptions(fields.discNerveSize), [fields.discNerveSize]);
   const descriptorOptions = useMemo(
     () => activeOptions(fields.discAppearanceDescriptors),
@@ -236,33 +246,51 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <Field label={verticalField.display ?? "Vertical C/D ratio"}>
-                    <input
-                      value={row.verticalCupDiscRatio}
-                      onChange={(event) => updateEye(eye, { verticalCupDiscRatio: event.target.value })}
-                      inputMode="decimal"
-                      type="number"
-                      min={verticalField.minimum ?? 0}
-                      max={verticalField.maximum ?? 1}
-                      step={verticalField.step ?? 0.05}
-                      disabled={disabled}
-                      placeholder="0.30"
-                      className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
-                    />
+                    <fieldset disabled={disabled} className="grid grid-cols-2 gap-2">
+                      <input
+                        value={row.verticalCupDiscRatio}
+                        onChange={(event) => updateEye(eye, { verticalCupDiscRatio: event.target.value })}
+                        inputMode="decimal"
+                        type="number"
+                        min={verticalField.minimum ?? 0}
+                        max={verticalField.maximum ?? 1}
+                        step={verticalField.step ?? 0.05}
+                        placeholder="0.30"
+                        aria-label={`${eye} vertical cup disc ratio typed value`}
+                        className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
+                      />
+                      <PowerDropdown
+                        value={row.verticalCupDiscRatio}
+                        options={verticalOptions}
+                        defaultValue={ratioDefault(verticalOptions)}
+                        onChange={(value) => updateEye(eye, { verticalCupDiscRatio: value })}
+                        ariaLabel={`${eye} vertical cup disc ratio picker`}
+                      />
+                    </fieldset>
                   </Field>
 
                   <Field label={horizontalField.display ?? "Horizontal C/D ratio"}>
-                    <input
-                      value={row.horizontalCupDiscRatio}
-                      onChange={(event) => updateEye(eye, { horizontalCupDiscRatio: event.target.value })}
-                      inputMode="decimal"
-                      type="number"
-                      min={horizontalField.minimum ?? 0}
-                      max={horizontalField.maximum ?? 1}
-                      step={horizontalField.step ?? 0.05}
-                      disabled={disabled}
-                      placeholder="0.30"
-                      className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
-                    />
+                    <fieldset disabled={disabled} className="grid grid-cols-2 gap-2">
+                      <input
+                        value={row.horizontalCupDiscRatio}
+                        onChange={(event) => updateEye(eye, { horizontalCupDiscRatio: event.target.value })}
+                        inputMode="decimal"
+                        type="number"
+                        min={horizontalField.minimum ?? 0}
+                        max={horizontalField.maximum ?? 1}
+                        step={horizontalField.step ?? 0.05}
+                        placeholder="0.30"
+                        aria-label={`${eye} horizontal cup disc ratio typed value`}
+                        className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
+                      />
+                      <PowerDropdown
+                        value={row.horizontalCupDiscRatio}
+                        options={horizontalOptions}
+                        defaultValue={ratioDefault(horizontalOptions)}
+                        onChange={(value) => updateEye(eye, { horizontalCupDiscRatio: value })}
+                        ariaLabel={`${eye} horizontal cup disc ratio picker`}
+                      />
+                    </fieldset>
                   </Field>
 
                   <Field label="Disc/nerve size">
@@ -360,6 +388,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {children}
     </label>
   );
+}
+
+function ratioDefault(options: string[]): string {
+  return options.includes("0.30") ? "0.30" : options[0] ?? "";
 }
 
 function SectionFooter({
