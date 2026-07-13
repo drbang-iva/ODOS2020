@@ -206,7 +206,7 @@ export function RouteSwitch({
     case CLINIC_PATH: {
       const clinicView = clinicRouteView(search, view);
       return (
-        <ClinicOfficeShell location={clinicLocation(clinicView)} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
+        <ClinicOfficeShell location={clinicLocation(clinicView)} roles={roles} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
           {clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />}
         </ClinicOfficeShell>
       );
