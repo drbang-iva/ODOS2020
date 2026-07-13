@@ -63,9 +63,9 @@ async function server() {
     authenticateService: async () => { serviceAuthCalls += 1; },
     handlers: {
       authenticate: async (header) => header === "Bearer good"
-        ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir: fhir as never }
+        ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fhir as never }
         : header === "Bearer forbidden"
-          ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", fhir: fhir as never }
+          ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir: fhir as never }
           : null,
       lifecycleFhir: fhir,
       dispatch: createPaymentDispatch([{ method: "manual-cash" }]),

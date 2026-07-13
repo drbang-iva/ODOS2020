@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
-import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/authz/roles.js";
+import {
+  assertBusinessActionAllowed,
+  OSOD_PRACTICE_ROLE_SYSTEM,
+  resolveBusinessActionRole,
+} from "../src/authz/roles.js";
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
@@ -21,6 +25,14 @@ test("clinician, auditor, and aesthetics-provider do NOT hold payment.charge", (
   for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
     assert.throws(() => assertBusinessActionAllowed(role, "payment.charge"), /lacks business action/);
   }
+});
+
+test("business-action acting roles are selected from the full set in registry order", () => {
+  const roles = ["clinician", "front-desk", "practice-admin"] as const;
+  assert.equal(resolveBusinessActionRole(roles, "chart.write"), "clinician");
+  assert.equal(resolveBusinessActionRole(roles, "payment.charge"), "practice-admin");
+  assert.equal(resolveBusinessActionRole(roles, "claims.manage"), "practice-admin");
+  assert.equal(resolveBusinessActionRole(["clinician"], "claims.manage"), undefined);
 });
 
 // --- Adapter registrations from env (service-start configuration) ---
@@ -338,6 +350,21 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     email: "staff@example.test",
     roles: ["clinician", "front-desk", "aesthetics-provider"],
   });
+
+  const reversed = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: {
+      ...serviceClient,
+      search: async <T,>(): Promise<Bundle<T>> => ({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: { ...membership, access: [...membership.access!].reverse() } as unknown as T }],
+      }),
+    },
+    fetchImpl,
+  });
+  assert.deepEqual(reversed?.roles, staff?.roles);
 });
 
 test("resolveStaffRoles preserves authenticated identity when no role-bearing policy exists", async () => {

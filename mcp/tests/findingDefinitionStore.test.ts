@@ -280,11 +280,11 @@ test("a handler still receives working definitions when one stored row is garbag
 test("every definition-backed clinical-graph HTTP closure receives the persistent dependency", () => {
   const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
   const clinicalRoutes = source.match(/app\.(?:get|post)\("\/clinical-graph\//g) ?? [];
-  const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\)\)/g) ?? [];
+  const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g) ?? [];
 
   assert.equal(clinicalRoutes.length, 33);
   assert.equal(routeDependencies.length, 25);
-  assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRoute \}/);
+  assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
   assert.match(source, /handleDiagnosisCatalogListRequest/);
   assert.match(source, /handleDiagnosisCandidatesRequest/);
   assert.match(source, /handleDiagnosisCompletenessRequest/);

@@ -15,7 +15,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
 import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibility-invoice.js";
-import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import {
@@ -159,6 +159,7 @@ export interface StatementHandlerDeps {
 }
 
 export interface AuthenticatedStatementStaff extends Omit<AuthenticatedStaff, "fhir"> {
+  roles: readonly PracticeRoleId[];
   fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
 }
 
@@ -660,15 +661,11 @@ async function authorizedStaff(
     throw error;
   }
   if (!staff) return { result: { status: 401, body: { error: "Authentication required to manage statements." } } };
-  if (!PRACTICE_ROLE_IDS.includes(staff.actorRole as PracticeRoleId)) {
+  const actorRole = resolveBusinessActionRole(staff.roles, "payment.charge");
+  if (!actorRole) {
     return { result: { status: 403, body: { error: "payment.charge role required" } } };
   }
-  try {
-    assertBusinessActionAllowed(staff.actorRole as PracticeRoleId, "payment.charge");
-  } catch {
-    return { result: { status: 403, body: { error: "payment.charge role required" } } };
-  }
-  return { staff };
+  return { staff: { ...staff, actorRole } };
 }
 
 function reconcileInvoiceTotals(invoice: Invoice): { grossCents: number; netCents: number } {

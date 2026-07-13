@@ -58,6 +58,23 @@ test("every patient-insurance HTTP route preserves 401 and claims.manage 403 gat
   }
 });
 
+test("patient-insurance uses a granting role from a clinician-primary multi-role caller", async () => {
+  const fixture = await server();
+  try {
+    const response = await call(
+      fixture.baseUrl,
+      "POST",
+      "/insurance/coverages",
+      "Bearer owner",
+      { bundle: coverageBundle() },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(fixture.audits()[0].actorRole, "practice-admin");
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("Coverage transactions reject dangling subscriber URNs and map concurrent edits to 409", async () => {
   const invalid = await server();
   try {
@@ -121,9 +138,16 @@ async function server(conflict = false) {
   app.use(express.json());
   registerPatientInsuranceRoutes(app, async () => { serviceAuthCalls += 1; }, {
     authenticate: async (header) => header === "Bearer good"
-      ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", fhir }
+      ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir }
       : header === "Bearer forbidden"
-        ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", fhir }
+        ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir }
+        : header === "Bearer owner"
+          ? {
+              staffReference: "Practitioner/owner",
+              actorRole: "clinician",
+              roles: ["clinician", "front-desk", "practice-admin"],
+              fhir,
+            }
         : null,
     recordAudit: async (row) => { audits.push(row); },
   });

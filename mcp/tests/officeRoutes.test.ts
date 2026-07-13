@@ -4,7 +4,7 @@ import { test } from "node:test";
 import type { Bundle, Communication, Patient, Practitioner, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import { OFFICE_ACK_CODE, OFFICE_ACK_SYSTEM, OFFICE_AUDIENCE_CODE, OFFICE_AUDIENCE_SYSTEM, OFFICE_CATEGORY_CODE, OFFICE_CATEGORY_SYSTEM } from "../src/office/office-channel.js";
-import { registerOfficeRoutes } from "../src/office/office-routes.js";
+import { officeActingRole, registerOfficeRoutes } from "../src/office/office-routes.js";
 
 const LAB_CATEGORY_SYSTEM = "https://osod.dev/fhir/CodeSystem/communication-category";
 const LAB_CATEGORY_CODE = "optical-lab-order";
@@ -75,6 +75,25 @@ test("Office routes enforce Desk and Clinic roles plus unauthenticated rejection
     assert.equal((await request(server.base, "/clinic/office/messages/office-1/ack", "desk", { method: "POST" })).response.status, 403);
     assert.equal((await request(server.base, "/clinic/office/messages", "desk")).response.status, 403);
     assert.equal((await request(server.base, "/desk/office/messages", "doctor")).response.status, 403);
+  } finally {
+    await server.close();
+  }
+});
+
+test("Office routes authorize a clinician-primary multi-role caller on both sides", async () => {
+  const store = new InMemoryFhirStore();
+  store.seed(practitioner("owner-1", "Eric", "Bang", "Dr."));
+  const server = await startServer(store);
+  try {
+    const sent = await request(server.base, "/desk/office/messages", "owner", {
+      method: "POST",
+      body: { text: "Multi-role desk action", tier: "ambient" },
+    });
+    assert.equal(sent.response.status, 201);
+    assert.equal((await request(server.base, "/desk/office/messages", "owner")).response.status, 200);
+    assert.equal((await request(server.base, "/clinic/office/messages", "owner")).response.status, 200);
+    assert.equal(officeActingRole(["clinician", "front-desk", "practice-admin"], "desk"), "front-desk");
+    assert.equal(officeActingRole(["clinician", "front-desk", "practice-admin"], "clinic"), "clinician");
   } finally {
     await server.close();
   }
@@ -152,9 +171,15 @@ async function startServer(store: InMemoryFhirStore) {
   registerOfficeRoutes(app, {
     authenticateService: async () => undefined,
     authenticate: async (header) => header === "Bearer desk"
-      ? { staffReference: "Practitioner/desk-1", actorRole: "front-desk", fhir: store }
-      : header === "Bearer doctor" ? { staffReference: "Practitioner/doctor-1", actorRole: "clinician", fhir: store }
-        : header === "Bearer doctor-2" ? { staffReference: "Practitioner/doctor-2", actorRole: "clinician", fhir: store } : null,
+      ? { staffReference: "Practitioner/desk-1", actorRole: "front-desk", roles: ["front-desk"], fhir: store }
+      : header === "Bearer doctor" ? { staffReference: "Practitioner/doctor-1", actorRole: "clinician", roles: ["clinician"], fhir: store }
+        : header === "Bearer doctor-2" ? { staffReference: "Practitioner/doctor-2", actorRole: "clinician", roles: ["clinician"], fhir: store }
+          : header === "Bearer owner" ? {
+              staffReference: "Practitioner/owner-1",
+              actorRole: "clinician",
+              roles: ["clinician", "front-desk", "practice-admin"],
+              fhir: store,
+            } : null,
     now: () => "2026-07-11T15:00:00.000Z",
   });
   const listener = app.listen(0, "127.0.0.1");

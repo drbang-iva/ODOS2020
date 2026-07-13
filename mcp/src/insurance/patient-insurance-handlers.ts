@@ -12,7 +12,7 @@ import {
   type OsodAuditEventRecord,
   type OsodAuditEventType,
 } from "../authz/osodAudit.js";
-import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
+import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
@@ -20,6 +20,7 @@ import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.j
 export interface AuthenticatedInsuranceStaff {
   staffReference: string;
   actorRole: OsodActorRole;
+  roles: readonly PracticeRoleId[];
   fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
 }
 
@@ -227,15 +228,11 @@ async function authenticateInsuranceStaff(
     throw error;
   }
   if (!staff) return { status: 401, body: { error: "Authentication required to manage patient insurance." } };
-  if (!PRACTICE_ROLE_IDS.includes(staff.actorRole as PracticeRoleId)) {
+  const actorRole = resolveBusinessActionRole(staff.roles, "claims.manage");
+  if (!actorRole) {
     return { status: 403, body: { error: "claims.manage role required" } };
   }
-  try {
-    assertBusinessActionAllowed(staff.actorRole as PracticeRoleId, "claims.manage");
-  } catch {
-    return { status: 403, body: { error: "claims.manage role required" } };
-  }
-  return staff;
+  return { ...staff, actorRole };
 }
 
 function bodyBundle(body: unknown): Bundle | undefined {
