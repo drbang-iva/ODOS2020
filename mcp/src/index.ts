@@ -5797,7 +5797,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingCaptureRequest(
-            await clinicalGraphRouteDeps(req.header("authorization")),
+            { authenticate: authenticateStaffRoute },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);

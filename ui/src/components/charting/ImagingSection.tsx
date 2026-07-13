@@ -8,7 +8,20 @@ interface Props {
   onSaved: (status: SectionSaveStatus) => void;
 }
 
-const ACCEPTED_FILE_TYPES = ".pdf,.bmp,.heic,.heif,.jpg,.jpeg,.png,.tif,.tiff,.webp";
+const CONTENT_TYPE_BY_EXTENSION = {
+  pdf: "application/pdf",
+  bmp: "image/bmp",
+  heic: "image/heic",
+  heif: "image/heif",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  webp: "image/webp",
+} as const;
+const ACCEPTED_FILE_TYPES = Object.keys(CONTENT_TYPE_BY_EXTENSION).map((extension) => `.${extension}`).join(",");
+const ACCEPTED_CONTENT_TYPES = new Set<string>(Object.values(CONTENT_TYPE_BY_EXTENSION));
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const CATEGORY_OPTIONS = [
   ["visual-field", "Visual field printout"],
@@ -33,6 +46,11 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     setSaved(null);
     setError(null);
     if (!next) return;
+    if (!imagingContentType(next)) {
+      setFile(null);
+      setError("Unsupported file type.");
+      return;
+    }
     if (next.size > MAX_FILE_BYTES) {
       setFile(null);
       setError("Files may not exceed 15 MB.");
@@ -49,6 +67,12 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
 
   async function upload() {
     if (!file) return;
+    const contentType = imagingContentType(file);
+    if (!contentType) {
+      setFile(null);
+      setError("Unsupported file type.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(null);
@@ -63,7 +87,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
           ...(interpretation.trim() ? { interpretation: interpretation.trim() } : {}),
           file: {
             name: file.name,
-            contentType: file.type || contentTypeFromName(file.name),
+            contentType,
             data: await fileBase64(file),
           },
         }),
@@ -109,7 +133,10 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             ].join(" ")}
             onClick={() => inputRef.current?.click()}
             onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") inputRef.current?.click();
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                inputRef.current?.click();
+              }
             }}
             onDragEnter={(event) => {
               event.preventDefault();
@@ -176,16 +203,16 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function contentTypeFromName(name: string): string {
+export function imagingContentType(file: Pick<File, "name" | "type">): string | undefined {
+  const contentType = file.type.trim().toLowerCase() || contentTypeFromName(file.name);
+  return contentType && ACCEPTED_CONTENT_TYPES.has(contentType) ? contentType : undefined;
+}
+
+function contentTypeFromName(name: string): string | undefined {
   const extension = name.split(".").pop()?.toLowerCase();
-  if (extension === "pdf") return "application/pdf";
-  if (extension === "bmp") return "image/bmp";
-  if (extension === "heic") return "image/heic";
-  if (extension === "heif") return "image/heif";
-  if (extension === "png") return "image/png";
-  if (extension === "tif" || extension === "tiff") return "image/tiff";
-  if (extension === "webp") return "image/webp";
-  return "image/jpeg";
+  return extension && extension in CONTENT_TYPE_BY_EXTENSION
+    ? CONTENT_TYPE_BY_EXTENSION[extension as keyof typeof CONTENT_TYPE_BY_EXTENSION]
+    : undefined;
 }
 
 async function fileBase64(file: File): Promise<string> {
