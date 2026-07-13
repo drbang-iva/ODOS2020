@@ -5,8 +5,10 @@ import {
   devPrimaryRole,
   membershipPolicyReferences,
   repairPracticeRoles,
+  requiredEmailArgument,
   type PracticeRoleRepairAdapter,
 } from "../../scripts/repair-practice-roles.ts";
+import type { ResolvedRoleGrantTarget } from "../../mcp/src/authz/role-grants.ts";
 import {
   OSOD_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
@@ -18,6 +20,7 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
   readonly membership: ProjectMembership;
   policyWrites = 0;
   membershipWrites = 0;
+  auditWrites = 0;
 
   constructor(input: { policies?: AccessPolicy[]; membership?: ProjectMembership } = {}) {
     this.policies = input.policies ?? [];
@@ -45,20 +48,8 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
     return policy;
   }
 
-  async currentIdentity() {
-    return {
-      profileReference: "Practitioner/dev-admin",
-      projectReference: "Project/local-practice",
-      membershipReference: "ProjectMembership/dev-membership",
-    };
-  }
-
-  async findMemberships(): Promise<ProjectMembership[]> {
-    return [this.membership];
-  }
-
-  async readMembership(): Promise<ProjectMembership> {
-    return this.membership;
+  async resolveTarget(target: string): Promise<ResolvedRoleGrantTarget> {
+    return { email: target, membership: this.membership };
   }
 
   async patchMembership(id: string, operations: JsonPatchOperation[], versionId: string): Promise<ProjectMembership> {
@@ -69,6 +60,11 @@ class FakeRepairAdapter implements PracticeRoleRepairAdapter {
     this.membershipWrites += 1;
     return this.membership;
   }
+
+  async recordMembershipChange<T>(_target: ResolvedRoleGrantTarget, operation: () => Promise<T>): Promise<T> {
+    this.auditWrites += 1;
+    return operation();
+  }
 }
 
 test("missing role policies are created and all dev roles are granted front-desk first", async () => {
@@ -76,11 +72,12 @@ test("missing role policies are created and all dev roles are granted front-desk
     membership: membership({ accessPolicy: { reference: "AccessPolicy/keep-legacy" } }),
   });
 
-  const result = await repairPracticeRoles(adapter);
+  const result = await repairPracticeRoles(adapter, "human@example.test");
 
   assert.deepEqual(result.createdPolicies, PRACTICE_ROLE_IDS);
-  assert.deepEqual(result.membershipGrants, { "front-desk": "ADDED", "practice-admin": "ADDED", clinician: "ADDED" });
   assert.equal(result.primaryRole, "front-desk");
+  assert.equal(result.targetEmail, "human@example.test");
+  assert.equal(result.membershipChanged, true);
   assert.equal(result.membershipReference, "ProjectMembership/dev-membership");
   assert.equal(adapter.policyWrites, 5);
   assert.equal(adapter.membershipWrites, 1);
@@ -91,25 +88,26 @@ test("missing role policies are created and all dev roles are granted front-desk
     )));
   }
   assert.deepEqual(membershipPolicyReferences(adapter.membership), [
-    "AccessPolicy/keep-legacy",
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
     "AccessPolicy/policy-2",
   ]);
+  assert.equal(adapter.membership.accessPolicy, undefined);
+  assert.equal(adapter.auditWrites, 1);
 });
 
 test("a second repair is a zero-write idempotent no-op", async () => {
   const adapter = new FakeRepairAdapter();
-  await repairPracticeRoles(adapter);
+  await repairPracticeRoles(adapter, "human@example.test");
   const policyWrites = adapter.policyWrites;
   const membershipWrites = adapter.membershipWrites;
 
-  const result = await repairPracticeRoles(adapter);
+  const result = await repairPracticeRoles(adapter, "human@example.test");
 
   assert.deepEqual(result.createdPolicies, []);
   assert.deepEqual(result.taggedPolicies, []);
   assert.deepEqual(result.existingPolicies, PRACTICE_ROLE_IDS);
-  assert.deepEqual(result.membershipGrants, { "front-desk": "EXISTING", "practice-admin": "EXISTING", clinician: "EXISTING" });
+  assert.equal(result.membershipChanged, false);
   assert.equal(adapter.policyWrites, policyWrites);
   assert.equal(adapter.membershipWrites, membershipWrites);
 });
@@ -127,25 +125,30 @@ test("clinician primary override reorders grants without duplicates and remains 
     }),
   });
 
-  const first = await repairPracticeRoles(adapter, "clinician");
+  const first = await repairPracticeRoles(adapter, "human@example.test", "clinician");
   const writes = adapter.membershipWrites;
-  const second = await repairPracticeRoles(adapter, "clinician");
+  const second = await repairPracticeRoles(adapter, "human@example.test", "clinician");
 
   assert.equal(first.primaryRole, "clinician");
   assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
     "AccessPolicy/policy-2",
     "AccessPolicy/policy-3",
     "AccessPolicy/policy-1",
-    "AccessPolicy/unrelated",
   ]);
   assert.equal(adapter.membershipWrites, writes);
-  assert.deepEqual(second.membershipGrants, { "front-desk": "EXISTING", "practice-admin": "EXISTING", clinician: "EXISTING" });
+  assert.equal(second.membershipChanged, false);
 });
 
 test("the primary-role environment value defaults safely and rejects unsupported roles", () => {
   assert.equal(devPrimaryRole(undefined), "front-desk");
   assert.equal(devPrimaryRole(" clinician "), "clinician");
   assert.throws(() => devPrimaryRole("practice-admin"), /must be front-desk or clinician/);
+});
+
+test("the repair CLI requires an explicit --email target", () => {
+  assert.equal(requiredEmailArgument(["--email", "person@example.test"]), "person@example.test");
+  assert.throws(() => requiredEmailArgument([]), /requires --email <target>/);
+  assert.throws(() => requiredEmailArgument(["--email"]), /requires --email <target>/);
 });
 
 test("one untagged canonical policy is tagged without replacing unrelated metadata", async () => {
@@ -158,7 +161,7 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
     }],
   });
 
-  const result = await repairPracticeRoles(adapter);
+  const result = await repairPracticeRoles(adapter, "human@example.test");
 
   assert.deepEqual(result.taggedPolicies, ["practice-admin"]);
   assert.deepEqual(adapter.policies[0]?.meta?.tag, [
@@ -170,7 +173,7 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
 test("duplicate canonical policies stop repair before membership mutation", async () => {
   const adapter = new FakeRepairAdapter({ policies: [policy("a", "practice-admin"), policy("b", "practice-admin")] });
 
-  await assert.rejects(() => repairPracticeRoles(adapter), /2 exact matches; repair stopped without guessing/);
+  await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /2 exact matches; repair stopped without guessing/);
   assert.equal(adapter.membershipWrites, 0);
 });
 
@@ -179,7 +182,7 @@ test("a wrong OSOD role tag stops repair without overwriting it", async () => {
   wrong.meta!.tag = [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" }];
   const adapter = new FakeRepairAdapter({ policies: [wrong] });
 
-  await assert.rejects(() => repairPracticeRoles(adapter), /conflicting practice-role code/);
+  await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /conflicting practice-role code/);
   assert.deepEqual(wrong.meta.tag, [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" }]);
   assert.equal(adapter.membershipWrites, 0);
 });
@@ -225,6 +228,9 @@ function applyPatch(target: AccessPolicy | ProjectMembership, operations: JsonPa
       assert.equal(operation.op, "add");
       assert.ok((target as ProjectMembership).access);
       (target as ProjectMembership).access!.splice(0, 0, operation.value as NonNullable<ProjectMembership["access"]>[number]);
+    } else if (operation.path === "/accessPolicy") {
+      assert.equal(operation.op, "remove");
+      delete (target as ProjectMembership).accessPolicy;
     } else {
       assert.fail(`Unexpected patch path ${operation.path}`);
     }

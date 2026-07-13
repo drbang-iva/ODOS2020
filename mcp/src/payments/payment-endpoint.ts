@@ -1,4 +1,4 @@
-import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, ProjectMembership, User } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import {
   OSOD_PRACTICE_ROLE_SYSTEM,
@@ -75,6 +75,8 @@ export function paymentAdapterRegistrationsFromEnv(
 export interface VerifiedStaffToken {
   /** Practitioner / PractitionerRole reference for requestor + audit attribution. */
   staffReference: string;
+  email?: string;
+  userReference?: string;
 }
 
 /**
@@ -103,6 +105,7 @@ export async function verifyMedplumStaffToken(opts: {
 
   const body = (await response.json()) as {
     profile?: { resourceType?: string; id?: string };
+    user?: { resourceType?: string; id?: string; email?: string; reference?: string };
   };
   const profile = body.profile;
   if (
@@ -111,7 +114,13 @@ export async function verifyMedplumStaffToken(opts: {
   ) {
     return null;
   }
-  return { staffReference: `${profile.resourceType}/${profile.id}` };
+  const userReference = body.user?.reference ??
+    (body.user?.resourceType === "User" && body.user.id ? `User/${body.user.id}` : undefined);
+  return {
+    staffReference: `${profile.resourceType}/${profile.id}`,
+    ...(body.user?.email ? { email: body.user.email } : {}),
+    ...(userReference ? { userReference } : {}),
+  };
 }
 
 export interface ResolvedStaffRole {
@@ -121,6 +130,7 @@ export interface ResolvedStaffRole {
 
 export interface ResolvedStaffRoles {
   staffReference: string;
+  email: string;
   roles: PracticeRoleId[];
 }
 
@@ -187,13 +197,13 @@ export async function resolveStaffRoles(opts: {
   if (!verified) return null;
 
   try {
-    return await resolveRolesWithServiceClient(opts.serviceClient, verified.staffReference);
+    return await resolveRolesWithServiceClient(opts.serviceClient, verified);
   } catch (error) {
     if (!isUnauthorizedServiceError(error)) throw error;
     if (!opts.refreshServiceClient) throw new StaffRoleServiceUnavailableError(error);
     try {
       await opts.refreshServiceClient();
-      return await resolveRolesWithServiceClient(opts.serviceClient, verified.staffReference);
+      return await resolveRolesWithServiceClient(opts.serviceClient, verified);
     } catch (retryError) {
       throw new StaffRoleServiceUnavailableError(retryError);
     }
@@ -202,10 +212,10 @@ export async function resolveStaffRoles(opts: {
 
 async function resolveRolesWithServiceClient(
   serviceClient: Pick<MedplumClient, "search" | "read">,
-  staffReference: string,
-): Promise<ResolvedStaffRoles | null> {
+  verified: VerifiedStaffToken,
+): Promise<ResolvedStaffRoles> {
   const memberships = await serviceClient.search<ProjectMembership>("ProjectMembership", {
-    profile: staffReference,
+    profile: verified.staffReference,
   });
   const policyIds = new Set<string>();
   for (const entry of memberships.entry ?? []) {
@@ -239,7 +249,14 @@ async function resolveRolesWithServiceClient(
     }
   }
   const roles = PRACTICE_ROLE_IDS.filter((role) => found.has(role));
-  return roles.length > 0 ? { staffReference, roles } : null;
+  const userReference = verified.userReference ??
+    memberships.entry?.map((entry) => entry.resource?.user.reference).find(Boolean);
+  let email = verified.email;
+  const userId = userReference?.match(/^User\/([^/]+)$/)?.[1];
+  if (!email && userId) {
+    email = (await serviceClient.read<User>("User", userId)).email;
+  }
+  return { staffReference: verified.staffReference, email: email ?? "unknown", roles };
 }
 
 async function resolveRoleWithServiceClient(

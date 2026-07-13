@@ -295,7 +295,10 @@ test("resolveStaffRole also reads the legacy single accessPolicy binding", async
 });
 
 test("resolveStaffRoles returns every recognized practice-role tag across the caller's policy bindings", async () => {
-  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
   const membership: ProjectMembership = {
     ...MEMBERSHIP_FRONT_DESK,
     access: [
@@ -332,6 +335,26 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
   });
   assert.deepEqual(staff, {
     staffReference: "Practitioner/staff1",
+    email: "staff@example.test",
     roles: ["clinician", "front-desk", "aesthetics-provider"],
+  });
+});
+
+test("resolveStaffRoles preserves authenticated identity when no role-bearing policy exists", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "roleless@example.test" },
+  });
+  const svc = serviceClient({ membership: null });
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: svc,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "roleless@example.test",
+    roles: [],
   });
 });

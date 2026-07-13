@@ -155,11 +155,11 @@ Admin UI: http://localhost:8100
 For an already-created local practice, run the non-destructive role repair once, then use the checked-in `.claude/launch.json` entries to start `osod-mcp` on `:3333` and `osod-ui` on `:5173`:
 
 ```bash
-npm run repair-practice-roles
+npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
 npm run seed-demo
 ```
 
-Open `http://localhost:5173` and use the regular OSOD login. The default developer email is `admin@osod.local`; its password remains only in the local `.env`. The repaired developer membership deliberately routes as `front-desk`, so the complete Desk home, Statements, Clinic summary, Schedule, and payment-facing screens load without token copying or role-related FHIR 403 responses. A supplemental `practice-admin` grant gives this developer-only administrator enough local FHIR authority to run the demo seed; Clinic-side Office acknowledgement remains clinician-only. `seed-demo` is idempotent and provides a synthetic patient, current appointment, visit type, issued Invoice, unapplied credit, and generated statement.
+Open `http://localhost:5173` and use the regular OSOD login for the named human account. The repaired membership deliberately routes as `front-desk`, so the complete Desk home, Statements, Clinic summary, Schedule, and payment-facing screens load without token copying or role-related FHIR 403 responses. The configured Medplum service identity is not eligible for these human practice roles. `seed-demo` is idempotent and provides a synthetic patient, current appointment, visit type, issued Invoice, unapplied credit, and generated statement.
 
 See [`docs/install.md`](docs/install.md#developer-screen-bring-up) for the complete bring-up and partial-provision repair behavior.
 

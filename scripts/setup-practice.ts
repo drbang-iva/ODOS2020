@@ -4,14 +4,19 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
-import type { AccessPolicy, Practitioner } from "@medplum/fhirtypes";
+import type { AccessPolicy, Practitioner, ProjectMembership, User } from "@medplum/fhirtypes";
 import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import {
+  grantPracticeRoles,
+  type ResolvedRoleGrantTarget,
+} from "../mcp/src/authz/role-grants.js";
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
+import { searchAll } from "../mcp/src/fhir-search.js";
 
 export const SETUP_WIZARD_HEADER =
   "Run OSOD on your own hardware. Your patients, your machines, your data.";
@@ -21,6 +26,8 @@ export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already prov
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const DEFAULT_STATE_PATH = resolve(process.cwd(), ".osod-setup-state.json");
+const CLINICIAN_ROLE = getRoleDeclaration("clinician");
+const CLINICIAN_POLICY_NAME = `OSOD ${CLINICIAN_ROLE.display}`;
 
 export interface SetupPracticeConfig {
   readonly baseUrl: string;
@@ -54,8 +61,11 @@ export interface SetupPracticeAdapter {
   isPracticeProvisioned(config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean>;
   createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession>;
   createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner>;
-  createClinicianAccessPolicy(config: SetupPracticeConfig, session: AdminSession): Promise<AccessPolicy>;
-  assignClinicianPolicy(input: {
+  createClinicianAccessPolicy(config: SetupPracticeConfig, session: AdminSession): Promise<{
+    policy: AccessPolicy;
+    created: boolean;
+  }>;
+  grantClinicianRole(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
@@ -175,7 +185,8 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
   if (state.accessPolicyCreated && state.accessPolicyId) {
     policy = { resourceType: "AccessPolicy", id: state.accessPolicyId };
   } else {
-    policy = await adapter.createClinicianAccessPolicy(config, session);
+    const resolvedPolicy = await adapter.createClinicianAccessPolicy(config, session);
+    policy = resolvedPolicy.policy;
     if (!policy.id) {
       throw new Error("Setup wizard AccessPolicy create returned no id.");
     }
@@ -184,18 +195,20 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
       accessPolicyCreated: true,
       accessPolicyId: policy.id,
     });
-    await emit(
-      buildSetupAuditRow({
-        eventType: "create",
-        resourceType: "AccessPolicy",
-        resourceId: policy.id,
-        actionReason: SETUP_WIZARD_ACTION_REASON,
-      }),
-    );
+    if (resolvedPolicy.created) {
+      await emit(
+        buildSetupAuditRow({
+          eventType: "create",
+          resourceType: "AccessPolicy",
+          resourceId: policy.id,
+          actionReason: SETUP_WIZARD_ACTION_REASON,
+        }),
+      );
+    }
   }
 
   if (!state.accessPolicyAssigned) {
-    const assignment = await adapter.assignClinicianPolicy({
+    const assignment = await adapter.grantClinicianRole({
       config,
       session,
       practitioner,
@@ -233,6 +246,16 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   readonly practitioners: Practitioner[] = [];
   readonly policies: AccessPolicy[] = [];
   readonly assignments: { id: string; practitionerId?: string; policyId?: string }[] = [];
+  readonly membership: ProjectMembership = {
+    resourceType: "ProjectMembership",
+    id: "project-membership-1",
+    meta: { versionId: "1" },
+    active: true,
+    project: { reference: "Project/project-1" },
+    user: { reference: "User/admin-1" },
+    profile: { reference: "Practitioner/practitioner-1" },
+    access: [],
+  };
   readonly auditRows: OsodAuditEventRecord[] = [];
   practiceProvisioned = false;
 
@@ -268,22 +291,51 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return practitioner;
   }
 
-  async createClinicianAccessPolicy(): Promise<AccessPolicy> {
+  async createClinicianAccessPolicy(): Promise<{ policy: AccessPolicy; created: boolean }> {
+    const existing = this.policies.filter((policy) => policy.name === CLINICIAN_POLICY_NAME);
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one ${CLINICIAN_POLICY_NAME} AccessPolicy; found ${existing.length}.`);
+    }
+    if (existing[0]) return { policy: existing[0], created: false };
     const policy: AccessPolicy = {
-      ...buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+      ...buildMedplumAccessPolicy(CLINICIAN_ROLE),
       id: `access-policy-${this.policies.length + 1}`,
-      name: "OSOD Clinician",
+      name: CLINICIAN_POLICY_NAME,
     };
     this.policies.push(policy);
-    return policy;
+    return { policy, created: true };
   }
 
-  async assignClinicianPolicy(input: {
+  async grantClinicianRole(input: {
+    config: SetupPracticeConfig;
     practitioner: Practitioner;
     policy: AccessPolicy;
   }): Promise<{ id: string }> {
+    await grantPracticeRoles(
+      bootstrapClinicianGrant(input.config.adminEmail),
+      {
+        serviceIdentityEmail: input.config.adminEmail,
+        resolveTarget: async () => ({ email: input.config.adminEmail, membership: this.membership }),
+        resolvePolicy: async () => input.policy,
+        patchMembership: async (_id, operations) => {
+          for (const operation of operations) {
+            if (operation.path === "/access") {
+              this.membership.access = operation.value as ProjectMembership["access"];
+            } else if (operation.path === "/accessPolicy") {
+              delete this.membership.accessPolicy;
+            }
+          }
+          return this.membership;
+        },
+        recordMembershipChange: async (target, operation) => {
+          const result = await operation();
+          await this.emitAudit(buildSetupRoleChangeAuditRow(target));
+          return result;
+        },
+      },
+    );
     const assignment = {
-      id: `project-membership-${this.assignments.length + 1}`,
+      id: this.membership.id!,
       practitionerId: input.practitioner.id,
       policyId: input.policy.id,
     };
@@ -335,49 +387,59 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     });
   }
 
-  async createClinicianAccessPolicy(): Promise<AccessPolicy> {
-    return this.client().create<AccessPolicy>({
-      ...buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
-      name: `OSOD Clinician ${Date.now()}`,
-    });
+  async createClinicianAccessPolicy(): Promise<{ policy: AccessPolicy; created: boolean }> {
+    const existing = (await searchAll<AccessPolicy>(this.client(), "AccessPolicy", {
+      "name:exact": CLINICIAN_POLICY_NAME,
+    })).filter((policy) => policy.name === CLINICIAN_POLICY_NAME);
+    if (existing.length > 1) {
+      throw new Error(`Expected at most one ${CLINICIAN_POLICY_NAME} AccessPolicy; found ${existing.length}.`);
+    }
+    if (existing[0]) return { policy: existing[0], created: false };
+    return {
+      policy: await this.client().create<AccessPolicy>(buildMedplumAccessPolicy(CLINICIAN_ROLE)),
+      created: true,
+    };
   }
 
-  async assignClinicianPolicy(input: {
+  async grantClinicianRole(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
     policy: AccessPolicy;
   }): Promise<{ id: string }> {
-    const response = await fetch(
-      `${input.config.baseUrl.replace(/\/$/, "")}/admin/projects/${input.session.projectId}/client`,
+    const result = await grantPracticeRoles(
+      bootstrapClinicianGrant(input.config.adminEmail),
       {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${input.session.accessToken}`,
-          "Content-Type": "application/json",
+        serviceIdentityEmail: process.env.MEDPLUM_ADMIN_EMAIL,
+        resolveTarget: async (target) => {
+          const users = (await searchAll<User>(this.client(), "User", { email: target })).filter(
+            (user) => user.email?.toLowerCase() === target.toLowerCase(),
+          );
+          if (users.length !== 1 || !users[0]?.id) {
+            throw new Error(`Expected one setup User for ${target}; found ${users.length}.`);
+          }
+          const memberships = await searchAll<ProjectMembership>(this.client(), "ProjectMembership", {
+            user: `User/${users[0].id}`,
+          });
+          if (memberships.length !== 1) {
+            throw new Error(`Expected one setup ProjectMembership for ${target}; found ${memberships.length}.`);
+          }
+          return { email: users[0].email!, membership: memberships[0]! };
         },
-        body: JSON.stringify({
-          name: `osod-first-clinician-${Date.now()}`,
-          description: `OSOD v0.5d setup wizard clinician access for Practitioner/${input.practitioner.id}`,
-          accessPolicy: { reference: `AccessPolicy/${input.policy.id}` },
-        }),
+        resolvePolicy: async () => input.policy,
+        patchMembership: (id, operations, versionId) =>
+          this.client().patch("ProjectMembership", id, operations, {
+            "If-Match": `W/\"${versionId}\"`,
+          }),
+        recordMembershipChange: (target, operation) =>
+          this.auditRuntime().record(buildSetupRoleChangeAuditRow(target), operation),
       },
     );
-    const body = await response.text();
-    if (!response.ok) {
-      throw new Error(
-        `Medplum admin project client create failed: ${response.status} ${body}`,
-      );
-    }
-    return JSON.parse(body) as { id: string };
+    return { id: result.membershipReference.slice("ProjectMembership/".length) };
   }
 
   async emitAudit(row: OsodAuditEventRecord): Promise<void> {
-    this.audit ??= createLiveOsodAuditRuntime({
-      postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
-      disabled: process.env.OSOD_SETUP_AUDIT_DISABLED === "true",
-    });
-    await this.audit.record(row, () => undefined);
+    await this.auditRuntime().record(row, () => undefined);
   }
 
   private client(): MedplumClient {
@@ -386,6 +448,37 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     }
     return this.fhir;
   }
+
+  private auditRuntime(): ReturnType<typeof createLiveOsodAuditRuntime> {
+    this.audit ??= createLiveOsodAuditRuntime({
+      postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+      disabled: process.env.OSOD_SETUP_AUDIT_DISABLED === "true",
+    });
+    return this.audit;
+  }
+}
+
+function bootstrapClinicianGrant(target: string) {
+  return {
+    target,
+    roles: ["clinician"] as const,
+    primaryRole: "clinician" as const,
+    // The shipped first-run defaults intentionally use one local bootstrap/service identity.
+    // This is the sole grant exception; it must not be used as a human login and cleanup removes it.
+    allowServiceIdentity: true,
+  };
+}
+
+function buildSetupRoleChangeAuditRow(target: ResolvedRoleGrantTarget): OsodAuditEventRecord {
+  return buildOsodAuditEventRow({
+    eventType: "role-change",
+    actorId: "setup-wizard",
+    actorRole: "system",
+    resourceType: "ProjectMembership",
+    resourceId: target.membership.id,
+    actionOutcome: "granted",
+    actionReason: `bootstrap clinician role for ${target.email}`,
+  });
 }
 
 function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
@@ -394,7 +487,7 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
   return {
     baseUrl: config.baseUrl ?? env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL,
     practiceName: requireConfigValue(config.practiceName ?? env.OSOD_PRACTICE_NAME, "OSOD_PRACTICE_NAME"),
-    adminEmail: requireConfigValue(config.adminEmail ?? env.OSOD_ADMIN_EMAIL ?? env.MEDPLUM_ADMIN_EMAIL, "OSOD_ADMIN_EMAIL"),
+    adminEmail: requireConfigValue(config.adminEmail ?? env.OSOD_ADMIN_EMAIL, "OSOD_ADMIN_EMAIL"),
     adminName: requireConfigValue(config.adminName ?? env.OSOD_ADMIN_NAME, "OSOD_ADMIN_NAME"),
     adminPassword: requireConfigValue(
       config.adminPassword ?? env.OSOD_ADMIN_PASSWORD ?? env.MEDPLUM_ADMIN_PASSWORD,
@@ -450,7 +543,6 @@ async function collectInteractiveConfig(): Promise<Partial<SetupPracticeConfig>>
     const adminName = process.env.OSOD_ADMIN_NAME || (await rl.question("Admin/practitioner name: "));
     const adminEmail =
       process.env.OSOD_ADMIN_EMAIL ||
-      process.env.MEDPLUM_ADMIN_EMAIL ||
       (await rl.question("Admin email: "));
     const adminPassword =
       process.env.OSOD_ADMIN_PASSWORD ||

@@ -28,6 +28,10 @@ import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOsodAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
+  logPracticeRoleBootVerification,
+  logSsePracticeRoleBootVerification,
+} from "./authz/boot-role-verification.js";
+import {
   buildOsodAuditEventRow,
   type OsodAuditEventRecord,
   type OsodAuditEventType,
@@ -417,6 +421,7 @@ auditRuntime.startProjectionWorker();
 const fhir = createMedplumClient({
   baseUrl: BASE_URL,
   accessToken: ACCESS_TOKEN,
+  refreshAuthentication: () => authenticateWithMedplum(true),
   audit: auditRuntime,
   auditContext: {
     actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
@@ -5370,7 +5375,7 @@ function requestIp(req: express.Request): string | undefined {
 }
 
 async function authenticateWithMedplum(force = false): Promise<void> {
-  if (ACCESS_TOKEN) {
+  if (ACCESS_TOKEN && !force) {
     return;
   }
 
@@ -5395,10 +5400,18 @@ async function authenticateWithMedplum(force = false): Promise<void> {
 
 async function main(): Promise<void> {
   const transportMode = process.env.OSOD_MCP_TRANSPORT ?? "stdio";
+  if (transportMode === "sse") {
+    await logSsePracticeRoleBootVerification({
+      authenticate: authenticateWithMedplum,
+      verify: () => logPracticeRoleBootVerification(fhir),
+    });
+  } else if (transportMode === "stdio") {
+    await authenticateWithMedplum();
+    await logPracticeRoleBootVerification(fhir);
+  }
 
   switch (transportMode) {
     case "stdio": {
-      await authenticateWithMedplum();
       const server = createServer();
       const transport = new StdioServerTransport();
       await server.connect(transport);
@@ -5520,7 +5533,6 @@ async function main(): Promise<void> {
           baseUrl: BASE_URL,
           authHeader: header,
           serviceClient: fhir,
-          refreshServiceClient: () => authenticateWithMedplum(true),
         });
         if (!resolved || !header) {
           return null;
@@ -6037,7 +6049,6 @@ async function main(): Promise<void> {
                   baseUrl: BASE_URL,
                   authHeader: header,
                   serviceClient: fhir,
-                  refreshServiceClient: () => authenticateWithMedplum(true),
                 });
                 if (!resolved) {
                   return null;
@@ -6105,9 +6116,8 @@ async function main(): Promise<void> {
             baseUrl: BASE_URL,
             authHeader: header,
             serviceClient: fhir,
-            refreshServiceClient: () => authenticateWithMedplum(true),
           });
-          return resolved?.roles ?? null;
+          return resolved ? { email: resolved.email, roles: resolved.roles } : null;
         },
         terminalMode: process.env.OSOD_PAYMENT_TERMINAL_MODE
           ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"
