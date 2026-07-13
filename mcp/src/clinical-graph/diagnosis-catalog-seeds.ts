@@ -11,6 +11,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-suspect-phase0-ledger.json");
 const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
 const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
+const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
 
 interface LedgerRow {
   code: string;
@@ -36,6 +37,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const glaucoma = loadLedger(GLAUCOMA_LEDGER_PATH);
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
   const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
+  const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
   return [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -62,6 +64,20 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("retinal_round_hole", "Round hole of retina", "retinal-break", "H33.32-", ocularHealth, provenance),
     familySeed("retinoschisis", "Retinoschisis", "retinoschisis", "H33.10-", ocularHealth, provenance),
     familySeed("retinal_detachment_single_break", "Retinal detachment with single break", "retinal-detachment", "H33.01-", ocularHealth, provenance),
+    fixedSeed("t2_dr_unspecified_with_dme", "Type 2 diabetes with unspecified diabetic retinopathy with macular edema", "diabetic-retinopathy", "E11.311", diabeticRetinopathy, provenance),
+    fixedSeed("t2_dr_unspecified_without_dme", "Type 2 diabetes with unspecified diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.319", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_mild_npdr_with_dme", "Type 2 diabetes with mild nonproliferative diabetic retinopathy with macular edema", "diabetic-retinopathy", "E11.321-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_mild_npdr_without_dme", "Type 2 diabetes with mild nonproliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.329-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_moderate_npdr_with_dme", "Type 2 diabetes with moderate nonproliferative diabetic retinopathy with macular edema", "diabetic-retinopathy", "E11.331-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_moderate_npdr_without_dme", "Type 2 diabetes with moderate nonproliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.339-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_severe_npdr_with_dme", "Type 2 diabetes with severe nonproliferative diabetic retinopathy with macular edema", "diabetic-retinopathy", "E11.341-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_severe_npdr_without_dme", "Type 2 diabetes with severe nonproliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.349-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_pdr_with_dme", "Type 2 diabetes with proliferative diabetic retinopathy with macular edema", "diabetic-retinopathy", "E11.351-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_pdr_trd_involving_macula", "Type 2 diabetes with proliferative diabetic retinopathy with traction retinal detachment involving the macula", "diabetic-retinopathy", "E11.352-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_pdr_trd_not_involving_macula", "Type 2 diabetes with proliferative diabetic retinopathy with traction retinal detachment not involving the macula", "diabetic-retinopathy", "E11.353-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_pdr_combined_trd_rrd", "Type 2 diabetes with proliferative diabetic retinopathy with combined traction and rhegmatogenous retinal detachment", "diabetic-retinopathy", "E11.354-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_stable_pdr", "Type 2 diabetes with stable proliferative diabetic retinopathy", "diabetic-retinopathy", "E11.355-", diabeticRetinopathy, provenance),
+    familySeed("t2_dr_pdr_without_dme", "Type 2 diabetes with proliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.359-", diabeticRetinopathy, provenance),
   ];
 }
 

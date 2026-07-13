@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { AddressInfo } from "node:net";
+import { resolve } from "node:path";
 import type { Basic, Bundle, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
@@ -110,6 +112,20 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "retinal_round_hole",
     "retinoschisis",
     "retinal_detachment_single_break",
+    "t2_dr_unspecified_with_dme",
+    "t2_dr_unspecified_without_dme",
+    "t2_dr_mild_npdr_with_dme",
+    "t2_dr_mild_npdr_without_dme",
+    "t2_dr_moderate_npdr_with_dme",
+    "t2_dr_moderate_npdr_without_dme",
+    "t2_dr_severe_npdr_with_dme",
+    "t2_dr_severe_npdr_without_dme",
+    "t2_dr_pdr_with_dme",
+    "t2_dr_pdr_trd_involving_macula",
+    "t2_dr_pdr_trd_not_involving_macula",
+    "t2_dr_pdr_combined_trd_rrd",
+    "t2_dr_stable_pdr",
+    "t2_dr_pdr_without_dme",
   ]);
   assert.deepEqual((seeds.find((row) => row.stableKey === "myopia")?.icd10 as { pattern: object }).pattern, {
     unspecifiedEye: "H52.10",
@@ -128,6 +144,24 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "cdcIcd10Cm2026CodeDescriptions",
     "nlmClinicalTablesIcd10Cm",
   ]);
+  const diabeticRetinopathySeeds = seeds.filter((row) => row.clinicalFamily === "diabetic-retinopathy");
+  assert.equal(diabeticRetinopathySeeds.every((row) => row.id.length <= 64), true);
+  assert.equal(diabeticRetinopathySeeds.every((row) => row.icd10Code?.startsWith("E11.3")), true);
+  const mildWithEdema = seeds.find((row) => row.stableKey === "t2_dr_mild_npdr_with_dme");
+  assert.deepEqual((mildWithEdema?.icd10 as { pattern: object }).pattern, {
+    unspecifiedEye: "E11.3219",
+    right: "E11.3211",
+    left: "E11.3212",
+    bilateral: "E11.3213",
+  });
+  assert.equal(mildWithEdema?.codingStatus, "verified");
+  assert.equal(mildWithEdema?.lateralityRequired, true);
+  const unspecifiedWithoutEdema = seeds.find((row) => row.stableKey === "t2_dr_unspecified_without_dme");
+  assert.deepEqual(unspecifiedWithoutEdema?.icd10, {
+    code: "E11.319",
+    display: "Type 2 diabetes mellitus with unspecified diabetic retinopathy without macular edema",
+  });
+  assert.equal(unspecifiedWithoutEdema?.lateralityRequired, false);
   seeds[0]!.display = "Mutated caller copy";
   assert.equal(buildDiagnosisCatalogSeeds()[0]?.display, "Open angle with borderline findings, low risk");
   const practice = {
@@ -147,6 +181,39 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
   const restarted = new FhirDiagnosisCatalogStore(fhir);
   assert.equal((await restarted.list()).find((row) => row.stableKey === "custom:kcs")?.codingStatus, "provisional");
   assert.deepEqual(fhir.writes[0]?.headers, DIAGNOSIS_CATALOG_WRITE_HEADERS);
+});
+
+test("diabetic retinopathy Phase 0 ledger is dual-source and keeps coverage descriptor-only", () => {
+  const raw = readFileSync(
+    resolve(process.cwd(), "../data/code-bindings/diabetic-retinopathy-phase0-ledger.json"),
+    "utf8",
+  );
+  const ledger = JSON.parse(raw) as {
+    mandate: string;
+    accessDate: string;
+    diagnosisFamilies: Array<{ family: string }>;
+    diagnosisCodes: Array<{ code: string; laterality: string; sourceRefs: string[] }>;
+    procedures: Array<{ conceptKey: string; coverageReady: boolean; code?: string; cptBinding: { status: string } }>;
+    provisionalCoverageRules: Array<{ procedureCode: string; diagnosisFamilies: string[]; jurisdiction: string; supportStatus: string; notBillReady: boolean }>;
+  };
+
+  assert.equal(ledger.mandate, "Mandate 14");
+  assert.equal(ledger.accessDate, "2026-07-13");
+  assert.equal(ledger.diagnosisFamilies.length, 14);
+  assert.equal(ledger.diagnosisCodes.length, 50);
+  assert.equal(ledger.diagnosisCodes.every((row) => row.sourceRefs.length >= 2), true);
+  assert.equal(ledger.diagnosisCodes.filter((row) => row.code === "E11.311" || row.code === "E11.319").every((row) => row.laterality === "UNKNOWN"), true);
+  assert.deepEqual(
+    new Set(ledger.diagnosisCodes.filter((row) => row.code !== "E11.311" && row.code !== "E11.319").map((row) => row.laterality)),
+    new Set(["OD", "OS", "OU", "UNKNOWN"]),
+  );
+  assert.deepEqual(ledger.procedures.map((row) => row.conceptKey), ["fundus-photography", "scodi-retina"]);
+  assert.equal(ledger.procedures.every((row) => row.cptBinding.status === "deferred-to-licensed-adapter" && row.coverageReady === false && row.code === undefined), true);
+  assert.equal(ledger.provisionalCoverageRules.every((row) => row.supportStatus === "provisional" && row.notBillReady), true);
+  assert.equal(ledger.provisionalCoverageRules.every((row) => row.jurisdiction === "Palmetto GBA J-M South Carolina"), true);
+  assert.equal(ledger.provisionalCoverageRules.every((row) => !/^\d+$/.test(row.procedureCode)), true);
+  assert.equal(ledger.provisionalCoverageRules.every((row) => row.diagnosisFamilies.length === ledger.diagnosisFamilies.length), true);
+  assert.doesNotMatch(raw, /(?<!\d)\d{5}(?!\d)/);
 });
 
 test("mapping evaluator fails closed for malformed and unknown fields", () => {
