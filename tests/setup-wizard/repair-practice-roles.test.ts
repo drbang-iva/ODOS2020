@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AccessPolicy, ProjectMembership } from "@medplum/fhirtypes";
+import type { AccessPolicy, Bundle, Practitioner, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
   devPrimaryRole,
   membershipPolicyReferences,
   repairPracticeRoles,
+  resolvePracticeRoleTarget,
   requiredEmailArgument,
   type PracticeRoleRepairAdapter,
 } from "../../scripts/repair-practice-roles.ts";
@@ -147,8 +148,29 @@ test("the primary-role environment value defaults safely and rejects unsupported
 
 test("the repair CLI requires an explicit --email target", () => {
   assert.equal(requiredEmailArgument(["--email", "person@example.test"]), "person@example.test");
-  assert.throws(() => requiredEmailArgument([]), /requires --email <target>/);
-  assert.throws(() => requiredEmailArgument(["--email"]), /requires --email <target>/);
+  assert.equal(requiredEmailArgument(["--email", "Practitioner/p1"]), "Practitioner/p1");
+  assert.throws(() => requiredEmailArgument([]), /requires --email <email-or-Practitioner-reference>/);
+  assert.throws(() => requiredEmailArgument(["--email"]), /requires --email <email-or-Practitioner-reference>/);
+});
+
+test("repair target resolution uses Practitioner profile and telecom without reading User", async () => {
+  const practitioner: Practitioner = { resourceType: "Practitioner", id: "p1", telecom: [{ system: "email", value: "hidden-user@example.test" }] };
+  const client = {
+    read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      assert.equal(resourceType, "Practitioner");
+      assert.equal(id, "p1");
+      return practitioner as T;
+    },
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+      if (resourceType === "Practitioner") return bundle([practitioner as T]);
+      assert.equal(params.profile, "Practitioner/p1");
+      return bundle([membership({ profile: { reference: "Practitioner/p1" } }) as T]);
+    },
+  };
+  const byEmail = await resolvePracticeRoleTarget(client, "hidden-user@example.test");
+  const byReference = await resolvePracticeRoleTarget(client, "Practitioner/p1");
+  assert.equal(byEmail.email, "hidden-user@example.test");
+  assert.equal(byReference.email, "hidden-user@example.test");
 });
 
 test("one untagged canonical policy is tagged without replacing unrelated metadata", async () => {
@@ -209,6 +231,10 @@ function policy(id: string, roleId: "practice-admin" | "clinician"): AccessPolic
     name: `OSOD ${display}`,
     meta: { versionId: "1", tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: roleId }] },
   };
+}
+
+function bundle<T extends Resource>(resources: T[]): Bundle<T> {
+  return { resourceType: "Bundle", type: "searchset", entry: resources.map((resource) => ({ resource })) };
 }
 
 function applyPatch(target: AccessPolicy | ProjectMembership, operations: JsonPatchOperation[]): void {

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { toError } from "../lib/fhir";
+import { defaultSetPassword } from "../lib/auth-api";
 
 export interface SetPasswordScreenProps {
   id: string;
@@ -23,15 +23,6 @@ export async function submitSetPassword({
 }): Promise<void> {
   if (password !== confirmPassword) throw new Error("Passwords do not match.");
   await setPassword(id, secret, password);
-}
-
-async function defaultSetPassword(id: string, secret: string, password: string): Promise<void> {
-  const response = await fetch("/auth/setpassword", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, secret, password }),
-  });
-  if (!response.ok) throw await toError(response);
 }
 
 export function SetPasswordScreen({

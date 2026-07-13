@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import type { AccessPolicy, ProjectMembership, User } from "@medplum/fhirtypes";
+import type { AccessPolicy, Practitioner, ProjectMembership } from "@medplum/fhirtypes";
 import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOsodAuditEventRow } from "../mcp/src/authz/osodAudit.js";
 import { reconcileMembershipAccess } from "../mcp/src/authz/role-grants.js";
@@ -49,10 +49,6 @@ async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[
     if (policy.id && role) policyRoles.set(`AccessPolicy/${policy.id}`, role);
   }
 
-  const users = await searchAll<User>(fhir, "User", {});
-  const userEmails = new Map(
-    users.flatMap((user) => user.id && user.email ? [[`User/${user.id}`, user.email.toLowerCase()] as const] : []),
-  );
   const memberships = await searchAll<ProjectMembership>(fhir, "ProjectMembership", {});
   const audit = createLiveOsodAuditRuntime({
     postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
@@ -64,7 +60,7 @@ async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[
     if (!membership.id || !membership.meta?.versionId) {
       throw new Error("Every cleanup ProjectMembership must carry id and meta.versionId.");
     }
-    const email = userEmails.get(membership.user.reference ?? "");
+    const email = (await resolveMembershipTargetEmail(fhir, membership))?.toLowerCase();
     const operations = cleanupMembershipOperations({
       membership,
       policyRoles,
@@ -93,6 +89,17 @@ async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[
     results.push({ membershipId: membership.id, changed: operations.length > 0 });
   }
   return results;
+}
+
+export async function resolveMembershipTargetEmail(
+  fhir: Pick<MedplumClient, "read">,
+  membership: ProjectMembership,
+): Promise<string | undefined> {
+  const practitionerId = membership.profile.reference?.match(/^Practitioner\/([^/]+)$/)?.[1];
+  if (!practitionerId) return membership.user.display;
+  const practitioner = await fhir.read<Practitioner>("Practitioner", practitionerId);
+  return practitioner.telecom?.find((telecom) => telecom.system === "email" && telecom.value)?.value
+    ?? membership.user.display;
 }
 
 async function runCli(): Promise<void> {

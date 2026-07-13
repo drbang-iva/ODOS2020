@@ -3,6 +3,8 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitLogin } from "../src/scenes/LoginScreen";
+import { PasswordResetTransportError } from "../src/lib/auth-api";
+import { fetchWhoAmI } from "../src/lib/practice-roles";
 import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
 import { CLINIC_PATH, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
 import type { DeskSummary } from "../src/lib/desk-summary";
@@ -71,6 +73,25 @@ test("forgot-password confirmation is neutral on success and failure", async () 
   });
   assert.equal(success, PASSWORD_RESET_CONFIRMATION);
   assert.equal(failure, PASSWORD_RESET_CONFIRMATION);
+});
+
+test("forgot-password transport failure does not claim an email is coming", async () => {
+  await assert.rejects(
+    () => requestPasswordReset("person@example.test", async () => {
+      throw new PasswordResetTransportError(new Error("connection refused"));
+    }),
+    /could not reach ODOS/,
+  );
+});
+
+test("whoami no-role errors render the server detail instead of only the machine code", async () => {
+  await assert.rejects(
+    () => fetchWhoAmI(async () => new Response(JSON.stringify({
+      error: "no-practice-role",
+      detail: "Account person@example.test has no practice role. An administrator must grant one.",
+    }), { status: 403, headers: { "Content-Type": "application/json" } })),
+    /Account person@example.test has no practice role/,
+  );
 });
 
 test("Desk home is independent from the cockpit and Clinic opens the existing flow in a new tab", () => {

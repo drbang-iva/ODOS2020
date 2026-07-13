@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { ProjectMembership } from "@medplum/fhirtypes";
-import { cleanupMembershipOperations } from "../../scripts/cleanup-practice-role-memberships.ts";
+import type { Practitioner, ProjectMembership, Resource } from "@medplum/fhirtypes";
+import { cleanupMembershipOperations, resolveMembershipTargetEmail } from "../../scripts/cleanup-practice-role-memberships.ts";
 
 test("cleanup strips the service identity clinical trio while preserving one non-clinical policy", () => {
   const membership = fixture({
@@ -47,6 +47,18 @@ test("cleanup dedupes access and migrates the legacy field idempotently", () => 
     },
     { op: "remove", path: "/accessPolicy" },
   ]);
+});
+
+test("cleanup identifies the service identity from its Practitioner profile without User search", async () => {
+  const practitioner: Practitioner = { resourceType: "Practitioner", id: "service-profile", telecom: [{ system: "email", value: "admin@osod.local" }] };
+  const email = await resolveMembershipTargetEmail({
+    read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      assert.equal(resourceType, "Practitioner");
+      assert.equal(id, "service-profile");
+      return practitioner as T;
+    },
+  }, fixture({ profile: { reference: "Practitioner/service-profile" } }));
+  assert.equal(email, "admin@osod.local");
 });
 
 function fixture(overrides: Partial<ProjectMembership>): ProjectMembership {

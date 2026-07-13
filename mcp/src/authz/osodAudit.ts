@@ -117,6 +117,7 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   "claim.manual-eob.posted",
   "coverage.write",
   "benefits.manual-entry",
+  "staff.invite",
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 

@@ -9,6 +9,13 @@ export const PRACTICE_ROLE_IDS = [
 ] as const;
 
 export type PracticeRoleId = (typeof PRACTICE_ROLE_IDS)[number];
+export const PRACTICE_ROLE_LABELS: Record<PracticeRoleId, string> = {
+  "practice-admin": "Practice admin",
+  clinician: "Clinician",
+  "front-desk": "Front desk",
+  auditor: "Auditor",
+  "aesthetics-provider": "Aesthetics provider",
+};
 export interface WhoAmIResponse { roles: PracticeRoleId[] }
 
 let sessionRequest: { authorization: string; promise: Promise<WhoAmIResponse> } | undefined;
@@ -21,8 +28,8 @@ export async function fetchWhoAmI(fetchImpl: typeof fetch = fetch): Promise<WhoA
       ...(authorization ? { Authorization: authorization } : {}),
     },
   });
-  const body = await response.json() as Partial<WhoAmIResponse> & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Practice role lookup failed with HTTP ${response.status}.`);
+  const body = await response.json() as Partial<WhoAmIResponse> & { error?: string; detail?: string };
+  if (!response.ok) throw new Error(body.detail ?? body.error ?? `Practice role lookup failed with HTTP ${response.status}.`);
   const roles = PRACTICE_ROLE_IDS.filter((role) => body.roles?.includes(role));
   if (roles.length === 0) throw new Error("No recognized practice role is assigned to this account.");
   return { roles };

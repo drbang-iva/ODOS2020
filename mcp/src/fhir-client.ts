@@ -4,7 +4,7 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { Binary, Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import type { Binary, Bundle, OperationOutcome, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
   buildOsodAuditEventRow,
   type BuildOsodAuditEventInput,
@@ -64,8 +64,21 @@ export interface MedplumClient {
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
   executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  getActiveProjectId(): Promise<string>;
+  invitePractitioner(
+    projectId: string,
+    input: MedplumPractitionerInvite,
+  ): Promise<ProjectMembership>;
   deleteAttempt(rt: string, id: string, reason?: string): Promise<never>;
   nullifyAttempt(rt: string, id: string, reason?: string): Promise<never>;
+}
+
+export interface MedplumPractitionerInvite {
+  resourceType: "Practitioner";
+  email: string;
+  firstName: string;
+  lastName: string;
+  sendEmail: true;
 }
 
 export function createMedplumClient(opts: {
@@ -471,6 +484,27 @@ export function createMedplumClient(opts: {
           return responseBundle;
         },
       );
+    },
+
+    async getActiveProjectId(): Promise<string> {
+      const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
+      if (!res.ok) throw await toError(res);
+      const body = (await res.json()) as { project?: { id?: string } };
+      if (!body.project?.id) throw new Error("The service session has no active Medplum project.");
+      return body.project.id;
+    },
+
+    async invitePractitioner(
+      projectId: string,
+      input: MedplumPractitionerInvite,
+    ): Promise<ProjectMembership> {
+      const res = await authorizedFetch(`${base}/admin/projects/${encodeURIComponent(projectId)}/invite`, () => ({
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }));
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as ProjectMembership;
     },
 
     async deleteAttempt(rt: string, id: string, reason = "mandate-8-boundary delete-attempt"): Promise<never> {
