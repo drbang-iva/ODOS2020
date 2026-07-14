@@ -13,6 +13,18 @@ export default defineConfig({
       "/payments": { target: "http://localhost:3333", changeOrigin: true },
       "/claims": { target: "http://localhost:3333", changeOrigin: true },
       "/statements": { target: "http://localhost:3333", changeOrigin: true },
+      "/reports": { target: "http://localhost:3333", changeOrigin: true },
+      "/lab-orders": { target: "http://localhost:3333", changeOrigin: true },
+      "/insurance": { target: "http://localhost:3333", changeOrigin: true },
+      "/audit": {
+        target: "http://localhost:3333",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers["sec-fetch-dest"] === "document" || (req.headers.accept || "").includes("text/html")) {
+            return "/index.html";
+          }
+        },
+      },
       "/desk": {
         target: "http://localhost:3333",
         changeOrigin: true,
