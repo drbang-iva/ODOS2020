@@ -12,6 +12,7 @@ import {
   type FramesDataSubscriptionSettings,
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
+import { fhir } from "../lib/fhir";
 import { useRole } from "../lib/role-context";
 
 type OpticalFramesRoute = "catalog" | "inventory" | "lookup" | "settings";
@@ -25,8 +26,14 @@ interface OpticalFramesApi {
 const defaultApi: OpticalFramesApi = {
   searchCatalog: searchFrameCatalog,
   loadInventory: loadPracticeFrameInventory,
-  addToInventory: addFrameToInventory,
+  addToInventory: (item) => addFrameToInventory(item, actingPractitionerId()),
 };
+
+function actingPractitionerId(): string {
+  const actorId = fhir.practitionerId();
+  if (!actorId) throw new Error("The signed-in session has no acting Practitioner profile.");
+  return actorId;
+}
 
 export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFramesRoute; api?: OpticalFramesApi }) {
   const [catalogRows, setCatalogRows] = useState<FrameCatalogItem[]>([]);
@@ -277,7 +284,7 @@ function FramesDataSettings() {
   async function save() {
     await saveFramesDataSubscriptionSettings({
       practiceId: "osod-practice",
-      actorId: "practice-admin",
+      actorId: actingPractitionerId(),
       settings,
     });
     setStatus("Saved");

@@ -3,6 +3,7 @@ import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
 const BASIC_KIND_SYSTEM = "https://osod.dev/fhir/CodeSystem/basic-kind";
+const FRAME_INVENTORY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/frame-inventory-canonical-url";
 const EXTENSION_URLS = {
   catalogCanonicalUrl: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url",
   catalogPublicityClass: "https://osod.dev/fhir/StructureDefinition/catalog-publicity-class",
@@ -61,19 +62,19 @@ export async function searchFrameCatalog(query: string): Promise<FrameCatalogIte
 }
 
 export async function loadPracticeFrameInventory(): Promise<PracticeFrameInventoryItem[]> {
-  const bundle = await fhir.search<Basic>("Basic", {
+  const rows = await searchAllBasics({
     code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory`,
     _count: "100",
   });
-  return basicEntries(bundle).map(basicToInventoryItem);
+  return rows.map(basicToInventoryItem);
 }
 
-export async function addFrameToInventory(item: FrameCatalogItem): Promise<PracticeFrameInventoryItem> {
-  const bundle = await fhir.search<Basic>("Basic", {
+export async function addFrameToInventory(item: FrameCatalogItem, actorId: string): Promise<PracticeFrameInventoryItem> {
+  const rows = await searchAllBasics({
     code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory`,
     _count: "100",
   });
-  const existing = basicEntries(bundle).find(
+  const existing = rows.find(
     (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === item.canonicalUrl,
   );
 
@@ -83,7 +84,10 @@ export async function addFrameToInventory(item: FrameCatalogItem): Promise<Pract
     if (qtyIndex < 0) {
       throw new Error("Practice frame inventory item is missing qty-on-hand.");
     }
-    const qtyOnHand = extensionNumber(current, EXTENSION_URLS.qtyOnHand) ?? 0;
+    const qtyOnHand = extensionNumber(current, EXTENSION_URLS.qtyOnHand);
+    if (qtyOnHand === null) {
+      throw new Error("Practice frame inventory item has a malformed qty-on-hand value.");
+    }
     const target = `Basic/${existing.id}`;
     await writeInventoryTransaction({
       resourceEntry: {
@@ -97,13 +101,19 @@ export async function addFrameToInventory(item: FrameCatalogItem): Promise<Pract
         },
       },
       target,
+      actorId,
     });
     return { ...basicToInventoryItem(current), qtyOnHand: qtyOnHand + 1 };
   }
 
-  const fullUrl = `urn:uuid:frame-inventory-${crypto.randomUUID()}`;
+  // fullUrl must be a bare urn:uuid or Medplum will not rewrite intra-bundle references.
+  const fullUrl = `urn:uuid:${crypto.randomUUID()}`;
+  const ifNoneExist = new URLSearchParams({
+    identifier: `${FRAME_INVENTORY_IDENTIFIER_SYSTEM}|${item.canonicalUrl}`,
+  }).toString();
   const inventory: Basic = {
     resourceType: "Basic",
+    identifier: [{ system: FRAME_INVENTORY_IDENTIFIER_SYSTEM, value: item.canonicalUrl }],
     code: {
       coding: [
         {
@@ -122,9 +132,10 @@ export async function addFrameToInventory(item: FrameCatalogItem): Promise<Pract
     resourceEntry: {
       fullUrl,
       resource: inventory,
-      request: { method: "POST", url: "Basic" },
+      request: { method: "POST", url: "Basic", ifNoneExist },
     },
     target: fullUrl,
+    actorId,
   });
   const id = createdId(response, "Basic");
   return basicToInventoryItem({ ...inventory, id });
@@ -299,6 +310,7 @@ function basicToInventoryItem(resource: Basic): PracticeFrameInventoryItem {
 async function writeInventoryTransaction(input: {
   resourceEntry: NonNullable<Bundle["entry"]>[number];
   target: string;
+  actorId: string;
 }): Promise<Bundle> {
   const now = new Date().toISOString();
   const auditEvent: AuditEvent = {
@@ -310,7 +322,7 @@ async function writeInventoryTransaction(input: {
     action: input.resourceEntry.request?.method === "POST" ? "C" : "U",
     recorded: now,
     outcome: "0",
-    agent: [{ who: { reference: "Device/osod-ui" }, requestor: true }],
+    agent: [{ who: { reference: `Practitioner/${input.actorId}` }, requestor: true }],
     source: { observer: { reference: "Device/osod-ui" } },
     entity: [{ what: { reference: input.target }, name: "practice-frame-inventory" }],
   };
@@ -318,7 +330,7 @@ async function writeInventoryTransaction(input: {
     resourceType: "Provenance",
     recorded: now,
     target: [{ reference: input.target }],
-    agent: [{ who: { reference: "Device/osod-ui" } }],
+    agent: [{ who: { reference: `Practitioner/${input.actorId}` } }],
   };
   const response = await fhir.executeTransaction(
     {
@@ -356,8 +368,25 @@ function createdId(bundle: Bundle, resourceType: string): string {
   return id;
 }
 
-function extension(url: string, value: Record<string, string | boolean | number>): NonNullable<Basic["extension"]>[number] {
+type ExtensionValue =
+  | { valueString: string }
+  | { valueDateTime: string }
+  | { valueInteger: number }
+  | { valueBoolean: boolean };
+
+function extension(url: string, value: ExtensionValue): NonNullable<Basic["extension"]>[number] {
   return { url, ...value };
+}
+
+async function searchAllBasics(params: Record<string, string>): Promise<Basic[]> {
+  const rows: Basic[] = [];
+  let bundle = await fhir.search<Basic>("Basic", params);
+  while (true) {
+    rows.push(...basicEntries(bundle));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return rows;
+    bundle = await fhir.searchUrl<Basic>(next);
+  }
 }
 
 function extensionString(resource: { extension?: readonly { url?: string; valueString?: string; valueDateTime?: string }[] } | undefined, url: string): string | null {

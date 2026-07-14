@@ -144,6 +144,12 @@ export const fhir = {
     return token ? `Bearer ${token}` : undefined;
   },
 
+  practitionerId(): string | undefined {
+    const profile = tokenClaims(token)?.profile;
+    if (typeof profile !== "string" || !profile.startsWith("Practitioner/")) return undefined;
+    return profile.slice("Practitioner/".length) || undefined;
+  },
+
   async login(email: string, password: string): Promise<void> {
     const { verifier, challenge } = await pkce();
     const loginRes = await fetch(`${AUTH}/auth/login`, {
@@ -270,6 +276,19 @@ export const fhir = {
     return responseBundle;
   },
 };
+
+function tokenClaims(accessToken: string | undefined): Record<string, unknown> | undefined {
+  const payload = accessToken?.split(".")[1];
+  if (!payload) return undefined;
+  try {
+    const normalized = payload.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const bytes = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
 
 function normalizeFhirSearchUrl(url: string): string {
   const parsed = new URL(url, "http://osod.local");

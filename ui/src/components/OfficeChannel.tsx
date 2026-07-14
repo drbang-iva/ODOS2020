@@ -73,7 +73,7 @@ export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pol
   }, [options.initialMessages, options.pollMs, refresh]);
 
   async function acknowledge(messageId: string) {
-    if (acknowledging) return;
+    if (!(options.canAcknowledge ?? true) || acknowledging) return;
     requestIdRef.current += 1;
     setAcknowledging(messageId);
     try {

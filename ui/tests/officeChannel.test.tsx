@@ -46,6 +46,21 @@ test("Office bell opens the shared inbox and renders its unread badge on Desk an
   }
 });
 
+test("Desk-side Office state refuses acknowledgement calls even when invoked directly", async () => {
+  let acknowledgeCalls = 0;
+  const api: OfficeInboxApi = {
+    list: async () => [],
+    acknowledge: async () => {
+      acknowledgeCalls += 1;
+      return message({ acknowledgement });
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => { renderer = create(<OfficeProbe api={api} canAcknowledge={false} />); });
+  await act(async () => { await renderer.root.findByProps({ id: "acknowledge" }).props.onClick(); });
+  assert.equal(acknowledgeCalls, 0);
+});
+
 test("Desk home consumes the shell Office source without starting a second poll", async () => {
   const originalWindow = globalThis.window;
   let listCalls = 0;
@@ -196,9 +211,9 @@ test("Clinic poll ignores an older response after a newer refresh completes", as
   assert.equal(renderer.root.findByProps({ id: "ids" }).children.join(""), "latest");
 });
 
-function OfficeProbe({ api }: { api: OfficeInboxApi }) {
-  const office = useOfficeInbox({ api, pollMs: 60_000 });
-  return <div><button id="refresh" onClick={() => office.refresh()}>Refresh</button><span id="ids">{office.messages.map((item) => item.id).join(",")}</span></div>;
+function OfficeProbe({ api, canAcknowledge = true }: { api: OfficeInboxApi; canAcknowledge?: boolean }) {
+  const office = useOfficeInbox({ api, pollMs: 60_000, canAcknowledge });
+  return <div><button id="refresh" onClick={() => office.refresh()}>Refresh</button><button id="acknowledge" onClick={() => office.acknowledge("message-1")}>Acknowledge</button><span id="ids">{office.messages.map((item) => item.id).join(",")}</span></div>;
 }
 
 function ClinicShell({ children, roles = ["clinician"] }: { children: React.ReactNode; roles?: Array<"clinician" | "practice-admin"> }) {
