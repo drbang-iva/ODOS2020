@@ -18,6 +18,7 @@ import {
   type RouteSwitchProps,
 } from "../src/App";
 import { fhir, SESSION_STORAGE_KEY } from "../src/lib/fhir";
+import { AppShell } from "../src/components/AppShell";
 import { LoginScreen } from "../src/scenes/LoginScreen";
 import { SetPasswordScreen } from "../src/scenes/SetPasswordScreen";
 import {
@@ -105,8 +106,8 @@ test("cross-side users switch between Desk and Clinic in the same tab", () => {
   const roles: PracticeRoleId[] = ["clinician", "front-desk"];
   assert.equal(defaultHomePath(roles), DESK_HOME_PATH);
 
-  const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={roles} />);
-  const desk = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={roles} />);
+  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={roles} homePath={DESK_HOME_PATH} side="clinic" email="doctor@example.test" switchPill={<RoleSwitchPill target={DESK_HOME_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={roles} /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={roles} homePath={DESK_HOME_PATH} side="desk" email="doctor@example.test" switchPill={<RoleSwitchPill target={CLINIC_PATH} />}><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={roles} /></AppShell>);
   assert.match(clinic, /Switch to Desk/);
   assert.match(desk, /Switch to Clinic/);
 
@@ -210,8 +211,8 @@ test("logout and any intercepted 401 clear the persisted session", async () => {
 });
 
 test("single-role users do not render a cross-side switch pill", () => {
-  const clinic = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={["clinician"]} />);
-  const desk = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={["front-desk"]} />);
+  const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={["clinician"]} homePath={CLINIC_PATH} side="clinic" email="doctor@example.test"><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={["clinician"]} /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={["front-desk"]} homePath={DESK_HOME_PATH} side="desk" email="desk@example.test"><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={["front-desk"]} /></AppShell>);
   assert.doesNotMatch(clinic, /Switch to/);
   assert.doesNotMatch(desk, /Switch to/);
 });
@@ -287,6 +288,8 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
     },
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
+    setInterval: () => 1,
+    clearInterval: () => undefined,
   } as unknown as Window & typeof globalThis;
   Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
   useViewState.setState({ view: { kind: "picker" } });

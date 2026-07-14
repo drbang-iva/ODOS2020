@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Patient } from "@medplum/fhirtypes";
 import { ClinicOfficeShell, searchClinicPatients, useOfficeInbox, type OfficeInboxApi } from "../src/components/OfficeChannel";
+import { AppShell } from "../src/components/AppShell";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import type { OfficeMessage } from "../src/lib/office-channel";
 import { ClinicHome } from "../src/scenes/ClinicHome";
@@ -14,31 +15,29 @@ import { PatientOverview } from "../src/scenes/PatientOverview";
 
 test("Office pill badge and ambient panel reflect the real unacknowledged count", async () => {
   let emptyRenderer!: ReactTestRenderer;
-  await act(async () => { emptyRenderer = create(<ClinicOfficeShell location="Clinic home" initialMessages={[]}><ClinicHome initialSummary={summary()} /></ClinicOfficeShell>); });
+  await act(async () => { emptyRenderer = create(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell><ClinicHome /></ClinicShell></ClinicOfficeShell>); });
   assert.equal(emptyRenderer.root.findAllByProps({ className: "odos-office-badge" }).length, 0);
   emptyRenderer.unmount();
 
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<ClinicOfficeShell location="Clinic home" initialMessages={[message(), message({ id: "seen", acknowledgement: acknowledgement })]}><ClinicHome initialSummary={summary()} /></ClinicOfficeShell>);
+    renderer = create(<ClinicOfficeShell initialMessages={[message(), message({ id: "seen", acknowledgement: acknowledgement })]} initialSummary={summary()}><ClinicShell><ClinicHome /></ClinicShell></ClinicOfficeShell>);
   });
   assert.equal(renderer.root.findByProps({ className: "odos-office-badge" }).children.join(""), "1");
-  await act(async () => renderer.root.findByProps({ className: "odos-pill odos-office-pill" }).props.onClick());
+  await act(async () => renderer.root.findByProps({ "aria-label": "Office" }).props.onClick());
   assert.equal(renderer.root.findAllByProps({ "aria-label": "Office messages" }).length, 1);
   assert.match(renderer.toJSON() ? JSON.stringify(renderer.toJSON()) : "", /Insurance question/);
 });
 
-test("Clinic Sections drawer routes every shipped item and gates Settings to practice admins", () => {
-  const clinician = renderToStaticMarkup(<ClinicOfficeShell location="Clinic home" roles={["clinician"]} initialMessages={[]} initialSummary={summary()}><ClinicHome /></ClinicOfficeShell>);
-  const admin = renderToStaticMarkup(<ClinicOfficeShell location="Clinic home" roles={["clinician", "practice-admin"]} initialMessages={[]} initialSummary={summary()}><ClinicHome /></ClinicOfficeShell>);
-  for (const href of ["/clinic/patients", "/patient/new", "/schedule/day", "/dispensary/lab-orders", "/settings/chart-fields-sections", "/settings/suggested-diagnoses", "/audit/log"]) {
+test("unified Sections routes every named surface and gates Settings to practice admins", () => {
+  const clinician = renderToStaticMarkup(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell><ClinicHome /></ClinicShell></ClinicOfficeShell>);
+  const admin = renderToStaticMarkup(<ClinicOfficeShell initialMessages={[]} initialSummary={summary()}><ClinicShell roles={["clinician", "practice-admin"]}><ClinicHome /></ClinicShell></ClinicOfficeShell>);
+  for (const href of ["/schedule/day", "/frontdesk", "/billing/claims/worklist", "/billing/claims/reports/accounts-receivable", "/billing/statements", "/dispensary/lab-orders", "/admin/optical/catalog/frames", "/admin/optical/inventory/frames", "/admin/practice/settings/frames-data", "/audit/log", "/clinic"]) {
     assert.match(clinician, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
   }
   assert.doesNotMatch(clinician, /href="\/settings"/);
   assert.match(admin, /href="\/settings"/);
-  assert.match(clinician, /Results review[\s\S]*review queue not wired/);
-  assert.match(clinician, /E-Rx queue[\s\S]*not wired/);
-  assert.match(clinician, /Orders worklist[\s\S]*>2<\/i>/);
+  assert.match(clinician, /Schedule/);
 });
 
 test("Clinic patient search uses existing FHIR name, DOB, identifier, and id searches", async () => {
@@ -69,7 +68,7 @@ test("urgent queue persists across Clinic views, dismisses globally, and reveals
   const api = { list: async () => [first, second], acknowledge };
   let renderer!: ReactTestRenderer;
   await act(async () => {
-    renderer = create(<ClinicOfficeShell location="Clinic home" initialMessages={[first, second]} officeApi={api}><ClinicHome initialSummary={summary()} /></ClinicOfficeShell>);
+    renderer = create(<ClinicOfficeShell initialMessages={[first, second]} officeApi={api} initialSummary={summary()}><ClinicShell><ClinicHome /></ClinicShell></ClinicOfficeShell>);
   });
   assert.match(JSON.stringify(renderer.toJSON()), /Checkout question/);
   assert.match(JSON.stringify(renderer.toJSON()), /1 of 2/);
@@ -80,8 +79,8 @@ test("urgent queue persists across Clinic views, dismisses globally, and reveals
   assert.equal(renderer.root.findByProps({ className: "odos-office-badge" }).children.join(""), "1");
 
   await act(async () => renderer.update(
-    <ClinicOfficeShell location="Patient overview" initialMessages={[first, second]} officeApi={api}>
-      <PatientOverview patient={patient} initialOverview={overviewFixture()} />
+    <ClinicOfficeShell initialMessages={[first, second]} officeApi={api} initialSummary={summary()}>
+      <ClinicShell><PatientOverview patient={patient} initialOverview={overviewFixture()} /></ClinicShell>
     </ClinicOfficeShell>,
   ));
   assert.match(JSON.stringify(renderer.toJSON()), /Lab is holding/);
@@ -150,6 +149,10 @@ test("Clinic poll ignores an older response after a newer refresh completes", as
 function OfficeProbe({ api }: { api: OfficeInboxApi }) {
   const office = useOfficeInbox({ api, pollMs: 60_000 });
   return <div><button id="refresh" onClick={() => office.refresh()}>Refresh</button><span id="ids">{office.messages.map((item) => item.id).join(",")}</span></div>;
+}
+
+function ClinicShell({ children, roles = ["clinician"] }: { children: React.ReactNode; roles?: Array<"clinician" | "practice-admin"> }) {
+  return <AppShell path="/clinic" roles={roles} homePath="/clinic" side="clinic" email="doctor@example.test">{children}</AppShell>;
 }
 
 const acknowledgement = { by: "Practitioner/doctor-1", display: "Dr. Eric Bang", at: "2026-07-11T15:01:00Z" };
