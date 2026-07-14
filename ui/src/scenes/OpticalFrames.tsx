@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  addFrameToInventory,
   canExportFrameCatalogCsv,
   exportableFrameRows,
   loadFramesDataSubscriptionSettings,
@@ -11,11 +12,30 @@ import {
   type FramesDataSubscriptionSettings,
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
+import { fhir } from "../lib/fhir";
 import { useRole } from "../lib/role-context";
 
 type OpticalFramesRoute = "catalog" | "inventory" | "lookup" | "settings";
 
-export function OpticalFrames({ route }: { route: OpticalFramesRoute }) {
+interface OpticalFramesApi {
+  searchCatalog(query: string): Promise<FrameCatalogItem[]>;
+  loadInventory(): Promise<PracticeFrameInventoryItem[]>;
+  addToInventory(item: FrameCatalogItem): Promise<PracticeFrameInventoryItem>;
+}
+
+const defaultApi: OpticalFramesApi = {
+  searchCatalog: searchFrameCatalog,
+  loadInventory: loadPracticeFrameInventory,
+  addToInventory: (item) => addFrameToInventory(item, actingPractitionerId()),
+};
+
+function actingPractitionerId(): string {
+  const actorId = fhir.practitionerId();
+  if (!actorId) throw new Error("The signed-in session has no acting Practitioner profile.");
+  return actorId;
+}
+
+export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFramesRoute; api?: OpticalFramesApi }) {
   const [catalogRows, setCatalogRows] = useState<FrameCatalogItem[]>([]);
   const [inventoryRows, setInventoryRows] = useState<PracticeFrameInventoryItem[]>([]);
   const [query, setQuery] = useState("");
@@ -27,8 +47,8 @@ export function OpticalFrames({ route }: { route: OpticalFramesRoute }) {
       setError(null);
       try {
         const [catalog, inventory] = await Promise.all([
-          searchFrameCatalog(query),
-          route === "catalog" ? Promise.resolve([]) : loadPracticeFrameInventory(),
+          api.searchCatalog(query),
+          route === "catalog" ? Promise.resolve([]) : api.loadInventory(),
         ]);
         if (!cancelled) {
           setCatalogRows(catalog);
@@ -42,7 +62,15 @@ export function OpticalFrames({ route }: { route: OpticalFramesRoute }) {
     return () => {
       cancelled = true;
     };
-  }, [query, route]);
+  }, [api, query, route]);
+
+  function inventoryAdded(updated: PracticeFrameInventoryItem) {
+    setInventoryRows((current) => {
+      const index = current.findIndex((row) => row.id === updated.id || row.canonicalUrl === updated.canonicalUrl);
+      if (index < 0) return [...current, updated];
+      return current.map((row, rowIndex) => rowIndex === index ? updated : row);
+    });
+  }
 
   if (route === "settings") {
     return <FramesDataSettings />;
@@ -61,8 +89,8 @@ export function OpticalFrames({ route }: { route: OpticalFramesRoute }) {
           />
           {route === "inventory" ? <CsvExportButton rows={catalogRows} /> : null}
         </div>
-        {error ? <div className="rounded border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</div> : null}
-        {route === "catalog" ? <CatalogTable rows={catalogRows} /> : null}
+        {error ? <div role="alert" className="rounded border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</div> : null}
+        {route === "catalog" ? <CatalogTable rows={catalogRows} onAdd={api.addToInventory} onAdded={inventoryAdded} onError={setError} /> : null}
         {route === "inventory" ? <InventoryTable rows={inventoryRows} catalog={catalogRows} /> : null}
         {route === "lookup" ? <PosLookup rows={catalogRows} inventory={inventoryRows} query={query} /> : null}
       </div>
@@ -92,7 +120,45 @@ function OpticalNav({ active }: { active: OpticalFramesRoute }) {
   );
 }
 
-function CatalogTable({ rows }: { rows: readonly FrameCatalogItem[] }) {
+export function CatalogTable({
+  rows,
+  onAdd,
+  onAdded,
+  onError,
+}: {
+  rows: readonly FrameCatalogItem[];
+  onAdd(item: FrameCatalogItem): Promise<PracticeFrameInventoryItem>;
+  onAdded(item: PracticeFrameInventoryItem): void;
+  onError(message: string | null): void;
+}) {
+  const [pendingUrls, setPendingUrls] = useState<Set<string>>(() => new Set());
+  const [addedUrl, setAddedUrl] = useState<string>();
+
+  useEffect(() => {
+    if (!addedUrl) return;
+    const handle = setTimeout(() => setAddedUrl(undefined), 1_500);
+    return () => clearTimeout(handle);
+  }, [addedUrl]);
+
+  async function add(row: FrameCatalogItem) {
+    setPendingUrls((current) => new Set(current).add(row.canonicalUrl));
+    setAddedUrl(undefined);
+    onError(null);
+    try {
+      const updated = await onAdd(row);
+      onAdded(updated);
+      setAddedUrl(row.canonicalUrl);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingUrls((current) => {
+        const next = new Set(current);
+        next.delete(row.canonicalUrl);
+        return next;
+      });
+    }
+  }
+
   return (
     <div className="overflow-hidden rounded border border-white/10">
       <table className="w-full table-fixed border-collapse text-left text-sm">
@@ -123,7 +189,14 @@ function CatalogTable({ rows }: { rows: readonly FrameCatalogItem[] }) {
                 <span className="rounded bg-white/10 px-2 py-1 text-xs text-white/70">{row.publicityClass}</span>
               </td>
               <td className="px-3 py-3">
-                <button className="sidebar-button w-full">Add</button>
+                <button
+                  className="sidebar-button w-full"
+                  type="button"
+                  disabled={pendingUrls.has(row.canonicalUrl)}
+                  onClick={() => void add(row)}
+                >
+                  {pendingUrls.has(row.canonicalUrl) ? "Adding…" : addedUrl === row.canonicalUrl ? "Added ✓" : "Add"}
+                </button>
               </td>
             </tr>
           ))}
@@ -211,7 +284,7 @@ function FramesDataSettings() {
   async function save() {
     await saveFramesDataSubscriptionSettings({
       practiceId: "osod-practice",
-      actorId: "practice-admin",
+      actorId: actingPractitionerId(),
       settings,
     });
     setStatus("Saved");

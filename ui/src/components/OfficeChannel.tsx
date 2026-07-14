@@ -1,11 +1,11 @@
 import type { Patient } from "@medplum/fhirtypes";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, type OfficeMessage } from "../lib/office-channel";
+import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, fetchDeskOfficeMessages, type OfficeMessage } from "../lib/office-channel";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { fhir } from "../lib/fhir";
 import { patientName } from "../lib/scheduler-appointment-ui";
 import { patientOverviewView, useViewState } from "../lib/view-state";
-import { CLINIC_PATH } from "../scenes/DeskHome";
+import { CLINIC_PATH } from "../lib/app-paths";
 
 export interface OfficeInboxApi {
   list: typeof fetchClinicOfficeMessages;
@@ -13,8 +13,10 @@ export interface OfficeInboxApi {
 }
 
 export interface OfficeChannelState {
+  provided: boolean;
   messages: OfficeMessage[];
   unread: OfficeMessage[];
+  canAcknowledge: boolean;
   open: boolean;
   setOpen(open: boolean): void;
   error?: string;
@@ -24,8 +26,9 @@ export interface OfficeChannelState {
 }
 
 const defaultApi: OfficeInboxApi = { list: fetchClinicOfficeMessages, acknowledge: acknowledgeOfficeMessage };
+const defaultDeskApi: OfficeInboxApi = { list: fetchDeskOfficeMessages, acknowledge: acknowledgeOfficeMessage };
 const emptyState: OfficeChannelState = {
-  messages: [], unread: [], open: false, setOpen: () => undefined,
+  provided: false, messages: [], unread: [], canAcknowledge: false, open: false, setOpen: () => undefined,
   acknowledge: async () => undefined, refresh: async () => undefined,
 };
 const OfficeChannelContext = createContext<OfficeChannelState | undefined>(undefined);
@@ -39,7 +42,7 @@ export function useClinicSummaryContext() {
   return useContext(ClinicSummaryContext);
 }
 
-export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pollMs?: number; api?: OfficeInboxApi } = {}): OfficeChannelState {
+export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pollMs?: number; api?: OfficeInboxApi; canAcknowledge?: boolean } = {}): OfficeChannelState {
   const api = options.api ?? defaultApi;
   const [messages, setMessages] = useState(options.initialMessages ?? []);
   const [open, setOpen] = useState(false);
@@ -60,7 +63,7 @@ export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pol
   }, [api]);
 
   useEffect(() => {
-    if (options.initialMessages || typeof window === "undefined") return;
+    if (options.initialMessages || typeof window === "undefined" || typeof window.setInterval !== "function") return;
     void refresh();
     const handle = window.setInterval(() => void refresh(), options.pollMs ?? 15_000);
     return () => {
@@ -70,7 +73,7 @@ export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pol
   }, [options.initialMessages, options.pollMs, refresh]);
 
   async function acknowledge(messageId: string) {
-    if (acknowledging) return;
+    if (!(options.canAcknowledge ?? true) || acknowledging) return;
     requestIdRef.current += 1;
     setAcknowledging(messageId);
     try {
@@ -85,34 +88,41 @@ export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pol
   }
 
   const unread = useMemo(() => messages.filter((message) => !message.acknowledgement), [messages]);
-  return { messages, unread, open, setOpen, error, acknowledging, acknowledge, refresh };
+  return { provided: true, messages, unread, canAcknowledge: options.canAcknowledge ?? true, open, setOpen, error, acknowledging, acknowledge, refresh };
 }
 
-export function ClinicOfficeShell({
+export function OfficeChannelShell({
   children,
+  side,
   initialMessages,
   officeApi,
   pollMs = 15_000,
   initialSummary,
 }: {
   children: ReactNode;
+  side: "desk" | "clinic";
   initialMessages?: OfficeMessage[];
   officeApi?: OfficeInboxApi;
   pollMs?: number;
   initialSummary?: ClinicSummary;
 }) {
-  const office = useOfficeInbox({ initialMessages, pollMs, api: officeApi });
+  const office = useOfficeInbox({
+    initialMessages,
+    pollMs,
+    api: officeApi ?? (side === "clinic" ? defaultApi : defaultDeskApi),
+    canAcknowledge: side === "clinic",
+  });
   const [summary, setSummary] = useState(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
 
   useEffect(() => {
-    if (initialSummary) return;
+    if (side === "desk" || initialSummary) return;
     let active = true;
     fetchClinicSummary()
       .then((value) => active && setSummary(value))
       .catch((reason) => active && setSummaryError(reason instanceof Error ? reason.message : "Clinic summary unavailable."));
     return () => { active = false; };
-  }, [initialSummary]);
+  }, [initialSummary, side]);
 
   const summaryState = useMemo(() => ({ summary, error: summaryError }), [summary, summaryError]);
 
@@ -123,6 +133,10 @@ export function ClinicOfficeShell({
       </OfficeChannelContext.Provider>
     </ClinicSummaryContext.Provider>
   );
+}
+
+export function ClinicOfficeShell(props: Omit<Parameters<typeof OfficeChannelShell>[0], "side">) {
+  return <OfficeChannelShell {...props} side="clinic" />;
 }
 
 export function ClinicPatientSearch() {
@@ -243,18 +257,18 @@ export function OfficePill({ count, open, onClick }: { count: number; open: bool
   return <button className="odos-pill odos-office-pill" type="button" aria-expanded={open} onClick={onClick}>Office {count > 0 && <span className="odos-office-badge">{count}</span>}</button>;
 }
 
-export function OfficeInboxPanel({ messages, error, acknowledging, onAcknowledge, onClose }: { messages: OfficeMessage[]; error?: string; acknowledging?: string; onAcknowledge(id: string): Promise<void>; onClose(): void }) {
+export function OfficeInboxPanel({ messages, error, acknowledging, canAcknowledge = true, onAcknowledge, onClose }: { messages: OfficeMessage[]; error?: string; acknowledging?: string; canAcknowledge?: boolean; onAcknowledge(id: string): Promise<void>; onClose(): void }) {
   return (
     <aside className="odos-office-panel" aria-label="Office messages">
-      <div className="odos-office-panel-head"><div><strong>Office</strong><span>Internal clinic channel</span></div><button type="button" onClick={onClose} aria-label="Close Office messages">×</button></div>
+      <div className="odos-office-panel-head"><div><strong>Office</strong><span>Internal practice channel</span></div><button type="button" onClick={onClose} aria-label="Close Office messages">×</button></div>
       {error && <p role="alert" className="odos-office-error">{error}</p>}
       {messages.length === 0 && !error && <p className="odos-office-empty">No Office messages.</p>}
-      {messages.map((message) => <OfficeMessageCard key={message.id} message={message} acknowledging={acknowledging === message.id} onAcknowledge={onAcknowledge} />)}
+      {messages.map((message) => <OfficeMessageCard key={message.id} message={message} acknowledging={acknowledging === message.id} canAcknowledge={canAcknowledge} onAcknowledge={onAcknowledge} />)}
     </aside>
   );
 }
 
-export function UrgentOfficeBanner({ messages, acknowledging, onAcknowledge }: { messages: OfficeMessage[]; acknowledging?: string; onAcknowledge(id: string): Promise<void> }) {
+export function UrgentOfficeBanner({ messages, acknowledging, canAcknowledge = true, onAcknowledge }: { messages: OfficeMessage[]; acknowledging?: string; canAcknowledge?: boolean; onAcknowledge(id: string): Promise<void> }) {
   const message = messages[0];
   if (!message) return null;
   return (
@@ -263,7 +277,7 @@ export function UrgentOfficeBanner({ messages, acknowledging, onAcknowledge }: {
         <span className="odos-office-from">Front desk · {message.sender.display}</span>
         <span className="odos-office-text">{message.text}</span>
         <span className="odos-office-age">{ageLabel(message.sentAt)}{messages.length > 1 ? ` · 1 of ${messages.length}` : ""}</span>
-        <button type="button" disabled={acknowledging === message.id} onClick={() => onAcknowledge(message.id)}>{acknowledging === message.id ? "Saving…" : "Got it ✓"}</button>
+        {canAcknowledge ? <button type="button" disabled={acknowledging === message.id} onClick={() => onAcknowledge(message.id)}>{acknowledging === message.id ? "Saving…" : "Got it ✓"}</button> : null}
       </div>
     </div>
   );
@@ -285,14 +299,16 @@ export function PinnedOfficeNote({ patientId, compact = false }: { patientId?: s
   );
 }
 
-function OfficeMessageCard({ message, acknowledging, onAcknowledge }: { message: OfficeMessage; acknowledging: boolean; onAcknowledge(id: string): Promise<void> }) {
+function OfficeMessageCard({ message, acknowledging, canAcknowledge, onAcknowledge }: { message: OfficeMessage; acknowledging: boolean; canAcknowledge: boolean; onAcknowledge(id: string): Promise<void> }) {
   return <article className={`odos-office-message is-${message.tier}`}>
     <div><strong>{message.sender.display}</strong><time>{ageLabel(message.sentAt)}</time></div>
     <p>{message.text}</p>
     {message.patient && <span className="odos-office-pin">📌 {message.patient.display}</span>}
     {message.acknowledgement
       ? <small>Seen ✓ by {message.acknowledgement.display} · {dateTimeLabel(message.acknowledgement.at)}</small>
-      : <button type="button" disabled={acknowledging} onClick={() => onAcknowledge(message.id)}>{acknowledging ? "Saving…" : "Got it ✓"}</button>}
+      : canAcknowledge
+        ? <button type="button" disabled={acknowledging} onClick={() => onAcknowledge(message.id)}>{acknowledging ? "Saving…" : "Got it ✓"}</button>
+        : <small>Awaiting Clinic acknowledgement</small>}
   </article>;
 }
 

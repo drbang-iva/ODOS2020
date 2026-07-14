@@ -35,7 +35,7 @@ import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings
 import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
-import { ClinicOfficeShell } from "./components/OfficeChannel";
+import { OfficeChannelShell } from "./components/OfficeChannel";
 import { AppShell, type AppShellSide } from "./components/AppShell";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
@@ -162,7 +162,7 @@ export function App({
 
   return (
     <RoleProvider>
-      {side === "clinic" ? <ClinicOfficeShell>{shell}</ClinicOfficeShell> : shell}
+      <OfficeChannelShell key={side} side={side}>{shell}</OfficeChannelShell>
     </RoleProvider>
   );
 }
