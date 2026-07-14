@@ -10,12 +10,14 @@ import {
   clinicRouteView,
   defaultHomePath,
   hasCrossSideAccess,
+  openOtherSide,
   parseSetPasswordPath,
   RoleSwitchPill,
   RouteSwitch,
   shouldResetClinicView,
   type RouteSwitchProps,
 } from "../src/App";
+import { fhir, SESSION_STORAGE_KEY } from "../src/lib/fhir";
 import { LoginScreen } from "../src/scenes/LoginScreen";
 import { SetPasswordScreen } from "../src/scenes/SetPasswordScreen";
 import {
@@ -30,6 +32,18 @@ import { useViewState } from "../src/lib/view-state";
 
 function RouteProbe(_props: RouteSwitchProps) {
   return <main>Route probe</main>;
+}
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); },
+  };
 }
 
 test("set-password email links route before the authenticated app", () => {
@@ -87,7 +101,7 @@ test("cross-side access requires at least one Desk role and one Clinic role", ()
   assert.equal(hasCrossSideAccess([]), false);
 });
 
-test("cross-side users get a new-tab switch pill on Desk and on a Clinic deep-link entry", () => {
+test("cross-side users switch between Desk and Clinic in the same tab", () => {
   const roles: PracticeRoleId[] = ["clinician", "front-desk"];
   assert.equal(defaultHomePath(roles), DESK_HOME_PATH);
 
@@ -96,13 +110,103 @@ test("cross-side users get a new-tab switch pill on Desk and on a Clinic deep-li
   assert.match(clinic, /Switch to Desk/);
   assert.match(desk, /Switch to Clinic/);
 
-  const calls: unknown[][] = [];
-  const pill = RoleSwitchPill({ target: DESK_HOME_PATH, open: ((...args: unknown[]) => {
-    calls.push(args);
-    return null;
-  }) as typeof window.open });
-  pill.props.onClick();
-  assert.deepEqual(calls, [[DESK_HOME_PATH, "_blank", "noopener,noreferrer"]]);
+  const originalWindow = globalThis.window;
+  const pushed: string[] = [];
+  const events: string[] = [];
+  const windowStub = {
+    history: { pushState: (_state: unknown, _title: string, path: string) => pushed.push(path) },
+    dispatchEvent: (event: Event) => { events.push(event.type); return true; },
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  try {
+    openOtherSide(CLINIC_PATH);
+    assert.deepEqual(pushed, [CLINIC_PATH]);
+    assert.deepEqual(events, ["popstate"]);
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("App rehydrates an unexpired session on boot", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "persisted-access-token",
+    refreshToken: "persisted-refresh-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  const location = { pathname: DESK_HOME_PATH, search: "" };
+  const windowStub = {
+    location,
+    history: {
+      replaceState: (_state: unknown, _title: string, path: string) => { location.pathname = path; },
+    },
+    fetch: globalThis.fetch,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: storage });
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<App
+        resolveRoles={async () => ({ roles: ["front-desk"] })}
+        RouteComponent={RouteProbe}
+      />);
+      await Promise.resolve();
+    });
+    assert.equal(fhir.authHeader(), "Bearer persisted-access-token");
+    assert.equal(renderer.root.findAllByType(LoginScreen).length, 0);
+    assert.equal(renderer.root.findByType(RouteProbe).props.path, DESK_HOME_PATH);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    fhir.logout(storage);
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: originalStorage });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("logout and any intercepted 401 clear the persisted session", async () => {
+  const storage = memoryStorage();
+  const seedSession = () => {
+    storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      accessToken: "session-token",
+      expiresAt: Date.now() + 60_000,
+    }));
+    assert.equal(fhir.rehydrateSession(storage), true);
+  };
+
+  seedSession();
+  fhir.logout(storage);
+  assert.equal(storage.getItem(SESSION_STORAGE_KEY), null);
+  assert.equal(fhir.authHeader(), undefined);
+
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "expired-token",
+    expiresAt: Date.now() - 1,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), false);
+  assert.equal(storage.getItem(SESSION_STORAGE_KEY), null);
+
+  seedSession();
+  let cleared = 0;
+  const stopListening = fhir.onSessionCleared(() => { cleared += 1; });
+  const host = { fetch: async () => new Response(null, { status: 401 }) as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const response = await host.fetch("/any-api");
+    assert.equal(response.status, 401);
+    assert.equal(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), undefined);
+    assert.equal(cleared, 1);
+  } finally {
+    stopIntercepting();
+    stopListening();
+    fhir.logout(storage);
+  }
 });
 
 test("single-role users do not render a cross-side switch pill", () => {

@@ -62,7 +62,7 @@ export function App({
     return <GrantsManagement />;
   }
 
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState(() => fhir.rehydrateSession());
   const [roles, setRoles] = useState<PracticeRoleId[]>();
   const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
@@ -91,6 +91,19 @@ export function App({
   }, [setView]);
 
   useEffect(() => {
+    const stopIntercepting = fhir.interceptUnauthorizedResponses(window);
+    const stopListening = fhir.onSessionCleared(() => {
+      setAuthed(false);
+      setRoles(undefined);
+      setRoleError(undefined);
+    });
+    return () => {
+      stopListening();
+      stopIntercepting();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!authed) return;
     let active = true;
     resolveRoles()
@@ -106,7 +119,11 @@ export function App({
         previousPath.current = renderedPath;
         setPath(renderedPath);
       })
-      .catch((error) => active && setRoleError(error instanceof Error ? error.message : "Practice role lookup failed."));
+      .catch((error) => {
+        if (active && fhir.isAuthenticated()) {
+          setRoleError(error instanceof Error ? error.message : "Practice role lookup failed.");
+        }
+      });
     return () => { active = false; };
   }, [authed, resolveRoles, setView]);
 
@@ -168,13 +185,14 @@ export function clinicRouteView(search: string, view: ViewState): ViewState {
   return view.kind === "picker" ? clinicViewFromSearch(search, view) : view;
 }
 
-export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH, open = window.open): void {
-  open(path, "_blank", "noopener,noreferrer");
+export function openOtherSide(path: typeof CLINIC_PATH | typeof DESK_HOME_PATH): void {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new Event("popstate"));
 }
 
-export function RoleSwitchPill({ target, open }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH; open?: typeof window.open }) {
+export function RoleSwitchPill({ target }: { target: typeof CLINIC_PATH | typeof DESK_HOME_PATH }) {
   const label = target === CLINIC_PATH ? "Clinic" : "Desk";
-  return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => openOtherSide(target, open ?? window.open)}>Switch to {label} <span aria-hidden>↗</span></button>;
+  return <button className="odos-pill odos-clinic-pill" type="button" onClick={() => openOtherSide(target)}>Switch to {label} <span aria-hidden>→</span></button>;
 }
 
 export interface RouteSwitchProps {
