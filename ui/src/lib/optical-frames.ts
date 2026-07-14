@@ -1,4 +1,4 @@
-import type { AuditEvent, Basic, Bundle, DeviceDefinition, Provenance } from "@medplum/fhirtypes";
+import type { AuditEvent, Basic, Binary, Bundle, DeviceDefinition, Provenance } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
@@ -66,6 +66,68 @@ export async function loadPracticeFrameInventory(): Promise<PracticeFrameInvento
     _count: "100",
   });
   return basicEntries(bundle).map(basicToInventoryItem);
+}
+
+export async function addFrameToInventory(item: FrameCatalogItem): Promise<PracticeFrameInventoryItem> {
+  const bundle = await fhir.search<Basic>("Basic", {
+    code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory`,
+    _count: "100",
+  });
+  const existing = basicEntries(bundle).find(
+    (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === item.canonicalUrl,
+  );
+
+  if (existing?.id) {
+    const current = await fhir.read<Basic>("Basic", existing.id);
+    const qtyIndex = current.extension?.findIndex((candidate) => candidate.url === EXTENSION_URLS.qtyOnHand) ?? -1;
+    if (qtyIndex < 0) {
+      throw new Error("Practice frame inventory item is missing qty-on-hand.");
+    }
+    const qtyOnHand = extensionNumber(current, EXTENSION_URLS.qtyOnHand) ?? 0;
+    const target = `Basic/${existing.id}`;
+    await writeInventoryTransaction({
+      resourceEntry: {
+        resource: jsonPatchBinary([
+          { op: "replace", path: `/extension/${qtyIndex}/valueInteger`, value: qtyOnHand + 1 },
+        ]),
+        request: {
+          method: "PATCH",
+          url: target,
+          ...(current.meta?.versionId ? { ifMatch: `W/\"${current.meta.versionId}\"` } : {}),
+        },
+      },
+      target,
+    });
+    return { ...basicToInventoryItem(current), qtyOnHand: qtyOnHand + 1 };
+  }
+
+  const fullUrl = `urn:uuid:frame-inventory-${crypto.randomUUID()}`;
+  const inventory: Basic = {
+    resourceType: "Basic",
+    code: {
+      coding: [
+        {
+          system: BASIC_KIND_SYSTEM,
+          code: "practice-frame-inventory",
+        },
+      ],
+    },
+    extension: [
+      extension(EXTENSION_URLS.catalogCanonicalUrl, { valueString: item.canonicalUrl }),
+      extension(EXTENSION_URLS.qtyOnHand, { valueInteger: 1 }),
+      extension(EXTENSION_URLS.inventoryStatus, { valueString: "active" }),
+    ],
+  };
+  const response = await writeInventoryTransaction({
+    resourceEntry: {
+      fullUrl,
+      resource: inventory,
+      request: { method: "POST", url: "Basic" },
+    },
+    target: fullUrl,
+  });
+  const id = createdId(response, "Basic");
+  return basicToInventoryItem({ ...inventory, id });
 }
 
 export async function decrementPracticeFrameInventory(
@@ -234,7 +296,67 @@ function basicToInventoryItem(resource: Basic): PracticeFrameInventoryItem {
   };
 }
 
-function extension(url: string, value: Record<string, string | boolean>): NonNullable<Basic["extension"]>[number] {
+async function writeInventoryTransaction(input: {
+  resourceEntry: NonNullable<Bundle["entry"]>[number];
+  target: string;
+}): Promise<Bundle> {
+  const now = new Date().toISOString();
+  const auditEvent: AuditEvent = {
+    resourceType: "AuditEvent",
+    type: {
+      system: "https://osod.dev/fhir/CodeSystem/audit-event-type",
+      code: "practice.frame-inventory.incremented",
+    },
+    action: input.resourceEntry.request?.method === "POST" ? "C" : "U",
+    recorded: now,
+    outcome: "0",
+    agent: [{ who: { reference: "Device/osod-ui" }, requestor: true }],
+    source: { observer: { reference: "Device/osod-ui" } },
+    entity: [{ what: { reference: input.target }, name: "practice-frame-inventory" }],
+  };
+  const provenance: Provenance = {
+    resourceType: "Provenance",
+    recorded: now,
+    target: [{ reference: input.target }],
+    agent: [{ who: { reference: "Device/osod-ui" } }],
+  };
+  const response = await fhir.executeTransaction(
+    {
+      resourceType: "Bundle",
+      type: "transaction",
+      entry: [
+        input.resourceEntry,
+        { resource: auditEvent, request: { method: "POST", url: "AuditEvent" } },
+        { resource: provenance, request: { method: "POST", url: "Provenance" } },
+      ],
+    },
+    "practice.frame-inventory.increment",
+  );
+  const failed = response.entry?.find((entry) => !entry.response?.status || !/^2\d\d/.test(entry.response.status));
+  if (failed) {
+    throw new Error(`Frame inventory transaction failed: ${failed.response?.status ?? "missing response status"}.`);
+  }
+  return response;
+}
+
+function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: number }>): Binary {
+  return {
+    resourceType: "Binary",
+    contentType: "application/json-patch+json",
+    data: btoa(JSON.stringify(ops)),
+  };
+}
+
+function createdId(bundle: Bundle, resourceType: string): string {
+  const location = bundle.entry?.find((entry) => entry.response?.location?.startsWith(`${resourceType}/`))?.response?.location;
+  const id = location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
+  if (!id) {
+    throw new Error(`FHIR transaction did not return the created ${resourceType} id.`);
+  }
+  return id;
+}
+
+function extension(url: string, value: Record<string, string | boolean | number>): NonNullable<Basic["extension"]>[number] {
   return { url, ...value };
 }
 

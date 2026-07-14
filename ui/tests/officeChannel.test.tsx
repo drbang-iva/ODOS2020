@@ -5,7 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Patient } from "@medplum/fhirtypes";
-import { ClinicOfficeShell, searchClinicPatients, useOfficeInbox, type OfficeInboxApi } from "../src/components/OfficeChannel";
+import { ClinicOfficeShell, OfficeChannelShell, searchClinicPatients, useOfficeInbox, type OfficeInboxApi } from "../src/components/OfficeChannel";
 import { AppShell } from "../src/components/AppShell";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import type { OfficeMessage } from "../src/lib/office-channel";
@@ -27,6 +27,56 @@ test("Office pill badge and ambient panel reflect the real unacknowledged count"
   await act(async () => renderer.root.findByProps({ "aria-label": "Office" }).props.onClick());
   assert.equal(renderer.root.findAllByProps({ "aria-label": "Office messages" }).length, 1);
   assert.match(renderer.toJSON() ? JSON.stringify(renderer.toJSON()) : "", /Insurance question/);
+});
+
+test("Office bell opens the shared inbox and renders its unread badge on Desk and Clinic sides", async () => {
+  for (const side of ["desk", "clinic"] as const) {
+    let renderer!: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <OfficeChannelShell side={side} initialMessages={[message()]} initialSummary={summary()}>
+          <AppShell path={`/${side}`} roles={side === "desk" ? ["front-desk"] : ["clinician"]} homePath={`/${side}`} side={side} email={`${side}@example.test`}><main /></AppShell>
+        </OfficeChannelShell>,
+      );
+    });
+    assert.equal(renderer.root.findByProps({ className: "odos-office-badge" }).children.join(""), "1", side);
+    await act(async () => renderer.root.findByProps({ "aria-label": "Office" }).props.onClick());
+    assert.equal(renderer.root.findAllByProps({ "aria-label": "Office messages" }).length, 1, side);
+    renderer.unmount();
+  }
+});
+
+test("Desk home consumes the shell Office source without starting a second poll", async () => {
+  const originalWindow = globalThis.window;
+  let listCalls = 0;
+  let intervals = 0;
+  const storage = memoryStorage();
+  const windowStub = {
+    localStorage: storage,
+    setInterval: () => { intervals += 1; return intervals; },
+    clearInterval: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  const api: OfficeInboxApi = {
+    list: async () => { listCalls += 1; return []; },
+    acknowledge: async () => message({ acknowledgement }),
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <OfficeChannelShell side="desk" officeApi={api} initialSummary={summary()} pollMs={60_000}>
+          <DeskHome initialSummary={emptyDeskSummary()} officeApi={{ list: api.list, send: async () => message() }} />
+        </OfficeChannelShell>,
+      );
+      await Promise.resolve();
+    });
+    assert.equal(listCalls, 1);
+    assert.equal(intervals, 1);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("unified Sections routes every named surface and gates Settings to practice admins", () => {
@@ -207,5 +257,36 @@ function overviewFixture() {
     snapshot: { ocularHistory: [], ocularSurgicalHistory: [], medicalConditions: [], socialHistory: [], ophthalmicMedications: [], systemicMedications: [] },
     visits: [],
     diagnosisChoices: [],
+  };
+}
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); },
+  };
+}
+
+function emptyDeskSummary() {
+  const n = { value: 0, tone: "ok" as const };
+  const off = { value: null, tone: "off" as const };
+  return {
+    cards: {
+      schedule: { today: n, confirmed: n, checkedIn: n, webRequests: n, agenda: [] },
+      attention: { items: [] },
+      frontLine: { available: false, message: "Not wired", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },
+      pendingRx: { spectacle: n, contactLens: off, labOrdersUnsent: off, oldestWaiting: off },
+      productPickup: { openOrders: n, atLab: n, readyNotNotified: off, awaitingPickup: n },
+      claims: { failed: n, inProcess: n, paperQueue: off, heldCents: n, lastTransmission: off },
+      payments: { unappliedCount: n, unappliedCents: n, patientCreditsOpen: n, patientOpenBalanceCents: n, terminalMode: { value: "LIVE", tone: "ok" as const } },
+      remits: { waitingToPost: n, unpostedCents: n },
+      statements: { available: true, cadence: n, invalidRejects: n, lastStatement: off },
+    },
+    pulse: { itemsNeedingYou: 0, everythingElseAtTarget: true, lastClaimTransmission: null, lastClaimTransmissionTone: "off" as const },
   };
 }

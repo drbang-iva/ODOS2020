@@ -6,10 +6,10 @@ import type { CockpitPanelId } from "../lib/cockpit-shell";
 import { fetchDeskSummary, type DeskStat, type DeskSummary, type DeskTone } from "../lib/desk-summary";
 import { fetchDeskOfficeMessages, sendOfficeMessage, type OfficeMessage, type OfficeTier } from "../lib/office-channel";
 import { PatientSearch } from "./PatientPicker";
+import { useOfficeChannel } from "../components/OfficeChannel";
 
 export const DESK_LABEL = "Desk";
-export const DESK_HOME_PATH = "/desk";
-export const CLINIC_PATH = "/clinic";
+export { CLINIC_PATH, DESK_HOME_PATH } from "../lib/app-paths";
 export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v2";
 
 export interface DeskOfficeApi {
@@ -69,29 +69,32 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
 }
 
 export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; initialOfficeMessages?: OfficeMessage[]; officeApi?: DeskOfficeApi } = {}) {
+  const sharedOffice = useOfficeChannel();
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
   const [dragged, setDragged] = useState<DeskCardId | null>(null);
   const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
   const [summary, setSummary] = useState<DeskSummary | undefined>(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
-  const [sentMessages, setSentMessages] = useState(initialOfficeMessages ?? []);
-  const [officeError, setOfficeError] = useState<string>();
+  const [localSentMessages, setLocalSentMessages] = useState(initialOfficeMessages ?? []);
+  const [localOfficeError, setLocalOfficeError] = useState<string>();
   const [messageText, setMessageText] = useState("");
   const [tier, setTier] = useState<OfficeTier>("ambient");
   const [pinnedPatient, setPinnedPatient] = useState<Patient>();
   const [sending, setSending] = useState(false);
   const officeRequestIdRef = useRef(0);
+  const sentMessages = sharedOffice.provided ? sharedOffice.messages : localSentMessages;
+  const officeError = sharedOffice.provided ? sharedOffice.error : localOfficeError;
 
   const refreshSent = useCallback(async () => {
     const requestId = ++officeRequestIdRef.current;
     try {
       const next = await officeApi.list();
       if (requestId !== officeRequestIdRef.current) return;
-      setSentMessages(next);
-      setOfficeError(undefined);
+      setLocalSentMessages(next);
+      setLocalOfficeError(undefined);
     } catch (reason) {
-      if (requestId === officeRequestIdRef.current) setOfficeError(reason instanceof Error ? reason.message : "Office channel unavailable.");
+      if (requestId === officeRequestIdRef.current) setLocalOfficeError(reason instanceof Error ? reason.message : "Office channel unavailable.");
     }
   }, [officeApi]);
 
@@ -103,14 +106,14 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
     return () => { active = false; };
   }, [initialSummary]);
   useEffect(() => {
-    if (initialOfficeMessages) return;
+    if (initialOfficeMessages || sharedOffice.provided) return;
     void refreshSent();
     const handle = window.setInterval(() => void refreshSent(), 10_000);
     return () => {
       window.clearInterval(handle);
       officeRequestIdRef.current += 1;
     };
-  }, [initialOfficeMessages, refreshSent]);
+  }, [initialOfficeMessages, refreshSent, sharedOffice.provided]);
   const hiddenCards = DESK_CARDS.filter((card) => !cardIds.includes(card.id));
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
 
@@ -125,12 +128,13 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
         tier,
         ...(tier === "patient-pinned" && pinnedPatient?.id ? { patientId: pinnedPatient.id } : {}),
       });
-      setSentMessages((current) => [created, ...current]);
+      if (sharedOffice.provided) await sharedOffice.refresh();
+      else setLocalSentMessages((current) => [created, ...current]);
       setMessageText("");
       setTier("ambient");
       setPinnedPatient(undefined);
-      setOfficeError(undefined);
-    } catch (reason) { setOfficeError(reason instanceof Error ? reason.message : "Office message could not be sent."); }
+      setLocalOfficeError(undefined);
+    } catch (reason) { setLocalOfficeError(reason instanceof Error ? reason.message : "Office message could not be sent."); }
     finally { setSending(false); }
   }
 

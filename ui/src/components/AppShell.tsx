@@ -61,7 +61,6 @@ export function AppShell({
   path,
   roles,
   homePath,
-  side,
   viewKind,
   email,
   switchPill,
@@ -97,22 +96,8 @@ export function AppShell({
     return () => document.removeEventListener("keydown", close);
   }, [sectionsOpen]);
 
-  useEffect(() => {
-    if (path === DESK_HOME_PATH && typeof document !== "undefined" && window.location.hash === "#office") {
-      document.getElementById("office")?.scrollIntoView({ block: "start" });
-    }
-  }, [path]);
-
   function openOffice() {
-    if (side === "clinic") {
-      office.setOpen(!office.open);
-      return;
-    }
-    if (path === DESK_HOME_PATH) {
-      document.getElementById("office")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-    navigateWithinApp(`${DESK_HOME_PATH}#office`);
+    office.setOpen(!office.open);
   }
 
   return (
@@ -124,15 +109,15 @@ export function AppShell({
         <a className="odos-pill flex-none" href="/schedule/day"><span aria-hidden>▦</span> Schedule</a>
         <button className="odos-pill flex-none" type="button" aria-expanded={newOpen} onClick={() => setNewOpen(true)}>＋ New…</button>
         <button className="odos-pill flex-none" type="button" aria-expanded={sectionsOpen} onClick={() => setSectionsOpen(true)}>Sections</button>
-        <button className="odos-pill odos-office-pill flex-none" type="button" aria-label="Office" aria-expanded={side === "clinic" ? office.open : undefined} onClick={openOffice}>
+        <button className="odos-pill odos-office-pill flex-none" type="button" aria-label="Office" aria-expanded={office.open} onClick={openOffice}>
           <span aria-hidden>🔔</span>
-          {side === "clinic" && office.unread.length > 0 && <span className="odos-office-badge">{office.unread.length}</span>}
+          {office.unread.length > 0 && <span className="odos-office-badge">{office.unread.length}</span>}
         </button>
         {switchPill}
         <AccountChip email={accountEmail} roles={roles} />
       </header>
-      {side === "clinic" && <UrgentOfficeBanner messages={office.unread.filter((message) => message.tier === "urgent")} onAcknowledge={office.acknowledge} acknowledging={office.acknowledging} />}
-      {side === "clinic" && office.open && <OfficeInboxPanel messages={office.messages} error={office.error} acknowledging={office.acknowledging} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
+      <UrgentOfficeBanner messages={office.unread.filter((message) => message.tier === "urgent")} canAcknowledge={office.canAcknowledge} onAcknowledge={office.acknowledge} acknowledging={office.acknowledging} />
+      {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} acknowledging={office.acknowledging} canAcknowledge={office.canAcknowledge} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
       {children}
       <SectionsDrawer open={sectionsOpen} roles={roles} onClose={() => setSectionsOpen(false)} />
       {newOpen && <CockpitGuestPanel panel="launcher" onClose={() => setNewOpen(false)} />}
@@ -263,9 +248,4 @@ function sessionClaimsFromAuthorization(authorization: string | undefined): Reco
   } catch {
     return undefined;
   }
-}
-
-function navigateWithinApp(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
 }
