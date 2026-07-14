@@ -117,13 +117,13 @@ export function AppShell({
 
   return (
     <div className="odos-clinic-shell" data-testid="app-shell">
-      <header className="odos-desk-topbar !flex-nowrap overflow-x-auto">
+      <header className="odos-desk-topbar flex-wrap">
         <a className="odos-mark flex-none" href={homePath}>ODOS <b>20/20</b></a>
         <Breadcrumb path={path} viewKind={viewKind} />
         <ClinicPatientSearch />
         <a className="odos-pill flex-none" href="/schedule/day"><span aria-hidden>▦</span> Schedule</a>
-        <button className="odos-pill flex-none" type="button" aria-expanded={sectionsOpen} onClick={() => setSectionsOpen(true)}>Sections</button>
         <button className="odos-pill flex-none" type="button" aria-expanded={newOpen} onClick={() => setNewOpen(true)}>＋ New…</button>
+        <button className="odos-pill flex-none" type="button" aria-expanded={sectionsOpen} onClick={() => setSectionsOpen(true)}>Sections</button>
         <button className="odos-pill odos-office-pill flex-none" type="button" aria-label="Office" aria-expanded={side === "clinic" ? office.open : undefined} onClick={openOffice}>
           <span aria-hidden>🔔</span>
           {side === "clinic" && office.unread.length > 0 && <span className="odos-office-badge">{office.unread.length}</span>}

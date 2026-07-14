@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -45,6 +46,41 @@ test("unified Sections includes Schedule and applies the existing practice-admin
   assert.match(frontDesk, /href="\/schedule\/day"[\s\S]*Schedule/);
   assert.doesNotMatch(frontDesk, /href="\/settings"/);
   assert.match(admin, /href="\/settings"[\s\S]*Administration \/ Settings/);
+});
+
+test("AppShell leaves account-menu overflow visible and places Sections in the right control cluster", () => {
+  const html = renderToStaticMarkup(
+    <AppShell
+      path="/settings/staff"
+      roles={["practice-admin", "clinician"]}
+      homePath="/desk"
+      side="desk"
+      email="eric.bang@example.test"
+      switchPill={<RoleSwitchPill target="/clinic" />}
+    >
+      <main />
+    </AppShell>,
+  );
+  const header = html.match(/<header class="odos-desk-topbar[\s\S]*?<\/header>/)?.[0] ?? "";
+  const css = readFileSync(new URL("../src/styles/desk-home.css", import.meta.url), "utf8");
+  const topbar = css.match(/\.odos-desk-topbar \{[^}]*\}/)?.[0] ?? "";
+
+  assert.match(header, /class="odos-desk-topbar flex-wrap"/);
+  assert.doesNotMatch(header, /overflow-x-auto|flex-nowrap/);
+  assert.match(topbar, /flex-wrap: wrap/);
+  assert.match(topbar, /overflow: visible/);
+  assert.match(topbar, /z-index: 30/);
+
+  const newIndex = header.indexOf("New…");
+  const sectionsIndex = header.indexOf(">Sections</button>");
+  const officeIndex = header.indexOf('aria-label="Office"');
+  const switchIndex = header.indexOf("Switch to Clinic");
+  const accountIndex = header.indexOf('aria-label="Account menu"');
+  assert.ok(newIndex >= 0);
+  assert.ok(newIndex < sectionsIndex);
+  assert.ok(sectionsIndex < officeIndex);
+  assert.ok(officeIndex < switchIndex);
+  assert.ok(switchIndex < accountIndex);
 });
 
 test("login and full-page routes render without AppShell", () => {

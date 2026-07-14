@@ -42,7 +42,7 @@
 .odos-forgot-password .odos-login-form { margin-top: 12px; }
 .odos-login-foot { margin-top: 40px; color: var(--odos-faint); font-size: 11px; letter-spacing: .06em; }
 
-.odos-desk-topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px; padding: 13px 26px; border-bottom: 1px solid var(--odos-line); background: rgba(10,14,26,.88); backdrop-filter: blur(16px); }
+.odos-desk-topbar { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; overflow: visible; padding: 13px 26px; border-bottom: 1px solid var(--odos-line); background: rgba(10,14,26,.88); backdrop-filter: blur(16px); }
 .odos-mark { color: var(--odos-text); font-size: 19px; letter-spacing: .18em; text-decoration: none; }
 .odos-location { padding-left: 18px; border-left: 1px solid var(--odos-line-2); color: var(--odos-faint); font-size: 12px; letter-spacing: .06em; }
 .odos-topbar-spacer { flex: 1; }
