@@ -37,6 +37,8 @@ interface CatalogResponse {
   error?: string;
 }
 
+let sidebarExpandedForSession = false;
+
 export function EncounterCharting({ patient, encounterId }: Props) {
   const { config } = useRole();
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
@@ -44,6 +46,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
   const [creatingSection, setCreatingSection] = useState(false);
   const [savingSection, setSavingSection] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
+
+  function setSidebarOpen(expanded: boolean) {
+    sidebarExpandedForSession = expanded;
+    setSidebarExpanded(expanded);
+  }
 
   async function loadCatalog() {
     try {
@@ -60,6 +68,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    if (!sidebarExpanded) return;
+    const close = (event: KeyboardEvent) => event.key === "Escape" && setSidebarOpen(false);
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [sidebarExpanded]);
 
   async function createSection(value: CustomSectionEditorValue) {
     setSavingSection(true);
@@ -105,9 +120,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     : undefined;
 
   return (
-    <div className={["flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
+    <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
       <EncounterHeader patient={patient} encounterId={encounterId} />
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="odos-charting-body flex min-h-0 flex-1 flex-col md:flex-row">
         <SpineNav
           active={activeSection}
           statuses={statuses}
@@ -116,7 +131,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           ocularHealthSections={ocularHealthSections}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
-        <main className="min-w-0 flex-1 bg-bg-deep">
+        <main className="min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
           {activeSection === "hpi" && (
             <HpiSection
               patientReference={patientReference}
@@ -243,7 +258,30 @@ export function EncounterCharting({ patient, encounterId }: Props) {
             />
           )}
         </main>
-        <ChartSidebar patient={patient} />
+        <div className={`odos-chart-sidebar-shell${sidebarExpanded ? " is-open" : ""}`}>
+          {sidebarExpanded && (
+            <button
+              type="button"
+              className="odos-chart-sidebar-scrim"
+              aria-label="Close chart sidebar"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+          <button
+            type="button"
+            className="odos-chart-sidebar-toggle"
+            aria-controls="encounter-chart-sidebar"
+            aria-expanded={sidebarExpanded}
+            aria-label={sidebarExpanded ? "Collapse chart sidebar" : "Expand chart sidebar"}
+            onClick={() => setSidebarOpen(!sidebarExpanded)}
+          >
+            <span aria-hidden>{sidebarExpanded ? "›" : "‹"}</span>
+            <span aria-hidden>Chart</span>
+          </button>
+          <div id="encounter-chart-sidebar" className="odos-chart-sidebar-panel">
+            <ChartSidebar patient={patient} />
+          </div>
+        </div>
       </div>
       {creatingSection && (
         <CustomSectionEditor

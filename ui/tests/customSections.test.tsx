@@ -17,12 +17,14 @@ import {
 } from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
+import { RoleProvider } from "../src/lib/role-context";
+import { EncounterCharting } from "../src/scenes/EncounterCharting";
 
-test("SpineNav is unchanged for an empty custom registry and safely appends missing-status custom sections", () => {
+test("SpineNav preserves its section inventory for an empty custom registry and safely appends missing-status custom sections", () => {
   const before = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
   const emptyRegistry = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} customSections={[]} />);
   assert.equal(emptyRegistry, before);
-  assert.equal((before.match(/<button/g) ?? []).length, 16);
+  assert.equal((before.match(/data-status=/g) ?? []).length, 16);
   assert.match(before, /ASSESSMENT &amp; PLAN/);
   assert.ok(before.indexOf("Assessment") < before.indexOf("Plan · Prescriptions"));
 
@@ -37,7 +39,7 @@ test("SpineNav is unchanged for an empty custom registry and safely appends miss
   );
   assert.match(custom, /Skin Carotenoid Score/);
   assert.match(custom, /\+ Add section/);
-  assert.equal((custom.match(/<button/g) ?? []).length, 18);
+  assert.equal((custom.match(/data-status=/g) ?? []).length, 17);
   assert.deepEqual(sectionStatus({}, "custom:missing"), { completed: false });
 });
 
@@ -83,7 +85,52 @@ test("SpineNav groups the traditional spine and appends custom sections after ev
   }
 });
 
-test("ongoing Dry Eye and Myopia summaries stay visible without a completed dot", () => {
+test("only the active SpineNav group opens by default and a new active section auto-opens its group", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
+  });
+
+  function expandedGroups() {
+    return renderer.root
+      .findAll((node) => node.type === "section" && typeof node.props["data-spine-group"] === "string")
+      .filter((group) => group.findAllByType("button").find((button) => button.props["aria-controls"])?.props["aria-expanded"])
+      .map((group) => group.props["data-spine-group"]);
+  }
+
+  assert.deepEqual(expandedGroups(), ["PRETEST"]);
+  const history = renderer.root.find((node) => node.type === "section" && node.props["data-spine-group"] === "HISTORY");
+  const historyToggle = history.findAllByType("button").find((button) => button.props["aria-controls"]);
+  assert.ok(historyToggle);
+  await act(async () => historyToggle.props.onClick());
+  assert.deepEqual(expandedGroups(), ["HISTORY"]);
+  await act(async () => historyToggle.props.onClick());
+  assert.deepEqual(expandedGroups(), []);
+  await act(async () => {
+    renderer.update(<SpineNav active="assessment" statuses={{}} onSelect={() => undefined} />);
+  });
+  assert.deepEqual(expandedGroups(), ["ASSESSMENT & PLAN"]);
+  renderer.unmount();
+});
+
+test("SpineNav status dots expose complete, incomplete, and read-only labels without dropping detailed summaries", () => {
+  const html = renderToStaticMarkup(
+    <SpineNav
+      active="va"
+      statuses={{
+        va: { completed: true, summary: "OD 20/20 · OS 20/25" },
+        "dry-eye": { completed: false, summary: "OSDI 34" },
+      }}
+      onSelect={() => undefined}
+    />,
+  );
+  assert.match(html, /data-status="complete" role="img" aria-label="Complete — OD 20\/20 · OS 20\/25"/);
+  assert.match(html, /data-status="incomplete" role="img" aria-label="Incomplete — OSDI 34"/);
+  assert.match(html, /data-status="read-only" role="img" aria-label="Read only"/);
+  assert.match(html, /title="Incomplete — OSDI 34"/);
+});
+
+test("ongoing Dry Eye and Myopia summaries stay available without a completed dot", () => {
   const html = renderToStaticMarkup(
     <SpineNav
       active="dry-eye"
@@ -663,6 +710,65 @@ test("EncounterCharting renders the shared ChartSidebar without removing it from
   assert.match(encounterCharting, /import \{ ChartSidebar \} from "\.\.\/components\/ChartSidebar";/);
   assert.match(encounterCharting, /<ChartSidebar patient=\{patient\} \/>/);
   assert.match(patientDirector, /<ChartSidebar patient=\{currentPatient\} \/>/);
+});
+
+test("EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion", async () => {
+  const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
+  const tablet = css.match(/@container \(max-width: 1023px\) \{[\s\S]*\n\}/)?.[0] ?? "";
+
+  assert.match(css, /\.odos-charting-workspace \{[\s\S]*container-type: inline-size/);
+  assert.match(css, /\.odos-charting-body \{[\s\S]*overflow: hidden/);
+  assert.match(css, /@media \(min-width: 768px\) \{[\s\S]*\.odos-spine-nav \{[\s\S]*position: sticky;[\s\S]*height: 100%;[\s\S]*overflow-y: auto/);
+  assert.match(tablet, /\.odos-chart-sidebar-shell \{[\s\S]*position: absolute/);
+  assert.match(tablet, /\.odos-chart-sidebar-panel \{[\s\S]*visibility: hidden;[\s\S]*transform: translateX\(calc\(100% \+ 2px\)\)/);
+  assert.match(tablet, /\.odos-chart-sidebar-shell\.is-open \.odos-chart-sidebar-panel \{[\s\S]*visibility: visible;[\s\S]*transform: translateX\(0\)/);
+  assert.match(tablet, /\.odos-chart-sidebar-toggle \{[\s\S]*display: flex/);
+
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  const documentStub = {
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  } as unknown as Document;
+  globalThis.fetch = (async (input) => String(input).includes("finding-definitions")
+    ? jsonResponse({ canWrite: false, definitions: [] })
+    : jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] })) as typeof fetch;
+  Object.defineProperty(globalThis, "document", { configurable: true, value: documentStub });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+    });
+    const toggle = () => renderer.root.find((node) => node.type === "button" && node.props["aria-controls"] === "encounter-chart-sidebar");
+    assert.equal(renderer.root.find((node) => node.props.className === "odos-chart-sidebar-shell").props.className, "odos-chart-sidebar-shell");
+    assert.equal(toggle().props["aria-expanded"], false);
+    assert.equal(toggle().props["aria-label"], "Expand chart sidebar");
+    assert.equal(renderer.root.findByType("main").props.inert, undefined);
+    await act(async () => toggle().props.onClick());
+    assert.equal(toggle().props["aria-expanded"], true);
+    assert.equal(renderer.root.findByType("main").props.inert, "");
+
+    await act(async () => renderer.unmount());
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+    });
+    assert.equal(toggle().props["aria-expanded"], true);
+    await act(async () => toggle().props.onClick());
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
 });
 
 function ocularDefinitions() {

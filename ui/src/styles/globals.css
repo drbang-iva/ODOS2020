@@ -2,6 +2,7 @@
 @import "./clinic-home.css";
 @import "./lab-orders.css";
 @import "./patient-overview.css";
+@import "./charting.css";
 
 @tailwind base;
 @tailwind components;
