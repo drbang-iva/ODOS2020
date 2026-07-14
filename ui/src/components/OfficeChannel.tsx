@@ -3,12 +3,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, type OfficeMessage } from "../lib/office-channel";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { fhir } from "../lib/fhir";
-import type { PracticeRoleId } from "../lib/practice-roles";
 import { patientName } from "../lib/scheduler-appointment-ui";
 import { patientOverviewView, useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "../scenes/DeskHome";
-
-const CLINIC_PATIENTS_PATH = "/clinic/patients";
 
 export interface OfficeInboxApi {
   list: typeof fetchClinicOfficeMessages;
@@ -92,28 +89,21 @@ export function useOfficeInbox(options: { initialMessages?: OfficeMessage[]; pol
 }
 
 export function ClinicOfficeShell({
-  location,
-  switchPill,
   children,
   initialMessages,
   officeApi,
   pollMs = 15_000,
-  roles = [],
   initialSummary,
 }: {
-  location: string;
-  switchPill?: ReactNode;
   children: ReactNode;
   initialMessages?: OfficeMessage[];
   officeApi?: OfficeInboxApi;
   pollMs?: number;
-  roles?: readonly PracticeRoleId[];
   initialSummary?: ClinicSummary;
 }) {
   const office = useOfficeInbox({ initialMessages, pollMs, api: officeApi });
   const [summary, setSummary] = useState(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
-  const [sectionsOpen, setSectionsOpen] = useState(false);
 
   useEffect(() => {
     if (initialSummary) return;
@@ -124,33 +114,12 @@ export function ClinicOfficeShell({
     return () => { active = false; };
   }, [initialSummary]);
 
-  useEffect(() => {
-    if (!sectionsOpen || typeof document === "undefined") return;
-    const close = (event: KeyboardEvent) => event.key === "Escape" && setSectionsOpen(false);
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
-  }, [sectionsOpen]);
-
   const summaryState = useMemo(() => ({ summary, error: summaryError }), [summary, summaryError]);
 
   return (
     <ClinicSummaryContext.Provider value={summaryState}>
       <OfficeChannelContext.Provider value={office}>
-        <div className="odos-clinic-shell">
-          <header className="odos-desk-topbar">
-            <a className="odos-mark" href={CLINIC_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-            <span className="odos-location">{location}</span>
-            <ClinicPatientSearch />
-            <span className="odos-topbar-spacer" />
-            <OfficePill count={office.unread.length} open={office.open} onClick={() => office.setOpen(!office.open)} />
-            <button className="odos-pill" type="button" aria-expanded={sectionsOpen} onClick={() => setSectionsOpen(true)}>Sections</button>
-            {switchPill}
-          </header>
-          <UrgentOfficeBanner messages={office.unread.filter((message) => message.tier === "urgent")} onAcknowledge={office.acknowledge} acknowledging={office.acknowledging} />
-          {office.open && <OfficeInboxPanel messages={office.messages} error={office.error} acknowledging={office.acknowledging} onAcknowledge={office.acknowledge} onClose={() => office.setOpen(false)} />}
-          {children}
-          <ClinicSectionsDrawer open={sectionsOpen} roles={roles} summary={summary} onClose={() => setSectionsOpen(false)} />
-        </div>
+        {children}
       </OfficeChannelContext.Provider>
     </ClinicSummaryContext.Provider>
   );
@@ -199,13 +168,14 @@ export function ClinicPatientSearch() {
 
   function selectPatient(patient: Patient) {
     if (!patient.id) return;
-    setView(patientOverviewView(patient.id));
     setQuery("");
     setOpen(false);
+    navigateTo(`${CLINIC_PATH}?patientId=${encodeURIComponent(patient.id)}`);
+    setView(patientOverviewView(patient.id));
   }
 
   return (
-    <div className={`odos-clinic-search${open ? " is-open" : ""}`}>
+    <div className={`odos-clinic-search !order-none !basis-auto min-w-[240px]${open ? " is-open" : ""}`}>
       <span className="odos-clinic-search-glass" aria-hidden>⌕</span>
       <input
         ref={inputRef}
@@ -251,50 +221,6 @@ export async function searchClinicPatients(query: string, api: Pick<typeof fhir,
   return bundles.flatMap((bundle) => (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []))
     .filter((patient) => patient.id && !seen.has(patient.id) && Boolean(seen.add(patient.id)))
     .slice(0, 8);
-}
-
-function ClinicSectionsDrawer({ open, roles, summary, onClose }: { open: boolean; roles: readonly PracticeRoleId[]; summary?: ClinicSummary; onClose(): void }) {
-  const route = (event: MouseEvent<HTMLAnchorElement>) => { onClose(); navigateWithinApp(event); };
-  return (
-    <>
-      <button className={`odos-clinic-scrim${open ? " is-open" : ""}`} type="button" aria-label="Close sections" tabIndex={open ? 0 : -1} onClick={onClose} />
-      <aside ref={(node) => { node?.toggleAttribute("inert", !open); }} className={`odos-clinic-sections${open ? " is-open" : ""}`} role="dialog" aria-modal="true" aria-label="Sections" aria-hidden={!open}>
-        <button className="odos-clinic-sections-close" type="button" aria-label="Close sections" onClick={onClose}>×</button>
-        <h2>Sections</h2>
-        <p>Everything you don't need every hour — one slide away, never in the way.</p>
-        <DrawerGroup label="Patients">
-          <DrawerLink icon="⌕" title="Patient directory" detail="find, open, or register a patient" href={CLINIC_PATIENTS_PATH} onClick={route} />
-          <DrawerLink icon="＋" title="New patient" detail="register with duplicate check" href="/patient/new" onClick={route} />
-        </DrawerGroup>
-        <DrawerGroup label="Clinic">
-          <DrawerLink icon="▦" title="Full schedule" detail="day grid, all providers" href="/schedule/day" onClick={route} />
-          <DrawerLink icon="⇄" title="Orders worklist" detail="persisted optical lab orders" href="/dispensary/lab-orders" count={summary?.orders.activeCount} onClick={route} />
-          <DrawerUnavailable icon="☰" title="Results review" detail="review queue not wired" />
-          <DrawerUnavailable icon="℞" title="E-Rx queue" detail="not wired — honest state" />
-        </DrawerGroup>
-        <DrawerGroup label="Chart setup">
-          <DrawerLink icon="✎" title="Chart fields & sections" detail="exam form configuration" href="/settings/chart-fields-sections" onClick={route} />
-          <DrawerLink icon="✳" title="Suggested diagnoses" detail="finding → diagnosis mapping" href="/settings/suggested-diagnoses" onClick={route} />
-        </DrawerGroup>
-        <DrawerGroup label="Practice">
-          {roles.includes("practice-admin") && <DrawerLink icon="⚙" title="Settings" detail="practice administration" href="/settings" onClick={route} />}
-          <DrawerLink icon="≡" title="Audit log" detail="every access, every change" href="/audit/log" onClick={route} />
-        </DrawerGroup>
-      </aside>
-    </>
-  );
-}
-
-function DrawerGroup({ label, children }: { label: string; children: ReactNode }) {
-  return <section className="odos-clinic-section-group"><h3>{label}</h3>{children}</section>;
-}
-
-function DrawerLink({ icon, title, detail, href, count, onClick }: { icon: string; title: string; detail: string; href: string; count?: number; onClick(event: MouseEvent<HTMLAnchorElement>): void }) {
-  return <a className="odos-clinic-section-item" href={href} onClick={onClick}><span className="odos-clinic-section-icon">{icon}</span><span>{title}<small>{detail}</small></span>{count !== undefined && <i>{count}</i>}</a>;
-}
-
-function DrawerUnavailable({ icon, title, detail }: { icon: string; title: string; detail: string }) {
-  return <div className="odos-clinic-section-item is-unavailable" aria-disabled="true"><span className="odos-clinic-section-icon">{icon}</span><span>{title}<small>{detail}</small></span></div>;
 }
 
 function normalizedBirthDate(value: string): string | undefined {
@@ -386,5 +312,10 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   window.history.pushState({}, "", event.currentTarget.href);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function navigateTo(path: string) {
+  window.history.pushState({}, "", path);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }

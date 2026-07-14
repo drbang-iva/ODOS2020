@@ -94,14 +94,14 @@ test("whoami no-role errors render the server detail instead of only the machine
   );
 });
 
-test("Desk home is independent from the cockpit and Clinic opens the existing flow in a new tab", () => {
+test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {
   const html = renderToStaticMarkup(<DeskHome />);
   assert.match(html, /The Desk/);
-  assert.match(html, new RegExp(`href="${CLINIC_PATH}"[^>]*target="_blank"`));
-  assert.match(html, /Sections/);
   assert.match(html, /Customize/);
   assert.match(html, /Electronic remits/);
   assert.match(html, /href="\/billing\/statements"/);
+  assert.doesNotMatch(html, /odos-desk-topbar/);
+  assert.doesNotMatch(html, new RegExp(`href="${CLINIC_PATH}"[^>]*target="_blank"`));
 });
 
 test("Desk card configuration sanitizes and reorders only catalog cards", () => {

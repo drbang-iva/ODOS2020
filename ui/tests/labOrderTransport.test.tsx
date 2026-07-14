@@ -19,6 +19,7 @@ import {
 import { FilterRail, OrdersBoard } from "../src/scenes/LabOrdersWorklist";
 import type { LabOrder } from "../src/lib/optical-lab-order";
 import { RouteSwitch } from "../src/App";
+import { AppShell } from "../src/components/AppShell";
 import { DeskHome } from "../src/scenes/DeskHome";
 import { LabOrderActionButtons } from "../src/scenes/OpticalOrder";
 
@@ -155,14 +156,14 @@ test("Done — dispensed remains visible but has no active filter action", async
   renderer.unmount();
 });
 
-test("lab-order worklist is reachable from its route and the Desk sections menu", () => {
-  const route = renderToStaticMarkup(<RouteSwitch view={{ kind: "picker" }} path="/dispensary/lab-orders" />);
-  const desk = renderToStaticMarkup(<DeskHome />);
+test("lab-order worklist is reachable from its route and the global Sections menu", () => {
+  const route = renderToStaticMarkup(<AppShell path="/dispensary/lab-orders" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><RouteSwitch view={{ kind: "picker" }} path="/dispensary/lab-orders" /></AppShell>);
+  const desk = renderToStaticMarkup(<AppShell path="/desk" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><DeskHome /></AppShell>);
   assert.match(route, /Orders/);
   assert.match(route, /Loading orders/);
   assert.match(route, /Office/);
   assert.match(desk, /href="\/dispensary\/lab-orders"/);
-  assert.match(desk, /Track orders sent to the lab/);
+  assert.match(desk, /optical orders in flight/);
 });
 
 test("Send to Lab is gated by a created order and active transmissions expose only follow-up actions", () => {

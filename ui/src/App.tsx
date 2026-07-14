@@ -36,6 +36,7 @@ import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { ClinicOfficeShell } from "./components/OfficeChannel";
+import { AppShell, type AppShellSide } from "./components/AppShell";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
 import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
@@ -64,6 +65,7 @@ export function App({
 
   const [authed, setAuthed] = useState(() => fhir.rehydrateSession());
   const [roles, setRoles] = useState<PracticeRoleId[]>();
+  const [accountEmail, setAccountEmail] = useState<string>();
   const [roleError, setRoleError] = useState<string>();
   const [path, setPath] = useState(window.location.pathname);
   const view = useViewState((state) => state.view);
@@ -95,6 +97,7 @@ export function App({
     const stopListening = fhir.onSessionCleared(() => {
       setAuthed(false);
       setRoles(undefined);
+      setAccountEmail(undefined);
       setRoleError(undefined);
     });
     return () => {
@@ -129,17 +132,43 @@ export function App({
 
   if (!authed) {
     const returnTo = initialClinicView.current.kind === "picker" ? "/" : `${CLINIC_PATH}${initialSearch.current}`;
-    return <LoginScreen returnTo={returnTo} onAuthenticated={() => setAuthed(true)} login={login} />;
+    return <LoginScreen returnTo={returnTo} onAuthenticated={() => setAuthed(true)} login={async (email, password) => {
+      await login(email, password);
+      setAccountEmail(email.trim());
+    }} />;
   }
 
-  if (roleError) return <main role="alert">Unable to open your practice home: {roleError}</main>;
-  if (!roles) return <main>Opening your practice home…</main>;
+  const resolvedRoles = roles ?? [];
+  const side = appShellSide(path);
+  const target = side === "clinic" ? DESK_HOME_PATH : CLINIC_PATH;
+  const content = roleError
+    ? <main role="alert">Unable to open your practice home: {roleError}</main>
+    : roles
+      ? <RouteComponent view={view} path={path} roles={roles} />
+      : <main>Opening your practice home…</main>;
+  const shell = (
+    <AppShell
+      path={path}
+      roles={resolvedRoles}
+      homePath={defaultHomePath(resolvedRoles)}
+      side={side}
+      viewKind={view.kind}
+      email={accountEmail}
+      switchPill={roles && hasCrossSideAccess(roles) ? <RoleSwitchPill target={target} /> : undefined}
+    >
+      {content}
+    </AppShell>
+  );
 
   return (
     <RoleProvider>
-      <RouteComponent view={view} path={path} roles={roles} />
+      {side === "clinic" ? <ClinicOfficeShell>{shell}</ClinicOfficeShell> : shell}
     </RoleProvider>
   );
+}
+
+export function appShellSide(path: string): AppShellSide {
+  return path === CLINIC_PATH || path.startsWith(`${CLINIC_PATH}/`) || path === "/dispensary/lab-orders" ? "clinic" : "desk";
 }
 
 export function parseSetPasswordPath(pathname: string): { id: string; secret: string } | undefined {
@@ -208,7 +237,6 @@ export function RouteSwitch({
   roles = [],
   search = typeof window === "undefined" ? "" : window.location.search,
 }: RouteSwitchProps) {
-  const showSwitch = hasCrossSideAccess(roles);
   switch (path) {
     case "/audit/log":
       return <AuditLog />;
@@ -221,25 +249,17 @@ export function RouteSwitch({
     case "/dispensary/orders":
       return <OpticalOrder />;
     case "/dispensary/lab-orders":
-      return (
-        <ClinicOfficeShell location="The Clinic · Orders" roles={roles} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
-          <LabOrdersWorklist />
-        </ClinicOfficeShell>
-      );
+      return <LabOrdersWorklist />;
     case "/schedule/day":
     case "/scheduler/day":
       return <SchedulerDayGrid />;
     case "/frontdesk":
       return <FrontDeskCockpit />;
     case DESK_HOME_PATH:
-      return <DeskHome switchPill={showSwitch ? <RoleSwitchPill target={CLINIC_PATH} /> : null} />;
+      return <DeskHome />;
     case CLINIC_PATH: {
       const clinicView = clinicRouteView(search, view);
-      return (
-        <ClinicOfficeShell location={clinicLocation(clinicView)} roles={roles} switchPill={showSwitch ? <RoleSwitchPill target={DESK_HOME_PATH} /> : null}>
-          {clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />}
-        </ClinicOfficeShell>
-      );
+      return clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />;
     }
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
@@ -289,13 +309,6 @@ export function RouteSwitch({
     default:
       return <ViewRouter view={view} />;
   }
-}
-
-function clinicLocation(view: ViewState): string {
-  if (view.kind === "picker") return "Clinic home";
-  if (view.kind === "overview") return "Patient overview";
-  if (view.kind === "director") return "Patient director";
-  return "Encounter";
 }
 
 function ViewRouter({ view }: { view: ViewState }) {

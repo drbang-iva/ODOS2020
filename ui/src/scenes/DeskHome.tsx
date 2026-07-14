@@ -68,26 +68,7 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-const SECTIONS = [
-  { label: "Every day", items: [
-    ["Reports", "Sales, production, and aging", "/billing/claims/reports/accounts-receivable"],
-    ["Claims workbench", "Transmission, remits, and denial worklists", "/billing/claims/worklist"],
-    ["Lab orders", "Track orders sent to the lab", "/dispensary/lab-orders"],
-    ["Patient recall", "Recall workflow", ""],
-    ["Statements & letters", "Patient statements and batch letters", "/billing/statements"],
-    ["OpenDesk", "Connected communications workspace", ""],
-  ] },
-  { label: "Setup & admin", items: [
-    ["Administration", "Practice configuration", "/settings"],
-    ["Catalog & pricing", "Frames catalog and pricing", "/admin/optical/catalog/frames"],
-    ["Inventory", "Frames inventory and adjustments", "/admin/optical/inventory/frames"],
-    ["Integrations", "Frames Data and connected services", "/admin/practice/settings/frames-data"],
-    ["Audit log", "Every access and change", "/audit/log"],
-  ] },
-] as const;
-
-export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; switchPill?: ReactNode; initialOfficeMessages?: OfficeMessage[]; officeApi?: DeskOfficeApi } = {}) {
-  const [sectionsOpen, setSectionsOpen] = useState(false);
+export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = defaultDeskOfficeApi }: { initialSummary?: DeskSummary; initialOfficeMessages?: OfficeMessage[]; officeApi?: DeskOfficeApi } = {}) {
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
   const [dragged, setDragged] = useState<DeskCardId | null>(null);
@@ -130,13 +111,6 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, of
       officeRequestIdRef.current += 1;
     };
   }, [initialOfficeMessages, refreshSent]);
-  useEffect(() => {
-    if (!sectionsOpen) return;
-    const close = (event: KeyboardEvent) => event.key === "Escape" && setSectionsOpen(false);
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
-  }, [sectionsOpen]);
-
   const hiddenCards = DESK_CARDS.filter((card) => !cardIds.includes(card.id));
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
 
@@ -163,16 +137,8 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, of
   return (
     <main className="odos-desk">
       <div className="odos-ambient" aria-hidden="true" />
-      <header className="odos-desk-topbar">
-        <a className="odos-mark" href={DESK_HOME_PATH} onClick={navigateWithinApp}>ODOS <b>20/20</b></a>
-        <span className="odos-location">Practice home</span><div className="odos-topbar-spacer" />
-        <button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button>
-        <button className="odos-pill" type="button" onClick={() => setSectionsOpen(true)}>Sections</button>
-        {switchPill === undefined ? <a className="odos-pill odos-clinic-pill" href={CLINIC_PATH} target="_blank" rel="noopener noreferrer">Clinic <span aria-hidden>↗</span></a> : switchPill}
-      </header>
-
       <section className="odos-desk-body">
-        <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span></div>
+        <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span><button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button></div>
         <PracticePulse summary={summary} error={summaryError} />
         {customizing && (
           <section className="odos-customizer" aria-label="Customize home cards">
@@ -189,7 +155,7 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, of
               ? { tone: sentMessages.some((message) => !message.acknowledgement) ? "warn" as const : "ok" as const, kicker: sentMessages.some((message) => !message.acknowledgement) ? "awaiting acknowledgement" : "closed loop", target: "every message acknowledged", content: <OfficeDeskCard /> }
               : cardModel(id, summary);
             return (
-              <article key={card.id} className={`odos-desk-card odos-live-tone-${model.tone} odos-span-${card.span}`} draggable={customizing}
+              <article id={card.id} key={card.id} className={`odos-desk-card odos-live-tone-${model.tone} odos-span-${card.span}`} draggable={customizing}
                 onDragStart={() => setDragged(card.id)} onDragOver={(event) => customizing && event.preventDefault()}
                 onDrop={() => { if (dragged) setCardIds((ids) => reorderDeskCards(ids, dragged, card.id)); setDragged(null); }}>
                 <div className="odos-card-content">
@@ -210,14 +176,6 @@ export function DeskHome({ initialSummary, switchPill, initialOfficeMessages, of
 
       <div className="odos-dock"><CockpitBadgeDock openPanel={openPanel} onToggle={(id) => setOpenPanel((value) => value === id ? null : id)} /></div>
       {openPanel && <CockpitGuestPanel panel={openPanel} onClose={() => setOpenPanel(null)} />}
-      <button className={`odos-scrim ${sectionsOpen ? "is-open" : ""}`} type="button" aria-label="Close sections" onClick={() => setSectionsOpen(false)} />
-      <aside className={`odos-sections ${sectionsOpen ? "is-open" : ""}`} aria-label="Sections" aria-hidden={!sectionsOpen}>
-        <button className="odos-sections-close" type="button" aria-label="Close sections" onClick={() => setSectionsOpen(false)}>×</button>
-        <h2>Sections</h2><p>Everything you don't need every hour — one slide away, never in the way.</p>
-        {SECTIONS.map((group) => <section className="odos-section-group" key={group.label}><h3>{group.label}</h3><div className="odos-sections-grid">
-          {group.items.map(([title, detail, href]) => href ? <a key={title} href={href} onClick={navigateWithinApp}><strong>{title}</strong><span>{detail}</span></a> : <div key={title} aria-disabled="true"><strong>{title}</strong><span>{detail} · Not yet available</span></div>)}
-        </div></section>)}
-      </aside>
     </main>
   );
 
