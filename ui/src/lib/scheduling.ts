@@ -924,6 +924,17 @@ export function visibleSchedulingResourcesForOffice(
   });
 }
 
+export function filterSchedulingResourcesByHiddenActorReferences(
+  resources: Schedule[],
+  hiddenActorReferences: readonly string[],
+): Schedule[] {
+  const hidden = new Set(hiddenActorReferences);
+  return resources.filter((resource) => {
+    const actorReference = resourceActorReference(resource);
+    return !actorReference || !hidden.has(actorReference);
+  });
+}
+
 export function visibleSchedulingVisitTypes(
   visitTypes: HealthcareService[],
   mode: ClinicMode | string,

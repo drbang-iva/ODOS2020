@@ -3,16 +3,23 @@ import { test } from "node:test";
 import type { Coverage, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui";
-import { buildVisitType, type SchedulingPracticeConfig } from "../src/lib/scheduling";
+import {
+  OSOD_DISCIPLINE_SYSTEM,
+  buildVisitType,
+  filterSchedulingResourcesByHiddenActorReferences,
+  type SchedulingPracticeConfig,
+} from "../src/lib/scheduling";
 import {
   DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+  SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY,
   SCHEDULER_SLOT_MINUTES_STORAGE_KEY,
+  readSchedulerHiddenResourceRefs,
   schedulerSlotMinutesState,
   useSchedulingStore,
 } from "../src/lib/scheduling-store";
-import { SchedulerToolbar } from "../src/scenes/SchedulerDayGrid";
+import { SchedulerDayGrid, SchedulerToolbar } from "../src/scenes/SchedulerDayGrid";
 import { AppointmentDetailsModal } from "../src/scenes/scheduler/AppointmentDetailsModal";
 
 const RESOURCE: Schedule = {
@@ -21,6 +28,13 @@ const RESOURCE: Schedule = {
   active: true,
   actor: [{ reference: "Practitioner/doctor-1", display: "Dr One" }],
 };
+
+const SCHEDULER_RESOURCES: Schedule[] = [
+  schedulingResource("schedule-1", "Practitioner/doctor-1", "Dr One", "eyecare"),
+  schedulingResource("exam-1", "Location/exam-1", "Exam 1", "eyecare"),
+  schedulingResource("oct-1", "Device/oct-1", "OCT 1", "eyecare"),
+  schedulingResource("aesthetics-1", "Practitioner/aesthetics-1", "Aesthetics Provider", "aesthetics"),
+];
 
 const ROUTINE = visitType("routine", "Routine Exam", 30);
 const OFF_PRESET = visitType("off-preset", "Off-preset Visit", 20);
@@ -69,6 +83,48 @@ test("slot interval override persists, survives office switches, and Auto re-der
   }
 });
 
+test("hidden resource preferences add, remove, round-trip, clear, and tolerate stale references", () => {
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = memoryStorage();
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+  const originalHidden = useSchedulingStore.getState().hiddenResourceRefs;
+  try {
+    useSchedulingStore.setState({ hiddenResourceRefs: [] });
+    useSchedulingStore.getState().setResourceHidden("Practitioner/doctor-1", true);
+    assert.deepEqual(useSchedulingStore.getState().hiddenResourceRefs, ["Practitioner/doctor-1"]);
+    assert.deepEqual(readSchedulerHiddenResourceRefs(storage), ["Practitioner/doctor-1"]);
+
+    useSchedulingStore.getState().setResourceHidden("Location/exam-1", true);
+    useSchedulingStore.getState().setResourceHidden("Practitioner/doctor-1", false);
+    assert.deepEqual(useSchedulingStore.getState().hiddenResourceRefs, ["Location/exam-1"]);
+
+    storage.setItem(
+      SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY,
+      JSON.stringify(["Device/retinal-camera", "Device/retinal-camera", "", 42]),
+    );
+    assert.deepEqual(readSchedulerHiddenResourceRefs(storage), ["Device/retinal-camera"]);
+
+    useSchedulingStore.getState().clearHiddenResources();
+    assert.deepEqual(useSchedulingStore.getState().hiddenResourceRefs, []);
+    assert.equal(storage.getItem(SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY), null);
+  } finally {
+    useSchedulingStore.setState({ hiddenResourceRefs: originalHidden });
+    if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
+    else delete (globalThis as { localStorage?: Storage }).localStorage;
+  }
+});
+
+test("hidden actor filtering preserves visible resource order and ignores unknown stored refs", () => {
+  const filtered = filterSchedulingResourcesByHiddenActorReferences(
+    SCHEDULER_RESOURCES.slice(0, 3),
+    ["Location/exam-1", "Device/unknown"],
+  );
+  assert.deepEqual(
+    filtered.map((resource) => resource.actor?.[0]?.reference),
+    ["Practitioner/doctor-1", "Device/oct-1"],
+  );
+});
+
 test("shared day and week toolbar exposes Auto, 30, 15, and 10 minute view controls", () => {
   for (const view of ["day", "week"] as const) {
     const html = renderToStaticMarkup(
@@ -79,6 +135,8 @@ test("shared day and week toolbar exposes Auto, 30, 15, and 10 minute view contr
         legendOpen
         officeId="all"
         offices={[]}
+        resources={SCHEDULER_RESOURCES}
+        hiddenResourceRefs={[]}
         slotMinutesOverride={15}
         onClinicModeChange={() => undefined}
         onFindOpen={() => undefined}
@@ -89,6 +147,8 @@ test("shared day and week toolbar exposes Auto, 30, 15, and 10 minute view contr
         onPrevious={() => undefined}
         onSettings={() => undefined}
         onSlotMinutesChange={() => undefined}
+        onResourceHiddenChange={() => undefined}
+        onShowAllResources={() => undefined}
         onToday={() => undefined}
         onViewChange={() => undefined}
         onWalkIn={() => undefined}
@@ -102,6 +162,71 @@ test("shared day and week toolbar exposes Auto, 30, 15, and 10 minute view contr
     );
     assert.match(html, /aria-label="Grid interval"/);
     for (const label of ["Auto (config)", "30 min", "15 min", "10 min"]) assert.ok(html.includes(label));
+  }
+});
+
+test("Columns groups current resources, updates Day and Week, restores all, and reaches the empty state", async () => {
+  const originalState = useSchedulingStore.getState();
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = memoryStorage();
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+  let renderer!: ReactTestRenderer;
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      clinicMode: "eyecare",
+      view: "day",
+      date: "2026-07-14",
+      slotMinutes: 30,
+      slotMinutesOverride: null,
+      hiddenResourceRefs: [],
+      resources: SCHEDULER_RESOURCES,
+      visitTypes: [],
+      appointments: [],
+      appointmentsByDay: {},
+      loadedWindow: null,
+      config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+      officeId: "all",
+      weekResourceScheduleReference: "Schedule/schedule-1",
+      catalogsLoaded: true,
+      loading: false,
+      error: null,
+      loadDay: async () => undefined,
+      loadWindow: async () => undefined,
+    });
+    await act(async () => {
+      renderer = create(<SchedulerDayGrid />);
+      await Promise.resolve();
+    });
+
+    const pickerText = testInstanceText(renderer.root.findByProps({ "aria-label": "Scheduler columns" }));
+    for (const label of ["Providers", "Rooms", "Equipment", "Dr One", "Exam 1", "OCT 1"]) {
+      assert.ok(pickerText.includes(label), `picker includes ${label}`);
+    }
+    assert.ok(!pickerText.includes("Aesthetics Provider"), "current clinic mode excludes unrelated resources");
+    assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
+
+    act(() => checkbox(renderer, "Show Dr One column").props.onChange({ target: { checked: false } }));
+    assert.deepEqual(renderedColumnRefs(renderer), ["Location/exam-1", "Device/oct-1"]);
+
+    act(() => button(renderer, "Week").props.onClick());
+    const weekOptions = renderer.root.findByType("section").findAllByType("option").map((option) => option.props.value);
+    assert.deepEqual(weekOptions, ["Schedule/exam-1", "Schedule/oct-1"]);
+
+    act(() => button(renderer, "Day").props.onClick());
+    act(() => button(renderer, "Show all").props.onClick());
+    assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
+
+    for (const label of ["Show Dr One column", "Show Exam 1 column", "Show OCT 1 column"]) {
+      act(() => checkbox(renderer, label).props.onChange({ target: { checked: false } }));
+    }
+    assert.deepEqual(renderedColumnRefs(renderer), []);
+    assert.match(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
+  } finally {
+    renderer?.unmount();
+    useSchedulingStore.setState(originalState, true);
+    if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
+    else delete (globalThis as { localStorage?: Storage }).localStorage;
   }
 });
 
@@ -270,4 +395,41 @@ function memoryStorage(): Storage {
     removeItem: (key) => { values.delete(key); },
     setItem: (key, value) => { values.set(key, value); },
   };
+}
+
+function schedulingResource(
+  id: string,
+  reference: string,
+  display: string,
+  discipline: "eyecare" | "aesthetics",
+): Schedule {
+  return {
+    resourceType: "Schedule",
+    id,
+    active: true,
+    actor: [{ reference, display }],
+    serviceCategory: [{ coding: [{ system: OSOD_DISCIPLINE_SYSTEM, code: discipline }] }],
+  };
+}
+
+function renderedColumnRefs(renderer: ReactTestRenderer): string[] {
+  return renderer.root
+    .findAll((node) => typeof node.props["data-scheduler-resource-column"] === "string")
+    .map((node) => node.props["data-scheduler-resource-column"] as string);
+}
+
+function checkbox(renderer: ReactTestRenderer, ariaLabel: string): ReactTestInstance {
+  return renderer.root.findByProps({ "aria-label": ariaLabel });
+}
+
+function button(renderer: ReactTestRenderer, label: string): ReactTestInstance {
+  const match = renderer.root.findAllByType("button").find((candidate) => candidate.children.join("") === label);
+  assert.ok(match, `${label} button exists`);
+  return match;
+}
+
+function testInstanceText(node: ReactTestInstance): string {
+  return node.children
+    .map((child) => typeof child === "string" ? child : testInstanceText(child))
+    .join(" ");
 }
