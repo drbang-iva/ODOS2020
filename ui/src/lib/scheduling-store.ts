@@ -100,6 +100,7 @@ export const SCHEDULER_ZOOM_MIN = 0.5;
 export const SCHEDULER_ZOOM_MAX = 1.75;
 export const SCHEDULER_ZOOM_STEP = 0.25;
 export const SCHEDULER_SLOT_MINUTES_STORAGE_KEY = "osod-scheduler-slot-minutes";
+export const SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY = "osod-scheduler-hidden-resources";
 export const SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS = [30, 15, 10] as const;
 
 type SchedulerSlotMinutesOverride = (typeof SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS)[number];
@@ -127,6 +128,23 @@ export function schedulerSlotMinutesState(
     slotMinutesOverride,
     slotMinutes: slotMinutesOverride ?? resolveSlotMinutes(config, officeId),
   };
+}
+
+export function readSchedulerHiddenResourceRefs(
+  storage = browserLocalStorage(),
+): string[] {
+  const stored = storage?.getItem(SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY);
+  if (!stored) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed)
+      ? [...new Set(parsed.filter((reference): reference is string => typeof reference === "string" && reference.length > 0))]
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function clampZoom(zoom: number): number {
@@ -197,6 +215,7 @@ export interface SchedulingStoreState {
   date: string;
   slotMinutes: number;
   slotMinutesOverride: SchedulerSlotMinutesOverride | null;
+  hiddenResourceRefs: string[];
   zoom: number;
   resources: Schedule[];
   visitTypes: HealthcareService[];
@@ -217,6 +236,8 @@ export interface SchedulingStoreState {
   setDate: (date: string) => void;
   openDay: (date: string) => void;
   setSlotMinutes: (minutes: SchedulerSlotMinutesOverride | null) => void;
+  setResourceHidden: (reference: string, hidden: boolean) => void;
+  clearHiddenResources: () => void;
   setOfficeId: (officeId: string | "all") => void;
   setWeekResourceScheduleReference: (reference: string | undefined) => void;
   clearConfigError: () => void;
@@ -259,12 +280,14 @@ export interface SchedulingStoreState {
 }
 
 const initialSlotMinutesState = schedulerSlotMinutesState(DEFAULT_SCHEDULING_PRACTICE_CONFIG, "all");
+const initialHiddenResourceRefs = readSchedulerHiddenResourceRefs();
 
 export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   clinicMode: "both",
   view: "day",
   date: todayYmd(new Date(), DEFAULT_SCHEDULING_PRACTICE_CONFIG.timezoneOffset),
   ...initialSlotMinutesState,
+  hiddenResourceRefs: initialHiddenResourceRefs,
   zoom: 1,
   resources: [],
   visitTypes: [],
@@ -326,6 +349,23 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       slotMinutesOverride: minutes,
       slotMinutes: minutes ?? resolveSlotMinutes(state.config, state.officeId),
     }));
+  },
+  setResourceHidden: (reference, hidden) =>
+    set((state) => {
+      const hiddenResourceRefs = hidden
+        ? state.hiddenResourceRefs.includes(reference)
+          ? state.hiddenResourceRefs
+          : [...state.hiddenResourceRefs, reference]
+        : state.hiddenResourceRefs.filter((candidate) => candidate !== reference);
+      browserLocalStorage()?.setItem(
+        SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY,
+        JSON.stringify(hiddenResourceRefs),
+      );
+      return { hiddenResourceRefs };
+    }),
+  clearHiddenResources: () => {
+    browserLocalStorage()?.removeItem(SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY);
+    set({ hiddenResourceRefs: [] });
   },
   setOfficeId: (officeId) =>
     set((state) => ({
