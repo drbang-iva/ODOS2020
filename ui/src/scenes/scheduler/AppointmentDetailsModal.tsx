@@ -1,6 +1,10 @@
-import type { Appointment, HealthcareService, Patient, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Coverage, HealthcareService, Patient, Schedule } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
+import {
+  fetchPatientInsurance,
+  type InsuranceScreenData,
+} from "../../lib/patient-insurance";
 import {
   APPOINTMENT_CONFIRMATION_STATUSES,
   OSOD_APPOINTMENT_STATUSES,
@@ -30,6 +34,17 @@ import type {
   AppointmentChangeInput,
   SchedulingWriteDeps,
 } from "../../lib/scheduling-store";
+import { coveragePlanName, coverageType } from "../../lib/submit-claims";
+
+const DURATION_PRESETS = [10, 15, 30, 60] as const;
+
+type PatientInsuranceLoader = (patientReference: string) => Promise<InsuranceScreenData>;
+
+const defaultPatientInsuranceLoader: PatientInsuranceLoader = (patientReference) =>
+  fetchPatientInsurance(patientReference, {
+    authorization: fhir.authHeader(),
+    baseUrl: import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
+  });
 
 export function AppointmentDetailsModal({
   appointment,
@@ -42,6 +57,7 @@ export function AppointmentDetailsModal({
   onCreate,
   onUpdate,
   onSetStatus,
+  loadPatientInsurance = defaultPatientInsuranceLoader,
 }: {
   appointment?: Appointment;
   initialDraft?: AppointmentModalDraft;
@@ -61,6 +77,7 @@ export function AppointmentDetailsModal({
     status: OsodAppointmentStatus,
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
+  loadPatientInsurance?: PatientInsuranceLoader;
 }) {
   const fallbackDraft = useMemo(
     () => {
@@ -93,15 +110,67 @@ export function AppointmentDetailsModal({
   const [patientQueryOpen, setPatientQueryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [durationCustom, setDurationCustom] = useState(
+    () => !isDurationPreset(appointment ? appointmentModalDraftFromAppointment(appointment, resources).durationMinutes : fallbackDraft?.durationMinutes ?? 30),
+  );
+  const [patientCoverages, setPatientCoverages] = useState<Coverage[] | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [coverageError, setCoverageError] = useState<string | null>(null);
+  const [visionOther, setVisionOther] = useState(false);
+  const [medicalOther, setMedicalOther] = useState(false);
 
   useEffect(() => {
-    setDraft(appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset));
+    const nextDraft = appointment ? appointmentModalDraftFromAppointment(appointment, resources) : fallbackDraft ?? emptyDraft(timezoneOffset);
+    setDraft(nextDraft);
+    setDurationCustom(!isDurationPreset(nextDraft.durationMinutes));
     setError(null);
   }, [appointment?.id, Boolean(fallbackDraft)]);
+
+  useEffect(() => {
+    const patientReference = draft.patient?.reference;
+    if (!patientReference) {
+      setPatientCoverages(null);
+      setCoverageLoading(false);
+      setCoverageError(null);
+      setVisionOther(false);
+      setMedicalOther(false);
+      return;
+    }
+    let cancelled = false;
+    setPatientCoverages(null);
+    setCoverageLoading(true);
+    setCoverageError(null);
+    void loadPatientInsurance(patientReference)
+      .then((data) => {
+        if (cancelled) return;
+        setPatientCoverages(data.coverages);
+        setVisionOther(needsOtherCoverage(draft, data.coverages, "vision"));
+        setMedicalOther(needsOtherCoverage(draft, data.coverages, "medical"));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPatientCoverages([]);
+        setCoverageError("Insurance plans could not be loaded; enter the display manually.");
+      })
+      .finally(() => {
+        if (!cancelled) setCoverageLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.patient?.reference, loadPatientInsurance]);
 
   const visibleVisitTypes = useMemo(
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
     [visitTypes, clinicMode],
+  );
+  const visionCoverages = useMemo(
+    () => relevantCoverages(patientCoverages, "vision"),
+    [patientCoverages],
+  );
+  const medicalCoverages = useMemo(
+    () => relevantCoverages(patientCoverages, "medical"),
+    [patientCoverages],
   );
 
   async function save(allowDoubleBook = false) {
@@ -160,10 +229,33 @@ export function AppointmentDetailsModal({
 
   function updateVisitType(code: string) {
     const entry = visibleVisitTypes.find((visitType) => visitTypeCode(visitType) === code);
+    const durationMinutes = visitTypeDurationMinutes(entry ?? ({} as HealthcareService));
+    if (durationMinutes !== undefined) {
+      setDurationCustom(!isDurationPreset(durationMinutes));
+    }
     setDraft((current) => ({
       ...current,
       visitTypeCode: code,
-      durationMinutes: visitTypeDurationMinutes(entry ?? ({} as HealthcareService)) ?? current.durationMinutes,
+      durationMinutes: durationMinutes ?? current.durationMinutes,
+    }));
+  }
+
+  function selectCoverage(kind: "vision" | "medical", value: string) {
+    const coverages = kind === "vision" ? visionCoverages : medicalCoverages;
+    const setOther = kind === "vision" ? setVisionOther : setMedicalOther;
+    const referenceKey = kind === "vision" ? "visionCoverageReference" : "medicalCoverageReference";
+    const displayKey = kind === "vision" ? "visionCoverageDisplay" : "medicalCoverageDisplay";
+    if (value === "other") {
+      setOther(true);
+      setDraft((current) => ({ ...current, [referenceKey]: "", [displayKey]: "" }));
+      return;
+    }
+    setOther(false);
+    const coverage = coverages.find((candidate) => coverageReference(candidate) === value);
+    setDraft((current) => ({
+      ...current,
+      [referenceKey]: coverage ? coverageReference(coverage) : "",
+      [displayKey]: coverage ? appointmentCoverageDisplay(coverage) : "",
     }));
   }
 
@@ -202,6 +294,7 @@ export function AppointmentDetailsModal({
                 <span>Service Type</span>
                 <select
                   className="scheduler-input"
+                  aria-label="Service Type"
                   value={draft.visitTypeCode}
                   onChange={(event) => updateVisitType(event.target.value)}
                 >
@@ -215,21 +308,46 @@ export function AppointmentDetailsModal({
                   })}
                 </select>
               </label>
-              <label className="scheduler-field">
-                <span>Duration</span>
-                <input
+              <div className="scheduler-field">
+                <label htmlFor="appointment-duration-preset">Duration</label>
+                <select
+                  id="appointment-duration-preset"
                   className="scheduler-input"
-                  min={1}
-                  type="number"
-                  value={draft.durationMinutes}
-                  onChange={(event) =>
+                  aria-label="Duration preset"
+                  value={durationCustom ? "custom" : draft.durationMinutes}
+                  onChange={(event) => {
+                    if (event.target.value === "custom") {
+                      setDurationCustom(true);
+                      return;
+                    }
+                    setDurationCustom(false);
                     setDraft((current) => ({
                       ...current,
                       durationMinutes: Number(event.target.value),
-                    }))
-                  }
-                />
-              </label>
+                    }));
+                  }}
+                >
+                  {DURATION_PRESETS.map((minutes) => (
+                    <option key={minutes} value={minutes}>{minutes === 60 ? "1 hr" : `${minutes} min`}</option>
+                  ))}
+                  <option value="custom">Custom…</option>
+                </select>
+                {durationCustom && (
+                  <input
+                    className="scheduler-input"
+                    aria-label="Custom duration minutes"
+                    min={1}
+                    type="number"
+                    value={draft.durationMinutes}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        durationMinutes: Number(event.target.value),
+                      }))
+                    }
+                  />
+                )}
+              </div>
               <label className="scheduler-field">
                 <span>Date</span>
                 <input
@@ -251,28 +369,34 @@ export function AppointmentDetailsModal({
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="scheduler-field">
-                <span>Vision Insurance</span>
-                <input
-                  className="scheduler-input"
-                  value={draft.visionCoverageDisplay}
-                  placeholder="none"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, visionCoverageDisplay: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="scheduler-field">
-                <span>Medical Insurance</span>
-                <input
-                  className="scheduler-input"
-                  value={draft.medicalCoverageDisplay}
-                  placeholder="none"
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, medicalCoverageDisplay: event.target.value }))
-                  }
-                />
-              </label>
+              <AppointmentCoverageField
+                kind="vision"
+                patientSelected={Boolean(draft.patient)}
+                loading={coverageLoading}
+                loadError={coverageError}
+                coverages={visionCoverages}
+                other={visionOther}
+                value={coverageSelectValue(draft, visionCoverages, "vision", visionOther)}
+                display={draft.visionCoverageDisplay}
+                onSelect={(value) => selectCoverage("vision", value)}
+                onDisplayChange={(value) =>
+                  setDraft((current) => ({ ...current, visionCoverageReference: "", visionCoverageDisplay: value }))
+                }
+              />
+              <AppointmentCoverageField
+                kind="medical"
+                patientSelected={Boolean(draft.patient)}
+                loading={coverageLoading}
+                loadError={coverageError}
+                coverages={medicalCoverages}
+                other={medicalOther}
+                value={coverageSelectValue(draft, medicalCoverages, "medical", medicalOther)}
+                display={draft.medicalCoverageDisplay}
+                onSelect={(value) => selectCoverage("medical", value)}
+                onDisplayChange={(value) =>
+                  setDraft((current) => ({ ...current, medicalCoverageReference: "", medicalCoverageDisplay: value }))
+                }
+              />
             </div>
 
             <fieldset className="border border-white/10 p-3">
@@ -447,6 +571,135 @@ export function AppointmentDetailsModal({
         </footer>
       </section>
     </div>
+  );
+}
+
+function AppointmentCoverageField({
+  kind,
+  patientSelected,
+  loading,
+  loadError,
+  coverages,
+  other,
+  value,
+  display,
+  onSelect,
+  onDisplayChange,
+}: {
+  kind: "vision" | "medical";
+  patientSelected: boolean;
+  loading: boolean;
+  loadError: string | null;
+  coverages: Coverage[];
+  other: boolean;
+  value: string;
+  display: string;
+  onSelect: (value: string) => void;
+  onDisplayChange: (value: string) => void;
+}) {
+  const label = `${kind === "vision" ? "Vision" : "Medical"} Insurance`;
+  if (!patientSelected || loadError) {
+    return (
+      <label className="scheduler-field">
+        <span>{label}</span>
+        <input
+          className="scheduler-input"
+          aria-label={label}
+          value={display}
+          placeholder="none"
+          onChange={(event) => onDisplayChange(event.target.value)}
+        />
+        {loadError && kind === "vision" && <small className="text-amber-200/60">{loadError}</small>}
+      </label>
+    );
+  }
+  if (loading) {
+    return (
+      <label className="scheduler-field">
+        <span>{label}</span>
+        <select className="scheduler-input" aria-label={label} disabled value="loading">
+          <option value="loading">Loading patient coverages…</option>
+        </select>
+      </label>
+    );
+  }
+  return (
+    <div className="scheduler-field">
+      <label htmlFor={`appointment-${kind}-coverage`}>{label}</label>
+      <select
+        id={`appointment-${kind}-coverage`}
+        className="scheduler-input"
+        aria-label={label}
+        value={value}
+        onChange={(event) => onSelect(event.target.value)}
+      >
+        <option value="none">None</option>
+        {coverages.map((coverage) => (
+          <option key={coverageReference(coverage)} value={coverageReference(coverage)}>
+            {appointmentCoverageDisplay(coverage)}
+          </option>
+        ))}
+        <option value="other">Other…</option>
+      </select>
+      {other && (
+        <input
+          className="scheduler-input"
+          aria-label={`Other ${label}`}
+          value={display}
+          placeholder="Enter plan display"
+          onChange={(event) => onDisplayChange(event.target.value)}
+        />
+      )}
+    </div>
+  );
+}
+
+function isDurationPreset(minutes: number): minutes is (typeof DURATION_PRESETS)[number] {
+  return DURATION_PRESETS.includes(minutes as (typeof DURATION_PRESETS)[number]);
+}
+
+function relevantCoverages(
+  coverages: Coverage[] | null,
+  kind: "vision" | "medical",
+): Coverage[] {
+  return (coverages ?? []).filter((coverage) => coverage.id && coverageType(coverage) === kind);
+}
+
+function coverageReference(coverage: Coverage): string {
+  return `Coverage/${coverage.id}`;
+}
+
+function appointmentCoverageDisplay(coverage: Coverage): string {
+  const carrier = coverage.payor[0]?.display ?? coverage.payor[0]?.reference ?? "";
+  const plan = coveragePlanName(coverage);
+  return [carrier, plan].filter(Boolean).join(" · ") || coverageReference(coverage);
+}
+
+function coverageSelectValue(
+  draft: AppointmentModalDraft,
+  coverages: Coverage[],
+  kind: "vision" | "medical",
+  other: boolean,
+): string {
+  if (other) return "other";
+  const reference = kind === "vision" ? draft.visionCoverageReference : draft.medicalCoverageReference;
+  const display = kind === "vision" ? draft.visionCoverageDisplay : draft.medicalCoverageDisplay;
+  const match = coverages.find((coverage) =>
+    coverageReference(coverage) === reference || appointmentCoverageDisplay(coverage) === display,
+  );
+  return match ? coverageReference(match) : display ? "other" : "none";
+}
+
+function needsOtherCoverage(
+  draft: AppointmentModalDraft,
+  coverages: Coverage[],
+  kind: "vision" | "medical",
+): boolean {
+  const relevant = relevantCoverages(coverages, kind);
+  const reference = kind === "vision" ? draft.visionCoverageReference : draft.medicalCoverageReference;
+  const display = kind === "vision" ? draft.visionCoverageDisplay : draft.medicalCoverageDisplay;
+  return Boolean(display) && !relevant.some((coverage) =>
+    coverageReference(coverage) === reference || appointmentCoverageDisplay(coverage) === display,
   );
 }
 

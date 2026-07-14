@@ -27,7 +27,11 @@ import {
   schedulerWindowForView,
   type SchedulerView,
 } from "../lib/scheduling-calendar";
-import { todayYmd, useSchedulingStore } from "../lib/scheduling-store";
+import {
+  SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS,
+  todayYmd,
+  useSchedulingStore,
+} from "../lib/scheduling-store";
 import {
   confirmDoubleBookAndRetry,
   type AppointmentModalDraft,
@@ -52,6 +56,7 @@ export function SchedulerDayGrid() {
   const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
   const slotMinutes = useSchedulingStore((state) => state.slotMinutes);
+  const slotMinutesOverride = useSchedulingStore((state) => state.slotMinutesOverride);
   const resources = useSchedulingStore((state) => state.resources);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const appointments = useSchedulingStore((state) => state.appointments);
@@ -64,6 +69,7 @@ export function SchedulerDayGrid() {
   const configError = useSchedulingStore((state) => state.configError);
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
   const setView = useSchedulingStore((state) => state.setView);
+  const setSlotMinutes = useSchedulingStore((state) => state.setSlotMinutes);
   const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
   const openDay = useSchedulingStore((state) => state.openDay);
   const setWeekResourceScheduleReference = useSchedulingStore((state) => state.setWeekResourceScheduleReference);
@@ -342,6 +348,7 @@ export function SchedulerDayGrid() {
         onPrevious={() => shiftDate(-1)}
         onOfficeChange={setOfficeId}
         onSettings={() => openSettings()}
+        onSlotMinutesChange={setSlotMinutes}
         onToday={today}
         onViewChange={setView}
         onWalkIn={handleWalkIn}
@@ -350,6 +357,7 @@ export function SchedulerDayGrid() {
         zoomEnabled={view !== "month"}
         officeId={officeId}
         offices={config.offices}
+        slotMinutesOverride={slotMinutesOverride}
         moveActive={Boolean(moveSource)}
         moveEnabled={Boolean(quickCardAppointment)}
         view={view}
@@ -508,13 +516,14 @@ export function SchedulerDayGrid() {
   );
 }
 
-function SchedulerToolbar({
+export function SchedulerToolbar({
   clinicMode,
   date,
   dayActionsEnabled,
   legendOpen,
   officeId,
   offices,
+  slotMinutesOverride,
   onClinicModeChange,
   onFindOpen,
   onLegendToggle,
@@ -523,6 +532,7 @@ function SchedulerToolbar({
   onOfficeChange,
   onPrevious,
   onSettings,
+  onSlotMinutesChange,
   onToday,
   onViewChange,
   onWalkIn,
@@ -539,6 +549,7 @@ function SchedulerToolbar({
   legendOpen: boolean;
   officeId: string | "all";
   offices: Array<{ id: string; name: string }>;
+  slotMinutesOverride: 10 | 15 | 30 | null;
   onClinicModeChange: (mode: ClinicMode) => void;
   onFindOpen: () => void;
   onLegendToggle: () => void;
@@ -547,6 +558,7 @@ function SchedulerToolbar({
   onOfficeChange: (officeId: string | "all") => void;
   onPrevious: () => void;
   onSettings: () => void;
+  onSlotMinutesChange: (minutes: 10 | 15 | 30 | null) => void;
   onToday: () => void;
   onViewChange: (view: SchedulerView) => void;
   onWalkIn: () => void;
@@ -603,6 +615,25 @@ function SchedulerToolbar({
             +
           </button>
         </div>
+      )}
+      {zoomEnabled && (
+        <select
+          className="scheduler-select"
+          aria-label="Grid interval"
+          value={slotMinutesOverride ?? "auto"}
+          onChange={(event) =>
+            onSlotMinutesChange(
+              event.target.value === "auto"
+                ? null
+                : Number(event.target.value) as 10 | 15 | 30,
+            )
+          }
+        >
+          <option value="auto">Auto (config)</option>
+          {SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS.map((minutes) => (
+            <option key={minutes} value={minutes}>{minutes} min</option>
+          ))}
+        </select>
       )}
       {dayActionsEnabled && (
         <button className="scheduler-button" type="button" onClick={onWalkIn}>
