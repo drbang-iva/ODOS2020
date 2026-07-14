@@ -59,6 +59,7 @@
 @container (max-width: 1023px) {
   .odos-chart-sidebar-shell {
     --chart-sidebar-width: min(360px, calc(100cqw - 48px));
+
     position: absolute;
     z-index: 30;
     top: 0;

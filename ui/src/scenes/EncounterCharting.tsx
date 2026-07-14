@@ -131,7 +131,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           ocularHealthSections={ocularHealthSections}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
-        <main className="min-w-0 flex-1 bg-bg-deep">
+        <main className="min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
           {activeSection === "hpi" && (
             <HpiSection
               patientReference={patientReference}

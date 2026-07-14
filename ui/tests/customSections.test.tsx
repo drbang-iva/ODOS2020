@@ -712,15 +712,9 @@ test("EncounterCharting renders the shared ChartSidebar without removing it from
   assert.match(patientDirector, /<ChartSidebar patient=\{currentPatient\} \/>/);
 });
 
-test("EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint", () => {
+test("EncounterCharting collapses its chart sidebar at the existing tablet container breakpoint and persists expansion", async () => {
   const css = readFileSync(new URL("../src/styles/charting.css", import.meta.url), "utf8");
-  const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   const tablet = css.match(/@container \(max-width: 1023px\) \{[\s\S]*\n\}/)?.[0] ?? "";
-  const html = renderToStaticMarkup(
-    <RoleProvider>
-      <EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" />
-    </RoleProvider>,
-  );
 
   assert.match(css, /\.odos-charting-workspace \{[\s\S]*container-type: inline-size/);
   assert.match(css, /\.odos-charting-body \{[\s\S]*overflow: hidden/);
@@ -729,10 +723,52 @@ test("EncounterCharting collapses its chart sidebar at the existing tablet conta
   assert.match(tablet, /\.odos-chart-sidebar-panel \{[\s\S]*visibility: hidden;[\s\S]*transform: translateX\(calc\(100% \+ 2px\)\)/);
   assert.match(tablet, /\.odos-chart-sidebar-shell\.is-open \.odos-chart-sidebar-panel \{[\s\S]*visibility: visible;[\s\S]*transform: translateX\(0\)/);
   assert.match(tablet, /\.odos-chart-sidebar-toggle \{[\s\S]*display: flex/);
-  assert.match(source, /let sidebarExpandedForSession = false;/);
-  assert.match(source, /useState\(sidebarExpandedForSession\)/);
-  assert.match(html, /class="odos-chart-sidebar-shell"/);
-  assert.match(html, /aria-expanded="false" aria-label="Expand chart sidebar"/);
+
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  const documentStub = {
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  } as unknown as Document;
+  globalThis.fetch = (async (input) => String(input).includes("finding-definitions")
+    ? jsonResponse({ canWrite: false, definitions: [] })
+    : jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] })) as typeof fetch;
+  Object.defineProperty(globalThis, "document", { configurable: true, value: documentStub });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+    });
+    const toggle = () => renderer.root.find((node) => node.type === "button" && node.props["aria-controls"] === "encounter-chart-sidebar");
+    assert.equal(renderer.root.find((node) => node.props.className === "odos-chart-sidebar-shell").props.className, "odos-chart-sidebar-shell");
+    assert.equal(toggle().props["aria-expanded"], false);
+    assert.equal(toggle().props["aria-label"], "Expand chart sidebar");
+    assert.equal(renderer.root.findByType("main").props.inert, undefined);
+    await act(async () => toggle().props.onClick());
+    assert.equal(toggle().props["aria-expanded"], true);
+    assert.equal(renderer.root.findByType("main").props.inert, "");
+
+    await act(async () => renderer.unmount());
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting patient={{ resourceType: "Patient", id: "patient-1" }} encounterId="encounter-1" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+    });
+    assert.equal(toggle().props["aria-expanded"], true);
+    await act(async () => toggle().props.onClick());
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
 });
 
 function ocularDefinitions() {
