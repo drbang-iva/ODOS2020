@@ -39,6 +39,7 @@ import { ClinicOfficeShell } from "./components/OfficeChannel";
 import { LoginScreen } from "./scenes/LoginScreen";
 import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
 import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
+import { interceptAppNavigation } from "./lib/navigation";
 import type { Patient } from "@medplum/fhirtypes";
 
 export function App({
@@ -78,8 +79,15 @@ export function App({
       previousPath.current = nextPath;
       setPath(nextPath);
     };
+    const interceptLink = (event: MouseEvent) => {
+      if (interceptAppNavigation(event)) updatePath();
+    };
     window.addEventListener("popstate", updatePath);
-    return () => window.removeEventListener("popstate", updatePath);
+    window.addEventListener("click", interceptLink);
+    return () => {
+      window.removeEventListener("popstate", updatePath);
+      window.removeEventListener("click", interceptLink);
+    };
   }, [setView]);
 
   useEffect(() => {
