@@ -10,6 +10,8 @@ import { filterUnappliedCredits } from "../payments/payment-credit-service.js";
 const PAGE_LIMIT = "1000";
 const LEDGER_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
 const LEDGER_PARTICIPANT_CODE = "ENT";
+const DEFAULT_LEDGER_TIME_ZONE = "UTC";
+const UNATTRIBUTED = "unattributed";
 const TENDERS: readonly PaymentTenderCode[] = ["CASH", "CHECK", "CARD_MANUAL"];
 
 export interface DayLedgerPayment {
@@ -96,14 +98,12 @@ export function projectDayLedgerPayments(
     if (!invoice.date || practiceDate(invoice.date, timeZone) !== date) return [];
     const tender = invoiceTender(invoice);
     if (!tender) return [];
-    const patientReference = invoice.subject?.reference;
-    if (!patientReference) throw new Error(`Invoice/${invoice.id ?? "(unknown)"} has no patient subject.`);
+    const patientReference = invoice.subject?.reference ?? UNATTRIBUTED;
     const staffer = invoice.participant?.find((participant) =>
       participant.role?.coding?.some((coding) =>
         coding.system === LEDGER_PARTICIPANT_SYSTEM && coding.code === LEDGER_PARTICIPANT_CODE,
       ),
-    )?.actor.reference;
-    if (!staffer) throw new Error(`Invoice/${invoice.id ?? "(unknown)"} has no recording staff participant.`);
+    )?.actor.reference ?? UNATTRIBUTED;
     return [{
       time: invoice.date,
       patientReference,
@@ -139,7 +139,7 @@ export function practiceDate(now: string, timeZone?: string): string {
   const date = new Date(now);
   if (!Number.isFinite(date.getTime())) throw new Error("Ledger timestamp is invalid.");
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
+    timeZone: timeZone ?? DEFAULT_LEDGER_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -152,9 +152,10 @@ export function practiceDayRange(date: string, timeZone?: string): { start: stri
   assertDate(date);
   const [year, month, day] = date.split("-").map(Number);
   const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const ledgerTimeZone = timeZone ?? DEFAULT_LEDGER_TIME_ZONE;
   return {
-    start: zonedMidnightIso(year, month, day, timeZone),
-    end: zonedMidnightIso(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), timeZone),
+    start: zonedMidnightIso(year, month, day, ledgerTimeZone),
+    end: zonedMidnightIso(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), ledgerTimeZone),
   };
 }
 
@@ -203,8 +204,7 @@ function assertDate(value: string): void {
   }
 }
 
-function zonedMidnightIso(year: number, month: number, day: number, timeZone?: string): string {
-  if (!timeZone) return new Date(Date.UTC(year, month - 1, day)).toISOString();
+function zonedMidnightIso(year: number, month: number, day: number, timeZone: string): string {
   const target = Date.UTC(year, month - 1, day);
   let guess = target;
   const formatter = new Intl.DateTimeFormat("en-US", {

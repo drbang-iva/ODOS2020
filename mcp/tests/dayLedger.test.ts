@@ -5,6 +5,7 @@ import type { Bundle, Invoice, PaymentReconciliation, Resource } from "@medplum/
 import express from "express";
 import {
   loadDayLedger,
+  practiceDate,
   practiceDayRange,
   projectDayLedgerPayments,
 } from "../src/desk/day-ledger.js";
@@ -31,6 +32,33 @@ test("Day Ledger projects integer-cent tender totals, newest-first detail, and S
   assert.deepEqual(result.staffLedgerTotals, [
     { staffer: "Practitioner/alex", count: 2, subtotalCents: 4750 },
     { staffer: "Practitioner/blair", count: 1, subtotalCents: 2500 },
+  ]);
+});
+
+test("dated tendered invoices with missing attribution still count and render as unattributed", () => {
+  const missingStaff = invoice("missing-staff", "2026-07-15T13:00:00.000Z", "Practitioner/alex", "CASH", 1200);
+  delete missingStaff.participant;
+  const missingPatient = invoice("missing-patient", "2026-07-15T14:00:00.000Z", "Practitioner/blair", "CHECK", 2300);
+  delete missingPatient.subject;
+  const dateless = invoice("dateless", "2026-07-15T15:00:00.000Z", "Practitioner/alex", "CASH", 9900);
+  delete dateless.date;
+  const untendered = invoice("untendered", "2026-07-15T16:00:00.000Z", "Practitioner/alex", "CHECK", 8800);
+  delete untendered.extension;
+
+  const result = projectDayLedgerPayments(
+    [missingStaff, missingPatient, dateless, untendered],
+    "2026-07-15",
+    "America/New_York",
+  );
+
+  assert.deepEqual(result.tenderTotalsCents, { CASH: 1200, CHECK: 2300, CARD_MANUAL: 0 });
+  assert.equal(result.totalCents, 3500);
+  assert.equal(result.detail.find((row) => row.tender === "CASH")?.staffer, "unattributed");
+  assert.equal(result.detail.find((row) => row.tender === "CHECK")?.patientReference, "unattributed");
+  assert.equal(result.detail.length, 2);
+  assert.deepEqual(result.staffLedgerTotals, [
+    { staffer: "Practitioner/blair", count: 1, subtotalCents: 2300 },
+    { staffer: "unattributed", count: 1, subtotalCents: 1200 },
   ]);
 });
 
@@ -82,6 +110,27 @@ test("practice-day ranges honor daylight-saving offsets", () => {
   });
 });
 
+test("an unset ledger timezone uses UTC for both search windows and day rebucketing", () => {
+  const previousTimeZone = process.env.TZ;
+  process.env.TZ = "America/Los_Angeles";
+  try {
+    assert.deepEqual(practiceDayRange("2026-07-15"), {
+      start: "2026-07-15T00:00:00.000Z",
+      end: "2026-07-16T00:00:00.000Z",
+    });
+    assert.equal(practiceDate("2026-07-15T02:00:00.000Z"), "2026-07-15");
+    assert.equal(
+      projectDayLedgerPayments([
+        invoice("utc-evening", "2026-07-15T02:00:00.000Z", "Practitioner/alex", "CASH", 1800),
+      ], "2026-07-15").totalCents,
+      1800,
+    );
+  } finally {
+    if (previousTimeZone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimeZone;
+  }
+});
+
 test("GET /desk/ledger returns 401 before FHIR reads and uses payment.charge for authorized reads", async () => {
   let searches = 0;
   const fhir = { search: async <T extends Resource>(): Promise<Bundle<T>> => { searches += 1; return { resourceType: "Bundle", type: "searchset" }; } };
@@ -108,6 +157,62 @@ test("GET /desk/ledger returns 401 before FHIR reads and uses payment.charge for
     const response = await fetch(`http://127.0.0.1:${port}/desk/ledger`, { headers: { Authorization: "Bearer good" } });
     assert.equal(response.status, 200);
     assert.equal(searches, 2);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("one dated tendered Invoice without staff attribution cannot blank the ledger or Desk summary", async () => {
+  const unattributedInvoice = invoice(
+    "unattributed",
+    "2026-07-15T14:00:00.000Z",
+    "Practitioner/removed",
+    "CASH",
+    4200,
+  );
+  delete unattributedInvoice.participant;
+  const fhir = {
+    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      ...(resourceType === "Invoice" ? { entry: [{ resource: unattributedInvoice as T }] } : {}),
+    }),
+  };
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "front-desk",
+      roles: ["front-desk"],
+      fhir: fhir as never,
+    }),
+    resolveRoles: async () => ({ email: "staff@example.test", roles: ["front-desk"] }),
+    terminalMode: "LIVE",
+    timeZone: "America/New_York",
+    now: () => "2026-07-15T15:00:00.000Z",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const ledgerResponse = await fetch(`http://127.0.0.1:${port}/desk/ledger`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(ledgerResponse.status, 200);
+    const ledger = await ledgerResponse.json() as {
+      payments: { totalCents: number; tenderTotalsCents: { CASH: number }; detail: Array<{ staffer: string }> };
+    };
+    assert.equal(ledger.payments.totalCents, 4200);
+    assert.equal(ledger.payments.tenderTotalsCents.CASH, 4200);
+    assert.equal(ledger.payments.detail[0].staffer, "unattributed");
+
+    const summaryResponse = await fetch(`http://127.0.0.1:${port}/desk/summary`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(summaryResponse.status, 200);
+    const summary = await summaryResponse.json() as { day: { collectedCents: { value: number } } };
+    assert.equal(summary.day.collectedCents.value, 4200);
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
