@@ -8,17 +8,61 @@ import { test } from "node:test";
 const UI_SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "ui", "src");
 import {
   CHECKOUT_TENDERS,
+  buildOpticalInvoice,
   chargeOpticalCardPayment,
   invoiceTotalNetCents,
+  routeCheckoutTender,
 } from "../../ui/src/lib/optical-order.js";
 import type { Invoice } from "@medplum/fhirtypes";
 
-test("checkout tender picker exposes card terminal without making it an Invoice tender", () => {
+test("checkout tenders add manual card without making either card option a general Invoice tender", () => {
   assert.deepEqual(CHECKOUT_TENDERS.map((tender) => tender.code), [
     "CASH",
     "CHECK",
+    "CARD_MANUAL",
     "CARD_TERMINAL",
   ]);
+});
+
+test("CARD_MANUAL routes through createOpticalCashOrder and never the Clover card path", async () => {
+  const calls: string[] = [];
+  await routeCheckoutTender("CARD_MANUAL", {
+    createOpticalCashOrder: async (tender) => {
+      calls.push(`createOpticalCashOrder:${tender}`);
+    },
+    processCardPayment: async () => {
+      calls.push("processCardPayment/chargeOpticalCardPayment");
+    },
+  });
+  assert.deepEqual(calls, ["createOpticalCashOrder:CARD_MANUAL"]);
+});
+
+test("CARD_MANUAL records its exact checkout-only tender code and display on the Invoice", () => {
+  const invoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    visionPrescriptionReference: "VisionPrescription/rx1",
+    orderHcpcsCode: "V2020",
+    businessStatus: "quote",
+    orderType: "rx",
+    tender: "CARD_MANUAL",
+    charges: [{
+      id: "line-1",
+      procedure: "V2020",
+      modifier: "",
+      diagnosis: "",
+      units: 1,
+      feeCents: 24400,
+      taxCents: 0,
+      selected: true,
+      taxable: false,
+    }],
+  }, ["ChargeItem/charge-1"]);
+  const coding = invoice.extension?.[0]?.valueCodeableConcept?.coding?.[0];
+  assert.deepEqual(coding, {
+    system: "https://osod.dev/fhir/CodeSystem/payment-tender",
+    code: "CARD_MANUAL",
+    display: "Card — manual entry",
+  });
 });
 
 test("UI card charge helper posts only the server-owned Clover charge request", async () => {

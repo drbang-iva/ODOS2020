@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PaymentReconciliation } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
-import { handleChargeRequest, type ChargeHandlerDeps } from "../src/payments/payment-charge-handler.js";
+import {
+  handleChargeRequest,
+  handlePaymentMethodsRequest,
+  type ChargeHandlerDeps,
+} from "../src/payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { CLOVER_SANDBOX_BASE_URL } from "../src/payments/adapters/clover-adapter.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
@@ -63,6 +67,23 @@ const BODY = {
   description: "Optical order card payment",
   surface: "in-clinic-pos",
 };
+
+test("payment methods returns the configured dispatch methods for authenticated staff", async () => {
+  const { deps: d } = deps({
+    dispatch: createPaymentDispatch([{ method: "manual-cash" }]),
+  });
+  const res = await handlePaymentMethodsRequest(d, { authHeader: "Bearer good" });
+  assert.deepEqual(res, { status: 200, body: { methods: ["manual-cash"] } });
+});
+
+test("payment methods rejects an unauthenticated caller with 401", async () => {
+  const { deps: d } = deps();
+  const res = await handlePaymentMethodsRequest(d, { authHeader: undefined });
+  assert.deepEqual(res, {
+    status: 401,
+    body: { error: "Authentication required to view payment methods." },
+  });
+});
 
 test("a successful card charge returns 200 with the transaction result and audits payment.charge.completed against the PR", async () => {
   const { created, fetchImpl, fhir } = cloverTransport({

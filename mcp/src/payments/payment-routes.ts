@@ -7,7 +7,7 @@ import {
   handleVoidCreditRequest,
   type PaymentCreditHandlerDeps,
 } from "./payment-credit-handler.js";
-import type { ChargeHandlerResult } from "./payment-charge-handler.js";
+import { handlePaymentMethodsRequest, type ChargeHandlerResult } from "./payment-charge-handler.js";
 
 export interface PatientPaymentRouteDeps {
   authenticateService(): Promise<void>;
@@ -18,6 +18,9 @@ export function registerPatientPaymentRoutes(
   app: Pick<Application, "get" | "post">,
   deps: PatientPaymentRouteDeps,
 ): void {
+  get(app, "/payments/methods", deps, (req) => handlePaymentMethodsRequest(deps.handlers, {
+    authHeader: req.header("authorization"),
+  }));
   post(app, "/payments/credit/apply", deps, (req) => handleApplyCreditRequest(deps.handlers, {
     authHeader: req.header("authorization"),
     body: req.body,
