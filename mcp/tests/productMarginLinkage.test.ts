@@ -9,11 +9,13 @@ import {
 } from "../../ui/src/lib/optical-order.js";
 import { frameChargeItemDefinitionCanonical } from "../../ui/src/lib/optical-pricing-catalog.js";
 
+const SYNTHETIC_FRAME_CODE = "FRAME-TEST";
+
 test("catalog-attached frame identity reaches the checkout transaction ChargeItem definitionCanonical", () => {
   const catalogCanonicalUrl = "https://osod.dev/catalog/frames/frame-900";
   const draft: OpticalChargeLineDraft = {
     id: "frame-line",
-    procedure: "V2020",
+    procedure: SYNTHETIC_FRAME_CODE,
     modifier: "",
     diagnosis: "",
     units: 1,
@@ -42,7 +44,7 @@ test("catalog-attached frame identity reaches the checkout transaction ChargeIte
   const bundle = assembleOpticalCashOrder({
     patientReference: "Patient/patient-1",
     visionPrescriptionReference: "VisionPrescription/rx-1",
-    orderHcpcsCode: "V2020",
+    orderHcpcsCode: SYNTHETIC_FRAME_CODE,
     charges: [charge],
     tender: "CASH",
   });
@@ -54,7 +56,7 @@ test("catalog-attached frame identity reaches the checkout transaction ChargeIte
     catalogCanonicalUrl,
     practiceSalePriceCents: 24_400,
     wholesaleCostCents: 10_000,
-    hcpcsBaseCode: "V2020",
+    hcpcsBaseCode: SYNTHETIC_FRAME_CODE,
   });
 
   assert.equal(frameChargeItemDefinitionCanonical(catalogCanonicalUrl), definition.url);

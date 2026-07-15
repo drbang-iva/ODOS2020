@@ -14,7 +14,7 @@ export const OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-charge-item";
 
 export function claimResponseChargeItemExtension(chargeItemId: string | undefined): Extension | undefined {
-  return chargeItemId && /^[A-Za-z0-9.-]+$/.test(chargeItemId)
+  return chargeItemId && /^[A-Za-z0-9.-]{1,64}$/.test(chargeItemId)
     ? {
         url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
         valueReference: { reference: `ChargeItem/${chargeItemId}` },
@@ -116,6 +116,7 @@ export interface ClaimMdEraAdjustment {
 
 export interface ClaimMdEraCharge {
   chgid?: string;
+  remote_chgid?: string;
   proc_code?: string;
   charge?: string;
   allowed?: string;
@@ -367,7 +368,7 @@ export function buildClaimResponseFromClaimMdEra(input: {
     disposition: input.era.payer_name ? `Claim.MD ERA from ${input.era.payer_name}` : "Claim.MD ERA",
     ...(claim.payer_icn ? { preAuthRef: claim.payer_icn } : {}),
     item: charges.map((charge, index) => {
-      const chargeItemExtension = claimResponseChargeItemExtension(charge.chgid);
+      const chargeItemExtension = claimResponseChargeItemExtension(charge.remote_chgid);
       return {
         itemSequence: index + 1,
         ...(chargeItemExtension ? { extension: [chargeItemExtension] } : {}),

@@ -27,6 +27,10 @@ export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/pa
 /** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
 export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
 export const STEDI_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/stedi-era";
+export const OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/insurance-payment-detail-level";
+export const INSURANCE_CLAIM_ROLLUP_DETAIL_CODE = "claim-rollup";
+export const INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE = "charge-item-allocation";
 
 export interface PatientPaymentAllocationInput {
   invoiceReference: string;
@@ -243,7 +247,7 @@ export function buildInsurancePaymentReconciliation(
   const seenChargeItems = new Set<string>();
   let lineAllocationTotalCents = 0;
   for (const allocation of lineAllocations) {
-    if (!/^ChargeItem\/[A-Za-z0-9.-]+$/.test(allocation.chargeItemReference)) {
+    if (!/^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(allocation.chargeItemReference)) {
       throw new Error('Insurance line allocation must reference a local "ChargeItem/<id>".');
     }
     if (!Number.isInteger(allocation.amountCents) || allocation.amountCents <= 0) {
@@ -260,6 +264,7 @@ export function buildInsurancePaymentReconciliation(
   }
 
   const amount = { value: input.amountCents / 100, currency: "USD" as const };
+  const unallocatedCents = input.amountCents - lineAllocationTotalCents;
 
   return {
     resourceType: "PaymentReconciliation",
@@ -278,16 +283,32 @@ export function buildInsurancePaymentReconciliation(
     detail: [
       {
         type: {
-          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
+              display: "Claim rollup",
+            },
+          ],
         },
         request: { reference: input.claimReference },
         response: { reference: input.claimResponseReference },
         ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
-        amount,
+        ...(unallocatedCents > 0
+          ? { amount: { value: unallocatedCents / 100, currency: "USD" as const } }
+          : {}),
       },
       ...lineAllocations.map((allocation) => ({
         type: {
-          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+              display: "ChargeItem allocation",
+            },
+          ],
         },
         request: { reference: allocation.chargeItemReference },
         response: { reference: input.claimResponseReference },

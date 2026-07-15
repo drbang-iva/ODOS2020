@@ -8,6 +8,7 @@ import {
   buildCoverageEligibilityRequest,
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
+  claimResponseChargeItemExtension,
   medicalEligibilitySummary,
   OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ProfessionalClaimInput,
@@ -165,7 +166,8 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
         status_code: "1",
         charge: [
           {
-            chgid: "charge-1",
+            chgid: "claimmd-internal-charge-987",
+            remote_chgid: "charge-1",
             proc_code: "PROC-A",
             charge: "125.00",
             allowed: "100.00",
@@ -191,11 +193,20 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
       ?.valueReference?.reference,
     "ChargeItem/charge-1",
   );
+  assert.notEqual(
+    response.item?.[0]?.extension?.[0]?.valueReference?.reference,
+    "ChargeItem/claimmd-internal-charge-987",
+  );
   assert.equal(response.item?.[0]?.adjudication.find((a) => a.category.text === "paid")?.amount?.value, 80);
   assert.equal(
     response.item?.[0]?.adjudication.find((a) => a.category.text === "patient responsibility")?.amount?.value,
     15,
   );
+});
+
+test("ClaimResponse ChargeItem provenance rejects a value beyond the FHIR id length limit", () => {
+  assert.equal(claimResponseChargeItemExtension("a".repeat(64))?.valueReference?.reference, `ChargeItem/${"a".repeat(64)}`);
+  assert.equal(claimResponseChargeItemExtension("a".repeat(65)), undefined);
 });
 
 test("buildManualClaimResponse preserves paid, allowed, and distinct PR-1/2/3 adjudications", () => {

@@ -39,6 +39,7 @@ import {
 } from "./clearinghouse-adapter.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
+  ERA_WORKLIST_INPUT_SYSTEM,
   ERA_WORKLIST_CODE_SYSTEM,
   ERA_IMPORT_CODE,
   ERA_IMPORT_CODE_SYSTEM,
@@ -69,6 +70,7 @@ import {
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
   medicalEligibilitySummary,
+  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ClaimMdEraClaim,
   type ClaimMdEraData,
   type ManualClaimResponseLineInput,
@@ -509,7 +511,7 @@ async function importStediEra(
         continue;
       }
 
-      const response = await auth.fhir.create(buildClaimResponseFromStediEra({
+      const candidateResponse = buildClaimResponseFromStediEra({
         claimReference,
         patientReference,
         insurerReference: body.insurerReference,
@@ -520,7 +522,9 @@ async function importStediEra(
         paymentDate: era.paymentDate,
         traceNumber: era.traceNumber,
         claim: stediClaim,
-      }));
+      });
+      const verifiedLinkage = await verifyClaimResponseChargeItemLinks(auth, claimReference, candidateResponse);
+      const response = await auth.fhir.create(verifiedLinkage.response);
       claimResponseIds.push(requiredId(response));
       const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
       paidTotalCents += paidCents;
@@ -542,6 +546,16 @@ async function importStediEra(
         }));
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
+      }
+      if (verifiedLinkage.reviewReason) {
+        const task = await createEraLineLinkageReviewTask(deps, auth, {
+          adapterName: "stedi",
+          era: taskEra,
+          eraClaim,
+          claimReference,
+          reason: verifiedLinkage.reviewReason,
+        });
+        taskIds.push(requiredId(task));
       }
       if (
         paidCents === 0
@@ -1073,6 +1087,122 @@ interface EraClaimPersistenceResult {
   paidCents: number;
 }
 
+async function verifyClaimResponseChargeItemLinks(
+  auth: AuthenticatedClaimsStaff,
+  claimReference: string,
+  response: ClaimResponse,
+): Promise<{ response: ClaimResponse; reviewReason?: string }> {
+  const echoedReferences = (response.item ?? []).flatMap((item) => item.extension?.flatMap((extension) =>
+    extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL && extension.valueReference?.reference
+      ? [extension.valueReference.reference]
+      : [],
+  ) ?? []);
+  if (echoedReferences.length === 0) return { response };
+
+  if (new Set(echoedReferences).size !== echoedReferences.length) {
+    return {
+      response: withoutClaimResponseChargeItemLinks(response),
+      reviewReason: "ERA service lines echoed a duplicate ChargeItem control number.",
+    };
+  }
+
+  const claimId = claimReference.match(/^Claim\/([A-Za-z0-9.-]{1,64})$/)?.[1];
+  if (!claimId) {
+    return {
+      response: withoutClaimResponseChargeItemLinks(response),
+      reviewReason: "ERA line linkage could not verify its local Claim reference.",
+    };
+  }
+
+  try {
+    const claim = await auth.fhir.read<Claim>("Claim", claimId);
+    const claimChargeItems = new Set((claim.item ?? []).flatMap((item) => item.extension?.flatMap((extension) =>
+      extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL
+      && /^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(extension.valueReference?.reference ?? "")
+        ? [extension.valueReference!.reference!]
+        : [],
+    ) ?? []));
+    if (!echoedReferences.every((reference) => claimChargeItems.has(reference))) {
+      return {
+        response: withoutClaimResponseChargeItemLinks(response),
+        reviewReason: "ERA line linkage echoed a ChargeItem that is not owned by the matched Claim.",
+      };
+    }
+
+    const chargeItems = await Promise.all(echoedReferences.map(async (reference) => {
+      const id = reference.slice("ChargeItem/".length);
+      return auth.fhir.read<ChargeItem>("ChargeItem", id);
+    }));
+    if (chargeItems.some((chargeItem, index) =>
+      `ChargeItem/${chargeItem.id ?? ""}` !== echoedReferences[index]
+      || chargeItem.subject.reference !== claim.patient.reference,
+    )) {
+      return {
+        response: withoutClaimResponseChargeItemLinks(response),
+        reviewReason: "ERA line linkage could not verify ChargeItem existence and patient ownership.",
+      };
+    }
+  } catch {
+    return {
+      response: withoutClaimResponseChargeItemLinks(response),
+      reviewReason: "ERA line linkage could not load its matched Claim and ChargeItems.",
+    };
+  }
+
+  return { response };
+}
+
+function withoutClaimResponseChargeItemLinks(response: ClaimResponse): ClaimResponse {
+  return {
+    ...response,
+    item: response.item?.map((item) => {
+      const extensions = item.extension?.filter(
+        (extension) => extension.url !== OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+      ) ?? [];
+      const { extension: _extension, ...withoutExtensions } = item;
+      return extensions.length > 0 ? { ...withoutExtensions, extension: extensions } : withoutExtensions;
+    }),
+  };
+}
+
+async function createEraLineLinkageReviewTask(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  input: {
+    adapterName: "claimmd" | "stedi";
+    era: ClaimMdEraData;
+    eraClaim: ClaimMdEraClaim;
+    claimReference: string;
+    reason: string;
+  },
+): Promise<Task> {
+  const identifierValue = `${input.era.eraid ?? "unknown-era"}:${input.claimReference}:line-linkage`;
+  const candidate = buildEraWorklistTask({
+    code: "era-unmatched",
+    era: input.era,
+    eraClaim: input.eraClaim,
+    authoredOn: now(deps),
+    identifierSystem: input.adapterName === "stedi" ? STEDI_ERA_PAYMENT_SYSTEM : CLAIMMD_ERA_PAYMENT_SYSTEM,
+  });
+  candidate.identifier = [{ system: ERA_DISCREPANCY_IDENTIFIER_SYSTEM, value: identifierValue }];
+  candidate.description = "ERA line linkage requires review";
+  candidate.input = [
+    ...(candidate.input ?? []),
+    {
+      type: {
+        coding: [{ system: ERA_WORKLIST_INPUT_SYSTEM, code: "line-linkage-review-reason" }],
+        text: "Line-linkage review reason",
+      },
+      valueString: input.reason,
+    },
+  ];
+  const task = await auth.fhir.create(candidate, {
+    "If-None-Exist": `identifier=${ERA_DISCREPANCY_IDENTIFIER_SYSTEM}|${identifierValue}`,
+  });
+  await audit(deps, auth, "era.unmatched.flagged", "success", ref(task), undefined, undefined, input.adapterName);
+  return task;
+}
+
 async function persistMatchedEraClaim(
   deps: ClaimsHandlerDeps,
   auth: AuthenticatedClaimsStaff,
@@ -1087,14 +1217,16 @@ async function persistMatchedEraClaim(
     appealDeadline?: string;
   },
 ): Promise<EraClaimPersistenceResult> {
-  const response = await auth.fhir.create(buildClaimResponseFromClaimMdEra({
+  const candidateResponse = buildClaimResponseFromClaimMdEra({
     claimReference: input.claimReference,
     patientReference: input.patientReference,
     insurerReference: input.insurerReference,
     providerReference: input.providerReference,
     created: today(deps),
     era: { ...input.era, claim: input.eraClaim },
-  }));
+  });
+  const verifiedLinkage = await verifyClaimResponseChargeItemLinks(auth, input.claimReference, candidateResponse);
+  const response = await auth.fhir.create(verifiedLinkage.response);
   const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
   const evidence = eraWorklistEvidence(input.eraClaim, input.era.eraid ?? "");
   const invoiceResult = await ensurePatientResponsibilityInvoice(auth, input.claimReference, response);
@@ -1120,6 +1252,17 @@ async function persistMatchedEraClaim(
     }));
     paymentReconciliationIds.push(requiredId(pr));
     posted = 1;
+  }
+
+  if (verifiedLinkage.reviewReason) {
+    const task = await createEraLineLinkageReviewTask(deps, auth, {
+      adapterName: "claimmd",
+      era: input.era,
+      eraClaim: input.eraClaim,
+      claimReference: input.claimReference,
+      reason: verifiedLinkage.reviewReason,
+    });
+    taskIds.push(requiredId(task));
   }
 
   if (paidCents === 0) {

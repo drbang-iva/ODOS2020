@@ -24,6 +24,10 @@ import {
   paymentSubjectReference,
   unappliedPaymentCents,
 } from "../payments/payment-credit-service.js";
+import {
+  INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
+  OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+} from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 
@@ -701,9 +705,15 @@ function validateLinkedPayment(payment: PaymentReconciliation, patientReference:
     throw new StatementValidationError(`${reference} allocation does not belong to ${patientReference}.`);
   }
   const amountCents = paymentAmountCents(payment);
-  const allocatedCents = sum((payment.detail ?? []).map((detail) =>
-    moneyCents(detail.amount?.value, detail.amount?.currency, `${reference} allocation`),
-  ));
+  const allocatedCents = sum((payment.detail ?? []).flatMap((detail) => {
+    const amountlessClaimRollup = !detail.amount && detail.type.coding?.some((coding) =>
+      coding.system === OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM
+      && coding.code === INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
+    );
+    return amountlessClaimRollup
+      ? []
+      : [moneyCents(detail.amount?.value, detail.amount?.currency, `${reference} allocation`)];
+  }));
   if (allocatedCents > amountCents) {
     throw new StatementValidationError(`${reference} allocations exceed its payment amount.`);
   }
