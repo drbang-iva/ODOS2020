@@ -31,7 +31,7 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
 });
 
 test("the latest audit migration drop-and-re-add constraint exactly matches the TypeScript event union", () => {
-  const migrationFile = "2026-07-12-staff-invite-event.sql";
+  const migrationFile = "2026-07-15-era-line-linkage-event.sql";
   const sql = readFileSync(
     resolve(process.cwd(), "../data/migrations", migrationFile),
     "utf8",

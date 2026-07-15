@@ -687,6 +687,23 @@ test("an invalid line identity falls back and creates a dedicated linkage review
 test("a mismatched ClaimResponse patient is corrected from the Claim and never receives a line link", async () => {
   const fixture = deps();
   fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-patient-mismatch",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      total_charge: "125.00",
+      total_paid: "70.00",
+      charge: [{
+        chgid: "claimmd-charge-patient-mismatch",
+        remote_chgid: "charge-1",
+        charge: "125.00",
+        allowed: "100.00",
+        paid: "70.00",
+      }],
+    },
+  });
 
   const result = await handleEraImportRequest(fixture.deps, {
     authHeader: "Bearer good",
@@ -704,7 +721,10 @@ test("a mismatched ClaimResponse patient is corrected from the Claim and never r
   assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
   assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
   assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
+  assert.equal(worklistCode(fixture.created.Task[1]), "era-underpayment");
+  assert.equal(fixture.created.Task[1].for?.reference, "Patient/pat-900");
   assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /patient ownership/);
+  assert.equal(fixture.audits.some((row) => row.eventType === "era.line-linkage.flagged"), true);
 });
 
 test("a duplicate line echo falls back for that claim, flags review, and does not abort the ERA batch", async () => {
@@ -1478,6 +1498,18 @@ test("manual EOB audit migration uses drop-and-re-add and registers its claims e
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   assert.match(sql, /'claim\.manual-eob\.posted'/);
+});
+
+test("line-linkage audit migration uses drop-and-re-add and registers its claims event", () => {
+  const sql = readFileSync(
+    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event.sql"),
+    "utf8",
+  );
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  assert.ok(dropIndex >= 0);
+  assert.ok(addIndex > dropIndex);
+  assert.match(sql, /'era\.line-linkage\.flagged'/);
 });
 
 test("claims.manage denial happens before adapter calls or audit writes", async () => {

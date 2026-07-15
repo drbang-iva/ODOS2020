@@ -526,6 +526,7 @@ async function importStediEra(
       const verifiedLinkage = await verifyClaimResponseChargeItemLinks(auth, claimReference, candidateResponse);
       const response = await auth.fhir.create(verifiedLinkage.response);
       claimResponseIds.push(requiredId(response));
+      const verifiedPatientReference = response.patient.reference ?? patientReference;
       const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
       paidTotalCents += paidCents;
       const evidence = eraWorklistEvidence(eraClaim, era.transactionId);
@@ -554,7 +555,7 @@ async function importStediEra(
           eraClaim,
           claimReference,
           claimResponseReference: ref(response),
-          patientReference: response.patient.reference ?? patientReference,
+          patientReference: verifiedPatientReference,
           reason: verifiedLinkage.reviewReason,
         });
         taskIds.push(requiredId(task));
@@ -570,7 +571,7 @@ async function importStediEra(
           deps,
           auth,
           code,
-          { era: taskEra, eraClaim, patientReference, appealDeadline: body.appealDeadlineByPcn?.[pcn] },
+          { era: taskEra, eraClaim, patientReference: verifiedPatientReference, appealDeadline: body.appealDeadlineByPcn?.[pcn] },
           response,
           "stedi",
         );
@@ -1216,7 +1217,7 @@ async function createEraLineLinkageReviewTask(
   const task = await auth.fhir.create(candidate, {
     "If-None-Exist": `identifier=${ERA_DISCREPANCY_IDENTIFIER_SYSTEM}|${identifierValue}`,
   });
-  await audit(deps, auth, "era.unmatched.flagged", "success", ref(task), undefined, undefined, input.adapterName);
+  await audit(deps, auth, "era.line-linkage.flagged", "success", ref(task), undefined, undefined, input.adapterName);
   return task;
 }
 
@@ -1244,6 +1245,7 @@ async function persistMatchedEraClaim(
   });
   const verifiedLinkage = await verifyClaimResponseChargeItemLinks(auth, input.claimReference, candidateResponse);
   const response = await auth.fhir.create(verifiedLinkage.response);
+  const verifiedPatientReference = response.patient.reference ?? input.patientReference;
   const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
   const evidence = eraWorklistEvidence(input.eraClaim, input.era.eraid ?? "");
   const invoiceResult = await ensurePatientResponsibilityInvoice(auth, input.claimReference, response);
@@ -1278,14 +1280,20 @@ async function persistMatchedEraClaim(
       eraClaim: input.eraClaim,
       claimReference: input.claimReference,
       claimResponseReference: ref(response),
-      patientReference: response.patient.reference ?? input.patientReference,
+      patientReference: verifiedPatientReference,
       reason: verifiedLinkage.reviewReason,
     });
     taskIds.push(requiredId(task));
   }
 
   if (paidCents === 0) {
-    const task = await createAndAuditEraWorklistTask(deps, auth, "era-denial", input, response);
+    const task = await createAndAuditEraWorklistTask(
+      deps,
+      auth,
+      "era-denial",
+      { ...input, patientReference: verifiedPatientReference },
+      response,
+    );
     taskIds.push(requiredId(task));
     denied = 1;
   } else if (
@@ -1294,7 +1302,13 @@ async function persistMatchedEraClaim(
     || (evidence.shortfallCents > 0
       && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))
   ) {
-    const task = await createAndAuditEraWorklistTask(deps, auth, "era-underpayment", input, response);
+    const task = await createAndAuditEraWorklistTask(
+      deps,
+      auth,
+      "era-underpayment",
+      { ...input, patientReference: verifiedPatientReference },
+      response,
+    );
     taskIds.push(requiredId(task));
     underpaid = 1;
   }
