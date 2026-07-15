@@ -12,7 +12,7 @@ export const ERA_IMPORT_CODE = "osod-era-import";
 export const ERA_IMPORT_SUMMARY_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-era-import-summary";
 
-export const ERA_WORKLIST_CODES = ["era-denial", "era-unmatched", "era-underpayment"] as const;
+export const ERA_WORKLIST_CODES = ["era-denial", "era-line-linkage", "era-unmatched", "era-underpayment"] as const;
 export const CLAIM_REJECTED_CODES = ["claim-rejected"] as const;
 export const WORKLIST_CODE_REGISTRY = [
   { system: ERA_WORKLIST_CODE_SYSTEM, codes: ERA_WORKLIST_CODES },
@@ -485,6 +485,7 @@ function inputType(input: TaskInput): string | undefined {
 
 function displayForWorklistCode(code: WorklistCode): string {
   if (code === "era-denial") return "ERA denial requires review";
+  if (code === "era-line-linkage") return "ERA line linkage requires review";
   if (code === "era-underpayment") return "ERA underpayment requires review";
   if (code === "claim-rejected") return "Rejected claim requires correction";
   return "Unmatched ERA claim requires mapping";

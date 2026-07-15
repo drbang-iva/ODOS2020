@@ -5,12 +5,22 @@ import type {
   CodeableConcept,
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
+  Extension,
   Money,
 } from "@medplum/fhirtypes";
 
 export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
 export const OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL =
   "https://osod.dev/fhir/StructureDefinition/osod-charge-item";
+
+export function claimResponseChargeItemExtension(chargeItemId: string | undefined): Extension | undefined {
+  return chargeItemId && /^[A-Za-z0-9.-]{1,64}$/.test(chargeItemId)
+    ? {
+        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        valueReference: { reference: `ChargeItem/${chargeItemId}` },
+      }
+    : undefined;
+}
 
 export interface ClaimMdProviderInput {
   name?: string;
@@ -106,6 +116,7 @@ export interface ClaimMdEraAdjustment {
 
 export interface ClaimMdEraCharge {
   chgid?: string;
+  remote_chgid?: string;
   proc_code?: string;
   charge?: string;
   allowed?: string;
@@ -356,21 +367,25 @@ export function buildClaimResponseFromClaimMdEra(input: {
     outcome: claim.status_code === "4" ? "error" : "complete",
     disposition: input.era.payer_name ? `Claim.MD ERA from ${input.era.payer_name}` : "Claim.MD ERA",
     ...(claim.payer_icn ? { preAuthRef: claim.payer_icn } : {}),
-    item: charges.map((charge, index) => ({
-      itemSequence: index + 1,
-      adjudication: [
-        adjudication("submitted", decimalStringToCents(charge.charge)),
-        adjudication("allowed", decimalStringToCents(charge.allowed)),
-        adjudication("paid", decimalStringToCents(charge.paid)),
-        adjudication("patient responsibility", patientResponsibilityCents(charge)),
-        ...arrayOf(charge.adjustment).map((adjustment) =>
-          adjudication(
-            ["adjustment", adjustment.group, adjustment.code].filter(Boolean).join(" "),
-            decimalStringToCents(adjustment.amount),
+    item: charges.map((charge, index) => {
+      const chargeItemExtension = claimResponseChargeItemExtension(charge.remote_chgid);
+      return {
+        itemSequence: index + 1,
+        ...(chargeItemExtension ? { extension: [chargeItemExtension] } : {}),
+        adjudication: [
+          adjudication("submitted", decimalStringToCents(charge.charge)),
+          adjudication("allowed", decimalStringToCents(charge.allowed)),
+          adjudication("paid", decimalStringToCents(charge.paid)),
+          adjudication("patient responsibility", patientResponsibilityCents(charge)),
+          ...arrayOf(charge.adjustment).map((adjustment) =>
+            adjudication(
+              ["adjustment", adjustment.group, adjustment.code].filter(Boolean).join(" "),
+              decimalStringToCents(adjustment.amount),
+            ),
           ),
-        ),
-      ].filter((entry) => moneyToCents(entry.amount) > 0),
-    })),
+        ].filter((entry) => moneyToCents(entry.amount) > 0),
+      };
+    }),
     payment: {
       type: { text: input.era.payment_method ? `Claim.MD ERA ${input.era.payment_method}` : "Claim.MD ERA" },
       date: isoDateFromClaimMd(input.era.paid_date) ?? input.created,

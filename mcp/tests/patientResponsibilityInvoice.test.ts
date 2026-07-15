@@ -123,16 +123,16 @@ test("money comparison detects a corrected remit without treating metadata drift
 
 test("claim-invoice seam extensions are installable R4 Reference constraints", async () => {
   const cases = [
-    ["osod-charge-item.json", "Claim.item", "http://hl7.org/fhir/StructureDefinition/ChargeItem"],
-    ["osod-source-claim.json", "Invoice", "http://hl7.org/fhir/StructureDefinition/Claim"],
+    ["osod-charge-item.json", ["Claim.item", "ClaimResponse.item"], "http://hl7.org/fhir/StructureDefinition/ChargeItem"],
+    ["osod-source-claim.json", ["Invoice"], "http://hl7.org/fhir/StructureDefinition/Claim"],
   ] as const;
-  for (const [file, context, targetProfile] of cases) {
+  for (const [file, contexts, targetProfile] of cases) {
     const definition = JSON.parse(await readFile(
       resolve(import.meta.dirname, "../../data/canonical-extensions", file),
       "utf8",
     )) as StructureDefinition;
     assert.equal(definition.fhirVersion, "4.0.1");
-    assert.deepEqual(definition.context, [{ type: "element", expression: context }]);
+    assert.deepEqual(definition.context, contexts.map((expression) => ({ type: "element", expression })));
     assert.equal(definition.differential?.element.find((element) => element.id === "Extension.extension")?.max, "0");
     assert.deepEqual(
       definition.differential?.element.find((element) => element.id === "Extension.value[x]")?.type,

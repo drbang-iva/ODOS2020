@@ -23,6 +23,10 @@ const FRAME_CATALOG_PREFIX = "https://osod.dev/catalog/frames/";
 const SNOMED_SYSTEM = "http://snomed.info/sct";
 const OSOD_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
 
+export function frameChargeItemDefinitionCanonical(catalogCanonicalUrl: string): string {
+  return `https://osod.dev/practice/${PRACTICE_ID}/charge-rules/frames/${encodeURIComponent(catalogCanonicalUrl)}`;
+}
+
 export type LensPricingCategory = "design" | "material" | "treatment";
 
 export type LensPricingItem = {
@@ -190,7 +194,7 @@ export function buildFramePricingResource(item: FramePricingItem): ChargeItemDef
     resourceType: "ChargeItemDefinition",
     url:
       original?.url ??
-      `https://osod.dev/practice/${PRACTICE_ID}/charge-rules/frames/${encodeURIComponent(item.catalogCanonicalUrl)}`,
+      frameChargeItemDefinitionCanonical(item.catalogCanonicalUrl),
     version: original?.version ?? "1",
     status: item.active ? "active" : "retired",
     code: original?.code ?? {

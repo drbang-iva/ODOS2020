@@ -75,6 +75,7 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `era.import.completed` | claim-event | Claim.MD ERA import completed; audited against the created PaymentReconciliation when payment posted. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.import.failed` | claim-event | Claim.MD ERA import failed; audited against the ERA id. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.denial.flagged` | claim-event | A matched zero-pay ERA claim created a claimable denial Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.line-linkage.flagged` | claim-event | A matched ERA claim created a dedicated review Task because its service-line identity could not be verified. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.underpayment.flagged` | claim-event | A paid ERA claim with a true allowed-minus-paid-minus-patient-responsibility shortfall created an underpayment Task. Ledger: claimmd-clearinghouse-ledger.md. |
 | `era.unmatched.flagged` | claim-event | An ERA claim without a local PCN mapping created a recoverable unmatched Task. Ledger: claimmd-clearinghouse-ledger.md. |
 | `claim.rejected.flagged` | claim-event | A pre-remittance Claim.MD rejection created a claimable correction Task. Ledger: claimmd-clearinghouse-ledger.md. |

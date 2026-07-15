@@ -101,6 +101,7 @@ test("Stedi 277 and 835 responses map to the shared FHIR ClaimResponse shape", (
     claim: {
       claimPaymentInfo: { patientControlNumber: "OSODCLAIM900", totalClaimChargeAmount: "125", claimPaymentAmount: "80", patientResponsibilityAmount: "20", payerClaimControlNumber: "PAYER900", claimStatusCode: "1" },
       serviceLines: [{
+        lineItemControlNumber: "line-1",
         servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "92004" },
         serviceSupplementalAmounts: { allowedActual: "100" },
         serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
@@ -108,6 +109,7 @@ test("Stedi 277 and 835 responses map to the shared FHIR ClaimResponse shape", (
     },
   });
   assert.equal(era.payment?.amount.value, 80);
+  assert.equal(era.item?.[0].extension?.[0]?.valueReference?.reference, "ChargeItem/line-1");
   assert.equal(era.item?.[0].adjudication.find((entry) => entry.category.text === "allowed")?.amount?.value, 100);
   assert.equal(era.payment?.identifier?.value, "TRACE900");
 });

@@ -1,4 +1,5 @@
-import type { Extension, PaymentReconciliation } from "@medplum/fhirtypes";
+import type { ClaimResponse, Extension, PaymentReconciliation } from "@medplum/fhirtypes";
+import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
 import { paymentTenderExtensionForReconciliation } from "../fhir/osodPaymentTender.js";
 import type { PaymentSurface } from "./payment-processor-adapter.js";
 
@@ -26,6 +27,10 @@ export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/pa
 /** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
 export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
 export const STEDI_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/stedi-era";
+export const OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM =
+  "https://osod.dev/fhir/CodeSystem/insurance-payment-detail-level";
+export const INSURANCE_CLAIM_ROLLUP_DETAIL_CODE = "claim-rollup";
+export const INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE = "charge-item-allocation";
 
 export interface PatientPaymentAllocationInput {
   invoiceReference: string;
@@ -192,6 +197,28 @@ export interface InsurancePaymentReconciliationInput {
   processorTransactionId: string;
   processorTransactionSystem: string;
   description?: string;
+  lineAllocations?: InsurancePaymentLineAllocationInput[];
+}
+
+export interface InsurancePaymentLineAllocationInput {
+  chargeItemReference: string;
+  amountCents: number;
+}
+
+export function claimResponseLinePaymentAllocations(
+  response: ClaimResponse,
+): InsurancePaymentLineAllocationInput[] {
+  return (response.item ?? []).flatMap((item) => {
+    const chargeItemReference = item.extension?.find(
+      (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+    )?.valueReference?.reference;
+    const paid = item.adjudication.find((entry) => /^paid$/i.test(entry.category.text ?? ""));
+    if (!chargeItemReference || !paid?.amount || (paid.amount.value ?? 0) <= 0) return [];
+    return [{
+      chargeItemReference,
+      amountCents: wholeUsdCents(paid.amount.value, paid.amount.currency, "ClaimResponse paid amount"),
+    }];
+  });
 }
 
 export function buildInsurancePaymentReconciliation(
@@ -216,7 +243,28 @@ export function buildInsurancePaymentReconciliation(
     throw new Error("paymentDate must be an R4 date (YYYY-MM-DD).");
   }
 
+  const lineAllocations = input.lineAllocations ?? [];
+  const seenChargeItems = new Set<string>();
+  let lineAllocationTotalCents = 0;
+  for (const allocation of lineAllocations) {
+    if (!/^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(allocation.chargeItemReference)) {
+      throw new Error('Insurance line allocation must reference a local "ChargeItem/<id>".');
+    }
+    if (!Number.isInteger(allocation.amountCents) || allocation.amountCents <= 0) {
+      throw new Error("Insurance line allocation amountCents must be a positive integer number of cents.");
+    }
+    if (seenChargeItems.has(allocation.chargeItemReference)) {
+      throw new Error("Insurance line allocations must contain unique ChargeItem references.");
+    }
+    seenChargeItems.add(allocation.chargeItemReference);
+    lineAllocationTotalCents += allocation.amountCents;
+  }
+  if (lineAllocationTotalCents > input.amountCents) {
+    throw new Error("Insurance line allocations cannot exceed the whole-claim payment amount.");
+  }
+
   const amount = { value: input.amountCents / 100, currency: "USD" as const };
+  const unallocatedCents = input.amountCents - lineAllocationTotalCents;
 
   return {
     resourceType: "PaymentReconciliation",
@@ -235,13 +283,49 @@ export function buildInsurancePaymentReconciliation(
     detail: [
       {
         type: {
-          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
+              display: "Claim rollup",
+            },
+          ],
         },
         request: { reference: input.claimReference },
         response: { reference: input.claimResponseReference },
         ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
-        amount,
+        ...(unallocatedCents > 0
+          ? { amount: { value: unallocatedCents / 100, currency: "USD" as const } }
+          : {}),
       },
+      ...lineAllocations.map((allocation) => ({
+        type: {
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+              display: "ChargeItem allocation",
+            },
+          ],
+        },
+        request: { reference: allocation.chargeItemReference },
+        response: { reference: input.claimResponseReference },
+        ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
+        amount: { value: allocation.amountCents / 100, currency: "USD" as const },
+      })),
     ],
   };
+}
+
+function wholeUsdCents(value: number | undefined, currency: string | undefined, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || (currency && currency !== "USD")) {
+    throw new Error(`${label} must be a nonnegative USD amount.`);
+  }
+  const cents = Math.round(value * 100);
+  if (Math.abs(value * 100 - cents) > 1e-6) {
+    throw new Error(`${label} must resolve to whole cents.`);
+  }
+  return cents;
 }

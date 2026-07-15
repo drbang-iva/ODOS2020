@@ -23,6 +23,7 @@ import {
   labOrderFrameFromAttachedFrame,
   loadConfiguredPaymentMethods,
   loadVisionPrescription,
+  opticalCollectionChargeFromDraft,
   transitionOpticalOrderStatus,
   visionPrescriptionRows,
   type AttachedFrame,
@@ -219,14 +220,7 @@ export function OpticalOrder() {
     ...(primaryOrderCode(selectedLines) === "V2020" ? { orderHcpcsDisplay: "Frames, purchases" } : {}),
     businessStatus: header.orderStatus,
     orderType: header.orderType,
-    charges: selectedLines.map((line) => ({
-      id: line.id,
-      code: line.procedure,
-      feeCents: line.feeCents,
-      taxCents: line.taxCents,
-      quantity: line.units,
-      discount: line.discount,
-    })),
+    charges: selectedLines.map(opticalCollectionChargeFromDraft),
   }), [patientReference, rxReference, encounterReference, selectedLines, header.orderStatus, header.orderType]);
   const selectedFrameLocked = Boolean(selectedCharge.frame);
 

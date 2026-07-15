@@ -46,7 +46,12 @@ import {
   eraSnapshotFromTask,
   parseEraImportRecord,
 } from "../src/claims/era-worklist.js";
-import { buildProfessionalClaim, type ClaimMdEraData, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
+import {
+  buildProfessionalClaim,
+  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  type ClaimMdEraData,
+  type ProfessionalClaimInput,
+} from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
 import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
@@ -223,7 +228,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
           total_charge: "125.00",
           total_paid: "80.00",
           status_code: "1",
-          charge: [{ chgid: "charge-1", proc_code: "PROC-A", charge: "125.00", allowed: "80.00", paid: "80.00" }],
+          charge: [{ chgid: "claimmd-charge-101", remote_chgid: "charge-1", proc_code: "PROC-A", charge: "125.00", allowed: "80.00", paid: "80.00" }],
         },
       }),
     },
@@ -541,6 +546,7 @@ test("claim status error creates a claim-rejected Task with Claim focus and verb
 
 test("ERA clean-paid claim preserves auto-post behavior and creates zero worklist Tasks", async () => {
   const { audits, created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   const res = await handleEraImportRequest(d, {
     authHeader: "Bearer good",
     body: {
@@ -577,6 +583,8 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   });
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.response?.reference, "ClaimResponse/claimresponse-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
   assert.equal(audits[0].eventType, "era.import.completed");
 
   const batches = await handleEraListRequest(d, { authHeader: "Bearer good" });
@@ -601,9 +609,196 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   });
 });
 
+test("ERA line linkage falls back to whole-claim detail when the echoed ChargeItem is not owned by the Claim", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.created.ChargeItem.push({
+    ...structuredClone(professionalClaim.chargeItems[0]),
+    id: "charge-other",
+  });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-foreign-link",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      total_charge: "80.00",
+      total_paid: "80.00",
+      charge: [{
+        chgid: "claimmd-charge-foreign",
+        remote_chgid: "charge-other",
+        charge: "80.00",
+        allowed: "80.00",
+        paid: "80.00",
+      }],
+    },
+  });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-foreign-link" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
+  assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
+    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ) ?? false, false);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].focus?.reference, "ClaimResponse/claimresponse-1");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
+  assert.equal(fixture.created.Task[0].description, "ERA line linkage requires review");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
+});
+
+test("an invalid line identity falls back and creates a dedicated linkage review Task", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-invalid-link",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      total_charge: "80.00",
+      total_paid: "80.00",
+      charge: [{
+        chgid: "claimmd-charge-invalid",
+        remote_chgid: "invalid/charge",
+        charge: "80.00",
+        allowed: "80.00",
+        paid: "80.00",
+      }],
+    },
+  });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-invalid-link" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /omitted/);
+});
+
+test("a mismatched ClaimResponse patient is corrected from the Claim and never receives a line link", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-patient-mismatch",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      total_charge: "125.00",
+      total_paid: "70.00",
+      charge: [{
+        chgid: "claimmd-charge-patient-mismatch",
+        remote_chgid: "charge-1",
+        charge: "125.00",
+        allowed: "100.00",
+        paid: "70.00",
+      }],
+    },
+  });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-wrong" },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.ClaimResponse[0].patient.reference, "Patient/pat-900");
+  assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
+    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ) ?? false, false);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
+  assert.equal(worklistCode(fixture.created.Task[1]), "era-underpayment");
+  assert.equal(fixture.created.Task[1].for?.reference, "Patient/pat-900");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /patient ownership/);
+  assert.equal(fixture.audits.some((row) => row.eventType === "era.line-linkage.flagged"), true);
+});
+
+test("a duplicate line echo falls back for that claim, flags review, and does not abort the ERA batch", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const secondCharge = {
+    ...structuredClone(professionalClaim.chargeItems[0]),
+    id: "charge-2",
+  };
+  fixture.created.ChargeItem.push(secondCharge);
+  fixture.created.Claim.push({
+    ...buildProfessionalClaim({
+      ...professionalClaim,
+      patientAccountNumber: "OSOD-CLAIM-901",
+      chargeItems: [secondCharge],
+    }),
+    id: "claim-2",
+  });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-two-claims",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: [
+      {
+        pcn: "OSOD-CLAIM-900",
+        total_charge: "80.00",
+        total_paid: "80.00",
+        charge: [{ chgid: "claimmd-charge-1", remote_chgid: "charge-1", charge: "80.00", allowed: "80.00", paid: "80.00" }],
+      },
+      {
+        pcn: "OSOD-CLAIM-901",
+        total_charge: "80.00",
+        total_paid: "80.00",
+        charge: [
+          { chgid: "claimmd-charge-2a", remote_chgid: "charge-2", charge: "40.00", allowed: "40.00", paid: "40.00" },
+          { chgid: "claimmd-charge-2b", remote_chgid: "charge-2", charge: "40.00", allowed: "40.00", paid: "40.00" },
+        ],
+      },
+    ],
+  });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-two-claims",
+      claimReferenceByPcn: { "OSOD-CLAIM-900": "Claim/claim-1", "OSOD-CLAIM-901": "Claim/claim-2" },
+      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-900", "OSOD-CLAIM-901": "Patient/pat-900" },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.ClaimResponse.length, 2);
+  assert.equal(fixture.created.PaymentReconciliation.length, 2);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 2);
+  assert.equal(fixture.created.PaymentReconciliation[1].detail?.length, 1);
+  assert.equal(fixture.created.PaymentReconciliation[1].detail?.[0]?.amount?.value, 80);
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
+  assert.equal(fixture.created.Task[0].description, "ERA line linkage requires review");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /duplicate/);
+  assert.deepEqual(
+    pickCounts(result.body),
+    { posted: 2, denied: 0, underpaid: 0, flagged: 1, taskIds: ["task-1"] },
+  );
+});
+
 test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape without enrollment side effects", async () => {
   const { audits, created, deps: d } = deps();
   created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  let stediTransactionId = "7647d644-9348-4596-a3b4-6830b8b48cc8";
+  let lineItemControlNumber = "charge-1";
   d.adapters = {
     stedi: {
       id: "stedi",
@@ -612,7 +807,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
       checkClaimStatus: async () => ({}),
       listEras: async () => ({}),
       retrieveEraData: async () => ({
-        meta: { transactionId: "7647d644-9348-4596-a3b4-6830b8b48cc8" },
+        meta: { transactionId: stediTransactionId },
         transactions: [{
           payer: { name: "SYNTHETIC PAYER" },
           financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
@@ -627,6 +822,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
               claimStatusCode: "1",
             },
             serviceLines: [{
+              lineItemControlNumber,
               servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "PROC-A" },
               serviceSupplementalAmounts: { allowedActual: "100" },
               serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
@@ -643,10 +839,34 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(result.status, 200);
   assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
   assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
   assert.equal(created.Invoice.length, 1);
   assert.equal(created.Invoice[0].totalNet?.value, 20);
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+
+  stediTransactionId = "7647d644-9348-4596-a3b4-6830b8b48cc9";
+  lineItemControlNumber = "charge-other";
+  const unverifiedLine = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "stedi-foreign-line", clearinghouse: "stedi" },
+  });
+  assert.equal(unverifiedLine.status, 200);
+  assert.equal(created.PaymentReconciliation[1].detail?.length, 1);
+  assert.equal(created.PaymentReconciliation[1].detail?.[0]?.request?.reference, "Claim/claim-1");
+  assert.equal(created.ClaimResponse[1].item?.[0]?.extension?.some(
+    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ) ?? false, false);
+  assert.equal(worklistCode(created.Task[0]), "era-line-linkage");
+  assert.equal(created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
+  assert.equal(created.Task[0].for?.reference, "Patient/pat-900");
+  assert.equal(created.Task[0].description, "ERA line linkage requires review");
+  assert.match(taskInput(created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
+  assert.deepEqual(
+    pickCounts(unverifiedLine.body),
+    { posted: 1, denied: 0, underpaid: 0, flagged: 1, taskIds: ["task-1"] },
+  );
 
   const unmatched = await handleEraImportRequest(d, {
     authHeader: "Bearer good",
@@ -658,11 +878,12 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
     },
   });
   assert.equal(unmatched.status, 200);
-  assert.equal(created.Task[0].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
+  assert.equal(created.Task[1].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
 });
 
 test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
   const { created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   const first = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
   const second = await handleEraImportRequest(d, { authHeader: "Bearer good", body: eraImportBody() });
 
@@ -722,6 +943,7 @@ test("Stedi ERA routing projects inbound 835 polling rows into the shared remitt
 
 test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit", async () => {
   const { audits, created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   d.adapter!.retrieveEraData = async () => ({
     eraid: "era-900",
     paid_date: "2026-07-09",
@@ -733,7 +955,8 @@ test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment 
       total_paid: "0.00",
       status_code: "1",
       charge: [{
-        chgid: "charge-1",
+        chgid: "claimmd-charge-zero",
+        remote_chgid: "charge-1",
         proc_code: "PROC-A",
         charge: "125.00",
         allowed: "100.00",
@@ -800,7 +1023,8 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
       total_paid: "70.00",
       status_code: "1",
       charge: [{
-        chgid: "charge-1",
+        chgid: "claimmd-charge-under",
+        remote_chgid: "charge-1",
         proc_code: "PROC-A",
         charge: "125.00",
         allowed: "100.00",
@@ -1280,6 +1504,25 @@ test("manual EOB audit migration uses drop-and-re-add and registers its claims e
   assert.match(sql, /'claim\.manual-eob\.posted'/);
 });
 
+test("line-linkage audit migration uses drop-and-re-add and registers its claims event", () => {
+  const sql = readFileSync(
+    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event.sql"),
+    "utf8",
+  );
+  const validationSql = readFileSync(
+    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event-validate.sql"),
+    "utf8",
+  );
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  assert.ok(dropIndex >= 0);
+  assert.ok(addIndex > dropIndex);
+  assert.match(sql, /'era\.line-linkage\.flagged'/);
+  assert.match(sql, /\) NOT VALID;/);
+  assert.doesNotMatch(sql, /VALIDATE CONSTRAINT/);
+  assert.match(validationSql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
+});
+
 test("claims.manage denial happens before adapter calls or audit writes", async () => {
   const { audits, deps: d } = deps("clinician");
   let called = false;
@@ -1394,7 +1637,8 @@ function patientResponsibilityEra(amountCents: number): ClaimMdEraData {
       total_paid: paid.toFixed(2),
       status_code: "1",
       charge: [{
-        chgid: "charge-1",
+        chgid: "claimmd-charge-pr",
+        remote_chgid: "charge-1",
         proc_code: "PROC-A",
         charge: "300.00",
         allowed: ((paid * 100 + amountCents) / 100).toFixed(2),

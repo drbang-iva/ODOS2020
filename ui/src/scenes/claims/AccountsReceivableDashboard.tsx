@@ -9,6 +9,7 @@ import {
 
 const WORKLIST_LABELS: Record<WorklistCode, string> = {
   "era-denial": "Denials",
+  "era-line-linkage": "Line linkage",
   "era-underpayment": "Underpayments",
   "era-unmatched": "Unmatched ERAs",
   "claim-rejected": "Rejected claims",
