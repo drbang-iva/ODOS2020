@@ -23,6 +23,7 @@ export interface OpticalCollectionCharge {
   taxCents?: number;
   quantity?: number;
   discount?: { code: string; amountCents: number };
+  definitionCanonical?: string;
 }
 
 export interface OpticalCollectionOrder {

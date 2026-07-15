@@ -2,13 +2,13 @@
   "resourceType": "StructureDefinition",
   "id": "osod-charge-item",
   "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
-  "version": "claim-invoice-seam-phase-a",
+  "version": "claim-remittance-linkage",
   "name": "OSODClaimChargeItem",
   "title": "OSOD Claim ChargeItem Provenance",
   "status": "active",
-  "date": "2026-07-12",
+  "date": "2026-07-15",
   "publisher": "OSOD",
-  "description": "Persisted ChargeItem that supplied one professional Claim item.",
+  "description": "Persisted ChargeItem that supplied one professional Claim item or was identity-echoed for its corresponding ClaimResponse item.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
@@ -16,6 +16,10 @@
     {
       "type": "element",
       "expression": "Claim.item"
+    },
+    {
+      "type": "element",
+      "expression": "ClaimResponse.item"
     }
   ],
   "type": "Extension",
@@ -26,7 +30,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "ChargeItem provenance for a Claim item",
+        "short": "ChargeItem provenance for a Claim or ClaimResponse item",
         "min": 0,
         "max": "1"
       },

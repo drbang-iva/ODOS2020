@@ -6,7 +6,9 @@ import type {
   VisionPrescriptionLensSpecification,
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
+import type { OpticalCollectionCharge } from "./collect";
 import type { LabOrderFrame } from "./optical-lab-order";
+import { frameChargeItemDefinitionCanonical } from "./optical-pricing-catalog";
 
 export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
 export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
@@ -158,6 +160,20 @@ export interface OpticalCashOrderDraft {
   orderType: OpticalOrderTypeCode;
   charges: OpticalChargeLineDraft[];
   tender?: RecordedCheckoutTenderCode;
+}
+
+export function opticalCollectionChargeFromDraft(line: OpticalChargeLineDraft): OpticalCollectionCharge {
+  return {
+    id: line.id,
+    code: line.procedure,
+    feeCents: line.feeCents,
+    taxCents: line.taxCents,
+    quantity: line.units,
+    discount: line.discount,
+    ...(line.frame
+      ? { definitionCanonical: frameChargeItemDefinitionCanonical(line.frame.canonicalUrl) }
+      : {}),
+  };
 }
 
 export interface OpticalCardChargeInput {

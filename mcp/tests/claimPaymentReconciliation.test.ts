@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildInsurancePaymentReconciliation } from "../src/payments/payment-reconciliation.js";
+import type { ClaimResponse } from "@medplum/fhirtypes";
+import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
+import {
+  buildInsurancePaymentReconciliation,
+  claimResponseLinePaymentAllocations,
+} from "../src/payments/payment-reconciliation.js";
 
 test("buildInsurancePaymentReconciliation adds the v0.6d insurance row: request Claim, response ClaimResponse", () => {
   const pr = buildInsurancePaymentReconciliation({
@@ -25,6 +30,70 @@ test("buildInsurancePaymentReconciliation adds the v0.6d insurance row: request 
   assert.equal(pr.detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(pr.detail?.[0]?.response?.reference, "ClaimResponse/cr-1");
   assert.equal(pr.detail?.[0]?.amount?.value, 170);
+});
+
+test("identity-linked ClaimResponse lines add ChargeItem settlement details without changing the whole-claim row", () => {
+  const response: ClaimResponse = {
+    resourceType: "ClaimResponse",
+    status: "active",
+    type: { text: "professional" },
+    use: "claim",
+    patient: { reference: "Patient/patient-1" },
+    created: "2026-07-15",
+    insurer: { reference: "Organization/payer-1" },
+    request: { reference: "Claim/claim-1" },
+    outcome: "complete",
+    item: [{
+      itemSequence: 1,
+      extension: [{
+        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        valueReference: { reference: "ChargeItem/charge-1" },
+      }],
+      adjudication: [{ category: { text: "paid" }, amount: { value: 80, currency: "USD" } }],
+    }],
+  };
+  const pr = buildInsurancePaymentReconciliation({
+    createdIso: "2026-07-15T12:00:00.000Z",
+    paymentDate: "2026-07-15",
+    amountCents: 8_000,
+    claimReference: "Claim/claim-1",
+    claimResponseReference: "ClaimResponse/response-1",
+    processorTransactionId: "ERA-1",
+    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/test-era",
+    lineAllocations: claimResponseLinePaymentAllocations(response),
+  });
+
+  assert.deepEqual(pr.detail?.[0], {
+    type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/payment-type", code: "payment", display: "Payment" }] },
+    request: { reference: "Claim/claim-1" },
+    response: { reference: "ClaimResponse/response-1" },
+    amount: { value: 80, currency: "USD" },
+  });
+  assert.deepEqual(pr.detail?.[1], {
+    type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/payment-type", code: "payment", display: "Payment" }] },
+    request: { reference: "ChargeItem/charge-1" },
+    response: { reference: "ClaimResponse/response-1" },
+    amount: { value: 80, currency: "USD" },
+  });
+});
+
+test("positional-only ClaimResponse lines leave the existing whole-claim payment detail unchanged", () => {
+  const response: ClaimResponse = {
+    resourceType: "ClaimResponse",
+    status: "active",
+    type: { text: "professional" },
+    use: "claim",
+    patient: { reference: "Patient/patient-1" },
+    created: "2026-07-15",
+    insurer: { reference: "Organization/payer-1" },
+    request: { reference: "Claim/claim-1" },
+    outcome: "complete",
+    item: [{
+      itemSequence: 1,
+      adjudication: [{ category: { text: "paid" }, amount: { value: 80, currency: "USD" } }],
+    }],
+  };
+  assert.deepEqual(claimResponseLinePaymentAllocations(response), []);
 });
 
 test("buildInsurancePaymentReconciliation retains its amount, reference, and date guards", () => {

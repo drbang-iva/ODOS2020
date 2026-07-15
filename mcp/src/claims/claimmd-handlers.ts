@@ -17,6 +17,7 @@ import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
 import {
   buildInsurancePaymentReconciliation,
+  claimResponseLinePaymentAllocations,
   CLAIMMD_ERA_PAYMENT_SYSTEM,
   STEDI_ERA_PAYMENT_SYSTEM,
 } from "../payments/payment-reconciliation.js";
@@ -537,6 +538,7 @@ async function importStediEra(
           processorTransactionId: era.traceNumber ?? era.transactionId,
           processorTransactionSystem: STEDI_ERA_PAYMENT_SYSTEM,
           description: `Stedi ERA ${era.transactionId}`,
+          lineAllocations: claimResponseLinePaymentAllocations(response),
         }));
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
@@ -1114,6 +1116,7 @@ async function persistMatchedEraClaim(
       processorTransactionId: input.era.eraid ?? "unknown-era",
       processorTransactionSystem: CLAIMMD_ERA_PAYMENT_SYSTEM,
       description: `Claim.MD ERA ${input.era.eraid ?? "unknown"}`,
+      lineAllocations: claimResponseLinePaymentAllocations(response),
     }));
     paymentReconciliationIds.push(requiredId(pr));
     posted = 1;

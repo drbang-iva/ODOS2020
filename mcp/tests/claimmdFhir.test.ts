@@ -186,6 +186,11 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
   assert.equal(response.outcome, "complete");
   assert.equal(response.payment?.amount.value, 170);
   assert.equal(response.item?.[0]?.itemSequence, 1);
+  assert.equal(
+    response.item?.[0]?.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+      ?.valueReference?.reference,
+    "ChargeItem/charge-1",
+  );
   assert.equal(response.item?.[0]?.adjudication.find((a) => a.category.text === "paid")?.amount?.value, 80);
   assert.equal(
     response.item?.[0]?.adjudication.find((a) => a.category.text === "patient responsibility")?.amount?.value,

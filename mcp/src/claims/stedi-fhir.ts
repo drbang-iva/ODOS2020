@@ -1,5 +1,9 @@
 import type { Claim, ClaimResponse, CoverageEligibilityResponse, Money } from "@medplum/fhirtypes";
-import { HL7_CLAIM_TYPE_SYSTEM, type ProfessionalClaimInput } from "./claimmd-fhir.js";
+import {
+  claimResponseChargeItemExtension,
+  HL7_CLAIM_TYPE_SYSTEM,
+  type ProfessionalClaimInput,
+} from "./claimmd-fhir.js";
 
 export interface StediProfessionalClaimPayload {
   usageIndicator: "T" | "P";
@@ -47,6 +51,7 @@ export interface StediEraClaim {
     claimStatusCode?: string;
   };
   serviceLines?: Array<{
+    lineItemControlNumber?: string;
     servicePaymentInformation?: {
       lineItemChargeAmount?: string;
       lineItemProviderPaymentAmount?: string;
@@ -261,18 +266,22 @@ export function buildClaimResponseFromStediEra(input: {
     outcome: input.claim.claimPaymentInfo.claimStatusCode === "4" ? "error" : "complete",
     disposition: input.payerName ? `Stedi ERA from ${input.payerName}` : "Stedi ERA",
     ...(input.claim.claimPaymentInfo.payerClaimControlNumber ? { preAuthRef: input.claim.claimPaymentInfo.payerClaimControlNumber } : {}),
-    item: (input.claim.serviceLines ?? []).map((line, index) => ({
-      itemSequence: index + 1,
-      adjudication: [
-        adjudication("submitted", decimalCents(line.servicePaymentInformation?.lineItemChargeAmount)),
-        adjudication("allowed", decimalCents(line.serviceSupplementalAmounts?.allowedActual)),
-        adjudication("paid", decimalCents(line.servicePaymentInformation?.lineItemProviderPaymentAmount)),
-        ...((line.serviceAdjustments ?? []).map((adjustment) => adjudication(
-          ["adjustment", adjustment.claimAdjustmentGroupCode, adjustment.adjustmentReasonCode1].filter(Boolean).join(" "),
-          decimalCents(adjustment.adjustmentAmount1),
-        ))),
-      ].filter((entry) => (entry.amount?.value ?? 0) > 0),
-    })),
+    item: (input.claim.serviceLines ?? []).map((line, index) => {
+      const chargeItemExtension = claimResponseChargeItemExtension(line.lineItemControlNumber);
+      return {
+        itemSequence: index + 1,
+        ...(chargeItemExtension ? { extension: [chargeItemExtension] } : {}),
+        adjudication: [
+          adjudication("submitted", decimalCents(line.servicePaymentInformation?.lineItemChargeAmount)),
+          adjudication("allowed", decimalCents(line.serviceSupplementalAmounts?.allowedActual)),
+          adjudication("paid", decimalCents(line.servicePaymentInformation?.lineItemProviderPaymentAmount)),
+          ...((line.serviceAdjustments ?? []).map((adjustment) => adjudication(
+            ["adjustment", adjustment.claimAdjustmentGroupCode, adjustment.adjustmentReasonCode1].filter(Boolean).join(" "),
+            decimalCents(adjustment.adjustmentAmount1),
+          ))),
+        ].filter((entry) => (entry.amount?.value ?? 0) > 0),
+      };
+    }),
     payment: {
       type: { text: "Stedi ERA" },
       date: isoDate(input.paymentDate) ?? input.created,

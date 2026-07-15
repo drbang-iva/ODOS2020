@@ -577,6 +577,8 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
   });
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[0]?.response?.reference, "ClaimResponse/claimresponse-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
   assert.equal(audits[0].eventType, "era.import.completed");
 
   const batches = await handleEraListRequest(d, { authHeader: "Bearer good" });
@@ -627,6 +629,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
               claimStatusCode: "1",
             },
             serviceLines: [{
+              lineItemControlNumber: "charge-1",
               servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "PROC-A" },
               serviceSupplementalAmounts: { allowedActual: "100" },
               serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
@@ -643,6 +646,8 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(result.status, 200);
   assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
+  assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
   assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
   assert.equal(created.Invoice.length, 1);
   assert.equal(created.Invoice[0].totalNet?.value, 20);
