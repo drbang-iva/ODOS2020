@@ -82,6 +82,3 @@ ALTER TABLE osod_audit_events
             'agentops.policy.collision'
         )
     ) NOT VALID;
-
-ALTER TABLE osod_audit_events
-    VALIDATE CONSTRAINT osod_audit_events_event_type_check;

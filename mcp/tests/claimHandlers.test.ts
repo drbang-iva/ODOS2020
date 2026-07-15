@@ -1509,13 +1509,18 @@ test("line-linkage audit migration uses drop-and-re-add and registers its claims
     resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event.sql"),
     "utf8",
   );
+  const validationSql = readFileSync(
+    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event-validate.sql"),
+    "utf8",
+  );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
   const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   assert.match(sql, /'era\.line-linkage\.flagged'/);
   assert.match(sql, /\) NOT VALID;/);
-  assert.match(sql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
+  assert.doesNotMatch(sql, /VALIDATE CONSTRAINT/);
+  assert.match(validationSql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
 });
 
 test("claims.manage denial happens before adapter calls or audit writes", async () => {
