@@ -21,6 +21,7 @@ import {
 } from "../src/lib/scheduling-store";
 import { SchedulerDayGrid, SchedulerToolbar } from "../src/scenes/SchedulerDayGrid";
 import { AppointmentDetailsModal } from "../src/scenes/scheduler/AppointmentDetailsModal";
+import { SchedulerTimeGutter } from "../src/scenes/scheduler/ResourceDayColumn";
 
 const RESOURCE: Schedule = {
   resourceType: "Schedule",
@@ -230,6 +231,76 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
   }
 });
 
+test("one visible hours-less column retains the base practice time axis while true empty cases stay empty", async () => {
+  const originalState = useSchedulingStore.getState();
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const storage = memoryStorage();
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
+  const practiceHoursConfig: SchedulingPracticeConfig = {
+    ...DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+    defaultWeeklyHours: {},
+    weeklyHoursBySchedule: {
+      "Schedule/schedule-1": {},
+      "Schedule/exam-1": { tue: [{ start: "08:00", end: "17:00" }] },
+      "Schedule/oct-1": { tue: [{ start: "09:00", end: "16:00" }] },
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      clinicMode: "eyecare",
+      view: "day",
+      date: "2026-07-14",
+      slotMinutes: 30,
+      slotMinutesOverride: null,
+      hiddenResourceRefs: ["Location/exam-1", "Device/oct-1"],
+      resources: SCHEDULER_RESOURCES,
+      visitTypes: [],
+      appointments: [],
+      appointmentsByDay: {},
+      loadedWindow: null,
+      config: practiceHoursConfig,
+      officeId: "all",
+      weekResourceScheduleReference: "Schedule/schedule-1",
+      catalogsLoaded: true,
+      loading: false,
+      error: null,
+      loadDay: async () => undefined,
+      loadWindow: async () => undefined,
+    });
+    await act(async () => {
+      renderer = create(<SchedulerDayGrid />);
+      await Promise.resolve();
+    });
+
+    assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1"]);
+    assert.equal(timeAxisRows(renderer).length, 18);
+    assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
+
+    act(() => checkbox(renderer, "Show Dr One column").props.onChange({ target: { checked: false } }));
+    assert.deepEqual(renderedColumnRefs(renderer), []);
+    assert.equal(timeAxisRows(renderer).length, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
+
+    act(() => button(renderer, "Show all").props.onClick());
+    assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
+    assert.equal(timeAxisRows(renderer).length, 18);
+
+    act(() => useSchedulingStore.setState({
+      config: { ...practiceHoursConfig, weeklyHoursBySchedule: {} },
+    }));
+    assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
+    assert.equal(timeAxisRows(renderer).length, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
+  } finally {
+    renderer?.unmount();
+    useSchedulingStore.setState(originalState, true);
+    if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
+    else delete (globalThis as { localStorage?: Storage }).localStorage;
+  }
+});
+
 test("duration presets update the saved draft and invalid custom input keeps the existing validator authoritative", async () => {
   let createdDuration: number | undefined;
   const renderer = await renderModal({
@@ -416,6 +487,10 @@ function renderedColumnRefs(renderer: ReactTestRenderer): string[] {
   return renderer.root
     .findAll((node) => typeof node.props["data-scheduler-resource-column"] === "string")
     .map((node) => node.props["data-scheduler-resource-column"] as string);
+}
+
+function timeAxisRows(renderer: ReactTestRenderer): Array<{ startMinutes: number; label: string }> {
+  return renderer.root.findAllByType(SchedulerTimeGutter)[0]?.props.rows ?? [];
 }
 
 function checkbox(renderer: ReactTestRenderer, ariaLabel: string): ReactTestInstance {
