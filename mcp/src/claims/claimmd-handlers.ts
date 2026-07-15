@@ -420,6 +420,7 @@ export async function handleEraImportRequest(
       posted += result.posted;
       denied += result.denied;
       underpaid += result.underpaid;
+      flagged += result.flagged;
       paidTotalCents += result.paidCents;
     }
     await upsertEraImportRecord(auth, eraId, {
@@ -559,6 +560,7 @@ async function importStediEra(
           reason: verifiedLinkage.reviewReason,
         });
         taskIds.push(requiredId(task));
+        flagged += 1;
       }
       if (
         paidCents === 0
@@ -1084,6 +1086,7 @@ interface EraClaimPersistenceResult {
   posted: number;
   denied: number;
   underpaid: number;
+  flagged: number;
   claimResponseIds: string[];
   paymentReconciliationIds: string[];
   taskIds: string[];
@@ -1254,6 +1257,7 @@ async function persistMatchedEraClaim(
   let posted = 0;
   let denied = 0;
   let underpaid = 0;
+  let flagged = 0;
 
   if (paidCents > 0) {
     const pr = await auth.fhir.create(buildInsurancePaymentReconciliation({
@@ -1284,6 +1288,7 @@ async function persistMatchedEraClaim(
       reason: verifiedLinkage.reviewReason,
     });
     taskIds.push(requiredId(task));
+    flagged = 1;
   }
 
   if (paidCents === 0) {
@@ -1317,6 +1322,7 @@ async function persistMatchedEraClaim(
     posted,
     denied,
     underpaid,
+    flagged,
     claimResponseIds: [requiredId(response)],
     paymentReconciliationIds,
     taskIds,

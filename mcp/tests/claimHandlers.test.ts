@@ -790,7 +790,7 @@ test("a duplicate line echo falls back for that claim, flags review, and does no
   assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /duplicate/);
   assert.deepEqual(
     pickCounts(result.body),
-    { posted: 2, denied: 0, underpaid: 0, flagged: 0, taskIds: ["task-1"] },
+    { posted: 2, denied: 0, underpaid: 0, flagged: 1, taskIds: ["task-1"] },
   );
 });
 
@@ -863,6 +863,10 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.Task[0].for?.reference, "Patient/pat-900");
   assert.equal(created.Task[0].description, "ERA line linkage requires review");
   assert.match(taskInput(created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
+  assert.deepEqual(
+    pickCounts(unverifiedLine.body),
+    { posted: 1, denied: 0, underpaid: 0, flagged: 1, taskIds: ["task-1"] },
+  );
 
   const unmatched = await handleEraImportRequest(d, {
     authHeader: "Bearer good",
@@ -1510,6 +1514,8 @@ test("line-linkage audit migration uses drop-and-re-add and registers its claims
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   assert.match(sql, /'era\.line-linkage\.flagged'/);
+  assert.match(sql, /\) NOT VALID;/);
+  assert.match(sql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
 });
 
 test("claims.manage denial happens before adapter calls or audit writes", async () => {
