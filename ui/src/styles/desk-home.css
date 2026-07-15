@@ -148,6 +148,9 @@
 .odos-card-remove { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border: 1px solid var(--odos-line-2); border-radius: 50%; background: #0e1425; color: var(--odos-muted); }
 .odos-dock { position: fixed; right: 0; top: 50%; z-index: 30; transform: translateY(-50%); overflow: hidden; border: 1px solid var(--odos-line-2); border-right: 0; border-radius: 16px 0 0 16px; background: rgba(13,18,33,.9); }
 .odos-dock nav { border: 0; background: transparent; }
+.odos-cockpit-panel { top: 50%; right: 60px; width: min(380px, calc(100vw - 76px)); height: min(820px, calc(100vh - 32px)); border-radius: 28px; visibility: hidden; pointer-events: none; transform: translate3d(calc(100% + 60px), -50%, 0); transition: transform 240ms cubic-bezier(.25,.9,.3,1), visibility 0s linear 240ms; }
+.odos-cockpit-panel.is-open { visibility: visible; pointer-events: auto; transform: translate3d(0, -50%, 0); transition-delay: 0s; }
+.odos-cockpit-panel.is-floating { transform: translate3d(var(--odos-cockpit-panel-x), calc(-50% + var(--odos-cockpit-panel-y)), 0); transition: none; }
 .odos-scrim { position: fixed; inset: 0; z-index: 40; border: 0; background: rgba(5,8,16,.6); opacity: 0; pointer-events: none; transition: opacity 260ms; }
 .odos-scrim.is-open { opacity: 1; pointer-events: auto; }
 .odos-sections { position: fixed; inset: 0 auto 0 0; z-index: 45; width: min(420px, 92vw); padding: 26px; overflow-y: auto; border-right: 1px solid var(--odos-line-2); background: linear-gradient(180deg, #131b31, #0e1425); box-shadow: 30px 0 80px rgba(0,0,0,.5); transform: translateX(-102%); transition: transform 340ms cubic-bezier(.25,.9,.3,1); }
@@ -166,5 +169,6 @@
 .odos-section-group h3 { margin: 0 0 8px; color: var(--odos-faint); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
 
 @media (prefers-reduced-motion: no-preference) { .odos-iris-ring { animation: odos-iris-spin 26s linear infinite; } @keyframes odos-iris-spin { to { transform: rotate(360deg); } } }
+@media (prefers-reduced-motion: reduce) { .odos-cockpit-panel { transition: none; } }
 @media (max-width: 1080px) { .odos-span-wide, .odos-span-standard { grid-column: span 6; } }
 @media (max-width: 720px) { .odos-location { display: none; } .odos-desk-topbar { padding: 12px; } .odos-pill { padding: 7px 11px; } .odos-desk-body { padding: 22px 62px 60px 16px; } .odos-span-full, .odos-span-wide, .odos-span-standard, .odos-span-half { grid-column: span 12; } .odos-sections-grid, .odos-office-card { grid-template-columns: 1fr; } .odos-office-nudge { padding: 0 12px; } .odos-office-nudge-inner { align-items: flex-start; flex-wrap: wrap; } }

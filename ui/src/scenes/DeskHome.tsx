@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { CockpitBadgeDock } from "./frontdesk/CockpitBadgeDock";
-import { CockpitGuestPanel } from "./frontdesk/CockpitGuestPanel";
+import { clearCockpitPanelPosition, CockpitGuestPanel, loadCockpitPanelPosition, saveCockpitPanelPosition, type CockpitPanelPosition } from "./frontdesk/CockpitGuestPanel";
 import type { CockpitPanelId } from "../lib/cockpit-shell";
 import { fetchDeskSummary, type DeskStat, type DeskSummary, type DeskTone } from "../lib/desk-summary";
 import { fetchDeskOfficeMessages, sendOfficeMessage, type OfficeMessage, type OfficeTier } from "../lib/office-channel";
@@ -11,6 +11,7 @@ import { useOfficeChannel } from "../components/OfficeChannel";
 export const DESK_LABEL = "Desk";
 export { CLINIC_PATH, DESK_HOME_PATH } from "../lib/app-paths";
 export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v2";
+export const COCKPIT_HOVER_CLOSE_DELAY_MS = 250;
 
 export interface DeskOfficeApi {
   list: typeof fetchDeskOfficeMessages;
@@ -73,7 +74,10 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
   const [customizing, setCustomizing] = useState(false);
   const [cardIds, setCardIds] = useState<DeskCardId[]>(() => loadDeskCardIds(typeof window === "undefined" ? undefined : window.localStorage));
   const [dragged, setDragged] = useState<DeskCardId | null>(null);
-  const [openPanel, setOpenPanel] = useState<CockpitPanelId | null>(null);
+  const [panelPosition, setPanelPosition] = useState<CockpitPanelPosition | null>(() => loadCockpitPanelPosition());
+  const [hoveredPanel, setHoveredPanel] = useState<CockpitPanelId | null>(null);
+  const [pinnedPanel, setPinnedPanel] = useState<CockpitPanelId | null>(() => panelPosition ? "messages" : null);
+  const [renderedPanel, setRenderedPanel] = useState<CockpitPanelId>("messages");
   const [summary, setSummary] = useState<DeskSummary | undefined>(initialSummary);
   const [summaryError, setSummaryError] = useState<string>();
   const [localSentMessages, setLocalSentMessages] = useState(initialOfficeMessages ?? []);
@@ -83,8 +87,72 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
   const [pinnedPatient, setPinnedPatient] = useState<Patient>();
   const [sending, setSending] = useState(false);
   const officeRequestIdRef = useRef(0);
+  const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const openPanel = pinnedPanel ?? hoveredPanel;
   const sentMessages = sharedOffice.provided ? sharedOffice.messages : localSentMessages;
   const officeError = sharedOffice.provided ? sharedOffice.error : localOfficeError;
+
+  const cancelHoverClose = useCallback(() => {
+    if (hoverCloseTimerRef.current === undefined) return;
+    clearTimeout(hoverCloseTimerRef.current);
+    hoverCloseTimerRef.current = undefined;
+  }, []);
+
+  const closePanel = useCallback(() => {
+    cancelHoverClose();
+    setHoveredPanel(null);
+    setPinnedPanel(null);
+  }, [cancelHoverClose]);
+
+  const hoverPanel = useCallback((panel: CockpitPanelId) => {
+    cancelHoverClose();
+    setRenderedPanel(panel);
+    if (panelPosition) {
+      setHoveredPanel(null);
+      setPinnedPanel(panel);
+    } else {
+      setHoveredPanel(panel);
+    }
+  }, [cancelHoverClose, panelPosition]);
+
+  const scheduleHoverClose = useCallback(() => {
+    if (panelPosition) return;
+    cancelHoverClose();
+    hoverCloseTimerRef.current = setTimeout(() => {
+      hoverCloseTimerRef.current = undefined;
+      setHoveredPanel(null);
+    }, COCKPIT_HOVER_CLOSE_DELAY_MS);
+  }, [cancelHoverClose, panelPosition]);
+
+  const togglePinnedPanel = useCallback((panel: CockpitPanelId) => {
+    cancelHoverClose();
+    setRenderedPanel(panel);
+    setHoveredPanel(null);
+    setPinnedPanel((current) => panelPosition ? panel : current === panel ? null : panel);
+  }, [cancelHoverClose, panelPosition]);
+
+  const openPinnedPanel = useCallback((panel: CockpitPanelId) => {
+    cancelHoverClose();
+    setRenderedPanel(panel);
+    setHoveredPanel(null);
+    setPinnedPanel(panel);
+  }, [cancelHoverClose]);
+
+  const floatPanel = useCallback((position: CockpitPanelPosition) => {
+    cancelHoverClose();
+    setPanelPosition(position);
+    saveCockpitPanelPosition(position);
+    setHoveredPanel(null);
+    setPinnedPanel(renderedPanel);
+  }, [cancelHoverClose, renderedPanel]);
+
+  const redockPanel = useCallback(() => {
+    cancelHoverClose();
+    clearCockpitPanelPosition();
+    setPanelPosition(null);
+    setPinnedPanel(null);
+    setHoveredPanel(renderedPanel);
+  }, [cancelHoverClose, renderedPanel]);
 
   const refreshSent = useCallback(async () => {
     const requestId = ++officeRequestIdRef.current;
@@ -99,6 +167,13 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
   }, [officeApi]);
 
   useEffect(() => { window.localStorage.setItem(DESK_CARD_STORAGE_KEY, JSON.stringify(cardIds)); }, [cardIds]);
+  useEffect(() => () => cancelHoverClose(), [cancelHoverClose]);
+  useEffect(() => {
+    if (!openPanel || typeof document === "undefined") return;
+    const handleKeyDown = (event: KeyboardEvent) => event.key === "Escape" && closePanel();
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [closePanel, openPanel]);
   useEffect(() => {
     if (initialSummary) return;
     let active = true;
@@ -167,7 +242,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
                   {model.content}
                   <span className="odos-card-target">Target: {model.target}</span>
                   {id === "office" ? null
-                    : id === "front-line" ? <button className="odos-card-link" type="button" onClick={() => setOpenPanel("messages")}>Open desk inbox →</button>
+                    : id === "front-line" ? <button className="odos-card-link" type="button" onClick={() => openPinnedPanel("messages")}>Open desk inbox →</button>
                     : "href" in card ? <a className="odos-card-link" href={card.href} onClick={navigateWithinApp}>Open section →</a>
                       : <span className="odos-card-link odos-card-link-off">Not yet available</span>}
                 </div>
@@ -178,8 +253,25 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
         </div>
       </section>
 
-      <div className="odos-dock"><CockpitBadgeDock openPanel={openPanel} onToggle={(id) => setOpenPanel((value) => value === id ? null : id)} /></div>
-      {openPanel && <CockpitGuestPanel panel={openPanel} onClose={() => setOpenPanel(null)} />}
+      <div className="odos-dock">
+        <CockpitBadgeDock
+          openPanel={openPanel}
+          pinnedPanel={pinnedPanel}
+          onToggle={togglePinnedPanel}
+          onHover={hoverPanel}
+          onHoverLeave={scheduleHoverClose}
+        />
+      </div>
+      <CockpitGuestPanel
+        panel={renderedPanel}
+        open={openPanel !== null}
+        onClose={closePanel}
+        onHoverEnter={cancelHoverClose}
+        onHoverLeave={scheduleHoverClose}
+        position={panelPosition}
+        onPositionChange={floatPanel}
+        onRedock={redockPanel}
+      />
     </main>
   );
 
