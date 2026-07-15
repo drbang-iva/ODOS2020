@@ -3,6 +3,7 @@ import { fhir } from "./fhir";
 export type DeskTone = "ok" | "warn" | "alert" | "info" | "off";
 export interface DeskStat<T = number | string | null> { value: T; tone: DeskTone; unavailableReason?: string }
 export interface DeskSummary {
+  day: { collectedCents: DeskStat<number | null> };
   cards: {
     schedule: { today: DeskStat<number>; confirmed: DeskStat<number>; checkedIn: DeskStat<number>; webRequests: DeskStat<number>; agenda: Array<{ time: string; patient: string; visitType: string }> };
     attention: { items: Array<{ tone: "alert" | "warn" | "info"; label: string; detail: string; href?: string }> };

@@ -74,6 +74,27 @@ test("buildOpticalInvoice carries a CHECK tender", () => {
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CHECK");
 });
 
+test("buildOpticalInvoice carries native date and standard data-entry participant when supplied", () => {
+  const invoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    tender: "CASH",
+    date: "2026-07-15T14:30:00.000Z",
+    staffReference: "PractitionerRole/front-1",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 5000 }],
+  });
+  assert.equal(invoice.date, "2026-07-15T14:30:00.000Z");
+  assert.deepEqual(invoice.participant, [{
+    role: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        code: "ENT",
+        display: "data entry person",
+      }],
+    },
+    actor: { reference: "PractitionerRole/front-1" },
+  }]);
+});
+
 test("buildOpticalInvoice with no tender issues the bill untendered (processor path — the tender lives on the PaymentReconciliation)", () => {
   const invoice = buildOpticalInvoice({
     patientReference: "Patient/p1",

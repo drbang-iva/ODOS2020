@@ -22,6 +22,10 @@ export interface OpticalCashOrderChargeInput {
 
 export interface AssembleOpticalCashOrderInput {
   patientReference: string;
+  /** Collection timestamp carried through to Invoice.date. */
+  date?: string;
+  /** Verified staff actor carried through to Invoice.participant. */
+  staffReference?: string;
   /** The signed spectacle Rx (VisionPrescription) the order fulfills — DeviceRequest.basedOn. */
   visionPrescriptionReference: string;
   /** The visit the order/charges belong to (ChargeItem.context). */
@@ -92,6 +96,8 @@ export function assembleOpticalCashOrder(input: AssembleOpticalCashOrderInput): 
 
   const invoice = buildOpticalInvoice({
     patientReference: input.patientReference,
+    date: input.date,
+    staffReference: input.staffReference,
     tender: input.tender,
     lineItems: input.charges.map((charge, index) => ({
       chargeItemReference: chargeUrns[index],

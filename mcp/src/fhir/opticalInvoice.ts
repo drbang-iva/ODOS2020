@@ -20,6 +20,10 @@ export interface OpticalInvoiceLineInput {
 
 export interface OpticalInvoiceInput {
   patientReference: string;
+  /** Collection timestamp carried on native R4 Invoice.date. */
+  date?: string;
+  /** Verified staff actor who recorded the payment. */
+  staffReference?: string;
   /**
    * CASH, CHECK, or record-only CARD_MANUAL — carried in the osod-payment-tender extension.
    * Optional: the Invoice is the bill and exists before it is paid. A processor order issues the
@@ -105,6 +109,19 @@ export function buildOpticalInvoice(input: OpticalInvoiceInput): Invoice {
     resourceType: "Invoice",
     status: input.status ?? "issued",
     subject: { reference: input.patientReference },
+    ...(input.date ? { date: input.date } : {}),
+    ...(input.staffReference ? {
+      participant: [{
+        role: {
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+            code: "ENT",
+            display: "data entry person",
+          }],
+        },
+        actor: { reference: input.staffReference },
+      }],
+    } : {}),
     ...(input.tender !== undefined ? { extension: [paymentTenderExtension(input.tender)] } : {}),
     lineItem,
     totalGross: { value: grossCents / 100, currency: "USD" },

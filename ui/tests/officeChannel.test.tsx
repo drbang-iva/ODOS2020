@@ -291,6 +291,7 @@ function emptyDeskSummary() {
   const n = { value: 0, tone: "ok" as const };
   const off = { value: null, tone: "off" as const };
   return {
+    day: { collectedCents: { value: 0, tone: "info" as const } },
     cards: {
       schedule: { today: n, confirmed: n, checkedIn: n, webRequests: n, agenda: [] },
       attention: { items: [] },

@@ -5,6 +5,7 @@ import { projectDeskSummary, safeLatestStatementRun, type DeskSummaryInput } fro
 import { appointmentConfirmationExtension } from "../src/fhir/appointmentConfirmation.js";
 import { opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
 import { opticalOrderTypeConcept } from "../src/fhir/opticalOrderType.js";
+import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import {
   buildClaimRejectedWorklistTask,
   buildEraWorklistTask,
@@ -92,6 +93,7 @@ test("desk summary projects every card stat from seeded resources with truthful 
   assert.equal(summary.cards.payments.patientCreditsOpen.value, 1);
   assert.equal(summary.cards.payments.patientOpenBalanceCents.value, 8_000);
   assert.equal(summary.cards.payments.terminalMode.tone, "warn");
+  assert.equal(summary.day.collectedCents.value, 0);
   assert.equal(summary.cards.remits.waitingToPost.value, 1);
   assert.equal(summary.cards.remits.unpostedCents.value, 4_000);
   assert.equal(summary.cards.statements.available, true);
@@ -128,6 +130,25 @@ test("needs-attention is exactly all-clear when every available target is met", 
   assert.deepEqual(summary.cards.attention.items, []);
   assert.equal(summary.pulse.itemsNeedingYou, 0);
   assert.equal(summary.pulse.everythingElseAtTarget, true);
+});
+
+test("Desk day chip reuses loaded Invoices and totals only today's record-only tenders", () => {
+  const today = buildOpticalInvoice({
+    patientReference: "Patient/patient-1",
+    date: "2026-07-11T13:00:00.000Z",
+    staffReference: "Practitioner/front-1",
+    tender: "CARD_MANUAL",
+    lineItems: [{ chargeItemReference: "ChargeItem/today", amountCents: 1234 }],
+  });
+  const yesterday = buildOpticalInvoice({
+    patientReference: "Patient/patient-1",
+    date: "2026-07-10T13:00:00.000Z",
+    staffReference: "Practitioner/front-1",
+    tender: "CASH",
+    lineItems: [{ chargeItemReference: "ChargeItem/yesterday", amountCents: 9999 }],
+  });
+  const summary = projectDeskSummary({ ...emptyInput(), invoices: [today, yesterday] });
+  assert.deepEqual(summary.day.collectedCents, { value: 1234, tone: "info" });
 });
 
 test("a malformed latest statement run degrades without blocking any Desk card", () => {

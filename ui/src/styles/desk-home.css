@@ -107,6 +107,8 @@
 .odos-practice-pulse { margin: -12px 0 22px; color: var(--odos-muted); font-size: 12.5px; letter-spacing: .025em; }
 .odos-practice-pulse b { color: var(--odos-amber); font-weight: 600; }
 .odos-pulse-off { color: var(--odos-faint); }
+.odos-day-chip { display: inline-flex; align-items: center; gap: 10px; margin: -12px 0 22px; padding: 8px 13px; border: 1px solid currentColor; border-radius: 999px; background: rgba(76,127,232,.06); font-size: 11px; letter-spacing: .04em; text-decoration: none; }
+.odos-day-chip span { opacity: .7; }
 .odos-customizer { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; padding: 14px 16px; border: 1px solid var(--odos-line-2); border-radius: 14px; background: rgba(76,127,232,.06); }
 .odos-customizer p { color: var(--odos-muted); font-size: 12px; }
 .odos-customizer > button, .odos-card-catalog button { padding: 6px 10px; border: 1px solid var(--odos-line-2); border-radius: 999px; background: transparent; color: var(--odos-muted); font-size: 12px; }

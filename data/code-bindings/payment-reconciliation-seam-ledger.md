@@ -92,3 +92,14 @@ Access date: 2026-07-10. No medical codes are added or asserted in this phase.
 | ODOS manual payment identifier namespace | `https://osod.dev/fhir/NamingSystem/manual-payment` | accepted addendum §2.1 cash pre-payment exception | `mcp/src/payments/adapters/manual-cash-adapter.ts` | 2026-07-10 | verified (local) |
 | Phase 6a audit vocabulary | adds `payment.credit.applied`; uses registered `payment.void.attempted` for same-day void outcomes | accepted addendum §3 | `mcp/src/payments/payment-audit.ts`; `data/migrations/2026-07-10-payment-credit-event.sql` | 2026-07-10 | verified (local) |
 | Front-desk PaymentReconciliation mutation boundary | direct create/read/search/history/vread only; no direct update/delete; version-aware mutations cross guarded osod-core Phase 6a handlers | accepted addendum §3 invariants | `mcp/src/authz/roles.ts`; `mcp/tests/v05a-authz.test.ts`; `mcp/tests/paymentCreditService.test.ts` | 2026-07-10 | verified (local) |
+
+## Day Ledger Invoice attribution and date-scoped reads
+
+Access date: 2026-07-15. No medical or billing codes are added or asserted in this slice.
+
+| Artifact | Chosen value | Source 1 URL | Source 2 URL | Access date | Status |
+|---|---|---|---|---|---|
+| FHIR R4 Invoice payment timestamp | `Invoice.date` (`dateTime`) | https://hl7.org/fhir/R4/invoice-definitions.html#Invoice.date | https://hl7.org/fhir/R4/invoice.html | 2026-07-15 | verified |
+| FHIR R4 Invoice staff attribution | `Invoice.participant.actor` with `participant.role` | https://hl7.org/fhir/R4/invoice-definitions.html#Invoice.participant | https://hl7.org/fhir/R4/invoice.html | 2026-07-15 | verified |
+| Standard participant role for the staff member who recorded the payment | `http://terminology.hl7.org/CodeSystem/v3-ParticipationType#ENT` (data entry person) | https://terminology.hl7.org/3.1.0/CodeSystem-v3-ParticipationType.html | https://terminology.hl7.org/3.1.0/ValueSet-v3-ParticipationDataEntryPerson.html | 2026-07-15 | verified |
+| FHIR R4 date search boundary for the Day Ledger's exact practice-day range | repeated `Invoice?date=ge{start}&date=lt{end}` and `PaymentReconciliation?created=ge{start}&created=lt{end}` | https://hl7.org/fhir/R4/search.html#date | https://www.hl7.org/fhir/R4/searchparameter-registry.html | 2026-07-15 | verified |

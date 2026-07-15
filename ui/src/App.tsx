@@ -34,6 +34,7 @@ import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
+import { DayLedger } from "./scenes/DayLedger";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { OfficeChannelShell } from "./components/OfficeChannel";
 import { AppShell, type AppShellSide } from "./components/AppShell";
@@ -257,6 +258,8 @@ export function RouteSwitch({
       return <FrontDeskCockpit />;
     case DESK_HOME_PATH:
       return <DeskHome />;
+    case "/desk/ledger":
+      return <DayLedger />;
     case CLINIC_PATH: {
       const clinicView = clinicRouteView(search, view);
       return clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />;

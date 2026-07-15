@@ -223,6 +223,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
       <section className="odos-desk-body">
         <div className="odos-desk-greeting"><h1>Good day.</h1><span>{date}</span><span className="odos-mode">The {DESK_LABEL}</span><button className="odos-pill" type="button" onClick={() => setCustomizing((value) => !value)} aria-pressed={customizing}>Customize</button></div>
         <PracticePulse summary={summary} error={summaryError} />
+        {summary && <a className={`odos-day-chip odos-live-tone-${summary.day.collectedCents.tone}`} href="/desk/ledger" onClick={navigateWithinApp}>{summary.day.collectedCents.value === null ? "Day total unavailable" : `Day open · ${money(summary.day.collectedCents.value)} collected`} <span>→</span></a>}
         {customizing && (
           <section className="odos-customizer" aria-label="Customize home cards">
             <div><strong>Arrange your home</strong><p>Drag visible cards to reorder them. This layout is saved on this workstation.</p></div>
@@ -320,6 +321,10 @@ function tierLabel(message: OfficeMessage): string {
   if (message.tier === "urgent") return "Urgent · Clinic side";
   if (message.tier === "patient-pinned") return `Pinned · ${message.patient?.display ?? "patient"}`;
   return "Note · Clinic side";
+}
+
+function money(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
 function PracticePulse({ summary, error }: { summary?: DeskSummary; error?: string }) {

@@ -108,10 +108,16 @@ export async function handleRecordedTenderCollectionRequest(
   if ("result" in staff) return staff.result;
   const parsed = parseCollectionBody(input.body);
   if ("error" in parsed) return { status: 400, body: { error: parsed.error } };
+  const collectedAt = deps.now?.() ?? new Date().toISOString();
 
   let created: CreatedOpticalCashOrderIds;
   try {
-    created = await createCollection(staff.staff.fhir, parsed.body);
+    created = await createCollection(
+      staff.staff.fhir,
+      parsed.body,
+      collectedAt,
+      staff.staff.staffReference,
+    );
   } catch (error) {
     if (error instanceof CollectionInputError) {
       return { status: 400, body: { error: error.message } };
@@ -127,7 +133,7 @@ export async function handleRecordedTenderCollectionRequest(
     purpose: "PATIENT_PAYMENT",
     adapterName: "manual-record",
     outcome: "success",
-    ...(deps.now ? { timestamp: deps.now() } : {}),
+    timestamp: collectedAt,
   }));
   return {
     status: 200,
@@ -143,6 +149,8 @@ export async function handleRecordedTenderCollectionRequest(
 async function createCollection(
   fhir: CollectionFhirClient,
   body: CollectionBody,
+  collectedAt: string,
+  staffReference: string,
 ): Promise<CreatedOpticalCashOrderIds> {
   if (body.opticalOrder) {
     if (body.opticalOrder.patientReference !== body.patientReference) {
@@ -160,6 +168,8 @@ async function createCollection(
       ...body.opticalOrder,
       charges: charges.map(({ id: _id, ...charge }) => charge),
       tender: body.tender,
+      date: collectedAt,
+      staffReference,
     });
   }
 
@@ -179,6 +189,8 @@ async function createCollection(
   assertCollectionAmount(body.amountCents, totalCents);
   const invoice = buildOpticalInvoice({
     patientReference: body.patientReference,
+    date: collectedAt,
+    staffReference,
     lineItems: lines,
     tender: body.tender,
   });
