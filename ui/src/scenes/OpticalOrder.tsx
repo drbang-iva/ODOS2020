@@ -1,11 +1,7 @@
-import type { ChargeItem, Invoice, PaymentReconciliation, VisionPrescription } from "@medplum/fhirtypes";
-import { useEffect, useState } from "react";
-import { fhir } from "../lib/fhir";
-import {
-  buildFinancialSummary,
-  paymentReconciliationsToTenderLines,
-  renderReceiptSheet,
-} from "../lib/optical-financial-summary";
+import type { VisionPrescription } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useState } from "react";
+import { CollectPanel } from "../components/CollectPanel";
+import type { OpenChargeLine, OpticalCollectionOrder } from "../lib/collect";
 import {
   buildLabOrder,
   labOrderToExport,
@@ -24,13 +20,9 @@ import {
   OPTICAL_ORDER_TYPES,
   RX_COLUMNS,
   canTransitionOpticalOrderStatus,
-  chargeOpticalCardPayment,
-  createOpticalCashOrder,
-  invoiceTotalNetCents,
   labOrderFrameFromAttachedFrame,
   loadConfiguredPaymentMethods,
   loadVisionPrescription,
-  routeCheckoutTender,
   transitionOpticalOrderStatus,
   visionPrescriptionRows,
   type AttachedFrame,
@@ -62,13 +54,6 @@ interface OrderHeaderState {
   diagnosis: string;
   trayNumber: string;
   orderNumber: string;
-}
-
-interface ReceiptSourceIds {
-  invoiceId: string;
-  chargeItemIds: string[];
-  paymentKind: "invoice-tender" | "payment-reconciliation";
-  paymentReconciliationIds?: string[];
 }
 
 type FrameCriteriaKey = "upc" | "barcode" | "designer" | "material" | "category" | "name";
@@ -141,8 +126,6 @@ export function OpticalOrder() {
     newChargeLine("Lenses", false),
   ]);
   const [selectedChargeId, setSelectedChargeId] = useState(chargeLines[0].id);
-  const [tender, setTender] = useState<CheckoutTenderCode>("CASH");
-  const [paymentAmount, setPaymentAmount] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
   const [discountPercent, setDiscountPercent] = useState("20");
   const [discountAmount, setDiscountAmount] = useState("");
@@ -168,12 +151,10 @@ export function OpticalOrder() {
   const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
   const [labTransportState, setLabTransportState] = useState<string | null>(null);
   const [labOrderBusy, setLabOrderBusy] = useState(false);
-  const [receiptSourceIds, setReceiptSourceIds] = useState<ReceiptSourceIds | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const selectedCharge = chargeLines.find((line) => line.id === selectedChargeId) ?? chargeLines[0];
   const selectedLines = chargeLines.filter((line) => line.selected);
-  const selectedTotalCents = selectedLines.reduce((sum, line) => sum + patientBalanceCents(line), 0);
   const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
   const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
   const canPrintLabSheet = Boolean(
@@ -217,28 +198,36 @@ export function OpticalOrder() {
     };
   }, [frameCriteria]);
 
-  useEffect(() => {
-    setPaymentAmount(formatMoneyInput(selectedTotalCents));
-  }, [selectedTotalCents]);
-
-  const hasPendingCardPayment = Boolean(
-    createdTaskId &&
-      receiptSourceIds?.paymentKind === "payment-reconciliation" &&
-      !receiptSourceIds.paymentReconciliationIds?.length,
-  );
-  const canProcessPayment =
-    patientReference &&
-    rxReference &&
-    selectedLines.length > 0 &&
-    (!createdTaskId || (tender === "CARD_TERMINAL" && hasPendingCardPayment));
-  const canPrintReceipt = Boolean(
-    createdTaskId &&
-      receiptSourceIds &&
-      receiptSourceIds.invoiceId &&
-      receiptSourceIds.chargeItemIds.length > 0 &&
-      (receiptSourceIds.paymentKind === "invoice-tender" ||
-        Boolean(receiptSourceIds.paymentReconciliationIds?.length)),
-  );
+  const opticalCollectCharges = useMemo<OpenChargeLine[]>(() =>
+    chargeLines.filter((line) => line.selected).map((line) => ({
+      id: line.id,
+      amountCents: patientBalanceCents(line),
+      description: line.procedure || "Optical charge",
+      date: header.serviceDate,
+      source: "optical",
+      code: line.procedure,
+      quantity: line.units,
+      feeCents: line.feeCents,
+      taxCents: line.taxCents,
+      ...(line.discount ? { discount: line.discount } : {}),
+    })), [chargeLines, header.serviceDate]);
+  const opticalCollectionOrder = useMemo<OpticalCollectionOrder>(() => ({
+    patientReference,
+    visionPrescriptionReference: visionPrescriptionReference(rxReference),
+    ...(encounterReference ? { encounterReference } : {}),
+    orderHcpcsCode: primaryOrderCode(selectedLines),
+    ...(primaryOrderCode(selectedLines) === "V2020" ? { orderHcpcsDisplay: "Frames, purchases" } : {}),
+    businessStatus: header.orderStatus,
+    orderType: header.orderType,
+    charges: selectedLines.map((line) => ({
+      id: line.id,
+      code: line.procedure,
+      feeCents: line.feeCents,
+      taxCents: line.taxCents,
+      quantity: line.units,
+      discount: line.discount,
+    })),
+  }), [patientReference, rxReference, encounterReference, selectedLines, header.orderStatus, header.orderType]);
   const selectedFrameLocked = Boolean(selectedCharge.frame);
 
   function selectLabOption(option: string) {
@@ -300,164 +289,6 @@ export function OpticalOrder() {
       await transitionOpticalOrderStatus(createdTaskId, next);
     }
     setHeader((current) => ({ ...current, orderStatus: next }));
-  }
-
-  async function processPayment() {
-    setError(null);
-    setStatus("");
-    if (!canProcessPayment) {
-      setError("Patient, signed Rx, and selected charge lines are required before payment.");
-      return;
-    }
-    const expectedAmount = formatMoneyInput(selectedTotalCents);
-    if (paymentAmount !== expectedAmount) {
-      setError(`Payment amount must equal selected patient balance ${expectedAmount}.`);
-      return;
-    }
-    try {
-      await routeCheckoutTender(tender, {
-        processCardPayment,
-        createOpticalCashOrder: async (recordedTender) => {
-          const created = await createOpticalCashOrder({
-            patientReference,
-            visionPrescriptionReference: visionPrescriptionReference(rxReference),
-            encounterReference: encounterReference || undefined,
-            orderHcpcsCode: primaryOrderCode(selectedLines),
-            orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
-            businessStatus: header.orderStatus,
-            orderType: header.orderType,
-            charges: selectedLines,
-            tender: recordedTender,
-          });
-          setCreatedTaskId(created.taskId);
-          setReceiptSourceIds({
-            invoiceId: created.invoiceId,
-            chargeItemIds: created.chargeItemIds,
-            paymentKind: "invoice-tender",
-          });
-          setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
-          setStatus(`Order ${created.deviceRequestId} paid by ${recordedTender}.`);
-        },
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function processCardPayment() {
-    let order =
-      createdTaskId && receiptSourceIds?.paymentKind === "payment-reconciliation"
-        ? {
-            taskId: createdTaskId,
-            invoiceId: receiptSourceIds.invoiceId,
-            chargeItemIds: receiptSourceIds.chargeItemIds,
-            deviceRequestId: header.orderNumber,
-          }
-        : null;
-
-    if (!order) {
-      const created = await createOpticalCashOrder({
-        patientReference,
-        visionPrescriptionReference: visionPrescriptionReference(rxReference),
-        encounterReference: encounterReference || undefined,
-        orderHcpcsCode: primaryOrderCode(selectedLines),
-        orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
-        businessStatus: "waiting-on-payment",
-        orderType: header.orderType,
-        charges: selectedLines,
-      });
-      order = created;
-      setCreatedTaskId(created.taskId);
-      setReceiptSourceIds({
-        invoiceId: created.invoiceId,
-        chargeItemIds: created.chargeItemIds,
-        paymentKind: "payment-reconciliation",
-      });
-      setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
-    }
-
-    const invoice = await fhir.read<Invoice>("Invoice", order.invoiceId);
-    const result = await chargeOpticalCardPayment({
-      amountCents: invoiceTotalNetCents(invoice),
-      patientReference,
-      invoiceReference: `Invoice/${order.invoiceId}`,
-      taskReference: `Task/${order.taskId}`,
-    });
-
-    if (result.outcome !== "success") {
-      setHeader((current) => ({ ...current, orderStatus: "waiting-on-payment" }));
-      setError(result.declineReason ?? `Card payment ${result.outcome}.`);
-      setStatus(`Order ${order.deviceRequestId || order.taskId} is waiting on payment.`);
-      return;
-    }
-
-    if (result.paymentRecord?.resourceType !== "PaymentReconciliation" || !result.paymentRecord.id) {
-      throw new Error("Card payment succeeded but did not return a PaymentReconciliation id.");
-    }
-
-    const paidSources: ReceiptSourceIds = {
-      invoiceId: order.invoiceId,
-      chargeItemIds: order.chargeItemIds,
-      paymentKind: "payment-reconciliation",
-      paymentReconciliationIds: [result.paymentRecord.id],
-    };
-    setReceiptSourceIds(paidSources);
-
-    if (header.orderStatus !== "waiting-on-payment") {
-      await transitionOpticalOrderStatus(order.taskId, header.orderStatus);
-    }
-
-    const printed = await renderReceiptFromSources(paidSources, false);
-    if (!printed) return;
-    setStatus(`Order ${order.deviceRequestId || order.taskId} paid by card terminal. Receipt ready.`);
-  }
-
-  async function printReceipt() {
-    setError(null);
-    setStatus("");
-    if (!createdTaskId || !receiptSourceIds) {
-      setError("A paid order is required before printing a receipt.");
-      return;
-    }
-    try {
-      await renderReceiptFromSources(receiptSourceIds, true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function renderReceiptFromSources(sourceIds: ReceiptSourceIds, announce: boolean): Promise<boolean> {
-    const paymentReconciliationIds = sourceIds.paymentReconciliationIds ?? [];
-    const [invoice, chargeItems, paymentReconciliations] = await Promise.all([
-      fhir.read<Invoice>("Invoice", sourceIds.invoiceId),
-      Promise.all(sourceIds.chargeItemIds.map((id) => fhir.read<ChargeItem>("ChargeItem", id))),
-      Promise.all(paymentReconciliationIds.map((id) => fhir.read<PaymentReconciliation>("PaymentReconciliation", id))),
-    ]);
-    const summary = buildFinancialSummary({
-      practiceName: optionalString(header.staffLocation) ?? "Integrated Vision & Aesthetics",
-      patientName: labOrderCapture.patientName.trim(),
-      patientRef: patientReference || undefined,
-      receiptDate: header.serviceDate,
-      orderId: header.orderNumber || createdTaskId || sourceIds.invoiceId,
-      providerName: optionalString(header.provider),
-      invoice,
-      chargeItems,
-      ...(paymentReconciliations.length
-        ? { payments: paymentReconciliationsToTenderLines(
-            paymentReconciliations,
-            `Invoice/${invoice.id}`,
-          ) }
-        : {}),
-    });
-    const printed = openPrintWindow(`Receipt ${summary.header.orderId}`, renderReceiptSheet(summary));
-    if (!printed) {
-      setError("The browser blocked the receipt print window.");
-      return false;
-    }
-    if (announce) {
-      setStatus(`Receipt ready for order ${summary.header.orderId}.`);
-    }
-    return true;
   }
 
   function applyDiscount() {
@@ -697,16 +528,19 @@ export function OpticalOrder() {
           </section>
 
           <div className="grid gap-4">
-            <PaymentPanel
-              tender={tender}
-              paymentAmount={paymentAmount}
-              selectedTotalCents={selectedTotalCents}
-              canProcessPayment={Boolean(canProcessPayment)}
-              canPrintReceipt={canPrintReceipt}
-              onTenderChange={setTender}
-              onAmountChange={setPaymentAmount}
-              onProcess={() => void processPayment()}
-              onPrintReceipt={() => void printReceipt()}
+            <CollectPanel
+              embedded
+              disabled={!patientReference || !rxReference || Boolean(createdTaskId)}
+              patientReference={patientReference}
+              patientName={labOrderCapture.patientName.trim() || undefined}
+              initialCharges={opticalCollectCharges}
+              opticalOrder={opticalCollectionOrder}
+              onClose={() => undefined}
+              onCollected={(result) => {
+                setCreatedTaskId(result.taskId);
+                setHeader((current) => ({ ...current, orderNumber: result.deviceRequestId }));
+                setStatus(`Order ${result.deviceRequestId} paid. Receipt ready.`);
+              }}
             />
             <DiscountPanel
               mode={discountMode}

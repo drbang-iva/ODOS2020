@@ -15,6 +15,7 @@ import {
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import { PatientSearch } from "../PatientPicker";
 import { downloadCsvExport, queryPath } from "../../lib/reporting";
+import { CollectPanel } from "../../components/CollectPanel";
 
 type View = "all" | "unapplied";
 type CreditAction =
@@ -35,6 +36,7 @@ export function PatientPayments() {
   const [dateFilters, setDateFilters] = useState<{ startDate?: string; endDate?: string }>({});
   const [appliedDateFilters, setAppliedDateFilters] = useState<{ startDate?: string; endDate?: string }>({});
   const [exporting, setExporting] = useState(false);
+  const [collecting, setCollecting] = useState(false);
   const api = patientPaymentApiOptions();
 
   const load = async (
@@ -152,9 +154,12 @@ export function PatientPayments() {
         <>
           <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-400/20 bg-blue-950/20 px-4 py-3">
             <div><strong>{patientName(patient)}</strong><span className="ml-2 text-xs text-white/45">Patient/{patient.id}</span></div>
-            <div className="flex rounded border border-white/10 bg-black/20 p-1">
-              <Tab active={view === "all"} onClick={() => setView("all")}>All payments</Tab>
-              <Tab active={view === "unapplied"} onClick={() => setView("unapplied")}>Unapplied credit ({credits.length})</Tab>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setCollecting(true)} className="rounded bg-blue-600 px-4 py-2 text-sm font-bold">Collect</button>
+              <div className="flex rounded border border-white/10 bg-black/20 p-1">
+                <Tab active={view === "all"} onClick={() => setView("all")}>All payments</Tab>
+                <Tab active={view === "unapplied"} onClick={() => setView("unapplied")}>Unapplied credit ({credits.length})</Tab>
+              </div>
             </div>
           </section>
 
@@ -191,6 +196,14 @@ export function PatientPayments() {
           busy={busy}
           onClose={() => setAction(undefined)}
           onSubmit={(input) => void submitAction(input)}
+        />
+      )}
+      {collecting && patient?.id && (
+        <CollectPanel
+          patientReference={`Patient/${patient.id}`}
+          patientName={patientName(patient)}
+          onClose={() => setCollecting(false)}
+          onCollected={() => void load(`Patient/${patient.id}`, appliedDateFilters)}
         />
       )}
     </main>

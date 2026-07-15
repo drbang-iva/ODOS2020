@@ -10,9 +10,9 @@ import {
   paymentTenderExtensionForReconciliation,
 } from "../src/fhir/osodPaymentTender.js";
 
-test("the payment-tender vocabulary is the Foxfire CASH/CHECK transaction codes", () => {
+test("the record-only payment-tender vocabulary includes cash, check, and manual card", () => {
   const codes = PAYMENT_TENDERS.map((t) => t.code);
-  assert.deepEqual(codes, ["CASH", "CHECK"]);
+  assert.deepEqual(codes, ["CASH", "CHECK", "CARD_MANUAL"]);
 });
 
 test("paymentTenderExtension builds the osod-payment-tender extension with a coded value", () => {
@@ -24,7 +24,13 @@ test("paymentTenderExtension builds the osod-payment-tender extension with a cod
   assert.equal(coding?.display, "Cash");
 });
 
-test("assertPaymentTender rejects a tender outside CASH/CHECK (no card/processor in the cash tier)", () => {
+test("paymentTenderExtension records CARD_MANUAL without processor metadata", () => {
+  const ext = paymentTenderExtension("CARD_MANUAL");
+  assert.equal(ext.valueCodeableConcept?.coding?.[0]?.code, "CARD_MANUAL");
+  assert.equal(ext.valueCodeableConcept?.coding?.[0]?.display, "Card — manual entry");
+});
+
+test("assertPaymentTender rejects a tender outside the three record-only tenders", () => {
   assert.throws(() => assertPaymentTender("CARD"), /payment tender/i);
 });
 

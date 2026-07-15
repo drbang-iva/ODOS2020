@@ -8,7 +8,7 @@ import type { ChargeRequest, PaymentSurface, TransactionResult } from "./payment
 /**
  * Payment charge endpoint handler — pure orchestration, transport-free so it unit-tests without HTTP.
  *
- * This is the server-side charge boundary the browser-direct cash path never needed: a processor
+ * This is the server-side processor charge boundary: a processor
  * charge (Clover/Stripe) requires the vendor secret, which lives only on osod-core. The handler
  * authenticates the caller (verified staff identity — never a body-supplied one), resolves the
  * configured adapter via the unified dispatch, runs the charge, and lands a payment.* AuditEvent.

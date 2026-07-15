@@ -11,11 +11,10 @@ import {
   buildOpticalInvoice,
   chargeOpticalCardPayment,
   invoiceTotalNetCents,
-  routeCheckoutTender,
 } from "../../ui/src/lib/optical-order.js";
 import type { Invoice } from "@medplum/fhirtypes";
 
-test("checkout tenders add manual card without making either card option a general Invoice tender", () => {
+test("checkout tenders list record-only manual card separately from the dormant terminal tender", () => {
   assert.deepEqual(CHECKOUT_TENDERS.map((tender) => tender.code), [
     "CASH",
     "CHECK",
@@ -24,20 +23,7 @@ test("checkout tenders add manual card without making either card option a gener
   ]);
 });
 
-test("CARD_MANUAL routes through createOpticalCashOrder and never the Clover card path", async () => {
-  const calls: string[] = [];
-  await routeCheckoutTender("CARD_MANUAL", {
-    createOpticalCashOrder: async (tender) => {
-      calls.push(`createOpticalCashOrder:${tender}`);
-    },
-    processCardPayment: async () => {
-      calls.push("processCardPayment/chargeOpticalCardPayment");
-    },
-  });
-  assert.deepEqual(calls, ["createOpticalCashOrder:CARD_MANUAL"]);
-});
-
-test("CARD_MANUAL records its exact checkout-only tender code and display on the Invoice", () => {
+test("CARD_MANUAL records its exact record-only tender code and display on the Invoice", () => {
   const invoice = buildOpticalInvoice({
     patientReference: "Patient/p1",
     visionPrescriptionReference: "VisionPrescription/rx1",
@@ -147,6 +133,14 @@ test("ui source does not import Clover processor config", () => {
     .join("\n");
   assert.doesNotMatch(text, /CLOVER_(BASE_URL|ACCESS_TOKEN|DEVICE_ID|POS_ID)/);
   assert.doesNotMatch(text, /payment-config|clover-adapter/i);
+});
+
+test("optical collection no longer contains a browser-direct FHIR payment transaction", () => {
+  const opticalScene = readFileSync(join(UI_SRC, "scenes", "OpticalOrder.tsx"), "utf8");
+  const collectionClient = readFileSync(join(UI_SRC, "lib", "collect.ts"), "utf8");
+  assert.doesNotMatch(opticalScene, /executeTransaction|createOpticalCashOrder/);
+  assert.doesNotMatch(collectionClient, /executeTransaction|\/payments\/charge/);
+  assert.match(collectionClient, /\/payments\/collect/);
 });
 
 function listFiles(dir: string): string[] {

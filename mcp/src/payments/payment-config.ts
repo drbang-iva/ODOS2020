@@ -6,12 +6,10 @@ import type { PaymentProcessorAdapter } from "./payment-processor-adapter.js";
 
 /**
  * Payment dispatch — the vendor-neutral resolver that maps a practice's configured payment method
- * to its concrete adapter, wired with the per-request FHIR client + injected transport/clock.
+ * to its concrete processor adapter, wired with the per-request FHIR client + injected transport/clock.
  *
- * This is the unified backend seam (decision 2026-07-05, operator-confirmed): every tender resolves
- * through one dispatch, so cash and card share a single charge path server-side even though the
- * dispensary UI keeps taking cash on its resilient client-side rail. Per-practice adapter config
- * persistence (`osod_payment_adapter_config` + secrets store) is deferred per the 2026-05-05
+ * Record-only CASH, CHECK, and CARD_MANUAL use payment-collection-handler instead. Per-practice
+ * adapter config persistence (`osod_payment_adapter_config` + secrets store) is deferred per the 2026-05-05
  * architecture; registrations are constructed at service start from that config.
  */
 
