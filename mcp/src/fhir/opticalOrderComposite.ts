@@ -11,6 +11,7 @@ export interface OpticalCashOrderChargeInput {
   codeDisplay?: string;
   /** Billed fee in whole cents (ChargeItem.priceOverride and the Invoice line base). */
   feeCents: number;
+  taxCents?: number;
   quantity?: number;
   /** Engine price rule (ChargeItemDefinition canonical) retained for the audit diff. */
   definitionCanonical?: string;
@@ -46,7 +47,7 @@ export interface AssembleOpticalCashOrderInput {
  *
  * Wires the Slice-3 composite (spec §7): a DeviceRequest (the glasses order, basedOn→VisionPrescription),
  * a sibling Task owning the 17-value lifecycle (focus→DeviceRequest), one ChargeItem per line
- * (supportingInformation→DeviceRequest, context→Encounter), and an Invoice recording the cash/check
+ * (supportingInformation→DeviceRequest, context→Encounter), and an Invoice recording the record-only
  * payment (lineItem.chargeItemReference→each ChargeItem). Intra-bundle references use urn:uuid fullUrls
  * so the whole graph resolves in a single transaction. Delegates every resource to its verified builder.
  */
@@ -95,6 +96,7 @@ export function assembleOpticalCashOrder(input: AssembleOpticalCashOrderInput): 
     lineItems: input.charges.map((charge, index) => ({
       chargeItemReference: chargeUrns[index],
       amountCents: charge.feeCents,
+      taxCents: charge.taxCents,
       discount: charge.discount,
     })),
   });

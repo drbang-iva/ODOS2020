@@ -8,10 +8,16 @@ import {
   type PaymentCreditHandlerDeps,
 } from "./payment-credit-handler.js";
 import { handlePaymentMethodsRequest, type ChargeHandlerResult } from "./payment-charge-handler.js";
+import {
+  handleRecordedTenderCollectionRequest,
+  handleOpenChargesRequest,
+  type PaymentCollectionHandlerDeps,
+} from "./payment-collection-handler.js";
 
 export interface PatientPaymentRouteDeps {
   authenticateService(): Promise<void>;
   handlers: PaymentCreditHandlerDeps;
+  collection: PaymentCollectionHandlerDeps;
 }
 
 export function registerPatientPaymentRoutes(
@@ -20,6 +26,14 @@ export function registerPatientPaymentRoutes(
 ): void {
   get(app, "/payments/methods", deps, (req) => handlePaymentMethodsRequest(deps.handlers, {
     authHeader: req.header("authorization"),
+  }));
+  get(app, "/payments/patient/:reference/open-charges", deps, (req) => handleOpenChargesRequest(deps.collection, {
+    authHeader: req.header("authorization"),
+    patientReference: typeof req.params.reference === "string" ? req.params.reference : undefined,
+  }));
+  post(app, "/payments/collect", deps, (req) => handleRecordedTenderCollectionRequest(deps.collection, {
+    authHeader: req.header("authorization"),
+    body: req.body,
   }));
   post(app, "/payments/credit/apply", deps, (req) => handleApplyCreditRequest(deps.handlers, {
     authHeader: req.header("authorization"),

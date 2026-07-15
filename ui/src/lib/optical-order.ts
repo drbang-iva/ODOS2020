@@ -1,7 +1,4 @@
 import type {
-  Bundle,
-  ChargeItem,
-  DeviceRequest,
   Invoice,
   InvoiceLineItemPriceComponent,
   Task,
@@ -50,11 +47,11 @@ export const OPTICAL_ORDER_TYPES = [
 export const PAYMENT_TENDERS = [
   { code: "CASH", display: "Cash" },
   { code: "CHECK", display: "Check" },
+  { code: "CARD_MANUAL", display: "Card — manual entry" },
 ] as const;
 
 export const CHECKOUT_TENDERS = [
   ...PAYMENT_TENDERS,
-  { code: "CARD_MANUAL", display: "Card — manual entry" },
   { code: "CARD_TERMINAL", display: "Card (terminal)" },
 ] as const;
 
@@ -163,13 +160,6 @@ export interface OpticalCashOrderDraft {
   tender?: RecordedCheckoutTenderCode;
 }
 
-export interface CreatedOpticalOrderIds {
-  deviceRequestId: string;
-  taskId: string;
-  chargeItemIds: string[];
-  invoiceId: string;
-}
-
 export interface OpticalCardChargeInput {
   amountCents: number;
   patientReference: string;
@@ -235,18 +225,6 @@ export function canTransitionOpticalOrderStatus(from: string, to: string): boole
   return from === to || from !== "cancelled";
 }
 
-export async function createOpticalCashOrder(input: OpticalCashOrderDraft): Promise<CreatedOpticalOrderIds> {
-  const requestBundle = assembleOpticalCashOrder(input);
-  const responseBundle = await fhir.executeTransaction(requestBundle, "optical.cash-order");
-  const created = createdIdsByRequestResourceType(requestBundle, responseBundle);
-  return {
-    deviceRequestId: oneCreatedId(created, "DeviceRequest"),
-    taskId: oneCreatedId(created, "Task"),
-    chargeItemIds: created.get("ChargeItem") ?? [],
-    invoiceId: oneCreatedId(created, "Invoice"),
-  };
-}
-
 export async function chargeOpticalCardPayment(
   input: OpticalCardChargeInput,
   deps: { authHeader?: () => string | undefined; fetchImpl?: typeof fetch } = {},
@@ -309,19 +287,6 @@ export async function loadConfiguredPaymentMethods(
   return (body as { methods: string[] }).methods;
 }
 
-export async function routeCheckoutTender<T>(
-  tender: CheckoutTenderCode,
-  actions: {
-    createOpticalCashOrder(tender: RecordedCheckoutTenderCode): Promise<T>;
-    processCardPayment(): Promise<T>;
-  },
-): Promise<T> {
-  if (tender === "CARD_TERMINAL") {
-    return actions.processCardPayment();
-  }
-  return actions.createOpticalCashOrder(tender);
-}
-
 export function invoiceTotalNetCents(invoice: Invoice): number {
   const totalNet = invoice.totalNet?.value;
   if (typeof totalNet !== "number" || !Number.isFinite(totalNet)) {
@@ -349,82 +314,6 @@ export async function transitionOpticalOrderStatus(
     "optical.order-status",
     current.meta?.versionId,
   );
-}
-
-function assembleOpticalCashOrder(input: OpticalCashOrderDraft): Bundle {
-  if (!input.charges.length) {
-    throw new Error("A cash optical order requires at least one charge line.");
-  }
-  const deviceRequestUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const taskUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const chargeUrns = input.charges.map(() => `urn:uuid:${crypto.randomUUID()}`);
-  const invoiceUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const charges = input.charges.map((line) => buildOpticalChargeItem(input, line, deviceRequestUrn));
-  return {
-    resourceType: "Bundle",
-    type: "transaction",
-    entry: [
-      entry(deviceRequestUrn, buildSpectacleOrderDeviceRequest(input)),
-      entry(taskUrn, buildOpticalOrderTask(input, deviceRequestUrn)),
-      ...charges.map((charge, index) => entry(chargeUrns[index], charge)),
-      entry(invoiceUrn, buildOpticalInvoice(input, chargeUrns)),
-    ],
-  };
-}
-
-function buildSpectacleOrderDeviceRequest(input: OpticalCashOrderDraft): DeviceRequest {
-  return {
-    resourceType: "DeviceRequest",
-    status: "active",
-    intent: "order",
-    codeCodeableConcept: {
-      coding: [
-        {
-          system: HCPCS_SYSTEM,
-          code: input.orderHcpcsCode,
-          ...(input.orderHcpcsDisplay ? { display: input.orderHcpcsDisplay } : {}),
-        },
-      ],
-    },
-    subject: { reference: input.patientReference },
-    basedOn: [{ reference: input.visionPrescriptionReference }],
-  };
-}
-
-function buildOpticalOrderTask(input: OpticalCashOrderDraft, deviceRequestReference: string): Task {
-  return {
-    resourceType: "Task",
-    status: "in-progress",
-    intent: "order",
-    code: opticalOrderTypeConcept(input.orderType),
-    focus: { reference: deviceRequestReference },
-    for: { reference: input.patientReference },
-    businessStatus: opticalOrderStatusConcept(input.businessStatus),
-  };
-}
-
-function buildOpticalChargeItem(
-  order: OpticalCashOrderDraft,
-  line: OpticalChargeLineDraft,
-  deviceRequestReference: string,
-): ChargeItem {
-  return {
-    resourceType: "ChargeItem",
-    status: "billable",
-    code: {
-      coding: [
-        {
-          system: HCPCS_SYSTEM,
-          code: line.procedure,
-        },
-      ],
-    },
-    subject: { reference: order.patientReference },
-    ...(order.encounterReference ? { context: { reference: order.encounterReference } } : {}),
-    quantity: { value: line.units },
-    priceOverride: { value: line.feeCents / 100, currency: "USD" },
-    supportingInformation: [{ reference: deviceRequestReference }],
-  };
 }
 
 export function buildOpticalInvoice(input: OpticalCashOrderDraft, chargeItemReferences: string[]): Invoice {
@@ -473,14 +362,6 @@ function linePriceComponents(line: OpticalChargeLineDraft): InvoiceLineItemPrice
   return components;
 }
 
-function entry(fullUrl: string, resource: DeviceRequest | Task | ChargeItem | Invoice) {
-  return {
-    fullUrl,
-    resource,
-    request: { method: "POST" as const, url: resource.resourceType },
-  };
-}
-
 function rxValues(
   lens: VisionPrescriptionLensSpecification | undefined,
   eye: "OD" | "OS",
@@ -519,17 +400,6 @@ function opticalOrderStatusConcept(code: OpticalOrderStatusCode) {
   return {
     coding: [{ system: OSOD_OPTICAL_ORDER_STATUS_SYSTEM, code: status.code, display: status.display }],
     text: status.display,
-  };
-}
-
-function opticalOrderTypeConcept(code: OpticalOrderTypeCode) {
-  const type = OPTICAL_ORDER_TYPES.find((candidate) => candidate.code === code);
-  if (!type) {
-    throw new Error(`Unknown optical order type "${code}".`);
-  }
-  return {
-    coding: [{ system: OSOD_OPTICAL_ORDER_TYPE_SYSTEM, code: type.code, display: type.display }],
-    text: type.display,
   };
 }
 
@@ -587,32 +457,6 @@ function fhirTaskStatusForOpticalStatus(status: OpticalOrderStatusCode): Task["s
   if (status === "cancelled") return "cancelled";
   if (status === "dispensed") return "completed";
   return "in-progress";
-}
-
-function createdIdsByRequestResourceType(
-  requestBundle: Bundle,
-  responseBundle: Bundle,
-): Map<string, string[]> {
-  const byType = new Map<string, string[]>();
-  const requestEntries = requestBundle.entry ?? [];
-  const responseEntries = responseBundle.entry ?? [];
-  requestEntries.forEach((requestEntry, index) => {
-    const resourceType = requestEntry.resource?.resourceType;
-    const id = responseEntries[index]?.response?.location?.match(/^[A-Za-z]+\/([^/]+)/)?.[1];
-    if (!resourceType || !id) return;
-    const ids = byType.get(resourceType) ?? [];
-    ids.push(id);
-    byType.set(resourceType, ids);
-  });
-  return byType;
-}
-
-function oneCreatedId(created: Map<string, string[]>, resourceType: string): string {
-  const ids = created.get(resourceType) ?? [];
-  if (ids.length !== 1) {
-    throw new Error(`Expected exactly one created ${resourceType}; got ${ids.length}.`);
-  }
-  return ids[0];
 }
 
 function formatNumber(value: number | undefined): string {

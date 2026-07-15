@@ -5596,6 +5596,12 @@ async function main(): Promise<void> {
           await auditRuntime.record(row, () => undefined);
         },
       };
+      const paymentCollectionDeps = {
+        authenticate: authenticateStaffRoute,
+        recordAudit: async (row: OsodAuditEventRecord) => {
+          await auditRuntime.record(row, () => undefined);
+        },
+      };
       const labOrderHandlerDeps = {
         authenticate: authenticateStaffRoute,
         dispatch: labOrderDispatch,
@@ -6138,6 +6144,7 @@ async function main(): Promise<void> {
       registerPatientPaymentRoutes(app, {
         authenticateService: authenticateWithMedplum,
         handlers: paymentCreditDeps,
+        collection: paymentCollectionDeps,
       });
       registerLabOrderRoutes(app, {
         authenticateService: authenticateWithMedplum,

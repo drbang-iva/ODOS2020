@@ -6,7 +6,7 @@ import express from "express";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "../src/payments/payment-routes.js";
 
-test("all six patient-payment HTTP routes reach their handlers", async () => {
+test("all patient-payment HTTP routes reach their handlers", async () => {
   const fixture = await server();
   try {
     const cases: Array<["GET" | "POST", string, number, RegExp | undefined]> = [
@@ -16,6 +16,8 @@ test("all six patient-payment HTTP routes reach their handlers", async () => {
       ["POST", "/payments/credit/void", 400, /payment method/],
       ["GET", "/payments/credit/unapplied?patientReference=Patient%2Fpatient-1", 200, undefined],
       ["GET", "/payments/reconciliations?patientReference=Patient%2Fpatient-1", 200, undefined],
+      ["GET", "/payments/patient/Patient%2Fpatient-1/open-charges", 200, undefined],
+      ["POST", "/payments/collect", 400, /patientReference/],
     ];
     for (const [method, path, status, error] of cases) {
       const response = await call(fixture.baseUrl, method, path, "Bearer good");
@@ -50,6 +52,8 @@ test("every patient-payment HTTP route preserves 401 and payment.charge 403 gate
       ["POST", "/payments/credit/void"],
       ["GET", "/payments/credit/unapplied?patientReference=Patient%2Fpatient-1"],
       ["GET", "/payments/reconciliations?patientReference=Patient%2Fpatient-1"],
+      ["GET", "/payments/patient/Patient%2Fpatient-1/open-charges"],
+      ["POST", "/payments/collect"],
     ];
     for (const [method, path] of routes) {
       assert.equal((await call(fixture.baseUrl, method, path)).status, 401, `${path} 401`);
@@ -84,6 +88,14 @@ async function server() {
       dispatch: createPaymentDispatch([{ method: "manual-cash" }]),
       recordAudit: async () => undefined,
       now: () => "2026-07-10T12:00:00.000Z",
+    },
+    collection: {
+      authenticate: async (header) => header === "Bearer good"
+        ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk", roles: ["front-desk"], fhir: fhir as never }
+        : header === "Bearer forbidden"
+          ? { staffReference: "Practitioner/staff-2", actorRole: "clinician", roles: ["clinician"], fhir: fhir as never }
+          : null,
+      recordAudit: async () => undefined,
     },
   });
   const listener = app.listen(0, "127.0.0.1");

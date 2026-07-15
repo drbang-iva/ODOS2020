@@ -33,7 +33,7 @@ test("buildOpticalInvoice builds an issued cash Invoice referencing ChargeItems 
   assert.equal(invoice.totalNet?.value, 305);
   assert.equal(invoice.totalNet?.currency, "USD");
 
-  // R4 trap #5: CASH/CHECK tender lives in the osod-payment-tender extension
+  // R4 trap #5: the record-only tender lives in the osod-payment-tender extension
   const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
 });
@@ -86,7 +86,17 @@ test("buildOpticalInvoice with no tender issues the bill untendered (processor p
   assert.equal(invoice.totalNet?.value, 50);
 });
 
-test("buildOpticalInvoice rejects a tender outside CASH/CHECK", () => {
+test("buildOpticalInvoice accepts CARD_MANUAL as record-only and rejects processor tenders", () => {
+  const manualCard = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    tender: "CARD_MANUAL",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 100 }],
+  });
+  assert.equal(
+    manualCard.extension?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+      ?.valueCodeableConcept?.coding?.[0]?.code,
+    "CARD_MANUAL",
+  );
   assert.throws(
     () =>
       buildOpticalInvoice({
