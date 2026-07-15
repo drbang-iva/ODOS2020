@@ -645,8 +645,66 @@ test("ERA line linkage falls back to whole-claim detail when the echoed ChargeIt
   assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
     (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   ) ?? false, false);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].focus?.reference, "ClaimResponse/claimresponse-1");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
   assert.equal(fixture.created.Task[0].description, "ERA line linkage requires review");
   assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
+});
+
+test("an invalid line identity falls back and creates a dedicated linkage review Task", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapter!.retrieveEraData = async () => ({
+    eraid: "era-invalid-link",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    claim: {
+      pcn: "OSOD-CLAIM-900",
+      total_charge: "80.00",
+      total_paid: "80.00",
+      charge: [{
+        chgid: "claimmd-charge-invalid",
+        remote_chgid: "invalid/charge",
+        charge: "80.00",
+        allowed: "80.00",
+        paid: "80.00",
+      }],
+    },
+  });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-invalid-link" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /omitted/);
+});
+
+test("a mismatched ClaimResponse patient is corrected from the Claim and never receives a line link", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-wrong" },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.ClaimResponse[0].patient.reference, "Patient/pat-900");
+  assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
+    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ) ?? false, false);
+  assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
+  assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /patient ownership/);
 });
 
 test("a duplicate line echo falls back for that claim, flags review, and does not abort the ERA batch", async () => {
@@ -705,6 +763,9 @@ test("a duplicate line echo falls back for that claim, flags review, and does no
   assert.equal(fixture.created.PaymentReconciliation[1].detail?.length, 1);
   assert.equal(fixture.created.PaymentReconciliation[1].detail?.[0]?.amount?.value, 80);
   assert.equal(fixture.created.Task.length, 1);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
+  assert.equal(fixture.created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
+  assert.equal(fixture.created.Task[0].for?.reference, "Patient/pat-900");
   assert.equal(fixture.created.Task[0].description, "ERA line linkage requires review");
   assert.match(taskInput(fixture.created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /duplicate/);
   assert.deepEqual(
@@ -777,6 +838,9 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.ClaimResponse[1].item?.[0]?.extension?.some(
     (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   ) ?? false, false);
+  assert.equal(worklistCode(created.Task[0]), "era-line-linkage");
+  assert.equal(created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
+  assert.equal(created.Task[0].for?.reference, "Patient/pat-900");
   assert.equal(created.Task[0].description, "ERA line linkage requires review");
   assert.match(taskInput(created.Task[0], "line-linkage-review-reason")?.valueString ?? "", /not owned/);
 

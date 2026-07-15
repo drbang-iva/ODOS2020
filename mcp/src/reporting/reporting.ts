@@ -207,6 +207,7 @@ export function projectAccountsReceivableDashboard(
   const totalDays = outstandingClaims.reduce((sum, claim) => sum + claim.daysSinceSubmission, 0);
   const openWorklistCounts: Record<WorklistCode, number> = {
     "era-denial": 0,
+    "era-line-linkage": 0,
     "era-underpayment": 0,
     "era-unmatched": 0,
     "claim-rejected": 0,

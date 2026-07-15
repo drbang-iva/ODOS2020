@@ -11,11 +11,12 @@ import {
 } from "../src/lib/claims-worklist";
 import { ClaimsWorklistBoard, ClaimsWorklistPanel } from "../src/scenes/claims/ClaimsWorklist";
 
-test("worklist board renders all four lanes from attention-item fixtures", () => {
+test("worklist board renders all five lanes from attention-item fixtures", () => {
   const html = renderToStaticMarkup(
     <ClaimsWorklistBoard
       items={[
         fixture("era-denial"),
+        fixture("era-line-linkage"),
         fixture("era-underpayment"),
         fixture("era-unmatched"),
         fixture("claim-rejected"),
@@ -24,7 +25,7 @@ test("worklist board renders all four lanes from attention-item fixtures", () =>
     />,
   );
 
-  for (const label of ["ERA denials", "Underpayments", "Unmatched ERAs", "Rejected claims"]) {
+  for (const label of ["ERA denials", "Line linkage", "Underpayments", "Unmatched ERAs", "Rejected claims"]) {
     assert.match(html, new RegExp(label));
   }
   assert.equal((html.match(/No items in this lane/g) ?? []).length, 0);
@@ -70,6 +71,7 @@ test("claim action refresh projects the resulting in-review status", async () =>
 test("matched disposition is offered only for era-unmatched", () => {
   assert.equal(dispositionsForLane("era-unmatched").includes("matched"), true);
   assert.equal(dispositionsForLane("era-denial").includes("matched"), false);
+  assert.equal(dispositionsForLane("era-line-linkage").includes("matched"), false);
   assert.equal(dispositionsForLane("era-underpayment").includes("matched"), false);
   assert.equal(dispositionsForLane("claim-rejected").includes("matched"), false);
 });

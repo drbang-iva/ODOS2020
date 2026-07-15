@@ -18,6 +18,7 @@ import {
 
 const LANE_COLOR = {
   "era-denial": "#f87171",
+  "era-line-linkage": "#60a5fa",
   "era-underpayment": "#fbbf24",
   "era-unmatched": "#c084fc",
   "claim-rejected": "#fb7185",

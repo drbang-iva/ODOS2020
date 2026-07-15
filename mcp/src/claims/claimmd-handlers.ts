@@ -553,6 +553,8 @@ async function importStediEra(
           era: taskEra,
           eraClaim,
           claimReference,
+          claimResponseReference: ref(response),
+          patientReference: response.patient.reference ?? patientReference,
           reason: verifiedLinkage.reviewReason,
         });
         taskIds.push(requiredId(task));
@@ -1092,11 +1094,18 @@ async function verifyClaimResponseChargeItemLinks(
   claimReference: string,
   response: ClaimResponse,
 ): Promise<{ response: ClaimResponse; reviewReason?: string }> {
-  const echoedReferences = (response.item ?? []).flatMap((item) => item.extension?.flatMap((extension) =>
+  const referencesByItem = (response.item ?? []).map((item) => item.extension?.flatMap((extension) =>
     extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL && extension.valueReference?.reference
       ? [extension.valueReference.reference]
       : [],
   ) ?? []);
+  if (referencesByItem.some((references) => references.length !== 1)) {
+    return {
+      response: withoutClaimResponseChargeItemLinks(response),
+      reviewReason: "One or more ERA service lines omitted a valid ChargeItem control number.",
+    };
+  }
+  const echoedReferences = referencesByItem.flat();
   if (echoedReferences.length === 0) return { response };
 
   if (new Set(echoedReferences).size !== echoedReferences.length) {
@@ -1133,12 +1142,16 @@ async function verifyClaimResponseChargeItemLinks(
       const id = reference.slice("ChargeItem/".length);
       return auth.fhir.read<ChargeItem>("ChargeItem", id);
     }));
-    if (chargeItems.some((chargeItem, index) =>
-      `ChargeItem/${chargeItem.id ?? ""}` !== echoedReferences[index]
-      || chargeItem.subject.reference !== claim.patient.reference,
-    )) {
+    if (
+      response.patient.reference !== claim.patient.reference
+      || chargeItems.some((chargeItem, index) =>
+        `ChargeItem/${chargeItem.id ?? ""}` !== echoedReferences[index]
+        || chargeItem.subject.reference !== claim.patient.reference,
+      )
+    ) {
+      const withoutLinks = withoutClaimResponseChargeItemLinks(response);
       return {
-        response: withoutClaimResponseChargeItemLinks(response),
+        response: { ...withoutLinks, patient: { reference: claim.patient.reference } },
         reviewReason: "ERA line linkage could not verify ChargeItem existence and patient ownership.",
       };
     }
@@ -1173,14 +1186,18 @@ async function createEraLineLinkageReviewTask(
     era: ClaimMdEraData;
     eraClaim: ClaimMdEraClaim;
     claimReference: string;
+    claimResponseReference: string;
+    patientReference: string;
     reason: string;
   },
 ): Promise<Task> {
   const identifierValue = `${input.era.eraid ?? "unknown-era"}:${input.claimReference}:line-linkage`;
   const candidate = buildEraWorklistTask({
-    code: "era-unmatched",
+    code: "era-line-linkage",
     era: input.era,
     eraClaim: input.eraClaim,
+    claimResponseReference: input.claimResponseReference,
+    patientReference: input.patientReference,
     authoredOn: now(deps),
     identifierSystem: input.adapterName === "stedi" ? STEDI_ERA_PAYMENT_SYSTEM : CLAIMMD_ERA_PAYMENT_SYSTEM,
   });
@@ -1260,6 +1277,8 @@ async function persistMatchedEraClaim(
       era: input.era,
       eraClaim: input.eraClaim,
       claimReference: input.claimReference,
+      claimResponseReference: ref(response),
+      patientReference: response.patient.reference ?? input.patientReference,
       reason: verifiedLinkage.reviewReason,
     });
     taskIds.push(requiredId(task));
@@ -1414,7 +1433,7 @@ async function upsertEraImportRecord(
 async function createAndAuditEraWorklistTask(
   deps: ClaimsHandlerDeps,
   auth: AuthenticatedClaimsStaff,
-  code: Exclude<EraWorklistCode, "era-unmatched">,
+  code: Exclude<EraWorklistCode, "era-line-linkage" | "era-unmatched">,
   input: {
     era: ClaimMdEraData;
     eraClaim: ClaimMdEraClaim;
