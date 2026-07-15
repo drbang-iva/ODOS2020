@@ -147,12 +147,19 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
   const originalWindow = globalThis.window;
   const originalDocument = globalThis.document;
   let keydown: ((event: KeyboardEvent) => void) | undefined;
+  let resize: (() => void) | undefined;
   const storage = memoryStorage();
   const windowStub = {
     innerHeight: 900,
     innerWidth: 1200,
     localStorage: storage,
     matchMedia: () => ({ matches: true }),
+    addEventListener: (type: string, listener: EventListener) => {
+      if (type === "resize") resize = listener as () => void;
+    },
+    removeEventListener: (type: string, listener: EventListener) => {
+      if (type === "resize" && resize === listener) resize = undefined;
+    },
   } as unknown as Window & typeof globalThis;
   const documentStub = {
     addEventListener: (type: string, listener: EventListener) => {
@@ -168,9 +175,14 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
   let renderer!: ReactTestRenderer;
   let capturedPointer: number | undefined;
   let releasedPointer: number | undefined;
-  const panelRect = { left: 760, top: 40, width: 380, height: 820 };
+  const panelRect = () => {
+    const style = renderer.root.findByType("aside").props.style;
+    const x = Number.parseFloat(style?.["--odos-cockpit-panel-x"] ?? "0");
+    const y = Number.parseFloat(style?.["--odos-cockpit-panel-y"] ?? "0");
+    return { left: 760 + x, top: 40 + y, width: 380, height: 820 };
+  };
   const panelNode = {
-    getBoundingClientRect: () => panelRect,
+    getBoundingClientRect: panelRect,
     querySelector: (selector: string) => selector === "header" ? headerNode : null,
   };
   const headerNode = {
@@ -215,6 +227,12 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
 
     act(() => button("Messages").props.onClick());
     assert.equal(button("Messages").props["aria-pressed"], true);
+    act(() => button("Calls").props.onPointerEnter({ pointerType: "mouse" }));
+    assert.equal(button("Messages").props["aria-expanded"], true);
+    assert.equal(button("Messages").props["aria-pressed"], true);
+    assert.equal(button("Calls").props["aria-expanded"], false);
+    assert.equal(button("Calls").props["aria-pressed"], false);
+    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Two-way messaging/);
     act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
     act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
     assert.equal(panelOpen(), true);
@@ -246,6 +264,15 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
       clientX: 900,
       clientY: 60,
       currentTarget: headerNode,
+      pointerId: 6,
+    }));
+    act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 6 }));
+    assert.equal(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY), null);
+    act(() => dragHandle().props.onPointerDown({
+      button: 0,
+      clientX: 900,
+      clientY: 60,
+      currentTarget: headerNode,
       pointerId: 7,
     }));
     assert.equal(capturedPointer, 7);
@@ -260,15 +287,27 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
     assert.equal(panel().props.style["--odos-cockpit-panel-y"], "812px");
     assert.match(panel().props.className, /is-floating/);
     assert.equal(button("Messages").props["aria-pressed"], true);
-    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: 60, y: 812 });
+    assert.equal(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY), null);
     act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
     act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
     assert.equal(panelOpen(), true);
     act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 7 }));
     assert.equal(releasedPointer, 7);
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: 60, y: 812 });
 
-    panelRect.left = 820;
-    panelRect.top = 852;
+    windowStub.innerWidth = 900;
+    windowStub.innerHeight = 500;
+    assert.ok(resize);
+    act(() => resize?.());
+    assert.equal(panel().props.style["--odos-cockpit-panel-x"], "-240px");
+    assert.equal(panel().props.style["--odos-cockpit-panel-y"], "412px");
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -240, y: 412 });
+    assert.equal(panelRect().left, 520);
+    assert.equal(panelRect().top + 48, 500);
+    assert.ok(button("Dock panel to rail"));
+
+    windowStub.innerWidth = 1200;
+    windowStub.innerHeight = 900;
     act(() => dragHandle().props.onPointerDown({
       button: 0,
       clientX: 900,
@@ -285,7 +324,9 @@ test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escap
     }));
     assert.equal(panel().props.style["--odos-cockpit-panel-x"], "-760px");
     assert.equal(panel().props.style["--odos-cockpit-panel-y"], "-40px");
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -240, y: 412 });
     act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 8 }));
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -760, y: -40 });
 
     act(() => button("Calls").props.onClick());
     assert.equal(button("Calls").props["aria-pressed"], true);

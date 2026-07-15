@@ -105,6 +105,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
   }, [cancelHoverClose]);
 
   const hoverPanel = useCallback((panel: CockpitPanelId) => {
+    if (pinnedPanel) return;
     cancelHoverClose();
     setRenderedPanel(panel);
     if (panelPosition) {
@@ -113,7 +114,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
     } else {
       setHoveredPanel(panel);
     }
-  }, [cancelHoverClose, panelPosition]);
+  }, [cancelHoverClose, panelPosition, pinnedPanel]);
 
   const scheduleHoverClose = useCallback(() => {
     if (panelPosition) return;
@@ -141,10 +142,13 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
   const floatPanel = useCallback((position: CockpitPanelPosition) => {
     cancelHoverClose();
     setPanelPosition(position);
-    saveCockpitPanelPosition(position);
     setHoveredPanel(null);
     setPinnedPanel(renderedPanel);
   }, [cancelHoverClose, renderedPanel]);
+
+  const commitPanelPosition = useCallback((position: CockpitPanelPosition) => {
+    saveCockpitPanelPosition(position);
+  }, []);
 
   const redockPanel = useCallback(() => {
     cancelHoverClose();
@@ -270,6 +274,7 @@ export function DeskHome({ initialSummary, initialOfficeMessages, officeApi = de
         onHoverLeave={scheduleHoverClose}
         position={panelPosition}
         onPositionChange={floatPanel}
+        onPositionCommit={commitPanelPosition}
         onRedock={redockPanel}
       />
     </main>

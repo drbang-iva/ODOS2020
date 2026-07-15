@@ -67,6 +67,7 @@ export function CockpitGuestPanel({
   onHoverLeave,
   position = null,
   onPositionChange,
+  onPositionCommit,
   onRedock,
 }: {
   panel: CockpitPanelId;
@@ -76,6 +77,7 @@ export function CockpitGuestPanel({
   onHoverLeave?: () => void;
   position?: CockpitPanelPosition | null;
   onPositionChange?: (position: CockpitPanelPosition) => void;
+  onPositionCommit?: (position: CockpitPanelPosition) => void;
   onRedock?: () => void;
 }) {
   const item = dockItem(panel);
@@ -89,20 +91,31 @@ export function CockpitGuestPanel({
     panelWidth: number;
     headerHeight: number;
     position: CockpitPanelPosition;
+    latestPosition: CockpitPanelPosition;
+    moved: boolean;
   }>();
 
   useEffect(() => {
     if (!open || !position || !panelRef.current) return;
-    const panelRect = panelRef.current.getBoundingClientRect();
-    const headerHeight = panelRef.current.querySelector("header")?.getBoundingClientRect().height ?? 0;
-    const clamped = clampPanelOffset(position, panelRect, headerHeight, window.innerWidth, window.innerHeight);
-    if (clamped.x !== position.x || clamped.y !== position.y) onPositionChange?.(clamped);
-  }, [onPositionChange, open, position]);
+    const clampPosition = () => {
+      if (!panelRef.current) return;
+      const panelRect = panelRef.current.getBoundingClientRect();
+      const headerHeight = panelRef.current.querySelector("header")?.getBoundingClientRect().height ?? 0;
+      const clamped = clampPanelOffset(position, panelRect, headerHeight, window.innerWidth, window.innerHeight);
+      if (clamped.x === position.x && clamped.y === position.y) return;
+      onPositionChange?.(clamped);
+      onPositionCommit?.(clamped);
+    };
+    clampPosition();
+    window.addEventListener("resize", clampPosition);
+    return () => window.removeEventListener("resize", clampPosition);
+  }, [onPositionChange, onPositionCommit, open, position]);
 
   const startDrag = (event: ReactPointerEvent<HTMLElement>) => {
     if (!open || event.button !== 0 || !panelRef.current) return;
     const panelRect = panelRef.current.getBoundingClientRect();
     const headerRect = event.currentTarget.getBoundingClientRect();
+    const initialPosition = position ?? { floating: true, x: 0, y: 0 };
     dragRef.current = {
       pointerId: event.pointerId,
       pointerX: event.clientX,
@@ -111,7 +124,9 @@ export function CockpitGuestPanel({
       panelTop: panelRect.top,
       panelWidth: panelRect.width,
       headerHeight: headerRect.height,
-      position: position ?? { floating: true, x: 0, y: 0 },
+      position: initialPosition,
+      latestPosition: initialPosition,
+      moved: false,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -125,16 +140,21 @@ export function CockpitGuestPanel({
     event.preventDefault();
     const left = Math.min(Math.max(0, drag.panelLeft + deltaX), Math.max(0, window.innerWidth - drag.panelWidth));
     const top = Math.min(Math.max(0, drag.panelTop + deltaY), Math.max(0, window.innerHeight - drag.headerHeight));
-    onPositionChange?.({
+    const nextPosition: CockpitPanelPosition = {
       floating: true,
       x: drag.position.x + left - drag.panelLeft,
       y: drag.position.y + top - drag.panelTop,
-    });
+    };
+    drag.latestPosition = nextPosition;
+    drag.moved = true;
+    onPositionChange?.(nextPosition);
   };
 
   const endDrag = (event: ReactPointerEvent<HTMLElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (drag.moved) onPositionCommit?.(drag.latestPosition);
     dragRef.current = undefined;
   };
 
