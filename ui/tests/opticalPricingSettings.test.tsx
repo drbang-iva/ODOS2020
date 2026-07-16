@@ -180,6 +180,10 @@ test("shared CatalogEditor descriptors visibly label per-lens prices and group l
   assert.match(html, /Retail price per lens \(cents\)/);
   assert.match(html, /Unassigned lab/);
   assert.match(html, /Bifocal \(flat top\)/);
+  assert.match(html, /Search lens pricing/);
+  assert.match(html, />New lens price</);
+  assert.match(html, /settings-required-dot/);
+  assert.match(html, />Deactivate</);
 });
 
 function resourceClient(

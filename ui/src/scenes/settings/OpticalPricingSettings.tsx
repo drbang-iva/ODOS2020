@@ -77,6 +77,11 @@ export function framePricingDescriptor(
     readOnlyFacts: (item) => [
       { label: "Frame catalog item", value: item.catalogCanonicalUrl },
     ],
+    listGrammar: {
+      searchPlaceholder: "Search frame pricing",
+      searchText: (item) => `${item.catalogCanonicalUrl} ${item.retailPriceCents} ${item.wholesaleCostCents ?? ""}`,
+      deactivateConsequence: () => "The frame keeps its catalog identity and pricing history; this pricing row becomes inactive.",
+    },
   };
 }
 
@@ -138,6 +143,11 @@ export function lensPricingDescriptor(
       label: "Lab",
       value: (item) => item.lab || "Unassigned lab",
     },
+    listGrammar: {
+      searchPlaceholder: "Search lens pricing",
+      searchText: (item) => `${item.label} ${item.lab} ${item.category} ${item.billingCode}`,
+      deactivateConsequence: (item) => `${item.label || "This lens price"} remains in historical records and leaves the active pricing list.`,
+    },
   };
 }
 
@@ -173,6 +183,11 @@ export function contactLensPricingDescriptor(
         ? "Wholesale TBD"
         : `${money(item.wholesaleCostCents)} wholesale`,
     ],
+    listGrammar: {
+      searchPlaceholder: "Search contact lens pricing",
+      searchText: (item) => `${item.manufacturerCode} ${item.manufacturerDisplay} ${item.productCode} ${item.productDisplay}`,
+      deactivateConsequence: (item) => `${item.productDisplay || "This contact lens price"} remains in historical records and leaves the active pricing list.`,
+    },
   };
 }
 

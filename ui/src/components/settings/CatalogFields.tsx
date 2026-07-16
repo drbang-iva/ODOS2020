@@ -8,6 +8,7 @@ import {
 } from "../../lib/catalog-field-kernel";
 import { nextAvailableHoursWindow } from "../../lib/scheduling-settings";
 import { DISCIPLINE_COLOR_BANDS } from "../../lib/scheduling";
+import { RequiredFieldLabel } from "./RequiredGate";
 
 export const CATALOG_COLOR_PALETTE = [
   ...new Set(Object.values(DISCIPLINE_COLOR_BANDS).flat()),
@@ -36,11 +37,15 @@ export function CatalogFieldKit({
   fields,
   values,
   errors = {},
+  fieldId,
+  showRequired = false,
   onChange,
 }: {
   fields: readonly CatalogFieldDescriptor[];
   values: Record<string, unknown>;
   errors?: Record<string, string>;
+  fieldId?: (key: string) => string;
+  showRequired?: boolean;
   onChange: (key: string, value: unknown) => void;
 }) {
   return (
@@ -51,6 +56,8 @@ export function CatalogFieldKit({
           field={field}
           value={values[field.key]}
           error={errors[field.key]}
+          inputId={fieldId?.(field.key)}
+          showRequired={showRequired}
           onChange={(value) => onChange(field.key, value)}
         />
       ))}
@@ -62,11 +69,15 @@ function CatalogFieldControl({
   field,
   value,
   error,
+  inputId,
+  showRequired,
   onChange,
 }: {
   field: CatalogFieldDescriptor;
   value: unknown;
   error?: string;
+  inputId?: string;
+  showRequired: boolean;
   onChange: (value: unknown) => void;
 }) {
   const errorId = `${field.key}-error`;
@@ -75,8 +86,9 @@ function CatalogFieldControl({
   switch (field.type) {
     case "text":
       return (
-        <FieldFrame field={field} error={error}>
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
           <input
+            id={inputId}
             className="scheduler-input"
             value={typeof value === "string" ? value : ""}
             aria-describedby={describedBy}
@@ -86,8 +98,8 @@ function CatalogFieldControl({
       );
     case "color":
       return (
-        <FieldFrame field={field} error={error}>
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={field.label}>
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
+          <div id={inputId} tabIndex={-1} className="flex flex-wrap gap-2" role="radiogroup" aria-label={field.label}>
             {field.palette.map((color) => (
               <button
                 key={color}
@@ -108,8 +120,9 @@ function CatalogFieldControl({
     case "duration":
     case "number":
       return (
-        <FieldFrame field={field} error={error}>
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
           <input
+            id={inputId}
             className="scheduler-input"
             type="number"
             min={field.min}
@@ -124,8 +137,9 @@ function CatalogFieldControl({
       );
     case "select":
       return (
-        <FieldFrame field={field} error={error}>
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
           <select
+            id={inputId}
             className="scheduler-input"
             value={typeof value === "string" ? value : ""}
             aria-describedby={describedBy}
@@ -142,47 +156,55 @@ function CatalogFieldControl({
       );
     case "reference-picker":
       return (
-        <FieldFrame field={field} error={error}>
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
           <ReferencePicker
             label={field.label}
             value={typeof value === "string" ? value : ""}
             valueKind={field.valueKind ?? "reference"}
             search={field.search}
             describedBy={describedBy}
+            inputId={inputId}
             onChange={onChange}
           />
         </FieldFrame>
       );
     case "toggle":
       return (
-        <FieldFrame field={field} error={error} hideLabel>
+        <FieldFrame field={field} error={error} showRequired={showRequired} hideLabel>
           <label className="flex items-center gap-2 text-sm text-white/75">
             <input
+              id={inputId}
               type="checkbox"
               checked={value === true}
               aria-describedby={describedBy}
               onChange={(event) => onChange(event.target.checked)}
             />
-            <span>{field.label}</span>
+            <span>
+              <RequiredFieldLabel required={showRequired && field.required}>{field.label}</RequiredFieldLabel>
+            </span>
           </label>
         </FieldFrame>
       );
     case "weekly-hours":
       return (
-        <FieldFrame field={field} error={error}>
-          <WeeklyHoursEditor
-            hours={isWeeklyHours(value) ? value : {}}
-            onChange={onChange}
-          />
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
+          <div id={inputId} tabIndex={-1}>
+            <WeeklyHoursEditor
+              hours={isWeeklyHours(value) ? value : {}}
+              onChange={onChange}
+            />
+          </div>
         </FieldFrame>
       );
     case "time-window-weekdays":
       return (
-        <FieldFrame field={field} error={error}>
-          <TimeWindowWeekdayField
-            value={isTimeWindowWeekdays(value) ? value : { weekdays: [] }}
-            onChange={onChange}
-          />
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
+          <div id={inputId} tabIndex={-1}>
+            <TimeWindowWeekdayField
+              value={isTimeWindowWeekdays(value) ? value : { weekdays: [] }}
+              onChange={onChange}
+            />
+          </div>
         </FieldFrame>
       );
   }
@@ -191,17 +213,23 @@ function CatalogFieldControl({
 function FieldFrame({
   field,
   error,
+  showRequired,
   hideLabel = false,
   children,
 }: {
   field: CatalogFieldDescriptor;
   error?: string;
+  showRequired: boolean;
   hideLabel?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="grid gap-1">
-      {!hideLabel && <div className="text-sm font-medium text-white/75">{field.label}</div>}
+      {!hideLabel && (
+        <div className="text-sm font-medium text-white/75">
+          <RequiredFieldLabel required={showRequired && field.required}>{field.label}</RequiredFieldLabel>
+        </div>
+      )}
       {children}
       {error && (
         <div id={`${field.key}-error`} className="text-sm text-red-200">
@@ -218,6 +246,7 @@ function ReferencePicker({
   valueKind,
   search,
   describedBy,
+  inputId,
   onChange,
 }: {
   label: string;
@@ -225,6 +254,7 @@ function ReferencePicker({
   valueKind: "reference" | "text";
   search?: (query: string) => Promise<ReferencePickerOption[]>;
   describedBy?: string;
+  inputId?: string;
   onChange: (value: unknown) => void;
 }) {
   const [query, setQuery] = useState(value);
@@ -268,6 +298,7 @@ function ReferencePicker({
   return (
     <div className="grid gap-2">
       <input
+        id={inputId}
         className="scheduler-input"
         value={query}
         placeholder={`Search ${label.toLocaleLowerCase()}…`}
