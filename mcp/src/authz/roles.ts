@@ -41,6 +41,7 @@ export const BUSINESS_ACTIONS = [
   "break-glass.invoke",
   "payment.charge",
   "payment.seal-day",
+  "margin.read",
   "claims.manage",
   "finding-definitions.write",
 ] as const;
@@ -287,7 +288,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "claims.manage", "finding-definitions.write"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {

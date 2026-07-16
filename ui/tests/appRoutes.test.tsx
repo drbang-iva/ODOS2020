@@ -34,6 +34,7 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.match(html, /Visit types/);
   assert.match(html, /Suggested diagnoses/);
   assert.match(html, /Optical pricing/);
+  assert.doesNotMatch(html, /Plan profiles/);
 });
 
 test("the optical-pricing route reaches all three shared catalog sections", () => {
@@ -47,6 +48,26 @@ test("the optical-pricing route reaches all three shared catalog sections", () =
   assert.match(html, /Lens pricing/);
   assert.match(html, /Contact lens pricing/);
   assert.match(html, /Read only. Practice-admin access is required/);
+});
+
+test("the plan-profile route reaches the owner settings scene with actual-role write gating", () => {
+  const admin = renderToStaticMarkup(
+    <RouteSwitch
+      view={{ kind: "picker" }}
+      path="/settings/plan-profiles"
+      roles={["practice-admin"]}
+    />,
+  );
+  const desk = renderToStaticMarkup(
+    <RouteSwitch
+      view={{ kind: "picker" }}
+      path="/settings/plan-profiles"
+      roles={["front-desk"]}
+    />,
+  );
+  assert.match(admin, /Plan profiles/);
+  assert.doesNotMatch(admin, /Read only/);
+  assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
 test("the suggested-diagnoses route reaches the shared catalog editor scene", () => {

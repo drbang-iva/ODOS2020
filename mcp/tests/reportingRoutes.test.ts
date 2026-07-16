@@ -72,6 +72,27 @@ test("statement list, generate-one, and batch routes use the same authenticated 
   }
 });
 
+test("plan-profile route grants practice-admin and returns legible 403s to desk and clinician roles", async () => {
+  const fixture = await server();
+  try {
+    assert.equal((await fetch(`${fixture.baseUrl}/practice/plan-profiles`)).status, 401);
+    const admin = await fetch(`${fixture.baseUrl}/practice/plan-profiles`, {
+      headers: { Authorization: "Bearer admin" },
+    });
+    assert.equal(admin.status, 200);
+    assert.deepEqual(await admin.json(), { items: [] });
+    for (const token of ["good", "forbidden"]) {
+      const denied = await fetch(`${fixture.baseUrl}/practice/plan-profiles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      assert.equal(denied.status, 403);
+      assert.match(await denied.text(), /margin\.read role required/);
+    }
+  } finally {
+    await fixture.close();
+  }
+});
+
 async function server() {
   let serviceAuthCalls = 0;
   const fhir = {
@@ -87,6 +108,8 @@ async function server() {
   };
   const authenticate = async (header: string | undefined) => header === "Bearer good"
     ? { staffReference: "Practitioner/staff-1", actorRole: "front-desk" as const, roles: ["front-desk"] as const, fhir }
+    : header === "Bearer admin"
+      ? { staffReference: "Practitioner/admin", actorRole: "practice-admin" as const, roles: ["practice-admin"] as const, fhir }
     : header === "Bearer forbidden"
       ? { staffReference: "Practitioner/staff-2", actorRole: "clinician" as const, roles: ["clinician"] as const, fhir }
       : null;
@@ -108,6 +131,9 @@ async function server() {
       authenticate,
       now: () => "2026-07-10T12:00:00.000Z",
       generateId: (() => { let id = 0; return () => `statement-${++id}`; })(),
+    },
+    planProfiles: {
+      authenticate,
     },
   });
   const listener = app.listen(0, "127.0.0.1");
