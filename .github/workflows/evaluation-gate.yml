@@ -15,7 +15,10 @@ on:
 #
 # Passes when either is present on the PR:
 #   - label "evaluated"
-#   - a comment whose body starts with "Evaluated-by: <Model>"
+#   - the newest marker comment has the form
+#     "Evaluated-by: <Model> — PASS" (also accepts "-- PASS" or "- PASS")
+# A newest marker verdict of FAIL, BLOCKED, or NEEDS-WORK keeps the gate red.
+# A marker without a recognizable verdict token also keeps the gate red.
 #
 # This repo has enforce_admins OFF (solo repo), so a failing check here
 # does not physically block an admin merge — it makes a skipped
@@ -32,10 +35,17 @@ jobs:
       issues: read
       pull-requests: read
     steps:
+      - name: check out verdict parser
+        uses: actions/checkout@v4
+
       - name: check for an independent evaluation marker
         uses: actions/github-script@v7
         with:
           script: |
+            const { evaluateEvaluationGate } = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/scripts/evaluation-verdict.cjs`
+            );
+
             const prNumber = context.payload.pull_request?.number ?? context.payload.issue?.number;
             if (!prNumber) {
               core.setFailed("evaluation-gate: could not resolve a PR number from this event.");
@@ -47,32 +57,19 @@ jobs:
               repo: context.repo.repo,
               issue_number: prNumber,
             });
-            if (labels.some((l) => l.name.toLowerCase() === "evaluated")) {
-              core.info(`PR #${prNumber}: "evaluated" label present — gate passes.`);
-              return;
-            }
 
-            const pattern = /^Evaluated-by:\s*\S+/im;
-            const { data: comments } = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
               per_page: 100,
             });
-            if (comments.some((c) => pattern.test(c.body || ""))) {
-              core.info(`PR #${prNumber}: "Evaluated-by:" comment found — gate passes.`);
+            const decision = evaluateEvaluationGate({ labels, comments });
+            const message = `PR #${prNumber}: ${decision.message}`;
+
+            if (decision.passed) {
+              core.info(message);
               return;
             }
 
-            core.setFailed(
-              [
-                "NOT EVALUATED — this PR has no independent model review yet.",
-                "",
-                "Author ≠ evaluator: the model/tool that wrote this code cannot also be the one that grades it.",
-                "CodeRabbit's automated review is a first pass, not a substitute for this.",
-                "",
-                "To clear this gate, once an independent model has reviewed the diff:",
-                "  - add a PR comment starting with 'Evaluated-by: <Model>' (e.g. 'Evaluated-by: Opus — reviewed, no blocking issues'), or",
-                "  - apply the 'evaluated' label to this PR.",
-              ].join("\n")
-            );
+            core.setFailed(message);
