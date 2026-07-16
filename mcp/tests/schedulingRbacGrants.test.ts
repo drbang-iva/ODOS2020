@@ -108,9 +108,12 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   const readTierCriteria = [
     "Basic?code=https://osod.dev/fhir/CodeSystem/visit-type-config|osod-visit-type-config",
   ];
+  const createOnceCriteria = [
+    "Basic?code=https://osod.dev/fhir/CodeSystem/day-seal|day-seal",
+  ];
   assert.deepEqual(
     rules.map((rule) => rule.criteria).sort(),
-    [...writeTierCriteria, ...readTierCriteria].sort(),
+    [...writeTierCriteria, ...readTierCriteria, ...createOnceCriteria].sort(),
   );
 
   for (const criteria of writeTierCriteria) {
@@ -128,6 +131,16 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     assert.ok(rule.interaction?.includes("read"));
     assert.ok(rule.interaction?.includes("search"));
     assert.ok(!rule.interaction?.includes("create"));
+    assert.ok(!rule.interaction?.includes("update"));
+    assert.ok(!rule.interaction?.includes("delete"));
+  }
+
+  for (const criteria of createOnceCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
+    for (const interaction of ["create", "read", "search"]) {
+      assert.ok(rule.interaction?.includes(interaction as never), `DaySeal Basic needs ${interaction}`);
+    }
     assert.ok(!rule.interaction?.includes("update"));
     assert.ok(!rule.interaction?.includes("delete"));
   }

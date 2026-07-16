@@ -103,3 +103,14 @@ Access date: 2026-07-15. No medical or billing codes are added or asserted in th
 | FHIR R4 Invoice staff attribution | `Invoice.participant.actor` with `participant.role` | https://hl7.org/fhir/R4/invoice-definitions.html#Invoice.participant | https://hl7.org/fhir/R4/invoice.html | 2026-07-15 | verified |
 | Standard participant role for the staff member who recorded the payment | `http://terminology.hl7.org/CodeSystem/v3-ParticipationType#ENT` (data entry person) | https://terminology.hl7.org/3.1.0/CodeSystem-v3-ParticipationType.html | https://terminology.hl7.org/3.1.0/ValueSet-v3-ParticipationDataEntryPerson.html | 2026-07-15 | verified |
 | FHIR R4 date search boundary for the Day Ledger's exact practice-day range | repeated `Invoice?date=ge{start}&date=lt{end}` and `PaymentReconciliation?created=ge{start}&created=lt{end}` | https://hl7.org/fhir/R4/search.html#date | https://www.hl7.org/fhir/R4/searchparameter-registry.html | 2026-07-15 | verified |
+
+## Close the Day — DaySeal and day-scoped charge review
+
+Access date: 2026-07-15. No medical or billing codes are added or asserted in this slice. `day-seal` is an ODOS-local workflow code, distinct from every existing Basic-resource code in the repository.
+
+| Artifact | Chosen value | Source 1 URL | Source 2 URL | Access date | Status |
+|---|---|---|---|---|---|
+| FHIR R4 persistence resource for a create-once day marker | `Basic` with `identifier` as the practice-day natural key, `code` as the resource kind, `created` as the sealed date, and `author` as the sealing staff reference | https://hl7.org/fhir/R4/basic.html | https://hl7.org/fhir/R4/basic-definitions.html | 2026-07-15 | verified |
+| FHIR R4 exact seal timestamp (Basic.created is date-only) | ODOS extension `https://osod.dev/fhir/StructureDefinition/day-seal-timestamp` with `valueInstant` | https://hl7.org/fhir/R4/extensibility.html | https://hl7.org/fhir/R4/datatypes.html#instant | 2026-07-15 | verified (local extension) |
+| FHIR R4 create-once collision guard | search-before-create plus conditional create header `If-None-Exist: identifier=https://osod.dev/fhir/NamingSystem/day-seal-date\|{YYYY-MM-DD}` | https://hl7.org/fhir/R4/http.html#ccreate | https://hl7.org/fhir/R4/search.html#token | 2026-07-15 | verified |
+| FHIR R4 day-scoped unattached-charge search | repeated `ChargeItem?occurrence=ge{start}&occurrence=lt{end}`; `ChargeItem-occurrence` is a date SearchParameter | https://hl7.org/fhir/R4/searchparameter-registry.html | https://hl7.org/fhir/R4/search.html#date | 2026-07-15 | verified |

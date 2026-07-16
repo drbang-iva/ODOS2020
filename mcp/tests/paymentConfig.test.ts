@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { PaymentReconciliation } from "@medplum/fhirtypes";
+import type { Bundle, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { CLOVER_SANDBOX_BASE_URL } from "../src/payments/adapters/clover-adapter.js";
 
@@ -15,6 +15,7 @@ const STRIPE_CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_d
 function fakeFhir() {
   return {
     read: async <T,>(): Promise<T> => ({}) as T,
+    search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
     update: async <T,>(_rt: string, _id: string, r: T): Promise<T> => r,
     create: async <T,>(r: T): Promise<T> => ({ ...(r as object), id: "pr-1" }) as T,
   };

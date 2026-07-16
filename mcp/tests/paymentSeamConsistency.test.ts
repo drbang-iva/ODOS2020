@@ -74,6 +74,7 @@ test("the same order paid by cash vs by processor renders identical money — on
     {
       read: async <T,>(_rt: string, _id: string): Promise<T> =>
         structuredClone(cashStore.invoice) as T,
+      search: async () => ({ resourceType: "Bundle" as const, type: "searchset" as const }),
       update: async <T,>(_rt: string, _id: string, next: T): Promise<T> => {
         cashStore.invoice = structuredClone(next) as Invoice;
         return next;

@@ -1,27 +1,39 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   handleRecordedTenderCollectionRequest,
   handleOpenChargesRequest,
   type PaymentCollectionHandlerDeps,
 } from "../src/payments/payment-collection-handler.js";
 
-function fixture(searchEntries: ChargeItem[] = []) {
+function fixture(
+  searchEntries: ChargeItem[] = [],
+  sealed = false,
+  now = "2026-07-15T10:00:00.000Z",
+  timeZone = "America/New_York",
+) {
   const audits: OsodAuditEventRecord[] = [];
   const transactions: Bundle[] = [];
+  const searches: Array<{ resourceType: string; params: URLSearchParams }> = [];
   let reads = 0;
   const fhir = {
     read: async <T extends Resource>(_type: T["resourceType"], id: string): Promise<T> => {
       reads += 1;
       return charge(id) as T;
     },
-    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => ({
-      resourceType: "Bundle",
-      type: "searchset",
-      entry: resourceType === "ChargeItem" ? searchEntries.map((resource) => ({ resource: resource as T })) : [],
-    }),
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: FhirSearchParams): Promise<Bundle<T>> => {
+      searches.push({ resourceType: String(resourceType), params: new URLSearchParams(params) });
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resourceType === "ChargeItem"
+          ? searchEntries.map((resource) => ({ resource: resource as T }))
+          : resourceType === "Basic" && sealed ? [{ resource: daySeal() as T }] : [],
+      };
+    },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       transactions.push(bundle);
       return {
@@ -44,9 +56,10 @@ function fixture(searchEntries: ChargeItem[] = []) {
       fhir,
     } : null,
     recordAudit: async (row) => { audits.push(row); },
-    now: () => "2026-07-15T10:00:00.000Z",
+    now: () => now,
+    timeZone,
   };
-  return { audits, deps, reads: () => reads, transactions };
+  return { audits, deps, reads: () => reads, searches, transactions };
 }
 
 test("open charges returns an empty array for an authenticated patient with no billable ChargeItems", async () => {
@@ -194,6 +207,57 @@ test("recorded-tender collection returns 400 when amount does not equal the sele
   assert.equal(transactions.length, 0);
   assert.equal(audits.length, 0);
 });
+
+test("recorded-tender collection rejects all record-only tenders after the day is sealed", async () => {
+  for (const tender of ["CASH", "CHECK", "CARD_MANUAL"] as const) {
+    const { audits, deps, reads, transactions } = fixture([], true);
+    const result = await handleRecordedTenderCollectionRequest(deps, {
+      authHeader: "Bearer good",
+      body: {
+        patientReference: "Patient/patient-1",
+        selectedOpenChargeLineIds: ["charge-1"],
+        amountCents: 12_345,
+        tender,
+      },
+    });
+    assert.equal(result.status, 409);
+    assert.match((result.body as { error: string }).error, /already sealed.*payments can't be backdated/i);
+    assert.equal(reads(), 0);
+    assert.equal(transactions.length, 0);
+    assert.equal(audits.length, 0);
+  }
+});
+
+test("recorded-tender collection checks the practice-local seal date across a UTC boundary", async () => {
+  const { deps, searches, transactions } = fixture([], true, "2026-07-16T01:30:00.000Z");
+  const result = await handleRecordedTenderCollectionRequest(deps, {
+    authHeader: "Bearer good",
+    body: {
+      patientReference: "Patient/patient-1",
+      selectedOpenChargeLineIds: ["charge-1"],
+      amountCents: 12_345,
+      tender: "CASH",
+    },
+  });
+  assert.equal(result.status, 409);
+  assert.equal(transactions.length, 0);
+  assert.equal(
+    searches.find((search) => search.resourceType === "Basic")?.params.get("identifier"),
+    "https://osod.dev/fhir/NamingSystem/day-seal-date|2026-07-15",
+  );
+});
+
+function daySeal(): Basic {
+  return {
+    resourceType: "Basic",
+    id: "seal-1",
+    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: "2026-07-15" }],
+    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    created: "2026-07-15",
+    author: { reference: "Practitioner/staff-1" },
+    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueInstant: "2026-07-15T21:00:00.000Z" }],
+  };
+}
 
 function charge(id: string): ChargeItem {
   return {

@@ -40,6 +40,7 @@ export const BUSINESS_ACTIONS = [
   "aesthetics.procedure.write",
   "break-glass.invoke",
   "payment.charge",
+  "payment.seal-day",
   "claims.manage",
   "finding-definitions.write",
 ] as const;
@@ -128,6 +129,14 @@ const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
       kind: "practice-search",
       criteria:
         "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/day-seal|day-seal",
     },
   },
   { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -277,7 +286,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "claims.manage", "finding-definitions.write"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "claims.manage", "finding-definitions.write"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {
@@ -333,7 +342,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
     display: "Front Desk",
     description:
       "Scheduling, demographic, and financial-context access inside a patient compartment; no clinical writes.",
-    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "claims.manage"],
+    businessActions: ["chart.read", "scheduling.manage", "demographics.update", "billing-context.read", "payment.charge", "payment.seal-day", "claims.manage"],
     membershipParameters: [
       {
         name: "patient_compartment",

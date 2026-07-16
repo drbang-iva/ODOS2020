@@ -5559,7 +5559,9 @@ async function main(): Promise<void> {
       // payment.charge business action (same pattern as audit.read); authentication verifies the
       // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
       // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
-      const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env));
+      const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env), {
+        timeZone: process.env.OSOD_TIMEZONE,
+      });
       const labOrderRouting = labOrderRoutingFromEnv(process.env);
       const labOrderDispatch = createLabOrderDispatch([{ vendor: "manual" }], {
         recordAudit: async (row) => {
@@ -5598,6 +5600,7 @@ async function main(): Promise<void> {
       };
       const paymentCollectionDeps = {
         authenticate: authenticateStaffRoute,
+        timeZone: process.env.OSOD_TIMEZONE,
         recordAudit: async (row: OsodAuditEventRecord) => {
           await auditRuntime.record(row, () => undefined);
         },

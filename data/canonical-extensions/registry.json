@@ -369,6 +369,12 @@
       "sliceConsumer": "patient-payments-phase-6a"
     },
     {
+      "url": "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp",
+      "namespace": "payments",
+      "status": "active",
+      "sliceConsumer": "day-close"
+    },
+    {
       "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
       "namespace": "claims",
       "status": "active",
