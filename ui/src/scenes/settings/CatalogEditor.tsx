@@ -2,6 +2,7 @@ import type { Basic } from "@medplum/fhirtypes";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { CatalogFieldKit, type CatalogFieldDescriptor } from "../../components/settings/CatalogFields";
+import { ConfirmDelete, ListHeader, RequiredGate } from "../../components/settings";
 import {
   CatalogFieldValidationError,
   buildCatalogFields,
@@ -34,6 +35,11 @@ export type CatalogDescriptor<Item extends CatalogItemBase> = {
   presetSeedOffer?: ReactNode;
   transaction?: CatalogDraftTransaction;
   immediateCommit?: boolean;
+  listGrammar?: {
+    searchPlaceholder?: string;
+    searchText?: (item: Item) => string;
+    deactivateConsequence: (item: Item) => string;
+  };
 };
 
 export type CatalogInitialState<Item> = {
@@ -183,6 +189,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [expandedInactiveGroups, setExpandedInactiveGroups] = useState<Set<string>>(
     () => new Set(),
   );
@@ -216,7 +223,20 @@ export function CatalogSection<Item extends CatalogItemBase>({
     setLoadError(initialState.error ?? null);
   }, [initialState?.error, initialState?.items, initialState?.loading]);
 
-  const groups = useMemo(() => groupItems(items, descriptor), [descriptor, items]);
+  const visibleItems = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized || !descriptor.listGrammar) return items;
+    return items.filter((item) => {
+      const searchText = descriptor.listGrammar?.searchText?.(item)
+        ?? [
+          descriptor.label(item),
+          ...(descriptor.facts?.(item) ?? []),
+          ...(descriptor.chips?.(item) ?? []),
+        ].join(" ");
+      return searchText.toLocaleLowerCase().includes(normalized);
+    });
+  }, [descriptor, items, query]);
+  const groups = useMemo(() => groupItems(visibleItems, descriptor), [descriptor, visibleItems]);
 
   function openEditor(item: Item) {
     setSelected(item);
@@ -296,6 +316,16 @@ export function CatalogSection<Item extends CatalogItemBase>({
 
   return (
     <section aria-label={`${descriptor.title} section`}>
+      {descriptor.listGrammar ? (
+        <ListHeader
+          title={descriptor.title}
+          searchValue={query}
+          searchPlaceholder={descriptor.listGrammar.searchPlaceholder}
+          newActionLabel={canWrite && descriptor.canCreate !== false ? `New ${descriptor.singularLabel}` : undefined}
+          onSearchChange={setQuery}
+          onNew={canWrite && descriptor.canCreate !== false ? () => openEditor(descriptor.createItem()) : undefined}
+        />
+      ) : (
         <header className="mb-3 flex items-center justify-between">
           {!hideTitle && <h2 className="text-lg font-semibold text-white/90">{descriptor.title}</h2>}
           {canWrite && descriptor.canCreate !== false && (
@@ -304,6 +334,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
             </button>
           )}
         </header>
+      )}
 
         {loadError && (
           <div role="alert" className="mb-4 border border-red-400/40 bg-red-950/50 px-4 py-3 text-sm text-red-100">
@@ -318,6 +349,8 @@ export function CatalogSection<Item extends CatalogItemBase>({
             title={`No ${descriptor.title.toLocaleLowerCase()} yet`}
             presetSeedOffer={descriptor.adapter.capabilities.presetSeed ? descriptor.presetSeedOffer : undefined}
           />
+        ) : visibleItems.length === 0 ? (
+          <div className="settings-list-no-results">No matches for “{query.trim()}”.</div>
         ) : (
           <div className="grid gap-4">
             {groups.map((group) => (
@@ -331,7 +364,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
                   <button
                     type="button"
                     className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-white/10 bg-[#060610]/95 px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white/55 backdrop-blur"
-                    aria-expanded={expandedInactiveGroups.has(group.name)}
+                    aria-expanded={Boolean(query.trim()) || expandedInactiveGroups.has(group.name)}
                     onClick={() =>
                       setExpandedInactiveGroups((current) => {
                         const next = new Set(current);
@@ -342,10 +375,10 @@ export function CatalogSection<Item extends CatalogItemBase>({
                     }
                   >
                     <span>{group.name}</span>
-                    <span>{expandedInactiveGroups.has(group.name) ? "Collapse" : "Inactive · expand"}</span>
+                    <span>{query.trim() || expandedInactiveGroups.has(group.name) ? "Collapse" : "Inactive · expand"}</span>
                   </button>
                 )}
-                {(group.hasActive || expandedInactiveGroups.has(group.name)) && (
+                {(group.hasActive || Boolean(query.trim()) || expandedInactiveGroups.has(group.name)) && (
                   <div className="grid gap-2 pt-2">
                   {group.items.map((item) => (
                     <CatalogRow
@@ -372,6 +405,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
           errors={fieldErrors}
           saving={saving}
           saveLabel={transaction ? "Apply to draft" : "Save"}
+          useListGrammar={Boolean(descriptor.listGrammar)}
           onChange={(key, value) => setDraftFields((current) => ({ ...current, [key]: value }))}
           onSave={() => void saveItem()}
           onDeactivate={() => void deactivateSelected()}
@@ -458,6 +492,7 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
   errors,
   saving,
   saveLabel,
+  useListGrammar,
   onChange,
   onSave,
   onDeactivate,
@@ -469,11 +504,17 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
   errors: Record<string, string>;
   saving: boolean;
   saveLabel: string;
+  useListGrammar: boolean;
   onChange: (key: string, value: unknown) => void;
   onSave: () => void;
   onDeactivate: () => void;
   onClose: () => void;
 }) {
+  const fieldId = (key: string) => `catalog-${slug(descriptor.title)}-${key}`;
+  const requiredFields = descriptor.fields
+    .filter((field) => field.required)
+    .map((field) => ({ key: field.key, label: field.label }));
+
   return (
     <aside
       role="dialog"
@@ -499,17 +540,46 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
             </div>
           </div>
         ))}
-        <CatalogFieldKit fields={descriptor.fields} values={values} errors={errors} onChange={onChange} />
+        <CatalogFieldKit
+          fields={descriptor.fields}
+          values={values}
+          errors={errors}
+          fieldId={useListGrammar ? fieldId : undefined}
+          showRequired={useListGrammar}
+          onChange={onChange}
+        />
       </div>
       <footer className="flex items-center gap-2 border-t border-white/10 px-4 py-3">
         {item.active && descriptor.adapter.capabilities.deactivate && (
-          <button className="scheduler-button" type="button" disabled={saving} onClick={onDeactivate}>
-            Deactivate
+          useListGrammar && descriptor.listGrammar ? (
+            <ConfirmDelete
+              actionLabel="Deactivate"
+              confirmLabel="Deactivate"
+              title={`Deactivate ${descriptor.label(item) || descriptor.singularLabel}?`}
+              consequence={descriptor.listGrammar.deactivateConsequence(item)}
+              disabled={saving}
+              onConfirm={onDeactivate}
+            />
+          ) : (
+            <button className="scheduler-button" type="button" disabled={saving} onClick={onDeactivate}>
+              Deactivate
+            </button>
+          )
+        )}
+        {useListGrammar ? (
+          <RequiredGate
+            fields={requiredFields}
+            values={values}
+            fieldId={fieldId}
+            saveLabel={saveLabel}
+            saving={saving}
+            onSave={onSave}
+          />
+        ) : (
+          <button className="scheduler-button ml-auto" type="button" disabled={saving} onClick={onSave}>
+            {saveLabel}
           </button>
         )}
-        <button className="scheduler-button ml-auto" type="button" disabled={saving} onClick={onSave}>
-          {saveLabel}
-        </button>
       </footer>
     </aside>
   );
@@ -564,4 +634,8 @@ function toRecord<Item extends CatalogItemBase>(item: Item): Record<string, unkn
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function slug(value: string): string {
+  return value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
