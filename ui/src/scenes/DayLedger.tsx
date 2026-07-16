@@ -29,13 +29,13 @@ export function DayLedger({ initialLedger, initialSeal, date }: { initialLedger?
   }, [date, initialLedger]);
 
   useEffect(() => {
-    if (initialSeal !== undefined || initialLedger || !ledger) return;
+    if (initialSeal !== undefined || !ledger) return;
     let active = true;
     fetchDaySeal(ledger.date)
       .then((value) => active && setSeal(value))
       .catch((reason) => active && setSealError(reason instanceof Error ? reason.message : "Seal status unavailable."));
     return () => { active = false; };
-  }, [initialLedger, initialSeal, ledger]);
+  }, [initialSeal, ledger]);
 
   return (
     <main className="odos-day-ledger">

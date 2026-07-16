@@ -53,7 +53,7 @@ export async function createDaySeal(
   input: { date: string; staffReference: string; sealedAt: string },
 ): Promise<DaySeal> {
   assertDate(input.date);
-  if (!Number.isFinite(new Date(input.sealedAt).getTime())) throw new Error("Seal timestamp is invalid.");
+  if (!isFhirInstant(input.sealedAt)) throw new Error("Seal timestamp is invalid.");
   if (!/^(Practitioner|PractitionerRole)\/[^/]+$/.test(input.staffReference)) {
     throw new Error("Seal staff reference must identify a Practitioner or PractitionerRole.");
   }
@@ -68,7 +68,7 @@ export async function createDaySeal(
     },
     created: input.date,
     author: { reference: input.staffReference },
-    extension: [{ url: DAY_SEAL_TIMESTAMP_URL, valueDateTime: input.sealedAt }],
+    extension: [{ url: DAY_SEAL_TIMESTAMP_URL, valueInstant: input.sealedAt }],
   }, {
     "If-None-Exist": `identifier=${DAY_SEAL_IDENTIFIER_SYSTEM}|${input.date}`,
   });
@@ -91,7 +91,7 @@ function projectDaySeal(resource: Basic): DaySeal {
   )?.value;
   const sealedAt = resource.extension?.find((extension) =>
     extension.url === DAY_SEAL_TIMESTAMP_URL,
-  )?.valueDateTime;
+  )?.valueInstant;
   const sealedBy = resource.author?.reference;
   const coded = resource.code.coding?.some((coding) =>
     coding.system === DAY_SEAL_CODE_SYSTEM && coding.code === DAY_SEAL_CODE,
@@ -100,8 +100,19 @@ function projectDaySeal(resource: Basic): DaySeal {
     throw new Error(`Basic/${resource.id ?? "(unknown)"} is not a complete DaySeal.`);
   }
   assertDate(date);
-  if (!Number.isFinite(new Date(sealedAt).getTime())) {
+  if (resource.created !== date) {
+    throw new Error(`Basic/${resource.id} does not match its DaySeal date identity.`);
+  }
+  if (!/^(Practitioner|PractitionerRole)\/[^/]+$/.test(sealedBy)) {
+    throw new Error(`Basic/${resource.id} has an invalid seal staff reference.`);
+  }
+  if (!isFhirInstant(sealedAt)) {
     throw new Error(`Basic/${resource.id} has an invalid seal timestamp.`);
   }
   return { id: resource.id, date, sealedBy, sealedAt };
+}
+
+function isFhirInstant(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+    Number.isFinite(new Date(value).getTime());
 }

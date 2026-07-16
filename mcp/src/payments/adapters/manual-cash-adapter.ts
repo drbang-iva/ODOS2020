@@ -20,6 +20,7 @@ import type {
 } from "../payment-processor-adapter.js";
 import { buildPaymentReconciliation } from "../payment-reconciliation.js";
 import { assertDayNotSealed } from "../../desk/day-seal.js";
+import { practiceDate } from "../../desk/day-ledger.js";
 
 export const MANUAL_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-payment";
 const DATA_ENTRY_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
@@ -63,6 +64,7 @@ export function createManualCashAdapter(
         throw new Error("Charge amount (amountCents) must be a positive integer number of cents.");
       }
       const chargedAt = now();
+      const chargedDate = practiceDate(chargedAt, options?.timeZone);
       await assertDayNotSealed(fhir, chargedAt, options?.timeZone);
       if (args.invoiceReference === undefined) {
         const transactionId = `manual-${randomUUID()}`;
@@ -70,7 +72,7 @@ export function createManualCashAdapter(
           buildPaymentReconciliation({
             outcome: "success",
             createdIso: chargedAt,
-            paymentDate: chargedAt.slice(0, 10),
+            paymentDate: chargedDate,
             amountCents: args.amountCents,
             subjectReference: args.patientReference,
             staffReference: args.staffReference,
@@ -87,7 +89,7 @@ export function createManualCashAdapter(
           outcome: "success",
           amountChargedCents: args.amountCents,
           feesCents: 0,
-          settlementDate: chargedAt.slice(0, 10),
+          settlementDate: chargedDate,
         };
       }
       const invoiceId = invoiceIdFromReference(args.invoiceReference);
@@ -139,7 +141,7 @@ export function createManualCashAdapter(
         outcome: "success",
         amountChargedCents: args.amountCents,
         feesCents: 0,
-        settlementDate: chargedAt.slice(0, 10),
+        settlementDate: chargedDate,
       };
     },
 

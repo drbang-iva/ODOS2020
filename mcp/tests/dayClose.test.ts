@@ -47,12 +47,24 @@ test("DaySeal is created once with date identity, verified staff, and exact time
     sealedAt: "2026-07-15T21:45:00.000Z",
   });
   assert.deepEqual(await loadDaySeal(fhir, "2026-07-15"), seal);
+  const stored = fhir.store.find((resource): resource is Basic => resource.resourceType === "Basic")!;
+  assert.equal(stored.extension?.[0]?.valueInstant, "2026-07-15T21:45:00.000Z");
   await assert.rejects(() => createDaySeal(fhir, {
     date: "2026-07-15",
     staffReference: "Practitioner/staff-2",
     sealedAt: "2026-07-15T22:00:00.000Z",
   }), /already sealed/i);
   assert.equal(fhir.store.filter((resource) => resource.resourceType === "Basic").length, 1);
+});
+
+test("DaySeal reads reject mismatched date identity and unverified staff attribution", async () => {
+  const mismatched = daySeal("seal-1", "2026-07-15", "2026-07-15T22:00:00.000Z");
+  mismatched.created = "2026-07-14";
+  await assert.rejects(() => loadDaySeal(fixture([mismatched]), "2026-07-15"), /date identity/i);
+
+  const unverified = daySeal("seal-2", "2026-07-15", "2026-07-15T22:00:00.000Z");
+  unverified.author = { reference: "Patient/p1" };
+  await assert.rejects(() => loadDaySeal(fixture([unverified]), "2026-07-15"), /staff reference/i);
 });
 
 test("a persisted seal blocks a later backdated manual payment before its Invoice write", async () => {
@@ -106,6 +118,10 @@ test("close review finds billable charges missing from same-day Invoice lines an
     patientReference: "Patient/p1",
     chargesTotalCents: 5000,
     paidTotalCents: 5000,
+  }, {
+    patientReference: "Patient/p2",
+    chargesTotalCents: 3750,
+    paidTotalCents: 0,
   }]);
 });
 
@@ -234,6 +250,6 @@ function daySeal(id: string, date: string, sealedAt: string): Basic {
     code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
     created: date,
     author: { reference: "Practitioner/staff-1" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueDateTime: sealedAt }],
+    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueInstant: sealedAt }],
   };
 }

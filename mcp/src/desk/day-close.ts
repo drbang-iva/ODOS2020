@@ -59,7 +59,6 @@ export async function loadDayClose(
       ["_count", "1000"],
     ]),
   ]);
-  const patientSkim = ledger.payments.available ? projectPatientSkim(ledger) : [];
   if (!charges.complete || !invoices.complete) {
     return {
       date: options.date,
@@ -91,7 +90,7 @@ export async function loadDayClose(
         }];
       }),
       heldCreditsToday: ledger.heldCreditsToday,
-      patientSkim,
+      patientSkim: projectPatientSkim(ledger, charges.resources),
     },
   };
 }
@@ -113,21 +112,38 @@ export async function loadDaySealArchive(
   timeZone?: string,
 ): Promise<Array<DaySeal & { totalCents: number | null }>> {
   const seals = await listDaySeals(fhir);
-  return Promise.all(seals.map(async (seal) => {
+  const archive: Array<DaySeal & { totalCents: number | null }> = [];
+  for (const seal of seals) {
     const ledger = await loadDayLedger(fhir, { date: seal.date, timeZone });
-    return { ...seal, totalCents: ledger.payments.available ? ledger.payments.totalCents : null };
-  }));
+    archive.push({ ...seal, totalCents: ledger.payments.available ? ledger.payments.totalCents : null });
+  }
+  return archive;
 }
 
-function projectPatientSkim(ledger: DayLedger): PatientDaySkim[] {
+function projectPatientSkim(ledger: DayLedger, charges: ChargeItem[]): PatientDaySkim[] {
   if (!ledger.payments.available) return [];
-  const totals = new Map<string, number>();
+  const paidTotals = new Map<string, number>();
   for (const payment of ledger.payments.detail) {
-    totals.set(payment.patientReference, (totals.get(payment.patientReference) ?? 0) + payment.amountCents);
+    paidTotals.set(payment.patientReference, (paidTotals.get(payment.patientReference) ?? 0) + payment.amountCents);
   }
-  return [...totals.entries()].map(([patientReference, paidTotalCents]) => ({
+  const chargeTotals = new Map<string, number>();
+  for (const charge of charges) {
+    const patientReference = charge.subject.reference ?? "unattributed";
+    chargeTotals.set(
+      patientReference,
+      (chargeTotals.get(patientReference) ?? 0) + moneyCents(
+        charge.priceOverride?.value,
+        `ChargeItem/${charge.id ?? "(unknown)"} priceOverride`,
+      ),
+    );
+  }
+  const patientReferences = new Set([...chargeTotals.keys(), ...paidTotals.keys()]);
+  return [...patientReferences].map((patientReference) => ({
     patientReference,
-    chargesTotalCents: paidTotalCents,
-    paidTotalCents,
-  })).sort((a, b) => b.paidTotalCents - a.paidTotalCents || a.patientReference.localeCompare(b.patientReference));
+    chargesTotalCents: chargeTotals.get(patientReference) ?? 0,
+    paidTotalCents: paidTotals.get(patientReference) ?? 0,
+  })).sort((a, b) =>
+    b.paidTotalCents - a.paidTotalCents ||
+    b.chargesTotalCents - a.chargesTotalCents ||
+    a.patientReference.localeCompare(b.patientReference));
 }

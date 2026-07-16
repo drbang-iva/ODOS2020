@@ -43,6 +43,8 @@ test("Close the Day renders Verify, Review, Seal, tender counts, exceptions, and
   assert.match(html, /Patient skim/);
   assert.match(html, /Front Desk or Practice Admin/);
   assert.match(html, /Claims and billing work continue unchanged/);
+  const renderer = create(<CloseDay roles={["clinician"]} initialData={CLOSE_DATA} />);
+  assert.equal(renderer.root.findByType("button").props.disabled, true);
 });
 
 test("a completed seal renders immutable attribution and the explicit no-claims-change Billing handoff", () => {
@@ -54,6 +56,21 @@ test("a completed seal renders immutable attribution and the explicit no-claims-
   assert.match(html, /alex/);
   assert.match(html, /with Billing/);
   assert.match(html, /no claims or billing workflow was changed/);
+  const renderer = create(<CloseDay roles={["front-desk"]} initialData={{
+    ...CLOSE_DATA,
+    seal: { id: "seal-1", date: "2026-07-15", sealedBy: "Practitioner/alex", sealedAt: "2026-07-15T22:00:00.000Z" },
+  }} />);
+  assert.equal(renderer.root.findAllByType("button").length, 0);
+});
+
+test("a sealed day never presents unavailable payment totals as zero", () => {
+  const html = renderToStaticMarkup(<CloseDay roles={["front-desk"]} initialData={{
+    ...CLOSE_DATA,
+    ledger: { ...CLOSE_DATA.ledger, payments: { available: false, reason: "Payment totals unavailable." } },
+    seal: { id: "seal-1", date: "2026-07-15", sealedBy: "Practitioner/alex", sealedAt: "2026-07-15T22:00:00.000Z" },
+  }} />);
+  assert.match(html, /Total unavailable/);
+  assert.doesNotMatch(html, /\$0\.00/);
 });
 
 test("a known nonzero variance does not disable sealing for an authorized staffer", () => {

@@ -69,7 +69,7 @@ export function CloseDay({ roles, date, initialData }: {
         <StepTitle number="01" eyebrow="Verify" title="Count what is here" />
         {data.ledger.payments.available ? <>
           <div className="odos-close-count-grid">{TENDERS.map(({ code, label }) => <label key={code}><span>{label}<small>Recorded {money(data.ledger.payments.available ? data.ledger.payments.tenderTotalsCents[code] : 0)}</small></span><span className="odos-close-money-input">$<input aria-label={`${label} counted`} inputMode="decimal" placeholder="0.00" value={counted[code]} onChange={(event) => setCounted((current) => ({ ...current, [code]: event.target.value }))} /></span></label>)}</div>
-          <div className={`odos-close-variance ${variance === 0 ? "is-balanced" : ""}`}><span>Counted variance</span><strong>{variance === null ? "Enter all counts" : signedMoney(variance)}</strong><small>A variance is recorded for review; it does not block sealing.</small></div>
+          <div className={`odos-close-variance ${variance === 0 ? "is-balanced" : ""}`}><span>Counted variance</span><strong>{variance === null ? "Enter all counts" : signedMoney(variance)}</strong><small>A nonzero variance stays visible here for review; it does not block sealing.</small></div>
         </> : <Unavailable reason={data.ledger.payments.reason} />}
       </section>
 
@@ -117,7 +117,7 @@ function ReviewCard({ title, value, children }: { title: string; value: string; 
 function ReviewRow({ label, detail, value }: { label: string; detail: string; value: string }) { return <div className="odos-close-review-row"><span><b>{label}</b><small>{detail}</small></span><strong>{value}</strong></div>; }
 function Empty({ children }: { children: ReactNode }) { return <p className="odos-close-empty">{children}</p>; }
 function Unavailable({ reason }: { reason: string }) { return <p className="odos-close-unavailable" role="status">{reason}</p>; }
-function SealSummary({ data }: { data: DayCloseData }) { const seal = data.seal!; return <div className="odos-close-sealed"><strong>{money(data.ledger.payments.available ? data.ledger.payments.totalCents : 0)}</strong><span>{data.date} · {referenceLabel(seal.sealedBy)} · {new Date(seal.sealedAt).toLocaleString()}</span><p>Soft close complete. The day is now with Billing; no claims or billing workflow was changed.</p></div>; }
+function SealSummary({ data }: { data: DayCloseData }) { const seal = data.seal!; return <div className="odos-close-sealed"><strong>{data.ledger.payments.available ? money(data.ledger.payments.totalCents) : "Total unavailable"}</strong><span>{data.date} · {referenceLabel(seal.sealedBy)} · {new Date(seal.sealedAt).toLocaleString()}</span><p>Soft close complete. The day is now with Billing; no claims or billing workflow was changed.</p></div>; }
 
 function parseMoney(value: string): number | null { const trimmed = value.trim(); if (!/^\d+(?:\.\d{0,2})?$/.test(trimmed)) return null; const [whole, fraction = ""] = trimmed.split("."); const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0")); return Number.isSafeInteger(cents) ? cents : null; }
 function money(cents: number): string { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100); }
