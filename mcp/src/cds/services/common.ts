@@ -92,15 +92,15 @@ export function ruleCard(input: {
     summary: input.summary,
     indicator: input.indicator ?? "info",
     source: {
-      label: "OSOD local specialty rules",
+      label: "ODOS local specialty rules",
       url: PERFORMANCE_OD_SOURCE_URL,
     },
     detail: input.detail,
     suggestions: input.suggestions,
     links: [
       {
-        label: "OSOD CDS Hooks operator guide",
-        url: "https://osod.dev/docs/cds-hooks",
+        label: "ODOS CDS Hooks operator guide",
+        url: "https://odos2020.com/docs/cds-hooks",
         type: "absolute",
       },
     ],

@@ -19,7 +19,7 @@ import {
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
 import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
-import { OSOD_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
 test("patient overview projects real snapshot resources and newest-first encounter diagnoses", async () => {
   const fake = new FakeFhir();
@@ -143,7 +143,7 @@ test("sticky-note conditional-create races update the winning resource with this
     id: "sticky-1",
     meta: { versionId: "1" },
     status: "current",
-    identifier: [{ system: "https://osod.dev/fhir/identifier/patient-sticky-note", value: "p1" }],
+    identifier: [{ system: "https://odos2020.com/fhir/identifier/patient-sticky-note", value: "p1" }],
     subject: { reference: "Patient/p1" },
     content: [{ attachment: { data: Buffer.from("Concurrent edit", "utf8").toString("base64") } }],
   };
@@ -249,7 +249,7 @@ function encounter(id: string, start: string, visitCode?: string): Encounter {
     class: { code: "AMB" },
     subject: { reference: "Patient/p1" },
     period: { start, end: start },
-    type: [{ text: "Comprehensive exam", ...(visitCode ? { coding: [{ system: OSOD_VISIT_TYPE_SYSTEM, code: visitCode }] } : {}) }],
+    type: [{ text: "Comprehensive exam", ...(visitCode ? { coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: visitCode }] } : {}) }],
     participant: [{ individual: { display: "Dr. Clinician" } }],
     serviceProvider: { display: "Practice location" },
   };

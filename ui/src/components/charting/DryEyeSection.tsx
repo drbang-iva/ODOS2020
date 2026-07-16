@@ -225,7 +225,7 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
       completed: false,
       summary,
       savedAt: new Date().toISOString(),
-      operator: "OSOD UI dry_eye",
+      operator: "ODOS UI dry_eye",
     };
     setStatus(next);
     onSaved(next);
@@ -379,7 +379,7 @@ async function createUiProvenance(sourceTag: string, targetReferences: string[])
               },
             ],
           },
-          who: { display: `OSOD UI ${sourceTag}` },
+          who: { display: `ODOS UI ${sourceTag}` },
         },
       ],
     },

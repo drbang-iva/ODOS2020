@@ -60,7 +60,7 @@ test("v0.55e patient-directed grant revocation invalidates refresh and access to
     );
     assert.equal(((await accessIntrospection.json()) as { active: boolean }).active, false);
 
-    const deniedExport = await fetch(`${server.origin}/Group/osod-exportable-group/$export?_type=Patient`, {
+    const deniedExport = await fetch(`${server.origin}/Group/odos-exportable-group/$export?_type=Patient`, {
       headers: {
         Accept: "application/fhir+json",
         Prefer: "respond-async",

@@ -110,7 +110,7 @@ function setup(options: { now?: string } = {}) {
       allocations: [{ invoiceReference: "Invoice/invoice-a", amountCents: 4_000 }],
       staffReference: "Practitioner/staff-1",
       processorTransactionId: "cash-1",
-      processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/manual-payment",
+      processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/manual-payment",
       surface: "manual",
       tender: { code: "CASH", display: "Cash" },
     }),

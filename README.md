@@ -1,4 +1,4 @@
-# OSOD — Open Source Optometry
+# ODOS — Open Source Optometry
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Self-hosted on the practice's own hardware. Built on the Medplum FHIR foundation.
 
@@ -22,16 +22,16 @@ This is real working code, advancing through milestone-locked slices. It's not p
 
 ## How it's built
 
-- **FHIR backend:** Medplum (Apache-2.0, self-hosted). Swappable with any FHIR R4 server — OSOD imports zero Medplum SDK beyond `@medplum/fhirtypes` (pure TypeScript types).
+- **FHIR backend:** Medplum (Apache-2.0, self-hosted). Swappable with any FHIR R4 server — ODOS imports zero Medplum SDK beyond `@medplum/fhirtypes` (pure TypeScript types).
 - **Application:** custom TypeScript / Node, talks plain FHIR REST.
 - **Data locality:** patient data lives only on practice hardware. No cloud, no phone-home, no telemetry.
-- **Local SMART authorization server:** runs in the MCP Node adapter — SMART App Launch v2 (authorize / token / introspection / revocation / JWKS / app-registration). Practice-local signing key. Intersects requested SMART scopes against OSOD AccessPolicy before issuing tokens. See `docs/smart.md` and `docs/smart-app-registry.md`.
-- **Decision support runs locally.** External CDS services are off by default — opt in only the ones you trust, only when you trust them. The CDS Hooks client advertises local OSOD specialty services + practice-approved external services through the local `/cds-services` endpoint. See `docs/cds-hooks.md`.
+- **Local SMART authorization server:** runs in the MCP Node adapter — SMART App Launch v2 (authorize / token / introspection / revocation / JWKS / app-registration). Practice-local signing key. Intersects requested SMART scopes against ODOS AccessPolicy before issuing tokens. See `docs/smart.md` and `docs/smart-app-registry.md`.
+- **Decision support runs locally.** External CDS services are off by default — opt in only the ones you trust, only when you trust them. The CDS Hooks client advertises local ODOS specialty services + practice-approved external services through the local `/cds-services` endpoint. See `docs/cds-hooks.md`.
 - **AgentOps governance** for any AI agent that touches charts: every action audited, blockable, undoable. See `docs/agentops.md`.
 - **Patient Access API** — patients can authorize third-party apps to read their records.
 - **Population-level export** — group exports run on the practice's hardware, NDJSON files stay on local disk. Data never leaves the building unless the practice authorizes it. See `docs/bulk-data.md` and `docs/capability-statement.md`.
 
-OSOD is designed for the practice's own hardware. If a practice ever wants cloud, that's a separate conversation — the engine ships local-only.
+ODOS is designed for the practice's own hardware. If a practice ever wants cloud, that's a separate conversation — the engine ships local-only.
 
 ## What works today (v0.55 spine)
 
@@ -68,7 +68,7 @@ Plus the catalog architecture trifecta drafted 2026-05-05: product catalogs hybr
 
 A local optometry practice can, on its own hardware, with no cloud dependency:
 
-1. Install OSOD via documented script
+1. Install ODOS via documented script
 2. Pass `npm run preflight` clean
 3. Onboard admin Practitioner + AccessPolicies
 4. Chart a basic visit (refraction, IOP, anterior/posterior segment, signing)
@@ -77,7 +77,7 @@ A local optometry practice can, on its own hardware, with no cloud dependency:
 7. Export the patient via §170.315(g)(10) Patient Access API
 8. Understand explicitly what is NOT production-ready yet
 
-**Tier-1 has zero in-flight v0.6 dependencies.** v0.55 substrate is what we validate first in a real practice. The proving-ground practice runs their current PMS in parallel for revenue cycle during the Tier-1 pilot — OSOD is the charting + audit + safety substrate during validation.
+**Tier-1 has zero in-flight v0.6 dependencies.** v0.55 substrate is what we validate first in a real practice. The proving-ground practice runs their current PMS in parallel for revenue cycle during the Tier-1 pilot — ODOS is the charting + audit + safety substrate during validation.
 
 Tier-2 (cash dispensary) needs v0.6c. Tier-3 (insured visit) needs v0.6b + v0.6c + v0.6d.
 
@@ -85,14 +85,14 @@ Full acceptance criteria, rationale, and v0.6 ranking against pilot tiers: [`doc
 
 ## Practice install (developer-only — not a customer onboarding path yet)
 
-OSOD targets a practice-owned Mac Studio, NUC, Linux box, or server with at least 16 GB RAM and 500 GB storage. The practice handles the physical safeguards around hardware and backup media; see v0.5 verification ledger row 46 for HIPAA 45 CFR §164.310. Docker Compose v2 is the local deployment surface; ledger row 47 + the official Docker Compose install docs: <https://docs.docker.com/compose/install/>.
+ODOS targets a practice-owned Mac Studio, NUC, Linux box, or server with at least 16 GB RAM and 500 GB storage. The practice handles the physical safeguards around hardware and backup media; see v0.5 verification ledger row 46 for HIPAA 45 CFR §164.310. Docker Compose v2 is the local deployment surface; ledger row 47 + the official Docker Compose install docs: <https://docs.docker.com/compose/install/>.
 
 Install only the SMART apps you opt into. Your registry, your seed catalog, your call.
 
 ```bash
-# 1. Install Docker + Docker Compose v2, then clone OSOD
-git clone https://github.com/drbang-iva/osod.git
-cd osod
+# 1. Install Docker + Docker Compose v2, then clone ODOS
+git clone https://github.com/drbang-iva/ODOS2020.git
+cd ODOS2020
 
 # 2. Install Node dependencies for the setup scripts
 npm install
@@ -104,8 +104,8 @@ docker-compose ps
 
 # 4. Provide human-owned setup credentials
 cp .env.example .env
-# Edit .env or export OSOD_PRACTICE_NAME, OSOD_ADMIN_EMAIL,
-# OSOD_ADMIN_NAME, and OSOD_ADMIN_PASSWORD.
+# Edit .env or export ODOS_PRACTICE_NAME, ODOS_ADMIN_EMAIL,
+# ODOS_ADMIN_NAME, and ODOS_ADMIN_PASSWORD.
 
 # 5. Run the interactive setup wizard
 npm run setup-practice
@@ -139,7 +139,7 @@ npm run poc
 Expected output:
 
 ```
-✓ Logged in as admin@osod.local
+✓ Logged in as admin@odos.local
 ✓ Created Patient: <uuid>
 ✓ Created Encounter: <uuid>
 ✓ Created ChargeItem (comprehensive-established-eye-exam): <uuid>
@@ -152,14 +152,14 @@ Admin UI: http://localhost:8100
 
 ### Pull up the working screens
 
-For an already-created local practice, run the non-destructive role repair once, then use the checked-in `.claude/launch.json` entries to start `osod-mcp` on `:3333` and `osod-ui` on `:5173`:
+For an already-created local practice, run the non-destructive role repair once, then use the checked-in `.claude/launch.json` entries to start `odos-mcp` on `:3333` and `odos-ui` on `:5173`:
 
 ```bash
 npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
 npm run seed-demo
 ```
 
-Open `http://localhost:5173` and use the regular OSOD login for the named human account. The repaired membership deliberately routes as `front-desk`, so the complete Desk home, Statements, Clinic summary, Schedule, and payment-facing screens load without token copying or role-related FHIR 403 responses. The configured Medplum service identity is not eligible for these human practice roles. `seed-demo` is idempotent and provides a synthetic patient, current appointment, visit type, issued Invoice, unapplied credit, and generated statement.
+Open `http://localhost:5173` and use the regular ODOS login for the named human account. The repaired membership deliberately routes as `front-desk`, so the complete Desk home, Statements, Clinic summary, Schedule, and payment-facing screens load without token copying or role-related FHIR 403 responses. The configured Medplum service identity is not eligible for these human practice roles. `seed-demo` is idempotent and provides a synthetic patient, current appointment, visit type, issued Invoice, unapplied credit, and generated statement.
 
 See [`docs/install.md`](docs/install.md#developer-screen-bring-up) for the complete bring-up and partial-provision repair behavior.
 
@@ -171,10 +171,13 @@ See [`docs/install.md`](docs/install.md#developer-screen-bring-up) for the compl
 
 ## Repository relationships
 
-- **Business brain + knowledge vault (private):** [`performance-od`](https://github.com/drbang-iva/performance-od) — strategy, decisions, research, mandates, four-wave triangulation files, the AI agent fleet, and the wider PerformanceOD posture. OSOD is one of three pillars there (alongside open-source marketing & automation, and a community-for-ODs concept). The private repo is maintainer-only; nothing private (PHI, secrets, customer data, raw clinic data, finance) crosses the boundary into this OSOD repo.
+- **Business brain + knowledge vault (private):** [`performance-od`](https://github.com/drbang-iva/performance-od) — strategy, decisions, research, mandates, four-wave triangulation files, the AI agent fleet, and the wider PerformanceOD posture. ODOS is one of three pillars there (alongside open-source marketing & automation, and a community-for-ODs concept). The private repo is maintainer-only; nothing private (PHI, secrets, customer data, raw clinic data, finance) crosses the boundary into this ODOS repo.
 - **Code (this repo, public AGPL-3.0):** application code, infrastructure config, tests, dev scripts, build logs, evidence files.
 
-See `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md` for the architecture rationale, `performance-od/decisions/2026-03-14-open-source-od-architecture.md` for the founding architecture decision, and `performance-od/decisions/2026-05-10-osod-first-pilot-milestone.md` for the Tier-1 first-pilot-milestone decision.
+See the private PerformanceOD decisions index for the foundation decision dated
+2026-04-22 and the Tier-1 first-pilot decision dated 2026-05-10. The founding
+architecture decision remains
+`performance-od/decisions/2026-03-14-open-source-od-architecture.md`.
 
 ## History
 

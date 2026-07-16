@@ -37,7 +37,7 @@ export interface ProcedureDefinitionEndpointDeps {
 }
 
 const WRITE_HEADERS = {
-  "X-OSOD-Source": "mcp/create_definition_backed_procedure",
+  "X-ODOS-Source": "mcp/create_definition_backed_procedure",
 } as const;
 
 const captureSchema = z.object({

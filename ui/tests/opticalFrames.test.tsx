@@ -6,13 +6,13 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { addFrameToInventory, type FrameCatalogItem, type PracticeFrameInventoryItem } from "../src/lib/optical-frames";
 import { OpticalFrames } from "../src/scenes/OpticalFrames";
 
-const CATALOG_URL = "https://osod.dev/catalog/frames/SKU-100";
+const CATALOG_URL = "https://odos2020.com/catalog/frames/SKU-100";
 const ACTOR_ID = "practitioner-1";
 const CATALOG_ITEM: FrameCatalogItem = {
   canonicalUrl: CATALOG_URL,
   sku: "SKU-100",
   display: "Test Frame",
-  manufacturer: "OSOD",
+  manufacturer: "ODOS",
   properties: {},
   publicityClass: "open",
 };
@@ -47,13 +47,13 @@ test("addFrameToInventory creates qty 1 with the inventory extensions, AuditEven
   const fullUrl = transaction?.entry?.[0]?.fullUrl;
   assert.equal(transaction?.entry?.[0]?.request?.method, "POST");
   assert.match(fullUrl ?? "", /^urn:uuid:[0-9a-f-]{36}$/);
-  assert.equal(new URLSearchParams(transaction?.entry?.[0]?.request?.ifNoneExist).get("identifier"), `https://osod.dev/fhir/NamingSystem/frame-inventory-canonical-url|${CATALOG_URL}`);
+  assert.equal(new URLSearchParams(transaction?.entry?.[0]?.request?.ifNoneExist).get("identifier"), `https://odos2020.com/fhir/NamingSystem/frame-inventory-canonical-url|${CATALOG_URL}`);
   assert.equal(inventory.code?.coding?.[0]?.code, "practice-frame-inventory");
-  assert.deepEqual(inventory.identifier, [{ system: "https://osod.dev/fhir/NamingSystem/frame-inventory-canonical-url", value: CATALOG_URL }]);
+  assert.deepEqual(inventory.identifier, [{ system: "https://odos2020.com/fhir/NamingSystem/frame-inventory-canonical-url", value: CATALOG_URL }]);
   assert.deepEqual(inventory.extension, [
-    { url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
-    { url: "https://osod.dev/fhir/StructureDefinition/qty-on-hand", valueInteger: 1 },
-    { url: "https://osod.dev/fhir/StructureDefinition/inventory-status", valueString: "active" },
+    { url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
+    { url: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand", valueInteger: 1 },
+    { url: "https://odos2020.com/fhir/StructureDefinition/inventory-status", valueString: "active" },
   ]);
   assert.equal(inventory.extension?.some((extension) => extension.url?.includes("dispensary-location")), false);
   assert.equal(inventory.extension?.some((extension) => extension.url?.includes("sale-price-cents")), false);
@@ -61,7 +61,7 @@ test("addFrameToInventory creates qty 1 with the inventory extensions, AuditEven
   const provenance = transaction?.entry?.[2]?.resource as Provenance;
   assert.equal(auditEvent.resourceType, "AuditEvent");
   assert.equal(auditEvent.agent[0]?.who?.reference, `Practitioner/${ACTOR_ID}`);
-  assert.equal(auditEvent.source.observer.reference, "Device/osod-ui");
+  assert.equal(auditEvent.source.observer.reference, "Device/odos-ui");
   assert.equal(auditEvent.entity?.[0]?.what?.reference, fullUrl);
   assert.equal(provenance.resourceType, "Provenance");
   assert.equal(provenance.agent[0]?.who.reference, `Practitioner/${ACTOR_ID}`);
@@ -73,9 +73,9 @@ test("addFrameToInventory reads the current version and increments through an au
     resourceType: "Basic",
     id: "inventory-1",
     extension: [
-      { url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
-      { url: "https://osod.dev/fhir/StructureDefinition/qty-on-hand", valueInteger: 2 },
-      { url: "https://osod.dev/fhir/StructureDefinition/inventory-status", valueString: "active" },
+      { url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
+      { url: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand", valueInteger: 2 },
+      { url: "https://odos2020.com/fhir/StructureDefinition/inventory-status", valueString: "active" },
     ],
   };
   const current: Basic = { ...existing, meta: { versionId: "7" }, extension: existing.extension?.map((extension) => extension.url?.includes("qty-on-hand") ? { ...extension, valueInteger: 4 } : extension) };
@@ -122,15 +122,15 @@ test("addFrameToInventory follows pagination and increments a page-2 match inste
   const unrelated: Basic = {
     resourceType: "Basic",
     id: "inventory-other",
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: "https://osod.dev/catalog/frames/OTHER" }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: "https://odos2020.com/catalog/frames/OTHER" }],
   };
   const existing: Basic = {
     resourceType: "Basic",
     id: "inventory-page-2",
     extension: [
-      { url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
-      { url: "https://osod.dev/fhir/StructureDefinition/qty-on-hand", valueInteger: 3 },
-      { url: "https://osod.dev/fhir/StructureDefinition/inventory-status", valueString: "active" },
+      { url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
+      { url: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand", valueInteger: 3 },
+      { url: "https://odos2020.com/fhir/StructureDefinition/inventory-status", valueString: "active" },
     ],
   };
   let transaction: Bundle | undefined;
@@ -179,7 +179,7 @@ test("addFrameToInventory rejects an existing row missing qty-on-hand without wr
   const existing: Basic = {
     resourceType: "Basic",
     id: "inventory-missing-qty",
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL }],
   };
   let writeCalls = 0;
   await assert.rejects(withFetch(async (input, init) => {
@@ -199,8 +199,8 @@ test("addFrameToInventory rejects a malformed qty-on-hand without resetting it",
     resourceType: "Basic",
     id: "inventory-malformed-qty",
     extension: [
-      { url: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
-      { url: "https://osod.dev/fhir/StructureDefinition/qty-on-hand", valueString: "not-a-number" },
+      { url: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url", valueString: CATALOG_URL },
+      { url: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand", valueString: "not-a-number" },
     ],
   };
   let writeCalls = 0;

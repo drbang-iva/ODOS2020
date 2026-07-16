@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BENEFIT_KINDS } from "../../ui/src/lib/patient-insurance.js";
 import {
-  OSOD_INSURANCE_CONFIG_CODE,
-  OSOD_INSURANCE_CONFIG_EXTENSION_URL,
-  OSOD_INSURANCE_CONFIG_SYSTEM,
+  ODOS_INSURANCE_CONFIG_CODE,
+  ODOS_INSURANCE_CONFIG_EXTENSION_URL,
+  ODOS_INSURANCE_CONFIG_SYSTEM,
   buildInsuranceConfigResource,
   parseInsuranceConfig,
   type PersistedInsuranceConfig,
@@ -42,8 +42,8 @@ test("buildInsuranceConfigResource round-trips the real singleton and preserves 
   existing.id = "insurance-config-1";
   existing.meta = { versionId: "4" };
   const resource = buildInsuranceConfigResource(CONFIG, existing);
-  assert.equal(resource.code?.coding?.[0]?.system, OSOD_INSURANCE_CONFIG_SYSTEM);
-  assert.equal(resource.code?.coding?.[0]?.code, OSOD_INSURANCE_CONFIG_CODE);
+  assert.equal(resource.code?.coding?.[0]?.system, ODOS_INSURANCE_CONFIG_SYSTEM);
+  assert.equal(resource.code?.coding?.[0]?.code, ODOS_INSURANCE_CONFIG_CODE);
   assert.equal(resource.id, "insurance-config-1");
   assert.equal(resource.meta?.versionId, "4");
   assert.deepEqual(parseInsuranceConfig(resource), CONFIG);
@@ -55,7 +55,7 @@ test("active templates omit active true while inactive templates persist false",
   });
   const raw = JSON.parse(
     resource.extension?.find(
-      (extension) => extension.url === OSOD_INSURANCE_CONFIG_EXTENSION_URL,
+      (extension) => extension.url === ODOS_INSURANCE_CONFIG_EXTENSION_URL,
     )?.valueString ?? "{}",
   ) as PersistedInsuranceConfig;
   assert.ok(raw.planTemplates.every((template) => !("active" in template)));
@@ -104,13 +104,13 @@ test("insurance-config validators reject labels, money, and frequency with verba
 test("parseInsuranceConfig rejects the wrong singleton, missing payload, and malformed JSON", () => {
   assert.throws(
     () => parseInsuranceConfig({ resourceType: "Basic", code: { coding: [{ system: "other", code: "x" }] } }),
-    /not the osod insurance-config singleton/,
+    /not the odos insurance-config singleton/,
   );
   assert.throws(
     () =>
       parseInsuranceConfig({
         resourceType: "Basic",
-        code: { coding: [{ system: OSOD_INSURANCE_CONFIG_SYSTEM, code: OSOD_INSURANCE_CONFIG_CODE }] },
+        code: { coding: [{ system: ODOS_INSURANCE_CONFIG_SYSTEM, code: ODOS_INSURANCE_CONFIG_CODE }] },
       }),
     /missing its config extension/,
   );

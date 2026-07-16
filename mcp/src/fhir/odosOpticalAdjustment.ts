@@ -14,7 +14,7 @@
  * The vocabulary is PRACTICE-EXTENSIBLE — Foxfire lets a practice add custom transaction codes — so
  * consumers accept unknown codes verbatim (there is no hard assertion); known codes get a display.
  */
-export const OSOD_OPTICAL_ADJUSTMENT_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-adjustment";
+export const ODOS_OPTICAL_ADJUSTMENT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-adjustment";
 
 export const OPTICAL_ADJUSTMENTS = [
   { code: "2PAIR", display: "Second Pair Discount", planLinked: false },

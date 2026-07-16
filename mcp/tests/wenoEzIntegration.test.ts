@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Basic, Bundle, MedicationRequest } from "@medplum/fhirtypes";
-import { OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../src/fhir/medicationOrder.js";
+import { ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../src/fhir/medicationOrder.js";
 import {
   buildWenoMappingResource,
   FhirWenoMappingCatalog,
@@ -331,7 +331,7 @@ test("mapping save updates an existing stable key without creating a duplicate",
   assert.equal(fhir.updateCount, 1);
   assert.deepEqual(await catalog.list("prescriber"), [updated]);
   assert.deepEqual(fhir.createHeaders, [{
-    "X-OSOD-Source": "weno-mapping-catalog",
+    "X-ODOS-Source": "weno-mapping-catalog",
     "If-None-Exist":
       `identifier=${WENO_MAPPING_IDENTIFIER_SYSTEM}|${row.stableKey}`,
   }]);
@@ -391,7 +391,7 @@ test("sync builds a new MedicationRequest matched to the echoed patient ID", () 
   assert.equal(resource.extension?.[0]?.valueCode, "electronically-sent");
   assert.equal(
     resource.extension?.some((extension) =>
-      extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL
+      extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL
     ),
     false,
   );

@@ -1,6 +1,6 @@
 lab_code: synergeyes
 lab_display: SynergEyes
-target_uri: urn:osod:contact-lens-lab:synergeyes:parameter
+target_uri: urn:odos:contact-lens-lab:synergeyes:parameter
 organization_reference: Organization/synergeyes
 mappings:
   - source: gp-zone-base-curve-mm

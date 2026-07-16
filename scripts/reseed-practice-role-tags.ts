@@ -2,7 +2,7 @@
 import type { AccessPolicy, Coding } from "@medplum/fhirtypes";
 import {
   getRoleDeclaration,
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
@@ -45,7 +45,7 @@ export function decidePracticeRoleTag(
   expectedRoleCode: PracticeRoleId,
 ): PracticeRoleTagDecision {
   const practiceRoleTags = (existingTags ?? []).filter(
-    (tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM,
+    (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM,
   );
   const conflictingCodes = practiceRoleTags
     .filter((tag) => tag.code !== expectedRoleCode)
@@ -59,7 +59,7 @@ export function decidePracticeRoleTag(
   }
   return {
     kind: "ADD",
-    tag: { system: OSOD_PRACTICE_ROLE_SYSTEM, code: expectedRoleCode },
+    tag: { system: ODOS_PRACTICE_ROLE_SYSTEM, code: expectedRoleCode },
   };
 }
 
@@ -71,7 +71,7 @@ export async function reseedPracticeRoleTags(
 
   for (const roleId of PRACTICE_ROLE_IDS) {
     const role = getRoleDeclaration(roleId);
-    const expectedName = `OSOD ${role.display}`;
+    const expectedName = `ODOS ${role.display}`;
     const policies = (await adapter.findPoliciesByName(expectedName)).filter(
       (policy) => policy.name === expectedName,
     );

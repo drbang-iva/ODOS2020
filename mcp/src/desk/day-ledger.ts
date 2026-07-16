@@ -1,10 +1,10 @@
 import type { Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import type { FhirSearchParams, MedplumClient } from "../fhir-client.js";
 import {
-  OSOD_PAYMENT_TENDER_EXTENSION_URL,
-  OSOD_PAYMENT_TENDER_SYSTEM,
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_SYSTEM,
   type PaymentTenderCode,
-} from "../fhir/osodPaymentTender.js";
+} from "../fhir/odosPaymentTender.js";
 import { filterUnappliedCredits } from "../payments/payment-credit-service.js";
 
 const PAGE_LIMIT = "1000";
@@ -177,9 +177,9 @@ function projectHeldCredits(
 
 function invoiceTender(invoice: Invoice): PaymentTenderCode | undefined {
   const coding = invoice.extension
-    ?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+    ?.find((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding
-    ?.find((candidate) => candidate.system === OSOD_PAYMENT_TENDER_SYSTEM);
+    ?.find((candidate) => candidate.system === ODOS_PAYMENT_TENDER_SYSTEM);
   return TENDERS.includes(coding?.code as PaymentTenderCode) ? coding?.code as PaymentTenderCode : undefined;
 }
 

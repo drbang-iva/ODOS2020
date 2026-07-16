@@ -30,7 +30,7 @@ export class ObservationStatusTransitionError extends Error {
     reason: string;
   }) {
     super(
-      `OSOD Observation.status transition rejected (${formatStatus(input.from)} -> ${input.to}): ${input.reason}`,
+      `ODOS Observation.status transition rejected (${formatStatus(input.from)} -> ${input.to}): ${input.reason}`,
     );
     this.name = "ObservationStatusTransitionError";
     this.from = input.from;

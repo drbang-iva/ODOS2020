@@ -11,7 +11,7 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
-import { buildOsodAuditEventRow, type OsodActorRole, type OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosActorRole, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { assertBusinessActionAllowed, PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
@@ -70,7 +70,7 @@ import {
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
   medicalEligibilitySummary,
-  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ClaimMdEraClaim,
   type ClaimMdEraData,
   type ManualClaimResponseLineInput,
@@ -102,12 +102,12 @@ import {
   patientResponsibilityInvoiceMatches,
 } from "./patient-responsibility-invoice.js";
 
-const CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/claim-charge-item";
-const ERA_DISCREPANCY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/era-worklist-discrepancy";
+const CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/claim-charge-item";
+const ERA_DISCREPANCY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/era-worklist-discrepancy";
 
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
-  actorRole: OsodActorRole;
+  actorRole: OdosActorRole;
   fhir: Pick<MedplumClient, "create" | "search" | "searchUrl" | "read" | "update">;
 }
 
@@ -116,7 +116,7 @@ export interface ClaimsHandlerDeps {
   adapter: ClaimMdAdapter | null;
   adapters?: ClearinghouseAdapters;
   routingDefaults?: ClearinghouseRoutingDefaults;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
   eraUnderpaymentThresholdCents?: number;
   now?: () => string;
 }
@@ -1099,7 +1099,7 @@ async function verifyClaimResponseChargeItemLinks(
   response: ClaimResponse,
 ): Promise<{ response: ClaimResponse; reviewReason?: string }> {
   const referencesByItem = (response.item ?? []).map((item) => item.extension?.flatMap((extension) =>
-    extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL && extension.valueReference?.reference
+    extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL && extension.valueReference?.reference
       ? [extension.valueReference.reference]
       : [],
   ) ?? []);
@@ -1130,7 +1130,7 @@ async function verifyClaimResponseChargeItemLinks(
   try {
     const claim = await auth.fhir.read<Claim>("Claim", claimId);
     const claimChargeItems = new Set((claim.item ?? []).flatMap((item) => item.extension?.flatMap((extension) =>
-      extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL
+      extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL
       && /^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(extension.valueReference?.reference ?? "")
         ? [extension.valueReference!.reference!]
         : [],
@@ -1174,7 +1174,7 @@ function withoutClaimResponseChargeItemLinks(response: ClaimResponse): ClaimResp
     ...response,
     item: response.item?.map((item) => {
       const extensions = item.extension?.filter(
-        (extension) => extension.url !== OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        (extension) => extension.url !== ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
       ) ?? [];
       const { extension: _extension, ...withoutExtensions } = item;
       return extensions.length > 0 ? { ...withoutExtensions, extension: extensions } : withoutExtensions;
@@ -1493,10 +1493,10 @@ async function createAndAuditEraWorklistTask(
 }
 
 export function eraUnderpaymentThresholdCentsFromEnv(env: Record<string, string | undefined>): number {
-  const value = env.OSOD_ERA_UNDERPAYMENT_THRESHOLD_CENTS;
+  const value = env.ODOS_ERA_UNDERPAYMENT_THRESHOLD_CENTS;
   if (value === undefined || value === "") return 1;
   if (!/^\d+$/.test(value)) {
-    throw new Error("OSOD_ERA_UNDERPAYMENT_THRESHOLD_CENTS must be a nonnegative whole number of cents.");
+    throw new Error("ODOS_ERA_UNDERPAYMENT_THRESHOLD_CENTS must be a nonnegative whole number of cents.");
   }
   return Number(value);
 }
@@ -1507,7 +1507,7 @@ async function auditTaskWrite(
   task: Task,
   actionReason: string,
 ): Promise<void> {
-  await deps.recordAudit(buildOsodAuditEventRow({
+  await deps.recordAudit(buildOdosAuditEventRow({
     eventType: "update",
     actorReference: staff.staffReference,
     actorRole: staff.actorRole,
@@ -1539,7 +1539,7 @@ async function authenticateClaimsManager(
   return staff;
 }
 
-function staffMayManageClaims(actorRole: OsodActorRole): boolean {
+function staffMayManageClaims(actorRole: OdosActorRole): boolean {
   if (!PRACTICE_ROLE_IDS.includes(actorRole as PracticeRoleId)) return false;
   try {
     assertBusinessActionAllowed(actorRole as PracticeRoleId, "claims.manage");

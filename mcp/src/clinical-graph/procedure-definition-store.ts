@@ -12,16 +12,16 @@ import {
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 
 export const PROCEDURE_DEFINITION_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/osod-procedure-definition";
-export const PROCEDURE_DEFINITION_CODE = "osod-procedure-definition";
+  "https://odos2020.com/fhir/CodeSystem/odos-procedure-definition";
+export const PROCEDURE_DEFINITION_CODE = "odos-procedure-definition";
 export const PROCEDURE_DEFINITION_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/procedure-definition-stable-key";
+  "https://odos2020.com/fhir/NamingSystem/procedure-definition-stable-key";
 export const PROCEDURE_DEFINITION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-procedure-definition-json";
+  "https://odos2020.com/fhir/StructureDefinition/odos-procedure-definition-json";
 export const AESTHETICS_PROCEDURE_TYPE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/aesthetics-procedure-type";
+  "https://odos2020.com/fhir/CodeSystem/aesthetics-procedure-type";
 export const PROCEDURE_DEFINITION_WRITE_HEADERS = {
-  "X-OSOD-Source": "procedure-definitions",
+  "X-ODOS-Source": "procedure-definitions",
 } as const;
 
 export interface ClinicalProcedureDefinition {
@@ -121,8 +121,8 @@ export function buildProcedureDefinitionSeeds(): ClinicalProcedureDefinition[] {
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: new Date(0).toISOString(),
-    actorReference: "Practitioner/osod-system",
-    note: "OSOD local aesthetics procedure definition seed.",
+    actorReference: "Practitioner/odos-system",
+    note: "ODOS local aesthetics procedure definition seed.",
   };
   return [
     procedureSeed(
@@ -181,7 +181,7 @@ export function buildProcedureDefinitionResource(
       coding: [{
         system: PROCEDURE_DEFINITION_CODE_SYSTEM,
         code: PROCEDURE_DEFINITION_CODE,
-        display: "OSOD procedure definition",
+        display: "ODOS procedure definition",
       }],
       text: validated.display,
     },
@@ -197,7 +197,7 @@ export function parseProcedureDefinitionResource(resource: Basic): ClinicalProce
     candidate.system === PROCEDURE_DEFINITION_CODE_SYSTEM &&
     candidate.code === PROCEDURE_DEFINITION_CODE
   );
-  if (!coding) throw new Error("Basic resource is not an OSOD procedure definition.");
+  if (!coding) throw new Error("Basic resource is not an ODOS procedure definition.");
   const raw = resource.extension?.find((extension) =>
     extension.url === PROCEDURE_DEFINITION_EXTENSION_URL
   )?.valueString;

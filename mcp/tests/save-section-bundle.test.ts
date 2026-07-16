@@ -10,7 +10,7 @@ import {
 const baseInput = {
   patientReference: "Patient/p1",
   encounterReference: "Encounter/e1",
-  operatorDisplay: "OSOD save-section test",
+  operatorDisplay: "ODOS save-section test",
   measuredAt: "2026-04-25T12:00:00.000Z",
   recordedAt: "2026-04-25T12:00:00.001Z",
 };

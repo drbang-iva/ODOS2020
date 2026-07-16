@@ -211,18 +211,18 @@ function buildResource(item: PlanProfileItem): Basic {
   return {
     resourceType: "Basic",
     identifier: [{
-      system: "https://osod.dev/fhir/NamingSystem/plan-profile-key",
+      system: "https://odos2020.com/fhir/NamingSystem/plan-profile-key",
       value: item.planKey,
     }],
     code: {
       coding: [{
-        system: "https://osod.dev/fhir/CodeSystem/plan-profile",
+        system: "https://odos2020.com/fhir/CodeSystem/plan-profile",
         code: "plan-profile",
       }],
       text: item.displayName,
     },
     extension: [{
-      url: "https://osod.dev/fhir/StructureDefinition/osod-plan-profile",
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile",
       extension: [{ url: "active", valueBoolean: item.active }],
     }],
   };

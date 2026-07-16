@@ -4,7 +4,7 @@ authority: human-approved
 auto_inject_priority: 10
 ---
 
-# OSOD — Open Source Optometry
+# ODOS — Open Source Optometry
 
 Practitioner-owned open-source EHR / practice management for independent optometry. Built by a practicing O.D. on the Medplum FHIR foundation. Self-hosted on the practice's own hardware. AGPL v3.
 
@@ -36,16 +36,17 @@ Chosen over HAPI FHIR for:
 3. 3-6 months less rebuild work on admin/auth/subscriptions
 4. Open-core dynamics favor OSS (Medplum Inc. monetizes hosted SaaS, feature-identical to OSS)
 
-Full rationale: [`performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md`](https://github.com/drbang-iva/performance-od/blob/main/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md) (private repo — accessible to maintainers).
+Full rationale: the private PerformanceOD foundation decision dated 2026-04-22
+([decisions index](https://github.com/drbang-iva/performance-od/tree/main/decisions)).
 
 ### SDK discipline (Option 3 architecture)
 
-OSOD application code imports **only** `@medplum/fhirtypes` — pure Apache-2.0 TypeScript types, zero runtime coupling. All server communication is plain FHIR REST/GraphQL.
+ODOS application code imports **only** `@medplum/fhirtypes` — pure Apache-2.0 TypeScript types, zero runtime coupling. All server communication is plain FHIR REST/GraphQL.
 
-**Never import in OSOD app code:**
+**Never import in ODOS app code:**
 - `@medplum/core` → use plain `fetch()` in `src/fhir-client.ts`
-- `@medplum/react` → OSOD builds its own UI
-- `@medplum/bot-layer` → workflow logic lives in OSOD's own service layer
+- `@medplum/react` → ODOS builds its own UI
+- `@medplum/bot-layer` → workflow logic lives in ODOS's own service layer
 
 **Never call these Medplum-proprietary endpoints:**
 - `$execute-bot` (proprietary operation)
@@ -56,13 +57,13 @@ OSOD application code imports **only** `@medplum/fhirtypes` — pure Apache-2.0 
 - `@medplum/ccda` (C-CDA converter library)
 - `@medplum/hl7` (HL7 v2 parser library)
 
-Why: this keeps the FHIR server swappable. If a future reason appears to leave Medplum (HAPI, Blaze, IBM FHIR), OSOD's application layer is portable.
+Why: this keeps the FHIR server swappable. If a future reason appears to leave Medplum (HAPI, Blaze, IBM FHIR), ODOS's application layer is portable.
 
 ### Data locality (non-negotiable)
 
-Patient data lives ONLY on the practice's own hardware. No cloud, no vendor telemetry, no phone-home, no centralized backups unless the practice explicitly opts in. The proving-ground practice is the first install; each subscribing practice installs their own self-hosted OSOD on their own hardware (Mac Mini / Mac Studio / NUC / Linux box / server).
+Patient data lives ONLY on the practice's own hardware. No cloud, no vendor telemetry, no phone-home, no centralized backups unless the practice explicitly opts in. The proving-ground practice is the first install; each subscribing practice installs their own self-hosted ODOS on their own hardware (Mac Mini / Mac Studio / NUC / Linux box / server).
 
-Cloud retracted by decision 2026-04-30 — see `performance-od/decisions/2026-04-30-osod-local-only-cloud-retraction.md`.
+Cloud retracted by the private PerformanceOD local-only decision dated 2026-04-30.
 
 **`docker-compose.yml` is the deployment unit.** Same file works for dev, test, and production.
 
@@ -73,24 +74,24 @@ Cloud retracted by decision 2026-04-30 — see `performance-od/decisions/2026-04
 ### Shipped
 
 - **v0.5 substrate** (a-e slices, shipped Apr 2026) — identity, RBAC, AccessPolicy, audit substrate, DR drill, scribe attestation, FHIR profile installer, clinical encounter UI baseline.
-- **v0.55 integration spine** (a-e slices, SHIPPED 2026-05-05 at osod tag `v0.55` / commit `e8c8d9e`):
+- **v0.55 integration spine** (a-e slices, SHIPPED 2026-05-05 at odos tag `v0.55` / commit `e8c8d9e`):
   - `v0.55a` — SMART v2 authorization (patient-directed token revocation)
   - `v0.55b` — SMART app registry (third-party SMART apps integrate via local registry)
   - `v0.55c` — CDS Hooks 2.0.1 (locally-enforced service trust)
   - `v0.55d` — AgentOps governance (audited, blockable, undoable agent actions)
   - `v0.55e` — Bulk Data $export + §170.315(g)(10) Patient Access API + SMART Backend Services + truthful CapabilityStatement + Information Blocking Safety Valve
-- **v0.6a Frames Data** (SHIPPED 2026-05-09 at osod tag `v0.6a` / merge commit `ce6e94f`):
+- **v0.6a Frames Data** (SHIPPED 2026-05-09 at odos tag `v0.6a` / merge commit `ce6e94f`):
   - HCPCS V-series terminology sync
-  - `osod_frames_catalog` + `osod_practice_frames_inventory` (FHIR + sibling SQL pattern)
+  - `odos_frames_catalog` + `odos_practice_frames_inventory` (FHIR + sibling SQL pattern)
   - FHIR `ChargeItemDefinition` builder cross-referencing frame SKUs
   - Bulk-file-ingest pathway (Access-Point-like local-subscriber workflow)
   - Inventory management UI primitive
 - **Tier-2 cash dispensary** (Slices 3 / 3b / 3c, SHIPPED 2026-07-03/04, PRs #19–#21):
-  - Cash spectacle order kernel — DeviceRequest + Task 17-status lifecycle + ChargeItem + CASH/CHECK Invoice with `osod-payment-tender` extension; live E2E walkthrough on the local Medplum stack
+  - Cash spectacle order kernel — DeviceRequest + Task 17-status lifecycle + ChargeItem + CASH/CHECK Invoice with `odos-payment-tender` extension; live E2E walkthrough on the local Medplum stack
   - Lab-order emitter T0 (print/export lab sheet) + patient receipt / financial summary (hard-reconciled to the Invoice)
 - **v0.6c payments kernel + card path** (SHIPPED to main 2026-07-05, PRs #22/#23; untagged — close pending Stripe test-mode + live walkthrough):
   - Invoice↔PaymentReconciliation seam (Invoice = the bill; PaymentReconciliation = the settling processor payment, `detail.request → Invoice`; manual cash keeps the Invoice tender extension, no PR)
-  - Vendor-neutral `PaymentProcessorAdapter` + manual-cash + Clover REST Pay Display adapters; unified `POST /payments/charge` on osod-core
+  - Vendor-neutral `PaymentProcessorAdapter` + manual-cash + Clover REST Pay Display adapters; unified `POST /payments/charge` on odos-core
   - Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants (practice scope); identity-derived role gate (`practice-role` `meta.tag` on AccessPolicy; no client role header)
   - Dispensary card checkout UI (Codex) with receipt-consistency + parity guards
 
@@ -112,7 +113,7 @@ Per-slice cadence observed (v0.6a baseline): multi-hour focused-session-per-slic
 
 A local optometry practice can, on its own hardware:
 
-1. Install OSOD via documented script
+1. Install ODOS via documented script
 2. Pass `npm run preflight` clean
 3. Onboard admin Practitioner + AccessPolicies
 4. Chart a basic visit (refraction, IOP, anterior/posterior segment, signing)
@@ -125,7 +126,7 @@ A local optometry practice can, on its own hardware:
 
 Future tiers (post-Tier-1):
 
-- **Tier-2 "Install + Chart + Cash dispensary"** — requires v0.6c. Cash optical sales through OSOD.
+- **Tier-2 "Install + Chart + Cash dispensary"** — requires v0.6c. Cash optical sales through ODOS.
 - **Tier-3 "Install + Chart + Insured visit"** — requires v0.6b + v0.6c + v0.6d. Full revenue cycle.
 
 Full Tier-1 acceptance criteria, rationale, and v0.6 ranking against pilot tiers: [`docs/operator-dashboard.md`](docs/operator-dashboard.md).
@@ -141,13 +142,13 @@ Full Tier-1 acceptance criteria, rationale, and v0.6 ranking against pilot tiers
 
 ## Licensing
 
-- **OSOD application code:** AGPL v3 (copyleft — community protection, prevents closed-source forks)
+- **ODOS application code:** AGPL v3 (copyleft — community protection, prevents closed-source forks)
 - **Runtime deps:** Apache-2.0 (Medplum, `@medplum/fhirtypes`), PostgreSQL License, BSD-3 (Redis)
 - **Medical coding terminologies:**
   - **ICD-10-CM, ICD-10-PCS, HCPCS Level II, NDC, CVX** — ship native (CMS / FDA / CDC public domain)
   - **LOINC, RxNorm, UCUM** — ship native (Regenstrief / NLM permissive)
   - **SNOMED CT** — ships native via IHTSDO US Affiliate (free for US users; geographic-fenced for non-affiliate countries)
-  - **CPT codes** — NOT redistributed in the OSOD codebase (AGPL conflict + AMA copyright). Third-party vendor adapter pattern; first integration in v0.7. Practices integrate per their own AMA CPT license. Decision: `performance-od/decisions/2026-05-05-osod-medical-coding-licensing-strategy.md`.
+  - **CPT codes** — NOT redistributed in the ODOS codebase (AGPL conflict + AMA copyright). Third-party vendor adapter pattern; first integration in v0.7. Practices integrate per their own AMA CPT license. Decision: private PerformanceOD medical-coding licensing decision dated 2026-05-05.
 
 ---
 
@@ -189,7 +190,7 @@ Runtime targets: `npm run up` for the local stack; same compose file works on la
 
 **No agent interacts with authentication flows, credential management, or account settings.** Browser automation is read-only by default. If a task requires authentication, stop and let the human do it. Full policy lives in the companion private business repo at `performance-od/reference/core/soul.md`.
 
-The 2026-03-21 Figma MCP autonomous-SSO incident is the defining boundary. Inside the OSOD repo, that policy translates to: no automated authentication flow traversal of any kind, ever.
+The 2026-03-21 Figma MCP autonomous-SSO incident is the defining boundary. Inside the ODOS repo, that policy translates to: no automated authentication flow traversal of any kind, ever.
 
 ---
 
@@ -202,4 +203,4 @@ Prior custom TypeScript implementation (341 passing tests, non-FHIR) archived at
 
 Reason for reset: Medplum foundation gives 2+ years of FHIR plumbing for free, aligns with AMA CPT distribution criterion (a) structurally (CPT only appears inside FHIR Encounter/ChargeItem/Claim — inseparable from clinical context), and removes the polyglot + rebuild tax HAPI would impose.
 
-Full decision rationale: `performance-od/decisions/2026-04-22-osod-foundation-medplum-over-hapi.md` (private companion repo).
+Full rationale: private PerformanceOD foundation decision dated 2026-04-22.

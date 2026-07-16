@@ -50,7 +50,7 @@ interface PairState {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_wearing";
+const OPERATOR = "ODOS UI clinical_graph_wearing";
 
 export function WearingSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<WearingDefinitionResponse | null>(null);

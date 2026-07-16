@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
 import {
   assertBusinessActionAllowed,
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   resolveBusinessActionRole,
 } from "../src/authz/roles.js";
 import {
@@ -50,7 +50,7 @@ test("manual-cash is always registered; clover registers when its four env vars 
     CLOVER_BASE_URL: "https://apisandbox.dev.clover.com",
     CLOVER_ACCESS_TOKEN: "tok",
     CLOVER_DEVICE_ID: "DEV1",
-    CLOVER_POS_ID: "OSOD-Dispensary",
+    CLOVER_POS_ID: "ODOS-Dispensary",
   });
   assert.deepEqual(
     registrations.map((r) => r.method).sort(),
@@ -63,7 +63,7 @@ test("manual-cash is always registered; clover registers when its four env vars 
       baseUrl: "https://apisandbox.dev.clover.com",
       accessToken: "tok",
       deviceId: "DEV1",
-      posId: "OSOD-Dispensary",
+      posId: "ODOS-Dispensary",
     },
   });
 });
@@ -175,8 +175,8 @@ function frontDeskPolicy(): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
     id: "ap-front-desk",
-    name: "OSOD Front Desk",
-    meta: { tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+    name: "ODOS Front Desk",
+    meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
   };
 }
 
@@ -292,7 +292,7 @@ test("resolveStaffRole returns null when the AccessPolicy carries no practice-ro
   const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
   const svc = serviceClient({
     membership: MEMBERSHIP_FRONT_DESK,
-    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "OSOD Front Desk" },
+    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "ODOS Front Desk" },
   });
   assert.equal(
     await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
@@ -330,15 +330,15 @@ test("resolveStaffRoles returns every recognized practice-role tag across the ca
     "ap-clinical": {
       resourceType: "AccessPolicy",
       meta: { tag: [
-        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" },
-        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
       ] },
     },
     "ap-desk": {
       resourceType: "AccessPolicy",
       meta: { tag: [
         { system: "https://example.test/unrelated", code: "front-desk" },
-        { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
       ] },
     },
   };

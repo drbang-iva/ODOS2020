@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Basic, Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   handleRecordedTenderCollectionRequest,
@@ -15,7 +15,7 @@ function fixture(
   now = "2026-07-15T10:00:00.000Z",
   timeZone = "America/New_York",
 ) {
-  const audits: OsodAuditEventRecord[] = [];
+  const audits: OdosAuditEventRecord[] = [];
   const transactions: Bundle[] = [];
   const searches: Array<{ resourceType: string; params: URLSearchParams }> = [];
   let reads = 0;
@@ -72,7 +72,8 @@ test("open charges returns an empty array for an authenticated patient with no b
 });
 
 test("open charges returns integer cents and derives optical source from DeviceRequest supportingInformation", async () => {
-  const { deps } = fixture([charge("charge-1")]);
+  const nonbillable = { ...charge("charge-closed"), status: "billed" as const };
+  const { deps } = fixture([charge("charge-1"), nonbillable]);
   const result = await handleOpenChargesRequest(deps, {
     authHeader: "Bearer good",
     patientReference: "Patient/patient-1",
@@ -144,7 +145,7 @@ test("CARD_MANUAL uses the same record-only Invoice transaction and never a proc
   const invoice = transactions[0].entry?.[0]?.resource;
   assert.equal(invoice?.resourceType, "Invoice");
   assert.equal(
-    invoice?.extension?.find((extension) => extension.url.endsWith("/osod-payment-tender"))
+    invoice?.extension?.find((extension) => extension.url.endsWith("/odos-payment-tender"))
       ?.valueCodeableConcept?.coding?.[0]?.code,
     "CARD_MANUAL",
   );
@@ -243,7 +244,7 @@ test("recorded-tender collection checks the practice-local seal date across a UT
   assert.equal(transactions.length, 0);
   assert.equal(
     searches.find((search) => search.resourceType === "Basic")?.params.get("identifier"),
-    "https://osod.dev/fhir/NamingSystem/day-seal-date|2026-07-15",
+    "https://odos2020.com/fhir/NamingSystem/day-seal-date|2026-07-15",
   );
 });
 
@@ -251,11 +252,11 @@ function daySeal(): Basic {
   return {
     resourceType: "Basic",
     id: "seal-1",
-    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: "2026-07-15" }],
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    identifier: [{ system: "https://odos2020.com/fhir/NamingSystem/day-seal-date", value: "2026-07-15" }],
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/day-seal", code: "day-seal" }] },
     created: "2026-07-15",
     author: { reference: "Practitioner/staff-1" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueInstant: "2026-07-15T21:00:00.000Z" }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp", valueInstant: "2026-07-15T21:00:00.000Z" }],
   };
 }
 

@@ -22,7 +22,7 @@ test("executeTransaction rolls back created entries when a later transaction ent
 
   const goodPatient: Patient = {
     resourceType: "Patient",
-    identifier: [{ system: "https://osod.dev/test/transaction-atomicity", value: marker }],
+    identifier: [{ system: "https://odos2020.com/test/transaction-atomicity", value: marker }],
     name: [{ family: "AtomicityRollback", given: ["Good"] }],
   };
   const response = await fhir.executeTransaction({
@@ -48,7 +48,7 @@ test("executeTransaction rolls back created entries when a later transaction ent
   );
 
   const persisted = await fhir.search<Patient>("Patient", {
-    identifier: `https://osod.dev/test/transaction-atomicity|${marker}`,
+    identifier: `https://odos2020.com/test/transaction-atomicity|${marker}`,
     _count: "1",
   });
   assert.equal(persisted.entry?.length ?? 0, 0);

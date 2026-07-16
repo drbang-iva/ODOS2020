@@ -1,25 +1,21 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-charge-item",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
-  "version": "claim-remittance-linkage",
-  "name": "OSODClaimChargeItem",
-  "title": "OSOD Claim ChargeItem Provenance",
+  "id": "odos-source-claim",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-source-claim",
+  "version": "claim-invoice-seam-phase-a",
+  "name": "ODOSInvoiceSourceClaim",
+  "title": "ODOS Invoice Source Claim",
   "status": "active",
-  "date": "2026-07-15",
-  "publisher": "OSOD",
-  "description": "Persisted ChargeItem that supplied one professional Claim item or was identity-echoed for its corresponding ClaimResponse item.",
+  "date": "2026-07-12",
+  "publisher": "ODOS",
+  "description": "Claim whose posted patient responsibility produced an Invoice.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "Claim.item"
-    },
-    {
-      "type": "element",
-      "expression": "ClaimResponse.item"
+      "expression": "Invoice"
     }
   ],
   "type": "Extension",
@@ -30,7 +26,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "ChargeItem provenance for a Claim or ClaimResponse item",
+        "short": "Source Claim for patient responsibility",
         "min": 0,
         "max": "1"
       },
@@ -42,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-charge-item"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-source-claim"
       },
       {
         "id": "Extension.value[x]",
@@ -53,7 +49,7 @@
           {
             "code": "Reference",
             "targetProfile": [
-              "http://hl7.org/fhir/StructureDefinition/ChargeItem"
+              "http://hl7.org/fhir/StructureDefinition/Claim"
             ]
           }
         ]

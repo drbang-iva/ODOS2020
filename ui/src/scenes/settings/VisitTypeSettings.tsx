@@ -20,8 +20,8 @@ import {
 } from "../../lib/visit-type-settings";
 import {
   DEFAULT_VISIT_TYPE_CATEGORIES,
-  OSOD_VISIT_TYPE_CONFIG_CODE,
-  OSOD_VISIT_TYPE_CONFIG_SYSTEM,
+  ODOS_VISIT_TYPE_CONFIG_CODE,
+  ODOS_VISIT_TYPE_CONFIG_SYSTEM,
   buildVisitTypeConfigResource,
   parseVisitTypeConfig,
   type PersistedVisitTypeConfig,
@@ -80,7 +80,7 @@ export async function loadVisitTypeConfigSingleton(
   client: Pick<typeof fhir, "search" | "searchUrl">,
 ): Promise<LoadedVisitTypeSettings> {
   const resources = await searchAll<Basic>(client, "Basic", {
-    code: `${OSOD_VISIT_TYPE_CONFIG_SYSTEM}|${OSOD_VISIT_TYPE_CONFIG_CODE}`,
+    code: `${ODOS_VISIT_TYPE_CONFIG_SYSTEM}|${ODOS_VISIT_TYPE_CONFIG_CODE}`,
     _count: "10",
   });
   const resource = [...resources].sort((a, b) => lastUpdatedMs(b) - lastUpdatedMs(a))[0];
@@ -109,7 +109,7 @@ export function VisitTypeSettingsReady({
   const draft = useMemo(
     () =>
       createSingletonConfigDraft({
-        configKey: OSOD_VISIT_TYPE_CONFIG_CODE,
+        configKey: ODOS_VISIT_TYPE_CONFIG_CODE,
         config,
         resource: configResource,
         buildResource: buildVisitTypeConfigResource,
@@ -227,8 +227,8 @@ export function VisitTypeSettingsReady({
           name: "",
           category: [],
           extension: [
-            { url: "https://osod.dev/fhir/StructureDefinition/osod-visit-duration", valuePositiveInt: 30 },
-            { url: "https://osod.dev/fhir/StructureDefinition/osod-display-color", valueString: SCHEDULER_PALETTE.newExamBlue },
+            { url: "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration", valuePositiveInt: 30 },
+            { url: "https://odos2020.com/fhir/StructureDefinition/odos-display-color", valueString: SCHEDULER_PALETTE.newExamBlue },
           ],
         }),
       label: (item) => item.label,

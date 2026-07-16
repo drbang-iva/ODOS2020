@@ -1,25 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_APPOINTMENT_STATUSES,
+  ODOS_APPOINTMENT_STATUSES,
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
-  assertOsodAppointmentStatus,
-  osodAppointmentStatusOf,
+  assertOdosAppointmentStatus,
+  odosAppointmentStatusOf,
   toFhirAppointmentStatus,
 } from "../src/fhir/schedulingAppointmentStatus.js";
 
 test("the appointment-status vocabulary is the Eyefinity five plus cancelled (brief §2.5)", () => {
   assert.deepEqual(
-    OSOD_APPOINTMENT_STATUSES.map((s) => s.code),
+    ODOS_APPOINTMENT_STATUSES.map((s) => s.code),
     ["scheduled", "checked-in", "checked-out", "no-show", "walk-in", "cancelled"],
   );
   assert.deepEqual(
-    OSOD_APPOINTMENT_STATUSES.map((s) => s.display),
+    ODOS_APPOINTMENT_STATUSES.map((s) => s.display),
     ["Scheduled", "Checked In", "Checked Out", "No Show", "Walk In", "Cancelled"],
   );
 });
 
-test("each OSOD status maps onto the R4 appointment-status VS (brief §6)", () => {
+test("each ODOS status maps onto the R4 appointment-status VS (brief §6)", () => {
   assert.deepEqual(toFhirAppointmentStatus("scheduled"), { status: "booked" });
   assert.deepEqual(toFhirAppointmentStatus("checked-in"), { status: "checked-in" });
   assert.deepEqual(toFhirAppointmentStatus("checked-out"), { status: "fulfilled" });
@@ -34,14 +34,14 @@ test("walk-in maps to arrived + the v2-0276 WALKIN appointmentType (R4 status VS
   });
 });
 
-test("assertOsodAppointmentStatus rejects a code outside the vocabulary", () => {
-  assert.throws(() => assertOsodAppointmentStatus("rescheduled"), /appointment status/i);
+test("assertOdosAppointmentStatus rejects a code outside the vocabulary", () => {
+  assert.throws(() => assertOdosAppointmentStatus("rescheduled"), /appointment status/i);
 });
 
-test("every OSOD status round-trips through its FHIR representation", () => {
-  for (const { code } of OSOD_APPOINTMENT_STATUSES) {
+test("every ODOS status round-trips through its FHIR representation", () => {
+  for (const { code } of ODOS_APPOINTMENT_STATUSES) {
     const fhir = toFhirAppointmentStatus(code);
-    const roundTripped = osodAppointmentStatusOf({
+    const roundTripped = odosAppointmentStatusOf({
       status: fhir.status,
       appointmentType: fhir.appointmentTypeCode
         ? {
@@ -56,10 +56,10 @@ test("every OSOD status round-trips through its FHIR representation", () => {
 });
 
 test("a foreign 'arrived' without WALKIN reads as checked-in (the patient is here)", () => {
-  assert.equal(osodAppointmentStatusOf({ status: "arrived" }), "checked-in");
+  assert.equal(odosAppointmentStatusOf({ status: "arrived" }), "checked-in");
 });
 
 test("FHIR statuses outside the front-desk vocabulary read as undefined", () => {
-  assert.equal(osodAppointmentStatusOf({ status: "waitlist" }), undefined);
-  assert.equal(osodAppointmentStatusOf({ status: "entered-in-error" }), undefined);
+  assert.equal(odosAppointmentStatusOf({ status: "waitlist" }), undefined);
+  assert.equal(odosAppointmentStatusOf({ status: "entered-in-error" }), undefined);
 });

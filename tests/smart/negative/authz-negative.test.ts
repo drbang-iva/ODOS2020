@@ -272,8 +272,8 @@ test("v0.55b negative: image analysis opt-in is rejected at registration", async
 });
 
 test("v0.55b negative: app prohibited in the practice state is rejected at registration", async () => {
-  const previous = process.env.OSOD_PRACTICE_JURISDICTION;
-  process.env.OSOD_PRACTICE_JURISDICTION = "US-SC";
+  const previous = process.env.ODOS_PRACTICE_JURISDICTION;
+  process.env.ODOS_PRACTICE_JURISDICTION = "US-SC";
   const server = await registrationServer();
   try {
     const response = await registerSmartApp(server.origin, {
@@ -284,9 +284,9 @@ test("v0.55b negative: app prohibited in the practice state is rejected at regis
     assert.equal((await response.json() as { error: string }).error, "jurisdiction-violation");
   } finally {
     if (previous === undefined) {
-      delete process.env.OSOD_PRACTICE_JURISDICTION;
+      delete process.env.ODOS_PRACTICE_JURISDICTION;
     } else {
-      process.env.OSOD_PRACTICE_JURISDICTION = previous;
+      process.env.ODOS_PRACTICE_JURISDICTION = previous;
     }
     await server.close();
   }

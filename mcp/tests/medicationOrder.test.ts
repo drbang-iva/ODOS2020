@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildMedicationRequest,
-  OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
-  OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
+  ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+  ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
 } from "../src/fhir/medicationOrder.js";
 
 test("buildMedicationRequest captures the prescription, linked diagnosis, and dispensing details", () => {
@@ -41,11 +41,11 @@ test("buildMedicationRequest captures the prescription, linked diagnosis, and di
   assert.equal(request.reasonReference?.[0]?.reference, "Condition/c1");
   assert.equal(request.reasonCode, undefined);
   assert.equal(
-    request.extension?.find((extension) => extension.url === OSOD_TRANSMISSION_METHOD_EXTENSION_URL)?.valueCode,
+    request.extension?.find((extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL)?.valueCode,
     "printed",
   );
   assert.equal(
-    request.extension?.find((extension) => extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL)?.valueBoolean,
+    request.extension?.find((extension) => extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL)?.valueBoolean,
     false,
   );
 });
@@ -58,11 +58,11 @@ test("buildMedicationRequest omits an unknown controlled-substance flag", () => 
   });
 
   assert.equal(
-    request.extension?.find((extension) => extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL),
+    request.extension?.find((extension) => extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL),
     undefined,
   );
   assert.equal(
-    request.extension?.find((extension) => extension.url === OSOD_TRANSMISSION_METHOD_EXTENSION_URL)?.valueCode,
+    request.extension?.find((extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL)?.valueCode,
     "electronically-sent",
   );
 });
@@ -82,7 +82,7 @@ test("buildMedicationRequest uses free-text indication and records a controlled 
   assert.deepEqual(request.reasonCode, [{ text: "Postoperative pain" }]);
   assert.equal(request.reasonReference, undefined);
   assert.equal(
-    request.extension?.find((extension) => extension.url === OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL)?.valueBoolean,
+    request.extension?.find((extension) => extension.url === ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL)?.valueBoolean,
     true,
   );
 });

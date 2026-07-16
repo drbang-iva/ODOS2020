@@ -11,8 +11,8 @@ eventTypes:
   - parameter-adjustment
   - failed-trial
 profiles:
-  - https://osod.dev/fhir/StructureDefinition/Device-OrthoKLens
-  - https://osod.dev/fhir/StructureDefinition/Observation-ContactLensFitFinding
+  - https://odos2020.com/fhir/StructureDefinition/Device-OrthoKLens
+  - https://odos2020.com/fhir/StructureDefinition/Observation-ContactLensFitFinding
   - http://hl7.org/fhir/StructureDefinition/Procedure
   - http://hl7.org/fhir/StructureDefinition/AdverseEvent
 toolDeclarations:

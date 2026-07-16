@@ -2,15 +2,15 @@ import type { Basic, Bundle, CodeableConcept, Extension, Task, TaskInput } from 
 import { CLAIMMD_ERA_PAYMENT_SYSTEM, STEDI_ERA_PAYMENT_SYSTEM } from "../payments/payment-reconciliation.js";
 import type { ClaimMdEraClaim, ClaimMdEraData } from "./claimmd-fhir.js";
 
-export const ERA_WORKLIST_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-worklist";
-export const CLAIM_REJECTED_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-claim-rejected-worklist";
-export const ERA_WORKLIST_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-status";
-export const ERA_WORKLIST_INPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-input";
-export const ERA_WORKLIST_OUTPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/era-worklist-output";
-export const ERA_IMPORT_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-era-import";
-export const ERA_IMPORT_CODE = "osod-era-import";
+export const ERA_WORKLIST_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-era-worklist";
+export const CLAIM_REJECTED_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-claim-rejected-worklist";
+export const ERA_WORKLIST_STATUS_SYSTEM = "https://odos2020.com/fhir/CodeSystem/era-worklist-status";
+export const ERA_WORKLIST_INPUT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/era-worklist-input";
+export const ERA_WORKLIST_OUTPUT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/era-worklist-output";
+export const ERA_IMPORT_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-era-import";
+export const ERA_IMPORT_CODE = "odos-era-import";
 export const ERA_IMPORT_SUMMARY_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-era-import-summary";
+  "https://odos2020.com/fhir/StructureDefinition/odos-era-import-summary";
 
 export const ERA_WORKLIST_CODES = ["era-denial", "era-line-linkage", "era-unmatched", "era-underpayment"] as const;
 export const CLAIM_REJECTED_CODES = ["claim-rejected"] as const;
@@ -101,7 +101,7 @@ export function buildEraImportRecord(
     ...(existing?.id ? { id: existing.id } : {}),
     ...(existing?.meta ? { meta: existing.meta } : {}),
     identifier: [{ system: identifierSystem, value: eraId }],
-    code: codedConcept(ERA_IMPORT_CODE_SYSTEM, ERA_IMPORT_CODE, "OSOD ERA import"),
+    code: codedConcept(ERA_IMPORT_CODE_SYSTEM, ERA_IMPORT_CODE, "ODOS ERA import"),
     extension: [{
       url: ERA_IMPORT_SUMMARY_EXTENSION_URL,
       extension: [
@@ -122,7 +122,7 @@ export function parseEraImportRecord(basic: Basic): { eraId: string; summary: Er
   const code = basic.code?.coding?.find((coding) =>
     coding.system === ERA_IMPORT_CODE_SYSTEM && coding.code === ERA_IMPORT_CODE,
   );
-  if (!code) throw new Error("Basic resource is not an OSOD ERA import record.");
+  if (!code) throw new Error("Basic resource is not an ODOS ERA import record.");
   const eraId = basic.identifier?.find((identifier) =>
     identifier.system === CLAIMMD_ERA_PAYMENT_SYSTEM || identifier.system === STEDI_ERA_PAYMENT_SYSTEM,
   )?.value;
@@ -426,7 +426,7 @@ export function eraWorklistCode(task: Task): WorklistCode {
       return code as WorklistCode;
     }
   }
-  throw new Error("Task is not coded as a known OSOD claims worklist item.");
+  throw new Error("Task is not coded as a known ODOS claims worklist item.");
 }
 
 export function eraWorklistStatus(task: Task): EraWorklistStatus {

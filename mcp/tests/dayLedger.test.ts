@@ -12,7 +12,7 @@ import {
 import { registerDeskRoutes } from "../src/desk/desk-routes.js";
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
-import { OSOD_PAYMENT_SUBJECT_EXTENSION_URL } from "../src/payments/payment-reconciliation.js";
+import { ODOS_PAYMENT_SUBJECT_EXTENSION_URL } from "../src/payments/payment-reconciliation.js";
 
 test("Day Ledger projects integer-cent tender totals, newest-first detail, and StaffLedgerTotal groups", () => {
   const invoices = [
@@ -246,7 +246,7 @@ function unappliedCredit(): PaymentReconciliation {
     created: "2026-07-15T16:00:00.000Z",
     paymentDate: "2026-07-15",
     paymentAmount: { value: 50, currency: "USD" },
-    paymentIdentifier: { system: "https://osod.dev/fhir/NamingSystem/manual-payment", value: "credit-1" },
-    extension: [{ url: OSOD_PAYMENT_SUBJECT_EXTENSION_URL, valueReference: { reference: "Patient/credit" } }],
+    paymentIdentifier: { system: "https://odos2020.com/fhir/NamingSystem/manual-payment", value: "credit-1" },
+    extension: [{ url: ODOS_PAYMENT_SUBJECT_EXTENSION_URL, valueReference: { reference: "Patient/credit" } }],
   };
 }

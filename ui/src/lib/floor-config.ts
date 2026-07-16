@@ -1,9 +1,9 @@
 import type { Basic } from "@medplum/fhirtypes";
 
-export const OSOD_FLOOR_CONFIG_SYSTEM = "https://osod.dev/fhir/CodeSystem/floor-config";
-export const OSOD_FLOOR_CONFIG_CODE = "osod-floor-config";
-export const OSOD_FLOOR_CONFIG_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config";
+export const ODOS_FLOOR_CONFIG_SYSTEM = "https://odos2020.com/fhir/CodeSystem/floor-config";
+export const ODOS_FLOOR_CONFIG_CODE = "odos-floor-config";
+export const ODOS_FLOOR_CONFIG_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-floor-practice-config";
 
 export interface FloorStation {
   id: string;
@@ -87,26 +87,26 @@ export function buildFloorConfigResource(config: PersistedFloorConfig, existing?
     code: {
       coding: [
         {
-          system: OSOD_FLOOR_CONFIG_SYSTEM,
-          code: OSOD_FLOOR_CONFIG_CODE,
-          display: "OSOD Floor Board Config",
+          system: ODOS_FLOOR_CONFIG_SYSTEM,
+          code: ODOS_FLOOR_CONFIG_CODE,
+          display: "ODOS Floor Board Config",
         },
       ],
-      text: "OSOD Floor Board Config",
+      text: "ODOS Floor Board Config",
     },
-    extension: [{ url: OSOD_FLOOR_CONFIG_EXTENSION_URL, valueString: JSON.stringify(persistedConfig) }],
+    extension: [{ url: ODOS_FLOOR_CONFIG_EXTENSION_URL, valueString: JSON.stringify(persistedConfig) }],
   };
 }
 
 export function parseFloorConfig(basic: Basic): PersistedFloorConfig {
   const coding = basic.code?.coding?.find(
     (candidate) =>
-      candidate.system === OSOD_FLOOR_CONFIG_SYSTEM && candidate.code === OSOD_FLOOR_CONFIG_CODE,
+      candidate.system === ODOS_FLOOR_CONFIG_SYSTEM && candidate.code === ODOS_FLOOR_CONFIG_CODE,
   );
   if (!coding) {
-    throw new Error("Basic resource is not the osod floor-config singleton.");
+    throw new Error("Basic resource is not the odos floor-config singleton.");
   }
-  const raw = basic.extension?.find((extension) => extension.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)
+  const raw = basic.extension?.find((extension) => extension.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)
     ?.valueString;
   if (!raw) {
     throw new Error("Floor-config singleton is missing its config extension.");

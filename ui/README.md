@@ -1,6 +1,6 @@
-# OSOD UI - Director and Clinical Encounter (v0.3)
+# ODOS UI - Director and Clinical Encounter (v0.3)
 
-Browser UI for OSOD. Built on **Vite + React + Three.js + R3F**.
+Browser UI for ODOS. Built on **Vite + React + Three.js + R3F**.
 Zero Medplum SDK runtime coupling: the UI talks plain FHIR REST through `src/lib/fhir.ts` and imports only `@medplum/fhirtypes` for FHIR typing.
 
 ## Current state
@@ -45,7 +45,7 @@ Profile-validation smoke: save an invalid IOP unit through a test or tool path a
 ## Transaction Bundle Pattern
 
 - UI writes use `create`, `patch`, and `executeTransaction` in `src/lib/fhir.ts`.
-- Every UI write sends `X-OSOD-Source: ui/<sourceTag>`.
+- Every UI write sends `X-ODOS-Source: ui/<sourceTag>`.
 - Section saves use `src/lib/fhir-ophthalmology/save-section-bundle.ts`.
 - The save composer is mirrored from `mcp/src/fhir/ophthalmology/save-section-bundle.ts`; `mcp/tests/builder-mirror-parity.test.ts` fails if UI and MCP drift.
 - A section Bundle contains conditional `BodyStructure` create-by-location, one Observation per eye, and one Provenance sidecar per Observation.

@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        OSOD is single-practitioner-led and prioritizes the operator's milestone roadmap. Feature requests are read but may not be implemented quickly. Discussion before code is encouraged for anything non-trivial.
+        ODOS is single-practitioner-led and prioritizes the operator's milestone roadmap. Feature requests are read but may not be implemented quickly. Discussion before code is encouraged for anything non-trivial.
   - type: textarea
     id: problem
     attributes:
@@ -38,5 +38,5 @@ body:
       options:
         - label: I have searched existing issues and confirmed this is not a duplicate
           required: true
-        - label: I understand OSOD is local-first and that features adding cloud calls, telemetry, or default phone-home will be declined
+        - label: I understand ODOS is local-first and that features adding cloud calls, telemetry, or default phone-home will be declined
           required: true

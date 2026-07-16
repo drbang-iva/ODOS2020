@@ -36,7 +36,7 @@ async function handleClinicSummary(req: Request, res: Response, deps: ClinicRout
     }
     res.json(await loadClinicSummary(staff.fhir, { now: deps.now?.(), timeZone: deps.timeZone }));
   } catch (error) {
-    console.error("osod-mcp: /clinic/summary failed:", error);
+    console.error("odos-mcp: /clinic/summary failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Clinic summary route failed." });
   }
 }
@@ -80,7 +80,7 @@ async function handlePatientOverview(req: Request, res: Response, deps: ClinicRo
       ...(diagnosisCode ? { diagnosisCode } : {}),
     }));
   } catch (error) {
-    console.error("osod-mcp: patient overview failed:", error);
+    console.error("odos-mcp: patient overview failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Patient overview route failed." });
   }
 }
@@ -106,7 +106,7 @@ async function handleStickyNoteSave(req: Request, res: Response, deps: ClinicRou
       now: deps.now?.(),
     }));
   } catch (error) {
-    console.error("osod-mcp: sticky note save failed:", error);
+    console.error("odos-mcp: sticky note save failed:", error);
     if (!res.headersSent) {
       if (error instanceof StickyNoteValidationError) {
         res.status(400).json({ error: error.message });
@@ -132,7 +132,7 @@ async function handleStickyNoteHistory(req: Request, res: Response, deps: Clinic
     }
     res.json(await loadPatientStickyNoteHistory(staff.fhir, patientId));
   } catch (error) {
-    console.error("osod-mcp: sticky note history failed:", error);
+    console.error("odos-mcp: sticky note history failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Sticky note history route failed." });
   }
 }

@@ -26,7 +26,7 @@ import type { EyeLaterality, SourceType } from "../fhir/ophthalmology/types.js";
 import {
   applyCommonObservationFields,
   lateralityConcept,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "../fhir/ophthalmology/extensions.js";
@@ -92,7 +92,7 @@ const GLAUCOMA_FINDING_STUB_METADATA: Record<
   },
 };
 
-/** Source class recorded on OSOD-local graph rows for provenance and audit context. */
+/** Source class recorded on ODOS-local graph rows for provenance and audit context. */
 export type ClinicalGraphSource =
   | "manual"
   | "device"
@@ -115,7 +115,7 @@ export type SuggestionVisitState =
   | "expired"
   | "superseded";
 
-/** Kinds of protocol actions the OSOD-local graph can prefill before clinician review. */
+/** Kinds of protocol actions the ODOS-local graph can prefill before clinician review. */
 export type ProtocolActionKind =
   | "finding-prompt"
   | "plan-text"
@@ -142,7 +142,7 @@ export type ChargeProposalStatus = "suggested" | "selected" | "removed" | "overr
 /** Mandate-14 coding state; only verified rows may project code-bearing FHIR artifacts. */
 export type CodingStatus = "verified" | "placeholder" | "provisional";
 
-/** Provenance carried by OSOD-local graph rows and copied into derived artifacts when useful. */
+/** Provenance carried by ODOS-local graph rows and copied into derived artifacts when useful. */
 export interface ClinicalGraphProvenance {
   source: ClinicalGraphSource;
   recordedAt: string;
@@ -273,7 +273,7 @@ export interface DiagnosisDefinition {
   provenance: ClinicalGraphProvenance;
 }
 
-/** OSOD-local ranked candidate edge from a neutral finding to a possible diagnosis. */
+/** ODOS-local ranked candidate edge from a neutral finding to a possible diagnosis. */
 export interface DiagnosisSuggestionEdge {
   id: string;
   sourceFindingDefinitionId?: string;
@@ -560,7 +560,7 @@ export function projectFindingInstanceToObservation(
       ? finding.observationReference.slice("Observation/".length)
       : undefined,
     status: "preliminary",
-    code: definition.fhirObservationCode ?? osodConcept(definition.stableKey, definition.display),
+    code: definition.fhirObservationCode ?? odosConcept(definition.stableKey, definition.display),
     ...(findingValueToObservationValue(finding.value)),
   };
 
@@ -608,7 +608,7 @@ export function buildDiagnosisDefinition(
 }
 
 /**
- * Builds a non-committal suggestion edge; it is OSOD-local and never a confirmed diagnosis by itself.
+ * Builds a non-committal suggestion edge; it is ODOS-local and never a confirmed diagnosis by itself.
  */
 export function buildDiagnosisSuggestionEdge(
   input: Omit<DiagnosisSuggestionEdge, "id" | "visitState" | "evidenceFindingInstanceIds" | "score"> &
@@ -628,7 +628,7 @@ export function buildDiagnosisSuggestionEdge(
 }
 
 /**
- * Builds an OSOD-local encounter diagnosis; confirmation requires explicit status plus timestamp.
+ * Builds an ODOS-local encounter diagnosis; confirmation requires explicit status plus timestamp.
  */
 export function buildEncounterDiagnosis(
   input: Omit<EncounterDiagnosis, "id" | "clinicalStatus" | "verificationStatus" | "rank" | "evidenceFindingInstanceIds" | "evidenceObservationReferences" | "confirmedAt"> &
@@ -980,7 +980,7 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
         : {
             typeCode: "author",
             typeDisplay: "Author",
-            whoDisplay: `OSOD ${input.provenance.source} evidence source`,
+            whoDisplay: `ODOS ${input.provenance.source} evidence source`,
           },
     ],
     entityReferences: sourceReferences,
@@ -1286,7 +1286,7 @@ export function rejectDiagnosisSuggestionEdge(
 }
 
 /**
- * Records clinician reconciliation of accepted Conditions and rejected OSOD-local suggestions.
+ * Records clinician reconciliation of accepted Conditions and rejected ODOS-local suggestions.
  */
 export function buildSuggestionReconciliationClinicalImpression(input: {
   patientReference: string;
@@ -1306,7 +1306,7 @@ export function buildSuggestionReconciliationClinicalImpression(input: {
     investigation: input.reviewedObservationReferences.length
       ? [
           {
-            code: osodConcept("reviewed-observations", "Reviewed observations"),
+            code: odosConcept("reviewed-observations", "Reviewed observations"),
             item: input.reviewedObservationReferences.map((r) => reference<Observation>(r)),
           },
         ]
@@ -1336,7 +1336,7 @@ export function buildCoverageWarningDetectedIssue(input: {
   return {
     resourceType: "DetectedIssue",
     status: "final",
-    code: osodConcept("coverage-warning", "Coverage warning"),
+    code: odosConcept("coverage-warning", "Coverage warning"),
     severity: "moderate",
     patient: reference(input.patientReference),
     identifiedDateTime: input.identifiedDateTime,
@@ -1386,12 +1386,12 @@ export function buildClaimWithDiagnosisPointers(input: {
   return {
     resourceType: "Claim",
     status: "active",
-    type: osodConcept("professional", "Professional"),
+    type: odosConcept("professional", "Professional"),
     use: "claim",
     patient: reference(input.patientReference),
     created: input.created,
     provider: reference(input.providerReference),
-    priority: osodConcept("normal", "Normal"),
+    priority: odosConcept("normal", "Normal"),
     insurance: [
       {
         sequence: 1,
@@ -1423,7 +1423,7 @@ export function projectProtocolDefinitionToPlanDefinition(protocol: ProtocolDefi
     action: protocol.actionTemplates.map((action) => ({
       id: action.actionKey,
       title: action.display,
-      code: [osodConcept(action.actionKind, action.actionKind)],
+      code: [odosConcept(action.actionKind, action.actionKind)],
       precheckBehavior: action.defaultSelected ? "yes" : "no",
     })),
   };
@@ -1442,7 +1442,7 @@ export function projectProtocolActionToActivityDefinition(
     name: `${protocol.stableKey}_${action.actionKey}`,
     title: action.display,
     kind: "Task",
-    code: osodConcept(action.actionKind, action.actionKind),
+    code: odosConcept(action.actionKind, action.actionKind),
   };
 }
 
@@ -2023,7 +2023,7 @@ function findingValueToObservationValue(
   if (value.type === "components") {
     return {
       component: value.components.map((item) => ({
-        code: osodConcept(item.code, item.display),
+        code: odosConcept(item.code, item.display),
         ...(typeof item.value === "number"
           ? {
               valueQuantity: quantity(

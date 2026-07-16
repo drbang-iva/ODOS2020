@@ -54,7 +54,7 @@ test("desk summary projects every card stat from seeded resources with truthful 
   const payment = buildPaymentReconciliation({
     outcome: "success",
     processorTransactionId: "payment-1",
-    processorTransactionSystem: "https://osod.dev/test/payment",
+    processorTransactionSystem: "https://odos2020.com/test/payment",
     subjectReference: "Patient/patient-1",
     amountCents: 5000,
     tender: { code: "CASH", display: "Cash" },

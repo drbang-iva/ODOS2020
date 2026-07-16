@@ -5,10 +5,10 @@ import {
   type ManualBenefitsDraft,
 } from "./patient-insurance";
 
-export const OSOD_INSURANCE_CONFIG_SYSTEM = "https://osod.dev/fhir/CodeSystem/insurance-config";
-export const OSOD_INSURANCE_CONFIG_CODE = "osod-insurance-config";
-export const OSOD_INSURANCE_CONFIG_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-insurance-practice-config";
+export const ODOS_INSURANCE_CONFIG_SYSTEM = "https://odos2020.com/fhir/CodeSystem/insurance-config";
+export const ODOS_INSURANCE_CONFIG_CODE = "odos-insurance-config";
+export const ODOS_INSURANCE_CONFIG_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-insurance-practice-config";
 
 export interface PlanTemplateBenefit {
   excluded: boolean;
@@ -101,16 +101,16 @@ export function buildInsuranceConfigResource(
     code: {
       coding: [
         {
-          system: OSOD_INSURANCE_CONFIG_SYSTEM,
-          code: OSOD_INSURANCE_CONFIG_CODE,
-          display: "OSOD Insurance Config",
+          system: ODOS_INSURANCE_CONFIG_SYSTEM,
+          code: ODOS_INSURANCE_CONFIG_CODE,
+          display: "ODOS Insurance Config",
         },
       ],
-      text: "OSOD Insurance Config",
+      text: "ODOS Insurance Config",
     },
     extension: [
       {
-        url: OSOD_INSURANCE_CONFIG_EXTENSION_URL,
+        url: ODOS_INSURANCE_CONFIG_EXTENSION_URL,
         valueString: JSON.stringify(persistedConfig),
       },
     ],
@@ -120,14 +120,14 @@ export function buildInsuranceConfigResource(
 export function parseInsuranceConfig(basic: Basic): PersistedInsuranceConfig {
   const coding = basic.code?.coding?.find(
     (candidate) =>
-      candidate.system === OSOD_INSURANCE_CONFIG_SYSTEM &&
-      candidate.code === OSOD_INSURANCE_CONFIG_CODE,
+      candidate.system === ODOS_INSURANCE_CONFIG_SYSTEM &&
+      candidate.code === ODOS_INSURANCE_CONFIG_CODE,
   );
   if (!coding) {
-    throw new Error("Basic resource is not the osod insurance-config singleton.");
+    throw new Error("Basic resource is not the odos insurance-config singleton.");
   }
   const raw = basic.extension?.find(
-    (extension) => extension.url === OSOD_INSURANCE_CONFIG_EXTENSION_URL,
+    (extension) => extension.url === ODOS_INSURANCE_CONFIG_EXTENSION_URL,
   )?.valueString;
   if (!raw) {
     throw new Error("Insurance-config singleton is missing its config extension.");
@@ -151,7 +151,7 @@ export async function loadInsuranceConfigSingleton(
   const bundle = await client.search<Basic>(
     "Basic",
     new URLSearchParams([
-      ["code", `${OSOD_INSURANCE_CONFIG_SYSTEM}|${OSOD_INSURANCE_CONFIG_CODE}`],
+      ["code", `${ODOS_INSURANCE_CONFIG_SYSTEM}|${ODOS_INSURANCE_CONFIG_CODE}`],
       ["_count", "10"],
     ]),
   );

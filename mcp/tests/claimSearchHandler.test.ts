@@ -32,7 +32,7 @@ test("GET /claims/search supports patient name, claim number, and derived status
   });
   const claim = await handleClaimSearchRequest(deps, {
     authHeader: "Bearer good",
-    query: { claim: "OSOD-CLAIM-1" },
+    query: { claim: "ODOS-CLAIM-1" },
   });
   const status = await handleClaimSearchRequest(deps, {
     authHeader: "Bearer good",
@@ -115,20 +115,20 @@ function claimResource(number: number): Claim {
     providerReference: "Practitioner/provider-1",
     insurerReference: "Organization/payer-1",
     coverageReference: `Coverage/coverage-${number}`,
-    patientAccountNumber: `OSOD-CLAIM-${number}`,
+    patientAccountNumber: `ODOS-CLAIM-${number}`,
     payerId: "PAYERTEST",
-    billingProvider: { name: "OSOD TEST CLINIC", npi: "1111111112" },
+    billingProvider: { name: "ODOS TEST CLINIC", npi: "1111111112" },
     renderingProvider: { firstName: "Alex", lastName: "Synthetic", npi: "1111111112" },
     subscriber: { firstName: "Jamie", lastName: "Synthetic", dateOfBirth: "1980-01-01", sex: "F" },
     patient: { firstName: "Jamie", lastName: "Synthetic", dateOfBirth: "1980-01-01", sex: "F" },
-    diagnoses: [{ system: "https://osod.test/fhir/CodeSystem/diagnosis", code: "DX-A" }],
+    diagnoses: [{ system: "https://odos.test/fhir/CodeSystem/diagnosis", code: "DX-A" }],
     facilityReference: "Location/main-office",
     chargeItems: [{
       resourceType: "ChargeItem",
       id: `charge-${number}`,
       status: "billable",
       subject: { reference: `Patient/patient-${number}` },
-      code: { coding: [{ system: "https://osod.test/fhir/CodeSystem/procedure", code: "PROC-A" }] },
+      code: { coding: [{ system: "https://odos.test/fhir/CodeSystem/procedure", code: "PROC-A" }] },
       priceOverride: { value: 125, currency: "USD" },
     }],
   };

@@ -1,21 +1,21 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-benefit-last-used",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-last-used",
-  "version": "claims-phase7a",
-  "name": "OSODBenefitLastUsed",
-  "title": "OSOD Benefit Last Used",
+  "id": "odos-optical-lab",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-optical-lab",
+  "version": "optical-pricing-1",
+  "name": "ODOSOpticalLab",
+  "title": "ODOS Optical Lab Identifier",
   "status": "active",
-  "date": "2026-07-10",
-  "publisher": "OSOD",
-  "description": "Date a manually entered vision-plan benefit was last used.",
+  "date": "2026-07-11",
+  "publisher": "ODOS",
+  "description": "Practice-local optical lab identifier matching the string identity used by the ODOS lab-order header.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "CoverageEligibilityResponse.insurance.item"
+      "expression": "ChargeItemDefinition"
     }
   ],
   "type": "Extension",
@@ -26,7 +26,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "Date the benefit was last used",
+        "short": "Practice-local optical lab identifier",
         "min": 0,
         "max": "1"
       },
@@ -38,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-benefit-last-used"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-optical-lab"
       },
       {
         "id": "Extension.value[x]",
@@ -47,7 +47,7 @@
         "max": "1",
         "type": [
           {
-            "code": "date"
+            "code": "string"
           }
         ]
       }

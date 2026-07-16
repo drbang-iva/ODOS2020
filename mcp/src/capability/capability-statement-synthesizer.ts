@@ -36,7 +36,7 @@ export interface CapabilityStatementSynthesisResult {
 const INTERNAL_REFERENCE_PATTERNS: readonly RegExp[] = [
   /\b(?:192\.168|10\.|127\.|localhost|host\.docker\.internal)\b[^\s"']*/gi,
   /\b172\.(?:1[6-9]|2\d|3[0-1])\.[^\s"']*/gi,
-  /\/(?:var\/lib|etc|opt\/osod|home)\/[^\s"']*/gi,
+  /\/(?:var\/lib|etc|opt\/odos|home)\/[^\s"']*/gi,
   /postgres(?:ql)?:\/\/[^\s"']+/gi,
   /Device\/agent-[A-Za-z0-9_.-]+/g,
 ];
@@ -59,7 +59,7 @@ export function synthesizeCapabilityStatement(
     fhirVersion: "4.0.1",
     format: ["json"],
     implementation: {
-      description: sanitizeForPublicEmission("OSOD local FHIR R4 server", baseUrl),
+      description: sanitizeForPublicEmission("ODOS local FHIR R4 server", baseUrl),
       url: baseUrl,
     },
     rest: [

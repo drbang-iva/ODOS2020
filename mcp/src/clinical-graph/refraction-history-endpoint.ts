@@ -2,7 +2,7 @@ import type { Bundle, Observation, ObservationComponent } from "@medplum/fhirtyp
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { CONTACT_LENS_PARAMETER_CODE_SYSTEM } from "../fhir/contactLens.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import {
   customFieldEntries,
   observationCustomValue,
@@ -95,10 +95,10 @@ const historyQuerySchema = z.object({
 }).strict();
 
 const SEARCH_CODES = {
-  refraction: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
-  wearing: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|wearing_rx`,
-  softCl: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|soft_contact_lens`,
-  specialtyCl: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|specialty_contact_lens`,
+  refraction: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
+  wearing: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|wearing_rx`,
+  softCl: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|soft_contact_lens`,
+  specialtyCl: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|specialty_contact_lens`,
 } as const;
 
 export async function handleRefractionHistoryRequest(

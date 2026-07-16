@@ -543,6 +543,6 @@ function validateCoverageEntry(entry: CoverageEntryInput): string[] {
 }
 
 function claimApiBaseUrl(): string {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+  const meta = import.meta as ImportMeta & { env?: { VITE_ODOS_MCP_BASE_URL?: string } };
+  return meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }

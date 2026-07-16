@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui";
 import {
-  OSOD_DISCIPLINE_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM,
   buildVisitType,
   filterSchedulingResourcesByHiddenActorReferences,
   type SchedulingPracticeConfig,
@@ -479,7 +479,7 @@ function schedulingResource(
     id,
     active: true,
     actor: [{ reference, display }],
-    serviceCategory: [{ coding: [{ system: OSOD_DISCIPLINE_SYSTEM, code: discipline }] }],
+    serviceCategory: [{ coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: discipline }] }],
   };
 }
 

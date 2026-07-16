@@ -14,7 +14,7 @@ import {
 import { readFileSync, statSync } from "node:fs";
 import express, { type Request, type Response, type Router } from "express";
 import { Pool } from "pg";
-import { buildOsodAuditEventRow, type OsodActorRole } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosActorRole } from "../authz/odosAudit.js";
 import type { FhirAuditRecorder } from "../authz/liveAudit.js";
 import { type PracticeRoleId, PRACTICE_ROLE_IDS } from "../authz/roles.js";
 import {
@@ -73,7 +73,7 @@ import {
   persistCdsFeedback,
   type CdsFeedbackRepository,
 } from "../cds/feedback.js";
-import { OSOD_DEFAULT_CDS_SERVICES, OSOD_DEFAULT_CDS_SERVICE_IDS } from "../cds/services/index.js";
+import { ODOS_DEFAULT_CDS_SERVICES, ODOS_DEFAULT_CDS_SERVICE_IDS } from "../cds/services/index.js";
 import type { CdsHookEvaluationInput, CdsHookId, CdsFhirAuthorization } from "../cds/types.js";
 import {
   createAgentOpsRouter,
@@ -209,7 +209,7 @@ export class SmartAuthorizationState {
       `
         SELECT client_id, name, redirect_uris, client_type, token_endpoint_auth_method,
                jwks_uri, client_secret_hash, scopes_allowed, is_sandbox
-        FROM osod_smart_clients
+        FROM odos_smart_clients
         WHERE client_id = $1
       `,
       [clientId],
@@ -229,7 +229,7 @@ export class SmartAuthorizationState {
         `
           SELECT client_id, name, redirect_uris, client_type, token_endpoint_auth_method,
                  jwks_uri, client_secret_hash, scopes_allowed, is_sandbox
-          FROM osod_smart_clients
+          FROM odos_smart_clients
           ORDER BY updated_at DESC
         `,
       );
@@ -250,7 +250,7 @@ export class SmartAuthorizationState {
     await this.ensureSchema();
     await this.pool.query(
       `
-        INSERT INTO osod_smart_clients (
+        INSERT INTO odos_smart_clients (
           client_id, name, redirect_uris, client_type, token_endpoint_auth_method,
           jwks_uri, client_secret_hash, scopes_allowed, is_sandbox, updated_at
         )
@@ -282,7 +282,7 @@ export class SmartAuthorizationState {
 
   private async ensureSchema(): Promise<void> {
     this.schemaReady ??= this.pool?.query(`
-      CREATE TABLE IF NOT EXISTS osod_smart_clients (
+      CREATE TABLE IF NOT EXISTS odos_smart_clients (
         client_id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         redirect_uris JSONB NOT NULL,
@@ -302,7 +302,7 @@ export class SmartAuthorizationState {
 export function createSmartAuthorizationRouter(options: SmartAuthorizationServerOptions): Router {
   const now = options.now ?? (() => new Date());
   const state = options.state ?? new SmartAuthorizationState([defaultSandboxClient(options.issuer)], {
-    postgresUrl: process.env.OSOD_POSTGRES_URL,
+    postgresUrl: process.env.ODOS_POSTGRES_URL,
   });
   const signingKey = options.signingKey ?? loadSmartSigningKey(options.signingKeyPath);
   const smartAppRegistryStore = options.smartAppRegistryStore ?? createDefaultSmartAppRegistryStore(options.fhirBaseUrl);
@@ -329,8 +329,8 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   router.get("/metadata", async (req, res) => {
     const result = synthesizeCapabilityStatement({
       baseUrl: options.fhirBaseUrl,
-      patientExportEnabled: process.env.OSOD_BULK_EXPORT_PATIENT_ENABLED === "true",
-      systemExportEnabled: process.env.OSOD_BULK_EXPORT_SYSTEM_ENABLED === "true",
+      patientExportEnabled: process.env.ODOS_BULK_EXPORT_PATIENT_ENABLED === "true",
+      systemExportEnabled: process.env.ODOS_BULK_EXPORT_SYSTEM_ENABLED === "true",
     });
     res.type("application/fhir+json");
     res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
@@ -345,7 +345,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   router.get("/api-documentation", (req, res) => {
     const base = publicBaseUrl(options);
     res.type("application/json").setHeader("Cache-Control", "public, max-age=86400").json({
-      product: "OSOD Patient Access API",
+      product: "ODOS Patient Access API",
       base_urls: [
         sanitizeForPublicEmission(`${base}/`, base),
         sanitizeForPublicEmission(`${base}/authorize`, base),
@@ -359,7 +359,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
         sanitizeForPublicEmission(`${base}/.well-known/smart-configuration`, base),
       ],
       rate_limit: {
-        anonymous_requests_per_minute: Number(process.env.OSOD_PUBLIC_DOCS_RATE_LIMIT ?? 120),
+        anonymous_requests_per_minute: Number(process.env.ODOS_PUBLIC_DOCS_RATE_LIMIT ?? 120),
       },
     });
   });
@@ -369,7 +369,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     res.type("application/json").setHeader("Cache-Control", "public, max-age=86400").json({
       openapi: "3.1.0",
       info: {
-        title: "OSOD Patient Access and Bulk Data API",
+        title: "ODOS Patient Access and Bulk Data API",
         version: "0.55e",
       },
       servers: [{ url: sanitizeForPublicEmission(base, base) }],
@@ -424,7 +424,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
         await audit(options.audit, "smart-scope-staged-review", req, {
           actorId: decision.userId,
           actorRole: roleId,
-          resourceType: "osod_smart_scope_decisions",
+          resourceType: "odos_smart_scope_decisions",
           resourceId: decision.id,
           actionOutcome: "granted",
           actionReason: decision.reason,
@@ -436,7 +436,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
         await audit(options.audit, "smart-scope-rejected", req, {
           actorId: decision.userId,
           actorRole: roleId,
-          resourceType: "osod_smart_scope_decisions",
+          resourceType: "odos_smart_scope_decisions",
           resourceId: decision.id,
           actionOutcome: "denied",
           actionReason: decision.reason,
@@ -447,7 +447,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
       await audit(options.audit, "smart-scope-approved", req, {
         actorId: decision.userId,
         actorRole: roleId,
-        resourceType: "osod_smart_scope_decisions",
+        resourceType: "odos_smart_scope_decisions",
         resourceId: decision.id,
         actionReason: decision.reason,
       });
@@ -601,7 +601,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
     const externalServices = activeCdsServiceEndpoints(await cdsServiceRegistryStore.list());
     res.type("application/json").json({
       services: [
-        ...OSOD_DEFAULT_CDS_SERVICES.map((service) => service.discovery),
+        ...ODOS_DEFAULT_CDS_SERVICES.map((service) => service.discovery),
         ...externalServices.map(cdsServiceDiscoveryEntry),
       ],
     });
@@ -616,13 +616,13 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
           target: `Endpoint/${stored.id}`,
           activityCode: "register",
           recorded: now().toISOString(),
-          actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
-          actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+          actorId: req.header("X-ODOS-Actor-Id") ?? "cds-service-registry",
+          actorRole: (req.header("X-ODOS-Role") as OdosActorRole | undefined) ?? "system",
         }),
       );
       await audit(options.audit, "cds.service.registered", req, {
-        actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
-        actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        actorId: req.header("X-ODOS-Actor-Id") ?? "cds-service-registry",
+        actorRole: (req.header("X-ODOS-Role") as OdosActorRole | undefined) ?? "system",
         resourceType: "Endpoint",
         resourceId: stored.id,
         actionReason: "External CDS service registered through local practice-admin review.",
@@ -649,13 +649,13 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
           target: `Endpoint/${stored.id}`,
           activityCode: req.body?.activity === "amend" ? "amend" : "nullify",
           recorded: now().toISOString(),
-          actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
-          actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+          actorId: req.header("X-ODOS-Actor-Id") ?? "cds-service-registry",
+          actorRole: (req.header("X-ODOS-Role") as OdosActorRole | undefined) ?? "system",
         }),
       );
       await audit(options.audit, "cds.service.deactivated", req, {
-        actorId: req.header("X-OSOD-Actor-Id") ?? "cds-service-registry",
-        actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+        actorId: req.header("X-ODOS-Actor-Id") ?? "cds-service-registry",
+        actorRole: (req.header("X-ODOS-Role") as OdosActorRole | undefined) ?? "system",
         resourceType: "Endpoint",
         resourceId: stored.id,
         actionReason: "External CDS service deactivated through local practice-admin workflow.",
@@ -672,7 +672,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
         request: parseCdsFeedbackRequest(req.body),
         repository: cdsFeedbackRepository,
         serviceId: req.params.id,
-        userId: req.header("X-OSOD-Actor-Id") ?? bodyString(req, "user_id") ?? "local-practitioner",
+        userId: req.header("X-ODOS-Actor-Id") ?? bodyString(req, "user_id") ?? "local-practitioner",
         patientId: bodyString(req, "patient_id"),
         encounterId: bodyString(req, "encounter_id"),
         now: now(),
@@ -689,7 +689,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   router.post("/cds-services/:id", async (req, res) => {
     try {
       const services = [
-        ...OSOD_DEFAULT_CDS_SERVICE_IDS,
+        ...ODOS_DEFAULT_CDS_SERVICE_IDS,
         ...activeCdsServiceEndpoints(await cdsServiceRegistryStore.list()).map((service) => service.metadata.serviceId),
       ];
       if (!services.includes(req.params.id)) {
@@ -742,7 +742,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
         decision,
         adminUserId: userFromRequest(req),
         adminRole,
-        actorRole: req.header("X-OSOD-Actor-Role"),
+        actorRole: req.header("X-ODOS-Actor-Role"),
         approvedScopes: Array.isArray(req.body?.approved_scopes) ? req.body.approved_scopes : undefined,
         now: now(),
       });
@@ -751,7 +751,7 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
       await audit(options.audit, approved.outcomeClass === "rejected" ? "smart-scope-rejected" : "smart-scope-approved", req, {
         actorId: approved.decidedBy,
         actorRole: adminRole,
-        resourceType: "osod_smart_scope_decisions",
+        resourceType: "odos_smart_scope_decisions",
         resourceId: approved.id,
         actionOutcome: approved.outcomeClass === "rejected" ? "denied" : "granted",
         actionReason: "staged SMART scope review resolved by practice-admin",
@@ -789,13 +789,13 @@ export function createSmartAuthorizationRouter(options: SmartAuthorizationServer
   return router;
 }
 
-export function loadSmartSigningKey(path = process.env.OSOD_SMART_SIGNING_KEY_PATH): SmartSigningKey {
+export function loadSmartSigningKey(path = process.env.ODOS_SMART_SIGNING_KEY_PATH): SmartSigningKey {
   if (!path) {
-    throw new Error("OSOD_SMART_SIGNING_KEY_PATH is required for the local SMART authorization server.");
+    throw new Error("ODOS_SMART_SIGNING_KEY_PATH is required for the local SMART authorization server.");
   }
   const stat = statSync(path);
   if ((stat.mode & 0o777) !== 0o600) {
-    throw new Error("OSOD_SMART_SIGNING_KEY_PATH must point to a private key with mode 0600.");
+    throw new Error("ODOS_SMART_SIGNING_KEY_PATH must point to a private key with mode 0600.");
   }
   const privateKey = createPrivateKey(readFileSync(path));
   return smartSigningKeyFromPrivateKey(privateKey);
@@ -1235,8 +1235,8 @@ async function smartConfigurationSnapshot(
     codeChallengeMethodsSupported: ["S256"],
     registrationEndpoint: `${base}/oauth2/register`,
     cdsHooksEndpoint: `${base}/cds-services`,
-    cdsCapabilities: OSOD_DEFAULT_CDS_SERVICE_IDS,
-    osodExtensions: {
+    cdsCapabilities: ODOS_DEFAULT_CDS_SERVICE_IDS,
+    odosExtensions: {
       agentopsEndpoint: `${base}/agentops`,
       agentopsCapabilities: DEFAULT_AGENTOPS_CAPABILITIES,
     },
@@ -1250,7 +1250,7 @@ async function smartConfigurationSnapshot(
     tokenEndpointAuthSigningAlgValuesSupported: ["RS384", "ES384"],
     grantTypesSupported: ["authorization_code", "client_credentials", "refresh_token"],
     updatedAt: state.updatedAt,
-    practicePublicBaseUrl: process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? options.issuer,
+    practicePublicBaseUrl: process.env.ODOS_PRACTICE_PUBLIC_BASE_URL ?? options.issuer,
   };
 }
 
@@ -1270,7 +1270,7 @@ function cdsHookInputFromRequest(
     hook: hook as CdsHookId,
     hookInstance: typeof body.hookInstance === "string" ? body.hookInstance : randomUUID(),
     fhirServer: typeof body.fhirServer === "string" ? body.fhirServer : options.fhirBaseUrl,
-    userId: req.header("X-OSOD-Actor-Id") ?? contextString(context, "userId") ?? "local-practitioner",
+    userId: req.header("X-ODOS-Actor-Id") ?? contextString(context, "userId") ?? "local-practitioner",
     patientId: contextString(context, "patientId"),
     encounterId: contextString(context, "encounterId"),
     context,
@@ -1314,8 +1314,8 @@ async function cdsFhirAuthorizationForService(
 
 function defaultSandboxClient(issuer: string): SmartClientRegistration {
   return {
-    clientId: "osod-sandbox-public",
-    name: "OSOD Sandbox Public Client",
+    clientId: "odos-sandbox-public",
+    name: "ODOS Sandbox Public Client",
     redirectUris: [`${issuer.replace(/\/$/, "")}/sandbox/callback`],
     clientType: "public",
     tokenEndpointAuthMethod: "none",
@@ -1325,7 +1325,7 @@ function defaultSandboxClient(issuer: string): SmartClientRegistration {
 }
 
 function publicBaseUrl(options: SmartAuthorizationServerOptions): string {
-  return (process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? options.issuer).replace(/\/$/, "");
+  return (process.env.ODOS_PRACTICE_PUBLIC_BASE_URL ?? options.issuer).replace(/\/$/, "");
 }
 
 async function requireClient(
@@ -1378,15 +1378,15 @@ function clientAuthClass(client: SmartClientRegistration): SmartClientAuthClass 
 }
 
 function roleFromRequest(req: Request): PracticeRoleId {
-  const raw = req.header("X-OSOD-Role") ?? stringQuery(req, "osod_role") ?? bodyString(req, "osod_role") ?? "clinician";
+  const raw = req.header("X-ODOS-Role") ?? stringQuery(req, "odos_role") ?? bodyString(req, "odos_role") ?? "clinician";
   if (PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId)) {
     return raw as PracticeRoleId;
   }
-  throw oauthError("access_denied", "unknown OSOD role", 403);
+  throw oauthError("access_denied", "unknown ODOS role", 403);
 }
 
 function userFromRequest(req: Request): string {
-  return req.header("X-OSOD-Actor-Id") ?? stringQuery(req, "user_id") ?? bodyString(req, "user_id") ?? "local-practitioner";
+  return req.header("X-ODOS-Actor-Id") ?? stringQuery(req, "user_id") ?? bodyString(req, "user_id") ?? "local-practitioner";
 }
 
 function launchContextFromRequest(req: Request): SmartLaunchContext {
@@ -1571,11 +1571,11 @@ function contextString(context: Record<string, unknown>, key: string): string | 
 
 async function audit(
   recorder: FhirAuditRecorder | undefined,
-  eventType: Parameters<typeof buildOsodAuditEventRow>[0]["eventType"],
+  eventType: Parameters<typeof buildOdosAuditEventRow>[0]["eventType"],
   req: Request,
   input: {
     readonly actorId?: string;
-    readonly actorRole?: OsodActorRole;
+    readonly actorRole?: OdosActorRole;
     readonly resourceType?: string;
     readonly resourceId?: string;
     readonly actionOutcome?: "granted" | "denied";
@@ -1586,7 +1586,7 @@ async function audit(
     return;
   }
   await recorder.recordDenied(
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType,
       actorId: input.actorId,
       actorRole: input.actorRole,

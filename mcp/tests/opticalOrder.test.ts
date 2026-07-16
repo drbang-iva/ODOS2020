@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildSpectacleOrderDeviceRequest, buildOpticalOrderTask } from "../src/fhir/opticalOrder.js";
-import { OSOD_OPTICAL_ORDER_STATUS_SYSTEM } from "../src/fhir/opticalOrderStatus.js";
-import { OSOD_OPTICAL_ORDER_TYPE_SYSTEM } from "../src/fhir/opticalOrderType.js";
+import { ODOS_OPTICAL_ORDER_STATUS_SYSTEM } from "../src/fhir/opticalOrderStatus.js";
+import { ODOS_OPTICAL_ORDER_TYPE_SYSTEM } from "../src/fhir/opticalOrderType.js";
 
 const TASK_STATUS_VOCAB = [
   "draft", "requested", "received", "accepted", "rejected", "ready",
@@ -53,9 +53,9 @@ test("buildOpticalOrderTask wires the order lifecycle: focus→DeviceRequest, fo
   assert.equal(task.intent, "order");
   assert.equal(task.focus?.reference, "DeviceRequest/dr1");
   assert.equal(task.for?.reference, "Patient/p1");
-  assert.equal(task.businessStatus?.coding?.[0]?.system, OSOD_OPTICAL_ORDER_STATUS_SYSTEM);
+  assert.equal(task.businessStatus?.coding?.[0]?.system, ODOS_OPTICAL_ORDER_STATUS_SYSTEM);
   assert.equal(task.businessStatus?.coding?.[0]?.code, "at-lab");
-  assert.equal(task.code?.coding?.[0]?.system, OSOD_OPTICAL_ORDER_TYPE_SYSTEM);
+  assert.equal(task.code?.coding?.[0]?.system, ODOS_OPTICAL_ORDER_TYPE_SYSTEM);
   assert.equal(task.code?.coding?.[0]?.code, "frame-only");
   // Task.status stays on the FHIR required workflow vocabulary, NOT the optical vocab
   assert.ok(TASK_STATUS_VOCAB.includes(task.status), `Task.status ${task.status} not in FHIR vocab`);

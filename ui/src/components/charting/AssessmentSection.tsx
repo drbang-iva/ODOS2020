@@ -20,9 +20,9 @@ import {
 } from "../../lib/clinical-view-model";
 import type { SectionSaveStatus } from "./types";
 import { submitDiagnosisPick } from "../../lib/clinical-graph-client";
-import { OSOD_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
+import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 
-const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key";
+const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 
 interface Props {
@@ -96,8 +96,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       const detail = (event as CustomEvent<{ encounterReference?: string }>).detail;
       if (detail?.encounterReference === encounterReference) void load().catch((err) => setError(err instanceof Error ? err.message : String(err)));
     };
-    window.addEventListener("osod:diagnosis-picked", refresh);
-    return () => window.removeEventListener("osod:diagnosis-picked", refresh);
+    window.addEventListener("odos:diagnosis-picked", refresh);
+    return () => window.removeEventListener("odos:diagnosis-picked", refresh);
   }, [encounterReference]);
 
   const sortedConditions = useMemo(
@@ -131,7 +131,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         completed: true,
         summary: `${form.tier === "principal" ? "Principal" : "Secondary"} ${form.code}`,
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI assessment",
+        operator: "ODOS UI assessment",
       };
       onSaved(status);
       setForm((current) => ({ ...current, tier: "secondary" }));
@@ -404,7 +404,7 @@ function findingProvenanceLine(observation: Observation): string {
   const label = stableCode === "cup_disc_ratio"
     ? "Cup/Disc"
     : observation.code.text ?? observation.code.coding?.find((coding) => coding.display)?.display ?? stableCode ?? "Finding";
-  const laterality = observation.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+  const laterality = observation.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
   const value = findingValue(observation);
   return [label, value, laterality].filter(Boolean).join(" ");

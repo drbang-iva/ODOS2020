@@ -1,4 +1,4 @@
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildClinicalFindingDefinition,
   type ClinicalFindingDefinition,
@@ -41,7 +41,7 @@ export function buildHpiFindingDefinition(
       perEye: false,
       terminologyStatus: {
         status: "MANDATE-14-DEFERRED",
-        note: "Chief complaint, HPI, and ROS use OSOD-local coding only. External terminology alignment requires current two-primary-source verification before external codes are introduced.",
+        note: "Chief complaint, HPI, and ROS use ODOS-local coding only. External terminology alignment requires current two-primary-source verification before external codes are introduced.",
       },
       fields: {
         chiefComplaint: { display: "Chief complaint", type: "text", maximumLength: 2000 },
@@ -59,7 +59,7 @@ export function buildHpiFindingDefinition(
       },
     },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept(HPI_STABLE_KEY, "Chief complaint, HPI, and review of systems"),
+    fhirObservationCode: odosConcept(HPI_STABLE_KEY, "Chief complaint, HPI, and review of systems"),
     allowDiagnosisMapping: false,
     notBillReady: true,
     provenance,

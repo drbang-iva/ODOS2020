@@ -146,7 +146,7 @@ test("labOrderToExport wraps the LabOrder in a tagged, versioned, JSON-round-tri
     frame: { brand: "Walkthrough", model: "Wayfarer", color: "Black", frameType: "Zyl", source: "frame-to-come" },
   });
   const exported = labOrderToExport(order);
-  assert.equal(exported.format, "osod-lab-order");
+  assert.equal(exported.format, "odos-lab-order");
   assert.equal(exported.version, "0");
   assert.deepEqual(exported.order, order);
   // T1 seam: must be a clean JSON snapshot (no undefined/functions to trip serialization)

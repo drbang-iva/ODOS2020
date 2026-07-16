@@ -5,7 +5,7 @@ import {
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
   toFhirAppointmentStatus,
 } from "./schedulingAppointmentStatus.js";
-import { OSOD_VISIT_TYPE_SYSTEM } from "./schedulingVisitType.js";
+import { ODOS_VISIT_TYPE_SYSTEM } from "./schedulingVisitType.js";
 
 /**
  * The scheduler Appointment builder — the Eyefinity details-modal data model on FHIR R4
@@ -13,18 +13,18 @@ import { OSOD_VISIT_TYPE_SYSTEM } from "./schedulingVisitType.js";
  * duration, both status axes, notes, urgent + follow-up flags, non-patient appointments.
  *
  * R4 homes, native-first: notes → `comment`; urgent → `priority` 1 (iCal highest); walk-in →
- * `appointmentType` v2-0276 WALKIN via the status-axis module. Only what R4 lacks rides osod
+ * `appointmentType` v2-0276 WALKIN via the status-axis module. Only what R4 lacks rides odos
  * extensions: confirmation status, vision/medical coverage split, the follow-up flag.
  */
 
-export const OSOD_VISION_COVERAGE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-vision-coverage";
+export const ODOS_VISION_COVERAGE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-vision-coverage";
 
-export const OSOD_MEDICAL_COVERAGE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-medical-coverage";
+export const ODOS_MEDICAL_COVERAGE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-medical-coverage";
 
-export const OSOD_FOLLOW_UP_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-appointment-follow-up";
+export const ODOS_FOLLOW_UP_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-appointment-follow-up";
 
 export interface CoverageInput {
   /** Coverage/… reference when the payer is on file. */
@@ -47,7 +47,7 @@ export interface SchedulingAppointmentInput {
   /** ISO dateTime WITH timezone offset (R4 requires it when time is present). */
   start: string;
   durationMinutes: number;
-  /** OSOD front-desk status (default "scheduled"). */
+  /** ODOS front-desk status (default "scheduled"). */
   status?: string;
   /** Confirmation axis (default "not-confirmed"). */
   confirmation?: string;
@@ -138,7 +138,7 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
       {
         coding: [
           {
-            system: OSOD_VISIT_TYPE_SYSTEM,
+            system: ODOS_VISIT_TYPE_SYSTEM,
             code: input.visitTypeCode,
             ...(input.visitTypeDisplay ? { display: input.visitTypeDisplay } : {}),
           },
@@ -179,12 +179,12 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
     extension: [
       appointmentConfirmationExtension(input.confirmation ?? "not-confirmed"),
       ...(input.visionCoverage
-        ? [coverageExtension(OSOD_VISION_COVERAGE_EXTENSION_URL, input.visionCoverage)]
+        ? [coverageExtension(ODOS_VISION_COVERAGE_EXTENSION_URL, input.visionCoverage)]
         : []),
       ...(input.medicalCoverage
-        ? [coverageExtension(OSOD_MEDICAL_COVERAGE_EXTENSION_URL, input.medicalCoverage)]
+        ? [coverageExtension(ODOS_MEDICAL_COVERAGE_EXTENSION_URL, input.medicalCoverage)]
         : []),
-      ...(input.followUp ? [{ url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true }] : []),
+      ...(input.followUp ? [{ url: ODOS_FOLLOW_UP_EXTENSION_URL, valueBoolean: true }] : []),
     ],
   };
 }
@@ -202,12 +202,12 @@ function coverageOf(appointment: Appointment, url: string): CoverageInput | unde
 
 /** Vision insurance on the block (undefined → the block shows "Vision: none"). */
 export function visionCoverageOf(appointment: Appointment): CoverageInput | undefined {
-  return coverageOf(appointment, OSOD_VISION_COVERAGE_EXTENSION_URL);
+  return coverageOf(appointment, ODOS_VISION_COVERAGE_EXTENSION_URL);
 }
 
 /** Medical insurance on the block (undefined → the block shows "Medical: none"). */
 export function medicalCoverageOf(appointment: Appointment): CoverageInput | undefined {
-  return coverageOf(appointment, OSOD_MEDICAL_COVERAGE_EXTENSION_URL);
+  return coverageOf(appointment, ODOS_MEDICAL_COVERAGE_EXTENSION_URL);
 }
 
 /** Urgent badge — iCal priority 1 is highest. */
@@ -218,7 +218,7 @@ export function isUrgentAppointment(appointment: Appointment): boolean {
 /** Follow-up badge. */
 export function isFollowUpAppointment(appointment: Appointment): boolean {
   return (
-    appointment.extension?.find((e) => e.url === OSOD_FOLLOW_UP_EXTENSION_URL)?.valueBoolean ===
+    appointment.extension?.find((e) => e.url === ODOS_FOLLOW_UP_EXTENSION_URL)?.valueBoolean ===
     true
   );
 }
@@ -227,5 +227,5 @@ export function isFollowUpAppointment(appointment: Appointment): boolean {
 export function appointmentVisitTypeCode(appointment: Appointment): string | undefined {
   return appointment.serviceType
     ?.flatMap((concept) => concept.coding ?? [])
-    .find((coding) => coding.system === OSOD_VISIT_TYPE_SYSTEM)?.code;
+    .find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM)?.code;
 }

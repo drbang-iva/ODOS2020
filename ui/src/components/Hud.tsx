@@ -91,7 +91,7 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
           encounterId,
           patientId: patient.id,
           recorded: new Date(now.getTime() + 1).toISOString(),
-          operatorDisplay: "OSOD UI start_encounter",
+          operatorDisplay: "ODOS UI start_encounter",
           ops: [{ op: "replace", path: "/status", value: "in-progress" }],
         }),
         "start_encounter",
@@ -143,7 +143,7 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col">
       <header className="pointer-events-auto p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="text-sm tracking-widest text-white/40 uppercase">OSOD · Patient Director</div>
+          <div className="text-sm tracking-widest text-white/40 uppercase">ODOS · Patient Director</div>
           <div className="h-4 w-px bg-white/20" />
           <div className="text-sm font-semibold">{display}</div>
           {patient.birthDate && (

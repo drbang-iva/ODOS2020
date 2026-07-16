@@ -1,14 +1,14 @@
-import { osodContactLensFinalizeService } from "./osod-contact-lens-finalize/index.js";
-import { osodDryEyeEscalationService } from "./osod-dry-eye-escalation/index.js";
-import { osodMyopiaControlPlanService } from "./osod-myopia-control-plan/index.js";
+import { odosContactLensFinalizeService } from "./odos-contact-lens-finalize/index.js";
+import { odosDryEyeEscalationService } from "./odos-dry-eye-escalation/index.js";
+import { odosMyopiaControlPlanService } from "./odos-myopia-control-plan/index.js";
 import type { CdsHookService } from "../types.js";
 
-export const OSOD_DEFAULT_CDS_SERVICES: readonly CdsHookService[] = [
-  osodContactLensFinalizeService,
-  osodMyopiaControlPlanService,
-  osodDryEyeEscalationService,
+export const ODOS_DEFAULT_CDS_SERVICES: readonly CdsHookService[] = [
+  odosContactLensFinalizeService,
+  odosMyopiaControlPlanService,
+  odosDryEyeEscalationService,
 ] as const;
 
-export const OSOD_DEFAULT_CDS_SERVICE_IDS = OSOD_DEFAULT_CDS_SERVICES.map(
+export const ODOS_DEFAULT_CDS_SERVICE_IDS = ODOS_DEFAULT_CDS_SERVICES.map(
   (service) => service.discovery.id,
 );

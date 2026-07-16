@@ -1,7 +1,7 @@
 import type { Bundle, MedicationRequest } from "@medplum/fhirtypes";
 import {
   buildMedicationRequest,
-  OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
+  ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
 } from "../fhir/medicationOrder.js";
 import type { WenoEzIntegrationConfig } from "../integrations/weno/config.js";
 import {
@@ -11,10 +11,10 @@ import {
 } from "../integrations/weno/wenoEzIntegrationClient.js";
 
 export const WENO_MESSAGE_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/weno-new-rx-message-id";
-export { OSOD_TRANSMISSION_METHOD_EXTENSION_URL };
+  "https://odos2020.com/fhir/NamingSystem/weno-new-rx-message-id";
+export { ODOS_TRANSMISSION_METHOD_EXTENSION_URL };
 export const WENO_RX_SYNC_WRITE_HEADERS = {
-  "X-OSOD-Source": "weno-new-rx-sync",
+  "X-ODOS-Source": "weno-new-rx-sync",
 } as const;
 
 export type WenoRxSyncTrigger = "scheduled" | "manual";

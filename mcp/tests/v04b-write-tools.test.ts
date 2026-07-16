@@ -68,7 +68,7 @@ test("v0.4b dry-eye MCP write tools create resources with mandatory Provenance",
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-v04b-write-tools-test",
+    clientName: "odos-mcp-v04b-write-tools-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -111,7 +111,7 @@ test("v0.4b dry-eye MCP write tools create resources with mandatory Provenance",
           scoring_system: "meiboscore",
           total_score: 4,
           content_type: "image/png",
-          url: "https://osod.dev/test-assets/meibography.png",
+          url: "https://odos2020.com/test-assets/meibography.png",
           title: "Test meibography",
         },
       }),

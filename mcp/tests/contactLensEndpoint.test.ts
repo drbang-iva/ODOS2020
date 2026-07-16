@@ -6,7 +6,7 @@ import {
   CONTACT_LENS_PARAMETER_CODE_SYSTEM,
   UCUM_CODE_SYSTEM,
 } from "../src/fhir/contactLens.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildSoftContactLensFindingDefinitionStub } from "../src/clinical-graph/contact-lens-definition.js";
 import {
   handleSoftContactLensCaptureRequest,
@@ -120,7 +120,7 @@ test("soft CL capture persists one Observation per eye using existing CL paramet
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), [
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_section_observations"), true);
   for (const provenance of created
     .map((entry) => entry.resource)
     .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
@@ -131,7 +131,7 @@ test("soft CL capture persists one Observation per eye using existing CL paramet
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   for (const observation of observations) {
     assert.equal(observation.code.coding?.some((coding) =>
-      coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "soft_contact_lens"), true);
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "soft_contact_lens"), true);
     assert.equal(observation.subject?.reference, BODY.patientReference);
     assert.equal(observation.encounter?.reference, BODY.encounterReference);
     assert.equal(observation.performer?.[0]?.reference, "Practitioner/doc1");

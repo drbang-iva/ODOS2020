@@ -10,16 +10,16 @@ export const MYOPIA_CONTROL_CODES = [
   snomed("57190000", "Myopia"),
 ] as const;
 
-export const osodMyopiaControlPlanService: CdsHookService = {
+export const odosMyopiaControlPlanService: CdsHookService = {
   discovery: {
-    id: "osod-myopia-control-plan",
+    id: "odos-myopia-control-plan",
     hook: "order-sign",
-    title: "OSOD myopia control plan",
+    title: "ODOS myopia control plan",
     description: "Prompts clinician review of myopia-control plan elements before signing related orders.",
     prefetch: {
       serviceRequests: "ServiceRequest?patient={{context.patientId}}&encounter={{context.encounterId}}",
     },
-    usageRequirements: "Local deterministic OSOD specialty rule. No predictive model. No external network call.",
+    usageRequirements: "Local deterministic ODOS specialty rule. No predictive model. No external network call.",
   },
   supportedCodes: MYOPIA_CONTROL_CODES,
   matches(input: CdsHookEvaluationInput): boolean {
@@ -42,7 +42,7 @@ export const osodMyopiaControlPlanService: CdsHookService = {
             "SNOMED CT 57190000 verified 2026-05-02; CDS Hooks 2.0.1 card schema + HTI-1 DSI disclosure fields verified 2026-05-02.",
           suggestions: [
             {
-              uuid: "osod-myopia-control-plan-review",
+              uuid: "odos-myopia-control-plan-review",
               label: "Document myopia-control plan review",
               actions: [],
             },

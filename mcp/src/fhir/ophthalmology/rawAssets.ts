@@ -1,5 +1,5 @@
 import type { DiagnosticReportInput, RawAssetInput } from "./types.js";
-import { osodConcept, reference, sourceSha256Extension } from "./extensions.js";
+import { odosConcept, reference, sourceSha256Extension } from "./extensions.js";
 
 export function buildDocumentReference(
   input: RawAssetInput,
@@ -8,14 +8,14 @@ export function buildDocumentReference(
     throw new Error("DocumentReference contentType is required.");
   }
   if (input.sha1Base64 && input.sha1Base64.length < 20) {
-    throw new Error("Attachment.hash must be the FHIR SHA-1 base64 value, not an OSOD SHA-256 digest.");
+    throw new Error("Attachment.hash must be the FHIR SHA-1 base64 value, not an ODOS SHA-256 digest.");
   }
 
   return {
     resourceType: "DocumentReference",
     status: "current",
-    type: osodConcept(input.typeCode ?? "OPHTHALMIC_RAW_ASSET", "Ophthalmic raw asset"),
-    category: [osodConcept(input.categoryCode ?? "OPHTHALMIC_SOURCE_DOCUMENT", "Ophthalmic source document")],
+    type: odosConcept(input.typeCode ?? "OPHTHALMIC_RAW_ASSET", "Ophthalmic raw asset"),
+    category: [odosConcept(input.categoryCode ?? "OPHTHALMIC_SOURCE_DOCUMENT", "Ophthalmic source document")],
     subject: reference(input.patientReference),
     date: new Date().toISOString(),
     ...(input.authorReferences?.length
@@ -51,7 +51,7 @@ export function buildDiagnosticReport(
   return {
     resourceType: "DiagnosticReport",
     status: "final",
-    code: osodConcept(input.code, input.display),
+    code: odosConcept(input.code, input.display),
     subject: reference(input.patientReference),
     effectiveDateTime: input.effectiveDateTime,
     result: input.resultReferences.map((r) => reference(r)),

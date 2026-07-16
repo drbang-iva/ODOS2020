@@ -38,10 +38,10 @@ export function isClearinghouseId(value: unknown): value is ClearinghouseId {
 }
 
 export function clearinghouseRoutingFromEnv(env: Record<string, string | undefined>): Required<ClearinghouseRoutingDefaults> {
-  const transaction = env.OSOD_CLEARINGHOUSE_DEFAULT || "claimmd";
-  const era = env.OSOD_ERA_CLEARINGHOUSE || "claimmd";
+  const transaction = env.ODOS_CLEARINGHOUSE_DEFAULT || "claimmd";
+  const era = env.ODOS_ERA_CLEARINGHOUSE || "claimmd";
   if (!isClearinghouseId(transaction) || !isClearinghouseId(era)) {
-    throw new Error("OSOD clearinghouse routing values must be claimmd or stedi.");
+    throw new Error("ODOS clearinghouse routing values must be claimmd or stedi.");
   }
   return { transaction, era };
 }

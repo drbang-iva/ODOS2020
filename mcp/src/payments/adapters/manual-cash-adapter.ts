@@ -2,10 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../../fhir-client.js";
 import {
-  OSOD_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
   assertPaymentTender,
   paymentTenderExtension,
-} from "../../fhir/osodPaymentTender.js";
+} from "../../fhir/odosPaymentTender.js";
 import type {
   ChargeRequest,
   PaymentProcessorAdapter,
@@ -22,7 +22,7 @@ import { buildPaymentReconciliation } from "../payment-reconciliation.js";
 import { assertDayNotSealed } from "../../desk/day-seal.js";
 import { practiceDate } from "../../desk/day-ledger.js";
 
-export const MANUAL_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-payment";
+export const MANUAL_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/manual-payment";
 const DATA_ENTRY_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
 const DATA_ENTRY_PARTICIPANT_CODE = "ENT";
 
@@ -30,7 +30,7 @@ const DATA_ENTRY_PARTICIPANT_CODE = "ENT";
  * The manual cash/check adapter — the shipped Slice-3 cash path formalized behind the
  * PaymentProcessorAdapter interface. Zero vendor, zero new money movement.
  *
- * charge() records the tender on the Invoice's osod-payment-tender extension and balances the bill
+ * charge() records the tender on the Invoice's odos-payment-tender extension and balances the bill
  * when fully paid. Per the seam spec §4, a manual tender emits NO PaymentReconciliation — the
  * tendered Invoice IS the canonical payment record (cash never settles through a processor batch;
  * the absence of a PR is the correct answer for v0.7 settlement reconciliation). The exactly-one-
@@ -96,7 +96,7 @@ export function createManualCashAdapter(
 
       const invoice = await fhir.read<Invoice>("Invoice", invoiceId);
       const existingTender = invoice.extension?.some(
-        (ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL,
+        (ext) => ext.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
       );
       if (existingTender) {
         throw new Error(

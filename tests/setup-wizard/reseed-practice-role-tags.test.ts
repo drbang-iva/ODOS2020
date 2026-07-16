@@ -7,7 +7,7 @@ import {
   reseedPracticeRoleTags,
   type PracticeRoleReseedAdapter,
 } from "../../scripts/reseed-practice-role-tags.ts";
-import { OSOD_PRACTICE_ROLE_SYSTEM } from "../../mcp/src/authz/roles.ts";
+import { ODOS_PRACTICE_ROLE_SYSTEM } from "../../mcp/src/authz/roles.ts";
 import type { JsonPatchOperation } from "../../mcp/src/fhir-client.ts";
 
 type AccessPolicyTag = NonNullable<NonNullable<AccessPolicy["meta"]>["tag"]>[number];
@@ -39,7 +39,7 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "clinician-policy",
-    name: "OSOD Clinician",
+    name: "ODOS Clinician",
     meta: { versionId: "legacy-version" },
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -50,7 +50,7 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
   assert.equal(adapter.writes.length, 1);
   assert.deepEqual(policy.meta, {
     versionId: "legacy-version",
-    tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" }],
+    tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }],
   });
   assert.equal(decidePracticeRoleTag(policy.meta?.tag, "clinician").kind, "SKIP");
 
@@ -68,8 +68,8 @@ test("untagged policy is tagged without replacing other meta fields and is idemp
 
 test("already-correct policy is skipped with zero writes", async () => {
   const adapter = new FakePracticeRoleReseedAdapter([
-    policyWithTags("front-desk-policy", "OSOD Front Desk", [
-      { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+    policyWithTags("front-desk-policy", "ODOS Front Desk", [
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
     ]),
   ]);
 
@@ -80,10 +80,10 @@ test("already-correct policy is skipped with zero writes", async () => {
   assert.equal(roleCount(result, "front-desk").alreadyCorrect, 1);
 });
 
-test("wrong OSOD role tag is a conflict with no write and a non-zero exit path", async () => {
+test("wrong ODOS role tag is a conflict with no write and a non-zero exit path", async () => {
   const adapter = new FakePracticeRoleReseedAdapter([
-    policyWithTags("auditor-policy", "OSOD Auditor", [
-      { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+    policyWithTags("auditor-policy", "ODOS Auditor", [
+      { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" },
     ]),
   ]);
 
@@ -108,7 +108,7 @@ test("wrong OSOD role tag is a conflict with no write and a non-zero exit path",
 
 test("unrelated tag is preserved and the practice-role tag is appended", async () => {
   const unrelatedTag = { system: "https://example.test/tags", code: "preserve-me" };
-  const policy = policyWithTags("admin-policy", "OSOD Practice Admin", [unrelatedTag]);
+  const policy = policyWithTags("admin-policy", "ODOS Practice Admin", [unrelatedTag]);
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
 
   const result = await reseedPracticeRoleTags(adapter);
@@ -117,13 +117,13 @@ test("unrelated tag is preserved and the practice-role tag is appended", async (
   assert.equal(adapter.writes.length, 1);
   assert.deepEqual(policy.meta?.tag, [
     unrelatedTag,
-    { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
   ]);
   assert.deepEqual(adapter.writes[0]?.operations, [
     {
       op: "add",
       path: "/meta/tag/-",
-      value: { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+      value: { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
     },
   ]);
   assert.equal(adapter.writes[0]?.versionId, "1");
@@ -133,7 +133,7 @@ test("a stale version is reported as a conflict without applying the patch", asy
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "stale-clinician-policy",
-    name: "OSOD Clinician",
+    name: "ODOS Clinician",
     meta: { versionId: "7" },
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -153,7 +153,7 @@ test("a missing version is reported as a conflict without attempting a write", a
   const policy: AccessPolicy = {
     resourceType: "AccessPolicy",
     id: "unversioned-clinician-policy",
-    name: "OSOD Clinician",
+    name: "ODOS Clinician",
     meta: {},
   };
   const adapter = new FakePracticeRoleReseedAdapter([policy]);
@@ -170,7 +170,7 @@ test("a missing version is reported as a conflict without attempting a write", a
 
 test("the live migration target must be local or private", () => {
   assert.doesNotThrow(() => assertLocalMedplumBaseUrl("http://localhost:8103"));
-  assert.doesNotThrow(() => assertLocalMedplumBaseUrl("https://osod.local"));
+  assert.doesNotThrow(() => assertLocalMedplumBaseUrl("https://odos.local"));
   assert.doesNotThrow(() => assertLocalMedplumBaseUrl("http://192.168.1.20:8103"));
   assert.throws(
     () => assertLocalMedplumBaseUrl("https://medplum.example.com"),

@@ -1,13 +1,13 @@
 {
   "resourceType": "StructureDefinition",
   "id": "day-seal-timestamp",
-  "url": "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp",
+  "url": "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp",
   "version": "day-close",
-  "name": "OSODDaySealTimestamp",
-  "title": "OSOD Day Seal Timestamp",
+  "name": "ODOSDaySealTimestamp",
+  "title": "ODOS Day Seal Timestamp",
   "status": "active",
   "date": "2026-07-15",
-  "publisher": "OSOD",
+  "publisher": "ODOS",
   "description": "Exact instant when a DaySeal Basic resource was created; Basic.created carries only the sealed calendar date.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
@@ -38,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp"
       },
       {
         "id": "Extension.value[x]",

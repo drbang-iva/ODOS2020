@@ -14,12 +14,12 @@ import type {
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
-import { OSOD_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
 
-export const PATIENT_STICKY_NOTE_SYSTEM = "https://osod.dev/fhir/CodeSystem/patient-sticky-note";
+export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
-export const PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/identifier/patient-sticky-note";
+export const PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/identifier/patient-sticky-note";
 
 export type VisitLedgerFilter = "all" | "eye-exams" | "office-visits";
 
@@ -91,9 +91,9 @@ export async function loadPatientOverview(
     _sort: "-date",
   };
   if (filter === "eye-exams") {
-    encounterParams.type = EYE_EXAM_VISIT_CODES.map((code) => `${OSOD_VISIT_TYPE_SYSTEM}|${code}`).join(",");
+    encounterParams.type = EYE_EXAM_VISIT_CODES.map((code) => `${ODOS_VISIT_TYPE_SYSTEM}|${code}`).join(",");
   } else if (filter === "office-visits") {
-    encounterParams.type = `${OSOD_VISIT_TYPE_SYSTEM}|office-visit`;
+    encounterParams.type = `${ODOS_VISIT_TYPE_SYSTEM}|office-visit`;
   }
 
   const conditionParams: Record<string, string> = {
@@ -435,7 +435,7 @@ async function findPatientStickyNote(
     return notes[0];
   } catch (error) {
     if (!optional) throw error;
-    console.error("osod-mcp: patient sticky-note lookup omitted from overview:", error);
+    console.error("odos-mcp: patient sticky-note lookup omitted from overview:", error);
     return undefined;
   }
 }

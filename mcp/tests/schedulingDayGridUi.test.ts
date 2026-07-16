@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { HealthcareService, Patient, Schedule } from "@medplum/fhirtypes";
 import { buildSchedulingAppointment } from "../src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../src/fhir/schedulingResource.js";
-import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import { defaultVisitTypeCatalog } from "../src/fhir/schedulingVisitType.js";
 import {
   SCHEDULER_PALETTE,
@@ -415,7 +415,7 @@ test("visit type display color falls back through discipline defaults before new
   const aestheticsNoColor: HealthcareService = {
     resourceType: "HealthcareService",
     active: true,
-    category: [{ coding: [{ system: OSOD_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
+    category: [{ coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
   };
   const noDisciplineNoColor: HealthcareService = {
     resourceType: "HealthcareService",

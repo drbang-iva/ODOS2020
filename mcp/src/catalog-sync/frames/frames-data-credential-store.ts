@@ -1,5 +1,5 @@
 import type { Provenance } from "@medplum/fhirtypes";
-import { buildAuditEventProjection, buildOsodAuditEventRow, type OsodAuditEventRecord } from "../../authz/osodAudit.js";
+import { buildAuditEventProjection, buildOdosAuditEventRow, type OdosAuditEventRecord } from "../../authz/odosAudit.js";
 
 export interface FramesDataSubscriptionConfig {
   readonly practiceId: string;
@@ -19,7 +19,7 @@ export interface SaveFramesDataSubscriptionInput {
 
 export interface FramesDataSubscriptionSaveResult {
   readonly config: FramesDataSubscriptionConfig;
-  readonly auditRow: OsodAuditEventRecord;
+  readonly auditRow: OdosAuditEventRecord;
   readonly auditEvent: ReturnType<typeof buildAuditEventProjection>;
   readonly provenance: Provenance;
 }
@@ -42,7 +42,7 @@ export class InMemoryFramesDataSubscriptionStore {
       lastIngestSourceFile: previous?.lastIngestSourceFile ?? null,
     };
     this.configs.set(input.practiceId, config);
-    const auditRow = buildOsodAuditEventRow({
+    const auditRow = buildOdosAuditEventRow({
       eventType: "practice.frames-data-subscription.toggled",
       eventTime: now,
       actorId: input.actorId,

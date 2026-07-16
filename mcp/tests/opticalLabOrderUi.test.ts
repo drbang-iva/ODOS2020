@@ -4,7 +4,7 @@ import { labOrderFrameFromAttachedFrame, type AttachedFrame } from "../../ui/src
 
 const FRAME: AttachedFrame = {
   inventoryId: "Inventory/frame-1",
-  canonicalUrl: "https://osod.dev/fhir/frames/frame-1",
+  canonicalUrl: "https://odos2020.com/fhir/frames/frame-1",
   upc: "00000000000001",
   brand: "Walkthrough",
   model: "Wayfarer",

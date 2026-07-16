@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 import {
-  buildOsodAuditEventRow,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-} from "../../authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+} from "../../authz/odosAudit.js";
 import {
   assertInstallPolicy,
   readSmartClientApp,
   SMART_APP_REGISTRY_POLICY_URL,
   SmartAppRegistryError,
   V055B_SMART_CAPABILITIES,
-  type OSODSmartClientApp,
+  type ODOSSmartClientApp,
 } from "./smart-client-app.js";
 
 export interface SmartAppInstallationRecord {
@@ -36,7 +36,7 @@ export class InMemorySmartAppInstallationRepository {
 
 export function assertSmartAppAdminActionAllowed(input: {
   readonly actorId?: string;
-  readonly actorRole?: OsodActorRole | string;
+  readonly actorRole?: OdosActorRole | string;
 }): void {
   if (!input.actorId || input.actorRole !== "practice-admin") {
     throw new SmartAppRegistryError(
@@ -48,19 +48,19 @@ export function assertSmartAppAdminActionAllowed(input: {
 }
 
 export function reviewSmartAppInstall(input: {
-  readonly app: OSODSmartClientApp;
+  readonly app: ODOSSmartClientApp;
   readonly adminUserId?: string;
-  readonly adminRole?: OsodActorRole | string;
+  readonly adminRole?: OdosActorRole | string;
   readonly practiceJurisdiction?: string;
   readonly requiredCapabilities?: readonly string[];
   readonly supportedCapabilities?: readonly string[];
   readonly adminAttestedCompatibilityGap?: boolean;
   readonly repository?: InMemorySmartAppInstallationRepository;
   readonly now?: string;
-}): { readonly installation?: SmartAppInstallationRecord; readonly auditRows: readonly OsodAuditEventRecord[] } {
+}): { readonly installation?: SmartAppInstallationRecord; readonly auditRows: readonly OdosAuditEventRecord[] } {
   assertSmartAppAdminActionAllowed({ actorId: input.adminUserId, actorRole: input.adminRole });
   const app = readSmartClientApp(input.app.canonicalRecord);
-  const auditRows: OsodAuditEventRecord[] = [];
+  const auditRows: OdosAuditEventRecord[] = [];
   const now = input.now ?? new Date().toISOString();
   try {
     assertCapabilityMatch({
@@ -81,7 +81,7 @@ export function reviewSmartAppInstall(input: {
     };
     input.repository?.save(installation);
     auditRows.push(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType: "smart-app-installed",
         actorId: input.adminUserId,
         actorRole: "practice-admin",
@@ -108,7 +108,7 @@ export function reviewSmartAppInstall(input: {
     };
     input.repository?.save(installation);
     auditRows.push(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType,
         actorId: input.adminUserId,
         actorRole: "practice-admin",

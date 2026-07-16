@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_OPTICAL_ADJUSTMENT_SYSTEM,
+  ODOS_OPTICAL_ADJUSTMENT_SYSTEM,
   OPTICAL_ADJUSTMENTS,
   opticalAdjustmentDisplay,
-} from "../src/fhir/osodOpticalAdjustment.js";
+} from "../src/fhir/odosOpticalAdjustment.js";
 
 test("the optical adjustment vocabulary holds the Foxfire patient self-pay discount codes (Category DS)", () => {
   const codes = OPTICAL_ADJUSTMENTS.map((a) => a.code);
   for (const expected of ["2PAIR", "CSDIS", "DEYE", "DVSP", "FAMILY", "PPAY"]) {
     assert.ok(codes.includes(expected), `missing adjustment code: ${expected}`);
   }
-  assert.ok(OSOD_OPTICAL_ADJUSTMENT_SYSTEM.startsWith("https://osod.dev/"));
+  assert.ok(ODOS_OPTICAL_ADJUSTMENT_SYSTEM.startsWith("https://odos2020.com/"));
 });
 
 test("opticalAdjustmentDisplay returns the corpus-verbatim display for a known code", () => {

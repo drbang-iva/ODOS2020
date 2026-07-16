@@ -4,12 +4,12 @@ import { resolve } from "node:path";
 import { test } from "node:test";
 import type { StructureDefinition } from "@medplum/fhirtypes";
 
-test("osod-payment-subject is an installable R4 extension constrained to Reference(Patient)", async () => {
+test("odos-payment-subject is an installable R4 extension constrained to Reference(Patient)", async () => {
   const definition = JSON.parse(await readFile(resolve(
     import.meta.dirname,
-    "../../data/canonical-extensions/osod-payment-subject.json",
+    "../../data/canonical-extensions/odos-payment-subject.json",
   ), "utf8")) as StructureDefinition;
-  assert.equal(definition.url, "https://osod.dev/fhir/StructureDefinition/osod-payment-subject");
+  assert.equal(definition.url, "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject");
   assert.equal(definition.fhirVersion, "4.0.1");
   assert.equal(definition.type, "Extension");
   assert.deepEqual(definition.context, [{ type: "element", expression: "PaymentReconciliation" }]);

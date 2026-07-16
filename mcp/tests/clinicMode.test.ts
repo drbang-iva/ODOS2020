@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   CLINIC_MODES,
-  OSOD_DISCIPLINE_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM,
   SCHEDULING_DISCIPLINES,
   assertClinicMode,
   assertDiscipline,
@@ -46,9 +46,9 @@ test("isDisciplineVisible filters the other discipline's noise out of a single-d
   assert.equal(isDisciplineVisible("eyecare", "both"), true);
 });
 
-test("disciplineCoding builds the osod discipline coding used to tag catalog entries and resources", () => {
+test("disciplineCoding builds the odos discipline coding used to tag catalog entries and resources", () => {
   const coding = disciplineCoding("aesthetics");
-  assert.equal(coding.system, OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(coding.system, ODOS_DISCIPLINE_SYSTEM);
   assert.equal(coding.code, "aesthetics");
   assert.equal(coding.display, "Aesthetics");
 });

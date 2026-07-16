@@ -6,16 +6,16 @@ import { createMedplumClient, type MedplumClient } from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
   buildAuditEventProjection,
-  type OsodActionOutcome,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "./osodAudit.js";
+  type OdosActionOutcome,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "./odosAudit.js";
 import type { AgentOpsAuditFields } from "../agentops/types.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const AUDIT_DDL_FILES = [
-  new URL("../../../data/migrations/2026-04-29-v05b-osod-audit-events.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-04-29-v05b-odos-audit-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-clients.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-scope-decisions.sql", import.meta.url),
@@ -53,18 +53,18 @@ export interface LiveAuditQueryFilters {
   actorId?: string;
   from?: string;
   to?: string;
-  eventTypes?: readonly OsodAuditEventType[];
-  outcome?: OsodActionOutcome;
+  eventTypes?: readonly OdosAuditEventType[];
+  outcome?: OdosActionOutcome;
   breakGlassOnly?: boolean;
   limit?: number;
 }
 
 export interface FhirAuditRecorder {
-  record<T>(row: OsodAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
-  recordDenied(row: OsodAuditEventRecord): Promise<void>;
+  record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
+  recordDenied(row: OdosAuditEventRecord): Promise<void>;
 }
 
-export class LiveOsodAuditRuntime implements FhirAuditRecorder {
+export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   readonly projectionQueue = new AuditEventProjectionQueue();
   private readonly pool: Pool;
   private readonly options: Required<Pick<LiveAuditRuntimeOptions, "disabled">> &
@@ -81,14 +81,14 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
     });
   }
 
-  async record<T>(row: OsodAuditEventRecord, operation: () => Promise<T> | T): Promise<T> {
+  async record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T> {
     if (this.options.disabled) {
       return operation();
     }
 
     await this.ensureSchema();
     const client = await this.pool.connect();
-    let inserted: OsodAuditEventRecord | undefined;
+    let inserted: OdosAuditEventRecord | undefined;
     try {
       await client.query("BEGIN");
       try {
@@ -121,11 +121,11 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
     }
   }
 
-  async recordDenied(row: OsodAuditEventRecord): Promise<void> {
+  async recordDenied(row: OdosAuditEventRecord): Promise<void> {
     await this.record(row, async () => undefined);
   }
 
-  async queryRows(filters: LiveAuditQueryFilters = {}): Promise<OsodAuditEventRecord[]> {
+  async queryRows(filters: LiveAuditQueryFilters = {}): Promise<OdosAuditEventRecord[]> {
     await this.ensureSchema();
     const clauses: string[] = [];
     const values: unknown[] = [];
@@ -181,7 +181,7 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
           provenance_id,
           audit_event_id,
           created_at
-        FROM osod_audit_events
+        FROM odos_audit_events
         ${where}
         ORDER BY event_time DESC
         LIMIT $${values.length}
@@ -198,7 +198,7 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
     const intervalMs = this.options.projectionWorkerIntervalMs ?? 60_000;
     this.projectionWorker = setInterval(() => {
       this.drainProjectionQueue().catch((error) => {
-        console.error("osod-audit: projection worker failed:", error);
+        console.error("odos-audit: projection worker failed:", error);
       });
     }, intervalMs);
     this.projectionWorker.unref();
@@ -233,12 +233,12 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
   }
 
   private async insertRow(
-    row: OsodAuditEventRecord,
+    row: OdosAuditEventRecord,
     client: Pool | PoolClient = this.pool,
-  ): Promise<OsodAuditEventRecord> {
+  ): Promise<OdosAuditEventRecord> {
     const result = await client.query(
       `
-        INSERT INTO osod_audit_events (
+        INSERT INTO odos_audit_events (
           id,
           event_time,
           event_type,
@@ -353,7 +353,7 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
     return pgRowToAuditRecord(result.rows[0]);
   }
 
-  private async projectOrQueue(row: OsodAuditEventRecord): Promise<void> {
+  private async projectOrQueue(row: OdosAuditEventRecord): Promise<void> {
     try {
       await this.projectAuditEvent(row);
     } catch (error) {
@@ -362,7 +362,7 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
     }
   }
 
-  private async projectAuditEvent(row: OsodAuditEventRecord): Promise<void> {
+  private async projectAuditEvent(row: OdosAuditEventRecord): Promise<void> {
     const client = await this.getProjectionClient();
     const auditEvent = buildAuditEventProjection(row);
     try {
@@ -405,23 +405,23 @@ export class LiveOsodAuditRuntime implements FhirAuditRecorder {
   }
 }
 
-export function createLiveOsodAuditRuntime(
+export function createLiveOdosAuditRuntime(
   options: LiveAuditRuntimeOptions = {},
-): LiveOsodAuditRuntime {
-  return new LiveOsodAuditRuntime(options);
+): LiveOdosAuditRuntime {
+  return new LiveOdosAuditRuntime(options);
 }
 
-function pgRowToAuditRecord(row: Record<string, unknown>): OsodAuditEventRecord {
+function pgRowToAuditRecord(row: Record<string, unknown>): OdosAuditEventRecord {
   return {
     id: String(row.id),
     eventTime: iso(row.event_time),
-    eventType: String(row.event_type) as OsodAuditEventType,
+    eventType: String(row.event_type) as OdosAuditEventType,
     actorId: optionalString(row.actor_id),
-    actorRole: optionalString(row.actor_role) as OsodActorRole | undefined,
+    actorRole: optionalString(row.actor_role) as OdosActorRole | undefined,
     patientId: optionalString(row.patient_id),
     resourceType: optionalString(row.resource_type),
     resourceId: optionalString(row.resource_id),
-    actionOutcome: String(row.action_outcome) as OsodActionOutcome,
+    actionOutcome: String(row.action_outcome) as OdosActionOutcome,
     actionReason: optionalString(row.action_reason),
     policyUrl: optionalString(row.policy_url),
     sessionId: optionalString(row.session_id),
@@ -430,7 +430,7 @@ function pgRowToAuditRecord(row: Record<string, unknown>): OsodAuditEventRecord 
     breakGlass: Boolean(row.break_glass),
     breakGlassReason: optionalString(row.break_glass_reason),
     ibActorClassification: "health-care-provider",
-    ibException: optionalString(row.ib_exception) as OsodAuditEventRecord["ibException"],
+    ibException: optionalString(row.ib_exception) as OdosAuditEventRecord["ibException"],
     agentOps: agentOpsFieldsFromRow(row),
     provenanceId: optionalString(row.provenance_id),
     auditEventId: optionalString(row.audit_event_id),

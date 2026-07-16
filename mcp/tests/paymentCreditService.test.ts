@@ -8,7 +8,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { buildFinancialSummary, paymentReconciliationsToTenderLines } from "../src/fhir/opticalFinancialSummary.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 import {
   applyPaymentCredit,
   buildUnappliedCreditReceipt,
@@ -33,7 +33,7 @@ function payment(overrides: Partial<Parameters<typeof buildPaymentReconciliation
       subjectReference: "Patient/p1",
       staffReference: "Practitioner/staff1",
       processorTransactionId: "manual-credit-1",
-      processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/manual-payment",
+      processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/manual-payment",
       surface: "manual",
       tender: { code: "CASH", display: "Cash" },
       description: "Check-in copay",
@@ -148,7 +148,7 @@ test("cash pre-payment allocates without adding an Invoice tender and is counted
   });
   const cashInvoice = invoice("cash-visit", 7500);
   assert.ok(
-    !cashInvoice.extension?.some((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL),
+    !cashInvoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL),
   );
   assert.deepEqual(
     paymentReconciliationsToTenderLines([applied], "Invoice/cash-visit"),

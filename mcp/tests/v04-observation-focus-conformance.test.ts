@@ -51,7 +51,7 @@ test("Medplum Observation focus search conformance or documented fallback", { ti
   try {
     const bundle = await fhir.search<Observation>("Observation", {
       focus: `Device/${device.id}`,
-      code: "https://osod.dev/fhir/CodeSystem/contact-lens-clinical-observation|central-clearance-settled",
+      code: "https://odos2020.com/fhir/CodeSystem/contact-lens-clinical-observation|central-clearance-settled",
       date: "ge2026-01-01",
       _count: "10",
     });

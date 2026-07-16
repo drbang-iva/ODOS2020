@@ -1,1 +1,0 @@
-const blocked = "https://osod.dev/fhir/StructureDefinition/not-in-registry";

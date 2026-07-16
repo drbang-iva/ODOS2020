@@ -5,26 +5,26 @@ import {
 } from "./catalog-adapter";
 import type { fhir } from "./fhir";
 
-export const OSOD_WHOLESALE_COST_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost";
-export const OSOD_OPTICAL_LAB_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-optical-lab";
-export const OSOD_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity";
+export const ODOS_WHOLESALE_COST_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-wholesale-cost";
+export const ODOS_OPTICAL_LAB_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-optical-lab";
+export const ODOS_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-contact-lens-product-identity";
 
 const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
 const OPTICAL_PRICING_CATALOG_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/optical-pricing-catalog";
+  "https://odos2020.com/fhir/CodeSystem/optical-pricing-catalog";
 const LENS_PRICING_CATEGORY_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/lens-pricing-category";
+  "https://odos2020.com/fhir/CodeSystem/lens-pricing-category";
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
-const PRACTICE_ID = "osod-practice";
-const FRAME_CATALOG_PREFIX = "https://osod.dev/catalog/frames/";
+const PRACTICE_ID = "odos-practice";
+const FRAME_CATALOG_PREFIX = "https://odos2020.com/catalog/frames/";
 const SNOMED_SYSTEM = "http://snomed.info/sct";
-const OSOD_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
+const ODOS_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
 
 export function frameChargeItemDefinitionCanonical(catalogCanonicalUrl: string): string {
-  return `https://osod.dev/practice/${PRACTICE_ID}/charge-rules/frames/${encodeURIComponent(catalogCanonicalUrl)}`;
+  return `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/frames/${encodeURIComponent(catalogCanonicalUrl)}`;
 }
 
 export type LensPricingCategory = "design" | "material" | "treatment";
@@ -164,7 +164,7 @@ export function buildLensPricingResource(item: LensPricingItem): ChargeItemDefin
     assertNonnegativeCents(item.perLensWholesaleCostCents, "Wholesale cost per lens");
   }
   const managedExtensions: Extension[] = [
-    ...(item.lab ? [{ url: OSOD_OPTICAL_LAB_EXTENSION_URL, valueString: item.lab }] : []),
+    ...(item.lab ? [{ url: ODOS_OPTICAL_LAB_EXTENSION_URL, valueString: item.lab }] : []),
     ...moneyExtension(item.perLensWholesaleCostCents),
   ];
   return buildPricingResource({
@@ -177,8 +177,8 @@ export function buildLensPricingResource(item: LensPricingItem): ChargeItemDefin
     description: "Wholesale and retail prices are per lens.",
     managedExtensions,
     managedExtensionUrls: new Set([
-      OSOD_OPTICAL_LAB_EXTENSION_URL,
-      OSOD_WHOLESALE_COST_EXTENSION_URL,
+      ODOS_OPTICAL_LAB_EXTENSION_URL,
+      ODOS_WHOLESALE_COST_EXTENSION_URL,
     ]),
   });
 }
@@ -202,7 +202,7 @@ export function buildFramePricingResource(item: FramePricingItem): ChargeItemDef
         { system: HCPCS_SYSTEM, code: "V2020", display: "Frames, purchases" },
         {
           system: SNOMED_SYSTEM,
-          code: OSOD_OPTOMETRY_SERVICE_LINE_CODE,
+          code: ODOS_OPTOMETRY_SERVICE_LINE_CODE,
           display: "Optometry service",
         },
       ],
@@ -211,7 +211,7 @@ export function buildFramePricingResource(item: FramePricingItem): ChargeItemDef
     extension: [
       ...moneyExtension(item.wholesaleCostCents),
       ...(original?.extension ?? []).filter(
-        (extension) => extension.url !== OSOD_WHOLESALE_COST_EXTENSION_URL,
+        (extension) => extension.url !== ODOS_WHOLESALE_COST_EXTENSION_URL,
       ),
     ],
     propertyGroup: [
@@ -237,7 +237,7 @@ export function buildContactLensPricingResource(
   }
   const managedExtensions: Extension[] = [
     {
-      url: OSOD_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
+      url: ODOS_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
       extension: [
         { url: "manufacturer-code", valueCode: item.manufacturerCode },
         { url: "manufacturer-display", valueString: item.manufacturerDisplay },
@@ -254,8 +254,8 @@ export function buildContactLensPricingResource(
     retailPriceCents: item.retailPriceCents,
     managedExtensions,
     managedExtensionUrls: new Set([
-      OSOD_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
-      OSOD_WHOLESALE_COST_EXTENSION_URL,
+      ODOS_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
+      ODOS_WHOLESALE_COST_EXTENSION_URL,
     ]),
   });
 }
@@ -287,7 +287,7 @@ function buildPricingResource({
     resourceType: "ChargeItemDefinition",
     url:
       original?.url ??
-      `https://osod.dev/practice/${PRACTICE_ID}/charge-rules/${catalogKind}/${encodeURIComponent(item.id)}`,
+      `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/${catalogKind}/${encodeURIComponent(item.id)}`,
     version: original?.version ?? "1",
     status: item.active ? "active" : "retired",
     title: label,
@@ -337,7 +337,7 @@ function lensPricingItem(resource: ChargeItemDefinition): LensPricingItem {
     ) as LensPricingCategory,
     billingCode:
       resource.code?.coding?.find((coding) => coding.system === HCPCS_SYSTEM)?.code ?? "",
-    lab: extensionString(resource, OSOD_OPTICAL_LAB_EXTENSION_URL),
+    lab: extensionString(resource, ODOS_OPTICAL_LAB_EXTENSION_URL),
     perLensWholesaleCostCents: extensionMoneyCents(resource),
     perLensRetailPriceCents: retailPriceCents(resource),
     resource,
@@ -358,7 +358,7 @@ function framePricingItem(resource: ChargeItemDefinition): FramePricingItem {
 
 function contactLensPricingItem(resource: ChargeItemDefinition): ContactLensPricingItem {
   const identity = resource.extension?.find(
-    (extension) => extension.url === OSOD_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
+    (extension) => extension.url === ODOS_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL,
   );
   return {
     id: resource.id ?? canonicalTail(resource.url),
@@ -378,7 +378,7 @@ function moneyExtension(cents: number | undefined): Extension[] {
     ? []
     : [
         {
-          url: OSOD_WHOLESALE_COST_EXTENSION_URL,
+          url: ODOS_WHOLESALE_COST_EXTENSION_URL,
           valueMoney: { value: cents / 100, currency: "USD" },
         },
       ];
@@ -397,7 +397,7 @@ function retailPriceCents(resource: ChargeItemDefinition): number {
 
 function extensionMoneyCents(resource: ChargeItemDefinition): number | undefined {
   const value = resource.extension?.find(
-    (extension) => extension.url === OSOD_WHOLESALE_COST_EXTENSION_URL,
+    (extension) => extension.url === ODOS_WHOLESALE_COST_EXTENSION_URL,
   )?.valueMoney?.value;
   return typeof value === "number" ? Math.round(value * 100) : undefined;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicyResource } from "@medplum/fhirtypes";
 import {
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   buildMedplumAccessPolicy,
   getRoleDeclaration,
 } from "../src/authz/roles.js";
@@ -85,7 +85,7 @@ test("the scheduling.manage business action and the role↔policy meta.tag link 
   const role = getRoleDeclaration("front-desk");
   assert.ok(role.businessActions.includes("scheduling.manage"));
   const policy = buildMedplumAccessPolicy(role);
-  const tag = policy.meta?.tag?.find((candidate) => candidate.system === OSOD_PRACTICE_ROLE_SYSTEM);
+  const tag = policy.meta?.tag?.find((candidate) => candidate.system === ODOS_PRACTICE_ROLE_SYSTEM);
   assert.equal(tag?.code, "front-desk");
 });
 
@@ -98,18 +98,18 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
 test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
   const writeTierCriteria = [
-    "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
-    "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
-    "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
-    "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
-    "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory",
-    "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
   ];
   const readTierCriteria = [
-    "Basic?code=https://osod.dev/fhir/CodeSystem/visit-type-config|osod-visit-type-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
   ];
   const createOnceCriteria = [
-    "Basic?code=https://osod.dev/fhir/CodeSystem/day-seal|day-seal",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
   ];
   assert.deepEqual(
     rules.map((rule) => rule.criteria).sort(),
@@ -146,7 +146,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   }
 
   const inventoryCriteria =
-    "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory";
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory";
   const inventoryRule = rules.find((candidate) => candidate.criteria === inventoryCriteria);
   assert.ok(inventoryRule?.interaction?.includes("read"));
   assert.ok(inventoryRule?.interaction?.includes("update"));
@@ -155,7 +155,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
       (candidate) =>
         candidate.criteria === undefined ||
         candidate.criteria ===
-          "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|frames-data-subscription",
+          "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|frames-data-subscription",
     ),
     false,
     "no blanket Basic or frames-data-subscription grant may bypass the inventory criteria fence",

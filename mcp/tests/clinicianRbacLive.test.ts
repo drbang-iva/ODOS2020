@@ -7,19 +7,19 @@ import {
 } from "../../ui/src/lib/encounter-bundles.js";
 
 test("live scoped-clinician exam-start RBAC matrix", { timeout: 90_000 }, async (t) => {
-  const clinicianToken = process.env.OSOD_TEST_CLINICIAN_TOKEN;
-  const otherClinicianToken = process.env.OSOD_TEST_OTHER_CLINICIAN_TOKEN;
-  const patientId = process.env.OSOD_TEST_PATIENT_ID;
+  const clinicianToken = process.env.ODOS_TEST_CLINICIAN_TOKEN;
+  const otherClinicianToken = process.env.ODOS_TEST_OTHER_CLINICIAN_TOKEN;
+  const patientId = process.env.ODOS_TEST_PATIENT_ID;
   if (!clinicianToken || !otherClinicianToken || !patientId) {
     t.skip(
-      "OSOD_TEST_CLINICIAN_TOKEN, OSOD_TEST_OTHER_CLINICIAN_TOKEN, and " +
-      "OSOD_TEST_PATIENT_ID are required for the operator-assisted live RBAC gate.",
+      "ODOS_TEST_CLINICIAN_TOKEN, ODOS_TEST_OTHER_CLINICIAN_TOKEN, and " +
+      "ODOS_TEST_PATIENT_ID are required for the operator-assisted live RBAC gate.",
     );
     return;
   }
 
   const fhirBase = `${(process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "")}/fhir/R4`;
-  const coreBase = (process.env.OSOD_CORE_BASE_URL ?? "http://localhost:3333").replace(/\/$/, "");
+  const coreBase = (process.env.ODOS_CORE_BASE_URL ?? "http://localhost:3333").replace(/\/$/, "");
   const patientReference = `Patient/${patientId}`;
   const clinicianHeaders = fhirHeaders(clinicianToken);
 
@@ -120,7 +120,7 @@ test("live scoped-clinician exam-start RBAC matrix", { timeout: 90_000 }, async 
       encounterId: startedEncounterId,
       patientId,
       recorded: new Date().toISOString(),
-      operatorDisplay: "OSOD live clinician RBAC gate",
+      operatorDisplay: "ODOS live clinician RBAC gate",
       practitionerReference: firstAssignmentBody.practitionerReference,
       ops: [{ op: "replace", path: "/status", value: "in-progress" }],
     })),
@@ -159,7 +159,7 @@ function createObservation(
     body: JSON.stringify({
       resourceType: "Observation",
       status,
-      code: { text: `OSOD live RBAC ${status} create gate` },
+      code: { text: `ODOS live RBAC ${status} create gate` },
       subject: { reference: patientReference },
     }),
   });

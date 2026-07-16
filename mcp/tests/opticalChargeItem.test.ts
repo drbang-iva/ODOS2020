@@ -112,13 +112,13 @@ test("buildOpticalChargeItem records the engine price rule + override reason for
     deviceRequestReference: "DeviceRequest/dr1",
     code: "V2020",
     feeCents: 15000,
-    definitionCanonical: "https://osod.dev/practice/iva/charge-rules/frames/cat-1",
+    definitionCanonical: "https://odos2020.com/practice/iva/charge-rules/frames/cat-1",
     overrideReason: "Prompt-pay cash discount applied at counter",
   });
   // definitionCanonical points at the ChargeItemDefinition (the engine-suggested base price);
   // priceOverride is the final billed price → the two together are the audit diff.
   assert.deepEqual(chargeItem.definitionCanonical, [
-    "https://osod.dev/practice/iva/charge-rules/frames/cat-1",
+    "https://odos2020.com/practice/iva/charge-rules/frames/cat-1",
   ]);
   assert.equal(chargeItem.priceOverride?.value, 150);
   assert.equal(chargeItem.overrideReason, "Prompt-pay cash discount applied at counter");

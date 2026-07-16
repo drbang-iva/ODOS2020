@@ -1,22 +1,22 @@
 import type { CodeableConcept } from "@medplum/fhirtypes";
 
-export const OSOD_FHIR_BASE = "https://osod.dev/fhir";
+export const ODOS_FHIR_BASE = "https://odos2020.com/fhir";
 export const DRY_EYE_TREATMENT_TYPE_CODE_SYSTEM =
-  `${OSOD_FHIR_BASE}/CodeSystem/dry-eye-treatment-type`;
+  `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-treatment-type`;
 export const MEIBOGRAPHY_SCORE_CODE_SYSTEM =
-  `${OSOD_FHIR_BASE}/CodeSystem/meibography-score`;
+  `${ODOS_FHIR_BASE}/CodeSystem/meibography-score`;
 export const DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM =
-  `${OSOD_FHIR_BASE}/CodeSystem/dry-eye-questionnaire-instrument`;
+  `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-questionnaire-instrument`;
 export const OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/Observation-MeibomianGlandScore`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/Observation-MeibomianGlandScore`;
 export const DRY_EYE_PROCEDURE_ENERGY_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-energy-mj`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-energy-mj`;
 export const DRY_EYE_PROCEDURE_WAVELENGTH_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-wavelength-nm`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-wavelength-nm`;
 export const DRY_EYE_PROCEDURE_SPOT_COUNT_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-spot-count`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-spot-count`;
 export const OPHTHALMIC_MEDICATION_SUPPLY_TYPE_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/ophthalmic-medication-supply-type`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/ophthalmic-medication-supply-type`;
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 
 export const DRY_EYE_TREATMENT_TYPE_CODES = [
@@ -56,10 +56,10 @@ export const DRY_EYE_QUESTIONNAIRE_URLS: Record<
   DryEyeQuestionnaireInstrument,
   string
 > = {
-  OSDI: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-osdi`,
-  SPEED: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-speed`,
-  "DEQ-5": `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
-  McMonnies: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
+  OSDI: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-osdi`,
+  SPEED: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-speed`,
+  "DEQ-5": `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
+  McMonnies: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
 };
 
 export function questionnaireUrlForInstrument(

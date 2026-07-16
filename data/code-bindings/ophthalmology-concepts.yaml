@@ -1,4 +1,4 @@
-codeSystem: "https://osod.dev/fhir/CodeSystem/ophthalmology"
+codeSystem: "https://odos2020.com/fhir/CodeSystem/ophthalmology"
 version: "0.2.2"
 concepts:
   - id: VISUAL_ACUITY

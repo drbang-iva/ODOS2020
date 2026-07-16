@@ -3,10 +3,10 @@ import type { Device, Endpoint, Extension, Resource } from "@medplum/fhirtypes";
 import { parseSmartScopeList } from "../scope.js";
 
 export const SMART_CLIENT_APP_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/smart-client-app";
+  "https://odos2020.com/fhir/StructureDefinition/smart-client-app";
 
 export const SMART_APP_REGISTRY_POLICY_URL =
-  "https://osod.dev/fhir/Policy/smart-app-registry";
+  "https://odos2020.com/fhir/Policy/smart-app-registry";
 
 export const SMART_APP_ACTIVITY_CODES = [
   "smart-app-register",
@@ -47,7 +47,7 @@ export type SmartAppTokenEndpointAuthMethod =
   | "client_secret_post"
   | "private_key_jwt";
 
-export interface OSODSmartClientAppMetadata {
+export interface ODOSSmartClientAppMetadata {
   readonly clientType: SmartAppClientType;
   readonly tokenEndpointAuthMethod: SmartAppTokenEndpointAuthMethod;
   readonly redirectUris: readonly string[];
@@ -58,7 +58,7 @@ export interface OSODSmartClientAppMetadata {
   readonly clientName: string;
 }
 
-export interface OSODSmartClientAppPolicy {
+export interface ODOSSmartClientAppPolicy {
   readonly riskClass: SmartAppRiskClass;
   readonly phiBoundary: SmartAppPhiBoundary;
   readonly launchMode: SmartAppLaunchMode;
@@ -73,11 +73,11 @@ export interface OSODSmartClientAppPolicy {
   readonly scopeRequestCanonical: string;
 }
 
-export interface OSODSmartClientApp {
+export interface ODOSSmartClientApp {
   readonly shape: SmartAppShape;
   readonly canonicalRecord: Endpoint | Device;
-  readonly metadata: OSODSmartClientAppMetadata;
-  readonly policy: OSODSmartClientAppPolicy;
+  readonly metadata: ODOSSmartClientAppMetadata;
+  readonly policy: ODOSSmartClientAppPolicy;
   readonly clientId?: string;
 }
 
@@ -118,7 +118,7 @@ export class SmartAppRegistryError extends Error {
   }
 }
 
-export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInput): OSODSmartClientApp {
+export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInput): ODOSSmartClientApp {
   const redirectUris = stringArray(input.redirect_uris, "redirect_uris");
   if (!redirectUris.length) {
     throw new SmartAppRegistryError("invalid_client_metadata", "redirect_uris is required.");
@@ -133,7 +133,7 @@ export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInp
   }
   parseSmartScopeList(defaultScope);
 
-  const metadata: OSODSmartClientAppMetadata = {
+  const metadata: ODOSSmartClientAppMetadata = {
     clientType: clientType(input.token_endpoint_auth_method),
     tokenEndpointAuthMethod: input.token_endpoint_auth_method ?? "none",
     redirectUris,
@@ -150,7 +150,7 @@ export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInp
     throw new SmartAppRegistryError("invalid_client_metadata", "public clients must use token_endpoint_auth_method none.");
   }
 
-  const policy: OSODSmartClientAppPolicy = {
+  const policy: ODOSSmartClientAppPolicy = {
     riskClass: requiredEnum(input.risk_class, "risk_class", [
       "low",
       "moderate",
@@ -191,7 +191,7 @@ export function buildCanonicalSmartClientApp(input: DynamicClientRegistrationInp
 }
 
 export function assertInstallPolicy(
-  policy: OSODSmartClientAppPolicy,
+  policy: ODOSSmartClientAppPolicy,
   options: { readonly practiceJurisdiction?: string; readonly adminAttestedCompatibilityGap?: boolean } = {},
 ): void {
   if (policy.phiBoundary === "patient-payload" && !policy.baaRequired) {
@@ -240,12 +240,12 @@ export function assertInstallPolicy(
   }
 }
 
-export function readSmartClientApp(record: Endpoint | Device): OSODSmartClientApp {
+export function readSmartClientApp(record: Endpoint | Device): ODOSSmartClientApp {
   const extension = record.extension?.find((candidate) => candidate.url === SMART_CLIENT_APP_EXTENSION_URL);
   if (!extension) {
     throw new SmartAppRegistryError("missing-smart-client-app-extension", "SMART app extension is missing.");
   }
-  const metadata: OSODSmartClientAppMetadata = {
+  const metadata: ODOSSmartClientAppMetadata = {
     clientType: extensionCode(extension, "oauth_metadata", "client_type") as SmartAppClientType,
     tokenEndpointAuthMethod: extensionCode(
       extension,
@@ -259,7 +259,7 @@ export function readSmartClientApp(record: Endpoint | Device): OSODSmartClientAp
     allowedOrigin: extensionValues(extension, "oauth_metadata", "allowed_origin", "valueUri"),
     clientName: record.resourceType === "Endpoint" ? (record.name ?? "Local SMART App") : record.deviceName?.[0]?.name ?? "Local SMART App",
   };
-  const policy: OSODSmartClientAppPolicy = {
+  const policy: ODOSSmartClientAppPolicy = {
     riskClass: requiredText(extensionValue(extension, "risk_class", undefined, "valueCode"), "risk_class") as SmartAppRiskClass,
     phiBoundary: requiredText(extensionValue(extension, "phi_boundary", undefined, "valueCode"), "phi_boundary") as SmartAppPhiBoundary,
     launchMode: requiredText(extensionValue(extension, "launch_mode", undefined, "valueCode"), "launch_mode") as SmartAppLaunchMode,
@@ -294,8 +294,8 @@ export function readSmartClientApp(record: Endpoint | Device): OSODSmartClientAp
 }
 
 export function smartClientAppExtension(
-  metadata: OSODSmartClientAppMetadata,
-  policy: OSODSmartClientAppPolicy,
+  metadata: ODOSSmartClientAppMetadata,
+  policy: ODOSSmartClientAppPolicy,
 ): Extension {
   return {
     url: SMART_CLIENT_APP_EXTENSION_URL,
@@ -331,7 +331,7 @@ export function smartClientAppExtension(
 }
 
 export function smartClientRegistrationResponse(input: {
-  readonly app: OSODSmartClientApp;
+  readonly app: ODOSSmartClientApp;
   readonly clientId: string;
   readonly clientSecret?: string;
 }): Record<string, unknown> {
@@ -361,7 +361,7 @@ export function smartClientRegistrationResponse(input: {
   };
 }
 
-function buildEndpointRecord(metadata: OSODSmartClientAppMetadata, extension: Extension): Endpoint {
+function buildEndpointRecord(metadata: ODOSSmartClientAppMetadata, extension: Extension): Endpoint {
   return {
     resourceType: "Endpoint",
     id: `smart-app-${randomUUID()}`,
@@ -379,7 +379,7 @@ function buildEndpointRecord(metadata: OSODSmartClientAppMetadata, extension: Ex
   };
 }
 
-function buildDeviceRecord(metadata: OSODSmartClientAppMetadata, extension: Extension): Device {
+function buildDeviceRecord(metadata: ODOSSmartClientAppMetadata, extension: Extension): Device {
   return {
     resourceType: "Device",
     id: `smart-app-${randomUUID()}`,
@@ -438,7 +438,7 @@ function redirectOrigins(redirectUris: readonly string[]): string[] {
 }
 
 function practiceJurisdiction(): string | undefined {
-  return process.env.OSOD_PRACTICE_JURISDICTION ?? process.env.OSOD_PRACTICE_STATE;
+  return process.env.ODOS_PRACTICE_JURISDICTION ?? process.env.ODOS_PRACTICE_STATE;
 }
 
 function normalizeJurisdiction(value: string | undefined): string | undefined {

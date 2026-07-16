@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * OSOD MCP Server
+ * ODOS MCP Server
  *
  * Exposes Medplum FHIR resources as MCP tools so Claude, Iris, Netra,
- * Dharma, or any MCP-compatible agent can read and write OSOD data.
+ * Dharma, or any MCP-compatible agent can read and write ODOS data.
  *
  * Transport: stdio (standard MCP). Suitable for launch-on-demand by
  * Claude Desktop, Claude Code, Iris's OpenClaw, etc.
@@ -26,19 +26,19 @@ import express from "express";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
-import { createLiveOsodAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
+import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
 } from "./authz/boot-role-verification.js";
 import {
-  buildOsodAuditEventRow,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "./authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "./authz/odosAudit.js";
 import {
   PRACTICE_ROLE_IDS,
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   assertBusinessActionAllowed,
   getRoleDeclaration,
   resolveBusinessActionRole,
@@ -155,7 +155,7 @@ import {
   SmartAuthorizationState,
   createSmartAuthorizationRouter,
 } from "./smart/authorization-server.js";
-import { osodConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
+import { odosConcept, normalizeLaterality, patientReference, encounterReference } from "./fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "./fhir/ophthalmology/iop.js";
 import { buildVisualAcuityObservation } from "./fhir/ophthalmology/visualAcuity.js";
 import { buildRefractionObservation } from "./fhir/ophthalmology/refraction.js";
@@ -272,8 +272,8 @@ import {
   medicationStatementStatusForTimeline,
 } from "./fhir/ophthalmicMedicationStatement.js";
 import {
-  OSOD_CLINICAL_AMENDMENT_POLICY_URL,
-  OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+  ODOS_CLINICAL_AMENDMENT_POLICY_URL,
+  ODOS_CLINICAL_ATTESTATION_POLICY_URL,
 } from "../../policy/attestation-policy-urls.js";
 import {
   appendObservationContextSchema,
@@ -359,34 +359,34 @@ const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const ACCESS_TOKEN = process.env.MEDPLUM_ACCESS_TOKEN;
 const CREATE_OBSERVATION_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/create_observation",
+  "X-ODOS-Source": "mcp/create_observation",
 } as const;
 const CREATE_ENCOUNTER_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/create_encounter",
+  "X-ODOS-Source": "mcp/create_encounter",
 } as const;
 const CREATE_RAW_ASSET_REFERENCE_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/create_raw_asset_reference",
+  "X-ODOS-Source": "mcp/create_raw_asset_reference",
 } as const;
 const CREATE_VISION_PRESCRIPTION_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/create_vision_prescription",
+  "X-ODOS-Source": "mcp/create_vision_prescription",
 } as const;
 const CREATE_SECTION_OBSERVATIONS_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/save_section_observations",
+  "X-ODOS-Source": "mcp/save_section_observations",
 } as const;
 const SCRIBE_WRITE_OBSERVATION_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/scribe_write_observation",
+  "X-ODOS-Source": "mcp/scribe_write_observation",
 } as const;
 const CLINICIAN_ATTEST_OBSERVATION_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/clinician_attest_observation",
+  "X-ODOS-Source": "mcp/clinician_attest_observation",
 } as const;
 const AMEND_OBSERVATION_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/amend_observation",
+  "X-ODOS-Source": "mcp/amend_observation",
 } as const;
 const APPEND_OBSERVATION_CONTEXT_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/append_observation_context",
+  "X-ODOS-Source": "mcp/append_observation_context",
 } as const;
 const UPDATE_PATIENT_AUDIT_HEADERS = {
-  "X-OSOD-Source": "mcp/update_patient",
+  "X-ODOS-Source": "mcp/update_patient",
 } as const;
 const HL7_V3_ACT_ENCOUNTER_CLASS_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-ActCode";
@@ -438,14 +438,14 @@ const FHIR_CONTACT_POINT_USE_CODES = ["home", "work", "temp", "old", "mobile"] a
 const FHIR_ADDRESS_USE_CODES = ["home", "work", "temp", "old", "billing"] as const;
 const FHIR_ADDRESS_TYPE_CODES = ["postal", "physical", "both"] as const;
 
-const auditRuntime = createLiveOsodAuditRuntime({
-  postgresUrl: process.env.OSOD_POSTGRES_URL,
+const auditRuntime = createLiveOdosAuditRuntime({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
   medplumBaseUrl: BASE_URL,
-  medplumAccessToken: process.env.OSOD_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
-  medplumEmail: process.env.OSOD_AUDIT_MEDPLUM_EMAIL ?? EMAIL,
-  medplumPassword: process.env.OSOD_AUDIT_MEDPLUM_PASSWORD ?? PASSWORD,
-  disabled: process.env.OSOD_AUDIT_DISABLED === "1",
-  projectionWorkerIntervalMs: Number(process.env.OSOD_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
+  medplumAccessToken: process.env.ODOS_AUDIT_MEDPLUM_ACCESS_TOKEN ?? ACCESS_TOKEN,
+  medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? EMAIL,
+  medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? PASSWORD,
+  disabled: process.env.ODOS_AUDIT_DISABLED === "1",
+  projectionWorkerIntervalMs: Number(process.env.ODOS_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
 });
 auditRuntime.startProjectionWorker();
 
@@ -455,9 +455,9 @@ const fhir = createMedplumClient({
   refreshAuthentication: () => authenticateWithMedplum(true),
   audit: auditRuntime,
   auditContext: {
-    actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
+    actorId: process.env.ODOS_AUDIT_ACTOR_ID ?? "odos-mcp",
     actorRole: "system",
-    sessionId: process.env.OSOD_AUDIT_SESSION_ID,
+    sessionId: process.env.ODOS_AUDIT_SESSION_ID,
   },
 });
 const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
@@ -465,7 +465,7 @@ const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
- * Tool definitions — start minimal; grow as OSOD needs more agent surfaces.
+ * Tool definitions — start minimal; grow as ODOS needs more agent surfaces.
  * Every tool returns plain FHIR JSON so the consuming agent sees exactly
  * what a human developer would see in the admin UI.
  * ------------------------------------------------------------------------ */
@@ -474,7 +474,7 @@ const tools = [
   {
     name: "list_patients",
     description:
-      "List patients in the OSOD instance. Returns a FHIR Bundle of Patient resources.",
+      "List patients in the ODOS instance. Returns a FHIR Bundle of Patient resources.",
     inputSchema: {
       type: "object",
       properties: {
@@ -501,7 +501,7 @@ const tools = [
   {
     name: "update_patient",
     description:
-      "Update native FHIR Patient fields using JSON Patch replace operations. Writes use X-OSOD-Source=mcp/update_patient.",
+      "Update native FHIR Patient fields using JSON Patch replace operations. Writes use X-ODOS-Source=mcp/update_patient.",
     inputSchema: {
       type: "object",
       required: ["patient_id"],
@@ -574,7 +574,7 @@ const tools = [
   {
     name: "get_observations",
     description:
-      "List Observation resources for a given Patient. Supports anatomical-location filter for OSOD Director orbital queries.",
+      "List Observation resources for a given Patient. Supports anatomical-location filter for ODOS Director orbital queries.",
     inputSchema: {
       type: "object",
       required: ["patient_id"],
@@ -628,7 +628,7 @@ const tools = [
   {
     name: "create_encounter",
     description:
-      "Create a FHIR Encounter for a Patient. Writes use X-OSOD-Source=mcp/create_encounter.",
+      "Create a FHIR Encounter for a Patient. Writes use X-ODOS-Source=mcp/create_encounter.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "class_code", "status"],
@@ -686,7 +686,7 @@ const tools = [
   {
     name: "create_observation",
     description:
-      "Create a FHIR-native ophthalmic Observation for visual acuity, IOP, or refraction. Writes use X-OSOD-Source=mcp/create_observation.",
+      "Create a FHIR-native ophthalmic Observation for visual acuity, IOP, or refraction. Writes use X-ODOS-Source=mcp/create_observation.",
     inputSchema: {
       type: "object",
       required: ["type", "patient_id", "encounter_id", "laterality"],
@@ -850,7 +850,7 @@ const tools = [
   {
     name: "create_raw_asset_reference",
     description:
-      "Create a DocumentReference index for an ophthalmic PDF/image/vendor export. Attachment.hash is SHA-1/base64; OSOD SHA-256 goes in the source-sha256 extension.",
+      "Create a DocumentReference index for an ophthalmic PDF/image/vendor export. Attachment.hash is SHA-1/base64; ODOS SHA-256 goes in the source-sha256 extension.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "content_type"],
@@ -882,7 +882,7 @@ const tools = [
   {
     name: "save_section_observations",
     description:
-      "Atomically save VA, IOP, or refraction section Observations with BodyStructure ensures and Provenance sidecars. Writes use X-OSOD-Source=mcp/save_section_observations.",
+      "Atomically save VA, IOP, or refraction section Observations with BodyStructure ensures and Provenance sidecars. Writes use X-ODOS-Source=mcp/save_section_observations.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "encounter_id", "section", "entries"],
@@ -921,7 +921,7 @@ const tools = [
   {
     name: "create_vision_prescription",
     description:
-      "Create a FHIR VisionPrescription from a FINAL_RX Refraction Observation. Writes use X-OSOD-Source=mcp/create_vision_prescription.",
+      "Create a FHIR VisionPrescription from a FINAL_RX Refraction Observation. Writes use X-ODOS-Source=mcp/create_vision_prescription.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "refraction_observation_id", "prescriber_reference"],
@@ -950,7 +950,7 @@ const tools = [
   {
     name: "create_episode_of_care",
     description:
-      "Create a FHIR EpisodeOfCare using the OSOD EpisodeOfCare.type ValueSet. Writes use X-OSOD-Source=mcp/create_episode_of_care.",
+      "Create a FHIR EpisodeOfCare using the ODOS EpisodeOfCare.type ValueSet. Writes use X-ODOS-Source=mcp/create_episode_of_care.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "type_code", "status"],
@@ -971,7 +971,7 @@ const tools = [
   {
     name: "update_episode_of_care",
     description:
-      "Version-aware PATCH for FHIR EpisodeOfCare. Writes use X-OSOD-Source=mcp/update_episode_of_care.",
+      "Version-aware PATCH for FHIR EpisodeOfCare. Writes use X-ODOS-Source=mcp/update_episode_of_care.",
     inputSchema: {
       type: "object",
       required: ["episode_of_care_id"],
@@ -992,7 +992,7 @@ const tools = [
   {
     name: "create_condition_with_tier",
     description:
-      "Create an encounter-diagnosis Condition and set Encounter.diagnosis.rank. Writes use X-OSOD-Source=mcp/create_condition_with_tier.",
+      "Create an encounter-diagnosis Condition and set Encounter.diagnosis.rank. Writes use X-ODOS-Source=mcp/create_condition_with_tier.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "encounter_id", "code_system", "code", "tier"],
@@ -1002,7 +1002,7 @@ const tools = [
   {
     name: "create_problem_list_condition",
     description:
-      "Create a longitudinal problem-list-item Condition. Writes use X-OSOD-Source=mcp/create_problem_list_condition.",
+      "Create a longitudinal problem-list-item Condition. Writes use X-ODOS-Source=mcp/create_problem_list_condition.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "code_system", "code"],
@@ -1012,7 +1012,7 @@ const tools = [
   {
     name: "update_condition_status",
     description:
-      "Version-aware PATCH of Condition.clinicalStatus. Writes use X-OSOD-Source=mcp/update_condition_status.",
+      "Version-aware PATCH of Condition.clinicalStatus. Writes use X-ODOS-Source=mcp/update_condition_status.",
     inputSchema: {
       type: "object",
       required: ["condition_id", "clinical_status"],
@@ -1045,7 +1045,7 @@ const tools = [
   {
     name: "update_condition_body_site",
     description:
-      "Version-aware PATCH of Condition bodySite BodyStructure reference extension. Writes use X-OSOD-Source=mcp/update_condition_body_site.",
+      "Version-aware PATCH of Condition bodySite BodyStructure reference extension. Writes use X-ODOS-Source=mcp/update_condition_body_site.",
     inputSchema: {
       type: "object",
       required: ["condition_id", "body_structure_reference"],
@@ -1096,7 +1096,7 @@ const tools = [
   {
     name: "create_allergy_intolerance",
     description:
-      "Create a US Core AllergyIntolerance using the .code-first pattern. Writes use X-OSOD-Source=mcp/create_allergy_intolerance.",
+      "Create a US Core AllergyIntolerance using the .code-first pattern. Writes use X-ODOS-Source=mcp/create_allergy_intolerance.",
     inputSchema: {
       type: "object",
       required: ["patient_id"],
@@ -1220,7 +1220,7 @@ const tools = [
   {
     name: "create_lens_device",
     description:
-      "Create a patient-specific contact-lens Device using Device.property for lens geometry. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_lens_device.",
+      "Create a patient-specific contact-lens Device using Device.property for lens geometry. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_lens_device.",
     inputSchema: {
       type: "object",
       required: ["lens_type"],
@@ -1243,7 +1243,7 @@ const tools = [
   {
     name: "update_lens_device_properties",
     description:
-      "Version-aware PATCH of contact-lens Device.property entries. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_lens_device_properties.",
+      "Version-aware PATCH of contact-lens Device.property entries. Provenance is mandatory and writes use X-ODOS-Source=mcp/update_lens_device_properties.",
     inputSchema: {
       type: "object",
       required: ["lens_device_id", "properties"],
@@ -1259,7 +1259,7 @@ const tools = [
   {
     name: "create_device_definition",
     description:
-      "Create a contact-lens DeviceDefinition catalog blueprint. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_device_definition.",
+      "Create a contact-lens DeviceDefinition catalog blueprint. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_device_definition.",
     inputSchema: {
       type: "object",
       required: ["catalog_code", "display_name", "lens_type"],
@@ -1280,7 +1280,7 @@ const tools = [
   {
     name: "create_concept_map",
     description:
-      "Create a ConceptMap from OSOD contact-lens parameter codes to lab-specific aliases. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_concept_map.",
+      "Create a ConceptMap from ODOS contact-lens parameter codes to lab-specific aliases. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_concept_map.",
     inputSchema: {
       type: "object",
       required: ["lab_code", "lab_display", "target_uri", "mappings"],
@@ -1311,7 +1311,7 @@ const tools = [
   {
     name: "create_substance",
     description:
-      "Create a contact-lens material or coating Substance. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_substance.",
+      "Create a contact-lens material or coating Substance. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_substance.",
     inputSchema: {
       type: "object",
       required: ["code", "display", "kind"],
@@ -1330,7 +1330,7 @@ const tools = [
   {
     name: "create_dry_eye_questionnaire_response",
     description:
-      "Create a dry-eye QuestionnaireResponse and auto-derived summary Observation. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_questionnaire_response.",
+      "Create a dry-eye QuestionnaireResponse and auto-derived summary Observation. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_questionnaire_response.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "instrument", "answers"],
@@ -1351,7 +1351,7 @@ const tools = [
   {
     name: "create_meibography_observation",
     description:
-      "Create a meibography image DocumentReference plus derived meibography score Observation. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_meibography_observation.",
+      "Create a meibography image DocumentReference plus derived meibography score Observation. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_meibography_observation.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "eye", "lid", "scoring_system", "total_score"],
@@ -1379,7 +1379,7 @@ const tools = [
   {
     name: "create_dry_eye_treatment_procedure",
     description:
-      "Create one dry-eye treatment Procedure session with Procedure.usedReference for the treatment device. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_treatment_procedure.",
+      "Create one dry-eye treatment Procedure session with Procedure.usedReference for the treatment device. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_treatment_procedure.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "treatment_type"],
@@ -1405,7 +1405,7 @@ const tools = [
   {
     name: "create_dry_eye_treatment_series",
     description:
-      "Create a series-parent Procedure and scheduled child Procedure.partOf sessions. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_treatment_series.",
+      "Create a series-parent Procedure and scheduled child Procedure.partOf sessions. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_treatment_series.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "treatment_type", "total_sessions"],
@@ -1429,7 +1429,7 @@ const tools = [
   {
     name: "update_dry_eye_treatment_procedure_status",
     description:
-      "Version-aware PATCH for dry-eye Procedure.status. Input aborted maps to FHIR stopped. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_dry_eye_treatment_procedure_status.",
+      "Version-aware PATCH for dry-eye Procedure.status. Input aborted maps to FHIR stopped. Provenance is mandatory and writes use X-ODOS-Source=mcp/update_dry_eye_treatment_procedure_status.",
     inputSchema: {
       type: "object",
       required: ["procedure_id", "status"],
@@ -1444,7 +1444,7 @@ const tools = [
   {
     name: "create_ophthalmic_medication_statement",
     description:
-      "Create a dry-eye MedicationStatement with ophthalmic route and OTC/Rx/supplement flag. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_ophthalmic_medication_statement.",
+      "Create a dry-eye MedicationStatement with ophthalmic route and OTC/Rx/supplement flag. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_ophthalmic_medication_statement.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "medication_text"],
@@ -1469,7 +1469,7 @@ const tools = [
   {
     name: "update_dry_eye_medication_status",
     description:
-      "Version-aware PATCH of dry-eye MedicationStatement status using active/resolved/resumed timeline states. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_dry_eye_medication_status.",
+      "Version-aware PATCH of dry-eye MedicationStatement status using active/resolved/resumed timeline states. Provenance is mandatory and writes use X-ODOS-Source=mcp/update_dry_eye_medication_status.",
     inputSchema: {
       type: "object",
       required: ["medication_statement_id", "status"],
@@ -1484,7 +1484,7 @@ const tools = [
   {
     name: "create_dry_eye_adverse_event",
     description:
-      "Create a FHIR AdverseEvent for dry-eye complications with later-USCDI forward-compatible fields. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_dry_eye_adverse_event.",
+      "Create a FHIR AdverseEvent for dry-eye complications with later-USCDI forward-compatible fields. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_dry_eye_adverse_event.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "event_text"],
@@ -1512,7 +1512,7 @@ const tools = [
   {
     name: "create_ortho_k_lens_device",
     description:
-      "Create a patient-specific Device-OrthoKLens. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_ortho_k_lens_device.",
+      "Create a patient-specific Device-OrthoKLens. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_ortho_k_lens_device.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "properties"],
@@ -1534,7 +1534,7 @@ const tools = [
   {
     name: "record_ortho_k_fitting_event",
     description:
-      "Create an Ortho-K fitting Procedure with Procedure.usedReference -> Device. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_fitting_event.",
+      "Create an Ortho-K fitting Procedure with Procedure.usedReference -> Device. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_ortho_k_fitting_event.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "lens_device_id"],
@@ -1555,7 +1555,7 @@ const tools = [
   {
     name: "record_ortho_k_fit_observation",
     description:
-      "Create an Ortho-K fit finding Observation with Observation.focus -> Device. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_fit_observation.",
+      "Create an Ortho-K fit finding Observation with Observation.focus -> Device. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_ortho_k_fit_observation.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "lens_device_id", "finding_code"],
@@ -1578,7 +1578,7 @@ const tools = [
   {
     name: "record_ortho_k_trial",
     description:
-      "Create a child Ortho-K trial Procedure via Procedure.partOf. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_ortho_k_trial.",
+      "Create a child Ortho-K trial Procedure via Procedure.partOf. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_ortho_k_trial.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "lens_device_id", "series_procedure_id", "trial_number"],
@@ -1602,7 +1602,7 @@ const tools = [
   {
     name: "update_ortho_k_lens_parameters",
     description:
-      "Version-aware PATCH of Ortho-K Device.property entries. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_ortho_k_lens_parameters.",
+      "Version-aware PATCH of Ortho-K Device.property entries. Provenance is mandatory and writes use X-ODOS-Source=mcp/update_ortho_k_lens_parameters.",
     inputSchema: {
       type: "object",
       required: ["lens_device_id", "properties"],
@@ -1617,7 +1617,7 @@ const tools = [
   {
     name: "create_myopia_management_episode",
     description:
-      "Create a myopia-management EpisodeOfCare. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_myopia_management_episode.",
+      "Create a myopia-management EpisodeOfCare. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_myopia_management_episode.",
     inputSchema: {
       type: "object",
       required: ["patient_id"],
@@ -1636,7 +1636,7 @@ const tools = [
   {
     name: "create_or_update_myopia_plan",
     description:
-      "Create or version-aware PATCH a CarePlan-driven myopia treatment plan. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_or_update_myopia_plan.",
+      "Create or version-aware PATCH a CarePlan-driven myopia treatment plan. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_or_update_myopia_plan.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "activities"],
@@ -1658,7 +1658,7 @@ const tools = [
   {
     name: "create_atropine_medication_statement",
     description:
-      "Create a myopia-management atropine MedicationStatement with compounded concentration. Provenance is mandatory and writes use X-OSOD-Source=mcp/create_atropine_medication_statement.",
+      "Create a myopia-management atropine MedicationStatement with compounded concentration. Provenance is mandatory and writes use X-ODOS-Source=mcp/create_atropine_medication_statement.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "concentration", "frequency_text"],
@@ -1678,7 +1678,7 @@ const tools = [
   {
     name: "update_atropine_medication_status",
     description:
-      "Version-aware PATCH of atropine MedicationStatement status using active/tapering/resolved states. Provenance is mandatory and writes use X-OSOD-Source=mcp/update_atropine_medication_status.",
+      "Version-aware PATCH of atropine MedicationStatement status using active/tapering/resolved states. Provenance is mandatory and writes use X-ODOS-Source=mcp/update_atropine_medication_status.",
     inputSchema: {
       type: "object",
       required: ["medication_statement_id", "status"],
@@ -1693,7 +1693,7 @@ const tools = [
   {
     name: "record_myopia_axial_length_measurement",
     description:
-      "Create an axial length Observation using the existing v0.3 profile. Provenance is mandatory and writes use X-OSOD-Source=mcp/record_myopia_axial_length_measurement.",
+      "Create an axial length Observation using the existing v0.3 profile. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_myopia_axial_length_measurement.",
     inputSchema: {
       type: "object",
       required: ["patient_id", "encounter_id", "eye", "value_mm"],
@@ -2520,7 +2520,7 @@ const compareTreatmentEpisodesSchema = z.object({
 
 function createServer(): Server {
   const server = new Server(
-    { name: "osod-mcp", version: "0.1.0" },
+    { name: "odos-mcp", version: "0.1.0" },
     { capabilities: { tools: {} } },
   );
 
@@ -2618,7 +2618,7 @@ function createServer(): Server {
                     typeDisplay: "Author",
                     whoReference: input.provenance_agent_reference,
                     whoDisplay:
-                      input.provenance_agent_display ?? "OSOD MCP create_encounter",
+                      input.provenance_agent_display ?? "ODOS MCP create_encounter",
                   },
                 ],
               }),
@@ -2675,7 +2675,7 @@ function createServer(): Server {
                     whoDisplay:
                       input.provenance_agent_display ??
                       input.provenanceAgentDisplay ??
-                      "OSOD MCP create_observation",
+                      "ODOS MCP create_observation",
                   },
                 ],
               }),
@@ -2756,7 +2756,7 @@ function createServer(): Server {
               actorRole: "clinician",
               observation,
               provenanceId: transaction.provenance.id,
-              policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+              policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
               actionReason: "CREATE",
             });
             const responseBundle = await auditRuntime.record(auditRow, () =>
@@ -2778,11 +2778,11 @@ function createServer(): Server {
                   actorRole: "clinician",
                   observation,
                   actionReason: `attestation failed: ${error instanceof Error ? error.message : String(error)}`,
-                  policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+                  policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
                 }),
               )
               .catch((auditError) => {
-                console.error("osod-mcp: failed to audit attestation rejection:", auditError);
+                console.error("odos-mcp: failed to audit attestation rejection:", auditError);
               });
             throw error;
           }
@@ -2815,7 +2815,7 @@ function createServer(): Server {
               actorRole: "clinician",
               observation,
               provenanceId: transaction.provenance.id,
-              policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
               actionReason,
             });
             const responseBundle = await auditRuntime.record(auditRow, () =>
@@ -2834,11 +2834,11 @@ function createServer(): Server {
                   actorRole: "clinician",
                   observation,
                   actionReason: `amendment failed: ${error instanceof Error ? error.message : String(error)}`,
-                  policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
                 }),
               )
               .catch((auditError) => {
-                console.error("osod-mcp: failed to audit amendment rejection:", auditError);
+                console.error("odos-mcp: failed to audit amendment rejection:", auditError);
               });
             throw error;
           }
@@ -2864,7 +2864,7 @@ function createServer(): Server {
               actorRole: "clinician",
               observation: transaction.observation,
               provenanceId: transaction.provenance.id,
-              policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+              policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
               actionReason: "APPEND",
             });
             const responseBundle = await auditRuntime.record(auditRow, () =>
@@ -2886,11 +2886,11 @@ function createServer(): Server {
                   actorRole: "clinician",
                   observation: sourceObservation,
                   actionReason: `append failed: ${error instanceof Error ? error.message : String(error)}`,
-                  policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+                  policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
                 }),
               )
               .catch((auditError) => {
-                console.error("osod-mcp: failed to audit append rejection:", auditError);
+                console.error("odos-mcp: failed to audit append rejection:", auditError);
               });
             throw error;
           }
@@ -2935,7 +2935,7 @@ function createServer(): Server {
                     whoReference: input.provenance_agent_reference,
                     whoDisplay:
                       input.provenance_agent_display ??
-                      "OSOD MCP create_raw_asset_reference",
+                      "ODOS MCP create_raw_asset_reference",
                   },
                 ],
               }),
@@ -2964,7 +2964,7 @@ function createServer(): Server {
             section: input.section,
             entries: buildSectionSaveEntries(input),
             operatorDisplay:
-              input.operator_display ?? "OSOD MCP save_section_observations",
+              input.operator_display ?? "ODOS MCP save_section_observations",
           });
           const responseBundle = await fhir.executeTransaction(
             bundle,
@@ -3008,7 +3008,7 @@ function createServer(): Server {
                     whoReference: input.provenance_agent_reference,
                     whoDisplay:
                       input.provenance_agent_display ??
-                      "OSOD MCP create_vision_prescription",
+                      "ODOS MCP create_vision_prescription",
                   },
                 ],
               }),
@@ -3459,7 +3459,7 @@ function createServer(): Server {
             input.lens_type ?? existing.type?.coding?.find((coding) => coding.code)?.code;
           if (!lensType) {
             throw new Error(
-              "update_lens_device_properties requires lens_type when Device.type does not carry an OSOD lens type code.",
+              "update_lens_device_properties requires lens_type when Device.type does not carry an ODOS lens type code.",
             );
           }
           const normalizedLensType = normalizeLensTypeCode(lensType);
@@ -4443,7 +4443,7 @@ function stripReference(value: string, resourceType: string): string {
 }
 
 function sessionPractitionerId(): string | undefined {
-  return process.env.OSOD_SESSION_PRACTITIONER_ID ?? process.env.OSOD_AUDIT_ACTOR_ID;
+  return process.env.ODOS_SESSION_PRACTITIONER_ID ?? process.env.ODOS_AUDIT_ACTOR_ID;
 }
 
 function versionedHeaders(
@@ -4489,7 +4489,7 @@ async function createV035Provenance(
           typeCode: "author",
           typeDisplay: "Author",
           whoReference: input.provenance_agent_reference,
-          whoDisplay: input.provenance_agent_display ?? `OSOD MCP ${toolName}`,
+          whoDisplay: input.provenance_agent_display ?? `ODOS MCP ${toolName}`,
         },
       ],
       entityValues,
@@ -4520,7 +4520,7 @@ async function createV04Provenance(
           typeCode: "author",
           typeDisplay: "Author",
           whoReference: input.provenance_agent_reference,
-          whoDisplay: input.provenance_agent_display ?? `OSOD MCP ${toolName}`,
+          whoDisplay: input.provenance_agent_display ?? `ODOS MCP ${toolName}`,
         },
       ],
       entityValues,
@@ -5068,7 +5068,7 @@ function buildCreateObservationResource(input: CreateObservationInput) {
         ...common,
         value: input.value,
         unit: "mm[Hg]",
-        method: osodConcept(normalizeIopMethod(input.method), normalizeIopMethod(input.method)),
+        method: odosConcept(normalizeIopMethod(input.method), normalizeIopMethod(input.method)),
       });
     }
 
@@ -5241,12 +5241,12 @@ function isLoopbackHost(host: string): boolean {
 }
 
 function getHttpPort(): number {
-  const rawPort = process.env.OSOD_MCP_HTTP_PORT ?? "3333";
+  const rawPort = process.env.ODOS_MCP_HTTP_PORT ?? "3333";
   const port = Number(rawPort);
 
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(
-      `osod-mcp: invalid OSOD_MCP_HTTP_PORT "${rawPort}". Expected an integer between 1 and 65535.`,
+      `odos-mcp: invalid ODOS_MCP_HTTP_PORT "${rawPort}". Expected an integer between 1 and 65535.`,
     );
   }
 
@@ -5263,15 +5263,15 @@ function enforceSseTlsGate(host: string): void {
     return;
   }
 
-  if (!process.env.OSOD_MCP_TLS) {
+  if (!process.env.ODOS_MCP_TLS) {
     throw new Error(
-      `osod-mcp: OSOD_MCP_TLS must be set before binding SSE transport to non-loopback host "${host}". This fail-closed rule applies to 0.0.0.0 and any external interface.`,
+      `odos-mcp: ODOS_MCP_TLS must be set before binding SSE transport to non-loopback host "${host}". This fail-closed rule applies to 0.0.0.0 and any external interface.`,
     );
   }
 }
 
 function auditRouteRole(req: express.Request): PracticeRoleId | undefined {
-  const raw = req.header("X-OSOD-Role") ?? auditRouteString(req, "role");
+  const raw = req.header("X-ODOS-Role") ?? auditRouteString(req, "role");
   return PRACTICE_ROLE_IDS.includes(raw as PracticeRoleId) ? (raw as PracticeRoleId) : undefined;
 }
 
@@ -5282,8 +5282,8 @@ function auditRouteFilters(req: express.Request): LiveAuditQueryFilters {
     actorId: auditRouteString(req, "actor_id", "actorId"),
     from: auditRouteString(req, "from"),
     to: auditRouteString(req, "to"),
-    eventTypes: eventTypeValues.filter((value): value is OsodAuditEventType =>
-      isOsodAuditEventType(value),
+    eventTypes: eventTypeValues.filter((value): value is OdosAuditEventType =>
+      isOdosAuditEventType(value),
     ),
     outcome: auditRouteOutcome(req),
     breakGlassOnly: auditRouteBoolean(req, "break_glass_only", "breakGlassOnly"),
@@ -5336,7 +5336,7 @@ function auditRouteOutcome(req: express.Request): "granted" | "denied" | undefin
   return value === "granted" || value === "denied" ? value : undefined;
 }
 
-function auditRouteJsonRow(row: OsodAuditEventRecord): Record<string, string | boolean | null> {
+function auditRouteJsonRow(row: OdosAuditEventRecord): Record<string, string | boolean | null> {
   return {
     id: row.id,
     eventTime: row.eventTime,
@@ -5362,7 +5362,7 @@ function auditRouteJsonRow(row: OsodAuditEventRecord): Record<string, string | b
   };
 }
 
-function isOsodAuditEventType(value: string): value is OsodAuditEventType {
+function isOdosAuditEventType(value: string): value is OdosAuditEventType {
   return [
     "read",
     "search",
@@ -5400,16 +5400,16 @@ async function recordAuditRouteDenial(input: {
   req: express.Request;
 }): Promise<void> {
   await auditRuntime.recordDenied(
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "denied",
       actorId: input.actorId,
       actorRole: input.actorRole,
       patientId: input.filters.patientId,
-      resourceType: "osod_audit_events",
+      resourceType: "odos_audit_events",
       actionOutcome: "denied",
       actionReason: input.reason,
       policyUrl:
-        input.actorRole === "system" ? undefined : `AccessPolicy/osod-${input.actorRole}`,
+        input.actorRole === "system" ? undefined : `AccessPolicy/odos-${input.actorRole}`,
       ipAddress: requestIp(input.req),
       userAgent: input.req.header("user-agent"),
     }),
@@ -5427,14 +5427,14 @@ async function authenticateWithMedplum(force = false): Promise<void> {
 
   if (!EMAIL || !PASSWORD) {
     throw new Error(
-      "osod-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",
+      "odos-mcp: MEDPLUM_ADMIN_EMAIL and MEDPLUM_ADMIN_PASSWORD must be set in env.",
     );
   }
 
   if (force) authPromise = undefined;
   authPromise ??= (async () => {
     await fhir.login(EMAIL, PASSWORD);
-    console.error("osod-mcp: authenticated with Medplum");
+    console.error("odos-mcp: authenticated with Medplum");
   })();
   try {
     await authPromise;
@@ -5473,7 +5473,7 @@ function authenticateStaffRouteForAction(businessAction: BusinessAction) {
 }
 
 async function main(): Promise<void> {
-  const transportMode = process.env.OSOD_MCP_TRANSPORT ?? "stdio";
+  const transportMode = process.env.ODOS_MCP_TRANSPORT ?? "stdio";
   if (transportMode === "sse") {
     await logSsePracticeRoleBootVerification({
       authenticate: authenticateWithMedplum,
@@ -5489,12 +5489,12 @@ async function main(): Promise<void> {
       const server = createServer();
       const transport = new StdioServerTransport();
       await server.connect(transport);
-      console.error("osod-mcp: MCP server running on stdio");
+      console.error("odos-mcp: MCP server running on stdio");
       return;
     }
 
     case "sse": {
-      const host = process.env.OSOD_MCP_HTTP_HOST ?? "127.0.0.1";
+      const host = process.env.ODOS_MCP_HTTP_HOST ?? "127.0.0.1";
       const port = getHttpPort();
       const origin = formatHttpOrigin(host, port);
 
@@ -5510,9 +5510,9 @@ async function main(): Promise<void> {
       );
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
-        const origin = process.env.OSOD_MCP_ALLOWED_ORIGIN ?? "*";
+        const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
         res.header("Access-Control-Allow-Origin", origin);
-        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-OSOD-Role, X-OSOD-Actor-Id, X-OSOD-Actor-Role");
+        res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
         res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         if (req.method === "OPTIONS") {
           res.sendStatus(204);
@@ -5531,7 +5531,7 @@ async function main(): Promise<void> {
 
       app.get("/audit/events", async (req, res) => {
         const actorRole = auditRouteRole(req);
-        const actorId = auditRouteString(req, "actor_id") ?? req.header("X-OSOD-Actor-Id") ?? "audit-ui";
+        const actorId = auditRouteString(req, "actor_id") ?? req.header("X-ODOS-Actor-Id") ?? "audit-ui";
         const filters = auditRouteFilters(req);
 
         try {
@@ -5549,15 +5549,15 @@ async function main(): Promise<void> {
 
           assertBusinessActionAllowed(actorRole, "audit.read");
           const rows = await auditRuntime.record(
-            buildOsodAuditEventRow({
+            buildOdosAuditEventRow({
               eventType: "read",
               actorId,
               actorRole,
               patientId: filters.patientId,
-              resourceType: "osod_audit_events",
+              resourceType: "odos_audit_events",
               actionOutcome: "granted",
               actionReason: "audit-log-review",
-              policyUrl: `AccessPolicy/osod-${actorRole}`,
+              policyUrl: `AccessPolicy/odos-${actorRole}`,
               ipAddress: requestIp(req),
               userAgent: req.header("user-agent"),
             }),
@@ -5576,7 +5576,7 @@ async function main(): Promise<void> {
                   : "access-policy-compartment-isolation",
               req,
             }).catch((auditError) => {
-              console.error("osod-mcp: failed to audit /audit/events denial:", auditError);
+              console.error("odos-mcp: failed to audit /audit/events denial:", auditError);
             });
           }
           const status = error instanceof Error && /lacks business action/.test(error.message) ? 403 : 500;
@@ -5590,7 +5590,7 @@ async function main(): Promise<void> {
       // forwarded Medplum token, and the PR write runs on a client bound to the caller's token so
       // Medplum AccessPolicy governs it. Cash keeps its resilient browser→Medplum rail.
       const paymentDispatch = createPaymentDispatch(paymentAdapterRegistrationsFromEnv(process.env), {
-        timeZone: process.env.OSOD_TIMEZONE,
+        timeZone: process.env.ODOS_TIMEZONE,
       });
       const labOrderRouting = labOrderRoutingFromEnv(process.env);
       const labOrderDispatch = createLabOrderDispatch([{ vendor: "manual" }], {
@@ -5635,14 +5635,14 @@ async function main(): Promise<void> {
         authenticate: authenticateStaffRoute,
         lifecycleFhir: fhir,
         dispatch: paymentDispatch,
-        recordAudit: async (row: OsodAuditEventRecord) => {
+        recordAudit: async (row: OdosAuditEventRecord) => {
           await auditRuntime.record(row, () => undefined);
         },
       };
       const paymentCollectionDeps = {
         authenticate: authenticateStaffRoute,
-        timeZone: process.env.OSOD_TIMEZONE,
-        recordAudit: async (row: OsodAuditEventRecord) => {
+        timeZone: process.env.ODOS_TIMEZONE,
+        recordAudit: async (row: OdosAuditEventRecord) => {
           await auditRuntime.record(row, () => undefined);
         },
       };
@@ -5667,7 +5667,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: assign-provider route failed:", error);
+          console.error("odos-mcp: assign-provider route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "provider assignment failed" });
         }
       });
@@ -5681,7 +5681,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/finding-definitions failed:", error);
+          console.error("odos-mcp: /clinical-graph/finding-definitions failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition catalog route failed" });
         }
       });
@@ -5695,7 +5695,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: POST /clinical-graph/finding-definitions failed:", error);
+          console.error("odos-mcp: POST /clinical-graph/finding-definitions failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition creation route failed" });
         }
       });
@@ -5713,7 +5713,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
+          console.error("odos-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
         }
       });
@@ -5727,7 +5727,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/procedure-definitions failed:", error);
+          console.error("odos-mcp: /clinical-graph/procedure-definitions failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "procedure-definition catalog route failed" });
         }
       });
@@ -5745,7 +5745,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: procedure-definition capture failed:", error);
+          console.error("odos-mcp: procedure-definition capture failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "procedure-definition capture route failed" });
         }
       });
@@ -5763,7 +5763,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: procedure-definition mutation failed:", error);
+          console.error("odos-mcp: procedure-definition mutation failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "procedure-definition mutation route failed" });
         }
       });
@@ -5781,7 +5781,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: procedure-definition history failed:", error);
+          console.error("odos-mcp: procedure-definition history failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "procedure-definition history route failed" });
         }
       });
@@ -5795,7 +5795,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: aesthetics consent definition failed:", error);
+          console.error("odos-mcp: aesthetics consent definition failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "aesthetics consent definition route failed" });
         }
       });
@@ -5809,7 +5809,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: aesthetics consent submission failed:", error);
+          console.error("odos-mcp: aesthetics consent submission failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "aesthetics consent submission route failed" });
         }
       });
@@ -5823,7 +5823,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/diagnosis-catalog failed:", error);
+          console.error("odos-mcp: /clinical-graph/diagnosis-catalog failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog route failed" });
         }
       });
@@ -5837,7 +5837,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: POST /clinical-graph/diagnosis-catalog failed:", error);
+          console.error("odos-mcp: POST /clinical-graph/diagnosis-catalog failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog creation route failed" });
         }
       });
@@ -5851,7 +5851,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/diagnosis-catalog/:stableKey failed:", error);
+          console.error("odos-mcp: /clinical-graph/diagnosis-catalog/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis catalog mutation route failed" });
         }
       });
@@ -5865,7 +5865,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: encounter diagnosis candidates route failed:", error);
+          console.error("odos-mcp: encounter diagnosis candidates route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis candidates route failed" });
         }
       });
@@ -5879,7 +5879,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: encounter diagnosis completeness route failed:", error);
+          console.error("odos-mcp: encounter diagnosis completeness route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis completeness route failed" });
         }
       });
@@ -5893,7 +5893,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: encounter diagnosis pick route failed:", error);
+          console.error("odos-mcp: encounter diagnosis pick route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis pick route failed" });
         }
       });
@@ -5907,7 +5907,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/custom/:stableKey failed:", error);
+          console.error("odos-mcp: /clinical-graph/custom/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "custom section capture route failed" });
         }
       });
@@ -5921,7 +5921,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/custom/:stableKey/history failed:", error);
+          console.error("odos-mcp: /clinical-graph/custom/:stableKey/history failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "custom section history route failed" });
         }
       });
@@ -5935,7 +5935,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/glaucoma/cup-disc/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/glaucoma/cup-disc/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "cup/disc definition route failed" });
           }
@@ -5951,7 +5951,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/hpi/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/hpi/definition failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI definition route failed" });
         }
       });
@@ -5965,7 +5965,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/hpi failed:", error);
+          console.error("odos-mcp: /clinical-graph/hpi failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI capture route failed" });
         }
       });
@@ -5979,7 +5979,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/glaucoma/cup-disc failed:", error);
+          console.error("odos-mcp: /clinical-graph/glaucoma/cup-disc failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "cup/disc clinical-graph route failed" });
           }
@@ -5995,7 +5995,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/imaging failed:", error);
+          console.error("odos-mcp: /clinical-graph/imaging failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "imaging upload route failed" });
         }
       });
@@ -6009,7 +6009,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/iop/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/iop/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP definition route failed" });
           }
@@ -6025,7 +6025,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/iop failed:", error);
+          console.error("odos-mcp: /clinical-graph/iop failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP clinical-graph route failed" });
           }
@@ -6041,7 +6041,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/refraction/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/refraction/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Refraction definition route failed" });
           }
@@ -6057,7 +6057,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/refraction failed:", error);
+          console.error("odos-mcp: /clinical-graph/refraction failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Refraction clinical-graph route failed" });
           }
@@ -6073,7 +6073,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/contact-lens/soft/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/contact-lens/soft/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Soft contact lens definition route failed" });
           }
@@ -6089,7 +6089,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/contact-lens/soft failed:", error);
+          console.error("odos-mcp: /clinical-graph/contact-lens/soft failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Soft contact lens clinical-graph route failed" });
           }
@@ -6105,7 +6105,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/contact-lens/specialty/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/contact-lens/specialty/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Specialty contact lens definition route failed" });
           }
@@ -6121,7 +6121,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/contact-lens/specialty failed:", error);
+          console.error("odos-mcp: /clinical-graph/contact-lens/specialty failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Specialty contact lens clinical-graph route failed" });
           }
@@ -6137,7 +6137,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/contact-lens/keratometry failed:", error);
+          console.error("odos-mcp: /clinical-graph/contact-lens/keratometry failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Specialty contact lens keratometry route failed" });
           }
@@ -6153,7 +6153,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/wearing/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/wearing/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Wearing definition route failed" });
           }
@@ -6169,7 +6169,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/wearing failed:", error);
+          console.error("odos-mcp: /clinical-graph/wearing failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Wearing clinical-graph route failed" });
           }
@@ -6185,7 +6185,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/auto-refraction/definition failed:", error);
+          console.error("odos-mcp: /clinical-graph/auto-refraction/definition failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Auto-refraction definition route failed" });
           }
@@ -6201,7 +6201,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/auto-refraction failed:", error);
+          console.error("odos-mcp: /clinical-graph/auto-refraction failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Auto-refraction clinical-graph route failed" });
           }
@@ -6217,7 +6217,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/iop/history failed:", error);
+          console.error("odos-mcp: /clinical-graph/iop/history failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP history route failed" });
           }
@@ -6233,7 +6233,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/refraction/history failed:", error);
+          console.error("odos-mcp: /clinical-graph/refraction/history failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "Refraction history route failed" });
           }
@@ -6249,7 +6249,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /clinical-graph/iop/target failed:", error);
+          console.error("odos-mcp: /clinical-graph/iop/target failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP target route failed" });
           }
@@ -6258,7 +6258,7 @@ async function main(): Promise<void> {
 
       app.post("/payments/charge", async (req, res) => {
         try {
-          // Ensure the osod-core service client is authenticated so it can resolve the caller's
+          // Ensure the odos-core service client is authenticated so it can resolve the caller's
           // role from their bound AccessPolicy (same pattern as /mcp/sse).
           await authenticateWithMedplum();
           const authHeader = req.header("authorization");
@@ -6274,7 +6274,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /payments/charge failed:", error);
+          console.error("odos-mcp: /payments/charge failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "payment route failed" });
           }
@@ -6324,11 +6324,11 @@ async function main(): Promise<void> {
           });
           return resolved ? { email: resolved.email, roles: resolved.roles } : null;
         },
-        terminalMode: process.env.OSOD_PAYMENT_TERMINAL_MODE
+        terminalMode: process.env.ODOS_PAYMENT_TERMINAL_MODE
           ?? (paymentDispatch.methods().includes("stripe") ? "TEST MODE"
             : paymentDispatch.methods().includes("clover") ? "LIVE"
               : "NOT CONFIGURED"),
-        timeZone: process.env.OSOD_TIMEZONE,
+        timeZone: process.env.ODOS_TIMEZONE,
       });
       registerStaffInviteRoute(app, {
         authenticateService: authenticateWithMedplum,
@@ -6354,13 +6354,13 @@ async function main(): Promise<void> {
             {
               resolveTarget: async () => ({ email, membership }),
               resolvePolicy: async (role) => {
-                const expectedName = `OSOD ${getRoleDeclaration(role).display}`;
+                const expectedName = `ODOS ${getRoleDeclaration(role).display}`;
                 const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
                 const matches = (bundle.entry ?? []).map((entry) => entry.resource).filter(
                   (policy): policy is AccessPolicy =>
                     policy?.name === expectedName &&
                     Boolean(policy.meta?.tag?.some(
-                      (tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM && tag.code === role,
+                      (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role,
                     )),
                 );
                 if (matches.length !== 1) {
@@ -6383,7 +6383,7 @@ async function main(): Promise<void> {
       registerClinicRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
-        timeZone: process.env.OSOD_TIMEZONE,
+        timeZone: process.env.ODOS_TIMEZONE,
       });
       registerOfficeRoutes(app, {
         authenticateService: authenticateWithMedplum,
@@ -6407,7 +6407,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/submit failed:", error);
+          console.error("odos-mcp: /claims/submit failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claim submission route failed" });
           }
@@ -6431,7 +6431,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /eligibility/check failed:", error);
+          console.error("odos-mcp: /eligibility/check failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "eligibility route failed" });
           }
@@ -6453,7 +6453,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/search failed:", error);
+          console.error("odos-mcp: /claims/search failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claim search route failed" });
           }
@@ -6475,7 +6475,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/manual-eob failed:", error);
+          console.error("odos-mcp: /claims/manual-eob failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "manual EOB list route failed" });
         }
       });
@@ -6495,7 +6495,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: POST /claims/manual-eob failed:", error);
+          console.error("odos-mcp: POST /claims/manual-eob failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "manual EOB create route failed" });
         }
       });
@@ -6515,7 +6515,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/manual-eob/:id/post failed:", error);
+          console.error("odos-mcp: /claims/manual-eob/:id/post failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "manual EOB posting route failed" });
         }
       });
@@ -6535,7 +6535,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/manual-eob/:id/close failed:", error);
+          console.error("odos-mcp: /claims/manual-eob/:id/close failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "manual EOB close route failed" });
         }
       });
@@ -6561,7 +6561,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/:id/status failed:", error);
+          console.error("odos-mcp: /claims/:id/status failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claim status route failed" });
           }
@@ -6586,7 +6586,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/era/import failed:", error);
+          console.error("odos-mcp: /claims/era/import failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "ERA import route failed" });
           }
@@ -6610,7 +6610,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/era failed:", error);
+          console.error("odos-mcp: /claims/era failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "ERA list route failed" });
           }
@@ -6632,7 +6632,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/worklist failed:", error);
+          console.error("odos-mcp: /claims/worklist failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claims worklist route failed" });
           }
@@ -6654,7 +6654,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/worklist/:id/claim failed:", error);
+          console.error("odos-mcp: /claims/worklist/:id/claim failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claims worklist claim route failed" });
           }
@@ -6677,7 +6677,7 @@ async function main(): Promise<void> {
           );
           res.status(result.status).json(result.body);
         } catch (error) {
-          console.error("osod-mcp: /claims/worklist/:id/resolve failed:", error);
+          console.error("odos-mcp: /claims/worklist/:id/resolve failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "claims worklist resolve route failed" });
           }
@@ -6695,9 +6695,9 @@ async function main(): Promise<void> {
             transports.delete(transport.sessionId);
             auditRuntime
               .record(
-                buildOsodAuditEventRow({
+                buildOdosAuditEventRow({
                   eventType: "logout",
-                  actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-mcp",
+                  actorId: process.env.ODOS_AUDIT_ACTOR_ID ?? "odos-mcp",
                   actorRole: "system",
                   sessionId: transport.sessionId,
                   actionOutcome: "granted",
@@ -6706,14 +6706,14 @@ async function main(): Promise<void> {
                 () => undefined,
               )
               .catch((error) => {
-                console.error("osod-mcp: failed to audit SSE logout:", error);
+                console.error("odos-mcp: failed to audit SSE logout:", error);
               });
           });
 
           await server.connect(transport);
-          console.error(`osod-mcp: SSE session connected (${transport.sessionId})`);
+          console.error(`odos-mcp: SSE session connected (${transport.sessionId})`);
         } catch (err) {
-          console.error("osod-mcp: failed to establish SSE session:", err);
+          console.error("odos-mcp: failed to establish SSE session:", err);
           if (!res.headersSent) {
             res.status(500).send("Failed to establish SSE session");
           }
@@ -6738,7 +6738,7 @@ async function main(): Promise<void> {
         try {
           await transport.handlePostMessage(req, res, req.body);
         } catch (err) {
-          console.error(`osod-mcp: failed to handle SSE message for session ${sessionId}:`, err);
+          console.error(`odos-mcp: failed to handle SSE message for session ${sessionId}:`, err);
           if (!res.headersSent) {
             res.status(500).send("Failed to handle SSE message");
           }
@@ -6747,8 +6747,8 @@ async function main(): Promise<void> {
 
       await new Promise<void>((resolve, reject) => {
         const listener = app.listen(port, host, () => {
-          console.error(`osod-mcp: MCP server running on SSE at ${origin}/mcp/sse`);
-          console.error(`osod-mcp: POST messages to ${origin}/mcp/messages?sessionId=<id>`);
+          console.error(`odos-mcp: MCP server running on SSE at ${origin}/mcp/sse`);
+          console.error(`odos-mcp: POST messages to ${origin}/mcp/messages?sessionId=<id>`);
           resolve();
         });
 
@@ -6759,12 +6759,12 @@ async function main(): Promise<void> {
 
     default:
       throw new Error(
-        `osod-mcp: invalid OSOD_MCP_TRANSPORT "${transportMode}". Expected "stdio" or "sse".`,
+        `odos-mcp: invalid ODOS_MCP_TRANSPORT "${transportMode}". Expected "stdio" or "sse".`,
       );
   }
 }
 
 main().catch((err: unknown) => {
-  console.error("osod-mcp fatal:", err);
+  console.error("odos-mcp fatal:", err);
   process.exit(1);
 });

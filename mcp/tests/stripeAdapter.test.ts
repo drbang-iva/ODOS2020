@@ -6,9 +6,9 @@ import {
   STRIPE_TRANSACTION_SYSTEM,
 } from "../src/payments/adapters/stripe-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 
-const CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_osod_fixture" };
+const CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_odos_fixture" };
 
 function chargeRequest(overrides?: Partial<ChargeRequest>): ChargeRequest {
   return {
@@ -106,7 +106,7 @@ test("successful create+confirm charge persists only the Stripe PaymentIntent id
 
   assert.equal(captured[0].url, "https://api.stripe.com/v1/payment_intents");
   assert.equal(captured[0].method, "POST");
-  assert.equal(captured[0].headers.Authorization, "Bearer sk_test_osod_fixture");
+  assert.equal(captured[0].headers.Authorization, "Bearer sk_test_odos_fixture");
   assert.equal(captured[0].headers["Idempotency-Key"], "idem-charge-1");
   assert.equal(captured[0].headers["Content-Type"], "application/x-www-form-urlencoded");
   assert.equal(captured[0].form.get("amount"), "5000");
@@ -126,7 +126,7 @@ test("successful create+confirm charge persists only the Stripe PaymentIntent id
   assert.equal(pr.paymentIdentifier?.value, "pi_success");
   assert.equal(pr.detail?.[0]?.request?.reference, "Invoice/inv1");
   assert.equal(
-    pr.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+    pr.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
       ?.valueCodeableConcept?.coding?.[0]?.code,
     "STRIPE",
   );

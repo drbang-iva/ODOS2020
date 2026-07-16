@@ -11,7 +11,7 @@ export function PatientPicker() {
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
         <header className="flex items-center justify-between border-b border-white/10 pb-5">
           <div>
-            <div className="text-xs uppercase tracking-widest text-white/40">OSOD</div>
+            <div className="text-xs uppercase tracking-widest text-white/40">ODOS</div>
             <h1 className="mt-1 text-2xl font-semibold">Patient Picker</h1>
           </div>
           <div className="flex items-center gap-3">

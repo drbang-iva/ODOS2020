@@ -131,8 +131,8 @@ test("new visit-type codes are generated once from the label", async () => {
       active: true,
       category: [],
       extension: [
-        { url: "https://osod.dev/fhir/StructureDefinition/osod-visit-duration", valuePositiveInt: 45 },
-        { url: "https://osod.dev/fhir/StructureDefinition/osod-display-color", valueString: "#cc88ff" },
+        { url: "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration", valuePositiveInt: 45 },
+        { url: "https://odos2020.com/fhir/StructureDefinition/odos-display-color", valueString: "#cc88ff" },
       ],
     }),
   );
@@ -152,7 +152,7 @@ test("scheduler picker hygiene excludes deactivated visit types", () => {
 
 test("category edits dirty only the singleton draft and active-member deactivation is blocked with the count", async () => {
   const draft = createSingletonConfigDraft({
-    configKey: "osod-visit-type-config",
+    configKey: "odos-visit-type-config",
     config: CATEGORIES,
     buildResource: buildVisitTypeConfigResource,
     sourceTag: "visit-type-config",

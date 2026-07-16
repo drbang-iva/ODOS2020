@@ -125,13 +125,13 @@ function labTask(
     id,
     status: state === "received" ? "completed" : state === "queued" ? "requested" : "in-progress",
     intent: "order",
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/task-type", code: "lab-order-transmission" }] },
-    businessStatus: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-transport-state", code: state }] },
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/task-type", code: "lab-order-transmission" }] },
+    businessStatus: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/lab-transport-state", code: state }] },
     authoredOn,
     input: [{
-      type: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-order-task-input", code: "lab-order-export" }] },
+      type: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/lab-order-task-input", code: "lab-order-export" }] },
       valueString: JSON.stringify({
-        format: "osod-lab-order",
+        format: "odos-lab-order",
         version: "0",
         order: {
           header: { orderId: id, orderDate: "2026-07-05", lab: "Example Lab", patientName, patientRef: `Patient/${id}` },
@@ -142,7 +142,7 @@ function labTask(
         },
       }),
     }, ...(status ? [{
-      type: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-order-task-input", code: "lab-order-status" }] },
+      type: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/lab-order-task-input", code: "lab-order-status" }] },
       valueString: JSON.stringify({
         version: 1,
         currentStatus: status,
@@ -203,7 +203,7 @@ function patient(id: string): Patient {
 
 function floor(station: string, since: string, checkedInAt: string) {
   return {
-    url: "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+    url: "https://odos2020.com/fhir/StructureDefinition/odos-floor-state",
     extension: [
       { url: "station", valueString: station },
       { url: "since", valueInstant: since },

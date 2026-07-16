@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { osodConcept, reference } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 import { buildHpiFindingDefinition, HPI_ROS_OPTIONS, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
   captureGlaucomaFinding,
@@ -35,7 +35,7 @@ export interface HpiEndpointDeps {
   now?: () => string;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_hpi_ros" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
 const HPI_FIELD_DISPLAYS = {
   location: "Location",
   quality: "Quality",
@@ -130,7 +130,7 @@ export async function handleHpiCaptureRequest(
     source: "manual",
     recordedAt,
     actorReference: staff.staffReference,
-    note: "MANDATE-14-DEFERRED: HPI and ROS remain OSOD-local; no external terminology code is asserted.",
+    note: "MANDATE-14-DEFERRED: HPI and ROS remain ODOS-local; no external terminology code is asserted.",
   };
   const findingId = `finding-${HPI_STABLE_KEY}-${randomUUID()}`;
   const captured = captureGlaucomaFinding({
@@ -160,7 +160,7 @@ export async function handleHpiCaptureRequest(
 
   const createdProvenance = await staff.fhir.create<Provenance>({
     ...captured.provenance,
-    activity: osodConcept("CREATE", "Capture chief complaint, HPI, and review of systems"),
+    activity: odosConcept("CREATE", "Capture chief complaint, HPI, and review of systems"),
     target: [
       reference(observationReference),
       reference(parsed.data.encounterReference),
@@ -196,7 +196,7 @@ function resolveHpiDefinition(
   const definitions = suppliedDefinitions ?? [buildHpiFindingDefinition({
     source: "manual",
     recordedAt: new Date(0).toISOString(),
-    actorReference: "Practitioner/osod-system",
+    actorReference: "Practitioner/odos-system",
   })];
   const definition = definitions.find((candidate) => candidate.stableKey === HPI_STABLE_KEY);
   if (!definition) throw new Error("HPI finding definition seed is missing.");

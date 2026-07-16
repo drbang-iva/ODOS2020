@@ -273,5 +273,5 @@ function Field({ label, value, type = "text", onChange }: { label: string; value
 function benefitLabel(kind: BenefitKind): string { return kind === "contact-exam" ? "Contact Exam" : `${kind[0].toUpperCase()}${kind.slice(1)}`; }
 function money(value: number): string { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value); }
 function emptyResponse(): CoverageEligibilityResponse { return { resourceType: "CoverageEligibilityResponse", status: "active", purpose: ["benefits"], patient: {}, created: "", request: {}, outcome: "complete", insurer: {} }; }
-function insuranceApiOptions() { return { authorization: fhir.authHeader(), baseUrl: import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "" }; }
+function insuranceApiOptions() { return { authorization: fhir.authHeader(), baseUrl: import.meta.env.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "" }; }
 function messageOf(error: unknown): string { return error instanceof Error ? error.message : String(error); }

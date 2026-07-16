@@ -117,10 +117,10 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
   </tr>`).join("\n");
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Balance-forward statement</title></head>
-<body><section class="osod-statement">
+<body><section class="odos-statement">
 <style>
   body { margin: 0; color: #111; background: #fff; font: 14px/1.45 system-ui, sans-serif; }
-  .osod-statement { max-width: 760px; margin: 0 auto; padding: 40px; }
+  .odos-statement { max-width: 760px; margin: 0 auto; padding: 40px; }
   h1 { margin: 0 0 4px; font-size: 28px; } .sub { margin: 0 0 28px; color: #555; }
   .patient { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 24px; }
   table { width: 100%; border-collapse: collapse; } th, td { padding: 10px 8px; border-bottom: 1px solid #bbb; text-align: right; }
@@ -128,7 +128,7 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
   .totals { width: min(420px, 100%); margin: 28px 0 0 auto; } .totals td:first-child { text-align: left; }
   .balance td { border-top: 2px solid #111; border-bottom: 3px double #111; font-size: 18px; font-weight: 800; }
   .note { margin-top: 28px; color: #555; }
-  @media print { .osod-statement { max-width: none; } }
+  @media print { .odos-statement { max-width: none; } }
 </style>
 <h1>Balance-forward statement</h1>
 <p class="sub">Printable statement · no mail or email was sent</p>

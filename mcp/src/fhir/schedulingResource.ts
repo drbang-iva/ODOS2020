@@ -1,6 +1,6 @@
 import type { Schedule } from "@medplum/fhirtypes";
 import {
-  OSOD_DISCIPLINE_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM,
   type ClinicMode,
   type SchedulingDiscipline,
   assertDiscipline,
@@ -89,7 +89,7 @@ export function buildSchedulingResource(input: SchedulingResourceInput): Schedul
 export function resourceDisciplines(schedule: Schedule): SchedulingDiscipline[] {
   return (schedule.serviceCategory ?? [])
     .flatMap((concept) => concept.coding ?? [])
-    .filter((coding) => coding.system === OSOD_DISCIPLINE_SYSTEM)
+    .filter((coding) => coding.system === ODOS_DISCIPLINE_SYSTEM)
     .map((coding) => coding.code as SchedulingDiscipline);
 }
 

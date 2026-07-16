@@ -4,12 +4,12 @@ import { fhir } from "./fhir";
 import { searchAll } from "./fhir-search";
 export { searchAll } from "./fhir-search";
 import {
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-  OSOD_DISCIPLINE_SYSTEM,
-  OSOD_FOLLOW_UP_EXTENSION_URL,
-  OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
-  OSOD_VISION_COVERAGE_EXTENSION_URL,
-  OSOD_VISIT_TYPE_SYSTEM,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_DISCIPLINE_SYSTEM,
+  ODOS_FOLLOW_UP_EXTENSION_URL,
+  ODOS_MEDICAL_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_VISIT_TYPE_SYSTEM,
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
   FIND_OPEN_DEFAULT_LIMIT,
   FIND_OPEN_HORIZON_DAYS,
@@ -40,11 +40,11 @@ import {
   type BookSchedulingAppointmentInput,
   type ClinicMode,
   type CoverageInput,
-  type OsodAppointmentStatus,
+  type OdosAppointmentStatus,
   type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
-import { OSOD_FLOOR_STATE_EXTENSION_URL, floorStateExtension, parseFloorState } from "./floor-state";
+import { ODOS_FLOOR_STATE_EXTENSION_URL, floorStateExtension, parseFloorState } from "./floor-state";
 import {
   bucketAppointmentsByPracticeDay,
   reconcileWeekResourceReference,
@@ -55,8 +55,8 @@ import {
 import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
 import { validateSchedulingPracticeSettings } from "./scheduling-settings";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig,
 } from "./scheduling-config";
@@ -99,8 +99,8 @@ export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
 export const SCHEDULER_ZOOM_MIN = 0.5;
 export const SCHEDULER_ZOOM_MAX = 1.75;
 export const SCHEDULER_ZOOM_STEP = 0.25;
-export const SCHEDULER_SLOT_MINUTES_STORAGE_KEY = "osod-scheduler-slot-minutes";
-export const SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY = "osod-scheduler-hidden-resources";
+export const SCHEDULER_SLOT_MINUTES_STORAGE_KEY = "odos-scheduler-slot-minutes";
+export const SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY = "odos-scheduler-hidden-resources";
 export const SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS = [30, 15, 10] as const;
 
 type SchedulerSlotMinutesOverride = (typeof SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS)[number];
@@ -175,7 +175,7 @@ export interface AppointmentChangeInput {
   resourceScheduleReferences?: string[];
   start?: string;
   durationMinutes?: number;
-  status?: OsodAppointmentStatus;
+  status?: OdosAppointmentStatus;
   confirmation?: AppointmentConfirmationStatus;
   visionCoverage?: CoverageInput | null;
   medicalCoverage?: CoverageInput | null;
@@ -264,7 +264,7 @@ export interface SchedulingStoreState {
   ) => Promise<void>;
   setAppointmentStatus: (
     appointment: Appointment,
-    osodStatus: OsodAppointmentStatus,
+    odosStatus: OdosAppointmentStatus,
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
   setConfirmationStatus: (
@@ -611,12 +611,12 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   async updateAppointment(appointment, changes, deps) {
     await writeAppointmentUpdate(get, set, appointment, changes, deps, SCHEDULING_SOURCE_TAGS.update);
   },
-  async setAppointmentStatus(appointment, osodStatus, deps) {
+  async setAppointmentStatus(appointment, odosStatus, deps) {
     await writeAppointmentUpdate(
       get,
       set,
       appointment,
-      { status: osodStatus },
+      { status: odosStatus },
       deps,
       SCHEDULING_SOURCE_TAGS.status,
     );
@@ -683,7 +683,7 @@ async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
   const bundle = await client.search<Basic>(
     "Basic",
     new URLSearchParams([
-      ["code", `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`],
+      ["code", `${ODOS_SCHEDULING_CONFIG_SYSTEM}|${ODOS_SCHEDULING_CONFIG_CODE}`],
       ["_count", "10"],
     ]),
   );
@@ -842,13 +842,13 @@ function rebuildAppointmentForUpdate(
     applyStatusChange(updated, changes.status);
   }
   if (changes.confirmation !== undefined) {
-    replaceExtension(updated, OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL, appointmentConfirmationExtension(changes.confirmation));
+    replaceExtension(updated, ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL, appointmentConfirmationExtension(changes.confirmation));
   }
   if (changes.visionCoverage !== undefined) {
-    applyCoverageChange(updated, OSOD_VISION_COVERAGE_EXTENSION_URL, changes.visionCoverage);
+    applyCoverageChange(updated, ODOS_VISION_COVERAGE_EXTENSION_URL, changes.visionCoverage);
   }
   if (changes.medicalCoverage !== undefined) {
-    applyCoverageChange(updated, OSOD_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
+    applyCoverageChange(updated, ODOS_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
   }
   if (changes.floorStation !== undefined) {
     applyFloorStationChange(updated, changes.floorStation, deps?.now);
@@ -866,8 +866,8 @@ function rebuildAppointmentForUpdate(
   if (changes.followUp !== undefined) {
     replaceExtension(
       updated,
-      OSOD_FOLLOW_UP_EXTENSION_URL,
-      changes.followUp ? { url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true } : undefined,
+      ODOS_FOLLOW_UP_EXTENSION_URL,
+      changes.followUp ? { url: ODOS_FOLLOW_UP_EXTENSION_URL, valueBoolean: true } : undefined,
     );
   }
 
@@ -1081,7 +1081,7 @@ function applyVisitTypeChange(
     {
       coding: [
         {
-          system: OSOD_DISCIPLINE_SYSTEM,
+          system: ODOS_DISCIPLINE_SYSTEM,
           code: discipline,
           display: discipline === "eyecare" ? "Eyecare" : "Aesthetics",
         },
@@ -1092,7 +1092,7 @@ function applyVisitTypeChange(
     {
       coding: [
         {
-          system: OSOD_VISIT_TYPE_SYSTEM,
+          system: ODOS_VISIT_TYPE_SYSTEM,
           code,
           ...(entry.name ? { display: entry.name } : {}),
         },
@@ -1159,7 +1159,7 @@ function applyResourceScheduleReferences(
   appointment.participant = [...patientParticipants, ...resourceParticipants];
 }
 
-function applyStatusChange(appointment: Appointment, status: OsodAppointmentStatus): void {
+function applyStatusChange(appointment: Appointment, status: OdosAppointmentStatus): void {
   const mapped = toFhirAppointmentStatus(status);
   appointment.status = mapped.status;
   if (mapped.appointmentTypeCode) {
@@ -1220,7 +1220,7 @@ function applyFloorStationChange(
 ): void {
   if (!station) {
     // Checkout: clear the whole floor-state (station + since + checkedInAt).
-    replaceExtension(appointment, OSOD_FLOOR_STATE_EXTENSION_URL, undefined);
+    replaceExtension(appointment, ODOS_FLOOR_STATE_EXTENSION_URL, undefined);
     return;
   }
   const timestamp = (now ?? (() => new Date().toISOString()))();
@@ -1231,7 +1231,7 @@ function applyFloorStationChange(
   const existingCheckedInAt = parseFloorState(appointment)?.checkedInAt;
   replaceExtension(
     appointment,
-    OSOD_FLOOR_STATE_EXTENSION_URL,
+    ODOS_FLOOR_STATE_EXTENSION_URL,
     floorStateExtension(station, timestamp, existingCheckedInAt ?? timestamp),
   );
 }

@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/bodyStructure.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/bodyStructure.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type {
   BodyStructure,
   CodeableConcept,
@@ -105,7 +105,7 @@ export function bodyStructureReferenceExtension(bodyStructureReference: string):
 }
 
 function eyeBodyStructureId(laterality: Exclude<EyeLaterality, "UNKNOWN">): string {
-  return `osod-eye-${laterality.toLowerCase()}`;
+  return `odos-eye-${laterality.toLowerCase()}`;
 }
 
 function snomedConcept(code: string, display: string): CodeableConcept {

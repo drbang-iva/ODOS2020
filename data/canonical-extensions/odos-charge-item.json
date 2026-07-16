@@ -1,21 +1,25 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-benefit-frequency-months",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-frequency-months",
-  "version": "claims-phase7a",
-  "name": "OSODBenefitFrequencyMonths",
-  "title": "OSOD Benefit Frequency Months",
+  "id": "odos-charge-item",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item",
+  "version": "claim-remittance-linkage",
+  "name": "ODOSClaimChargeItem",
+  "title": "ODOS Claim ChargeItem Provenance",
   "status": "active",
-  "date": "2026-07-10",
-  "publisher": "OSOD",
-  "description": "Whole-month eligibility frequency for a manually entered vision-plan benefit.",
+  "date": "2026-07-15",
+  "publisher": "ODOS",
+  "description": "Persisted ChargeItem that supplied one professional Claim item or was identity-echoed for its corresponding ClaimResponse item.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "CoverageEligibilityResponse.insurance.item"
+      "expression": "Claim.item"
+    },
+    {
+      "type": "element",
+      "expression": "ClaimResponse.item"
     }
   ],
   "type": "Extension",
@@ -26,7 +30,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "Benefit eligibility frequency in months",
+        "short": "ChargeItem provenance for a Claim or ClaimResponse item",
         "min": 0,
         "max": "1"
       },
@@ -38,7 +42,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-benefit-frequency-months"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item"
       },
       {
         "id": "Extension.value[x]",
@@ -47,7 +51,10 @@
         "max": "1",
         "type": [
           {
-            "code": "unsignedInt"
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/ChargeItem"
+            ]
           }
         ]
       }

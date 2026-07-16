@@ -58,7 +58,7 @@ test("clinical MCP write tools default Provenance ON", { timeout: 90_000 }, asyn
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-provenance-defaults-test",
+    clientName: "odos-mcp-provenance-defaults-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -166,7 +166,7 @@ test("clinical MCP write tools default Provenance ON", { timeout: 90_000 }, asyn
       arguments: {
         patient_id: patient.id,
         refraction_observation_id: finalRxOutput.observation.id,
-        prescriber_reference: "Practitioner/osod-test",
+        prescriber_reference: "Practitioner/odos-test",
       },
     }),
   );

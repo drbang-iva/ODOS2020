@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
-  OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
+  ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig,
   type PersistedSchedulingPracticeConfig,
@@ -55,9 +55,9 @@ test("the practice scheduling config persists as a coded singleton Basic resourc
   const basic = buildSchedulingPracticeConfigResource(CONFIG);
   assert.equal(basic.resourceType, "Basic");
   const coding = basic.code.coding?.[0];
-  assert.equal(coding?.system, OSOD_SCHEDULING_CONFIG_SYSTEM);
-  assert.equal(coding?.code, OSOD_SCHEDULING_CONFIG_CODE);
-  const ext = basic.extension?.find((e) => e.url === OSOD_SCHEDULING_CONFIG_EXTENSION_URL);
+  assert.equal(coding?.system, ODOS_SCHEDULING_CONFIG_SYSTEM);
+  assert.equal(coding?.code, ODOS_SCHEDULING_CONFIG_CODE);
+  const ext = basic.extension?.find((e) => e.url === ODOS_SCHEDULING_CONFIG_EXTENSION_URL);
   assert.ok(ext?.valueString, "config JSON rides in the registered extension");
 });
 
@@ -119,14 +119,14 @@ test("parse rejects a Basic that is not the scheduling-config singleton", () => 
 
 test("parse is forward-compatible: unknown top-level keys in stored JSON are dropped, not fatal", () => {
   const basic = buildSchedulingPracticeConfigResource(CONFIG);
-  const ext = basic.extension!.find((e) => e.url === OSOD_SCHEDULING_CONFIG_EXTENSION_URL)!;
+  const ext = basic.extension!.find((e) => e.url === ODOS_SCHEDULING_CONFIG_EXTENSION_URL)!;
   ext.valueString = JSON.stringify({ ...JSON.parse(ext.valueString!), futureKnob: true });
   assert.deepEqual(parseSchedulingPracticeConfig(basic), CONFIG);
 });
 
 test("parse rejects malformed stored JSON with a clear error", () => {
   const basic = buildSchedulingPracticeConfigResource(CONFIG);
-  const ext = basic.extension!.find((e) => e.url === OSOD_SCHEDULING_CONFIG_EXTENSION_URL)!;
+  const ext = basic.extension!.find((e) => e.url === ODOS_SCHEDULING_CONFIG_EXTENSION_URL)!;
   ext.valueString = "{not json";
   assert.throws(() => parseSchedulingPracticeConfig(basic), /config JSON/i);
 });

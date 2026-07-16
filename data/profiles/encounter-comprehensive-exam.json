@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam",
+  "url": "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam",
   "version": "0.3.0",
-  "name": "OSODEncounterComprehensiveExam",
-  "title": "OSOD Encounter - Comprehensive Exam",
+  "name": "ODOSEncounterComprehensiveExam",
+  "title": "ODOS Encounter - Comprehensive Exam",
   "status": "draft",
-  "publisher": "OSOD",
-  "description": "OSOD v0.3 profile for comprehensive eye exam Encounters.",
+  "publisher": "ODOS",
+  "description": "ODOS v0.3 profile for comprehensive eye exam Encounters.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -82,31 +82,31 @@
             "source": "http://hl7.org/fhir/StructureDefinition/DomainResource"
           },
           {
-            "key": "osod-enc-profile",
+            "key": "odos-enc-profile",
             "severity": "error",
             "human": "meta.profile must declare Encounter-ComprehensiveExam.",
-            "expression": "meta.profile.where($this = 'https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam').exists()"
+            "expression": "meta.profile.where($this = 'https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam').exists()"
           },
           {
-            "key": "osod-enc-class",
+            "key": "odos-enc-class",
             "severity": "error",
             "human": "Encounter.class must be AMB from v3-ActCode.",
             "expression": "class.system = 'http://terminology.hl7.org/CodeSystem/v3-ActCode' and class.code = 'AMB'"
           },
           {
-            "key": "osod-enc-subject",
+            "key": "odos-enc-subject",
             "severity": "error",
             "human": "Encounter.subject is required.",
             "expression": "subject.exists()"
           },
           {
-            "key": "osod-enc-start",
+            "key": "odos-enc-start",
             "severity": "error",
             "human": "Encounter.period.start is required.",
             "expression": "period.start.exists()"
           },
           {
-            "key": "osod-enc-finished-end",
+            "key": "odos-enc-finished-end",
             "severity": "error",
             "human": "Finished Encounters must have period.end.",
             "expression": "status != 'finished' or period.end.exists()"
@@ -3474,28 +3474,28 @@
         "path": "Encounter",
         "min": 0,
         "max": "*",
-        "definition": "Encounter constrained by https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam"
+        "definition": "Encounter constrained by https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam"
       },
       {
         "id": "Encounter.subject",
         "path": "Encounter.subject",
         "min": 1,
         "max": "1",
-        "definition": "Encounter.subject constrained by https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam"
+        "definition": "Encounter.subject constrained by https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam"
       },
       {
         "id": "Encounter.period",
         "path": "Encounter.period",
         "min": 1,
         "max": "1",
-        "definition": "Encounter.period constrained by https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam"
+        "definition": "Encounter.period constrained by https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam"
       },
       {
         "id": "Encounter.period.start",
         "path": "Encounter.period.start",
         "min": 1,
         "max": "1",
-        "definition": "Encounter.period.start constrained by https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam"
+        "definition": "Encounter.period.start constrained by https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam"
       }
     ]
   }

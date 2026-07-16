@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, Invoice } from "@medplum/fhirtypes";
 import { assembleOpticalCashOrder } from "../src/fhir/opticalOrderComposite.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 
 function entriesByType(bundle: Bundle, resourceType: string) {
   return (bundle.entry ?? []).filter((e) => e.resource?.resourceType === resourceType);
@@ -135,7 +135,7 @@ test("assembleOpticalCashOrder with no tender emits an untendered issued Invoice
   assert.ok(invoiceEntry, "expected an Invoice entry");
   const invoice = invoiceEntry.resource as Invoice;
   assert.equal(invoice.status, "issued");
-  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  const tenderExt = invoice.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
   assert.equal(tenderExt, undefined, "processor order carries no tender on the Invoice — it lives on the PaymentReconciliation");
 });
 

@@ -8,7 +8,7 @@ const CLOVER_CONFIG = {
   baseUrl: CLOVER_SANDBOX_BASE_URL,
   accessToken: "tok",
   deviceId: "DEV1",
-  posId: "OSOD",
+  posId: "ODOS",
 };
 const STRIPE_CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_dispatch" };
 

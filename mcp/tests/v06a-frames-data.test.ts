@@ -7,7 +7,7 @@ import { performance } from "node:perf_hooks";
 import { test } from "node:test";
 import type { AuditEvent, ChargeItemDefinition, DeviceDefinition, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import {
-  OSOD_WHOLESALE_COST_EXTENSION_URL,
+  ODOS_WHOLESALE_COST_EXTENSION_URL,
   buildFrameChargeItemDefinition,
   emitFrameClaimLines,
   validateFrameClaimModifiers,
@@ -31,32 +31,32 @@ import { rankFramePosLookupRows, type FrameCatalogItem, type PracticeFrameInvent
 
 const REPO_ROOT = resolve(process.cwd(), "..");
 const V06A_DR_TABLES = [
-  "osod_frames_catalog",
-  "osod_practice_frames_inventory",
-  "osod_catalog_sync_runs",
-  "osod_catalog_overlays",
-  "osod_terminology_hcpcs",
+  "odos_frames_catalog",
+  "odos_practice_frames_inventory",
+  "odos_catalog_sync_runs",
+  "odos_catalog_overlays",
+  "odos_terminology_hcpcs",
 ] as const;
 
 test("v0.6a SQL migration creates closure-aligned Frames Data substrate", () => {
   const sql = readFileSync(resolve(REPO_ROOT, "data/migrations/2026-05-09-v06a-frames-data.sql"), "utf8");
 
   for (const table of [
-    "osod_catalog_sync_runs",
-    "osod_catalog_overlays",
-    "osod_frames_catalog",
-    "osod_practice_frames_inventory",
-    "osod_terminology_hcpcs",
+    "odos_catalog_sync_runs",
+    "odos_catalog_overlays",
+    "odos_frames_catalog",
+    "odos_practice_frames_inventory",
+    "odos_terminology_hcpcs",
   ]) {
     assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
   assert.match(sql, /sync_mode TEXT NOT NULL DEFAULT 'bulk'/);
   assert.match(sql, /catalog_type <> 'frames' OR sync_mode = 'bulk'/);
   assert.match(sql, /catalog_type <> 'frames' OR cursor_high_water IS NULL/);
-  assert.match(sql, /ALTER TABLE osod_catalog_overlays FORCE ROW LEVEL SECURITY/);
-  assert.match(sql, /ALTER TABLE osod_practice_frames_inventory FORCE ROW LEVEL SECURITY/);
-  assert.match(sql, /osod_frames_catalog_retire\(/);
-  assert.match(sql, /current_setting\('osod\.frames_catalog_retire', true\) <> 'on'/);
+  assert.match(sql, /ALTER TABLE odos_catalog_overlays FORCE ROW LEVEL SECURITY/);
+  assert.match(sql, /ALTER TABLE odos_practice_frames_inventory FORCE ROW LEVEL SECURITY/);
+  assert.match(sql, /odos_frames_catalog_retire\(/);
+  assert.match(sql, /current_setting\('odos\.frames_catalog_retire', true\) <> 'on'/);
   assert.match(sql, /catalog_sync\.frames\.bulk\.upserted/);
   assert.match(sql, /catalog_sync\.frames\.bulk\.retired/);
   assert.doesNotMatch(sql, /catalog_sync\.frames\.delta/);
@@ -74,11 +74,11 @@ test("Frame FHIR builders keep physical identity and billing rules split", () =>
   });
 
   assert.equal(device.resourceType, "DeviceDefinition");
-  assert.equal(device.url, "https://osod.dev/catalog/frames/SKU-1");
+  assert.equal(device.url, "https://odos2020.com/catalog/frames/SKU-1");
   assert.equal(device.identifier?.some((id) => id.system === "https://gs1.org/gtin" && id.value === "00123456789012"), true);
   assert.equal(device.property?.find((property) => property.type.coding?.[0]?.code === "eyesize")?.valueQuantity?.[0]?.code, "mm");
   assert.equal(charge.resourceType, "ChargeItemDefinition");
-  assert.equal(charge.derivedFromUri?.[0], "https://osod.dev/catalog/frames/SKU-1");
+  assert.equal(charge.derivedFromUri?.[0], "https://odos2020.com/catalog/frames/SKU-1");
   assert.equal(charge.code?.coding?.some((coding) => coding.system === "http://snomed.info/sct" && coding.code === "310105000"), true);
   assert.equal("useContext" in charge, false);
 });
@@ -86,7 +86,7 @@ test("Frame FHIR builders keep physical identity and billing rules split", () =>
 test("frame retail-only ChargeItemDefinition output is byte-for-byte unchanged when wholesale is omitted", () => {
   const input = {
     practiceId: "practice-a",
-    catalogCanonicalUrl: "https://osod.dev/catalog/frames/SKU-REGRESSION",
+    catalogCanonicalUrl: "https://odos2020.com/catalog/frames/SKU-REGRESSION",
     practiceSalePriceCents: 19900,
     hcpcsBaseCode: "V2020" as const,
   };
@@ -114,7 +114,7 @@ test("frame retail-only ChargeItemDefinition output is byte-for-byte unchanged w
 test("frame wholesale cost is isolated outside every patient-facing price component and claim line", () => {
   const definition = buildFrameChargeItemDefinition({
     practiceId: "practice-a",
-    catalogCanonicalUrl: "https://osod.dev/catalog/frames/SKU-ISOLATION",
+    catalogCanonicalUrl: "https://odos2020.com/catalog/frames/SKU-ISOLATION",
     practiceSalePriceCents: 19900,
     wholesaleCostCents: 4700,
     hcpcsBaseCode: "V2020",
@@ -122,14 +122,14 @@ test("frame wholesale cost is isolated outside every patient-facing price compon
 
   assert.deepEqual(definition.extension, [
     {
-      url: OSOD_WHOLESALE_COST_EXTENSION_URL,
+      url: ODOS_WHOLESALE_COST_EXTENSION_URL,
       valueMoney: { value: 47, currency: "USD" },
     },
   ]);
   assert.equal(definition.propertyGroup?.[0]?.priceComponent?.length, 1);
   assert.equal(definition.propertyGroup?.[0]?.priceComponent?.[0]?.amount?.value, 199);
   assert.equal(
-    JSON.stringify(definition.propertyGroup).includes(OSOD_WHOLESALE_COST_EXTENSION_URL),
+    JSON.stringify(definition.propertyGroup).includes(ODOS_WHOLESALE_COST_EXTENSION_URL),
     false,
   );
 
@@ -184,7 +184,7 @@ test("Frame claim validators enforce modifier, deluxe, GTIN, SHA-1, and LCD rule
 });
 
 test("Bulk ingest parses operator file by stream and preserves v0.6a audit math", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-v06a-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-v06a-"));
   const file = join(dir, "frames.csv");
   writeFileSync(
     file,
@@ -248,7 +248,7 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
         .filter((resource): resource is ChargeItemDefinition => resource.resourceType === "ChargeItemDefinition")
         .every((resource) => {
           const wholesale = resource.extension?.find(
-            (extension) => extension.url === OSOD_WHOLESALE_COST_EXTENSION_URL,
+            (extension) => extension.url === ODOS_WHOLESALE_COST_EXTENSION_URL,
           )?.valueMoney?.value;
           return wholesale === 47 || wholesale === 89;
         }),
@@ -260,7 +260,7 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
       written
         .filter((resource): resource is Provenance => resource.resourceType === "Provenance")
         .flatMap((provenance) => provenance.target?.map((target) => target.reference ?? "") ?? [])
-        .every((reference) => reference.startsWith("https://osod.dev/catalog/frames/") || reference.startsWith("https://osod.dev/practice/") || reference.startsWith("Task/")),
+        .every((reference) => reference.startsWith("https://odos2020.com/catalog/frames/") || reference.startsWith("https://odos2020.com/practice/") || reference.startsWith("Task/")),
       true,
     );
     assert.equal((written.find((resource): resource is Task => resource.resourceType === "Task")?.input?.[0]?.valueAttachment?.hash), fhirAttachmentSha1Base64("operator-upload://frames.csv"));
@@ -270,7 +270,7 @@ test("Bulk ingest parses operator file by stream and preserves v0.6a audit math"
 });
 
 test("Bulk ingest N=100 emits 200 FHIR resources and 403 attribution artifacts", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-v06a-100-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-v06a-100-"));
   const file = join(dir, "frames-100.csv");
   writeFileSync(
     file,
@@ -299,7 +299,7 @@ test("Bulk ingest N=100 emits 200 FHIR resources and 403 attribution artifacts",
 });
 
 test("Stream parser handles a 50MB NDJSON catalog drop without readFileSync or heap blowup", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-v06a-50mb-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-v06a-50mb-"));
   const file = join(dir, "frames-large.ndjson");
   const stream = createWriteStream(file);
   const filler = "x".repeat(256 * 1024);
@@ -379,7 +379,7 @@ test("Pass 4 deep scans enforce local-only terminology and Medplum fhirtypes-onl
   assert.doesNotMatch(source, /createHash\(["']sha256["']\)/);
 });
 
-test("SMART DeviceDefinition catalog scopes require first-party OSOD core client", () => {
+test("SMART DeviceDefinition catalog scopes require first-party ODOS core client", () => {
   const requestedScopes = [parseSmartResourceScope("system/DeviceDefinition.rs")];
   const thirdParty = evaluateSmartScopeIntersection({
     appClientId: "third-party-inventory",
@@ -391,7 +391,7 @@ test("SMART DeviceDefinition catalog scopes require first-party OSOD core client
   assert.equal(thirdParty.outcomeClass, "rejected");
 
   const firstParty = evaluateSmartScopeIntersection({
-    appClientId: "osod-core",
+    appClientId: "odos-core",
     userId: "user-1",
     roleId: "practice-admin",
     clientAuthClass: "confidential-asymmetric",
@@ -410,8 +410,8 @@ test("HCPCS seed rows mark V-series frame codes laterality-exempt", () => {
 test("SQL substrate statically covers overlay isolation, FORCE RLS, SCD, and DR table manifest", () => {
   const sql = readFileSync(resolve(REPO_ROOT, "data/migrations/2026-05-09-v06a-frames-data.sql"), "utf8");
   assert.match(sql, /catalog_canonical_url TEXT NOT NULL/);
-  assert.match(sql, /USING \(practice_id = current_setting\('osod\.practice_id', true\)\)/);
-  assert.match(sql, /WITH CHECK \(practice_id = current_setting\('osod\.practice_id', true\)\)/);
+  assert.match(sql, /USING \(practice_id = current_setting\('odos\.practice_id', true\)\)/);
+  assert.match(sql, /WITH CHECK \(practice_id = current_setting\('odos\.practice_id', true\)\)/);
   assert.match(sql, /CREATE UNIQUE INDEX IF NOT EXISTS idx_frames_catalog_sku_active_unique/);
   assert.match(sql, /WHERE effective_to IS NULL/);
   assert.match(sql, /gtin14 CHARACTER\(14\) CHECK \(gtin14 IS NULL OR gtin14 ~ '\^\[0-9\]\{14\}\$'\)/);
@@ -422,7 +422,7 @@ test("SQL substrate statically covers overlay isolation, FORCE RLS, SCD, and DR 
 
 test("Dispensary POS lookup remains under 100ms p95 over a 100K-row fixture", () => {
   const rows: FrameCatalogItem[] = Array.from({ length: 100_000 }, (_, index) => ({
-    canonicalUrl: `https://osod.dev/catalog/frames/SKU-${index}`,
+    canonicalUrl: `https://odos2020.com/catalog/frames/SKU-${index}`,
     sku: `SKU-${index}`,
     display: `Brand Model ${index}`,
     manufacturer: "Manufacturer",
@@ -455,7 +455,7 @@ test("Inventory UI has no password field and no raw SQL route", () => {
   ].map((file) => readFileSync(file, "utf8")).join("\n");
   assert.doesNotMatch(uiFiles, /type=["']password["']/i);
   assert.doesNotMatch(uiFiles, /passwordSecret|framesDataPassword|bearer token|api key/i);
-  assert.doesNotMatch(uiFiles, /\bSELECT\b|\bosod_frames_catalog\b|\bosod_practice_frames_inventory\b/i);
+  assert.doesNotMatch(uiFiles, /\bSELECT\b|\bodos_frames_catalog\b|\bodos_practice_frames_inventory\b/i);
   assert.match(uiFiles, /DeviceDefinition/);
   assert.match(uiFiles, /Basic/);
   assert.match(uiFiles, /Username/);

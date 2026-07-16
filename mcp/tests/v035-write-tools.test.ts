@@ -84,7 +84,7 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-v035-write-tools-test",
+    clientName: "odos-mcp-v035-write-tools-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -320,15 +320,15 @@ test("v0.35 MCP write tools create version-aware FHIR resources with Provenance"
           participants: [
             {
               role_text: "Primary optometrist",
-              practitioner_role_reference: "PractitionerRole/osod-test-role",
-              practitioner_reference: "Practitioner/osod-test-practitioner",
+              practitioner_role_reference: "PractitionerRole/odos-test-role",
+              practitioner_reference: "Practitioner/odos-test-practitioner",
             },
           ],
         },
       }),
     );
 
-    assert.equal(output.careTeam.participant?.[0]?.member?.reference, "PractitionerRole/osod-test-role");
+    assert.equal(output.careTeam.participant?.[0]?.member?.reference, "PractitionerRole/odos-test-role");
     assertProvenance(output.provenance, `CareTeam/${output.careTeam.id}`);
   });
 

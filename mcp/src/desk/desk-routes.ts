@@ -115,7 +115,7 @@ function routeFailure(res: Response, error: unknown, fallback: string): void {
   } else if (error instanceof DayAlreadySealedError || message.includes("guarded read limit") || message.includes("totals are unavailable")) {
     res.status(409).json({ error: message });
   } else {
-    console.error(`osod-mcp: ${fallback}`, error);
+    console.error(`odos-mcp: ${fallback}`, error);
     res.status(500).json({ error: fallback });
   }
 }
@@ -148,7 +148,7 @@ async function handleDayLedger(req: Request, res: Response, deps: DeskRouteDeps)
       throw error;
     }
   } catch (error) {
-    console.error("osod-mcp: /desk/ledger failed:", error);
+    console.error("odos-mcp: /desk/ledger failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Day Ledger route failed." });
   }
 }
@@ -170,7 +170,7 @@ async function handleDeskWhoAmI(req: Request, res: Response, deps: DeskRouteDeps
     }
     res.json({ roles: resolved.roles });
   } catch (error) {
-    console.error("osod-mcp: /desk/whoami failed:", error);
+    console.error("odos-mcp: /desk/whoami failed:", error);
     if (!res.headersSent) res.status(503).json({ error: "Practice role service unavailable." });
   }
 }
@@ -190,7 +190,7 @@ async function handleDeskSummary(req: Request, res: Response, deps: DeskRouteDep
     });
     res.json(summary);
   } catch (error) {
-    console.error("osod-mcp: /desk/summary failed:", error);
+    console.error("odos-mcp: /desk/summary failed:", error);
     if (!res.headersSent) res.status(500).json({ error: "Desk summary route failed." });
   }
 }

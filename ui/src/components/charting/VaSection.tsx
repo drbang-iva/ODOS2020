@@ -19,7 +19,7 @@ interface VaRowState {
   correction: VisualAcuitySectionSaveEntry["correction"];
 }
 
-const OPERATOR = "OSOD UI save_va";
+const OPERATOR = "ODOS UI save_va";
 
 export function VaSection({ patientReference, encounterReference, onSaved }: Props) {
   const [rows, setRows] = useState<Record<"OD" | "OS", VaRowState>>({

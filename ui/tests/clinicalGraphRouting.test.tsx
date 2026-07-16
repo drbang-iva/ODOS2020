@@ -15,13 +15,14 @@ const UI_ROOT = join(process.cwd(), "src");
 
 test("Vite proxies relative clinical-graph requests to the MCP server", () => {
   const config = readFileSync(join(process.cwd(), "vite.config.ts"), "utf8");
-  assert.match(config, /"\/clinical-graph": \{ target: "http:\/\/localhost:3333", changeOrigin: true \}/);
+  assert.match(config, /const mcpTarget = env\.VITE_ODOS_MCP_BASE_URL \|\| "http:\/\/localhost:3333"/);
+  assert.match(config, /"\/clinical-graph": \{ target: mcpTarget, changeOrigin: true \}/);
 });
 
 test("clinical-graph requests share the literal Vite route and Medplum authorization helpers", () => {
   const clientPath = join(UI_ROOT, "lib", "clinical-graph-client.ts");
   const client = readFileSync(clientPath, "utf8");
-  assert.match(client, /import\.meta\.env\?\.VITE_OSOD_MCP_BASE_URL/);
+  assert.match(client, /import\.meta\.env\?\.VITE_ODOS_MCP_BASE_URL/);
   assert.match(client, /fhir\.authHeader\(\)/);
 
   const callers = sourceFiles(UI_ROOT)
@@ -104,9 +105,9 @@ test("Auto-Refraction renders directly typeable binocular PD fields and saves th
   }
 });
 
-test("no UI source references the obsolete osod_access_token key", () => {
+test("no UI source references the obsolete odos_access_token key", () => {
   for (const path of sourceFiles(UI_ROOT)) {
-    assert.doesNotMatch(readFileSync(path, "utf8"), /osod_access_token/, path);
+    assert.doesNotMatch(readFileSync(path, "utf8"), /odos_access_token/, path);
   }
 });
 

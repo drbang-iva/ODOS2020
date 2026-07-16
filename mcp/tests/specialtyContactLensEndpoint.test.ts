@@ -8,8 +8,8 @@ import {
   CONTACT_LENS_TYPE_CODE_SYSTEM,
   UCUM_CODE_SYSTEM,
 } from "../src/fhir/contactLens.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
-import { osodConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { buildSpecialtyContactLensFindingDefinitionStub } from "../src/clinical-graph/contact-lens-definition.js";
 import {
   handleSpecialtyContactLensCaptureRequest,
@@ -118,7 +118,7 @@ test("specialty CL capture persists per eye with existing type, material, and pa
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), [
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_section_observations"), true);
   for (const provenance of created
     .map((entry) => entry.resource)
     .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
@@ -128,7 +128,7 @@ test("specialty CL capture persists per eye with existing type, material, and pa
   assert.equal(observations.every((observation) => observation.status === "preliminary"), true);
   assert.deepEqual(observations.map((observation) => observation.bodySite?.coding?.[0]?.code), ["OD", "OS"]);
   const od = observations[0];
-  assert.equal(od?.code.coding?.some((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "specialty_contact_lens"), true);
+  assert.equal(od?.code.coding?.some((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "specialty_contact_lens"), true);
   assert.equal(od?.performer?.[0]?.reference, "Practitioner/doc1");
   assert.equal(od?.effectiveDateTime, "2026-07-10T14:00:00.000Z");
   assert.equal(componentValue(od, "base-curve-mm"), 7.8);
@@ -146,7 +146,7 @@ test("specialty CL capture persists per eye with existing type, material, and pa
     assert.equal(component?.valueQuantity?.system, UCUM_CODE_SYSTEM);
   }
   assert.equal(componentValue(od, "SPECIALTY_HVID_MM"), 11.8);
-  assert.equal(findComponent(od, "SPECIALTY_HVID_MM")?.code.coding?.[0]?.system, OSOD_OPHTHALMOLOGY_CODE_SYSTEM);
+  assert.equal(findComponent(od, "SPECIALTY_HVID_MM")?.code.coding?.[0]?.system, ODOS_OPHTHALMOLOGY_CODE_SYSTEM);
 });
 
 test("additional fields persist only while selected and populated", async () => {
@@ -359,9 +359,9 @@ function autoK(
     resourceType: "Observation",
     id,
     status: "final",
-    code: osodConcept("auto_keratometry", "Auto-keratometry"),
+    code: odosConcept("auto_keratometry", "Auto-keratometry"),
     subject: { reference: BODY.patientReference },
-    bodySite: osodConcept(eye, eye),
+    bodySite: odosConcept(eye, eye),
     effectiveDateTime,
     component: [
       quantityComponent("FLAT_K", flatK, "D"),
@@ -373,7 +373,7 @@ function autoK(
 }
 
 function quantityComponent(code: string, value: number, unit: string): NonNullable<Observation["component"]>[number] {
-  return { code: osodConcept(code, code), valueQuantity: { value, unit } };
+  return { code: odosConcept(code, code), valueQuantity: { value, unit } };
 }
 
 function bundle(resources: Observation[]): Bundle<Observation> {

@@ -7,7 +7,7 @@ import {
 } from "../../lib/patient-insurance";
 import {
   APPOINTMENT_CONFIRMATION_STATUSES,
-  OSOD_APPOINTMENT_STATUSES,
+  ODOS_APPOINTMENT_STATUSES,
   resourceDisplay,
   scheduleReference,
   visitTypeCode,
@@ -15,7 +15,7 @@ import {
   visibleSchedulingVisitTypes,
   type AppointmentConfirmationStatus,
   type ClinicMode,
-  type OsodAppointmentStatus,
+  type OdosAppointmentStatus,
 } from "../../lib/scheduling";
 import {
   appointmentModalDurationError,
@@ -43,7 +43,7 @@ type PatientInsuranceLoader = (patientReference: string) => Promise<InsuranceScr
 const defaultPatientInsuranceLoader: PatientInsuranceLoader = (patientReference) =>
   fetchPatientInsurance(patientReference, {
     authorization: fhir.authHeader(),
-    baseUrl: import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
+    baseUrl: import.meta.env.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
   });
 
 export function AppointmentDetailsModal({
@@ -74,7 +74,7 @@ export function AppointmentDetailsModal({
   ) => Promise<void>;
   onSetStatus: (
     appointment: Appointment,
-    status: OsodAppointmentStatus,
+    status: OdosAppointmentStatus,
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
   loadPatientInsurance?: PatientInsuranceLoader;
@@ -203,7 +203,7 @@ export function AppointmentDetailsModal({
     }
   }
 
-  async function transition(status: OsodAppointmentStatus) {
+  async function transition(status: OdosAppointmentStatus) {
     if (!appointment) {
       setDraft((current) => ({ ...current, status }));
       return;
@@ -450,10 +450,10 @@ export function AppointmentDetailsModal({
                   className="scheduler-input"
                   value={draft.status}
                   onChange={(event) =>
-                    setDraft((current) => ({ ...current, status: event.target.value as OsodAppointmentStatus }))
+                    setDraft((current) => ({ ...current, status: event.target.value as OdosAppointmentStatus }))
                   }
                 >
-                  {OSOD_APPOINTMENT_STATUSES.map((status) => (
+                  {ODOS_APPOINTMENT_STATUSES.map((status) => (
                     <option key={status.code} value={status.code}>
                       {status.display}
                     </option>

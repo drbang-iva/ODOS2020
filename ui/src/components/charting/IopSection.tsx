@@ -68,7 +68,7 @@ interface IopEyeResult {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_iop";
+const OPERATOR = "ODOS UI clinical_graph_iop";
 
 export function IopSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<IopDefinition["definitions"] | null>(null);

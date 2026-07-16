@@ -6,7 +6,7 @@ import express from "express";
 import { OFFICE_ACK_CODE, OFFICE_ACK_SYSTEM, OFFICE_AUDIENCE_CODE, OFFICE_AUDIENCE_SYSTEM, OFFICE_CATEGORY_CODE, OFFICE_CATEGORY_SYSTEM } from "../src/office/office-channel.js";
 import { officeActingRole, registerOfficeRoutes } from "../src/office/office-routes.js";
 
-const LAB_CATEGORY_SYSTEM = "https://osod.dev/fhir/CodeSystem/communication-category";
+const LAB_CATEGORY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/communication-category";
 const LAB_CATEGORY_CODE = "optical-lab-order";
 
 test("Office channel closes the real FHIR-store round trip and keeps Office and lab Communications disjoint", async () => {

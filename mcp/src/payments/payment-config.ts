@@ -9,7 +9,7 @@ import type { PaymentProcessorAdapter } from "./payment-processor-adapter.js";
  * to its concrete processor adapter, wired with the per-request FHIR client + injected transport/clock.
  *
  * Record-only CASH, CHECK, and CARD_MANUAL use payment-collection-handler instead. Per-practice
- * adapter config persistence (`osod_payment_adapter_config` + secrets store) is deferred per the 2026-05-05
+ * adapter config persistence (`odos_payment_adapter_config` + secrets store) is deferred per the 2026-05-05
  * architecture; registrations are constructed at service start from that config.
  */
 

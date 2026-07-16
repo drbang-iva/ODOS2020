@@ -2,13 +2,13 @@ import type { Bundle, Encounter, OperationOutcome, Provenance, Resource } from "
 import type { JsonPatchOperation } from "./fhir";
 
 export const ENCOUNTER_COMPREHENSIVE_EXAM_PROFILE =
-  "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam";
+  "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam";
 
 const V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
-const FALLBACK_PRACTITIONER_REFERENCE = "Practitioner/osod-admin";
+const FALLBACK_PRACTITIONER_REFERENCE = "Practitioner/odos-admin";
 
 export function buildStartEncounterCreateBundle(input: {
   patientId: string;
@@ -51,7 +51,7 @@ export function buildStartEncounterCreateBundle(input: {
           recorded: input.now,
           activityCode: "CREATE",
           activityDisplay: "Create",
-          operatorDisplay: "OSOD UI start_encounter",
+          operatorDisplay: "ODOS UI start_encounter",
           practitionerReference: input.practitionerReference,
         }),
         request: { method: "POST", url: "Provenance" },

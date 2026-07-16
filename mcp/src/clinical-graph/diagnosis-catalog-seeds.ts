@@ -32,7 +32,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: new Date(0).toISOString(),
-    actorReference: "Practitioner/osod-system",
+    actorReference: "Practitioner/odos-system",
   };
   const glaucoma = loadLedger(GLAUCOMA_LEDGER_PATH);
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);

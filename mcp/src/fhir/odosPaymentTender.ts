@@ -4,15 +4,15 @@ import type { Extension } from "@medplum/fhirtypes";
  * Local ODOS vocabulary + extension for record-only payment tenders.
  *
  * R4 has no coded field for how a payment was tendered, so the Slice-3 spec §7
- * trap #5 calls for a local `osod-payment-tender` extension carried on the Invoice. Source: Foxfire
+ * trap #5 calls for a local `odos-payment-tender` extension carried on the Invoice. Source: Foxfire
  * reverse-engineering corpus `orders-optical-cl.md:85` — the Transactions-screen payment Codes,
  * verbatim (CASH · CHECK). CARD_MANUAL is ODOS's record-only keyed-card tender; it carries no
  * processor interaction or card data.
  */
-export const OSOD_PAYMENT_TENDER_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-tender";
+export const ODOS_PAYMENT_TENDER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender";
 
-export const OSOD_PAYMENT_TENDER_SYSTEM = "https://osod.dev/fhir/CodeSystem/payment-tender";
+export const ODOS_PAYMENT_TENDER_SYSTEM = "https://odos2020.com/fhir/CodeSystem/payment-tender";
 
 export const PAYMENT_TENDERS = [
   { code: "CASH", display: "Cash" },
@@ -54,16 +54,16 @@ export function assertPaymentTender(code: string): asserts code is PaymentTender
   }
 }
 
-/** Build the osod-payment-tender extension carrying a record-only tender as a coded value. */
+/** Build the odos-payment-tender extension carrying a record-only tender as a coded value. */
 export function paymentTenderExtension(code: string): Extension {
   assertPaymentTender(code);
   const tender = TENDER_BY_CODE.get(code)!;
   return {
-    url: OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
     valueCodeableConcept: {
       coding: [
         {
-          system: OSOD_PAYMENT_TENDER_SYSTEM,
+          system: ODOS_PAYMENT_TENDER_SYSTEM,
           code: tender.code,
           display: tender.display,
         },
@@ -74,7 +74,7 @@ export function paymentTenderExtension(code: string): Extension {
 }
 
 /**
- * Build the osod-payment-tender extension for a PaymentReconciliation (the settling payment).
+ * Build the odos-payment-tender extension for a PaymentReconciliation (the settling payment).
  *
  * Lenient by design: known manual + processor codes get their corpus-verbatim display, the adapter
  * may override the display with an instrument label (e.g. "VISA ****4242" — brand + last-4 are not
@@ -90,11 +90,11 @@ export function paymentTenderExtensionForReconciliation(tender: {
   }
   const display = tender.display ?? KNOWN_DISPLAY_BY_CODE.get(tender.code);
   return {
-    url: OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
     valueCodeableConcept: {
       coding: [
         {
-          system: OSOD_PAYMENT_TENDER_SYSTEM,
+          system: ODOS_PAYMENT_TENDER_SYSTEM,
           code: tender.code,
           ...(display ? { display } : {}),
         },

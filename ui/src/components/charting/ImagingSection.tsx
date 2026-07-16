@@ -79,7 +79,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     try {
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/imaging`, {
         method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/vnd.osod.manual-imaging+json" },
+        headers: { ...authHeaders(), "Content-Type": "application/vnd.odos.manual-imaging+json" },
         body: JSON.stringify({
           patientReference,
           encounterReference,
@@ -105,7 +105,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
         completed: true,
         summary,
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI manual imaging",
+        operator: "ODOS UI manual imaging",
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));

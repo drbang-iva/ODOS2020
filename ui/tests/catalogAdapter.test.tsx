@@ -45,7 +45,7 @@ test("singletonListAdapter round-trips list, save, deactivate, reorder, discard,
     buildResource: (next) => ({
       resourceType: "Basic",
       code: { text: "Fixture" },
-      extension: [{ url: "urn:osod:test:fixture-config", valueString: JSON.stringify(next) }],
+      extension: [{ url: "urn:odos:test:fixture-config", valueString: JSON.stringify(next) }],
     }),
     fhirClient: {
       async create(resource, sourceTag) {

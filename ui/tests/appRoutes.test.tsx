@@ -141,7 +141,7 @@ test("the Clinic route opens the real Clinic home while the patient picker stays
 test("insurance screens expose the MCP base URL as a literal Vite environment reference", () => {
   for (const scene of ["PatientInsurance.tsx", "VisionPlanBenefits.tsx"]) {
     const source = readFileSync(new URL(`../src/scenes/insurance/${scene}`, import.meta.url), "utf8");
-    assert.match(source, /import\.meta\.env\.VITE_OSOD_MCP_BASE_URL/);
+    assert.match(source, /import\.meta\.env\.VITE_ODOS_MCP_BASE_URL/);
     assert.doesNotMatch(source, /const meta = import\.meta as/);
   }
 });

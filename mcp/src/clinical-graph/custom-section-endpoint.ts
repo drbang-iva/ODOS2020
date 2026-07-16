@@ -1,8 +1,8 @@
 import type { Bundle, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
-import { OSOD_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import {
   appendCustomFieldComponentsToObservation,
   customFieldEntries,
@@ -41,7 +41,7 @@ export interface CustomSectionEndpointDeps {
   now?: () => string;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES: Eye[] = ["OD", "OS"];
 
 const eyePayloadSchema = z.object({
@@ -198,7 +198,7 @@ export async function handleCustomSectionHistoryRequest(
   }
   const bundle = await staff.fhir.search<Observation>("Observation", {
     subject: parsed.data.patient,
-    code: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`,
+    code: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`,
     ...(parsed.data.encounter ? { encounter: parsed.data.encounter } : {}),
     _sort: "-date",
     _count: "200",
@@ -268,7 +268,7 @@ async function persistCapture(
 }
 
 function observationEye(observation: Observation): string | undefined {
-  return observation.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+  return observation.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code;
 }
 

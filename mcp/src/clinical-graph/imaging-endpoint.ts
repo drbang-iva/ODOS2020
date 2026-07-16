@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import type { DiagnosticReport, Media, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { osodConcept, reference } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
 
-export const MANUAL_IMAGING_CONTENT_TYPE = "application/vnd.osod.manual-imaging+json";
+export const MANUAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.manual-imaging+json";
 export const MAX_MANUAL_IMAGING_BYTES = 15 * 1024 * 1024;
 
 export interface ImagingFhirClient {
@@ -23,7 +23,7 @@ export interface ImagingEndpointDeps {
   now?: () => string;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/manual_imaging_upload" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/manual_imaging_upload" } as const;
 const CATEGORY_DISPLAY = {
   "visual-field": "Visual field",
   "fundus-photo": "Fundus photo",
@@ -126,8 +126,8 @@ function buildMedia(
   return {
     resourceType: "Media",
     status: "completed",
-    type: osodConcept(document ? "document" : "image", document ? "Document" : "Image"),
-    modality: osodConcept(input.category, CATEGORY_DISPLAY[input.category]),
+    type: odosConcept(document ? "document" : "image", document ? "Document" : "Image"),
+    modality: odosConcept(input.category, CATEGORY_DISPLAY[input.category]),
     subject: reference(input.patientReference),
     encounter: reference(input.encounterReference),
     createdDateTime: recordedAt,
@@ -154,7 +154,7 @@ function buildDiagnosticReport(
   return {
     resourceType: "DiagnosticReport",
     status: "preliminary",
-    code: osodConcept("manual-imaging-interpretation", "Manual imaging interpretation"),
+    code: odosConcept("manual-imaging-interpretation", "Manual imaging interpretation"),
     subject: reference(patientReference),
     encounter: reference(encounterReference),
     effectiveDateTime: recordedAt,

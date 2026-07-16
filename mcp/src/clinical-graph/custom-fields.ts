@@ -6,7 +6,7 @@ import {
   UCUM_UNIT_CODES,
   type UcumUnitCode,
 } from "../fhir/contactLens.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import type {
   ClinicalFindingDefinition,
   ClinicalGraphProvenance,
@@ -372,7 +372,7 @@ export function codeCustomFieldComponents(
       const option = field.options?.find((candidate) => candidate.code === component.valueString);
       if (!option) return component;
       const { valueString: _valueString, ...rest } = component;
-      return { ...rest, valueCodeableConcept: osodConcept(option.code, option.display) };
+      return { ...rest, valueCodeableConcept: odosConcept(option.code, option.display) };
     }),
   };
 }
@@ -385,7 +385,7 @@ export function appendCustomFieldComponentsToObservation(
 ): Observation {
   const additions: ObservationComponent[] = customFieldComponents(values, definition, codePrefix)
     .map((item) => ({
-      code: osodConcept(item.code, item.display),
+      code: odosConcept(item.code, item.display),
       ...(typeof item.value === "number"
         ? {
             valueQuantity: {

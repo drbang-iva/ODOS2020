@@ -22,7 +22,7 @@ import {
   projectFindingInstanceToObservation,
   rejectDiagnosisSuggestionEdge,
 } from "../src/clinical-graph/glaucoma-suspect.js";
-import { osodConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
 
 const REPO_ROOT = resolve(process.cwd(), "..");
 const provenance = {
@@ -89,23 +89,23 @@ test("Phase 0 ledger carries verified glaucoma seeds and explicit not-bill-ready
   );
 });
 
-test("Phase 1 migration declares the OSOD-owned clinical graph entities", () => {
+test("Phase 1 migration declares the ODOS-owned clinical graph entities", () => {
   const sql = readFileSync(
     resolve(REPO_ROOT, "data/migrations/2026-06-14-glaucoma-suspect-clinical-graph.sql"),
     "utf8",
   );
 
   for (const table of [
-    "osod_clinical_finding_definitions",
-    "osod_finding_instances",
-    "osod_diagnosis_definitions",
-    "osod_diagnosis_suggestion_edges",
-    "osod_encounter_diagnoses",
-    "osod_encounter_diagnosis_evidence",
-    "osod_protocol_definitions",
-    "osod_plan_action_instances",
-    "osod_procedure_charge_rules",
-    "osod_charge_proposals",
+    "odos_clinical_finding_definitions",
+    "odos_finding_instances",
+    "odos_diagnosis_definitions",
+    "odos_diagnosis_suggestion_edges",
+    "odos_encounter_diagnoses",
+    "odos_encounter_diagnosis_evidence",
+    "odos_protocol_definitions",
+    "odos_plan_action_instances",
+    "odos_procedure_charge_rules",
+    "odos_charge_proposals",
   ]) {
     assert.match(sql, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
@@ -212,7 +212,7 @@ test("Phase 2 capture projects standalone glaucoma evidence to Observation plus 
     observationId: "observation-cd-od-runtime",
     laterality: "OD",
     value: { type: "quantity", value: 0.64, unit: "ratio", code: "1" },
-    method: osodConcept("manual-entry", "Manual entry"),
+    method: odosConcept("manual-entry", "Manual entry"),
     performerReferences: ["Practitioner/dr-bang"],
     recordedAt: "2026-06-14T13:00:00.000Z",
     provenance,
@@ -917,7 +917,7 @@ test("practice-added IOP method persists in editable option data and round-trips
     findingInstanceId: "finding-iop-practice-method",
     laterality: "OD",
     value: { type: "quantity", value: 18, unit: "mmHg", system: "http://unitsofmeasure.org", code: "mm[Hg]" },
-    method: osodConcept("ORA-CUSTOM", "ORA custom"),
+    method: odosConcept("ORA-CUSTOM", "ORA custom"),
     recordedAt: "2026-07-09T13:25:00.000Z",
     provenance,
   });
@@ -1091,8 +1091,8 @@ test("clinical severity, disease stage, and payer-risk bucket remain independent
     laterality: "OD",
     verificationStatus: "confirmed",
     confirmedAt: provenance.recordedAt,
-    clinicalSeverity: osodConcept("mild-clinical-severity", "Mild clinical severity"),
-    diseaseStage: osodConcept("pre-perimetric-stage", "Pre-perimetric stage"),
+    clinicalSeverity: odosConcept("mild-clinical-severity", "Mild clinical severity"),
+    diseaseStage: odosConcept("pre-perimetric-stage", "Pre-perimetric stage"),
     payerRiskBucket: "high",
     provenance,
   });

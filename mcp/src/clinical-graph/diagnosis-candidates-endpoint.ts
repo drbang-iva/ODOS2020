@@ -1,6 +1,6 @@
 import type { Basic, Bundle, Observation } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { OSOD_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { evaluateMappingTrigger } from "./diagnosis-mapping.js";
@@ -271,7 +271,7 @@ function refractionFindingValue(observation: Observation): FindingValue | undefi
 }
 
 function observationLaterality(observation: Observation): FindingInstance["laterality"] {
-  const code = observation.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+  const code = observation.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
     observation.bodySite?.coding?.find((coding) => coding.code)?.code;
   return code === "OD" || code === "OS" || code === "OU" ? code : "UNKNOWN";

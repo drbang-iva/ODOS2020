@@ -27,7 +27,7 @@ function clickEvent(link: HTMLAnchorElement, options: Partial<MouseEvent> = {}) 
 }
 
 test("same-origin anchor clicks use pushState without assigning location", () => {
-  const location = { href: "http://osod.local/settings", origin: "http://osod.local" };
+  const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const click = clickEvent(anchor("/settings/staff?from=index#roles"));
@@ -35,11 +35,11 @@ test("same-origin anchor clicks use pushState without assigning location", () =>
   assert.equal(interceptAppNavigation(click.event, location, history), true);
   assert.equal(click.wasPrevented(), true);
   assert.deepEqual(pushes, ["/settings/staff?from=index#roles"]);
-  assert.deepEqual(location, { href: "http://osod.local/settings", origin: "http://osod.local" });
+  assert.deepEqual(location, { href: "http://odos.local/settings", origin: "http://odos.local" });
 });
 
 test("modified, middle, and target-blank anchor clicks retain native navigation", () => {
-  const location = { href: "http://osod.local/settings", origin: "http://osod.local" };
+  const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const clicks = [
@@ -59,12 +59,12 @@ test("modified, middle, and target-blank anchor clicks retain native navigation"
 });
 
 test("external, native, download, hash, and full-page routes retain native navigation", () => {
-  const location = { href: "http://osod.local/settings", origin: "http://osod.local" };
+  const location = { href: "http://odos.local/settings", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const links = [
     anchor("https://example.com/help"),
-    anchor("mailto:desk@osod.local"),
+    anchor("mailto:desk@odos.local"),
     anchor("tel:+15551234567"),
     anchor("/settings/staff", { "data-native": "" }),
     anchor("/exports/report.csv", { download: "" }),
@@ -83,7 +83,7 @@ test("external, native, download, hash, and full-page routes retain native navig
 });
 
 test("already-handled internal clicks do not create a second history entry", () => {
-  const location = { href: "http://osod.local/desk", origin: "http://osod.local" };
+  const location = { href: "http://odos.local/desk", origin: "http://odos.local" };
   const pushes: string[] = [];
   const history = { pushState: (_state: unknown, _title: string, url?: string | URL | null) => pushes.push(String(url)) };
   const click = clickEvent(anchor("/settings"), { defaultPrevented: true });

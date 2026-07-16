@@ -3,16 +3,16 @@ import { Buffer } from "node:buffer";
 import { test } from "node:test";
 import type { Binary, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import {
-  OSOD_CLINICAL_AMENDMENT_POLICY_URL,
-  OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+  ODOS_CLINICAL_AMENDMENT_POLICY_URL,
+  ODOS_CLINICAL_ATTESTATION_POLICY_URL,
 } from "../../policy/attestation-policy-urls.js";
-import { OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD } from "../../policy/observation-relationship-types.js";
+import { ODOS_APPEND_OBSERVATION_RELATIONSHIP_FIELD } from "../../policy/observation-relationship-types.js";
 import { assertProvenanceActivityCode } from "../../policy/provenance-activity-map.js";
 import {
   buildAuditEventProjection,
-  buildOsodAuditEventRow,
+  buildOdosAuditEventRow,
   ocrStyleAuditQuery,
-} from "../src/authz/osodAudit.js";
+} from "../src/authz/odosAudit.js";
 import { verifyRestoreIntegrity } from "../src/authz/restoreIntegrity.js";
 import {
   appendObservationContextSchema,
@@ -138,7 +138,7 @@ test("clinician attestation transaction patches preliminary to final and creates
   assert.equal(transaction.bundle.entry?.[0]?.request?.method, "PATCH");
   assert.equal(transaction.bundle.entry?.[1]?.request?.method, "PUT");
   assert.equal(provenance.activity?.coding?.[0]?.code, "CREATE");
-  assert.equal(provenance.policy?.[0], OSOD_CLINICAL_ATTESTATION_POLICY_URL);
+  assert.equal(provenance.policy?.[0], ODOS_CLINICAL_ATTESTATION_POLICY_URL);
   assert.equal(provenance.agent[0].who.reference, "Practitioner/clinician-1");
   assert.equal(provenance.agent[0].role?.[0]?.coding?.[0]?.code, "clinician");
   assert.equal(provenance.signature?.[0]?.type?.[0]?.code, "1.2.840.10065.1.12.1.1");
@@ -163,7 +163,7 @@ test("attestation audit row carries clinician attribution, policy URL, and Prove
     actorRole: "clinician",
     observation: PRELIMINARY_OBSERVATION,
     provenanceId: "prov-attest",
-    policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
   });
   const auditEvent = buildAuditEventProjection(row);
 
@@ -173,7 +173,7 @@ test("attestation audit row carries clinician attribution, policy URL, and Prove
   assert.equal(row.patientId, "patient-1");
   assert.equal(row.provenanceId, "prov-attest");
   assert.equal(auditEvent.outcome, "0");
-  assert.equal(auditEvent.agent[0].policy?.[0], OSOD_CLINICAL_ATTESTATION_POLICY_URL);
+  assert.equal(auditEvent.agent[0].policy?.[0], ODOS_CLINICAL_ATTESTATION_POLICY_URL);
 });
 
 test("Mandate 8 negative 5: failed attestation transaction has serious-failure audit row shape", () => {
@@ -182,7 +182,7 @@ test("Mandate 8 negative 5: failed attestation transaction has serious-failure a
     actorRole: "clinician",
     observation: PRELIMINARY_OBSERVATION,
     actionReason: "attestation failed: Provenance create rejected; transaction rolled back",
-    policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
   });
   const auditEvent = buildAuditEventProjection(row);
 
@@ -225,7 +225,7 @@ test("amendment transactions map target statuses to canonical Provenance.activit
     provenanceId: "prov-nullify",
   });
   assert.equal(nullified.activityCode, "NULLIFY");
-  assert.equal(nullified.provenance.policy?.[0], OSOD_CLINICAL_AMENDMENT_POLICY_URL);
+  assert.equal(nullified.provenance.policy?.[0], ODOS_CLINICAL_AMENDMENT_POLICY_URL);
 });
 
 test("successive amendments create distinct Provenance ids, timestamps, and signatures", () => {
@@ -272,7 +272,7 @@ test("APPEND creates a new final Observation linked by derivedFrom and leaves or
 
   assert.equal(FINAL_OBSERVATION.status, "final");
   assert.equal(transaction.observation.status, "final");
-  assert.equal(transaction.observation[OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD]?.[0]?.reference, "Observation/obs-final");
+  assert.equal(transaction.observation[ODOS_APPEND_OBSERVATION_RELATIONSHIP_FIELD]?.[0]?.reference, "Observation/obs-final");
   assert.equal(transaction.provenance.activity?.coding?.[0]?.code, "APPEND");
 });
 
@@ -299,7 +299,7 @@ test("Mandate 8 negative 7: signed Observation hard-delete is rejected with cano
 
 test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", () => {
   const rows = [
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "read",
       eventTime: "2026-04-01T12:00:00.000Z",
       actorId: "front-desk-1",
@@ -322,7 +322,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
       actorRole: "clinician",
       observation: FINAL_OBSERVATION,
       provenanceId: "prov-amend",
-      policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+      policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
       actionReason: "UPDATE",
     }),
   ];
@@ -336,7 +336,7 @@ test("OCR-style 90-day query surfaces v0.5c audit rows with full attribution", (
   assert.equal(result.length, 3);
   assert.equal(result.some((row) => row.actorRole === "scribe"), true);
   assert.equal(result.some((row) => row.provenanceId === "prov-amend"), true);
-  assert.equal(result.some((row) => row.policyUrl === OSOD_CLINICAL_AMENDMENT_POLICY_URL), true);
+  assert.equal(result.some((row) => row.policyUrl === ODOS_CLINICAL_AMENDMENT_POLICY_URL), true);
 });
 
 function signature(label: string): string {

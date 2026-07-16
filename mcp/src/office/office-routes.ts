@@ -62,7 +62,7 @@ async function withStaff(
     }
     await action({ ...staff, actorRole });
   } catch (error) {
-    console.error("osod-mcp: Office channel route failed:", error);
+    console.error("odos-mcp: Office channel route failed:", error);
     if (res.headersSent) return;
     if (error instanceof OfficeMessageValidationError) {
       res.status(400).json({ error: error.message });

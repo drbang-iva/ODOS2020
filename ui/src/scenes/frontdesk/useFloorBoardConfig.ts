@@ -3,8 +3,8 @@ import { useEffect, useSyncExternalStore } from "react";
 import { fhir } from "../../lib/fhir";
 import {
   DEFAULT_FLOOR_BOARD_CONFIG,
-  OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_SYSTEM,
   parseFloorConfigResource,
   type FloorBoardConfig,
 } from "../../lib/floor-board";
@@ -51,7 +51,7 @@ export async function loadFloorConfigSingleton(
     const bundle = await client.search<Basic>(
       "Basic",
       new URLSearchParams([
-        ["code", `${OSOD_FLOOR_CONFIG_SYSTEM}|${OSOD_FLOOR_CONFIG_CODE}`],
+        ["code", `${ODOS_FLOOR_CONFIG_SYSTEM}|${ODOS_FLOOR_CONFIG_CODE}`],
         ["_count", "10"],
       ]),
     );

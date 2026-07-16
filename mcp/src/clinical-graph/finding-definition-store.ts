@@ -17,14 +17,14 @@ import {
 import { buildHpiFindingDefinition } from "./hpi-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/osod-finding-definition";
-export const FINDING_DEFINITION_CODE = "osod-finding-definition";
+  "https://odos2020.com/fhir/CodeSystem/odos-finding-definition";
+export const FINDING_DEFINITION_CODE = "odos-finding-definition";
 export const FINDING_DEFINITION_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/finding-definition-stable-key";
+  "https://odos2020.com/fhir/NamingSystem/finding-definition-stable-key";
 export const FINDING_DEFINITION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-finding-definition-json";
+  "https://odos2020.com/fhir/StructureDefinition/odos-finding-definition-json";
 export const FINDING_DEFINITION_WRITE_HEADERS = {
-  "X-OSOD-Source": "finding-definitions",
+  "X-ODOS-Source": "finding-definitions",
 } as const;
 
 export interface FindingDefinitionFhirClient {
@@ -122,7 +122,7 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: new Date(0).toISOString(),
-    actorReference: "Practitioner/osod-system",
+    actorReference: "Practitioner/odos-system",
   };
   return [
     buildHpiFindingDefinition(provenance),
@@ -150,7 +150,7 @@ export function buildFindingDefinitionResource(
       coding: [{
         system: FINDING_DEFINITION_CODE_SYSTEM,
         code: FINDING_DEFINITION_CODE,
-        display: "OSOD finding definition",
+        display: "ODOS finding definition",
       }],
       text: validated.display,
     },
@@ -167,7 +167,7 @@ export function parseFindingDefinitionResource(resource: Basic): ClinicalFinding
     candidate.code === FINDING_DEFINITION_CODE,
   );
   if (!coding) {
-    throw new Error("Basic resource is not an OSOD finding definition.");
+    throw new Error("Basic resource is not an ODOS finding definition.");
   }
   const raw = resource.extension?.find((extension) =>
     extension.url === FINDING_DEFINITION_EXTENSION_URL

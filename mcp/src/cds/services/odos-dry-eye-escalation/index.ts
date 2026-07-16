@@ -10,16 +10,16 @@ export const DRY_EYE_CODES = [
   snomed("302896008", "Keratoconjunctivitis sicca"),
 ] as const;
 
-export const osodDryEyeEscalationService: CdsHookService = {
+export const odosDryEyeEscalationService: CdsHookService = {
   discovery: {
-    id: "osod-dry-eye-escalation",
+    id: "odos-dry-eye-escalation",
     hook: "encounter-discharge",
-    title: "OSOD dry eye escalation",
+    title: "ODOS dry eye escalation",
     description: "Checks dry-eye assessment findings before encounter discharge.",
     prefetch: {
       dryEyeAssessments: "Observation?patient={{context.patientId}}&encounter={{context.encounterId}}",
     },
-    usageRequirements: "Local deterministic OSOD specialty rule. No image analysis. No external network call.",
+    usageRequirements: "Local deterministic ODOS specialty rule. No image analysis. No external network call.",
   },
   supportedCodes: DRY_EYE_CODES,
   matches(input: CdsHookEvaluationInput): boolean {
@@ -40,7 +40,7 @@ export const osodDryEyeEscalationService: CdsHookService = {
             "SNOMED CT 302896008 verified 2026-05-02; CDS Hooks 2.0.1 card schema + HTI-1 DSI disclosure fields verified 2026-05-02.",
           suggestions: [
             {
-              uuid: "osod-dry-eye-escalation-review",
+              uuid: "odos-dry-eye-escalation-review",
               label: "Document dry-eye plan review",
               actions: [],
             },

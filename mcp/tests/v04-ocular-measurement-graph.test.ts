@@ -9,7 +9,7 @@ import {
   summarizeProgression,
 } from "../src/fhir/ocularMeasurementGraph.js";
 
-const CODE = "https://osod.dev/fhir/CodeSystem/contact-lens-clinical-observation|central-clearance-settled";
+const CODE = "https://odos2020.com/fhir/CodeSystem/contact-lens-clinical-observation|central-clearance-settled";
 
 test("Observation history params use standard code, subject, date, and focus search keys", () => {
   const params = buildObservationSearchParams({

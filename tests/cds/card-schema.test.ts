@@ -6,7 +6,7 @@ const baseCard = {
   uuid: "7b8f9d21-2d38-4d6b-a7f8-b7c172f9c2cc",
   summary: "Review local CDS guidance",
   indicator: "info",
-  source: { label: "OSOD" },
+  source: { label: "ODOS" },
   dsi_type: "rules-based",
   intervention_risk_management: {
     risk_identification: "FHIR-coded context only.",
@@ -14,8 +14,8 @@ const baseCard = {
     continual_monitoring: "Feedback and stale-card audits are reviewed.",
   },
   source_attributes: {
-    developer_identity: "PerformanceOD / OSOD",
-    funding_source: "OSOD open-source project",
+    developer_identity: "PerformanceOD / ODOS",
+    funding_source: "ODOS open-source project",
     evidence_basis_citation: "v0.55c verification ledger rows 28-35",
   },
 };

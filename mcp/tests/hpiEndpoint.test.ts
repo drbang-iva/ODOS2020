@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
 import {
   handleHpiCaptureRequest,
@@ -50,7 +50,7 @@ function fixture(role: PracticeRoleId = "clinician") {
   const definition = buildHpiFindingDefinition({
     source: "manual",
     recordedAt: "1970-01-01T00:00:00.000Z",
-    actorReference: "Practitioner/osod-system",
+    actorReference: "Practitioner/odos-system",
   });
   const deps: HpiEndpointDeps = {
     authenticate: async (header) => header === AUTH ? {
@@ -71,7 +71,7 @@ function fixture(role: PracticeRoleId = "clinician") {
           resource: T,
           headers?: Record<string, string>,
         ): Promise<T> => {
-          assert.equal(headers?.["X-OSOD-Source"], "mcp/save_hpi_ros");
+          assert.equal(headers?.["X-ODOS-Source"], "mcp/save_hpi_ros");
           updated.push(resource);
           return resource;
         },
@@ -83,15 +83,15 @@ function fixture(role: PracticeRoleId = "clinician") {
   return { created, updated, deps };
 }
 
-test("HPI capture persists OSOD-local finding evidence and stamps a text-only encounter reason", async () => {
+test("HPI capture persists ODOS-local finding evidence and stamps a text-only encounter reason", async () => {
   const { created, updated, deps } = fixture();
   const result = await handleHpiCaptureRequest(deps, { authHeader: AUTH, body: BODY });
 
   assert.equal(result.status, 200);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Observation", "Provenance"]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_hpi_ros"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_hpi_ros"), true);
   const observation = created[0]!.resource as Observation;
-  assert.equal(observation.code.coding?.[0]?.system, OSOD_OPHTHALMOLOGY_CODE_SYSTEM);
+  assert.equal(observation.code.coding?.[0]?.system, ODOS_OPHTHALMOLOGY_CODE_SYSTEM);
   assert.equal(observation.code.coding?.[0]?.code, "hpi_ros");
   assert.equal(observation.subject?.reference, BODY.patientReference);
   assert.equal(observation.encounter?.reference, BODY.encounterReference);
@@ -132,7 +132,7 @@ test("HPI definition exposes eight elements, default ROS flags, extensibility, a
   assert.equal(definition.fields.reviewOfSystems?.allowCreate, true);
   assert.deepEqual(definition.fields.reviewOfSystems?.options?.slice(-2).map((option) => option.code), ["diabetes", "hypertension"]);
   assert.equal(definition.terminologyStatus.status, "MANDATE-14-DEFERRED");
-  assert.match(definition.terminologyStatus.note, /OSOD-local coding only/);
+  assert.match(definition.terminologyStatus.note, /ODOS-local coding only/);
 });
 
 test("HPI capture enforces authority and permits only general-medical custom flags", async () => {

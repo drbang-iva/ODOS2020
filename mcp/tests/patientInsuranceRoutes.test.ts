@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Bundle, Coverage, CoverageEligibilityRequest, CoverageEligibilityResponse, Resource } from "@medplum/fhirtypes";
 import express from "express";
-import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import { registerPatientInsuranceRoutes } from "../src/insurance/patient-insurance-routes.js";
 
 test("all four patient-insurance HTTP routes reach their handlers", async () => {
@@ -114,7 +114,7 @@ test("Coverage transactions reject dangling subscriber URNs and map concurrent e
 async function server(conflict = false) {
   let serviceAuthCalls = 0;
   let transactions = 0;
-  const audits: OsodAuditEventRecord[] = [];
+  const audits: OdosAuditEventRecord[] = [];
   const fhir = {
     search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {

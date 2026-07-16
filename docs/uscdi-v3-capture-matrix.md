@@ -2,7 +2,7 @@
 
 Access date: 2026-04-25
 
-Scope: v0.35a documents capture posture for USCDI v3 (19 data classes / 94 data elements) against what OSOD v0.3 plus v0.35a actually writes. This is a capture matrix only; it is not a US Core conformance claim. CapabilityStatement language remains "Partial Conformance: Data Class Capture Only."
+Scope: v0.35a documents capture posture for USCDI v3 (19 data classes / 94 data elements) against what ODOS v0.3 plus v0.35a actually writes. This is a capture matrix only; it is not a US Core conformance claim. CapabilityStatement language remains "Partial Conformance: Data Class Capture Only."
 
 Primary sources:
 - HHS/ONC Standards Bulletin 2022-2: https://healthit.gov/standards-onc-technology/onc-standards-bulletin/onc-standards-bulletin-2022-2/
@@ -11,7 +11,7 @@ Primary sources:
 
 Status values: `captured`, `partial`, `stub`, `deferred`, `not-applicable`.
 
-| USCDI v3 element | US Core 6.1.0 profile | OSOD FHIR resource | Builder/MCP tool | Status | Target milestone |
+| USCDI v3 element | US Core 6.1.0 profile | ODOS FHIR resource | Builder/MCP tool | Status | Target milestone |
 |---|---|---|---|---|---|
 | Allergies and Intolerances - Substance (Medication) | US Core AllergyIntolerance | AllergyIntolerance.code | buildAllergyIntolerance / create_allergy_intolerance | partial | v0.35a |
 | Allergies and Intolerances - Substance (Drug Class) | US Core AllergyIntolerance | AllergyIntolerance.code | buildAllergyIntolerance / create_allergy_intolerance | partial | v0.35a |
@@ -28,8 +28,8 @@ Status values: `captured`, `partial`, `stub`, `deferred`, `not-applicable`.
 | Clinical Notes - History & Physical | US Core DocumentReference | DocumentReference | create_raw_asset_reference | stub | v0.5 |
 | Clinical Notes - Procedure Note | US Core DocumentReference | DocumentReference | create_raw_asset_reference | stub | v0.5 |
 | Clinical Notes - Progress Note | US Core DocumentReference | DocumentReference | create_raw_asset_reference | stub | v0.5 |
-| Clinical Tests - Clinical Test | US Core Observation Clinical Result / Simple Observation | Observation | OSOD eye Observations (VA / IOP / refraction) | partial | v0.3 |
-| Clinical Tests - Clinical Test Result/Report | US Core DiagnosticReport for Report and Note Exchange | DiagnosticReport / Observation | OSOD eye Observations and raw asset builders | partial | v0.3 |
+| Clinical Tests - Clinical Test | US Core Observation Clinical Result / Simple Observation | Observation | ODOS eye Observations (VA / IOP / refraction) | partial | v0.3 |
+| Clinical Tests - Clinical Test Result/Report | US Core DiagnosticReport for Report and Note Exchange | DiagnosticReport / Observation | ODOS eye Observations and raw asset builders | partial | v0.3 |
 | Diagnostic Imaging - Diagnostic Imaging Test | US Core DiagnosticReport / DocumentReference | DiagnosticReport / DocumentReference / ImagingStudy | create_raw_asset_reference | partial | v0.6 |
 | Diagnostic Imaging - Diagnostic Imaging Report | US Core DiagnosticReport for Report and Note Exchange | DiagnosticReport / DocumentReference | create_raw_asset_reference | partial | v0.6 |
 | Encounter Information - Encounter Type | US Core Encounter | Encounter.class / Encounter.type | create_encounter | partial | v0.3 |
@@ -110,7 +110,7 @@ Status values: `captured`, `partial`, `stub`, `deferred`, `not-applicable`.
 
 ## Notes
 
-- VA, IOP, and refraction Observations are tracked under OSOD eye-observation / USCDI Clinical Tests coverage, not under USCDI Vital Signs. US Core Vital Signs is reserved here for general physiologic vitals such as blood pressure, pulse, temperature, height, and weight.
+- VA, IOP, and refraction Observations are tracked under ODOS eye-observation / USCDI Clinical Tests coverage, not under USCDI Vital Signs. US Core Vital Signs is reserved here for general physiologic vitals such as blood pressure, pulse, temperature, height, and weight.
 - `health-concern` builder support ships in v0.35a as a stubbed write path so v0.5 does not refactor the Condition model; Director UI for Health Concerns is not part of v0.35a or v0.35b.
 
 ## Future Tracking

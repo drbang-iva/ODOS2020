@@ -7,11 +7,11 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import {
-  buildOsodAuditEventRow,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "../authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "../authz/odosAudit.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
@@ -19,14 +19,14 @@ import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.j
 
 export interface AuthenticatedInsuranceStaff {
   staffReference: string;
-  actorRole: OsodActorRole;
+  actorRole: OdosActorRole;
   roles: readonly PracticeRoleId[];
   fhir: Pick<MedplumClient, "search" | "searchUrl" | "executeTransaction">;
 }
 
 export interface PatientInsuranceHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedInsuranceStaff | null>;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface PatientInsuranceHandlerResult {
@@ -126,13 +126,13 @@ export async function handleVisionBenefitsWrite(
 async function auditWrite(
   deps: PatientInsuranceHandlerDeps,
   staff: AuthenticatedInsuranceStaff,
-  eventType: Extract<OsodAuditEventType, "coverage.write" | "benefits.manual-entry">,
+  eventType: Extract<OdosAuditEventType, "coverage.write" | "benefits.manual-entry">,
   outcome: "success" | "failure",
   patientReference: string,
   targetReference: string,
   error?: unknown,
 ): Promise<void> {
-  await deps.recordAudit(buildOsodAuditEventRow({
+  await deps.recordAudit(buildOdosAuditEventRow({
     eventType,
     actorReference: staff.staffReference,
     actorRole: staff.actorRole,

@@ -25,7 +25,7 @@ test("Stedi adapter uses the documented JSON endpoints and API-key headers", asy
 
   await adapter.checkEligibility({ tradingPartnerServiceId: "STEDITEST" });
   await adapter.submitProfessionalClaim({
-    idempotencyKey: "OSODCLAIM900",
+    idempotencyKey: "ODOSCLAIM900",
     payload: { usageIndicator: "T", tradingPartnerServiceId: "STEDITEST" },
   });
   await adapter.checkClaimStatus({ tradingPartnerServiceId: "STEDITEST" });
@@ -42,7 +42,7 @@ test("Stedi adapter uses the documented JSON endpoints and API-key headers", asy
   for (const call of calls) {
     assert.equal((call.init.headers as Record<string, string>).Authorization, "test-key");
   }
-  assert.equal((calls[1].init.headers as Record<string, string>)["Idempotency-Key"], "OSODCLAIM900");
+  assert.equal((calls[1].init.headers as Record<string, string>)["Idempotency-Key"], "ODOSCLAIM900");
   assert.equal(calls[3].init.method, "GET");
   assert.equal("enrollEra" in adapter, false);
 });

@@ -1,4 +1,4 @@
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   type ContactLensMaterialCode,
   type ContactLensParameterCode,
@@ -158,7 +158,7 @@ export function buildSoftContactLensFindingDefinitionStub(
     },
     normalSemantics: { diagnosisSuggestions: false },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("soft_contact_lens", "Soft contact lens prescription"),
+    fhirObservationCode: odosConcept("soft_contact_lens", "Soft contact lens prescription"),
     notBillReady: true,
     active: true,
     provenance,
@@ -281,7 +281,7 @@ export function buildSpecialtyContactLensFindingDefinitionStub(
     },
     normalSemantics: { diagnosisSuggestions: false },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("specialty_contact_lens", "Specialty contact lens prescription"),
+    fhirObservationCode: odosConcept("specialty_contact_lens", "Specialty contact lens prescription"),
     notBillReady: true,
     active: true,
     provenance,

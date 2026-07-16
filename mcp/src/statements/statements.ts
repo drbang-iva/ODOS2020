@@ -13,8 +13,8 @@ import type {
   TaskInput,
   TaskOutput,
 } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
-import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibility-invoice.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
+import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibility-invoice.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
@@ -26,16 +26,16 @@ import {
 } from "../payments/payment-credit-service.js";
 import {
   INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
-  OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+  ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
 } from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 
-export const STATEMENT_TASK_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/statement-task";
+export const STATEMENT_TASK_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-task";
 export const STATEMENT_RUN_CODE = "statement-run";
 export const PATIENT_STATEMENT_CODE = "patient-statement";
-export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/statement-run";
-export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/statement-output";
+export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/statement-run";
+export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-output";
 export const STATEMENT_TRANSACTION_CHILD_LIMIT = 40;
 
 const RUN_OUTPUTS = {
@@ -329,7 +329,7 @@ export function addStatementDetail(input: {
         amountCents,
       }] : [];
     });
-    const claimReference = invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+    const claimReference = invoice.extension?.find((extension) => extension.url === ODOS_SOURCE_CLAIM_EXTENSION_URL)
       ?.valueReference?.reference;
     const claim = claimReference ? claims.get(claimReference) : undefined;
     const response = claimReference ? newestClaimResponse(responsesByClaim.get(claimReference) ?? []) : undefined;
@@ -460,7 +460,7 @@ export function buildStatementTransaction(input: {
 
 export function parseStatementTask(task: Task): StatementRow {
   if (!taskCodeIs(task, PATIENT_STATEMENT_CODE) || task.status !== "completed") {
-    throw new StatementValidationError("Task is not a completed OSOD patient statement.");
+    throw new StatementValidationError("Task is not a completed ODOS patient statement.");
   }
   if (!task.id) throw new StatementValidationError("Patient statement Task is missing its id.");
   const snapshotJson = output(task.output, STATEMENT_OUTPUTS.snapshot)?.valueString;
@@ -707,7 +707,7 @@ function validateLinkedPayment(payment: PaymentReconciliation, patientReference:
   const amountCents = paymentAmountCents(payment);
   const allocatedCents = sum((payment.detail ?? []).flatMap((detail) => {
     const amountlessClaimRollup = !detail.amount && detail.type.coding?.some((coding) =>
-      coding.system === OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM
+      coding.system === ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM
       && coding.code === INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
     );
     return amountlessClaimRollup
@@ -750,7 +750,7 @@ function newestClaimResponse(responses: ClaimResponse[]): ClaimResponse | undefi
 
 function hasCompleteChargeItemJoin(invoice: Invoice, claim: Claim): boolean {
   const claimChargeItems = new Set((claim.item ?? []).flatMap((item) => {
-    const reference = item.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+    const reference = item.extension?.find((extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL)
       ?.valueReference?.reference;
     return reference ? [reference] : [];
   }));

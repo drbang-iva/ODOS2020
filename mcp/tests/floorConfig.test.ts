@@ -4,9 +4,9 @@ import { test } from "node:test";
 import {
   DEFAULT_FLOOR_STATIONS,
   DEFAULT_LANE_THRESHOLDS,
-  OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM,
   buildFloorConfigResource,
   parseFloorConfig,
   type PersistedFloorConfig,
@@ -32,9 +32,9 @@ const CONFIG: PersistedFloorConfig = {
 test("buildFloorConfigResource round-trips through parseFloorConfig", () => {
   const resource = buildFloorConfigResource(CONFIG);
   assert.equal(resource.resourceType, "Basic");
-  assert.equal(resource.code?.coding?.[0]?.system, OSOD_FLOOR_CONFIG_SYSTEM);
-  assert.equal(resource.code?.coding?.[0]?.code, OSOD_FLOOR_CONFIG_CODE);
-  const extension = resource.extension?.find((e) => e.url === OSOD_FLOOR_CONFIG_EXTENSION_URL);
+  assert.equal(resource.code?.coding?.[0]?.system, ODOS_FLOOR_CONFIG_SYSTEM);
+  assert.equal(resource.code?.coding?.[0]?.code, ODOS_FLOOR_CONFIG_CODE);
+  const extension = resource.extension?.find((e) => e.url === ODOS_FLOOR_CONFIG_EXTENSION_URL);
   assert.ok(extension?.valueString, "config extension carries the JSON payload");
   assert.deepEqual(parseFloorConfig(resource), CONFIG);
 });
@@ -44,7 +44,7 @@ test("pre-amendment station fixtures remain active and round-trip without writin
   const parsed = parseFloorConfig(resource);
   assert.ok(parsed.stations.every((station) => station.active !== false));
   const raw = JSON.parse(
-    resource.extension?.find((extension) => extension.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
+    resource.extension?.find((extension) => extension.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
   ) as PersistedFloorConfig;
   assert.ok(raw.stations.every((station) => !("active" in station)));
   assert.deepEqual(parseFloorConfig(buildFloorConfigResource(parsed)), CONFIG);
@@ -68,7 +68,7 @@ test("inactive stations remain persisted with their thresholds and reactivation 
     ),
   });
   const raw = JSON.parse(
-    reactivated.extension?.find((extension) => extension.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
+    reactivated.extension?.find((extension) => extension.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)?.valueString ?? "{}",
   ) as PersistedFloorConfig;
   assert.equal("active" in raw.stations.find((station) => station.id === "waiting")!, false);
 });
@@ -88,7 +88,7 @@ test("buildFloorConfigResource preserves id + meta when updating in place", () =
 test("parseFloorConfig rejects a Basic that is not the floor-config singleton", () => {
   assert.throws(
     () => parseFloorConfig({ resourceType: "Basic", code: { coding: [{ system: "other", code: "x" }] } }),
-    /not the osod floor-config singleton/,
+    /not the odos floor-config singleton/,
   );
 });
 
@@ -97,7 +97,7 @@ test("parseFloorConfig rejects a singleton Basic that is missing its config exte
     () =>
       parseFloorConfig({
         resourceType: "Basic",
-        code: { coding: [{ system: OSOD_FLOOR_CONFIG_SYSTEM, code: OSOD_FLOOR_CONFIG_CODE }] },
+        code: { coding: [{ system: ODOS_FLOOR_CONFIG_SYSTEM, code: ODOS_FLOOR_CONFIG_CODE }] },
       }),
     /missing its config extension/,
   );
@@ -105,14 +105,14 @@ test("parseFloorConfig rejects a singleton Basic that is missing its config exte
 
 test("parseFloorConfig rejects malformed stored JSON with a clear error", () => {
   const basic = buildFloorConfigResource(CONFIG);
-  const ext = basic.extension!.find((e) => e.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)!;
+  const ext = basic.extension!.find((e) => e.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)!;
   ext.valueString = "{not json";
   assert.throws(() => parseFloorConfig(basic), /Floor-config JSON/i);
 });
 
 test("parseFloorConfig is forward-compatible: unknown top-level keys in stored JSON are dropped, not fatal", () => {
   const basic = buildFloorConfigResource(CONFIG);
-  const ext = basic.extension!.find((e) => e.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)!;
+  const ext = basic.extension!.find((e) => e.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)!;
   ext.valueString = JSON.stringify({ ...JSON.parse(ext.valueString!), futureKnob: true });
   assert.deepEqual(parseFloorConfig(basic), CONFIG);
 });

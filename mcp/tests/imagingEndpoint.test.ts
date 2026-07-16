@@ -54,7 +54,7 @@ test("manual imaging upload persists Media, preliminary interpretation report, a
 
   assert.equal(result.status, 200);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Media", "DiagnosticReport", "Provenance"]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/manual_imaging_upload"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/manual_imaging_upload"), true);
   const media = created[0]!.resource as Media;
   assert.equal(media.status, "completed");
   assert.equal(media.subject?.reference, BODY.patientReference);

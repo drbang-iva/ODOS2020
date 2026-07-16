@@ -10,7 +10,7 @@ if (args[0] === "certs" && args[1] === "generate") {
   const purpose = valueAfter("--purpose") ?? "general";
   const force = args.includes("--force");
   if (!out) {
-    fail("Usage: osod certs generate --purpose smart-signing --out <private-key.pem> [--force]");
+    fail("Usage: odos certs generate --purpose smart-signing --out <private-key.pem> [--force]");
   }
   const path = resolve(out);
   if (existsSync(path) && !force) {
@@ -24,7 +24,7 @@ if (args[0] === "certs" && args[1] === "generate") {
   process.exit(0);
 }
 
-fail("Usage: osod certs generate --purpose smart-signing --out <private-key.pem> [--force]");
+fail("Usage: odos certs generate --purpose smart-signing --out <private-key.pem> [--force]");
 
 function valueAfter(flag: string): string | undefined {
   const index = args.indexOf(flag);

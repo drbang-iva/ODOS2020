@@ -59,7 +59,7 @@ export function buildProvenance(input: ProvenanceInput): import("./types.js").Pr
         : {}),
       who: agent.whoReference
         ? reference(agent.whoReference)
-        : { display: agent.whoDisplay ?? "Unknown OSOD source agent" },
+        : { display: agent.whoDisplay ?? "Unknown ODOS source agent" },
     })),
     ...(input.entityReferences?.length || input.entityValues?.length
       ? {

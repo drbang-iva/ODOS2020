@@ -2,14 +2,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_FLOOR_STATE_EXTENSION_URL,
+  ODOS_FLOOR_STATE_EXTENSION_URL,
   floorStateExtension,
   parseFloorState,
 } from "../../ui/src/lib/floor-state.js";
 
 test("floorStateExtension builds a composite extension with station + since + checkedInAt", () => {
   const extension = floorStateExtension("waiting", "2026-07-08T14:00:00.000Z", "2026-07-08T13:45:00.000Z");
-  assert.equal(extension.url, OSOD_FLOOR_STATE_EXTENSION_URL);
+  assert.equal(extension.url, ODOS_FLOOR_STATE_EXTENSION_URL);
   const station = extension.extension?.find((e) => e.url === "station");
   const since = extension.extension?.find((e) => e.url === "since");
   const checkedInAt = extension.extension?.find((e) => e.url === "checkedInAt");
@@ -55,7 +55,7 @@ test("parseFloorState is backward-compatible with a station+since extension lack
     participant: [],
     extension: [
       {
-        url: OSOD_FLOOR_STATE_EXTENSION_URL,
+        url: ODOS_FLOOR_STATE_EXTENSION_URL,
         extension: [
           { url: "station", valueString: "waiting" },
           { url: "since", valueInstant: "2026-07-08T14:00:00.000Z" },
@@ -79,7 +79,7 @@ test("parseFloorState returns undefined when the extension is malformed (missing
     resourceType: "Appointment",
     status: "arrived",
     participant: [],
-    extension: [{ url: OSOD_FLOOR_STATE_EXTENSION_URL, extension: [{ url: "since", valueInstant: "2026-07-08T14:00:00.000Z" }] }],
+    extension: [{ url: ODOS_FLOOR_STATE_EXTENSION_URL, extension: [{ url: "since", valueInstant: "2026-07-08T14:00:00.000Z" }] }],
   });
   assert.equal(malformed, undefined);
 });

@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto";
 
-export const FRAME_CATALOG_SYSTEM = "https://osod.dev/catalog/frames";
-export const FRAME_PROPERTY_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/frame-property";
+export const FRAME_CATALOG_SYSTEM = "https://odos2020.com/catalog/frames";
+export const FRAME_PROPERTY_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/frame-property";
 export const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
 export const SNOMED_SYSTEM = "http://snomed.info/sct";
 export const UCUM_SYSTEM = "http://unitsofmeasure.org";
 export const GS1_GTIN_SYSTEM = "https://gs1.org/gtin";
-export const FRAMES_DATA_SKU_SYSTEM = "https://osod.dev/catalog/frames/frames-data-sku";
-export const OSOD_FRAME_DEVICE_TYPE_CODE = "419681006";
-export const OSOD_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
-export const OSOD_FHIR_SOURCE_HEADER = "catalog-sync.frames.bulk-ingest";
+export const FRAMES_DATA_SKU_SYSTEM = "https://odos2020.com/catalog/frames/frames-data-sku";
+export const ODOS_FRAME_DEVICE_TYPE_CODE = "419681006";
+export const ODOS_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
+export const ODOS_FHIR_SOURCE_HEADER = "catalog-sync.frames.bulk-ingest";
 
 export type FrameShape =
   | "aviator"

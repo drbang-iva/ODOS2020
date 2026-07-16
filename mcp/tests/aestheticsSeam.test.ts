@@ -99,7 +99,7 @@ class MemoryFhir {
     if (persisted.resourceType === "Provenance") this.provenances.push(persisted);
     this.writes.push({
       resourceType: persisted.resourceType,
-      source: headers?.["X-OSOD-Source"],
+      source: headers?.["X-ODOS-Source"],
     });
     return persisted as T;
   }
@@ -116,7 +116,7 @@ class MemoryFhir {
     this.basics[index] = persisted;
     this.writes.push({
       resourceType: persisted.resourceType,
-      source: headers?.["X-OSOD-Source"],
+      source: headers?.["X-ODOS-Source"],
     });
     return persisted;
   }
@@ -181,7 +181,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
   assert.equal(rows[0]?.sourceStatus, "local-practice");
   assert.deepEqual(fhir.writes[0], {
     resourceType: "Basic",
-    source: PROCEDURE_DEFINITION_WRITE_HEADERS["X-OSOD-Source"],
+    source: PROCEDURE_DEFINITION_WRITE_HEADERS["X-ODOS-Source"],
   });
 });
 

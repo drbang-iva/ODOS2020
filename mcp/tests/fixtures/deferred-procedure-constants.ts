@@ -1,5 +1,5 @@
 export const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+  "https://odos2020.com/fhir/CodeSystem/deferred-procedure-concepts";
 export const CPT_CODE_SYSTEM = "urn:ama:cpt";
 export const SCODI_OPTIC_NERVE = {
   conceptKey: "scodi-optic-nerve",

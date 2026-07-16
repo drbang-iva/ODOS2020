@@ -1,5 +1,5 @@
 import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
-import type { OsodActorRole } from "../authz/osodAudit.js";
+import type { OdosActorRole } from "../authz/odosAudit.js";
 import { assertLabTransportState, type LabTransportState } from "../fhir/labTransportState.js";
 import { assertLabOrderFrameSource, renderLabOrderSheet, type LabOrder } from "../fhir/opticalLabOrder.js";
 import {
@@ -17,7 +17,7 @@ import {
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
-  OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
+  ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
   isLabOrderTransmissionTask,
   storedLabOrderExport,
   type LabOrderFhirClient,
@@ -31,7 +31,7 @@ import {
 
 export interface AuthenticatedLabOrderStaff {
   staffReference: string;
-  actorRole: OsodActorRole;
+  actorRole: OdosActorRole;
   fhir: LabOrderFhirClient;
 }
 
@@ -289,7 +289,7 @@ export async function handleLabOrderWorklistRequest(
   }
   try {
     const bundle = await authenticated.staff.fhir.search<Task>("Task", {
-      code: `${OSOD_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
+      code: `${ODOS_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
       _count: "1000",
       _sort: "-authored-on",
     });

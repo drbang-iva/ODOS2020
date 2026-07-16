@@ -21,7 +21,7 @@ function fakeClient(existing: Appointment) {
   };
 }
 
-test("updateAppointment with floorStation writes the osod-floor-state extension", async () => {
+test("updateAppointment with floorStation writes the odos-floor-state extension", async () => {
   const appointment: Appointment = {
     resourceType: "Appointment",
     id: "appt-1",
@@ -54,7 +54,7 @@ test("updateAppointment with floorStation:null clears the extension", async () =
     participant: [{ actor: { reference: "Patient/p1" }, status: "accepted" }],
     extension: [
       {
-        url: "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+        url: "https://odos2020.com/fhir/StructureDefinition/odos-floor-state",
         extension: [
           { url: "station", valueString: "waiting" },
           { url: "since", valueInstant: "2026-07-08T14:00:00.000Z" },
@@ -72,7 +72,7 @@ test("updateAppointment with floorStation:null clears the extension", async () =
 });
 
 test("updateAppointment with floorStation preserves unrelated extensions", async () => {
-  const visionCoverageUrl = "https://osod.dev/fhir/StructureDefinition/osod-vision-coverage";
+  const visionCoverageUrl = "https://odos2020.com/fhir/StructureDefinition/odos-vision-coverage";
   const appointment: Appointment = {
     resourceType: "Appointment",
     id: "appt-1",
@@ -106,7 +106,7 @@ test("moving a checked-in patient rewrites since but PRESERVES the original chec
     participant: [{ actor: { reference: "Patient/p1" }, status: "accepted" }],
     extension: [
       {
-        url: "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+        url: "https://odos2020.com/fhir/StructureDefinition/odos-floor-state",
         extension: [
           { url: "station", valueString: "waiting" },
           { url: "since", valueInstant: "2026-07-08T14:00:00.000Z" },

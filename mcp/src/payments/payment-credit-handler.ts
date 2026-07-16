@@ -1,5 +1,5 @@
 import type { Bundle, Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import {
@@ -27,7 +27,7 @@ export interface PaymentCreditHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
   lifecycleFhir: PaymentCreditFhirClient;
   dispatch: PaymentDispatch;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
   now?: () => string;
 }
 

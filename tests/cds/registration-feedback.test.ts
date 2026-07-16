@@ -66,19 +66,19 @@ test("v0.55c CDS feedback endpoint persists acceptance and override outcomes", a
   const repository = new InMemoryCdsFeedbackRepository();
   const server = await createSmartTestServer({ cdsFeedbackRepository: repository });
   try {
-    const response = await postJson(`${server.origin}/cds-services/osod-contact-lens-finalize/feedback`, {
+    const response = await postJson(`${server.origin}/cds-services/odos-contact-lens-finalize/feedback`, {
       feedback: [
         {
           card: "afc5fd88-3c05-4a7c-b7ce-74851ef713bd",
           outcome: "accepted",
-          acceptedSuggestions: ["osod-contact-lens-finalize-review"],
+          acceptedSuggestions: ["odos-contact-lens-finalize-review"],
           outcomeTimestamp: "2026-05-02T12:00:00.000Z",
         },
         {
           card: "8e4546b9-4da1-46ea-88ac-0d9e51f897dd",
           outcome: "overridden",
           overrideReason: {
-            reason: { code: "clinician-judgment", system: "https://osod.dev/fhir/CodeSystem/cds-override" },
+            reason: { code: "clinician-judgment", system: "https://odos2020.com/fhir/CodeSystem/cds-override" },
             userComment: "Not applicable to this lens order.",
           },
           outcomeTimestamp: "2026-05-02T12:01:00.000Z",
@@ -97,7 +97,7 @@ test("v0.55c CDS feedback endpoint persists acceptance and override outcomes", a
 function postJson(url: string, body: unknown): Promise<Response> {
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-OSOD-Actor-Id": "admin-1", "X-OSOD-Role": "practice-admin" },
+    headers: { "Content-Type": "application/json", "X-ODOS-Actor-Id": "admin-1", "X-ODOS-Role": "practice-admin" },
     body: JSON.stringify(body),
   });
 }

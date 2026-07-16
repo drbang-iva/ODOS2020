@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { InMemoryAgentOpsDeviceRegistry } from "../../mcp/src/agentops/device-registry.js";
 
 const baseRegistration = {
-  agentUri: "https://osod.dev/agents/iris",
+  agentUri: "https://odos2020.com/agents/iris",
   agentLogicalName: "Iris",
   agentRole: "strategic",
   agentRiskClass: "HIGH" as const,
@@ -12,7 +12,7 @@ const baseRegistration = {
   deploymentDistinctIdentifier: "iris.local-iris",
   adminReviewStatus: "approved" as const,
   model: {
-    modelUri: "https://osod.dev/models/claude-opus-4-7",
+    modelUri: "https://odos2020.com/models/claude-opus-4-7",
     vendorName: "Anthropic",
     modelName: "claude-opus-4-7",
     modelVersion: "4.7",

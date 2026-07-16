@@ -1,15 +1,15 @@
 import type { Coding, Resource } from "@medplum/fhirtypes";
 
 export const AGENT_IDENTITY_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/agent-identity";
+  "https://odos2020.com/fhir/StructureDefinition/agent-identity";
 export const MODEL_IDENTITY_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/model-identity";
+  "https://odos2020.com/fhir/StructureDefinition/model-identity";
 export const AGENTOPS_RECORD_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/agentops-record";
+  "https://odos2020.com/fhir/StructureDefinition/agentops-record";
 export const AGENTOPS_BLOCKED_PAYLOAD_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/agentops-blocked-payload";
+  "https://odos2020.com/fhir/StructureDefinition/agentops-blocked-payload";
 export const SOURCE_SHA256_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/source-sha256";
+  "https://odos2020.com/fhir/StructureDefinition/source-sha256";
 
 export const AIAST_CODE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v3-ObservationValue";

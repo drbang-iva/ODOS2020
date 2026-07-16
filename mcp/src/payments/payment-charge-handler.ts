@@ -1,4 +1,4 @@
-import type { OsodActorRole, OsodAuditEventRecord } from "../authz/osodAudit.js";
+import type { OdosActorRole, OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-audit.js";
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
@@ -10,18 +10,18 @@ import { DayAlreadySealedError } from "../desk/day-seal.js";
  * Payment charge endpoint handler — pure orchestration, transport-free so it unit-tests without HTTP.
  *
  * This is the server-side processor charge boundary: a processor
- * charge (Clover/Stripe) requires the vendor secret, which lives only on osod-core. The handler
+ * charge (Clover/Stripe) requires the vendor secret, which lives only on odos-core. The handler
  * authenticates the caller (verified staff identity — never a body-supplied one), resolves the
  * configured adapter via the unified dispatch, runs the charge, and lands a payment.* AuditEvent.
  * Real token verification, the caller-bound FHIR client, and audit persistence are injected deps
- * implemented in the osod-core wiring (index.ts). Decision: performance-od
+ * implemented in the odos-core wiring (index.ts). Decision: performance-od
  * decisions/2026-07-05-odos-payment-reconciliation-seam-spec.md + the checkout-boundary follow-up.
  */
 
 export interface AuthenticatedStaff {
   /** Practitioner / PractitionerRole reference for requestor + audit attribution. */
   staffReference: string;
-  actorRole: OsodActorRole;
+  actorRole: OdosActorRole;
   roles?: readonly PracticeRoleId[];
   /** FHIR client bound to the caller (their token) so Medplum AccessPolicy governs the PR write. */
   fhir: DispatchFhirClient;
@@ -31,7 +31,7 @@ export interface ChargeHandlerDeps {
   /** Verify the forwarded Medplum bearer token → staff identity + bound FHIR client, or null. */
   authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
   dispatch: PaymentDispatch;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
   now?: () => string;
 }
 

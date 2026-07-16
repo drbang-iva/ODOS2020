@@ -9,7 +9,7 @@ import { useFloorBoardConfig } from "./useFloorBoardConfig";
 
 // The floor board center stage (design doc §5): stations as horizontal swim-rows,
 // checked-in patients as draggable cards, honest-manual movement (drag rewrites the
-// osod-floor-state extension via updateAppointment). Renders its own PatientQuickCard
+// odos-floor-state extension via updateAppointment). Renders its own PatientQuickCard
 // on card click, mirroring how SchedulerDayGrid owns its quick card. Config source is
 // the persisted floor-config singleton (read via useFloorBoardConfig), falling back to
 // the ui-side DEFAULT_FLOOR_BOARD_CONFIG until a practice configures its own.

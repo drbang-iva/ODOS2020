@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { EyeLaterality } from "../fhir/ophthalmology/types.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildClinicalFindingDefinition,
   buildDiagnosisDefinition,
@@ -141,7 +141,7 @@ export function buildRefractionFindingDefinitionStub(
       },
     },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("REFRACTION", "Refraction"),
+    fhirObservationCode: odosConcept("REFRACTION", "Refraction"),
     notBillReady: true,
     active: true,
     provenance: {

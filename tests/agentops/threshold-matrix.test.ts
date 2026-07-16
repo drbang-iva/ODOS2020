@@ -32,7 +32,7 @@ test("v0.55d threshold matrix resolves Iris-specific rule before generic default
     "iris-starter.yaml",
   ).policies;
   const result = lookupThresholdRule(rules, {
-    agent_uri: "https://osod.dev/agents/iris",
+    agent_uri: "https://odos2020.com/agents/iris",
     tool_name: "iris-finalize-chart-summary",
     target_resourceType: "Composition",
     specific_action: "write",
@@ -46,7 +46,7 @@ test("v0.55d threshold matrix resolves Iris-specific rule before generic default
 
 test("v0.55d threshold matrix returns defensive HIGH confirmation for unknown actions", () => {
   const result = lookupThresholdRule([], {
-    agent_uri: "https://osod.dev/agents/bodhi",
+    agent_uri: "https://odos2020.com/agents/bodhi",
     tool_name: "bodhi-unknown-action",
     target_resourceType: "Observation",
     specific_action: "write",

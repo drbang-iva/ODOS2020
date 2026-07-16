@@ -23,8 +23,8 @@ import {
   type SubscriberRelationship,
 } from "./submit-claims";
 
-export const OSOD_BENEFIT_LAST_USED_EXTENSION_URL = "https://osod.dev/fhir/StructureDefinition/osod-benefit-last-used";
-export const OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL = "https://osod.dev/fhir/StructureDefinition/osod-benefit-frequency-months";
+export const ODOS_BENEFIT_LAST_USED_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-last-used";
+export const ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months";
 
 export const SUBSCRIBER_RELATIONSHIPS: ReadonlyArray<{ value: SubscriberRelationship; label: string }> = [
   { value: "self", label: "Self" },
@@ -337,11 +337,11 @@ export function benefitUsedDollars(item: CoverageEligibilityResponseInsuranceIte
 }
 
 export function benefitLastUsed(item: CoverageEligibilityResponseInsuranceItem | undefined): string {
-  return item?.extension?.find((extension) => extension.url === OSOD_BENEFIT_LAST_USED_EXTENSION_URL)?.valueDate ?? "";
+  return item?.extension?.find((extension) => extension.url === ODOS_BENEFIT_LAST_USED_EXTENSION_URL)?.valueDate ?? "";
 }
 
 export function benefitFrequencyMonths(item: CoverageEligibilityResponseInsuranceItem | undefined): number | undefined {
-  return item?.extension?.find((extension) => extension.url === OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL)?.valueUnsignedInt;
+  return item?.extension?.find((extension) => extension.url === ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL)?.valueUnsignedInt;
 }
 
 export function nextEligibleDate(item: CoverageEligibilityResponseInsuranceItem | undefined): string {
@@ -413,8 +413,8 @@ function buildBenefitItem(benefit: BenefitEntryDraft): CoverageEligibilityRespon
     name: benefitLabel(benefit.kind),
     excluded: benefit.excluded,
     extension: [
-      ...(benefit.lastUsed ? [{ url: OSOD_BENEFIT_LAST_USED_EXTENSION_URL, valueDate: benefit.lastUsed }] : []),
-      ...(benefit.frequencyMonths ? [{ url: OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL, valueUnsignedInt: Number(benefit.frequencyMonths) }] : []),
+      ...(benefit.lastUsed ? [{ url: ODOS_BENEFIT_LAST_USED_EXTENSION_URL, valueDate: benefit.lastUsed }] : []),
+      ...(benefit.frequencyMonths ? [{ url: ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL, valueUnsignedInt: Number(benefit.frequencyMonths) }] : []),
     ],
     benefit: [
       ...(allowance !== undefined || used !== undefined ? [{

@@ -61,7 +61,7 @@ async function route(
     const result = await dispatch(req);
     res.status(result.status).json(result.body);
   } catch (error) {
-    console.error(`osod-mcp: ${path} failed:`, error);
+    console.error(`odos-mcp: ${path} failed:`, error);
     if (!res.headersSent) res.status(500).json({ error: "patient insurance route failed" });
   }
 }

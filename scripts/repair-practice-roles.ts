@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 import { createHash, randomBytes } from "node:crypto";
 import type { AccessPolicy, Practitioner, ProjectMembership } from "@medplum/fhirtypes";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
-import { buildOsodAuditEventRow } from "../mcp/src/authz/osodAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { buildOdosAuditEventRow } from "../mcp/src/authz/odosAudit.js";
 import {
   grantPracticeRoles,
   type ResolvedRoleGrantTarget,
@@ -60,7 +60,7 @@ export async function repairPracticeRoles(
 
   for (const roleId of PRACTICE_ROLE_IDS) {
     const role = getRoleDeclaration(roleId);
-    const expectedName = `OSOD ${role.display}`;
+    const expectedName = `ODOS ${role.display}`;
     const matches = (await adapter.findPoliciesByName(expectedName)).filter(
       (policy) => policy.name === expectedName,
     );
@@ -142,9 +142,9 @@ export function membershipPolicyReferences(membership: ProjectMembership): strin
 }
 
 class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
-  private readonly audit = createLiveOsodAuditRuntime({
-    postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
-    disabled: process.env.OSOD_ROLE_REPAIR_AUDIT_DISABLED === "true",
+  private readonly audit = createLiveOdosAuditRuntime({
+    postgresUrl: process.env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+    disabled: process.env.ODOS_ROLE_REPAIR_AUDIT_DISABLED === "true",
   });
 
   constructor(private readonly fhir: MedplumClient) {}
@@ -182,7 +182,7 @@ class LivePracticeRoleRepairAdapter implements PracticeRoleRepairAdapter {
     operation: () => Promise<T>,
   ): Promise<T> {
     return this.audit.record(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType: "role-change",
         actorId: "repair-practice-roles",
         actorRole: "system",
@@ -269,7 +269,7 @@ async function runCli(): Promise<void> {
   const password = requireEnv("MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl, email, password });
   const fhir = createMedplumClient({ baseUrl, accessToken });
-  const primaryRole = devPrimaryRole(process.env.OSOD_DEV_PRIMARY_ROLE);
+  const primaryRole = devPrimaryRole(process.env.ODOS_DEV_PRIMARY_ROLE);
   const result = await repairPracticeRoles(
     new LivePracticeRoleRepairAdapter(fhir),
     target,
@@ -287,7 +287,7 @@ async function runCli(): Promise<void> {
 export function devPrimaryRole(value: string | undefined): DevAdminPrimaryRole {
   const role = value?.trim() || DEV_ADMIN_ROLE;
   if (role !== "front-desk" && role !== "clinician") {
-    throw new Error("OSOD_DEV_PRIMARY_ROLE must be front-desk or clinician.");
+    throw new Error("ODOS_DEV_PRIMARY_ROLE must be front-desk or clinician.");
   }
   return role;
 }

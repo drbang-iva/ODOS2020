@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Bundle, ChargeItem, Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { buildOpticalInvoice } from "../fhir/opticalInvoice.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
 import {
   createOpticalCashOrder,
   type CreatedOpticalCashOrderIds,
@@ -26,7 +26,7 @@ export interface CollectionAuthenticatedStaff {
 
 export interface PaymentCollectionHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<CollectionAuthenticatedStaff | null>;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
   now?: () => string;
   timeZone?: string;
 }
@@ -72,7 +72,6 @@ export async function handleOpenChargesRequest(
   const [chargeBundle, invoiceBundle, paymentBundle] = await Promise.all([
     staff.staff.fhir.search<ChargeItem>("ChargeItem", {
       subject: patientReference,
-      status: "billable",
       _count: "1000",
     }),
     staff.staff.fhir.search<Invoice>("Invoice", { subject: patientReference, _count: "1000" }),
@@ -90,14 +89,16 @@ export async function handleOpenChargesRequest(
     const invoice = entry.resource;
     const paid = invoice && (
       invoice.status === "balanced" ||
-      invoice.extension?.some((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL) ||
+      invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL) ||
       (invoice.id && settledInvoices.has(`Invoice/${invoice.id}`))
     );
     return paid ? (invoice.lineItem ?? []).flatMap((line) => line.chargeItemReference?.reference ?? []) : [];
   }));
   const items = (chargeBundle.entry ?? []).flatMap((entry) => {
     const chargeItem = entry.resource;
-    return chargeItem?.id && !closedCharges.has(`ChargeItem/${chargeItem.id}`) ? openChargeLine(chargeItem) : [];
+    return chargeItem?.id && chargeItem.status === "billable" && !closedCharges.has(`ChargeItem/${chargeItem.id}`)
+      ? openChargeLine(chargeItem)
+      : [];
   });
   return { status: 200, body: items };
 }

@@ -32,7 +32,7 @@ export interface AestheticsConsentEndpointDeps {
 }
 
 const WRITE_HEADERS = {
-  "X-OSOD-Source": "mcp/create_aesthetics_consent_response",
+  "X-ODOS-Source": "mcp/create_aesthetics_consent_response",
 } as const;
 
 const consentSchema = z.object({

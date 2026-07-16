@@ -326,10 +326,10 @@ function money(cents: number): string {
 }
 
 function claimsApiOptions(): ClaimsApiOptions {
-  const meta = import.meta as ImportMeta & { env?: { VITE_OSOD_MCP_BASE_URL?: string } };
+  const meta = import.meta as ImportMeta & { env?: { VITE_ODOS_MCP_BASE_URL?: string } };
   return {
     authorization: fhir.authHeader(),
-    baseUrl: meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
+    baseUrl: meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
   };
 }
 

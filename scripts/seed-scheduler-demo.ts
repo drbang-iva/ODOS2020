@@ -41,7 +41,7 @@ const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const TZ = "-05:00";
-const SEED_SYSTEM = "https://osod.dev/seed/scheduler-demo";
+const SEED_SYSTEM = "https://odos2020.com/seed/scheduler-demo";
 const SEED_MARKER = "scheduler-walkthrough";
 
 /** YYYY-MM-DD for "today" in the practice timezone (offset like "-05:00"). */

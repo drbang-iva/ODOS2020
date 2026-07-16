@@ -1,10 +1,10 @@
 import type { Claim, ClaimResponse, Invoice } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "./claimmd-fhir.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "./claimmd-fhir.js";
 
-export const OSOD_SOURCE_CLAIM_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-source-claim";
+export const ODOS_SOURCE_CLAIM_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-source-claim";
 export const PATIENT_RESPONSIBILITY_INVOICE_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice";
+  "https://odos2020.com/fhir/NamingSystem/patient-responsibility-invoice";
 
 export function buildPatientResponsibilityInvoice(
   claim: Claim,
@@ -25,7 +25,7 @@ export function buildPatientResponsibilityInvoice(
     if (amountCents === 0) return [];
     const claimItem = claimItems.get(responseItem.itemSequence);
     const chargeItemReference = claimItem?.extension?.find(
-      (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+      (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
     )?.valueReference?.reference;
     if (!chargeItemReference || !/^ChargeItem\/[A-Za-z0-9.-]+$/.test(chargeItemReference)) {
       throw new PatientResponsibilityInvoiceUnavailableError(
@@ -53,7 +53,7 @@ export function buildPatientResponsibilityInvoice(
     status: "issued",
     subject: { reference: claim.patient.reference },
     ...(response.created ? { date: response.created } : {}),
-    extension: [{ url: OSOD_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: claimReference } }],
+    extension: [{ url: ODOS_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: claimReference } }],
     lineItem,
     totalGross: { value: totalCents / 100, currency: "USD" },
     totalNet: { value: totalCents / 100, currency: "USD" },
@@ -81,7 +81,7 @@ function invoiceMoneyShape(invoice: Invoice): unknown {
   return {
     status: invoice.status,
     subject: invoice.subject?.reference,
-    sourceClaim: invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+    sourceClaim: invoice.extension?.find((extension) => extension.url === ODOS_SOURCE_CLAIM_EXTENSION_URL)
       ?.valueReference?.reference,
     lines: (invoice.lineItem ?? []).map((line) => ({
       sequence: line.sequence,

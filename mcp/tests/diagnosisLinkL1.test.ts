@@ -391,8 +391,8 @@ test("real HTTP routes complete Tear Film mapping, candidates read, deactivation
   const findingRow = fhir.resources.find((resource) => resource.resourceType === "Basic" && (resource as Basic).code?.coding?.some((coding) => coding.system === FINDING_DEFINITION_CODE_SYSTEM && coding.code === FINDING_DEFINITION_CODE));
   assert.ok(findingRow?.id);
   assert.ok((fhir.versions.get(`Basic/${findingRow.id}`)?.length ?? 0) >= 2);
-  assert.equal(fhir.writes.some((write) => write.headers?.["X-OSOD-Source"] === FINDING_DEFINITION_WRITE_HEADERS["X-OSOD-Source"]), true);
-  assert.equal(fhir.writes.some((write) => write.headers?.["X-OSOD-Source"] === DIAGNOSIS_CATALOG_WRITE_HEADERS["X-OSOD-Source"]), true);
+  assert.equal(fhir.writes.some((write) => write.headers?.["X-ODOS-Source"] === FINDING_DEFINITION_WRITE_HEADERS["X-ODOS-Source"]), true);
+  assert.equal(fhir.writes.some((write) => write.headers?.["X-ODOS-Source"] === DIAGNOSIS_CATALOG_WRITE_HEADERS["X-ODOS-Source"]), true);
   assert.equal(fhir.resources.some((resource) => resource.resourceType === "Condition"), false);
   assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Basic").some((resource) => (resource as Basic).code?.coding?.some((coding) => coding.system === DIAGNOSIS_DEFINITION_CODE_SYSTEM && coding.code === DIAGNOSIS_DEFINITION_CODE)), true);
 });

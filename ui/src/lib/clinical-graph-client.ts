@@ -6,7 +6,7 @@ export function authHeaders(): Record<string, string> {
 }
 
 export function clinicalGraphApiBase(): string {
-  return import.meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+  return import.meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 export type DiagnosisCompleteness = {
@@ -63,5 +63,5 @@ export async function submitDiagnosisPick(input: {
   });
   const body = await response.json() as { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Diagnosis pick failed: ${response.status}`);
-  window.dispatchEvent(new CustomEvent("osod:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
+  window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
 }

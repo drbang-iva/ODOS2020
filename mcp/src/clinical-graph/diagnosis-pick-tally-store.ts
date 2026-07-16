@@ -1,10 +1,10 @@
 import type { Basic, Bundle } from "@medplum/fhirtypes";
 
-export const DX_PICK_TALLY_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-dx-pick-tally";
-export const DX_PICK_TALLY_CODE = "osod-dx-pick-tally";
-export const DX_PICK_TALLY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/dx-pick-tally-practitioner";
-export const DX_PICK_TALLY_EXTENSION_URL = "https://osod.dev/fhir/StructureDefinition/osod-dx-pick-tally-json";
-export const DX_PICK_TALLY_WRITE_HEADERS = { "X-OSOD-Source": "diagnosis-pick-tally" } as const;
+export const DX_PICK_TALLY_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-dx-pick-tally";
+export const DX_PICK_TALLY_CODE = "odos-dx-pick-tally";
+export const DX_PICK_TALLY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/dx-pick-tally-practitioner";
+export const DX_PICK_TALLY_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-dx-pick-tally-json";
+export const DX_PICK_TALLY_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick-tally" } as const;
 
 export interface DiagnosisPickTallyRow {
   counts: Record<string, Record<string, number>>;
@@ -109,7 +109,7 @@ export function buildDiagnosisPickTallyResource(
     ...(existing?.meta ? { meta: existing.meta } : {}),
     identifier: [{ system: DX_PICK_TALLY_IDENTIFIER_SYSTEM, value: practitionerReference }],
     code: {
-      coding: [{ system: DX_PICK_TALLY_CODE_SYSTEM, code: DX_PICK_TALLY_CODE, display: "OSOD diagnosis pick tally" }],
+      coding: [{ system: DX_PICK_TALLY_CODE_SYSTEM, code: DX_PICK_TALLY_CODE, display: "ODOS diagnosis pick tally" }],
       text: "Diagnosis pick tally",
     },
     extension: [{ url: DX_PICK_TALLY_EXTENSION_URL, valueString: JSON.stringify(row) }],
@@ -118,7 +118,7 @@ export function buildDiagnosisPickTallyResource(
 
 export function parseDiagnosisPickTallyResource(resource: Basic, practitionerReference?: string): DiagnosisPickTallyRow {
   if (!resource.code?.coding?.some((coding) => coding.system === DX_PICK_TALLY_CODE_SYSTEM && coding.code === DX_PICK_TALLY_CODE)) {
-    throw new Error("Basic resource is not an OSOD diagnosis pick tally.");
+    throw new Error("Basic resource is not an ODOS diagnosis pick tally.");
   }
   const identifier = resource.identifier?.find((row) => row.system === DX_PICK_TALLY_IDENTIFIER_SYSTEM)?.value;
   if (!identifier || (practitionerReference && identifier !== practitionerReference)) {

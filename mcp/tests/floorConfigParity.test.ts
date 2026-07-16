@@ -4,18 +4,18 @@ import { test } from "node:test";
 import {
   DEFAULT_FLOOR_STATIONS,
   DEFAULT_LANE_THRESHOLDS,
-  OSOD_FLOOR_CONFIG_CODE as MCP_OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL as MCP_OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM as MCP_OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE as MCP_ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL as MCP_ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM as MCP_ODOS_FLOOR_CONFIG_SYSTEM,
   buildFloorConfigResource as mcpBuildFloorConfigResource,
   parseFloorConfig as mcpParseFloorConfig,
   type PersistedFloorConfig,
 } from "../src/scheduling/floor-config.js";
 import { DEFAULT_FLOOR_BOARD_CONFIG } from "../../ui/src/lib/floor-board.js";
 import {
-  OSOD_FLOOR_CONFIG_CODE as UI_OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL as UI_OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM as UI_OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE as UI_ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL as UI_ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM as UI_ODOS_FLOOR_CONFIG_SYSTEM,
   buildFloorConfigResource as uiBuildFloorConfigResource,
   parseFloorConfig as uiParseFloorConfig,
 } from "../../ui/src/lib/floor-config.js";
@@ -42,9 +42,9 @@ test("ui DEFAULT_FLOOR_BOARD_CONFIG.defaultThreshold mirrors mcp DEFAULT_LANE_TH
 });
 
 test("UI floor-config mirror constants and inactive-station wire shape match the kernel", () => {
-  assert.equal(UI_OSOD_FLOOR_CONFIG_SYSTEM, MCP_OSOD_FLOOR_CONFIG_SYSTEM);
-  assert.equal(UI_OSOD_FLOOR_CONFIG_CODE, MCP_OSOD_FLOOR_CONFIG_CODE);
-  assert.equal(UI_OSOD_FLOOR_CONFIG_EXTENSION_URL, MCP_OSOD_FLOOR_CONFIG_EXTENSION_URL);
+  assert.equal(UI_ODOS_FLOOR_CONFIG_SYSTEM, MCP_ODOS_FLOOR_CONFIG_SYSTEM);
+  assert.equal(UI_ODOS_FLOOR_CONFIG_CODE, MCP_ODOS_FLOOR_CONFIG_CODE);
+  assert.equal(UI_ODOS_FLOOR_CONFIG_EXTENSION_URL, MCP_ODOS_FLOOR_CONFIG_EXTENSION_URL);
   assert.deepEqual(uiBuildFloorConfigResource(CONFIG), mcpBuildFloorConfigResource(CONFIG));
   assert.deepEqual(
     uiParseFloorConfig(uiBuildFloorConfigResource(CONFIG)),

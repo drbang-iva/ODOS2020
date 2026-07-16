@@ -135,7 +135,7 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
   const claim = resourceWithMarker(adapter, "Claim", "insured-claim");
   assert.equal(claim.item?.length, 2);
   assert.ok(claim.item?.every((item) => item.extension?.some((extension) =>
-    extension.url === "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
+    extension.url === "https://odos2020.com/fhir/StructureDefinition/odos-charge-item",
   )));
   assert.ok(claim.insurance?.length);
   assert.equal(claim.insurance[0]?.sequence, 1);
@@ -147,7 +147,7 @@ test("demo seed creates a synthetic patient, schedule, issued Invoice, unapplied
   assert.equal(coverage.status, "active");
   assert.equal(coverage.beneficiary?.reference, `Patient/${insuredPatient.id}`);
   const payer = resourceWithMarker(adapter, "Organization", "demo-payer");
-  assert.equal(payer.name, "OSOD Demo Insurance");
+  assert.equal(payer.name, "ODOS Demo Insurance");
   assert.ok(coverage.payor?.some((payor) => payor.reference === `Organization/${payer.id}`));
   assert.equal(claim.insurer?.reference, `Organization/${payer.id}`);
   const claimResponse = resourceWithMarker(adapter, "ClaimResponse", "insured-claim-response");

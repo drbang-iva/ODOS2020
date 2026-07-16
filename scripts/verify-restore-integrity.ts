@@ -13,7 +13,7 @@ import type {
 import { verifyRestoreIntegrity } from "../mcp/src/authz/restoreIntegrity.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../mcp/src/authz/roles.js";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
-import type { OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 
 const manifestPath = process.argv[2];
 if (!manifestPath) {
@@ -22,7 +22,7 @@ if (!manifestPath) {
 
 loadRepoEnv();
 
-const postgresUrl = process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const email = process.env.MEDPLUM_ADMIN_EMAIL;
 const password = process.env.MEDPLUM_ADMIN_PASSWORD;
@@ -50,7 +50,7 @@ if (!result.passed) {
   process.exitCode = 1;
 }
 
-function readRestoredAuditRows(expectedCount: number): OsodAuditEventRecord[] {
+function readRestoredAuditRows(expectedCount: number): OdosAuditEventRecord[] {
   const sql = `
     SELECT COALESCE(json_agg(json_build_object(
       'id', id::text,
@@ -75,14 +75,14 @@ function readRestoredAuditRows(expectedCount: number): OsodAuditEventRecord[] {
       'auditEventId', audit_event_id,
       'createdAt', created_at
     ) ORDER BY event_time), '[]'::json)::text
-    FROM osod_audit_events;
+    FROM odos_audit_events;
   `;
   try {
     const output = execFileSync("psql", [postgresUrl, "-Atc", sql], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     }).trim();
-    return JSON.parse(output || "[]") as OsodAuditEventRecord[];
+    return JSON.parse(output || "[]") as OdosAuditEventRecord[];
   } catch (error) {
     if (expectedCount === 0) {
       return [];
@@ -158,7 +158,7 @@ async function runAccessPolicyRoundTrip(fhir: ReturnType<typeof createMedplumCli
     const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
     const created = await fhir.create<AccessPolicy>({
       ...policy,
-      name: `osod-restore-roundtrip-${Date.now()}`,
+      name: `odos-restore-roundtrip-${Date.now()}`,
     });
     return created.resourceType === "AccessPolicy" && Boolean(created.id);
   } catch {

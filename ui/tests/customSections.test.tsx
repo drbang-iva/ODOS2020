@@ -849,7 +849,7 @@ test("an aesthetics-tagged Encounter loads the procedure catalog into the shared
         subject: { reference: "Patient/shared-1" },
         serviceType: {
           coding: [{
-            system: "https://osod.dev/fhir/CodeSystem/scheduling-discipline",
+            system: "https://odos2020.com/fhir/CodeSystem/scheduling-discipline",
             code: "aesthetics",
           }],
         },

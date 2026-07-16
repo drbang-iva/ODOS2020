@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/procedure.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/procedure.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { CodeableConcept, Extension, Procedure, Reference } from "@medplum/fhirtypes";
 
 export const PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL =

@@ -81,7 +81,7 @@ interface BlockPayload {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_refraction";
+const OPERATOR = "ODOS UI clinical_graph_refraction";
 
 export function RefractionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<RefractionDefinitionResponse | null>(null);

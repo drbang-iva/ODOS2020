@@ -31,10 +31,10 @@ test("clearinghouse selection defaults traffic to Claim.MD and keeps ERA routing
 test("system routing config defaults both lanes to Claim.MD and keeps ERA explicit", () => {
   assert.deepEqual(clearinghouseRoutingFromEnv({}), { transaction: "claimmd", era: "claimmd" });
   assert.deepEqual(clearinghouseRoutingFromEnv({
-    OSOD_CLEARINGHOUSE_DEFAULT: "stedi",
-    OSOD_ERA_CLEARINGHOUSE: "claimmd",
+    ODOS_CLEARINGHOUSE_DEFAULT: "stedi",
+    ODOS_ERA_CLEARINGHOUSE: "claimmd",
   }), { transaction: "stedi", era: "claimmd" });
-  assert.throws(() => clearinghouseRoutingFromEnv({ OSOD_ERA_CLEARINGHOUSE: "auto" }), /claimmd or stedi/);
+  assert.throws(() => clearinghouseRoutingFromEnv({ ODOS_ERA_CLEARINGHOUSE: "auto" }), /claimmd or stedi/);
 });
 
 test("clearinghouse selection fails closed when the selected adapter is not configured", () => {

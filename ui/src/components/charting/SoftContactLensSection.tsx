@@ -98,7 +98,7 @@ interface EyePayload {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_soft_contact_lens";
+const OPERATOR = "ODOS UI clinical_graph_soft_contact_lens";
 
 export function SoftContactLensSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<DefinitionResponse | null>(null);

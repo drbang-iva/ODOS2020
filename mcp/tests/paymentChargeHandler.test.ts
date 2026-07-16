@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import { projectDayLedgerPayments } from "../src/desk/day-ledger.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import {
@@ -39,7 +39,7 @@ function cloverTransport(response: unknown, ok = true, status = 200) {
 }
 
 function deps(overrides: Partial<ChargeHandlerDeps> & { fetchImpl?: typeof fetch; fhir?: unknown } = {}) {
-  const audits: OsodAuditEventRecord[] = [];
+  const audits: OdosAuditEventRecord[] = [];
   const fhir = overrides.fhir ?? cloverTransport({}).fhir;
   const base: ChargeHandlerDeps = {
     authenticate: async (authHeader) =>
@@ -144,7 +144,7 @@ test("a successful card charge returns 200 with the transaction result and audit
   assert.equal(result.paymentRecord?.id, "pr-server-1");
   assert.equal(created.length, 1);
   assert.equal(created[0].extension?.find((extension) =>
-    extension.url.endsWith("/osod-payment-subject"))?.valueReference?.reference, "Patient/p1");
+    extension.url.endsWith("/odos-payment-subject"))?.valueReference?.reference, "Patient/p1");
 
   assert.equal(audits.length, 1);
   assert.equal(audits[0].eventType, "payment.charge.completed");

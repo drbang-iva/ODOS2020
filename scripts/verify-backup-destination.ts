@@ -63,7 +63,7 @@ export function verifyBackupDestination(
 }
 
 function checkWritable(destination: string, warnings: string[]): boolean {
-  const probe = resolve(destination, `.osod-backup-write-test-${Date.now()}`);
+  const probe = resolve(destination, `.odos-backup-write-test-${Date.now()}`);
   try {
     writeFileSync(probe, "ok\n");
     rmSync(probe);
@@ -175,7 +175,7 @@ function runCommand(command: string, args: readonly string[]): string {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const destination = process.argv[2] ?? process.env.OSOD_BACKUP_DIR;
+  const destination = process.argv[2] ?? process.env.ODOS_BACKUP_DIR;
   if (!destination) {
     console.error("Usage: npm run verify-backup-destination -- /path/to/backup-destination");
     process.exitCode = 1;

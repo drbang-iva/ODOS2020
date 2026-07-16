@@ -1,20 +1,20 @@
-# OSOD CDS Hooks v0.55c
+# ODOS CDS Hooks v0.55c
 
 ## Overview
 
-OSOD v0.55c adds a local CDS Hooks 2.0.1 client and local OSOD specialty hook services. Decision support runs in the practice-owned OSOD Node runtime unless a practice admin explicitly activates an external CDS service. The shipped external-services catalog is empty by default.
+ODOS v0.55c adds a local CDS Hooks 2.0.1 client and local ODOS specialty hook services. Decision support runs in the practice-owned ODOS Node runtime unless a practice admin explicitly activates an external CDS service. The shipped external-services catalog is empty by default.
 
 Local CDS guidance - your registry, your call.
 
-## OSOD-Default Hook Services
+## ODOS-Default Hook Services
 
 The v0.55c default services are deterministic specialty workflow checks, not AI agents:
 
 | Service ID | Hook | Trigger substrate |
 |---|---|---|
-| `osod-contact-lens-finalize` | `order-sign` | ServiceRequest code matches SNOMED CT `2488002` or `6213004` |
-| `osod-myopia-control-plan` | `order-sign` | ServiceRequest code matches SNOMED CT `57190000` |
-| `osod-dry-eye-escalation` | `encounter-discharge` | Assessment Observation code matches SNOMED CT `302896008` |
+| `odos-contact-lens-finalize` | `order-sign` | ServiceRequest code matches SNOMED CT `2488002` or `6213004` |
+| `odos-myopia-control-plan` | `order-sign` | ServiceRequest code matches SNOMED CT `57190000` |
+| `odos-dry-eye-escalation` | `encounter-discharge` | Assessment Observation code matches SNOMED CT `302896008` |
 
 All three services emit rules-based cards with HTI-1 DSI source attributes and intervention risk-management fields. They do not analyze images, raw media, patient-portal render hooks, SMS, email, Twilio, or SendGrid.
 
@@ -28,15 +28,15 @@ All three services emit rules-based cards with HTI-1 DSI source attributes and i
 }
 ```
 
-In a running v0.55c stack, the response includes the three OSOD-default services plus any locally approved external CDS service. The `.well-known/smart-configuration` document also advertises:
+In a running v0.55c stack, the response includes the three ODOS-default services plus any locally approved external CDS service. The `.well-known/smart-configuration` document also advertises:
 
 ```json
 {
   "cds_hooks_endpoint": "http://localhost:.../cds-services",
   "cds_capabilities": [
-    "osod-contact-lens-finalize",
-    "osod-myopia-control-plan",
-    "osod-dry-eye-escalation"
+    "odos-contact-lens-finalize",
+    "odos-myopia-control-plan",
+    "odos-dry-eye-escalation"
   ]
 }
 ```
@@ -45,9 +45,9 @@ The existing SMART `registration_endpoint` remains `/oauth2/register`.
 
 ## External CDS Service Registration
 
-Practice admins register an external CDS service with `POST /cds-services/register`. The endpoint is local to the OSOD runtime and is distinct from SMART app registration.
+Practice admins register an external CDS service with `POST /cds-services/register`. The endpoint is local to the ODOS runtime and is distinct from SMART app registration.
 
-Registration does not auto-activate. The request must include `admin_review_approved: true` after staged local admin review before OSOD creates the canonical FHIR `Endpoint` record.
+Registration does not auto-activate. The request must include `admin_review_approved: true` after staged local admin review before ODOS creates the canonical FHIR `Endpoint` record.
 
 Required metadata:
 
@@ -74,19 +74,19 @@ Required metadata:
 }
 ```
 
-The canonical record is a FHIR R4 `Endpoint` with the OSOD extension URL:
+The canonical record is a FHIR R4 `Endpoint` with the ODOS extension URL:
 
-`https://osod.dev/fhir/StructureDefinition/cds-service`
+`https://odos2020.com/fhir/StructureDefinition/cds-service`
 
 Registration writes a `Provenance` record with top-level `Provenance.policy` set to:
 
-`https://osod.dev/fhir/Policy/cds-service-registry`
+`https://odos2020.com/fhir/Policy/cds-service-registry`
 
 Removal uses `POST /cds-services/{service-id}/deactivate` and records `nullify` or `amend` activity.
 
 ## Registration Blocks
 
-OSOD hard-blocks registration when:
+ODOS hard-blocks registration when:
 
 - `image_analysis_prohibited` is not `true`.
 - The service declares an image-analysis payload.
@@ -109,13 +109,13 @@ Every returned card must pass the v0.55c card schema before rendering. Required 
 - `source_attributes.funding_source`.
 - `source_attributes.evidence_basis_citation`.
 
-Predictive cards additionally require `training_data_demographics` and `algorithmic_validity_bounds`. The v0.55c OSOD-default services are all `rules-based`.
+Predictive cards additionally require `training_data_demographics` and `algorithmic_validity_bounds`. The v0.55c ODOS-default services are all `rules-based`.
 
 Cards failing schema validation are rejected before rendering and emit `cds.card.rejected_validation`. Cards carrying executable content are rejected.
 
 ## Stale Guidance
 
-Rendered cards carry `card_ttl_minutes`, defaulting to 60. Expired cards are suppressed at display time and emit `cds.card.suppressed_stale`. OSOD does not auto-refresh stale cards; the user action that caused the hook must run again.
+Rendered cards carry `card_ttl_minutes`, defaulting to 60. Expired cards are suppressed at display time and emit `cds.card.suppressed_stale`. ODOS does not auto-refresh stale cards; the user action that caused the hook must run again.
 
 ## Feedback Endpoint
 
@@ -124,11 +124,11 @@ Rendered cards carry `card_ttl_minutes`, defaulting to 60. Expired cards are sup
 - `accepted` outcomes may include accepted suggestion UUIDs.
 - `overridden` outcomes may include a CodeableConcept reason and user comment.
 
-Feedback persists to `osod_cds_feedback` and emits `cds.feedback.accepted` or `cds.feedback.overridden`.
+Feedback persists to `odos_cds_feedback` and emits `cds.feedback.accepted` or `cds.feedback.overridden`.
 
 ## Why This Is Not A Marketplace
 
-OSOD v0.55c ships infrastructure, not a ranked service catalog. The default external services file is:
+ODOS v0.55c ships infrastructure, not a ranked service catalog. The default external services file is:
 
 `data/seed-catalogs/cds-services.json`
 

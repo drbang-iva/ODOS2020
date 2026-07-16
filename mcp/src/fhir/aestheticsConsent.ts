@@ -5,7 +5,7 @@ import type {
 import { reference } from "./ophthalmology/extensions.js";
 
 export const AESTHETICS_COSMETIC_CONSENT_URL =
-  "https://osod.dev/fhir/Questionnaire/aesthetics-cosmetic-consent";
+  "https://odos2020.com/fhir/Questionnaire/aesthetics-cosmetic-consent";
 export const AESTHETICS_CONSENT_ACKNOWLEDGEMENT_LINK_ID =
   "cosmetic-procedure-acknowledgement";
 
@@ -14,13 +14,13 @@ export function buildAestheticsConsentQuestionnaire(): Questionnaire {
     resourceType: "Questionnaire",
     url: AESTHETICS_COSMETIC_CONSENT_URL,
     version: "0.1.0",
-    name: "OSODAestheticsCosmeticConsent",
+    name: "ODOSAestheticsCosmeticConsent",
     title: "Cosmetic procedure consent acknowledgement",
     status: "active",
     experimental: true,
     subjectType: ["Patient"],
     date: "2026-07-16",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description:
       "Prototype acknowledgement for the aesthetics seam spike; not a production legal consent template.",
     item: [

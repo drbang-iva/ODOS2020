@@ -1,13 +1,13 @@
 ---
-title: OSOD Audit Event Type ValueSet
+title: ODOS Audit Event Type ValueSet
 date: 2026-04-29
 status: verified
 ledger: data/code-bindings/v0.5-verification-ledger.md
 ---
 
-# OSOD Audit Event Type ValueSet
+# ODOS Audit Event Type ValueSet
 
-The DB table `osod_audit_events` is the source of truth for the local HIPAA
+The DB table `odos_audit_events` is the source of truth for the local HIPAA
 security log. FHIR `AuditEvent` resources are projections for interoperability.
 
 ## Event Types

@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/save-section-bundle.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/save-section-bundle.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type {
   BodyStructure,
   Bundle,
@@ -10,7 +10,7 @@ import { buildEyeBodyStructure, rewriteObservationBodyStructureReference } from 
 import { buildIopObservation } from "./iop.js";
 import { buildRefractionObservation } from "./refraction.js";
 import { buildVisualAcuityObservation } from "./visualAcuity.js";
-import { osodConcept } from "./extensions.js";
+import { odosConcept } from "./extensions.js";
 import type {
   EyeLaterality,
   IopMethod,
@@ -71,13 +71,13 @@ export interface BuildSectionSaveBundleInput {
 }
 
 export const SECTION_PROFILE_URLS: Record<SectionSaveSection, string> = {
-  va: "https://osod.dev/fhir/StructureDefinition/Observation-VA",
-  iop: "https://osod.dev/fhir/StructureDefinition/Observation-IOP",
-  refraction: "https://osod.dev/fhir/StructureDefinition/Observation-Refraction",
+  va: "https://odos2020.com/fhir/StructureDefinition/Observation-VA",
+  iop: "https://odos2020.com/fhir/StructureDefinition/Observation-IOP",
+  refraction: "https://odos2020.com/fhir/StructureDefinition/Observation-Refraction",
 };
 
 const BODY_STRUCTURE_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/body-structure";
+  "https://odos2020.com/fhir/NamingSystem/body-structure";
 const SNOMED_BY_LATERALITY: Record<SectionSaveLaterality, string> = {
   OD: "18944008",
   OS: "8966001",
@@ -192,7 +192,7 @@ function buildSectionObservation(input: {
         ...common,
         value: entry.value,
         unit: "mm[Hg]",
-        method: osodConcept(method, method),
+        method: odosConcept(method, method),
       }).resource;
     }
 

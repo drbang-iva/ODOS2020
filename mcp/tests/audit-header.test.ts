@@ -1,9 +1,9 @@
 /**
- * X-OSOD-Source AuditEvent verification.
+ * X-ODOS-Source AuditEvent verification.
  *
  * If Medplum does not expose the request header in FHIR AuditEvent, this test
  * emits a structured WARNING and passes. That is an intentional, documented
- * gap: X-OSOD-Source remains useful for HTTP-layer logs, but Provenance is the
+ * gap: X-ODOS-Source remains useful for HTTP-layer logs, but Provenance is the
  * reviewable per-resource attribution path when AuditEvent does not surface it.
  */
 
@@ -31,7 +31,7 @@ interface AuditEventSearchAttempt {
   error?: string;
 }
 
-test("X-OSOD-Source header visibility in Medplum AuditEvent", { timeout: 90_000 }, async (t) => {
+test("X-ODOS-Source header visibility in Medplum AuditEvent", { timeout: 90_000 }, async (t) => {
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
@@ -55,7 +55,7 @@ test("X-OSOD-Source header visibility in Medplum AuditEvent", { timeout: 90_000 
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-audit-header-test",
+    clientName: "odos-mcp-audit-header-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -93,7 +93,7 @@ test("X-OSOD-Source header visibility in Medplum AuditEvent", { timeout: 90_000 
   const warning = {
     level: "WARNING",
     test: "audit-header",
-    outcome: "x-osod-source-not-surfaced-in-fhir-auditevent",
+    outcome: "x-odos-source-not-surfaced-in-fhir-auditevent",
     searchedFor: SOURCE_HEADER_VALUE,
     encounterReference,
     recordedAt,

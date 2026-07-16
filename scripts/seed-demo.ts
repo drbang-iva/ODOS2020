@@ -16,7 +16,7 @@ import type {
   Schedule,
   Task,
 } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../mcp/src/claims/claimmd-fhir.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../mcp/src/claims/claimmd-fhir.js";
 import { buildPatientResponsibilityInvoice } from "../mcp/src/claims/patient-responsibility-invoice.js";
 import { buildSchedulingAppointment } from "../mcp/src/fhir/schedulingAppointment.js";
 import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
@@ -35,7 +35,7 @@ import { loginForLocalRepair } from "./repair-practice-roles.js";
 
 const DEFAULT_MEDPLUM_BASE_URL = "http://localhost:8103";
 const DEFAULT_MCP_BASE_URL = "http://localhost:3333";
-export const DEMO_SEED_SYSTEM = "https://osod.dev/seed/operator-demo";
+export const DEMO_SEED_SYSTEM = "https://odos2020.com/seed/operator-demo";
 
 type DemoResource = Patient | Practitioner | PractitionerRole | HealthcareService | Schedule | Appointment
   | ChargeItem | Claim | ClaimResponse | Coverage | Invoice | Organization | PaymentReconciliation;
@@ -186,7 +186,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     resourceType: "Organization",
     active: true,
     identifier: [demoIdentifier("demo-payer")],
-    name: "OSOD Demo Insurance",
+    name: "ODOS Demo Insurance",
   }));
   const demoPayerReference = `Organization/${demoPayer.id}`;
   const coverage = await ensure<Coverage>("Coverage", "insured-coverage", () => ({
@@ -194,7 +194,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     status: "active",
     identifier: [demoIdentifier("insured-coverage")],
     beneficiary: { reference: `Patient/${insuredPatient.id}`, display: "TEST-Insured, Demo" },
-    payor: [{ reference: demoPayerReference, display: "OSOD Demo Insurance" }],
+    payor: [{ reference: demoPayerReference, display: "ODOS Demo Insurance" }],
   }));
   const insuredProvider = await ensure<Practitioner>("Practitioner", "insured-provider", () => ({
     resourceType: "Practitioner",
@@ -221,7 +221,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     active: true,
     identifier: [demoIdentifier("insured-provider-role")],
     practitioner: { reference: `Practitioner/${insuredProvider.id}`, display: "Morgan TEST-Optometrist, OD" },
-    organization: { display: "OSOD Demo Eye Care" },
+    organization: { display: "ODOS Demo Eye Care" },
     telecom: [{ system: "phone", use: "work", value: "919-555-0100" }],
   }));
   const insuredPatientReference = `Patient/${insuredPatient.id}`;
@@ -249,7 +249,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     identifier: [demoIdentifier("insured-claim")],
     patient: { reference: insuredPatientReference, display: "TEST-Insured, Demo" },
     created: "2026-07-10",
-    insurer: { reference: demoPayerReference, display: "OSOD Demo Insurance" },
+    insurer: { reference: demoPayerReference, display: "ODOS Demo Insurance" },
     provider: { reference: `Practitioner/${insuredProvider.id}`, display: "Morgan TEST-Optometrist, OD" },
     priority: { text: "normal" },
     insurance: [{ sequence: 1, focal: true, coverage: { reference: `Coverage/${coverage.id}` } }],
@@ -268,7 +268,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     item: chargeItems.map((chargeItem, index) => ({
       sequence: index + 1,
       extension: [{
-        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
         valueReference: { reference: `ChargeItem/${chargeItem.id}` },
       }],
       productOrService: { coding: chargeItem.code.coding },
@@ -289,7 +289,7 @@ export async function seedDemo(adapter: DemoSeedAdapter): Promise<DemoSeedResult
     identifier: [demoIdentifier("insured-claim-response")],
     patient: { reference: insuredPatientReference },
     created: "2026-07-11T12:00:00.000Z",
-    insurer: { reference: demoPayerReference, display: "OSOD Demo Insurance" },
+    insurer: { reference: demoPayerReference, display: "ODOS Demo Insurance" },
     request: { reference: claimReference },
     outcome: "complete",
     item: [
@@ -398,14 +398,14 @@ export function assertInsuranceAwareDemoStatement(result: {
     || !procedureCodes.includes("00001")
     || !diagnosisCodes.includes("D00.00")
     || !diagnosisCodes.includes("D00.01")
-    || order.payerName !== "OSOD Demo Insurance"
+    || order.payerName !== "ODOS Demo Insurance"
     || insuranceAdjustments.length !== 2
     || patientAdjustments.length !== 2
     || !patientAdjustments.every((row) => row.label.startsWith("Transfer balance to patient:"))
     || order.patientPayments.length !== 1
     || order.patientPayments[0].date !== "2026-07-12"
     || order.patientPayments[0].amountCents !== 1_500
-    || header?.practiceName !== "OSOD Demo Eye Care"
+    || header?.practiceName !== "ODOS Demo Eye Care"
     || header.practicePhone !== "919-555-0100"
     || header.providerNpi !== "1111111112"
     || header.providerLicense !== "DEMO-OD-100"
@@ -547,11 +547,11 @@ function statementRunCount(code: string, valueInteger: number) {
 
 async function runCli(): Promise<void> {
   const medplumBaseUrl = (process.env.MEDPLUM_BASE_URL ?? DEFAULT_MEDPLUM_BASE_URL).replace(/\/$/, "");
-  const mcpBaseUrl = (process.env.OSOD_MCP_BASE_URL ?? DEFAULT_MCP_BASE_URL).replace(/\/$/, "");
+  const mcpBaseUrl = (process.env.ODOS_MCP_BASE_URL ?? DEFAULT_MCP_BASE_URL).replace(/\/$/, "");
   assertLocalMedplumBaseUrl(medplumBaseUrl);
   assertLocalMedplumBaseUrl(mcpBaseUrl);
-  const email = requireEnv("OSOD_ADMIN_EMAIL", "MEDPLUM_ADMIN_EMAIL");
-  const password = requireEnv("OSOD_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
+  const email = requireEnv("ODOS_ADMIN_EMAIL", "MEDPLUM_ADMIN_EMAIL");
+  const password = requireEnv("ODOS_ADMIN_PASSWORD", "MEDPLUM_ADMIN_PASSWORD");
   const accessToken = await loginForLocalRepair({ baseUrl: medplumBaseUrl, email, password });
   const result = await seedDemo(new LiveDemoSeedAdapter(
     createMedplumClient({ baseUrl: medplumBaseUrl, accessToken }),
