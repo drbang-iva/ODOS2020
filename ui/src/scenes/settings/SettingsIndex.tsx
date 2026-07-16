@@ -80,6 +80,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         description: "Manage frame, per-lab lens, and contact lens wholesale and retail prices.",
         synonyms: ["prices", "retail", "wholesale", "lens", "contact lens", "frames", "cost"],
       },
+      {
+        href: "/settings/plan-profiles",
+        title: "Plan profiles",
+        description: "Seed expected plan reimbursement for margin estimates.",
+        synonyms: ["insurance", "payer", "reimbursement", "margin", "estimate", "allowance"],
+        practiceAdminOnly: true,
+      },
     ],
   },
   {

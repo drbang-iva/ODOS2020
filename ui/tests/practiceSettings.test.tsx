@@ -13,10 +13,11 @@ const ALL_SETTINGS_HREFS = [
   "/settings/chart-fields-sections",
   "/settings/suggested-diagnoses",
   "/settings/optical-pricing",
+  "/settings/plan-profiles",
   "/admin/practice/settings/frames-data",
 ] as const;
 
-test("Practice landing groups all eight existing settings without changing their routes", () => {
+test("Practice landing groups existing settings and the owner-only plan-profile route", () => {
   const html = renderToStaticMarkup(<SettingsIndex roles={["practice-admin"]} />);
 
   for (const href of ALL_SETTINGS_HREFS) {
@@ -26,7 +27,7 @@ test("Practice landing groups all eight existing settings without changing their
     assert.match(html, new RegExp(`>${group}<`));
   }
   assert.match(html, /practice-settings-tone-gold/);
-  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 8);
+  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 9);
 });
 
 test("Find a setting filters static Manage links and Cmd-K focuses the search", async () => {
@@ -61,6 +62,14 @@ test("Find a setting filters static Manage links and Cmd-K focuses the search", 
   });
   const links = renderer.root.findAllByType("a");
   assert.deepEqual(links.map((link) => link.props.href), ["/settings/vision-plan-templates"]);
+
+  await act(async () => {
+    search.props.onChange({ target: { value: "margin estimate" } });
+  });
+  assert.deepEqual(
+    renderer.root.findAllByType("a").map((link) => link.props.href),
+    ["/settings/plan-profiles"],
+  );
 
   let prevented = false;
   assert.ok(keydown);
