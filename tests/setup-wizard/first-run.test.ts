@@ -5,33 +5,12 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   InMemorySetupPracticeAdapter,
-  resolveSessionContext,
   SETUP_WIZARD_ACTION_REASON,
   SETUP_WIZARD_NOOP_REASON,
   runSetupPractice,
 } from "../../scripts/setup-practice.ts";
 
-test("setup resolves the authenticated project membership from auth/me", async () => {
-  const membership = {
-    resourceType: "ProjectMembership" as const,
-    id: "membership-1",
-    project: { reference: "Project/project-1" },
-    user: { reference: "User/user-1" },
-  };
-  const context = await resolveSessionContext({
-    baseUrl: "http://localhost:8103/",
-    accessToken: "test-token",
-    fetchImpl: async () => new Response(JSON.stringify({
-      project: { id: "project-1" },
-      membership,
-    }), { status: 200 }),
-  });
-
-  assert.equal(context.projectId, "project-1");
-  assert.deepEqual(context.membership, membership);
-});
-
-test("v0.5d setup wizard gives the first administrator front-desk, practice-admin, and clinician roles", async () => {
+test("v0.5d setup wizard completes with the default shared bootstrap identity and audits its clinician grant", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-"));
   try {
     const statePath = join(dir, ".odos-setup-state.json");
@@ -54,31 +33,19 @@ test("v0.5d setup wizard gives the first administrator front-desk, practice-admi
     assert.equal(firstRun.noOp, false);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 1);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(firstRun.state.completed, true);
     assert.equal(firstRun.practitionerId, "practitioner-1");
-    assert.equal(firstRun.accessPolicyId, "access-policy-2");
-    assert.deepEqual(adapter.policies.map((policy) => policy.name), [
-      "ODOS Practice Admin",
-      "ODOS Clinician",
-      "ODOS Front Desk",
-      "ODOS Auditor",
-      "ODOS Aesthetics Provider",
-    ]);
-    assert.equal(adapter.policies[1]?.resourceType, "AccessPolicy");
-    assert.equal(adapter.policies[1]?.resource?.some((rule) => rule.resourceType === "Observation"), true);
+    assert.equal(firstRun.accessPolicyId, "access-policy-1");
+    assert.equal(adapter.policies[0]?.name, "ODOS Clinician");
+    assert.equal(adapter.policies[0]?.resourceType, "AccessPolicy");
+    assert.equal(adapter.policies[0]?.resource?.some((rule) => rule.resourceType === "Observation"), true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-      "AccessPolicy/access-policy-3",
       "AccessPolicy/access-policy-1",
-      "AccessPolicy/access-policy-2",
     ]);
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
-      "create",
-      "create",
-      "create",
-      "create",
       "create",
       "create",
       "create",
@@ -92,7 +59,7 @@ test("v0.5d setup wizard gives the first administrator front-desk, practice-admi
     const roleChanges = adapter.auditRows.filter((row) => row.eventType === "role-change");
     assert.equal(roleChanges.length, 1);
     assert.equal(roleChanges[0]?.resourceId, "project-membership-1");
-    assert.equal(roleChanges[0]?.actionReason, "bootstrap first administrator role bundle");
+    assert.equal(roleChanges[0]?.actionReason, "bootstrap clinician role for admin@odos.local");
 
     const secondRun = await runSetupPractice({
       adapter,
@@ -103,7 +70,7 @@ test("v0.5d setup wizard gives the first administrator front-desk, practice-admi
     assert.equal(secondRun.noOp, true);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 1);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(secondRun.auditRows.length, 1);
     assert.equal(secondRun.auditRows[0]?.eventType, "noop");
@@ -147,19 +114,13 @@ test("setup reuses one pre-existing canonical clinician policy instead of creati
 
     assert.equal(result.state.completed, true);
     assert.equal(result.accessPolicyId, "existing-clinician-policy");
-    assert.equal(adapter.policies.length, 5);
+    assert.equal(adapter.policies.length, 1);
     assert.deepEqual(result.auditRows.map((row) => row.resourceType), [
       "Project",
       "Practitioner",
-      "AccessPolicy",
-      "AccessPolicy",
-      "AccessPolicy",
-      "AccessPolicy",
       "ProjectMembership",
     ]);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
-      "AccessPolicy/access-policy-3",
-      "AccessPolicy/access-policy-2",
       "AccessPolicy/existing-clinician-policy",
     ]);
   } finally {
