@@ -45,6 +45,12 @@ const captureSchema = z.object({
   performedDateTime: z.string().datetime().optional(),
 }).strict();
 
+const mutationSchema = z.object({
+  action: z.literal("update-definition"),
+  display: z.string().trim().min(1).max(120).optional(),
+  active: z.boolean().optional(),
+}).strict();
+
 const historyQuerySchema = z.object({
   patient: z.string().regex(/^Patient\/[^/]+$/),
   encounter: z.string().regex(/^Encounter\/[^/]+$/).optional(),
@@ -69,6 +75,54 @@ export async function handleProcedureDefinitionCatalogRequest(
       definitions: definitions.filter((definition) => definition.active).map(definitionSummary),
     },
   };
+}
+
+export async function handleProcedureDefinitionMutationRequest(
+  deps: ProcedureDefinitionEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    params: unknown;
+    body: unknown;
+  },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) {
+    return { status: 401, body: { error: "Authentication required to manage procedure definitions." } };
+  }
+  if (!staffMay(staff.actorRole, "finding-definitions.write")) {
+    return { status: 403, body: { error: "finding-definitions.write role required" } };
+  }
+  const stableKey = readStableKey(input.params);
+  if (!stableKey) {
+    return { status: 400, body: { error: "A valid procedure-definition stableKey is required." } };
+  }
+  const parsed = mutationSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid procedure-definition mutation." },
+    };
+  }
+  if (parsed.data.display === undefined && parsed.data.active === undefined) {
+    return { status: 400, body: { error: "Definition update requires display or active." } };
+  }
+  const store = new FhirProcedureDefinitionStore(staff.fhir);
+  const definition = (deps.procedureDefinitions?.() ?? await store.list())
+    .find((candidate) => candidate.stableKey === stableKey);
+  if (!definition) {
+    return { status: 404, body: { error: `Procedure definition ${stableKey} does not exist.` } };
+  }
+  const saved = await store.save({
+    ...definition,
+    ...(parsed.data.display !== undefined ? { display: parsed.data.display } : {}),
+    ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
+  }, {
+    source: "manual",
+    recordedAt: deps.now?.() ?? new Date().toISOString(),
+    actorReference: staff.staffReference,
+    note: "Practice procedure-definition update.",
+  });
+  return { status: 200, body: { definition: definitionSummary(saved) } };
 }
 
 export async function handleProcedureDefinitionCaptureRequest(

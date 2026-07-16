@@ -15,6 +15,7 @@ import {
   handleProcedureDefinitionCaptureRequest,
   handleProcedureDefinitionCatalogRequest,
   handleProcedureDefinitionHistoryRequest,
+  handleProcedureDefinitionMutationRequest,
 } from "../src/clinical-graph/procedure-definition-endpoint.js";
 import {
   AESTHETICS_PROCEDURE_TYPE_SYSTEM,
@@ -135,11 +136,18 @@ test("the procedure-definition endpoint serves the same persisted data store use
   const fhir = new MemoryFhir();
   const store = new FhirProcedureDefinitionStore(fhir);
   const seed = buildProcedureDefinitionSeeds()[0]!;
-  await store.save({ ...seed, display: "Local glabella neurotoxin" }, {
-    ...seed.provenance,
-    recordedAt: NOW,
-    actorReference: "Practitioner/admin-1",
-  });
+  const mutation = await handleProcedureDefinitionMutationRequest(
+    deps("practice-admin", fhir, await store.list()),
+    {
+      authHeader: AUTH,
+      params: { stableKey: seed.stableKey },
+      body: {
+        action: "update-definition",
+        display: "Local glabella neurotoxin",
+      },
+    },
+  );
+  assert.equal(mutation.status, 200);
   const definitions = await store.list();
   const catalog = await handleProcedureDefinitionCatalogRequest(
     deps("aesthetics-provider", fhir, definitions),

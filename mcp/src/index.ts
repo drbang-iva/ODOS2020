@@ -113,6 +113,7 @@ import {
   handleProcedureDefinitionCaptureRequest,
   handleProcedureDefinitionCatalogRequest,
   handleProcedureDefinitionHistoryRequest,
+  handleProcedureDefinitionMutationRequest,
 } from "./clinical-graph/procedure-definition-endpoint.js";
 import {
   handleAestheticsConsentDefinitionRequest,
@@ -5746,6 +5747,24 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: procedure-definition capture failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "procedure-definition capture route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/procedure-definitions/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureDefinitionMutationRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "finding-definitions.write"),
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: procedure-definition mutation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "procedure-definition mutation route failed" });
         }
       });
 
