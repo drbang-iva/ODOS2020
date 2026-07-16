@@ -13,6 +13,7 @@ import type { AssembleOpticalCashOrderInput } from "../fhir/opticalOrderComposit
 import { buildPaymentAuditRecord } from "./payment-audit.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 import type { ChargeHandlerResult } from "./payment-charge-handler.js";
+import { assertDayNotSealed, DayAlreadySealedError } from "../desk/day-seal.js";
 
 export type CollectionFhirClient = Pick<MedplumClient, "read" | "search" | "executeTransaction">;
 
@@ -27,6 +28,7 @@ export interface PaymentCollectionHandlerDeps {
   authenticate(authHeader: string | undefined): Promise<CollectionAuthenticatedStaff | null>;
   recordAudit(row: OsodAuditEventRecord): Promise<void>;
   now?: () => string;
+  timeZone?: string;
 }
 
 export interface OpenChargeLine {
@@ -117,10 +119,14 @@ export async function handleRecordedTenderCollectionRequest(
       parsed.body,
       collectedAt,
       staff.staff.staffReference,
+      deps.timeZone,
     );
   } catch (error) {
     if (error instanceof CollectionInputError) {
       return { status: 400, body: { error: error.message } };
+    }
+    if (error instanceof DayAlreadySealedError) {
+      return { status: 409, body: { error: error.message } };
     }
     throw error;
   }
@@ -151,7 +157,9 @@ async function createCollection(
   body: CollectionBody,
   collectedAt: string,
   staffReference: string,
+  timeZone?: string,
 ): Promise<CreatedOpticalCashOrderIds> {
+  await assertDayNotSealed(fhir, collectedAt, timeZone);
   if (body.opticalOrder) {
     if (body.opticalOrder.patientReference !== body.patientReference) {
       throw new CollectionInputError("The optical order patient must match patientReference.");

@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
 import { createManualCashAdapter } from "../src/payments/adapters/manual-cash-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
 
 /** In-memory FHIR client double covering the Pick<MedplumClient, "read" | "update"> the adapter takes. */
-function fakeFhir(invoice: Invoice) {
+function fakeFhir(invoice: Invoice, sealed = false) {
   const store = { invoice: structuredClone(invoice), updates: 0, created: [] as PaymentReconciliation[] };
   return {
     store,
@@ -16,6 +16,11 @@ function fakeFhir(invoice: Invoice) {
       assert.equal(id, "inv1");
       return structuredClone(store.invoice) as T;
     },
+    search: async <T extends Resource>(): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      ...(sealed ? { entry: [{ resource: daySeal() as T }] } : {}),
+    }),
     update: async <T>(resourceType: string, _id: string, next: T): Promise<T> => {
       assert.equal(resourceType, "Invoice");
       store.invoice = structuredClone(next) as Invoice;
@@ -26,6 +31,18 @@ function fakeFhir(invoice: Invoice) {
       store.created.push(structuredClone(resource) as PaymentReconciliation);
       return { ...(resource as object), id: "prepay-pr-1" } as T;
     },
+  };
+}
+
+function daySeal(): Basic {
+  return {
+    resourceType: "Basic",
+    id: "seal-1",
+    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: "2026-07-05" }],
+    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    created: "2026-07-05",
+    author: { reference: "Practitioner/staff1" },
+    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueDateTime: "2026-07-05T21:00:00.000Z" }],
   };
 }
 
@@ -140,6 +157,16 @@ test("manual-cash charge validates the amount and the invoice reference", async 
   await assert.rejects(() => adapter.charge(chargeRequest({ amountCents: 0 })), /amountCents/);
   await assert.rejects(() => adapter.charge(chargeRequest({ invoiceReference: "inv1" })), /Invoice\//);
   assert.equal(fhir.store.updates, 0);
+});
+
+test("manual-cash rejects invoice and prepayment writes after the practice day is sealed", async () => {
+  const fhir = fakeFhir(untenderedInvoice(), true);
+  const adapter = createManualCashAdapter(fhir, { now: () => "2026-07-05T22:00:00.000Z" });
+
+  await assert.rejects(() => adapter.charge(chargeRequest()), /already sealed.*payments can't be backdated/i);
+  await assert.rejects(() => adapter.charge(chargeRequest({ invoiceReference: undefined })), /already sealed.*payments can't be backdated/i);
+  assert.equal(fhir.store.updates, 0);
+  assert.equal(fhir.store.created.length, 0);
 });
 
 test("same-day void is available while refund / settle / status remain v0.7 deferrals", async () => {

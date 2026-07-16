@@ -5,6 +5,7 @@ import {
   type DayLedgerPayment,
   type PaymentTenderCode,
 } from "../lib/day-ledger";
+import { fetchDaySeal, type DaySeal } from "../lib/day-close";
 
 const TENDERS: Array<{ code: PaymentTenderCode; label: string }> = [
   { code: "CASH", label: "Cash" },
@@ -12,18 +13,29 @@ const TENDERS: Array<{ code: PaymentTenderCode; label: string }> = [
   { code: "CARD_MANUAL", label: "Card" },
 ];
 
-export function DayLedger({ initialLedger }: { initialLedger?: DayLedgerData } = {}) {
+export function DayLedger({ initialLedger, initialSeal, date }: { initialLedger?: DayLedgerData; initialSeal?: DaySeal | null; date?: string } = {}) {
   const [ledger, setLedger] = useState(initialLedger);
+  const [seal, setSeal] = useState<DaySeal | null | undefined>(initialSeal);
   const [error, setError] = useState<string>();
+  const [sealError, setSealError] = useState<string>();
 
   useEffect(() => {
     if (initialLedger) return;
     let active = true;
-    fetchDayLedger()
+    fetchDayLedger(date)
       .then((value) => active && setLedger(value))
       .catch((reason) => active && setError(reason instanceof Error ? reason.message : "Day Ledger unavailable."));
     return () => { active = false; };
-  }, [initialLedger]);
+  }, [date, initialLedger]);
+
+  useEffect(() => {
+    if (initialSeal !== undefined || initialLedger || !ledger) return;
+    let active = true;
+    fetchDaySeal(ledger.date)
+      .then((value) => active && setSeal(value))
+      .catch((reason) => active && setSealError(reason instanceof Error ? reason.message : "Seal status unavailable."));
+    return () => { active = false; };
+  }, [initialLedger, initialSeal, ledger]);
 
   return (
     <main className="odos-day-ledger">
@@ -37,15 +49,17 @@ export function DayLedger({ initialLedger }: { initialLedger?: DayLedgerData } =
             <span>{ledger ? longDate(ledger.date) : "Today"}</span>
           </div>
           <div className="odos-ledger-close">
-            <button type="button" disabled>Close the day</button>
-            <small>Coming soon</small>
+            <a href={`/desk/ledger/close${ledger ? `?${new URLSearchParams({ date: ledger.date })}` : ""}`}>Close the day</a>
+            <a href="/desk/ledger/archive">Archive</a>
           </div>
         </header>
 
         {error && <p className="odos-ledger-error" role="alert">{error}</p>}
+        {sealError && <p className="odos-ledger-error" role="alert">Seal status unavailable: {sealError}</p>}
         {!ledger && !error && <p className="odos-ledger-loading">Opening today’s ledger…</p>}
         {ledger && (
           <>
+            {seal && <section className="odos-ledger-sealed" role="status"><strong>Sealed by {referenceLabel(seal.sealedBy)}</strong><span>at {new Date(seal.sealedAt).toLocaleString()}</span></section>}
             {ledger.payments.available
               ? <TenderMonuments payments={ledger.payments.detail} totals={ledger.payments.tenderTotalsCents} />
               : <Unavailable title="Payment totals unavailable" reason={ledger.payments.reason} />}

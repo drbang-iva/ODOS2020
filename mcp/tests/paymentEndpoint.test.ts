@@ -21,6 +21,14 @@ test("front-desk and practice-admin hold the payment.charge business action", ()
   assertBusinessActionAllowed("practice-admin", "payment.charge");
 });
 
+test("only front-desk and practice-admin hold payment.seal-day", () => {
+  assertBusinessActionAllowed("front-desk", "payment.seal-day");
+  assertBusinessActionAllowed("practice-admin", "payment.seal-day");
+  for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
+    assert.throws(() => assertBusinessActionAllowed(role, "payment.seal-day"), /lacks business action/);
+  }
+});
+
 test("clinician, auditor, and aesthetics-provider do NOT hold payment.charge", () => {
   for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
     assert.throws(() => assertBusinessActionAllowed(role, "payment.charge"), /lacks business action/);

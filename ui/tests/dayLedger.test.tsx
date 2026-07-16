@@ -26,7 +26,7 @@ const LEDGER: DayLedgerData = {
   heldCreditsToday: { available: true, count: 0, totalCents: 0 },
 };
 
-test("Day Ledger renders monumental tenders, live feed, Sessions, credits, and disabled Close affordance", () => {
+test("Day Ledger renders monumental tenders, live feed, Sessions, credits, and the Close-day entry", () => {
   const html = renderToStaticMarkup(<DayLedger initialLedger={LEDGER} />);
   assert.match(html, /Day Ledger/);
   assert.match(html, /Cash/);
@@ -37,8 +37,19 @@ test("Day Ledger renders monumental tenders, live feed, Sessions, credits, and d
   assert.match(html, /Sessions/);
   assert.match(html, /Held credits today/);
   assert.match(html, /Close the day/);
-  assert.match(html, /disabled=""/);
-  assert.match(html, /Coming soon/);
+  assert.match(html, /href="\/desk\/ledger\/close\?date=2026-07-15"/);
+  assert.match(html, /href="\/desk\/ledger\/archive"/);
+});
+
+test("a sealed historical ledger renders the seal banner", () => {
+  const html = renderToStaticMarkup(<DayLedger initialLedger={LEDGER} initialSeal={{
+    id: "seal-1",
+    date: "2026-07-15",
+    sealedBy: "Practitioner/alex",
+    sealedAt: "2026-07-15T21:00:00.000Z",
+  }} />);
+  assert.match(html, /Sealed by alex/);
+  assert.match(html, /alex/);
 });
 
 test("Day Ledger route is registered in the application switch", () => {

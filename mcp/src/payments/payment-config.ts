@@ -22,6 +22,7 @@ export interface PaymentDispatchDeps {
   fetchImpl?: typeof fetch;
   now?: () => string;
   generateId?: () => string;
+  timeZone?: string;
 }
 
 /** The per-request FHIR client the resolved adapter uses (bound to the caller in the endpoint). */
@@ -54,7 +55,7 @@ export function createPaymentDispatch(
       }
       switch (registration.method) {
         case "manual-cash":
-          return createManualCashAdapter(fhir, { now: deps.now });
+          return createManualCashAdapter(fhir, { now: deps.now, timeZone: deps.timeZone });
         case "clover":
           return createCloverAdapter(registration.config, fhir, {
             fetchImpl: deps.fetchImpl,

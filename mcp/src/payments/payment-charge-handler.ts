@@ -4,6 +4,7 @@ import { buildPaymentAuditRecord, type PaymentAuditEventType } from "./payment-a
 import type { DispatchFhirClient, PaymentDispatch } from "./payment-config.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 import type { ChargeRequest, PaymentSurface, TransactionResult } from "./payment-processor-adapter.js";
+import { DayAlreadySealedError } from "../desk/day-seal.js";
 
 /**
  * Payment charge endpoint handler — pure orchestration, transport-free so it unit-tests without HTTP.
@@ -138,6 +139,9 @@ export async function handleChargeRequest(
       body.invoiceReference ?? body.patientReference,
       messageOf(error),
     );
+    if (error instanceof DayAlreadySealedError) {
+      return { status: 409, body: { error: messageOf(error) } };
+    }
     return { status: 502, body: { error: `Payment charge failed: ${messageOf(error)}` } };
   }
 

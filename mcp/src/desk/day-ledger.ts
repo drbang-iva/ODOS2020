@@ -183,7 +183,7 @@ function invoiceTender(invoice: Invoice): PaymentTenderCode | undefined {
   return TENDERS.includes(coding?.code as PaymentTenderCode) ? coding?.code as PaymentTenderCode : undefined;
 }
 
-function moneyCents(value: number | undefined, label: string): number {
+export function moneyCents(value: number | undefined, label: string): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
     throw new Error(`${label} is not a valid nonnegative USD amount.`);
   }
@@ -195,7 +195,7 @@ function moneyCents(value: number | undefined, label: string): number {
   return cents;
 }
 
-function assertDate(value: string): void {
+export function assertDate(value: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Ledger date must use YYYY-MM-DD.");
   const [year, month, day] = value.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
@@ -226,7 +226,7 @@ function zonedMidnightIso(year: number, month: number, day: number, timeZone: st
   return new Date(guess).toISOString();
 }
 
-async function searchAvailablePage<T extends Resource>(
+export async function searchAvailablePage<T extends Resource>(
   fhir: Pick<MedplumClient, "search">,
   resourceType: T["resourceType"],
   params: FhirSearchParams,

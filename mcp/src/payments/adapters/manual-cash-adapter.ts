@@ -19,6 +19,7 @@ import type {
   VoidResult,
 } from "../payment-processor-adapter.js";
 import { buildPaymentReconciliation } from "../payment-reconciliation.js";
+import { assertDayNotSealed } from "../../desk/day-seal.js";
 
 export const MANUAL_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-payment";
 const DATA_ENTRY_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
@@ -39,10 +40,11 @@ const DATA_ENTRY_PARTICIPANT_CODE = "ENT";
 export interface ManualCashAdapterOptions {
   /** Injected clock (ISO dateTime) for deterministic tests; defaults to system time. */
   now?: () => string;
+  timeZone?: string;
 }
 
 export function createManualCashAdapter(
-  fhir: Pick<MedplumClient, "read" | "update" | "create">,
+  fhir: Pick<MedplumClient, "read" | "search" | "update" | "create">,
   options?: ManualCashAdapterOptions,
 ): PaymentProcessorAdapter {
   const now = options?.now ?? (() => new Date().toISOString());
@@ -60,9 +62,10 @@ export function createManualCashAdapter(
       if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
         throw new Error("Charge amount (amountCents) must be a positive integer number of cents.");
       }
+      const chargedAt = now();
+      await assertDayNotSealed(fhir, chargedAt, options?.timeZone);
       if (args.invoiceReference === undefined) {
         const transactionId = `manual-${randomUUID()}`;
-        const chargedAt = now();
         const created = await fhir.create<PaymentReconciliation>(
           buildPaymentReconciliation({
             outcome: "success",
@@ -105,7 +108,6 @@ export function createManualCashAdapter(
       }
 
       const paidInFull = args.amountCents >= netCents;
-      const chargedAt = now();
       const updated: Invoice = {
         ...invoice,
         date: chargedAt,

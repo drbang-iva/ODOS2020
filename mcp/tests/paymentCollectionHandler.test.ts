@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
 import {
   handleRecordedTenderCollectionRequest,
@@ -8,7 +8,7 @@ import {
   type PaymentCollectionHandlerDeps,
 } from "../src/payments/payment-collection-handler.js";
 
-function fixture(searchEntries: ChargeItem[] = []) {
+function fixture(searchEntries: ChargeItem[] = [], sealed = false) {
   const audits: OsodAuditEventRecord[] = [];
   const transactions: Bundle[] = [];
   let reads = 0;
@@ -20,7 +20,9 @@ function fixture(searchEntries: ChargeItem[] = []) {
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => ({
       resourceType: "Bundle",
       type: "searchset",
-      entry: resourceType === "ChargeItem" ? searchEntries.map((resource) => ({ resource: resource as T })) : [],
+      entry: resourceType === "ChargeItem"
+        ? searchEntries.map((resource) => ({ resource: resource as T }))
+        : resourceType === "Basic" && sealed ? [{ resource: daySeal() as T }] : [],
     }),
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
       transactions.push(bundle);
@@ -194,6 +196,38 @@ test("recorded-tender collection returns 400 when amount does not equal the sele
   assert.equal(transactions.length, 0);
   assert.equal(audits.length, 0);
 });
+
+test("recorded-tender collection rejects all record-only tenders after the day is sealed", async () => {
+  for (const tender of ["CASH", "CHECK", "CARD_MANUAL"] as const) {
+    const { audits, deps, reads, transactions } = fixture([], true);
+    const result = await handleRecordedTenderCollectionRequest(deps, {
+      authHeader: "Bearer good",
+      body: {
+        patientReference: "Patient/patient-1",
+        selectedOpenChargeLineIds: ["charge-1"],
+        amountCents: 12_345,
+        tender,
+      },
+    });
+    assert.equal(result.status, 409);
+    assert.match((result.body as { error: string }).error, /already sealed.*payments can't be backdated/i);
+    assert.equal(reads(), 0);
+    assert.equal(transactions.length, 0);
+    assert.equal(audits.length, 0);
+  }
+});
+
+function daySeal(): Basic {
+  return {
+    resourceType: "Basic",
+    id: "seal-1",
+    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: "2026-07-15" }],
+    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    created: "2026-07-15",
+    author: { reference: "Practitioner/staff-1" },
+    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueDateTime: "2026-07-15T21:00:00.000Z" }],
+  };
+}
 
 function charge(id: string): ChargeItem {
   return {
