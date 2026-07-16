@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { PaymentReconciliation } from "@medplum/fhirtypes";
+import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import { projectDayLedgerPayments } from "../src/desk/day-ledger.js";
+import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import {
   handleChargeRequest,
   handlePaymentMethodsRequest,
@@ -83,6 +85,49 @@ test("payment methods rejects an unauthenticated caller with 401", async () => {
     status: 401,
     body: { error: "Authentication required to view payment methods." },
   });
+});
+
+test("manual CASH through /payments/charge is dated, staff-attributed, and counted by Day Ledger", async () => {
+  let storedInvoice: Invoice = {
+    ...buildOpticalInvoice({
+      patientReference: "Patient/p1",
+      lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 24400 }],
+    }),
+    id: "inv1",
+  };
+  const fhir = {
+    read: async <T,>(): Promise<T> => structuredClone(storedInvoice) as T,
+    search: async () => ({ resourceType: "Bundle" as const, type: "searchset" as const }),
+    update: async <T,>(_resourceType: string, _id: string, resource: T): Promise<T> => {
+      storedInvoice = structuredClone(resource) as Invoice;
+      return resource;
+    },
+    create: async <T,>(resource: T): Promise<T> => resource,
+  };
+  const dispatch = createPaymentDispatch([{ method: "manual-cash" }], {
+    now: () => "2026-07-15T14:30:00.000Z",
+  });
+  const { deps: d } = deps({ fhir, dispatch });
+
+  const response = await handleChargeRequest(d, {
+    authHeader: "Bearer good",
+    body: {
+      method: "manual-cash",
+      amountCents: 24400,
+      patientReference: "Patient/p1",
+      invoiceReference: "Invoice/inv1",
+      description: "Optical order cash payment",
+      surface: "manual",
+      tender: { code: "CASH" },
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(storedInvoice.date, "2026-07-15T14:30:00.000Z");
+  assert.equal(storedInvoice.participant?.[0]?.actor.reference, "Practitioner/staff1");
+  const ledger = projectDayLedgerPayments([storedInvoice], "2026-07-15", "America/New_York");
+  assert.equal(ledger.tenderTotalsCents.CASH, 24400);
+  assert.equal(ledger.totalCents, 24400);
 });
 
 test("a successful card charge returns 200 with the transaction result and audits payment.charge.completed against the PR", async () => {

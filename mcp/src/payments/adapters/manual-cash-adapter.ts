@@ -21,6 +21,8 @@ import type {
 import { buildPaymentReconciliation } from "../payment-reconciliation.js";
 
 export const MANUAL_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-payment";
+const DATA_ENTRY_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
+const DATA_ENTRY_PARTICIPANT_CODE = "ENT";
 
 /**
  * The manual cash/check adapter — the shipped Slice-3 cash path formalized behind the
@@ -106,6 +108,24 @@ export function createManualCashAdapter(
       const chargedAt = now();
       const updated: Invoice = {
         ...invoice,
+        date: chargedAt,
+        participant: [
+          ...(invoice.participant ?? []).filter((participant) =>
+            !participant.role?.coding?.some((coding) =>
+              coding.system === DATA_ENTRY_PARTICIPANT_SYSTEM && coding.code === DATA_ENTRY_PARTICIPANT_CODE,
+            ),
+          ),
+          {
+            role: {
+              coding: [{
+                system: DATA_ENTRY_PARTICIPANT_SYSTEM,
+                code: DATA_ENTRY_PARTICIPANT_CODE,
+                display: "data entry person",
+              }],
+            },
+            actor: { reference: args.staffReference },
+          },
+        ],
         extension: [...(invoice.extension ?? []), paymentTenderExtension(args.tender.code)],
         ...(paidInFull ? { status: "balanced" as const } : {}),
       };

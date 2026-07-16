@@ -41,7 +41,7 @@ export interface MedplumClient {
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
     rt: T["resourceType"],
-    params?: Record<string, string>,
+    params?: FhirSearchParams,
   ): Promise<Bundle<T>>;
   searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   history<T extends Resource>(
@@ -72,6 +72,8 @@ export interface MedplumClient {
   deleteAttempt(rt: string, id: string, reason?: string): Promise<never>;
   nullifyAttempt(rt: string, id: string, reason?: string): Promise<never>;
 }
+
+export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
 export interface MedplumPractitionerInvite {
   resourceType: "Practitioner";
@@ -265,7 +267,7 @@ export function createMedplumClient(opts: {
 
     async search<T extends Resource>(
       rt: T["resourceType"],
-      params: Record<string, string> = {},
+      params: FhirSearchParams = {},
     ): Promise<Bundle<T>> {
       return audited(
         {
@@ -561,14 +563,17 @@ export function tokenExpiresSoon(token: string | undefined, nowMs: number): bool
   }
 }
 
-function patientIdFromSearch(resourceType: string, params: Record<string, string>): string | undefined {
+function patientIdFromSearch(resourceType: string, params: FhirSearchParams): string | undefined {
+  const values = params instanceof URLSearchParams
+    ? params
+    : new URLSearchParams(params);
   if (resourceType === "Patient") {
-    return stripReferenceId(params._id ?? params.id, "Patient");
+    return stripReferenceId(values.get("_id") ?? values.get("id") ?? undefined, "Patient");
   }
   return (
-    stripReferenceId(params.subject, "Patient") ??
-    stripReferenceId(params.patient, "Patient") ??
-    stripReferenceId(params.context, "Patient")
+    stripReferenceId(values.get("subject") ?? undefined, "Patient") ??
+    stripReferenceId(values.get("patient") ?? undefined, "Patient") ??
+    stripReferenceId(values.get("context") ?? undefined, "Patient")
   );
 }
 

@@ -27,7 +27,12 @@ function fixture(searchEntries: ChargeItem[] = []) {
       return {
         resourceType: "Bundle",
         type: "transaction-response",
-        entry: [{ response: { status: "201 Created", location: "Invoice/invoice-1/_history/1" } }],
+        entry: (bundle.entry ?? []).map((entry, index) => ({
+          response: {
+            status: "201 Created",
+            location: `${entry.resource?.resourceType ?? "Resource"}/${entry.resource?.resourceType === "Invoice" ? "invoice-1" : `created-${index}`}/_history/1`,
+          },
+        })),
       };
     },
   };
@@ -100,11 +105,15 @@ test("recorded-tender collection posts a server-side Invoice transaction and emi
   assert.equal((result.body as { invoiceId: string }).invoiceId, "invoice-1");
   assert.equal(transactions.length, 1);
   assert.equal(transactions[0].entry?.[0]?.resource?.resourceType, "Invoice");
+  const invoice = transactions[0].entry?.[0]?.resource;
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.date : undefined, "2026-07-15T10:00:00.000Z");
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.participant?.[0]?.actor.reference : undefined, "Practitioner/staff-1");
   assert.equal(audits.length, 1);
   assert.equal(audits[0].eventType, "payment.charge.completed");
   assert.equal(audits[0].resourceType, "Invoice");
   assert.equal(audits[0].resourceId, "invoice-1");
   assert.match(audits[0].actionReason ?? "", /manual-record/);
+  assert.equal(audits[0].eventTime, "2026-07-15T10:00:00.000Z");
 });
 
 test("CARD_MANUAL uses the same record-only Invoice transaction and never a processor path", async () => {
@@ -126,6 +135,29 @@ test("CARD_MANUAL uses the same record-only Invoice transaction and never a proc
       ?.valueCodeableConcept?.coding?.[0]?.code,
     "CARD_MANUAL",
   );
+});
+
+test("recorded optical collection threads date and verified staff into its Invoice", async () => {
+  const { deps, transactions } = fixture();
+  const result = await handleRecordedTenderCollectionRequest(deps, {
+    authHeader: "Bearer good",
+    body: {
+      patientReference: "Patient/patient-1",
+      selectedOpenChargeLineIds: ["charge-1"],
+      amountCents: 12_345,
+      tender: "CASH",
+      opticalOrder: {
+        patientReference: "Patient/patient-1",
+        visionPrescriptionReference: "VisionPrescription/rx-1",
+        orderHcpcsCode: "V2020",
+        charges: [{ id: "charge-1", code: "V2020", feeCents: 12_345 }],
+      },
+    },
+  });
+  assert.equal(result.status, 200);
+  const invoice = transactions[0].entry?.find((entry) => entry.resource?.resourceType === "Invoice")?.resource;
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.date : undefined, "2026-07-15T10:00:00.000Z");
+  assert.equal(invoice?.resourceType === "Invoice" ? invoice.participant?.[0]?.actor.reference : undefined, "Practitioner/staff-1");
 });
 
 test("recorded-tender collection rejects a non-integer cent amount before reading or writing FHIR", async () => {

@@ -136,6 +136,8 @@ test("Front Line without a CommsProvider renders one wiring panel and no zero pl
 test("Needs attention renders the exact all-clear state when every target is met", () => {
   const html = renderToStaticMarkup(<DeskHome initialSummary={emptyDeskSummary()} />);
   assert.match(html, /All clear — nothing needs you\./);
+  assert.match(html, /Day open · \$0\.00 collected/);
+  assert.match(html, /href="\/desk\/ledger"/);
 });
 
 test("Desk statement date-time formatting degrades malformed values to an em dash", () => {
@@ -377,6 +379,7 @@ function emptyDeskSummary(): DeskSummary {
   const n = { value: 0, tone: "ok" as const };
   const off = { value: null, tone: "off" as const, unavailableReason: "Not wired." };
   return {
+    day: { collectedCents: { value: 0, tone: "info" } },
     cards: {
       schedule: { today: n, confirmed: n, checkedIn: { value: 0, tone: "info" }, webRequests: n, agenda: [] },
       attention: { items: [] },

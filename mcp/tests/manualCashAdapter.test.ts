@@ -71,6 +71,8 @@ test("manual-cash charge records the tender on the Invoice, balances it, and ret
     (e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL,
   );
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
+  assert.equal(fhir.store.invoice.date, "2026-07-05T15:00:00.000Z");
+  assert.equal(fhir.store.invoice.participant?.[0]?.actor.reference, "Practitioner/staff1");
   assert.equal(fhir.store.invoice.status, "balanced");
   assert.equal(fhir.store.updates, 1);
 });

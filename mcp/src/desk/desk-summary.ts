@@ -30,6 +30,7 @@ import {
   STATEMENT_RUN_CODE,
   STATEMENT_TASK_CODE_SYSTEM,
 } from "../statements/statements.js";
+import { practiceDate, projectDayLedgerPayments } from "./day-ledger.js";
 
 const OPTICAL_TASKS_UNAVAILABLE = "Open optical Tasks exceed the Desk card read limit.";
 const CLAIM_TASKS_UNAVAILABLE = "Claim worklist Tasks exceed the Desk card read limit.";
@@ -60,6 +61,9 @@ export interface DeskAttentionRow {
 }
 
 export interface DeskSummary {
+  day: {
+    collectedCents: DeskStat<number | null>;
+  };
   cards: {
     schedule: {
       today: DeskStat<number>;
@@ -231,6 +235,10 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
 
   const paymentReconciliationsAvailable = input.resourceAvailability?.paymentReconciliations !== false;
   const invoicesAvailable = input.resourceAvailability?.invoices !== false;
+  const ledgerDate = practiceDate(input.now, input.timeZone);
+  const dayCollectedCents = invoicesAvailable
+    ? stat(projectDayLedgerPayments(input.invoices, ledgerDate, input.timeZone).totalCents, "info")
+    : unavailable(INVOICE_RESOURCES_UNAVAILABLE);
   const activePayments = input.paymentReconciliations.filter((payment) => payment.status === "active");
   const credits = filterUnappliedCredits(activePayments);
   const unappliedCents = credits.reduce((total, credit) => total + unappliedPaymentCents(credit.paymentReconciliation), 0);
@@ -290,6 +298,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     },
   };
   return {
+    day: { collectedCents: dayCollectedCents },
     cards,
     pulse: {
       itemsNeedingYou: attention.length,
@@ -507,17 +516,6 @@ function previousBusinessDayTone(last: string, now: string): DeskTone {
   const previous = new Date(nowDate);
   do previous.setUTCDate(previous.getUTCDate() - 1); while (previous.getUTCDay() === 0 || previous.getUTCDay() === 6);
   return last.slice(0, 10) >= previous.toISOString().slice(0, 10) ? "ok" : "warn";
-}
-
-function practiceDate(now: string, timeZone?: string): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(now));
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
 function unique(values: string[]): string[] {

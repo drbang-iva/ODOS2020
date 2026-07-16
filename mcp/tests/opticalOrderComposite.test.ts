@@ -16,6 +16,8 @@ test("assembleOpticalCashOrder emits a transaction Bundle wiring order→task, o
     orderHcpcsCode: "V2020",
     orderHcpcsDisplay: "Frames, purchases",
     businessStatus: "waiting-on-payment",
+    date: "2026-07-15T14:30:00.000Z",
+    staffReference: "Practitioner/front-1",
     charges: [
       { code: "V2020", codeDisplay: "Frames, purchases", feeCents: 18500 },
       {
@@ -84,6 +86,8 @@ test("assembleOpticalCashOrder emits a transaction Bundle wiring order→task, o
       ?.valueCodeableConcept?.coding?.[0]?.code,
     "CASH",
   );
+  assert.equal((invoice as Invoice).date, "2026-07-15T14:30:00.000Z");
+  assert.equal((invoice as Invoice).participant?.[0]?.actor.reference, "Practitioner/front-1");
 });
 
 test("assembleOpticalCashOrder defaults the lifecycle to quote and omits context when no encounter given", () => {
