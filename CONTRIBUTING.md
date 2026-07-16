@@ -16,6 +16,14 @@ OSOD is built by a practicing optometrist and refined at his own practice. The r
 - Include tests for new behavior. The repo's verification posture is real, not decorative.
 - Don't break the AgentOps governance, audit/DR, or local-only data posture. These are load-bearing.
 
+### Independent evaluation gate
+
+Every pull request into `main` needs an independent model evaluation before merge. The authoring model cannot evaluate its own code, and CodeRabbit does not satisfy this gate.
+
+The newest PR comment beginning with `Evaluated-by:` decides the gate. A passing evaluation must use `Evaluated-by: <Model> — PASS`; `-- PASS` and `- PASS` are also accepted, the verdict is case-insensitive, and trailing prose is allowed. `FAIL`, `BLOCKED`, and `NEEDS-WORK` are explicit failing verdicts. A marker without a recognized verdict fails as ambiguous, and an earlier PASS cannot override a later failing marker.
+
+The `evaluated` label remains the deliberate operator override.
+
 ## License terms for contributions
 
 OSOD is licensed under **AGPL-3.0-or-later**. By submitting a pull request, you agree your contribution is licensed under the same terms.

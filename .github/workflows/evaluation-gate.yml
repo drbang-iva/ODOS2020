@@ -15,7 +15,12 @@ on:
 #
 # Passes when either is present on the PR:
 #   - label "evaluated"
-#   - a comment whose body starts with "Evaluated-by: <Model>"
+#   - the newest marker comment has an explicit passing verdict:
+#     "Evaluated-by: <Model> — PASS" (also accepts "-- PASS" or "- PASS")
+#
+# FAIL, BLOCKED, and NEEDS-WORK are explicit failing verdicts. A marker
+# without a recognized verdict also fails. Later markers supersede earlier
+# ones so a fix-back PASS can clear an earlier failing evaluation.
 #
 # This repo has enforce_admins OFF (solo repo), so a failing check here
 # does not physically block an admin merge — it makes a skipped
@@ -32,10 +37,14 @@ jobs:
       issues: read
       pull-requests: read
     steps:
+      - uses: actions/checkout@v4
       - name: check for an independent evaluation marker
         uses: actions/github-script@v7
         with:
           script: |
+            const { decideEvaluation } = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/scripts/evaluation-verdict.cjs`
+            );
             const prNumber = context.payload.pull_request?.number ?? context.payload.issue?.number;
             if (!prNumber) {
               core.setFailed("evaluation-gate: could not resolve a PR number from this event.");
@@ -52,15 +61,47 @@ jobs:
               return;
             }
 
-            const pattern = /^Evaluated-by:\s*\S+/im;
-            const { data: comments } = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
               per_page: 100,
             });
-            if (comments.some((c) => pattern.test(c.body || ""))) {
-              core.info(`PR #${prNumber}: "Evaluated-by:" comment found — gate passes.`);
+            const decision = decideEvaluation({ labels, comments });
+            if (decision.reason === "pass") {
+              core.info(`PR #${prNumber}: latest "Evaluated-by:" verdict is PASS — gate passes.`);
+              return;
+            }
+
+            if (decision.reason === "failing-verdict") {
+              core.setFailed(
+                [
+                  `INDEPENDENT EVALUATION DID NOT PASS — the latest marker verdict is ${decision.verdict}.`,
+                  "",
+                  "The newest evaluation marker controls; an earlier PASS cannot override a later failing verdict.",
+                  "After fix-back and independent re-evaluation, add a newer passing marker in this form:",
+                  "  Evaluated-by: <Model> — PASS",
+                  "",
+                  "Accepted separators are an em dash, double hyphen, or single hyphen.",
+                  "Operator override: applying the 'evaluated' label clears this gate.",
+                ].join("\n")
+              );
+              return;
+            }
+
+            if (decision.reason === "missing-verdict") {
+              core.setFailed(
+                [
+                  "EVALUATION VERDICT MISSING — the latest marker has no recognizable verdict token.",
+                  "",
+                  "Use the explicit passing form:",
+                  "  Evaluated-by: <Model> — PASS",
+                  "",
+                  "Recognized failing verdicts are FAIL, BLOCKED, and NEEDS-WORK.",
+                  "Accepted separators are an em dash, double hyphen, or single hyphen.",
+                  "Operator override: applying the 'evaluated' label clears this gate.",
+                ].join("\n")
+              );
               return;
             }
 
@@ -72,7 +113,11 @@ jobs:
                 "CodeRabbit's automated review is a first pass, not a substitute for this.",
                 "",
                 "To clear this gate, once an independent model has reviewed the diff:",
-                "  - add a PR comment starting with 'Evaluated-by: <Model>' (e.g. 'Evaluated-by: Opus — reviewed, no blocking issues'), or",
+                "  - add a passing PR comment in the form 'Evaluated-by: <Model> — PASS', or",
                 "  - apply the 'evaluated' label to this PR.",
+                "",
+                "Accepted separators are an em dash, double hyphen, or single hyphen.",
+                "FAIL, BLOCKED, NEEDS-WORK, or a missing verdict token do not clear the gate.",
+                "The 'evaluated' label is the deliberate operator override.",
               ].join("\n")
             );
