@@ -1,4 +1,5 @@
 import type {
+  Encounter,
   QuestionnaireResponse,
   Provenance,
 } from "@medplum/fhirtypes";
@@ -14,6 +15,7 @@ import {
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 
 export interface AestheticsConsentFhirClient {
+  read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends QuestionnaireResponse | Provenance>(
     resource: T,
     extraHeaders?: Record<string, string>,
@@ -64,6 +66,14 @@ export async function handleAestheticsConsentSubmissionRequest(
   if (!parsed.success) {
     return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid consent submission." } };
   }
+  const encounterError = await validateEncounterPatient(
+    staff.fhir,
+    parsed.data.encounterReference,
+    parsed.data.patientReference,
+  );
+  if (encounterError) {
+    return { status: 422, body: { error: encounterError } };
+  }
   const authored = deps.now?.() ?? new Date().toISOString();
   const questionnaireResponse = await staff.fhir.create(
     buildAestheticsConsentQuestionnaireResponse({
@@ -109,4 +119,22 @@ function staffMay(
   } catch {
     return false;
   }
+}
+
+async function validateEncounterPatient(
+  fhir: AestheticsConsentFhirClient,
+  encounterReference: string,
+  patientReference: string,
+): Promise<string | undefined> {
+  const encounterId = encounterReference.slice("Encounter/".length);
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  } catch {
+    return `Unable to validate ${encounterReference} because the Encounter could not be read.`;
+  }
+  if (encounter.subject?.reference !== patientReference) {
+    return `${encounterReference} does not belong to ${patientReference}.`;
+  }
+  return undefined;
 }

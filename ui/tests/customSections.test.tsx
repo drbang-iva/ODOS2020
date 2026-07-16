@@ -18,6 +18,9 @@ import {
 } from "../src/components/charting/OcularHealthSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
+import { VaSection } from "../src/components/charting/VaSection";
+import { PatientRoute } from "../src/App";
+import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
 import { EncounterCharting } from "../src/scenes/EncounterCharting";
 
@@ -233,6 +236,10 @@ test("the same generic renderer records a data-defined Procedure without an aest
         onSaved={() => undefined}
       />,
     ), /Data-defined clinical procedure/);
+    const remarks = renderer.root.findByType("textarea");
+    await act(async () => remarks.props.onChange({
+      target: { value: "  Conservative placement after counseling.  " },
+    }));
     const record = renderer.root.find((node) =>
       node.type === "button" &&
       String(node.props.children).includes("Record Neurotoxin injection")
@@ -248,6 +255,7 @@ test("the same generic renderer records a data-defined Procedure without an aest
       {
         patientReference: "Patient/shared-1",
         encounterReference: "Encounter/aesthetics-1",
+        remarks: "Conservative placement after counseling.",
       },
     );
   } finally {
@@ -904,6 +912,66 @@ test("an aesthetics-tagged Encounter loads the procedure catalog into the shared
     assert.match(text, /Neurotoxin injection — glabella/);
   } finally {
     renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
+});
+
+test("changing encounterId remounts charting and clears encounter-scoped completion statuses", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRead = fhir.read;
+  const originalDocument = globalThis.document;
+  fhir.read = (async (resourceType: string, id: string) => {
+    if (resourceType === "Patient") {
+      return { resourceType: "Patient", id: "shared-1" };
+    }
+    return {
+      resourceType: "Encounter",
+      id,
+      status: "in-progress",
+      class: { code: "AMB" },
+      subject: { reference: "Patient/shared-1" },
+    };
+  }) as typeof fhir.read;
+  globalThis.fetch = (async (input) => String(input).includes("finding-definitions")
+    ? jsonResponse({ canWrite: false, definitions: [] })
+    : jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] })) as typeof fetch;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as Document,
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <PatientRoute patientId="shared-1" mode="encounter" encounterId="encounter-a" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    await act(async () => renderer.root.findByType(VaSection).props.onSaved({
+      completed: true,
+      summary: "Encounter A complete",
+    }));
+    assert.equal(renderer.root.findByType(SpineNav).props.statuses.va?.summary, "Encounter A complete");
+
+    await act(async () => {
+      renderer.update(
+        <RoleProvider>
+          <PatientRoute patientId="shared-1" mode="encounter" encounterId="encounter-b" />
+        </RoleProvider>,
+      );
+      await flushEffects();
+    });
+    assert.equal(renderer.root.findByType(SpineNav).props.statuses.va, undefined);
+  } finally {
+    renderer?.unmount();
+    fhir.read = originalRead;
     globalThis.fetch = originalFetch;
     Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
   }

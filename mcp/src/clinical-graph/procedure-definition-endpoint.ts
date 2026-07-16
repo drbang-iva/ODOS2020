@@ -1,4 +1,4 @@
-import type { Basic, Bundle, Procedure, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Procedure, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import {
   assertBusinessActionAllowed,
@@ -15,6 +15,7 @@ import {
 } from "./procedure-definition-store.js";
 
 export interface ProcedureDefinitionEndpointFhirClient extends ProcedureDefinitionFhirClient {
+  read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends Basic | Procedure | Provenance>(
     resource: T,
     extraHeaders?: Record<string, string>,
@@ -43,6 +44,7 @@ const captureSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
   performedDateTime: z.string().datetime().optional(),
+  remarks: z.string().trim().max(2000).optional(),
 }).strict();
 
 const mutationSchema = z.object({
@@ -161,15 +163,27 @@ export async function handleProcedureDefinitionCaptureRequest(
   if (!definition) {
     return { status: 404, body: { error: `Active procedure definition ${stableKey} does not exist.` } };
   }
+  const encounterError = await validateEncounterPatient(
+    staff.fhir,
+    parsed.data.encounterReference,
+    parsed.data.patientReference,
+  );
+  if (encounterError) {
+    return { status: 422, body: { error: encounterError } };
+  }
   const performedDateTime = parsed.data.performedDateTime ??
     deps.now?.() ??
     new Date().toISOString();
+  const procedureResource = buildProcedureFromDefinition(definition, {
+    patientReference: parsed.data.patientReference,
+    encounterReference: parsed.data.encounterReference,
+    performedDateTime,
+  });
+  if (parsed.data.remarks) {
+    procedureResource.note = [{ text: parsed.data.remarks }];
+  }
   const procedure = await staff.fhir.create(
-    buildProcedureFromDefinition(definition, {
-      patientReference: parsed.data.patientReference,
-      encounterReference: parsed.data.encounterReference,
-      performedDateTime,
-    }),
+    procedureResource,
     WRITE_HEADERS,
   );
   const procedureReference = `Procedure/${procedure.id}`;
@@ -241,6 +255,7 @@ export async function handleProcedureDefinitionHistoryRequest(
       rows: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [{
         recordedAt: entry.resource.performedDateTime ?? entry.resource.meta?.lastUpdated ?? "",
         values: [],
+        remarks: entry.resource.note?.[0]?.text,
         procedureReference: entry.resource.id ? `Procedure/${entry.resource.id}` : undefined,
       }] : []),
     },
@@ -283,4 +298,22 @@ function staffMay(role: PracticeRoleId, action: BusinessAction): boolean {
   } catch {
     return false;
   }
+}
+
+async function validateEncounterPatient(
+  fhir: ProcedureDefinitionEndpointFhirClient,
+  encounterReference: string,
+  patientReference: string,
+): Promise<string | undefined> {
+  const encounterId = encounterReference.slice("Encounter/".length);
+  let encounter: Encounter;
+  try {
+    encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  } catch {
+    return `Unable to validate ${encounterReference} because the Encounter could not be read.`;
+  }
+  if (encounter.subject?.reference !== patientReference) {
+    return `${encounterReference} does not belong to ${patientReference}.`;
+  }
+  return undefined;
 }

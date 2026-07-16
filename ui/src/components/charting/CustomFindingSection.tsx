@@ -92,6 +92,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
             patientReference,
             encounterReference,
             performedDateTime: new Date().toISOString(),
+            ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
           }
         : definition.perEye
           ? {
@@ -166,12 +167,10 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
             This definition has no additional capture fields.
           </div>
         )}
-        {resourceKind === "finding" && (
-          <label className="mt-4 block max-w-4xl">
-            <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Other / notes</span>
-            <textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={3} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white outline-none focus:border-brand" />
-          </label>
-        )}
+        <label className="mt-4 block max-w-4xl">
+          <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Other / notes</span>
+          <textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={3} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white outline-none focus:border-brand" />
+        </label>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="min-h-10">
             {error && <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">{error}</div>}

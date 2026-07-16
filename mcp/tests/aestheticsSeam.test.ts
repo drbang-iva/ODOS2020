@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type {
   Basic,
   Bundle,
+  Encounter,
   Procedure,
   Provenance,
   QuestionnaireResponse,
@@ -35,10 +36,28 @@ const NOW = "2026-07-16T12:00:00.000Z";
 
 class MemoryFhir {
   readonly basics: Basic[] = [];
+  readonly encounters: Encounter[] = [{
+    resourceType: "Encounter",
+    id: "aesthetics-1",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/shared-1" },
+  }];
   readonly procedures: Procedure[] = [];
   readonly questionnaireResponses: QuestionnaireResponse[] = [];
   readonly provenances: Provenance[] = [];
   readonly writes: Array<{ resourceType: string; source?: string }> = [];
+  encounterReadError?: Error;
+
+  async read<T extends Encounter>(
+    _resourceType: T["resourceType"],
+    id: string,
+  ): Promise<T> {
+    if (this.encounterReadError) throw this.encounterReadError;
+    const encounter = this.encounters.find((candidate) => candidate.id === id);
+    if (!encounter) throw new Error(`Missing Encounter/${id}`);
+    return encounter as T;
+  }
 
   async search<T extends Basic | Procedure>(
     resourceType: T["resourceType"],
@@ -179,6 +198,7 @@ test("an aesthetics procedure definition constructs and persists a shared-Patien
         patientReference: "Patient/shared-1",
         encounterReference: "Encounter/aesthetics-1",
         performedDateTime: NOW,
+        remarks: "  Applied conservatively after discussing expected effect.  ",
       },
     },
   );
@@ -188,6 +208,10 @@ test("an aesthetics procedure definition constructs and persists a shared-Patien
   assert.equal(fhir.procedures[0]?.encounter?.reference, "Encounter/aesthetics-1");
   assert.equal(fhir.procedures[0]?.code?.coding?.[0]?.system, AESTHETICS_PROCEDURE_TYPE_SYSTEM);
   assert.equal(fhir.procedures[0]?.code?.coding?.[0]?.code, "neurotoxin-injection-glabella");
+  assert.equal(
+    fhir.procedures[0]?.note?.[0]?.text,
+    "Applied conservatively after discussing expected effect.",
+  );
   assert.equal(fhir.provenances[0]?.target?.[1]?.reference, "Patient/shared-1");
 
   const history = await handleProcedureDefinitionHistoryRequest(
@@ -199,7 +223,47 @@ test("an aesthetics procedure definition constructs and persists a shared-Patien
     },
   );
   assert.equal(history.status, 200);
-  assert.equal((history.body as { rows: unknown[] }).rows.length, 1);
+  const rows = (history.body as { rows: Array<{ remarks?: string }> }).rows;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.remarks, "Applied conservatively after discussing expected effect.");
+});
+
+test("procedure capture rejects mismatched and unreadable Encounters before writing", async () => {
+  const definitions = buildProcedureDefinitionSeeds();
+  const stableKey = definitions[0]!.stableKey;
+  const mismatched = new MemoryFhir();
+  mismatched.encounters[0]!.subject = { reference: "Patient/different" };
+  const mismatch = await handleProcedureDefinitionCaptureRequest(
+    deps("aesthetics-provider", mismatched, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey },
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+      },
+    },
+  );
+  assert.equal(mismatch.status, 422);
+  assert.match(JSON.stringify(mismatch.body), /does not belong to Patient\/shared-1/);
+  assert.equal(mismatched.writes.length, 0);
+
+  const unreadable = new MemoryFhir();
+  unreadable.encounterReadError = new Error("FHIR unavailable");
+  const readFailure = await handleProcedureDefinitionCaptureRequest(
+    deps("aesthetics-provider", unreadable, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey },
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+      },
+    },
+  );
+  assert.equal(readFailure.status, 422);
+  assert.match(JSON.stringify(readFailure.body), /Encounter could not be read/);
+  assert.equal(unreadable.writes.length, 0);
 });
 
 test("cosmetic consent persists as QuestionnaireResponse on the existing shared Patient", async () => {
@@ -228,6 +292,43 @@ test("cosmetic consent persists as QuestionnaireResponse on the existing shared 
   assert.equal(fhir.questionnaireResponses[0]?.encounter?.reference, "Encounter/aesthetics-1");
   assert.equal(fhir.questionnaireResponses[0]?.item?.[0]?.answer?.[0]?.valueBoolean, true);
   assert.equal(fhir.provenances[0]?.target?.[1]?.reference, "Patient/shared-1");
+});
+
+test("cosmetic consent rejects mismatched and unreadable Encounters before writing", async () => {
+  const definitions = buildProcedureDefinitionSeeds();
+  const mismatched = new MemoryFhir();
+  mismatched.encounters[0]!.subject = { reference: "Patient/different" };
+  const mismatch = await handleAestheticsConsentSubmissionRequest(
+    deps("aesthetics-provider", mismatched, definitions),
+    {
+      authHeader: AUTH,
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+        acknowledged: true,
+      },
+    },
+  );
+  assert.equal(mismatch.status, 422);
+  assert.match(JSON.stringify(mismatch.body), /does not belong to Patient\/shared-1/);
+  assert.equal(mismatched.writes.length, 0);
+
+  const unreadable = new MemoryFhir();
+  unreadable.encounterReadError = new Error("FHIR unavailable");
+  const readFailure = await handleAestheticsConsentSubmissionRequest(
+    deps("aesthetics-provider", unreadable, definitions),
+    {
+      authHeader: AUTH,
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+        acknowledged: true,
+      },
+    },
+  );
+  assert.equal(readFailure.status, 422);
+  assert.match(JSON.stringify(readFailure.body), /Encounter could not be read/);
+  assert.equal(unreadable.writes.length, 0);
 });
 
 function deps(
