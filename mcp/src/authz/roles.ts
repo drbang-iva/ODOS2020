@@ -213,6 +213,7 @@ const PATIENT_COMPARTMENT_CLINICAL_RESOURCES = [
   "EpisodeOfCare",
   "CarePlan",
   "ChargeItem",
+  "QuestionnaireResponse",
 ] as const;
 
 const FRONT_DESK_RESOURCES = [
@@ -404,7 +405,17 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
       {
+        resourceType: "Encounter",
+        interactions: READ_INTERACTIONS,
+        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+      },
+      {
         resourceType: "Procedure",
+        interactions: UPDATE_INTERACTIONS,
+        scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
+      },
+      {
+        resourceType: "QuestionnaireResponse",
         interactions: UPDATE_INTERACTIONS,
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },

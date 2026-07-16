@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { Patient } from "@medplum/fhirtypes";
+import type { Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
@@ -23,7 +24,9 @@ import { SpineNav } from "../components/charting/SpineNav";
 import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
+import { fhir } from "../lib/fhir";
 import { useRole } from "../lib/role-context";
+import { OSOD_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../lib/scheduling";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
 interface Props {
@@ -37,6 +40,11 @@ interface CatalogResponse {
   error?: string;
 }
 
+interface ProcedureCatalogResponse {
+  definitions: CustomFindingDefinition[];
+  error?: string;
+}
+
 let sidebarExpandedForSession = false;
 
 export function EncounterCharting({ patient, encounterId }: Props) {
@@ -44,6 +52,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>({});
   const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
+  const [procedureCatalog, setProcedureCatalog] = useState<ProcedureCatalogResponse>({ definitions: [] });
+  const [discipline, setDiscipline] = useState<SchedulingDiscipline>();
   const [creatingSection, setCreatingSection] = useState(false);
   const [savingSection, setSavingSection] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
@@ -68,6 +78,56 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fhir.read<Encounter>("Encounter", encounterId)
+      .then((encounter) => {
+        const code = encounter.serviceType?.coding?.find((coding) =>
+          coding.system === OSOD_DISCIPLINE_SYSTEM
+        )?.code;
+        if (cancelled) return;
+        if (code === "eyecare" || code === "aesthetics") {
+          setDiscipline(code);
+          if (code === "aesthetics") {
+            setActiveSection((current) => current === "va" ? "aesthetics-consent" : current);
+          }
+        }
+      })
+      .catch((caught) => {
+        if (!cancelled) console.error("Encounter discipline unavailable.", caught);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [encounterId]);
+
+  useEffect(() => {
+    if (discipline !== "aesthetics") {
+      setProcedureCatalog({ definitions: [] });
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/procedure-definitions`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as ProcedureCatalogResponse;
+        if (!response.ok) {
+          throw new Error(body.error ?? `Procedure-definition catalog failed: ${response.status}`);
+        }
+        return body;
+      })
+      .then(setProcedureCatalog)
+      .catch((caught) => {
+        if ((caught as Error).name !== "AbortError") {
+          console.error("Procedure definition catalog unavailable.", caught);
+          setProcedureCatalog({ definitions: [] });
+        }
+      });
+    return () => controller.abort();
+  }, [discipline]);
 
   useEffect(() => {
     if (!sidebarExpanded) return;
@@ -115,8 +175,27 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     segment: definition.stableKey.startsWith("ocular-health:posterior:") ? "posterior" as const : "anterior" as const,
   }));
   const customSections = customDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
+  const procedureDefinitions = procedureCatalog.definitions.filter((definition) =>
+    definition.resourceKind === "procedure" &&
+    definition.active
+  );
+  const procedureSections = procedureDefinitions.map((definition) => ({
+    id: definition.stableKey as ChartSectionId,
+    label: definition.display,
+    group: "AESTHETICS",
+  }));
+  const spineCustomSections = [
+    ...(discipline === "aesthetics"
+      ? [{ id: "aesthetics-consent" as ChartSectionId, label: "Cosmetic consent", group: "AESTHETICS" }]
+      : []),
+    ...procedureSections,
+    ...customSections,
+  ];
   const customDefinition = activeSection.startsWith("custom:")
     ? customDefinitions.find((definition) => definition.stableKey === activeSection)
+    : undefined;
+  const procedureDefinition = activeSection.startsWith("procedure:")
+    ? procedureDefinitions.find((definition) => definition.stableKey === activeSection)
     : undefined;
 
   return (
@@ -127,7 +206,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           active={activeSection}
           statuses={statuses}
           onSelect={setActiveSection}
-          customSections={customSections}
+          customSections={spineCustomSections}
           ocularHealthSections={ocularHealthSections}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
@@ -240,6 +319,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("prescription", status)}
             />
           )}
+          {activeSection === "aesthetics-consent" && discipline === "aesthetics" && (
+            <AestheticsConsentSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("aesthetics-consent", status)}
+            />
+          )}
           {activeSection.startsWith("ocular-health:") && (
             <OcularHealthSection
               definitions={ocularHealthDefinitions}
@@ -252,6 +338,14 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           {activeSection.startsWith("custom:") && customDefinition && (
             <CustomFindingSection
               definition={customDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved(activeSection, status)}
+            />
+          )}
+          {activeSection.startsWith("procedure:") && procedureDefinition && (
+            <CustomFindingSection
+              definition={procedureDefinition}
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved(activeSection, status)}

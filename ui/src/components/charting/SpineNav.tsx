@@ -32,7 +32,7 @@ interface Props {
   active: ChartSectionId;
   statuses: SectionStatusMap;
   onSelect: (section: ChartSectionId) => void;
-  customSections?: Array<{ id: ChartSectionId; label: string }>;
+  customSections?: Array<{ id: ChartSectionId; label: string; group?: string }>;
   ocularHealthSections?: Array<{ id: ChartSectionId; label: string; segment?: "anterior" | "posterior" }>;
   onAddSection?: () => void;
 }

@@ -341,7 +341,7 @@ function ViewRouter({ view }: { view: ViewState }) {
   }
 }
 
-function PatientRoute({
+export function PatientRoute({
   patientId,
   mode,
   encounterId,
@@ -393,7 +393,7 @@ function PatientRoute({
   }
 
   if (mode === "encounter") {
-    return <EncounterCharting patient={patient} encounterId={encounterId ?? ""} />;
+    return <EncounterCharting key={encounterId} patient={patient} encounterId={encounterId ?? ""} />;
   }
 
   if (mode === "overview") {

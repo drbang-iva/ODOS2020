@@ -103,11 +103,22 @@ import {
 } from "./clinical-graph/iop-history-endpoint.js";
 import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
 import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
+import { FhirProcedureDefinitionStore } from "./clinical-graph/procedure-definition-store.js";
 import {
   handleFindingDefinitionCatalogRequest,
   handleFindingDefinitionCreationRequest,
   handleFindingDefinitionMutationRequest,
 } from "./clinical-graph/finding-definition-endpoint.js";
+import {
+  handleProcedureDefinitionCaptureRequest,
+  handleProcedureDefinitionCatalogRequest,
+  handleProcedureDefinitionHistoryRequest,
+  handleProcedureDefinitionMutationRequest,
+} from "./clinical-graph/procedure-definition-endpoint.js";
+import {
+  handleAestheticsConsentDefinitionRequest,
+  handleAestheticsConsentSubmissionRequest,
+} from "./clinical-graph/aesthetics-consent-endpoint.js";
 import {
   handleDiagnosisCatalogCreationRequest,
   handleDiagnosisCatalogListRequest,
@@ -201,6 +212,11 @@ import {
   procedureTargetBodyStructureExtension,
   type ProcedureStatusCode,
 } from "./fhir/procedure.js";
+import {
+  SCHEDULING_DISCIPLINES,
+  disciplineCoding,
+  type SchedulingDiscipline,
+} from "./scheduling/clinic-mode.js";
 import {
   CONTACT_LENS_CLINICAL_OBSERVATION_CODES,
   CONTACT_LENS_MATERIAL_CODES,
@@ -445,6 +461,7 @@ const fhir = createMedplumClient({
   },
 });
 const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
+const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
@@ -651,6 +668,11 @@ const tools = [
             "Reason code system. Defaults to http://snomed.info/sct when reason_code is supplied.",
         },
         reason_display: { type: "string" },
+        discipline: {
+          type: "string",
+          enum: SCHEDULING_DISCIPLINES.map((discipline) => discipline.code),
+          description: "Clinical discipline carried in Encounter.serviceType.",
+        },
         create_provenance: {
           type: "boolean",
           description:
@@ -1883,6 +1905,11 @@ const createEncounterSchema = z.object({
   reason_code: z.string().optional(),
   reason_system: z.string().optional(),
   reason_display: z.string().optional(),
+  discipline: z.custom<SchedulingDiscipline>(
+    (value) => typeof value === "string" &&
+      SCHEDULING_DISCIPLINES.some((discipline) => discipline.code === value),
+    { message: "discipline must be eyecare or aesthetics." },
+  ).optional(),
   create_provenance: z.boolean().optional(),
   provenance_agent_reference: z.string().optional(),
   provenance_agent_display: z.string().optional(),
@@ -5007,6 +5034,9 @@ function buildCreateEncounterResource(input: CreateEncounterInput) {
           ],
         }
       : {}),
+    ...(input.discipline
+      ? { serviceType: { coding: [disciplineCoding(input.discipline)] } }
+      : {}),
   };
 
   return { resource: encounter, warnings };
@@ -5590,6 +5620,17 @@ async function main(): Promise<void> {
           findingDefinitions: () => findingDefinitions,
         };
       };
+      const procedureDefinitionRouteDeps = async (
+        authHeader: string | undefined,
+        businessAction: BusinessAction,
+      ) => {
+        const staff = await authenticateStaffRouteForAction(businessAction)(authHeader);
+        const procedureDefinitions = staff ? await procedureDefinitionStore.list() : [];
+        return {
+          authenticate: async () => staff,
+          procedureDefinitions: () => procedureDefinitions,
+        };
+      };
       const paymentCreditDeps = {
         authenticate: authenticateStaffRoute,
         lifecycleFhir: fhir,
@@ -5674,6 +5715,102 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("osod-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/procedure-definitions", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureDefinitionCatalogRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: /clinical-graph/procedure-definitions failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "procedure-definition catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/procedure-definitions/:stableKey/capture", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureDefinitionCaptureRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "aesthetics.procedure.write"),
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: procedure-definition capture failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "procedure-definition capture route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/procedure-definitions/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureDefinitionMutationRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "finding-definitions.write"),
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: procedure-definition mutation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "procedure-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/procedure-definitions/:stableKey/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureDefinitionHistoryRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.read"),
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              query: req.query,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: procedure-definition history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "procedure-definition history route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/aesthetics-consent", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleAestheticsConsentDefinitionRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: aesthetics consent definition failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "aesthetics consent definition route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/aesthetics-consent", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleAestheticsConsentSubmissionRequest(
+            { authenticate: authenticateStaffRouteForAction("aesthetics.procedure.write") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("osod-mcp: aesthetics consent submission failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "aesthetics consent submission route failed" });
         }
       });
 

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Encounter, Patient, Provenance } from "@medplum/fhirtypes";
+import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import {
   connectMcpServer,
   createAuthenticatedFhirClient,
@@ -82,6 +83,25 @@ test("create_encounter MCP write tool integrates with Medplum", { timeout: 90_00
       `Encounter/${output.encounter.id}`,
     );
     assert.ok(output.provenance?.agent[0]?.who, "Expected Provenance.agent[0].who to be present.");
+  });
+
+  await t.test("creates and reads an aesthetics-tagged Encounter", async () => {
+    const output = parseToolOutput<CreateEncounterToolOutput>(
+      await mcp.client.callTool({
+        name: "create_encounter",
+        arguments: {
+          patient_id: patient.id,
+          class_code: "AMB",
+          status: "in-progress",
+          discipline: "aesthetics",
+        },
+      }),
+    );
+
+    assert.ok(output.encounter.id);
+    const readable = await fhir.read<Encounter>("Encounter", output.encounter.id);
+    assert.equal(readable.serviceType?.coding?.[0]?.system, OSOD_DISCIPLINE_SYSTEM);
+    assert.equal(readable.serviceType?.coding?.[0]?.code, "aesthetics");
   });
 
   await t.test("rejects invalid class_code at Zod parse", async () => {
