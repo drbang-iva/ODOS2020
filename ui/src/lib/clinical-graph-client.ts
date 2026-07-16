@@ -6,7 +6,7 @@ export function authHeaders(): Record<string, string> {
 }
 
 export function clinicalGraphApiBase(): string {
-  return import.meta.env.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+  return import.meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 export type DiagnosisCompleteness = {

@@ -5,6 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { CustomFieldEditor, type CustomFieldEditorValue } from "../src/components/charting/CustomFieldEditor";
+import { AestheticsConsentSection } from "../src/components/charting/AestheticsConsentSection";
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import {
@@ -182,6 +183,127 @@ test("the generic renderer shows ordered fields, OD and OS columns, automatic no
   assert.match(html, /Stable/);
   assert.match(html, /Other \/ notes/);
   assert.match(html, /History/);
+});
+
+test("the same generic renderer records a data-defined Procedure without an aesthetics component fork", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ url: string; method?: string; body?: unknown }> = [];
+  globalThis.fetch = (async (input, init) => {
+    requests.push({
+      url: String(input),
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
+    return init?.method === "POST" ? jsonResponse({ procedureReference: "Procedure/p1" }) : jsonResponse({ rows: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <CustomFindingSection
+          definition={{
+            resourceKind: "procedure",
+            stableKey: "procedure:aesthetics:neurotoxin-glabella",
+            sectionKey: "procedure:aesthetics:neurotoxin-glabella",
+            display: "Neurotoxin injection — glabella",
+            active: true,
+            perEye: false,
+            customFields: [],
+          }}
+          patientReference="Patient/shared-1"
+          encounterReference="Encounter/aesthetics-1"
+          onSaved={() => undefined}
+          apiBase=""
+        />,
+      );
+      await flushEffects();
+    });
+    assert.match(renderToStaticMarkup(
+      <CustomFindingSection
+        definition={{
+          resourceKind: "procedure",
+          stableKey: "procedure:aesthetics:neurotoxin-glabella",
+          display: "Neurotoxin injection — glabella",
+          active: true,
+          perEye: false,
+          customFields: [],
+        }}
+        patientReference="Patient/shared-1"
+        encounterReference="Encounter/aesthetics-1"
+        onSaved={() => undefined}
+      />,
+    ), /Data-defined clinical procedure/);
+    const record = renderer.root.find((node) =>
+      node.type === "button" &&
+      String(node.props.children).includes("Record Neurotoxin injection")
+    );
+    await act(async () => record.props.onClick());
+    const post = requests.find((request) => request.method === "POST");
+    assert.equal(
+      post?.url,
+      "/clinical-graph/procedure-definitions/procedure%3Aaesthetics%3Aneurotoxin-glabella/capture",
+    );
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(post?.body as Record<string, unknown>).filter(([key]) => key !== "performedDateTime")),
+      {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+      },
+    );
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("aesthetics consent renders server-owned Questionnaire text and submits the shared Patient reference", async () => {
+  const originalFetch = globalThis.fetch;
+  let submitted: Record<string, unknown> | undefined;
+  globalThis.fetch = (async (_input, init) => {
+    if (init?.method === "POST") {
+      submitted = JSON.parse(String(init.body));
+      return jsonResponse({ questionnaireResponseReference: "QuestionnaireResponse/qr1" });
+    }
+    return jsonResponse({
+      questionnaire: {
+        resourceType: "Questionnaire",
+        status: "active",
+        title: "Cosmetic procedure consent acknowledgement",
+        item: [
+          { linkId: "notice", type: "display", text: "Prototype notice" },
+          { linkId: "ack", type: "boolean", text: "I acknowledge the proposed procedure." },
+        ],
+      },
+    });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <AestheticsConsentSection
+          patientReference="Patient/shared-1"
+          encounterReference="Encounter/aesthetics-1"
+          onSaved={() => undefined}
+          apiBase=""
+        />,
+      );
+      await flushEffects();
+    });
+    const checkbox = renderer.root.findByType("input");
+    await act(async () => checkbox.props.onChange({ target: { checked: true } }));
+    const submit = renderer.root.find((node) =>
+      node.type === "button" && node.props.children === "Submit consent"
+    );
+    await act(async () => submit.props.onClick());
+    assert.deepEqual(submitted, {
+      patientReference: "Patient/shared-1",
+      encounterReference: "Encounter/aesthetics-1",
+      acknowledged: true,
+    });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("the generic renderer reaches and captures a nested child option under its parent", async () => {
@@ -696,11 +818,95 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps exactly the 16 shipped built-in render branches plus one custom branch", () => {
+test("EncounterCharting keeps the 16 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 16);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 17);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
+  assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
+  assert.match(source, /<CustomFindingSection[\s\S]*definition=\{procedureDefinition\}/);
+});
+
+test("an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/encounter-1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/shared-1" },
+        serviceType: {
+          coding: [{
+            system: "https://osod.dev/fhir/CodeSystem/scheduling-discipline",
+            code: "aesthetics",
+          }],
+        },
+      });
+    }
+    if (url.includes("/clinical-graph/finding-definitions")) {
+      return jsonResponse({ canWrite: false, definitions: [] });
+    }
+    if (url.includes("/clinical-graph/procedure-definitions")) {
+      return jsonResponse({
+        definitions: [{
+          resourceKind: "procedure",
+          stableKey: "procedure:aesthetics:neurotoxin-glabella",
+          sectionKey: "procedure:aesthetics:neurotoxin-glabella",
+          display: "Neurotoxin injection — glabella",
+          active: true,
+          perEye: false,
+          customFields: [],
+        }],
+      });
+    }
+    if (url.includes("/clinical-graph/aesthetics-consent")) {
+      return jsonResponse({
+        questionnaire: {
+          resourceType: "Questionnaire",
+          status: "active",
+          title: "Cosmetic procedure consent acknowledgement",
+          item: [],
+        },
+      });
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as Document,
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting
+            patient={{ resourceType: "Patient", id: "shared-1" }}
+            encounterId="encounter-1"
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    const text = renderer.root.findAll((node) => typeof node.children?.[0] === "string")
+      .flatMap((node) => node.children)
+      .join(" ");
+    assert.match(text, /AESTHETICS/);
+    assert.match(text, /Cosmetic consent/);
+    assert.match(text, /Neurotoxin injection — glabella/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
 });
 
 test("EncounterCharting renders the shared ChartSidebar without removing it from PatientDirector", () => {

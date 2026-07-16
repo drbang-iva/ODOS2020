@@ -1,4 +1,5 @@
 export type BuiltInSectionId =
+  | "aesthetics-consent"
   | "hpi"
   | "wearing"
   | "auto-refraction"
@@ -16,7 +17,11 @@ export type BuiltInSectionId =
   | "assessment"
   | "prescription";
 
-export type ChartSectionId = BuiltInSectionId | `custom:${string}` | `ocular-health:${string}`;
+export type ChartSectionId =
+  | BuiltInSectionId
+  | `custom:${string}`
+  | `ocular-health:${string}`
+  | `procedure:${string}`;
 
 export interface SectionSaveStatus {
   completed: boolean;

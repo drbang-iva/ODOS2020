@@ -18,6 +18,7 @@ export interface CustomFindingField {
 }
 
 export interface CustomFindingDefinition {
+  resourceKind?: "finding" | "procedure";
   stableKey: string;
   sectionKey?: string;
   display: string;
@@ -55,13 +56,14 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
   const [saved, setSaved] = useState<SectionSaveStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const resourceKind = definition.resourceKind ?? "finding";
   const fields = definition.customFields.filter((field) => field.active).sort((left, right) => left.order - right.order);
 
   useEffect(() => {
     const controller = new AbortController();
     setHistoryLoading(true);
     setHistoryError(null);
-    fetch(historyUrl(definition.stableKey, patientReference, apiBase), { headers: authHeaders(), signal: controller.signal })
+    fetch(historyUrl(definition.stableKey, patientReference, resourceKind, apiBase), { headers: authHeaders(), signal: controller.signal })
       .then(async (response) => {
         const body = await response.json() as { rows?: HistoryRow[]; error?: string };
         if (!response.ok) throw new Error(body.error ?? `Custom section history failed: ${response.status}`);
@@ -75,7 +77,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
         if (!controller.signal.aborted) setHistoryLoading(false);
       });
     return () => controller.abort();
-  }, [definition.stableKey, patientReference, historyVersion, apiBase]);
+  }, [definition.stableKey, patientReference, resourceKind, historyVersion, apiBase]);
 
   function update(key: string, value: string | string[]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -85,23 +87,29 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
     setSaving(true);
     setError(null);
     try {
-      const body = definition.perEye
+      const body = resourceKind === "procedure"
         ? {
             patientReference,
             encounterReference,
-            eyes: Object.fromEntries(EYES.flatMap((eye) => {
-              const customFields = fieldValues(fields, values, eye);
-              return customFields.length ? [[eye, { customFields }]] : [];
-            })),
-            ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
+            performedDateTime: new Date().toISOString(),
           }
-        : {
-            patientReference,
-            encounterReference,
-            customFields: fieldValues(fields, values),
-            ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
-          };
-      const response = await fetch(`${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(definition.stableKey)}`, {
+        : definition.perEye
+          ? {
+              patientReference,
+              encounterReference,
+              eyes: Object.fromEntries(EYES.flatMap((eye) => {
+                const customFields = fieldValues(fields, values, eye);
+                return customFields.length ? [[eye, { customFields }]] : [];
+              })),
+              ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
+            }
+          : {
+              patientReference,
+              encounterReference,
+              customFields: fieldValues(fields, values),
+              ...(remarks.trim() ? { remarks: remarks.trim() } : {}),
+            };
+      const response = await fetch(captureUrl(definition.stableKey, resourceKind, apiBase), {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -110,7 +118,9 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
       if (!response.ok) throw new Error(result.error ?? `Custom section save failed: ${response.status}`);
       const status = {
         completed: true,
-        summary: definition.perEye ? "OD/OS saved" : "Saved",
+        summary: resourceKind === "procedure"
+          ? "Procedure recorded"
+          : definition.perEye ? "OD/OS saved" : "Saved",
         savedAt: new Date().toISOString(),
         operator: "OSOD UI custom section",
       };
@@ -129,35 +139,45 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
       <div className="max-w-6xl">
         <div className="border-b border-white/10 pb-4">
           <h2 className="text-lg font-semibold text-white">{definition.display}</h2>
-          <p className="mt-1 text-sm text-white/45">Practice-created chart section</p>
+          <p className="mt-1 text-sm text-white/45">
+            {resourceKind === "procedure" ? "Data-defined clinical procedure" : "Practice-created chart section"}
+          </p>
         </div>
-        <div className={definition.perEye ? "mt-5 grid gap-4 xl:grid-cols-2" : "mt-5 max-w-2xl"}>
-          {(definition.perEye ? EYES : [undefined]).map((eye) => (
-            <div key={eye ?? "record"} className="rounded border border-white/10 bg-white/[0.02] p-4">
-              {eye && <div className="mb-4 text-sm font-semibold text-white">{eye}</div>}
-              <div className="grid gap-4 md:grid-cols-2">
-                {fields.map((field) => (
-                  <CustomFieldControl
-                    key={field.localCode}
-                    field={field}
-                    value={values[valueKey(field.localCode, eye)] ?? (field.valueType === "multi-select" ? [] : "")}
-                    onChange={(value) => update(valueKey(field.localCode, eye), value)}
-                  />
-                ))}
+        {fields.length > 0 ? (
+          <div className={definition.perEye ? "mt-5 grid gap-4 xl:grid-cols-2" : "mt-5 max-w-2xl"}>
+            {(definition.perEye ? EYES : [undefined]).map((eye) => (
+              <div key={eye ?? "record"} className="rounded border border-white/10 bg-white/[0.02] p-4">
+                {eye && <div className="mb-4 text-sm font-semibold text-white">{eye}</div>}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {fields.map((field) => (
+                    <CustomFieldControl
+                      key={field.localCode}
+                      field={field}
+                      value={values[valueKey(field.localCode, eye)] ?? (field.valueType === "multi-select" ? [] : "")}
+                      onChange={(value) => update(valueKey(field.localCode, eye), value)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-        <label className="mt-4 block max-w-4xl">
-          <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Other / notes</span>
-          <textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={3} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white outline-none focus:border-brand" />
-        </label>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 max-w-2xl rounded border border-white/10 bg-white/[0.02] p-4 text-sm text-white/55">
+            This definition has no additional capture fields.
+          </div>
+        )}
+        {resourceKind === "finding" && (
+          <label className="mt-4 block max-w-4xl">
+            <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Other / notes</span>
+            <textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={3} className="w-full rounded border border-white/15 bg-bg-deep p-3 text-white outline-none focus:border-brand" />
+          </label>
+        )}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div className="min-h-10">
             {error && <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">{error}</div>}
             {saved && !error && <div className="text-sm text-white/70">{saved.summary}<span className="ml-3 text-xs text-white/45">{saved.savedAt}</span></div>}
           </div>
-          <button type="button" onClick={save} disabled={saving} className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:opacity-50">{saving ? "Saving…" : `Save ${definition.display}`}</button>
+          <button type="button" onClick={save} disabled={saving} className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand/25 disabled:opacity-50">{saving ? "Saving…" : resourceKind === "procedure" ? `Record ${definition.display}` : `Save ${definition.display}`}</button>
         </div>
         <div className="mt-8 overflow-hidden rounded border border-white/10 bg-bg-panel/55">
           <div className="border-b border-white/10 px-4 py-3 text-sm font-semibold text-white">History</div>
@@ -234,8 +254,27 @@ function valueKey(code: string, eye?: Eye): string {
   return `${eye ?? "record"}:${code}`;
 }
 
-function historyUrl(stableKey: string, patientReference: string, apiBase?: string): string {
-  return `${apiBase ?? clinicalGraphApiBase()}/clinical-graph/custom/${encodeURIComponent(stableKey)}/history?${new URLSearchParams({ patient: patientReference })}`;
+function captureUrl(
+  stableKey: string,
+  resourceKind: "finding" | "procedure",
+  apiBase?: string,
+): string {
+  const path = resourceKind === "procedure"
+    ? `/clinical-graph/procedure-definitions/${encodeURIComponent(stableKey)}/capture`
+    : `/clinical-graph/custom/${encodeURIComponent(stableKey)}`;
+  return `${apiBase ?? clinicalGraphApiBase()}${path}`;
+}
+
+function historyUrl(
+  stableKey: string,
+  patientReference: string,
+  resourceKind: "finding" | "procedure",
+  apiBase?: string,
+): string {
+  const path = resourceKind === "procedure"
+    ? `/clinical-graph/procedure-definitions/${encodeURIComponent(stableKey)}/history`
+    : `/clinical-graph/custom/${encodeURIComponent(stableKey)}/history`;
+  return `${apiBase ?? clinicalGraphApiBase()}${path}?${new URLSearchParams({ patient: patientReference })}`;
 }
 
 
