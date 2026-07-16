@@ -6172,6 +6172,9 @@ async function main(): Promise<void> {
         statements: {
           authenticate: authenticateStaffRoute,
         },
+        planProfiles: {
+          authenticate: authenticateStaffRoute,
+        },
       });
       registerDeskRoutes(app, {
         authenticateService: authenticateWithMedplum,
