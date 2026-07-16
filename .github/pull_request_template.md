@@ -34,3 +34,11 @@ By submitting this PR, I agree my contribution is licensed under the project's *
 ## Anything reviewers should know
 
 <!-- Migration steps, follow-up work, known limitations. -->
+
+## Independent evaluation
+
+The newest independent evaluation marker decides the `check-evaluation` gate. A
+passing evaluation must include `Evaluated-by: <Model> — PASS` (the separators
+`--` and `-` are also accepted). `FAIL`, `BLOCKED`, and `NEEDS-WORK` keep the
+gate red, and a marker without a verdict token is rejected as ambiguous. The
+`evaluated` label remains the deliberate operator override.
