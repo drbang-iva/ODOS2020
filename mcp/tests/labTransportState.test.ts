@@ -48,3 +48,15 @@ test("manual lab transport transitions are independent from the clinical optical
   assert.equal(isTerminalLabTransportState("cancelled"), true);
   assert.equal(isTerminalLabTransportState("error"), false);
 });
+
+test("vendor transport states progress forward and permit skipped polling milestones", () => {
+  assert.equal(canTransitionLabTransportState("sent", "acknowledged"), true);
+  assert.equal(canTransitionLabTransportState("sent", "in-production"), true);
+  assert.equal(canTransitionLabTransportState("sent", "shipped"), true);
+  assert.equal(canTransitionLabTransportState("acknowledged", "in-production"), true);
+  assert.equal(canTransitionLabTransportState("acknowledged", "shipped"), true);
+  assert.equal(canTransitionLabTransportState("in-production", "shipped"), true);
+  assert.equal(canTransitionLabTransportState("shipped", "received"), true);
+  assert.equal(canTransitionLabTransportState("in-production", "acknowledged"), false);
+  assert.equal(canTransitionLabTransportState("shipped", "in-production"), false);
+});
