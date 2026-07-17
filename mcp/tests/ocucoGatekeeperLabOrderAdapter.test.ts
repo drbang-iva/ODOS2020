@@ -174,6 +174,27 @@ test("Ocuco adapter reaches vendor-only states through legal forward transitions
   assert.equal(fhir.store.tasks.get("ocuco-1")?.status, "completed");
 });
 
+test("Ocuco advanceTransportState cannot bypass the remote cancellation flow", async () => {
+  const fhir = fakeFhir();
+  const client = fakeClient();
+  const adapter = createOcucoGatekeeperLabOrderAdapter(fhir, CONFIG, client, { now: () => NOW });
+  const submitted = await adapter.submit(submitRequest());
+  const taskBefore = structuredClone(fhir.store.tasks.get("ocuco-1"));
+
+  await assert.rejects(
+    () => adapter.advanceTransportState({
+      labOrderReference: submitted.labOrderReference,
+      staffReference: "Practitioner/staff-1",
+      toState: "cancelled",
+    }),
+    /must use cancel\(\).*notify Ocuco/i,
+  );
+
+  assert.equal(client.store.pushes.length, 1);
+  assert.equal(fhir.store.updated.length, 0);
+  assert.deepEqual(fhir.store.tasks.get("ocuco-1"), taskBefore);
+});
+
 test("Ocuco cancellation re-submits the original order with cancel:1 before cancelling the Task", async () => {
   const fhir = fakeFhir();
   const client = fakeClient();

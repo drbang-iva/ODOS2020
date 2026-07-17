@@ -216,7 +216,10 @@ export function createOcucoGatekeeperLabOrderAdapter(
       return transportStateFromTask(task);
     },
 
-    advanceTransportState(req: AdvanceLabTransportRequest): Promise<LabTransportState> {
+    async advanceTransportState(req: AdvanceLabTransportRequest): Promise<LabTransportState> {
+      if (req.toState === "cancelled") {
+        throw new Error("Ocuco cancellation must use cancel() to notify Ocuco before updating the local Task.");
+      }
       return updateState(req);
     },
 
