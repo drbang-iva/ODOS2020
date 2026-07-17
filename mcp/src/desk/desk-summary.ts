@@ -38,6 +38,8 @@ const ERA_TASKS_UNAVAILABLE = "Open ERA Tasks exceed the Desk card read limit.";
 const CLAIM_RESOURCES_UNAVAILABLE = "Claim records exceed the Desk card read limit.";
 const PAYMENT_RESOURCES_UNAVAILABLE = "Payment records exceed the Desk card read limit.";
 const INVOICE_RESOURCES_UNAVAILABLE = "Invoice records exceed the Desk card read limit.";
+const APPOINTMENTS_UNAVAILABLE = "Today's appointments exceed the Desk card read limit.";
+const STATEMENT_RUN_UNAVAILABLE = "Latest statement run could not be read.";
 
 export type DeskTone = "ok" | "warn" | "alert" | "info" | "off";
 
@@ -144,6 +146,7 @@ export interface DeskSummaryInput {
     era?: boolean;
   };
   resourceAvailability?: {
+    appointments?: boolean;
     claims?: boolean;
     claimResponses?: boolean;
     paymentReconciliations?: boolean;
@@ -153,6 +156,7 @@ export interface DeskSummaryInput {
 
 export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const nowMs = Date.parse(input.now);
+  const appointmentsAvailable = input.resourceAvailability?.appointments !== false;
   const patients = new Map(input.patients.flatMap((patient) => patient.id ? [[`Patient/${patient.id}`, patient] as const] : []));
   const currentAppointments = input.appointments.filter((appointment) =>
     appointment.status !== "cancelled" && appointment.status !== "noshow" && appointment.status !== "entered-in-error",
@@ -160,22 +164,30 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   const webAppointments = currentAppointments.filter((appointment) => appointment.status === "proposed" || appointment.status === "pending");
   const confirmed = currentAppointments.filter((appointment) => confirmationStatusOf(appointment) === "confirmed").length;
   const schedule = {
-    today: stat(currentAppointments.length, "ok"),
-    confirmed: stat(confirmed, confirmed >= currentAppointments.length ? "ok" : "warn"),
-    checkedIn: stat(currentAppointments.filter((appointment) => appointment.status === "arrived").length, "info"),
-    webRequests: stat(webAppointments.length, webAppointments.length > 0 ? "warn" : "ok"),
-    agenda: currentAppointments
-      .filter((appointment) => Date.parse(appointment.start ?? "") >= nowMs)
-      .sort((a, b) => Date.parse(a.start ?? "") - Date.parse(b.start ?? ""))
-      .slice(0, 4)
-      .map((appointment) => ({
-        time: timeLabel(appointment.start, input.timeZone),
-        patient: appointmentPatientName(appointment, patients),
-        visitType: appointment.serviceType?.[0]?.text
-          ?? appointment.serviceType?.[0]?.coding?.[0]?.display
-          ?? appointment.serviceType?.[0]?.coding?.[0]?.code
-          ?? "Visit",
-      })),
+    today: appointmentsAvailable ? stat(currentAppointments.length, "ok") : stat(0, "off", APPOINTMENTS_UNAVAILABLE),
+    confirmed: appointmentsAvailable
+      ? stat(confirmed, confirmed >= currentAppointments.length ? "ok" : "warn")
+      : stat(0, "off", APPOINTMENTS_UNAVAILABLE),
+    checkedIn: appointmentsAvailable
+      ? stat(currentAppointments.filter((appointment) => appointment.status === "arrived").length, "info")
+      : stat(0, "off", APPOINTMENTS_UNAVAILABLE),
+    webRequests: appointmentsAvailable
+      ? stat(webAppointments.length, webAppointments.length > 0 ? "warn" : "ok")
+      : stat(0, "off", APPOINTMENTS_UNAVAILABLE),
+    agenda: appointmentsAvailable
+      ? currentAppointments
+        .filter((appointment) => Date.parse(appointment.start ?? "") >= nowMs)
+        .sort((a, b) => Date.parse(a.start ?? "") - Date.parse(b.start ?? ""))
+        .slice(0, 4)
+        .map((appointment) => ({
+          time: timeLabel(appointment.start, input.timeZone),
+          patient: appointmentPatientName(appointment, patients),
+          visitType: appointment.serviceType?.[0]?.text
+            ?? appointment.serviceType?.[0]?.coding?.[0]?.display
+            ?? appointment.serviceType?.[0]?.coding?.[0]?.code
+            ?? "Visit",
+        }))
+      : [],
   };
 
   const opticalTasks = input.tasks.filter((task) =>
@@ -265,7 +277,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
 
   const attention: DeskAttentionRow[] = [
     ...(claimsAvailable && failedRows.length > 0 ? [{ tone: "alert" as const, label: `${failedRows.length} failed claim${failedRows.length === 1 ? "" : "s"}`, detail: `${money(heldCents)} held`, href: "/billing/claims/worklist" }] : []),
-    ...(webAppointments.length > 0 ? [{ tone: "warn" as const, label: `${webAppointments.length} web appointment${webAppointments.length === 1 ? "" : "s"} waiting`, detail: sinceLabel(oldestAppointmentTime(webAppointments), nowMs), href: "/frontdesk" }] : []),
+    ...(appointmentsAvailable && webAppointments.length > 0 ? [{ tone: "warn" as const, label: `${webAppointments.length} web appointment${webAppointments.length === 1 ? "" : "s"} waiting`, detail: sinceLabel(oldestAppointmentTime(webAppointments), nowMs), href: "/frontdesk" }] : []),
     ...(eraTasksAvailable && openEraTasks.length > 0 ? [{ tone: "warn" as const, label: `${openEraTasks.length} remit item${openEraTasks.length === 1 ? "" : "s"} waiting`, detail: `${money(unpostedCents)} unposted`, href: "/billing/claims/remittances" }] : []),
   ];
 
@@ -289,11 +301,15 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     statements: {
       available: true,
       cadence: stat("Weekly · Wednesdays recommended", "info"),
-      invalidRejects: stat(statementRun.invalidRejects, statementRun.invalidRejects > 0 ? "alert" : "ok"),
+      invalidRejects: stat(
+        statementRun.invalidRejects,
+        statementRun.unavailableReason ? "off" : statementRun.invalidRejects > 0 ? "alert" : "ok",
+        statementRun.unavailableReason,
+      ),
       lastStatement: stat(
         statementRun.generatedAt,
-        statementRun.generatedAt ? "info" : "off",
-        statementRun.generatedAt ? undefined : "No statement run is persisted yet.",
+        statementRun.unavailableReason ? "off" : statementRun.generatedAt ? "info" : "off",
+        statementRun.unavailableReason ?? (statementRun.generatedAt ? undefined : "No statement run is persisted yet."),
       ),
     },
   };
@@ -316,7 +332,7 @@ export async function loadDeskSummary(
   const now = options.now ?? new Date().toISOString();
   const date = options.date ?? practiceDate(now, options.timeZone);
   const [
-    appointments,
+    appointmentRead,
     opticalTaskRead,
     claimRejectedTaskRead,
     eraTaskRead,
@@ -326,7 +342,7 @@ export async function loadDeskSummary(
     paymentReconciliationRead,
     invoiceRead,
   ] = await Promise.all([
-    searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
+    searchAvailablePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
     searchScopedTasks(fhir, {
       status: "in-progress",
       code: `${ODOS_OPTICAL_ORDER_TYPE_SYSTEM}|`,
@@ -355,11 +371,12 @@ export async function loadDeskSummary(
     searchAvailablePage<PaymentReconciliation>(fhir, "PaymentReconciliation", { _count: "1000", _sort: "-_lastUpdated" }),
     searchAvailablePage<Invoice>(fhir, "Invoice", { _count: "1000", _sort: "-_lastUpdated" }),
   ]);
+  const appointments = appointmentRead.resources;
   const patientIds = unique(appointments.flatMap((appointment) => appointment.participant ?? [])
     .flatMap((participant) => participant.actor?.reference?.match(/^Patient\/([^/]+)$/)?.[1] ?? []));
   const patients = patientIds.length === 0
     ? []
-    : await searchOnePage<Patient>(fhir, "Patient", { _id: patientIds.join(","), _count: String(patientIds.length) });
+    : (await searchAvailablePage<Patient>(fhir, "Patient", { _id: patientIds.join(","), _count: String(patientIds.length) })).resources;
   return projectDeskSummary({
     appointments,
     patients,
@@ -377,6 +394,7 @@ export async function loadDeskSummary(
       era: eraTaskRead.complete,
     },
     resourceAvailability: {
+      appointments: appointmentRead.complete,
       claims: claimRead.complete,
       claimResponses: claimResponseRead.complete,
       paymentReconciliations: paymentReconciliationRead.complete,
@@ -435,13 +453,20 @@ async function searchFirstPage<T extends Resource>(
 export function safeLatestStatementRun(
   tasks: readonly Task[],
   readLatest: typeof latestStatementRun = latestStatementRun,
-): { generatedAt: string | null; invalidRejects: number } {
+): { generatedAt: string | null; invalidRejects: number; unavailableReason?: string } {
   try {
     return readLatest(tasks);
   } catch (error) {
-    if (!(error instanceof StatementValidationError)) throw error;
+    if (!(error instanceof StatementValidationError)) {
+      console.error(`Latest statement run read skipped: ${errorMessage(error)}`, error);
+      return { generatedAt: null, invalidRejects: 0, unavailableReason: STATEMENT_RUN_UNAVAILABLE };
+    }
     return { generatedAt: null, invalidRejects: 0 };
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function stat<T>(value: T, tone: DeskTone, unavailableReason?: string): DeskStat<T> {
