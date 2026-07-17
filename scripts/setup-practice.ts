@@ -14,6 +14,7 @@ import {
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
+  type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
@@ -26,8 +27,9 @@ export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already prov
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const DEFAULT_STATE_PATH = resolve(process.cwd(), ".odos-setup-state.json");
-const CLINICIAN_ROLE = getRoleDeclaration("clinician");
-const CLINICIAN_POLICY_NAME = `ODOS ${CLINICIAN_ROLE.display}`;
+const FIRST_ADMIN_GRANT_ROLES = ["front-desk", "practice-admin", "clinician"] as const satisfies readonly PracticeRoleId[];
+type FirstAdminGrantRole = (typeof FIRST_ADMIN_GRANT_ROLES)[number];
+const FIRST_ADMIN_PRIMARY_ROLE: FirstAdminGrantRole = "front-desk";
 
 export interface SetupPracticeConfig {
   readonly baseUrl: string;
@@ -35,6 +37,7 @@ export interface SetupPracticeConfig {
   readonly adminEmail: string;
   readonly adminName: string;
   readonly adminPassword: string;
+  readonly serviceIdentityEmail?: string;
   readonly postgresUrl?: string;
   readonly statePath: string;
 }
@@ -61,15 +64,16 @@ export interface SetupPracticeAdapter {
   isPracticeProvisioned(config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean>;
   createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession>;
   createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner>;
-  createClinicianAccessPolicy(config: SetupPracticeConfig, session: AdminSession): Promise<{
+  createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
+    role: FirstAdminGrantRole;
     policy: AccessPolicy;
     created: boolean;
-  }>;
-  grantClinicianRole(input: {
+  }[]>;
+  grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
-    policy: AccessPolicy;
+    policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
   }): Promise<{ id: string }>;
   emitAudit(row: OdosAuditEventRecord): Promise<void>;
 }
@@ -181,38 +185,40 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     );
   }
 
-  let policy: AccessPolicy | undefined;
-  if (state.accessPolicyCreated && state.accessPolicyId) {
-    policy = { resourceType: "AccessPolicy", id: state.accessPolicyId };
-  } else {
-    const resolvedPolicy = await adapter.createClinicianAccessPolicy(config, session);
-    policy = resolvedPolicy.policy;
-    if (!policy.id) {
-      throw new Error("Setup wizard AccessPolicy create returned no id.");
+  const resolvedPolicies = await adapter.createFirstAdminAccessPolicies(config, session);
+  const policies = new Map<FirstAdminGrantRole, AccessPolicy>();
+  for (const resolvedPolicy of resolvedPolicies) {
+    if (!resolvedPolicy.policy.id) {
+      throw new Error(`Setup wizard ${resolvedPolicy.role} AccessPolicy create returned no id.`);
     }
-    state = persistSetupState(config.statePath, {
-      ...state,
-      accessPolicyCreated: true,
-      accessPolicyId: policy.id,
-    });
+    policies.set(resolvedPolicy.role, resolvedPolicy.policy);
     if (resolvedPolicy.created) {
       await emit(
         buildSetupAuditRow({
           eventType: "create",
           resourceType: "AccessPolicy",
-          resourceId: policy.id,
+          resourceId: resolvedPolicy.policy.id,
           actionReason: SETUP_WIZARD_ACTION_REASON,
         }),
       );
     }
   }
+  const clinicianPolicy = policies.get("clinician");
+  if (!clinicianPolicy?.id || policies.size !== FIRST_ADMIN_GRANT_ROLES.length) {
+    throw new Error("Setup wizard did not resolve all first-admin AccessPolicies.");
+  }
+  state = persistSetupState(config.statePath, {
+    ...state,
+    accessPolicyCreated: true,
+    accessPolicyId: clinicianPolicy.id,
+  });
 
   if (!state.accessPolicyAssigned) {
-    const assignment = await adapter.grantClinicianRole({
+    const assignment = await adapter.grantFirstAdminRoles({
       config,
       session,
       practitioner,
-      policy,
+      policies,
     });
     state = persistSetupState(config.statePath, {
       ...state,
@@ -291,35 +297,39 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return practitioner;
   }
 
-  async createClinicianAccessPolicy(): Promise<{ policy: AccessPolicy; created: boolean }> {
-    const existing = this.policies.filter((policy) => policy.name === CLINICIAN_POLICY_NAME);
-    if (existing.length > 1) {
-      throw new Error(`Expected at most one ${CLINICIAN_POLICY_NAME} AccessPolicy; found ${existing.length}.`);
-    }
-    if (existing[0]) return { policy: existing[0], created: false };
-    const policy: AccessPolicy = {
-      ...buildMedplumAccessPolicy(CLINICIAN_ROLE),
-      id: `access-policy-${this.policies.length + 1}`,
-      name: CLINICIAN_POLICY_NAME,
-    };
-    this.policies.push(policy);
-    return { policy, created: true };
+  async createFirstAdminAccessPolicies(): Promise<readonly {
+    role: FirstAdminGrantRole;
+    policy: AccessPolicy;
+    created: boolean;
+  }[]> {
+    return this.resolveFirstAdminPolicies(async (role) => {
+      const policy: AccessPolicy = {
+        ...buildMedplumAccessPolicy(getRoleDeclaration(role)),
+        id: `access-policy-${this.policies.length + 1}`,
+      };
+      this.policies.push(policy);
+      return policy;
+    });
   }
 
-  async grantClinicianRole(input: {
+  async grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     practitioner: Practitioner;
-    policy: AccessPolicy;
+    policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
   }): Promise<{ id: string }> {
     await grantPracticeRoles(
-      bootstrapClinicianGrant(input.config.adminEmail),
+      firstAdminGrant(input.config.adminEmail),
       {
-        serviceIdentityEmail: input.config.adminEmail,
+        serviceIdentityEmail: input.config.serviceIdentityEmail,
         resolveTarget: async () => ({ email: input.config.adminEmail, membership: this.membership }),
-        resolvePolicy: async () => input.policy,
+        resolvePolicy: async (role) => {
+          const policy = input.policies.get(role as FirstAdminGrantRole);
+          if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
+          return policy;
+        },
         patchMembership: async (_id, operations) => {
           for (const operation of operations) {
-            if (operation.path === "/access") {
+            if (operation.path === "/access" && "value" in operation) {
               this.membership.access = operation.value as ProjectMembership["access"];
             } else if (operation.path === "/accessPolicy") {
               delete this.membership.accessPolicy;
@@ -337,10 +347,30 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     const assignment = {
       id: this.membership.id!,
       practitionerId: input.practitioner.id,
-      policyId: input.policy.id,
+      policyId: input.policies.get("clinician")?.id,
     };
     this.assignments.push(assignment);
     return assignment;
+  }
+
+  private async resolveFirstAdminPolicies(
+    createPolicy: (role: FirstAdminGrantRole) => Promise<AccessPolicy>,
+  ): Promise<readonly { role: FirstAdminGrantRole; policy: AccessPolicy; created: boolean }[]> {
+    const resolved = [];
+    for (const roleId of FIRST_ADMIN_GRANT_ROLES) {
+      const role = getRoleDeclaration(roleId);
+      const policyName = `ODOS ${role.display}`;
+      const existing = this.policies.filter((policy) => policy.name === policyName);
+      if (existing.length > 1) {
+        throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
+      }
+      if (existing[0]) {
+        resolved.push({ role: roleId, policy: existing[0], created: false });
+      } else {
+        resolved.push({ role: roleId, policy: await createPolicy(roleId), created: true });
+      }
+    }
+    return resolved;
   }
 
   async emitAudit(row: OdosAuditEventRecord): Promise<void> {
@@ -387,30 +417,44 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     });
   }
 
-  async createClinicianAccessPolicy(): Promise<{ policy: AccessPolicy; created: boolean }> {
-    const existing = (await searchAll<AccessPolicy>(this.client(), "AccessPolicy", {
-      "name:exact": CLINICIAN_POLICY_NAME,
-    })).filter((policy) => policy.name === CLINICIAN_POLICY_NAME);
-    if (existing.length > 1) {
-      throw new Error(`Expected at most one ${CLINICIAN_POLICY_NAME} AccessPolicy; found ${existing.length}.`);
+  async createFirstAdminAccessPolicies(): Promise<readonly {
+    role: FirstAdminGrantRole;
+    policy: AccessPolicy;
+    created: boolean;
+  }[]> {
+    const resolved = [];
+    for (const roleId of FIRST_ADMIN_GRANT_ROLES) {
+      const role = getRoleDeclaration(roleId);
+      const policyName = `ODOS ${role.display}`;
+      const existing = (await searchAll<AccessPolicy>(this.client(), "AccessPolicy", {
+        "name:exact": policyName,
+      })).filter((policy) => policy.name === policyName);
+      if (existing.length > 1) {
+        throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
+      }
+      if (existing[0]) {
+        resolved.push({ role: roleId, policy: existing[0], created: false });
+      } else {
+        resolved.push({
+          role: roleId,
+          policy: await this.client().create<AccessPolicy>(buildMedplumAccessPolicy(role)),
+          created: true,
+        });
+      }
     }
-    if (existing[0]) return { policy: existing[0], created: false };
-    return {
-      policy: await this.client().create<AccessPolicy>(buildMedplumAccessPolicy(CLINICIAN_ROLE)),
-      created: true,
-    };
+    return resolved;
   }
 
-  async grantClinicianRole(input: {
+  async grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
     session: AdminSession;
     practitioner: Practitioner;
-    policy: AccessPolicy;
+    policies: ReadonlyMap<FirstAdminGrantRole, AccessPolicy>;
   }): Promise<{ id: string }> {
     const result = await grantPracticeRoles(
-      bootstrapClinicianGrant(input.config.adminEmail),
+      firstAdminGrant(input.config.adminEmail),
       {
-        serviceIdentityEmail: process.env.MEDPLUM_ADMIN_EMAIL,
+        serviceIdentityEmail: input.config.serviceIdentityEmail,
         resolveTarget: async (target) => {
           const users = (await searchAll<User>(this.client(), "User", { email: target })).filter(
             (user) => user.email?.toLowerCase() === target.toLowerCase(),
@@ -426,7 +470,11 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
           }
           return { email: users[0].email!, membership: memberships[0]! };
         },
-        resolvePolicy: async () => input.policy,
+        resolvePolicy: async (role) => {
+          const policy = input.policies.get(role as FirstAdminGrantRole);
+          if (!policy) throw new Error(`${role} AccessPolicy was not resolved.`);
+          return policy;
+        },
         patchMembership: (id, operations, versionId) =>
           this.client().patch("ProjectMembership", id, operations, {
             "If-Match": `W/\"${versionId}\"`,
@@ -458,14 +506,11 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   }
 }
 
-function bootstrapClinicianGrant(target: string) {
+function firstAdminGrant(target: string) {
   return {
     target,
-    roles: ["clinician"] as const,
-    primaryRole: "clinician" as const,
-    // The shipped first-run defaults intentionally use one local bootstrap/service identity.
-    // This is the sole grant exception; it must not be used as a human login and cleanup removes it.
-    allowServiceIdentity: true,
+    roles: FIRST_ADMIN_GRANT_ROLES,
+    primaryRole: FIRST_ADMIN_PRIMARY_ROLE,
   };
 }
 
@@ -477,14 +522,14 @@ function buildSetupRoleChangeAuditRow(target: ResolvedRoleGrantTarget): OdosAudi
     resourceType: "ProjectMembership",
     resourceId: target.membership.id,
     actionOutcome: "granted",
-    actionReason: `bootstrap clinician role for ${target.email}`,
+    actionReason: `bootstrap first-admin roles for ${target.email}`,
   });
 }
 
 function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
   const env = options.env ?? process.env;
   const config = options.config ?? {};
-  return {
+  const resolved = {
     baseUrl: config.baseUrl ?? env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL,
     practiceName: requireConfigValue(config.practiceName ?? env.ODOS_PRACTICE_NAME, "ODOS_PRACTICE_NAME"),
     adminEmail: requireConfigValue(config.adminEmail ?? env.ODOS_ADMIN_EMAIL, "ODOS_ADMIN_EMAIL"),
@@ -493,9 +538,19 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
       config.adminPassword ?? env.ODOS_ADMIN_PASSWORD ?? env.MEDPLUM_ADMIN_PASSWORD,
       "ODOS_ADMIN_PASSWORD",
     ),
+    serviceIdentityEmail: (config.serviceIdentityEmail ?? env.MEDPLUM_ADMIN_EMAIL)?.trim() || undefined,
     postgresUrl: config.postgresUrl ?? env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
     statePath: options.statePath ?? config.statePath ?? env.ODOS_SETUP_STATE_PATH ?? DEFAULT_STATE_PATH,
   };
+  if (
+    resolved.serviceIdentityEmail &&
+    resolved.adminEmail.toLowerCase() === resolved.serviceIdentityEmail.toLowerCase()
+  ) {
+    throw new Error(
+      "ODOS_ADMIN_EMAIL must be distinct from MEDPLUM_ADMIN_EMAIL; refusing to grant first-admin practice roles to the configured Medplum service identity.",
+    );
+  }
+  return resolved;
 }
 
 function buildSetupAuditRow(input: {
