@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
 import type { AuditEvent } from "@medplum/fhirtypes";
@@ -14,6 +15,9 @@ import {
 import type { AgentOpsAuditFields } from "../agentops/types.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
+  new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
+);
 const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-04-29-v05b-odos-audit-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
@@ -223,13 +227,54 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   }
 
   private async ensureSchema(): Promise<void> {
-    this.schemaReady ??= (async () => {
-      for (const path of AUDIT_DDL_FILES) {
-        const sql = await readFile(path, "utf8");
-        await this.pool.query(sql);
-      }
-    })();
+    this.schemaReady ??= this.initializeSchema();
     await this.schemaReady;
+  }
+
+  private async initializeSchema(): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      const auditTable = await client.query<{ exists: boolean }>(
+        "SELECT to_regclass('odos_audit_events') IS NOT NULL AS exists",
+      );
+      await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
+
+      await runInTransaction(client, async () => {
+        await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
+        const ledger = await client.query<{ count: string }>(
+          "SELECT count(*)::text AS count FROM odos_schema_migrations",
+        );
+        if (auditTable.rows[0].exists && ledger.rows[0].count === "0") {
+          for (const path of AUDIT_DDL_FILES) {
+            await client.query(
+              "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
+              [basename(path)],
+            );
+          }
+        }
+      });
+
+      for (const path of AUDIT_DDL_FILES) {
+        await runInTransaction(client, async () => {
+          await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
+          const applied = await client.query(
+            "SELECT 1 FROM odos_schema_migrations WHERE filename = $1",
+            [basename(path)],
+          );
+          if (applied.rowCount) {
+            return;
+          }
+
+          await client.query(await readFile(path, "utf8"));
+          await client.query(
+            "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
+            [basename(path)],
+          );
+        });
+      }
+    } finally {
+      client.release();
+    }
   }
 
   private async insertRow(
@@ -493,6 +538,20 @@ function optionalString(value: unknown): string | undefined {
 
 async function rollbackQuietly(client: PoolClient): Promise<void> {
   await client.query("ROLLBACK").catch(() => undefined);
+}
+
+async function runInTransaction(
+  client: PoolClient,
+  operation: () => Promise<void>,
+): Promise<void> {
+  await client.query("BEGIN");
+  try {
+    await operation();
+    await client.query("COMMIT");
+  } catch (error) {
+    await rollbackQuietly(client);
+    throw error;
+  }
 }
 
 function isAuthzProjectionError(error: unknown): boolean {
