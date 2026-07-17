@@ -16,6 +16,26 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 - Include tests for new behavior. The repo's verification posture is real, not decorative.
 - Don't break the AgentOps governance, audit/DR, or local-only data posture. These are load-bearing.
 
+## Independent evaluation gate
+
+Every PR into `main` needs an independent Fable or Opus evaluation. CodeRabbit
+is a first-pass review, not the final evaluator. The final marker must be posted
+by a dedicated GitHub App or user listed in the repository variable
+`ODOS_TRUSTED_EVALUATOR_LOGINS`; a marker reposted through the PR author's
+account does not prove independence.
+
+The marker must include exactly one verdict line and the full current PR head
+SHA:
+
+```text
+Evaluated-by: Opus 4.8 — PASS
+Head-SHA: 0123456789abcdef0123456789abcdef01234567
+```
+
+Only Fable or Opus can issue the final verdict. Any new commit requires a new
+marker for the new head. The `evaluated` label is an explicit operator override
+that bypasses evaluator-identity and head-SHA enforcement.
+
 ## License terms for contributions
 
 ODOS is licensed under **AGPL-3.0-or-later**. By submitting a pull request, you agree your contribution is licensed under the same terms.
