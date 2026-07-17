@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
 import type { AuditEvent } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
+  ODOS_AUDIT_EVENT_TYPES,
   buildAuditEventProjection,
   type OdosActionOutcome,
   type OdosActorRole,
@@ -14,6 +16,9 @@ import {
 import type { AgentOpsAuditFields } from "../agentops/types.js";
 
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
+  new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
+);
 const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-04-29-v05b-odos-audit-events.sql", import.meta.url),
   new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
@@ -37,6 +42,27 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event-validate.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
+
+// Keep in sync with CREATE TABLE statements in AUDIT_DDL_FILES.
+const AUDIT_MIGRATION_TABLES = [
+  "odos_audit_events",
+  "odos_smart_clients",
+  "odos_smart_scope_decisions",
+  "odos_smart_app_installations",
+  "odos_cds_feedback",
+  "odos_cds_services_keys",
+  "odos_agentops_agent_keys",
+  "odos_catalog_sync_runs",
+  "odos_catalog_overlays",
+  "odos_frames_catalog",
+  "odos_practice_frames_inventory",
+  "odos_terminology_hcpcs",
+] as const;
+
+const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =
+  "restored database predates this code's migration set; the ledger backfill cannot be trusted — restore a newer backup or apply migrations manually";
+const AUDIT_EVENT_CONSTRAINT_VALIDATE_MIGRATION =
+  "2026-07-15-era-line-linkage-event-validate.sql";
 
 export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;
@@ -223,13 +249,90 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   }
 
   private async ensureSchema(): Promise<void> {
-    this.schemaReady ??= (async () => {
-      for (const path of AUDIT_DDL_FILES) {
-        const sql = await readFile(path, "utf8");
-        await this.pool.query(sql);
-      }
-    })();
+    this.schemaReady ??= this.initializeSchema();
     await this.schemaReady;
+  }
+
+  private async initializeSchema(): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      const auditTable = await client.query<{ exists: boolean }>(
+        "SELECT to_regclass('odos_audit_events') IS NOT NULL AS exists",
+      );
+      await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
+
+      await runInTransaction(client, async () => {
+        await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
+        const ledger = await client.query<{ count: string }>(
+          "SELECT count(*)::text AS count FROM odos_schema_migrations",
+        );
+        if (auditTable.rows[0].exists && ledger.rows[0].count === "0") {
+          const eventTypeConstraintValidated = await this.verifyLegacyBackfill(client);
+          for (const path of AUDIT_DDL_FILES) {
+            const filename = basename(path);
+            if (
+              filename === AUDIT_EVENT_CONSTRAINT_VALIDATE_MIGRATION &&
+              !eventTypeConstraintValidated
+            ) {
+              continue;
+            }
+            await client.query(
+              "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
+              [filename],
+            );
+          }
+        }
+      });
+
+      for (const path of AUDIT_DDL_FILES) {
+        await runInTransaction(client, async () => {
+          await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
+          const applied = await client.query(
+            "SELECT 1 FROM odos_schema_migrations WHERE filename = $1",
+            [basename(path)],
+          );
+          if (applied.rowCount) {
+            return;
+          }
+
+          await client.query(await readFile(path, "utf8"));
+          await client.query(
+            "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
+            [basename(path)],
+          );
+        });
+      }
+    } finally {
+      client.release();
+    }
+  }
+
+  private async verifyLegacyBackfill(client: PoolClient): Promise<boolean> {
+    const constraint = await client.query<{ definition: string; convalidated: boolean }>(`
+      SELECT pg_get_constraintdef(oid) AS definition, convalidated
+      FROM pg_constraint
+      WHERE conrelid = 'odos_audit_events'::regclass
+        AND conname = 'odos_audit_events_event_type_check'
+    `);
+    const acceptedEventTypes = new Set(
+      [...(constraint.rows[0]?.definition.matchAll(/'((?:''|[^'])*)'::text/g) ?? [])]
+        .map((match) => match[1].replaceAll("''", "'")),
+    );
+    const eventTypesComplete = ODOS_AUDIT_EVENT_TYPES.every((eventType) =>
+      acceptedEventTypes.has(eventType),
+    );
+
+    const tables = await client.query<{ exists: boolean }>(
+      `
+        SELECT to_regclass(table_name) IS NOT NULL AS exists
+        FROM unnest($1::text[]) AS table_name
+      `,
+      [[...AUDIT_MIGRATION_TABLES]],
+    );
+    if (!eventTypesComplete || tables.rows.some((row) => !row.exists)) {
+      throw new Error(UNTRUSTED_LEGACY_BACKFILL_MESSAGE);
+    }
+    return constraint.rows[0].convalidated;
   }
 
   private async insertRow(
@@ -493,6 +596,20 @@ function optionalString(value: unknown): string | undefined {
 
 async function rollbackQuietly(client: PoolClient): Promise<void> {
   await client.query("ROLLBACK").catch(() => undefined);
+}
+
+async function runInTransaction(
+  client: PoolClient,
+  operation: () => Promise<void>,
+): Promise<void> {
+  await client.query("BEGIN");
+  try {
+    await operation();
+    await client.query("COMMIT");
+  } catch (error) {
+    await rollbackQuietly(client);
+    throw error;
+  }
 }
 
 function isAuthzProjectionError(error: unknown): boolean {

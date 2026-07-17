@@ -34,7 +34,7 @@ services:
       retries: 10
 
   medplum-server:
-    image: medplum/medplum-server:latest
+    image: medplum/medplum-server:5.1.8
     restart: unless-stopped
     depends_on:
       postgres:
@@ -50,7 +50,7 @@ services:
     command: ["file:/config/medplum.config.json"]
 
   medplum-app:
-    image: medplum/medplum-app:latest
+    image: medplum/medplum-app:5.1.8
     restart: unless-stopped
     depends_on:
       - medplum-server
