@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Appointment, Claim, Invoice, PaymentReconciliation, Task } from "@medplum/fhirtypes";
-import { projectDeskSummary, safeLatestStatementRun, type DeskSummaryInput } from "../src/desk/desk-summary.js";
+import type { Appointment, Bundle, Claim, Invoice, PaymentReconciliation, Resource, Task } from "@medplum/fhirtypes";
+import { loadDeskSummary, projectDeskSummary, safeLatestStatementRun, type DeskSummaryInput } from "../src/desk/desk-summary.js";
 import { appointmentConfirmationExtension } from "../src/fhir/appointmentConfirmation.js";
 import { opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
 import { opticalOrderTypeConcept } from "../src/fhir/opticalOrderType.js";
@@ -158,13 +158,82 @@ test("a malformed latest statement run degrades without blocking any Desk card",
   assert.deepEqual(Object.keys(summary.cards), Object.keys(baseline.cards));
   assert.equal(summary.cards.statements.available, true);
   assert.equal(summary.cards.statements.lastStatement.value, null);
+  assert.equal(summary.cards.statements.lastStatement.unavailableReason, "No statement run is persisted yet.");
   assert.equal(summary.cards.statements.invalidRejects.value, 0);
+  assert.equal(summary.cards.statements.invalidRejects.unavailableReason, undefined);
 });
 
-test("an unexpected latest-statement error is not silently degraded", () => {
-  assert.throws(
-    () => safeLatestStatementRun([], () => { throw new Error("unexpected statement reader bug"); }),
-    /unexpected statement reader bug/,
+test("loadDeskSummary isolates an unexpected malformed statement-run read", async () => {
+  const appointment = appointmentFixture("booked");
+  const malformedRun: Task = {
+    resourceType: "Task",
+    status: "completed",
+    intent: "order",
+    authoredOn: "2026-07-11T13:00:00.000Z",
+    code: { coding: [{ system: STATEMENT_TASK_CODE_SYSTEM, code: STATEMENT_RUN_CODE }] },
+    output: {} as Task["output"],
+  };
+  const fhir = {
+    search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> => {
+      const resources: Resource[] = resourceType === "Appointment"
+        ? [appointment]
+        : resourceType === "Task" && params.code === `${STATEMENT_TASK_CODE_SYSTEM}|${STATEMENT_RUN_CODE}`
+          ? [malformedRun]
+          : [];
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resources.map((resource) => ({ resource })) as Bundle<T>["entry"],
+      };
+    },
+  };
+
+  const summary = await loadDeskSummary(fhir, { now: NOW, timeZone: "America/New_York", terminalMode: "TEST MODE" });
+
+  assert.equal(summary.cards.schedule.today.value, 1);
+  assert.equal(summary.cards.payments.unappliedCount.value, 0);
+  assert.equal(summary.cards.payments.terminalMode.tone, "warn");
+  assert.equal(summary.cards.statements.cadence.unavailableReason, undefined);
+  assert.deepEqual(summary.cards.statements.invalidRejects, {
+    value: 0,
+    tone: "off",
+    unavailableReason: "Latest statement run could not be read.",
+  });
+  assert.deepEqual(summary.cards.statements.lastStatement, {
+    value: null,
+    tone: "off",
+    unavailableReason: "Latest statement run could not be read.",
+  });
+});
+
+test("loadDeskSummary isolates an oversized Appointment page", async () => {
+  const fhir = {
+    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Appointment"
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          total: 1_001,
+          link: [{ relation: "next", url: "Appointment?_page=2" }],
+        } as Bundle<T>
+      : { resourceType: "Bundle", type: "searchset" },
+  };
+
+  const summary = await loadDeskSummary(fhir, { now: NOW, timeZone: "America/New_York", terminalMode: "LIVE" });
+
+  assert.deepEqual(summary.cards.schedule.today, {
+    value: 0,
+    tone: "off",
+    unavailableReason: "Today's appointments exceed the Desk card read limit.",
+  });
+  assert.equal(summary.cards.schedule.agenda.length, 0);
+  assert.equal(summary.cards.payments.unappliedCount.value, 0);
+  assert.equal(summary.cards.statements.cadence.value, "Weekly · Wednesdays recommended");
+});
+
+test("an unexpected latest-statement error is marked unavailable", () => {
+  assert.deepEqual(
+    safeLatestStatementRun([], () => { throw new Error("unexpected statement reader bug"); }),
+    { generatedAt: null, invalidRejects: 0, unavailableReason: "Latest statement run could not be read." },
   );
 });
 
