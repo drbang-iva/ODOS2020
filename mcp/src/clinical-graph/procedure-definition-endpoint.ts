@@ -13,6 +13,7 @@ import {
   type ClinicalProcedureDefinition,
   type ProcedureDefinitionFhirClient,
 } from "./procedure-definition-store.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../scheduling/clinic-mode.js";
 
 export interface ProcedureDefinitionEndpointFhirClient extends ProcedureDefinitionFhirClient {
   read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -314,6 +315,11 @@ async function validateEncounterPatient(
   }
   if (encounter.subject?.reference !== patientReference) {
     return `${encounterReference} does not belong to ${patientReference}.`;
+  }
+  if (!encounter.serviceType?.coding?.some((coding) =>
+    coding.system === ODOS_DISCIPLINE_SYSTEM && coding.code === "aesthetics"
+  )) {
+    return `${encounterReference} is not an aesthetics Encounter.`;
   }
   return undefined;
 }

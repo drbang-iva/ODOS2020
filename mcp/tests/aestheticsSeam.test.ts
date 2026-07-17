@@ -30,6 +30,7 @@ import {
   AESTHETICS_COSMETIC_CONSENT_URL,
 } from "../src/fhir/aestheticsConsent.js";
 import type { PracticeRoleId } from "../src/authz/roles.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 
 const AUTH = "Bearer good";
 const NOW = "2026-07-16T12:00:00.000Z";
@@ -42,6 +43,9 @@ class MemoryFhir {
     status: "in-progress",
     class: { code: "AMB" },
     subject: { reference: "Patient/shared-1" },
+    serviceType: {
+      coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "aesthetics" }],
+    },
   }];
   readonly procedures: Procedure[] = [];
   readonly questionnaireResponses: QuestionnaireResponse[] = [];
@@ -149,6 +153,37 @@ test("three aesthetics procedure types are seeded as procedure-definition data a
     };
     assert.deepEqual(parseProcedureDefinitionResource(buildProcedureDefinitionResource(local)), local);
   }
+});
+
+test("procedure definitions reject an empty FHIR procedure code and accept a valid CodeableConcept coding", () => {
+  const seed = buildProcedureDefinitionSeeds()[0]!;
+  const local = {
+    ...seed,
+    sourceStatus: "local-practice" as const,
+    provenance: { ...seed.provenance, recordedAt: NOW },
+  };
+
+  assert.throws(
+    () => buildProcedureDefinitionResource({ ...local, fhirProcedureCode: {} as never }),
+    /requires a searchable FHIR coding/,
+  );
+  assert.throws(
+    () => buildProcedureDefinitionResource({
+      ...local,
+      fhirProcedureCode: {
+        system: AESTHETICS_PROCEDURE_TYPE_SYSTEM,
+        code: "hidden-by-empty-coding",
+        coding: [],
+      } as never,
+    }),
+    /requires a searchable FHIR coding/,
+  );
+  assert.doesNotThrow(() => buildProcedureDefinitionResource({
+    ...local,
+    fhirProcedureCode: {
+      coding: [{ system: AESTHETICS_PROCEDURE_TYPE_SYSTEM, code: "local-neurotoxin" }],
+    },
+  }));
 });
 
 test("the procedure-definition endpoint serves the same persisted data store used by captures", async () => {
@@ -266,6 +301,31 @@ test("procedure capture rejects mismatched and unreadable Encounters before writ
   assert.equal(unreadable.writes.length, 0);
 });
 
+test("procedure capture rejects an eyecare Encounter before writing", async () => {
+  const fhir = new MemoryFhir();
+  fhir.encounters[0]!.serviceType = {
+    coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "eyecare" }],
+  };
+  const definitions = buildProcedureDefinitionSeeds();
+  const result = await handleProcedureDefinitionCaptureRequest(
+    deps("aesthetics-provider", fhir, definitions),
+    {
+      authHeader: AUTH,
+      params: { stableKey: definitions[0]!.stableKey },
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+      },
+    },
+  );
+
+  assert.deepEqual(result, {
+    status: 422,
+    body: { error: "Encounter/aesthetics-1 is not an aesthetics Encounter." },
+  });
+  assert.equal(fhir.writes.length, 0);
+});
+
 test("cosmetic consent persists as QuestionnaireResponse on the existing shared Patient", async () => {
   const fhir = new MemoryFhir();
   const definition = await handleAestheticsConsentDefinitionRequest(
@@ -287,7 +347,10 @@ test("cosmetic consent persists as QuestionnaireResponse on the existing shared 
   );
   assert.equal(result.status, 201, JSON.stringify(result.body));
   assert.equal(fhir.questionnaireResponses.length, 1);
-  assert.equal(fhir.questionnaireResponses[0]?.questionnaire, AESTHETICS_COSMETIC_CONSENT_URL);
+  assert.equal(
+    fhir.questionnaireResponses[0]?.questionnaire,
+    `${AESTHETICS_COSMETIC_CONSENT_URL}|0.1.0`,
+  );
   assert.equal(fhir.questionnaireResponses[0]?.subject?.reference, "Patient/shared-1");
   assert.equal(fhir.questionnaireResponses[0]?.encounter?.reference, "Encounter/aesthetics-1");
   assert.equal(fhir.questionnaireResponses[0]?.item?.[0]?.answer?.[0]?.valueBoolean, true);
@@ -329,6 +392,30 @@ test("cosmetic consent rejects mismatched and unreadable Encounters before writi
   assert.equal(readFailure.status, 422);
   assert.match(JSON.stringify(readFailure.body), /Encounter could not be read/);
   assert.equal(unreadable.writes.length, 0);
+});
+
+test("cosmetic consent rejects an eyecare Encounter before writing", async () => {
+  const fhir = new MemoryFhir();
+  fhir.encounters[0]!.serviceType = {
+    coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "eyecare" }],
+  };
+  const result = await handleAestheticsConsentSubmissionRequest(
+    deps("aesthetics-provider", fhir, buildProcedureDefinitionSeeds()),
+    {
+      authHeader: AUTH,
+      body: {
+        patientReference: "Patient/shared-1",
+        encounterReference: "Encounter/aesthetics-1",
+        acknowledged: true,
+      },
+    },
+  );
+
+  assert.deepEqual(result, {
+    status: 422,
+    body: { error: "Encounter/aesthetics-1 is not an aesthetics Encounter." },
+  });
+  assert.equal(fhir.writes.length, 0);
 });
 
 function deps(

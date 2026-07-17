@@ -52,7 +52,7 @@ export function buildAestheticsConsentQuestionnaireResponse(input: {
   }
   return {
     resourceType: "QuestionnaireResponse",
-    questionnaire: AESTHETICS_COSMETIC_CONSENT_URL,
+    questionnaire: `${AESTHETICS_COSMETIC_CONSENT_URL}|0.1.0`,
     status: "completed",
     subject: reference(input.patientReference),
     encounter: reference(input.encounterReference),
