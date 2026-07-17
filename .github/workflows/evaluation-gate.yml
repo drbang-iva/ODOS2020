@@ -1,11 +1,15 @@
 name: evaluation-gate
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
   issue_comment:
-    types: [created]
+    types: [created, edited, deleted]
+
+concurrency:
+  group: evaluation-gate-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
 
 # Belt-and-suspenders for the author-never-evaluates-own-code rule
 # (performance-od/core/model-routing-card.md). Every PR into main needs
@@ -13,12 +17,17 @@ on:
 # the code cannot also be the one that grades it. CodeRabbit is a cheap
 # first pass, not a substitute for this.
 #
+# The workflow runs from the protected default branch and publishes the required
+# check-evaluation check run onto the current PR head. It never checks out or
+# executes code from the PR branch.
+#
 # Passes when either is present on the PR:
-#   - label "evaluated"
-#   - the newest marker comment has the form
-#     "Evaluated-by: <Model> — PASS" (also accepts "-- PASS" or "- PASS")
-# A newest marker verdict of FAIL, BLOCKED, or NEEDS-WORK keeps the gate red.
-# A marker without a recognizable verdict token also keeps the gate red.
+#   - label "evaluated" (deliberate operator override)
+#   - the newest marker from a login in ODOS_TRUSTED_EVALUATOR_LOGINS has:
+#       Evaluated-by: Fable 5 — PASS
+#       Head-SHA: <40-character current PR head SHA>
+# The trusted login must differ from the PR author. Fable and Opus are the only
+# accepted evaluator models. New commits stale prior markers automatically.
 #
 # This repo has enforce_admins OFF (solo repo), so a failing check here
 # does not physically block an admin merge — it makes a skipped
@@ -26,20 +35,26 @@ on:
 # than impossible to override.
 
 jobs:
-  check-evaluation:
+  publish-evaluation-status:
     if: github.event.pull_request != null || github.event.issue.pull_request != null
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
+      checks: write
       issues: read
       pull-requests: read
     steps:
       - name: check out verdict parser
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.repository.default_branch }}
 
-      - name: check for an independent evaluation marker
-        uses: actions/github-script@v7
+      - name: publish independent evaluation status
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          TRUSTED_EVALUATOR_LOGINS: ${{ vars.ODOS_TRUSTED_EVALUATOR_LOGINS }}
         with:
           script: |
             const { evaluateEvaluationGate } = require(
@@ -52,24 +67,80 @@ jobs:
               return;
             }
 
-            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+            const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
+              pull_number: prNumber,
             });
+            const headSha = pullRequest.head.sha;
+            const targetUrl = [
+              `https://github.com/${context.repo.owner}/${context.repo.repo}`,
+              `actions/runs/${context.runId}`,
+            ].join("/");
 
-            const comments = await github.paginate(github.rest.issues.listComments, {
+            const { data: checkRun } = await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
-              per_page: 100,
+              name: "check-evaluation",
+              head_sha: headSha,
+              status: "in_progress",
+              details_url: targetUrl,
+              output: {
+                title: "Independent evaluation pending",
+                summary: "Checking the trusted evaluator marker for the current PR head.",
+              },
             });
-            const decision = evaluateEvaluationGate({ labels, comments });
-            const message = `PR #${prNumber}: ${decision.message}`;
 
-            if (decision.passed) {
-              core.info(message);
-              return;
+            async function complete(conclusion, title, summary) {
+              await github.rest.checks.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                check_run_id: checkRun.id,
+                status: "completed",
+                conclusion,
+                completed_at: new Date().toISOString(),
+                output: { title, summary },
+              });
             }
 
-            core.setFailed(message);
+            try {
+              const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+              });
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 100,
+              });
+              const trustedEvaluatorLogins = (process.env.TRUSTED_EVALUATOR_LOGINS || "")
+                .split(/[\s,]+/)
+                .filter(Boolean);
+              const decision = evaluateEvaluationGate({
+                labels,
+                comments,
+                trustedEvaluatorLogins,
+                pullRequestAuthorLogin: pullRequest.user.login,
+                currentHeadSha: headSha,
+              });
+              const message = `PR #${prNumber}: ${decision.message}`;
+
+              if (decision.passed) {
+                await complete("success", "Independent evaluation accepted", message);
+                core.info(message);
+                return;
+              }
+
+              await complete("failure", "Independent evaluation blocked", message);
+              core.setFailed(message);
+            } catch (error) {
+              await complete(
+                "failure",
+                "Evaluation gate error",
+                error instanceof Error ? error.message : String(error),
+              );
+              throw error;
+            }
