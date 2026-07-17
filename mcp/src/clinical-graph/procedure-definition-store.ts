@@ -269,6 +269,18 @@ function assertClinicalProcedureDefinition(value: unknown): ClinicalProcedureDef
   if (!isRecord(value.fhirProcedureCode)) {
     throw new Error("Procedure definition fhirProcedureCode must be an object.");
   }
+  const searchableCode = "coding" in value.fhirProcedureCode
+    ? Array.isArray(value.fhirProcedureCode.coding) &&
+      value.fhirProcedureCode.coding.some((coding) =>
+        isRecord(coding) && requiredCodingPair(coding.system, coding.code)
+      )
+    : requiredCodingPair(
+        value.fhirProcedureCode.system,
+        value.fhirProcedureCode.code,
+      );
+  if (!searchableCode) {
+    throw new Error("Procedure definition requires a searchable FHIR coding.");
+  }
   if (!isRecord(value.valueSchema)) {
     throw new Error("Procedure definition valueSchema must be an object.");
   }
@@ -341,6 +353,11 @@ function requiredString(value: unknown, field: string): asserts value is string 
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`Procedure definition ${field} must be a non-empty string.`);
   }
+}
+
+function requiredCodingPair(system: unknown, code: unknown): boolean {
+  return typeof system === "string" && system.trim().length > 0 &&
+    typeof code === "string" && code.trim().length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
