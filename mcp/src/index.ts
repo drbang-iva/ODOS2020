@@ -5593,7 +5593,10 @@ async function main(): Promise<void> {
         timeZone: process.env.ODOS_TIMEZONE,
       });
       const labOrderRouting = labOrderRoutingFromEnv(process.env);
-      const labOrderDispatch = createLabOrderDispatch([{ vendor: "manual" }], {
+      const labOrderDispatch = createLabOrderDispatch([
+        { vendor: "manual" },
+        { vendor: "ocuco-gatekeeper" },
+      ], {
         recordAudit: async (row) => {
           await auditRuntime.record(row, () => undefined);
         },

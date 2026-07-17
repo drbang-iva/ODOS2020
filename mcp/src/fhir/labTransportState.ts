@@ -48,6 +48,16 @@ export function canTransitionLabTransportState(
 ): boolean {
   if (isTerminalLabTransportState(from)) return false;
   if (to === "error") return true;
-  return (from === "queued" && to === "sent")
-    || (from === "sent" && (to === "received" || to === "cancelled"));
+  if (to === "cancelled") return true;
+  if (from === "queued") return to === "sent";
+  const forwardOrder: LabTransportState[] = [
+    "sent",
+    "acknowledged",
+    "in-production",
+    "shipped",
+    "received",
+  ];
+  const fromIndex = forwardOrder.indexOf(from);
+  const toIndex = forwardOrder.indexOf(to);
+  return fromIndex >= 0 && toIndex > fromIndex;
 }
