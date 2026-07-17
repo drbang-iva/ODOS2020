@@ -89,8 +89,8 @@ The wizard:
 
 - Uses `auth/newuser` and `auth/newproject` for first-run admin/project creation.
 - Creates the first `Practitioner`.
-- Creates the five canonical ODOS role `AccessPolicy` resources. (Since 2026-07-05, ODOS AccessPolicies carry a `practice-role` `meta.tag` — the payments endpoint derives a caller's role from it. Installs seeded before that date must run `npm run reseed-role-tags` with a human-provisioned, short-lived `MEDPLUM_ACCESS_TOKEN` set so existing policies gain the tag; the command conditionally patches only missing tags, reports role-tag or concurrent-write conflicts without overwriting them, and exits non-zero when conflicts exist.)
-- Reconciles the named first administrator's `ProjectMembership.access[]` to the front-desk, practice-admin, and clinician bundle through the shared explicit-target role grant helper.
+- Creates the canonical ODOS clinician `AccessPolicy`. (Since 2026-07-05, ODOS AccessPolicies carry a `practice-role` `meta.tag` — the payments endpoint derives a caller's role from it. Installs seeded before that date must run `npm run reseed-role-tags` with a human-provisioned, short-lived `MEDPLUM_ACCESS_TOKEN` set so existing policies gain the tag; the command conditionally patches only missing tags, reports role-tag or concurrent-write conflicts without overwriting them, and exits non-zero when conflicts exist.)
+- Reconciles the named human administrator's `ProjectMembership.access[]` through the shared explicit-target role grant helper.
 - Emits `odos_audit_events` rows with `actor_id = setup-wizard`, `actor_role = system`, and `action_reason = "v0.5d setup wizard first-run provisioning"`.
 - Records resumable progress in `.odos-setup-state.json`.
 
