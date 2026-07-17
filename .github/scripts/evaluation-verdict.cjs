@@ -2,7 +2,7 @@
 
 const MARKER_PATTERN = /^Evaluated-by:/im;
 const VERDICT_PATTERN =
-  /^Evaluated-by:\s*(.+?)\s+(?:—|--|-)\s*(PASS|FAIL|BLOCKED|NEEDS-WORK)\b/i;
+  /^Evaluated-by:\s*(.+?)\s+(?:—|--|-)\s*(PASS|FAIL|BLOCKED|NEEDS-WORK)\s*$/i;
 const HEAD_SHA_PATTERN = /^Head-SHA:\s*([0-9a-f]{40})\s*$/i;
 const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const TRUSTED_MODEL_PATTERN =

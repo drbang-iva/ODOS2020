@@ -166,6 +166,19 @@ test("a marker without a verdict token fails", () => {
   assert.equal(decision.reason, "missing-verdict");
 });
 
+test("trailing or contradictory verdict content fails", () => {
+  for (const trailing of ["PASS FAIL", "PASS — later changed to FAIL"]) {
+    const decision = evaluate({
+      comments: [
+        comment(`Evaluated-by: Fable 5 — ${trailing}\nHead-SHA: ${CURRENT_HEAD}`),
+      ],
+    });
+
+    assert.equal(decision.passed, false, trailing);
+    assert.equal(decision.reason, "missing-verdict", trailing);
+  }
+});
+
 test("a non-Fable-or-Opus model cannot issue the final verdict", () => {
   const decision = evaluate({
     comments: [comment(marker("Codex", "PASS"))],
