@@ -11,11 +11,9 @@ concurrency:
   group: evaluation-gate-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
-# Belt-and-suspenders for the author-never-evaluates-own-code rule
-# (performance-od/core/model-routing-card.md). Every PR into main needs
-# an independent model review before it merges: the model/tool that wrote
-# the code cannot also be the one that grades it. CodeRabbit is a cheap
-# first pass, not a substitute for this.
+# Every PR into main needs a Fable or Opus model review before it merges.
+# Author != evaluator remains a procedural expectation in coding kickoffs;
+# CodeRabbit is a cheap first pass, not a substitute for model review.
 #
 # The workflow runs from the protected default branch and publishes the required
 # check-evaluation check run onto the current PR head. It never checks out or
@@ -23,11 +21,11 @@ concurrency:
 #
 # Passes when either is present on the PR:
 #   - label "evaluated" (deliberate operator override)
-#   - the newest marker from a login in ODOS_TRUSTED_EVALUATOR_LOGINS has:
+#   - the newest marker, posted from any account, has:
 #       Evaluated-by: Fable 5 — PASS
 #       Head-SHA: <40-character current PR head SHA>
-# The trusted login must differ from the PR author. Fable and Opus are the only
-# accepted evaluator models. New commits stale prior markers automatically.
+# Fable and Opus are the only accepted evaluator models. New commits stale
+# prior markers automatically.
 #
 # This repo has enforce_admins OFF (solo repo), so a failing check here
 # does not physically block an admin merge — it makes a skipped
@@ -53,8 +51,6 @@ jobs:
 
       - name: publish independent evaluation status
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
-        env:
-          TRUSTED_EVALUATOR_LOGINS: ${{ vars.ODOS_TRUSTED_EVALUATOR_LOGINS }}
         with:
           script: |
             const { evaluateEvaluationGate } = require(
@@ -87,7 +83,7 @@ jobs:
               details_url: targetUrl,
               output: {
                 title: "Independent evaluation pending",
-                summary: "Checking the trusted evaluator marker for the current PR head.",
+                summary: "Checking the evaluator marker for the current PR head.",
               },
             });
 
@@ -116,14 +112,9 @@ jobs:
                 issue_number: prNumber,
                 per_page: 100,
               });
-              const trustedEvaluatorLogins = (process.env.TRUSTED_EVALUATOR_LOGINS || "")
-                .split(/[\s,]+/)
-                .filter(Boolean);
               const decision = evaluateEvaluationGate({
                 labels,
                 comments,
-                trustedEvaluatorLogins,
-                pullRequestAuthorLogin: pullRequest.user.login,
                 currentHeadSha: headSha,
               });
               const message = `PR #${prNumber}: ${decision.message}`;

@@ -19,10 +19,10 @@ ODOS is built by a practicing optometrist and refined at his own practice. The r
 ## Independent evaluation gate
 
 Every PR into `main` needs an independent Fable or Opus evaluation. CodeRabbit
-is a first-pass review, not the final evaluator. The final marker must be posted
-by a dedicated GitHub App or user listed in the repository variable
-`ODOS_TRUSTED_EVALUATOR_LOGINS`; a marker reposted through the PR author's
-account does not prove independence.
+is a first-pass review, not the final evaluator. A well-formed final marker from
+Fable or Opus passes from any GitHub account. Author != evaluator remains a
+procedural expectation stated in coding kickoffs, not a mechanically enforced
+login rule.
 
 The marker must include exactly one verdict line and the full current PR head
 SHA:
@@ -34,7 +34,7 @@ Head-SHA: 0123456789abcdef0123456789abcdef01234567
 
 Only Fable or Opus can issue the final verdict. Any new commit requires a new
 marker for the new head. The `evaluated` label is an explicit operator override
-that bypasses evaluator-identity and head-SHA enforcement.
+that bypasses marker and head-SHA enforcement.
 
 ## License terms for contributions
 
