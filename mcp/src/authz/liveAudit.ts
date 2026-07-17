@@ -6,6 +6,7 @@ import type { AuditEvent } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
+  ODOS_AUDIT_EVENT_TYPES,
   buildAuditEventProjection,
   type OdosActionOutcome,
   type OdosActorRole,
@@ -41,6 +42,25 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event-validate.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
+
+// Keep in sync with CREATE TABLE statements in AUDIT_DDL_FILES.
+const AUDIT_MIGRATION_TABLES = [
+  "odos_audit_events",
+  "odos_smart_clients",
+  "odos_smart_scope_decisions",
+  "odos_smart_app_installations",
+  "odos_cds_feedback",
+  "odos_cds_services_keys",
+  "odos_agentops_agent_keys",
+  "odos_catalog_sync_runs",
+  "odos_catalog_overlays",
+  "odos_frames_catalog",
+  "odos_practice_frames_inventory",
+  "odos_terminology_hcpcs",
+] as const;
+
+const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =
+  "restored database predates this code's migration set; the ledger backfill cannot be trusted — restore a newer backup or apply migrations manually";
 
 export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;
@@ -239,6 +259,7 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
       );
       await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
 
+      let legacyBackfilled = false;
       await runInTransaction(client, async () => {
         await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
         const ledger = await client.query<{ count: string }>(
@@ -251,8 +272,24 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
               [basename(path)],
             );
           }
+          legacyBackfilled = true;
         }
       });
+
+      if (legacyBackfilled) {
+        try {
+          await this.verifyLegacyBackfill(client);
+        } catch (error) {
+          await runInTransaction(client, async () => {
+            await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
+            await client.query(
+              "DELETE FROM odos_schema_migrations WHERE filename = ANY($1::text[])",
+              [AUDIT_DDL_FILES.map((path) => basename(path))],
+            );
+          });
+          throw error;
+        }
+      }
 
       for (const path of AUDIT_DDL_FILES) {
         await runInTransaction(client, async () => {
@@ -274,6 +311,33 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
       }
     } finally {
       client.release();
+    }
+  }
+
+  private async verifyLegacyBackfill(client: PoolClient): Promise<void> {
+    const constraint = await client.query<{ definition: string }>(`
+      SELECT pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint
+      WHERE conrelid = 'odos_audit_events'::regclass
+        AND conname = 'odos_audit_events_event_type_check'
+    `);
+    const acceptedEventTypes = new Set(
+      [...(constraint.rows[0]?.definition.matchAll(/'((?:''|[^'])*)'::text/g) ?? [])]
+        .map((match) => match[1].replaceAll("''", "'")),
+    );
+    const eventTypesComplete = ODOS_AUDIT_EVENT_TYPES.every((eventType) =>
+      acceptedEventTypes.has(eventType),
+    );
+
+    const tables = await client.query<{ exists: boolean }>(
+      `
+        SELECT to_regclass(table_name) IS NOT NULL AS exists
+        FROM unnest($1::text[]) AS table_name
+      `,
+      [[...AUDIT_MIGRATION_TABLES]],
+    );
+    if (!eventTypesComplete || tables.rows.some((row) => !row.exists)) {
+      throw new Error(UNTRUSTED_LEGACY_BACKFILL_MESSAGE);
     }
   }
 
