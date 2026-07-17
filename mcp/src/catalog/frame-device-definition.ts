@@ -3,7 +3,7 @@ import {
   FRAME_PROPERTY_CODE_SYSTEM,
   FRAMES_DATA_SKU_SYSTEM,
   GS1_GTIN_SYSTEM,
-  OSOD_FRAME_DEVICE_TYPE_CODE,
+  ODOS_FRAME_DEVICE_TYPE_CODE,
   SNOMED_SYSTEM,
   UCUM_SYSTEM,
   assertFiniteNumber,
@@ -46,7 +46,7 @@ export function buildFrameDeviceDefinition(input: FrameDeviceDefinitionInput): D
       coding: [
         {
           system: SNOMED_SYSTEM,
-          code: OSOD_FRAME_DEVICE_TYPE_CODE,
+          code: ODOS_FRAME_DEVICE_TYPE_CODE,
           display: "Spectacle frame",
         },
       ],

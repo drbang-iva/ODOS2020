@@ -1,9 +1,9 @@
 {
   "resourceType": "StructureDefinition",
   "id": "agent-identity",
-  "url": "https://osod.dev/fhir/StructureDefinition/agent-identity",
+  "url": "https://odos2020.com/fhir/StructureDefinition/agent-identity",
   "version": "0.55d",
-  "name": "OSODAgentIdentity",
+  "name": "ODOSAgentIdentity",
   "status": "active",
   "kind": "complex-type",
   "abstract": false,
@@ -16,7 +16,7 @@
   "type": "Extension",
   "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
   "derivation": "constraint",
-  "description": "OSOD AgentOps metadata for a FHIR Device representing a logical AI agent.",
+  "description": "ODOS AgentOps metadata for a FHIR Device representing a logical AI agent.",
   "differential": {
     "element": [
       {
@@ -62,7 +62,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/agent-identity"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/agent-identity"
       }
     ]
   }

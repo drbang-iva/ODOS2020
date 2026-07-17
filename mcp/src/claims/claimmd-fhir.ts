@@ -10,13 +10,13 @@ import type {
 } from "@medplum/fhirtypes";
 
 export const HL7_CLAIM_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/claim-type";
-export const OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-charge-item";
+export const ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-charge-item";
 
 export function claimResponseChargeItemExtension(chargeItemId: string | undefined): Extension | undefined {
   return chargeItemId && /^[A-Za-z0-9.-]{1,64}$/.test(chargeItemId)
     ? {
-        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
         valueReference: { reference: `ChargeItem/${chargeItemId}` },
       }
     : undefined;
@@ -184,7 +184,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     return {
       sequence: index + 1,
       extension: [{
-        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
         valueReference: { reference: `ChargeItem/${chargeItem.id}` },
       }],
       productOrService: {
@@ -219,7 +219,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     provider: { reference: input.providerReference },
     ...(input.facilityReference ? { facility: { reference: input.facilityReference } } : {}),
     priority: { text: "normal" },
-    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/osod-claim-pcn", value: input.patientAccountNumber }],
+    identifier: [{ system: "https://odos2020.com/fhir/NamingSystem/odos-claim-pcn", value: input.patientAccountNumber }],
     insurance: [
       {
         sequence: 1,
@@ -271,7 +271,7 @@ export function buildClaimMdProfessionalClaimJson(
     total_charge: centsString(totalCents),
     balance_due: centsString(totalCents),
     remote_claimid: claim.id ?? input.patientAccountNumber,
-    remote_fileid: `osod-${input.patientAccountNumber}`,
+    remote_fileid: `odos-${input.patientAccountNumber}`,
     accept_assign: "Y",
     auto_accident: "N",
     employment_related: "N",
@@ -283,7 +283,7 @@ export function buildClaimMdProfessionalClaimJson(
     ...claimMdPatientFields(input.patient, input.subscriber.relationshipCode ?? "18"),
   };
 
-  return { fileid: `osod-${input.patientAccountNumber}`, claim: [row] };
+  return { fileid: `odos-${input.patientAccountNumber}`, claim: [row] };
 }
 
 export function buildCoverageEligibilityRequest(input: {
@@ -390,7 +390,7 @@ export function buildClaimResponseFromClaimMdEra(input: {
       type: { text: input.era.payment_method ? `Claim.MD ERA ${input.era.payment_method}` : "Claim.MD ERA" },
       date: isoDateFromClaimMd(input.era.paid_date) ?? input.created,
       amount: money(totalPaidCents),
-      ...(input.era.eraid ? { identifier: { system: "https://osod.dev/fhir/NamingSystem/claimmd-era", value: input.era.eraid } } : {}),
+      ...(input.era.eraid ? { identifier: { system: "https://odos2020.com/fhir/NamingSystem/claimmd-era", value: input.era.eraid } } : {}),
     },
   };
 }

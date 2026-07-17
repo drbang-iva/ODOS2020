@@ -46,7 +46,7 @@ export interface SmartScopeIntersectionInput {
   readonly clientAuthClass: SmartClientAuthClass;
   readonly requestedScopes: readonly SmartResourceScope[];
   readonly launchContext?: SmartLaunchContext;
-  readonly firstPartyOsodCoreClient?: boolean;
+  readonly firstPartyOdosCoreClient?: boolean;
   readonly policyId?: string;
   readonly now?: Date;
   readonly decisionTtlMs?: number;
@@ -69,8 +69,8 @@ export function evaluateSmartScopeIntersection(input: SmartScopeIntersectionInpu
       intersectScopeWithRole(scope, {
         roleId: input.roleId,
         clientAuthClass: input.clientAuthClass,
-        firstPartyOsodCoreClient:
-          input.firstPartyOsodCoreClient ?? isFirstPartyOsodCoreClient(input.appClientId),
+        firstPartyOdosCoreClient:
+          input.firstPartyOdosCoreClient ?? isFirstPartyOdosCoreClient(input.appClientId),
       }),
     )
     .map(formatSmartResourceScope);
@@ -90,7 +90,7 @@ export function evaluateSmartScopeIntersection(input: SmartScopeIntersectionInpu
     userId: input.userId,
     requestedScopes: requested,
     effectiveScopes: outcomeClass === "rejected" || outcomeClass === "staged-review" ? [] : uniqueEffective,
-    policyId: input.policyId ?? `AccessPolicy/osod-${input.roleId}`,
+    policyId: input.policyId ?? `AccessPolicy/odos-${input.roleId}`,
     parameterizedBounds: {
       patient: input.launchContext?.patient,
       encounter: input.launchContext?.encounter,
@@ -136,14 +136,14 @@ function intersectScopeWithRole(
   input: {
     readonly roleId: PracticeRoleId;
     readonly clientAuthClass: SmartClientAuthClass;
-    readonly firstPartyOsodCoreClient: boolean;
+    readonly firstPartyOdosCoreClient: boolean;
   },
 ): SmartResourceScope[] {
   if (requested.prefix === "system" && input.clientAuthClass === "public") {
     return [];
   }
 
-  if (isFrameCatalogDeviceDefinitionReadScope(requested) && !input.firstPartyOsodCoreClient) {
+  if (isFrameCatalogDeviceDefinitionReadScope(requested) && !input.firstPartyOdosCoreClient) {
     return [];
   }
 
@@ -160,8 +160,8 @@ function intersectScopeWithRole(
   return [{ ...requested, permissions, legacy: false }];
 }
 
-export function isFirstPartyOsodCoreClient(clientId: string): boolean {
-  return clientId === "osod-core" || clientId.startsWith("osod-core-") || clientId.startsWith("osod-mcp");
+export function isFirstPartyOdosCoreClient(clientId: string): boolean {
+  return clientId === "odos-core" || clientId.startsWith("odos-core-") || clientId.startsWith("odos-mcp");
 }
 
 function isFrameCatalogDeviceDefinitionReadScope(scope: SmartResourceScope): boolean {

@@ -5,8 +5,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   BENEFIT_KINDS,
-  OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL,
-  OSOD_BENEFIT_LAST_USED_EXTENSION_URL,
+  ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL,
+  ODOS_BENEFIT_LAST_USED_EXTENSION_URL,
   benefitAllowanceDollars,
   benefitCopayDollars,
   benefitItem,
@@ -136,8 +136,8 @@ test("manual benefit entry emits the required request-response history pair and 
   assert.equal(benefitAllowanceDollars(exam), 150);
   assert.equal(benefitUsedDollars(exam), 25);
   assert.equal(benefitCopayDollars(exam), 10);
-  assert.equal(exam?.extension?.find((extension) => extension.url === OSOD_BENEFIT_LAST_USED_EXTENSION_URL)?.valueDate, "2026-01-15");
-  assert.equal(exam?.extension?.find((extension) => extension.url === OSOD_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL)?.valueUnsignedInt, 12);
+  assert.equal(exam?.extension?.find((extension) => extension.url === ODOS_BENEFIT_LAST_USED_EXTENSION_URL)?.valueDate, "2026-01-15");
+  assert.equal(exam?.extension?.find((extension) => extension.url === ODOS_BENEFIT_FREQUENCY_MONTHS_EXTENSION_URL)?.valueUnsignedInt, 12);
   assert.equal(nextEligibleDate(exam), "2027-01-15");
 });
 

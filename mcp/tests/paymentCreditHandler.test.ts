@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import {
   handleApplyCreditRequest,
   handlePaymentReconciliationsRequest,
@@ -25,7 +25,7 @@ function storedPayment(invoiceReference?: string): PaymentReconciliation {
       ...(invoiceReference ? { invoiceReference } : {}),
       staffReference: "Practitioner/staff1",
       processorTransactionId: "manual-1",
-      processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/manual-payment",
+      processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/manual-payment",
       surface: "manual",
       tender: { code: "CASH", display: "Cash" },
     }),
@@ -36,7 +36,7 @@ function storedPayment(invoiceReference?: string): PaymentReconciliation {
 
 function setup(initial = storedPayment()) {
   let resource = structuredClone(initial);
-  const audits: OsodAuditEventRecord[] = [];
+  const audits: OdosAuditEventRecord[] = [];
   let downstreamCalls = 0;
   const fhir = {
     read: async <T extends Resource>(): Promise<T> => {

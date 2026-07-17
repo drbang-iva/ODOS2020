@@ -1,14 +1,14 @@
 import type { CodeableConcept, Device, DeviceProperty, Observation, Procedure, Quantity } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir";
 
-export const OSOD_FHIR_BASE = "https://osod.dev/fhir";
-export const CONTACT_LENS_TYPE_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-type`;
-export const CONTACT_LENS_PARAMETER_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-parameter`;
-export const CONTACT_LENS_FITTING_EVENT_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-fitting-event`;
-export const CONTACT_LENS_CLINICAL_OBSERVATION_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-clinical-observation`;
-export const DEVICE_CONTACT_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-ContactLens`;
-export const DEVICE_ORTHO_K_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-OrthoKLens`;
-export const OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-ContactLensFitFinding`;
+export const ODOS_FHIR_BASE = "https://odos2020.com/fhir";
+export const CONTACT_LENS_TYPE_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-type`;
+export const CONTACT_LENS_PARAMETER_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-parameter`;
+export const CONTACT_LENS_FITTING_EVENT_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-fitting-event`;
+export const CONTACT_LENS_CLINICAL_OBSERVATION_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-clinical-observation`;
+export const DEVICE_CONTACT_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-ContactLens`;
+export const DEVICE_ORTHO_K_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-OrthoKLens`;
+export const OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-ContactLensFitFinding`;
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 
 export const ORTHO_K_FIT_FINDING_CODES = [
@@ -117,7 +117,7 @@ export function buildOrthoKLensDevice(input: BuildOrthoKLensDeviceInput): Device
       ? {
           extension: [
             {
-              url: `${OSOD_FHIR_BASE}/StructureDefinition/contact-lens-coating`,
+              url: `${ODOS_FHIR_BASE}/StructureDefinition/contact-lens-coating`,
               valueReference: { reference: normalizeReference(input.coatingSubstanceReference, "Substance") },
             },
           ],

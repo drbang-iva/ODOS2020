@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Basic, Bundle, Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 import { createManualCashAdapter } from "../src/payments/adapters/manual-cash-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
 
@@ -47,11 +47,11 @@ function daySeal(): Basic {
   return {
     resourceType: "Basic",
     id: "seal-1",
-    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: "2026-07-05" }],
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    identifier: [{ system: "https://odos2020.com/fhir/NamingSystem/day-seal-date", value: "2026-07-05" }],
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/day-seal", code: "day-seal" }] },
     created: "2026-07-05",
     author: { reference: "Practitioner/staff1" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueInstant: "2026-07-05T21:00:00.000Z" }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp", valueInstant: "2026-07-05T21:00:00.000Z" }],
   };
 }
 
@@ -94,7 +94,7 @@ test("manual-cash charge records the tender on the Invoice, balances it, and ret
 
   // the tender now rides on the Invoice (the shipped cash model), and full payment balances the bill
   const tenderExt = fhir.store.invoice.extension?.find(
-    (e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    (e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
   );
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
   assert.equal(fhir.store.invoice.date, "2026-07-05T15:00:00.000Z");
@@ -112,7 +112,7 @@ test("a partial cash payment (deposit) records the tender but leaves the Invoice
   assert.equal(result.amountChargedCents, 10000);
   assert.equal(fhir.store.invoice.status, "issued");
   const tenderExt = fhir.store.invoice.extension?.find(
-    (e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    (e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
   );
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
 });
@@ -129,9 +129,9 @@ test("cash collected before an Invoice exists emits an unallocated PaymentReconc
   assert.deepEqual(fhir.store.created[0].detail, []);
   assert.equal(fhir.store.created[0].paymentAmount?.value, 75);
   assert.equal(fhir.store.created[0].extension?.find((extension) =>
-    extension.url.endsWith("/osod-payment-subject"))?.valueReference?.reference, "Patient/p1");
+    extension.url.endsWith("/odos-payment-subject"))?.valueReference?.reference, "Patient/p1");
   assert.equal(fhir.store.created[0].extension?.find((extension) =>
-    extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
+    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
 });
 
 test("manual cash uses the practice-local day for seal lookup and payment dates across a UTC boundary", async () => {
@@ -147,7 +147,7 @@ test("manual cash uses the practice-local day for seal lookup and payment dates 
   assert.equal(fhir.store.created[0].paymentDate, "2026-07-05");
   assert.equal(
     fhir.store.searches[0].get("identifier"),
-    "https://osod.dev/fhir/NamingSystem/day-seal-date|2026-07-05",
+    "https://odos2020.com/fhir/NamingSystem/day-seal-date|2026-07-05",
   );
 });
 

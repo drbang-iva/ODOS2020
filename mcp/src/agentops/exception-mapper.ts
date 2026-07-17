@@ -130,5 +130,5 @@ export function externalExceptionDescriptor(
 }
 
 export function exceptionTypeUri(descriptor: AgentOpsExceptionDescriptor): string {
-  return `https://osod.dev/fhir/exception/${descriptor.section}`;
+  return `https://odos2020.com/fhir/exception/${descriptor.section}`;
 }

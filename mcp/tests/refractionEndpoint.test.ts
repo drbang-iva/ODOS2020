@@ -126,7 +126,7 @@ test("refraction capture persists typed per-eye graph Observations with VA, Purp
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), [
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_section_observations"), true);
   for (const provenance of created
     .map((entry) => entry.resource)
     .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {

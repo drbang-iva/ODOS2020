@@ -10,7 +10,7 @@ import {
  * comment promised: "Persisted practice scheduling settings land here in a later slice").
  *
  * Design call (documented, swappable): the whole SchedulingPracticeConfig persists as ONE
- * coded singleton `Basic` resource carrying the config JSON in a registered osod extension.
+ * coded singleton `Basic` resource carrying the config JSON in a registered odos extension.
  * Rationale: it is practice-owned configuration (not clinical data), it must be readable and
  * writable through the existing plain-fetch FHIR client under AccessPolicy (no new endpoint,
  * no SQL sidecar), and a criteria-scoped grant can expose exactly this one Basic to the front
@@ -18,13 +18,13 @@ import {
  * parse/build stay the seam — consumers never touch the wire shape directly.
  */
 
-export const OSOD_SCHEDULING_CONFIG_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/scheduling-config";
+export const ODOS_SCHEDULING_CONFIG_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/scheduling-config";
 
-export const OSOD_SCHEDULING_CONFIG_CODE = "osod-scheduling-config";
+export const ODOS_SCHEDULING_CONFIG_CODE = "odos-scheduling-config";
 
-export const OSOD_SCHEDULING_CONFIG_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-scheduling-practice-config";
+export const ODOS_SCHEDULING_CONFIG_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-scheduling-practice-config";
 
 /** A stored block: the kernel BlockedTime plus optional per-schedule scoping (absent = global). */
 export type PersistedBlockedTime = BlockedTime & { scheduleReferences?: string[] };
@@ -132,35 +132,35 @@ export function buildSchedulingPracticeConfigResource(
     code: {
       coding: [
         {
-          system: OSOD_SCHEDULING_CONFIG_SYSTEM,
-          code: OSOD_SCHEDULING_CONFIG_CODE,
-          display: "OSOD Scheduling Practice Config",
+          system: ODOS_SCHEDULING_CONFIG_SYSTEM,
+          code: ODOS_SCHEDULING_CONFIG_CODE,
+          display: "ODOS Scheduling Practice Config",
         },
       ],
-      text: "OSOD Scheduling Practice Config",
+      text: "ODOS Scheduling Practice Config",
     },
     extension: [
-      { url: OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: JSON.stringify(config) },
+      { url: ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: JSON.stringify(config) },
     ],
   };
 }
 
 /**
  * Parse the stored config back out of the singleton Basic. Forward-compatible: only the known
- * top-level keys are read, so future config knobs written by a newer OSOD never break an older
+ * top-level keys are read, so future config knobs written by a newer ODOS never break an older
  * reader. The parsed config is re-validated before it is returned.
  */
 export function parseSchedulingPracticeConfig(basic: Basic): PersistedSchedulingPracticeConfig {
   const coding = basic.code?.coding?.find(
     (candidate) =>
-      candidate.system === OSOD_SCHEDULING_CONFIG_SYSTEM &&
-      candidate.code === OSOD_SCHEDULING_CONFIG_CODE,
+      candidate.system === ODOS_SCHEDULING_CONFIG_SYSTEM &&
+      candidate.code === ODOS_SCHEDULING_CONFIG_CODE,
   );
   if (!coding) {
-    throw new Error("Basic resource is not the osod scheduling-config singleton.");
+    throw new Error("Basic resource is not the odos scheduling-config singleton.");
   }
   const raw = basic.extension?.find(
-    (extension) => extension.url === OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+    (extension) => extension.url === ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
   )?.valueString;
   if (!raw) {
     throw new Error("Scheduling-config singleton is missing its config extension.");

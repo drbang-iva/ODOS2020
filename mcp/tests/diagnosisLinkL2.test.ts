@@ -457,7 +457,7 @@ test("conditional create makes identical same-eye Possible double-submit idempot
   assert.equal(conditions[0]?.verificationStatus?.coding?.[0]?.code, "provisional");
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "create").length, 1);
   assert.equal(fhir.writes.find((write) => write.resourceType === "Condition")?.headers?.["If-None-Exist"],
-    "identifier=https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key|glaucoma_suspect_open_angle_low::right");
+    "identifier=https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key|glaucoma_suspect_open_angle_low::right");
 });
 
 test("a failed tally side effect never fails a successful explicit diagnosis pick", async () => {
@@ -476,10 +476,10 @@ test("a failed tally side effect never fails a successful explicit diagnosis pic
     subject: { reference: "Patient/p1" },
   } as Encounter, {
     resourceType: "Observation", id: "finding-1", status: "preliminary",
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/osod", code: "cup_disc_ratio" }], text: "Cup/Disc" },
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/odos", code: "cup_disc_ratio" }], text: "Cup/Disc" },
     subject: { reference: "Patient/p1" }, encounter: { reference: "Encounter/e1" },
     effectiveDateTime: "2026-07-11T16:00:00.000Z", valueQuantity: { value: 0.6, unit: "ratio" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code: "OD" }] } }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code: "OD" }] } }],
   } as Observation);
   const originalError = console.error;
   const errors: string[] = [];
@@ -526,12 +526,12 @@ function diagnosisPickFhir(): MemoryFhir {
     resourceType: "Observation",
     id: `finding-${eye.toLowerCase()}`,
     status: "preliminary",
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/osod", code: "cup_disc_ratio" }], text: "Cup/Disc" },
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/odos", code: "cup_disc_ratio" }], text: "Cup/Disc" },
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/e1" },
     effectiveDateTime: "2026-07-11T16:00:00.000Z",
     valueQuantity: { value: 0.6, unit: "ratio" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code: eye }] } }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/eye-laterality", valueCodeableConcept: { coding: [{ code: eye }] } }],
   } as Observation)));
   return fhir;
 }

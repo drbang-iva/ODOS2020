@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { V035_WRITE_TOOL_NAMES, auditHeaders } from "../src/tools/audit.js";
 
-test("v0.35 write tools each emit their per-tool X-OSOD-Source header value", () => {
+test("v0.35 write tools each emit their per-tool X-ODOS-Source header value", () => {
   assert.deepEqual(V035_WRITE_TOOL_NAMES, [
     "create_episode_of_care",
     "update_episode_of_care",
@@ -22,7 +22,7 @@ test("v0.35 write tools each emit their per-tool X-OSOD-Source header value", ()
 
   for (const toolName of V035_WRITE_TOOL_NAMES) {
     assert.deepEqual(auditHeaders(toolName), {
-      "X-OSOD-Source": `mcp/${toolName}`,
+      "X-ODOS-Source": `mcp/${toolName}`,
     });
   }
 });

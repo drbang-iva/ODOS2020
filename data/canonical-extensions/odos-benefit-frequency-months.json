@@ -1,21 +1,21 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-payment-subject",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-subject",
-  "version": "0.6c-phase6a",
-  "name": "OSODPaymentSubject",
-  "title": "OSOD Payment Subject",
+  "id": "odos-benefit-frequency-months",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months",
+  "version": "claims-phase7a",
+  "name": "ODOSBenefitFrequencyMonths",
+  "title": "ODOS Benefit Frequency Months",
   "status": "active",
   "date": "2026-07-10",
-  "publisher": "OSOD",
-  "description": "Patient account that owns a patient PaymentReconciliation or its unapplied credit.",
+  "publisher": "ODOS",
+  "description": "Whole-month eligibility frequency for a manually entered vision-plan benefit.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "PaymentReconciliation"
+      "expression": "CoverageEligibilityResponse.insurance.item"
     }
   ],
   "type": "Extension",
@@ -26,7 +26,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "Patient account owning the payment",
+        "short": "Benefit eligibility frequency in months",
         "min": 0,
         "max": "1"
       },
@@ -38,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-payment-subject"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months"
       },
       {
         "id": "Extension.value[x]",
@@ -47,10 +47,7 @@
         "max": "1",
         "type": [
           {
-            "code": "Reference",
-            "targetProfile": [
-              "http://hl7.org/fhir/StructureDefinition/Patient"
-            ]
+            "code": "unsignedInt"
           }
         ]
       }

@@ -1,10 +1,10 @@
 import type { Basic, Extension } from "@medplum/fhirtypes";
 
-export const MANUAL_EOB_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/osod-manual-eob";
-export const MANUAL_EOB_CODE = "osod-manual-eob";
-export const MANUAL_EOB_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/manual-eob";
+export const MANUAL_EOB_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/odos-manual-eob";
+export const MANUAL_EOB_CODE = "odos-manual-eob";
+export const MANUAL_EOB_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/manual-eob";
 export const MANUAL_EOB_HEADER_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-manual-eob-header";
+  "https://odos2020.com/fhir/StructureDefinition/odos-manual-eob-header";
 
 export type ManualEobStatus = "draft" | "closed";
 
@@ -75,7 +75,7 @@ export function parseManualEobHeader(basic: Basic): ManualEobHeader {
   const code = basic.code?.coding?.find((coding) =>
     coding.system === MANUAL_EOB_CODE_SYSTEM && coding.code === MANUAL_EOB_CODE,
   );
-  if (!code) throw new ManualEobValidationError("Basic resource is not an OSOD manual EOB header.");
+  if (!code) throw new ManualEobValidationError("Basic resource is not an ODOS manual EOB header.");
   if (!basic.id) throw new ManualEobValidationError("Manual EOB header is missing its id.");
   const values = basic.extension?.find((extension) => extension.url === MANUAL_EOB_HEADER_EXTENSION_URL)?.extension;
   if (!values) throw new ManualEobValidationError("Manual EOB header extension is missing.");
@@ -156,7 +156,7 @@ function headerResource(
     ...(existing?.meta ? { meta: existing.meta } : {}),
     identifier: [{ system: MANUAL_EOB_IDENTIFIER_SYSTEM, value: input.paymentReference }],
     code: {
-      coding: [{ system: MANUAL_EOB_CODE_SYSTEM, code: MANUAL_EOB_CODE, display: "OSOD manual EOB" }],
+      coding: [{ system: MANUAL_EOB_CODE_SYSTEM, code: MANUAL_EOB_CODE, display: "ODOS manual EOB" }],
       text: "Manual EOB",
     },
     extension: [{ url: MANUAL_EOB_HEADER_EXTENSION_URL, extension }],

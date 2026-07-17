@@ -1,13 +1,13 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-plan-profile",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-plan-profile",
+  "id": "odos-plan-profile",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile",
   "version": "margin-d1-1",
-  "name": "OSODPlanProfile",
-  "title": "OSOD Plan Profile",
+  "name": "ODOSPlanProfile",
+  "title": "ODOS Plan Profile",
   "status": "active",
   "date": "2026-07-16",
-  "publisher": "OSOD",
+  "publisher": "ODOS",
   "description": "Practice-seeded expected vision-plan reimbursement values used as the estimate source for product margin reporting.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
@@ -163,7 +163,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-plan-profile"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile"
       },
       {
         "id": "Extension.value[x]",

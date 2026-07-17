@@ -1,15 +1,15 @@
 import type { Basic, Bundle } from "@medplum/fhirtypes";
 
 export const WENO_MAPPING_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/weno-mapping-kind";
-export const WENO_PRESCRIBER_MAPPING_CODE = "osod-weno-prescriber-mapping";
-export const WENO_LOCATION_MAPPING_CODE = "osod-weno-location-mapping";
+  "https://odos2020.com/fhir/CodeSystem/weno-mapping-kind";
+export const WENO_PRESCRIBER_MAPPING_CODE = "odos-weno-prescriber-mapping";
+export const WENO_LOCATION_MAPPING_CODE = "odos-weno-location-mapping";
 export const WENO_MAPPING_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/weno-mapping-stable-key";
+  "https://odos2020.com/fhir/NamingSystem/weno-mapping-stable-key";
 export const WENO_MAPPING_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-weno-mapping-json";
+  "https://odos2020.com/fhir/StructureDefinition/odos-weno-mapping-json";
 export const WENO_MAPPING_WRITE_HEADERS = {
-  "X-OSOD-Source": "weno-mapping-catalog",
+  "X-ODOS-Source": "weno-mapping-catalog",
 } as const;
 
 export type WenoMappingKind = "prescriber" | "location";
@@ -151,8 +151,8 @@ export function buildWenoMappingResource(mapping: WenoMappingRow, existing?: Bas
         system: WENO_MAPPING_CODE_SYSTEM,
         code: codeForKind(validated.kind),
         display: validated.kind === "prescriber"
-          ? "OSOD WENO prescriber mapping"
-          : "OSOD WENO location mapping",
+          ? "ODOS WENO prescriber mapping"
+          : "ODOS WENO location mapping",
       }],
     },
     extension: [{
@@ -167,7 +167,7 @@ export function parseWenoMappingResource(resource: Basic): WenoMappingRow {
     coding.system === WENO_MAPPING_CODE_SYSTEM &&
     (coding.code === WENO_PRESCRIBER_MAPPING_CODE || coding.code === WENO_LOCATION_MAPPING_CODE)
   )?.code;
-  if (!code) throw new Error("Basic resource is not an OSOD WENO mapping.");
+  if (!code) throw new Error("Basic resource is not an ODOS WENO mapping.");
   const raw = resource.extension?.find((extension) =>
     extension.url === WENO_MAPPING_EXTENSION_URL
   )?.valueString;

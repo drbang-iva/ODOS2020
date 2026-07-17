@@ -7,19 +7,19 @@ if [[ -z "$manifest_path" ]]; then
   exit 2
 fi
 
-postgres_url="${OSOD_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
-redis_host="${OSOD_REDIS_HOST:-127.0.0.1}"
-redis_port="${OSOD_REDIS_PORT:-6379}"
-redis_password="${OSOD_REDIS_PASSWORD:-medplum}"
-binary_target="${OSOD_BINARY_TARGET:-/data/binary}"
+postgres_url="${ODOS_POSTGRES_URL:-postgresql://medplum:medplum@127.0.0.1:5432/medplum}"
+redis_host="${ODOS_REDIS_HOST:-127.0.0.1}"
+redis_port="${ODOS_REDIS_PORT:-6379}"
+redis_password="${ODOS_REDIS_PASSWORD:-medplum}"
+binary_target="${ODOS_BINARY_TARGET:-/data/binary}"
 
 record_event() {
   npx tsx scripts/record-audit-event.ts "$1" "${2:-}"
 }
 
 redis_cmd() {
-  if [[ -n "${OSOD_REDIS_CLI:-}" ]]; then
-    "$OSOD_REDIS_CLI" -h "$redis_host" -p "$redis_port" -a "$redis_password" "$@"
+  if [[ -n "${ODOS_REDIS_CLI:-}" ]]; then
+    "$ODOS_REDIS_CLI" -h "$redis_host" -p "$redis_port" -a "$redis_password" "$@"
   elif command -v redis-cli >/dev/null 2>&1; then
     redis-cli -h "$redis_host" -p "$redis_port" -a "$redis_password" "$@"
   else
@@ -29,11 +29,11 @@ redis_cmd() {
 
 compose() {
   local compose_args=()
-  if [[ -n "${OSOD_COMPOSE_PROJECT:-}" ]]; then
-    compose_args+=("-p" "$OSOD_COMPOSE_PROJECT")
+  if [[ -n "${ODOS_COMPOSE_PROJECT:-}" ]]; then
+    compose_args+=("-p" "$ODOS_COMPOSE_PROJECT")
   fi
-  if [[ -n "${OSOD_COMPOSE_FILE:-}" ]]; then
-    compose_args+=("-f" "$OSOD_COMPOSE_FILE")
+  if [[ -n "${ODOS_COMPOSE_FILE:-}" ]]; then
+    compose_args+=("-f" "$ODOS_COMPOSE_FILE")
   fi
   if command -v docker-compose >/dev/null 2>&1; then
     docker-compose "${compose_args[@]}" "$@"

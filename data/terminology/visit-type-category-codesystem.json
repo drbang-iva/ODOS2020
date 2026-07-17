@@ -1,14 +1,14 @@
 {
   "resourceType": "CodeSystem",
   "id": "visit-type-category",
-  "url": "https://osod.dev/fhir/CodeSystem/visit-type-category",
+  "url": "https://odos2020.com/fhir/CodeSystem/visit-type-category",
   "version": "settings-s3",
-  "name": "OSODVisitTypeCategoryCodeSystem",
-  "title": "OSOD Visit Type Categories",
+  "name": "ODOSVisitTypeCategoryCodeSystem",
+  "title": "ODOS Visit Type Categories",
   "status": "active",
   "experimental": false,
   "date": "2026-07-10",
-  "publisher": "OSOD",
+  "publisher": "ODOS",
   "description": "Practice-defined category codes used to group scheduling visit types.",
   "caseSensitive": true,
   "content": "not-present"

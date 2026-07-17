@@ -169,7 +169,7 @@ test("eligible-resource restriction is enforced when the catalog entry declares 
   special.extension = [
     ...(special.extension ?? []),
     {
-      url: "https://osod.dev/fhir/StructureDefinition/osod-eligible-resource",
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-eligible-resource",
       valueReference: { reference: "Device/oct-1" },
     },
   ];

@@ -283,7 +283,7 @@ function FramesDataSettings() {
 
   async function save() {
     await saveFramesDataSubscriptionSettings({
-      practiceId: "osod-practice",
+      practiceId: "odos-practice",
       actorId: actingPractitionerId(),
       settings,
     });

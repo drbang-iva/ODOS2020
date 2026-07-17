@@ -1,7 +1,7 @@
 import type { Observation } from "@medplum/fhirtypes";
 
 export const OBSERVATION_ATTESTATION_UI_STATE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/observation-attestation-ui-state";
+  "https://odos2020.com/fhir/StructureDefinition/observation-attestation-ui-state";
 
 export const OBSERVATION_ATTESTATION_UI_STATES = [
   "pending-clinician-review",

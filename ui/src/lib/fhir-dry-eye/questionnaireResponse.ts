@@ -6,7 +6,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { reference } from "./common.js";
 import {
-  OSOD_FHIR_BASE,
+  ODOS_FHIR_BASE,
   type DryEyeQuestionnaireInstrument,
   DRY_EYE_QUESTIONNAIRE_ITEM_COUNTS,
   dryEyeQuestionnaireInstrumentConcept,
@@ -53,7 +53,7 @@ export function buildDryEyeQuestionnaireScoreObservation(input: {
   return {
     resourceType: "Observation",
     meta: {
-      profile: [`${OSOD_FHIR_BASE}/StructureDefinition/Observation-DryEyeQuestionnaireScore`],
+      profile: [`${ODOS_FHIR_BASE}/StructureDefinition/Observation-DryEyeQuestionnaireScore`],
     },
     status: "preliminary",
     category: [

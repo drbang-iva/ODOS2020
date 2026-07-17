@@ -12,7 +12,7 @@ export interface SmartConfigurationSnapshot {
   readonly registrationEndpoint: string;
   readonly cdsHooksEndpoint: string;
   readonly cdsCapabilities: readonly string[];
-  readonly osodExtensions?: {
+  readonly odosExtensions?: {
     readonly agentopsEndpoint?: string;
     readonly agentopsCapabilities?: readonly string[];
   };
@@ -39,7 +39,7 @@ export interface SmartConfigurationDocument {
   readonly registration_endpoint: string;
   readonly cds_hooks_endpoint: string;
   readonly cds_capabilities: readonly string[];
-  readonly osod_extensions?: {
+  readonly odos_extensions?: {
     readonly agentops_endpoint?: string;
     readonly agentops_capabilities?: readonly string[];
     readonly bulk_data?: {
@@ -73,11 +73,11 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
     registration_endpoint: snapshot.registrationEndpoint,
     cds_hooks_endpoint: snapshot.cdsHooksEndpoint,
     cds_capabilities: snapshot.cdsCapabilities,
-    ...(snapshot.osodExtensions
+    ...(snapshot.odosExtensions
       ? {
-          osod_extensions: {
-            agentops_endpoint: snapshot.osodExtensions.agentopsEndpoint,
-            agentops_capabilities: snapshot.osodExtensions.agentopsCapabilities,
+          odos_extensions: {
+            agentops_endpoint: snapshot.odosExtensions.agentopsEndpoint,
+            agentops_capabilities: snapshot.odosExtensions.agentopsCapabilities,
             bulk_data: {
               export_endpoints: {
                 group_export: "Group/{id}/$export",
@@ -85,7 +85,7 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
                 system_export: "$export",
               } as const,
               requires_access_token_default: true as const,
-              retention_days_default: Number(process.env.OSOD_BULK_EXPORT_RETENTION_DAYS ?? 7),
+              retention_days_default: Number(process.env.ODOS_BULK_EXPORT_RETENTION_DAYS ?? 7),
               supported_type_filter: false,
             },
           },
@@ -99,7 +99,7 @@ export function buildSmartConfiguration(snapshot: SmartConfigurationSnapshot): S
   };
   return sanitizeSmartDiscoveryStrings(
     document,
-    snapshot.practicePublicBaseUrl ?? process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? snapshot.issuer,
+    snapshot.practicePublicBaseUrl ?? process.env.ODOS_PRACTICE_PUBLIC_BASE_URL ?? snapshot.issuer,
   );
 }
 

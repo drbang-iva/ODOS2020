@@ -2,18 +2,18 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   DEFAULT_VISIT_TYPE_CATEGORIES as MCP_DEFAULTS,
-  OSOD_VISIT_TYPE_CONFIG_CODE as MCP_CODE,
-  OSOD_VISIT_TYPE_CONFIG_EXTENSION_URL as MCP_EXTENSION,
-  OSOD_VISIT_TYPE_CONFIG_SYSTEM as MCP_SYSTEM,
+  ODOS_VISIT_TYPE_CONFIG_CODE as MCP_CODE,
+  ODOS_VISIT_TYPE_CONFIG_EXTENSION_URL as MCP_EXTENSION,
+  ODOS_VISIT_TYPE_CONFIG_SYSTEM as MCP_SYSTEM,
   buildVisitTypeConfigResource as mcpBuild,
   parseVisitTypeConfig as mcpParse,
   type PersistedVisitTypeConfig,
 } from "../src/scheduling/visit-type-config.js";
 import {
   DEFAULT_VISIT_TYPE_CATEGORIES as UI_DEFAULTS,
-  OSOD_VISIT_TYPE_CONFIG_CODE as UI_CODE,
-  OSOD_VISIT_TYPE_CONFIG_EXTENSION_URL as UI_EXTENSION,
-  OSOD_VISIT_TYPE_CONFIG_SYSTEM as UI_SYSTEM,
+  ODOS_VISIT_TYPE_CONFIG_CODE as UI_CODE,
+  ODOS_VISIT_TYPE_CONFIG_EXTENSION_URL as UI_EXTENSION,
+  ODOS_VISIT_TYPE_CONFIG_SYSTEM as UI_SYSTEM,
   buildVisitTypeConfigResource as uiBuild,
   parseVisitTypeConfig as uiParse,
 } from "../../ui/src/lib/visit-type-config.js";

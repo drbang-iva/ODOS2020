@@ -5,9 +5,9 @@ import type { Basic } from "@medplum/fhirtypes";
 import {
   DEFAULT_FLOOR_BOARD_CONFIG,
   deriveFloorBoard,
-  OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM,
   parseFloorConfigResource,
 } from "../../ui/src/lib/floor-board.js";
 
@@ -22,8 +22,8 @@ const REAL_CONFIG = {
 function buildBasic(config: unknown): Basic {
   return {
     resourceType: "Basic",
-    code: { coding: [{ system: OSOD_FLOOR_CONFIG_SYSTEM, code: OSOD_FLOOR_CONFIG_CODE }] },
-    extension: [{ url: OSOD_FLOOR_CONFIG_EXTENSION_URL, valueString: JSON.stringify(config) }],
+    code: { coding: [{ system: ODOS_FLOOR_CONFIG_SYSTEM, code: ODOS_FLOOR_CONFIG_CODE }] },
+    extension: [{ url: ODOS_FLOOR_CONFIG_EXTENSION_URL, valueString: JSON.stringify(config) }],
   };
 }
 
@@ -39,8 +39,8 @@ test("parseFloorConfigResource returns undefined for a Basic that is not the flo
 test("parseFloorConfigResource returns undefined (never throws) on malformed JSON", () => {
   const malformed: Basic = {
     resourceType: "Basic",
-    code: { coding: [{ system: OSOD_FLOOR_CONFIG_SYSTEM, code: OSOD_FLOOR_CONFIG_CODE }] },
-    extension: [{ url: OSOD_FLOOR_CONFIG_EXTENSION_URL, valueString: "{not json" }],
+    code: { coding: [{ system: ODOS_FLOOR_CONFIG_SYSTEM, code: ODOS_FLOOR_CONFIG_CODE }] },
+    extension: [{ url: ODOS_FLOOR_CONFIG_EXTENSION_URL, valueString: "{not json" }],
   };
   assert.doesNotThrow(() => parseFloorConfigResource(malformed));
   assert.equal(parseFloorConfigResource(malformed), undefined);

@@ -162,14 +162,14 @@ export function buildLabOrder(input: BuildLabOrderInput): LabOrder {
  * plain JSON snapshot so it round-trips cleanly.
  */
 export interface LabOrderExport {
-  format: "osod-lab-order";
+  format: "odos-lab-order";
   version: "0";
   order: LabOrder;
 }
 
 export function labOrderToExport(order: LabOrder): LabOrderExport {
   assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
-  return { format: "osod-lab-order", version: "0", order };
+  return { format: "odos-lab-order", version: "0", order };
 }
 
 export function assertLabOrderFrameSource(
@@ -216,17 +216,17 @@ export function renderLabOrderSheet(order: LabOrder): string {
   const f = order.frame;
   const treatments = l.treatments.length ? l.treatments.map(escapeHtml).join(", ") : DASH;
 
-  return `<section class="osod-lab-sheet">
+  return `<section class="odos-lab-sheet">
 <style>
-  .osod-lab-sheet { font-family: system-ui, sans-serif; color: #111; max-width: 8.5in; }
-  .osod-lab-sheet h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
-  .osod-lab-sheet h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #ccc; margin: 1rem 0 .4rem; padding-bottom: .15rem; }
-  .osod-lab-sheet table { border-collapse: collapse; width: 100%; font-size: .85rem; }
-  .osod-lab-sheet th, .osod-lab-sheet td { border: 1px solid #ddd; padding: .25rem .4rem; text-align: left; }
-  .osod-lab-sheet .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; font-size: .85rem; }
-  .osod-lab-sheet .kv div { padding: .1rem 0; }
-  .osod-lab-sheet .kv b { color: #555; font-weight: 600; }
-  @media print { .osod-lab-sheet { max-width: none; } }
+  .odos-lab-sheet { font-family: system-ui, sans-serif; color: #111; max-width: 8.5in; }
+  .odos-lab-sheet h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  .odos-lab-sheet h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #ccc; margin: 1rem 0 .4rem; padding-bottom: .15rem; }
+  .odos-lab-sheet table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  .odos-lab-sheet th, .odos-lab-sheet td { border: 1px solid #ddd; padding: .25rem .4rem; text-align: left; }
+  .odos-lab-sheet .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; font-size: .85rem; }
+  .odos-lab-sheet .kv div { padding: .1rem 0; }
+  .odos-lab-sheet .kv b { color: #555; font-weight: 600; }
+  @media print { .odos-lab-sheet { max-width: none; } }
 </style>
 <h1>Lab Order — ${cell(h.orderId)}</h1>
 <div class="kv">

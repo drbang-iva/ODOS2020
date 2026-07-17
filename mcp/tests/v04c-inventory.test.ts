@@ -173,7 +173,7 @@ for (const lensTypeCode of CONTACT_LENS_TYPE_CODES) {
       properties: minimalPropertyForLensType(lensTypeCode),
     });
     const profiles = device.meta?.profile ?? [];
-    assert.ok(profiles.includes("https://osod.dev/fhir/StructureDefinition/Device-ContactLens"));
+    assert.ok(profiles.includes("https://odos2020.com/fhir/StructureDefinition/Device-ContactLens"));
     assert.ok(profiles.length <= 2);
   });
 }

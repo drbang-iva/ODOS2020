@@ -3,11 +3,11 @@ import type { InitiationMode } from "../agentops/types.js";
 
 export const CDS_HOOKS_SPEC_VERSION = "2.0.1";
 export const CDS_SERVICE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/cds-service";
+  "https://odos2020.com/fhir/StructureDefinition/cds-service";
 export const CDS_SERVICE_REGISTRY_POLICY_URL =
-  "https://osod.dev/fhir/Policy/cds-service-registry";
+  "https://odos2020.com/fhir/Policy/cds-service-registry";
 export const CDS_SERVICE_ACTIVITY_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/cds-service-activity";
+  "https://odos2020.com/fhir/CodeSystem/cds-service-activity";
 export const SNOMED_CT_SYSTEM = "http://snomed.info/sct";
 
 export const CDS_HOOK_IDS = ["order-sign", "order-select", "encounter-discharge"] as const;

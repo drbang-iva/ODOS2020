@@ -133,8 +133,8 @@ export function baseRulesBasedDsiFields(input: {
       continual_monitoring: input.monitoring ?? "Practice admins review feedback and stale-card audit events.",
     },
     source_attributes: {
-      developer_identity: "PerformanceOD / OSOD",
-      funding_source: "OSOD open-source project",
+      developer_identity: "PerformanceOD / ODOS",
+      funding_source: "ODOS open-source project",
       evidence_basis_citation: input.evidence,
     },
   };

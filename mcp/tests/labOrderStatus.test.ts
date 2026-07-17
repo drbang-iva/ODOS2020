@@ -128,13 +128,13 @@ function labTask(id: string, transport: "queued" | "sent" | "received" | "error"
     id,
     status: transport === "received" ? "completed" : transport === "queued" ? "requested" : transport === "error" ? "failed" : "in-progress",
     intent: "order",
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/task-type", code: "lab-order-transmission" }] },
-    businessStatus: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-transport-state", code: transport }] },
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/task-type", code: "lab-order-transmission" }] },
+    businessStatus: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/lab-transport-state", code: transport }] },
     authoredOn,
     input: [{
-      type: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/lab-order-task-input", code: "lab-order-export" }] },
+      type: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/lab-order-task-input", code: "lab-order-export" }] },
       valueString: JSON.stringify({
-        format: "osod-lab-order",
+        format: "odos-lab-order",
         version: "0",
         order: {
           header: { orderId: id, orderDate: "2026-07-01", lab: "Example Lab", patientName: `${id} Patient`, patientRef: `Patient/${id}` },

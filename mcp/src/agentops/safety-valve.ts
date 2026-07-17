@@ -28,7 +28,7 @@ export interface SafetyValveResponseInput extends AgentOpsExceptionMappingInput 
 }
 
 const PROBLEM_CONTENT_TYPE = "application/problem+json";
-const AUDIT_EVENT_HEADER = "X-OSOD-Audit-Event-Id";
+const AUDIT_EVENT_HEADER = "X-ODOS-Audit-Event-Id";
 
 export function buildSafetyValveResponse(input: SafetyValveResponseInput): SafetyValveResponse {
   const descriptor = mapAgentOpsException(input);

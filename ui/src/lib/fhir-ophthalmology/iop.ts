@@ -1,8 +1,8 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/iop.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/iop.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { CodeableConcept } from "@medplum/fhirtypes";
 import type { BuildResult, IopInput, IopMethod } from "./types.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM, SNOMED_CT_CODE_SYSTEM } from "./codeBindings.js";
-import { applyCommonObservationFields, osodConcept, quantity } from "./extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM, SNOMED_CT_CODE_SYSTEM } from "./codeBindings.js";
+import { applyCommonObservationFields, odosConcept, quantity } from "./extensions.js";
 
 const EYECARE_IOP_METHOD_CODE_SYSTEM =
   "http://terminology.hl7.org/uv/eyecare/CodeSystem/iop-methods";
@@ -55,7 +55,7 @@ export function buildIopObservation(input: IopInput): BuildResult<import("./type
       {
         resourceType: "Observation",
         status: "preliminary",
-        code: osodConcept("INTRAOCULAR_PRESSURE", "Intraocular pressure"),
+        code: odosConcept("INTRAOCULAR_PRESSURE", "Intraocular pressure"),
         valueQuantity: quantity(input.value, input.unit ?? "mm[Hg]", "http://unitsofmeasure.org", "mm[Hg]"),
       },
       {
@@ -69,10 +69,10 @@ export function buildIopObservation(input: IopInput): BuildResult<import("./type
 
 function iopMethodConcept(method: CodeableConcept | undefined): CodeableConcept {
   const normalizedMethod = method?.coding?.find(
-    (coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
+    (coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
   )?.code as IopMethod | undefined;
   const igCoding = normalizedMethod ? IOP_METHOD_TO_IG_CODING[normalizedMethod] : undefined;
-  const base = method ?? osodConcept("UNKNOWN", "Unknown tonometry method");
+  const base = method ?? odosConcept("UNKNOWN", "Unknown tonometry method");
 
   if (!igCoding) {
     return base;

@@ -48,16 +48,16 @@ export const BUSINESS_ACTIONS = [
 
 export type BusinessAction = (typeof BUSINESS_ACTIONS)[number];
 
-export interface OsodRoleDeclaration {
+export interface OdosRoleDeclaration {
   id: PracticeRoleId;
   display: string;
   description: string;
   businessActions: BusinessAction[];
-  resourceRules: OsodResourceRule[];
+  resourceRules: OdosResourceRule[];
   membershipParameters?: MembershipParameterDeclaration[];
 }
 
-export interface OsodResourceRule {
+export interface OdosResourceRule {
   resourceType: string;
   interactions: FhirInteraction[];
   scope: ResourceScope;
@@ -119,9 +119,9 @@ const FULL_INTERACTIONS: FhirInteraction[] = [...FHIR_INTERACTIONS];
  * patient-compartment: the dispensary is a walk-up counter, and PaymentReconciliation is not a
  * Patient-compartment resource. Frame inventory is code-fenced from every other Basic resource.
  * PaymentReconciliation stays create/read-only for staff; Phase 6a mutations cross the guarded
- * osod-core lifecycle handlers. Task/Invoice also need update (status advance / manual cash).
+ * odos-core lifecycle handlers. Task/Invoice also need update (status advance / manual cash).
  */
-const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
+const DISPENSARY_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "DeviceDefinition", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Basic",
@@ -129,7 +129,7 @@ const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
-        "Basic?code=https://osod.dev/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
     },
   },
   {
@@ -137,7 +137,7 @@ const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
     interactions: CREATE_READ_INTERACTIONS,
     scope: {
       kind: "practice-search",
-      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/day-seal|day-seal",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
     },
   },
   { resourceType: "DeviceRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -147,7 +147,7 @@ const DISPENSARY_RESOURCE_RULES: OsodResourceRule[] = [
   { resourceType: "Invoice", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
 ];
 
-const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
+const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Claim", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "ClaimResponse", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "CoverageEligibilityRequest", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -157,7 +157,7 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
-      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-era-import|osod-era-import",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
     },
   },
   {
@@ -165,23 +165,23 @@ const CLAIMS_RESOURCE_RULES: OsodResourceRule[] = [
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
-      criteria: "Basic?code=https://osod.dev/fhir/CodeSystem/osod-manual-eob|osod-manual-eob",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
     },
   },
 ];
 
-const OFFICE_CHANNEL_RESOURCE_RULES: OsodResourceRule[] = [
+const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Practitioner", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "PractitionerRole", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Communication",
     interactions: CREATE_READ_INTERACTIONS,
-    scope: { kind: "practice-search", criteria: "Communication?category=https://osod.dev/fhir/CodeSystem/communication-category|internal-office" },
+    scope: { kind: "practice-search", criteria: "Communication?category=https://odos2020.com/fhir/CodeSystem/communication-category|internal-office" },
   },
   {
     resourceType: "Provenance",
     interactions: CREATE_READ_INTERACTIONS,
-    scope: { kind: "practice-search", criteria: "Provenance?activity=https://osod.dev/fhir/CodeSystem/office-message-activity|acknowledged" },
+    scope: { kind: "practice-search", criteria: "Provenance?activity=https://odos2020.com/fhir/CodeSystem/office-message-activity|acknowledged" },
   },
 ];
 
@@ -234,7 +234,7 @@ const FRONT_DESK_RESOURCES = [
  * HealthcareService stay read-only (practice-admin manages them); Appointment gets no delete —
  * cancellation is a status change, never a delete.
  */
-const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
+const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Appointment", interactions: UPDATE_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "Schedule", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
   { resourceType: "Slot", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -247,7 +247,7 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
-        "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
     },
   },
   {
@@ -256,7 +256,7 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
-        "Basic?code=https://osod.dev/fhir/CodeSystem/floor-config|osod-floor-config",
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
     },
   },
   {
@@ -265,7 +265,7 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
-        "Basic?code=https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
     },
   },
   // Visit-type categories singleton: READ-only for the desk. The settings read-only
@@ -277,12 +277,12 @@ const SCHEDULING_RESOURCE_RULES: OsodResourceRule[] = [
     scope: {
       kind: "practice-search",
       criteria:
-        "Basic?code=https://osod.dev/fhir/CodeSystem/visit-type-config|osod-visit-type-config",
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     },
   },
 ];
 
-export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
+export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
   "practice-admin": {
     id: "practice-admin",
     display: "Practice Admin",
@@ -316,7 +316,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
         scope: { kind: "provider-assigned-patient", parameterName: "provider_profile" },
       },
       ...PATIENT_COMPARTMENT_CLINICAL_RESOURCES.map(
-        (resourceType): OsodResourceRule => ({
+        (resourceType): OdosResourceRule => ({
           resourceType,
           interactions: UPDATE_INTERACTIONS,
           scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
@@ -353,7 +353,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
       },
     ],
     resourceRules: [
-      ...FRONT_DESK_RESOURCES.map((resourceType): OsodResourceRule => ({
+      ...FRONT_DESK_RESOURCES.map((resourceType): OdosResourceRule => ({
         resourceType,
         interactions: UPDATE_INTERACTIONS,
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
@@ -443,20 +443,20 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OsodRoleDeclaration> = {
   },
 };
 
-export function getRoleDeclaration(roleId: PracticeRoleId): OsodRoleDeclaration {
+export function getRoleDeclaration(roleId: PracticeRoleId): OdosRoleDeclaration {
   return ROLE_REGISTRY[roleId];
 }
 
-export const OSOD_PRACTICE_ROLE_SYSTEM = "https://osod.dev/fhir/NamingSystem/practice-role";
+export const ODOS_PRACTICE_ROLE_SYSTEM = "https://odos2020.com/fhir/NamingSystem/practice-role";
 
-export function buildMedplumAccessPolicy(role: OsodRoleDeclaration): AccessPolicy {
+export function buildMedplumAccessPolicy(role: OdosRoleDeclaration): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
-    name: `OSOD ${role.display}`,
+    name: `ODOS ${role.display}`,
     // Machine-readable role↔policy link so the payment endpoint can derive a caller's role from
     // their bound AccessPolicy (decision 2026-07-05 §3) rather than a spoofable client header.
     // Carried on meta.tag — Medplum's AccessPolicy resource has no identifier element.
-    meta: { tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: role.id }] },
+    meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: role.id }] },
     resource: role.resourceRules.map(toMedplumResourceRule),
   };
 }
@@ -498,7 +498,7 @@ export function assertBusinessActionAllowed(
   const role = getRoleDeclaration(roleId);
   if (!role.businessActions.includes(businessAction)) {
     throw new Error(
-      `OSOD RBAC preflight denied: role ${roleId} lacks business action ${businessAction}.`,
+      `ODOS RBAC preflight denied: role ${roleId} lacks business action ${businessAction}.`,
     );
   }
 }
@@ -523,7 +523,7 @@ export function assertAestheticsProviderScope(input: AestheticsProviderScopeInpu
   const licensedStates = input.licensedStates.map(normalizeState);
   if (!licensedStates.includes(requestedState)) {
     throw new Error(
-      `OSOD RBAC preflight denied: aesthetics-provider is not credentialed for ${requestedState}.`,
+      `ODOS RBAC preflight denied: aesthetics-provider is not credentialed for ${requestedState}.`,
     );
   }
 
@@ -534,7 +534,7 @@ export function assertAestheticsProviderScope(input: AestheticsProviderScopeInpu
   const allowed = input.allowedProcedureTypesByState[requestedState] ?? [];
   if (!allowed.includes(input.procedureType)) {
     throw new Error(
-      `OSOD RBAC preflight denied: aesthetics-provider credential for ${requestedState} does not include ${input.procedureType}.`,
+      `ODOS RBAC preflight denied: aesthetics-provider credential for ${requestedState} does not include ${input.procedureType}.`,
     );
   }
 }
@@ -544,7 +544,7 @@ export function accessPolicyHasNoBusinessActionVocabulary(policy: AccessPolicy):
   return BUSINESS_ACTIONS.every((action) => !serialized.includes(action));
 }
 
-function toMedplumResourceRule(rule: OsodResourceRule): AccessPolicyResource {
+function toMedplumResourceRule(rule: OdosResourceRule): AccessPolicyResource {
   return {
     resourceType: rule.resourceType,
     interaction: rule.interactions,
@@ -563,7 +563,7 @@ function toMedplumResourceRule(rule: OsodResourceRule): AccessPolicyResource {
   };
 }
 
-function criteriaForRule(rule: OsodResourceRule): string | undefined {
+function criteriaForRule(rule: OdosResourceRule): string | undefined {
   switch (rule.scope.kind) {
     case "practice":
     case "audit-only":

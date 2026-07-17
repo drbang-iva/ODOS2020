@@ -9,8 +9,8 @@ import {
 import {
   assertAuditMutationAllowed,
   assertAuditSessionVisible,
-  buildOsodAuditEventRow,
-} from "../../mcp/src/authz/osodAudit.js";
+  buildOdosAuditEventRow,
+} from "../../mcp/src/authz/odosAudit.js";
 import {
   assertClinicianSessionMatches,
   buildScribeDraftObservation,
@@ -112,9 +112,9 @@ test("Mandate 8 boundary: MCP exposes no audit-session or audit-row mutation too
     "read_audit_session",
     "get_audit_session",
     "read_audit_event_session_id",
-    "update_osod_audit_event",
-    "delete_osod_audit_event",
-    "truncate_osod_audit_events",
+    "update_odos_audit_event",
+    "delete_odos_audit_event",
+    "truncate_odos_audit_events",
   ];
 
   for (const forbidden of forbiddenToolNames) {
@@ -147,7 +147,7 @@ test("Mandate 8 boundary: MCP exposes no backup, restore, or DR drill tools", ()
 });
 
 test("Mandate 8 boundary: MCP cannot read another user's audit session_id", () => {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType: "read",
     actorId: "clinician-2",
     actorRole: "clinician",
@@ -167,7 +167,7 @@ test("Mandate 8 boundary: MCP cannot read another user's audit session_id", () =
   );
 });
 
-test("Mandate 8 boundary: MCP cannot modify osod_audit_events rows", () => {
+test("Mandate 8 boundary: MCP cannot modify odos_audit_events rows", () => {
   assert.throws(
     () => assertAuditMutationAllowed({ operation: "UPDATE", dbRole: "app" }),
     /permission denied/,
@@ -223,7 +223,7 @@ test("Mandate 8 boundary: setup wizard is interactive and refuses unattended age
   assert.throws(
     () =>
       assertInteractiveSetupWizardAllowed({
-        env: { OSOD_UNATTENDED_AGENT: "true" } as NodeJS.ProcessEnv,
+        env: { ODOS_UNATTENDED_AGENT: "true" } as NodeJS.ProcessEnv,
         hasTty: true,
       }),
     /interactive setup wizard/,
@@ -239,7 +239,7 @@ test("Mandate 8 boundary: setup wizard is interactive and refuses unattended age
   assert.throws(
     () =>
       assertInteractiveSetupWizardAllowed({
-        env: { OSOD_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
+        env: { ODOS_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
         hasTty: true,
         parentCommand: "cron",
       }),
@@ -247,7 +247,7 @@ test("Mandate 8 boundary: setup wizard is interactive and refuses unattended age
   );
   assert.doesNotThrow(() =>
     assertInteractiveSetupWizardAllowed({
-      env: { OSOD_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
+      env: { ODOS_SETUP_INTERACTIVE_ACK: "human-supervised" } as NodeJS.ProcessEnv,
       hasTty: false,
     }),
   );
@@ -300,7 +300,7 @@ test("Mandate 8 boundary: SMART staged review refuses autonomous-agent approval"
     userId: "practitioner-1",
     requestedScopes: ["patient/Observation.rs"],
     effectiveScopes: [],
-    policyId: "AccessPolicy/osod-clinician",
+    policyId: "AccessPolicy/odos-clinician",
     parameterizedBounds: { patient: "Patient/patient-1" },
     outcomeClass: "staged-review" as const,
     decisionTimestamp: "2026-05-01T00:00:00.000Z",

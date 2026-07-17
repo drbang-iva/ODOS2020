@@ -2,7 +2,7 @@ import type { AccessPolicy } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import {
   getRoleDeclaration,
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
 } from "./roles.js";
 
@@ -11,7 +11,7 @@ export async function missingPracticeRolePolicies(
 ): Promise<string[]> {
   const missing: string[] = [];
   for (const roleId of PRACTICE_ROLE_IDS) {
-    const expectedName = `OSOD ${getRoleDeclaration(roleId).display}`;
+    const expectedName = `ODOS ${getRoleDeclaration(roleId).display}`;
     const bundle = await fhir.search<AccessPolicy>("AccessPolicy", { "name:exact": expectedName });
     const policies = (bundle.entry ?? [])
       .map((entry) => entry.resource)
@@ -25,7 +25,7 @@ export async function missingPracticeRolePolicies(
       continue;
     }
     const tagged = policies[0]!.meta?.tag?.some(
-      (tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
+      (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
     );
     if (!tagged) {
       missing.push(`${roleId}: AccessPolicy "${expectedName}" lacks its practice-role meta.tag`);
@@ -38,7 +38,7 @@ export function formatPracticeRoleBootFailure(missing: readonly string[]): strin
   return [
     "\u001b[31m",
     "============================================================",
-    "OSOD PRACTICE ROLE BOOT VERIFICATION FAILED",
+    "ODOS PRACTICE ROLE BOOT VERIFICATION FAILED",
     ...missing.map((item) => `- ${item}`),
     "The server will continue, but role-gated workflows are not ready.",
     "============================================================",

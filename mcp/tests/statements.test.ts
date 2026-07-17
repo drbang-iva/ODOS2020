@@ -12,8 +12,8 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
-import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
+import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
   addStatementDetail,
@@ -95,7 +95,7 @@ test("insurance detail passes through linked Claim diagnoses, ERA adjustments, p
 
 test("a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance", () => {
   const sourceInvoice = invoice("i1", "p1", 2_500);
-  sourceInvoice.extension = [{ url: OSOD_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }];
+  sourceInvoice.extension = [{ url: ODOS_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }];
   const snapshot = buildStatementSnapshot({ patient: patient("p1", "Alex Rivera"), invoices: [sourceInvoice], paymentReconciliations: [], generatedAt: GENERATED_AT });
   const detailed = addStatementDetail({
     snapshot,
@@ -481,8 +481,8 @@ function invoice(id: string, patientId: string, netCents: number): Invoice {
 function seamInvoice(id: string, patientId: string, netCents: number): Invoice {
   return {
     ...invoice(id, patientId, netCents),
-    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice", value: `claim-pr-${id}` }],
-    extension: [{ url: OSOD_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }],
+    identifier: [{ system: "https://odos2020.com/fhir/NamingSystem/patient-responsibility-invoice", value: `claim-pr-${id}` }],
+    extension: [{ url: ODOS_SOURCE_CLAIM_EXTENSION_URL, valueReference: { reference: "Claim/c1" } }],
     lineItem: [{
       sequence: 1,
       chargeItemReference: { reference: "ChargeItem/ch1" },
@@ -510,7 +510,7 @@ function postedClaim(): Claim {
     ],
     item: [{
       sequence: 1,
-      extension: [{ url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL, valueReference: { reference: "ChargeItem/ch1" } }],
+      extension: [{ url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL, valueReference: { reference: "ChargeItem/ch1" } }],
       productOrService: { coding: [{ code: "PROC-TEST", display: "Source procedure display" }] },
       servicedDate: "2026-07-01",
       diagnosisSequence: [1, 2],
@@ -583,7 +583,7 @@ function payment(id: string, patientId: string, invoiceId: string, amountCents: 
       subjectReference: `Patient/${patientId}`,
       invoiceReference: `Invoice/${invoiceId}`,
       processorTransactionId: id,
-      processorTransactionSystem: "https://osod.dev/test/payment",
+      processorTransactionSystem: "https://odos2020.com/test/payment",
       surface: "in-clinic",
       tender: { code: "CASH", display: "Cash" },
     }),
@@ -600,7 +600,7 @@ function unappliedPayment(id: string, patientId: string, amountCents: number): P
       amountCents,
       subjectReference: `Patient/${patientId}`,
       processorTransactionId: id,
-      processorTransactionSystem: "https://osod.dev/test/payment",
+      processorTransactionSystem: "https://odos2020.com/test/payment",
       surface: "in-clinic",
       tender: { code: "CASH", display: "Cash" },
     }),

@@ -10,7 +10,7 @@ import { useOfficeChannel } from "../components/OfficeChannel";
 
 export const DESK_LABEL = "Desk";
 export { CLINIC_PATH, DESK_HOME_PATH } from "../lib/app-paths";
-export const DESK_CARD_STORAGE_KEY = "osod.desk.cards.v2";
+export const DESK_CARD_STORAGE_KEY = "odos.desk.cards.v2";
 export const COCKPIT_HOVER_CLOSE_DELAY_MS = 250;
 
 export interface DeskOfficeApi {

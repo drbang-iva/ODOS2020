@@ -1,7 +1,7 @@
 import type { AccessPolicy, Bundle, ProjectMembership, User } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import {
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../authz/roles.js";
@@ -9,7 +9,7 @@ import type { AdapterRegistration } from "./payment-config.js";
 import { assertStripeAdapterConfig, STRIPE_BASE_URL } from "./adapters/stripe-adapter.js";
 
 /**
- * osod-core payment endpoint helpers — the env-driven adapter registrations built at service
+ * odos-core payment endpoint helpers — the env-driven adapter registrations built at service
  * start, and the authn step that turns the UI's forwarded Medplum bearer token into a verified
  * staff identity. Authorization (who may take a payment) is the `payment.charge` business action
  * asserted in the route, same pattern as `audit.read` on /audit/events.
@@ -142,10 +142,10 @@ export class StaffRoleServiceUnavailableError extends Error {
 }
 
 /**
- * Resolve a caller to their verified staff identity AND their OSOD role (decision 2026-07-05 §3).
+ * Resolve a caller to their verified staff identity AND their ODOS role (decision 2026-07-05 §3).
  *
  * Authentication uses the caller's forwarded token (/auth/me proves who they are). The role is then
- * derived from the AccessPolicy bound to their ProjectMembership — read with the osod-core SERVICE
+ * derived from the AccessPolicy bound to their ProjectMembership — read with the odos-core SERVICE
  * client, because a caller's own AccessPolicy need not grant ProjectMembership/AccessPolicy read.
  * The role comes from the policy's practice-role identifier (buildMedplumAccessPolicy stamps it), so
  * it is deterministic rather than display-name parsing. Returns null for any failure — invalid
@@ -240,7 +240,7 @@ async function resolveRolesWithServiceClient(
     }
     for (const tag of policy.meta?.tag ?? []) {
       if (
-        tag.system === OSOD_PRACTICE_ROLE_SYSTEM &&
+        tag.system === ODOS_PRACTICE_ROLE_SYSTEM &&
         tag.code &&
         PRACTICE_ROLE_IDS.includes(tag.code as PracticeRoleId)
       ) {
@@ -280,7 +280,7 @@ async function resolveRoleWithServiceClient(
     return null;
   }
 
-  const roleValue = policy.meta?.tag?.find((tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM)?.code;
+  const roleValue = policy.meta?.tag?.find((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM)?.code;
   if (!roleValue || !PRACTICE_ROLE_IDS.includes(roleValue as PracticeRoleId)) {
     return null;
   }

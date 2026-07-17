@@ -1,5 +1,5 @@
 import type { AuditEvent, Binary, Provenance } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "./osodAudit.js";
+import type { OdosAuditEventRecord } from "./odosAudit.js";
 
 export interface RestoreManifestAuditSnapshot {
   count: number;
@@ -9,7 +9,7 @@ export interface RestoreManifestAuditSnapshot {
 
 export interface RestoreIntegrityInput {
   manifestAuditSnapshot: RestoreManifestAuditSnapshot;
-  restoredAuditRows: readonly OsodAuditEventRecord[];
+  restoredAuditRows: readonly OdosAuditEventRecord[];
   provenanceSamples: readonly Provenance[];
   restoredBinaries: readonly Binary[];
   auditEvents: readonly AuditEvent[];
@@ -42,7 +42,7 @@ function verifyAuditSnapshot(input: RestoreIntegrityInput): RestoreIntegrityResu
     restoredSnapshotRows.length === input.manifestAuditSnapshot.count &&
     latest === input.manifestAuditSnapshot.latestEventTime;
   return {
-    name: "osod_audit_events row count + latest event time",
+    name: "odos_audit_events row count + latest event time",
     passed,
     detail: `manifest=${input.manifestAuditSnapshot.count}/${input.manifestAuditSnapshot.latestEventTime ?? "none"} restored=${restoredSnapshotRows.length}/${latest ?? "none"} restoreLifecycleRows=${input.restoredAuditRows.length - restoredSnapshotRows.length}`,
   };
@@ -84,7 +84,7 @@ function verifyAuditEventCount(input: RestoreIntegrityInput): RestoreIntegrityRe
     : Math.ceil(expected * 0.01);
   const passed = Math.abs(expected - actual) <= tolerance;
   return {
-    name: "AuditEvent count matches osod_audit_events count",
+    name: "AuditEvent count matches odos_audit_events count",
     passed,
     detail: `expected=${expected} actual=${actual} tolerance=${tolerance}`,
   };

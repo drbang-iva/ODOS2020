@@ -97,7 +97,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           encounterId,
           patientId: patient.id,
           recorded: now,
-          operatorDisplay: "OSOD UI finish_encounter",
+          operatorDisplay: "ODOS UI finish_encounter",
           ops: [
             { op: "replace", path: "/status", value: "finished" },
             { op: "add", path: "/period/end", value: now },
@@ -142,7 +142,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           encounterId,
           patientId: patient.id,
           recorded: new Date().toISOString(),
-          operatorDisplay: "OSOD UI abandon_encounter",
+          operatorDisplay: "ODOS UI abandon_encounter",
           ops: [
             { op: "replace", path: "/status", value: "cancelled" },
             {

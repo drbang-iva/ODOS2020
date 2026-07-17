@@ -4,14 +4,14 @@ import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 export { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 
 export const DIAGNOSIS_DEFINITION_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/osod-diagnosis-definition";
-export const DIAGNOSIS_DEFINITION_CODE = "osod-diagnosis-definition";
+  "https://odos2020.com/fhir/CodeSystem/odos-diagnosis-definition";
+export const DIAGNOSIS_DEFINITION_CODE = "odos-diagnosis-definition";
 export const DIAGNOSIS_DEFINITION_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/diagnosis-definition-stable-key";
+  "https://odos2020.com/fhir/NamingSystem/diagnosis-definition-stable-key";
 export const DIAGNOSIS_DEFINITION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-diagnosis-definition-json";
+  "https://odos2020.com/fhir/StructureDefinition/odos-diagnosis-definition-json";
 export const DIAGNOSIS_CATALOG_WRITE_HEADERS = {
-  "X-OSOD-Source": "diagnosis-catalog",
+  "X-ODOS-Source": "diagnosis-catalog",
 } as const;
 
 export interface DiagnosisCatalogFhirClient {
@@ -98,7 +98,7 @@ export function buildDiagnosisCatalogResource(definition: DiagnosisCatalogRow, e
       coding: [{
         system: DIAGNOSIS_DEFINITION_CODE_SYSTEM,
         code: DIAGNOSIS_DEFINITION_CODE,
-        display: "OSOD diagnosis definition",
+        display: "ODOS diagnosis definition",
       }],
       text: validated.display,
     },
@@ -110,7 +110,7 @@ export function parseDiagnosisCatalogResource(resource: Basic): DiagnosisCatalog
   if (!resource.code?.coding?.some((coding) =>
     coding.system === DIAGNOSIS_DEFINITION_CODE_SYSTEM && coding.code === DIAGNOSIS_DEFINITION_CODE
   )) {
-    throw new Error("Basic resource is not an OSOD diagnosis definition.");
+    throw new Error("Basic resource is not an ODOS diagnosis definition.");
   }
   const raw = resource.extension?.find((extension) => extension.url === DIAGNOSIS_DEFINITION_EXTENSION_URL)?.valueString;
   if (!raw) throw new Error("Diagnosis-definition Basic is missing its JSON extension.");

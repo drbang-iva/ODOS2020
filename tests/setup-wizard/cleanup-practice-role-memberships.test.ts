@@ -50,7 +50,7 @@ test("cleanup dedupes access and migrates the legacy field idempotently", () => 
 });
 
 test("cleanup identifies the service identity from its Practitioner profile without User search", async () => {
-  const practitioner: Practitioner = { resourceType: "Practitioner", id: "service-profile", telecom: [{ system: "email", value: "admin@osod.local" }] };
+  const practitioner: Practitioner = { resourceType: "Practitioner", id: "service-profile", telecom: [{ system: "email", value: "admin@odos.local" }] };
   const email = await resolveMembershipTargetEmail({
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
       assert.equal(resourceType, "Practitioner");
@@ -58,7 +58,7 @@ test("cleanup identifies the service identity from its Practitioner profile with
       return practitioner as T;
     },
   }, fixture({ profile: { reference: "Practitioner/service-profile" } }));
-  assert.equal(email, "admin@osod.local");
+  assert.equal(email, "admin@odos.local");
 });
 
 function fixture(overrides: Partial<ProjectMembership>): ProjectMembership {

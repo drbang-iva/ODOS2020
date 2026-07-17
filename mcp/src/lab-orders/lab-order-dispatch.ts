@@ -1,4 +1,4 @@
-import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { createManualLabOrderAdapter, type LabOrderFhirClient } from "./adapters/manual-lab-order-adapter.js";
 import type { LabOrderAdapter } from "./lab-order-adapter.js";
 
@@ -12,7 +12,7 @@ export interface LabOrderRoutingDefaults {
 
 export interface LabOrderDispatchDeps {
   now?: () => string;
-  recordAudit?(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit?(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface LabOrderDispatch {
@@ -69,9 +69,9 @@ export function isLabOrderVendorId(value: unknown): value is LabOrderVendorId {
 export function labOrderRoutingFromEnv(
   env: Record<string, string | undefined>,
 ): Required<LabOrderRoutingDefaults> {
-  const vendor = env.OSOD_LAB_ORDER_VENDOR_DEFAULT || "manual";
+  const vendor = env.ODOS_LAB_ORDER_VENDOR_DEFAULT || "manual";
   if (!isLabOrderVendorId(vendor)) {
-    throw new Error("OSOD lab-order vendor routing value must be manual.");
+    throw new Error("ODOS lab-order vendor routing value must be manual.");
   }
   return { vendor };
 }

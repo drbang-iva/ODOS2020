@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { submitProfessionalClaim, type ProfessionalClaimInput } from "../../ui/src/lib/submit-claims.js";
 
-const claim = { patientAccountNumber: "OSOD-CLAIM-900" } as ProfessionalClaimInput;
+const claim = { patientAccountNumber: "ODOS-CLAIM-900" } as ProfessionalClaimInput;
 
 test("UI submit helper preserves the Claim.MD-default request body when no selector is supplied", async () => {
   let body = "";

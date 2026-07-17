@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Request, Response } from "express";
 import type { Device, Endpoint, Provenance, Resource } from "@medplum/fhirtypes";
-import { buildOsodAuditEventRow, type OsodActorRole } from "../../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosActorRole } from "../../authz/odosAudit.js";
 import type { FhirAuditRecorder } from "../../authz/liveAudit.js";
 import type {
   SmartAuthorizationState,
@@ -14,7 +14,7 @@ import {
   SMART_APP_REGISTRY_POLICY_URL,
   SmartAppRegistryError,
   type DynamicClientRegistrationInput,
-  type OSODSmartClientApp,
+  type ODOSSmartClientApp,
 } from "./smart-client-app.js";
 
 export interface SmartAppRegistryStore {
@@ -25,9 +25,9 @@ export interface SmartAppRegistryStore {
 }
 
 export interface SmartAppMedplumAdapter {
-  registerSmartApp(canonicalRecord: OSODSmartClientApp): Promise<{ client_id: string; client_secret?: string }>;
-  revokeSmartApp(canonicalRecord: OSODSmartClientApp): Promise<void>;
-  updateSmartAppMetadata(canonicalRecord: OSODSmartClientApp): Promise<void>;
+  registerSmartApp(canonicalRecord: ODOSSmartClientApp): Promise<{ client_id: string; client_secret?: string }>;
+  revokeSmartApp(canonicalRecord: ODOSSmartClientApp): Promise<void>;
+  updateSmartAppMetadata(canonicalRecord: ODOSSmartClientApp): Promise<void>;
 }
 
 export interface DynamicClientRegistrationOptions {
@@ -141,7 +141,7 @@ export class HttpFhirSmartAppRegistryStore implements SmartAppRegistryStore {
 }
 
 export function createDefaultSmartAppRegistryStore(baseUrl: string): SmartAppRegistryStore {
-  return new HttpFhirSmartAppRegistryStore(baseUrl, process.env.OSOD_FHIR_ACCESS_TOKEN);
+  return new HttpFhirSmartAppRegistryStore(baseUrl, process.env.ODOS_FHIR_ACCESS_TOKEN);
 }
 
 export function createDynamicClientRegistrationHandler(options: DynamicClientRegistrationOptions) {
@@ -150,7 +150,7 @@ export function createDynamicClientRegistrationHandler(options: DynamicClientReg
     try {
       const canonical = buildCanonicalSmartClientApp(req.body as DynamicClientRegistrationInput);
       const stored = await options.store.create(canonical.canonicalRecord);
-      const storedCanonical: OSODSmartClientApp = {
+      const storedCanonical: ODOSSmartClientApp = {
         ...canonical,
         canonicalRecord: stored,
         clientId: stored.id,
@@ -173,12 +173,12 @@ export function createDynamicClientRegistrationHandler(options: DynamicClientReg
           target: `${stored.resourceType}/${stored.id}`,
           activityCode: "smart-app-register",
           recorded: now().toISOString(),
-          actorId: req.header("X-OSOD-Actor-Id") ?? "smart-app-registry",
-          actorRole: (req.header("X-OSOD-Role") as OsodActorRole | undefined) ?? "system",
+          actorId: req.header("X-ODOS-Actor-Id") ?? "smart-app-registry",
+          actorRole: (req.header("X-ODOS-Role") as OdosActorRole | undefined) ?? "system",
         }),
       );
       await options.audit?.record(
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           eventType: "smart-app-registered",
           actorId: client.clientId,
           actorRole: "system",
@@ -205,7 +205,7 @@ export function buildSmartAppProvenance(input: {
   readonly activityCode: string;
   readonly recorded: string;
   readonly actorId: string;
-  readonly actorRole: OsodActorRole;
+  readonly actorRole: OdosActorRole;
 }): Provenance {
   return {
     resourceType: "Provenance",
@@ -215,7 +215,7 @@ export function buildSmartAppProvenance(input: {
     activity: {
       coding: [
         {
-          system: "https://osod.dev/fhir/CodeSystem/smart-app-activity",
+          system: "https://odos2020.com/fhir/CodeSystem/smart-app-activity",
           code: input.activityCode,
           display: input.activityCode,
         },
@@ -225,7 +225,7 @@ export function buildSmartAppProvenance(input: {
     agent: [
       {
         role: [{ text: input.actorRole }],
-        who: { reference: input.actorRole === "system" ? "Device/osod-instance" : `Practitioner/${input.actorId}` },
+        who: { reference: input.actorRole === "system" ? "Device/odos-instance" : `Practitioner/${input.actorId}` },
       },
     ],
   };
@@ -246,7 +246,7 @@ function secretHash(secret: string): string {
   return createHash("sha256").update(secret).digest("base64url");
 }
 
-function safeReadSmartApp(resource: Resource): OSODSmartClientApp | undefined {
+function safeReadSmartApp(resource: Resource): ODOSSmartClientApp | undefined {
   if (resource.resourceType !== "Endpoint" && resource.resourceType !== "Device") {
     return undefined;
   }

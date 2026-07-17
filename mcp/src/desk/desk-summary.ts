@@ -10,8 +10,8 @@ import type {
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import { confirmationStatusOf } from "../fhir/appointmentConfirmation.js";
-import { OSOD_OPTICAL_ORDER_STATUS_SYSTEM } from "../fhir/opticalOrderStatus.js";
-import { OSOD_OPTICAL_ORDER_TYPE_SYSTEM } from "../fhir/opticalOrderType.js";
+import { ODOS_OPTICAL_ORDER_STATUS_SYSTEM } from "../fhir/opticalOrderStatus.js";
+import { ODOS_OPTICAL_ORDER_TYPE_SYSTEM } from "../fhir/opticalOrderType.js";
 import { projectClaimSearchResults } from "../claims/claim-search.js";
 import {
   CLAIM_REJECTED_CODE_SYSTEM,
@@ -179,7 +179,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
   };
 
   const opticalTasks = input.tasks.filter((task) =>
-    task.status === "in-progress" && coding(task.code, OSOD_OPTICAL_ORDER_TYPE_SYSTEM) !== undefined,
+    task.status === "in-progress" && coding(task.code, ODOS_OPTICAL_ORDER_TYPE_SYSTEM) !== undefined,
   );
   const atLab = opticalTasks.filter((task) => opticalStatus(task) === "at-lab").length;
   const awaitingPickup = opticalTasks.filter((task) =>
@@ -329,7 +329,7 @@ export async function loadDeskSummary(
     searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
     searchScopedTasks(fhir, {
       status: "in-progress",
-      code: `${OSOD_OPTICAL_ORDER_TYPE_SYSTEM}|`,
+      code: `${ODOS_OPTICAL_ORDER_TYPE_SYSTEM}|`,
       _count: "1000",
       _sort: "-authored-on",
     }),
@@ -457,7 +457,7 @@ function coding(concept: Task["code"], system: string): string | undefined {
 }
 
 function opticalStatus(task: Task): string | undefined {
-  return coding(task.businessStatus, OSOD_OPTICAL_ORDER_STATUS_SYSTEM);
+  return coding(task.businessStatus, ODOS_OPTICAL_ORDER_STATUS_SYSTEM);
 }
 
 function worklistCode(task: Task): string | undefined {

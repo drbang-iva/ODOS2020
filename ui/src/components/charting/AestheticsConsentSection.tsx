@@ -60,7 +60,7 @@ export function AestheticsConsentSection({
         completed: true,
         summary: "Cosmetic consent acknowledged",
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI aesthetics consent",
+        operator: "ODOS UI aesthetics consent",
       };
       setSaved(status);
       onSaved(status);

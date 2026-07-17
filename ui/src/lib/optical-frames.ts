@@ -2,19 +2,19 @@ import type { AuditEvent, Basic, Binary, Bundle, DeviceDefinition, Provenance } 
 import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
-const BASIC_KIND_SYSTEM = "https://osod.dev/fhir/CodeSystem/basic-kind";
-const FRAME_INVENTORY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/frame-inventory-canonical-url";
+const BASIC_KIND_SYSTEM = "https://odos2020.com/fhir/CodeSystem/basic-kind";
+const FRAME_INVENTORY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/frame-inventory-canonical-url";
 const EXTENSION_URLS = {
-  catalogCanonicalUrl: "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url",
-  catalogPublicityClass: "https://osod.dev/fhir/StructureDefinition/catalog-publicity-class",
-  dispensaryLocation: "https://osod.dev/fhir/StructureDefinition/dispensary-location",
-  framesDataLastIngestAt: "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-at",
-  framesDataLastIngestSourceFile: "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-source-file",
-  framesDataSubscriptionActive: "https://osod.dev/fhir/StructureDefinition/frames-data-subscription-active",
-  framesDataUsername: "https://osod.dev/fhir/StructureDefinition/frames-data-username",
-  inventoryStatus: "https://osod.dev/fhir/StructureDefinition/inventory-status",
-  qtyOnHand: "https://osod.dev/fhir/StructureDefinition/qty-on-hand",
-  salePriceCents: "https://osod.dev/fhir/StructureDefinition/sale-price-cents",
+  catalogCanonicalUrl: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url",
+  catalogPublicityClass: "https://odos2020.com/fhir/StructureDefinition/catalog-publicity-class",
+  dispensaryLocation: "https://odos2020.com/fhir/StructureDefinition/dispensary-location",
+  framesDataLastIngestAt: "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-at",
+  framesDataLastIngestSourceFile: "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-source-file",
+  framesDataSubscriptionActive: "https://odos2020.com/fhir/StructureDefinition/frames-data-subscription-active",
+  framesDataUsername: "https://odos2020.com/fhir/StructureDefinition/frames-data-username",
+  inventoryStatus: "https://odos2020.com/fhir/StructureDefinition/inventory-status",
+  qtyOnHand: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand",
+  salePriceCents: "https://odos2020.com/fhir/StructureDefinition/sale-price-cents",
 } as const;
 
 export interface FrameCatalogItem {
@@ -57,7 +57,7 @@ export async function searchFrameCatalog(query: string): Promise<FrameCatalogIte
   return (bundle.entry ?? [])
     .map((entry) => entry.resource)
     .filter((resource): resource is DeviceDefinition => resource?.resourceType === "DeviceDefinition")
-    .filter((resource) => resource.url?.startsWith("https://osod.dev/catalog/frames/"))
+    .filter((resource) => resource.url?.startsWith("https://odos2020.com/catalog/frames/"))
     .map(deviceDefinitionToFrameCatalogItem);
 }
 
@@ -210,13 +210,13 @@ export async function saveFramesDataSubscriptionSettings(input: {
   const auditEvent: AuditEvent = {
     resourceType: "AuditEvent",
     type: {
-      system: "https://osod.dev/fhir/CodeSystem/audit-event-type",
+      system: "https://odos2020.com/fhir/CodeSystem/audit-event-type",
       code: "practice.frames-data-subscription.toggled",
     },
     recorded: now,
     outcome: "0",
     agent: [{ who: { reference: `Practitioner/${input.actorId}` }, requestor: true }],
-    source: { observer: { reference: "Device/osod-ui" } },
+    source: { observer: { reference: "Device/odos-ui" } },
     entity: [{ what: { reference: `Organization/${input.practiceId}` }, name: "frames-data-subscription" }],
   };
   const provenance: Provenance = {
@@ -316,14 +316,14 @@ async function writeInventoryTransaction(input: {
   const auditEvent: AuditEvent = {
     resourceType: "AuditEvent",
     type: {
-      system: "https://osod.dev/fhir/CodeSystem/audit-event-type",
+      system: "https://odos2020.com/fhir/CodeSystem/audit-event-type",
       code: "practice.frame-inventory.incremented",
     },
     action: input.resourceEntry.request?.method === "POST" ? "C" : "U",
     recorded: now,
     outcome: "0",
     agent: [{ who: { reference: `Practitioner/${input.actorId}` }, requestor: true }],
-    source: { observer: { reference: "Device/osod-ui" } },
+    source: { observer: { reference: "Device/odos-ui" } },
     entity: [{ what: { reference: input.target }, name: "practice-frame-inventory" }],
   };
   const provenance: Provenance = {

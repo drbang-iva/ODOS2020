@@ -187,7 +187,7 @@ export function OcularHealthSection({
         completed: true,
         summary: `${dirtyDefinitions.length}/${definitions.length} ocular-health structures saved`,
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI ocular health",
+        operator: "ODOS UI ocular health",
       };
       setMessage(status.summary);
       onSaved(status, dirtyDefinitions.map((definition) => definition.stableKey));

@@ -106,7 +106,7 @@ function claim(): Claim {
     insurance: [{ sequence: 1, focal: true, coverage: { reference: "Coverage/cov-1" } }],
     item: [{
       sequence: 1,
-      productOrService: { coding: [{ system: "https://osod.test/procedure", code: "PROC-A" }] },
+      productOrService: { coding: [{ system: "https://odos.test/procedure", code: "PROC-A" }] },
       net: { value: 125, currency: "USD" },
     }],
   };

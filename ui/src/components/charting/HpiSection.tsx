@@ -120,7 +120,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         completed: true,
         summary,
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI HPI / ROS",
+        operator: "ODOS UI HPI / ROS",
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -149,7 +149,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
               placeholder="Patient's reason for today's visit"
             />
           </label>
-          <p className="mt-2 text-xs text-white/35">Saved as OSOD-local finding evidence and as free text on the encounter reason.</p>
+          <p className="mt-2 text-xs text-white/35">Saved as ODOS-local finding evidence and as free text on the encounter reason.</p>
         </div>
 
         <div className="mt-5 rounded border border-white/10 bg-bg-panel/70 p-5">

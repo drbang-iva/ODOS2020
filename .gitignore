@@ -23,8 +23,8 @@ outputs/
 
 # Session-local state
 .vip/
-.osod/
-.osod-setup-state.json
+.odos/
+.odos-setup-state.json
 # Main Branch local Claude wiring
 .claude/settings.local.json
 .claude/worktrees/

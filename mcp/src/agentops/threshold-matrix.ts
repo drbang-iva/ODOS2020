@@ -250,8 +250,8 @@ function validateRule(rule: AgentOpsPolicyRule, issues: AgentOpsPolicyValidation
   if (!THRESHOLD_CLASSES.includes(rule.threshold_class)) {
     issues.push({ code: "threshold-class-invalid", message: "threshold_class is invalid", rule_id: rule.rule_id });
   }
-  if (!rule.agent_scope.startsWith("https://osod.dev/agents/") && rule.agent_scope !== "any-agent") {
-    issues.push({ code: "agent-scope-invalid", message: "agent_scope must be any-agent or an OSOD agent URI", rule_id: rule.rule_id });
+  if (!rule.agent_scope.startsWith("https://odos2020.com/agents/") && rule.agent_scope !== "any-agent") {
+    issues.push({ code: "agent-scope-invalid", message: "agent_scope must be any-agent or an ODOS agent URI", rule_id: rule.rule_id });
   }
   if (Number.isNaN(Date.parse(rule.effective_from))) {
     issues.push({ code: "effective-from-invalid", message: "effective_from must be an ISO date", rule_id: rule.rule_id });

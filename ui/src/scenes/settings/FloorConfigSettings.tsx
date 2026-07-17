@@ -139,7 +139,7 @@ export function FloorConfigSettingsReady({
   const draft = useMemo(
     () =>
       createSingletonConfigDraft({
-        configKey: "osod-floor-config",
+        configKey: "odos-floor-config",
         config,
         resource,
         buildResource: buildFloorConfigResource,

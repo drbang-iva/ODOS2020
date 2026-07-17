@@ -2,10 +2,10 @@ import type { Basic } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import { assertDate, practiceDate, searchAvailablePage } from "./day-ledger.js";
 
-export const DAY_SEAL_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/day-seal";
+export const DAY_SEAL_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/day-seal";
 export const DAY_SEAL_CODE = "day-seal";
-export const DAY_SEAL_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/day-seal-date";
-export const DAY_SEAL_TIMESTAMP_URL = "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp";
+export const DAY_SEAL_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/day-seal-date";
+export const DAY_SEAL_TIMESTAMP_URL = "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp";
 
 export interface DaySeal {
   id: string;
@@ -63,7 +63,7 @@ export async function createDaySeal(
     resourceType: "Basic",
     identifier: [{ system: DAY_SEAL_IDENTIFIER_SYSTEM, value: input.date }],
     code: {
-      coding: [{ system: DAY_SEAL_CODE_SYSTEM, code: DAY_SEAL_CODE, display: "OSOD day seal" }],
+      coding: [{ system: DAY_SEAL_CODE_SYSTEM, code: DAY_SEAL_CODE, display: "ODOS day seal" }],
       text: "Day seal",
     },
     created: input.date,

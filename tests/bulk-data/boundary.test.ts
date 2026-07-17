@@ -23,7 +23,7 @@ test("Bulk Data export file URLs contain only high-entropy job paths", async () 
   try {
     server.state.clients.set("public-client", publicClient(server.origin));
     const token = await patientAccessToken(server, "patient/Patient.rs patient/Observation.rs");
-    const kickoff = await fetch(`${server.origin}/Group/osod-exportable-group/$export?_type=Patient,Observation`, {
+    const kickoff = await fetch(`${server.origin}/Group/odos-exportable-group/$export?_type=Patient,Observation`, {
       headers: {
         Accept: "application/fhir+json",
         Prefer: "respond-async",
@@ -66,7 +66,7 @@ test("Bulk Data file download rejects invalid and client-signed tokens before ND
   try {
     server.state.clients.set("public-client", publicClient(server.origin));
     const token = await patientAccessToken(server, "patient/Patient.rs patient/Observation.rs");
-    const kickoff = await fetch(`${server.origin}/Group/osod-exportable-group/$export?_type=Patient,Observation`, {
+    const kickoff = await fetch(`${server.origin}/Group/odos-exportable-group/$export?_type=Patient,Observation`, {
       headers: {
         Accept: "application/fhir+json",
         Prefer: "respond-async",

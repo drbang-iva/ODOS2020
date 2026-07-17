@@ -88,8 +88,8 @@ export function buildAgentDevice(input: AgentRegistrationInput): Device {
   return {
     resourceType: "Device",
     id: idFromUri(input.agentUri),
-    identifier: [{ system: "https://osod.dev/agents", value: input.agentUri }],
-    manufacturer: input.manufacturer ?? "OSOD development team",
+    identifier: [{ system: "https://odos2020.com/agents", value: input.agentUri }],
+    manufacturer: input.manufacturer ?? "ODOS development team",
     distinctIdentifier: input.deploymentDistinctIdentifier,
     parent: { reference: `Device/${idFromUri(input.model.modelUri)}` },
     extension: [
@@ -130,7 +130,7 @@ export function buildModelDevice(input: AgentModelRegistrationInput): Device {
   return {
     resourceType: "Device",
     id: idFromUri(input.modelUri),
-    identifier: [{ system: "https://osod.dev/models", value: input.modelUri }],
+    identifier: [{ system: "https://odos2020.com/models", value: input.modelUri }],
     manufacturer: input.vendorName,
     modelNumber: input.modelName,
     distinctIdentifier: input.modelFingerprint,
@@ -162,11 +162,11 @@ export function buildAgentRegistrationProvenance(agentDevice: Device, recorded: 
     id,
     target: [{ reference: `Device/${agentDevice.id}` }],
     recorded,
-    policy: ["https://osod.dev/fhir/Policy/agentops-agent-registry"],
+    policy: ["https://odos2020.com/fhir/Policy/agentops-agent-registry"],
     activity: {
       coding: [
         {
-          system: "https://osod.dev/fhir/CodeSystem/registry-activity",
+          system: "https://odos2020.com/fhir/CodeSystem/registry-activity",
           code: "register",
           display: "register",
         },
@@ -174,7 +174,7 @@ export function buildAgentRegistrationProvenance(agentDevice: Device, recorded: 
     },
     agent: [
       {
-        who: { reference: "Device/osod-instance" },
+        who: { reference: "Device/odos-instance" },
       },
     ],
   };
@@ -217,7 +217,7 @@ function agentDsiSourceAttributeProperties(): NonNullable<Device["property"]> {
 function dsiProperty(code: string, display: string): NonNullable<Device["property"]>[number] {
   return {
     type: {
-      coding: [{ system: `${AIAST_CODE_SYSTEM}/osod-dsi-source-attributes`, code, display }],
+      coding: [{ system: `${AIAST_CODE_SYSTEM}/odos-dsi-source-attributes`, code, display }],
       text: code,
     },
     valueCode: [{ text: display }],

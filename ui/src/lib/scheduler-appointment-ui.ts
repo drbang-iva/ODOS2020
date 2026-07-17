@@ -7,7 +7,7 @@ import {
   isFollowUpAppointment,
   isUrgentAppointment,
   medicalCoverageOf,
-  osodAppointmentStatusOf,
+  odosAppointmentStatusOf,
   scheduleReference,
   scheduleReferenceForActor,
   timezoneOffsetMinutes,
@@ -19,7 +19,7 @@ import {
   type BookSchedulingAppointmentInput,
   type ClinicMode,
   type CoverageInput,
-  type OsodAppointmentStatus,
+  type OdosAppointmentStatus,
 } from "./scheduling";
 import type { AppointmentChangeInput } from "./scheduling-store";
 
@@ -31,7 +31,7 @@ export interface AppointmentModalDraft {
   resourceScheduleReferences: string[];
   start: string;
   durationMinutes: number;
-  status: OsodAppointmentStatus;
+  status: OdosAppointmentStatus;
   confirmation: AppointmentConfirmationStatus;
   visionCoverageReference: string;
   visionCoverageDisplay: string;
@@ -63,7 +63,7 @@ export function defaultAppointmentModalDraft(input: {
   visitTypes: HealthcareService[];
   clinicMode: ClinicMode | string;
   resource: Schedule;
-  status?: OsodAppointmentStatus;
+  status?: OdosAppointmentStatus;
 }): AppointmentModalDraft {
   const visibleVisitTypes = visibleSchedulingVisitTypes(input.visitTypes, input.clinicMode);
   const visitType = visibleVisitTypes[0];
@@ -103,7 +103,7 @@ export function appointmentModalDraftFromAppointment(
     resourceScheduleReferences: resourceScheduleReferencesOf(resources, appointment),
     start: appointment.start ?? "",
     durationMinutes: appointmentDurationMinutes(appointment) ?? 30,
-    status: osodAppointmentStatusOf(appointment) ?? "scheduled",
+    status: odosAppointmentStatusOf(appointment) ?? "scheduled",
     confirmation: confirmationStatusOf(appointment) ?? "not-confirmed",
     visionCoverageReference: vision?.reference ?? "",
     visionCoverageDisplay: vision?.display ?? "",

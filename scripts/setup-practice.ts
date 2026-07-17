@@ -5,8 +5,8 @@ import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
 import type { AccessPolicy, Practitioner, ProjectMembership, User } from "@medplum/fhirtypes";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
-import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 import {
   grantPracticeRoles,
   type ResolvedRoleGrantTarget,
@@ -19,15 +19,15 @@ import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.
 import { searchAll } from "../mcp/src/fhir-search.js";
 
 export const SETUP_WIZARD_HEADER =
-  "Run OSOD on your own hardware. Your patients, your machines, your data.";
+  "Run ODOS on your own hardware. Your patients, your machines, your data.";
 export const SETUP_WIZARD_ACTION_REASON = "v0.5d setup wizard first-run provisioning";
 export const SETUP_WIZARD_NOOP_REASON = "v0.5d setup wizard re-run, already provisioned";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-const DEFAULT_STATE_PATH = resolve(process.cwd(), ".osod-setup-state.json");
+const DEFAULT_STATE_PATH = resolve(process.cwd(), ".odos-setup-state.json");
 const CLINICIAN_ROLE = getRoleDeclaration("clinician");
-const CLINICIAN_POLICY_NAME = `OSOD ${CLINICIAN_ROLE.display}`;
+const CLINICIAN_POLICY_NAME = `ODOS ${CLINICIAN_ROLE.display}`;
 
 export interface SetupPracticeConfig {
   readonly baseUrl: string;
@@ -71,7 +71,7 @@ export interface SetupPracticeAdapter {
     practitioner: Practitioner;
     policy: AccessPolicy;
   }): Promise<{ id: string }>;
-  emitAudit(row: OsodAuditEventRecord): Promise<void>;
+  emitAudit(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface SetupPracticeResult {
@@ -79,7 +79,7 @@ export interface SetupPracticeResult {
   readonly practitionerId?: string;
   readonly accessPolicyId?: string;
   readonly loginUrl?: string;
-  readonly auditRows: readonly OsodAuditEventRecord[];
+  readonly auditRows: readonly OdosAuditEventRecord[];
   readonly state: SetupPracticeState;
 }
 
@@ -100,7 +100,7 @@ export function assertInteractiveSetupWizardAllowed(input: {
   const hasTty = input.hasTty ?? Boolean(process.stdin.isTTY);
   const parentCommand = input.parentCommand ?? "";
 
-  if (env.OSOD_UNATTENDED_AGENT === "true") {
+  if (env.ODOS_UNATTENDED_AGENT === "true") {
     throw new Error(
       "soul.md security policy: setup-practice is an interactive setup wizard, not an unattended autonomous agent.",
     );
@@ -110,9 +110,9 @@ export function assertInteractiveSetupWizardAllowed(input: {
       "soul.md security policy: setup-practice must be run by a human at the keyboard, not a scheduler.",
     );
   }
-  if (!hasTty && env.OSOD_SETUP_INTERACTIVE_ACK !== "human-supervised") {
+  if (!hasTty && env.ODOS_SETUP_INTERACTIVE_ACK !== "human-supervised") {
     throw new Error(
-      "soul.md security policy: setup-practice needs a TTY or OSOD_SETUP_INTERACTIVE_ACK=human-supervised.",
+      "soul.md security policy: setup-practice needs a TTY or ODOS_SETUP_INTERACTIVE_ACK=human-supervised.",
     );
   }
 }
@@ -124,10 +124,10 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
 
   const config = buildSetupConfig(options);
   const adapter = options.adapter ?? new LiveSetupPracticeAdapter();
-  const auditRows: OsodAuditEventRecord[] = [];
+  const auditRows: OdosAuditEventRecord[] = [];
   let state = readSetupState(config.statePath);
 
-  const emit = async (row: OsodAuditEventRecord): Promise<void> => {
+  const emit = async (row: OdosAuditEventRecord): Promise<void> => {
     auditRows.push(row);
     await adapter.emitAudit(row);
   };
@@ -256,7 +256,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     profile: { reference: "Practitioner/practitioner-1" },
     access: [],
   };
-  readonly auditRows: OsodAuditEventRecord[] = [];
+  readonly auditRows: OdosAuditEventRecord[] = [];
   practiceProvisioned = false;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
@@ -282,7 +282,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
       telecom: [{ system: "email", value: config.adminEmail }],
       identifier: [
         {
-          system: "https://osod.dev/fhir/NamingSystem/setup-wizard",
+          system: "https://odos2020.com/fhir/NamingSystem/setup-wizard",
           value: "first-practitioner",
         },
       ],
@@ -343,14 +343,14 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return assignment;
   }
 
-  async emitAudit(row: OsodAuditEventRecord): Promise<void> {
+  async emitAudit(row: OdosAuditEventRecord): Promise<void> {
     this.auditRows.push(row);
   }
 }
 
 class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   private fhir?: MedplumClient;
-  private audit?: ReturnType<typeof createLiveOsodAuditRuntime>;
+  private audit?: ReturnType<typeof createLiveOdosAuditRuntime>;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
     return Boolean(state.completed);
@@ -380,7 +380,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       telecom: [{ system: "email", value: config.adminEmail }],
       identifier: [
         {
-          system: "https://osod.dev/fhir/NamingSystem/setup-wizard",
+          system: "https://odos2020.com/fhir/NamingSystem/setup-wizard",
           value: "first-practitioner",
         },
       ],
@@ -438,7 +438,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     return { id: result.membershipReference.slice("ProjectMembership/".length) };
   }
 
-  async emitAudit(row: OsodAuditEventRecord): Promise<void> {
+  async emitAudit(row: OdosAuditEventRecord): Promise<void> {
     await this.auditRuntime().record(row, () => undefined);
   }
 
@@ -449,10 +449,10 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     return this.fhir;
   }
 
-  private auditRuntime(): ReturnType<typeof createLiveOsodAuditRuntime> {
-    this.audit ??= createLiveOsodAuditRuntime({
-      postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
-      disabled: process.env.OSOD_SETUP_AUDIT_DISABLED === "true",
+  private auditRuntime(): ReturnType<typeof createLiveOdosAuditRuntime> {
+    this.audit ??= createLiveOdosAuditRuntime({
+      postgresUrl: process.env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+      disabled: process.env.ODOS_SETUP_AUDIT_DISABLED === "true",
     });
     return this.audit;
   }
@@ -469,8 +469,8 @@ function bootstrapClinicianGrant(target: string) {
   };
 }
 
-function buildSetupRoleChangeAuditRow(target: ResolvedRoleGrantTarget): OsodAuditEventRecord {
-  return buildOsodAuditEventRow({
+function buildSetupRoleChangeAuditRow(target: ResolvedRoleGrantTarget): OdosAuditEventRecord {
+  return buildOdosAuditEventRow({
     eventType: "role-change",
     actorId: "setup-wizard",
     actorRole: "system",
@@ -486,15 +486,15 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
   const config = options.config ?? {};
   return {
     baseUrl: config.baseUrl ?? env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL,
-    practiceName: requireConfigValue(config.practiceName ?? env.OSOD_PRACTICE_NAME, "OSOD_PRACTICE_NAME"),
-    adminEmail: requireConfigValue(config.adminEmail ?? env.OSOD_ADMIN_EMAIL, "OSOD_ADMIN_EMAIL"),
-    adminName: requireConfigValue(config.adminName ?? env.OSOD_ADMIN_NAME, "OSOD_ADMIN_NAME"),
+    practiceName: requireConfigValue(config.practiceName ?? env.ODOS_PRACTICE_NAME, "ODOS_PRACTICE_NAME"),
+    adminEmail: requireConfigValue(config.adminEmail ?? env.ODOS_ADMIN_EMAIL, "ODOS_ADMIN_EMAIL"),
+    adminName: requireConfigValue(config.adminName ?? env.ODOS_ADMIN_NAME, "ODOS_ADMIN_NAME"),
     adminPassword: requireConfigValue(
-      config.adminPassword ?? env.OSOD_ADMIN_PASSWORD ?? env.MEDPLUM_ADMIN_PASSWORD,
-      "OSOD_ADMIN_PASSWORD",
+      config.adminPassword ?? env.ODOS_ADMIN_PASSWORD ?? env.MEDPLUM_ADMIN_PASSWORD,
+      "ODOS_ADMIN_PASSWORD",
     ),
-    postgresUrl: config.postgresUrl ?? env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
-    statePath: options.statePath ?? config.statePath ?? env.OSOD_SETUP_STATE_PATH ?? DEFAULT_STATE_PATH,
+    postgresUrl: config.postgresUrl ?? env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+    statePath: options.statePath ?? config.statePath ?? env.ODOS_SETUP_STATE_PATH ?? DEFAULT_STATE_PATH,
   };
 }
 
@@ -503,8 +503,8 @@ function buildSetupAuditRow(input: {
   resourceType: string;
   resourceId: string;
   actionReason: string;
-}): OsodAuditEventRecord {
-  return buildOsodAuditEventRow({
+}): OdosAuditEventRecord {
+  return buildOdosAuditEventRow({
     eventType: input.eventType,
     actorId: "setup-wizard",
     actorRole: "system",
@@ -539,13 +539,13 @@ async function collectInteractiveConfig(): Promise<Partial<SetupPracticeConfig>>
   const rl = createInterface({ input, output });
   try {
     console.log(SETUP_WIZARD_HEADER);
-    const practiceName = process.env.OSOD_PRACTICE_NAME || (await rl.question("Practice name: "));
-    const adminName = process.env.OSOD_ADMIN_NAME || (await rl.question("Admin/practitioner name: "));
+    const practiceName = process.env.ODOS_PRACTICE_NAME || (await rl.question("Practice name: "));
+    const adminName = process.env.ODOS_ADMIN_NAME || (await rl.question("Admin/practitioner name: "));
     const adminEmail =
-      process.env.OSOD_ADMIN_EMAIL ||
+      process.env.ODOS_ADMIN_EMAIL ||
       (await rl.question("Admin email: "));
     const adminPassword =
-      process.env.OSOD_ADMIN_PASSWORD ||
+      process.env.ODOS_ADMIN_PASSWORD ||
       process.env.MEDPLUM_ADMIN_PASSWORD ||
       (await rl.question("Admin password (input will be visible in this preview build): "));
     return { practiceName, adminName, adminEmail, adminPassword };
@@ -582,7 +582,7 @@ async function createAdminUserAndProject(config: SetupPracticeConfig): Promise<v
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       projectId: "new",
-      firstName: firstName || "OSOD",
+      firstName: firstName || "ODOS",
       lastName: lastParts.join(" ") || "Admin",
       email: config.adminEmail,
       password: config.adminPassword,

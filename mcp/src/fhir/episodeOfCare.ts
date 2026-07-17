@@ -1,9 +1,9 @@
 import type { CodeableConcept, EpisodeOfCare, Reference } from "@medplum/fhirtypes";
 
-export const OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/episode-of-care-type";
-export const OSOD_EPISODE_OF_CARE_TYPE_VALUE_SET =
-  "https://osod.dev/fhir/ValueSet/episode-of-care-type";
+export const ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/episode-of-care-type";
+export const ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET =
+  "https://odos2020.com/fhir/ValueSet/episode-of-care-type";
 
 export const EPISODE_OF_CARE_TYPE_CODES = [
   "myopia-management",
@@ -88,7 +88,7 @@ export function episodeOfCareTypeConcept(code: EpisodeOfCareTypeCode): CodeableC
   return {
     coding: [
       {
-        system: OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+        system: ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
         code,
         display: EPISODE_TYPE_DISPLAY[code],
       },

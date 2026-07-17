@@ -44,7 +44,7 @@ export function createAgentOpsRouter(options: AgentOpsRouterOptions = {}): Route
   });
 
   router.post("/agents/:agentId/deactivate", (req, res) => {
-    const agentUri = `https://osod.dev/agents/${req.params.agentId}`;
+    const agentUri = `https://odos2020.com/agents/${req.params.agentId}`;
     const device = registry.getDevice(agentUri);
     if (!device) {
       res.status(404).json({ error: "agent_not_found" });

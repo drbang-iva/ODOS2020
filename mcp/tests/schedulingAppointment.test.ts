@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import {
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
   confirmationStatusOf,
 } from "../src/fhir/appointmentConfirmation.js";
 import { V2_0276_APPOINTMENT_TYPE_SYSTEM } from "../src/fhir/schedulingAppointmentStatus.js";
-import { OSOD_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
+import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import {
-  OSOD_FOLLOW_UP_EXTENSION_URL,
-  OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
-  OSOD_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_FOLLOW_UP_EXTENSION_URL,
+  ODOS_MEDICAL_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL,
   appointmentVisitTypeCode,
   buildSchedulingAppointment,
   isFollowUpAppointment,
@@ -38,10 +38,10 @@ test("buildSchedulingAppointment builds the Eyefinity-model Appointment (brief �
   assert.equal(appt.resourceType, "Appointment");
   // service type from the catalog + discipline category
   const serviceCoding = appt.serviceType?.[0]?.coding?.[0];
-  assert.equal(serviceCoding?.system, OSOD_VISIT_TYPE_SYSTEM);
+  assert.equal(serviceCoding?.system, ODOS_VISIT_TYPE_SYSTEM);
   assert.equal(serviceCoding?.code, "routine-exam-new");
   const categoryCoding = appt.serviceCategory?.[0]?.coding?.[0];
-  assert.equal(categoryCoding?.system, OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(categoryCoding?.system, ODOS_DISCIPLINE_SYSTEM);
   assert.equal(categoryCoding?.code, "eyecare");
   // participants: patient + resource, both accepted
   const actors = appt.participant.map((p) => p.actor?.reference);
@@ -60,7 +60,7 @@ test("defaults: status scheduled → booked; confirmation defaults to Not Confir
   assert.equal(appt.status, "booked");
   assert.equal(confirmationStatusOf(appt), "not-confirmed");
   assert.ok(
-    appt.extension?.some((e) => e.url === OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL),
+    appt.extension?.some((e) => e.url === ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL),
   );
 });
 
@@ -76,7 +76,7 @@ test("the status axis lands in FHIR: walk-in → arrived + v2-0276 WALKIN appoin
   assert.equal(typeCoding?.code, "WALKIN");
 });
 
-test("the confirmation axis lands as the osod extension", () => {
+test("the confirmation axis lands as the odos extension", () => {
   const appt = buildSchedulingAppointment({
     ...BASE,
     resources: [...BASE.resources],
@@ -92,10 +92,10 @@ test("vision + medical insurance ride as coverage extensions and read back (insu
     visionCoverage: { reference: "Coverage/vsp-1", display: "VSP" },
     medicalCoverage: { reference: "Coverage/bcbs-1", display: "BCBS" },
   });
-  const vision = appt.extension?.find((e) => e.url === OSOD_VISION_COVERAGE_EXTENSION_URL);
+  const vision = appt.extension?.find((e) => e.url === ODOS_VISION_COVERAGE_EXTENSION_URL);
   assert.equal(vision?.valueReference?.reference, "Coverage/vsp-1");
   assert.equal(vision?.valueReference?.display, "VSP");
-  const medical = appt.extension?.find((e) => e.url === OSOD_MEDICAL_COVERAGE_EXTENSION_URL);
+  const medical = appt.extension?.find((e) => e.url === ODOS_MEDICAL_COVERAGE_EXTENSION_URL);
   assert.equal(medical?.valueReference?.display, "BCBS");
   assert.deepEqual(visionCoverageOf(appt), { reference: "Coverage/vsp-1", display: "VSP" });
   assert.deepEqual(medicalCoverageOf(appt), { reference: "Coverage/bcbs-1", display: "BCBS" });
@@ -107,7 +107,7 @@ test("insurance readers are undefined when no coverage was recorded (the block s
   assert.equal(medicalCoverageOf(appt), undefined);
 });
 
-test("urgent rides as iCal-highest priority 1; follow-up as the osod flag extension", () => {
+test("urgent rides as iCal-highest priority 1; follow-up as the odos flag extension", () => {
   const appt = buildSchedulingAppointment({
     ...BASE,
     resources: [...BASE.resources],
@@ -116,7 +116,7 @@ test("urgent rides as iCal-highest priority 1; follow-up as the osod flag extens
   });
   assert.equal(appt.priority, 1);
   assert.equal(isUrgentAppointment(appt), true);
-  const followUpExt = appt.extension?.find((e) => e.url === OSOD_FOLLOW_UP_EXTENSION_URL);
+  const followUpExt = appt.extension?.find((e) => e.url === ODOS_FOLLOW_UP_EXTENSION_URL);
   assert.equal(followUpExt?.valueBoolean, true);
   assert.equal(isFollowUpAppointment(appt), true);
 

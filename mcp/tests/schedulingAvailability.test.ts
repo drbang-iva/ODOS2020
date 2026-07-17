@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   BLOCKED_TIME_KINDS,
-  OSOD_BLOCKED_TIME_KIND_EXTENSION_URL,
-  OSOD_BLOCKED_TIME_KIND_SYSTEM,
+  ODOS_BLOCKED_TIME_KIND_EXTENSION_URL,
+  ODOS_BLOCKED_TIME_KIND_SYSTEM,
   blockedTimeKindOf,
   generateSlots,
 } from "../src/scheduling/availability.js";
@@ -131,9 +131,9 @@ test("a recurring custom block marks overlapped slots busy-unavailable with kind
   assert.equal(blockedTimeKindOf(blocked), "custom");
   assert.equal(blocked.comment, "Rep lunch");
   const kindCoding = blocked.extension
-    ?.find((e) => e.url === OSOD_BLOCKED_TIME_KIND_EXTENSION_URL)
+    ?.find((e) => e.url === ODOS_BLOCKED_TIME_KIND_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0];
-  assert.equal(kindCoding?.system, OSOD_BLOCKED_TIME_KIND_SYSTEM);
+  assert.equal(kindCoding?.system, ODOS_BLOCKED_TIME_KIND_SYSTEM);
 });
 
 test("a one-date all-day staff-off block empties that day only", () => {

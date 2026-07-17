@@ -1,11 +1,11 @@
 import type { Bundle, CodeableConcept, Goal, Observation, Quantity } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import {
-  OSOD_EXTENSION_URLS,
+  ODOS_EXTENSION_URLS,
   lateralityExtension,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "../fhir/ophthalmology/extensions.js";
@@ -81,9 +81,9 @@ export interface IopHistoryResponse {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const TARGET_HEADERS = { "X-OSOD-Source": "mcp/iop_target" } as const;
+const TARGET_HEADERS = { "X-ODOS-Source": "mcp/iop_target" } as const;
 const TARGET_CATEGORY_CODE = "iop-target";
-const TARGET_NOTE_PREFIX = "OSOD_IOP_TARGET ";
+const TARGET_NOTE_PREFIX = "ODOS_IOP_TARGET ";
 
 const historyQuerySchema = z.object({
   patient: z.string().regex(/^Patient\/[^/]+$/),
@@ -208,13 +208,13 @@ function observationCodeParam(definition: ClinicalFindingDefinition): string {
   const coding = definition.fhirObservationCode?.coding?.find((candidate) => candidate.system && candidate.code);
   return coding?.system && coding.code
     ? `${coding.system}|${coding.code}`
-    : `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`;
+    : `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`;
 }
 
 function targetSearchParams(patientReference: string): Record<string, string> {
   return {
     subject: patientReference,
-    category: `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|${TARGET_CATEGORY_CODE}`,
+    category: `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${TARGET_CATEGORY_CODE}`,
     _count: "50",
   };
 }
@@ -252,7 +252,7 @@ function observationToCornealHysteresis(observation: Observation): IopHistoryCor
 
 function observationEye(observation: Observation): Eye | undefined {
   const extensionEye = observation.extension
-    ?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+    ?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding
     ?.find((coding) => coding.code === "OD" || coding.code === "OS")
     ?.code;
@@ -266,7 +266,7 @@ function observationEye(observation: Observation): Eye | undefined {
 function methodSummary(method: CodeableConcept | undefined): { code: string; display: string } | null {
   if (!method) return null;
   const coding = method.coding?.find((candidate) =>
-    candidate.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && candidate.code,
+    candidate.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && candidate.code,
   ) ?? method.coding?.find((candidate) => candidate.code);
   if (!coding?.code) return null;
   return {
@@ -323,7 +323,7 @@ function buildTargetGoal(input: {
       detailQuantity: targetQuantity,
     }],
     extension: [
-      ...(input.existing?.extension ?? []).filter((extension) => extension.url !== OSOD_EXTENSION_URLS.eyeLaterality),
+      ...(input.existing?.extension ?? []).filter((extension) => extension.url !== ODOS_EXTENSION_URLS.eyeLaterality),
       lateralityExtension(input.eye),
     ],
     note: [
@@ -334,7 +334,7 @@ function buildTargetGoal(input: {
 }
 
 function targetCategory(): CodeableConcept {
-  return osodConcept(TARGET_CATEGORY_CODE, "IOP target");
+  return odosConcept(TARGET_CATEGORY_CODE, "IOP target");
 }
 
 function targetsByEye(goals: readonly Goal[]): Partial<Record<Eye, IopTargetResponse>> {
@@ -357,13 +357,13 @@ function latestTargetGoalForEye(goals: readonly Goal[], eye: Eye): Goal | undefi
 function goalHasTargetCategory(goal: Goal): boolean {
   return Boolean(goal.category?.some((category) =>
     category.coding?.some((coding) =>
-      coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM &&
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM &&
       coding.code === TARGET_CATEGORY_CODE)));
 }
 
 function goalEye(goal: Goal): Eye | undefined {
   const code = goal.extension
-    ?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+    ?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding
     ?.find((coding) => coding.code === "OD" || coding.code === "OS")
     ?.code;

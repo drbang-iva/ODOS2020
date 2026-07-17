@@ -1,7 +1,7 @@
 # Stripe sandbox setup (v0.6c payments — online adapter)
 
 The Stripe adapter (`mcp/src/payments/adapters/stripe-adapter.ts`) uses the PaymentIntents API for
-test-mode, card-not-present payments. The browser-side Stripe surface creates a PaymentMethod; OSOD
+test-mode, card-not-present payments. The browser-side Stripe surface creates a PaymentMethod; ODOS
 passes that transient id to Stripe once and never writes it to FHIR or logs. This slice does not add
 or change checkout UI.
 
@@ -43,14 +43,14 @@ card details in test mode. Source: https://docs.stripe.com/testing
   request errors) `payment_intent`; a PaymentIntent can also expose `last_payment_error`. Sources:
   https://docs.stripe.com/api/errors and https://docs.stripe.com/api/payment_intents/object
 - Refund: `POST /v1/refunds` with `payment_intent` and positive integer `amount`. The adapter does
-  not send OSOD's free-text reason because Stripe accepts only `duplicate`, `fraudulent`, or
+  not send ODOS's free-text reason because Stripe accepts only `duplicate`, `fraudulent`, or
   `requested_by_customer`. Sources: https://docs.stripe.com/api/refunds/create and
   https://docs.stripe.com/api/refunds/object
 - Void: `POST /v1/payment_intents/:id/cancel` with `cancellation_reason=requested_by_customer`.
   Stripe cancellation is available only for cancelable PaymentIntent states; canceling a
   `requires_capture` intent releases/refunds the remaining capturable amount. Source:
   https://docs.stripe.com/api/payment_intents/cancel
-- Status: `GET /v1/payment_intents/:id`; OSOD maps `requires_capture` to authorized, `succeeded` to
+- Status: `GET /v1/payment_intents/:id`; ODOS maps `requires_capture` to authorized, `succeeded` to
   captured, `canceled` to voided, and `requires_payment_method` to declined only when
   `last_payment_error` is present. The initial state without an error is failed, not declined.
   Sources: https://docs.stripe.com/api/payment_intents/retrieve and

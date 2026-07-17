@@ -9,8 +9,8 @@ import { backfilledLabOrderStatusRecord, flagLabOrderProblem } from "../src/fhir
 import {
   LAB_ORDER_EXPORT_INPUT_CODE,
   LAB_ORDER_TRANSMISSION_TASK_CODE,
-  OSOD_LAB_ORDER_TASK_INPUT_SYSTEM,
-  OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
+  ODOS_LAB_ORDER_TASK_INPUT_SYSTEM,
+  ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
 } from "../src/lab-orders/adapters/manual-lab-order-adapter.js";
 import type { LabOrderAdapter } from "../src/lab-orders/lab-order-adapter.js";
 import { createLabOrderDispatch } from "../src/lab-orders/lab-order-dispatch.js";
@@ -51,7 +51,7 @@ function transmission(id: string, state: LabTransportState): Task {
     intent: "order",
     code: {
       coding: [{
-        system: OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
+        system: ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
         code: LAB_ORDER_TRANSMISSION_TASK_CODE,
       }],
     },
@@ -61,7 +61,7 @@ function transmission(id: string, state: LabTransportState): Task {
     authoredOn: "2026-07-11T12:00:00.000Z",
     input: [{
       type: {
-        coding: [{ system: OSOD_LAB_ORDER_TASK_INPUT_SYSTEM, code: LAB_ORDER_EXPORT_INPUT_CODE }],
+        coding: [{ system: ODOS_LAB_ORDER_TASK_INPUT_SYSTEM, code: LAB_ORDER_EXPORT_INPUT_CODE }],
         text: "Lab order export",
       },
       valueString: JSON.stringify(labOrderToExport(ORDER)),

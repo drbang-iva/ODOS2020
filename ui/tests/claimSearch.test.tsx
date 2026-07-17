@@ -30,7 +30,7 @@ test("claim search renders the results grid, collapsed additional criteria, and 
   for (const heading of ["Claim #", "Patient", "Provider", "CPT", "Charged", "Insurance paid", "Patient responsibility", "Status", "Payer", "Days since submission"]) {
     assert.match(html, new RegExp(heading));
   }
-  assert.match(html, /OSOD-CLAIM-1/);
+  assert.match(html, /ODOS-CLAIM-1/);
   assert.match(html, /\$125\.00/);
   assert.match(html, /\$25\.00/);
 });
@@ -78,7 +78,7 @@ test("claim search restores AR drill-down filters from the dashboard URL", () =>
 function row(): ClaimSearchRow {
   return {
     claimReference: "Claim/claim-1",
-    claimNumber: "OSOD-CLAIM-1",
+    claimNumber: "ODOS-CLAIM-1",
     patientReference: "Patient/patient-1",
     patient: "Jamie Synthetic",
     providerReference: "Practitioner/provider-1",

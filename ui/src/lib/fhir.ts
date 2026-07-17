@@ -1,5 +1,5 @@
 /**
- * Browser-side FHIR client. Mirrors osod/src/fhir-client.ts (node-side) but uses
+ * Browser-side FHIR client. Mirrors odos/src/fhir-client.ts (node-side) but uses
  * Web Crypto API for PKCE. Zero Medplum SDK coupling — swappable backend.
  */
 
@@ -7,7 +7,7 @@ import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
 
 const BASE = "/fhir/R4"; // Vite dev proxy -> http://localhost:8103
 const AUTH = "";
-export const SESSION_STORAGE_KEY = "osod.session.v1";
+export const SESSION_STORAGE_KEY = "odos.session.v1";
 
 let token: string | undefined;
 let sessionStorageBackend: Storage | undefined;
@@ -30,7 +30,7 @@ export type JsonPatchOperation =
   | { op: "remove"; path: string }
   | { op: "move" | "copy"; from: string; path: string };
 
-type TransactionResponse<T> = Bundle & { readonly __osodResponseType?: T };
+type TransactionResponse<T> = Bundle & { readonly __odosResponseType?: T };
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
@@ -68,7 +68,7 @@ function headers(): HeadersInit {
 function sourceHeaders(sourceTag: string): HeadersInit {
   return {
     ...headers(),
-    "X-OSOD-Source": `ui/${sourceTag}`,
+    "X-ODOS-Source": `ui/${sourceTag}`,
   };
 }
 
@@ -291,7 +291,7 @@ function tokenClaims(accessToken: string | undefined): Record<string, unknown> |
 }
 
 function normalizeFhirSearchUrl(url: string): string {
-  const parsed = new URL(url, "http://osod.local");
+  const parsed = new URL(url, "http://odos.local");
   if (parsed.pathname.startsWith(BASE)) {
     return `${parsed.pathname}${parsed.search}`;
   }

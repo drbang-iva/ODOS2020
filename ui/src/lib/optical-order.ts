@@ -10,12 +10,12 @@ import type { OpticalCollectionCharge } from "./collect";
 import type { LabOrderFrame } from "./optical-lab-order";
 import { frameChargeItemDefinitionCanonical } from "./optical-pricing-catalog";
 
-export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
-export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
-export const OSOD_PAYMENT_TENDER_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-tender";
-export const OSOD_PAYMENT_TENDER_SYSTEM = "https://osod.dev/fhir/CodeSystem/payment-tender";
-export const OSOD_OPTICAL_ADJUSTMENT_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-adjustment";
+export const ODOS_OPTICAL_ORDER_STATUS_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-status";
+export const ODOS_OPTICAL_ORDER_TYPE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-type";
+export const ODOS_PAYMENT_TENDER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender";
+export const ODOS_PAYMENT_TENDER_SYSTEM = "https://odos2020.com/fhir/CodeSystem/payment-tender";
+export const ODOS_OPTICAL_ADJUSTMENT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-adjustment";
 export const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
 
 export const OPTICAL_ORDER_STATUSES = [
@@ -364,7 +364,7 @@ function linePriceComponents(line: OpticalChargeLineDraft): InvoiceLineItemPrice
       code: {
         coding: [
           {
-            system: OSOD_OPTICAL_ADJUSTMENT_SYSTEM,
+            system: ODOS_OPTICAL_ADJUSTMENT_SYSTEM,
             code: line.discount.code,
             ...(opticalAdjustmentDisplay(line.discount.code)
               ? { display: opticalAdjustmentDisplay(line.discount.code) }
@@ -414,7 +414,7 @@ function opticalOrderStatusConcept(code: OpticalOrderStatusCode) {
     throw new Error(`Unknown optical order status "${code}".`);
   }
   return {
-    coding: [{ system: OSOD_OPTICAL_ORDER_STATUS_SYSTEM, code: status.code, display: status.display }],
+    coding: [{ system: ODOS_OPTICAL_ORDER_STATUS_SYSTEM, code: status.code, display: status.display }],
     text: status.display,
   };
 }
@@ -425,9 +425,9 @@ function paymentTenderExtension(code: RecordedCheckoutTenderCode) {
     throw new Error(`Unknown payment tender "${code}".`);
   }
   return {
-    url: OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
     valueCodeableConcept: {
-      coding: [{ system: OSOD_PAYMENT_TENDER_SYSTEM, code: tender.code, display: tender.display }],
+      coding: [{ system: ODOS_PAYMENT_TENDER_SYSTEM, code: tender.code, display: tender.display }],
       text: tender.display,
     },
   };
@@ -457,7 +457,7 @@ function opticalAdjustmentDisplay(code: string): string | undefined {
 
 function currentOpticalBusinessStatus(task: Task): OpticalOrderStatusCode {
   const code = task.businessStatus?.coding?.find(
-    (coding) => coding.system === OSOD_OPTICAL_ORDER_STATUS_SYSTEM,
+    (coding) => coding.system === ODOS_OPTICAL_ORDER_STATUS_SYSTEM,
   )?.code;
   assertOpticalOrderStatus(code ?? "");
   return code as OpticalOrderStatusCode;

@@ -1,6 +1,6 @@
 import type { CodeableConcept } from "@medplum/fhirtypes";
 
-export const OSOD_LAB_TRANSPORT_STATE_SYSTEM = "https://osod.dev/fhir/CodeSystem/lab-transport-state";
+export const ODOS_LAB_TRANSPORT_STATE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/lab-transport-state";
 
 export const LAB_TRANSPORT_STATES = [
   { code: "queued", display: "Queued" },
@@ -30,7 +30,7 @@ export function labTransportStateConcept(code: string): CodeableConcept {
   const state = STATE_BY_CODE.get(code)!;
   return {
     coding: [{
-      system: OSOD_LAB_TRANSPORT_STATE_SYSTEM,
+      system: ODOS_LAB_TRANSPORT_STATE_SYSTEM,
       code: state.code,
       display: state.display,
     }],

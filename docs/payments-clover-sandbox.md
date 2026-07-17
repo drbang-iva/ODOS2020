@@ -1,9 +1,9 @@
 # Clover sandbox setup (v0.6c payments — in-clinic POS adapter)
 
 The Clover adapter (`mcp/src/payments/adapters/clover-adapter.ts`) drives a physical Clover device
-through the **REST Pay Display API (cloud connection)**: OSOD dispatches the charge, the device
+through the **REST Pay Display API (cloud connection)**: ODOS dispatches the charge, the device
 collects the card, and on SUCCESS the adapter settles the order's Invoice with a FHIR
-`PaymentReconciliation`. No card data ever enters OSOD — the device and Clover's cloud handle the
+`PaymentReconciliation`. No card data ever enters ODOS — the device and Clover's cloud handle the
 card-present exchange (PCI scope minimization per the 2026-05-05 payment-processor architecture).
 
 **Every step on this page is performed by a human.** Account creation, logins, app registration,
@@ -19,7 +19,7 @@ and token generation are authentication flows — agents do not traverse them (s
 | Base URL | Sandbox: `https://apisandbox.dev.clover.com` (exported as `CLOVER_SANDBOX_BASE_URL`) | `CLOVER_BASE_URL` |
 | Access token | OAuth **expiring** token from the v2/OAuth flow — Clover's docs are explicit: an OAuth-generated API token, **not** a static merchant token | `CLOVER_ACCESS_TOKEN` |
 | Device id | The device serial (Setup app on the device → Devices, or the merchant web dashboard) | `CLOVER_DEVICE_ID` |
-| POS id | A stable POS identity string, e.g. `OSOD-Dispensary` | `CLOVER_POS_ID` |
+| POS id | A stable POS identity string, e.g. `ODOS-Dispensary` | `CLOVER_POS_ID` |
 
 Tokens expire and refresh — treat `CLOVER_ACCESS_TOKEN` as a rotating secret. The adapter uses it
 for the `Authorization` header only; it is never written to any FHIR resource or log (unit test

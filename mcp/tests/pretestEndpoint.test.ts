@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 import {
   AUTO_KERATOMETRY_SEARCH_CODE,
   buildPretestFindingDefinitionStubs,
@@ -160,7 +160,7 @@ test("Wearing persists one complete Observation per glasses pair with both eyes,
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), [
     "Observation", "Provenance", "Observation", "Provenance",
   ]);
-  assert.equal(created.every((entry) => entry.headers?.["X-OSOD-Source"] === "mcp/save_section_observations"), true);
+  assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_section_observations"), true);
   for (const provenance of created
     .map((entry) => entry.resource)
     .filter((resource): resource is Provenance => resource.resourceType === "Provenance")) {
@@ -303,10 +303,10 @@ test("Auto-K observations support a single latest-per-patient-and-eye FHIR searc
     .find((resource): resource is Observation => resource.resourceType === "Observation" && codingCode(resource) === "auto_keratometry");
 
   assert.ok(observation);
-  assert.equal(AUTO_KERATOMETRY_SEARCH_CODE, `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`);
+  assert.equal(AUTO_KERATOMETRY_SEARCH_CODE, `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`);
   assert.equal(observation.subject?.reference, BODY.patientReference);
   assert.equal(observation.bodySite?.coding?.some((coding) =>
-    coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "OD"), true);
+    coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === "OD"), true);
   assert.equal(observation.effectiveDateTime, "2026-07-10T14:00:00.000Z");
 });
 
@@ -403,11 +403,11 @@ function autoBody(sourceType: "manual" | "device" = "manual") {
 }
 
 function codingCode(observation: Observation): string | undefined {
-  return observation.code.coding?.find((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
+  return observation.code.coding?.find((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
 }
 
 function lateralityCode(observation: Observation | undefined): string | undefined {
-  return observation?.bodySite?.coding?.find((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
+  return observation?.bodySite?.coding?.find((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM)?.code;
 }
 
 function componentValue(observation: Observation | undefined, code: string): unknown {

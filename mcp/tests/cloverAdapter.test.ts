@@ -6,10 +6,10 @@ import {
   createCloverAdapter,
 } from "../src/payments/adapters/clover-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 import {
-  OSOD_PAYMENT_SUBJECT_EXTENSION_URL,
-  OSOD_PAYMENT_SURFACE_EXTENSION_URL,
+  ODOS_PAYMENT_SUBJECT_EXTENSION_URL,
+  ODOS_PAYMENT_SURFACE_EXTENSION_URL,
 } from "../src/payments/payment-reconciliation.js";
 
 /**
@@ -48,7 +48,7 @@ const CONFIG = {
   baseUrl: "https://apisandbox.dev.clover.com",
   accessToken: "test-oauth-token-abc",
   deviceId: "C030UQ01234567",
-  posId: "OSOD-Dispensary",
+  posId: "ODOS-Dispensary",
 };
 
 function chargeRequest(overrides?: Partial<ChargeRequest>): ChargeRequest {
@@ -126,12 +126,12 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(req.method, "POST");
   assert.equal(req.headers["Authorization"], "Bearer test-oauth-token-abc");
   assert.equal(req.headers["X-Clover-Device-Id"], "C030UQ01234567");
-  assert.equal(req.headers["X-POS-Id"], "OSOD-Dispensary");
+  assert.equal(req.headers["X-POS-Id"], "ODOS-Dispensary");
   assert.equal(req.headers["Content-Type"], "application/json");
   assert.ok(req.headers["Idempotency-Key"], "payment requests require an Idempotency-Key");
   assert.equal(req.body.amount, 24400);
   assert.equal(req.body.final, true);
-  assert.ok(String(req.body.externalPaymentId).startsWith("osod-"));
+  assert.ok(String(req.body.externalPaymentId).startsWith("odos-"));
 
   // the transaction result
   assert.equal(result.outcome, "success");
@@ -145,7 +145,7 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(pr.resourceType, "PaymentReconciliation");
   assert.equal(pr.outcome, "complete");
   assert.equal(pr.detail?.[0]?.request?.reference, "Invoice/inv1");
-  assert.equal(pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_SUBJECT_EXTENSION_URL)
+  assert.equal(pr.extension?.find((extension) => extension.url === ODOS_PAYMENT_SUBJECT_EXTENSION_URL)
     ?.valueReference?.reference, "Patient/p1");
   assert.equal(pr.request?.reference, "Task/task1");
   assert.equal(pr.requestor?.reference, "Practitioner/staff1");
@@ -154,12 +154,12 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(pr.created, "2026-07-05T16:00:00.000Z");
   assert.equal(pr.paymentDate, "2021-03-22"); // derived from the response createdTime epoch
 
-  const tender = pr.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  const tender = pr.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0];
   assert.equal(tender?.code, "CLOVER");
   assert.equal(tender?.display, "VISA ****0010");
 
-  const surfaceExt = pr.extension?.find((e) => e.url === OSOD_PAYMENT_SURFACE_EXTENSION_URL);
+  const surfaceExt = pr.extension?.find((e) => e.url === ODOS_PAYMENT_SURFACE_EXTENSION_URL);
   assert.equal(surfaceExt?.extension?.find((e) => e.url === "surface")?.valueCode, "in-clinic-pos");
   assert.equal(
     surfaceExt?.extension?.find((e) => e.url === "terminal-id")?.valueString,
@@ -198,7 +198,7 @@ test("a successful pre-payment omits the Invoice and creates an empty allocation
 
   assert.deepEqual(fhir.created[0].detail, []);
   assert.equal(fhir.created[0].extension?.find((extension) =>
-    extension.url === OSOD_PAYMENT_SUBJECT_EXTENSION_URL)?.valueReference?.reference, "Patient/p1");
+    extension.url === ODOS_PAYMENT_SUBJECT_EXTENSION_URL)?.valueReference?.reference, "Patient/p1");
 });
 
 test("a transport/auth failure maps to outcome failed with the HTTP status, and no record is written", async () => {

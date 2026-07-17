@@ -16,7 +16,7 @@ import type {
 } from "../payment-processor-adapter.js";
 
 /**
- * Stripe PaymentIntents adapter — the card-not-present / online surface. OSOD receives only a
+ * Stripe PaymentIntents adapter — the card-not-present / online surface. ODOS receives only a
  * processor-created PaymentMethod id, consumes it once, and never persists it. No patient,
  * encounter, invoice, staff, or free-text description data is transmitted to Stripe.
  *
@@ -30,7 +30,7 @@ import type {
 export const STRIPE_BASE_URL = "https://api.stripe.com";
 
 /** Identifier namespace for Stripe PaymentIntent ids on PaymentReconciliation.paymentIdentifier. */
-export const STRIPE_TRANSACTION_SYSTEM = "https://osod.dev/fhir/NamingSystem/stripe-payment-intent";
+export const STRIPE_TRANSACTION_SYSTEM = "https://odos2020.com/fhir/NamingSystem/stripe-payment-intent";
 
 export interface StripeAdapterConfig {
   /** Stripe API base URL. Defaults to STRIPE_BASE_URL in env-driven registration. */

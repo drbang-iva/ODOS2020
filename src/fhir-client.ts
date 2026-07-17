@@ -1,5 +1,5 @@
 /**
- * OSOD FHIR client — thin plain-fetch wrapper over Medplum's FHIR REST API.
+ * ODOS FHIR client — thin plain-fetch wrapper over Medplum's FHIR REST API.
  *
  * No Medplum SDK imports. Only @medplum/fhirtypes for type safety.
  * Server is swappable — any FHIR R4 server works at this interface.

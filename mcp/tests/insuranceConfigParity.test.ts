@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_INSURANCE_CONFIG_CODE as MCP_OSOD_INSURANCE_CONFIG_CODE,
-  OSOD_INSURANCE_CONFIG_EXTENSION_URL as MCP_OSOD_INSURANCE_CONFIG_EXTENSION_URL,
-  OSOD_INSURANCE_CONFIG_SYSTEM as MCP_OSOD_INSURANCE_CONFIG_SYSTEM,
+  ODOS_INSURANCE_CONFIG_CODE as MCP_ODOS_INSURANCE_CONFIG_CODE,
+  ODOS_INSURANCE_CONFIG_EXTENSION_URL as MCP_ODOS_INSURANCE_CONFIG_EXTENSION_URL,
+  ODOS_INSURANCE_CONFIG_SYSTEM as MCP_ODOS_INSURANCE_CONFIG_SYSTEM,
   buildInsuranceConfigResource as mcpBuildInsuranceConfigResource,
   parseInsuranceConfig as mcpParseInsuranceConfig,
   type PersistedInsuranceConfig,
 } from "../src/insurance/insurance-config.js";
 import { BENEFIT_KINDS } from "../../ui/src/lib/patient-insurance.js";
 import {
-  OSOD_INSURANCE_CONFIG_CODE as UI_OSOD_INSURANCE_CONFIG_CODE,
-  OSOD_INSURANCE_CONFIG_EXTENSION_URL as UI_OSOD_INSURANCE_CONFIG_EXTENSION_URL,
-  OSOD_INSURANCE_CONFIG_SYSTEM as UI_OSOD_INSURANCE_CONFIG_SYSTEM,
+  ODOS_INSURANCE_CONFIG_CODE as UI_ODOS_INSURANCE_CONFIG_CODE,
+  ODOS_INSURANCE_CONFIG_EXTENSION_URL as UI_ODOS_INSURANCE_CONFIG_EXTENSION_URL,
+  ODOS_INSURANCE_CONFIG_SYSTEM as UI_ODOS_INSURANCE_CONFIG_SYSTEM,
   buildInsuranceConfigResource as uiBuildInsuranceConfigResource,
   parseInsuranceConfig as uiParseInsuranceConfig,
 } from "../../ui/src/lib/insurance-config.js";
@@ -39,9 +39,9 @@ const CONFIG: PersistedInsuranceConfig = {
 };
 
 test("UI insurance-config mirror constants and singleton wire shape match the kernel", () => {
-  assert.equal(UI_OSOD_INSURANCE_CONFIG_SYSTEM, MCP_OSOD_INSURANCE_CONFIG_SYSTEM);
-  assert.equal(UI_OSOD_INSURANCE_CONFIG_CODE, MCP_OSOD_INSURANCE_CONFIG_CODE);
-  assert.equal(UI_OSOD_INSURANCE_CONFIG_EXTENSION_URL, MCP_OSOD_INSURANCE_CONFIG_EXTENSION_URL);
+  assert.equal(UI_ODOS_INSURANCE_CONFIG_SYSTEM, MCP_ODOS_INSURANCE_CONFIG_SYSTEM);
+  assert.equal(UI_ODOS_INSURANCE_CONFIG_CODE, MCP_ODOS_INSURANCE_CONFIG_CODE);
+  assert.equal(UI_ODOS_INSURANCE_CONFIG_EXTENSION_URL, MCP_ODOS_INSURANCE_CONFIG_EXTENSION_URL);
   assert.deepEqual(uiBuildInsuranceConfigResource(CONFIG as never), mcpBuildInsuranceConfigResource(CONFIG));
   assert.deepEqual(
     uiParseInsuranceConfig(uiBuildInsuranceConfigResource(CONFIG as never)),

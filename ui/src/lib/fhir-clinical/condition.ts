@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/condition.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/condition.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { CodeableConcept, Condition, Encounter, Extension, Reference } from "@medplum/fhirtypes";
 
 export const US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS_PROFILE =

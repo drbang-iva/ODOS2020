@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash } from "node:crypto";
 
-// The static zero IV is required by WENO's protocol, not an OSOD cryptographic design choice.
+// The static zero IV is required by WENO's protocol, not an ODOS cryptographic design choice.
 const WENO_IV = Buffer.alloc(16, 0);
 
 export function encryptWenoPayload(payload: unknown, encryptionKey: string): string {

@@ -10,10 +10,10 @@ import type { MedplumClient } from "../fhir-client.js";
 import { projectLabOrderBoard, type LabOrderBoardSummary } from "../fhir/labOrderStatus.js";
 import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
-  OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
+  ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
 } from "../lab-orders/adapters/manual-lab-order-adapter.js";
 
-const FLOOR_STATE_URL = "https://osod.dev/fhir/StructureDefinition/osod-floor-state";
+const FLOOR_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -194,7 +194,7 @@ export async function loadClinicSummary(
     searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
     searchOnePage<Encounter>(fhir, "Encounter", { date, _count: "1000", _sort: "date" }),
     searchOnePage<Task>(fhir, "Task", {
-      code: `${OSOD_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
+      code: `${ODOS_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
       _count: "1000",
       _sort: "-authored-on",
     }),

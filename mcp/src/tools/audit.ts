@@ -43,8 +43,8 @@ export const V04_WRITE_TOOL_NAMES = [
 
 export type V035WriteToolName = (typeof V035_WRITE_TOOL_NAMES)[number];
 export type V04WriteToolName = (typeof V04_WRITE_TOOL_NAMES)[number];
-export type OsodWriteToolName = V035WriteToolName | V04WriteToolName;
+export type OdosWriteToolName = V035WriteToolName | V04WriteToolName;
 
-export function auditHeaders(toolName: OsodWriteToolName): { "X-OSOD-Source": string } {
-  return { "X-OSOD-Source": `mcp/${toolName}` };
+export function auditHeaders(toolName: OdosWriteToolName): { "X-ODOS-Source": string } {
+  return { "X-ODOS-Source": `mcp/${toolName}` };
 }

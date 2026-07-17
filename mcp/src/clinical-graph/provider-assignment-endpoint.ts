@@ -27,7 +27,7 @@ export interface ProviderAssignmentEndpointResult {
 }
 
 const patientIdSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/assign_provider" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/assign_provider" } as const;
 
 export async function handleProviderAssignmentRequest(
   deps: ProviderAssignmentEndpointDeps,

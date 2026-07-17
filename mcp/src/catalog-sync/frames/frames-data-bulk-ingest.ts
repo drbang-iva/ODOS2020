@@ -1,10 +1,10 @@
 import { basename } from "node:path";
 import type { AuditEvent, ChargeItemDefinition, DeviceDefinition, Provenance, Task } from "@medplum/fhirtypes";
-import { buildAuditEventProjection, buildOsodAuditEventRow } from "../../authz/osodAudit.js";
+import { buildAuditEventProjection, buildOdosAuditEventRow } from "../../authz/odosAudit.js";
 import { buildFrameChargeItemDefinition } from "../../catalog/frame-charge-item-definition.js";
 import { buildFrameDeviceDefinition } from "../../catalog/frame-device-definition.js";
 import {
-  OSOD_FHIR_SOURCE_HEADER,
+  ODOS_FHIR_SOURCE_HEADER,
   fhirAttachmentSha1Base64,
   frameCanonicalUrl,
   materialChange,
@@ -327,13 +327,13 @@ function buildFhirResourceAudit(
   timestamp: string,
 ): AuditEvent {
   return buildAuditEventProjection(
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType,
       eventTime: timestamp,
       actorRole: "system",
       resourceType: "Canonical",
       resourceId: canonicalUrl,
-      actionReason: OSOD_FHIR_SOURCE_HEADER,
+      actionReason: ODOS_FHIR_SOURCE_HEADER,
     }),
   );
 }
@@ -343,7 +343,7 @@ function buildProvenance(canonicalUrl: string, timestamp: string): Provenance {
     resourceType: "Provenance",
     recorded: timestamp,
     target: [{ reference: canonicalUrl }],
-    agent: [{ who: { reference: "Device/osod-catalog-sync" } }],
+    agent: [{ who: { reference: "Device/odos-catalog-sync" } }],
   };
 }
 
@@ -352,7 +352,7 @@ function buildRunProvenance(syncRunId: string, timestamp: string): Provenance {
     resourceType: "Provenance",
     recorded: timestamp,
     target: [{ reference: `Task/frames-bulk-ingest-${syncRunId}` }],
-    agent: [{ who: { reference: "Device/osod-catalog-sync" } }],
+    agent: [{ who: { reference: "Device/odos-catalog-sync" } }],
   };
 }
 
@@ -361,13 +361,13 @@ function syntheticAuditEventId(
   skuId: string,
   timestamp: string,
 ): string {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType,
     eventTime: timestamp,
     actorRole: "system",
     resourceType: "DeviceDefinition",
     resourceId: frameCanonicalUrl(skuId),
-    actionReason: OSOD_FHIR_SOURCE_HEADER,
+    actionReason: ODOS_FHIR_SOURCE_HEADER,
   });
   return row.id;
 }
@@ -379,13 +379,13 @@ async function emitRunAudit(
   timestamp: string,
   reason?: string,
 ): Promise<string> {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType,
     eventTime: timestamp,
     actorRole: "system",
-    resourceType: "osod_catalog_sync_runs",
+    resourceType: "odos_catalog_sync_runs",
     resourceId: syncRunId,
-    actionReason: reason ?? OSOD_FHIR_SOURCE_HEADER,
+    actionReason: reason ?? ODOS_FHIR_SOURCE_HEADER,
   });
   await writeFhir(context, buildAuditEventProjection(row));
   return row.id;
@@ -395,7 +395,7 @@ async function writeFhir(
   context: FramesBulkIngestContext,
   resource: Task | DeviceDefinition | ChargeItemDefinition | AuditEvent | Provenance,
 ): Promise<void> {
-  await context.writeFhirResource?.(resource, { "X-OSOD-Source": OSOD_FHIR_SOURCE_HEADER });
+  await context.writeFhirResource?.(resource, { "X-ODOS-Source": ODOS_FHIR_SOURCE_HEADER });
 }
 
 function requireRowId(row: FrameCatalogRow): string {

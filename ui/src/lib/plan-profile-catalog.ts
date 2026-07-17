@@ -6,12 +6,12 @@ import {
 import type { fhir } from "./fhir";
 
 export const PLAN_PROFILE_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/plan-profile";
+  "https://odos2020.com/fhir/CodeSystem/plan-profile";
 export const PLAN_PROFILE_CODE = "plan-profile";
 export const PLAN_PROFILE_IDENTIFIER_SYSTEM =
-  "https://osod.dev/fhir/NamingSystem/plan-profile-key";
+  "https://odos2020.com/fhir/NamingSystem/plan-profile-key";
 export const PLAN_PROFILE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-plan-profile";
+  "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile";
 
 const MONEY_FIELDS = [
   "dispensingFeeCents",
@@ -117,7 +117,7 @@ export function buildPlanProfileResource(item: PlanProfileItem): Basic {
       coding: [{
         system: PLAN_PROFILE_CODE_SYSTEM,
         code: PLAN_PROFILE_CODE,
-        display: "OSOD plan reimbursement profile",
+        display: "ODOS plan reimbursement profile",
       }],
       text: validated.displayName,
     },
@@ -137,7 +137,7 @@ export function planProfileItem(resource: Basic): PlanProfileItem {
       coding.system === PLAN_PROFILE_CODE_SYSTEM
       && coding.code === PLAN_PROFILE_CODE,
   )) {
-    throw new Error("Basic resource is not an OSOD plan profile.");
+    throw new Error("Basic resource is not an ODOS plan profile.");
   }
   const planKey = resource.identifier?.find(
     (identifier) => identifier.system === PLAN_PROFILE_IDENTIFIER_SYSTEM,

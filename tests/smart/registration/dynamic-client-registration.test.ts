@@ -4,12 +4,12 @@ import {
   InMemorySmartAppRegistryStore,
   type SmartAppMedplumAdapter,
 } from "../../../mcp/src/smart/registration/dynamic-client-registration.js";
-import { readSmartClientApp, type OSODSmartClientApp } from "../../../mcp/src/smart/registration/smart-client-app.js";
+import { readSmartClientApp, type ODOSSmartClientApp } from "../../../mcp/src/smart/registration/smart-client-app.js";
 import { createSmartTestServer } from "../helpers.ts";
 
-test("v0.55b dynamic registration stores the OSOD canonical Endpoint and provisions through the adapter", async () => {
+test("v0.55b dynamic registration stores the ODOS canonical Endpoint and provisions through the adapter", async () => {
   const store = new InMemorySmartAppRegistryStore();
-  const adapterCalls: OSODSmartClientApp[] = [];
+  const adapterCalls: ODOSSmartClientApp[] = [];
   const adapter: SmartAppMedplumAdapter = {
     async registerSmartApp(canonicalRecord) {
       adapterCalls.push(canonicalRecord);

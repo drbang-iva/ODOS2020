@@ -97,7 +97,7 @@ export function VisionPlanTemplatesSettingsReady({
   const draft = useMemo(
     () =>
       createSingletonConfigDraft({
-        configKey: "osod-insurance-config",
+        configKey: "odos-insurance-config",
         config,
         resource,
         buildResource: buildInsuranceConfigResource,

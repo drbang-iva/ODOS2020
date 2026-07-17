@@ -1,9 +1,9 @@
--- OSOD v0.6a Frames Data integration substrate.
+-- ODOS v0.6a Frames Data integration substrate.
 -- Closure-aligned: operator-uploaded bulk file ingest only; no outbound Frames Data API path.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS osod_catalog_sync_runs (
+CREATE TABLE IF NOT EXISTS odos_catalog_sync_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     catalog_type TEXT NOT NULL CHECK (catalog_type IN ('frames', 'hcpcs', 'cpt', 'lenses', 'contacts', 'services')),
     started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -31,33 +31,33 @@ CREATE TABLE IF NOT EXISTS osod_catalog_sync_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_catalog_sync_runs_active
-    ON osod_catalog_sync_runs (catalog_type, started_at) WHERE completed_at IS NULL;
+    ON odos_catalog_sync_runs (catalog_type, started_at) WHERE completed_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_catalog_sync_runs_history
-    ON osod_catalog_sync_runs (catalog_type, completed_at DESC) WHERE completed_at IS NOT NULL;
+    ON odos_catalog_sync_runs (catalog_type, completed_at DESC) WHERE completed_at IS NOT NULL;
 
-CREATE OR REPLACE FUNCTION osod_catalog_sync_runs_block_update_after_close()
+CREATE OR REPLACE FUNCTION odos_catalog_sync_runs_block_update_after_close()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
     IF OLD.completed_at IS NOT NULL THEN
-        RAISE EXCEPTION 'osod_catalog_sync_runs: row is closed; UPDATE forbidden'
+        RAISE EXCEPTION 'odos_catalog_sync_runs: row is closed; UPDATE forbidden'
             USING ERRCODE = '42501';
     END IF;
     RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS osod_catalog_sync_runs_block_update_trigger ON osod_catalog_sync_runs;
-CREATE TRIGGER osod_catalog_sync_runs_block_update_trigger
-    BEFORE UPDATE ON osod_catalog_sync_runs
-    FOR EACH ROW EXECUTE FUNCTION osod_catalog_sync_runs_block_update_after_close();
+DROP TRIGGER IF EXISTS odos_catalog_sync_runs_block_update_trigger ON odos_catalog_sync_runs;
+CREATE TRIGGER odos_catalog_sync_runs_block_update_trigger
+    BEFORE UPDATE ON odos_catalog_sync_runs
+    FOR EACH ROW EXECUTE FUNCTION odos_catalog_sync_runs_block_update_after_close();
 
-CREATE TABLE IF NOT EXISTS osod_catalog_overlays (
+CREATE TABLE IF NOT EXISTS odos_catalog_overlays (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     practice_id TEXT NOT NULL CHECK (practice_id <> ''),
     catalog_type TEXT NOT NULL CHECK (catalog_type IN ('frames', 'lenses', 'contacts', 'services')),
-    catalog_canonical_url TEXT NOT NULL CHECK (catalog_canonical_url ~ '^https://osod\.dev/catalog/[a-z-]+/.+'),
+    catalog_canonical_url TEXT NOT NULL CHECK (catalog_canonical_url ~ '^https://odos2020\.com/catalog/[a-z-]+/.+'),
     overlay_kind TEXT NOT NULL CHECK (overlay_kind IN (
         'price_override',
         'lab_cost_override',
@@ -72,24 +72,24 @@ CREATE TABLE IF NOT EXISTS osod_catalog_overlays (
     created_by TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     audit_event_id TEXT NOT NULL,
-    CONSTRAINT osod_catalog_overlays_unique_per_practice_per_kind
+    CONSTRAINT odos_catalog_overlays_unique_per_practice_per_kind
         UNIQUE (practice_id, catalog_type, catalog_canonical_url, overlay_kind)
 );
 
 CREATE INDEX IF NOT EXISTS idx_catalog_overlays_practice
-    ON osod_catalog_overlays (practice_id, catalog_type);
+    ON odos_catalog_overlays (practice_id, catalog_type);
 CREATE INDEX IF NOT EXISTS idx_catalog_overlays_canonical
-    ON osod_catalog_overlays (catalog_canonical_url);
+    ON odos_catalog_overlays (catalog_canonical_url);
 
-ALTER TABLE osod_catalog_overlays ENABLE ROW LEVEL SECURITY;
-ALTER TABLE osod_catalog_overlays FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS osod_catalog_overlays_practice_isolation ON osod_catalog_overlays;
-CREATE POLICY osod_catalog_overlays_practice_isolation
-    ON osod_catalog_overlays
-    USING (practice_id = current_setting('osod.practice_id', true))
-    WITH CHECK (practice_id = current_setting('osod.practice_id', true));
+ALTER TABLE odos_catalog_overlays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE odos_catalog_overlays FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS odos_catalog_overlays_practice_isolation ON odos_catalog_overlays;
+CREATE POLICY odos_catalog_overlays_practice_isolation
+    ON odos_catalog_overlays
+    USING (practice_id = current_setting('odos.practice_id', true))
+    WITH CHECK (practice_id = current_setting('odos.practice_id', true));
 
-CREATE TABLE IF NOT EXISTS osod_frames_catalog (
+CREATE TABLE IF NOT EXISTS odos_frames_catalog (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sku_id TEXT NOT NULL,
     brand_id TEXT NOT NULL,
@@ -132,33 +132,33 @@ CREATE TABLE IF NOT EXISTS osod_frames_catalog (
     source_version TEXT NOT NULL,
     source_url TEXT NOT NULL,
     access_date DATE NOT NULL,
-    sync_run_id UUID NOT NULL REFERENCES osod_catalog_sync_runs(id),
+    sync_run_id UUID NOT NULL REFERENCES odos_catalog_sync_runs(id),
     audit_event_id TEXT NOT NULL,
-    CONSTRAINT osod_frames_catalog_sku_effective_unique UNIQUE (sku_id, effective_from)
+    CONSTRAINT odos_frames_catalog_sku_effective_unique UNIQUE (sku_id, effective_from)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_frames_catalog_sku_active_unique
-    ON osod_frames_catalog (sku_id) WHERE effective_to IS NULL;
+    ON odos_frames_catalog (sku_id) WHERE effective_to IS NULL;
 CREATE INDEX IF NOT EXISTS idx_frames_catalog_brand_active
-    ON osod_frames_catalog (brand_name) WHERE effective_to IS NULL;
+    ON odos_frames_catalog (brand_name) WHERE effective_to IS NULL;
 CREATE INDEX IF NOT EXISTS idx_frames_catalog_gtin14_active
-    ON osod_frames_catalog (gtin14) WHERE effective_to IS NULL AND gtin14 IS NOT NULL;
+    ON odos_frames_catalog (gtin14) WHERE effective_to IS NULL AND gtin14 IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_frames_catalog_search
-    ON osod_frames_catalog USING gin (
+    ON odos_frames_catalog USING gin (
         to_tsvector('english', brand_name || ' ' || model_name || ' ' || color_name)
     ) WHERE effective_to IS NULL;
 CREATE INDEX IF NOT EXISTS idx_frames_catalog_demographic
-    ON osod_frames_catalog (gender_category, age_group)
+    ON odos_frames_catalog (gender_category, age_group)
     WHERE effective_to IS NULL AND status = 'active';
 
-CREATE OR REPLACE FUNCTION osod_frames_catalog_block_payload_update()
+CREATE OR REPLACE FUNCTION odos_frames_catalog_block_payload_update()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
     IF OLD.effective_to IS DISTINCT FROM NEW.effective_to
-       AND current_setting('osod.frames_catalog_retire', true) <> 'on' THEN
-        RAISE EXCEPTION 'osod_frames_catalog: effective_to can only change through osod_frames_catalog_retire()'
+       AND current_setting('odos.frames_catalog_retire', true) <> 'on' THEN
+        RAISE EXCEPTION 'odos_frames_catalog: effective_to can only change through odos_frames_catalog_retire()'
             USING ERRCODE = '42501';
     END IF;
 
@@ -199,19 +199,19 @@ BEGIN
        OR (OLD.access_date IS DISTINCT FROM NEW.access_date)
        OR (OLD.sync_run_id IS DISTINCT FROM NEW.sync_run_id)
        OR (OLD.audit_event_id IS DISTINCT FROM NEW.audit_event_id) THEN
-        RAISE EXCEPTION 'osod_frames_catalog: payload columns are append-only; retire + insert a new version'
+        RAISE EXCEPTION 'odos_frames_catalog: payload columns are append-only; retire + insert a new version'
             USING ERRCODE = '42501';
     END IF;
     RETURN NEW;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS osod_frames_catalog_block_payload_update_trigger ON osod_frames_catalog;
-CREATE TRIGGER osod_frames_catalog_block_payload_update_trigger
-    BEFORE UPDATE ON osod_frames_catalog
-    FOR EACH ROW EXECUTE FUNCTION osod_frames_catalog_block_payload_update();
+DROP TRIGGER IF EXISTS odos_frames_catalog_block_payload_update_trigger ON odos_frames_catalog;
+CREATE TRIGGER odos_frames_catalog_block_payload_update_trigger
+    BEFORE UPDATE ON odos_frames_catalog
+    FOR EACH ROW EXECUTE FUNCTION odos_frames_catalog_block_payload_update();
 
-CREATE OR REPLACE FUNCTION osod_frames_catalog_retire(
+CREATE OR REPLACE FUNCTION odos_frames_catalog_retire(
     row_id UUID,
     retired_at_ts TIMESTAMPTZ,
     by_sync_run_id UUID,
@@ -221,22 +221,22 @@ RETURNS void
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    PERFORM set_config('osod.frames_catalog_retire', 'on', true);
-    UPDATE osod_frames_catalog
+    PERFORM set_config('odos.frames_catalog_retire', 'on', true);
+    UPDATE odos_frames_catalog
     SET effective_to = retired_at_ts
     WHERE id = row_id
       AND effective_to IS NULL;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'osod_frames_catalog_retire: row % not found or already retired (sync run %, audit event %)', row_id, by_sync_run_id, by_audit_event_id;
+        RAISE EXCEPTION 'odos_frames_catalog_retire: row % not found or already retired (sync run %, audit event %)', row_id, by_sync_run_id, by_audit_event_id;
     END IF;
 END;
 $$;
 
-CREATE TABLE IF NOT EXISTS osod_practice_frames_inventory (
+CREATE TABLE IF NOT EXISTS odos_practice_frames_inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     practice_id TEXT NOT NULL CHECK (practice_id <> ''),
-    catalog_canonical_url TEXT NOT NULL CHECK (catalog_canonical_url ~ '^https://osod\.dev/catalog/frames/.+'),
+    catalog_canonical_url TEXT NOT NULL CHECK (catalog_canonical_url ~ '^https://odos2020\.com/catalog/frames/.+'),
     qty_on_hand INTEGER NOT NULL DEFAULT 0 CHECK (qty_on_hand >= 0),
     dispensary_location TEXT,
     inventory_status TEXT NOT NULL DEFAULT 'active'
@@ -250,28 +250,28 @@ CREATE TABLE IF NOT EXISTS osod_practice_frames_inventory (
     created_by TEXT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     audit_event_id TEXT NOT NULL,
-    CONSTRAINT osod_practice_frames_inventory_unique_per_practice
+    CONSTRAINT odos_practice_frames_inventory_unique_per_practice
         UNIQUE (practice_id, catalog_canonical_url)
 );
 
 CREATE INDEX IF NOT EXISTS idx_practice_frames_inventory_practice
-    ON osod_practice_frames_inventory (practice_id) WHERE inventory_status = 'active';
+    ON odos_practice_frames_inventory (practice_id) WHERE inventory_status = 'active';
 CREATE INDEX IF NOT EXISTS idx_practice_frames_inventory_low_stock
-    ON osod_practice_frames_inventory (practice_id, qty_on_hand)
+    ON odos_practice_frames_inventory (practice_id, qty_on_hand)
     WHERE inventory_status = 'active' AND reorder_threshold IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_practice_frames_inventory_canonical
-    ON osod_practice_frames_inventory (catalog_canonical_url)
+    ON odos_practice_frames_inventory (catalog_canonical_url)
     WHERE inventory_status = 'active';
 
-ALTER TABLE osod_practice_frames_inventory ENABLE ROW LEVEL SECURITY;
-ALTER TABLE osod_practice_frames_inventory FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS osod_practice_frames_inventory_tenant_isolation ON osod_practice_frames_inventory;
-CREATE POLICY osod_practice_frames_inventory_tenant_isolation
-    ON osod_practice_frames_inventory
-    USING (practice_id = current_setting('osod.practice_id', true))
-    WITH CHECK (practice_id = current_setting('osod.practice_id', true));
+ALTER TABLE odos_practice_frames_inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE odos_practice_frames_inventory FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS odos_practice_frames_inventory_tenant_isolation ON odos_practice_frames_inventory;
+CREATE POLICY odos_practice_frames_inventory_tenant_isolation
+    ON odos_practice_frames_inventory
+    USING (practice_id = current_setting('odos.practice_id', true))
+    WITH CHECK (practice_id = current_setting('odos.practice_id', true));
 
-CREATE OR REPLACE VIEW osod_practice_frames_inventory_active AS
+CREATE OR REPLACE VIEW odos_practice_frames_inventory_active AS
 SELECT
     inv.*,
     cat.id AS active_catalog_row_id,
@@ -286,12 +286,12 @@ SELECT
     cat.gtin14,
     cat.msrp_cents,
     cat.publicity_class
-FROM osod_practice_frames_inventory inv
-JOIN osod_frames_catalog cat
+FROM odos_practice_frames_inventory inv
+JOIN odos_frames_catalog cat
     ON cat.effective_to IS NULL
-   AND ('https://osod.dev/catalog/frames/' || cat.sku_id) = inv.catalog_canonical_url;
+   AND ('https://odos2020.com/catalog/frames/' || cat.sku_id) = inv.catalog_canonical_url;
 
-CREATE TABLE IF NOT EXISTS osod_terminology_hcpcs (
+CREATE TABLE IF NOT EXISTS odos_terminology_hcpcs (
     code TEXT PRIMARY KEY,
     display TEXT NOT NULL,
     description TEXT,
@@ -308,15 +308,15 @@ CREATE TABLE IF NOT EXISTS osod_terminology_hcpcs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_terminology_hcpcs_active
-    ON osod_terminology_hcpcs (code) WHERE active = true;
+    ON odos_terminology_hcpcs (code) WHERE active = true;
 CREATE INDEX IF NOT EXISTS idx_terminology_hcpcs_category
-    ON osod_terminology_hcpcs (category) WHERE active = true;
+    ON odos_terminology_hcpcs (category) WHERE active = true;
 
-ALTER TABLE osod_audit_events
-    DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check;
+ALTER TABLE odos_audit_events
+    DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check;
 
-ALTER TABLE osod_audit_events
-    ADD CONSTRAINT osod_audit_events_event_type_check CHECK (
+ALTER TABLE odos_audit_events
+    ADD CONSTRAINT odos_audit_events_event_type_check CHECK (
         event_type IN (
             'read', 'search', 'history', 'vread',
             'create', 'update', 'patch', 'transaction', 'nullify-attempt', 'delete-attempt',

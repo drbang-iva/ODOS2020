@@ -11,8 +11,8 @@ import { buildIopObservation as buildUiIopObservation } from "../../ui/src/lib/f
 import { buildRefractionObservation as buildUiRefractionObservation } from "../../ui/src/lib/fhir-ophthalmology/refraction.js";
 import { buildSectionSaveBundle as buildUiSectionSaveBundle } from "../../ui/src/lib/fhir-ophthalmology/save-section-bundle.js";
 import { buildVisualAcuityObservation as buildUiVisualAcuityObservation } from "../../ui/src/lib/fhir-ophthalmology/visualAcuity.js";
-import { osodConcept as mcpOsodConcept } from "../src/fhir/ophthalmology/extensions.js";
-import { osodConcept as uiOsodConcept } from "../../ui/src/lib/fhir-ophthalmology/extensions.js";
+import { odosConcept as mcpOdosConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { odosConcept as uiOdosConcept } from "../../ui/src/lib/fhir-ophthalmology/extensions.js";
 import { buildEpisodeOfCare as buildMcpEpisodeOfCare } from "../src/fhir/episodeOfCare.js";
 import { buildEpisodeOfCare as buildUiEpisodeOfCare } from "../../ui/src/lib/fhir-clinical/episodeOfCare.js";
 import {
@@ -115,12 +115,12 @@ test("UI ophthalmology mirror matches MCP IOP builder output", () => {
     buildMcpIopObservation({
       ...common,
       value: 14,
-      method: mcpOsodConcept("GAT", "GAT"),
+      method: mcpOdosConcept("GAT", "GAT"),
     }),
     buildUiIopObservation({
       ...common,
       value: 14,
-      method: uiOsodConcept("GAT", "GAT"),
+      method: uiOdosConcept("GAT", "GAT"),
     }),
   );
 });
@@ -174,7 +174,7 @@ test("UI ophthalmology mirror keeps every section-save Observation preliminary",
   const commonInput = {
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
-    operatorDisplay: "OSOD parity test",
+    operatorDisplay: "ODOS parity test",
     measuredAt: "2026-04-25T12:00:00.000Z",
     recordedAt: "2026-04-25T12:00:00.001Z",
   };

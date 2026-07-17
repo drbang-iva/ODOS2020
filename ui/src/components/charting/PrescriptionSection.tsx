@@ -4,7 +4,7 @@ import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../.
 import { fhir } from "../../lib/fhir";
 import {
   buildMedicationRequest,
-  OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
+  ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
   type MedicationTransmissionMethod,
 } from "../../lib/fhir-medication-order";
 import type { SectionSaveStatus } from "./types";
@@ -264,7 +264,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         completed: true,
         summary: `${activeCount + (existing ? 0 : 1)} active Rx`,
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI prescription",
+        operator: "ODOS UI prescription",
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -345,7 +345,7 @@ function optionalInteger(value: string, label: string, minimum: number): number 
 
 function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in" {
   const value = request.extension
-    ?.find((extension) => extension.url === OSOD_TRANSMISSION_METHOD_EXTENSION_URL)
+    ?.find((extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL)
     ?.valueCode;
   return value === "phoned-in" ? "phoned-in" : "printed";
 }

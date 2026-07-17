@@ -20,7 +20,7 @@ export const V2_0276_APPOINTMENT_TYPE_SYSTEM =
 
 type FhirAppointmentStatus = Appointment["status"];
 
-export const OSOD_APPOINTMENT_STATUSES = [
+export const ODOS_APPOINTMENT_STATUSES = [
   { code: "scheduled", display: "Scheduled", fhirStatus: "booked" },
   { code: "checked-in", display: "Checked In", fhirStatus: "checked-in" },
   { code: "checked-out", display: "Checked Out", fhirStatus: "fulfilled" },
@@ -29,15 +29,15 @@ export const OSOD_APPOINTMENT_STATUSES = [
   { code: "cancelled", display: "Cancelled", fhirStatus: "cancelled" },
 ] as const;
 
-export type OsodAppointmentStatus = (typeof OSOD_APPOINTMENT_STATUSES)[number]["code"];
+export type OdosAppointmentStatus = (typeof ODOS_APPOINTMENT_STATUSES)[number]["code"];
 
-const STATUS_BY_CODE = new Map<string, (typeof OSOD_APPOINTMENT_STATUSES)[number]>(
-  OSOD_APPOINTMENT_STATUSES.map((status) => [status.code, status]),
+const STATUS_BY_CODE = new Map<string, (typeof ODOS_APPOINTMENT_STATUSES)[number]>(
+  ODOS_APPOINTMENT_STATUSES.map((status) => [status.code, status]),
 );
 
-export function assertOsodAppointmentStatus(
+export function assertOdosAppointmentStatus(
   code: string,
-): asserts code is OsodAppointmentStatus {
+): asserts code is OdosAppointmentStatus {
   if (!STATUS_BY_CODE.has(code)) {
     throw new Error(
       `Unknown appointment status "${code}" — must be one of the six front-desk lifecycle values.`,
@@ -51,9 +51,9 @@ export interface FhirStatusMapping {
   appointmentTypeCode?: string;
 }
 
-/** The FHIR representation of an OSOD front-desk status. */
+/** The FHIR representation of an ODOS front-desk status. */
 export function toFhirAppointmentStatus(code: string): FhirStatusMapping {
-  assertOsodAppointmentStatus(code);
+  assertOdosAppointmentStatus(code);
   const status = STATUS_BY_CODE.get(code)!;
   return {
     status: status.fhirStatus,
@@ -64,23 +64,23 @@ export function toFhirAppointmentStatus(code: string): FhirStatusMapping {
 }
 
 /**
- * Read the OSOD front-desk status back off an Appointment's FHIR fields.
+ * Read the ODOS front-desk status back off an Appointment's FHIR fields.
  *
  * `arrived` + WALKIN reads as walk-in; a foreign `arrived` without WALKIN reads as checked-in
  * (the patient is physically here — the closest front-desk semantic). FHIR statuses outside the
  * front-desk vocabulary (proposed/pending/waitlist/entered-in-error) read as undefined.
  */
-export function osodAppointmentStatusOf(appointment: {
+export function odosAppointmentStatusOf(appointment: {
   status: FhirAppointmentStatus;
   appointmentType?: CodeableConcept;
-}): OsodAppointmentStatus | undefined {
+}): OdosAppointmentStatus | undefined {
   if (appointment.status === "arrived") {
     const isWalkIn = appointment.appointmentType?.coding?.some(
       (c) => c.system === V2_0276_APPOINTMENT_TYPE_SYSTEM && c.code === "WALKIN",
     );
     return isWalkIn ? "walk-in" : "checked-in";
   }
-  const match = OSOD_APPOINTMENT_STATUSES.find(
+  const match = ODOS_APPOINTMENT_STATUSES.find(
     (status) => status.fhirStatus === appointment.status && !("appointmentTypeCode" in status),
   );
   return match?.code;

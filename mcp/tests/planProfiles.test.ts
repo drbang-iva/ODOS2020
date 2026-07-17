@@ -147,7 +147,7 @@ test("plan-profile reads return honest unavailable instead of partial or zero da
                 resourceType: "Basic",
                 code: {
                   coding: [{
-                    system: "https://osod.dev/fhir/CodeSystem/plan-profile",
+                    system: "https://odos2020.com/fhir/CodeSystem/plan-profile",
                     code: "plan-profile",
                   }],
                   text: "Malformed",
@@ -168,10 +168,10 @@ test("plan-profile reads return honest unavailable instead of partial or zero da
   });
 });
 
-test("osod-plan-profile is a registered R4 complex extension on Basic", async () => {
+test("odos-plan-profile is a registered R4 complex extension on Basic", async () => {
   const definition = JSON.parse(await readFile(resolve(
     import.meta.dirname,
-    "../../data/canonical-extensions/osod-plan-profile.json",
+    "../../data/canonical-extensions/odos-plan-profile.json",
   ), "utf8")) as StructureDefinition;
   assert.equal(definition.url, PLAN_PROFILE_EXTENSION_URL);
   assert.equal(definition.fhirVersion, "4.0.1");

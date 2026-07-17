@@ -16,7 +16,7 @@ const claimInput: ProfessionalClaimInput = {
   providerReference: "Practitioner/prov-1",
   insurerReference: "Organization/payer-1",
   coverageReference: "Coverage/cov-1",
-  patientAccountNumber: "OSODCLAIM900",
+  patientAccountNumber: "ODOSCLAIM900",
   payerId: "STEDITEST",
   billingProvider: {
     name: "SYNTHETIC VISION",
@@ -32,12 +32,12 @@ const claimInput: ProfessionalClaimInput = {
   renderingProvider: { firstName: "TEST", lastName: "PROVIDER", npi: "1999999984", taxonomy: "152W00000X" },
   subscriber: { firstName: "JAMIE", lastName: "SYNTHETIC", dateOfBirth: "1990-01-01", sex: "U", memberId: "MEMBER900", relationshipCode: "18" },
   patient: { firstName: "JAMIE", lastName: "SYNTHETIC", dateOfBirth: "1990-01-01", sex: "U" },
-  diagnoses: [{ system: "https://osod.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
+  diagnoses: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
   chargeItems: [{
     resourceType: "ChargeItem",
     id: "line-1",
     status: "billable",
-    code: { coding: [{ system: "https://osod.test/fhir/CodeSystem/synthetic-procedure", code: "PROC-A" }] },
+    code: { coding: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-procedure", code: "PROC-A" }] },
     subject: { reference: "Patient/pat-900" },
     quantity: { value: 1 },
     priceOverride: { value: 125, currency: "USD" },
@@ -49,7 +49,7 @@ test("Stedi claim mapper emits the documented 837P JSON shape", () => {
   assert.equal(payload.usageIndicator, "T");
   assert.equal(payload.tradingPartnerServiceId, "STEDITEST");
   assert.equal(payload.submitter.submitterIdentification, "1999999984");
-  assert.equal(payload.claimInformation.patientControlNumber, "OSODCLAIM900");
+  assert.equal(payload.claimInformation.patientControlNumber, "ODOSCLAIM900");
   assert.equal(payload.claimInformation.serviceLines[0].providerControlNumber, "line-1");
   assert.equal(payload.claimInformation.serviceLines[0].professionalService.procedureCode, "PROC-A");
   assert.equal(payload.billing.employerId, "900000001");
@@ -99,7 +99,7 @@ test("Stedi 277 and 835 responses map to the shared FHIR ClaimResponse shape", (
     paymentDate: "20260711",
     traceNumber: "TRACE900",
     claim: {
-      claimPaymentInfo: { patientControlNumber: "OSODCLAIM900", totalClaimChargeAmount: "125", claimPaymentAmount: "80", patientResponsibilityAmount: "20", payerClaimControlNumber: "PAYER900", claimStatusCode: "1" },
+      claimPaymentInfo: { patientControlNumber: "ODOSCLAIM900", totalClaimChargeAmount: "125", claimPaymentAmount: "80", patientResponsibilityAmount: "20", payerClaimControlNumber: "PAYER900", claimStatusCode: "1" },
       serviceLines: [{
         lineItemControlNumber: "line-1",
         servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "92004" },

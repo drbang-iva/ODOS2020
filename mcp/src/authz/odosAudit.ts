@@ -13,15 +13,15 @@ import {
   type AgentOpsAuditFields,
 } from "../agentops/types.js";
 
-export const OSOD_AUDIT_EVENT_TYPE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/audit-event-type";
-export const OSOD_ROLE_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/role";
+export const ODOS_AUDIT_EVENT_TYPE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/audit-event-type";
+export const ODOS_ROLE_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/role";
 export const FHIR_AUDIT_EVENT_TYPE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/audit-event-type";
 export const FHIR_RESTFUL_INTERACTION_SYSTEM = "http://hl7.org/fhir/restful-interaction";
-export const OSOD_AUDIT_SOURCE_OBSERVER = "Device/osod-instance";
+export const ODOS_AUDIT_SOURCE_OBSERVER = "Device/odos-instance";
 
-export const OSOD_AUDIT_EVENT_TYPES = [
+export const ODOS_AUDIT_EVENT_TYPES = [
   "read",
   "search",
   "history",
@@ -122,21 +122,21 @@ export const OSOD_AUDIT_EVENT_TYPES = [
   ...AGENTOPS_AUDIT_EVENT_TYPES,
 ] as const;
 
-export type OsodAuditEventType = (typeof OSOD_AUDIT_EVENT_TYPES)[number];
-export type OsodActionOutcome = "granted" | "denied";
-export type OsodAuditOutcome = "success" | "denied" | "error";
-export type OsodActorRole = PracticeRoleId | "scribe" | "system" | "autonomous-agent";
+export type OdosAuditEventType = (typeof ODOS_AUDIT_EVENT_TYPES)[number];
+export type OdosActionOutcome = "granted" | "denied";
+export type OdosAuditOutcome = "success" | "denied" | "error";
+export type OdosActorRole = PracticeRoleId | "scribe" | "system" | "autonomous-agent";
 
-export interface OsodAuditEventRecord {
+export interface OdosAuditEventRecord {
   id: string;
   eventTime: string;
-  eventType: OsodAuditEventType;
+  eventType: OdosAuditEventType;
   actorId?: string;
-  actorRole?: OsodActorRole;
+  actorRole?: OdosActorRole;
   patientId?: string;
   resourceType?: string;
   resourceId?: string;
-  actionOutcome: OsodActionOutcome;
+  actionOutcome: OdosActionOutcome;
   actionReason?: string;
   policyUrl?: string;
   sessionId?: string;
@@ -152,23 +152,23 @@ export interface OsodAuditEventRecord {
   createdAt: string;
 }
 
-export type OsodAuditEventRow = OsodAuditEventRecord;
+export type OdosAuditEventRow = OdosAuditEventRecord;
 
-export interface BuildOsodAuditEventInput {
-  eventType: OsodAuditEventType;
+export interface BuildOdosAuditEventInput {
+  eventType: OdosAuditEventType;
   eventTime?: string;
   occurredAt?: string;
   actorId?: string;
   actorReference?: string;
   actorDisplay?: string;
-  actorRole?: OsodActorRole;
+  actorRole?: OdosActorRole;
   patientId?: string;
   patientReference?: string;
   resourceType?: string;
   resourceId?: string;
   targetReference?: string;
-  actionOutcome?: OsodActionOutcome;
-  outcome?: OsodAuditOutcome;
+  actionOutcome?: OdosActionOutcome;
+  outcome?: OdosAuditOutcome;
   actionReason?: string;
   outcomeDescription?: string;
   policyUrl?: string;
@@ -188,8 +188,8 @@ export interface OcrStyleAuditQuery {
   patientId: string;
   from: string;
   to: string;
-  eventTypes?: readonly OsodAuditEventType[];
-  actionOutcomes?: readonly OsodActionOutcome[];
+  eventTypes?: readonly OdosAuditEventType[];
+  actionOutcomes?: readonly OdosActionOutcome[];
   actorId?: string;
   breakGlassOnly?: boolean;
 }
@@ -197,13 +197,13 @@ export interface OcrStyleAuditQuery {
 export interface OcrStyleAuditResult {
   id: string;
   eventTime: string;
-  eventType: OsodAuditEventType;
+  eventType: OdosAuditEventType;
   actorId?: string;
-  actorRole?: OsodActorRole;
+  actorRole?: OdosActorRole;
   patientId: string;
   resourceType?: string;
   resourceId?: string;
-  actionOutcome: OsodActionOutcome;
+  actionOutcome: OdosActionOutcome;
   actionReason?: string;
   policyUrl?: string;
   breakGlass: boolean;
@@ -213,8 +213,8 @@ export interface OcrStyleAuditResult {
   provenanceId?: string;
 }
 
-export const OSOD_AUDIT_EVENTS_SCHEMA = {
-  tableName: "osod_audit_events",
+export const ODOS_AUDIT_EVENTS_SCHEMA = {
+  tableName: "odos_audit_events",
   appendOnly: true,
   columns: [
     "id",
@@ -259,7 +259,7 @@ export const OSOD_AUDIT_EVENTS_SCHEMA = {
   ],
 } as const;
 
-export const OSOD_AUDIT_EVENTS_SCHEMA_STUB = OSOD_AUDIT_EVENTS_SCHEMA;
+export const ODOS_AUDIT_EVENTS_SCHEMA_STUB = ODOS_AUDIT_EVENTS_SCHEMA;
 
 export const AUDIT_EVENT_PROJECTION_BACKOFF_MS = [
   60_000,
@@ -269,7 +269,7 @@ export const AUDIT_EVENT_PROJECTION_BACKOFF_MS = [
   24 * 60 * 60_000,
 ] as const;
 
-export function buildOsodAuditEventRow(input: BuildOsodAuditEventInput): OsodAuditEventRecord {
+export function buildOdosAuditEventRow(input: BuildOdosAuditEventInput): OdosAuditEventRecord {
   assertAuditEventType(input.eventType);
   const eventTime = input.eventTime ?? input.occurredAt ?? new Date().toISOString();
   const actionOutcome = normalizeActionOutcome(input);
@@ -303,11 +303,11 @@ export function buildOsodAuditEventRow(input: BuildOsodAuditEventInput): OsodAud
   };
 }
 
-export function buildPlaceholderAuditEvent(row: OsodAuditEventRecord): AuditEvent {
+export function buildPlaceholderAuditEvent(row: OdosAuditEventRecord): AuditEvent {
   return buildAuditEventProjection(row);
 }
 
-export function buildAuditEventProjection(row: OsodAuditEventRecord): AuditEvent {
+export function buildAuditEventProjection(row: OdosAuditEventRecord): AuditEvent {
   const auditEvent: AuditEvent = {
     resourceType: "AuditEvent",
     type: auditEventTypeCoding(row.eventType),
@@ -329,7 +329,7 @@ export function buildAuditEventProjection(row: OsodAuditEventRecord): AuditEvent
       },
     ],
     source: {
-      observer: { reference: OSOD_AUDIT_SOURCE_OBSERVER },
+      observer: { reference: ODOS_AUDIT_SOURCE_OBSERVER },
     },
     entity: auditEntities(row),
   };
@@ -337,14 +337,14 @@ export function buildAuditEventProjection(row: OsodAuditEventRecord): AuditEvent
 }
 
 export function markAuditEventProjected(
-  row: OsodAuditEventRecord,
+  row: OdosAuditEventRecord,
   auditEventReference: string,
-): OsodAuditEventRecord {
+): OdosAuditEventRecord {
   return { ...row, auditEventId: idFromReference(auditEventReference, "AuditEvent") ?? auditEventReference };
 }
 
 export function ocrStyleAuditQuery(
-  rows: readonly OsodAuditEventRecord[],
+  rows: readonly OdosAuditEventRecord[],
   query: OcrStyleAuditQuery,
 ): OcrStyleAuditResult[] {
   const fromMs = Date.parse(query.from);
@@ -381,14 +381,14 @@ export function ocrStyleAuditQuery(
     }));
 }
 
-export class InMemoryOsodAuditRepository {
-  readonly rows: OsodAuditEventRecord[];
+export class InMemoryOdosAuditRepository {
+  readonly rows: OdosAuditEventRecord[];
 
-  constructor(rows: readonly OsodAuditEventRecord[] = []) {
+  constructor(rows: readonly OdosAuditEventRecord[] = []) {
     this.rows = [...rows];
   }
 
-  insert(row: OsodAuditEventRecord): OsodAuditEventRecord {
+  insert(row: OdosAuditEventRecord): OdosAuditEventRecord {
     this.rows.push(row);
     return row;
   }
@@ -406,20 +406,20 @@ export class InMemoryOsodAuditRepository {
   }
 
   update(): never {
-    throw new Error("osod_audit_events append-only trigger guard: UPDATE is forbidden.");
+    throw new Error("odos_audit_events append-only trigger guard: UPDATE is forbidden.");
   }
 
   delete(): never {
-    throw new Error("osod_audit_events append-only trigger guard: DELETE is forbidden.");
+    throw new Error("odos_audit_events append-only trigger guard: DELETE is forbidden.");
   }
 
   truncate(): never {
-    throw new Error("osod_audit_events append-only trigger guard: TRUNCATE is forbidden.");
+    throw new Error("odos_audit_events append-only trigger guard: TRUNCATE is forbidden.");
   }
 }
 
 export interface ProjectionQueueItem {
-  row: OsodAuditEventRecord;
+  row: OdosAuditEventRecord;
   attempts: number;
   nextAttemptAt: string;
   lastError?: string;
@@ -428,7 +428,7 @@ export interface ProjectionQueueItem {
 export class AuditEventProjectionQueue {
   readonly pending: ProjectionQueueItem[] = [];
 
-  enqueue(row: OsodAuditEventRecord, now = row.eventTime): ProjectionQueueItem {
+  enqueue(row: OdosAuditEventRecord, now = row.eventTime): ProjectionQueueItem {
     const item: ProjectionQueueItem = { row, attempts: 0, nextAttemptAt: now };
     this.pending.push(item);
     return item;
@@ -463,13 +463,13 @@ export class AuditEventProjectionQueue {
 }
 
 export async function executePhiOperationWithAudit<T>(input: {
-  auditRow: OsodAuditEventRecord;
-  insertAuditRow: (row: OsodAuditEventRecord) => Promise<OsodAuditEventRecord> | OsodAuditEventRecord;
+  auditRow: OdosAuditEventRecord;
+  insertAuditRow: (row: OdosAuditEventRecord) => Promise<OdosAuditEventRecord> | OdosAuditEventRecord;
   operation: () => Promise<T> | T;
-  projectAuditEvent?: (row: OsodAuditEventRecord, event: AuditEvent) => Promise<string> | string;
+  projectAuditEvent?: (row: OdosAuditEventRecord, event: AuditEvent) => Promise<string> | string;
   projectionQueue?: AuditEventProjectionQueue;
 }): Promise<T> {
-  let inserted: OsodAuditEventRecord;
+  let inserted: OdosAuditEventRecord;
   try {
     inserted = await input.insertAuditRow(input.auditRow);
   } catch (error) {
@@ -497,18 +497,18 @@ export function assertAuditMutationAllowed(input: {
 }): never {
   if (input.dbRole !== "superuser") {
     throw new Error(
-      `permission denied: ${input.dbRole} cannot ${input.operation} osod_audit_events`,
+      `permission denied: ${input.dbRole} cannot ${input.operation} odos_audit_events`,
     );
   }
   throw new Error(
-    `osod_audit_events append-only trigger guard: ${input.operation} is forbidden even for superuser sessions.`,
+    `odos_audit_events append-only trigger guard: ${input.operation} is forbidden even for superuser sessions.`,
   );
 }
 
 export function assertAuditSessionVisible(input: {
-  callerRole: OsodActorRole;
+  callerRole: OdosActorRole;
   callerActorId?: string;
-  row: OsodAuditEventRecord;
+  row: OdosAuditEventRecord;
 }): void {
   if (input.callerRole === "auditor" || input.callerRole === "practice-admin") {
     return;
@@ -517,11 +517,11 @@ export function assertAuditSessionVisible(input: {
     return;
   }
   throw new Error(
-    "Mandate 8 boundary: MCP cannot read another user's osod_audit_events.session_id.",
+    "Mandate 8 boundary: MCP cannot read another user's odos_audit_events.session_id.",
   );
 }
 
-function normalizeActionOutcome(input: BuildOsodAuditEventInput): OsodActionOutcome {
+function normalizeActionOutcome(input: BuildOdosAuditEventInput): OdosActionOutcome {
   if (input.actionOutcome) {
     return input.actionOutcome;
   }
@@ -533,7 +533,7 @@ function normalizeActionOutcome(input: BuildOsodAuditEventInput): OsodActionOutc
 
 function normalizeIbException(
   value: InformationBlockingException | string | undefined,
-  outcome: OsodActionOutcome,
+  outcome: OdosActionOutcome,
   reason: string | undefined,
 ): InformationBlockingException | undefined {
   if (isInformationBlockingException(value)) {
@@ -545,7 +545,7 @@ function normalizeIbException(
   return undefined;
 }
 
-function auditEventTypeCoding(eventType: OsodAuditEventType): Coding {
+function auditEventTypeCoding(eventType: OdosAuditEventType): Coding {
   if (auditEventSubtype(eventType)) {
     return {
       system: FHIR_AUDIT_EVENT_TYPE_SYSTEM,
@@ -554,13 +554,13 @@ function auditEventTypeCoding(eventType: OsodAuditEventType): Coding {
     };
   }
   return {
-    system: OSOD_AUDIT_EVENT_TYPE_SYSTEM,
+    system: ODOS_AUDIT_EVENT_TYPE_SYSTEM,
     code: eventType,
     display: eventType,
   };
 }
 
-function auditEventSubtype(eventType: OsodAuditEventType): Coding | undefined {
+function auditEventSubtype(eventType: OdosAuditEventType): Coding | undefined {
   if (
     eventType === "read" ||
     eventType === "search" ||
@@ -580,7 +580,7 @@ function auditEventSubtype(eventType: OsodAuditEventType): Coding | undefined {
   return undefined;
 }
 
-function auditAction(eventType: OsodAuditEventType): AuditEvent["action"] {
+function auditAction(eventType: OdosAuditEventType): AuditEvent["action"] {
   if (eventType === "read" || eventType === "search" || eventType === "history" || eventType === "vread") {
     return "R";
   }
@@ -619,7 +619,7 @@ function auditAction(eventType: OsodAuditEventType): AuditEvent["action"] {
   return "U";
 }
 
-function auditOutcome(row: OsodAuditEventRecord): AuditEvent["outcome"] {
+function auditOutcome(row: OdosAuditEventRecord): AuditEvent["outcome"] {
   if (row.actionOutcome === "granted") {
     return "0";
   }
@@ -629,14 +629,14 @@ function auditOutcome(row: OsodAuditEventRecord): AuditEvent["outcome"] {
   return "8";
 }
 
-function roleConcept(role: OsodActorRole): CodeableConcept {
+function roleConcept(role: OdosActorRole): CodeableConcept {
   return {
     text: role,
-    coding: [{ system: OSOD_ROLE_CODE_SYSTEM, code: role, display: role }],
+    coding: [{ system: ODOS_ROLE_CODE_SYSTEM, code: role, display: role }],
   };
 }
 
-function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entity"]> {
+function auditEntities(row: OdosAuditEventRecord): NonNullable<AuditEvent["entity"]> {
   const entities: NonNullable<AuditEvent["entity"]> = [];
   if (row.patientId) {
     entities.push({ what: { reference: `Patient/${row.patientId}` }, name: "patient" });
@@ -662,7 +662,7 @@ function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entit
     ...(row.ibException
       ? [{ type: "ib_exception", valueString: row.ibException }]
       : []),
-    { type: "osod_audit_event_id", valueString: row.id },
+    { type: "odos_audit_event_id", valueString: row.id },
     ...(row.sessionId ? [{ type: "session_id", valueString: row.sessionId }] : []),
     ...(row.agentOps
       ? [
@@ -700,9 +700,9 @@ function auditEntities(row: OsodAuditEventRecord): NonNullable<AuditEvent["entit
   return entities;
 }
 
-function assertAuditEventType(eventType: string): asserts eventType is OsodAuditEventType {
-  if (!OSOD_AUDIT_EVENT_TYPES.includes(eventType as OsodAuditEventType)) {
-    throw new Error(`Unsupported OSOD audit event_type: ${eventType}`);
+function assertAuditEventType(eventType: string): asserts eventType is OdosAuditEventType {
+  if (!ODOS_AUDIT_EVENT_TYPES.includes(eventType as OdosAuditEventType)) {
+    throw new Error(`Unsupported ODOS audit event_type: ${eventType}`);
   }
 }
 

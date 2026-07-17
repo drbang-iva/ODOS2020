@@ -79,7 +79,7 @@ const CARD_PAYMENT = buildPaymentReconciliation({
   taskReference: "Task/receipt-parity-task",
   staffReference: "Practitioner/receipt-staff",
   processorTransactionId: "clover-test-0010",
-  processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/clover-payment",
+  processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/clover-payment",
   feesCents: 0,
   surface: "in-clinic-pos",
   tender: { code: "CARD", display: "VISA ****0010" },

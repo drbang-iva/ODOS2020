@@ -8,7 +8,7 @@ policies:
       clinical_billing_patient_facing_impact: clinical
       initiation_mode: user-initiated
     threshold_class: MEDIUM
-    agent_scope: https://osod.dev/agents/iris
+    agent_scope: https://odos2020.com/agents/iris
     effective_from: 2026-05-04
     effective_to: null
     rationale: Iris can draft and finalize chart summaries after inline clinician confirmation.
@@ -24,7 +24,7 @@ policies:
       clinical_billing_patient_facing_impact: mixed
       initiation_mode: user-initiated
     threshold_class: LOW
-    agent_scope: https://osod.dev/agents/iris
+    agent_scope: https://odos2020.com/agents/iris
     effective_from: 2026-05-04
     effective_to: null
     rationale: Iris follow-up proposals stay clinician-facing and remain undoable.
@@ -40,7 +40,7 @@ policies:
       clinical_billing_patient_facing_impact: clinical
       initiation_mode: user-initiated
     threshold_class: MEDIUM
-    agent_scope: https://osod.dev/agents/iris
+    agent_scope: https://odos2020.com/agents/iris
     effective_from: 2026-05-04
     effective_to: null
     rationale: Iris may draft clinician-facing correspondence but patient-channel dispatch remains out of scope.
@@ -56,7 +56,7 @@ policies:
       clinical_billing_patient_facing_impact: billing
       initiation_mode: user-initiated
     threshold_class: CRITICAL
-    agent_scope: https://osod.dev/agents/iris
+    agent_scope: https://odos2020.com/agents/iris
     effective_from: 2026-05-04
     effective_to: null
     rationale: Billing-impact submissions require dual verification.

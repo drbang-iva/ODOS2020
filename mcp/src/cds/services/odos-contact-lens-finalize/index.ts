@@ -11,16 +11,16 @@ export const CONTACT_LENS_FINALIZATION_CODES = [
   snomed("6213004", "Prescribing corneoscleral contact lens"),
 ] as const;
 
-export const osodContactLensFinalizeService: CdsHookService = {
+export const odosContactLensFinalizeService: CdsHookService = {
   discovery: {
-    id: "osod-contact-lens-finalize",
+    id: "odos-contact-lens-finalize",
     hook: "order-sign",
-    title: "OSOD contact lens finalize",
+    title: "ODOS contact lens finalize",
     description: "Reviews contact lens fitting and finalization orders before signing.",
     prefetch: {
       serviceRequests: "ServiceRequest?patient={{context.patientId}}&encounter={{context.encounterId}}",
     },
-    usageRequirements: "Local deterministic OSOD specialty rule. No image analysis. No external network call.",
+    usageRequirements: "Local deterministic ODOS specialty rule. No image analysis. No external network call.",
   },
   supportedCodes: CONTACT_LENS_FINALIZATION_CODES,
   matches(input: CdsHookEvaluationInput): boolean {
@@ -43,7 +43,7 @@ export const osodContactLensFinalizeService: CdsHookService = {
             "SNOMED CT 2488002 and 6213004 verified 2026-05-02; CDS Hooks 2.0.1 card schema + HTI-1 DSI disclosure fields verified 2026-05-02.",
           suggestions: [
             {
-              uuid: "osod-contact-lens-finalize-review",
+              uuid: "odos-contact-lens-finalize-review",
               label: "Document final contact lens parameters",
               actions: [],
             },

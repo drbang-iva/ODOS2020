@@ -2,7 +2,7 @@
  * Vendor-neutral payment processor adapter interface (v0.6c payments slice).
  *
  * One concrete adapter per processor lands under ./adapters/; practices configure which adapter(s)
- * they run. Architecture: performance-od decisions/2026-05-05-osod-payment-processor-architecture.md
+ * they run. Architecture: performance-od decisions/2026-05-05-odos-payment-processor-architecture.md
  * (adapter pattern, three surfaces, PCI scope minimization via processor-side tokenization).
  * Seam refinements: performance-od decisions/2026-07-05-odos-payment-reconciliation-seam-spec.md —
  * the Invoice is the bill, the PaymentReconciliation is the settling payment; a charge therefore

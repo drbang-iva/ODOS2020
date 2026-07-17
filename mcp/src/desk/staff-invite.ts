@@ -1,6 +1,6 @@
 import type { ProjectMembership } from "@medplum/fhirtypes";
 import type { Application } from "express";
-import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../authz/odosAudit.js";
 import { PRACTICE_ROLE_IDS, type PracticeRoleId } from "../authz/roles.js";
 
 export interface StaffInviteInput {
@@ -18,7 +18,7 @@ export interface StaffInviteDeps {
   } | null>;
   invite(input: Omit<StaffInviteInput, "roleId">): Promise<ProjectMembership>;
   grantRole(membership: ProjectMembership, email: string, roleId: PracticeRoleId): Promise<void>;
-  recordAudit(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface StaffInviteResult {
@@ -41,7 +41,7 @@ export function registerStaffInviteRoute(
       });
       res.status(result.status).json(result.body);
     } catch (error) {
-      console.error("osod-mcp: /desk/staff/invite failed:", error);
+      console.error("odos-mcp: /desk/staff/invite failed:", error);
       if (!res.headersSent) res.status(500).json({ error: "Staff invite route failed." });
     }
   });
@@ -88,7 +88,7 @@ export async function handleStaffInviteRequest(
     };
   }
 
-  await deps.recordAudit(buildOsodAuditEventRow({
+  await deps.recordAudit(buildOdosAuditEventRow({
     eventType: "staff.invite",
     actorReference: staff.staffReference,
     actorRole: "practice-admin",

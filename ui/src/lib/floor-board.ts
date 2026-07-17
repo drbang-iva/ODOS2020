@@ -5,18 +5,18 @@ import { parseFloorState } from "./floor-state";
 import {
   DEFAULT_FLOOR_STATIONS,
   DEFAULT_LANE_THRESHOLDS,
-  OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM,
   type LaneThreshold,
   type PayerCueKind,
   type PersistedFloorConfig,
 } from "./floor-config";
 
 export {
-  OSOD_FLOOR_CONFIG_CODE,
-  OSOD_FLOOR_CONFIG_EXTENSION_URL,
-  OSOD_FLOOR_CONFIG_SYSTEM,
+  ODOS_FLOOR_CONFIG_CODE,
+  ODOS_FLOOR_CONFIG_EXTENSION_URL,
+  ODOS_FLOOR_CONFIG_SYSTEM,
 } from "./floor-config";
 export type { LaneThreshold, PayerCueKind } from "./floor-config";
 
@@ -104,7 +104,7 @@ function thresholdFor(stationId: string, config: FloorBoardConfig): LaneThreshol
 
 // Checked-in and walk-in patients are "on the floor". Both are represented via
 // content.status (already correctly derived by buildAppointmentBlockContent's
-// call to osodAppointmentStatusOf — see the note above on why this isn't
+// call to odosAppointmentStatusOf — see the note above on why this isn't
 // re-derived from raw appointment.status here).
 const ON_FLOOR_STATUSES = new Set(["checked-in", "walk-in"]);
 
@@ -145,7 +145,7 @@ export function deriveFloorBoard(
   return board;
 }
 
-// The fallback board config, used when no osod-floor-config singleton has been
+// The fallback board config, used when no odos-floor-config singleton has been
 // configured yet (or a read fails) — see useFloorBoardConfig, which reads the real
 // persisted singleton and falls back to this. Only `stations` and `defaultThreshold`
 // mirror mcp/src/scheduling/floor-config.ts's DEFAULT_FLOOR_STATIONS /
@@ -153,7 +153,7 @@ export function deriveFloorBoard(
 //
 // payerMap seeds only VSP/EyeMed (genuinely generic, cross-practice vision-plan
 // names) as a visible out-of-the-box demo. It deliberately has NO house-plan entry
-// and NO housePlanLabel default: this is shared open-source software every OSOD
+// and NO housePlanLabel default: this is shared open-source software every ODOS
 // practice runs, and a house plan's name is inherently practice-specific — baking
 // one practice's brand in here would be wrong for every other install. A practice
 // configures its own house-plan name + label via the floor-config singleton; until
@@ -205,12 +205,12 @@ function isValidPayerMap(value: unknown): value is Record<string, PayerCueKind> 
 
 export function parseFloorConfigResource(basic: Basic): FloorBoardConfig | undefined {
   const coding = basic.code?.coding?.find(
-    (c) => c.system === OSOD_FLOOR_CONFIG_SYSTEM && c.code === OSOD_FLOOR_CONFIG_CODE,
+    (c) => c.system === ODOS_FLOOR_CONFIG_SYSTEM && c.code === ODOS_FLOOR_CONFIG_CODE,
   );
   if (!coding) {
     return undefined;
   }
-  const raw = basic.extension?.find((e) => e.url === OSOD_FLOOR_CONFIG_EXTENSION_URL)?.valueString;
+  const raw = basic.extension?.find((e) => e.url === ODOS_FLOOR_CONFIG_EXTENSION_URL)?.valueString;
   if (!raw) {
     return undefined;
   }

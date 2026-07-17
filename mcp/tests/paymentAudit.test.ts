@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { OSOD_AUDIT_EVENT_TYPES, buildAuditEventProjection } from "../src/authz/osodAudit.js";
+import { ODOS_AUDIT_EVENT_TYPES, buildAuditEventProjection } from "../src/authz/odosAudit.js";
 import {
   PAYMENT_AUDIT_EVENT_TYPES,
   buildPaymentAuditRecord,
@@ -25,7 +25,7 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
   assert.deepEqual([...PAYMENT_AUDIT_EVENT_TYPES], expected);
   // and the registry carries exactly this payment.* family — no drift in either direction
   assert.deepEqual(
-    OSOD_AUDIT_EVENT_TYPES.filter((t) => t.startsWith("payment.")),
+    ODOS_AUDIT_EVENT_TYPES.filter((t) => t.startsWith("payment.")),
     expected,
   );
 });
@@ -41,14 +41,14 @@ test("the latest audit migration pair matches the TypeScript union and separates
     resolve(process.cwd(), "../data/migrations", validationFile),
     "utf8",
   );
-  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
-  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT odos_audit_events_event_type_check CHECK");
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   const sqlTypes = [...sql.matchAll(/'([^']+)'/g)].map((match) => match[1]);
-  assert.deepEqual(sqlTypes, [...OSOD_AUDIT_EVENT_TYPES]);
+  assert.deepEqual(sqlTypes, [...ODOS_AUDIT_EVENT_TYPES]);
   assert.doesNotMatch(sql, /VALIDATE CONSTRAINT/);
-  assert.match(validationSql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
+  assert.match(validationSql, /VALIDATE CONSTRAINT odos_audit_events_event_type_check/);
   const liveAuditSource = readFileSync(resolve(process.cwd(), "src/authz/liveAudit.ts"), "utf8");
   assert.match(liveAuditSource, new RegExp(`AUDIT_DDL_FILES[\\s\\S]*${migrationFile.replaceAll(".", "\\.")}`));
   assert.match(liveAuditSource, new RegExp(`${migrationFile.replaceAll(".", "\\.")}[\\s\\S]*${validationFile.replaceAll(".", "\\.")}`));

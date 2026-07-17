@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         brand: "#60a5fa",
-        // OSOD palette — dark space theme for Director view
+        // ODOS palette — dark space theme for Director view
         bg: {
           deep: "#0a0b14",
           mid: "#11131f",

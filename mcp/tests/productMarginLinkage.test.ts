@@ -12,7 +12,7 @@ import { frameChargeItemDefinitionCanonical } from "../../ui/src/lib/optical-pri
 const SYNTHETIC_FRAME_CODE = "FRAME-TEST";
 
 test("catalog-attached frame identity reaches the checkout transaction ChargeItem definitionCanonical", () => {
-  const catalogCanonicalUrl = "https://osod.dev/catalog/frames/frame-900";
+  const catalogCanonicalUrl = "https://odos2020.com/catalog/frames/frame-900";
   const draft: OpticalChargeLineDraft = {
     id: "frame-line",
     procedure: SYNTHETIC_FRAME_CODE,
@@ -52,7 +52,7 @@ test("catalog-attached frame identity reaches the checkout transaction ChargeIte
     (entry) => entry.resource?.resourceType === "ChargeItem",
   )?.resource as ChargeItem | undefined;
   const definition = buildFrameChargeItemDefinition({
-    practiceId: "osod-practice",
+    practiceId: "odos-practice",
     catalogCanonicalUrl,
     practiceSalePriceCents: 24_400,
     wholesaleCostCents: 10_000,

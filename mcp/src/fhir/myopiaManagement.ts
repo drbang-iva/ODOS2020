@@ -15,18 +15,18 @@ import {
   ATROPINE_CONCENTRATION_UCUM_CODE_SYSTEM,
   LOINC_CODE_SYSTEM,
   MYOPIA_CONTROL_INTERVENTION_CODE_SYSTEM,
-  OSOD_FHIR_BASE,
+  ODOS_FHIR_BASE,
   UCUM_CODE_SYSTEM,
 } from "./contactLens.js";
-import { applyCommonObservationFields, osodConcept, quantity, reference } from "./ophthalmology/extensions.js";
+import { applyCommonObservationFields, odosConcept, quantity, reference } from "./ophthalmology/extensions.js";
 import type { EyeLaterality } from "./ophthalmology/types.js";
 
 export const MYOPIA_MANAGEMENT_CAREPLAN_PROFILE_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/CarePlan-MyopiaManagement`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/CarePlan-MyopiaManagement`;
 export const MYOPIA_CAREPLAN_ACTIVITY_INTERVENTION_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/myopia-careplan-activity-intervention`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/myopia-careplan-activity-intervention`;
 export const OBSERVATION_AXIAL_LENGTH_PROFILE_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/Observation-AxialLength`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/Observation-AxialLength`;
 export const AXIAL_LENGTH_LOINC_BY_EYE = {
   OD: { code: "64742-0", display: "Right eye Axial length" },
   OS: { code: "66067-0", display: "Left eye Axial length" },
@@ -266,14 +266,14 @@ export function buildMyopiaDeviceUseStatement(
 }
 
 export function axialLengthConcept(eye: EyeLaterality): CodeableConcept {
-  const osod = osodConcept("AXIAL_LENGTH", "Axial length");
+  const odos = odosConcept("AXIAL_LENGTH", "Axial length");
   const loinc = eye === "OD" || eye === "OS" ? AXIAL_LENGTH_LOINC_BY_EYE[eye] : undefined;
   return {
     coding: [
       ...(loinc ? [{ system: LOINC_CODE_SYSTEM, code: loinc.code, display: loinc.display }] : []),
-      ...(osod.coding ?? []),
+      ...(odos.coding ?? []),
     ],
-    text: osod.text,
+    text: odos.text,
   };
 }
 
@@ -347,10 +347,10 @@ function extensionDefinition(): StructureDefinition {
     resourceType: "StructureDefinition",
     url: MYOPIA_CAREPLAN_ACTIVITY_INTERVENTION_EXTENSION_URL,
     version: "0.4.0",
-    name: "OSODMyopiaCarePlanActivityIntervention",
-    title: "OSOD Myopia CarePlan Activity Intervention",
+    name: "ODOSMyopiaCarePlanActivityIntervention",
+    title: "ODOS Myopia CarePlan Activity Intervention",
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description: "FHIR R4-valid reference from CarePlan.activity to the active intervention resource.",
     fhirVersion: "4.0.1",
     kind: "complex-type",
@@ -398,10 +398,10 @@ function carePlanProfile(): StructureDefinition {
     resourceType: "StructureDefinition",
     url: MYOPIA_MANAGEMENT_CAREPLAN_PROFILE_URL,
     version: "0.4.0",
-    name: "OSODCarePlanMyopiaManagement",
-    title: "OSOD CarePlan - Myopia Management",
+    name: "ODOSCarePlanMyopiaManagement",
+    title: "ODOS CarePlan - Myopia Management",
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description: "CarePlan profile for coordinating myopia-management interventions.",
     fhirVersion: "4.0.1",
     kind: "resource",

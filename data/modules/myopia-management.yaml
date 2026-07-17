@@ -11,8 +11,8 @@ eventTypes:
   - atropine-status-change
   - axial-length-measurement
 profiles:
-  - https://osod.dev/fhir/StructureDefinition/CarePlan-MyopiaManagement
-  - https://osod.dev/fhir/StructureDefinition/Observation-AxialLength
+  - https://odos2020.com/fhir/StructureDefinition/CarePlan-MyopiaManagement
+  - https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength
   - http://hl7.org/fhir/StructureDefinition/EpisodeOfCare
   - http://hl7.org/fhir/StructureDefinition/MedicationStatement
   - http://hl7.org/fhir/StructureDefinition/DeviceUseStatement

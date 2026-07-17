@@ -1,11 +1,11 @@
 import type { AuditEvent, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import {
   buildAuditEventProjection,
-  buildOsodAuditEventRow,
-  type OsodAuditEventRecord,
-} from "../../authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosAuditEventRecord,
+} from "../../authz/odosAudit.js";
 import {
-  OSOD_LAB_TRANSPORT_STATE_SYSTEM,
+  ODOS_LAB_TRANSPORT_STATE_SYSTEM,
   assertLabTransportState,
   canTransitionLabTransportState,
   isTerminalLabTransportState,
@@ -15,7 +15,7 @@ import {
 import { labOrderToExport, renderLabOrderSheet } from "../../fhir/opticalLabOrder.js";
 import {
   LAB_ORDER_EXPORT_INPUT_CODE,
-  OSOD_LAB_ORDER_TASK_INPUT_SYSTEM,
+  ODOS_LAB_ORDER_TASK_INPUT_SYSTEM,
   withLabOrderStatusRecord,
   type LabOrderStatus,
 } from "../../fhir/labOrderStatus.js";
@@ -26,9 +26,9 @@ import type {
   SubmitLabOrderRequest,
 } from "../lab-order-adapter.js";
 
-export const OSOD_LAB_ORDER_TASK_CODE_SYSTEM = "https://osod.dev/fhir/CodeSystem/task-type";
+export const ODOS_LAB_ORDER_TASK_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/task-type";
 export const LAB_ORDER_TRANSMISSION_TASK_CODE = "lab-order-transmission";
-export { LAB_ORDER_EXPORT_INPUT_CODE, OSOD_LAB_ORDER_TASK_INPUT_SYSTEM } from "../../fhir/labOrderStatus.js";
+export { LAB_ORDER_EXPORT_INPUT_CODE, ODOS_LAB_ORDER_TASK_INPUT_SYSTEM } from "../../fhir/labOrderStatus.js";
 
 export type LabOrderFhirClient = {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -39,7 +39,7 @@ export type LabOrderFhirClient = {
 
 export interface ManualLabOrderAdapterOptions {
   now?: () => string;
-  recordAudit?(row: OsodAuditEventRecord): Promise<void>;
+  recordAudit?(row: OdosAuditEventRecord): Promise<void>;
 }
 
 const VENDOR_ONLY_STATES: readonly LabTransportState[] = ["acknowledged", "in-production", "shipped"];
@@ -57,7 +57,7 @@ export function createManualLabOrderAdapter(
     targetReference: string;
     reason: string;
   }): Promise<void> {
-    const row = buildOsodAuditEventRow({
+    const row = buildOdosAuditEventRow({
       eventType: input.eventType,
       eventTime: input.at,
       actorReference: input.staffReference,
@@ -126,7 +126,7 @@ export function createManualLabOrderAdapter(
       const clinicalOrder = await fhir.read<Task>("Task", orderTaskId);
       const existing = await fhir.search<Task>("Task", {
         "based-on": req.orderTaskReference,
-        code: `${OSOD_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
+        code: `${ODOS_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
         _count: "1000",
       });
       if (existing.link?.some((link) => link.relation === "next")) {
@@ -150,7 +150,7 @@ export function createManualLabOrderAdapter(
         intent: "order",
         code: {
           coding: [{
-            system: OSOD_LAB_ORDER_TASK_CODE_SYSTEM,
+            system: ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
             code: LAB_ORDER_TRANSMISSION_TASK_CODE,
             display: "Lab Order Transmission",
           }],
@@ -165,7 +165,7 @@ export function createManualLabOrderAdapter(
         input: [{
           type: {
             coding: [{
-              system: OSOD_LAB_ORDER_TASK_INPUT_SYSTEM,
+              system: ODOS_LAB_ORDER_TASK_INPUT_SYSTEM,
               code: LAB_ORDER_EXPORT_INPUT_CODE,
               display: "Lab Order Export",
             }],
@@ -219,7 +219,7 @@ export function createManualLabOrderAdapter(
 export function storedLabOrderExport(task: Task): ReturnType<typeof labOrderToExport> {
   assertLabOrderTransmissionTask(task, task.id ? `Task/${task.id}` : "Task/(missing-id)");
   const value = task.input?.find((input) => input.type.coding?.some((coding) =>
-    coding.system === OSOD_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_EXPORT_INPUT_CODE))?.valueString;
+    coding.system === ODOS_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_EXPORT_INPUT_CODE))?.valueString;
   if (!value) throw new Error("Lab transmission Task is missing its stored lab-order export.");
   let parsed: unknown;
   try {
@@ -235,12 +235,12 @@ export function storedLabOrderExport(task: Task): ReturnType<typeof labOrderToEx
 
 export function isLabOrderTransmissionTask(task: Task): boolean {
   return task.code?.coding?.some((coding) =>
-    coding.system === OSOD_LAB_ORDER_TASK_CODE_SYSTEM && coding.code === LAB_ORDER_TRANSMISSION_TASK_CODE) ?? false;
+    coding.system === ODOS_LAB_ORDER_TASK_CODE_SYSTEM && coding.code === LAB_ORDER_TRANSMISSION_TASK_CODE) ?? false;
 }
 
 export function transportStateFromTask(task: Task): LabTransportState {
   const code = task.businessStatus?.coding?.find((coding) =>
-    coding.system === OSOD_LAB_TRANSPORT_STATE_SYSTEM)?.code;
+    coding.system === ODOS_LAB_TRANSPORT_STATE_SYSTEM)?.code;
   if (!code) throw new Error("Lab transmission Task is missing its lab transport businessStatus.");
   assertLabTransportState(code);
   return code;
@@ -281,7 +281,7 @@ function resources<T extends Resource>(bundle: Bundle<T>): T[] {
 function isStoredLabOrderExport(value: unknown): value is ReturnType<typeof labOrderToExport> {
   if (typeof value !== "object" || value === null) return false;
   const envelope = value as Record<string, unknown>;
-  return envelope.format === "osod-lab-order"
+  return envelope.format === "odos-lab-order"
     && envelope.version === "0"
     && typeof envelope.order === "object"
     && envelope.order !== null;

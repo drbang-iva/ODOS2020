@@ -1,21 +1,21 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-optical-lab",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab",
-  "version": "optical-pricing-1",
-  "name": "OSODOpticalLab",
-  "title": "OSOD Optical Lab Identifier",
+  "id": "odos-payment-subject",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject",
+  "version": "0.6c-phase6a",
+  "name": "ODOSPaymentSubject",
+  "title": "ODOS Payment Subject",
   "status": "active",
-  "date": "2026-07-11",
-  "publisher": "OSOD",
-  "description": "Practice-local optical lab identifier matching the string identity used by the OSOD lab-order header.",
+  "date": "2026-07-10",
+  "publisher": "ODOS",
+  "description": "Patient account that owns a patient PaymentReconciliation or its unapplied credit.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "ChargeItemDefinition"
+      "expression": "PaymentReconciliation"
     }
   ],
   "type": "Extension",
@@ -26,7 +26,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "Practice-local optical lab identifier",
+        "short": "Patient account owning the payment",
         "min": 0,
         "max": "1"
       },
@@ -38,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject"
       },
       {
         "id": "Extension.value[x]",
@@ -47,7 +47,10 @@
         "max": "1",
         "type": [
           {
-            "code": "string"
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Patient"
+            ]
           }
         ]
       }

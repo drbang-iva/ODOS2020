@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ClaimResponse } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
 import {
   buildInsurancePaymentReconciliation,
   claimResponseLinePaymentAllocations,
   INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
   INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
-  OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+  ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
 } from "../src/payments/payment-reconciliation.js";
 
 test("buildInsurancePaymentReconciliation adds the v0.6d insurance row: request Claim, response ClaimResponse", () => {
@@ -20,7 +20,7 @@ test("buildInsurancePaymentReconciliation adds the v0.6d insurance row: request 
     insurerReference: "Organization/payer-1",
     practiceOrgReference: "Organization/practice-1",
     processorTransactionId: "era-900",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/claimmd-era",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/claimmd-era",
     description: "Claim.MD ERA era-900",
   });
 
@@ -49,7 +49,7 @@ test("identity-linked lines are discriminated and their detail amounts do not du
     item: [{
       itemSequence: 1,
       extension: [{
-        url: OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+        url: ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
         valueReference: { reference: "ChargeItem/charge-1" },
       }],
       adjudication: [{ category: { text: "paid" }, amount: { value: 80, currency: "USD" } }],
@@ -62,14 +62,14 @@ test("identity-linked lines are discriminated and their detail amounts do not du
     claimReference: "Claim/claim-1",
     claimResponseReference: "ClaimResponse/response-1",
     processorTransactionId: "ERA-1",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/test-era",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/test-era",
     lineAllocations: claimResponseLinePaymentAllocations(response),
   });
 
   assert.deepEqual(pr.detail?.[0], {
     type: { coding: [
       { system: "http://terminology.hl7.org/CodeSystem/payment-type", code: "payment", display: "Payment" },
-      { system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM, code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE, display: "Claim rollup" },
+      { system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM, code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE, display: "Claim rollup" },
     ] },
     request: { reference: "Claim/claim-1" },
     response: { reference: "ClaimResponse/response-1" },
@@ -77,7 +77,7 @@ test("identity-linked lines are discriminated and their detail amounts do not du
   assert.deepEqual(pr.detail?.[1], {
     type: { coding: [
       { system: "http://terminology.hl7.org/CodeSystem/payment-type", code: "payment", display: "Payment" },
-      { system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM, code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE, display: "ChargeItem allocation" },
+      { system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM, code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE, display: "ChargeItem allocation" },
     ] },
     request: { reference: "ChargeItem/charge-1" },
     response: { reference: "ClaimResponse/response-1" },
@@ -94,7 +94,7 @@ test("a partially linked insurance payment leaves only the unallocated remainder
     claimReference: "Claim/claim-1",
     claimResponseReference: "ClaimResponse/response-1",
     processorTransactionId: "ERA-2",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/test-era",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/test-era",
     lineAllocations: [{ chargeItemReference: "ChargeItem/charge-1", amountCents: 8_000 }],
   });
 
@@ -130,7 +130,7 @@ test("buildInsurancePaymentReconciliation retains its amount, reference, and dat
     claimReference: "Claim/claim-1",
     claimResponseReference: "ClaimResponse/response-1",
     processorTransactionId: "EFT-1",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/manual-eob",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/manual-eob",
   };
   assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, amountCents: 0 }), /positive integer number of cents/);
   assert.throws(() => buildInsurancePaymentReconciliation({ ...valid, amountCents: -1 }), /positive integer number of cents/);

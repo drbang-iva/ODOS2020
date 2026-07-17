@@ -1,17 +1,17 @@
 /**
- * Node-side FHIR client for the OSOD MCP server.
- * Mirrors osod/src/fhir-client.ts (the POC) — PKCE OAuth2, zero SDK coupling.
+ * Node-side FHIR client for the ODOS MCP server.
+ * Mirrors odos/src/fhir-client.ts (the POC) — PKCE OAuth2, zero SDK coupling.
  */
 
 import { createHash, randomBytes } from "node:crypto";
 import type { Binary, Bundle, OperationOutcome, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
-  buildOsodAuditEventRow,
-  type BuildOsodAuditEventInput,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "./authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type BuildOdosAuditEventInput,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "./authz/odosAudit.js";
 import {
   assertBinaryCreateThroughParser,
   assertBinaryPatchAllowed,
@@ -24,7 +24,7 @@ export type JsonPatchOperation =
 
 export interface FhirAuditContext {
   actorId?: string;
-  actorRole?: OsodActorRole;
+  actorRole?: OdosActorRole;
   sessionId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -32,8 +32,8 @@ export interface FhirAuditContext {
 }
 
 export interface FhirAuditRecorder {
-  record<T>(row: OsodAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
-  recordDenied(row: OsodAuditEventRecord): Promise<void>;
+  record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
+  recordDenied(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface MedplumClient {
@@ -149,7 +149,7 @@ export function createMedplumClient(opts: {
   }
 
   async function audited<T>(
-    input: BuildOsodAuditEventInput,
+    input: BuildOdosAuditEventInput,
     operation: () => Promise<T>,
   ): Promise<T> {
     if (!audit) {
@@ -157,11 +157,11 @@ export function createMedplumClient(opts: {
     }
 
     try {
-      return await audit.record(buildOsodAuditEventRow({ ...auditContext, ...input }), operation);
+      return await audit.record(buildOdosAuditEventRow({ ...auditContext, ...input }), operation);
     } catch (error) {
       if (isAccessDeniedError(error)) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             ...input,
             eventType: "denied",
@@ -181,7 +181,7 @@ export function createMedplumClient(opts: {
 
     try {
       await audit.record(
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           ...auditContext,
           eventType: "login",
           actorId: auditContext.actorId ?? email,
@@ -194,7 +194,7 @@ export function createMedplumClient(opts: {
     } catch (error) {
       if (!isAuditSubstrateError(error)) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "login-failed",
             actorId: auditContext.actorId ?? email,
@@ -512,7 +512,7 @@ export function createMedplumClient(opts: {
     async deleteAttempt(rt: string, id: string, reason = "mandate-8-boundary delete-attempt"): Promise<never> {
       if (audit) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "delete-attempt",
             resourceType: rt,
@@ -524,13 +524,13 @@ export function createMedplumClient(opts: {
           }),
         );
       }
-      throw new Error("OSOD FHIR DELETE is disabled; use entered-in-error/nullification workflows.");
+      throw new Error("ODOS FHIR DELETE is disabled; use entered-in-error/nullification workflows.");
     },
 
     async nullifyAttempt(rt: string, id: string, reason = "mandate-8-boundary nullify-attempt"): Promise<never> {
       if (audit) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "nullify-attempt",
             resourceType: rt,
@@ -542,7 +542,7 @@ export function createMedplumClient(opts: {
           }),
         );
       }
-      throw new Error("OSOD FHIR nullification must use an explicit clinical status workflow.");
+      throw new Error("ODOS FHIR nullification must use an explicit clinical status workflow.");
     },
   };
 }
@@ -613,8 +613,8 @@ function patientIdFromResource(resource: Resource): string | undefined {
 
 export function auditEventTypeForFhirWrite(
   resourceType: string,
-  fallback: Extract<OsodAuditEventType, "create" | "update" | "patch">,
-): OsodAuditEventType {
+  fallback: Extract<OdosAuditEventType, "create" | "update" | "patch">,
+): OdosAuditEventType {
   if (resourceType === "AccessPolicy") {
     return "policy-change";
   }

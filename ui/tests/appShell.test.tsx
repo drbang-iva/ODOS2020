@@ -87,7 +87,7 @@ test("login and full-page routes render without AppShell", () => {
   const originalWindow = globalThis.window;
   const originalStorage = globalThis.sessionStorage;
   const storage = memoryStorage();
-  const location = { pathname: "/", search: "", href: "http://osod.local/", origin: "http://osod.local" };
+  const location = { pathname: "/", search: "", href: "http://odos.local/", origin: "http://odos.local" };
   const windowStub = {
     location,
     history: { replaceState: () => undefined },

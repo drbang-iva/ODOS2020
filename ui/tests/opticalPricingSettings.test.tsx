@@ -5,7 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   LENS_PRICING_SEEDS,
-  OSOD_WHOLESALE_COST_EXTENSION_URL,
+  ODOS_WHOLESALE_COST_EXTENSION_URL,
   buildContactLensPricingResource,
   buildFramePricingResource,
   buildLensPricingResource,
@@ -47,7 +47,7 @@ test("frame pricing adapter edits existing frame rules without creating parallel
   const item: FramePricingItem = {
     id: "frame-rule-1",
     active: true,
-    catalogCanonicalUrl: "https://osod.dev/catalog/frames/SKU-1",
+    catalogCanonicalUrl: "https://odos2020.com/catalog/frames/SKU-1",
     wholesaleCostCents: 4700,
     retailPriceCents: 19900,
   };
@@ -63,7 +63,7 @@ test("frame pricing adapter edits existing frame rules without creating parallel
   assert.equal("delete" in adapter, false);
   await adapter.save({ ...row!, wholesaleCostCents: 5100 });
   assert.equal(writes.at(-1)?.derivedFromUri?.[0], item.catalogCanonicalUrl);
-  assert.equal(writes.at(-1)?.extension?.find((extension) => extension.url === OSOD_WHOLESALE_COST_EXTENSION_URL)?.valueMoney?.value, 51);
+  assert.equal(writes.at(-1)?.extension?.find((extension) => extension.url === ODOS_WHOLESALE_COST_EXTENSION_URL)?.valueMoney?.value, 51);
   assert.equal(writes.at(-1)?.propertyGroup?.[0]?.priceComponent?.[0]?.amount?.value, 199);
 });
 
@@ -88,7 +88,7 @@ test("lens pricing resource keeps wholesale metadata outside the sole retail bas
   assert.equal(resource.propertyGroup?.[0]?.priceComponent?.[0]?.type, "base");
   assert.equal(resource.propertyGroup?.[0]?.priceComponent?.[0]?.amount?.value, 82);
   assert.equal(
-    resource.extension?.find((extension) => extension.url === OSOD_WHOLESALE_COST_EXTENSION_URL)?.valueMoney?.value,
+    resource.extension?.find((extension) => extension.url === ODOS_WHOLESALE_COST_EXTENSION_URL)?.valueMoney?.value,
     31,
   );
   assert.equal(JSON.stringify(resource.propertyGroup).includes("31"), false);

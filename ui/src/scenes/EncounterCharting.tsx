@@ -26,7 +26,7 @@ import { WearingSection } from "../components/charting/WearingSection";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { fhir } from "../lib/fhir";
 import { useRole } from "../lib/role-context";
-import { OSOD_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../lib/scheduling";
+import { ODOS_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../lib/scheduling";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
 
 interface Props {
@@ -84,7 +84,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     fhir.read<Encounter>("Encounter", encounterId)
       .then((encounter) => {
         const code = encounter.serviceType?.coding?.find((coding) =>
-          coding.system === OSOD_DISCIPLINE_SYSTEM
+          coding.system === ODOS_DISCIPLINE_SYSTEM
         )?.code;
         if (cancelled) return;
         if (code === "eyecare" || code === "aesthetics") {

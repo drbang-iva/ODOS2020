@@ -1,7 +1,7 @@
 import type { CodeableConcept, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildGlaucomaFindingDefinitionStubs,
   captureGlaucomaFinding,
@@ -60,7 +60,7 @@ export interface CupDiscDefinitionResponse {
   };
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const LEDGER_REF = "data/code-bindings/glaucoma-suspect-phase0-ledger.json";
 const EYES = ["OD", "OS"] as const;
 
@@ -202,7 +202,7 @@ export function resolveCupDiscDefinition(
   suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
 ): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? buildGlaucomaFindingDefinitionStubs({
-    provenance: cupDiscProvenance("Practitioner/osod-system", new Date(0).toISOString()),
+    provenance: cupDiscProvenance("Practitioner/odos-system", new Date(0).toISOString()),
   });
   const definition = definitions.find((row) => row.stableKey === "cup_disc_ratio");
   if (!definition) {
@@ -294,7 +294,7 @@ function methodConcept(
 ): CodeableConcept | undefined {
   if (!methodSource) return undefined;
   const option = fieldOptions(definition, "methodSource").find((candidate) => candidate.code === methodSource);
-  return option ? osodConcept(option.code, option.display) : undefined;
+  return option ? odosConcept(option.code, option.display) : undefined;
 }
 
 function eyeResult(

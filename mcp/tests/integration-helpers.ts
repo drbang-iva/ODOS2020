@@ -57,7 +57,7 @@ export async function connectMcpServer(input: {
     cwd: process.cwd(),
     env: {
       ...definedEnv(process.env),
-      OSOD_MCP_TRANSPORT: "stdio",
+      ODOS_MCP_TRANSPORT: "stdio",
       MEDPLUM_BASE_URL: input.baseUrl,
       MEDPLUM_ADMIN_EMAIL: input.email,
       MEDPLUM_ADMIN_PASSWORD: input.password,
@@ -78,7 +78,7 @@ export async function connectMcpServer(input: {
     await transport.close().catch(() => undefined);
     const stderr = stderrChunks.join("").trim();
     const detail = stderr ? `\nMCP stderr:\n${stderr}` : "";
-    throw new Error(`Failed to connect to osod-mcp test server.${detail}`, {
+    throw new Error(`Failed to connect to odos-mcp test server.${detail}`, {
       cause: err,
     });
   }

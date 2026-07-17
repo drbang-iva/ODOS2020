@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 
-# CI scope: the everyday verification path Devon flagged in osod issue #2.
+# CI scope: the everyday verification path Devon flagged in odos issue #2.
 # DR drill lives in dr-drill.yml (deeper, slower, separate trigger).
 # This workflow proves: deps install, types compile, tests pass, UI builds,
 # preflight lint clean. Nothing more.

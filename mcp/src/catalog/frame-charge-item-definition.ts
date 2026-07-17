@@ -1,7 +1,7 @@
 import type { ChargeItemDefinition } from "@medplum/fhirtypes";
 import {
   HCPCS_SYSTEM,
-  OSOD_OPTOMETRY_SERVICE_LINE_CODE,
+  ODOS_OPTOMETRY_SERVICE_LINE_CODE,
   SNOMED_SYSTEM,
   type ClaimLineItem,
   type FrameHcpcsCode,
@@ -15,8 +15,8 @@ export interface FrameChargeItemDefinitionInput {
   readonly hcpcsBaseCode: Extract<FrameHcpcsCode, "V2020">;
 }
 
-export const OSOD_WHOLESALE_COST_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost";
+export const ODOS_WHOLESALE_COST_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-wholesale-cost";
 
 export function buildFrameChargeItemDefinition(
   input: FrameChargeItemDefinitionInput,
@@ -26,7 +26,7 @@ export function buildFrameChargeItemDefinition(
   }
   return {
     resourceType: "ChargeItemDefinition",
-    url: `https://osod.dev/practice/${encodeURIComponent(input.practiceId)}/charge-rules/frames/${encodeURIComponent(input.catalogCanonicalUrl)}`,
+    url: `https://odos2020.com/practice/${encodeURIComponent(input.practiceId)}/charge-rules/frames/${encodeURIComponent(input.catalogCanonicalUrl)}`,
     version: "1",
     status: "active",
     ...(input.wholesaleCostCents === undefined
@@ -34,7 +34,7 @@ export function buildFrameChargeItemDefinition(
       : {
           extension: [
             {
-              url: OSOD_WHOLESALE_COST_EXTENSION_URL,
+              url: ODOS_WHOLESALE_COST_EXTENSION_URL,
               valueMoney: { value: input.wholesaleCostCents / 100, currency: "USD" },
             },
           ],
@@ -48,7 +48,7 @@ export function buildFrameChargeItemDefinition(
         },
         {
           system: SNOMED_SYSTEM,
-          code: OSOD_OPTOMETRY_SERVICE_LINE_CODE,
+          code: ODOS_OPTOMETRY_SERVICE_LINE_CODE,
           display: "Optometry service",
         },
       ],

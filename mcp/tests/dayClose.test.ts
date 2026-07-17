@@ -246,10 +246,10 @@ function daySeal(id: string, date: string, sealedAt: string): Basic {
   return {
     resourceType: "Basic",
     id,
-    identifier: [{ system: "https://osod.dev/fhir/NamingSystem/day-seal-date", value: date }],
-    code: { coding: [{ system: "https://osod.dev/fhir/CodeSystem/day-seal", code: "day-seal" }] },
+    identifier: [{ system: "https://odos2020.com/fhir/NamingSystem/day-seal-date", value: date }],
+    code: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/day-seal", code: "day-seal" }] },
     created: date,
     author: { reference: "Practitioner/staff-1" },
-    extension: [{ url: "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp", valueInstant: sealedAt }],
+    extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp", valueInstant: sealedAt }],
   };
 }

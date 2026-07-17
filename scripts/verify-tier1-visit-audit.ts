@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Observation, Patient } from "@medplum/fhirtypes";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
 
 type EncounterBundleModule = {
@@ -32,16 +32,16 @@ loadRepoEnv();
 
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const postgresUrl =
-  process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-const email = requireEnv("MEDPLUM_ADMIN_EMAIL", process.env.MEDPLUM_ADMIN_EMAIL ?? process.env.OSOD_ADMIN_EMAIL);
+  process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+const email = requireEnv("MEDPLUM_ADMIN_EMAIL", process.env.MEDPLUM_ADMIN_EMAIL ?? process.env.ODOS_ADMIN_EMAIL);
 const password = requireEnv(
   "MEDPLUM_ADMIN_PASSWORD",
-  process.env.MEDPLUM_ADMIN_PASSWORD ?? process.env.OSOD_ADMIN_PASSWORD,
+  process.env.MEDPLUM_ADMIN_PASSWORD ?? process.env.ODOS_ADMIN_PASSWORD,
 );
 const sessionId = `tier1-visit-${Date.now()}`;
 const startedAt = new Date().toISOString();
 const accessToken = await loginForAccessToken({ baseUrl, email, password });
-const audit = createLiveOsodAuditRuntime({
+const audit = createLiveOdosAuditRuntime({
   postgresUrl,
   medplumBaseUrl: baseUrl,
   medplumEmail: email,
@@ -74,13 +74,13 @@ try {
       patientId: patient.id,
       now: startedAt,
     }) as never,
-    { "X-OSOD-Source": "tier1-audit-verify/start_encounter" },
+    { "X-ODOS-Source": "tier1-audit-verify/start_encounter" },
   );
   encounterBundles.assertTransactionSuccess(startBundle);
   const encounterId = encounterBundles.createdIdFromEntry(startBundle, 0, "Encounter");
 
   for (const observation of tier1VisitObservations(patient.id, encounterId)) {
-    await fhir.create<Observation>(observation, { "X-OSOD-Source": "tier1-audit-verify/observation" });
+    await fhir.create<Observation>(observation, { "X-ODOS-Source": "tier1-audit-verify/observation" });
   }
 
   const finishBundle = await fhir.executeTransaction(
@@ -88,13 +88,13 @@ try {
       encounterId,
       patientId: patient.id,
       recorded: new Date().toISOString(),
-      operatorDisplay: "OSOD Tier-1 audit verification",
+      operatorDisplay: "ODOS Tier-1 audit verification",
       ops: [
         { op: "replace", path: "/status", value: "finished" },
         { op: "add", path: "/period/end", value: new Date().toISOString() },
       ],
     }) as never,
-    { "X-OSOD-Source": "tier1-audit-verify/finish_encounter" },
+    { "X-ODOS-Source": "tier1-audit-verify/finish_encounter" },
   );
   encounterBundles.assertTransactionSuccess(finishBundle);
   await audit.drainProjectionQueue();
@@ -105,14 +105,14 @@ try {
     sessionId,
     patient: `Patient/${patient.id}`,
     encounter: `Encounter/${encounterId}`,
-    osodAuditRows: counts.osodAuditRows,
+    odosAuditRows: counts.odosAuditRows,
     fhirAuditEvents: counts.fhirAuditEvents,
     eventTypes: counts.eventTypes,
   }, null, 2));
 
-  if (counts.osodAuditRows !== EXPECTED_BASELINE || counts.fhirAuditEvents !== EXPECTED_BASELINE) {
+  if (counts.odosAuditRows !== EXPECTED_BASELINE || counts.fhirAuditEvents !== EXPECTED_BASELINE) {
     throw new Error(
-      `Tier-1 visit audit baseline mismatch: expected ${EXPECTED_BASELINE}/${EXPECTED_BASELINE}, got ${counts.osodAuditRows}/${counts.fhirAuditEvents}.`,
+      `Tier-1 visit audit baseline mismatch: expected ${EXPECTED_BASELINE}/${EXPECTED_BASELINE}, got ${counts.odosAuditRows}/${counts.fhirAuditEvents}.`,
     );
   }
 } finally {
@@ -151,14 +151,14 @@ function observation(
 }
 
 function readAuditCounts(sessionId: string): {
-  osodAuditRows: number;
+  odosAuditRows: number;
   fhirAuditEvents: number;
   eventTypes: Record<string, number>;
 } {
   const sql = `
     WITH visit_rows AS (
       SELECT id::text, event_type
-      FROM osod_audit_events
+      FROM odos_audit_events
       WHERE session_id = '${sessionId}'
     ),
     projected AS (
@@ -166,7 +166,7 @@ function readAuditCounts(sessionId: string): {
       FROM "AuditEvent" ae
       CROSS JOIN LATERAL jsonb_array_elements(COALESCE(ae.content::jsonb->'entity', '[]'::jsonb)) AS entity_item(value)
       CROSS JOIN LATERAL jsonb_array_elements(COALESCE(entity_item.value->'detail', '[]'::jsonb)) AS detail_item(value)
-      JOIN visit_rows vr ON detail_item.value->>'type' = 'osod_audit_event_id'
+      JOIN visit_rows vr ON detail_item.value->>'type' = 'odos_audit_event_id'
         AND detail_item.value->>'valueString' = vr.id
       WHERE ae.deleted = false
     ),
@@ -179,7 +179,7 @@ function readAuditCounts(sessionId: string): {
       ) counts
     )
     SELECT jsonb_build_object(
-      'osodAuditRows', (SELECT count(*) FROM visit_rows),
+      'odosAuditRows', (SELECT count(*) FROM visit_rows),
       'fhirAuditEvents', (SELECT count(*) FROM projected),
       'eventTypes', (SELECT value FROM event_counts)
     )::text;
@@ -189,7 +189,7 @@ function readAuditCounts(sessionId: string): {
     stdio: ["ignore", "pipe", "pipe"],
   }).trim();
   const parsed = JSON.parse(output) as {
-    osodAuditRows: number;
+    odosAuditRows: number;
     fhirAuditEvents: number;
     eventTypes: Record<string, number>;
   };

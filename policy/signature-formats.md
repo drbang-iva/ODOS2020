@@ -1,4 +1,4 @@
-# OSOD Provenance Signature Format
+# ODOS Provenance Signature Format
 
 Verified in `data/code-bindings/v0.5-verification-ledger.md` row 41.
 

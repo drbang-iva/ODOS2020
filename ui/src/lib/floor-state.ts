@@ -4,7 +4,7 @@ import type { Appointment, Extension } from "@medplum/fhirtypes";
 /**
  * The floor board's location signal (cockpit design doc §5, floor-board MVP doc §2):
  * R4 has no coded field for "which station is this checked-in patient physically at
- * right now", so a local composite `osod-floor-state` extension carries it on the
+ * right now", so a local composite `odos-floor-state` extension carries it on the
  * Appointment — station id + the instant they entered THAT station (`since`, rewritten
  * on every move, drives the time-in-lane timer) + the instant they FIRST checked in
  * (`checkedInAt`, set once and preserved across moves, drives the quiet check-in-time
@@ -12,7 +12,7 @@ import type { Appointment, Extension } from "@medplum/fhirtypes";
  * move after that is a staff drag that rewrites station + since while carrying
  * checkedInAt forward. Pure logic only — no React in this module.
  */
-export const OSOD_FLOOR_STATE_EXTENSION_URL = "https://osod.dev/fhir/StructureDefinition/osod-floor-state";
+export const ODOS_FLOOR_STATE_EXTENSION_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
 
 export interface FloorState {
   station: string;
@@ -22,11 +22,11 @@ export interface FloorState {
   checkedInAt?: string;
 }
 
-/** Build the osod-floor-state composite extension. `checkedInAt` is required at the
+/** Build the odos-floor-state composite extension. `checkedInAt` is required at the
  *  write boundary — every writer must decide it (set on check-in, carry forward on move). */
 export function floorStateExtension(station: string, since: string, checkedInAt: string): Extension {
   return {
-    url: OSOD_FLOOR_STATE_EXTENSION_URL,
+    url: ODOS_FLOOR_STATE_EXTENSION_URL,
     extension: [
       { url: "station", valueString: station },
       { url: "since", valueInstant: since },
@@ -37,7 +37,7 @@ export function floorStateExtension(station: string, since: string, checkedInAt:
 
 /** Read the floor state off an Appointment. Undefined if absent or malformed. */
 export function parseFloorState(appointment: Appointment): FloorState | undefined {
-  const extension = appointment.extension?.find((e) => e.url === OSOD_FLOOR_STATE_EXTENSION_URL);
+  const extension = appointment.extension?.find((e) => e.url === ODOS_FLOOR_STATE_EXTENSION_URL);
   if (!extension?.extension) {
     return undefined;
   }

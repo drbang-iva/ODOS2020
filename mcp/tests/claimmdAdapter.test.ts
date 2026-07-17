@@ -31,8 +31,8 @@ test("Claim.MD adapter uploads professional JSON claims as a file with AccountKe
   });
 
   const result = await adapter.submitProfessionalClaim({
-    fileName: "osod-claim-900.json",
-    payload: { fileid: "osod-file-1", claim: [{ pcn: "OSOD-CLAIM-900" }] },
+    fileName: "odos-claim-900.json",
+    payload: { fileid: "odos-file-1", claim: [{ pcn: "ODOS-CLAIM-900" }] },
   });
 
   assert.equal(result.claims[0].claimMdId, "tracking-1");
@@ -40,8 +40,8 @@ test("Claim.MD adapter uploads professional JSON claims as a file with AccountKe
   assert.equal((calls[0].init.headers as Record<string, string>).Accept, "application/json");
   const form = calls[0].init.body as FormData;
   assert.equal(form.get("AccountKey"), "secret-key");
-  assert.equal(form.get("Filename"), "osod-claim-900.json");
-  assert.equal((form.get("File") as File).name, "osod-claim-900.json");
+  assert.equal(form.get("Filename"), "odos-claim-900.json");
+  assert.equal((form.get("File") as File).name, "odos-claim-900.json");
 });
 
 test("Claim.MD interface extraction preserves the serialized adapter result", async () => {
@@ -52,8 +52,8 @@ test("Claim.MD interface extraction preserves the serialized adapter result", as
     fetchImpl,
   });
   const result = await adapter.submitProfessionalClaim({
-    fileName: "osod-claim-900.json",
-    payload: { fileid: "osod-file-1", claim: [{ pcn: "OSOD-CLAIM-900" }] },
+    fileName: "odos-claim-900.json",
+    payload: { fileid: "odos-file-1", claim: [{ pcn: "ODOS-CLAIM-900" }] },
   });
   assert.equal(JSON.stringify(result), JSON.stringify({
     claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }],

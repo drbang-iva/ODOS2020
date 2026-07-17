@@ -48,7 +48,7 @@ interface EyeState {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_auto_refraction";
+const OPERATOR = "ODOS UI clinical_graph_auto_refraction";
 
 export function AutoRefractionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<AutoDefinitionResponse | null>(null);

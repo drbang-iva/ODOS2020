@@ -6,7 +6,7 @@ import type { ClaimResponse } from "@medplum/fhirtypes";
 import type { StructureDefinition } from "@medplum/fhirtypes";
 import { buildProfessionalClaim, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
 import {
-  OSOD_SOURCE_CLAIM_EXTENSION_URL,
+  ODOS_SOURCE_CLAIM_EXTENSION_URL,
   buildPatientResponsibilityInvoice,
   patientResponsibilityInvoiceMatches,
 } from "../src/claims/patient-responsibility-invoice.js";
@@ -24,10 +24,10 @@ const input: ProfessionalClaimInput = {
   renderingProvider: { npi: "1111111112" },
   subscriber: { firstName: "Jamie", lastName: "Test", dateOfBirth: "1980-01-01", sex: "F" },
   patient: { firstName: "Jamie", lastName: "Test", dateOfBirth: "1980-01-01", sex: "F" },
-  diagnoses: [{ system: "https://osod.test/diagnosis", code: "DX" }],
+  diagnoses: [{ system: "https://odos.test/diagnosis", code: "DX" }],
   chargeItems: [
-    { resourceType: "ChargeItem", id: "charge-1", status: "billable", code: { coding: [{ system: "https://osod.test/procedure", code: "PROC-1", display: "Line one" }] }, subject: { reference: "Patient/p1" }, priceOverride: { value: 200, currency: "USD" } },
-    { resourceType: "ChargeItem", id: "charge-2", status: "billable", code: { coding: [{ system: "https://osod.test/procedure", code: "PROC-2", display: "Line two" }] }, subject: { reference: "Patient/p1" }, priceOverride: { value: 100, currency: "USD" } },
+    { resourceType: "ChargeItem", id: "charge-1", status: "billable", code: { coding: [{ system: "https://odos.test/procedure", code: "PROC-1", display: "Line one" }] }, subject: { reference: "Patient/p1" }, priceOverride: { value: 200, currency: "USD" } },
+    { resourceType: "ChargeItem", id: "charge-2", status: "billable", code: { coding: [{ system: "https://odos.test/procedure", code: "PROC-2", display: "Line two" }] }, subject: { reference: "Patient/p1" }, priceOverride: { value: 100, currency: "USD" } },
   ],
 };
 
@@ -71,7 +71,7 @@ test("patient-responsibility Invoice uses per-line posted PR only and preserves 
   ]);
   assert.equal(invoice.totalGross?.value, 171.89);
   assert.equal(invoice.totalNet?.value, 171.89);
-  assert.equal(invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+  assert.equal(invoice.extension?.find((extension) => extension.url === ODOS_SOURCE_CLAIM_EXTENSION_URL)
     ?.valueReference?.reference, "Claim/claim-1");
 });
 
@@ -123,8 +123,8 @@ test("money comparison detects a corrected remit without treating metadata drift
 
 test("claim-invoice seam extensions are installable R4 Reference constraints", async () => {
   const cases = [
-    ["osod-charge-item.json", ["Claim.item", "ClaimResponse.item"], "http://hl7.org/fhir/StructureDefinition/ChargeItem"],
-    ["osod-source-claim.json", ["Invoice"], "http://hl7.org/fhir/StructureDefinition/Claim"],
+    ["odos-charge-item.json", ["Claim.item", "ClaimResponse.item"], "http://hl7.org/fhir/StructureDefinition/ChargeItem"],
+    ["odos-source-claim.json", ["Invoice"], "http://hl7.org/fhir/StructureDefinition/Claim"],
   ] as const;
   for (const [file, contexts, targetProfile] of cases) {
     const definition = JSON.parse(await readFile(

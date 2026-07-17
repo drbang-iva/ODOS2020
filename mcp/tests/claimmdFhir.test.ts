@@ -10,12 +10,12 @@ import {
   buildProfessionalClaim,
   claimResponseChargeItemExtension,
   medicalEligibilitySummary,
-  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
 
-const PROCEDURE_SYSTEM = "https://osod.test/fhir/CodeSystem/synthetic-procedure";
-const DIAGNOSIS_SYSTEM = "https://osod.test/fhir/CodeSystem/synthetic-diagnosis";
+const PROCEDURE_SYSTEM = "https://odos.test/fhir/CodeSystem/synthetic-procedure";
+const DIAGNOSIS_SYSTEM = "https://odos.test/fhir/CodeSystem/synthetic-diagnosis";
 
 const chargeItems: ChargeItem[] = [
   {
@@ -45,10 +45,10 @@ const professionalClaimInput: ProfessionalClaimInput = {
   providerReference: "Practitioner/prov-1",
   insurerReference: "Organization/payer-1",
   coverageReference: "Coverage/cov-1",
-  patientAccountNumber: "OSOD-CLAIM-900",
+  patientAccountNumber: "ODOS-CLAIM-900",
   payerId: "PAYERTEST",
   billingProvider: {
-    name: "OSOD TEST CLINIC",
+    name: "ODOS TEST CLINIC",
     npi: "1111111112",
     taxId: "900000001",
     taxIdType: "E",
@@ -106,7 +106,7 @@ test("buildProfessionalClaim composes the existing ChargeItem lines into a profe
   assert.deepEqual(claim.item?.[0]?.diagnosisSequence, [1]);
   assert.equal(claim.item?.[0]?.servicedDate, "2026-07-09");
   assert.equal(
-    claim.item?.[0]?.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+    claim.item?.[0]?.extension?.find((extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL)
       ?.valueReference?.reference,
     "ChargeItem/charge-1",
   );
@@ -125,7 +125,7 @@ test("buildClaimMdProfessionalClaimJson round-trips the FHIR claim to Claim.MD's
   assert.equal(payload.claim.length, 1);
   assert.equal(payload.claim[0].claim_form, "1500");
   assert.equal(payload.claim[0].payerid, "PAYERTEST");
-  assert.equal(payload.claim[0].pcn, "OSOD-CLAIM-900");
+  assert.equal(payload.claim[0].pcn, "ODOS-CLAIM-900");
   assert.equal(payload.claim[0].total_charge, "225.00");
   assert.equal(payload.claim[0].diag_1, "DX-A");
   assert.equal(payload.claim[0].charge.length, 2);
@@ -159,7 +159,7 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
       paid_date: "2026-07-09",
       payer_name: "SYNTHETIC PAYER",
       claim: {
-        pcn: "OSOD-CLAIM-900",
+        pcn: "ODOS-CLAIM-900",
         payer_icn: "ICN-900",
         total_charge: "225.00",
         total_paid: "170.00",
@@ -189,7 +189,7 @@ test("buildClaimResponseFromClaimMdEra maps ERA paid, allowed, adjustment, and p
   assert.equal(response.payment?.amount.value, 170);
   assert.equal(response.item?.[0]?.itemSequence, 1);
   assert.equal(
-    response.item?.[0]?.extension?.find((extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL)
+    response.item?.[0]?.extension?.find((extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL)
       ?.valueReference?.reference,
     "ChargeItem/charge-1",
   );
@@ -218,7 +218,7 @@ test("buildManualClaimResponse preserves paid, allowed, and distinct PR-1/2/3 ad
     created: "2026-07-10",
     paymentDate: "2026-07-10",
     paymentReference: "EFT-900",
-    paymentIdentifierSystem: "https://osod.dev/fhir/NamingSystem/manual-eob",
+    paymentIdentifierSystem: "https://odos2020.com/fhir/NamingSystem/manual-eob",
     lines: [{
       itemSequence: 1,
       submittedCents: 12_500,

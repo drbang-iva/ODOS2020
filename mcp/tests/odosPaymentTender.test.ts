@@ -1,25 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  OSOD_PAYMENT_TENDER_EXTENSION_URL,
-  OSOD_PAYMENT_TENDER_SYSTEM,
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_SYSTEM,
   PAYMENT_TENDERS,
   PROCESSOR_PAYMENT_TENDERS,
   assertPaymentTender,
   paymentTenderExtension,
   paymentTenderExtensionForReconciliation,
-} from "../src/fhir/osodPaymentTender.js";
+} from "../src/fhir/odosPaymentTender.js";
 
 test("the record-only payment-tender vocabulary includes cash, check, and manual card", () => {
   const codes = PAYMENT_TENDERS.map((t) => t.code);
   assert.deepEqual(codes, ["CASH", "CHECK", "CARD_MANUAL"]);
 });
 
-test("paymentTenderExtension builds the osod-payment-tender extension with a coded value", () => {
+test("paymentTenderExtension builds the odos-payment-tender extension with a coded value", () => {
   const ext = paymentTenderExtension("CASH");
-  assert.equal(ext.url, OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  assert.equal(ext.url, ODOS_PAYMENT_TENDER_EXTENSION_URL);
   const coding = ext.valueCodeableConcept?.coding?.[0];
-  assert.equal(coding?.system, OSOD_PAYMENT_TENDER_SYSTEM);
+  assert.equal(coding?.system, ODOS_PAYMENT_TENDER_SYSTEM);
   assert.equal(coding?.code, "CASH");
   assert.equal(coding?.display, "Cash");
 });
@@ -41,9 +41,9 @@ test("the processor-tender vocabulary carries the Foxfire non-cash payment codes
 
 test("paymentTenderExtensionForReconciliation gives a known processor code its corpus-verbatim display", () => {
   const ext = paymentTenderExtensionForReconciliation({ code: "CLOVER" });
-  assert.equal(ext.url, OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  assert.equal(ext.url, ODOS_PAYMENT_TENDER_EXTENSION_URL);
   const coding = ext.valueCodeableConcept?.coding?.[0];
-  assert.equal(coding?.system, OSOD_PAYMENT_TENDER_SYSTEM);
+  assert.equal(coding?.system, ODOS_PAYMENT_TENDER_SYSTEM);
   assert.equal(coding?.code, "CLOVER");
   assert.equal(coding?.display, "Clover Processing");
 });

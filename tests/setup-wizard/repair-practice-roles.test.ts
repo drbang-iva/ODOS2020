@@ -11,7 +11,7 @@ import {
 } from "../../scripts/repair-practice-roles.ts";
 import type { ResolvedRoleGrantTarget } from "../../mcp/src/authz/role-grants.ts";
 import {
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   PRACTICE_ROLE_IDS,
 } from "../../mcp/src/authz/roles.ts";
 import type { JsonPatchOperation } from "../../mcp/src/fhir-client.ts";
@@ -85,7 +85,7 @@ test("missing role policies are created and all dev roles are granted front-desk
   assert.equal(adapter.policies.length, 5);
   for (const roleId of PRACTICE_ROLE_IDS) {
     assert.ok(adapter.policies.some((policy) => policy.meta?.tag?.some((tag) =>
-      tag.system === OSOD_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
+      tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === roleId,
     )));
   }
   assert.deepEqual(membershipPolicyReferences(adapter.membership), [
@@ -178,7 +178,7 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
     policies: [{
       resourceType: "AccessPolicy",
       id: "admin-policy",
-      name: "OSOD Practice Admin",
+      name: "ODOS Practice Admin",
       meta: { versionId: "7", tag: [{ system: "https://example.test", code: "keep" }] },
     }],
   });
@@ -188,7 +188,7 @@ test("one untagged canonical policy is tagged without replacing unrelated metada
   assert.deepEqual(result.taggedPolicies, ["practice-admin"]);
   assert.deepEqual(adapter.policies[0]?.meta?.tag, [
     { system: "https://example.test", code: "keep" },
-    { system: OSOD_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
+    { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "practice-admin" },
   ]);
 });
 
@@ -199,13 +199,13 @@ test("duplicate canonical policies stop repair before membership mutation", asyn
   assert.equal(adapter.membershipWrites, 0);
 });
 
-test("a wrong OSOD role tag stops repair without overwriting it", async () => {
+test("a wrong ODOS role tag stops repair without overwriting it", async () => {
   const wrong = policy("wrong", "practice-admin");
-  wrong.meta!.tag = [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" }];
+  wrong.meta!.tag = [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }];
   const adapter = new FakeRepairAdapter({ policies: [wrong] });
 
   await assert.rejects(() => repairPracticeRoles(adapter, "human@example.test"), /conflicting practice-role code/);
-  assert.deepEqual(wrong.meta.tag, [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "clinician" }]);
+  assert.deepEqual(wrong.meta.tag, [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" }]);
   assert.equal(adapter.membershipWrites, 0);
 });
 
@@ -228,8 +228,8 @@ function policy(id: string, roleId: "practice-admin" | "clinician"): AccessPolic
   return {
     resourceType: "AccessPolicy",
     id,
-    name: `OSOD ${display}`,
-    meta: { versionId: "1", tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: roleId }] },
+    name: `ODOS ${display}`,
+    meta: { versionId: "1", tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: roleId }] },
   };
 }
 

@@ -45,7 +45,7 @@ test("CARD_MANUAL records its exact record-only tender code and display on the I
   }, ["ChargeItem/charge-1"]);
   const coding = invoice.extension?.[0]?.valueCodeableConcept?.coding?.[0];
   assert.deepEqual(coding, {
-    system: "https://osod.dev/fhir/CodeSystem/payment-tender",
+    system: "https://odos2020.com/fhir/CodeSystem/payment-tender",
     code: "CARD_MANUAL",
     display: "Card — manual entry",
   });
@@ -83,7 +83,7 @@ test("UI card charge helper posts only the server-owned Clover charge request", 
   assert.equal(captured?.init?.method, "POST");
   assert.equal((captured?.init?.headers as Record<string, string>).Authorization, "Bearer ui-token");
   // No role header — the server derives the role from the verified token (decision 2026-07-05 §3).
-  assert.equal((captured?.init?.headers as Record<string, string>)["X-OSOD-Role"], undefined);
+  assert.equal((captured?.init?.headers as Record<string, string>)["X-ODOS-Role"], undefined);
   const body = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>;
   assert.deepEqual(body, {
     method: "clover",

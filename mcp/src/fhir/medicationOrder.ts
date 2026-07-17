@@ -1,9 +1,9 @@
 import type { Identifier, MedicationRequest } from "@medplum/fhirtypes";
 
-export const OSOD_TRANSMISSION_METHOD_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-transmission-method";
-export const OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-controlled-substance-flag";
+export const ODOS_TRANSMISSION_METHOD_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-transmission-method";
+export const ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-controlled-substance-flag";
 
 export const MEDICATION_TRANSMISSION_METHOD_CODES = [
   "not-transmitted",
@@ -81,13 +81,13 @@ export function buildMedicationRequest(input: MedicationOrderInput): MedicationR
         : {}),
     extension: [
       {
-        url: OSOD_TRANSMISSION_METHOD_EXTENSION_URL,
+        url: ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
         valueCode: input.transmissionMethod,
       },
       ...(input.isControlledSubstance === undefined
         ? []
         : [{
-            url: OSOD_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
+            url: ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL,
             valueBoolean: input.isControlledSubstance,
           }]),
     ],

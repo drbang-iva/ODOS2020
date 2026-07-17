@@ -1,6 +1,6 @@
 lab_code: bostonsight
 lab_display: BostonSight
-target_uri: urn:osod:contact-lens-lab:bostonsight:parameter
+target_uri: urn:odos:contact-lens-lab:bostonsight:parameter
 organization_reference: Organization/bostonsight
 mappings:
   - source: sagittal-depth-um

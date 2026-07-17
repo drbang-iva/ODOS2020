@@ -49,7 +49,7 @@ test("v0.4 foundation MCP write tools create FHIR resources with mandatory Prove
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-v04-write-tools-test",
+    clientName: "odos-mcp-v04-write-tools-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -82,7 +82,7 @@ test("v0.4 foundation MCP write tools create FHIR resources with mandatory Prove
           catalog_code: `test-soft-${Date.now()}`,
           display_name: "Test stock soft lens",
           lens_type: "stock-soft",
-          manufacturer: "OSOD Test",
+          manufacturer: "ODOS Test",
           properties: [
             { code: "base-curve-mm", value_number: 8.6, unit_code: "mm" },
             { code: "diameter-mm", value_number: 14.2, unit_code: "mm" },
@@ -103,7 +103,7 @@ test("v0.4 foundation MCP write tools create FHIR resources with mandatory Prove
         arguments: {
           lab_code: `testlab-${Date.now()}`,
           lab_display: "Test Lab",
-          target_uri: "urn:osod:testlab:parameter",
+          target_uri: "urn:odos:testlab:parameter",
           mappings: [
             {
               source_code: "diameter-mm",

@@ -114,7 +114,7 @@ test("the same order paid by cash vs by processor renders identical money — on
     taskReference: "Task/task1",
     staffReference: "Practitioner/staff1",
     processorTransactionId: "ch_test_abc123",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/stripe-transaction",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/stripe-transaction",
     feesCents: 738,
     surface: "online",
     tender: { code: "CARD", display: "VISA ****4242" },

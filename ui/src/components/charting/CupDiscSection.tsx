@@ -63,7 +63,7 @@ interface CupDiscEyeResult {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI save_cup_disc";
+const OPERATOR = "ODOS UI save_cup_disc";
 
 const EMPTY_ROWS: Record<Eye, EyeState> = {
   OD: {

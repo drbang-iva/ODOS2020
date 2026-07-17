@@ -5,7 +5,7 @@ import {
   type AssembleOpticalCashOrderInput,
 } from "./fhir/opticalOrderComposite.js";
 import {
-  OSOD_OPTICAL_ORDER_STATUS_SYSTEM,
+  ODOS_OPTICAL_ORDER_STATUS_SYSTEM,
   assertOpticalOrderStatus,
   opticalOrderStatusConcept,
   type OpticalOrderStatusCode,
@@ -71,7 +71,7 @@ export async function updateOpticalOrderTask(
 
 function currentOpticalBusinessStatus(task: Task): OpticalOrderStatusCode {
   const code = task.businessStatus?.coding?.find(
-    (coding) => coding.system === OSOD_OPTICAL_ORDER_STATUS_SYSTEM,
+    (coding) => coding.system === ODOS_OPTICAL_ORDER_STATUS_SYSTEM,
   )?.code;
   if (!code) {
     throw new Error("Optical order Task is missing a Task.businessStatus optical order status.");

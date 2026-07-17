@@ -7,10 +7,10 @@ import {
 } from "./catalog-adapter";
 import type { FhirSearchClient } from "./fhir-search";
 import {
-  OSOD_DISPLAY_COLOR_EXTENSION_URL,
-  OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
-  OSOD_INTAKE_FORM_EXTENSION_URL,
-  OSOD_VISIT_DURATION_EXTENSION_URL,
+  ODOS_DISPLAY_COLOR_EXTENSION_URL,
+  ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+  ODOS_INTAKE_FORM_EXTENSION_URL,
+  ODOS_VISIT_DURATION_EXTENSION_URL,
   SCHEDULER_PALETTE,
   buildVisitType,
   visitTypeCategory,
@@ -205,14 +205,14 @@ export function kebabCase(label: string): string {
 }
 
 const MANAGED_EXTENSION_URLS = new Set([
-  OSOD_VISIT_DURATION_EXTENSION_URL,
-  OSOD_DISPLAY_COLOR_EXTENSION_URL,
-  OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
-  OSOD_INTAKE_FORM_EXTENSION_URL,
+  ODOS_VISIT_DURATION_EXTENSION_URL,
+  ODOS_DISPLAY_COLOR_EXTENSION_URL,
+  ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+  ODOS_INTAKE_FORM_EXTENSION_URL,
 ]);
 
 function intakeFormReference(resource: HealthcareService): string | undefined {
   return resource.extension?.find(
-    (extension) => extension.url === OSOD_INTAKE_FORM_EXTENSION_URL,
+    (extension) => extension.url === ODOS_INTAKE_FORM_EXTENSION_URL,
   )?.valueReference?.reference;
 }

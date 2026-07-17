@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { OSODSmartClientApp } from "../../mcp/src/smart/registration/smart-client-app.js";
+import type { ODOSSmartClientApp } from "../../mcp/src/smart/registration/smart-client-app.js";
 
 export interface ClientApplicationAdapterResult {
   readonly client_id: string;
@@ -18,25 +18,25 @@ export interface ClientApplicationAdminRequest {
 }
 
 export async function registerSmartApp(
-  canonicalRecord: OSODSmartClientApp,
+  canonicalRecord: ODOSSmartClientApp,
 ): Promise<ClientApplicationAdapterResult> {
   return defaultAdapter().registerSmartApp(canonicalRecord);
 }
 
-export async function revokeSmartApp(canonicalRecord: OSODSmartClientApp): Promise<void> {
+export async function revokeSmartApp(canonicalRecord: ODOSSmartClientApp): Promise<void> {
   return defaultAdapter().revokeSmartApp(canonicalRecord);
 }
 
-export async function updateSmartAppMetadata(canonicalRecord: OSODSmartClientApp): Promise<void> {
+export async function updateSmartAppMetadata(canonicalRecord: ODOSSmartClientApp): Promise<void> {
   return defaultAdapter().updateSmartAppMetadata(canonicalRecord);
 }
 
 export function medplumClientApplicationPayload(
-  canonicalRecord: OSODSmartClientApp,
+  canonicalRecord: ODOSSmartClientApp,
 ): ClientApplicationAdminRequest {
   return {
     name: canonicalRecord.metadata.clientName,
-    description: `OSOD local SMART app registry record ${canonicalRecord.canonicalRecord.resourceType}/${canonicalRecord.canonicalRecord.id ?? "pending"}`,
+    description: `ODOS local SMART app registry record ${canonicalRecord.canonicalRecord.resourceType}/${canonicalRecord.canonicalRecord.id ?? "pending"}`,
     redirectUris: canonicalRecord.metadata.redirectUris,
     redirectUri: canonicalRecord.metadata.redirectUris[0],
     launchUri: canonicalRecord.metadata.launchUri,
@@ -52,10 +52,10 @@ export function createMedplumSmartAppRegistryAdapter(input: {
   readonly accessToken?: string;
 } = {}) {
   const baseUrl = input.baseUrl ?? process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
-  const projectId = input.projectId ?? process.env.MEDPLUM_PROJECT_ID ?? process.env.OSOD_MEDPLUM_PROJECT_ID;
-  const accessToken = input.accessToken ?? process.env.MEDPLUM_ACCESS_TOKEN ?? process.env.OSOD_MEDPLUM_ACCESS_TOKEN;
+  const projectId = input.projectId ?? process.env.MEDPLUM_PROJECT_ID ?? process.env.ODOS_MEDPLUM_PROJECT_ID;
+  const accessToken = input.accessToken ?? process.env.MEDPLUM_ACCESS_TOKEN ?? process.env.ODOS_MEDPLUM_ACCESS_TOKEN;
   return {
-    async registerSmartApp(canonicalRecord: OSODSmartClientApp): Promise<ClientApplicationAdapterResult> {
+    async registerSmartApp(canonicalRecord: ODOSSmartClientApp): Promise<ClientApplicationAdapterResult> {
       if (!projectId || !accessToken) {
         const symmetric = canonicalRecord.metadata.tokenEndpointAuthMethod.startsWith("client_secret");
         return {
@@ -80,10 +80,10 @@ export function createMedplumSmartAppRegistryAdapter(input: {
         client_secret: created.secret,
       };
     },
-    async revokeSmartApp(_canonicalRecord: OSODSmartClientApp): Promise<void> {
+    async revokeSmartApp(_canonicalRecord: ODOSSmartClientApp): Promise<void> {
       return undefined;
     },
-    async updateSmartAppMetadata(_canonicalRecord: OSODSmartClientApp): Promise<void> {
+    async updateSmartAppMetadata(_canonicalRecord: ODOSSmartClientApp): Promise<void> {
       return undefined;
     },
   };

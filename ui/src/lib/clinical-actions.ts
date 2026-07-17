@@ -402,7 +402,7 @@ async function createUiProvenance(
               },
             ],
           },
-          who: { display: `OSOD UI ${sourceTag}` },
+          who: { display: `ODOS UI ${sourceTag}` },
         },
       ],
       ...(entityDisplay

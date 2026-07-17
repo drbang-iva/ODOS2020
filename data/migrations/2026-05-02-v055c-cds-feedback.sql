@@ -1,6 +1,6 @@
--- OSOD v0.55c CDS Hooks feedback persistence.
+-- ODOS v0.55c CDS Hooks feedback persistence.
 
-CREATE TABLE IF NOT EXISTS osod_cds_feedback (
+CREATE TABLE IF NOT EXISTS odos_cds_feedback (
     feedback_id UUID PRIMARY KEY,
     service_id TEXT NOT NULL,
     card_instance_uuid UUID NOT NULL,
@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS osod_cds_feedback (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS osod_cds_feedback_service_created_idx
-    ON osod_cds_feedback (service_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS odos_cds_feedback_service_created_idx
+    ON odos_cds_feedback (service_id, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS osod_cds_feedback_patient_created_idx
-    ON osod_cds_feedback (patient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS odos_cds_feedback_patient_created_idx
+    ON odos_cds_feedback (patient_id, created_at DESC);

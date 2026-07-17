@@ -2,17 +2,17 @@ import type { Questionnaire, StructureDefinition } from "@medplum/fhirtypes";
 import {
   DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM,
   DRY_EYE_TREATMENT_TYPE_CODE_SYSTEM,
-  OSOD_FHIR_BASE,
+  ODOS_FHIR_BASE,
 } from "./contactLens.js";
 
 export const DRY_EYE_PROCEDURE_ENERGY_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-energy-mj`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-energy-mj`;
 export const DRY_EYE_PROCEDURE_WAVELENGTH_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-wavelength-nm`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-wavelength-nm`;
 export const DRY_EYE_PROCEDURE_SPOT_COUNT_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/dry-eye-procedure-spot-count`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/dry-eye-procedure-spot-count`;
 export const OPHTHALMIC_MEDICATION_SUPPLY_TYPE_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/ophthalmic-medication-supply-type`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/ophthalmic-medication-supply-type`;
 
 export const DRY_EYE_TREATMENT_TYPE_CODES = [
   "IPL",
@@ -41,10 +41,10 @@ export const DRY_EYE_QUESTIONNAIRE_URLS: Record<
   DryEyeQuestionnaireInstrument,
   string
 > = {
-  OSDI: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-osdi`,
-  SPEED: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-speed`,
-  "DEQ-5": `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
-  McMonnies: `${OSOD_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
+  OSDI: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-osdi`,
+  SPEED: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-speed`,
+  "DEQ-5": `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-deq-5`,
+  McMonnies: `${ODOS_FHIR_BASE}/Questionnaire/dry-eye-mcmonnies`,
 };
 
 export const DRY_EYE_QUESTIONNAIRE_ITEM_COUNTS: Record<
@@ -113,7 +113,7 @@ export function buildDryEyeCanonicalResources(): Array<
     ...buildDryEyeExtensionDefinitions(),
     observationProfile(
       "Observation-DryEyeQuestionnaireScore",
-      "OSOD Observation - Dry Eye Questionnaire Score",
+      "ODOS Observation - Dry Eye Questionnaire Score",
       "Summary score derived from a dry-eye QuestionnaireResponse.",
     ),
     ...DRY_EYE_QUESTIONNAIRE_INSTRUMENTS.map(buildDryEyeQuestionnaire),
@@ -128,13 +128,13 @@ function buildDryEyeQuestionnaire(
     resourceType: "Questionnaire",
     url: questionnaireUrlForInstrument(instrument),
     version: "0.4.0",
-    name: `OSODDryEye${instrument.replace(/[^A-Za-z0-9]/g, "")}`,
+    name: `ODOSDryEye${instrument.replace(/[^A-Za-z0-9]/g, "")}`,
     title: displayForInstrument(instrument),
     status: "active",
     experimental: false,
     subjectType: ["Patient"],
     date: "2026-04-28",
-    publisher: "OSOD",
+    publisher: "ODOS",
     code: [
       {
         system: DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM,
@@ -155,21 +155,21 @@ function buildDryEyeExtensionDefinitions(): StructureDefinition[] {
   return [
     quantityExtension(
       "dry-eye-procedure-energy-mj",
-      "OSOD Dry Eye Procedure Energy",
+      "ODOS Dry Eye Procedure Energy",
       "Dry-eye treatment energy in millijoules.",
       DRY_EYE_PROCEDURE_ENERGY_EXTENSION_URL,
       "Procedure",
     ),
     quantityExtension(
       "dry-eye-procedure-wavelength-nm",
-      "OSOD Dry Eye Procedure Wavelength",
+      "ODOS Dry Eye Procedure Wavelength",
       "Dry-eye treatment wavelength in nanometers.",
       DRY_EYE_PROCEDURE_WAVELENGTH_EXTENSION_URL,
       "Procedure",
     ),
     valueExtension(
       "dry-eye-procedure-spot-count",
-      "OSOD Dry Eye Procedure Spot Count",
+      "ODOS Dry Eye Procedure Spot Count",
       "Dry-eye treatment spot count.",
       DRY_EYE_PROCEDURE_SPOT_COUNT_EXTENSION_URL,
       "Procedure",
@@ -177,7 +177,7 @@ function buildDryEyeExtensionDefinitions(): StructureDefinition[] {
     ),
     valueExtension(
       "ophthalmic-medication-supply-type",
-      "OSOD Ophthalmic Medication Supply Type",
+      "ODOS Ophthalmic Medication Supply Type",
       "OTC, prescription, or supplement supply type for ophthalmic medication statements.",
       OPHTHALMIC_MEDICATION_SUPPLY_TYPE_EXTENSION_URL,
       "MedicationStatement",
@@ -191,7 +191,7 @@ function observationProfile(
   title: string,
   description: string,
 ): StructureDefinition {
-  const url = `${OSOD_FHIR_BASE}/StructureDefinition/${id}`;
+  const url = `${ODOS_FHIR_BASE}/StructureDefinition/${id}`;
   const element = withElementBase([
     { id: "Observation", path: "Observation", min: 0, max: "*", definition: `${title} resource.` },
     { id: "Observation.subject", path: "Observation.subject", min: 1, max: "1", definition: "Patient subject for the clinical observation." },
@@ -208,10 +208,10 @@ function observationProfile(
     resourceType: "StructureDefinition",
     url,
     version: "0.4.0",
-    name: `OSOD${id.replace(/[^A-Za-z0-9]/g, "")}`,
+    name: `ODOS${id.replace(/[^A-Za-z0-9]/g, "")}`,
     title,
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description,
     fhirVersion: "4.0.1",
     kind: "resource",
@@ -268,10 +268,10 @@ function valueExtension(
     resourceType: "StructureDefinition",
     url,
     version: "0.4.0",
-    name: `OSOD${id.replace(/[^A-Za-z0-9]/g, "")}`,
+    name: `ODOS${id.replace(/[^A-Za-z0-9]/g, "")}`,
     title,
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description: definition,
     fhirVersion: "4.0.1",
     kind: "complex-type",

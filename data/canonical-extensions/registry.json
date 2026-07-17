@@ -1,507 +1,507 @@
 {
-  "resourceType": "OSODCanonicalExtensionRegistry",
+  "resourceType": "ODOSCanonicalExtensionRegistry",
   "generatedAt": "2026-05-02",
   "extensions": [
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-plan-profile",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile",
       "namespace": "margin",
       "status": "active",
       "sliceConsumer": "margin-d1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-wholesale-cost",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-wholesale-cost",
       "namespace": "optical-pricing",
       "status": "active",
       "sliceConsumer": "optical-pricing"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-optical-lab",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-optical-lab",
       "namespace": "optical-pricing",
       "status": "active",
       "sliceConsumer": "optical-pricing"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-contact-lens-product-identity",
       "namespace": "optical-pricing",
       "status": "active",
       "sliceConsumer": "optical-pricing"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/agent-identity",
+      "url": "https://odos2020.com/fhir/StructureDefinition/agent-identity",
       "namespace": "agentops",
       "status": "active",
       "sliceConsumer": "v0.55d"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/model-identity",
+      "url": "https://odos2020.com/fhir/StructureDefinition/model-identity",
       "namespace": "agentops",
       "status": "active",
       "sliceConsumer": "v0.55d"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/agentops-record",
+      "url": "https://odos2020.com/fhir/StructureDefinition/agentops-record",
       "namespace": "agentops",
       "status": "active",
       "sliceConsumer": "v0.55d"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/agentops-blocked-payload",
+      "url": "https://odos2020.com/fhir/StructureDefinition/agentops-blocked-payload",
       "namespace": "agentops",
       "status": "active",
       "sliceConsumer": "v0.55d"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+      "url": "https://odos2020.com/fhir/StructureDefinition/source-sha256",
       "namespace": "agentops",
       "status": "active",
       "sliceConsumer": "v0.55d"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/cds-service",
+      "url": "https://odos2020.com/fhir/StructureDefinition/cds-service",
       "namespace": "cds",
       "status": "active",
       "sliceConsumer": "v0.55c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
+      "url": "https://odos2020.com/fhir/StructureDefinition/smart-client-app",
       "namespace": "smart",
       "status": "active",
       "sliceConsumer": "v0.55b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/observation-attestation-ui-state",
+      "url": "https://odos2020.com/fhir/StructureDefinition/observation-attestation-ui-state",
       "namespace": "clinical-attestation",
       "status": "active",
       "sliceConsumer": "v0.5c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-finding-definition-json",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-finding-definition-json",
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "tier3-d1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-procedure-definition-json",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-procedure-definition-json",
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "aesthetics-seam"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-diagnosis-definition-json",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-diagnosis-definition-json",
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "dx-link-l1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-dx-pick-tally-json",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-dx-pick-tally-json",
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "dx-link-l2"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-weno-mapping-json",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-weno-mapping-json",
       "namespace": "weno",
       "status": "active",
       "sliceConsumer": "weno-ez-adapter"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-transmission-method",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-transmission-method",
       "namespace": "medication-order",
       "status": "active",
       "sliceConsumer": "prescription-plan,weno-ez-adapter"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-controlled-substance-flag",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-controlled-substance-flag",
       "namespace": "medication-order",
       "status": "active",
       "sliceConsumer": "prescription-plan"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state",
+      "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",
       "sliceConsumer": "v0.5a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/project-membership-role-review",
+      "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-role-review",
       "namespace": "authz",
       "status": "active",
       "sliceConsumer": "v0.5a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam",
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.3"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-VA",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-VA",
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.3"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-IOP",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-IOP",
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.3"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Refraction",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-Refraction",
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.3"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-AxialLength",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength",
       "namespace": "clinical",
       "status": "active",
       "sliceConsumer": "v0.4c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-ContactLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-ContactLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-OrthoKLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-OrthoKLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-CornealGPLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-CornealGPLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-ScleralLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-ScleralLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-HybridLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-HybridLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Device-SoftLens",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Device-SoftLens",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-KReadings",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-KReadings",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Pachymetry",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-Pachymetry",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-ContactLensFitFinding",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-ContactLensFitFinding",
       "namespace": "contact-lens",
       "status": "active",
       "sliceConsumer": "v0.4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-MeibomianGlandScore",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-MeibomianGlandScore",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-TBUT",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-TBUT",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-Schirmer",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-Schirmer",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/Observation-DryEyeQuestionnaireScore",
+      "url": "https://odos2020.com/fhir/StructureDefinition/Observation-DryEyeQuestionnaireScore",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/CarePlan-MyopiaManagement",
+      "url": "https://odos2020.com/fhir/StructureDefinition/CarePlan-MyopiaManagement",
       "namespace": "myopia-management",
       "status": "active",
       "sliceConsumer": "v0.4c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/myopia-careplan-activity-intervention",
+      "url": "https://odos2020.com/fhir/StructureDefinition/myopia-careplan-activity-intervention",
       "namespace": "myopia-management",
       "status": "active",
       "sliceConsumer": "v0.4c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-energy-mj",
+      "url": "https://odos2020.com/fhir/StructureDefinition/dry-eye-procedure-energy-mj",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-wavelength-nm",
+      "url": "https://odos2020.com/fhir/StructureDefinition/dry-eye-procedure-wavelength-nm",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/dry-eye-procedure-spot-count",
+      "url": "https://odos2020.com/fhir/StructureDefinition/dry-eye-procedure-spot-count",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/ophthalmic-medication-supply-type",
+      "url": "https://odos2020.com/fhir/StructureDefinition/ophthalmic-medication-supply-type",
       "namespace": "dry-eye",
       "status": "active",
       "sliceConsumer": "v0.4b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/quality-score",
+      "url": "https://odos2020.com/fhir/StructureDefinition/quality-score",
       "namespace": "ophthalmology",
       "status": "active",
       "sliceConsumer": "v0.2"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/confidence-score",
+      "url": "https://odos2020.com/fhir/StructureDefinition/confidence-score",
       "namespace": "ophthalmology",
       "status": "active",
       "sliceConsumer": "v0.2"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/eye-laterality",
+      "url": "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
       "namespace": "ophthalmology",
       "status": "active",
       "sliceConsumer": "v0.2"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+      "url": "https://odos2020.com/fhir/StructureDefinition/source-sha256",
       "namespace": "ophthalmology",
       "status": "active",
       "sliceConsumer": "v0.2"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/catalog-canonical-url",
+      "url": "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/catalog-publicity-class",
+      "url": "https://odos2020.com/fhir/StructureDefinition/catalog-publicity-class",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/dispensary-location",
+      "url": "https://odos2020.com/fhir/StructureDefinition/dispensary-location",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-at",
+      "url": "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-at",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-last-ingest-source-file",
+      "url": "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-source-file",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-subscription-active",
+      "url": "https://odos2020.com/fhir/StructureDefinition/frames-data-subscription-active",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/frames-data-username",
+      "url": "https://odos2020.com/fhir/StructureDefinition/frames-data-username",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/inventory-status",
+      "url": "https://odos2020.com/fhir/StructureDefinition/inventory-status",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/qty-on-hand",
+      "url": "https://odos2020.com/fhir/StructureDefinition/qty-on-hand",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/sale-price-cents",
+      "url": "https://odos2020.com/fhir/StructureDefinition/sale-price-cents",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-tender",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
       "namespace": "optical-order",
       "status": "active",
       "sliceConsumer": "slice-3"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-processor-fees",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-processor-fees",
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "v0.6c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-surface",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-payment-surface",
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "v0.6c"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-payment-subject",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject",
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "patient-payments-phase-6a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/day-seal-timestamp",
+      "url": "https://odos2020.com/fhir/StructureDefinition/day-seal-timestamp",
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "day-close"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-charge-item",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item",
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claim-invoice-seam-phase-a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-source-claim",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-source-claim",
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claim-invoice-seam-phase-a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-duration",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-display-color",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-display-color",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-eligible-resource",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-eligible-resource",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-intake-form",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-intake-form",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-appointment-confirmation",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-appointment-confirmation",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-vision-coverage",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-vision-coverage",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-medical-coverage",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-medical-coverage",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-appointment-follow-up",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-appointment-follow-up",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-blocked-time-kind",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-blocked-time-kind",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-scheduling-practice-config",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-scheduling-practice-config",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-4a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-floor-practice-config",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-floor-practice-config",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "cockpit-phase-3a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-floor-state",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "cockpit-phase-3a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-era-import-summary",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-era-import-summary",
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claims-phase-2b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-manual-eob-header",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-manual-eob-header",
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claims-phase-5"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-last-used",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-last-used",
       "namespace": "insurance",
       "status": "active",
       "sliceConsumer": "claims-phase-7a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-benefit-frequency-months",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months",
       "namespace": "insurance",
       "status": "active",
       "sliceConsumer": "claims-phase-7a"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-insurance-practice-config",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-insurance-practice-config",
       "namespace": "insurance",
       "status": "active",
       "sliceConsumer": "claims-phase-7b"
     },
     {
-      "url": "https://osod.dev/fhir/StructureDefinition/osod-visit-type-config",
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-visit-type-config",
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "settings-s3"

@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 import type { AccessPolicy, Practitioner, ProjectMembership } from "@medplum/fhirtypes";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
-import { buildOsodAuditEventRow } from "../mcp/src/authz/osodAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { buildOdosAuditEventRow } from "../mcp/src/authz/odosAudit.js";
 import { reconcileMembershipAccess } from "../mcp/src/authz/role-grants.js";
 import {
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type JsonPatchOperation, type MedplumClient } from "../mcp/src/fhir-client.js";
@@ -14,8 +14,8 @@ import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-const ADMIN_EMAIL = "admin@osod.local";
-const CLINICIAN_EMAIL = "clinician@osod.local";
+const ADMIN_EMAIL = "admin@odos.local";
+const CLINICIAN_EMAIL = "clinician@odos.local";
 const ADMIN_ROLES_TO_STRIP = new Set<PracticeRoleId>(["front-desk", "practice-admin", "clinician"]);
 
 export interface CleanupMembershipResult {
@@ -43,16 +43,16 @@ async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[
   const policies = await searchAll<AccessPolicy>(fhir, "AccessPolicy", {});
   const policyRoles = new Map<string, PracticeRoleId>();
   for (const policy of policies) {
-    const role = policy.meta?.tag?.find((tag) => tag.system === OSOD_PRACTICE_ROLE_SYSTEM)?.code as
+    const role = policy.meta?.tag?.find((tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM)?.code as
       | PracticeRoleId
       | undefined;
     if (policy.id && role) policyRoles.set(`AccessPolicy/${policy.id}`, role);
   }
 
   const memberships = await searchAll<ProjectMembership>(fhir, "ProjectMembership", {});
-  const audit = createLiveOsodAuditRuntime({
-    postgresUrl: process.env.OSOD_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
-    disabled: process.env.OSOD_ROLE_CLEANUP_AUDIT_DISABLED === "true",
+  const audit = createLiveOdosAuditRuntime({
+    postgresUrl: process.env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+    disabled: process.env.ODOS_ROLE_CLEANUP_AUDIT_DISABLED === "true",
   });
   const results: CleanupMembershipResult[] = [];
 
@@ -68,7 +68,7 @@ async function runCleanup(fhir: MedplumClient): Promise<CleanupMembershipResult[
     });
     if (operations.length > 0) {
       await audit.record(
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           eventType: "role-change",
           actorId: "cleanup-practice-role-memberships",
           actorRole: "system",

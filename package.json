@@ -1,12 +1,12 @@
 {
-  "name": "osod",
+  "name": "odos2020",
   "version": "0.0.1",
   "description": "Open Source Optometry — practitioner-owned EHR on Medplum FHIR foundation",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "bin": {
-    "osod": "./scripts/osod.ts"
+    "odos": "./scripts/odos.ts"
   },
   "scripts": {
     "up": "docker-compose up -d",

@@ -287,7 +287,7 @@ export function buildClaimResponseFromStediEra(input: {
       date: isoDate(input.paymentDate) ?? input.created,
       amount: money(paid),
       identifier: {
-        system: "https://osod.dev/fhir/NamingSystem/stedi-era",
+        system: "https://odos2020.com/fhir/NamingSystem/stedi-era",
         value: input.traceNumber ?? input.transactionId,
       },
     },

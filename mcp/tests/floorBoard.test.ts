@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Appointment } from "@medplum/fhirtypes";
-import { OSOD_VISION_COVERAGE_EXTENSION_URL, V2_0276_APPOINTMENT_TYPE_SYSTEM } from "../../ui/src/lib/scheduling.js";
+import { ODOS_VISION_COVERAGE_EXTENSION_URL, V2_0276_APPOINTMENT_TYPE_SYSTEM } from "../../ui/src/lib/scheduling.js";
 import { floorStateExtension } from "../../ui/src/lib/floor-state.js";
 import { deriveFloorBoard, payerCue, timerState, type FloorBoardConfig } from "../../ui/src/lib/floor-board.js";
 
@@ -17,7 +17,7 @@ const CONFIG: FloorBoardConfig = {
 };
 
 function visionCoverageExtension(display: string) {
-  return { url: OSOD_VISION_COVERAGE_EXTENSION_URL, valueReference: { display } };
+  return { url: ODOS_VISION_COVERAGE_EXTENSION_URL, valueReference: { display } };
 }
 
 function appt(
@@ -216,7 +216,7 @@ test("deriveFloorBoard falls back checkedInAt to since when the extension lacks 
     participant: [{ actor: { reference: "Patient/a9" }, status: "accepted" }],
     extension: [
       {
-        url: "https://osod.dev/fhir/StructureDefinition/osod-floor-state",
+        url: "https://odos2020.com/fhir/StructureDefinition/odos-floor-state",
         extension: [
           { url: "station", valueString: "waiting" },
           { url: "since", valueInstant: "2026-07-08T14:05:00.000Z" },

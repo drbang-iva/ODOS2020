@@ -2,14 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "osod-mcp",
+      "name": "odos-mcp",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["tsx", "--env-file=../.env", "src/index.ts"],
       "cwd": "mcp",
       "port": 3333
     },
     {
-      "name": "osod-ui",
+      "name": "odos-ui",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "cwd": "ui",

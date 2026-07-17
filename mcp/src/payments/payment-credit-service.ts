@@ -4,10 +4,10 @@ import type {
   PaymentReconciliationDetail,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
 import {
   HL7_PAYMENT_TYPE_SYSTEM,
-  OSOD_PAYMENT_SUBJECT_EXTENSION_URL,
+  ODOS_PAYMENT_SUBJECT_EXTENSION_URL,
 } from "./payment-reconciliation.js";
 
 export type PaymentCreditFhirClient = Pick<MedplumClient, "read" | "search" | "update">;
@@ -187,7 +187,7 @@ export function buildUnappliedCreditReceipt(input: {
 }
 
 export function renderUnappliedCreditReceipt(receipt: UnappliedCreditReceipt): string {
-  return `<section class="osod-unapplied-credit-receipt">
+  return `<section class="odos-unapplied-credit-receipt">
 <h1>Payment Receipt</h1>
 <dl>
   <dt>Practice</dt><dd>${escapeHtml(receipt.practice)}</dd>
@@ -201,7 +201,7 @@ export function renderUnappliedCreditReceipt(receipt: UnappliedCreditReceipt): s
 }
 
 export function paymentSubjectReference(pr: PaymentReconciliation): string | undefined {
-  return pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_SUBJECT_EXTENSION_URL)
+  return pr.extension?.find((extension) => extension.url === ODOS_PAYMENT_SUBJECT_EXTENSION_URL)
     ?.valueReference?.reference;
 }
 
@@ -264,7 +264,7 @@ function assertMutable(pr: PaymentReconciliation): void {
   }
   const subjectReference = paymentSubjectReference(pr);
   if (!subjectReference) {
-    throw new Error("PaymentReconciliation is missing the required osod-payment-subject extension.");
+    throw new Error("PaymentReconciliation is missing the required odos-payment-subject extension.");
   }
   assertPatientReference(subjectReference);
   unappliedPaymentCents(pr);
@@ -342,20 +342,20 @@ function detailAmountCents(detail: PaymentReconciliationDetail): number {
 }
 
 export function paymentTenderCode(pr: PaymentReconciliation): string {
-  const code = pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  const code = pr.extension?.find((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0]?.code;
   if (!code) {
-    throw new Error("PaymentReconciliation is missing the osod-payment-tender extension.");
+    throw new Error("PaymentReconciliation is missing the odos-payment-tender extension.");
   }
   return code;
 }
 
 export function paymentTenderLabel(pr: PaymentReconciliation): string {
-  const coding = pr.extension?.find((extension) => extension.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  const coding = pr.extension?.find((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0];
   const tender = coding?.display ?? coding?.code;
   if (!tender) {
-    throw new Error("PaymentReconciliation is missing the osod-payment-tender extension.");
+    throw new Error("PaymentReconciliation is missing the odos-payment-tender extension.");
   }
   return tender;
 }

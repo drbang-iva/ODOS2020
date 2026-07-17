@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   LAB_TRANSPORT_STATES,
-  OSOD_LAB_TRANSPORT_STATE_SYSTEM,
+  ODOS_LAB_TRANSPORT_STATE_SYSTEM,
   assertLabTransportState,
   canTransitionLabTransportState,
   isTerminalLabTransportState,
@@ -10,7 +10,7 @@ import {
 } from "../src/fhir/labTransportState.js";
 
 test("lab transport state is its own eight-code CodeSystem", () => {
-  assert.equal(OSOD_LAB_TRANSPORT_STATE_SYSTEM, "https://osod.dev/fhir/CodeSystem/lab-transport-state");
+  assert.equal(ODOS_LAB_TRANSPORT_STATE_SYSTEM, "https://odos2020.com/fhir/CodeSystem/lab-transport-state");
   assert.deepEqual(LAB_TRANSPORT_STATES.map(({ code }) => code), [
     "queued",
     "sent",
@@ -25,7 +25,7 @@ test("lab transport state is its own eight-code CodeSystem", () => {
   assert.throws(() => assertLabTransportState("at-lab"), /Unknown lab transport state/);
   assert.deepEqual(labTransportStateConcept("received"), {
     coding: [{
-      system: OSOD_LAB_TRANSPORT_STATE_SYSTEM,
+      system: ODOS_LAB_TRANSPORT_STATE_SYSTEM,
       code: "received",
       display: "Received",
     }],

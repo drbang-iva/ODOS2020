@@ -61,7 +61,7 @@ function fixture() {
     },
   };
   const draft = createSingletonConfigDraft({
-    configKey: "osod-insurance-config",
+    configKey: "odos-insurance-config",
     config: CONFIG,
     resource,
     buildResource: buildInsuranceConfigResource,
@@ -166,6 +166,6 @@ test("singleton loader uses the coded Basic criteria and defaults to an empty te
   assert.deepEqual(loaded.config, { planTemplates: [] });
   assert.equal(
     searches[0]?.get("code"),
-    "https://osod.dev/fhir/CodeSystem/insurance-config|osod-insurance-config",
+    "https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
   );
 });

@@ -2,7 +2,7 @@ import type { BuildResult, RefractionInput } from "./types.js";
 import {
   applyCommonObservationFields,
   component,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "./extensions.js";
@@ -23,7 +23,7 @@ export function buildRefractionObservation(
 
   const components = [
     component("REFRACTION_TYPE", "Refraction type", {
-      valueCodeableConcept: osodConcept(
+      valueCodeableConcept: odosConcept(
         input.refractionType,
         input.refractionTypeDisplay ?? input.refractionType,
       ),
@@ -133,7 +133,7 @@ export function buildRefractionObservation(
     {
       resourceType: "Observation",
       status: "preliminary",
-      code: osodConcept("REFRACTION", "Refraction"),
+      code: odosConcept("REFRACTION", "Refraction"),
       component: components,
       ...(input.visualAcuityWithCorrectionReference
         ? { hasMember: [reference(input.visualAcuityWithCorrectionReference)] }
@@ -141,7 +141,7 @@ export function buildRefractionObservation(
     },
     {
       ...input,
-      method: input.method ?? osodConcept(
+      method: input.method ?? odosConcept(
         input.refractionType,
         input.refractionTypeDisplay ?? input.refractionType,
       ),

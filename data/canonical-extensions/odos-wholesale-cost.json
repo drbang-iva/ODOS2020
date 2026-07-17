@@ -1,21 +1,21 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-source-claim",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-source-claim",
-  "version": "claim-invoice-seam-phase-a",
-  "name": "OSODInvoiceSourceClaim",
-  "title": "OSOD Invoice Source Claim",
+  "id": "odos-wholesale-cost",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-wholesale-cost",
+  "version": "optical-pricing-1",
+  "name": "ODOSWholesaleCost",
+  "title": "ODOS Wholesale Cost",
   "status": "active",
-  "date": "2026-07-12",
-  "publisher": "OSOD",
-  "description": "Claim whose posted patient responsibility produced an Invoice.",
+  "date": "2026-07-11",
+  "publisher": "ODOS",
+  "description": "Practice-internal wholesale acquisition cost. This value is metadata and is never a component of a patient-facing line-item price.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
   "context": [
     {
       "type": "element",
-      "expression": "Invoice"
+      "expression": "ChargeItemDefinition"
     }
   ],
   "type": "Extension",
@@ -26,7 +26,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "Source Claim for patient responsibility",
+        "short": "Practice-internal wholesale acquisition cost",
         "min": 0,
         "max": "1"
       },
@@ -38,7 +38,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-source-claim"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-wholesale-cost"
       },
       {
         "id": "Extension.value[x]",
@@ -47,10 +47,7 @@
         "max": "1",
         "type": [
           {
-            "code": "Reference",
-            "targetProfile": [
-              "http://hl7.org/fhir/StructureDefinition/Claim"
-            ]
+            "code": "Money"
           }
         ]
       }

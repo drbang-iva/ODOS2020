@@ -103,7 +103,7 @@ async function route(
     }
     res.status(result.status).json(result.body);
   } catch (error) {
-    console.error(`osod-mcp: ${path} failed:`, error);
+    console.error(`odos-mcp: ${path} failed:`, error);
     if (!res.headersSent) res.status(500).json({ error: "reporting route failed" });
   }
 }

@@ -17,8 +17,8 @@ import type {
 
 /**
  * Clover REST Pay Display adapter (cloud connection) — the in-clinic dispensary card-present
- * surface. The physical Clover device (Flex / Mini / Compact) collects the card; OSOD only
- * dispatches the charge and receives the outcome, so no PAN/CVV/track data ever enters OSOD
+ * surface. The physical Clover device (Flex / Mini / Compact) collects the card; ODOS only
+ * dispatches the charge and receives the outcome, so no PAN/CVV/track data ever enters ODOS
  * (PCI scope minimization). On SUCCESS the adapter settles the Invoice by creating the
  * PaymentReconciliation (seam spec §2/§5); declined/failed charges create no financial record.
  *
@@ -34,7 +34,7 @@ import type {
 export const CLOVER_SANDBOX_BASE_URL = "https://apisandbox.dev.clover.com";
 
 /** Identifier namespace for Clover payment ids carried on PaymentReconciliation.paymentIdentifier. */
-export const CLOVER_TRANSACTION_SYSTEM = "https://osod.dev/fhir/NamingSystem/clover-payment";
+export const CLOVER_TRANSACTION_SYSTEM = "https://odos2020.com/fhir/NamingSystem/clover-payment";
 
 export interface CloverAdapterConfig {
   /** REST Pay Display base URL (sandbox: CLOVER_SANDBOX_BASE_URL). Never hardcoded in callers. */
@@ -98,7 +98,7 @@ export function createCloverAdapter(
         );
       }
 
-      const externalPaymentId = `osod-${generateId()}`;
+      const externalPaymentId = `odos-${generateId()}`;
       const response = await fetchImpl(`${config.baseUrl}/connect/v1/payments`, {
         method: "POST",
         headers: {
@@ -194,7 +194,7 @@ export function createCloverAdapter(
             "X-Clover-Device-Id": config.deviceId,
             "X-POS-Id": config.posId,
             "Idempotency-Key": generateId(),
-            "User-Agent": "OSOD/0.6c",
+            "User-Agent": "ODOS/0.6c",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ voidReason: "USER_CANCEL" }),

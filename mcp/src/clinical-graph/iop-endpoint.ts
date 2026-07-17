@@ -2,7 +2,7 @@ import type { CodeableConcept, Observation, Provenance } from "@medplum/fhirtype
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { iopMethodConcept } from "../fhir/ophthalmology/iop.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildGlaucomaFindingDefinitionStubs,
   captureGlaucomaFinding,
@@ -75,7 +75,7 @@ export interface IopDefinitionResponse {
   };
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const LEDGER_REF = "data/code-bindings/glaucoma-suspect-phase0-ledger.json";
 const EYES = ["OD", "OS"] as const;
 
@@ -264,7 +264,7 @@ export function resolveIopDefinitions(
 ): { intraocularPressure: ClinicalFindingDefinition; cornealHysteresis: ClinicalFindingDefinition } {
   const definitions = suppliedDefinitions ??
     buildGlaucomaFindingDefinitionStubs({
-      provenance: iopProvenance("Practitioner/osod-system", new Date(0).toISOString()),
+      provenance: iopProvenance("Practitioner/odos-system", new Date(0).toISOString()),
     });
   const intraocularPressure = definitions.find((row) => row.stableKey === "intraocular_pressure");
   const cornealHysteresis = definitions.find((row) => row.stableKey === "corneal_hysteresis");
@@ -375,7 +375,7 @@ function methodConcept(
 ): CodeableConcept | undefined {
   if (!method) return undefined;
   const option = fieldOptions(definition, "method").find((candidate) => candidate.code === method);
-  return option ? iopMethodConcept(osodConcept(option.code, option.display)) : undefined;
+  return option ? iopMethodConcept(odosConcept(option.code, option.display)) : undefined;
 }
 
 function eyeResult(

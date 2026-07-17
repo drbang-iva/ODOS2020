@@ -2,7 +2,7 @@ import type { Binary } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir-client.js";
 
 export const SECURITY_CONTEXT_HEADER = "X-Security-Context";
-export const BINARY_PARSER_GUARD_HEADER = "X-OSOD-Binary-Parser";
+export const BINARY_PARSER_GUARD_HEADER = "X-ODOS-Binary-Parser";
 export const BINARY_PARSER_GUARD_VALUE = "security-context-v1";
 
 export const BINARY_SECURITY_CONTEXT_ANCHOR_TYPES = [
@@ -103,7 +103,7 @@ export function assertValidSecurityContextReference(
 
   if (!BINARY_SECURITY_CONTEXT_ANCHOR_TYPES.includes(resourceType as BinarySecurityContextAnchorType)) {
     throw new Error(
-      `Binary.securityContext anchor ${resourceType} is not allowed for OSOD parser uploads.`,
+      `Binary.securityContext anchor ${resourceType} is not allowed for ODOS parser uploads.`,
     );
   }
 }

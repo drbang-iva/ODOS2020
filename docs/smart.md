@@ -1,15 +1,15 @@
-# OSOD SMART Authorization Server
+# ODOS SMART Authorization Server
 
-v0.55a adds the local SMART on FHIR v2 authorization server core to the OSOD MCP Node adapter. It runs only inside the practice-owned Docker Compose stack and composes with the v0.5a AccessPolicy / ProjectMembership substrate.
+v0.55a adds the local SMART on FHIR v2 authorization server core to the ODOS MCP Node adapter. It runs only inside the practice-owned Docker Compose stack and composes with the v0.5a AccessPolicy / ProjectMembership substrate.
 
 ## Installation Prereqs
 
-Generate a local SMART signing key with the existing OSOD certificate tooling:
+Generate a local SMART signing key with the existing ODOS certificate tooling:
 
 ```bash
-osod certs generate --purpose smart-signing --out .osod/keys/smart-signing.pem
-chmod 600 .osod/keys/smart-signing.pem
-export OSOD_SMART_SIGNING_KEY_PATH="$PWD/.osod/keys/smart-signing.pem"
+odos certs generate --purpose smart-signing --out .odos/keys/smart-signing.pem
+chmod 600 .odos/keys/smart-signing.pem
+export ODOS_SMART_SIGNING_KEY_PATH="$PWD/.odos/keys/smart-signing.pem"
 ```
 
 The private key path must be mode `0600`. The server never logs the private key. The public key is published from the local JWKS endpoint so local resource servers and confidential backend clients can validate issued tokens.
@@ -49,11 +49,11 @@ curl -X POST http://127.0.0.1:<mcp-port>/oauth2/register \
   }'
 ```
 
-The registration stores an OSOD canonical Endpoint or Device record with the `smart-client-app` extension, then uses the Medplum adapter boundary to provision the local authorization client. The deprecated `/sandbox/register` endpoint returns HTTP 410 in v0.55b and is no longer advertised in SMART discovery.
+The registration stores an ODOS canonical Endpoint or Device record with the `smart-client-app` extension, then uses the Medplum adapter boundary to provision the local authorization client. The deprecated `/sandbox/register` endpoint returns HTTP 410 in v0.55b and is no longer advertised in SMART discovery.
 
 ## Confidential Asymmetric Backend Apps
 
-Backend apps use `private_key_jwt` against the token endpoint. Generate the backend app keypair with `osod certs generate`, publish the app's local JWKS URL, then register the sandbox app with `client_type = "confidential"` and `jwks_uri`.
+Backend apps use `private_key_jwt` against the token endpoint. Generate the backend app keypair with `odos certs generate`, publish the app's local JWKS URL, then register the sandbox app with `client_type = "confidential"` and `jwks_uri`.
 
 v0.55a also accepts confidential symmetric clients through Basic auth or POST body credentials for backward compatibility, but the asymmetric path is the canonical backend-app path.
 
@@ -69,6 +69,6 @@ v2 granular permissions are canonical: `c`, `r`, `u`, `d`, `s`. v1 forms such as
 
 ## Staged Review
 
-At authorization time OSOD intersects requested SMART scopes with the user's v0.5a AccessPolicy and ProjectMembership parameters. Low-risk reductions issue a token with reduced effective scope. High-risk differences enter staged admin review.
+At authorization time ODOS intersects requested SMART scopes with the user's v0.5a AccessPolicy and ProjectMembership parameters. Low-risk reductions issue a token with reduced effective scope. High-risk differences enter staged admin review.
 
 Only an authenticated `practice-admin` Practitioner can approve staged SMART scope decisions. Autonomous-agent approval attempts are rejected at the boundary layer and covered by the Mandate 8 test suite.

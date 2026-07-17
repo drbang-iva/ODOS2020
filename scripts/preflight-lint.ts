@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Resource } from "@medplum/fhirtypes";
-import { buildOsodAuditEventRow, type OsodAuditEventRecord } from "../mcp/src/authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 import {
   parseAgentOpsPolicyYaml,
   validateAgentOpsPolicyFile,
@@ -13,7 +13,7 @@ import { smartScopeLintVerdict } from "../mcp/src/smart/scope.js";
 import { findPhiPatternMatches, type PreflightPhiMatch } from "../policy/preflight-phi-patterns.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const REPORT_DIR = resolve(REPO_ROOT, ".osod");
+const REPORT_DIR = resolve(REPO_ROOT, ".odos");
 
 export type PreflightSeverity = "warning" | "hard-block";
 export type PreflightPassStatus = "pass" | "warning" | "hard-block";
@@ -43,7 +43,7 @@ export interface PreflightReport {
     readonly hardBlocks: number;
   };
   readonly passes: readonly PreflightPassReport[];
-  readonly auditRows: readonly OsodAuditEventRecord[];
+  readonly auditRows: readonly OdosAuditEventRecord[];
 }
 
 export interface LogScrubPassOptions {
@@ -191,7 +191,7 @@ const VENDOR_CANONICAL_SHAPES: readonly ForbiddenShape[] = [
 ];
 
 const MEDPLUM_CLIENT_APP_PATTERN = new RegExp(`\\b${["Client", "Application"].join("")}\\b`);
-const OSOD_EXTENSION_URL_PATTERN =
+const ODOS_EXTENSION_URL_PATTERN =
   /https?:\/\/[^"'\s]+\/fhir\/StructureDefinition\/[^"'\s]+/g;
 const PROMISE_ALL_MIGRATION_PATTERN = new RegExp(
   [
@@ -240,8 +240,8 @@ const IN_CONTAINER_PACKET_FILTER_PATTERN = new RegExp(
   "i",
 );
 const CDS_SERVICE_ID_PATTERN = /\bid\s*:\s*["'`]([^"'`]+)["'`]/g;
-const OSOD_CDS_SERVICE_ID_PATTERN = /^osod-[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const OSOD_CDS_SERVICE_URL_PATTERN = /^https:\/\/osod\.dev\/cds-hooks\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ODOS_CDS_SERVICE_ID_PATTERN = /^odos-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ODOS_CDS_SERVICE_URL_PATTERN = /^https:\/\/odos2020\.com\/cds-hooks\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const PREFLIGHT_ALLOWED_NETWORK_PATTERNS: readonly RegExp[] = [
   /^https?:\/\/localhost(?::\d+)?(?:\/|$)/i,
@@ -291,7 +291,7 @@ export function runResourceNamePass(options: ResourceNamePassOptions = {}): Pref
 }
 
 export function runEnvVarPhiPass(options: EnvVarPhiPassOptions = {}): PreflightPassReport & {
-  readonly auditRows: readonly OsodAuditEventRecord[];
+  readonly auditRows: readonly OdosAuditEventRecord[];
 } {
   const env = options.env ?? readComposeEnvironment();
   const findings: PreflightFinding[] = [];
@@ -314,7 +314,7 @@ export function runEnvVarPhiPass(options: EnvVarPhiPassOptions = {}): PreflightP
 
   const auditRows = findings.length
     ? [
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           eventType: "preflight-block",
           actorId: "preflight-linter",
           actorRole: "system",
@@ -360,14 +360,14 @@ export function runVendorCanonicalShapePass(
           lesson: "v0.55a Lesson 14",
         });
       }
-      for (const match of line.matchAll(OSOD_EXTENSION_URL_PATTERN)) {
+      for (const match of line.matchAll(ODOS_EXTENSION_URL_PATTERN)) {
         const url = match[0]!;
-        if (urlHost(url) === "osod.dev" && !canonicalExtensionUrls().has(url)) {
+        if (urlHost(url) === "odos2020.com" && !canonicalExtensionUrls().has(url)) {
           findings.push({
             pass: "vendor-canonical-shapes",
             severity: "hard-block",
-            code: "osod-extension-url-shape",
-            message: "OSOD-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
+            code: "odos-extension-url-shape",
+            message: "ODOS-authored StructureDefinition URL is missing from data/canonical-extensions/registry.json.",
             source: displayPath(file.path),
             line: index + 1,
             column: match.index === undefined ? undefined : match.index + 1,
@@ -633,7 +633,7 @@ function readComposeEnvironment(): Record<string, string> {
 }
 
 function readResourceNameInventory(): ResourceNameLintResource[] {
-  const postgresUrl = process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
+  const postgresUrl = process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
   const resourceTypes = [
     "Patient",
     "Practitioner",
@@ -724,7 +724,7 @@ function walk(path: string, files: { path: string; text: string }[]): void {
   for (const entry of entries) {
     const child = join(path, entry.name);
     if (entry.isDirectory()) {
-      if (![".git", ".osod", "dist", "node_modules"].includes(entry.name)) {
+      if (![".git", ".odos", "dist", "node_modules"].includes(entry.name)) {
         walk(child, files);
       }
       continue;
@@ -806,9 +806,9 @@ function cdsHookIdFormatFindings(files: readonly { path: string; text: string }[
     for (const [index, line] of file.text.split(/\r?\n/).entries()) {
       for (const match of line.matchAll(CDS_SERVICE_ID_PATTERN)) {
         const id = match[1]!;
-        const format = OSOD_CDS_SERVICE_ID_PATTERN.test(id)
+        const format = ODOS_CDS_SERVICE_ID_PATTERN.test(id)
           ? "short"
-          : OSOD_CDS_SERVICE_URL_PATTERN.test(id)
+          : ODOS_CDS_SERVICE_URL_PATTERN.test(id)
             ? "url"
             : "invalid";
         ids.push({ path: file.path, line: index + 1, id, format });
@@ -1002,7 +1002,7 @@ function agentOpsSafetyValveLeakFindings(files: readonly { path: string; text: s
       continue;
     }
     for (const [index, line] of file.text.split(/\r?\n/).entries()) {
-      if (/ProtectingCareAccess|171\.206|\/fhir\/exception\/171\.206|X-OSOD-IB-Exception/.test(line)) {
+      if (/ProtectingCareAccess|171\.206|\/fhir\/exception\/171\.206|X-ODOS-IB-Exception/.test(line)) {
         findings.push({
           pass: "vendor-canonical-shapes",
           severity: "hard-block",
@@ -1316,7 +1316,7 @@ function walkMarkdown(path: string, files: { path: string; text: string }[]): vo
   for (const entry of entries) {
     const child = join(path, entry.name);
     if (entry.isDirectory()) {
-      if (![".git", ".osod", "build-log", "dist", "node_modules"].includes(entry.name)) {
+      if (![".git", ".odos", "build-log", "dist", "node_modules"].includes(entry.name)) {
         walkMarkdown(child, files);
       }
       continue;
@@ -1356,7 +1356,7 @@ function writeReports(report: PreflightReport): void {
 
 function renderMarkdownReport(report: PreflightReport): string {
   const lines = [
-    "# OSOD Preflight Report",
+    "# ODOS Preflight Report",
     "",
     `Generated: ${report.generatedAt}`,
     `Warnings: ${report.summary.warnings}`,
@@ -1383,7 +1383,7 @@ function renderMarkdownReport(report: PreflightReport): string {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const report = runPreflightLint();
-  const message = `OSOD preflight complete: ${report.summary.warnings} warning(s), ${report.summary.hardBlocks} hard block(s). Reports: .osod/preflight-report.json and .osod/preflight-report.md`;
+  const message = `ODOS preflight complete: ${report.summary.warnings} warning(s), ${report.summary.hardBlocks} hard block(s). Reports: .odos/preflight-report.json and .odos/preflight-report.md`;
   console.log(message);
   if (report.summary.hardBlocks > 0) {
     process.exitCode = 1;

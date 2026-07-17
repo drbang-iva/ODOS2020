@@ -18,8 +18,8 @@ import {
   type UcumUnitCode,
   ucumQuantity,
 } from "../fhir/contactLens.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildSoftContactLensFindingDefinitionStub,
   buildSpecialtyContactLensFindingDefinitionStub,
@@ -85,7 +85,7 @@ export interface ContactLensEndpointResult {
   body: unknown;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES = ["OD", "OS"] as const;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -380,7 +380,7 @@ export function resolveSoftContactLensDefinition(
 ): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? [
     buildSoftContactLensFindingDefinitionStub(
-      contactLensProvenance("Practitioner/osod-system", new Date(0).toISOString()),
+      contactLensProvenance("Practitioner/odos-system", new Date(0).toISOString()),
     ),
   ];
   const definition = definitions.find((candidate) => candidate.stableKey === "soft_contact_lens");
@@ -393,7 +393,7 @@ export function resolveSpecialtyContactLensDefinition(
 ): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? [
     buildSpecialtyContactLensFindingDefinitionStub(
-      specialtyContactLensProvenance("Practitioner/osod-system", new Date(0).toISOString()),
+      specialtyContactLensProvenance("Practitioner/odos-system", new Date(0).toISOString()),
     ),
   ];
   const definition = definitions.find((candidate) => candidate.stableKey === "specialty_contact_lens");
@@ -437,7 +437,7 @@ function captureSoftContactLensFinding(input: {
     ),
     provenance: {
       ...capture.provenance,
-      activity: osodConcept("CREATE", "Capture soft contact lens prescription evidence"),
+      activity: odosConcept("CREATE", "Capture soft contact lens prescription evidence"),
     },
   };
 }
@@ -486,7 +486,7 @@ function captureSpecialtyContactLensFinding(input: {
     ),
     provenance: {
       ...capture.provenance,
-      activity: osodConcept("CREATE", "Capture specialty contact lens prescription evidence"),
+      activity: odosConcept("CREATE", "Capture specialty contact lens prescription evidence"),
     },
   };
 }
@@ -927,7 +927,7 @@ function latestKeratometryReading(
 ): SpecialtyKeratometryReading | null {
   const observation = observations
     .filter((candidate) => candidate.bodySite?.coding?.some((coding) =>
-      coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === eye))
+      coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === eye))
     .filter((candidate) => candidate.effectiveDateTime && candidate.id)
     .sort((a, b) => String(b.effectiveDateTime).localeCompare(String(a.effectiveDateTime)))[0];
   if (!observation?.effectiveDateTime || !observation.id) return null;

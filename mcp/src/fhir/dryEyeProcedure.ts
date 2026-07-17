@@ -1,6 +1,6 @@
 import type { Extension, Procedure } from "@medplum/fhirtypes";
 import {
-  OSOD_FHIR_BASE,
+  ODOS_FHIR_BASE,
   UCUM_CODE_SYSTEM,
 } from "./contactLens.js";
 import {
@@ -27,7 +27,7 @@ export type DryEyeProcedureStatusCode =
 export type DryEyeProcedureStatusUpdate = "in-progress" | "completed" | "aborted";
 
 export const DRY_EYE_TREATMENT_SESSION_IDENTIFIER_SYSTEM =
-  `${OSOD_FHIR_BASE}/Identifier/dry-eye-treatment-session`;
+  `${ODOS_FHIR_BASE}/Identifier/dry-eye-treatment-session`;
 
 export interface DryEyeTreatmentParametersInput {
   energyMj?: number;

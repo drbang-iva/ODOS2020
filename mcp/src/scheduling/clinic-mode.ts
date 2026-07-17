@@ -26,7 +26,7 @@ export const SCHEDULING_DISCIPLINES = [
 export type SchedulingDiscipline = (typeof SCHEDULING_DISCIPLINES)[number]["code"];
 
 /** Local CodeSystem tagging catalog entries + resources with their discipline. */
-export const OSOD_DISCIPLINE_SYSTEM = "https://osod.dev/fhir/CodeSystem/scheduling-discipline";
+export const ODOS_DISCIPLINE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/scheduling-discipline";
 
 const MODE_BY_CODE = new Map<string, (typeof CLINIC_MODES)[number]>(
   CLINIC_MODES.map((mode) => [mode.code, mode]),
@@ -67,12 +67,12 @@ export function isDisciplineVisible(discipline: string, mode: string): boolean {
   return disciplinesForMode(mode).includes(discipline);
 }
 
-/** The osod discipline Coding carried on catalog entries (serviceCategory) and resources. */
+/** The odos discipline Coding carried on catalog entries (serviceCategory) and resources. */
 export function disciplineCoding(discipline: string): Coding {
   assertDiscipline(discipline);
   const entry = DISCIPLINE_BY_CODE.get(discipline)!;
   return {
-    system: OSOD_DISCIPLINE_SYSTEM,
+    system: ODOS_DISCIPLINE_SYSTEM,
     code: entry.code,
     display: entry.display,
   };

@@ -29,7 +29,7 @@ test("lab-order selection and environment routing default to manual", () => {
   const manual = createLabOrderDispatch([{ vendor: "manual" }]).getAdapter("manual", fakeFhir());
   assert.equal(selectLabOrderAdapter({ manual }, undefined), manual);
   assert.deepEqual(labOrderRoutingFromEnv({}), { vendor: "manual" });
-  assert.deepEqual(labOrderRoutingFromEnv({ OSOD_LAB_ORDER_VENDOR_DEFAULT: "manual" }), { vendor: "manual" });
+  assert.deepEqual(labOrderRoutingFromEnv({ ODOS_LAB_ORDER_VENDOR_DEFAULT: "manual" }), { vendor: "manual" });
 });
 
 test("unknown or unconfigured lab-order vendors fail closed with explicit messages", () => {
@@ -37,7 +37,7 @@ test("unknown or unconfigured lab-order vendors fail closed with explicit messag
   assert.throws(() => dispatch.getAdapter("manual", fakeFhir()), /manual.*not configured|not configured.*manual/i);
   assert.throws(() => selectLabOrderAdapter({}, undefined), /manual.*not configured|not configured.*manual/i);
   assert.throws(
-    () => labOrderRoutingFromEnv({ OSOD_LAB_ORDER_VENDOR_DEFAULT: "visionweb" }),
+    () => labOrderRoutingFromEnv({ ODOS_LAB_ORDER_VENDOR_DEFAULT: "visionweb" }),
     /manual/,
   );
 });

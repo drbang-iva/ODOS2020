@@ -14,38 +14,38 @@ import type {
 } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir-client.js";
 
-export const OSOD_FHIR_BASE = "https://osod.dev/fhir";
-export const CONTACT_LENS_TYPE_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-type`;
-export const CONTACT_LENS_PARAMETER_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-parameter`;
-export const CONTACT_LENS_FITTING_EVENT_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-fitting-event`;
-export const CONTACT_LENS_CLINICAL_OBSERVATION_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-clinical-observation`;
-export const DRY_EYE_TREATMENT_TYPE_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/dry-eye-treatment-type`;
-export const MEIBOGRAPHY_SCORE_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/meibography-score`;
-export const DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/dry-eye-questionnaire-instrument`;
-export const CONTACT_LENS_MATERIAL_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-material`;
-export const CONTACT_LENS_COATING_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/contact-lens-coating`;
-export const MYOPIA_CONTROL_INTERVENTION_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/myopia-control-intervention`;
-export const ATROPINE_CONCENTRATION_UCUM_CODE_SYSTEM = `${OSOD_FHIR_BASE}/CodeSystem/atropine-concentration-ucum`;
+export const ODOS_FHIR_BASE = "https://odos2020.com/fhir";
+export const CONTACT_LENS_TYPE_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-type`;
+export const CONTACT_LENS_PARAMETER_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-parameter`;
+export const CONTACT_LENS_FITTING_EVENT_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-fitting-event`;
+export const CONTACT_LENS_CLINICAL_OBSERVATION_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-clinical-observation`;
+export const DRY_EYE_TREATMENT_TYPE_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-treatment-type`;
+export const MEIBOGRAPHY_SCORE_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/meibography-score`;
+export const DRY_EYE_QUESTIONNAIRE_INSTRUMENT_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/dry-eye-questionnaire-instrument`;
+export const CONTACT_LENS_MATERIAL_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-material`;
+export const CONTACT_LENS_COATING_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/contact-lens-coating`;
+export const MYOPIA_CONTROL_INTERVENTION_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/myopia-control-intervention`;
+export const ATROPINE_CONCENTRATION_UCUM_CODE_SYSTEM = `${ODOS_FHIR_BASE}/CodeSystem/atropine-concentration-ucum`;
 
-export const CONTACT_LENS_COATING_EXTENSION_URL = `${OSOD_FHIR_BASE}/StructureDefinition/contact-lens-coating`;
-export const CONCEPTMAP_LAB_ORGANIZATION_EXTENSION_URL = `${OSOD_FHIR_BASE}/StructureDefinition/conceptmap-lab-organization`;
+export const CONTACT_LENS_COATING_EXTENSION_URL = `${ODOS_FHIR_BASE}/StructureDefinition/contact-lens-coating`;
+export const CONCEPTMAP_LAB_ORGANIZATION_EXTENSION_URL = `${ODOS_FHIR_BASE}/StructureDefinition/conceptmap-lab-organization`;
 
-export const DEVICE_CONTACT_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-ContactLens`;
-export const DEVICE_ORTHO_K_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-OrthoKLens`;
-export const DEVICE_CORNEAL_GP_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-CornealGPLens`;
-export const DEVICE_SCLERAL_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-ScleralLens`;
-export const DEVICE_HYBRID_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-HybridLens`;
-export const DEVICE_SOFT_LENS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Device-SoftLens`;
+export const DEVICE_CONTACT_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-ContactLens`;
+export const DEVICE_ORTHO_K_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-OrthoKLens`;
+export const DEVICE_CORNEAL_GP_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-CornealGPLens`;
+export const DEVICE_SCLERAL_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-ScleralLens`;
+export const DEVICE_HYBRID_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-HybridLens`;
+export const DEVICE_SOFT_LENS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Device-SoftLens`;
 
-export const OBSERVATION_K_READINGS_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-KReadings`;
-export const OBSERVATION_PACHYMETRY_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-Pachymetry`;
-export const OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-MeibomianGlandScore`;
-export const OBSERVATION_TBUT_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-TBUT`;
-export const OBSERVATION_SCHIRMER_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-Schirmer`;
-export const OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL = `${OSOD_FHIR_BASE}/StructureDefinition/Observation-ContactLensFitFinding`;
+export const OBSERVATION_K_READINGS_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-KReadings`;
+export const OBSERVATION_PACHYMETRY_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-Pachymetry`;
+export const OBSERVATION_MEIBOMIAN_GLAND_SCORE_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-MeibomianGlandScore`;
+export const OBSERVATION_TBUT_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-TBUT`;
+export const OBSERVATION_SCHIRMER_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-Schirmer`;
+export const OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL = `${ODOS_FHIR_BASE}/StructureDefinition/Observation-ContactLensFitFinding`;
 
-export const OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM = `${OSOD_FHIR_BASE}/Identifier/contact-lens-device-definition`;
-export const OSOD_SUBSTANCE_IDENTIFIER_SYSTEM = `${OSOD_FHIR_BASE}/Identifier/contact-lens-substance`;
+export const ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM = `${ODOS_FHIR_BASE}/Identifier/contact-lens-device-definition`;
+export const ODOS_SUBSTANCE_IDENTIFIER_SYSTEM = `${ODOS_FHIR_BASE}/Identifier/contact-lens-substance`;
 
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 export const LOINC_CODE_SYSTEM = "http://loinc.org";
@@ -188,11 +188,11 @@ export const CONTACT_LENS_COATING_CODES = ["Hydra-PEG", "Tangible", "none"] as c
 export type ContactLensCoatingCode = (typeof CONTACT_LENS_COATING_CODES)[number];
 
 export const PARAMETER_VALUE_SET_URLS = {
-  orthoK: `${OSOD_FHIR_BASE}/ValueSet/ortho-k-lens-parameters`,
-  cornealGp: `${OSOD_FHIR_BASE}/ValueSet/corneal-gp-lens-parameters`,
-  cornealGpBitoricBifocal: `${OSOD_FHIR_BASE}/ValueSet/corneal-gp-bitoric-bifocal-parameters`,
-  scleral: `${OSOD_FHIR_BASE}/ValueSet/scleral-lens-parameters`,
-  hybrid: `${OSOD_FHIR_BASE}/ValueSet/hybrid-lens-parameters`,
+  orthoK: `${ODOS_FHIR_BASE}/ValueSet/ortho-k-lens-parameters`,
+  cornealGp: `${ODOS_FHIR_BASE}/ValueSet/corneal-gp-lens-parameters`,
+  cornealGpBitoricBifocal: `${ODOS_FHIR_BASE}/ValueSet/corneal-gp-bitoric-bifocal-parameters`,
+  scleral: `${ODOS_FHIR_BASE}/ValueSet/scleral-lens-parameters`,
+  hybrid: `${ODOS_FHIR_BASE}/ValueSet/hybrid-lens-parameters`,
 } as const;
 
 const COMMON_POWER_PARAMETER_CODES = [
@@ -488,7 +488,7 @@ export function buildDeviceDefinition(input: BuildDeviceDefinitionInput): Device
     resourceType: "DeviceDefinition",
     identifier: [
       {
-        system: OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+        system: ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
         value: input.catalogCode,
       },
     ],
@@ -515,16 +515,16 @@ export function buildDeviceDefinition(input: BuildDeviceDefinitionInput): Device
 export function buildConceptMap(input: BuildConceptMapInput): ConceptMap {
   return {
     resourceType: "ConceptMap",
-    url: `${OSOD_FHIR_BASE}/ConceptMap/contact-lens-lab-${input.labCode}`,
+    url: `${ODOS_FHIR_BASE}/ConceptMap/contact-lens-lab-${input.labCode}`,
     version: "0.4.0",
-    name: `OSOD${pascalCase(input.labCode)}ContactLensParameterMap`,
+    name: `ODOS${pascalCase(input.labCode)}ContactLensParameterMap`,
     title: `${input.labDisplay} contact lens parameter aliases`,
     status: "active",
     experimental: false,
     date: "2026-04-28",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description:
-      "Maps OSOD contact-lens parameter codes to lab-specific catalog or order-entry naming.",
+      "Maps ODOS contact-lens parameter codes to lab-specific catalog or order-entry naming.",
     sourceUri: CONTACT_LENS_PARAMETER_CODE_SYSTEM,
     targetUri: input.targetUri,
     group: [
@@ -569,12 +569,12 @@ export function buildSubstance(input: BuildSubstanceInput): Substance {
   return {
     resourceType: "Substance",
     status: "active",
-    identifier: [{ system: OSOD_SUBSTANCE_IDENTIFIER_SYSTEM, value: input.code }],
+    identifier: [{ system: ODOS_SUBSTANCE_IDENTIFIER_SYSTEM, value: input.code }],
     category: [
       {
         coding: [
           {
-            system: `${OSOD_FHIR_BASE}/CodeSystem/substance-category`,
+            system: `${ODOS_FHIR_BASE}/CodeSystem/substance-category`,
             code: input.kind,
             display: input.kind === "material" ? "Contact lens material" : "Contact lens coating",
           },
@@ -899,21 +899,21 @@ export function buildV04SubstanceSeeds(): Substance[] {
 
 function buildV04CodeSystems(): CodeSystem[] {
   return [
-    codeSystem("contact-lens-type", "OSOD contact lens types", CONTACT_LENS_TYPE_DEFINITIONS),
-    codeSystem("contact-lens-parameter", "OSOD contact lens parameters", PARAMETER_DEFINITIONS),
+    codeSystem("contact-lens-type", "ODOS contact lens types", CONTACT_LENS_TYPE_DEFINITIONS),
+    codeSystem("contact-lens-parameter", "ODOS contact lens parameters", PARAMETER_DEFINITIONS),
     codeSystem(
       "contact-lens-fitting-event",
-      "OSOD contact lens fitting events",
+      "ODOS contact lens fitting events",
       CONTACT_LENS_FITTING_EVENT_CODES.map((code) => ({ code, display: titleCase(code) })),
     ),
     codeSystem(
       "contact-lens-clinical-observation",
-      "OSOD contact lens clinical observations",
+      "ODOS contact lens clinical observations",
       CONTACT_LENS_CLINICAL_OBSERVATION_CODES.map((code) => ({ code, display: titleCase(code) })),
     ),
-    codeSystem("contact-lens-material", "OSOD contact lens materials", CONTACT_LENS_MATERIAL_CODES.map((code) => ({ code, display: titleCase(code) }))),
-    codeSystem("contact-lens-coating", "OSOD contact lens coatings", CONTACT_LENS_COATING_CODES.map((code) => ({ code, display: titleCase(code) }))),
-    codeSystem("dry-eye-treatment-type", "OSOD dry-eye treatment types", [
+    codeSystem("contact-lens-material", "ODOS contact lens materials", CONTACT_LENS_MATERIAL_CODES.map((code) => ({ code, display: titleCase(code) }))),
+    codeSystem("contact-lens-coating", "ODOS contact lens coatings", CONTACT_LENS_COATING_CODES.map((code) => ({ code, display: titleCase(code) }))),
+    codeSystem("dry-eye-treatment-type", "ODOS dry-eye treatment types", [
       {
         code: "IPL",
         display: "Intense pulsed light",
@@ -932,7 +932,7 @@ function buildV04CodeSystems(): CodeSystem[] {
       { code: "prescription-anti-inflammatory", display: "Prescription anti-inflammatory" },
       { code: "omega-3", display: "Omega-3 supplement" },
     ]),
-    codeSystem("meibography-score", "OSOD meibography scores", [
+    codeSystem("meibography-score", "ODOS meibography scores", [
       { code: "meiboscore-0", display: "Meiboscore 0" },
       { code: "meiboscore-1", display: "Meiboscore 1" },
       { code: "meiboscore-2", display: "Meiboscore 2" },
@@ -946,7 +946,7 @@ function buildV04CodeSystems(): CodeSystem[] {
       { code: "arita-gland", display: "Arita gland-level score" },
       { code: "arita-total-lid", display: "Arita total per lid, 0-15" },
     ]),
-    codeSystem("dry-eye-questionnaire-instrument", "OSOD dry-eye questionnaire instruments", [
+    codeSystem("dry-eye-questionnaire-instrument", "ODOS dry-eye questionnaire instruments", [
       { code: "OSDI", display: "Ocular Surface Disease Index" },
       { code: "SPEED", display: "Standard Patient Evaluation of Eye Dryness" },
       { code: "DEQ-5", display: "Dry Eye Questionnaire 5" },
@@ -956,7 +956,7 @@ function buildV04CodeSystems(): CodeSystem[] {
       { code: "DEQ-5-summary-score", display: "DEQ-5 summary score" },
       { code: "McMonnies-summary-score", display: "McMonnies summary score" },
     ]),
-    codeSystem("myopia-control-intervention", "OSOD myopia control interventions", [
+    codeSystem("myopia-control-intervention", "ODOS myopia control interventions", [
       { code: "ortho-K", display: "Orthokeratology" },
       { code: "atropine-low-dose", display: "Low-dose atropine" },
       { code: "atropine-medium-dose", display: "Medium-dose atropine" },
@@ -967,7 +967,7 @@ function buildV04CodeSystems(): CodeSystem[] {
       { code: "undercorrection", display: "Undercorrection" },
       { code: "outdoor-time-Rx", display: "Outdoor-time prescription" },
     ]),
-    codeSystem("atropine-concentration-ucum", "OSOD atropine concentration UCUM codes", [
+    codeSystem("atropine-concentration-ucum", "ODOS atropine concentration UCUM codes", [
       { code: "0.01%", display: "Atropine 0.01%" },
       { code: "0.025%", display: "Atropine 0.025%" },
       { code: "0.05%", display: "Atropine 0.05%" },
@@ -1014,23 +1014,23 @@ function buildV04ValueSets(): ValueSet[] {
 
 function buildV04DeviceProfiles(): StructureDefinition[] {
   return [
-    deviceProfile("Device-ContactLens", "OSOD Device - Contact Lens", "Device", undefined),
-    deviceProfile("Device-OrthoKLens", "OSOD Device - Ortho-K Lens", "Device", PARAMETER_VALUE_SET_URLS.orthoK, DEVICE_CONTACT_LENS_PROFILE_URL),
-    deviceProfile("Device-CornealGPLens", "OSOD Device - Corneal GP Lens", "Device", PARAMETER_VALUE_SET_URLS.cornealGp, DEVICE_CONTACT_LENS_PROFILE_URL),
-    deviceProfile("Device-ScleralLens", "OSOD Device - Scleral Lens", "Device", PARAMETER_VALUE_SET_URLS.scleral, DEVICE_CONTACT_LENS_PROFILE_URL),
-    deviceProfile("Device-HybridLens", "OSOD Device - Hybrid Lens", "Device", PARAMETER_VALUE_SET_URLS.hybrid, DEVICE_CONTACT_LENS_PROFILE_URL),
-    deviceProfile("Device-SoftLens", "OSOD Device - Soft Lens", "Device", undefined, DEVICE_CONTACT_LENS_PROFILE_URL),
+    deviceProfile("Device-ContactLens", "ODOS Device - Contact Lens", "Device", undefined),
+    deviceProfile("Device-OrthoKLens", "ODOS Device - Ortho-K Lens", "Device", PARAMETER_VALUE_SET_URLS.orthoK, DEVICE_CONTACT_LENS_PROFILE_URL),
+    deviceProfile("Device-CornealGPLens", "ODOS Device - Corneal GP Lens", "Device", PARAMETER_VALUE_SET_URLS.cornealGp, DEVICE_CONTACT_LENS_PROFILE_URL),
+    deviceProfile("Device-ScleralLens", "ODOS Device - Scleral Lens", "Device", PARAMETER_VALUE_SET_URLS.scleral, DEVICE_CONTACT_LENS_PROFILE_URL),
+    deviceProfile("Device-HybridLens", "ODOS Device - Hybrid Lens", "Device", PARAMETER_VALUE_SET_URLS.hybrid, DEVICE_CONTACT_LENS_PROFILE_URL),
+    deviceProfile("Device-SoftLens", "ODOS Device - Soft Lens", "Device", undefined, DEVICE_CONTACT_LENS_PROFILE_URL),
   ];
 }
 
 function buildV04ObservationProfiles(): StructureDefinition[] {
   return [
-    observationProfile("Observation-KReadings", "OSOD Observation - K Readings", "Keratometry panel with K readings and axis components."),
-    observationProfile("Observation-Pachymetry", "OSOD Observation - Pachymetry", "Central corneal thickness observation."),
-    observationProfile("Observation-MeibomianGlandScore", "OSOD Observation - Meibomian Gland Score", "Meiboscore/Arita scoring observation."),
-    observationProfile("Observation-TBUT", "OSOD Observation - TBUT", "Tear film break-up time observation."),
-    observationProfile("Observation-Schirmer", "OSOD Observation - Schirmer", "Schirmer tear test observation."),
-    observationProfile("Observation-ContactLensFitFinding", "OSOD Observation - Contact Lens Fit Finding", "Fit finding about a contact lens Device.", {
+    observationProfile("Observation-KReadings", "ODOS Observation - K Readings", "Keratometry panel with K readings and axis components."),
+    observationProfile("Observation-Pachymetry", "ODOS Observation - Pachymetry", "Central corneal thickness observation."),
+    observationProfile("Observation-MeibomianGlandScore", "ODOS Observation - Meibomian Gland Score", "Meiboscore/Arita scoring observation."),
+    observationProfile("Observation-TBUT", "ODOS Observation - TBUT", "Tear film break-up time observation."),
+    observationProfile("Observation-Schirmer", "ODOS Observation - Schirmer", "Schirmer tear test observation."),
+    observationProfile("Observation-ContactLensFitFinding", "ODOS Observation - Contact Lens Fit Finding", "Fit finding about a contact lens Device.", {
       focusMin: 1,
       componentMin: 0,
     }),
@@ -1043,10 +1043,10 @@ function buildV04ExtensionDefinitions(): StructureDefinition[] {
       resourceType: "StructureDefinition",
       url: CONTACT_LENS_COATING_EXTENSION_URL,
       version: "0.4.0",
-      name: "OSODContactLensCoating",
-      title: "OSOD Contact Lens Coating",
+      name: "ODOSContactLensCoating",
+      title: "ODOS Contact Lens Coating",
       status: "draft",
-      publisher: "OSOD",
+      publisher: "ODOS",
       description: "Links a contact lens Device to its coating Substance.",
       fhirVersion: "4.0.1",
       kind: "complex-type",
@@ -1088,10 +1088,10 @@ function buildV04ExtensionDefinitions(): StructureDefinition[] {
       resourceType: "StructureDefinition",
       url: CONCEPTMAP_LAB_ORGANIZATION_EXTENSION_URL,
       version: "0.4.0",
-      name: "OSODConceptMapLabOrganization",
-      title: "OSOD ConceptMap Lab Organization",
+      name: "ODOSConceptMapLabOrganization",
+      title: "ODOS ConceptMap Lab Organization",
       status: "draft",
-      publisher: "OSOD",
+      publisher: "ODOS",
       description: "Binds a ConceptMap group to the lab Organization whose aliases it represents.",
       fhirVersion: "4.0.1",
       kind: "complex-type",
@@ -1139,7 +1139,7 @@ function deviceProfile(
   parameterValueSet?: string,
   baseDefinition = "http://hl7.org/fhir/StructureDefinition/Device",
 ): StructureDefinition {
-  const url = `${OSOD_FHIR_BASE}/StructureDefinition/${id}`;
+  const url = `${ODOS_FHIR_BASE}/StructureDefinition/${id}`;
   const element = withElementBase([
     { id: type, path: type, min: 0, max: "*", definition: `${title} resource.` },
     { id: `${type}.type`, path: `${type}.type`, min: 1, max: "1", definition: "Contact lens type." },
@@ -1149,20 +1149,20 @@ function deviceProfile(
       path: `${type}.property.type`,
       min: 1,
       max: "1",
-      definition: "Property code from the OSOD contact-lens parameter code system.",
+      definition: "Property code from the ODOS contact-lens parameter code system.",
       binding: parameterValueSet
         ? { strength: "required" as const, valueSet: parameterValueSet }
-        : { strength: "extensible" as const, valueSet: `${OSOD_FHIR_BASE}/ValueSet/contact-lens-parameters` },
+        : { strength: "extensible" as const, valueSet: `${ODOS_FHIR_BASE}/ValueSet/contact-lens-parameters` },
     },
   ]);
   return {
     resourceType: "StructureDefinition",
     url,
     version: "0.4.0",
-    name: `OSOD${id.replace(/[^A-Za-z0-9]/g, "")}`,
+    name: `ODOS${id.replace(/[^A-Za-z0-9]/g, "")}`,
     title,
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description: `${title} profile for v0.4a contact lens foundation.`,
     fhirVersion: "4.0.1",
     kind: "resource",
@@ -1181,7 +1181,7 @@ function observationProfile(
   description: string,
   options: { focusMin?: number; componentMin?: number } = {},
 ): StructureDefinition {
-  const url = `${OSOD_FHIR_BASE}/StructureDefinition/${id}`;
+  const url = `${ODOS_FHIR_BASE}/StructureDefinition/${id}`;
   const element = withElementBase([
     { id: "Observation", path: "Observation", min: 0, max: "*", definition: `${title} resource.` },
     { id: "Observation.subject", path: "Observation.subject", min: 1, max: "1", definition: "Patient subject for the clinical observation." },
@@ -1197,10 +1197,10 @@ function observationProfile(
     resourceType: "StructureDefinition",
     url,
     version: "0.4.0",
-    name: `OSOD${id.replace(/[^A-Za-z0-9]/g, "")}`,
+    name: `ODOS${id.replace(/[^A-Za-z0-9]/g, "")}`,
     title,
     status: "draft",
-    publisher: "OSOD",
+    publisher: "ODOS",
     description,
     fhirVersion: "4.0.1",
     kind: "resource",
@@ -1224,14 +1224,14 @@ function codeSystem(
 ): CodeSystem {
   return {
     resourceType: "CodeSystem",
-    url: `${OSOD_FHIR_BASE}/CodeSystem/${id}`,
+    url: `${ODOS_FHIR_BASE}/CodeSystem/${id}`,
     version: "0.4.0",
-    name: `OSOD${pascalCase(id)}CodeSystem`,
+    name: `ODOS${pascalCase(id)}CodeSystem`,
     title,
     status: "active",
     experimental: false,
     date: "2026-04-28",
-    publisher: "OSOD",
+    publisher: "ODOS",
     content: "complete",
     concept: concepts.map((concept) => ({
       code: concept.code,
@@ -1248,14 +1248,14 @@ function parameterValueSet(
 ): ValueSet {
   return {
     resourceType: "ValueSet",
-    url: `${OSOD_FHIR_BASE}/ValueSet/${id}`,
+    url: `${ODOS_FHIR_BASE}/ValueSet/${id}`,
     version: "0.4.0",
-    name: `OSOD${pascalCase(id)}ValueSet`,
+    name: `ODOS${pascalCase(id)}ValueSet`,
     title,
     status: "active",
     experimental: false,
     date: "2026-04-28",
-    publisher: "OSOD",
+    publisher: "ODOS",
     compose: {
       include: [
         {
@@ -1278,14 +1278,14 @@ function codeValueSet(
 ): ValueSet {
   return {
     resourceType: "ValueSet",
-    url: `${OSOD_FHIR_BASE}/ValueSet/${id}`,
+    url: `${ODOS_FHIR_BASE}/ValueSet/${id}`,
     version: "0.4.0",
-    name: `OSOD${pascalCase(id)}ValueSet`,
+    name: `ODOS${pascalCase(id)}ValueSet`,
     title,
     status: "active",
     experimental: false,
     date: "2026-04-28",
-    publisher: "OSOD",
+    publisher: "ODOS",
     compose: {
       include: [
         {

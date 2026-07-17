@@ -732,7 +732,7 @@ class MemoryFhir {
     if (saved.resourceType === "Basic") this.basics.push(saved as Basic);
     if (saved.resourceType === "Observation") this.observations.push(saved as Observation);
     if (saved.resourceType !== "Basic") {
-      this.captureWrites.push({ resourceType: saved.resourceType, header: headers?.["X-OSOD-Source"], resource: saved });
+      this.captureWrites.push({ resourceType: saved.resourceType, header: headers?.["X-ODOS-Source"], resource: saved });
     }
     return saved;
   }

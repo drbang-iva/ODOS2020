@@ -70,7 +70,7 @@ export const DEFAULT_LAB_ORDER_AGING_CONFIG: LabOrderAgingConfig = {
   notifiedFollowUpDays: 7,
 };
 
-export const OSOD_LAB_ORDER_TASK_INPUT_SYSTEM = "https://osod.dev/fhir/CodeSystem/lab-order-task-input";
+export const ODOS_LAB_ORDER_TASK_INPUT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/lab-order-task-input";
 export const LAB_ORDER_EXPORT_INPUT_CODE = "lab-order-export";
 export const LAB_ORDER_STATUS_INPUT_CODE = "lab-order-status";
 
@@ -169,7 +169,7 @@ export function labOrderProblemLabel(reason: LabOrderProblemReason): string {
 
 export function labOrderStatusRecordFromTask(task: Task): LabOrderStatusRecord | undefined {
   const raw = task.input?.find((input) => input.type.coding?.some((coding) =>
-    coding.system === OSOD_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_STATUS_INPUT_CODE))?.valueString;
+    coding.system === ODOS_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_STATUS_INPUT_CODE))?.valueString;
   if (!raw) return undefined;
   let parsed: unknown;
   try {
@@ -204,13 +204,13 @@ export function backfilledStatusForTransport(state: LabTransportState): LabOrder
 
 export function withLabOrderStatusRecord(task: Task, record: LabOrderStatusRecord): Task {
   const input = (task.input ?? []).filter((entry) => !entry.type.coding?.some((coding) =>
-    coding.system === OSOD_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_STATUS_INPUT_CODE));
+    coding.system === ODOS_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_STATUS_INPUT_CODE));
   return {
     ...task,
     input: [...input, {
       type: {
         coding: [{
-          system: OSOD_LAB_ORDER_TASK_INPUT_SYSTEM,
+          system: ODOS_LAB_ORDER_TASK_INPUT_SYSTEM,
           code: LAB_ORDER_STATUS_INPUT_CODE,
           display: "Lab Order Status",
         }],
@@ -433,7 +433,7 @@ function storedOrderFromTask(task: Task): {
   frameOwnership?: LabOrderFrameOwnership;
 } {
   const raw = task.input?.find((input) => input.type.coding?.some((coding) =>
-    coding.system === OSOD_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_EXPORT_INPUT_CODE))?.valueString;
+    coding.system === ODOS_LAB_ORDER_TASK_INPUT_SYSTEM && coding.code === LAB_ORDER_EXPORT_INPUT_CODE))?.valueString;
   if (!raw) throw new Error(`Task/${task.id ?? "(missing-id)"} is missing its stored lab-order export.`);
   let parsed: unknown;
   try {
@@ -443,7 +443,7 @@ function storedOrderFromTask(task: Task): {
   }
   if (typeof parsed !== "object" || parsed === null) throw new Error("Unsupported lab-order export envelope.");
   const envelope = parsed as { format?: unknown; version?: unknown; order?: unknown };
-  if (envelope.format !== "osod-lab-order" || envelope.version !== "0" || typeof envelope.order !== "object" || envelope.order === null) {
+  if (envelope.format !== "odos-lab-order" || envelope.version !== "0" || typeof envelope.order !== "object" || envelope.order === null) {
     throw new Error("Unsupported lab-order export envelope.");
   }
   const order = envelope.order as ReturnType<typeof storedOrderFromTask>;
@@ -460,7 +460,7 @@ function storedOrderFromTask(task: Task): {
 
 function transportStateFromTask(task: Task): LabTransportState {
   const code = task.businessStatus?.coding?.find((coding) =>
-    coding.system === "https://osod.dev/fhir/CodeSystem/lab-transport-state")?.code;
+    coding.system === "https://odos2020.com/fhir/CodeSystem/lab-transport-state")?.code;
   if (!code) throw new Error(`Task/${task.id ?? "(missing-id)"} is missing its lab transport state.`);
   assertLabTransportState(code);
   return code;

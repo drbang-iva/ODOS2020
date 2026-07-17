@@ -6,7 +6,7 @@ import {
   verificationStatusConcept,
   type ConditionVerificationStatusCode,
 } from "../fhir/condition.js";
-import { OSOD_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
@@ -14,8 +14,8 @@ import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
 
-export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://osod.dev/fhir/NamingSystem/diagnosis-catalog-stable-key";
-export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-OSOD-Source": "diagnosis-pick" } as const;
+export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
+export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick" } as const;
 
 type PickResource = Basic | Condition | Encounter | Observation | Provenance;
 type LateralityBucket = "right" | "left" | "bilateral" | "unspecified" | "none";
@@ -238,7 +238,7 @@ function diagnosisLateralityBucket(
 }
 
 function observationLaterality(observation: Observation | undefined): string | undefined {
-  return observation?.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
+  return observation?.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
     ?.valueCodeableConcept?.coding?.find((coding) => coding.code)?.code ??
     observation?.bodySite?.coding?.find((coding) => coding.code)?.code;
 }

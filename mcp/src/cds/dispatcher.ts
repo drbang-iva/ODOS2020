@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { buildOsodAuditEventRow, type OsodAuditEventRow } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRow } from "../authz/odosAudit.js";
 import { validatedCdsCards, isCdsCardFresh } from "./card-schema.js";
-import { OSOD_DEFAULT_CDS_SERVICES } from "./services/index.js";
+import { ODOS_DEFAULT_CDS_SERVICES } from "./services/index.js";
 import type { RegisteredCdsService } from "./service-registry.js";
 import {
   CDS_SERVICE_REGISTRY_POLICY_URL,
@@ -23,7 +23,7 @@ export interface CdsDispatchOptions {
 
 export interface CdsDispatchResult {
   readonly cards: readonly CdsCard[];
-  readonly auditEvents: readonly OsodAuditEventRow[];
+  readonly auditEvents: readonly OdosAuditEventRow[];
   readonly invokedServices: readonly string[];
   readonly rejectedCards: ReadonlyArray<{
     readonly serviceId: string;
@@ -33,7 +33,7 @@ export interface CdsDispatchResult {
 
 export async function dispatchCdsHook(options: CdsDispatchOptions): Promise<CdsDispatchResult> {
   const now = options.now ?? options.input.now ?? new Date();
-  const localMatches = OSOD_DEFAULT_CDS_SERVICES.filter((service) => service.matches(options.input));
+  const localMatches = ODOS_DEFAULT_CDS_SERVICES.filter((service) => service.matches(options.input));
   const externalMatches = (options.externalServices ?? []).filter((service) =>
     service.metadata.hookSubscriptions.includes(options.input.hook),
   );
@@ -41,8 +41,8 @@ export async function dispatchCdsHook(options: CdsDispatchOptions): Promise<CdsD
     ...localMatches.map((service) => service.discovery.id),
     ...externalMatches.map((service) => service.metadata.serviceId),
   ];
-  const auditEvents: OsodAuditEventRow[] = [
-    buildOsodAuditEventRow({
+  const auditEvents: OdosAuditEventRow[] = [
+    buildOdosAuditEventRow({
       eventType: "cds.hook.fired",
       eventTime: now.toISOString(),
       actorId: options.input.userId,
@@ -136,7 +136,7 @@ function acceptServiceCards(input: {
   readonly response: CdsServiceResponse;
   readonly now: Date;
   readonly cards: CdsCard[];
-  readonly auditEvents: OsodAuditEventRow[];
+  readonly auditEvents: OdosAuditEventRow[];
   readonly rejectedCards: Array<{ serviceId: string; errors: readonly string[] }>;
   readonly input: CdsHookEvaluationInput;
 }): void {
@@ -144,7 +144,7 @@ function acceptServiceCards(input: {
   for (const rejection of validated.rejected) {
     input.rejectedCards.push({ serviceId: input.serviceId, errors: rejection.errors });
     input.auditEvents.push(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType: "cds.card.rejected_validation",
         eventTime: input.now.toISOString(),
         actorId: input.input.userId,
@@ -161,7 +161,7 @@ function acceptServiceCards(input: {
   for (const card of validated.accepted) {
     if (!isCdsCardFresh(card, input.now)) {
       input.auditEvents.push(
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           eventType: "cds.card.suppressed_stale",
           eventTime: input.now.toISOString(),
           actorId: input.input.userId,
@@ -178,7 +178,7 @@ function acceptServiceCards(input: {
     }
     input.cards.push(card);
     input.auditEvents.push(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType: "cds.card.rendered",
         eventTime: input.now.toISOString(),
         actorId: input.input.userId,

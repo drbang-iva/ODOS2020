@@ -15,16 +15,16 @@ import {
   type SchedulingFhirClient,
 } from "../../ui/src/lib/scheduling-store.js";
 import {
-  OSOD_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL,
   buildSchedulingAppointment,
   confirmationStatusOf,
   medicalCoverageOf,
   visionCoverageOf,
 } from "../../ui/src/lib/scheduling.js";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
-  OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
+  ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource,
   type PersistedSchedulingPracticeConfig,
 } from "../../ui/src/lib/scheduling-config.js";
@@ -264,7 +264,7 @@ test("loadDay searches the coded Basic singleton and keeps the default config wh
   const configSearch = client.searches.find((call) => call.resourceType === "Basic");
   assert.equal(
     configSearch?.params?.get("code"),
-    `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`,
+    `${ODOS_SCHEDULING_CONFIG_SYSTEM}|${ODOS_SCHEDULING_CONFIG_CODE}`,
   );
   assert.equal(configSearch?.params?.get("_count"), "10");
   assert.deepEqual(useSchedulingStore.getState().config, DEFAULT_SCHEDULING_PRACTICE_CONFIG);
@@ -344,9 +344,9 @@ test("loadDay falls back to default config when stored JSON is malformed and sti
     resourceType: "Basic",
     id: "cfg-bad",
     code: {
-      coding: [{ system: OSOD_SCHEDULING_CONFIG_SYSTEM, code: OSOD_SCHEDULING_CONFIG_CODE }],
+      coding: [{ system: ODOS_SCHEDULING_CONFIG_SYSTEM, code: ODOS_SCHEDULING_CONFIG_CODE }],
     },
-    extension: [{ url: OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
+    extension: [{ url: ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
   };
   const client = writableClient({
     basics: [malformed],
@@ -889,7 +889,7 @@ test("coverage updates distinguish undefined keep, null clear, and value replace
     "still here",
   );
   assert.equal(
-    updated.extension?.some((extension) => extension.url === OSOD_VISION_COVERAGE_EXTENSION_URL),
+    updated.extension?.some((extension) => extension.url === ODOS_VISION_COVERAGE_EXTENSION_URL),
     false,
   );
 });

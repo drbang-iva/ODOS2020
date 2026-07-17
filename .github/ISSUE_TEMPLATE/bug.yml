@@ -26,7 +26,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: OSOD version / commit
+      label: ODOS version / commit
       description: Output of `git rev-parse HEAD` or the milestone tag (e.g., v0.55e).
     validations:
       required: true

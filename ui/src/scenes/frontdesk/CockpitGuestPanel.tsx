@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { dockItem, type CockpitPanelId } from "../../lib/cockpit-shell";
 
-export const COCKPIT_PANEL_POSITION_STORAGE_KEY = "osod-cockpit-panel-position";
+export const COCKPIT_PANEL_POSITION_STORAGE_KEY = "odos-cockpit-panel-position";
 
 export interface CockpitPanelPosition {
   floating: true;

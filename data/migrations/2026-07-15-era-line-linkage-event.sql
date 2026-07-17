@@ -1,8 +1,8 @@
-ALTER TABLE osod_audit_events
-    DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check;
+ALTER TABLE odos_audit_events
+    DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check;
 
-ALTER TABLE osod_audit_events
-    ADD CONSTRAINT osod_audit_events_event_type_check CHECK (
+ALTER TABLE odos_audit_events
+    ADD CONSTRAINT odos_audit_events_event_type_check CHECK (
         event_type IN (
             'read', 'search', 'history', 'vread',
             'create', 'update', 'patch', 'transaction', 'nullify-attempt', 'delete-attempt',

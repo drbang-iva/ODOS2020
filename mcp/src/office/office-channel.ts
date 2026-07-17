@@ -1,11 +1,11 @@
 import type { Communication, Patient, Practitioner, PractitionerRole, Provenance, Resource } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 
-export const OFFICE_CATEGORY_SYSTEM = "https://osod.dev/fhir/CodeSystem/communication-category";
+export const OFFICE_CATEGORY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/communication-category";
 export const OFFICE_CATEGORY_CODE = "internal-office";
-export const OFFICE_AUDIENCE_SYSTEM = "https://osod.dev/fhir/NamingSystem/office-channel-audience";
+export const OFFICE_AUDIENCE_SYSTEM = "https://odos2020.com/fhir/NamingSystem/office-channel-audience";
 export const OFFICE_AUDIENCE_CODE = "clinic-side";
-export const OFFICE_ACK_SYSTEM = "https://osod.dev/fhir/CodeSystem/office-message-activity";
+export const OFFICE_ACK_SYSTEM = "https://odos2020.com/fhir/CodeSystem/office-message-activity";
 export const OFFICE_ACK_CODE = "acknowledged";
 export const OFFICE_TEXT_LIMIT = 1000;
 const RECENT_ACKNOWLEDGED_TAIL = 20;

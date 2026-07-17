@@ -48,7 +48,7 @@ test("GET /desk/summary keeps other cards available when one scoped Task categor
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string>): Promise<Bundle<T>> => {
       if (resourceType === "Task") {
         taskSearches.push(params);
-        if (params.code === "https://osod.dev/fhir/CodeSystem/optical-order-type|") {
+        if (params.code === "https://odos2020.com/fhir/CodeSystem/optical-order-type|") {
           return {
             resourceType: "Bundle",
             type: "searchset",

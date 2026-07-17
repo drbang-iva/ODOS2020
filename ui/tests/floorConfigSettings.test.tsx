@@ -62,7 +62,7 @@ function fixture() {
     },
   };
   const draft = createSingletonConfigDraft({
-    configKey: "osod-floor-config",
+    configKey: "odos-floor-config",
     config: CONFIG,
     resource,
     buildResource: buildFloorConfigResource,
@@ -95,7 +95,7 @@ test("three projected sections share one dirty bar and one singleton commit pers
   const optical = (await adapters.stations.list()).find((row) => row.id === "optical")!;
   await adapters.stations.save({ ...optical, label: "Optical shop", amberMinutes: 15, redMinutes: 25 });
   const houseLabel = (await adapters.housePlanLabel.list())[0]!;
-  await adapters.housePlanLabel.save({ ...houseLabel, label: "OSOD Select" });
+  await adapters.housePlanLabel.save({ ...houseLabel, label: "ODOS Select" });
 
   const html = renderToStaticMarkup(
     <CatalogScene title="Floor config" canWrite transaction={draft}>
@@ -114,7 +114,7 @@ test("three projected sections share one dirty bar and one singleton commit pers
   const persisted = parseFloorConfig(writes[0]!.resource);
   assert.equal(persisted.stations.find((station) => station.id === "optical")?.label, "Optical shop");
   assert.deepEqual(persisted.laneThresholds.optical, { amberMinutes: 15, redMinutes: 25 });
-  assert.equal(persisted.housePlanLabel, "OSOD Select");
+  assert.equal(persisted.housePlanLabel, "ODOS Select");
 });
 
 test("Discard restores edits across projected sections and payer-map none removes the stored key", async () => {

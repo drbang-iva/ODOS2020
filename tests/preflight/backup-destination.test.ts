@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { verifyBackupDestination } from "../../scripts/verify-backup-destination.ts";
 
 test("v0.5d backup destination helper verifies writability, free space, and advisory encryption signal", () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-backup-destination-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-backup-destination-"));
   try {
     const report = verifyBackupDestination({
       destination: dir,
@@ -14,10 +14,10 @@ test("v0.5d backup destination helper verifies writability, free space, and advi
       footprintBytes: 1,
       commandRunner(command) {
         if (command === "findmnt") {
-          return "/dev/mapper/osod-backup\n";
+          return "/dev/mapper/odos-backup\n";
         }
         if (command === "cryptsetup") {
-          return "/dev/mapper/osod-backup is active.\n";
+          return "/dev/mapper/odos-backup is active.\n";
         }
         return "";
       },

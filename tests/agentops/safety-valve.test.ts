@@ -16,11 +16,11 @@ test("v0.55d Safety Valve returns RFC 7807 problem details with dynamic status",
   });
   assert.equal(response.status, 429);
   assert.equal(response.headers["Content-Type"], "application/problem+json");
-  assert.equal(response.headers["X-OSOD-Audit-Event-Id"], "audit-123");
-  assert.equal(response.body?.type, "https://osod.dev/fhir/exception/171.205");
+  assert.equal(response.headers["X-ODOS-Audit-Event-Id"], "audit-123");
+  assert.equal(response.body?.type, "https://odos2020.com/fhir/exception/171.205");
   assert.equal(response.body?.status, response.status);
   assert.equal(/rule_id|Patient\/|Device\/|agent_uri/.test(response.body?.detail ?? ""), false);
-  assert.equal("X-OSOD-IB-Exception" in response.headers, false);
+  assert.equal("X-ODOS-IB-Exception" in response.headers, false);
 });
 
 test("v0.55d Safety Valve masks care-access exception externally while retaining internal code", () => {
@@ -37,7 +37,7 @@ test("v0.55d Safety Valve masks care-access exception externally while retaining
   });
   assert.equal(response.status, 403);
   assert.equal(response.internalExceptionCode, "ProtectingCareAccess");
-  assert.equal(response.body?.type, "https://osod.dev/fhir/exception/171.202");
+  assert.equal(response.body?.type, "https://odos2020.com/fhir/exception/171.202");
   assert.equal(JSON.stringify(response.body).includes("ProtectingCareAccess"), false);
   assert.equal(JSON.stringify(response.body).includes("171.206"), false);
 });
@@ -55,5 +55,5 @@ test("v0.55d TEFCA Manner maps to HTTP 406 problem details", () => {
     auditEventId: "audit-789",
   });
   assert.equal(response.status, 406);
-  assert.equal(response.body?.type, "https://osod.dev/fhir/exception/171.403");
+  assert.equal(response.body?.type, "https://odos2020.com/fhir/exception/171.403");
 });

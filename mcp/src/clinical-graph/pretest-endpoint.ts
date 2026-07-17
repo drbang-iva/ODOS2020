@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import {
   buildClinicalFindingDefinition,
   captureGlaucomaFinding,
@@ -47,7 +47,7 @@ export interface PretestEndpointResult {
   body: unknown;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const EYES = ["OD", "OS"] as const;
 const SOURCE_TYPES = ["manual", "device"] as const;
 
@@ -303,7 +303,7 @@ export async function handleAutoRefractionCaptureRequest(
         ...capture,
         observation: codeCustomFieldComponents(capture.observation, definitions.autoKeratometry),
       };
-      // Slice C query: Observation?subject=Patient/{id}&code=https://osod.dev/fhir/CodeSystem/ophthalmology|auto_keratometry&body-site=https://osod.dev/fhir/CodeSystem/ophthalmology|{OD|OS}&_sort=-date&_count=1
+      // Slice C query: Observation?subject=Patient/{id}&code=https://odos2020.com/fhir/CodeSystem/ophthalmology|auto_keratometry&body-site=https://odos2020.com/fhir/CodeSystem/ophthalmology|{OD|OS}&_sort=-date&_count=1
       const persisted = await persistCapture(staff.fhir, capture, parsed.data.patientReference);
       result.autoKeratometryObservationReference = persisted.observationReference;
       result.autoKeratometryProvenanceReference = persisted.provenanceReference;
@@ -336,7 +336,7 @@ export async function handleAutoRefractionCaptureRequest(
 }
 
 export function buildPretestFindingDefinitionStubs(
-  provenance = pretestProvenance("Practitioner/osod-system", new Date(0).toISOString(), "manual"),
+  provenance = pretestProvenance("Practitioner/odos-system", new Date(0).toISOString(), "manual"),
 ): ClinicalFindingDefinition[] {
   return [buildWearingDefinition(provenance), ...buildAutoDefinitions(provenance)];
 }
@@ -417,7 +417,7 @@ function buildWearingDefinition(provenance: ClinicalGraphProvenance): ClinicalFi
     },
     normalSemantics: { diagnosisSuggestions: false },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("wearing_rx", "Wearing spectacle prescription"),
+    fhirObservationCode: odosConcept("wearing_rx", "Wearing spectacle prescription"),
     allowDiagnosisMapping: false,
     notBillReady: true,
     active: true,
@@ -455,7 +455,7 @@ function buildAutoDefinitions(provenance: ClinicalGraphProvenance): ClinicalFind
     },
     normalSemantics: { diagnosisSuggestions: false },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("auto_refraction", "Auto-refraction"),
+    fhirObservationCode: odosConcept("auto_refraction", "Auto-refraction"),
     allowDiagnosisMapping: false,
     notBillReady: true,
     active: true,
@@ -488,7 +488,7 @@ function buildAutoDefinitions(provenance: ClinicalGraphProvenance): ClinicalFind
     },
     normalSemantics: { diagnosisSuggestions: false },
     sourceStatus: "verified-seed",
-    fhirObservationCode: osodConcept("auto_keratometry", "Auto-keratometry"),
+    fhirObservationCode: odosConcept("auto_keratometry", "Auto-keratometry"),
     notBillReady: true,
     active: true,
     provenance,
@@ -700,7 +700,7 @@ function capturePretestFinding(input: {
     ...captured,
     provenance: {
       ...captured.provenance,
-      activity: osodConcept("CREATE", `Capture ${input.definition.display} evidence`),
+      activity: odosConcept("CREATE", `Capture ${input.definition.display} evidence`),
     },
   };
 }
@@ -875,4 +875,4 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-export const AUTO_KERATOMETRY_SEARCH_CODE = `${OSOD_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`;
+export const AUTO_KERATOMETRY_SEARCH_CODE = `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|auto_keratometry`;

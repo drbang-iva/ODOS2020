@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Encounter, Patient, Provenance } from "@medplum/fhirtypes";
-import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import {
   connectMcpServer,
   createAuthenticatedFhirClient,
@@ -40,7 +40,7 @@ test("create_encounter MCP write tool integrates with Medplum", { timeout: 90_00
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-encounter-test",
+    clientName: "odos-mcp-encounter-test",
   });
   t.after(async () => {
     await mcp.client.close();
@@ -72,7 +72,7 @@ test("create_encounter MCP write tool integrates with Medplum", { timeout: 90_00
           class_code: "AMB",
           status: "in-progress",
           create_provenance: true,
-          provenance_agent_display: "OSOD MCP encounter integration test",
+          provenance_agent_display: "ODOS MCP encounter integration test",
         },
       }),
     );
@@ -100,7 +100,7 @@ test("create_encounter MCP write tool integrates with Medplum", { timeout: 90_00
 
     assert.ok(output.encounter.id);
     const readable = await fhir.read<Encounter>("Encounter", output.encounter.id);
-    assert.equal(readable.serviceType?.coding?.[0]?.system, OSOD_DISCIPLINE_SYSTEM);
+    assert.equal(readable.serviceType?.coding?.[0]?.system, ODOS_DISCIPLINE_SYSTEM);
     assert.equal(readable.serviceType?.coding?.[0]?.code, "aesthetics");
   });
 

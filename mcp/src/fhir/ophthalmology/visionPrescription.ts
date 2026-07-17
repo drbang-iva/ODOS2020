@@ -5,8 +5,8 @@ import type {
   VisionPrescriptionLensSpecification,
   VisionPrescriptionLensSpecificationPrism,
 } from "@medplum/fhirtypes";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "./codeBindings.js";
-import { OSOD_EXTENSION_URLS, reference } from "./extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "./codeBindings.js";
+import { ODOS_EXTENSION_URLS, reference } from "./extensions.js";
 import type { EyeLaterality } from "./types.js";
 
 export interface VisionPrescriptionInput {
@@ -68,7 +68,7 @@ function buildLensSpecification(
 function assertFinalRx(refractionObservation: Observation): void {
   const refractionType = component(refractionObservation, "REFRACTION_TYPE");
   const typeCode = refractionType?.valueCodeableConcept?.coding?.find(
-    (coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
+    (coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
   )?.code;
 
   if (typeCode !== "FINAL_RX") {
@@ -77,8 +77,8 @@ function assertFinalRx(refractionObservation: Observation): void {
 }
 
 function lateralityFromObservation(observation: Observation): Array<"right" | "left"> {
-  const eye = observation.extension?.find((extension) => extension.url === OSOD_EXTENSION_URLS.eyeLaterality)
-    ?.valueCodeableConcept?.coding?.find((coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM)
+  const eye = observation.extension?.find((extension) => extension.url === ODOS_EXTENSION_URLS.eyeLaterality)
+    ?.valueCodeableConcept?.coding?.find((coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM)
     ?.code as EyeLaterality | undefined;
 
   if (eye === "OD") return ["right"];
@@ -113,7 +113,7 @@ function prismComponent(
 function component(observation: Observation, code: string): ObservationComponent | undefined {
   return observation.component?.find((candidate) =>
     candidate.code.coding?.some(
-      (coding) => coding.system === OSOD_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === code,
+      (coding) => coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM && coding.code === code,
     ),
   );
 }

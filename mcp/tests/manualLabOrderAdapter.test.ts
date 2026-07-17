@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AuditEvent, Bundle, Resource, Task, VisionPrescription } from "@medplum/fhirtypes";
 import { buildLabOrder, type LabOrder } from "../src/fhir/opticalLabOrder.js";
-import { OSOD_OPTICAL_ORDER_STATUS_SYSTEM, opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
-import { OSOD_LAB_TRANSPORT_STATE_SYSTEM } from "../src/fhir/labTransportState.js";
+import { ODOS_OPTICAL_ORDER_STATUS_SYSTEM, opticalOrderStatusConcept } from "../src/fhir/opticalOrderStatus.js";
+import { ODOS_LAB_TRANSPORT_STATE_SYSTEM } from "../src/fhir/labTransportState.js";
 import {
   createManualLabOrderAdapter,
   taskStatusForLabTransportState,
@@ -74,7 +74,7 @@ function fakeFhir(initialTransmissions: Task[] = []) {
       assert.equal(resourceType, "Task");
       const transmissions = [...tasks.values()].filter((task) =>
         task.basedOn?.[0]?.reference === "Task/order-1"
-        && task.businessStatus?.coding?.[0]?.system === OSOD_LAB_TRANSPORT_STATE_SYSTEM);
+        && task.businessStatus?.coding?.[0]?.system === ODOS_LAB_TRANSPORT_STATE_SYSTEM);
       return {
         resourceType: "Bundle",
         type: "searchset",
@@ -130,12 +130,12 @@ test("manual submit persists a sent transmission Task, round-trippable export, A
   assert.equal(transmission.status, "in-progress");
   assert.equal(transmission.intent, "order");
   assert.equal(transmission.basedOn?.[0]?.reference, "Task/order-1");
-  assert.equal(transmission.businessStatus?.coding?.[0]?.system, OSOD_LAB_TRANSPORT_STATE_SYSTEM);
+  assert.equal(transmission.businessStatus?.coding?.[0]?.system, ODOS_LAB_TRANSPORT_STATE_SYSTEM);
   assert.equal(transmission.businessStatus?.coding?.[0]?.code, "sent");
   const storedExport = transmission.input?.find((input) => input.valueString)?.valueString;
   assert.ok(storedExport);
   assert.deepEqual(JSON.parse(storedExport), {
-    format: "osod-lab-order",
+    format: "odos-lab-order",
     version: "0",
     order: order(),
   });
@@ -145,7 +145,7 @@ test("manual submit persists a sent transmission Task, round-trippable export, A
   assert.equal(audit.agent?.[0]?.who?.reference, "Practitioner/staff-1");
   assert.ok(audit.entity?.some((entity) => entity.what?.reference === "Task/lab-1"));
   assert.deepEqual(fhir.store.tasks.get("order-1"), before);
-  assert.equal(fhir.store.tasks.get("order-1")?.businessStatus?.coding?.[0]?.system, OSOD_OPTICAL_ORDER_STATUS_SYSTEM);
+  assert.equal(fhir.store.tasks.get("order-1")?.businessStatus?.coding?.[0]?.system, ODOS_OPTICAL_ORDER_STATUS_SYSTEM);
 });
 
 test("manual submit rejects an active transmission for the same optical order", async () => {

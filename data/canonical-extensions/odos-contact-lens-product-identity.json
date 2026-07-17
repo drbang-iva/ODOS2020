@@ -1,14 +1,14 @@
 {
   "resourceType": "StructureDefinition",
-  "id": "osod-contact-lens-product-identity",
-  "url": "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity",
+  "id": "odos-contact-lens-product-identity",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-contact-lens-product-identity",
   "version": "optical-pricing-1",
-  "name": "OSODContactLensProductIdentity",
-  "title": "OSOD Contact Lens Product Identity",
+  "name": "ODOSContactLensProductIdentity",
+  "title": "ODOS Contact Lens Product Identity",
   "status": "active",
   "date": "2026-07-11",
-  "publisher": "OSOD",
-  "description": "Manufacturer and product codes plus displays matching the OSOD contact-lens catalog vocabulary.",
+  "publisher": "ODOS",
+  "description": "Manufacturer and product codes plus displays matching the ODOS contact-lens catalog vocabulary.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
@@ -116,7 +116,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/osod-contact-lens-product-identity"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-contact-lens-product-identity"
       },
       {
         "id": "Extension.value[x]",

@@ -16,7 +16,7 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
-import type { OsodAuditEventRecord } from "../src/authz/osodAudit.js";
+import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import { StaffRoleServiceUnavailableError } from "../src/payments/payment-endpoint.js";
 import {
@@ -48,12 +48,12 @@ import {
 } from "../src/claims/era-worklist.js";
 import {
   buildProfessionalClaim,
-  OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+  ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ClaimMdEraData,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
-import { OSOD_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
 const professionalClaim: ProfessionalClaimInput = {
@@ -63,10 +63,10 @@ const professionalClaim: ProfessionalClaimInput = {
   providerReference: "Practitioner/prov-1",
   insurerReference: "Organization/payer-1",
   coverageReference: "Coverage/cov-1",
-  patientAccountNumber: "OSOD-CLAIM-900",
+  patientAccountNumber: "ODOS-CLAIM-900",
   payerId: "PAYERTEST",
   billingProvider: {
-    name: "OSOD TEST CLINIC",
+    name: "ODOS TEST CLINIC",
     npi: "1111111112",
     taxId: "900000001",
     taxIdType: "E",
@@ -85,21 +85,21 @@ const professionalClaim: ProfessionalClaimInput = {
     relationshipCode: "18",
   },
   patient: { firstName: "JAMIE", lastName: "SYNTHETIC", dateOfBirth: "1980-01-01", sex: "F" },
-  diagnoses: [{ system: "https://osod.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
+  diagnoses: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
   chargeItems: [
     {
       resourceType: "ChargeItem",
       id: "charge-1",
       status: "billable",
       subject: { reference: "Patient/pat-900" },
-      code: { coding: [{ system: "https://osod.test/fhir/CodeSystem/synthetic-procedure", code: "PROC-A" }] },
+      code: { coding: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-procedure", code: "PROC-A" }] },
       priceOverride: { value: 125, currency: "USD" },
     },
   ],
 };
 
 function deps(role: "front-desk" | "clinician" = "front-desk") {
-  const audits: OsodAuditEventRecord[] = [];
+  const audits: OdosAuditEventRecord[] = [];
   const createHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
   let searchCalls = 0;
   const created = {
@@ -223,7 +223,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
         paid_date: "2026-07-09",
         payer_name: "SYNTHETIC PAYER",
         claim: {
-          pcn: "OSOD-CLAIM-900",
+          pcn: "ODOS-CLAIM-900",
           payer_icn: "ICN-900",
           total_charge: "125.00",
           total_paid: "80.00",
@@ -402,7 +402,7 @@ test("Stedi payload also remains on the original idless charge input after prove
 
   assert.equal(result.status, 200);
   assert.equal(created.ChargeItem.length, 2);
-  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "OSOD-CLAIM-900-1");
+  assert.equal(submitted.payload.claimInformation.serviceLines[0].providerControlNumber, "ODOS-CLAIM-900-1");
 });
 
 test("eligibility check creates request/response resources and audits eligibility.check.completed", async () => {
@@ -551,8 +551,8 @@ test("ERA clean-paid claim preserves auto-post behavior and creates zero worklis
     authHeader: "Bearer good",
     body: {
       eraId: "era-900",
-      claimReferenceByPcn: { "OSOD-CLAIM-900": "Claim/claim-1" },
-      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-900" },
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-1" },
+      patientReferenceByPcn: { "ODOS-CLAIM-900": "Patient/pat-900" },
       insurerReference: "Organization/payer-1",
       providerReference: "Practitioner/prov-1",
       practiceOrgReference: "Organization/practice-1",
@@ -621,7 +621,7 @@ test("ERA line linkage falls back to whole-claim detail when the echoed ChargeIt
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       total_charge: "80.00",
       total_paid: "80.00",
       charge: [{
@@ -643,7 +643,7 @@ test("ERA line linkage falls back to whole-claim detail when the echoed ChargeIt
   assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
   assert.equal(fixture.created.PaymentReconciliation[0].detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
-    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+    (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   ) ?? false, false);
   assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
   assert.equal(fixture.created.Task[0].focus?.reference, "ClaimResponse/claimresponse-1");
@@ -660,7 +660,7 @@ test("an invalid line identity falls back and creates a dedicated linkage review
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       total_charge: "80.00",
       total_paid: "80.00",
       charge: [{
@@ -692,7 +692,7 @@ test("a mismatched ClaimResponse patient is corrected from the Claim and never r
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       total_charge: "125.00",
       total_paid: "70.00",
       charge: [{
@@ -709,14 +709,14 @@ test("a mismatched ClaimResponse patient is corrected from the Claim and never r
     authHeader: "Bearer good",
     body: {
       ...eraImportBody(),
-      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-wrong" },
+      patientReferenceByPcn: { "ODOS-CLAIM-900": "Patient/pat-wrong" },
     },
   });
 
   assert.equal(result.status, 200);
   assert.equal(fixture.created.ClaimResponse[0].patient.reference, "Patient/pat-900");
   assert.equal(fixture.created.ClaimResponse[0].item?.[0]?.extension?.some(
-    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+    (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   ) ?? false, false);
   assert.equal(fixture.created.PaymentReconciliation[0].detail?.length, 1);
   assert.equal(worklistCode(fixture.created.Task[0]), "era-line-linkage");
@@ -738,7 +738,7 @@ test("a duplicate line echo falls back for that claim, flags review, and does no
   fixture.created.Claim.push({
     ...buildProfessionalClaim({
       ...professionalClaim,
-      patientAccountNumber: "OSOD-CLAIM-901",
+      patientAccountNumber: "ODOS-CLAIM-901",
       chargeItems: [secondCharge],
     }),
     id: "claim-2",
@@ -749,13 +749,13 @@ test("a duplicate line echo falls back for that claim, flags review, and does no
     payer_name: "SYNTHETIC PAYER",
     claim: [
       {
-        pcn: "OSOD-CLAIM-900",
+        pcn: "ODOS-CLAIM-900",
         total_charge: "80.00",
         total_paid: "80.00",
         charge: [{ chgid: "claimmd-charge-1", remote_chgid: "charge-1", charge: "80.00", allowed: "80.00", paid: "80.00" }],
       },
       {
-        pcn: "OSOD-CLAIM-901",
+        pcn: "ODOS-CLAIM-901",
         total_charge: "80.00",
         total_paid: "80.00",
         charge: [
@@ -771,8 +771,8 @@ test("a duplicate line echo falls back for that claim, flags review, and does no
     body: {
       ...eraImportBody(),
       eraId: "era-two-claims",
-      claimReferenceByPcn: { "OSOD-CLAIM-900": "Claim/claim-1", "OSOD-CLAIM-901": "Claim/claim-2" },
-      patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-900", "OSOD-CLAIM-901": "Patient/pat-900" },
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-1", "ODOS-CLAIM-901": "Claim/claim-2" },
+      patientReferenceByPcn: { "ODOS-CLAIM-900": "Patient/pat-900", "ODOS-CLAIM-901": "Patient/pat-900" },
     },
   });
 
@@ -814,7 +814,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
           paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: "TRACE900" },
           detailInfo: [{ paymentInfo: [{
             claimPaymentInfo: {
-              patientControlNumber: "OSOD-CLAIM-900",
+              patientControlNumber: "ODOS-CLAIM-900",
               totalClaimChargeAmount: "125",
               claimPaymentAmount: "80",
               patientResponsibilityAmount: "20",
@@ -841,7 +841,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
-  assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://osod.dev/fhir/NamingSystem/stedi-era");
+  assert.equal(created.PaymentReconciliation[0].paymentIdentifier?.system, "https://odos2020.com/fhir/NamingSystem/stedi-era");
   assert.equal(created.Invoice.length, 1);
   assert.equal(created.Invoice[0].totalNet?.value, 20);
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
@@ -856,7 +856,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   assert.equal(created.PaymentReconciliation[1].detail?.length, 1);
   assert.equal(created.PaymentReconciliation[1].detail?.[0]?.request?.reference, "Claim/claim-1");
   assert.equal(created.ClaimResponse[1].item?.[0]?.extension?.some(
-    (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+    (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   ) ?? false, false);
   assert.equal(worklistCode(created.Task[0]), "era-line-linkage");
   assert.equal(created.Task[0].focus?.reference, "ClaimResponse/claimresponse-2");
@@ -949,7 +949,7 @@ test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment 
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       payer_icn: "ICN-ZERO",
       total_charge: "125.00",
       total_paid: "0.00",
@@ -982,7 +982,7 @@ test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment 
   const task = created.Task[0];
   assert.equal(worklistCode(task), "era-denial");
   assert.deepEqual(task.groupIdentifier, {
-    system: "https://osod.dev/fhir/NamingSystem/claimmd-era",
+    system: "https://odos2020.com/fhir/NamingSystem/claimmd-era",
     value: "era-900",
   });
   assert.equal(task.focus?.reference, "ClaimResponse/claimresponse-1");
@@ -1017,7 +1017,7 @@ test("ERA underpayment posts moved money, creates a shortfall Task, and honors t
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       payer_icn: "ICN-UNDER",
       total_charge: "125.00",
       total_paid: "70.00",
@@ -1085,7 +1085,7 @@ test("patient-responsibility Invoice is create-once; a differing remit preserves
   assert.equal(fixture.created.Invoice[0].totalNet?.value, 171.89);
   assert.equal(
     fixture.createHeaders.find((write) => write.resourceType === "Invoice")?.headers?.["If-None-Exist"],
-    "identifier=https://osod.dev/fhir/NamingSystem/patient-responsibility-invoice|Claim/claim-1",
+    "identifier=https://odos2020.com/fhir/NamingSystem/patient-responsibility-invoice|Claim/claim-1",
   );
   assert.equal(fixture.created.Task.length, 0);
 
@@ -1126,7 +1126,7 @@ test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 state
   assert.equal(imported.status, 200);
   assert.equal(statementResult.status, 200);
   assert.equal(invoice.lineItem?.[0]?.chargeItemReference?.reference, "ChargeItem/charge-1");
-  assert.equal(invoice.extension?.find((extension) => extension.url === OSOD_SOURCE_CLAIM_EXTENSION_URL)
+  assert.equal(invoice.extension?.find((extension) => extension.url === ODOS_SOURCE_CLAIM_EXTENSION_URL)
     ?.valueReference?.reference, "Claim/claim-1");
   assert.equal(invoice.totalGross?.value, 171.89);
   assert.equal(invoice.totalNet?.value, 171.89);
@@ -1173,7 +1173,7 @@ test("ERA unmatched PCN persists a fully recoverable unmatched Task snapshot", a
   assert.equal(task.groupIdentifier?.system, CLAIMMD_ERA_PAYMENT_SYSTEM);
   assert.equal(task.focus, undefined);
   assert.equal(task.for, undefined);
-  assert.equal(taskInput(task, "pcn")?.valueString, "OSOD-CLAIM-900");
+  assert.equal(taskInput(task, "pcn")?.valueString, "ODOS-CLAIM-900");
   assert.equal(taskInput(task, "payer-icn")?.valueString, "ICN-900");
   assert.equal(taskInput(task, "charged-cents")?.valueInteger, 12_500);
   assert.equal(taskInput(task, "allowed-cents")?.valueInteger, 8_000);
@@ -1188,7 +1188,7 @@ test("ERA worklist resolve-as-rebilled records the Claim reference and rejects m
     eraid: "era-zero",
     paid_date: "2026-07-09",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       payer_icn: "ICN-ZERO",
       total_charge: "125.00",
       total_paid: "0.00",
@@ -1497,8 +1497,8 @@ test("manual EOB audit migration uses drop-and-re-add and registers its claims e
     resolve(process.cwd(), "../data/migrations/2026-07-10-manual-eob-event.sql"),
     "utf8",
   );
-  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
-  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT odos_audit_events_event_type_check CHECK");
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   assert.match(sql, /'claim\.manual-eob\.posted'/);
@@ -1513,14 +1513,14 @@ test("line-linkage audit migration uses drop-and-re-add and registers its claims
     resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event-validate.sql"),
     "utf8",
   );
-  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS osod_audit_events_event_type_check");
-  const addIndex = sql.indexOf("ADD CONSTRAINT osod_audit_events_event_type_check CHECK");
+  const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check");
+  const addIndex = sql.indexOf("ADD CONSTRAINT odos_audit_events_event_type_check CHECK");
   assert.ok(dropIndex >= 0);
   assert.ok(addIndex > dropIndex);
   assert.match(sql, /'era\.line-linkage\.flagged'/);
   assert.match(sql, /\) NOT VALID;/);
   assert.doesNotMatch(sql, /VALIDATE CONSTRAINT/);
-  assert.match(validationSql, /VALIDATE CONSTRAINT osod_audit_events_event_type_check/);
+  assert.match(validationSql, /VALIDATE CONSTRAINT odos_audit_events_event_type_check/);
 });
 
 test("claims.manage denial happens before adapter calls or audit writes", async () => {
@@ -1607,7 +1607,7 @@ test("claim-write failure and retry reuse the same conditionally-created ChargeI
   assert.equal(fixture.created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-1");
   assert.equal(
     fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").every((write) =>
-      write.headers?.["If-None-Exist"] === "identifier=https://osod.dev/fhir/NamingSystem/claim-charge-item|OSOD-CLAIM-900:1"),
+      write.headers?.["If-None-Exist"] === "identifier=https://odos2020.com/fhir/NamingSystem/claim-charge-item|ODOS-CLAIM-900:1"),
     true,
   );
 });
@@ -1615,8 +1615,8 @@ test("claim-write failure and retry reuse the same conditionally-created ChargeI
 function eraImportBody(): Record<string, unknown> {
   return {
     eraId: "era-900",
-    claimReferenceByPcn: { "OSOD-CLAIM-900": "Claim/claim-1" },
-    patientReferenceByPcn: { "OSOD-CLAIM-900": "Patient/pat-900" },
+    claimReferenceByPcn: { "ODOS-CLAIM-900": "Claim/claim-1" },
+    patientReferenceByPcn: { "ODOS-CLAIM-900": "Patient/pat-900" },
     insurerReference: "Organization/payer-1",
     providerReference: "Practitioner/prov-1",
     practiceOrgReference: "Organization/practice-1",
@@ -1631,7 +1631,7 @@ function patientResponsibilityEra(amountCents: number): ClaimMdEraData {
     paid_date: "2026-07-09",
     payer_name: "SYNTHETIC PAYER",
     claim: {
-      pcn: "OSOD-CLAIM-900",
+      pcn: "ODOS-CLAIM-900",
       payer_icn: "ICN-PR",
       total_charge: "300.00",
       total_paid: paid.toFixed(2),

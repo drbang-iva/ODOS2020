@@ -136,7 +136,7 @@ interface ManualCatalogEntry {
 }
 
 const EYES: Eye[] = ["OD", "OS"];
-const OPERATOR = "OSOD UI clinical_graph_specialty_contact_lens";
+const OPERATOR = "ODOS UI clinical_graph_specialty_contact_lens";
 
 export function SpecialtyContactLensSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<DefinitionResponse | null>(null);

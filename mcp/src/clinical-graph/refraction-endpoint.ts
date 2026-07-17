@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
-import { osodConcept } from "../fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
 import { buildRefractionObservation } from "../fhir/ophthalmology/refraction.js";
 import type { RefractionType } from "../fhir/ophthalmology/types.js";
 import {
@@ -49,7 +49,7 @@ export interface RefractionEndpointResult {
   body: unknown;
 }
 
-const WRITE_HEADERS = { "X-OSOD-Source": "mcp/save_section_observations" } as const;
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_section_observations" } as const;
 const LEDGER_REF = "data/code-bindings/refractive-error-phase0-ledger.json";
 const EYES = ["OD", "OS"] as const;
 const SOURCE_TYPES = ["manual", "device"] as const;
@@ -212,7 +212,7 @@ export function resolveRefractionDefinition(
 ): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? [
     buildRefractionFindingDefinitionStub(
-      refractionProvenance("Practitioner/osod-system", new Date(0).toISOString(), "manual"),
+      refractionProvenance("Practitioner/odos-system", new Date(0).toISOString(), "manual"),
     ),
   ];
   const definition = definitions.find((candidate) => candidate.stableKey === "refraction");
@@ -295,7 +295,7 @@ function captureBlocks(
         observation: { ...observation, id: capture.observation.id },
         provenance: {
           ...capture.provenance,
-          activity: osodConcept("CREATE", "Capture refraction finding evidence"),
+          activity: odosConcept("CREATE", "Capture refraction finding evidence"),
         },
       }];
     });

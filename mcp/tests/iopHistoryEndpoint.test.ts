@@ -16,8 +16,8 @@ import {
   type IopHistoryResponse,
 } from "../src/clinical-graph/iop-history-endpoint.js";
 import { iopMethodConcept } from "../src/fhir/ophthalmology/iop.js";
-import { osodConcept } from "../src/fhir/ophthalmology/extensions.js";
-import { OSOD_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 
 const AUTH = "Bearer good";
 const PATIENT = "Patient/p1";
@@ -263,7 +263,7 @@ function observation(
     encounterReference: ENCOUNTER,
     laterality: eye,
     value,
-    method: iopMethodConcept(osodConcept(methodCode, methodCode === "ICARE" ? "iCare" : methodCode)),
+    method: iopMethodConcept(odosConcept(methodCode, methodCode === "ICARE" ? "iCare" : methodCode)),
     sourceType: "manual",
     performerReferences: ["Practitioner/doc1"],
     recordedAt,
@@ -306,4 +306,4 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-assert.equal(OSOD_OPHTHALMOLOGY_CODE_SYSTEM.startsWith("https://osod.dev/fhir/CodeSystem/"), true);
+assert.equal(ODOS_OPHTHALMOLOGY_CODE_SYSTEM.startsWith("https://odos2020.com/fhir/CodeSystem/"), true);

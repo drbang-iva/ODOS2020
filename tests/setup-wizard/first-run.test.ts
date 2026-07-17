@@ -11,15 +11,15 @@ import {
 } from "../../scripts/setup-practice.ts";
 
 test("v0.5d setup wizard completes with the default shared bootstrap identity and audits its clinician grant", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-setup-wizard-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-"));
   try {
-    const statePath = join(dir, ".osod-setup-state.json");
+    const statePath = join(dir, ".odos-setup-state.json");
     const adapter = new InMemorySetupPracticeAdapter();
     const config = {
       baseUrl: "http://localhost:8103",
-      practiceName: "OSOD Test Practice",
-      adminEmail: "admin@osod.local",
-      adminName: "OSOD Admin",
+      practiceName: "ODOS Test Practice",
+      adminEmail: "admin@odos.local",
+      adminName: "ODOS Admin",
       adminPassword: "not-real-password",
       statePath,
     };
@@ -38,7 +38,7 @@ test("v0.5d setup wizard completes with the default shared bootstrap identity an
     assert.equal(firstRun.state.completed, true);
     assert.equal(firstRun.practitionerId, "practitioner-1");
     assert.equal(firstRun.accessPolicyId, "access-policy-1");
-    assert.equal(adapter.policies[0]?.name, "OSOD Clinician");
+    assert.equal(adapter.policies[0]?.name, "ODOS Clinician");
     assert.equal(adapter.policies[0]?.resourceType, "AccessPolicy");
     assert.equal(adapter.policies[0]?.resource?.some((rule) => rule.resourceType === "Observation"), true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
@@ -59,7 +59,7 @@ test("v0.5d setup wizard completes with the default shared bootstrap identity an
     const roleChanges = adapter.auditRows.filter((row) => row.eventType === "role-change");
     assert.equal(roleChanges.length, 1);
     assert.equal(roleChanges[0]?.resourceId, "project-membership-1");
-    assert.equal(roleChanges[0]?.actionReason, "bootstrap clinician role for admin@osod.local");
+    assert.equal(roleChanges[0]?.actionReason, "bootstrap clinician role for admin@odos.local");
 
     const secondRun = await runSetupPractice({
       adapter,
@@ -83,17 +83,17 @@ test("v0.5d setup wizard completes with the default shared bootstrap identity an
 });
 
 test("setup reuses one pre-existing canonical clinician policy instead of creating a duplicate", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-setup-wizard-existing-policy-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-existing-policy-"));
   try {
-    const statePath = join(dir, ".osod-setup-state.json");
+    const statePath = join(dir, ".odos-setup-state.json");
     const adapter = new InMemorySetupPracticeAdapter();
     adapter.policies.push({
       resourceType: "AccessPolicy",
       id: "existing-clinician-policy",
-      name: "OSOD Clinician",
+      name: "ODOS Clinician",
       meta: {
         tag: [{
-          system: "https://osod.dev/fhir/NamingSystem/practice-role",
+          system: "https://odos2020.com/fhir/NamingSystem/practice-role",
           code: "clinician",
         }],
       },
@@ -103,9 +103,9 @@ test("setup reuses one pre-existing canonical clinician policy instead of creati
       adapter,
       config: {
         baseUrl: "http://localhost:8103",
-        practiceName: "OSOD Test Practice",
-        adminEmail: "admin@osod.local",
-        adminName: "OSOD Admin",
+        practiceName: "ODOS Test Practice",
+        adminEmail: "admin@odos.local",
+        adminName: "ODOS Admin",
         adminPassword: "not-real-password",
         statePath,
       },

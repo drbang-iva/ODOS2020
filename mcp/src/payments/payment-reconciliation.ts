@@ -1,6 +1,6 @@
 import type { ClaimResponse, Extension, PaymentReconciliation } from "@medplum/fhirtypes";
-import { OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
-import { paymentTenderExtensionForReconciliation } from "../fhir/osodPaymentTender.js";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
+import { paymentTenderExtensionForReconciliation } from "../fhir/odosPaymentTender.js";
 import type { PaymentSurface } from "./payment-processor-adapter.js";
 
 /**
@@ -12,23 +12,23 @@ import type { PaymentSurface } from "./payment-processor-adapter.js";
  * decisions/2026-07-09-odos-unapplied-credit-seam-addendum.md §2-§3.
  */
 
-export const OSOD_PROCESSOR_FEES_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-processor-fees";
+export const ODOS_PROCESSOR_FEES_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-processor-fees";
 
-export const OSOD_PAYMENT_SURFACE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-surface";
+export const ODOS_PAYMENT_SURFACE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-surface";
 
-export const OSOD_PAYMENT_SUBJECT_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-subject";
+export const ODOS_PAYMENT_SUBJECT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject";
 
 /** HL7 payment-type CodeSystem for PaymentReconciliation.detail.type (payment | adjustment | advance). */
 export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/payment-type";
 
 /** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
-export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/claimmd-era";
-export const STEDI_ERA_PAYMENT_SYSTEM = "https://osod.dev/fhir/NamingSystem/stedi-era";
-export const OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/insurance-payment-detail-level";
+export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/claimmd-era";
+export const STEDI_ERA_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/stedi-era";
+export const ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/insurance-payment-detail-level";
 export const INSURANCE_CLAIM_ROLLUP_DETAIL_CODE = "claim-rollup";
 export const INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE = "charge-item-allocation";
 
@@ -64,7 +64,7 @@ export interface ProcessorPaymentInput {
   processorTransactionId: string;
   /** Adapter transaction-id namespace (PaymentReconciliation.paymentIdentifier.system). */
   processorTransactionSystem: string;
-  /** Processor fees in whole cents (osod-processor-fees extension; v0.7 settlement recon input). */
+  /** Processor fees in whole cents (odos-processor-fees extension; v0.7 settlement recon input). */
   feesCents?: number;
   surface: PaymentSurface;
   /** Receipt tender label: coded tender + optional instrument display (e.g. "VISA ****4242"). */
@@ -131,7 +131,7 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
   }
 
   const surfaceExtension: Extension = {
-    url: OSOD_PAYMENT_SURFACE_EXTENSION_URL,
+    url: ODOS_PAYMENT_SURFACE_EXTENSION_URL,
     extension: [
       { url: "surface", valueCode: input.surface },
       ...(input.inClinicTerminalId
@@ -169,14 +169,14 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
     })),
     extension: [
       {
-        url: OSOD_PAYMENT_SUBJECT_EXTENSION_URL,
+        url: ODOS_PAYMENT_SUBJECT_EXTENSION_URL,
         valueReference: { reference: input.subjectReference },
       },
       paymentTenderExtensionForReconciliation(input.tender),
       ...(input.feesCents !== undefined
         ? [
             {
-              url: OSOD_PROCESSOR_FEES_EXTENSION_URL,
+              url: ODOS_PROCESSOR_FEES_EXTENSION_URL,
               valueMoney: { value: input.feesCents / 100, currency: "USD" as const },
             },
           ]
@@ -210,7 +210,7 @@ export function claimResponseLinePaymentAllocations(
 ): InsurancePaymentLineAllocationInput[] {
   return (response.item ?? []).flatMap((item) => {
     const chargeItemReference = item.extension?.find(
-      (extension) => extension.url === OSOD_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+      (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
     )?.valueReference?.reference;
     const paid = item.adjudication.find((entry) => /^paid$/i.test(entry.category.text ?? ""));
     if (!chargeItemReference || !paid?.amount || (paid.amount.value ?? 0) <= 0) return [];
@@ -286,7 +286,7 @@ export function buildInsurancePaymentReconciliation(
           coding: [
             { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
             {
-              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
               code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
               display: "Claim rollup",
             },
@@ -304,7 +304,7 @@ export function buildInsurancePaymentReconciliation(
           coding: [
             { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
             {
-              system: OSOD_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
               code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
               display: "ChargeItem allocation",
             },

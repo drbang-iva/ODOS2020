@@ -123,7 +123,7 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
           ? "Procedure recorded"
           : definition.perEye ? "OD/OS saved" : "Saved",
         savedAt: new Date().toISOString(),
-        operator: "OSOD UI custom section",
+        operator: "ODOS UI custom section",
       };
       setSaved(status);
       onSaved(status);
