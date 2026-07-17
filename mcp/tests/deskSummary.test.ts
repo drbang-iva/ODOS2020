@@ -230,11 +230,21 @@ test("loadDeskSummary isolates an oversized Appointment page", async () => {
   assert.equal(summary.cards.statements.cadence.value, "Weekly · Wednesdays recommended");
 });
 
-test("an unexpected latest-statement error is marked unavailable", () => {
-  assert.deepEqual(
-    safeLatestStatementRun([], () => { throw new Error("unexpected statement reader bug"); }),
-    { generatedAt: null, invalidRejects: 0, unavailableReason: "Latest statement run could not be read." },
-  );
+// Preserves #115's "an unexpected latest-statement error is not silently degraded" guard under the degrade-and-log contract.
+test("an unexpected latest-statement error is degraded and logged", () => {
+  const error = new TypeError("unexpected statement reader bug");
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...values: unknown[]) => { logged.push(values); };
+  try {
+    assert.deepEqual(
+      safeLatestStatementRun([], () => { throw error; }),
+      { generatedAt: null, invalidRejects: 0, unavailableReason: "Latest statement run could not be read." },
+    );
+  } finally {
+    console.error = originalConsoleError;
+  }
+  assert.deepEqual(logged, [["Latest statement run read skipped: unexpected statement reader bug", error]]);
 });
 
 test("practice pulse counts only canonical attention rows", () => {

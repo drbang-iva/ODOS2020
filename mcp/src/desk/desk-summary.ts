@@ -458,10 +458,15 @@ export function safeLatestStatementRun(
     return readLatest(tasks);
   } catch (error) {
     if (!(error instanceof StatementValidationError)) {
+      console.error(`Latest statement run read skipped: ${errorMessage(error)}`, error);
       return { generatedAt: null, invalidRejects: 0, unavailableReason: STATEMENT_RUN_UNAVAILABLE };
     }
     return { generatedAt: null, invalidRejects: 0 };
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function stat<T>(value: T, tone: DeskTone, unavailableReason?: string): DeskStat<T> {
