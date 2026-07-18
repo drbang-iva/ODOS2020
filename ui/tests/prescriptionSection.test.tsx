@@ -257,9 +257,19 @@ test("MedicationRequest readback restores WENO fields only as a complete group",
   };
   assert.equal(draftFromRequest(request).drugDbCode, undefined);
 
-  request.medicationCodeableConcept!.coding![0]!.extension!.push({
-    url: "https://odos2020.com/fhir/StructureDefinition/odos-weno-quantity-unit-of-measure-code",
-    valueCode: "C48542",
+  request.medicationCodeableConcept!.coding!.push({
+    system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+    code: "196502",
+    extension: [
+      {
+        url: "https://odos2020.com/fhir/StructureDefinition/odos-weno-drug-db-code-qualifier",
+        valueCode: "SCD",
+      },
+      {
+        url: "https://odos2020.com/fhir/StructureDefinition/odos-weno-quantity-unit-of-measure-code",
+        valueCode: "C48542",
+      },
+    ],
   });
   assert.deepEqual(
     {

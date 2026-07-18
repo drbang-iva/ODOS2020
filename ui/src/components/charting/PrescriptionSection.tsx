@@ -607,9 +607,10 @@ function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in"
 }
 
 export function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
-  const coding = request.medicationCodeableConcept?.coding
-    ?.find((entry) => entry.system === RXNORM_CODE_SYSTEM);
-  const codedDrug = completeWenoDrugCoding(coding);
+  const codedDrug = request.medicationCodeableConcept?.coding
+    ?.filter((entry) => entry.system === RXNORM_CODE_SYSTEM)
+    .map(completeWenoDrugCoding)
+    .find((entry) => entry.drugDbCode) ?? {};
   return {
     drug: request.medicationCodeableConcept?.text ?? "",
     ...codedDrug,

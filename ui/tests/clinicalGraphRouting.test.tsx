@@ -9,7 +9,7 @@ import {
   buildAutoRefractionRequestBody,
 } from "../src/components/charting/AutoRefractionSection";
 import { authHeaders } from "../src/lib/clinical-graph-client";
-import { fhir } from "../src/lib/fhir";
+import { fhir, SESSION_STORAGE_KEY } from "../src/lib/fhir";
 
 const UI_ROOT = join(process.cwd(), "src");
 
@@ -112,19 +112,67 @@ test("no UI source references the obsolete odos_access_token key", () => {
   }
 });
 
-test("WENO searches use the authenticated shared client boundary", () => {
+test("WENO searches use the authenticated shared client boundary", async () => {
   const prescription = readFileSync(
     join(UI_ROOT, "components", "charting", "PrescriptionSection.tsx"),
     "utf8",
   );
-  const client = readFileSync(join(UI_ROOT, "lib", "fhir.ts"), "utf8");
   assert.match(prescription, /fhir\.searchWenoFormulary\(clinicalGraphApiBase\(\), query, signal\)/);
   assert.match(prescription, /fhir\.searchWenoDirectory\(clinicalGraphApiBase\(\), input, signal\)/);
   assert.doesNotMatch(prescription, /fetch\([^)]*\/weno\//);
-  assert.match(client, /async searchWenoFormulary\(/);
-  assert.match(client, /async searchWenoDirectory\(/);
-  assert.match(client, /Authorization: `Bearer \$\{token\}`/);
+
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "weno-test-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; authorization: string | null }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({
+      url: input.toString(),
+      authorization: new Headers(init?.headers).get("Authorization"),
+    });
+    return new Response(JSON.stringify({ results: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+  try {
+    await fhir.searchWenoFormulary("http://localhost:3333", "lata");
+    await fhir.searchWenoDirectory("http://localhost:3333", {
+      state: "SC",
+      place: "29646",
+      searchType: "local-retail",
+    });
+    assert.deepEqual(calls, [
+      {
+        url: "http://localhost:3333/weno/drugs/search?q=lata",
+        authorization: "Bearer weno-test-token",
+      },
+      {
+        url: "http://localhost:3333/weno/pharmacies/search?state=SC&searchType=local-retail&all=true&zip=29646",
+        authorization: "Bearer weno-test-token",
+      },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    fhir.logout(storage);
+  }
 });
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); },
+  };
+}
 
 function assertAuthenticatedDefinitionAndSave(path: string, kind: "soft" | "specialty"): void {
   const source = readFileSync(path, "utf8");
