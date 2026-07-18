@@ -14,6 +14,8 @@ import { fhir } from "../lib/fhir";
 import { openPrintWindow } from "../lib/print-window";
 import { BalanceChips } from "./commercial/BalanceChips";
 import { CheckoutRedeem } from "./commercial/CheckoutRedeem";
+import { CheckoutBankCredit } from "./commercial/CheckoutBankCredit";
+import { CreditBankDepositSheet } from "./commercial/CreditBankDepositSheet";
 import { SaleSheet } from "./commercial/SaleSheet";
 import { loadStatementMessageConfigSingleton } from "../scenes/settings/StatementMessagesSettings";
 
@@ -59,6 +61,7 @@ export function CollectPanel({
   const [error, setError] = useState<string>();
   const [receipt, setReceipt] = useState<{ result: CollectPanelResult; lines: OpenChargeLine[] }>();
   const [sellingPackage, setSellingPackage] = useState(false);
+  const [depositingCreditBank, setDepositingCreditBank] = useState(false);
   const [packageRevision, setPackageRevision] = useState(0);
 
   useEffect(() => {
@@ -145,6 +148,7 @@ export function CollectPanel({
           <p className="text-sm text-white/50">Open balance {money(openBalanceCents)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setDepositingCreditBank(true)} className="rounded border border-emerald-300/25 bg-emerald-950/20 px-3 py-2 text-xs font-bold text-emerald-100">Deposit Credit Bank</button>
           <button type="button" onClick={() => setSellingPackage(true)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-xs font-bold text-cyan-100">Add package</button>
           {!embedded && <button type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
         </div>
@@ -177,6 +181,22 @@ export function CollectPanel({
                     procedureCode={charge.code}
                     revision={packageRevision}
                     onRedeemed={() => {
+                      setCharges((current) => current.filter((item) => item.id !== charge.id));
+                      setSelectedIds((current) => {
+                        const next = new Set(current);
+                        next.delete(charge.id);
+                        return next;
+                      });
+                      setPackageRevision((current) => current + 1);
+                      onPackageBalanceChanged?.();
+                    }}
+                  />
+                  <CheckoutBankCredit
+                    patientReference={patientReference}
+                    chargeItemReference={`ChargeItem/${charge.id}`}
+                    amountCents={charge.amountCents}
+                    revision={packageRevision}
+                    onSpent={() => {
                       setCharges((current) => current.filter((item) => item.id !== charge.id));
                       setSelectedIds((current) => {
                         const next = new Set(current);
@@ -236,6 +256,17 @@ export function CollectPanel({
           patientName={patientName}
           onClose={() => setSellingPackage(false)}
           onSold={() => {
+            setPackageRevision((current) => current + 1);
+            onPackageBalanceChanged?.();
+          }}
+        />
+      )}
+      {depositingCreditBank && (
+        <CreditBankDepositSheet
+          patientReference={patientReference}
+          patientName={patientName}
+          onClose={() => setDepositingCreditBank(false)}
+          onDeposited={() => {
             setPackageRevision((current) => current + 1);
             onPackageBalanceChanged?.();
           }}
