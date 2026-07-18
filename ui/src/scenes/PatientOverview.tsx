@@ -14,6 +14,8 @@ import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
 import { BalanceChips } from "../components/commercial/BalanceChips";
 import { SaleSheet } from "../components/commercial/SaleSheet";
+import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
+import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -152,7 +154,12 @@ export function PatientOverview({
             <span>Chart <b>{chartNumber ? `#${chartNumber}` : "not recorded"}</b></span>
             <span>{overview?.insurance.length ? overview.insurance.join(" · ") : overview?.unavailable?.insurance ?? "Insurance not recorded"}</span>
           </div>
-          {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} />}
+          {patient.id && (
+            <PatientProgramPanels
+              packageStatus={<BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} />}
+              seriesStatus={<SeriesTrackerPanel patientReference={`Patient/${patient.id}`} />}
+            />
+          )}
           <div className="odos-overview-actions">
             <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>

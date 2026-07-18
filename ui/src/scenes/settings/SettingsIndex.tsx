@@ -48,6 +48,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         description: "Manage the diagnosis catalog and finding-to-diagnosis suggestion mappings.",
         synonyms: ["diagnosis", "diagnoses", "icd", "findings", "mapping", "suggestions"],
       },
+      {
+        href: "/settings/treatment-protocols",
+        title: "Treatment protocols",
+        description: "Define multi-session procedures, interval windows, and maintenance follow-up.",
+        synonyms: ["series", "sessions", "dry eye", "ipl", "rf", "care plan", "protocol"],
+        practiceAdminOnly: true,
+      },
     ],
   },
   {

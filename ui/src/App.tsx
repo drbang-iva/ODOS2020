@@ -36,6 +36,7 @@ import { LensCatalogSettings } from "./scenes/settings/LensCatalogSettings";
 import { PlanProfilesSettings } from "./scenes/settings/PlanProfilesSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { PackageDefinitionsSettings } from "./components/commercial/PackageDefinitionsSettings";
+import { ProtocolDefinitionsSettings } from "./components/series-tracker/ProtocolDefinitionsSettings";
 import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
@@ -327,6 +328,8 @@ export function RouteSwitch({
       return <PlanProfilesSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/packages":
       return <PackageDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/treatment-protocols":
+      return <ProtocolDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/statement-messages":
       return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
     default:
