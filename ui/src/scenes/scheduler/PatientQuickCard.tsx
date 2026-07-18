@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import { useSchedulingStore } from "../../lib/scheduling-store";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
+import { BalanceChips } from "../../components/commercial/BalanceChips";
 
 export function PatientQuickCard({
   appointment,
@@ -146,6 +147,7 @@ export function PatientQuickCard({
 
         {viewModel && (
           <>
+            {patientReference && <BalanceChips patientReference={patientReference} />}
             <QuickCardRow label="DOB + Age" value={`${viewModel.birthDate} (${viewModel.age ?? "unknown"})`} />
             <QuickCardRow label="Birth Sex" value={viewModel.birthSex} />
             <QuickCardRow label="Phone" value={viewModel.phones.join(", ") || "none"} />

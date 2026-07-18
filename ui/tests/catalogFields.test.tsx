@@ -23,7 +23,7 @@ const FIELDS: readonly CatalogFieldDescriptor[] = [
     palette: [SCHEDULER_PALETTE.newExamBlue, SCHEDULER_PALETTE.establishedTeal],
   },
   { type: "duration", key: "duration", label: "Duration", min: 5, max: 120 },
-  { type: "number", key: "threshold", label: "Threshold", min: 1, max: 60 },
+  { type: "number", key: "threshold", label: "Threshold", min: 1, max: 60, integer: true },
   {
     type: "select",
     key: "kind",
@@ -93,6 +93,10 @@ test("catalog field build/parse validates uniqueness, bounds, palette, reference
   assert.throws(
     () => buildCatalogFields({ ...VALUES, duration: 121 }, FIELDS),
     { message: "Duration must be at most 120." },
+  );
+  assert.throws(
+    () => buildCatalogFields({ ...VALUES, threshold: 1.5 }, FIELDS),
+    { message: "Threshold must be a whole number." },
   );
   assert.throws(
     () => buildCatalogFields({ ...VALUES, color: "#ffffff" }, FIELDS),

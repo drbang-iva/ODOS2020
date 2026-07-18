@@ -127,6 +127,7 @@ function CatalogFieldControl({
             type="number"
             min={field.min}
             max={field.max}
+            step={field.type === "duration" || field.integer ? 1 : undefined}
             value={typeof value === "number" ? value : ""}
             aria-describedby={describedBy}
             onChange={(event) =>
@@ -154,6 +155,27 @@ function CatalogFieldControl({
           </select>
         </FieldFrame>
       );
+    case "multi-select": {
+      const selected = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+      return (
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
+          <div id={inputId} className="grid gap-2 rounded border border-white/10 bg-black/20 p-3" aria-describedby={describedBy}>
+            {field.options.map((option) => (
+              <label key={option.value} className="flex items-center gap-2 text-sm text-white/75">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(option.value)}
+                  onChange={(event) => onChange(event.target.checked
+                    ? [...selected, option.value]
+                    : selected.filter((entry) => entry !== option.value))}
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </FieldFrame>
+      );
+    }
     case "reference-picker":
       return (
         <FieldFrame field={field} error={error} showRequired={showRequired}>

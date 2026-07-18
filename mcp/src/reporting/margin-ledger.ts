@@ -21,6 +21,7 @@ import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js"
 import { ODOS_WHOLESALE_COST_EXTENSION_URL } from "../catalog/frame-charge-item-definition.js";
 import { loadPlanProfiles, type PlanProfile } from "./plan-profiles.js";
 import type { ReportingResult } from "./reporting.js";
+import { isBalanceFundingInvoice } from "../commercial-engine/package-service.js";
 
 export const MARGIN_LEDGER_GENESIS_DATE = "2026-07-15";
 export const DEFAULT_MARGIN_TARGET_MULTIPLIER_MILLI = 3_000;
@@ -413,6 +414,7 @@ function invoiceReceipts(
   ));
   for (const invoice of invoices) {
     if (!invoice.date) continue;
+    if (isBalanceFundingInvoice(invoice)) continue;
     const collected = invoice.status === "balanced"
       || invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
       || (invoice.id && settledInvoices.has(`Invoice/${invoice.id}`));

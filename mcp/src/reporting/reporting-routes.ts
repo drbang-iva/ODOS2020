@@ -4,6 +4,7 @@ import {
   handleClaimSearchExportRequest,
   handlePatientPaymentsExportRequest,
   handleRemittanceExportRequest,
+  handleServiceProductionRequest,
   handleWorklistExportRequest,
   type ReportingHandlerDeps,
   type ReportingResult,
@@ -29,6 +30,7 @@ export interface ReportingRouteDeps extends ReportingHandlerDeps {
   statements: StatementHandlerDeps;
   planProfiles: PlanProfileEndpointDeps;
   marginLedger: MarginLedgerEndpointDeps;
+  serviceProduction: import("./reporting.js").ServiceProductionEndpointDeps;
 }
 
 export function registerReportingRoutes(
@@ -58,6 +60,10 @@ export function registerReportingRoutes(
     authHeader: req.header("authorization"),
   }));
   get(app, "/practice/margin-ledger", deps, (req) => handleMarginLedgerRequest(deps.marginLedger, {
+    authHeader: req.header("authorization"),
+    period: stringQuery(req.query.period),
+  }));
+  get(app, "/practice/service-production", deps, (req) => handleServiceProductionRequest(deps.serviceProduction, {
     authHeader: req.header("authorization"),
     period: stringQuery(req.query.period),
   }));

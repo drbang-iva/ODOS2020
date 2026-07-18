@@ -12,6 +12,8 @@ import {
 import { useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
+import { BalanceChips } from "../components/commercial/BalanceChips";
+import { SaleSheet } from "../components/commercial/SaleSheet";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -46,6 +48,8 @@ export function PatientOverview({
   const [history, setHistory] = useState<StickyNoteHistoryEntry[]>();
   const [historyError, setHistoryError] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [sellingPackage, setSellingPackage] = useState(false);
+  const [packageRevision, setPackageRevision] = useState(0);
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
 
@@ -148,7 +152,9 @@ export function PatientOverview({
             <span>Chart <b>{chartNumber ? `#${chartNumber}` : "not recorded"}</b></span>
             <span>{overview?.insurance.length ? overview.insurance.join(" · ") : overview?.unavailable?.insurance ?? "Insurance not recorded"}</span>
           </div>
+          {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} />}
           <div className="odos-overview-actions">
+            <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
           </div>
           <PinnedOfficeNote patientId={patient.id} />
@@ -237,6 +243,14 @@ export function PatientOverview({
               ))}
             </section>
           </div>
+        )}
+        {sellingPackage && patient.id && (
+          <SaleSheet
+            patientReference={`Patient/${patient.id}`}
+            patientName={name}
+            onClose={() => setSellingPackage(false)}
+            onSold={() => setPackageRevision((current) => current + 1)}
+          />
         )}
       </section>
     </main>

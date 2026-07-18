@@ -3,9 +3,20 @@ import { test } from "node:test";
 import type { ClaimSearchRow } from "../src/claims/claim-search.js";
 import type { EraWorklistAttentionItem, WorklistCode } from "../src/claims/era-worklist.js";
 import {
+  projectServiceProduction,
   projectAccountsReceivableDashboard,
   toCsv,
 } from "../src/reporting/reporting.js";
+import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
+import {
+  ODOS_BALANCE_FUNDING_CODE,
+  ODOS_PACKAGE_CREDIT_TENDER_CODE,
+  ODOS_REVENUE_CLASS_SYSTEM,
+} from "../src/commercial-engine/package-service.js";
+import {
+  ODOS_PAYMENT_TENDER_SYSTEM,
+  paymentTenderExtensionForReconciliation,
+} from "../src/fhir/odosPaymentTender.js";
 
 test("AR dashboard hand-computes average age, aging buckets, and open-worklist counts", () => {
   const claims = [10, 45, 75, 120].map(claimRow);
@@ -33,6 +44,116 @@ test("CSV output quotes punctuation and neutralizes spreadsheet formulas", () =>
   const csv = toCsv(["Patient", "Message"], [["=IMPORTXML(1)", "said \"hello\", then left\nnext line"]]);
   assert.match(csv, /^\uFEFFPatient,Message\r\n'=IMPORTXML\(1\),/);
   assert.match(csv, /"said ""hello"", then left\nnext line"/);
+});
+
+test("a $3,600 package sale and one $1,200 redemption recognize exactly $1,200 of service production", () => {
+  const funding: Invoice = {
+    resourceType: "Invoice",
+    id: "package-sale",
+    status: "balanced",
+    date: "2026-07-18T14:00:00Z",
+    meta: { tag: [{ system: ODOS_REVENUE_CLASS_SYSTEM, code: ODOS_BALANCE_FUNDING_CODE }] },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
+      valueCodeableConcept: { coding: [{ system: ODOS_PAYMENT_TENDER_SYSTEM, code: "CASH" }] },
+    }],
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Dry-Eye IPL x3" },
+      priceComponent: [{ type: "base", amount: usd(360_000) }],
+    }],
+    totalGross: usd(360_000),
+    totalNet: usd(360_000),
+  };
+  const redemption: Invoice = {
+    resourceType: "Invoice",
+    id: "redemption-1",
+    status: "issued",
+    date: "2026-07-19T14:00:00Z",
+    lineItem: [{
+      sequence: 1,
+      chargeItemReference: { reference: "ChargeItem/ipl-1" },
+      priceComponent: [{ type: "base", amount: usd(120_000) }],
+    }],
+    totalGross: usd(120_000),
+    totalNet: usd(120_000),
+  };
+  const packageCredit: PaymentReconciliation = {
+    resourceType: "PaymentReconciliation",
+    id: "package-credit-1",
+    status: "active",
+    outcome: "complete",
+    created: "2026-07-19T14:00:00Z",
+    paymentDate: "2026-07-19",
+    paymentAmount: usd(120_000),
+    detail: [{ request: { reference: "Invoice/redemption-1" }, amount: usd(120_000) }],
+    extension: [paymentTenderExtensionForReconciliation({ code: ODOS_PACKAGE_CREDIT_TENDER_CODE })],
+  };
+
+  const report = projectServiceProduction("2026-07", [funding, redemption], [packageCredit]);
+
+  assert.equal(report.cashCollectedCents, 360_000);
+  assert.equal(report.balanceFundingCents, 360_000);
+  assert.equal(report.productionCents, 120_000);
+  assert.equal(report.productionInvoiceCount, 1);
+});
+
+test("partial allocations do not recognize an Invoice as fully collected production", () => {
+  const invoice: Invoice = {
+    resourceType: "Invoice",
+    id: "partially-paid-service",
+    status: "issued",
+    date: "2026-07-20T14:00:00Z",
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Synthetic service" },
+      priceComponent: [{ type: "base", amount: usd(120_000) }],
+    }],
+    totalGross: usd(120_000),
+    totalNet: usd(120_000),
+  };
+  const partial: PaymentReconciliation = {
+    resourceType: "PaymentReconciliation",
+    status: "active",
+    outcome: "complete",
+    created: "2026-07-20T14:00:00Z",
+    paymentDate: "2026-07-20",
+    paymentAmount: usd(60_000),
+    detail: [{ request: { reference: "Invoice/partially-paid-service" }, amount: usd(60_000) }],
+  };
+
+  const report = projectServiceProduction("2026-07", [invoice], [partial]);
+
+  assert.equal(report.cashCollectedCents, 60_000);
+  assert.equal(report.productionCents, 0);
+  assert.equal(report.productionInvoiceCount, 0);
+});
+
+test("an unrecognized tender extension cannot mark an issued Invoice collected", () => {
+  const invoice: Invoice = {
+    resourceType: "Invoice",
+    id: "spoofed-tender",
+    status: "issued",
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
+      valueCodeableConcept: { coding: [{ system: "https://example.test/not-odos", code: "CASH" }] },
+    }],
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Synthetic service" },
+      priceComponent: [{ type: "base", amount: usd(12_000) }],
+    }],
+    totalGross: usd(12_000),
+    totalNet: usd(12_000),
+  };
+
+  assert.deepEqual(projectServiceProduction("2026-07", [invoice], []), {
+    period: "2026-07",
+    cashCollectedCents: 0,
+    productionCents: 0,
+    balanceFundingCents: 0,
+    productionInvoiceCount: 0,
+  });
 });
 
 function claimRow(daysSinceSubmission: number): ClaimSearchRow {
@@ -78,4 +199,8 @@ function worklistItem(code: WorklistCode, id: string): EraWorklistAttentionItem 
           adjustments: [],
         },
   };
+}
+
+function usd(cents: number): { value: number; currency: "USD" } {
+  return { value: cents / 100, currency: "USD" };
 }

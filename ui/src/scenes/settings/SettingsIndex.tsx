@@ -95,6 +95,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         practiceAdminOnly: true,
       },
       {
+        href: "/settings/packages",
+        title: "Packages",
+        description: "Define prepaid procedure series, expiry, and refund policy.",
+        synonyms: ["prepaid", "sessions", "dry eye", "ipl", "rf", "series"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/statement-messages",
         title: "Statement and receipt messages",
         description: "Set the practice-wide footer notes printed on statements and receipts.",

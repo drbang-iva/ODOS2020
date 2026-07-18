@@ -1,3 +1,16 @@
+import type { Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
+import { resolveBusinessActionRole } from "../authz/roles.js";
+import type { MedplumClient } from "../fhir-client.js";
+import {
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_SYSTEM,
+  PAYMENT_TENDERS,
+} from "../fhir/odosPaymentTender.js";
+import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
+import {
+  isBalanceFundingInvoice,
+  ODOS_PACKAGE_CREDIT_TENDER_CODE,
+} from "../commercial-engine/package-service.js";
 import type { PaymentCreditHandlerDeps, PatientPaymentRow } from "../payments/payment-credit-handler.js";
 import {
   handlePaymentReconciliationsRequest,
@@ -14,6 +27,19 @@ import {
 export interface ReportingHandlerDeps {
   claims: ClaimsHandlerDeps;
   payments: Pick<PaymentCreditHandlerDeps, "authenticate" | "now">;
+}
+
+export interface ServiceProductionEndpointDeps {
+  authenticate(authHeader: string | undefined): Promise<AuthenticatedStaff | null>;
+  now?: () => string;
+}
+
+export interface ServiceProductionReport {
+  period: string;
+  cashCollectedCents: number;
+  productionCents: number;
+  balanceFundingCents: number;
+  productionInvoiceCount: number;
 }
 
 export interface ReportingResult {
@@ -45,6 +71,86 @@ export interface AccountsReceivableDashboard {
 const TOTAL_OUTSTANDING_GAP =
   "Claim Search has submitted charges and insurer payment state, while Patient Payments settles Invoices. "
   + "No shipped Claim-to-Invoice balance link or post-adjustment balance supports an honest dollar total.";
+
+export async function handleServiceProductionRequest(
+  deps: ServiceProductionEndpointDeps,
+  input: { authHeader: string | undefined; period?: string },
+): Promise<ReportingResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to view production reporting." } };
+  if (!resolveBusinessActionRole(staff.roles ?? [], "margin.read")) {
+    return { status: 403, body: { error: "margin.read role required" } };
+  }
+  const period = input.period ?? (deps.now?.() ?? new Date().toISOString()).slice(0, 7);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
+    return { status: 400, body: { error: "period must use YYYY-MM." } };
+  }
+  const start = `${period}-01`;
+  const end = nextMonth(period);
+  const [invoices, reconciliations] = await Promise.all([
+    completePage<Invoice>(staff.fhir, "Invoice", [
+      ["date", `ge${start}`],
+      ["date", `lt${end}`],
+      ["_count", "1000"],
+    ]),
+    completePage<PaymentReconciliation>(staff.fhir, "PaymentReconciliation", [
+      ["created", `ge${start}`],
+      ["created", `lt${end}`],
+      ["status", "active"],
+      ["_count", "1000"],
+    ]),
+  ]);
+  if (!invoices.complete || !reconciliations.complete) {
+    return { status: 409, body: { error: "Production reporting exceeded one complete FHIR page." } };
+  }
+  return { status: 200, body: projectServiceProduction(period, invoices.resources, reconciliations.resources) };
+}
+
+export function projectServiceProduction(
+  period: string,
+  invoices: readonly Invoice[],
+  reconciliations: readonly PaymentReconciliation[],
+): ServiceProductionReport {
+  const allocatedCentsByInvoice = new Map<string, number>();
+  for (const payment of reconciliations) {
+    if (payment.status !== "active" || payment.outcome !== "complete") continue;
+    for (const detail of payment.detail ?? []) {
+      const invoiceReference = detail.request?.reference;
+      if (!/^Invoice\/[A-Za-z0-9.-]+$/.test(invoiceReference ?? "")) continue;
+      const amountCents = moneyCents(detail.amount?.value, "PaymentReconciliation detail amount");
+      allocatedCentsByInvoice.set(invoiceReference!, (allocatedCentsByInvoice.get(invoiceReference!) ?? 0) + amountCents);
+    }
+  }
+  let cashCollectedCents = 0;
+  let productionCents = 0;
+  let balanceFundingCents = 0;
+  let productionInvoiceCount = 0;
+  for (const invoice of invoices) {
+    const reference = invoice.id ? `Invoice/${invoice.id}` : undefined;
+    const allocatedCents = reference ? allocatedCentsByInvoice.get(reference) ?? 0 : 0;
+    const tenderedInvoice = invoice.extension?.some((extension) =>
+      extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
+      && extension.valueCodeableConcept?.coding?.some((coding) =>
+        coding.system === ODOS_PAYMENT_TENDER_SYSTEM
+        && PAYMENT_TENDERS.some((tender) => tender.code === coding.code),
+      ),
+    ) ?? false;
+    const netCents = invoiceNetCents(invoice);
+    const collected = invoice.status === "balanced" || tenderedInvoice || allocatedCents >= netCents;
+    if (!collected) continue;
+    if (isBalanceFundingInvoice(invoice)) {
+      balanceFundingCents += netCents;
+    } else {
+      productionCents += invoiceProductionCents(invoice);
+      productionInvoiceCount += 1;
+    }
+    if (tenderedInvoice) cashCollectedCents += netCents;
+  }
+  cashCollectedCents += reconciliations
+    .filter((payment) => payment.status === "active" && payment.outcome === "complete" && !isPackageCredit(payment))
+    .reduce((sum, payment) => sum + moneyCents(payment.paymentAmount?.value, "PaymentReconciliation paymentAmount"), 0);
+  return { period, cashCollectedCents, productionCents, balanceFundingCents, productionInvoiceCount };
+}
 
 export async function handleAccountsReceivableDashboardRequest(
   deps: ReportingHandlerDeps,
@@ -289,4 +395,49 @@ function queryString(value: unknown): string | undefined {
   if (typeof value === "string") return value;
   if (Array.isArray(value) && typeof value[0] === "string") return value[0];
   return undefined;
+}
+
+function invoiceProductionCents(invoice: Invoice): number {
+  return (invoice.lineItem ?? []).reduce((total, line) => {
+    const base = (line.priceComponent ?? []).filter((component) => component.type === "base")
+      .reduce((sum, component) => sum + moneyCents(component.amount?.value, "Invoice base amount"), 0);
+    const discount = (line.priceComponent ?? []).filter((component) => component.type === "discount")
+      .reduce((sum, component) => sum + moneyCents(component.amount?.value, "Invoice discount amount"), 0);
+    return total + base - discount;
+  }, 0);
+}
+
+function invoiceNetCents(invoice: Invoice): number {
+  return moneyCents(invoice.totalNet?.value, `Invoice/${invoice.id ?? "(unknown)"} totalNet`);
+}
+
+function moneyCents(value: number | undefined, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(`${label} is invalid.`);
+  const cents = Math.round(value * 100);
+  if (!Number.isSafeInteger(cents) || Math.abs(value * 100 - cents) > 0.000001) {
+    throw new Error(`${label} is not representable in whole cents.`);
+  }
+  return cents;
+}
+
+function isPackageCredit(payment: PaymentReconciliation): boolean {
+  return payment.extension?.some((extension) =>
+    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
+    && extension.valueCodeableConcept?.coding?.some((coding) => coding.code === ODOS_PACKAGE_CREDIT_TENDER_CODE),
+  ) ?? false;
+}
+
+function nextMonth(period: string): string {
+  const [year, month] = period.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+}
+
+async function completePage<T extends Resource>(
+  fhir: Pick<MedplumClient, "search">,
+  resourceType: T["resourceType"],
+  params: Array<[string, string]>,
+): Promise<{ complete: boolean; resources: T[] }> {
+  const bundle = await fhir.search<T>(resourceType, params);
+  if (bundle.link?.some((link) => link.relation === "next")) return { complete: false, resources: [] };
+  return { complete: true, resources: (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []) };
 }

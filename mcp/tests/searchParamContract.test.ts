@@ -17,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 61;
+const EXPECTED_DIRECT_SEARCH_CALLS = 65;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -57,17 +57,17 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2541": [spec("Patient", "name", "_count")],
-  "src/index.ts:2582": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2590": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2598": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4196": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4218": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2546": [spec("Patient", "name", "_count")],
+  "src/index.ts:2587": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2595": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2603": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4201": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4223": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:176": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "target", "_count", "_sort"),
   ],
-  "src/reporting/margin-ledger.ts:524": [
+  "src/reporting/margin-ledger.ts:526": [
     spec("Invoice", "date", "_count", "_sort"),
     spec("PaymentReconciliation", "status", "created", "_count", "_sort"),
     spec("Claim", "_count", "_sort"),
@@ -75,6 +75,10 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Task", "code", "_count", "_sort"),
     spec("ChargeItemDefinition", "_count"),
     spec("ChargeItem", "_id", "_count"),
+  ],
+  "src/reporting/reporting.ts:440": [
+    spec("Invoice", "date", "_count"),
+    spec("PaymentReconciliation", "created", "status", "_count"),
   ],
   "src/referral/referral-service.ts:245": [
     spec("Observation", "patient", "encounter", "_count"),
@@ -106,7 +110,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 61 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 65 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();

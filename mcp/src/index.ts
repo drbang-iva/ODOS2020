@@ -49,6 +49,8 @@ import { grantPracticeRoles } from "./authz/role-grants.js";
 import { handleChargeRequest } from "./payments/payment-charge-handler.js";
 import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
+import { PgCommercialEngineStore } from "./commercial-engine/ledger-store.js";
+import { registerCommercialEngineRoutes } from "./commercial-engine/package-definition-endpoint.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
@@ -451,6 +453,9 @@ const auditRuntime = createLiveOdosAuditRuntime({
   projectionWorkerIntervalMs: Number(process.env.ODOS_AUDIT_PROJECTION_WORKER_MS ?? 60_000),
 });
 auditRuntime.startProjectionWorker();
+const commercialEngineStore = new PgCommercialEngineStore({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
 
 const fhir = createMedplumClient({
   baseUrl: BASE_URL,
@@ -6292,6 +6297,11 @@ async function main(): Promise<void> {
         handlers: paymentCreditDeps,
         collection: paymentCollectionDeps,
       });
+      registerCommercialEngineRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        store: commercialEngineStore,
+      });
       registerLabOrderRoutes(app, {
         authenticateService: authenticateWithMedplum,
         handlers: labOrderHandlerDeps,
@@ -6321,6 +6331,9 @@ async function main(): Promise<void> {
         marginLedger: {
           authenticate: authenticateStaffRoute,
           targetMultiplierMilli: Number(process.env.ODOS_MARGIN_TARGET_MULTIPLIER_MILLI ?? "3000"),
+        },
+        serviceProduction: {
+          authenticate: authenticateStaffRoute,
         },
       });
       registerDeskRoutes(app, {

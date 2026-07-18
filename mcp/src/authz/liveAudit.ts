@@ -43,6 +43,8 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-07-17-weno-pharmacy-directory.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-17-weno-drug-database.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event-validate.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-18-commercial-engine-redemption-recovery.sql", import.meta.url),
 ].map((url) => fileURLToPath(url));
 
 // Keep in sync with CREATE TABLE statements in AUDIT_DDL_FILES.
@@ -61,6 +63,10 @@ const AUDIT_MIGRATION_TABLES = [
   "odos_terminology_hcpcs",
   "odos_weno_pharmacy_directory",
   "odos_weno_drug_database",
+  "odos_package_definitions",
+  "odos_package_instances",
+  "odos_package_ledger",
+  "odos_package_redemptions",
 ] as const;
 
 const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =
