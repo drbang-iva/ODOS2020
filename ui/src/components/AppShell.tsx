@@ -51,6 +51,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/settings/floor-config": [{ label: "Settings", href: "/settings" }, { label: "Floor config" }],
   "/settings/vision-plan-templates": [{ label: "Settings", href: "/settings" }, { label: "Vision plan templates" }],
   "/settings/visit-types": [{ label: "Settings", href: "/settings" }, { label: "Visit types" }],
+  "/settings/statement-messages": [{ label: "Settings", href: "/settings" }, { label: "Statement and receipt messages" }],
   "/settings/suggested-diagnoses": [{ label: "Settings", href: "/settings" }, { label: "Suggested diagnoses" }],
   "/settings/optical-pricing": [{ label: "Settings", href: "/settings" }, { label: "Optical pricing" }],
   "/settings/chart-fields-sections": [{ label: "Settings", href: "/settings" }, { label: "Chart fields & sections" }],

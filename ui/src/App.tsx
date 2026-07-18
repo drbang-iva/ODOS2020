@@ -34,6 +34,7 @@ import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
 import { PlanProfilesSettings } from "./scenes/settings/PlanProfilesSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
+import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
 import { MarginLedger } from "./scenes/MarginLedger";
@@ -320,6 +321,8 @@ export function RouteSwitch({
       return <OpticalPricingSettings />;
     case "/settings/plan-profiles":
       return <PlanProfilesSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/statement-messages":
+      return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
     default:
       return <ViewRouter view={view} />;
   }

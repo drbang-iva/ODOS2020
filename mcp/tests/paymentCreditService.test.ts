@@ -240,3 +240,23 @@ test("transfer re-points one allocation atomically and T0 receipt contains the r
   assert.match(renderUnappliedCreditReceipt(receipt), /\$75\.00/);
   assert.match(renderUnappliedCreditReceipt(receipt), /Unapplied credit/);
 });
+
+test("unapplied-credit receipt prints an escaped configured footer and omits an empty footer element", () => {
+  const configured = buildUnappliedCreditReceipt({
+    paymentReconciliation: payment(),
+    staff: "Alex Front Desk",
+    practice: "Integrated Vision & Aesthetics",
+    receiptFooterMessage: '<script>alert("credit")</script>',
+  });
+  const html = renderUnappliedCreditReceipt(configured);
+  assert.match(html, /class="practice-message"/);
+  assert.match(html, /&lt;script&gt;alert\(&quot;credit&quot;\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+
+  const unset = buildUnappliedCreditReceipt({
+    paymentReconciliation: payment(),
+    staff: "Alex Front Desk",
+    practice: "Integrated Vision & Aesthetics",
+  });
+  assert.doesNotMatch(renderUnappliedCreditReceipt(unset), /class="practice-message"/);
+});

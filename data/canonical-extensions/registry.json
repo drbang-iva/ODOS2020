@@ -529,6 +529,12 @@
       "namespace": "referral",
       "status": "active",
       "sliceConsumer": "referral-send-mvp"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-statement-message-config",
+      "namespace": "statements",
+      "status": "active",
+      "sliceConsumer": "statement-receipt-messages"
     }
   ]
 }

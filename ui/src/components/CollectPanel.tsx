@@ -10,7 +10,9 @@ import {
   type OpticalCollectionOrder,
 } from "../lib/collect";
 import { renderReceiptSheet, type FinancialSummary } from "../lib/optical-financial-summary";
+import { fhir } from "../lib/fhir";
 import { openPrintWindow } from "../lib/print-window";
+import { loadStatementMessageConfigSingleton } from "../scenes/settings/StatementMessagesSettings";
 
 const TENDERS: Array<{ code: CollectTender; label: string }> = [
   { code: "CASH", label: "Cash" },
@@ -224,10 +226,7 @@ function ReceiptView({
   receipt: { result: CollectPanelResult; lines: OpenChargeLine[] };
   onClose: () => void;
 }) {
-  const print = () => {
-    const summary = receiptSummary(patientReference, patientName, tender, receipt);
-    openPrintWindow(`Receipt ${summary.header.orderId}`, renderReceiptSheet(summary));
-  };
+  const print = () => void printReceipt({ patientReference, patientName, tender, receipt });
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-white/10 px-4 py-4">
@@ -243,6 +242,39 @@ function ReceiptView({
         <button type="button" onClick={onClose} className="rounded bg-blue-600 px-5 py-2 font-bold">Done</button>
       </footer>
     </div>
+  );
+}
+
+export async function printReceipt(
+  input: {
+    patientReference: string;
+    patientName?: string;
+    tender: CollectTender;
+    receipt: { result: CollectPanelResult; lines: OpenChargeLine[] };
+  },
+  deps: {
+    loadReceiptFooterMessage?: () => Promise<string | undefined>;
+    openPrint?: typeof openPrintWindow;
+  } = {},
+): Promise<void> {
+  const summary = receiptSummary(
+    input.patientReference,
+    input.patientName,
+    input.tender,
+    input.receipt,
+  );
+  let receiptFooterMessage: string | undefined;
+  try {
+    const loadReceiptFooterMessage = deps.loadReceiptFooterMessage ?? (async () =>
+      (await loadStatementMessageConfigSingleton(fhir)).config.receiptFooterMessage);
+    receiptFooterMessage = await loadReceiptFooterMessage();
+  } catch (error) {
+    console.error("Receipt footer message read skipped.", error);
+  }
+  const printable = receiptFooterMessage ? { ...summary, receiptFooterMessage } : summary;
+  (deps.openPrint ?? openPrintWindow)(
+    `Receipt ${summary.header.orderId}`,
+    renderReceiptSheet(printable),
   );
 }
 

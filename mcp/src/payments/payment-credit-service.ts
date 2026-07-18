@@ -44,6 +44,7 @@ export interface UnappliedCreditReceipt {
   staff: string;
   practice: string;
   notice: "Unapplied credit — will be applied to today's charges.";
+  receiptFooterMessage?: string;
 }
 
 export async function applyPaymentCredit(
@@ -165,6 +166,7 @@ export function buildUnappliedCreditReceipt(input: {
   paymentReconciliation: PaymentReconciliation;
   staff: string;
   practice: string;
+  receiptFooterMessage?: string;
 }): UnappliedCreditReceipt {
   if (!input.staff || !input.practice) {
     throw new Error("Unapplied-credit receipt requires staff and practice labels.");
@@ -183,6 +185,7 @@ export function buildUnappliedCreditReceipt(input: {
     staff: input.staff,
     practice: input.practice,
     notice: "Unapplied credit — will be applied to today's charges.",
+    ...(input.receiptFooterMessage ? { receiptFooterMessage: input.receiptFooterMessage } : {}),
   };
 }
 
@@ -197,7 +200,12 @@ export function renderUnappliedCreditReceipt(receipt: UnappliedCreditReceipt): s
   <dt>Amount</dt><dd>${money(receipt.amountCents)}</dd>
 </dl>
 <p>${escapeHtml(receipt.notice)}</p>
+${renderFooterMessage(receipt.receiptFooterMessage)}
 </section>`;
+}
+
+function renderFooterMessage(message: string | undefined): string {
+  return message?.trim() ? `<p class="practice-message">${escapeHtml(message)}</p>` : "";
 }
 
 export function paymentSubjectReference(pr: PaymentReconciliation): string | undefined {

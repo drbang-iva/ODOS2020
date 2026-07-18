@@ -280,6 +280,15 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
         "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     },
   },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
+    },
+  },
 ];
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
