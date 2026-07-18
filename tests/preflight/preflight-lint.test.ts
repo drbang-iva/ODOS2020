@@ -5,11 +5,38 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   runEnvVarPhiPass,
+  runAppearanceStylingDebtPass,
   runLogScrubPass,
   runPreflightLint,
   runResourceNamePass,
   runVendorCanonicalShapePass,
 } from "../../scripts/preflight-lint.ts";
+
+test("appearance styling debt ratchet blocks new and increased debt while allowing the baseline", () => {
+  const baseline = { "ui/src/existing.tsx": 1 };
+  const withinBaseline = runAppearanceStylingDebtPass({
+    appearanceDebtBaseline: baseline,
+    appearanceDebtFiles: [{ path: "ui/src/existing.tsx", text: '<div className="text-white" />\n' }],
+  });
+  assert.equal(withinBaseline.status, "pass");
+
+  const newFile = runAppearanceStylingDebtPass({
+    appearanceDebtBaseline: baseline,
+    appearanceDebtFiles: [
+      { path: "ui/src/existing.tsx", text: '<div className="text-white" />\n' },
+      { path: "ui/src/new.tsx", text: '<div className="text-white" />\n' },
+    ],
+  });
+  assert.equal(newFile.status, "hard-block");
+  assert.equal(newFile.findings[0]?.code, "appearance-debt-new-file");
+
+  const overBaseline = runAppearanceStylingDebtPass({
+    appearanceDebtBaseline: baseline,
+    appearanceDebtFiles: [{ path: "ui/src/existing.tsx", text: '<div className="text-white bg-black" />\n' }],
+  });
+  assert.equal(overBaseline.status, "hard-block");
+  assert.equal(overBaseline.findings[0]?.code, "appearance-debt-increase");
+});
 
 test("v0.5d preflight pass 1 log scrub is clean on clean input and warns on salted PHI-shaped logs", () => {
   const clean = runLogScrubPass({ logText: "medplum-server ready\nodos-mcp ready\n" });

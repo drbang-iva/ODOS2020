@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   APPEARANCE_ACCENTS,
   APPEARANCE_CONFIG_RESOURCE_ID,
-  APPEARANCE_SURFACES,
+  SELECTABLE_APPEARANCE_SURFACES,
   applyAppearance,
   buildAppearanceConfigResource,
   loadAppearanceConfigSingleton,
@@ -104,7 +104,7 @@ export function AppearanceSettingsReady({
           <SchemeRow
             legend="Surface"
             description="Sets the app canvas, cards, text, borders, popovers, and shadows."
-            options={APPEARANCE_SURFACES}
+            options={SELECTABLE_APPEARANCE_SURFACES}
             labels={SURFACE_LABELS}
             value={draft.surface}
             disabled={!canWrite || saving}

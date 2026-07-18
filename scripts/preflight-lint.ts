@@ -19,7 +19,7 @@ export type PreflightSeverity = "warning" | "hard-block";
 export type PreflightPassStatus = "pass" | "warning" | "hard-block";
 
 export interface PreflightFinding {
-  readonly pass: "logs" | "resource-names" | "env-vars" | "vendor-canonical-shapes";
+  readonly pass: "logs" | "resource-names" | "env-vars" | "vendor-canonical-shapes" | "appearance-styling-debt";
   readonly severity: PreflightSeverity;
   readonly code: string;
   readonly message: string;
@@ -34,6 +34,7 @@ export interface PreflightPassReport {
   readonly id: PreflightFinding["pass"];
   readonly status: PreflightPassStatus;
   readonly findings: readonly PreflightFinding[];
+  readonly notes?: readonly string[];
 }
 
 export interface PreflightReport {
@@ -64,7 +65,12 @@ export interface VendorCanonicalShapePassOptions {
   readonly files?: readonly { path: string; text: string }[];
 }
 
-export interface RunPreflightOptions extends LogScrubPassOptions, ResourceNamePassOptions, EnvVarPhiPassOptions, VendorCanonicalShapePassOptions {
+export interface AppearanceStylingDebtPassOptions {
+  readonly appearanceDebtFiles?: readonly { path: string; text: string }[];
+  readonly appearanceDebtBaseline?: Readonly<Record<string, number>>;
+}
+
+export interface RunPreflightOptions extends LogScrubPassOptions, ResourceNamePassOptions, EnvVarPhiPassOptions, VendorCanonicalShapePassOptions, AppearanceStylingDebtPassOptions {
   readonly writeReports?: boolean;
   readonly now?: string;
 }
@@ -99,6 +105,16 @@ const SOURCE_EXTENSIONS = new Set([
   ".yml",
   ".yaml",
 ]);
+
+const APPEARANCE_DEBT_BASELINE_PATH = resolve(REPO_ROOT, "scripts/appearance-debt-baseline.json");
+const APPEARANCE_DEBT_EXCLUDED_PATH = "ui/src/styles/appearance.css";
+const APPEARANCE_DEBT_PATTERNS: readonly RegExp[] = [
+  /\btext-white(?:\/[0-9]+)?\b/g,
+  /\bborder-white\/[0-9]+\b/g,
+  /\bbg-white\/\[?[0-9.]+\]?\b/g,
+  /\bbg-black(?:\/[0-9]+)?\b/g,
+  /bg-\[#0[0-9a-fA-F]{5}\]/g,
+];
 
 const VENDOR_CANONICAL_SHAPES: readonly ForbiddenShape[] = [
   {
@@ -501,12 +517,60 @@ export function runVendorCanonicalShapePass(
   return passReport("vendor-canonical-shapes", findings);
 }
 
+export function buildAppearanceDebtBaseline(
+  files: readonly { path: string; text: string }[] = readAppearanceStylingFiles(),
+): Record<string, number> {
+  return Object.fromEntries(
+    files
+      .map((file) => [displayPath(file.path), countAppearanceStylingDebt(file.text)] as const)
+      .filter(([path, count]) => path !== APPEARANCE_DEBT_EXCLUDED_PATH && count > 0)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+export function runAppearanceStylingDebtPass(
+  options: AppearanceStylingDebtPassOptions = {},
+): PreflightPassReport {
+  const files = options.appearanceDebtFiles ?? readAppearanceStylingFiles();
+  const baseline = options.appearanceDebtBaseline ?? readAppearanceDebtBaseline();
+  const current = buildAppearanceDebtBaseline(files);
+  const findings: PreflightFinding[] = [];
+  const notes: string[] = [];
+
+  for (const path of [...new Set([...Object.keys(baseline), ...Object.keys(current)])].sort()) {
+    const count = current[path] ?? 0;
+    const baselineCount = baseline[path];
+    if (baselineCount === undefined && count > 0) {
+      findings.push({
+        pass: "appearance-styling-debt",
+        severity: "hard-block",
+        code: "appearance-debt-new-file",
+        message: `${path} has ${count} hardcoded styling instance(s); baseline count is 0 for this new file`,
+        source: path,
+      });
+    } else if (baselineCount !== undefined && count > baselineCount) {
+      findings.push({
+        pass: "appearance-styling-debt",
+        severity: "hard-block",
+        code: "appearance-debt-increase",
+        message: `${path} has ${count} hardcoded styling instance(s); baseline count is ${baselineCount}`,
+        source: path,
+      });
+    } else if (baselineCount !== undefined && count < baselineCount) {
+      notes.push(`${path}: ${count} hardcoded styling instance(s), down from baseline ${baselineCount}; update the baseline to preserve this migration progress.`);
+    }
+  }
+
+  return { ...passReport("appearance-styling-debt", findings), notes };
+}
+
 export function runPreflightLint(options: RunPreflightOptions = {}): PreflightReport {
   const logPass = runLogScrubPass(options);
   const resourcePass = runResourceNamePass(options);
   const envPass = runEnvVarPhiPass(options);
   const shapePass = runVendorCanonicalShapePass(options);
-  const passes = [logPass, resourcePass, envPass, shapePass];
+  const appearanceDebtPass = runAppearanceStylingDebtPass(options);
+  const passes = [logPass, resourcePass, envPass, shapePass, appearanceDebtPass];
   const findings = passes.flatMap((pass) => [...pass.findings]);
   const report: PreflightReport = {
     generatedAt: options.now ?? new Date().toISOString(),
@@ -741,6 +805,46 @@ function displayPath(path: string): string {
     return path;
   }
   return relative(REPO_ROOT, path) || path;
+}
+
+function countAppearanceStylingDebt(text: string): number {
+  return APPEARANCE_DEBT_PATTERNS.reduce((count, pattern) => count + [...text.matchAll(pattern)].length, 0);
+}
+
+function readAppearanceDebtBaseline(): Record<string, number> {
+  const parsed = JSON.parse(readFileSync(APPEARANCE_DEBT_BASELINE_PATH, "utf8")) as unknown;
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Appearance styling debt baseline must be a path-to-count object.");
+  }
+  for (const [path, count] of Object.entries(parsed)) {
+    if (!path.startsWith("ui/src/") || !Number.isSafeInteger(count) || Number(count) < 0) {
+      throw new Error(`Appearance styling debt baseline has an invalid entry for ${path}.`);
+    }
+  }
+  return parsed as Record<string, number>;
+}
+
+function readAppearanceStylingFiles(): { path: string; text: string }[] {
+  const files: { path: string; text: string }[] = [];
+  walkAppearanceStyling(resolve(REPO_ROOT, "ui/src"), files);
+  return files;
+}
+
+function walkAppearanceStyling(path: string, files: { path: string; text: string }[]): void {
+  let entries;
+  try {
+    entries = readdirSync(path, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const child = join(path, entry.name);
+    if (entry.isDirectory()) {
+      walkAppearanceStyling(child, files);
+    } else if (entry.isFile() && [".css", ".tsx"].includes(extname(entry.name)) && displayPath(child) !== APPEARANCE_DEBT_EXCLUDED_PATH) {
+      files.push({ path: child, text: readFileSync(child, "utf8") });
+    }
+  }
 }
 
 function isMedplumAdapterPath(path: string): boolean {
@@ -1367,16 +1471,18 @@ function renderMarkdownReport(report: PreflightReport): string {
     lines.push(`## ${pass.id}: ${pass.status}`, "");
     if (!pass.findings.length) {
       lines.push("No findings.", "");
-      continue;
+    } else {
+      for (const finding of pass.findings) {
+        const location = finding.source
+          ? ` (${finding.source}${finding.line ? `:${finding.line}` : ""})`
+          : "";
+        const citation = finding.ledgerRow ? ` Ledger row ${finding.ledgerRow}; ${finding.lesson ?? "lesson recorded"}.` : "";
+        lines.push(`- ${finding.severity}: ${finding.code}${location} - ${finding.message}.${citation}`);
+      }
+      lines.push("");
     }
-    for (const finding of pass.findings) {
-      const location = finding.source
-        ? ` (${finding.source}${finding.line ? `:${finding.line}` : ""})`
-        : "";
-      const citation = finding.ledgerRow ? ` Ledger row ${finding.ledgerRow}; ${finding.lesson ?? "lesson recorded"}.` : "";
-      lines.push(`- ${finding.severity}: ${finding.code}${location} - ${finding.message}.${citation}`);
-    }
-    lines.push("");
+    for (const note of pass.notes ?? []) lines.push(`- note: ${note}`);
+    if (pass.notes?.length) lines.push("");
   }
   return lines.join("\n");
 }

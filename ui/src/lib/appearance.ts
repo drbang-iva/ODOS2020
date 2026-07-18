@@ -8,6 +8,9 @@ export const APPEARANCE_ACCENTS = ["gold", "sapphire", "emerald", "amethyst"] as
 export type AppearanceSurface = (typeof APPEARANCE_SURFACES)[number];
 export type AppearanceAccent = (typeof APPEARANCE_ACCENTS)[number];
 
+// Light stays valid but is withheld until the legacy hardcoded-utility migration lands.
+export const SELECTABLE_APPEARANCE_SURFACES = ["midnight", "space-black"] as const satisfies readonly AppearanceSurface[];
+
 export interface AppearanceConfig {
   surface: AppearanceSurface;
   accent: AppearanceAccent;

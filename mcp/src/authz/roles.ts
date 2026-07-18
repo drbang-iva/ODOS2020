@@ -289,15 +289,6 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
         "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
     },
   },
-  {
-    resourceType: "Basic",
-    interactions: READ_INTERACTIONS,
-    scope: {
-      kind: "practice-search",
-      criteria:
-        "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
-    },
-  },
 ];
 
 const APPEARANCE_CONFIG_READ_RULE: OdosResourceRule = {
@@ -388,6 +379,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       })),
       ...SCHEDULING_RESOURCE_RULES,
+      APPEARANCE_CONFIG_READ_RULE,
       ...DISPENSARY_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
       ...OFFICE_CHANNEL_RESOURCE_RULES,

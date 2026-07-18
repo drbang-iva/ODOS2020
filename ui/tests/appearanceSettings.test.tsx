@@ -9,6 +9,7 @@ import {
   APPEARANCE_ACCENTS,
   APPEARANCE_SURFACES,
   DEFAULT_APPEARANCE,
+  SELECTABLE_APPEARANCE_SURFACES,
   SEMANTIC_VARIABLES,
   SURFACE_VARIABLES,
   appearanceVariables,
@@ -122,10 +123,10 @@ test("saving Appearance persists the singleton and a reload restores and applies
       );
     });
     const radios = renderer.root.findAllByType("input");
-    const light = radios.find((input) => input.props.value === "light")!;
+    const spaceBlack = radios.find((input) => input.props.value === "space-black")!;
     const amethyst = radios.find((input) => input.props.value === "amethyst")!;
     await act(async () => {
-      light.props.onChange();
+      spaceBlack.props.onChange();
       amethyst.props.onChange();
     });
     await act(async () => {
@@ -135,12 +136,12 @@ test("saving Appearance persists the singleton and a reload restores and applies
     assert.equal(fixture.writes.length, 1);
     assert.equal(fixture.writes[0]?.sourceTag, "appearance-config");
     assert.deepEqual(parseAppearanceConfig(fixture.writes[0]!.resource), {
-      surface: "light",
+      surface: "space-black",
       accent: "amethyst",
     });
     const reloaded = await loadAppearanceConfigSingleton(fixture.client);
-    assert.deepEqual(reloaded.config, { surface: "light", accent: "amethyst" });
-    assert.deepEqual(dataset, { surface: "light", accent: "amethyst" });
+    assert.deepEqual(reloaded.config, { surface: "space-black", accent: "amethyst" });
+    assert.deepEqual(dataset, { surface: "space-black", accent: "amethyst" });
   } finally {
     if (renderer) act(() => renderer.unmount());
     Object.defineProperty(globalThis, "document", {
@@ -150,16 +151,27 @@ test("saving Appearance persists the singleton and a reload restores and applies
   }
 });
 
-test("Appearance is a closed scheme picker with no custom color input", () => {
+test("Appearance offers only the two ready surfaces and no custom color input", () => {
   const fixture = clientFixture();
   const renderer = create(
     <AppearanceSettingsReady config={DEFAULT_APPEARANCE} canWrite client={fixture.client} />,
   );
   const inputs = renderer.root.findAllByType("input");
-  assert.equal(inputs.length, 7);
+  assert.equal(inputs.length, 6);
   assert.ok(inputs.every((input) => input.props.type === "radio"));
   assert.deepEqual(inputs.map((input) => input.props.value), [
-    "light", "midnight", "space-black", "gold", "sapphire", "emerald", "amethyst",
+    "midnight", "space-black", "gold", "sapphire", "emerald", "amethyst",
   ]);
+  assert.deepEqual(SELECTABLE_APPEARANCE_SURFACES, ["midnight", "space-black"]);
+  assert.equal(inputs.some((input) => input.props.value === "light"), false);
   act(() => renderer.unmount());
+});
+
+test("a persisted Light configuration remains valid and resolves its variables", async () => {
+  const persisted = buildAppearanceConfigResource({ surface: "light", accent: "gold" });
+  const fixture = clientFixture(persisted);
+  const loaded = await loadAppearanceConfigSingleton(fixture.client);
+
+  assert.deepEqual(loaded.config, { surface: "light", accent: "gold" });
+  assert.equal(appearanceVariables(loaded.config)["--odos-ground"], SURFACE_VARIABLES.light["--odos-ground"]);
 });
