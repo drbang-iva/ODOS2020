@@ -363,6 +363,26 @@ export function latestBenefitsByCoverage(responses: readonly CoverageEligibility
   return latest;
 }
 
+export function hasActiveApplicableBenefit(
+  coverages: readonly Coverage[],
+  responses: readonly CoverageEligibilityResponse[],
+  kinds: readonly BenefitKind[],
+  serviceDate: string,
+): boolean {
+  const latest = latestBenefitsByCoverage(responses);
+  return coverages.some((coverage) => {
+    if (!coverage.id || coverage.status !== "active") return false;
+    if (coverage.period?.start && coverage.period.start > serviceDate) return false;
+    if (coverage.period?.end && coverage.period.end < serviceDate) return false;
+    const response = latest.get(`Coverage/${coverage.id}`);
+    if (!response || response.status !== "active" || response.outcome !== "complete") return false;
+    return kinds.some((kind) => {
+      const status = deriveBenefitStatus(response, benefitItem(response, kind), serviceDate);
+      return status === "Authorized" || status === "Eligibility Active";
+    });
+  });
+}
+
 export async function fetchPatientInsurance(patientReference: string, options: ClaimsApiOptions = {}): Promise<InsuranceScreenData> {
   return api<InsuranceScreenData>(`/insurance/coverages?patientReference=${encodeURIComponent(patientReference)}`, { method: "GET" }, options);
 }

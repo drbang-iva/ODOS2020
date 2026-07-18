@@ -18,6 +18,7 @@ import {
   emptyManualBenefitsDraft,
   fetchPatientInsurance,
   fetchVisionBenefits,
+  hasActiveApplicableBenefit,
   nextEligibleDate,
   savePatientInsurance,
   saveVisionBenefits,
@@ -240,6 +241,29 @@ test("all six benefit statuses are derived from period, authorization, exclusion
   assert.equal(deriveBenefitStatus(base, { ...item, benefit: [{ type: { text: "Allowance" }, usedMoney: { value: 1, currency: "USD" } }] }, "2026-07-10"), "Used");
   assert.equal(deriveBenefitStatus(base, item, "2026-07-10"), "Eligibility Active");
   assert.equal(deriveBenefitStatus({ ...base, insurance: [{ ...base.insurance![0], inforce: false }] }, item, "2026-07-10"), "Eligibility Expired");
+});
+
+test("claim context is active only when a current Coverage has an active applicable lens benefit", () => {
+  const response = responseFixture();
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [response], ["lens"], "2026-07-10"), true);
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [], ["lens"], "2026-07-10"), false);
+  assert.equal(
+    hasActiveApplicableBenefit([{ ...LEGACY_COVERAGE, status: "cancelled" }], [response], ["lens"], "2026-07-10"),
+    false,
+  );
+  assert.equal(
+    hasActiveApplicableBenefit([{ ...LEGACY_COVERAGE, period: { end: "2026-07-09" } }], [response], ["lens"], "2026-07-10"),
+    false,
+  );
+  const excludedLens: CoverageEligibilityResponse = {
+    ...response,
+    insurance: [{
+      ...response.insurance![0],
+      item: response.insurance![0].item?.map((item) => item.name === "lens" ? { ...item, excluded: true } : item),
+    }],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [excludedLens], ["lens"], "2026-07-10"), false);
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [excludedLens], ["exam"], "2026-07-10"), true);
 });
 
 test("both insurance clients use their dedicated routes and preserve transaction bodies", async () => {
