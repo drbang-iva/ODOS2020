@@ -14,6 +14,7 @@ export interface OpenChargeLine {
   feeCents?: number;
   taxCents?: number;
   discount?: { code: string; amountCents: number };
+  procedureReference?: string;
 }
 
 export interface OpticalCollectionCharge {
@@ -145,7 +146,8 @@ function isOpenChargeLine(value: unknown): value is OpenChargeLine {
     (line.quantity === undefined || (typeof line.quantity === "number" && Number.isFinite(line.quantity) && line.quantity > 0)) &&
     (line.feeCents === undefined || isNonnegativeInteger(line.feeCents)) &&
     (line.taxCents === undefined || isNonnegativeInteger(line.taxCents)) &&
-    (line.discount === undefined || isDiscount(line.discount));
+    (line.discount === undefined || isDiscount(line.discount)) &&
+    (line.procedureReference === undefined || (typeof line.procedureReference === "string" && /^Procedure\/[A-Za-z0-9.-]+$/.test(line.procedureReference)));
 }
 
 function isDiscount(value: unknown): value is { code: string; amountCents: number } {

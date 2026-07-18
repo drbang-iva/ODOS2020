@@ -14,6 +14,7 @@ const ALL_SETTINGS_HREFS = [
   "/settings/suggested-diagnoses",
   "/settings/optical-pricing",
   "/settings/plan-profiles",
+  "/settings/packages",
   "/admin/practice/settings/frames-data",
 ] as const;
 
@@ -27,7 +28,7 @@ test("Practice landing groups existing settings and the owner-only plan-profile 
     assert.match(html, new RegExp(`>${group}<`));
   }
   assert.match(html, /practice-settings-tone-gold/);
-  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 9);
+  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 10);
 });
 
 test("Find a setting filters static Manage links and Cmd-K focuses the search", async () => {

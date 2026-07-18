@@ -20,6 +20,7 @@ export type CatalogFieldDefinition =
   | (FieldBase & { type: "color"; palette: readonly string[] })
   | (FieldBase & { type: "duration" | "number"; min?: number; max?: number })
   | (FieldBase & { type: "select"; options: readonly { value: string; label: string }[] })
+  | (FieldBase & { type: "multi-select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "reference-picker"; valueKind?: "reference" | "text" })
   | (FieldBase & { type: "toggle" })
   | (FieldBase & { type: "weekly-hours" })
@@ -124,6 +125,19 @@ function validateField(
         throw new CatalogFieldValidationError(field.key, `${field.label} must be a listed option.`);
       }
       return value;
+    case "multi-select": {
+      if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} must be a list.`);
+      }
+      const unique = [...new Set(value)];
+      if (unique.some((entry) => !field.options.some((option) => option.value === entry))) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} contains an unlisted option.`);
+      }
+      if (field.required && unique.length === 0) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} requires at least one option.`);
+      }
+      return unique;
+    }
     case "reference-picker":
       if (typeof value !== "string") {
         throw new CatalogFieldValidationError(

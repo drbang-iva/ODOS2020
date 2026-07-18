@@ -87,6 +87,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         synonyms: ["insurance", "payer", "reimbursement", "margin", "estimate", "allowance"],
         practiceAdminOnly: true,
       },
+      {
+        href: "/settings/packages",
+        title: "Packages",
+        description: "Define prepaid procedure series, expiry, and refund policy.",
+        synonyms: ["prepaid", "sessions", "dry eye", "ipl", "rf", "series"],
+        practiceAdminOnly: true,
+      },
     ],
   },
   {

@@ -17,6 +17,7 @@ import {
   readDiagnosisCompleteness,
   type DiagnosisCompleteness,
 } from "../../lib/clinical-graph-client";
+import { BalanceChips } from "../commercial/BalanceChips";
 
 interface Props {
   patient: Patient;
@@ -175,6 +176,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
               {encounter?.status ?? "loading"}
             </span>
           </div>
+          {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

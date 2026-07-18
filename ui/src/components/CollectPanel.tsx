@@ -11,6 +11,9 @@ import {
 } from "../lib/collect";
 import { renderReceiptSheet, type FinancialSummary } from "../lib/optical-financial-summary";
 import { openPrintWindow } from "../lib/print-window";
+import { BalanceChips } from "./commercial/BalanceChips";
+import { CheckoutRedeem } from "./commercial/CheckoutRedeem";
+import { SaleSheet } from "./commercial/SaleSheet";
 
 const TENDERS: Array<{ code: CollectTender; label: string }> = [
   { code: "CASH", label: "Cash" },
@@ -51,6 +54,8 @@ export function CollectPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [receipt, setReceipt] = useState<{ result: CollectPanelResult; lines: OpenChargeLine[] }>();
+  const [sellingPackage, setSellingPackage] = useState(false);
+  const [packageRevision, setPackageRevision] = useState(0);
 
   useEffect(() => {
     if (initialCharges) {
@@ -135,28 +140,47 @@ export function CollectPanel({
           <h2 className="text-lg font-semibold">{patientName || patientReference}</h2>
           <p className="text-sm text-white/50">Open balance {money(openBalanceCents)}</p>
         </div>
-        {!embedded && <button type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setSellingPackage(true)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-xs font-bold text-cyan-100">Add package</button>
+          {!embedded && <button type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
+        </div>
       </header>
       <div className="space-y-4 p-4">
+        <BalanceChips patientReference={patientReference} revision={packageRevision} />
         {loading ? <p className="text-sm text-white/50">Loading open charges…</p> : (
           <div className="flex flex-wrap gap-2" aria-label="Open charges">
             {charges.map((charge) => {
               const selected = selectedIds.has(charge.id);
               return (
-                <button
-                  key={charge.id}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setSelectedIds((current) => {
-                    const next = new Set(current);
-                    if (selected) next.delete(charge.id); else next.add(charge.id);
-                    return next;
-                  })}
-                  className={`rounded-full border px-3 py-2 text-left text-xs ${selected ? "border-blue-400 bg-blue-950/60 text-blue-100" : "border-white/15 text-white/55"}`}
-                >
-                  <span className="block font-bold">{charge.description} · {money(charge.amountCents)}</span>
-                  <span className="text-[11px] opacity-60">{charge.source === "optical" ? "Optical" : "Other"}{charge.date ? ` · ${charge.date}` : ""}</span>
-                </button>
+                <div key={charge.id} className="min-w-[240px] flex-1">
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedIds((current) => {
+                      const next = new Set(current);
+                      if (selected) next.delete(charge.id); else next.add(charge.id);
+                      return next;
+                    })}
+                    className={`w-full rounded-full border px-3 py-2 text-left text-xs ${selected ? "border-blue-400 bg-blue-950/60 text-blue-100" : "border-white/15 text-white/55"}`}
+                  >
+                    <span className="block font-bold">{charge.description} · {money(charge.amountCents)}</span>
+                    <span className="text-[11px] opacity-60">{charge.source === "optical" ? "Optical" : "Other"}{charge.date ? ` · ${charge.date}` : ""}</span>
+                  </button>
+                  <CheckoutRedeem
+                    patientReference={patientReference}
+                    chargeItemReference={`ChargeItem/${charge.id}`}
+                    procedureReference={charge.procedureReference}
+                    procedureCode={charge.code}
+                    onRedeemed={() => {
+                      setSelectedIds((current) => {
+                        const next = new Set(current);
+                        next.delete(charge.id);
+                        return next;
+                      });
+                      setPackageRevision((current) => current + 1);
+                    }}
+                  />
+                </div>
               );
             })}
             {!charges.length && <p className="text-sm text-white/40">No open charges.</p>}
@@ -199,6 +223,14 @@ export function CollectPanel({
           {busy ? "Collecting…" : "Collect"}
         </button>
       </footer>
+      {sellingPackage && (
+        <SaleSheet
+          patientReference={patientReference}
+          patientName={patientName}
+          onClose={() => setSellingPackage(false)}
+          onSold={() => setPackageRevision((current) => current + 1)}
+        />
+      )}
     </>
   );
 

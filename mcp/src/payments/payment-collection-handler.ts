@@ -42,6 +42,7 @@ export interface OpenChargeLine {
   feeCents?: number;
   taxCents?: number;
   discount?: { code: string; amountCents: number };
+  procedureReference?: string;
 }
 
 interface OpticalOrderDraft extends AssembleOpticalCashOrderInput {
@@ -234,8 +235,15 @@ function openChargeLine(chargeItem: ChargeItem): OpenChargeLine[] {
     ) ? "optical" : "other",
     ...(coding?.code ? { code: coding.code } : {}),
     ...(chargeItem.quantity?.value ? { quantity: chargeItem.quantity.value } : {}),
+    ...(procedureReference(chargeItem) ? { procedureReference: procedureReference(chargeItem) } : {}),
     feeCents: amountCents,
   }];
+}
+
+function procedureReference(chargeItem: ChargeItem): string | undefined {
+  return chargeItem.supportingInformation
+    ?.map((reference) => reference.reference)
+    .find((reference): reference is string => /^Procedure\/[A-Za-z0-9.-]+$/.test(reference ?? ""));
 }
 
 function chargeAmountCents(chargeItem: ChargeItem): number {
