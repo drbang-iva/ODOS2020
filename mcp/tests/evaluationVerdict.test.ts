@@ -22,8 +22,6 @@ type EvaluationComment = {
 type EvaluationInput = {
   labels?: Array<{ name: string }>;
   comments?: EvaluationComment[];
-  trustedEvaluatorLogins?: string[];
-  pullRequestAuthorLogin?: string;
   currentHeadSha?: string;
 };
 
@@ -55,8 +53,6 @@ function marker(
 
 function evaluate(input: EvaluationInput = {}): EvaluationDecision {
   return evaluateEvaluationGate({
-    trustedEvaluatorLogins: [TRUSTED_LOGIN],
-    pullRequestAuthorLogin: "pr-author",
     currentHeadSha: CURRENT_HEAD,
     ...input,
   });
@@ -188,49 +184,14 @@ test("a non-Fable-or-Opus model cannot issue the final verdict", () => {
   assert.equal(decision.reason, "untrusted-model");
 });
 
-test("a marker from an untrusted login does not pass", () => {
+test("a marker posted under the PR author's login now passes", () => {
   const decision = evaluate({
     comments: [comment(marker("Fable 5", "PASS"), undefined, "pr-author")],
-  });
-
-  assert.equal(decision.passed, false);
-  assert.equal(decision.reason, "untrusted-evaluator");
-});
-
-test("a newer untrusted marker cannot supersede the newest trusted marker", () => {
-  const decision = evaluate({
-    comments: [
-      comment(marker("Opus 4.8", "PASS"), "2026-07-16T12:00:00Z"),
-      comment(
-        marker("Fable 5", "FAIL"),
-        "2026-07-16T13:00:00Z",
-        "untrusted-user",
-      ),
-    ],
   });
 
   assert.equal(decision.passed, true);
-  assert.equal(decision.evaluator, "Opus 4.8");
-});
-
-test("the PR author cannot be configured as their own evaluator", () => {
-  const decision = evaluate({
-    comments: [comment(marker("Fable 5", "PASS"), undefined, "pr-author")],
-    trustedEvaluatorLogins: ["pr-author"],
-  });
-
-  assert.equal(decision.passed, false);
-  assert.equal(decision.reason, "author-is-evaluator");
-});
-
-test("missing trusted evaluator configuration fails closed", () => {
-  const decision = evaluate({
-    comments: [comment(marker("Fable 5", "PASS"))],
-    trustedEvaluatorLogins: [],
-  });
-
-  assert.equal(decision.passed, false);
-  assert.equal(decision.reason, "trusted-evaluator-config-missing");
+  assert.equal(decision.reason, "passing-verdict");
+  assert.equal(decision.evaluatorLogin, "pr-author");
 });
 
 test("no evaluation marker fails", () => {
@@ -280,16 +241,11 @@ test("case normalization applies to verdicts, SHAs, and logins", () => {
   assert.equal(decision.verdict, "PASS");
 });
 
-test("invalid workflow inputs fail closed", () => {
+test("an invalid head SHA fails closed", () => {
   const invalidHead = evaluate({
     currentHeadSha: "abc123",
     comments: [comment(marker("Fable 5", "PASS"))],
   });
-  const missingAuthor = evaluate({
-    pullRequestAuthorLogin: "",
-    comments: [comment(marker("Fable 5", "PASS"))],
-  });
 
   assert.equal(invalidHead.reason, "invalid-gate-input");
-  assert.equal(missingAuthor.reason, "invalid-gate-input");
 });

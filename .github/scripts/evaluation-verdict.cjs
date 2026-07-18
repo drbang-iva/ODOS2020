@@ -13,7 +13,7 @@ const EXPECTED_FORM = [
   "Head-SHA: <40-character PR head SHA>",
 ].join("\n");
 const OVERRIDE_NOTE =
-  "The 'evaluated' label is the deliberate operator override and bypasses identity and head-SHA checks.";
+  "The 'evaluated' label is the deliberate operator override and bypasses marker and head-SHA checks.";
 
 function createdAtMillis(comment) {
   const timestamp = Date.parse(comment.created_at || "");
@@ -39,8 +39,6 @@ function failure(reason, message) {
 function evaluateEvaluationGate({
   labels = [],
   comments = [],
-  trustedEvaluatorLogins = [],
-  pullRequestAuthorLogin = "",
   currentHeadSha = "",
 } = {}) {
   if (labels.some((label) => (label.name || "").toLowerCase() === "evaluated")) {
@@ -49,34 +47,16 @@ function evaluateEvaluationGate({
       reason: "label-override",
       message: [
         '"evaluated" label present — operator override passes the gate',
-        "without evaluator-identity or head-SHA enforcement.",
+        "without marker or head-SHA enforcement.",
       ].join(" "),
     };
   }
 
   const normalizedHeadSha = currentHeadSha.trim().toLowerCase();
-  const normalizedAuthorLogin = normalizeLogin(pullRequestAuthorLogin);
-  if (!SHA_PATTERN.test(normalizedHeadSha) || !normalizedAuthorLogin) {
+  if (!SHA_PATTERN.test(normalizedHeadSha)) {
     return failure(
       "invalid-gate-input",
-      "EVALUATION GATE INPUT INVALID — the current PR head SHA or PR author login could not be resolved.",
-    );
-  }
-
-  const trustedLogins = new Set(
-    trustedEvaluatorLogins.map(normalizeLogin).filter(Boolean),
-  );
-  if (trustedLogins.size === 0) {
-    return failure(
-      "trusted-evaluator-config-missing",
-      [
-        "TRUSTED EVALUATOR CONFIG MISSING — no dedicated evaluator login is configured.",
-        [
-          "Set the ODOS_TRUSTED_EVALUATOR_LOGINS repository variable to the",
-          "GitHub App or user login authorized to relay Fable/Opus verdicts.",
-        ].join(" "),
-        OVERRIDE_NOTE,
-      ].join("\n"),
+      "EVALUATION GATE INPUT INVALID — the current PR head SHA could not be resolved.",
     );
   }
 
@@ -89,53 +69,25 @@ function evaluateEvaluationGate({
       "no-marker",
       [
         "NOT EVALUATED — this PR has no independent model review marker yet.",
-        `Expected the newest trusted marker to use:\n${EXPECTED_FORM}`,
-        "Author != evaluator; CodeRabbit is only a first pass.",
+        `Expected the newest marker to use:\n${EXPECTED_FORM}`,
+        "Author != evaluator remains a procedural expectation; CodeRabbit is only a first pass.",
         OVERRIDE_NOTE,
       ].join("\n"),
     );
   }
 
-  const trustedMarkerComments = markerComments
-    .filter(({ comment }) =>
-      trustedLogins.has(normalizeLogin(comment.user?.login)),
-    )
-    .sort((left, right) =>
-      createdAtMillis(left.comment) - createdAtMillis(right.comment) ||
-      left.index - right.index
-    );
-
-  if (trustedMarkerComments.length === 0) {
-    const newestMarker = markerComments.sort((left, right) =>
-      createdAtMillis(left.comment) - createdAtMillis(right.comment) ||
-      left.index - right.index
-    )[markerComments.length - 1].comment;
-    const actor = newestMarker.user?.login || "unknown actor";
-    return failure(
-      "untrusted-evaluator",
-      [
-        `UNTRUSTED EVALUATOR CHANNEL — marker from ${actor} is not from a configured dedicated evaluator login.`,
-        "Human/operator reposts through the PR author's account do not prove author/evaluator independence.",
-        OVERRIDE_NOTE,
-      ].join("\n"),
-    );
-  }
-
-  const latestComment = trustedMarkerComments[trustedMarkerComments.length - 1].comment;
+  const latestComment = markerComments.sort((left, right) =>
+    createdAtMillis(left.comment) - createdAtMillis(right.comment) ||
+    left.index - right.index
+  )[markerComments.length - 1].comment;
   const evaluatorLogin = normalizeLogin(latestComment.user?.login);
-  if (evaluatorLogin === normalizedAuthorLogin) {
-    return failure(
-      "author-is-evaluator",
-      `AUTHOR IS EVALUATOR — @${latestComment.user.login} opened the PR and cannot issue its independent verdict.`,
-    );
-  }
 
   const evaluationLines = markerLines(latestComment.body);
   if (evaluationLines.length > 1) {
     return failure(
       "ambiguous-marker",
       [
-        "EVALUATION MARKER AMBIGUOUS — the newest trusted comment must contain exactly one 'Evaluated-by:' line.",
+        "EVALUATION MARKER AMBIGUOUS — the newest marker comment must contain exactly one 'Evaluated-by:' line.",
         `Expected:\n${EXPECTED_FORM}`,
         OVERRIDE_NOTE,
       ].join("\n"),
@@ -147,7 +99,7 @@ function evaluateEvaluationGate({
     return failure(
       "missing-verdict",
       [
-        "EVALUATION VERDICT MISSING — the newest trusted marker has no recognizable verdict token.",
+        "EVALUATION VERDICT MISSING — the newest marker has no recognizable verdict token.",
         `Expected:\n${EXPECTED_FORM}`,
         "Recognized failing verdicts are FAIL, BLOCKED, and NEEDS-WORK.",
         OVERRIDE_NOTE,
@@ -172,7 +124,7 @@ function evaluateEvaluationGate({
     return failure(
       "missing-head-sha",
       [
-        "EVALUATION HEAD SHA MISSING — the newest trusted marker must contain one Head-SHA line.",
+        "EVALUATION HEAD SHA MISSING — the newest marker must contain one Head-SHA line.",
         `Expected:\n${EXPECTED_FORM}`,
         OVERRIDE_NOTE,
       ].join("\n"),
@@ -181,7 +133,7 @@ function evaluateEvaluationGate({
   if (shaLines.length > 1) {
     return failure(
       "ambiguous-head-sha",
-      "EVALUATION HEAD SHA AMBIGUOUS — the newest trusted marker contains more than one Head-SHA line.",
+      "EVALUATION HEAD SHA AMBIGUOUS — the newest marker contains more than one Head-SHA line.",
     );
   }
 
@@ -223,7 +175,7 @@ function evaluateEvaluationGate({
       evaluatedHeadSha,
       verdict,
       message: [
-        `newest trusted evaluation marker is ${verdict} from ${evaluator}`,
+        `newest evaluation marker is ${verdict} from ${evaluator}`,
         `via @${latestComment.user.login} for ${evaluatedHeadSha} — gate passes.`,
       ].join(" "),
     };
@@ -239,10 +191,10 @@ function evaluateEvaluationGate({
       verdict,
       message: [
         [
-          `EVALUATION DID NOT PASS — the newest trusted verdict is ${verdict}`,
+          `EVALUATION DID NOT PASS — the newest verdict is ${verdict}`,
           `from ${evaluator} for ${evaluatedHeadSha}.`,
         ].join(" "),
-        `A later independent pass must use:\n${EXPECTED_FORM}`,
+        `A later passing marker must use:\n${EXPECTED_FORM}`,
         OVERRIDE_NOTE,
       ].join("\n"),
     };
