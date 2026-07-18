@@ -55,6 +55,7 @@ export interface FinancialSummary {
     paymentsAppliedCents: number;
   };
   amountDueNowCents: number;
+  receiptFooterMessage?: string;
 }
 
 export interface BuildFinancialSummaryInput {
@@ -70,6 +71,7 @@ export interface BuildFinancialSummaryInput {
   chargeItems: ChargeItem[];
   /** Payments actually collected. Defaults to one line of the Invoice tender for the full net. */
   payments?: FinancialSummaryTenderLine[];
+  receiptFooterMessage?: string;
 }
 
 export function buildFinancialSummary(input: BuildFinancialSummaryInput): FinancialSummary {
@@ -138,6 +140,7 @@ export function buildFinancialSummary(input: BuildFinancialSummaryInput): Financ
     totals: { chargesSubtotalCents, discountTotalCents, taxTotalCents, chargesPlusTaxCents, netCents },
     payments: { tenderLines, paymentsAppliedCents },
     amountDueNowCents: netCents - paymentsAppliedCents,
+    ...(input.receiptFooterMessage ? { receiptFooterMessage: input.receiptFooterMessage } : {}),
   };
 }
 
@@ -222,6 +225,7 @@ export function renderReceiptSheet(summary: FinancialSummary): string {
   .odos-receipt .kv b { color: #555; font-weight: 600; }
   .odos-receipt .totals td:first-child { font-weight: 600; color: #555; }
   .odos-receipt .due { font-size: 1.05rem; font-weight: 700; border: 2px solid #111; padding: .5rem .75rem; margin-top: .75rem; display: inline-block; }
+  .odos-receipt .practice-message { margin-top: 1rem; color: #333; white-space: pre-line; }
   @media print { .odos-receipt { max-width: none; } }
 </style>
 <h1>Receipt / Financial Summary</h1>
@@ -258,7 +262,12 @@ export function renderReceiptSheet(summary: FinancialSummary): string {
   </tbody>
 </table>
 <div class="due">AMOUNT DUE NOW: ${money(summary.amountDueNowCents)}</div>
+${renderFooterMessage(summary.receiptFooterMessage)}
 </section>`;
+}
+
+function renderFooterMessage(message: string | undefined): string {
+  return message?.trim() ? `<p class="practice-message">${escapeHtml(message)}</p>` : "";
 }
 
 function componentCents(components: InvoiceLineItemPriceComponent[] | undefined, type: string): number {

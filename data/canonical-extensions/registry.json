@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-05-02",
+  "generatedAt": "2026-07-18",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile",
@@ -25,6 +25,24 @@
       "namespace": "optical-pricing",
       "status": "active",
       "sliceConsumer": "optical-pricing"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-lens-product",
+      "namespace": "lens-catalog",
+      "status": "active",
+      "sliceConsumer": "lens-catalog-a1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-lens-catalog-option",
+      "namespace": "lens-catalog",
+      "status": "active",
+      "sliceConsumer": "lens-catalog-a1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-lens-vocabulary",
+      "namespace": "lens-catalog",
+      "status": "active",
+      "sliceConsumer": "lens-catalog-a1"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/agent-identity",
@@ -529,6 +547,12 @@
       "namespace": "referral",
       "status": "active",
       "sliceConsumer": "referral-send-mvp"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-statement-message-config",
+      "namespace": "statements",
+      "status": "active",
+      "sliceConsumer": "statement-receipt-messages"
     }
   ]
 }

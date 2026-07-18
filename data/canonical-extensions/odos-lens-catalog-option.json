@@ -1,0 +1,333 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-lens-catalog-option",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-lens-catalog-option",
+  "version": "lens-catalog-a1-1",
+  "name": "ODOSLensCatalogOption",
+  "title": "ODOS Lens Catalog Option",
+  "status": "active",
+  "date": "2026-07-18",
+  "publisher": "ODOS",
+  "description": "Structured per-lab fields for coating, modifier, and lens-package Basic resources; Basic.code identifies the concrete option kind and application validation enforces its field combination.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Basic"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Per-lab coating, modifier, or lens-package fields",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [{ "type": "value", "path": "url" }],
+          "rules": "closed"
+        },
+        "min": 3,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:active",
+        "path": "Extension.extension",
+        "sliceName": "active",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:active.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "active"
+      },
+      {
+        "id": "Extension.extension:active.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:lab",
+        "path": "Extension.extension",
+        "sliceName": "lab",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:lab.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "lab"
+      },
+      {
+        "id": "Extension.extension:lab.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.extension:name",
+        "path": "Extension.extension",
+        "sliceName": "name",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:name.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "name"
+      },
+      {
+        "id": "Extension.extension:name.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.extension:category",
+        "path": "Extension.extension",
+        "sliceName": "category",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:category.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "category"
+      },
+      {
+        "id": "Extension.extension:category.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "code" }]
+      },
+      {
+        "id": "Extension.extension:price",
+        "path": "Extension.extension",
+        "sliceName": "price",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:price.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "price"
+      },
+      {
+        "id": "Extension.extension:price.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "Money" }]
+      },
+      {
+        "id": "Extension.extension:uv-protection",
+        "path": "Extension.extension",
+        "sliceName": "uv-protection",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:uv-protection.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "uv-protection"
+      },
+      {
+        "id": "Extension.extension:uv-protection.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:hydrophobic",
+        "path": "Extension.extension",
+        "sliceName": "hydrophobic",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:hydrophobic.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "hydrophobic"
+      },
+      {
+        "id": "Extension.extension:hydrophobic.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:hev-protection",
+        "path": "Extension.extension",
+        "sliceName": "hev-protection",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:hev-protection.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "hev-protection"
+      },
+      {
+        "id": "Extension.extension:hev-protection.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:warranty-years",
+        "path": "Extension.extension",
+        "sliceName": "warranty-years",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:warranty-years.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "warranty-years"
+      },
+      {
+        "id": "Extension.extension:warranty-years.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "decimal" }]
+      },
+      {
+        "id": "Extension.extension:house-default",
+        "path": "Extension.extension",
+        "sliceName": "house-default",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:house-default.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "house-default"
+      },
+      {
+        "id": "Extension.extension:house-default.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:unit",
+        "path": "Extension.extension",
+        "sliceName": "unit",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:unit.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "unit"
+      },
+      {
+        "id": "Extension.extension:unit.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "code" }]
+      },
+      {
+        "id": "Extension.extension:auto-trigger",
+        "path": "Extension.extension",
+        "sliceName": "auto-trigger",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:auto-trigger.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "auto-trigger"
+      },
+      {
+        "id": "Extension.extension:auto-trigger.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:includes-frame",
+        "path": "Extension.extension",
+        "sliceName": "includes-frame",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:includes-frame.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "includes-frame"
+      },
+      {
+        "id": "Extension.extension:includes-frame.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "boolean" }]
+      },
+      {
+        "id": "Extension.extension:base-price",
+        "path": "Extension.extension",
+        "sliceName": "base-price",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:base-price.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "base-price"
+      },
+      {
+        "id": "Extension.extension:base-price.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:add-on",
+        "path": "Extension.extension",
+        "sliceName": "add-on",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:add-on.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "add-on"
+      },
+      {
+        "id": "Extension.extension:add-on.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:order-notation",
+        "path": "Extension.extension",
+        "sliceName": "order-notation",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:order-notation.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "order-notation"
+      },
+      {
+        "id": "Extension.extension:order-notation.value[x]",
+        "path": "Extension.extension.value[x]",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-lens-catalog-option"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

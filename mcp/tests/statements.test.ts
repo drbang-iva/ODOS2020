@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  Basic,
   Bundle,
   Claim,
   ClaimResponse,
@@ -29,6 +30,7 @@ import {
   STATEMENT_TRANSACTION_CHILD_LIMIT,
   type StatementRunResult,
 } from "../src/statements/statements.js";
+import { buildStatementMessageConfigResource } from "../src/statements/statement-message-config.js";
 
 const GENERATED_AT = "2026-07-12T15:00:00.000Z";
 
@@ -43,6 +45,33 @@ test("a partial payment produces a balance-forward statement exactly reconciled 
   assert.equal(statement.paymentsAppliedCents, 4_000);
   assert.equal(statement.balanceCents, 6_000);
   assert.deepEqual(statement.invoices.map((row) => row.balanceCents), [6_000]);
+});
+
+test("configured statement message originates in the Basic singleton and round-trips through persisted statement data", async () => {
+  const message = "Pay online at portal.example.test or call our office.";
+  const fixture = fakeFhir({
+    patients: [patient("p1", "Alex Rivera")],
+    invoices: [invoice("i1", "p1", 10_000)],
+    payments: [],
+    basics: [{
+      ...buildStatementMessageConfigResource({ statementFooterMessage: message }),
+      id: "statement-message-config-1",
+      meta: { lastUpdated: "2026-07-18T12:00:00.000Z" },
+    }],
+  });
+  const result = await handleGeneratePatientStatementRequest(statementDeps(fixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/p1" },
+  });
+
+  assert.equal(result.status, 200);
+  const statement = (result.body as StatementRunResult).statements[0];
+  assert.equal(statement.statementFooterMessage, message);
+  const storedSnapshot = fixture.storedTasks
+    .find((task) => code(task) === PATIENT_STATEMENT_CODE)
+    ?.output?.find((item) => item.type.coding?.some((coding) => coding.code === "snapshot"))
+    ?.valueString;
+  assert.equal((JSON.parse(storedSnapshot ?? "{}") as { statementFooterMessage?: string }).statementFooterMessage, message);
 });
 
 test("an internally inconsistent Invoice is rejected instead of emitting a wrong balance", () => {
@@ -368,6 +397,7 @@ function fakeFhir(
     claimResponses?: ClaimResponse[];
     practitioners?: Practitioner[];
     practitionerRoles?: PractitionerRole[];
+    basics?: Basic[];
   },
   options: { failTransactionAt?: number; failCleanup?: boolean } = {},
 ) {
@@ -376,15 +406,16 @@ function fakeFhir(
   let storedTaskCount = 0;
   const fhir = {
     search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
-      const rows = resourceType === "Patient" ? input.patients
+      const rows: Resource[] = resourceType === "Patient" ? input.patients
         : resourceType === "Invoice" ? input.invoices
           : resourceType === "PaymentReconciliation" ? input.payments
             : resourceType === "Claim" ? input.claims ?? []
               : resourceType === "ClaimResponse" ? input.claimResponses ?? []
                 : resourceType === "Practitioner" ? input.practitioners ?? []
                   : resourceType === "PractitionerRole" ? input.practitionerRoles ?? []
-            : resourceType === "Task" ? storedTasks
-              : [];
+                    : resourceType === "Basic" ? input.basics ?? []
+                      : resourceType === "Task" ? storedTasks
+                        : [];
       return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
     },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {

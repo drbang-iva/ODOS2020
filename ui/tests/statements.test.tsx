@@ -35,6 +35,21 @@ test("printable statement renders only a reconciled balance-forward snapshot", (
   assert.throws(() => renderBalanceForwardStatement({ ...statement("bad", "2026-07-12T15:00:00.000Z", 6_000), balanceCents: 6_001 }), /do not reconcile/);
 });
 
+test("balance-forward statement renders the configured footer escaped and omits the element when unset", () => {
+  const configured = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    statementFooterMessage: '<script>alert("x")</script> Pay online',
+  };
+  const html = renderBalanceForwardStatement(configured);
+  assert.match(html, /class="practice-message"/);
+  assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt; Pay online/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(
+    renderBalanceForwardStatement(statement("new", "2026-07-12T15:00:00.000Z", 6_000)),
+    /class="practice-message"/,
+  );
+});
+
 test("insurance-aware mailer renders sourced line detail, addresses, provider identifiers, and static tear-off fields", () => {
   const row: StatementRow = {
     ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
@@ -100,6 +115,27 @@ test("detailed mailer prints an invoice-only row for a pre-seam Order", () => {
   assert.match(html, /Invoice-only detail/);
   assert.match(html, /pre-seam balance/);
   assert.match(html, /PAY THIS AMOUNT[\s\S]*\$60\.00/);
+});
+
+test("insurance-aware detailed statement renders the configured footer", () => {
+  const row: StatementRow = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    statementFooterMessage: "Balances are due upon receipt.",
+    detail: {
+      header: { practiceName: "Independent Eye Care" },
+      orders: [{
+        invoiceReference: "Invoice/new",
+        orderNumber: "ORDER-TEST",
+        mode: "invoice-only",
+        lines: [],
+        patientPayments: [],
+      }],
+    },
+  };
+  assert.match(
+    renderBalanceForwardStatement(row),
+    /class="practice-message">Balances are due upon receipt\.<\/p>/,
+  );
 });
 
 test("statement screen and print show unapplied credit as a separate line and the net balance due", () => {

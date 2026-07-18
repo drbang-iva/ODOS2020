@@ -30,6 +30,10 @@ import {
 } from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
+import {
+  STATEMENT_MESSAGE_MAX_LENGTH,
+  loadStatementMessageConfig,
+} from "./statement-message-config.js";
 
 export const STATEMENT_TASK_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-task";
 export const STATEMENT_RUN_CODE = "statement-run";
@@ -127,6 +131,7 @@ export interface StatementSnapshot {
   unappliedCreditCents?: number;
   balanceDueCents?: number;
   creditBalanceCents?: number;
+  statementFooterMessage?: string;
   detail?: StatementDetail;
 }
 
@@ -241,6 +246,7 @@ export function buildStatementSnapshot(input: {
   invoices: Invoice[];
   paymentReconciliations: PaymentReconciliation[];
   generatedAt: string;
+  statementFooterMessage?: string;
 }): StatementSnapshot {
   if (!validDateTime(input.generatedAt)) throw new StatementValidationError("Statement generatedAt must be a valid dateTime.");
   const patientReference = patientReferenceOf(input.patient);
@@ -295,6 +301,7 @@ export function buildStatementSnapshot(input: {
     totalNetCents,
     paymentsAppliedCents,
     balanceCents,
+    ...(input.statementFooterMessage ? { statementFooterMessage: input.statementFooterMessage } : {}),
   };
 }
 
@@ -506,7 +513,7 @@ async function runStatements(
     const invoiceParams: Record<string, string> = options.patientReference
       ? { status: "issued", subject: options.patientReference, _sort: "date" }
       : { status: "issued", _sort: "subject,date" };
-    const [invoices, payments, claims, claimResponses] = await Promise.all([
+    const [invoices, payments, claims, claimResponses, messageConfig] = await Promise.all([
       searchAll<Invoice>(fhir, "Invoice", invoiceParams),
       searchAll<PaymentReconciliation>(fhir, "PaymentReconciliation", { status: "active" }),
       searchAll<Claim>(fhir, "Claim", {
@@ -517,6 +524,7 @@ async function runStatements(
         status: "active",
         ...(options.patientReference ? { patient: options.patientReference } : {}),
       }),
+      loadStatementMessageConfig(fhir),
     ]);
     const patientReferences = options.patientReference
       ? [options.patientReference]
@@ -550,7 +558,13 @@ async function runStatements(
       try {
         const snapshot = addStatementDetail({
           snapshot: addAccountCredit(
-            buildStatementSnapshot({ patient, invoices: patientInvoices, paymentReconciliations: payments, generatedAt: options.generatedAt }),
+            buildStatementSnapshot({
+              patient,
+              invoices: patientInvoices,
+              paymentReconciliations: payments,
+              generatedAt: options.generatedAt,
+              statementFooterMessage: messageConfig.statementFooterMessage,
+            }),
             payments,
           ),
           patient,
@@ -897,6 +911,11 @@ function validateSnapshot(snapshot: StatementSnapshot): void {
   }
   for (const value of [snapshot.totalGrossCents, snapshot.totalNetCents, snapshot.paymentsAppliedCents, snapshot.balanceCents]) {
     if (!Number.isInteger(value) || value < 0) throw new StatementValidationError("Patient statement snapshot contains invalid money.");
+  }
+  if (snapshot.statementFooterMessage !== undefined
+    && (typeof snapshot.statementFooterMessage !== "string"
+      || snapshot.statementFooterMessage.length > STATEMENT_MESSAGE_MAX_LENGTH)) {
+    throw new StatementValidationError("Patient statement snapshot contains an invalid footer message.");
   }
   for (const invoice of snapshot.invoices) {
     if (!/^Invoice\/[A-Za-z0-9.-]+$/.test(invoice.invoiceReference)

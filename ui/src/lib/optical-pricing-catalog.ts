@@ -15,8 +15,6 @@ export const ODOS_CONTACT_LENS_PRODUCT_IDENTITY_EXTENSION_URL =
 const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
 const OPTICAL_PRICING_CATALOG_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/optical-pricing-catalog";
-const LENS_PRICING_CATEGORY_SYSTEM =
-  "https://odos2020.com/fhir/CodeSystem/lens-pricing-category";
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const PRACTICE_ID = "odos-practice";
 const FRAME_CATALOG_PREFIX = "https://odos2020.com/catalog/frames/";
@@ -26,20 +24,6 @@ const ODOS_OPTOMETRY_SERVICE_LINE_CODE = "310105000";
 export function frameChargeItemDefinitionCanonical(catalogCanonicalUrl: string): string {
   return `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/frames/${encodeURIComponent(catalogCanonicalUrl)}`;
 }
-
-export type LensPricingCategory = "design" | "material" | "treatment";
-
-export type LensPricingItem = {
-  id: string;
-  active: boolean;
-  label: string;
-  category: LensPricingCategory;
-  billingCode: string;
-  lab: string;
-  perLensWholesaleCostCents?: number;
-  perLensRetailPriceCents: number;
-  resource?: ChargeItemDefinition;
-};
 
 export type FramePricingItem = {
   id: string;
@@ -61,13 +45,6 @@ export type ContactLensPricingItem = {
   retailPriceCents: number;
   resource?: ChargeItemDefinition;
 };
-
-export const LENS_PRICING_SEEDS: readonly LensPricingItem[] = [
-  lensSeed("lens-bifocal-flat-top", "Bifocal (flat top)", "design", "", 6250),
-  lensSeed("lens-progressive-addon", "Progressive add-on", "design", "V2781", 8200),
-  lensSeed("lens-ar-basic", "AR basic", "treatment", "", 6915),
-  lensSeed("lens-prism-per-diopter", "Prism (per diopter)", "treatment", "", 500),
-];
 
 type OpticalPricingClient = Pick<
   typeof fhir,
@@ -100,45 +77,6 @@ export function framePricingAdapter(
   });
 }
 
-export function lensPricingAdapter(
-  client: OpticalPricingClient,
-): CatalogAdapter<LensPricingItem> {
-  const base = resourceCatalogAdapter<LensPricingItem, ChargeItemDefinition>({
-    resourceType: "ChargeItemDefinition",
-    searchParams: { _count: "100" },
-    client,
-    sourceTag: "lens-pricing-catalog",
-    capabilities: RESOURCE_CAPABILITIES,
-    includeResource: (resource) => hasCatalogKind(resource, "lens-pricing"),
-    toItem: lensPricingItem,
-    buildResource: buildLensPricingResource,
-    deactivateResource: (item) => ({
-      ...buildLensPricingResource(item),
-      status: "retired",
-    }),
-  });
-  return {
-    ...base,
-    async list() {
-      const rows = await base.list();
-      const persistedKeys = new Set(
-        rows.map((row) => canonicalTail(row.resource?.url)).filter(Boolean),
-      );
-      return [
-        ...rows,
-        ...LENS_PRICING_SEEDS
-          .filter((seed) => !persistedKeys.has(seed.id))
-          .map((seed) => structuredClone(seed)),
-      ];
-    },
-    async deactivate(item) {
-      return item.resource?.id
-        ? base.deactivate(item)
-        : base.save({ ...item, active: false });
-    },
-  };
-}
-
 export function contactLensPricingAdapter(
   client: OpticalPricingClient,
 ): CatalogAdapter<ContactLensPricingItem> {
@@ -155,31 +93,6 @@ export function contactLensPricingAdapter(
       ...buildContactLensPricingResource(item),
       status: "retired",
     }),
-  });
-}
-
-export function buildLensPricingResource(item: LensPricingItem): ChargeItemDefinition {
-  assertNonnegativeCents(item.perLensRetailPriceCents, "Retail price per lens");
-  if (item.perLensWholesaleCostCents !== undefined) {
-    assertNonnegativeCents(item.perLensWholesaleCostCents, "Wholesale cost per lens");
-  }
-  const managedExtensions: Extension[] = [
-    ...(item.lab ? [{ url: ODOS_OPTICAL_LAB_EXTENSION_URL, valueString: item.lab }] : []),
-    ...moneyExtension(item.perLensWholesaleCostCents),
-  ];
-  return buildPricingResource({
-    item,
-    catalogKind: "lens-pricing",
-    label: item.label,
-    billingCode: item.billingCode,
-    supplementalCoding: [{ system: LENS_PRICING_CATEGORY_SYSTEM, code: item.category }],
-    retailPriceCents: item.perLensRetailPriceCents,
-    description: "Wholesale and retail prices are per lens.",
-    managedExtensions,
-    managedExtensionUrls: new Set([
-      ODOS_OPTICAL_LAB_EXTENSION_URL,
-      ODOS_WHOLESALE_COST_EXTENSION_URL,
-    ]),
   });
 }
 
@@ -264,20 +177,14 @@ function buildPricingResource({
   item,
   catalogKind,
   label,
-  billingCode,
-  supplementalCoding = [],
   retailPriceCents,
-  description,
   managedExtensions,
   managedExtensionUrls,
 }: {
-  item: LensPricingItem | ContactLensPricingItem;
-  catalogKind: "lens-pricing" | "contact-lens-pricing";
+  item: ContactLensPricingItem;
+  catalogKind: "contact-lens-pricing";
   label: string;
-  billingCode?: string;
-  supplementalCoding?: NonNullable<NonNullable<ChargeItemDefinition["code"]>["coding"]>;
   retailPriceCents: number;
-  description?: string;
   managedExtensions: Extension[];
   managedExtensionUrls: ReadonlySet<string>;
 }): ChargeItemDefinition {
@@ -291,7 +198,6 @@ function buildPricingResource({
     version: original?.version ?? "1",
     status: item.active ? "active" : "retired",
     title: label,
-    ...(description ? { description } : {}),
     code: {
       coding: [
         {
@@ -299,10 +205,6 @@ function buildPricingResource({
           code: catalogKind,
           display: label,
         },
-        ...(billingCode
-          ? [{ system: HCPCS_SYSTEM, code: billingCode }]
-          : []),
-        ...supplementalCoding,
       ],
       text: label,
     },
@@ -323,24 +225,6 @@ function buildPricingResource({
         ],
       },
     ],
-  };
-}
-
-function lensPricingItem(resource: ChargeItemDefinition): LensPricingItem {
-  return {
-    id: resource.id ?? canonicalTail(resource.url),
-    active: resource.status === "active",
-    label: resource.title ?? resource.code?.text ?? "",
-    category: (
-      resource.code?.coding?.find((coding) => coding.system === LENS_PRICING_CATEGORY_SYSTEM)
-        ?.code ?? "design"
-    ) as LensPricingCategory,
-    billingCode:
-      resource.code?.coding?.find((coding) => coding.system === HCPCS_SYSTEM)?.code ?? "",
-    lab: extensionString(resource, ODOS_OPTICAL_LAB_EXTENSION_URL),
-    perLensWholesaleCostCents: extensionMoneyCents(resource),
-    perLensRetailPriceCents: retailPriceCents(resource),
-    resource,
   };
 }
 
@@ -402,10 +286,6 @@ function extensionMoneyCents(resource: ChargeItemDefinition): number | undefined
   return typeof value === "number" ? Math.round(value * 100) : undefined;
 }
 
-function extensionString(resource: ChargeItemDefinition, url: string): string {
-  return resource.extension?.find((extension) => extension.url === url)?.valueString ?? "";
-}
-
 function childExtensionCode(extension: Extension | undefined, url: string): string {
   return extension?.extension?.find((child) => child.url === url)?.valueCode ?? "";
 }
@@ -416,7 +296,7 @@ function childExtensionString(extension: Extension | undefined, url: string): st
 
 function hasCatalogKind(
   resource: ChargeItemDefinition,
-  kind: "lens-pricing" | "contact-lens-pricing",
+  kind: "contact-lens-pricing",
 ): boolean {
   return Boolean(
     resource.code?.coding?.some(
@@ -433,22 +313,4 @@ function assertNonnegativeCents(value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${label} must be a nonnegative whole number of cents.`);
   }
-}
-
-function lensSeed(
-  id: string,
-  label: string,
-  category: LensPricingCategory,
-  billingCode: string,
-  perLensRetailPriceCents: number,
-): LensPricingItem {
-  return {
-    id,
-    active: true,
-    label,
-    category,
-    billingCode,
-    lab: "",
-    perLensRetailPriceCents,
-  };
 }
