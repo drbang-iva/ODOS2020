@@ -303,6 +303,9 @@ test("inline media is attribute-escaped and bounded by per-file and aggregate by
   assert.doesNotMatch(html, /AA" onerror="/);
   assert.doesNotMatch(html, /Aggregate rejected/);
   assert.doesNotMatch(html, /Oversized/);
+  assert.equal(fhir.readKeys.includes("Media/accepted-one"), true);
+  assert.equal(fhir.readKeys.includes("Media/accepted-two"), true);
+  assert.equal(fhir.readKeys.includes("Media/escaped"), true);
   assert.equal(fhir.readKeys.includes("Media/aggregate-rejected"), false);
   assert.equal(fhir.readKeys.includes("Media/oversized"), false);
 });
@@ -361,7 +364,9 @@ class MemoryFhir implements ReferralFhirClient {
       resourceType: "Bundle",
       type: "searchset",
       total,
-      entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })),
+      entry: rows.map((resource) => ({
+        resource: structuredClone(summaryResource(resource, query._summary === "true")) as T,
+      })),
     };
   }
 }
@@ -499,4 +504,11 @@ function encounterReference(resource: Resource): string | undefined {
 function encounterDate(resource: Resource): string {
   if (resource.resourceType !== "Encounter") return "";
   return resource.period?.end ?? resource.period?.start ?? resource.meta?.lastUpdated ?? "";
+}
+
+function summaryResource(resource: Resource, summary: boolean): Resource {
+  if (!summary || resource.resourceType !== "Media") return resource;
+  const content = { ...resource.content };
+  delete content.data;
+  return { ...resource, content };
 }

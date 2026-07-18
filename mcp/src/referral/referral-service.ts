@@ -307,7 +307,7 @@ export class ReferralService {
         || (encounterId && media.encounter?.reference !== `Encounter/${encounterId}`)
       ) continue;
       const inlineBytes = media.content.data
-        ? Buffer.byteLength(media.content.data, "utf8")
+        ? Buffer.byteLength(media.content.data, "base64")
         : 0;
       const attachmentBytes = Math.max(media.content.size ?? 0, inlineBytes);
       if (
