@@ -57,6 +57,31 @@ test("CollectPanel switches among only Cash, Check, and manual card tenders", as
   assert.equal(renderer.root.findAllByProps({ "aria-pressed": true }).some((node) => node.children.join("") === "Card — manual entry"), true);
 });
 
+test("disabled CollectPanel exposes no financial action and closes an open deposit sheet", async () => {
+  const panel = (disabled: boolean) => (
+    <CollectPanel
+      embedded
+      disabled={disabled}
+      patientReference="Patient/patient-1"
+      onClose={() => undefined}
+      initialCharges={CHARGES}
+    />
+  );
+  const renderer = create(panel(false));
+  await act(async () => undefined);
+  const deposit = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Deposit Credit Bank");
+  assert.ok(deposit);
+
+  act(() => deposit.props.onClick());
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Deposit to Credit Bank" }).length, 1);
+
+  await act(async () => { renderer.update(panel(true)); });
+  const text = renderer.root.findAllByType("button").map((button) => button.children.join("")).join("\n");
+  assert.doesNotMatch(text, /Deposit Credit Bank|Add package|Apply \$/);
+  assert.equal(renderer.root.findAllByProps({ "aria-label": "Deposit to Credit Bank" }).length, 0);
+  assert.ok(renderer.root.findAllByType("button").every((button) => button.props.disabled === true));
+});
+
 test("CARD_MANUAL posts to the record-only collection endpoint with no processor request", async () => {
   let captured: { url: string; body: Record<string, unknown> } | undefined;
   await collectRecordedTender({

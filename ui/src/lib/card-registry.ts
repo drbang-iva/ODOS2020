@@ -6,7 +6,8 @@ export type ChartCardId =
   | "care-team"
   | "problem-list"
   | "programs"
-  | "product-timeline";
+  | "product-timeline"
+  | "longitudinal-imaging";
 
 export interface ChartCardRegistration {
   id: ChartCardId;
@@ -44,6 +45,11 @@ export const CHART_CARD_REGISTRY: ChartCardRegistration[] = [
     id: "problem-list",
     label: "Problem List",
     densityByRole: { doctor: "full", tech: "compact", "front-desk": "compact", "practice-admin": "compact" },
+  },
+  {
+    id: "longitudinal-imaging",
+    label: "Longitudinal Imaging",
+    densityByRole: { doctor: "full", tech: "full", "front-desk": "compact", "practice-admin": "compact" },
   },
 ];
 

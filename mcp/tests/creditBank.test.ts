@@ -6,6 +6,7 @@ import type { ChargeItem, Invoice, PaymentReconciliation, Resource } from "@medp
 import { Client } from "pg";
 import {
   ODOS_BANK_CREDIT_TENDER_CODE,
+  ODOS_BANK_CREDIT_TRANSACTION_SYSTEM,
   finalizeCreditBankDeposit,
   prepareCreditBankDeposit,
   spendCreditBankAtCheckout,
@@ -17,6 +18,14 @@ import {
   type CreditBankSpendOperation,
   type PatientCreditBank,
 } from "../src/commercial-engine/ledger-store.js";
+import {
+  paymentTenderExtension,
+  paymentTenderExtensionForReconciliation,
+} from "../src/fhir/odosPaymentTender.js";
+import {
+  DEFAULT_PACKAGE_EXPIRY_SWEEP_MS,
+  packageExpirySweepIntervalMs,
+} from "../src/jobs/expireCommercialPackages.js";
 
 const bank: PatientCreditBank = {
   patientFhirId: "patient-1",
@@ -107,6 +116,46 @@ test("promotional bonus finalization remains practice-admin gated from frozen In
   ), /Practice-admin/);
 });
 
+test("a partial manual payment on a funding Invoice does not mint Credit Bank value", async () => {
+  const invoice = await creditBankFundingInvoice();
+  let minted = false;
+  await assert.rejects(finalizeCreditBankDeposit(
+    { store: { finalizeCreditBankDeposit: async () => { minted = true; return bank; } } as never },
+    {
+      read: async () => ({ ...invoice, status: "issued" as const, extension: [paymentTenderExtension("CASH")] }),
+      create: async () => { throw new Error("not used"); },
+      search: async () => paymentBundle("bank-funding", 10_000),
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      invoiceReference: "Invoice/bank-funding",
+      staffReference: "Practitioner/admin-1",
+      allowBonus: true,
+    },
+  ), /successful payment/);
+  assert.equal(minted, false);
+});
+
+test("an unpaid funding Invoice with tender metadata does not mint Credit Bank value", async () => {
+  const invoice = await creditBankFundingInvoice();
+  let minted = false;
+  await assert.rejects(finalizeCreditBankDeposit(
+    { store: { finalizeCreditBankDeposit: async () => { minted = true; return bank; } } as never },
+    {
+      read: async () => ({ ...invoice, status: "issued" as const, extension: [paymentTenderExtension("CHECK")] }),
+      create: async () => { throw new Error("not used"); },
+      search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      invoiceReference: "Invoice/bank-funding",
+      staffReference: "Practitioner/admin-1",
+      allowBonus: true,
+    },
+  ), /successful payment/);
+  assert.equal(minted, false);
+});
+
 test("Credit Bank checkout consumes before BANK_CREDIT settlement and preserves the real charge price", async () => {
   const events: string[] = [];
   const created: Resource[] = [];
@@ -161,6 +210,75 @@ test("Credit Bank checkout consumes before BANK_CREDIT settlement and preserves 
   assert.equal(payment?.paymentAmount?.value, 550);
   assert.equal(payment?.extension?.some((extension) => extension.valueCodeableConcept?.coding?.some((coding) => coding.code === ODOS_BANK_CREDIT_TENDER_CODE)), true);
   assert.deepEqual(events, ["Invoice", "consume", "PaymentReconciliation", "complete"]);
+});
+
+test("Credit Bank checkout rejects recovered Invoices outside the issued-or-balanced allowlist", async (t) => {
+  for (const status of ["cancelled", "entered-in-error", "draft"] as const) {
+    await t.test(status, async () => {
+      let spent = false;
+      await assert.rejects(spendCreditBankAtCheckout(
+        {
+          store: {
+            beginCreditBankSpend: async () => spendOperation({ invoiceFhirId: "bank-spend-invoice" }),
+            recordCreditBankSpendInvoice: async () => spendOperation({ invoiceFhirId: "bank-spend-invoice" }),
+            spendCreditBank: async () => { spent = true; return bank; },
+          } as never,
+        },
+        {
+          read: async <T>(resourceType: string): Promise<T> => (resourceType === "ChargeItem"
+            ? charge()
+            : spendInvoice(status)) as T,
+          create: async () => { throw new Error("not used"); },
+          search: async () => { throw new Error("not used"); },
+        } as never,
+        checkoutInput,
+      ), /does not match this charge/);
+      assert.equal(spent, false);
+    });
+  }
+});
+
+test("Credit Bank checkout rejects a recovered payment without BANK_CREDIT tender coding", async () => {
+  let completed = false;
+  await assert.rejects(spendCreditBankAtCheckout(
+    {
+      store: {
+        beginCreditBankSpend: async () => spendOperation({ invoiceFhirId: "bank-spend-invoice", paymentFhirId: "bank-payment" }),
+        recordCreditBankSpendInvoice: async () => spendOperation({ invoiceFhirId: "bank-spend-invoice", paymentFhirId: "bank-payment" }),
+        spendCreditBank: async () => bank,
+        recordCreditBankSpendPayment: async () => spendOperation({ invoiceFhirId: "bank-spend-invoice", paymentFhirId: "bank-payment" }),
+        completeCreditBankSpend: async () => { completed = true; return spendOperation(); },
+      } as never,
+    },
+    {
+      read: async <T>(resourceType: string): Promise<T> => {
+        if (resourceType === "ChargeItem") return charge() as T;
+        if (resourceType === "Invoice") return spendInvoice("issued") as T;
+        return {
+          resourceType: "PaymentReconciliation",
+          id: "bank-payment",
+          status: "active",
+          outcome: "complete",
+          created: "2026-07-18T15:00:00Z",
+          paymentDate: "2026-07-18",
+          paymentAmount: { value: 550, currency: "USD" },
+          paymentIdentifier: {
+            system: ODOS_BANK_CREDIT_TRANSACTION_SYSTEM,
+            value: "credit-bank:charge-1",
+          },
+          detail: [{
+            request: { reference: "Invoice/bank-spend-invoice" },
+            amount: { value: 550, currency: "USD" },
+          }],
+          extension: [paymentTenderExtensionForReconciliation({ code: "CASH" })],
+        } as T;
+      },
+      create: async () => { throw new Error("not used"); },
+      search: async () => { throw new Error("not used"); },
+    } as never,
+    checkoutInput,
+  ), /not a complete settlement/);
+  assert.equal(completed, false);
 });
 
 test("largest-remainder allocation keeps $1,000 divided by three exact", () => {
@@ -245,6 +363,13 @@ test("expiry sweep is idempotent and row-locks against redemption", async () => 
   assert.equal(queries.some((sql) => sql.includes("FOR UPDATE")), true);
 });
 
+test("package expiry sweep interval falls back for empty, non-numeric, zero, and negative values", () => {
+  for (const value of [undefined, "", "not-a-number", "0", "-1"]) {
+    assert.equal(packageExpirySweepIntervalMs(value), DEFAULT_PACKAGE_EXPIRY_SWEEP_MS);
+  }
+  assert.equal(packageExpirySweepIntervalMs("60000"), 60_000);
+});
+
 test("an injected pool remains owned by its caller", async () => {
   let ended = false;
   const store = new PgCommercialEngineStore({
@@ -267,13 +392,18 @@ test("Credit Bank migration enforces append-only dollars and cash-refund evidenc
 });
 
 test("fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE and DELETE", { timeout: 30_000 }, async (t) => {
-  const adminUrl = process.env.ODOS_POSTGRES_URL;
+  const adminUrl = process.env.ODOS_TEST_POSTGRES_URL;
   if (!adminUrl) {
-    t.skip("ODOS_POSTGRES_URL is required for the fresh Postgres Credit Bank fixture.");
+    t.skip("ODOS_TEST_POSTGRES_URL is required for the destructive local Credit Bank fixture.");
     return;
   }
+  const adminTarget = new URL(adminUrl);
+  assert.ok(
+    adminTarget.hostname === "localhost" || adminTarget.hostname === "127.0.0.1",
+    "ODOS_TEST_POSTGRES_URL must use localhost or 127.0.0.1.",
+  );
   const databaseName = `odos_credit_bank_${randomUUID().replaceAll("-", "")}`;
-  const testUrl = new URL(adminUrl);
+  const testUrl = new URL(adminTarget);
   testUrl.pathname = `/${databaseName}`;
   const admin = new Client({ connectionString: adminUrl });
   const probe = new Client({ connectionString: testUrl.toString() });
@@ -383,3 +513,76 @@ test("fresh Postgres applies the Credit Bank migration and rejects ledger UPDATE
     await admin.end();
   }
 });
+
+async function creditBankFundingInvoice(): Promise<Invoice> {
+  return prepareCreditBankDeposit(
+    { store: {} as never, now: () => "2026-07-18T14:00:00Z" },
+    {
+      create: async <T>(resource: T): Promise<T> => ({ ...(resource as object), id: "bank-funding" }) as T,
+      read: async () => { throw new Error("not used"); },
+      search: async () => { throw new Error("not used"); },
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      depositCents: 50_000,
+      staffReference: "Practitioner/admin-1",
+    },
+  );
+}
+
+function paymentBundle(invoiceId: string, allocatedCents: number) {
+  return {
+    resourceType: "Bundle" as const,
+    type: "searchset" as const,
+    entry: [{
+      resource: {
+        resourceType: "PaymentReconciliation" as const,
+        status: "active" as const,
+        outcome: "complete" as const,
+        paymentAmount: { value: allocatedCents / 100, currency: "USD" },
+        detail: [{
+          request: { reference: `Invoice/${invoiceId}` },
+          amount: { value: allocatedCents / 100, currency: "USD" },
+        }],
+      },
+    }],
+  };
+}
+
+const checkoutInput = {
+  patientReference: "Patient/patient-1",
+  chargeItemReference: "ChargeItem/charge-1",
+  staffReference: "Practitioner/staff-1",
+};
+
+function charge(): ChargeItem {
+  return {
+    resourceType: "ChargeItem",
+    id: "charge-1",
+    status: "billable",
+    code: { text: "Dry-eye service" },
+    subject: { reference: "Patient/patient-1" },
+    priceOverride: { value: 550, currency: "USD" },
+  };
+}
+
+function spendInvoice(status: Invoice["status"]): Invoice {
+  return {
+    resourceType: "Invoice",
+    id: "bank-spend-invoice",
+    status,
+    subject: { reference: "Patient/patient-1" },
+    lineItem: [{ sequence: 1, chargeItemReference: { reference: "ChargeItem/charge-1" } }],
+    totalNet: { value: 550, currency: "USD" },
+  };
+}
+
+function spendOperation(overrides: Partial<CreditBankSpendOperation> = {}): CreditBankSpendOperation {
+  return {
+    chargeItemFhirId: "charge-1",
+    patientFhirId: "patient-1",
+    amountCents: 55_000,
+    createdAt: "2026-07-18T15:00:00Z",
+    ...overrides,
+  };
+}

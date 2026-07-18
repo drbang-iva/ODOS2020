@@ -7,9 +7,17 @@ import {
 } from "../../lib/commercial-engine";
 import { BalancePanel } from "./BalancePanel";
 import { fhir } from "../../lib/fhir";
-import { resolveSessionRoles, type PracticeRoleId } from "../../lib/practice-roles";
+import { resolveSessionRoles } from "../../lib/practice-roles";
 
-export function BalanceChips({ patientReference, revision = 0 }: { patientReference: string; revision?: number }) {
+export function BalanceChips({
+  patientReference,
+  revision = 0,
+  onBalanceChanged,
+}: {
+  patientReference: string;
+  revision?: number;
+  onBalanceChanged?: () => void;
+}) {
   const [packages, setPackages] = useState<PatientPackageInstance[]>([]);
   const [creditBank, setCreditBank] = useState<PatientCreditBank>();
   const [canAdminister, setCanAdminister] = useState(false);
@@ -18,18 +26,22 @@ export function BalanceChips({ patientReference, revision = 0 }: { patientRefere
   useEffect(() => {
     if (!fhir.authHeader()) return;
     let cancelled = false;
-    Promise.all([
+    void Promise.allSettled([
       fetchPatientPackages(patientReference),
       fetchCreditBank(patientReference),
-      resolveSessionRoles().catch(() => ({ roles: [] as PracticeRoleId[] })),
+      resolveSessionRoles(),
     ])
-      .then(([items, bank, session]) => {
+      .then(([packageResult, bankResult, sessionResult]) => {
         if (cancelled) return;
-        setPackages(items);
-        setCreditBank(bank);
-        setCanAdminister(session.roles.includes("practice-admin"));
-      })
-      .catch((error) => console.error("Patient package balances unavailable.", error));
+        if (packageResult.status === "fulfilled") setPackages(packageResult.value);
+        else console.error("Patient package balances unavailable.", packageResult.reason);
+        if (bankResult.status === "fulfilled") setCreditBank(bankResult.value);
+        else console.error("Patient Credit Bank balance unavailable.", bankResult.reason);
+        setCanAdminister(
+          sessionResult.status === "fulfilled"
+          && sessionResult.value.roles.includes("practice-admin"),
+        );
+      });
     return () => { cancelled = true; };
   }, [patientReference, revision]);
 
@@ -59,6 +71,7 @@ export function BalanceChips({ patientReference, revision = 0 }: { patientRefere
           onPackageChanged={(nextPackage, nextBank) => {
             setPackages((current) => current.map((item) => item.id === nextPackage.id ? nextPackage : item));
             if (nextBank) setCreditBank(nextBank);
+            onBalanceChanged?.();
           }}
           onClose={() => setPanelOpen(false)}
         />

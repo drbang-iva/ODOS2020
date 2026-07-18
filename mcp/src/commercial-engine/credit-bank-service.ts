@@ -11,6 +11,7 @@ import type {
 import {
   ODOS_BALANCE_FUNDING_CODE,
   ODOS_REVENUE_CLASS_SYSTEM,
+  balanceFundingInvoiceIsPaid,
   isBalanceFundingInvoice,
 } from "./package-service.js";
 import {
@@ -100,7 +101,7 @@ export async function finalizeCreditBankDeposit(
     || !invoice.identifier?.some((identifier) => identifier.system === ODOS_CREDIT_BANK_DEPOSIT_SYSTEM)) {
     throw new CommercialEngineConflictError("The Invoice is not this patient's Credit Bank funding Invoice.");
   }
-  if (!await invoiceIsPaid(fhir, invoice)) {
+  if (!await balanceFundingInvoiceIsPaid(fhir, invoice)) {
     throw new CommercialEngineConflictError("Credit Bank funding requires a successful payment.");
   }
   const bonusAmount = optionalIdentifier(invoice, ODOS_CREDIT_BANK_BONUS_AMOUNT_SYSTEM);
@@ -281,7 +282,8 @@ async function findOrCreateSpendPayment(
 }
 
 function assertSpendInvoice(invoice: Invoice, patientReference: string, chargeItemReference: string, amountCents: number): void {
-  if (invoice.subject?.reference !== patientReference
+  if (!(invoice.status === "issued" || invoice.status === "balanced")
+    || invoice.subject?.reference !== patientReference
     || moneyCents(invoice.totalNet?.value, "Credit Bank spend Invoice total") !== amountCents
     || !invoice.lineItem?.some((line) => line.chargeItemReference?.reference === chargeItemReference)) {
     throw new CommercialEngineConflictError("The recovered Credit Bank spend Invoice does not match this charge.");
@@ -294,6 +296,11 @@ function assertSpendPayment(
   amountCents: number,
   transactionId: string,
 ): void {
+  const hasBankCreditTender = payment.extension?.some((extension) =>
+    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
+    && extension.valueCodeableConcept?.coding?.some((coding) =>
+      coding.system === ODOS_PAYMENT_TENDER_SYSTEM
+      && coding.code === ODOS_BANK_CREDIT_TENDER_CODE));
   const allocated = (payment.detail ?? []).reduce((sum, detail) =>
     detail.request?.reference === invoiceReference
       ? sum + moneyCents(detail.amount?.value, "Credit Bank allocation")
@@ -302,32 +309,10 @@ function assertSpendPayment(
     || payment.outcome !== "complete"
     || payment.paymentIdentifier?.system !== ODOS_BANK_CREDIT_TRANSACTION_SYSTEM
     || payment.paymentIdentifier.value !== transactionId
-    || allocated < amountCents) {
+    || allocated < amountCents
+    || !hasBankCreditTender) {
     throw new CommercialEngineConflictError("The recovered Credit Bank payment is not a complete settlement for this Invoice.");
   }
-}
-
-async function invoiceIsPaid(fhir: CommercialFhirClient, invoice: Invoice): Promise<boolean> {
-  if (invoice.status === "balanced" || invoice.extension?.some((extension) =>
-    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
-    && extension.valueCodeableConcept?.coding?.some((coding) => coding.system === ODOS_PAYMENT_TENDER_SYSTEM),
-  )) return true;
-  if (!invoice.id) return false;
-  const reconciliations = await fhir.search<PaymentReconciliation>("PaymentReconciliation", {
-    request: `Invoice/${invoice.id}`,
-    status: "active",
-    _count: "1000",
-  });
-  if (reconciliations.link?.some((link) => link.relation === "next")) return false;
-  const allocatedCents = (reconciliations.entry ?? []).reduce((total, entry) => {
-    const payment = entry.resource;
-    if (payment?.outcome !== "complete") return total;
-    return total + (payment.detail ?? []).reduce((sum, detail) =>
-      detail.request?.reference === `Invoice/${invoice.id}`
-        ? sum + moneyCents(detail.amount?.value, "Payment allocation")
-        : sum, 0);
-  }, 0);
-  return allocatedCents >= moneyCents(invoice.totalNet?.value, "Credit Bank funding Invoice total");
 }
 
 function optionalIdentifier(invoice: Invoice, system: string): string | undefined {

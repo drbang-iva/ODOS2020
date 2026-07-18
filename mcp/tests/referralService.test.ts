@@ -74,10 +74,38 @@ test("referral round-trips its ServiceRequest links, structured include-list, an
   assert.equal(persisted.performer?.[0]?.reference, `Organization/${target.id}`);
   assert.equal(persisted.performer?.[0]?.display, "Bergstrom Retina Associates");
   assert.equal(persisted.encounter?.reference, "Encounter/current");
+  assert.equal(persisted.status, "draft");
   assert.deepEqual(readReferralIncludeList(persisted), ALL_FLAGS);
   const html = await service.assembleReferralArtifact(created.id!);
   assert.match(html, /Macular finding: New central distortion/);
   assert.match(html, /Retina consultation within one week/);
+});
+
+test("referral priority and reason text each map to their core ServiceRequest fields", async () => {
+  const fhir = seededFhir();
+  const target = await fhir.create<Organization>({
+    resourceType: "Organization",
+    name: "Retina Group",
+  });
+  const service = new ReferralService(fhir, () => NOW);
+  const common = {
+    subjectReference: "Patient/p1",
+    requesterReference: "Practitioner/referrer-1",
+    targetReference: `Organization/${target.id}`,
+    encounterReference: "Encounter/current",
+    includeList: flagsOff(),
+  };
+
+  const priorityReferral = await service.createReferral({ ...common, priority: "urgent" });
+  const reasonReferral = await service.createReferral({
+    ...common,
+    reasonText: "New central distortion",
+  });
+
+  assert.equal(priorityReferral.priority, "urgent");
+  assert.equal(priorityReferral.reasonCode, undefined);
+  assert.equal(reasonReferral.priority, undefined);
+  assert.deepEqual(reasonReferral.reasonCode, [{ text: "New central distortion" }]);
 });
 
 test("referral letters include only finalized findings", () => {
@@ -226,7 +254,11 @@ test("an old referral keeps its snapshotted target display after the target reso
   });
   const before = await service.assembleReferralArtifact(referral.id!);
 
-  await fhir.update<Organization>({ ...target, name: "Bergstrom Retina Associates" });
+  await fhir.update<Organization>(
+    "Organization",
+    target.id!,
+    { ...target, name: "Bergstrom Retina Associates" },
+  );
   const persisted = await fhir.read<ServiceRequest>("ServiceRequest", referral.id!);
   const after = await service.assembleReferralArtifact(persisted.id!);
 
@@ -326,16 +358,61 @@ class MemoryFhir implements ReferralFhirClient {
     return structuredClone(stored);
   }
 
-  async update<T extends Resource>(resource: T): Promise<T> {
+  async update<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<T> {
     if (!resource.id) throw new Error("Memory update requires an id.");
-    const current = this.rows.get(`${resource.resourceType}/${resource.id}`);
+    assert.equal(resource.resourceType, resourceType);
+    assert.equal(resource.id, id);
+    const current = this.rows.get(`${resourceType}/${id}`);
+    if (!current) throw new Error(`Missing ${resourceType}/${id}`);
+    const ifMatch = extraHeaders["If-Match"]?.match(/"(.+)"/)?.[1];
+    if (ifMatch && ifMatch !== current.meta?.versionId) throw fhirConflict(412);
     const versionId = String(Number(current?.meta?.versionId ?? "0") + 1);
     const stored = structuredClone({
       ...resource,
       meta: { ...resource.meta, versionId, lastUpdated: NOW },
     }) as T;
-    this.rows.set(`${resource.resourceType}/${resource.id}`, stored);
+    this.rows.set(`${resourceType}/${id}`, stored);
     return structuredClone(stored);
+  }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    const serviceRequest = bundle.entry?.[0]?.resource;
+    const provenance = bundle.entry?.[1]?.resource;
+    if (serviceRequest?.resourceType !== "ServiceRequest" || !serviceRequest.id) {
+      throw new Error("Expected a ServiceRequest transaction update.");
+    }
+    if (provenance?.resourceType !== "Provenance") {
+      throw new Error("Expected a Provenance transaction create.");
+    }
+    const current = this.rows.get(`ServiceRequest/${serviceRequest.id}`);
+    if (!current) throw new Error(`Missing ServiceRequest/${serviceRequest.id}`);
+    const ifMatch = bundle.entry?.[0]?.request?.ifMatch?.match(/"(.+)"/)?.[1];
+    if (ifMatch !== current.meta?.versionId) throw fhirConflict(412);
+    const storedServiceRequest = structuredClone({
+      ...serviceRequest,
+      meta: {
+        ...serviceRequest.meta,
+        versionId: String(Number(current.meta?.versionId ?? "0") + 1),
+        lastUpdated: NOW,
+      },
+    });
+    const provenanceId = provenance.id ?? `provenance-${++this.sequence}`;
+    const storedProvenance = structuredClone({ ...provenance, id: provenanceId });
+    this.rows.set(`ServiceRequest/${serviceRequest.id}`, storedServiceRequest);
+    this.rows.set(`Provenance/${provenanceId}`, storedProvenance);
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [
+        { response: { status: "200", location: `ServiceRequest/${serviceRequest.id}/_history/${storedServiceRequest.meta.versionId}` } },
+        { response: { status: "201", location: `Provenance/${provenanceId}/_history/1` } },
+      ],
+    };
   }
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -511,4 +588,8 @@ function summaryResource(resource: Resource, summary: boolean): Resource {
   const content = { ...resource.content };
   delete content.data;
   return { ...resource, content };
+}
+
+function fhirConflict(status: 409 | 412): Error & { status: number } {
+  return Object.assign(new Error(`FHIR ${status}`), { status });
 }

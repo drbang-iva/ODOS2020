@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  fetchCreditBank,
   spendCreditBank,
   type PatientCreditBank,
 } from "../../lib/commercial-engine";
@@ -9,29 +8,27 @@ export function CheckoutBankCredit({
   patientReference,
   chargeItemReference,
   amountCents,
-  revision = 0,
+  creditBank,
+  loading = false,
+  loadError,
   onSpent,
 }: {
   patientReference: string;
   chargeItemReference: string;
   amountCents: number;
-  revision?: number;
+  creditBank?: PatientCreditBank;
+  loading?: boolean;
+  loadError?: string;
   onSpent?: (creditBank: PatientCreditBank) => void;
 }) {
-  const [creditBank, setCreditBank] = useState<PatientCreditBank>();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string>();
   const [error, setError] = useState<string>();
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchCreditBank(patientReference)
-      .then((bank) => !cancelled && setCreditBank(bank))
-      .catch((cause) => !cancelled && setError(messageOf(cause)));
-    return () => { cancelled = true; };
-  }, [patientReference, revision]);
-
-  if (!creditBank) return error ? <p role="alert" className="mt-2 text-xs text-red-200">{error}</p> : null;
+  if (loading) return null;
+  if (!creditBank) return loadError
+    ? <p role="alert" className="mt-2 text-xs text-red-200">{loadError}</p>
+    : null;
   if (creditBank.balanceCents <= 0 && !error && !done) return null;
   const sufficient = creditBank.balanceCents >= amountCents;
 
@@ -41,7 +38,6 @@ export function CheckoutBankCredit({
     setError(undefined);
     try {
       const result = await spendCreditBank({ patientReference, chargeItemReference });
-      setCreditBank(result.creditBank);
       setDone(`Credit Bank applied · ${result.invoiceReference}`);
       onSpent?.(result.creditBank);
     } catch (cause) {

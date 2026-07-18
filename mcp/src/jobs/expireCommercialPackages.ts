@@ -4,6 +4,7 @@ import type {
 } from "../commercial-engine/ledger-store.js";
 
 export const PACKAGE_EXPIRY_SWEEP_ACTOR = "odos-package-expiry-sweep";
+export const DEFAULT_PACKAGE_EXPIRY_SWEEP_MS = 86_400_000;
 
 export interface PackageExpirySweepInput {
   store: CommercialEngineStore;
@@ -33,4 +34,10 @@ export function startPackageExpiryWorker(
   const timer = setInterval(run, input.intervalMs ?? 24 * 60 * 60 * 1000);
   timer.unref();
   return timer;
+}
+
+export function packageExpirySweepIntervalMs(value: string | undefined): number {
+  if (value === undefined || value.trim() === "") return DEFAULT_PACKAGE_EXPIRY_SWEEP_MS;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PACKAGE_EXPIRY_SWEEP_MS;
 }
