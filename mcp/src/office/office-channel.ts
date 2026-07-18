@@ -80,7 +80,6 @@ export async function listOfficeMessages(
     .sort((left, right) => Date.parse(right.sent ?? "") - Date.parse(left.sent ?? ""));
   const targets = visible.flatMap((message) => message.id ? [`Communication/${message.id}`] : []);
   const acknowledgements = targets.length === 0 ? [] : await searchOnePage<Provenance>(fhir, "Provenance", {
-    activity: `${OFFICE_ACK_SYSTEM}|${OFFICE_ACK_CODE}`,
     target: targets.join(","),
     _count: "1000",
     _sort: "recorded",
@@ -103,7 +102,6 @@ export async function acknowledgeOfficeMessage(
     throw new OfficeMessageValidationError("Office message is not available to the Clinic channel.");
   }
   const existing = (await searchOnePage<Provenance>(fhir, "Provenance", {
-    activity: `${OFFICE_ACK_SYSTEM}|${OFFICE_ACK_CODE}`,
     target: `Communication/${input.messageId}`,
     _count: "1000",
     _sort: "recorded",
