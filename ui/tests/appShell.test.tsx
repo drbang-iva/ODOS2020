@@ -58,6 +58,21 @@ test("AppShell registers the statement-message settings breadcrumb", () => {
   );
 });
 
+test("AppShell registers the Lens Catalog settings breadcrumb", () => {
+  const html = renderToStaticMarkup(
+    <AppShell
+      path="/settings/lens-catalog"
+      roles={["practice-admin"]}
+      homePath="/desk"
+      side="desk"
+      email="admin@example.test"
+    >
+      <main />
+    </AppShell>,
+  );
+  assert.match(html, /aria-label="Breadcrumb"[\s\S]*href="\/settings"[\s\S]*Lens Catalog/);
+});
+
 test("unified Sections includes Schedule and applies the existing practice-admin Settings gate", () => {
   const frontDesk = renderToStaticMarkup(<AppShell path="/desk" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>);
   const admin = renderToStaticMarkup(<AppShell path="/desk" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);

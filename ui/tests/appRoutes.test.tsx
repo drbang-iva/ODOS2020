@@ -37,7 +37,7 @@ test("the settings index route reaches the shared settings stub", () => {
   assert.doesNotMatch(html, /Plan profiles/);
 });
 
-test("the optical-pricing route reaches all three shared catalog sections", () => {
+test("the optical-pricing route keeps frame and contact-lens pricing separate from the Lens Catalog", () => {
   const html = renderToStaticMarkup(
     <RoleProvider>
       <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" />
@@ -45,9 +45,22 @@ test("the optical-pricing route reaches all three shared catalog sections", () =
   );
   assert.match(html, /Optical pricing/);
   assert.match(html, /Frame pricing/);
-  assert.match(html, /Lens pricing/);
   assert.match(html, /Contact lens pricing/);
+  assert.doesNotMatch(html, />Lens pricing</);
   assert.match(html, /Read only. Practice-admin access is required/);
+});
+
+test("the Lens Catalog route reaches its dedicated manager with practice-admin write gating", () => {
+  const admin = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["practice-admin"]} />,
+  );
+  const desk = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/lens-catalog" roles={["front-desk"]} />,
+  );
+  assert.match(admin, /Lens Catalog/);
+  assert.match(admin, /Lens products/);
+  assert.doesNotMatch(admin, /Read only/);
+  assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
 test("the plan-profile route reaches the owner settings scene with actual-role write gating", () => {
