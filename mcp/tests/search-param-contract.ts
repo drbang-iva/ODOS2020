@@ -44,11 +44,16 @@ export const MEDPLUM_5_1_8_SEARCH_PARAMETERS = {
 
 export type ContractResourceType = keyof typeof MEDPLUM_5_1_8_SEARCH_PARAMETERS;
 
+export const FHIR_R4_SEARCH_RESULT_PARAMETERS = ["_summary"] as const;
+
 export function invalidSearchParameterKeys(
   resourceType: ContractResourceType,
   parameterKeys: Iterable<string>,
 ): string[] {
-  const allowed = new Set<string>(MEDPLUM_5_1_8_SEARCH_PARAMETERS[resourceType]);
+  const allowed = new Set<string>([
+    ...MEDPLUM_5_1_8_SEARCH_PARAMETERS[resourceType],
+    ...FHIR_R4_SEARCH_RESULT_PARAMETERS,
+  ]);
   return [...parameterKeys]
     .filter((key) => !allowed.has(key.split(":", 1)[0]))
     .sort();

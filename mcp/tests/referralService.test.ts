@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  AllergyIntolerance,
   Bundle,
   CarePlan,
+  Condition,
   Encounter,
   Media,
   Observation,
@@ -14,7 +16,9 @@ import type {
 import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   buildReferralServiceRequest,
+  generateReferralLetterBody,
   readReferralIncludeList,
+  REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES,
   ReferralService,
   type ReferralFhirClient,
   type ReferralIncludeList,
@@ -74,6 +78,44 @@ test("referral round-trips its ServiceRequest links, structured include-list, an
   const html = await service.assembleReferralArtifact(created.id!);
   assert.match(html, /Macular finding: New central distortion/);
   assert.match(html, /Retina consultation within one week/);
+});
+
+test("referral letters include only finalized findings", () => {
+  const letter = generateReferralLetterBody({
+    patientDisplay: "Avery Patient",
+    targetDisplay: "Retina Group",
+    findings: [
+      observation("final", "Final finding"),
+      observation("amended", "Amended finding"),
+      observation("corrected", "Corrected finding"),
+      observation("preliminary", "Preliminary finding"),
+      observation("registered", "Registered finding"),
+    ],
+    plans: [],
+  });
+
+  assert.match(letter, /Final finding/);
+  assert.match(letter, /Amended finding/);
+  assert.match(letter, /Corrected finding/);
+  assert.doesNotMatch(letter, /Preliminary finding/);
+  assert.doesNotMatch(letter, /Registered finding/);
+});
+
+test("referral creation rejects an encounter that belongs to a different patient", async () => {
+  const fhir = seededFhir();
+  await fhir.create<Patient>({ resourceType: "Patient", id: "p2", name: [{ text: "Other Patient" }] });
+  const target = await fhir.create<Organization>({ resourceType: "Organization", name: "Retina Group" });
+
+  await assert.rejects(
+    new ReferralService(fhir).createReferral({
+      subjectReference: "Patient/p2",
+      requesterReference: "Practitioner/referrer-1",
+      targetReference: `Organization/${target.id}`,
+      encounterReference: "Encounter/current",
+      includeList: flagsOff(),
+    }),
+    /Referral encounter does not belong to the subject patient/,
+  );
 });
 
 test("each include-list flag independently governs its printable section", async () => {
@@ -194,9 +236,81 @@ test("an old referral keeps its snapshotted target display after the target reso
   assert.equal(persisted.performer?.[0]?.display, "Dr. Bergstrom, Retina");
 });
 
+test("clinical summary omits refuted conditions and allergies", async () => {
+  const fhir = seededFhir();
+  await Promise.all([
+    fhir.create<Condition>({
+      resourceType: "Condition",
+      subject: { reference: "Patient/p1" },
+      verificationStatus: { coding: [{ code: "confirmed" }] },
+      code: { text: "Confirmed condition" },
+    }),
+    fhir.create<Condition>({
+      resourceType: "Condition",
+      subject: { reference: "Patient/p1" },
+      verificationStatus: { coding: [{ code: "refuted" }] },
+      code: { text: "Refuted condition" },
+    }),
+    fhir.create<AllergyIntolerance>({
+      resourceType: "AllergyIntolerance",
+      patient: { reference: "Patient/p1" },
+      verificationStatus: { coding: [{ code: "confirmed" }] },
+      code: { text: "Confirmed allergy" },
+    }),
+    fhir.create<AllergyIntolerance>({
+      resourceType: "AllergyIntolerance",
+      patient: { reference: "Patient/p1" },
+      verificationStatus: { coding: [{ code: "refuted" }] },
+      code: { text: "Refuted allergy" },
+    }),
+  ]);
+  const referral = await fhir.create<ServiceRequest>(referralResource("clinical-summary", {
+    ...flagsOff(),
+    clinical_summary: true,
+  }));
+
+  const html = await new ReferralService(fhir).assembleReferralArtifact(referral.id!);
+
+  assert.match(html, /Confirmed condition/);
+  assert.match(html, /Confirmed allergy/);
+  assert.doesNotMatch(html, /Refuted condition/);
+  assert.doesNotMatch(html, /Refuted allergy/);
+});
+
+test("inline media is attribute-escaped and bounded by per-file and aggregate byte budgets", async () => {
+  const fhir = seededFhir();
+  await Promise.all([
+    fhir.create<Media>(media("accepted-one", "Accepted one", REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES)),
+    fhir.create<Media>(media("accepted-two", "Accepted two", REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES)),
+    fhir.create<Media>(media("aggregate-rejected", "Aggregate rejected", REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES)),
+    fhir.create<Media>(media("oversized", "Oversized", REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES + 1)),
+    fhir.create<Media>({
+      ...media("escaped", "Escaped attachment", 1),
+      content: { contentType: "image/png", title: "Escaped attachment", data: 'AA\" onerror=\"alert(1)' },
+    }),
+  ]);
+  const referral = await fhir.create<ServiceRequest>(referralResource("images", {
+    ...flagsOff(),
+    images: true,
+  }));
+
+  const html = await new ReferralService(fhir).assembleReferralArtifact(referral.id!);
+
+  assert.match(html, /Accepted one/);
+  assert.match(html, /Accepted two/);
+  assert.match(html, /Escaped attachment/);
+  assert.match(html, /AA&quot; onerror=&quot;alert\(1\)/);
+  assert.doesNotMatch(html, /AA" onerror="/);
+  assert.doesNotMatch(html, /Aggregate rejected/);
+  assert.doesNotMatch(html, /Oversized/);
+  assert.equal(fhir.readKeys.includes("Media/aggregate-rejected"), false);
+  assert.equal(fhir.readKeys.includes("Media/oversized"), false);
+});
+
 class MemoryFhir implements ReferralFhirClient {
   private readonly rows = new Map<string, Resource>();
   private sequence = 0;
+  readonly readKeys: string[] = [];
 
   async create<T extends Resource>(resource: T): Promise<T> {
     const id = resource.id ?? `${resource.resourceType.toLowerCase()}-${++this.sequence}`;
@@ -222,6 +336,7 @@ class MemoryFhir implements ReferralFhirClient {
   }
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    this.readKeys.push(`${resourceType}/${id}`);
     const row = this.rows.get(`${resourceType}/${id}`);
     if (!row) throw new Error(`Missing ${resourceType}/${id}`);
     return structuredClone(row) as T;
@@ -237,10 +352,15 @@ class MemoryFhir implements ReferralFhirClient {
     if (query.subject) rows = rows.filter((resource) => patientReference(resource) === query.subject);
     if (query.encounter) rows = rows.filter((resource) => encounterReference(resource) === normalizeEncounter(query.encounter));
     if (query.status) rows = rows.filter((resource) => "status" in resource && resource.status === query.status);
+    if (resourceType === "Encounter" && query._sort === "-date") {
+      rows.sort((left, right) => encounterDate(right).localeCompare(encounterDate(left)));
+    }
+    const total = rows.length;
+    if (query._count) rows = rows.slice(0, Number(query._count));
     return {
       resourceType: "Bundle",
       type: "searchset",
-      total: rows.length,
+      total,
       entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })),
     };
   }
@@ -330,6 +450,25 @@ function finishedEncounter(id: string, end: string, display: string): Encounter 
   };
 }
 
+function observation(status: Observation["status"], text: string): Observation {
+  return {
+    resourceType: "Observation",
+    status,
+    code: { text },
+  };
+}
+
+function media(id: string, title: string, size: number): Media {
+  return {
+    resourceType: "Media",
+    id,
+    status: "completed",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/current" },
+    content: { contentType: "image/png", title, data: "aW1hZ2U=", size },
+  };
+}
+
 function searchRecord(params: FhirSearchParams): Record<string, string> {
   if (params instanceof URLSearchParams) return Object.fromEntries(params);
   if (Array.isArray(params)) return Object.fromEntries(params);
@@ -355,4 +494,9 @@ function patientReference(resource: Resource): string | undefined {
 function encounterReference(resource: Resource): string | undefined {
   if (!("encounter" in resource) || !resource.encounter || typeof resource.encounter !== "object") return undefined;
   return "reference" in resource.encounter ? resource.encounter.reference : undefined;
+}
+
+function encounterDate(resource: Resource): string {
+  if (resource.resourceType !== "Encounter") return "";
+  return resource.period?.end ?? resource.period?.start ?? resource.meta?.lastUpdated ?? "";
 }

@@ -23,6 +23,8 @@ export const REFERRAL_INCLUDE_LIST_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-include-list";
 export const REFERRAL_LETTER_BODY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/referral-letter-body";
+export const REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const REFERRAL_MEDIA_MAX_TOTAL_BYTES = 25 * 1024 * 1024;
 
 const INCLUDE_FLAG_NAMES = [
   "letter",
@@ -131,7 +133,7 @@ export function readReferralIncludeList(serviceRequest: ServiceRequest): Referra
 
 export function generateReferralLetterBody(input: GenerateReferralLetterInput): string {
   const findings = input.findings
-    .filter((observation) => !["cancelled", "entered-in-error", "unknown"].includes(observation.status))
+    .filter((observation) => ["final", "amended", "corrected"].includes(observation.status))
     .map(formatObservation)
     .filter((line): line is string => Boolean(line));
   const plans = input.plans
@@ -163,12 +165,16 @@ export class ReferralService {
   async createReferral(input: CreateReferralInput): Promise<ServiceRequest> {
     const patientId = assertReference(input.subjectReference, "Patient");
     const encounterId = assertReference(input.encounterReference, "Encounter");
-    const [patient, target, findings, plans] = await Promise.all([
+    const [patient, encounter, target, findings, plans] = await Promise.all([
       this.fhir.read<Patient>("Patient", patientId),
+      this.fhir.read<Encounter>("Encounter", encounterId),
       readReferralTarget(this.fhir, input.targetReference),
       this.searchEncounterResources<Observation>("Observation", patientId, encounterId),
       this.searchEncounterResources<CarePlan>("CarePlan", patientId, encounterId),
     ]);
+    if (encounter.subject?.reference !== input.subjectReference) {
+      throw new Error("Referral encounter does not belong to the subject patient.");
+    }
     const patientDisplay = patientName(patient);
     const targetDisplay = referralTargetDisplay(target);
     const letterBody = generateReferralLetterBody({
@@ -277,13 +283,41 @@ export class ReferralService {
   }
 
   private async loadImages(patientId: string, encounterId: string | undefined): Promise<Media[]> {
-    const bundle = await this.fhir.search<Media>("Media", {
+    const metadataBundle = await this.fhir.search<Media>("Media", {
       subject: `Patient/${patientId}`,
       ...(encounterId ? { encounter: `Encounter/${encounterId}` } : {}),
       status: "completed",
+      _summary: "true",
       _count: "50",
     });
-    return resources(bundle).filter((media) => media.status === "completed");
+    const accepted: Media[] = [];
+    let remainingBytes = REFERRAL_MEDIA_MAX_TOTAL_BYTES;
+    for (const metadata of resources(metadataBundle)) {
+      if (!metadata.id || metadata.status !== "completed") continue;
+      const declaredBytes = metadata.content?.size;
+      if (declaredBytes !== undefined && (
+        declaredBytes > REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES
+        || declaredBytes > remainingBytes
+      )) continue;
+
+      const media = await this.fhir.read<Media>("Media", metadata.id);
+      if (
+        media.status !== "completed"
+        || media.subject?.reference !== `Patient/${patientId}`
+        || (encounterId && media.encounter?.reference !== `Encounter/${encounterId}`)
+      ) continue;
+      const inlineBytes = media.content.data
+        ? Buffer.byteLength(media.content.data, "utf8")
+        : 0;
+      const attachmentBytes = Math.max(media.content.size ?? 0, inlineBytes);
+      if (
+        attachmentBytes > REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES
+        || attachmentBytes > remainingBytes
+      ) continue;
+      remainingBytes -= attachmentBytes;
+      accepted.push(media);
+    }
+    return accepted;
   }
 }
 
@@ -480,7 +514,9 @@ function renderHistory(encounters: Encounter[]): string {
 
 function renderClinicalSummary(summary: ClinicalSummary): string {
   const conditions = summary.conditions
-    .filter((condition) => condition.verificationStatus?.coding?.every((coding) => coding.code !== "entered-in-error") !== false)
+    .filter((condition) => !condition.verificationStatus?.coding?.some(
+      (coding) => coding.code === "entered-in-error" || coding.code === "refuted",
+    ))
     .map((condition) => conceptText(condition.code) ?? "Condition");
   const medicationRequests = summary.medicationRequests
     .filter((request) => request.status !== "entered-in-error" && request.status !== "cancelled")
@@ -489,7 +525,9 @@ function renderClinicalSummary(summary: ClinicalSummary): string {
     .filter((statement) => statement.status !== "entered-in-error" && statement.status !== "not-taken")
     .map((statement) => conceptText(statement.medicationCodeableConcept) ?? statement.medicationReference?.display ?? "Medication");
   const allergies = summary.allergies
-    .filter((allergy) => allergy.verificationStatus?.coding?.every((coding) => coding.code !== "entered-in-error") !== false)
+    .filter((allergy) => !allergy.verificationStatus?.coding?.some(
+      (coding) => coding.code === "entered-in-error" || coding.code === "refuted",
+    ))
     .map((allergy) => conceptText(allergy.code) ?? "Allergy");
   return `<section data-section="clinical_summary" class="page-break"><h2>Clinical summary</h2>${renderList("Problems", conditions)}${renderList("Medications", unique([...medicationRequests, ...medicationStatements]))}${renderList("Allergies", allergies)}</section>`;
 }
@@ -500,10 +538,10 @@ function renderImages(images: Media[]): string {
     const contentType = media.content.contentType ?? "application/octet-stream";
     const data = media.content.data;
     if (data && contentType.startsWith("image/")) {
-      return `<figure><img alt="${escapeHtml(title)}" src="data:${escapeHtml(contentType)};base64,${data}"><figcaption>${escapeHtml(title)}</figcaption></figure>`;
+      return `<figure><img alt="${escapeHtml(title)}" src="data:${escapeHtml(contentType)};base64,${escapeHtml(data)}"><figcaption>${escapeHtml(title)}</figcaption></figure>`;
     }
     if (data && contentType === "application/pdf") {
-      return `<p><a download="${escapeHtml(title)}" href="data:application/pdf;base64,${data}">${escapeHtml(title)}</a></p>`;
+      return `<p><a download="${escapeHtml(title)}" href="data:application/pdf;base64,${escapeHtml(data)}">${escapeHtml(title)}</a></p>`;
     }
     return `<p>${escapeHtml(title)}</p>`;
   }).join("\n");
