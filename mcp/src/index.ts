@@ -51,6 +51,7 @@ import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { PgCommercialEngineStore } from "./commercial-engine/ledger-store.js";
 import { registerCommercialEngineRoutes } from "./commercial-engine/package-definition-endpoint.js";
+import { registerSeriesTrackerRoutes } from "./series-tracker/series-tracker-endpoint.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
@@ -6336,6 +6337,11 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         store: commercialEngineStore,
+      });
+      registerSeriesTrackerRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
       });
       registerLabOrderRoutes(app, {
         authenticateService: authenticateWithMedplum,

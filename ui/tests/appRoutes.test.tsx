@@ -83,6 +83,18 @@ test("the plan-profile route reaches the owner settings scene with actual-role w
   assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
+test("the treatment-protocol route reaches the practice-owned protocol editor", () => {
+  const admin = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["practice-admin"]} />,
+  );
+  const desk = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/treatment-protocols" roles={["front-desk"]} />,
+  );
+  assert.match(admin, /Treatment protocols/);
+  assert.doesNotMatch(admin, /Read only/);
+  assert.match(desk, /Treatment protocols/);
+});
+
 test("the statement-message route reaches the practice-admin editor", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch

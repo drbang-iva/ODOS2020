@@ -49,6 +49,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         synonyms: ["diagnosis", "diagnoses", "icd", "findings", "mapping", "suggestions"],
       },
       {
+        href: "/settings/treatment-protocols",
+        title: "Treatment protocols",
+        description: "Define multi-session procedures, interval windows, and maintenance follow-up.",
+        synonyms: ["series", "sessions", "dry eye", "ipl", "rf", "care plan", "protocol"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/procedure-definitions",
         title: "Procedure definitions",
         description: "Manage active procedures and their default longitudinal photo view.",
