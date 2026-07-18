@@ -34,6 +34,7 @@ export interface ClinicalProcedureDefinition {
   fhirProcedureCode: ProcedureCodeInput | CodeableConcept;
   valueSchema: Record<string, unknown>;
   defaultStatus: ProcedureStatusCode;
+  photo_posture: "monitoring" | "showcase";
   notBillReady: boolean;
   active: boolean;
   provenance: ClinicalGraphProvenance;
@@ -208,7 +209,10 @@ export function parseProcedureDefinitionResource(resource: Basic): ClinicalProce
   } catch {
     throw new Error("Procedure-definition JSON is malformed and cannot be parsed.");
   }
-  const definition = assertClinicalProcedureDefinition(parsed);
+  const normalized = isRecord(parsed) && parsed.photo_posture === undefined
+    ? { ...parsed, photo_posture: "monitoring" }
+    : parsed;
+  const definition = assertClinicalProcedureDefinition(normalized);
   const identifier = resource.identifier?.find((candidate) =>
     candidate.system === PROCEDURE_DEFINITION_IDENTIFIER_SYSTEM
   )?.value;
@@ -245,6 +249,7 @@ function procedureSeed(
       fields: {},
     },
     defaultStatus: "completed",
+    photo_posture: "showcase",
     notBillReady: true,
     active: true,
     provenance,
@@ -295,6 +300,9 @@ function assertClinicalProcedureDefinition(value: unknown): ClinicalProcedureDef
     "unknown",
   ].includes(String(value.defaultStatus))) {
     throw new Error("Procedure definition defaultStatus is invalid.");
+  }
+  if (value.photo_posture !== "monitoring" && value.photo_posture !== "showcase") {
+    throw new Error("Procedure definition photo_posture must be monitoring or showcase.");
   }
   if (typeof value.notBillReady !== "boolean") {
     throw new Error("Procedure definition notBillReady must be boolean.");

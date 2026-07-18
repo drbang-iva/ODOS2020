@@ -38,6 +38,7 @@ export const MEDPLUM_5_1_8_SEARCH_PARAMETERS = {
   PaymentReconciliation: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text created disposition identifier outcome payment-issuer request requestor status".split(" "),
   Procedure: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text based-on category code date encounter identifier instantiates-canonical instantiates-uri location part-of patient performer reason-code reason-reference status subject".split(" "),
   Provenance: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text agent agent-role agent-type entity location patient recorded signature-type target when".split(" "),
+  QuestionnaireResponse: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text authored author based-on encounter identifier patient questionnaire source status subject".split(" "),
   Schedule: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active actor date identifier service-category service-type specialty".split(" "),
   Task: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text authored-on based-on business-status code due-date encounter focus group-identifier identifier intent modified owner part-of patient performer period priority priority-order requester status subject".split(" "),
 } as const;

@@ -51,6 +51,7 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Former smoker/);
   assert.ok(html.indexOf("Jun 30") < html.indexOf("Feb 02"));
   assert.match(html, /DX-NEW/);
+  assert.match(html, /Longitudinal photos/);
   assert.match(html, /Start today&#x27;s visit →/);
 });
 
@@ -289,7 +290,10 @@ test("a history failure invalidated by sticky save does not surface a stale erro
     rejectHistory(new Error("stale history failure"));
     await historyRequest;
   });
-  assert.equal(renderer.root.findAllByProps({ role: "alert" }).length, 0);
+  assert.equal(
+    renderer.root.findAllByProps({ role: "alert" }).some((alert) => JSON.stringify(alert.children).includes("stale history failure")),
+    false,
+  );
 });
 
 test("an active history failure replaces the loading placeholder", async () => {

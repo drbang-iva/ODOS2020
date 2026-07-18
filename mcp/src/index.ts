@@ -78,6 +78,11 @@ import {
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
 import {
+  handleLongitudinalImagingCaptureRequest,
+  handleLongitudinalImagingListRequest,
+  LONGITUDINAL_IMAGING_CONTENT_TYPE,
+} from "./clinical-graph/longitudinal-imaging-endpoint.js";
+import {
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
 } from "./clinical-graph/hpi-endpoint.js";
@@ -123,6 +128,8 @@ import {
 import {
   handleAestheticsConsentDefinitionRequest,
   handleAestheticsConsentSubmissionRequest,
+  handleClinicalPhotographyConsentStatusRequest,
+  handleClinicalPhotographyConsentSubmissionRequest,
 } from "./clinical-graph/aesthetics-consent-endpoint.js";
 import {
   handleDiagnosisCatalogCreationRequest,
@@ -5516,6 +5523,10 @@ async function main(): Promise<void> {
         "/clinical-graph/imaging",
         express.json({ type: MANUAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
       );
+      app.use(
+        "/clinical-graph/longitudinal-imaging",
+        express.json({ type: LONGITUDINAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
+      );
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
@@ -5825,6 +5836,34 @@ async function main(): Promise<void> {
         }
       });
 
+      app.get("/clinical-graph/clinical-photography-consent", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleClinicalPhotographyConsentStatusRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: clinical photography consent status failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "clinical photography consent status failed" });
+        }
+      });
+
+      app.post("/clinical-graph/clinical-photography-consent", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleClinicalPhotographyConsentSubmissionRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: clinical photography consent submission failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "clinical photography consent submission failed" });
+        }
+      });
+
       app.get("/clinical-graph/diagnosis-catalog", async (req, res) => {
         try {
           await authenticateWithMedplum();
@@ -6008,6 +6047,34 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/imaging failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "imaging upload route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingListRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging list failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging list failed" });
+        }
+      });
+
+      app.post("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingCaptureRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging capture failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging capture failed" });
         }
       });
 

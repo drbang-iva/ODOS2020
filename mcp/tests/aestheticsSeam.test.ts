@@ -11,6 +11,8 @@ import type {
 import {
   handleAestheticsConsentDefinitionRequest,
   handleAestheticsConsentSubmissionRequest,
+  handleClinicalPhotographyConsentStatusRequest,
+  handleClinicalPhotographyConsentSubmissionRequest,
 } from "../src/clinical-graph/aesthetics-consent-endpoint.js";
 import {
   handleProcedureDefinitionCaptureRequest,
@@ -28,6 +30,7 @@ import {
 } from "../src/clinical-graph/procedure-definition-store.js";
 import {
   AESTHETICS_COSMETIC_CONSENT_URL,
+  CLINICAL_PHOTOGRAPHY_CONSENT_URL,
 } from "../src/fhir/aestheticsConsent.js";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
@@ -63,12 +66,18 @@ class MemoryFhir {
     return encounter as T;
   }
 
-  async search<T extends Basic | Procedure>(
+  async search<T extends Basic | Procedure | QuestionnaireResponse>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>> {
     const rows = resourceType === "Basic"
       ? this.basics
+      : resourceType === "QuestionnaireResponse"
+      ? this.questionnaireResponses.filter((response) => {
+          if (params?.subject && response.subject?.reference !== params.subject) return false;
+          if (params?.status && response.status !== params.status) return false;
+          return true;
+        })
       : this.procedures.filter((procedure) => {
           if (params?.subject && procedure.subject.reference !== params.subject) return false;
           if (params?.encounter && procedure.encounter?.reference !== params.encounter) return false;
@@ -140,6 +149,7 @@ test("three aesthetics procedure types are seeded as procedure-definition data a
     assert.equal(seed.discipline, "aesthetics");
     assert.equal(seed.sourceStatus, "verified-seed");
     assert.equal(seed.notBillReady, true);
+    assert.equal(seed.photo_posture, "showcase");
     assert.equal(seed.fhirProcedureCode.coding, undefined);
     assert.equal("system" in seed.fhirProcedureCode && seed.fhirProcedureCode.system, AESTHETICS_PROCEDURE_TYPE_SYSTEM);
     const local = {
@@ -416,6 +426,46 @@ test("cosmetic consent rejects an eyecare Encounter before writing", async () =>
     body: { error: "Encounter/aesthetics-1 is not an aesthetics Encounter." },
   });
   assert.equal(fhir.writes.length, 0);
+});
+
+test("clinical photography consent reuses QuestionnaireResponse persistence for eyecare", async () => {
+  const fhir = new MemoryFhir();
+  fhir.encounters[0]!.serviceType = {
+    coding: [{ system: ODOS_DISCIPLINE_SYSTEM, code: "eyecare" }],
+  };
+  const endpointDeps = deps("clinician", fhir, buildProcedureDefinitionSeeds());
+  const before = await handleClinicalPhotographyConsentStatusRequest(endpointDeps, {
+    authHeader: AUTH,
+    query: { patient: "Patient/shared-1" },
+  });
+  assert.deepEqual(before, {
+    status: 200,
+    body: {
+      questionnaire: (before.body as { questionnaire: unknown }).questionnaire,
+      consented: false,
+    },
+  });
+
+  const created = await handleClinicalPhotographyConsentSubmissionRequest(endpointDeps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: "Patient/shared-1",
+      encounterReference: "Encounter/aesthetics-1",
+      acknowledged: true,
+    },
+  });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  assert.equal(
+    fhir.questionnaireResponses[0]?.questionnaire,
+    `${CLINICAL_PHOTOGRAPHY_CONSENT_URL}|0.1.0`,
+  );
+
+  const after = await handleClinicalPhotographyConsentStatusRequest(endpointDeps, {
+    authHeader: AUTH,
+    query: { patient: "Patient/shared-1" },
+  });
+  assert.equal(after.status, 200);
+  assert.equal((after.body as { consented: boolean }).consented, true);
 });
 
 function deps(

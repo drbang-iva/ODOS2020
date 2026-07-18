@@ -14,6 +14,7 @@ import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
 import { BalanceChips } from "../components/commercial/BalanceChips";
 import { SaleSheet } from "../components/commercial/SaleSheet";
+import { LongitudinalImaging } from "../components/patient/LongitudinalImaging";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
@@ -199,9 +200,10 @@ export function PatientOverview({
         {error && <p className="odos-overview-error" role="alert">{error}</p>}
         {!overview && !error && <p className="odos-overview-loading">Loading patient overview…</p>}
         {overview && (
-          <div className="odos-overview-grid">
-            <PatientSnapshot snapshot={overview.snapshot} medicationOrdersUnavailable={overview.unavailable?.medicationOrders} />
-            <section className="odos-overview-card odos-ledger-card">
+          <React.Fragment>
+            <div className="odos-overview-grid">
+              <PatientSnapshot snapshot={overview.snapshot} medicationOrdersUnavailable={overview.unavailable?.medicationOrders} />
+              <section className="odos-overview-card odos-ledger-card">
               <span className="odos-overview-edge" />
               <div className="odos-overview-kicker">Visit ledger <span>every visit · its diagnoses · at a glance</span></div>
               <div className="odos-ledger-filters">
@@ -241,8 +243,18 @@ export function PatientOverview({
                   </div>
                 </article>
               ))}
-            </section>
-          </div>
+              </section>
+            </div>
+            {patient.id && (
+              <LongitudinalImaging
+                patientReference={`Patient/${patient.id}`}
+                encounters={overview.visits.map((visit) => ({
+                  reference: `Encounter/${visit.encounterId}`,
+                  label: `${visit.date ? localDate(visit.date.slice(0, 10)) : "Date not recorded"} · ${visit.visitType}`,
+                }))}
+              />
+            )}
+          </React.Fragment>
         )}
         {sellingPackage && patient.id && (
           <SaleSheet

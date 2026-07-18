@@ -285,15 +285,17 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 39);
+  assert.equal(clinicalRoutes.length, 43);
   assert.equal(routeDependencies.length, 25);
-  assert.equal(procedureRouteDependencies.length, 4);
+  assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
   assert.match(source, /handleDiagnosisCatalogListRequest/);
   assert.match(source, /handleDiagnosisCandidatesRequest/);
   assert.match(source, /handleDiagnosisCompletenessRequest/);
   assert.match(source, /handleDiagnosisPickRequest/);
   assert.match(source, /handleProviderAssignmentRequest\([\s\S]*serviceFhir: fhir/);
+  assert.match(source, /handleLongitudinalImagingCaptureRequest/);
+  assert.match(source, /handleClinicalPhotographyConsentSubmissionRequest/);
 });
 
 function endpointDeps(

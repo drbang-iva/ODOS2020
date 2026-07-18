@@ -52,6 +52,7 @@ const mutationSchema = z.object({
   action: z.literal("update-definition"),
   display: z.string().trim().min(1).max(120).optional(),
   active: z.boolean().optional(),
+  photo_posture: z.enum(["monitoring", "showcase"]).optional(),
 }).strict();
 
 const historyQuerySchema = z.object({
@@ -106,8 +107,12 @@ export async function handleProcedureDefinitionMutationRequest(
       body: { error: parsed.error.issues[0]?.message ?? "Invalid procedure-definition mutation." },
     };
   }
-  if (parsed.data.display === undefined && parsed.data.active === undefined) {
-    return { status: 400, body: { error: "Definition update requires display or active." } };
+  if (
+    parsed.data.display === undefined &&
+    parsed.data.active === undefined &&
+    parsed.data.photo_posture === undefined
+  ) {
+    return { status: 400, body: { error: "Definition update requires display, active, or photo_posture." } };
   }
   const store = new FhirProcedureDefinitionStore(staff.fhir);
   const definition = (deps.procedureDefinitions?.() ?? await store.list())
@@ -119,6 +124,7 @@ export async function handleProcedureDefinitionMutationRequest(
     ...definition,
     ...(parsed.data.display !== undefined ? { display: parsed.data.display } : {}),
     ...(parsed.data.active !== undefined ? { active: parsed.data.active } : {}),
+    ...(parsed.data.photo_posture !== undefined ? { photo_posture: parsed.data.photo_posture } : {}),
   }, {
     source: "manual",
     recordedAt: deps.now?.() ?? new Date().toISOString(),
@@ -279,6 +285,7 @@ function definitionSummary(definition: ClinicalProcedureDefinition) {
     discipline: definition.discipline,
     active: definition.active,
     sourceStatus: definition.sourceStatus,
+    photo_posture: definition.photo_posture,
     perEye: false,
     customFields: [],
     notBillReady: definition.notBillReady,
