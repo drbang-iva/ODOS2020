@@ -137,7 +137,7 @@ export class ProtocolService {
       if (item.itemType === "finding-seed") {
         const itemFindings = proposed.filter((row) => row.sourceItemKey === item.itemKey);
         if (!itemFindings.length) throw new Error(`Proposed finding ${item.itemKey} is missing.`);
-        for (const finding of itemFindings) {
+        for (const finding of itemFindings.filter((row) => row.state === "proposed")) {
           const committed: ProtocolFindingInstance = {
             ...finding,
             state: "committed",
@@ -292,6 +292,12 @@ export class ProtocolService {
     linkedDx: string[],
     at: string,
   ): Promise<void> {
+    const existing = (await this.charges.list()).find((row) =>
+      row.protocolApplicationId === application.id &&
+      row.planActionRef === item.itemKey &&
+      row.state !== "removed"
+    );
+    if (existing) return;
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
     await this.charges.save({
       id: this.id(),

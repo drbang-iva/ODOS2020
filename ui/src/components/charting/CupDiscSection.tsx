@@ -65,30 +65,26 @@ interface CupDiscEyeResult {
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI save_cup_disc";
 
-const EMPTY_ROWS: Record<Eye, EyeState> = {
-  OD: {
+function emptyEyeState(): EyeState {
+  return {
     verticalCupDiscRatio: "",
     horizontalCupDiscRatio: "",
     discNerveSize: "",
     discAppearanceDescriptors: [],
     methodSource: "",
     notVisualized: false,
-  },
-  OS: {
-    verticalCupDiscRatio: "",
-    horizontalCupDiscRatio: "",
-    discNerveSize: "",
-    discAppearanceDescriptors: [],
-    methodSource: "",
-    notVisualized: false,
-  },
-};
+  };
+}
+
+function emptyRows(): Record<Eye, EyeState> {
+  return { OD: emptyEyeState(), OS: emptyEyeState() };
+}
 
 export function CupDiscSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<CupDiscDefinition["definition"] | null>(null);
   const [definitionError, setDefinitionError] = useState<string | null>(null);
   const [definitionLoading, setDefinitionLoading] = useState(true);
-  const [rows, setRows] = useState<Record<Eye, EyeState>>(EMPTY_ROWS);
+  const [rows, setRows] = useState<Record<Eye, EyeState>>(emptyRows);
   const [results, setResults] = useState<Partial<Record<Eye, CupDiscEyeResult>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,15 +120,20 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
 
   useEffect(() => {
     const controller = new AbortController();
+    setRows(emptyRows());
+    setResults({});
+    setError(null);
+    setSaved(null);
     fetch(`${clinicalGraphApiBase()}/clinical-graph/glaucoma/cup-disc?encounterReference=${encodeURIComponent(encounterReference)}`, {
       headers: authHeaders(), signal: controller.signal,
     }).then(async (response) => {
       if (!response.ok) return;
       const body = await response.json() as { eyes?: Partial<Record<Eye, { verticalCupDiscRatio?: number }>> };
-      setRows((current) => Object.fromEntries(EYES.map((eye) => [
+      if (controller.signal.aborted) return;
+      setRows(Object.fromEntries(EYES.map((eye) => [
         eye,
         {
-          ...current[eye],
+          ...emptyEyeState(),
           ...(body.eyes?.[eye]?.verticalCupDiscRatio !== undefined
             ? { verticalCupDiscRatio: String(body.eyes[eye]!.verticalCupDiscRatio) }
             : {}),

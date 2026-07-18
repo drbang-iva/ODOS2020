@@ -8,6 +8,8 @@ import { CustomFieldEditor, type CustomFieldEditorValue } from "../src/component
 import { AestheticsConsentSection } from "../src/components/charting/AestheticsConsentSection";
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
+import { CupDiscSection } from "../src/components/charting/CupDiscSection";
+import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import {
   OcularHealthSection,
   applyAnteriorAllNormal,
@@ -977,6 +979,144 @@ test("changing encounterId remounts charting and clears encounter-scoped complet
   }
 });
 
+test("CupDiscSection clears every eye field before loading a different encounter", async () => {
+  const originalFetch = globalThis.fetch;
+  const encounterB = deferred<Response>();
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/definition")) return jsonResponse({ definition: { fields: {} } });
+    if (url.includes("Encounter%2Fencounter-a")) {
+      return jsonResponse({
+        eyes: {
+          OD: { verticalCupDiscRatio: 0.8 },
+          OS: { verticalCupDiscRatio: 0.4 },
+        },
+      });
+    }
+    if (url.includes("Encounter%2Fencounter-b")) return encounterB.promise;
+    throw new Error(`Unexpected fetch: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CupDiscSection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-a"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const input = (label: string) => renderer.root.find((node) =>
+      node.type === "input" && node.props["aria-label"] === label
+    );
+    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "0.8");
+    act(() => input("OD horizontal cup disc ratio typed value").props.onChange({ target: { value: "0.7" } }));
+
+    act(() => renderer.update(<CupDiscSection
+      patientReference="Patient/patient-1"
+      encounterReference="Encounter/encounter-b"
+      onSaved={() => undefined}
+    />));
+
+    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "");
+    assert.equal(input("OD horizontal cup disc ratio typed value").props.value, "");
+    assert.equal(input("OS vertical cup disc ratio typed value").props.value, "");
+
+    await act(async () => {
+      encounterB.resolve(jsonResponse({ eyes: { OS: { verticalCupDiscRatio: 0.2 } } }));
+      await flushEffects();
+    });
+    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "");
+    assert.equal(input("OD horizontal cup disc ratio typed value").props.value, "");
+    assert.equal(input("OS vertical cup disc ratio typed value").props.value, "0.2");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("GonioscopySection clears encounter state before fetch and hydrates pigmentation and note without dirty records", async () => {
+  const originalFetch = globalThis.fetch;
+  const encounterB = deferred<Response>();
+  let postedBody: Record<string, unknown> | undefined;
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({});
+    }
+    if (url.includes("Encounter%2Fencounter-a")) {
+      return jsonResponse({
+        records: [],
+        pigmentation: { OD: "3+" },
+        note: "Encounter A note",
+      });
+    }
+    if (url.includes("Encounter%2Fencounter-b")) return encounterB.promise;
+    throw new Error(`Unexpected fetch: ${url}`);
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<GonioscopySection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-a"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const select = (label: string) => renderer.root.find((node) =>
+      node.type === "select" && node.props["aria-label"] === label
+    );
+    assert.equal(select("OD TM pigmentation").props.value, "3+");
+    assert.equal(renderer.root.findByType("textarea").props.value, "Encounter A note");
+    act(() => select("OD all quadrants").props.onChange({ target: { value: "ss" } }));
+    assert.equal(select("OD all quadrants").props.value, "ss");
+
+    act(() => renderer.update(<GonioscopySection
+      patientReference="Patient/patient-1"
+      encounterReference="Encounter/encounter-b"
+      onSaved={() => undefined}
+    />));
+
+    assert.equal(select("OD all quadrants").props.value, "");
+    assert.equal(select("OD TM pigmentation").props.value, "");
+    assert.equal(select("OS TM pigmentation").props.value, "");
+    assert.equal(renderer.root.findByType("textarea").props.value, "");
+
+    await act(async () => {
+      encounterB.resolve(jsonResponse({
+        records: [{
+          eye: "OS",
+          quadrant: "nasal",
+          value: "ptm",
+          entryMode: "quadrant-specific",
+          source: "clinician-entered",
+        }],
+        pigmentation: { OS: "2+" },
+        note: "Encounter B note",
+      }));
+      await flushEffects();
+    });
+    assert.equal(select("OS TM pigmentation").props.value, "2+");
+    assert.equal(renderer.root.findByType("textarea").props.value, "Encounter B note");
+    const quadrantToggles = renderer.root.findAllByType("button").filter((button) =>
+      button.props["aria-expanded"] === false && button.children.join("").includes("Show quadrants")
+    );
+    assert.equal(quadrantToggles.length, 2);
+    act(() => quadrantToggles[1]!.props.onClick());
+    assert.equal(select("OS nasal").props.value, "ptm");
+
+    await act(async () => renderer.root.findAllByType("button").find((button) =>
+      button.children.join("") === "Save Gonioscopy"
+    )!.props.onClick());
+    assert.deepEqual(postedBody?.records, []);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("EncounterCharting renders the shared ChartSidebar without removing it from PatientDirector", () => {
   const encounterCharting = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   const patientDirector = readFileSync(new URL("../src/scenes/PatientDirector.tsx", import.meta.url), "utf8");
@@ -1168,4 +1308,12 @@ function jsonResponse(body: unknown): Response {
 
 async function flushEffects(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }

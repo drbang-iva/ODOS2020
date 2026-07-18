@@ -35,12 +35,26 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
 
   useEffect(() => {
     const controller = new AbortController();
+    setRecords([]);
+    setPigmentation({});
+    setNote("");
+    setDirtyRecords(new Set());
+    setError(undefined);
     fetch(`${clinicalGraphApiBase()}/clinical-graph/gonioscopy?encounterReference=${encodeURIComponent(encounterReference)}`, {
       headers: authHeaders(), signal: controller.signal,
     }).then(async (response) => {
-      const body = await response.json() as { records?: RecordRow[]; error?: string };
+      const body = await response.json() as {
+        records?: RecordRow[];
+        pigmentation?: Partial<Record<Eye, string>>;
+        note?: string;
+        error?: string;
+      };
       if (!response.ok) throw new Error(body.error ?? `Gonioscopy load failed: ${response.status}`);
+      if (controller.signal.aborted) return;
       setRecords(body.records ?? []);
+      setPigmentation(body.pigmentation ?? {});
+      setNote(body.note ?? "");
+      setDirtyRecords(new Set());
     }).catch((reason) => {
       if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
     });
@@ -146,7 +160,7 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
                 )}
                 <label className="mt-4 block text-xs uppercase tracking-widest text-white/35">
                   TM pigmentation
-                  <select value={pigmentation[eye] ?? ""} onChange={(event) => setPigmentation((current) => ({ ...current, [eye]: event.target.value }))}
+                  <select aria-label={`${eye} TM pigmentation`} value={pigmentation[eye] ?? ""} onChange={(event) => setPigmentation((current) => ({ ...current, [eye]: event.target.value }))}
                     className="mt-1 h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white">
                     <option value="">Select</option>
                     {PIGMENT.map((value) => <option key={value} value={value}>{value}</option>)}

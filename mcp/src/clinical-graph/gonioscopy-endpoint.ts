@@ -48,14 +48,20 @@ export async function handleGonioscopyReadRequest(
   if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const query = z.object({ encounterReference: z.string().regex(/^Encounter\/[^/]+$/) }).safeParse(input.query);
   if (!query.success) return { status: 400, body: { error: "encounterReference is required." } };
-  const bundle = await staff.fhir.search<Observation>("Observation", {
-    encounter: query.data.encounterReference,
-    code: "https://odos2020.com/fhir/CodeSystem/odos|gonio_angle_structures",
-    _count: "100",
-    _sort: "-date",
-  });
-  const records = latestRecords((bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
-  return { status: 200, body: { records } };
+  const [angleBundle, pigmentationBundle, noteBundle] = await Promise.all([
+    searchGonioscopyRecords(staff.fhir, query.data.encounterReference, "gonio_angle_structures"),
+    searchGonioscopyRecords(staff.fhir, query.data.encounterReference, "gonio_tm_pigmentation"),
+    searchGonioscopyRecords(staff.fhir, query.data.encounterReference, "gonio_note"),
+  ]);
+  const records = latestRecords(resources(angleBundle));
+  return {
+    status: 200,
+    body: {
+      records,
+      pigmentation: latestPigmentation(resources(pigmentationBundle)),
+      note: latestNote(resources(noteBundle)),
+    },
+  };
 }
 
 export async function handleGonioscopyCaptureRequest(
@@ -100,6 +106,39 @@ export function latestRecords(observations: Observation[]) {
     }
   }
   return [...result.values()].filter((row): row is GonioQuadrantRecord => Boolean(row));
+}
+
+function searchGonioscopyRecords(fhir: GonioFhir, encounterReference: string, code: string) {
+  return fhir.search<Observation>("Observation", {
+    encounter: encounterReference,
+    code: `https://odos2020.com/fhir/CodeSystem/odos|${code}`,
+    _count: "100",
+    _sort: "-date",
+  });
+}
+
+function resources(bundle: Bundle<Observation>): Observation[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function latestPigmentation(observations: Observation[]): Partial<Record<"OD" | "OS", string>> {
+  const result: Partial<Record<"OD" | "OS", string>> = {};
+  for (const observation of newestFirst(observations)) {
+    const eye = observation.bodySite?.coding?.[0]?.code;
+    if ((eye === "OD" || eye === "OS") && result[eye] === undefined && observation.valueString !== undefined) {
+      result[eye] = observation.valueString;
+    }
+  }
+  return result;
+}
+
+function latestNote(observations: Observation[]): string {
+  return newestFirst(observations).find((observation) => observation.valueString !== undefined)?.valueString ?? "";
+}
+
+function newestFirst(observations: Observation[]): Observation[] {
+  return [...observations].sort((a, b) =>
+    String(b.effectiveDateTime ?? b.issued ?? "").localeCompare(String(a.effectiveDateTime ?? a.issued ?? "")));
 }
 
 function simpleObservation(

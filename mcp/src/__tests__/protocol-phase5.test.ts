@@ -37,6 +37,9 @@ function harness() {
   const fhir = new MemoryFhir();
   const projectedFindings: string[] = [];
   const materialized: string[] = [];
+  const projectionControl: { failOnceOnActionType?: PlanActionInstance["actionType"]; failed: boolean } = {
+    failed: false,
+  };
   let id = 1;
   const service = new ProtocolService(fhir, {
     async commitFinding(finding) {
@@ -44,11 +47,15 @@ function harness() {
       return `Observation/${finding.id}`;
     },
     async materializeAction(action) {
+      if (!projectionControl.failed && action.actionType === projectionControl.failOnceOnActionType) {
+        projectionControl.failed = true;
+        throw new Error(`Simulated ${action.actionType} projection failure.`);
+      }
       materialized.push(action.id);
       return action.actionType === "order" ? `ServiceRequest/${action.id}` : `CarePlan/${action.id}`;
     },
   }, () => "2026-07-18T12:00:00.000Z", () => `id-${id++}`);
-  return { fhir, service, projectedFindings, materialized };
+  return { fhir, service, projectedFindings, materialized, projectionControl };
 }
 
 test("fixture stores six Basic entity codes with X-ODOS-Source writes", async () => {
@@ -176,6 +183,45 @@ test("unapply removes only charges staged by its protocol application", async ()
     row.protocolApplicationId === openedB.application.id && row.state === "staged"
   ).length, 5);
   assert.equal(chargesAfter.filter((row) => row.protocolApplicationId === openedB.application.id).length, 5);
+});
+
+test("commit retry after a partial failure skips committed findings and staged charges, then confirms once", async () => {
+  const { service, projectedFindings, materialized, projectionControl } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
+    encounterId: "enc-retry",
+    patientId: "patient-retry",
+    diagnosis: { reference: "Condition/c-retry", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  });
+  let confirmedSaves = 0;
+  const saveApplication = service.applications.save.bind(service.applications);
+  service.applications.save = async (application) => {
+    if (application.confirmed) confirmedSaves += 1;
+    return saveApplication(application);
+  };
+  projectionControl.failOnceOnActionType = "counseling";
+
+  await assert.rejects(
+    service.commit(opened.application.id, [], ["Condition/c-retry"]),
+    /Simulated counseling projection failure/,
+  );
+  assert.equal((await service.applications.get(opened.application.id))?.confirmed, false);
+  assert.equal(projectedFindings.length, 14);
+  assert.equal((await service.charges.list()).length, 5);
+  assert.equal(materialized.length, 5);
+
+  await service.commit(opened.application.id, [], ["Condition/c-retry"]);
+
+  assert.equal(projectedFindings.length, 14);
+  assert.equal((await service.findings.list()).filter((row) => row.state === "committed").length, 14);
+  assert.equal((await service.charges.list()).length, 5);
+  assert.equal(new Set((await service.charges.list()).map((row) =>
+    `${row.protocolApplicationId}:${row.planActionRef}`
+  )).size, 5);
+  assert.equal(materialized.length, 8);
+  assert.equal((await service.applications.get(opened.application.id))?.confirmed, true);
+  assert.equal(confirmedSaves, 1);
 });
 
 test("signing abandons an unconfirmed application and deletes all proposed findings", async () => {
