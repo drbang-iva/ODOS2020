@@ -117,6 +117,18 @@
       "sliceConsumer": "prescription-plan"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-weno-drug-db-code-qualifier",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "weno-formulary-directory"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-weno-quantity-unit-of-measure-code",
+      "namespace": "medication-order",
+      "status": "active",
+      "sliceConsumer": "weno-formulary-directory"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/project-membership-lifecycle-state",
       "namespace": "authz",
       "status": "active",

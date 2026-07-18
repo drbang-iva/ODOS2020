@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => {
           },
         },
         "/clinical-graph": { target: mcpTarget, changeOrigin: true },
+        "/weno": { target: mcpTarget, changeOrigin: true },
       },
     },
   };
