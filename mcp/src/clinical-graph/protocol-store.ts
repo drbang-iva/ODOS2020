@@ -16,6 +16,7 @@ export type ProtocolBasicCode = typeof PROTOCOL_BASIC_CODES[keyof typeof PROTOCO
 
 export interface ProtocolFhirClient {
   search<T extends Basic>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Basic>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
   update<T extends Basic>(
     resourceType: T["resourceType"],
@@ -30,39 +31,61 @@ export class ProtocolBasicStore<T extends { id: string }> {
   constructor(private readonly fhir: ProtocolFhirClient, readonly code: ProtocolBasicCode) {}
 
   async list(): Promise<T[]> {
-    const bundle = await this.fhir.search<Basic>("Basic", {
-      code: `${BASE}/CodeSystem/odos-protocol-module|${this.code}`,
-      _count: "500",
-    });
-    return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [parseProtocolBasic<T>(entry.resource, this.code)] : []);
+    return (await this.raw()).map((resource) => parseProtocolBasic<T>(resource, this.code));
   }
 
   async get(id: string): Promise<T | undefined> {
-    return (await this.list()).find((row) => row.id === id);
+    const existing = await this.rawById(id);
+    return existing ? parseProtocolBasic<T>(existing, this.code) : undefined;
   }
 
   async save(value: T): Promise<T> {
-    const existing = (await this.raw()).find((row) => identifier(row) === value.id);
+    const existing = await this.rawById(value.id);
     const resource = buildProtocolBasic(value, this.code, existing);
     const persisted = existing?.id
       ? await this.fhir.update("Basic", existing.id, resource, PROTOCOL_WRITE_HEADERS)
-      : await this.fhir.create(resource, PROTOCOL_WRITE_HEADERS);
+      : await this.fhir.create(resource, {
+          ...PROTOCOL_WRITE_HEADERS,
+          "If-None-Exist": `identifier=${identifierSystem(this.code)}|${value.id}`,
+        });
     return parseProtocolBasic<T>(persisted, this.code);
   }
 
   async remove(id: string): Promise<void> {
-    const existing = (await this.raw()).find((row) => identifier(row) === id);
+    const existing = await this.rawById(id);
     if (!existing?.id) return;
     if (!this.fhir.delete) throw new Error("FHIR client does not support deleting an uncommitted protocol row.");
     await this.fhir.delete("Basic", existing.id);
   }
 
   private async raw(): Promise<Basic[]> {
-    const bundle = await this.fhir.search<Basic>("Basic", {
+    return this.searchAll({
       code: `${BASE}/CodeSystem/odos-protocol-module|${this.code}`,
       _count: "500",
     });
-    return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  }
+
+  private async rawById(id: string): Promise<Basic | undefined> {
+    return (await this.searchAll({
+      code: `${BASE}/CodeSystem/odos-protocol-module|${this.code}`,
+      identifier: `${identifierSystem(this.code)}|${id}`,
+      _count: "2",
+    })).find((row) => identifier(row) === id);
+  }
+
+  private async searchAll(params: Record<string, string>): Promise<Basic[]> {
+    const resources: Basic[] = [];
+    const visited = new Set<string>();
+    let bundle = await this.fhir.search<Basic>("Basic", params);
+    while (true) {
+      resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+      const next = bundle.link?.find((link) => link.relation === "next")?.url;
+      if (!next) return resources;
+      if (!this.fhir.searchUrl) throw new Error("Protocol Basic search requires pagination support.");
+      if (visited.has(next)) throw new Error("Protocol Basic search returned a repeated next link.");
+      visited.add(next);
+      bundle = await this.fhir.searchUrl<Basic>(next, "Basic");
+    }
   }
 }
 
@@ -76,7 +99,7 @@ export function buildProtocolBasic<T extends { id: string }>(
     resourceType: "Basic",
     ...(existing?.id ? { id: existing.id } : {}),
     ...(existing?.meta ? { meta: existing.meta } : {}),
-    identifier: [{ system: `${BASE}/NamingSystem/${code}`, value: value.id }],
+    identifier: [{ system: identifierSystem(code), value: value.id }],
     code: { coding: [{ system: `${BASE}/CodeSystem/odos-protocol-module`, code }] },
     extension: [{
       url: `${BASE}/StructureDefinition/${code}-json`,
@@ -103,4 +126,8 @@ export function parseProtocolBasic<T extends { id: string }>(resource: Basic, co
 
 function identifier(resource: Basic): string | undefined {
   return resource.identifier?.[0]?.value;
+}
+
+function identifierSystem(code: ProtocolBasicCode): string {
+  return `${BASE}/NamingSystem/${code}`;
 }

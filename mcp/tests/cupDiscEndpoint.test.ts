@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
   handleCupDiscCaptureRequest,
   handleCupDiscDefinitionRequest,
+  handleCupDiscReadRequest,
   type CupDiscEndpointDeps,
 } from "../src/clinical-graph/cup-disc-endpoint.js";
 import {
@@ -31,6 +32,13 @@ function deps(
             staffReference: "Practitioner/doc1",
             actorRole: role,
             fhir: {
+              search: async <T extends Observation>(): Promise<Bundle<T>> => ({
+                resourceType: "Bundle", type: "searchset", entry: [],
+              }),
+              read: async <T extends Encounter>(): Promise<T> => ({
+                resourceType: "Encounter", status: "in-progress", class: { code: "AMB" },
+                subject: { reference: BODY.patientReference },
+              } as T),
               create: async <T extends Observation | Provenance>(
                 resource: T,
                 headers?: Record<string, string>,
@@ -47,6 +55,60 @@ function deps(
     now: () => "2026-07-09T12:00:00.000Z",
   };
   return { created, deps: d };
+}
+
+test("cup/disc read ignores newer entered-in-error and cancelled values per eye", async () => {
+  const observations: Observation[] = [
+    cupDiscReadObservation("OD", 0.4, "2026-07-18T10:00:00.000Z", "final"),
+    cupDiscReadObservation("OD", 0.9, "2026-07-18T12:00:00.000Z", "entered-in-error"),
+    cupDiscReadObservation("OS", 0.5, "2026-07-18T10:00:00.000Z", "final"),
+    cupDiscReadObservation("OS", 0.8, "2026-07-18T12:00:00.000Z", "cancelled"),
+  ];
+  const result = await handleCupDiscReadRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc1", actorRole: "clinician",
+      fhir: {
+        search: async <T extends Observation>(): Promise<Bundle<T>> => ({
+          resourceType: "Bundle", type: "searchset", entry: observations.map((resource) => ({ resource: resource as T })),
+        }),
+        read: async <T extends Encounter>(): Promise<T> => ({ resourceType: "Encounter" } as T),
+        create: async <T extends Observation | Provenance>(resource: T): Promise<T> => resource,
+      },
+    }),
+  }, { authHeader: AUTH, query: { encounterReference: BODY.encounterReference } });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { eyes: unknown }).eyes, {
+    OD: { verticalCupDiscRatio: 0.4 }, OS: { verticalCupDiscRatio: 0.5 },
+  });
+});
+
+test("cup/disc capture rejects patient and encounter mismatch before creating resources", async () => {
+  const { created, deps: d } = deps();
+  const authenticated = await d.authenticate(AUTH);
+  assert.ok(authenticated);
+  authenticated.fhir.read = async <T extends Encounter>(): Promise<T> => ({
+    resourceType: "Encounter", status: "in-progress", class: { code: "AMB" },
+    subject: { reference: "Patient/other" },
+  } as T);
+  const result = await handleCupDiscCaptureRequest({ ...d, authenticate: async () => authenticated }, {
+    authHeader: AUTH, body: { ...BODY, eyes: { OD: { verticalCupDiscRatio: 0.3 } } },
+  });
+  assert.equal(result.status, 400);
+  assert.equal(created.length, 0);
+});
+
+function cupDiscReadObservation(
+  eye: "OD" | "OS",
+  value: number,
+  at: string,
+  status: Observation["status"],
+): Observation {
+  return {
+    resourceType: "Observation", status,
+    code: { coding: [{ code: "cup_disc_ratio" }] },
+    bodySite: { coding: [{ code: eye }] }, valueQuantity: { value }, effectiveDateTime: at,
+  };
 }
 
 test("cup/disc definition endpoint serves practice-editable field options from the finding definition", async () => {

@@ -38,3 +38,19 @@ test("Assessment renders Possible decisions, hides refuted rows, and shows linke
   assert.match(source, /← from \{provenanceLine\}/);
   assert.match(source, /stableCode === "cup_disc_ratio"[\s\S]*"Cup\/Disc"/);
 });
+
+test("Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus", () => {
+  const source = readFileSync(join(CHARTING, "AssessmentSection.tsx"), "utf8");
+  assert.match(source, /protocols\/applications\?encounterId=/);
+  assert.match(source, /application\.confirmed && application\.undoState === "active"/);
+  assert.match(source, /const controller = new AbortController\(\)/);
+  assert.match(source, /signal: controller\.signal/);
+  assert.match(source, /return \(\) => controller\.abort\(\)/);
+  assert.match(source, /name !== "AbortError"\) setError/);
+  assert.match(source, /\[protocolDiagnosis\?\.id, protocolDiagnosisCode\]/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /event\.key !== "Tab"/);
+  assert.match(source, /previous\?\.focus\(\)/);
+  assert.match(source, /ref=\{protocolDialogRef\} tabIndex=\{-1\}/);
+  assert.doesNotMatch(source, /startsWith\("H40\.0"\)/);
+});

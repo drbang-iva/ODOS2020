@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Condition, Encounter, Observation } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import { useRole } from "../../lib/role-context";
@@ -24,6 +24,7 @@ import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
+export const GLAUCOMA_SUSPECT_TRIGGER_PREFIX = "H40.0";
 
 interface Props {
   patientReference: string;
@@ -70,6 +71,8 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [protocolOffer, setProtocolOffer] = useState<ProtocolOffer>();
   const [protocolSheetOpen, setProtocolSheetOpen] = useState(false);
   const [protocolSelections, setProtocolSelections] = useState<Record<string, boolean>>({});
+  const protocolTriggerRef = useRef<HTMLButtonElement>(null);
+  const protocolDialogRef = useRef<HTMLDivElement>(null);
   const encounterId = encounterReference.replace(/^Encounter\//, "");
 
   async function load() {
@@ -229,34 +232,95 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   const protocolDiagnosis = sortedConditions.find((condition) =>
     verificationStatus(condition) === "confirmed" &&
-    condition.code?.coding?.some((coding) => coding.code?.startsWith("H40.0"))
+    condition.code?.coding?.some((coding) => coding.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX))
   );
+  const protocolDiagnosisCode = protocolDiagnosis?.code?.coding?.find((row) =>
+    row.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX)
+  )?.code;
 
   useEffect(() => {
-    if (!protocolDiagnosis?.id) {
+    const controller = new AbortController();
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/applications?encounterId=${encodeURIComponent(encounterId)}`, {
+      headers: authHeaders(), signal: controller.signal,
+    }).then(async (response) => {
+      const body = await response.json() as {
+        applications?: Array<{ id: string; protocolId: string; confirmed: boolean; undoState: string }>;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error ?? `Protocol applications load failed: ${response.status}`);
+      if (controller.signal.aborted) return;
+      const active = body.applications?.find((application) =>
+        application.protocolId === "glaucoma-suspect-initial" && application.confirmed && application.undoState === "active"
+      );
+      setProtocolApplied(Boolean(active));
+      setProtocolApplicationId(active?.id);
+    }).catch((reason) => {
+      if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
+    });
+    return () => controller.abort();
+  }, [encounterId]);
+
+  useEffect(() => {
+    if (!protocolDiagnosis?.id || !protocolDiagnosisCode) {
       setProtocolOffer(undefined);
       return;
     }
-    const coding = protocolDiagnosis.code?.coding?.find((row) => row.code?.startsWith("H40.0"));
-    if (!coding?.code) return;
+    const controller = new AbortController();
     fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/offers`, {
       method: "POST",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({
-        diagnoses: [{ reference: `Condition/${protocolDiagnosis.id}`, code: coding.code, confirmed: true }],
+        diagnoses: [{ reference: `Condition/${protocolDiagnosis.id}`, code: protocolDiagnosisCode, confirmed: true }],
       }),
+      signal: controller.signal,
     }).then(async (response) => {
-      const body = await response.json() as { protocols?: ProtocolOffer[] };
-      if (!response.ok) return;
+      const body = await response.json() as { protocols?: ProtocolOffer[]; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `Protocol offers load failed: ${response.status}`);
+      if (controller.signal.aborted) return;
       const offer = body.protocols?.[0];
       setProtocolOffer(offer);
       if (offer) setProtocolSelections(Object.fromEntries(offer.items.map((item) => [item.itemKey, item.defaultSelected])));
-    }).catch(() => undefined);
-  }, [protocolDiagnosis?.id]);
+    }).catch((reason) => {
+      if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
+    });
+    return () => controller.abort();
+  }, [protocolDiagnosis?.id, protocolDiagnosisCode]);
+
+  useEffect(() => {
+    if (!protocolSheetOpen) return;
+    const dialog = protocolDialogRef.current;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : protocolTriggerRef.current;
+    const focusable = () => [...(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ) ?? [])];
+    (focusable()[0] ?? dialog)?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setProtocolSheetOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previous?.focus();
+    };
+  }, [protocolSheetOpen]);
 
   async function applyGlaucomaSuspectProtocol() {
     if (!protocolDiagnosis?.id) return;
-    const code = protocolDiagnosis.code?.coding?.find((coding) => coding.code?.startsWith("H40.0"))?.code;
+    const code = protocolDiagnosis.code?.coding?.find((coding) => coding.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX))?.code;
     if (!code) return;
     setBusy("protocol"); setError(null);
     try {
@@ -340,7 +404,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               <div className="text-sm font-semibold text-white">Glaucoma Suspect — Initial Workup</div>
               <div className="mt-1 text-xs text-white/55">Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.</div>
             </div>
-            <button disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className="sidebar-button">
+            <button ref={protocolTriggerRef} disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className="sidebar-button">
               {protocolApplied ? "Un-apply" : "Apply protocol"}
             </button>
           </div>
@@ -348,7 +412,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
         {protocolSheetOpen && protocolOffer && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Protocol staging sheet">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
+            <div ref={protocolDialogRef} tabIndex={-1} className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
               <h3 className="text-lg font-semibold text-white">{protocolOffer.title}</h3>
               <p className="mt-1 text-sm text-white/50">Review each proposed item before committing it to this encounter.</p>
               <div className="mt-4 space-y-2">
@@ -412,7 +476,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
 function protocolItemLabel(item: ProtocolOffer["items"][number]): string {
   return String(
-    item.payload.cptConcept ??
+    item.payload.procedureConceptKey ??
     item.payload.orderableKey ??
     item.payload.topicKey ??
     item.payload.assetRef ??

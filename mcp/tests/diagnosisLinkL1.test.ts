@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { AddressInfo } from "node:net";
 import { resolve } from "node:path";
-import type { Basic, Bundle, Observation, Provenance, Resource } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import {
@@ -68,6 +68,18 @@ class MemoryFhir {
     this.writes.push({ operation: "create", resourceType: resource.resourceType, id, headers });
     this.versions.set(`${resource.resourceType}/${id}`, [structuredClone(persisted)]);
     return structuredClone(persisted);
+  }
+
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
+    if (resourceType === "Encounter" && id === "e1") {
+      return {
+        resourceType: "Encounter", id, status: "in-progress", class: { code: "AMB" },
+        subject: { reference: "Patient/p1" },
+      } as Encounter as T;
+    }
+    const resource = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
+    if (!resource) throw new Error(`Missing ${resourceType}/${id}`);
+    return structuredClone(resource) as T;
   }
 
   async update<T extends Resource>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {

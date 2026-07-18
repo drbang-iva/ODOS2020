@@ -1,8 +1,8 @@
-import type { Basic, CarePlan, Observation, ServiceRequest } from "@medplum/fhirtypes";
+import type { Basic, CarePlan, Condition, Observation, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { GLAUCOMA_SUSPECT_PROTOCOL } from "./protocol-fixtures.js";
-import { ProtocolService } from "./protocol-service.js";
+import { matchesCode, ProtocolService } from "./protocol-service.js";
 import type { ProtocolFhirClient } from "./protocol-store.js";
 import { protocolFindingToGonioObservation } from "./gonioscopy.js";
 import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-types.js";
@@ -10,7 +10,7 @@ import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-typ
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
 
 interface LiveFhir extends ProtocolFhirClient {
-  read<T extends Observation | ServiceRequest | CarePlan>(resourceType: T["resourceType"], id: string): Promise<T>;
+  read<T extends Observation | ServiceRequest | CarePlan | Condition>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
 }
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
@@ -28,7 +28,7 @@ const applySchema = z.object({
   protocolId: z.string(),
   encounterId: z.string(),
   patientId: z.string(),
-  diagnosis: z.object({ reference: z.string(), code: z.string(), confirmed: z.literal(true) }).strict(),
+  diagnosis: z.object({ reference: z.string().regex(/^Condition\/[^/]+$/), code: z.string(), confirmed: z.literal(true) }).strict(),
   selections: z.array(z.object({
     itemKey: z.string(),
     selected: z.boolean(),
@@ -45,11 +45,7 @@ export async function handleProtocolOffersRequest(
   if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ diagnoses: diagnosesSchema }).strict().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: "Valid diagnoses are required." } };
-  const service = liveService(staff, deps.now);
-  if (!await service.definitions.get(GLAUCOMA_SUSPECT_PROTOCOL.id)) {
-    await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
-  }
-  return { status: 200, body: { protocols: await service.offers(parsed.data.diagnoses) } };
+  return { status: 200, body: { protocols: await liveService(staff, deps.now).offers(parsed.data.diagnoses) } };
 }
 
 export async function handleProtocolApplyRequest(
@@ -65,6 +61,36 @@ export async function handleProtocolApplyRequest(
   if (!await service.definitions.get(GLAUCOMA_SUSPECT_PROTOCOL.id)) {
     await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   }
+  const conditionId = parsed.data.diagnosis.reference.slice("Condition/".length);
+  let condition: Condition;
+  try {
+    condition = await staff.fhir.read<Condition>("Condition", conditionId);
+  } catch {
+    return { status: 400, body: { error: "Submitted Condition does not exist." } };
+  }
+  const submittedCoding = condition.code?.coding?.find((coding) => coding.code === parsed.data.diagnosis.code);
+  const protocol = await service.definitions.get(parsed.data.protocolId);
+  if (!condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")) {
+    return { status: 400, body: { error: "Condition must be confirmed before applying a protocol." } };
+  }
+  if (!submittedCoding) {
+    return { status: 400, body: { error: "Submitted diagnosis code does not match the Condition." } };
+  }
+  if (condition.subject.reference !== `Patient/${parsed.data.patientId}`) {
+    return { status: 400, body: { error: "Condition does not belong to the submitted patient." } };
+  }
+  if (condition.encounter?.reference && condition.encounter.reference !== `Encounter/${parsed.data.encounterId}`) {
+    return { status: 400, body: { error: "Condition does not belong to the submitted encounter." } };
+  }
+  if (!protocol || protocol.trigger.kind !== "diagnosis" ||
+    !protocol.trigger.dxKeys.some((pattern) => matchesCode(parsed.data.diagnosis.code, pattern))) {
+    return { status: 400, body: { error: "Condition does not match the protocol trigger." } };
+  }
+  if ((await service.applications.list()).some((application) =>
+    application.encounterId === parsed.data.encounterId &&
+    application.protocolId === parsed.data.protocolId &&
+    application.confirmed && application.undoState === "active"
+  )) return { status: 409, body: { error: "Protocol is already applied to this encounter." } };
   const opened = await service.open(parsed.data.protocolId, {
     encounterId: parsed.data.encounterId,
     patientId: parsed.data.patientId,
@@ -81,6 +107,27 @@ export async function handleProtocolApplyRequest(
       charges: (await service.charges.list()).filter((row) => row.protocolApplicationId === opened.application.id),
     },
   };
+}
+
+export async function handleProtocolApplicationsRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read protocol applications." } };
+  if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  const parsed = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.query);
+  if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
+  const applications = (await liveService(staff, deps.now).applications.list())
+    .filter((application) => application.encounterId === parsed.data.encounterId)
+    .map((application) => ({
+      id: application.id,
+      protocolId: application.protocolId,
+      version: application.protocolVersion,
+      confirmed: application.confirmed,
+      undoState: application.undoState,
+    }));
+  return { status: 200, body: { applications } };
 }
 
 export async function handleProtocolUnapplyRequest(
@@ -110,6 +157,7 @@ export async function handleProtocolSignCleanupRequest(
 function liveService(staff: Staff, now?: () => string): ProtocolService {
   return new ProtocolService(staff.fhir, {
     async commitFinding(finding) {
+      if (finding.value === undefined) return undefined;
       const observation = finding.findingDefKey === "gonio_angle_structures"
         ? protocolFindingToGonioObservation(finding)
         : protocolFindingObservation(finding);
@@ -155,7 +203,10 @@ async function updateProjected<T extends Observation | ServiceRequest | CarePlan
   await update(resourceType, id, resource, { "X-ODOS-Source": "protocol-module" });
 }
 
-function protocolFindingObservation(finding: ProtocolFindingInstance): Observation {
+export function protocolFindingObservation(finding: ProtocolFindingInstance): Observation {
+  if (typeof finding.value === "number" && finding.findingDefKey !== "cup_disc_ratio") {
+    throw new Error(`Numeric protocol finding ${finding.findingDefKey} requires an explicit unit mapping.`);
+  }
   return {
     resourceType: "Observation",
     status: "final",
@@ -167,7 +218,7 @@ function protocolFindingObservation(finding: ProtocolFindingInstance): Observati
     ...(finding.laterality ? { bodySite: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/laterality", code: finding.laterality }] } } : {}),
     ...(typeof finding.value === "number"
       ? { valueQuantity: { value: finding.value, unit: "ratio", code: "1" } }
-      : { valueString: finding.value === undefined ? "promptOnly" : String(finding.value) }),
+      : { valueString: String(finding.value) }),
     extension: [{
       url: FINDING_SOURCE_URL,
       valueCode: finding.provenance.source,

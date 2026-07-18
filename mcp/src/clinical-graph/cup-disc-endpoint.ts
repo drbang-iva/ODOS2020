@@ -1,4 +1,4 @@
-import type { Bundle, CodeableConcept, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, CodeableConcept, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
@@ -24,6 +24,7 @@ export interface CupDiscFhirClient {
     resource: T,
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+  read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
 }
 
 export async function handleCupDiscReadRequest(
@@ -43,6 +44,7 @@ export async function handleCupDiscReadRequest(
   });
   const eyes: Partial<Record<Eye, { verticalCupDiscRatio: number }>> = {};
   for (const observation of (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])) {
+    if (observation.status === "entered-in-error" || observation.status === "cancelled") continue;
     const eye = observation.bodySite?.coding?.[0]?.code;
     const value = observation.valueQuantity?.value;
     if ((eye === "OD" || eye === "OS") && typeof value === "number" && !eyes[eye]) {
@@ -154,6 +156,10 @@ export async function handleCupDiscCaptureRequest(
   const validationError = validateCupDiscRequest(parsed.data.eyes, definition);
   if (validationError) {
     return { status: 400, body: { error: validationError } };
+  }
+  const encounter = await staff.fhir.read<Encounter>("Encounter", parsed.data.encounterReference.slice("Encounter/".length));
+  if (encounter.subject?.reference !== parsed.data.patientReference) {
+    return { status: 400, body: { error: "Encounter does not belong to the submitted patient." } };
   }
 
   const recordedAt = parsed.data.recordedAt ?? deps.now?.() ?? new Date().toISOString();

@@ -1,4 +1,4 @@
-import type { Bundle, Observation } from "@medplum/fhirtypes";
+import type { Bundle, Encounter, Observation } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -32,6 +32,7 @@ const requestSchema = z.object({
 interface GonioFhir {
   search<T extends Observation>(type: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
   create<T extends Observation>(resource: T, headers?: Record<string, string>): Promise<T>;
+  read<T extends Encounter>(type: T["resourceType"], id: string): Promise<T>;
 }
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: GonioFhir }
 export interface GonioscopyEndpointDeps {
@@ -73,6 +74,10 @@ export async function handleGonioscopyCaptureRequest(
   if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = requestSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid gonioscopy request." } };
+  const encounter = await staff.fhir.read<Encounter>("Encounter", parsed.data.encounterReference.slice("Encounter/".length));
+  if (encounter.subject?.reference !== parsed.data.patientReference) {
+    return { status: 400, body: { error: "Encounter does not belong to the submitted patient." } };
+  }
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const records = [];
   for (const record of parsed.data.records) {
@@ -97,7 +102,7 @@ export async function handleGonioscopyCaptureRequest(
 
 export function latestRecords(observations: Observation[]) {
   const result = new Map<string, ReturnType<typeof parseGonioQuadrantObservation>>();
-  for (const observation of observations.sort((a, b) =>
+  for (const observation of validObservations(observations).sort((a, b) =>
     String(b.effectiveDateTime ?? b.issued ?? "").localeCompare(String(a.effectiveDateTime ?? a.issued ?? "")))) {
     const record = parseGonioQuadrantObservation(observation);
     if (record) {
@@ -123,17 +128,20 @@ function resources(bundle: Bundle<Observation>): Observation[] {
 
 function latestPigmentation(observations: Observation[]): Partial<Record<"OD" | "OS", string>> {
   const result: Partial<Record<"OD" | "OS", string>> = {};
-  for (const observation of newestFirst(observations)) {
+  for (const observation of newestFirst(validObservations(observations))) {
     const eye = observation.bodySite?.coding?.[0]?.code;
-    if ((eye === "OD" || eye === "OS") && result[eye] === undefined && observation.valueString !== undefined) {
-      result[eye] = observation.valueString;
+    const value = observation.valueCodeableConcept?.coding?.find((coding) =>
+      coding.system === "https://odos2020.com/fhir/CodeSystem/gonio-tm-pigmentation"
+    )?.code;
+    if ((eye === "OD" || eye === "OS") && result[eye] === undefined && value !== undefined) {
+      result[eye] = value;
     }
   }
   return result;
 }
 
 function latestNote(observations: Observation[]): string {
-  return newestFirst(observations).find((observation) => observation.valueString !== undefined)?.valueString ?? "";
+  return newestFirst(validObservations(observations)).find((observation) => observation.valueString !== undefined)?.valueString ?? "";
 }
 
 function newestFirst(observations: Observation[]): Observation[] {
@@ -155,8 +163,15 @@ function simpleObservation(
     subject: { reference: request.patientReference }, encounter: { reference: request.encounterReference },
     effectiveDateTime: at, issued: at, performer: [{ reference: actor }],
     ...(eye ? { bodySite: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/laterality", code: eye }] } } : {}),
-    valueString: value,
+    ...(code === "gonio_tm_pigmentation"
+      ? { valueCodeableConcept: { coding: [{ system: "https://odos2020.com/fhir/CodeSystem/gonio-tm-pigmentation", code: value }] } }
+      : { valueString: value }),
   };
+}
+function validObservations(observations: Observation[]): Observation[] {
+  return observations.filter((observation) =>
+    observation.status !== "entered-in-error" && observation.status !== "cancelled"
+  );
 }
 function may(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
   try { assertBusinessActionAllowed(role, action); return true; } catch { return false; }

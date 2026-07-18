@@ -80,7 +80,7 @@ export interface ProtocolApplication {
 export interface ProcedureChargeRule {
   id: string;
   version: number;
-  cptConcept: string;
+  procedureConceptKey: string;
   dxScope: string[];
   jurisdiction: { payerClass: string; macId?: string; payerId?: string };
   outcome: "allowed" | "needs-review" | "not-allowed" | "warn-only";
@@ -92,6 +92,7 @@ export interface ProcedureChargeRule {
     kind: string;
     citation: string;
     url: string;
+    additionalUrls?: string[];
     accessedDate: string;
   };
   effectivePeriod: { start: string; end?: string };
@@ -103,7 +104,7 @@ export interface ChargeProposal {
   encounterId: string;
   protocolApplicationId: string;
   planActionRef: string;
-  cptConcept: string;
+  procedureConceptKey: string;
   units: number;
   laterality: "OD" | "OS" | "OU";
   dxPointers: string[];
