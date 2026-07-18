@@ -18,12 +18,12 @@ import {
   lensOrderRxFromVisionPrescription,
   lensProductEnvelopeCheck,
   modifierLinesForSelection,
+  resolveLensSelectionBilling,
   type AttachedLensSelection,
   type LensFulfillment,
   type LensModifierLine,
   type LensSelection,
 } from "../lib/lens-selection";
-import { resolveVCode } from "../lib/v-code-resolver";
 
 interface LensesOrderSurfaceProps {
   open: boolean;
@@ -199,7 +199,7 @@ export function LensesOrderSurface({
     ...line,
     confirmed: confirmedModifiers[line.id] ?? true,
   })), ...retainedModifierLines];
-  const billing = resolveVCode(
+  const billing = resolveLensSelectionBilling(
     selectedProduct?.defaultBillingCodeFamily,
     { od: rxContext.od, os: rxContext.os },
     claimBound,

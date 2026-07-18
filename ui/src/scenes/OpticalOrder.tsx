@@ -1,4 +1,4 @@
-import type { VisionPrescription } from "@medplum/fhirtypes";
+import type { Coverage, CoverageEligibilityResponse, VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { CollectPanel } from "../components/CollectPanel";
 import { AttachedLensPanel, LensesOrderSurface } from "../components/LensesOrderSurface";
@@ -45,6 +45,11 @@ import {
 import { openPrintWindow } from "../lib/print-window";
 import { advanceLabOrderTransport, cancelLabOrder, submitLabOrder } from "../lib/lab-order-transport";
 import { commitLensSelection, unattachLensSelection, type LensSelection } from "../lib/lens-selection";
+import {
+  fetchPatientInsurance,
+  fetchVisionBenefits,
+  hasActiveApplicableBenefit,
+} from "../lib/patient-insurance";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -149,6 +154,10 @@ export function OpticalOrder() {
   const [frameMatches, setFrameMatches] = useState<FramePosLookupMatch[]>([]);
   const [inventoryRows, setInventoryRows] = useState<PracticeFrameInventoryItem[]>([]);
   const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
+  const [insuranceContext, setInsuranceContext] = useState<{
+    coverages: Coverage[];
+    responses: CoverageEligibilityResponse[];
+  }>({ coverages: [], responses: [] });
   const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
   const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
@@ -162,10 +171,43 @@ export function OpticalOrder() {
   const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
   const attachedLenses = chargeLines.find((line) => line.lens)?.lens;
   const lensesLocked = Boolean(createdTaskId || labOrderReference);
+  const claimBound = useMemo(
+    () => hasActiveApplicableBenefit(
+      insuranceContext.coverages,
+      insuranceContext.responses,
+      ["lens"],
+      header.serviceDate,
+    ),
+    [insuranceContext, header.serviceDate],
+  );
   const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
   const canPrintLabSheet = Boolean(
     patientReference && signedVisionPrescription && header.lab.trim() && labOrderCapture.patientName.trim(),
   );
+
+  useEffect(() => {
+    if (!patientReference) {
+      setInsuranceContext({ coverages: [], responses: [] });
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      fetchPatientInsurance(patientReference),
+      fetchVisionBenefits(patientReference),
+    ]).then(([insurance, benefits]) => {
+      if (!cancelled) {
+        setInsuranceContext({ coverages: insurance.coverages, responses: benefits.responses });
+      }
+    }).catch((cause) => {
+      if (!cancelled) {
+        setInsuranceContext({ coverages: [], responses: [] });
+        console.error("Optical-order benefit context unavailable; treating order as cash-pay.", cause);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [patientReference]);
 
   useEffect(() => {
     if (!rxReference) {
@@ -664,7 +706,7 @@ export function OpticalOrder() {
         open={lensesOpen && !lensesLocked}
         rx={visionPrescription}
         initialSelection={attachedLenses}
-        claimBound={false}
+        claimBound={claimBound}
         onCancel={() => setLensesOpen(false)}
         onCommit={attachLenses}
       />

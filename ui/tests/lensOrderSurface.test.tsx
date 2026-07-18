@@ -17,6 +17,7 @@ import {
   lensOrderRxFromVisionPrescription,
   lensProductEnvelopeCheck,
   modifierLinesForSelection,
+  resolveLensSelectionBilling,
   type LensSelection,
 } from "../src/lib/lens-selection";
 import { opticalCollectionChargeFromDraft, type OpticalChargeLineDraft } from "../src/lib/optical-order";
@@ -112,6 +113,38 @@ test("VCodeResolver resolves verified per-eye power bands and progressive add-on
   if (verifiedTrifocal.status === "resolved") assert.equal(verifiedTrifocal.codes[0]?.code, "V2304");
   assert.equal(resolveVCode("V21", { od: { sphere: 8, cylinder: 2.25 } }, true).status, "unverified");
   assert.equal(resolveVCode(undefined, {}, false).status, "not-required");
+});
+
+test("BP seed billing families parse cleanly and only verified single-vision rows activate", () => {
+  const singleVision = BP_DIGITAL_LENS_PRODUCTS.filter((product) => product.design.type === "single-vision");
+  const progressive = BP_DIGITAL_LENS_PRODUCTS.filter((product) => product.design.type === "progressive");
+  assert.ok(singleVision.length > 0);
+  assert.ok(progressive.length > 0);
+  assert.ok(singleVision.every((product) => product.defaultBillingCodeFamily === "V21"));
+  assert.ok(progressive.every((product) => product.defaultBillingCodeFamily === undefined));
+  for (const product of singleVision) {
+    const resolution = resolveVCode(product.defaultBillingCodeFamily, {
+      od: { sphere: -2.25, cylinder: -0.75 },
+      os: { sphere: -2, cylinder: 0 },
+    }, true);
+    assert.equal(resolution.status, "resolved");
+    if (resolution.status === "resolved") {
+      assert.deepEqual(resolution.codes.map((code) => code.code), ["V2103", "V2100"]);
+    }
+  }
+});
+
+test("lens selection invokes the V-code resolver only for claim-bound orders", () => {
+  let calls = 0;
+  const resolver: typeof resolveVCode = (familyHint, rx, claimBound) => {
+    calls += 1;
+    return resolveVCode(familyHint, rx, claimBound);
+  };
+  const rx = { od: { sphere: -2.25, cylinder: -0.75 } };
+  assert.equal(resolveLensSelectionBilling("V21", rx, false, resolver).status, "not-required");
+  assert.equal(calls, 0);
+  assert.equal(resolveLensSelectionBilling("V21", rx, true, resolver).status, "resolved");
+  assert.equal(calls, 1);
 });
 
 test("search-first returns the same catalog row as the guided axes and leaves blocked hits visible", () => {
@@ -257,6 +290,41 @@ test("claim-bound selection remains blocked when its catalog row has no verified
 
   assert.equal(buttonByText(renderer!.root, "Add to order").props.disabled, true);
   assert.match(nodeText(renderer!.root.findByProps({ className: "lenses-billing is-unverified" })), /UNVERIFIED/);
+});
+
+test("claim-bound BP single-vision selection resolves the seeded V21 family per eye", async () => {
+  let committed: LensSelection | undefined;
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <LensesOrderSurface
+        open
+        claimBound
+        rx={TEST_RX}
+        products={BP_DIGITAL_LENS_PRODUCTS}
+        coatings={COATING_OPTION_SEEDS}
+        modifiers={MODIFIER_OPTION_SEEDS}
+        onCancel={() => undefined}
+        onCommit={(selection) => { committed = selection; }}
+      />,
+    );
+  });
+
+  clickButton(renderer!, "Single Vision");
+  clickButton(renderer!, "BP Digital SV");
+  clickButton(renderer!, "Poly");
+  clickButton(renderer!, "Clear");
+
+  const add = buttonByText(renderer!.root, "Add to order");
+  assert.equal(add.props.disabled, false);
+  act(() => add.props.onClick());
+  assert.equal(committed?.billing.status, "resolved");
+  if (committed?.billing.status === "resolved") {
+    assert.deepEqual(committed.billing.codes.map((code) => [code.code, code.lateralityModifier]), [
+      ["V2103", "RT"],
+      ["V2103", "LT"],
+    ]);
+  }
 });
 
 test("changing an attached selection preserves no coating, deselected modifiers, and locked mutation controls", async () => {
