@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 import type { Basic, Bundle, MedicationRequest } from "@medplum/fhirtypes";
+import { zipSync } from "fflate";
+import { Client } from "pg";
 import { ODOS_CONTROLLED_SUBSTANCE_FLAG_EXTENSION_URL } from "../src/fhir/medicationOrder.js";
 import {
   buildWenoMappingResource,
@@ -25,9 +28,12 @@ import {
   type PharmacyDirectoryRequest,
 } from "../src/integrations/weno/wenoEzIntegrationClient.js";
 import {
+  PostgresWenoPharmacyDirectoryStorage,
   pharmacyDirectoryStorageMode,
   parsePharmacyDirectoryZip,
+  searchPharmacies,
   syncWenoPharmacyDirectory,
+  type PharmacyDirectoryRow,
 } from "../src/jobs/syncWenoPharmacyDirectory.js";
 import {
   buildWenoMedicationRequest,
@@ -236,11 +242,64 @@ test("pharmacy directory download reports a clear timeout error", async () => {
   }
 });
 
-test("pharmacy directory parser fails loudly until a real WENO LITE workbook is available", () => {
-  assert.throws(
-    () => parsePharmacyDirectoryZip(new ArrayBuffer(0)),
-    /not yet wired.*real WENO pharmacy directory sample file.*LITE Excel column schema/,
-  );
+test("pharmacy directory parser finds the LITE CSV by row-2 headers and preserves safe IDs", () => {
+  const row = syntheticPharmacy({
+    NCPDP_safe: "[0234567]",
+    ZipCode_safe: "[00701]",
+    Pharmacy_Phone_safe: "[0123456789]",
+    Mail_Order_US_State_Serviced: "TX|OK",
+    Mail_Order_US_Territories_Serviced: "All",
+    "24HR": "Y",
+  });
+  const bytes = syntheticDirectoryZip([row], { extraLiteColumn: true, includeFull: true });
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+  const withoutTrailingColumn = parsePharmacyDirectoryZip(syntheticDirectoryZip([row]));
+
+  assert.equal(parsed.malformedRows, 0);
+  assert.equal(parsed.rows.length, 1);
+  assert.deepEqual(parsed, withoutTrailingColumn);
+  assert.equal(parsed.rows[0].ncpdpId, "0234567");
+  assert.equal(parsed.rows[0].npi, "0123456789");
+  assert.equal(parsed.rows[0].zip, "00701");
+  assert.equal(parsed.rows[0].phone, "0123456789");
+  assert.equal(parsed.rows[0].businessName, "Synthetic Community Pharmacy");
+  assert.deepEqual(parsed.rows[0].mailOrderStatesServiced, { type: "list", codes: ["TX", "OK"] });
+  assert.deepEqual(parsed.rows[0].mailOrderTerritoriesServiced, { type: "all" });
+  assert.equal(parsed.rows[0].open24Hours, "yes");
+});
+
+test("pharmacy directory parser maps the LITE schema by header name instead of position", () => {
+  const row = syntheticPharmacy({ NCPDP_safe: "[0765432]", Business_Name: "Reordered Pharmacy" });
+  const reversedHeaders = [...SYNTHETIC_LITE_HEADERS].reverse();
+  const bytes = zipToArrayBuffer(zipSync({
+    "unexpected-name.csv": new TextEncoder().encode(csvFixture(reversedHeaders, [row])),
+  }));
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.rows[0].ncpdpId, "0765432");
+  assert.equal(parsed.rows[0].businessName, "Reordered Pharmacy");
+});
+
+test("pharmacy directory parser counts malformed rows and retains deleted tombstones", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000001]", Deleted: "2026-07-17T01:02:03Z" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000002]", On_WENO: "sometimes" }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 1);
+  assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.rows[0].deleted, "2026-07-17T01:02:03.000Z");
+});
+
+test("pharmacy directory parser rejects an archive without a recognizable LITE row-2 header", () => {
+  const bytes = zipToArrayBuffer(zipSync({
+    "directory.csv": new TextEncoder().encode("Confidential synthetic fixture\nNot,A,LITE,Header\n"),
+  }));
+  assert.throws(() => parsePharmacyDirectoryZip(bytes), /no recognizable LITE CSV header on row 2/);
 });
 
 test("pharmacy directory cadence selects incremental and full-replace storage modes", () => {
@@ -248,33 +307,187 @@ test("pharmacy directory cadence selects incremental and full-replace storage mo
   assert.equal(pharmacyDirectoryStorageMode("N"), "replace");
 });
 
-test("pharmacy directory sync downloads then surfaces the parser boundary", async () => {
+test("pharmacy directory sync downloads, reports malformed rows, and stores parsed rows", async () => {
   const originalFetch = globalThis.fetch;
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000001]" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000002]", Test_Pharmacy: "not-a-boolean" }),
+  ]);
   let fetchCalls = 0;
   let storageCalls = 0;
+  let storedRows: PharmacyDirectoryRow[] = [];
+  let storedMode = "";
   globalThis.fetch = (async () => {
     fetchCalls += 1;
-    return new Response(Uint8Array.from([0x50, 0x4b]), { status: 200 });
+    return new Response(bytes, { status: 200 });
   }) as typeof fetch;
   try {
-    await assert.rejects(
-      syncWenoPharmacyDirectory({
-        trigger: "scheduled-daily",
-        config: CONFIG,
-        request: pharmacyDirectoryRequest(),
-        storage: {
-          async store() {
-            storageCalls += 1;
-            return 0;
-          },
+    const result = await syncWenoPharmacyDirectory({
+      trigger: "scheduled-daily",
+      config: CONFIG,
+      request: pharmacyDirectoryRequest(),
+      storage: {
+        async store(rows, mode) {
+          storageCalls += 1;
+          storedRows = rows;
+          storedMode = mode;
+          return rows.length;
         },
-      }),
-      /not yet wired.*real WENO pharmacy directory sample file/,
-    );
+      },
+    });
     assert.equal(fetchCalls, 1);
-    assert.equal(storageCalls, 0);
+    assert.equal(storageCalls, 1);
+    assert.equal(storedRows.length, 1);
+    assert.equal(storedMode, "incremental");
+    assert.deepEqual(result, {
+      trigger: "scheduled-daily",
+      fetchedBytes: bytes.byteLength,
+      parsed: 1,
+      stored: 1,
+      malformedRows: 1,
+    });
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("pharmacy search enforces place, state, type, and an explicit additional filter", () => {
+  const rows = searchFixtureRows();
+  assert.throws(
+    () => searchPharmacies(rows, { city: "Austin", searchType: "local-retail", all: true }),
+    /requires a state/,
+  );
+  assert.throws(
+    () => searchPharmacies(rows, { state: "TX", searchType: "local-retail", all: true }),
+    /requires a place/,
+  );
+  assert.throws(
+    () => searchPharmacies(rows, { city: "Austin", state: "TX", all: true }),
+    /requires a search type/,
+  );
+  assert.throws(
+    () => searchPharmacies(rows, { city: "Austin", state: "TX", searchType: "local-retail" }),
+    /requires onWeno.*explicit all/,
+  );
+  assert.throws(
+    () => searchPharmacies(rows, {
+      city: "Austin",
+      state: "TX",
+      searchType: "local-retail",
+      name: "ab",
+    }),
+    /name must be at least 3 characters/,
+  );
+});
+
+test("pharmacy search applies On-WENO, name, street, and 24-hour filters", () => {
+  const rows = searchFixtureRows();
+  const base = { city: "Austin", state: "TX", searchType: "local-retail" as const };
+
+  assert.deepEqual(
+    searchPharmacies(rows, { ...base, onWeno: true }).map((row) => row.businessName),
+    ["Preferred Pharmacy"],
+  );
+  assert.deepEqual(
+    searchPharmacies(rows, { ...base, name: "community" }).map((row) => row.businessName),
+    ["Community Pharmacy"],
+  );
+  assert.deepEqual(
+    searchPharmacies(rows, { ...base, street: "night" }).map((row) => row.businessName),
+    ["Preferred Pharmacy"],
+  );
+  assert.deepEqual(
+    searchPharmacies(rows, { ...base, open24hr: true }).map((row) => row.businessName),
+    ["Preferred Pharmacy"],
+  );
+});
+
+test("pharmacy search excludes test and deleted rows and sorts On-WENO pharmacies first", () => {
+  const rows = searchFixtureRows();
+
+  const patientFacing = searchPharmacies(rows, {
+    city: "Austin",
+    state: "TX",
+    searchType: "local-retail",
+    all: true,
+  });
+  assert.deepEqual(patientFacing.map((row) => row.businessName), [
+    "Preferred Pharmacy",
+    "Community Pharmacy",
+  ]);
+
+  const developerSearch = searchPharmacies(rows, {
+    city: "Austin",
+    state: "TX",
+    searchType: "local-retail",
+    all: true,
+    includeTestPharmacies: true,
+  });
+  assert.deepEqual(developerSearch.map((row) => row.businessName), [
+    "Preferred Pharmacy",
+    "Community Pharmacy",
+    "Test Pharmacy",
+  ]);
+});
+
+test("mail-order search honors All and pipe-delimited state service areas", () => {
+  const rows = searchFixtureRows();
+
+  const texas = searchPharmacies(rows, {
+    city: "Austin",
+    state: "TX",
+    searchType: "mail-order",
+    all: true,
+  });
+  assert.deepEqual(texas.map((row) => row.businessName), ["Mail All", "Mail TX OK"]);
+
+  const wisconsin = searchPharmacies(rows, {
+    city: "Madison",
+    state: "WI",
+    searchType: "mail-order",
+    all: true,
+  });
+  assert.deepEqual(wisconsin.map((row) => row.businessName), ["Mail All"]);
+});
+
+test("Postgres pharmacy storage replaces atomically and incrementally upserts and deletes", async (t) => {
+  const adminUrl = process.env.ODOS_POSTGRES_URL;
+  if (!adminUrl) {
+    t.skip("ODOS_POSTGRES_URL is required for the live Postgres pharmacy directory fixture.");
+    return;
+  }
+
+  const databaseName = `odos_weno_directory_${randomUUID().replaceAll("-", "")}`;
+  const testUrl = new URL(adminUrl);
+  testUrl.pathname = `/${databaseName}`;
+  const admin = new Client({ connectionString: adminUrl });
+  const storage = new PostgresWenoPharmacyDirectoryStorage({ postgresUrl: testUrl.toString() });
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
+    const oldRow = pharmacyRow({ ncpdpId: "1000001", businessName: "Old Pharmacy" });
+    const replacement = pharmacyRow({ ncpdpId: "1000002", businessName: "Replacement Pharmacy" });
+    assert.equal(await storage.store([oldRow], "replace"), 1);
+    assert.equal(await storage.store([replacement], "replace"), 1);
+    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Replacement Pharmacy"]);
+
+    const updated = { ...replacement, businessName: "Updated Pharmacy" };
+    assert.equal(await storage.store([updated], "incremental"), 1);
+    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["Updated Pharmacy"]);
+
+    const international = pharmacyRow({
+      ncpdpId: "",
+      mutuallyDefinedId: "INT-1",
+      businessName: "International Pharmacy",
+      international: true,
+    });
+    const tombstone = { ...updated, deleted: "2026-07-17T00:00:00.000Z" };
+    assert.equal(await storage.store([international, tombstone], "incremental"), 2);
+    assert.deepEqual((await storage.list()).map((row) => row.businessName), ["International Pharmacy"]);
+  } finally {
+    await storage.close();
+    await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+    await admin.end();
   }
 });
 
@@ -444,6 +657,178 @@ function pharmacyDirectoryRequest(): PharmacyDirectoryRequest {
     Daily: "Y",
     ExcludeNonWenoTest: "Y",
   };
+}
+
+const SYNTHETIC_LITE_HEADERS = [
+  "Created",
+  "Modified",
+  "Deleted",
+  "NCPDP_safe",
+  "Mutually_Defined_ID_safe",
+  "NPI_safe",
+  "Business_Name",
+  "Address_Line_1",
+  "Address_Line_2",
+  "City",
+  "State",
+  "ZipCode_safe",
+  "Country_Code",
+  "International",
+  "Latitude",
+  "Longitude",
+  "Pharmacy_Phone_safe",
+  "Test_Pharmacy",
+  "State_Wide_Mail_Order",
+  "Mail_Order_US_State_Serviced",
+  "Mail_Order_US_Territories_Serviced",
+  "On_WENO",
+  "24HR",
+] as const;
+
+type SyntheticPharmacy = Record<typeof SYNTHETIC_LITE_HEADERS[number], string>;
+
+function syntheticPharmacy(overrides: Partial<SyntheticPharmacy> = {}): SyntheticPharmacy {
+  return {
+    Created: "2026-07-01T00:00:00Z",
+    Modified: "2026-07-17T00:00:00Z",
+    Deleted: "NULL",
+    NCPDP_safe: "[1234567]",
+    Mutually_Defined_ID_safe: "NULL",
+    NPI_safe: "[0123456789]",
+    Business_Name: "Synthetic Community Pharmacy",
+    Address_Line_1: "100 Main Street",
+    Address_Line_2: "Suite 2",
+    City: "Austin",
+    State: "TX",
+    ZipCode_safe: "[78701]",
+    Country_Code: "US",
+    International: "False",
+    Latitude: "30.2672",
+    Longitude: "-97.7431",
+    Pharmacy_Phone_safe: "[05125550100]",
+    Test_Pharmacy: "False",
+    State_Wide_Mail_Order: "False",
+    Mail_Order_US_State_Serviced: "NULL",
+    Mail_Order_US_Territories_Serviced: "NULL",
+    On_WENO: "True",
+    "24HR": "Unknown",
+    ...overrides,
+  };
+}
+
+function syntheticDirectoryZip(
+  rows: SyntheticPharmacy[],
+  options: { extraLiteColumn?: boolean; includeFull?: boolean } = {},
+): ArrayBuffer {
+  const liteHeaders = options.extraLiteColumn
+    ? [...SYNTHETIC_LITE_HEADERS, "Future_Column"]
+    : [...SYNTHETIC_LITE_HEADERS];
+  const lite = csvFixture(
+    liteHeaders,
+    rows.map((row) => ({ ...row, Future_Column: "ignored" })),
+  );
+  const files: Record<string, Uint8Array> = {
+    "FULL-by-name-but-LITE-by-header.csv": new TextEncoder().encode(lite),
+    "README.txt": new TextEncoder().encode("Synthetic fixture only."),
+  };
+  if (options.includeFull) {
+    const fullHeaders = [
+      ...SYNTHETIC_LITE_HEADERS,
+      "Script_Msg_Accepted",
+      "Connectivity_Status",
+      "eRxDrugWarning",
+      ...Array.from({ length: 21 }, (_, index) => `Synthetic_FULL_Column_${index + 1}`),
+    ];
+    files["LITE-by-name-but-FULL-by-header.csv"] = new TextEncoder().encode(
+      csvFixture(fullHeaders, rows.map((row) => ({
+        ...row,
+        Script_Msg_Accepted: "Y",
+        Connectivity_Status: "Connected",
+        eRxDrugWarning: "",
+      }))),
+    );
+  }
+  return zipToArrayBuffer(zipSync(files));
+}
+
+function csvFixture(headers: readonly string[], rows: Array<Record<string, string>>): string {
+  const lines = [
+    "Confidential synthetic fixture. Copyright Example.",
+    headers.map(csvCell).join(","),
+    ...rows.map((row) => headers.map((header) => csvCell(row[header] ?? "")).join(",")),
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
+function csvCell(value: string): string {
+  return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+function zipToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function pharmacyRow(overrides: Partial<PharmacyDirectoryRow> = {}): PharmacyDirectoryRow {
+  return {
+    created: "2026-07-01T00:00:00.000Z",
+    modified: "2026-07-17T00:00:00.000Z",
+    ncpdpId: "1234567",
+    mutuallyDefinedId: "",
+    npi: "0123456789",
+    businessName: "Community Pharmacy",
+    addressLine1: "100 Main Street",
+    addressLine2: "",
+    city: "Austin",
+    state: "TX",
+    zip: "78701",
+    countryCode: "US",
+    international: false,
+    latitude: 30.2672,
+    longitude: -97.7431,
+    phone: "05125550100",
+    testPharmacy: false,
+    stateWideMailOrder: false,
+    mailOrderStatesServiced: { type: "list", codes: [] },
+    mailOrderTerritoriesServiced: { type: "list", codes: [] },
+    onWeno: false,
+    open24Hours: "unknown",
+    ...overrides,
+  };
+}
+
+function searchFixtureRows(): PharmacyDirectoryRow[] {
+  return [
+    pharmacyRow({ ncpdpId: "1000001", businessName: "Community Pharmacy" }),
+    pharmacyRow({
+      ncpdpId: "1000002",
+      businessName: "Preferred Pharmacy",
+      addressLine1: "200 Night Street",
+      onWeno: true,
+      open24Hours: "yes",
+    }),
+    pharmacyRow({ ncpdpId: "1000003", businessName: "Test Pharmacy", testPharmacy: true }),
+    pharmacyRow({
+      ncpdpId: "1000004",
+      businessName: "Deleted Pharmacy",
+      deleted: "2026-07-17T00:00:00.000Z",
+    }),
+    pharmacyRow({
+      ncpdpId: "1000005",
+      businessName: "Mail All",
+      city: "Denver",
+      state: "CO",
+      stateWideMailOrder: true,
+      mailOrderStatesServiced: { type: "all" },
+      onWeno: true,
+    }),
+    pharmacyRow({
+      ncpdpId: "1000006",
+      businessName: "Mail TX OK",
+      city: "Dallas",
+      stateWideMailOrder: true,
+      mailOrderStatesServiced: { type: "list", codes: ["OK", "TX"] },
+    }),
+  ];
 }
 
 function syncRow() {
