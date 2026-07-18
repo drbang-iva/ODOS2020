@@ -316,6 +316,19 @@ test("claim context is active only when a current Coverage has an active applica
     ),
     false,
   );
+  const multiInsurance: CoverageEligibilityResponse = {
+    ...response,
+    insurance: [
+      {
+        coverage: { reference: "Coverage/unrelated" },
+        inforce: false,
+        benefitPeriod: { start: "2026-07-01", end: "2027-06-30" },
+        item: [],
+      },
+      response.insurance![0],
+    ],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [multiInsurance], ["lens"], "2026-07-10"), true);
   const excludedLens: CoverageEligibilityResponse = {
     ...response,
     insurance: [{

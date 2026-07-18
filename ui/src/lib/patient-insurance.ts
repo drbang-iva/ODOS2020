@@ -357,8 +357,10 @@ export function latestBenefitsByCoverage(responses: readonly CoverageEligibility
   const sorted = [...responses].sort((left, right) => Date.parse(right.created) - Date.parse(left.created));
   const latest = new Map<string, CoverageEligibilityResponse>();
   for (const response of sorted) {
-    const reference = coverageReferenceKey(response.insurance?.[0]?.coverage.reference);
-    if (reference && !latest.has(reference)) latest.set(reference, response);
+    for (const insurance of response.insurance ?? []) {
+      const reference = coverageReferenceKey(insurance.coverage.reference);
+      if (reference && !latest.has(reference)) latest.set(reference, response);
+    }
   }
   return latest;
 }
@@ -376,15 +378,21 @@ export function hasActiveApplicableBenefit(
     const coverageEnd = coverage.period?.end?.slice(0, 10);
     if (coverageStart && coverageStart > serviceDate) return false;
     if (coverageEnd && coverageEnd < serviceDate) return false;
-    const response = latest.get(`Coverage/${coverage.id}`);
+    const coverageKey = `Coverage/${coverage.id}`;
+    const response = latest.get(coverageKey);
     if (!response || response.status !== "active" || response.outcome !== "complete") return false;
-    const benefitPeriod = response.insurance?.[0]?.benefitPeriod;
+    const insurance = response.insurance?.find(
+      (candidate) => coverageReferenceKey(candidate.coverage.reference) === coverageKey,
+    );
+    if (!insurance) return false;
+    const benefitPeriod = insurance.benefitPeriod;
     const benefitStart = benefitPeriod?.start?.slice(0, 10);
     const benefitEnd = benefitPeriod?.end?.slice(0, 10);
     if (benefitStart && benefitStart > serviceDate) return false;
     if (benefitEnd && benefitEnd < serviceDate) return false;
+    const matchedResponse = { ...response, insurance: [insurance] };
     return kinds.some((kind) => {
-      const status = deriveBenefitStatus(response, benefitItem(response, kind), serviceDate);
+      const status = deriveBenefitStatus(matchedResponse, benefitItem(matchedResponse, kind), serviceDate);
       return status === "Authorized" || status === "Eligibility Active";
     });
   });
