@@ -17,6 +17,7 @@ test("Vite proxies relative clinical-graph requests to the MCP server", () => {
   const config = readFileSync(join(process.cwd(), "vite.config.ts"), "utf8");
   assert.match(config, /const mcpTarget = env\.VITE_ODOS_MCP_BASE_URL \|\| "http:\/\/localhost:3333"/);
   assert.match(config, /"\/clinical-graph": \{ target: mcpTarget, changeOrigin: true \}/);
+  assert.match(config, /"\/weno": \{ target: mcpTarget, changeOrigin: true \}/);
 });
 
 test("clinical-graph requests share the literal Vite route and Medplum authorization helpers", () => {
@@ -30,7 +31,7 @@ test("clinical-graph requests share the literal Vite route and Medplum authoriza
     .map((path) => ({ path, source: readFileSync(path, "utf8") }))
     .filter(({ source }) => source.includes("clinicalGraphApiBase()"));
 
-  assert.equal(callers.length, 19);
+  assert.equal(callers.length, 20);
   for (const { path, source } of callers) {
     assert.match(source, /from "\.\.\/(?:\.\.\/)?lib\/clinical-graph-client";/, path);
     assert.doesNotMatch(source, /function (?:authHeaders|clinicalGraphApiBase)\(/, path);

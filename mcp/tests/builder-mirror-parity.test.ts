@@ -96,6 +96,9 @@ test("UI medication-order mirror matches the canonical MCP builder output", () =
     practitionerReference: "Practitioner/dr1",
     encounterReference: "Encounter/e1",
     medicationText: "Prednisolone acetate 1%",
+    drugDbCode: "445141",
+    drugDbCodeQualifier: "SCD",
+    quantityUnitOfMeasureCode: "C48542",
     dosageText: "1 drop OU four times daily",
     quantity: "5 mL",
     refills: 1,
@@ -103,6 +106,7 @@ test("UI medication-order mirror matches the canonical MCP builder output", () =
     routeText: "Ophthalmic",
     reasonReference: "Condition/c1",
     pharmacyText: "Main Street Pharmacy · 555-0100",
+    pharmacyNcpdpId: "4222222",
     transmissionMethod: "printed" as const,
     authoredOn: "2026-07-11T14:00:00.000Z",
   };

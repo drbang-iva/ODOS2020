@@ -33,6 +33,8 @@ export const WENO_NON_CONTROLLED_DEA_SCHEDULE_CODE = "C38046";
 
 export type WenoDrugNameSource = "psn" | "displayName" | "fullName";
 
+export class WenoDrugSearchValidationError extends Error {}
+
 export interface WenoDrugRow {
   drugDbCode: string;
   drugDbCodeQualifier: string;
@@ -303,7 +305,7 @@ export function parseWenoDrugDatabase(
 export function searchDrugs(rows: readonly WenoDrugRow[], query: string): WenoDrugRow[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   if (!normalizedQuery) {
-    throw new Error("Drug search requires a non-blank query.");
+    throw new WenoDrugSearchValidationError("Drug search requires a non-blank query.");
   }
   return rows
     .filter((row) => row.psnDescription.toLocaleLowerCase().includes(normalizedQuery))

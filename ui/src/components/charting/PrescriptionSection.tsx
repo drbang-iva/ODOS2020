@@ -4,9 +4,14 @@ import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../.
 import { fhir } from "../../lib/fhir";
 import {
   buildMedicationRequest,
+  NCPDP_PROVIDER_IDENTIFIER_SYSTEM,
   ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
+  ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL,
+  ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL,
+  RXNORM_CODE_SYSTEM,
   type MedicationTransmissionMethod,
 } from "../../lib/fhir-medication-order";
+import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -17,6 +22,9 @@ interface Props {
 
 export interface PrescriptionDraft {
   drug: string;
+  drugDbCode?: string;
+  drugDbCodeQualifier?: string;
+  quantityUnitOfMeasureCode?: string;
   sig: string;
   quantity: string;
   refills: string;
@@ -25,7 +33,38 @@ export interface PrescriptionDraft {
   indicationReference: string;
   indicationText: string;
   pharmacy: string;
+  pharmacyNcpdpId?: string;
   transmissionMethod: "printed" | "phoned-in";
+}
+
+export interface FormularyResult {
+  drugDbCode: string;
+  drugDbCodeQualifier: string;
+  quantityUnitOfMeasureCode: string;
+  psnDescription: string;
+  route: string;
+  strength: string;
+}
+
+export interface DirectoryResult {
+  ncpdpId: string;
+  businessName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  onWeno: boolean;
+}
+
+export interface WenoSearchApi {
+  searchFormulary(query: string, signal?: AbortSignal): Promise<FormularyResult[]>;
+  searchDirectory(input: {
+    state: string;
+    place: string;
+    searchType: "local-retail" | "mail-order";
+  }, signal?: AbortSignal): Promise<DirectoryResult[]>;
 }
 
 interface EditorProps {
@@ -34,6 +73,8 @@ interface EditorProps {
   controlledSubstanceTerms?: readonly string[];
   saving?: boolean;
   editing?: boolean;
+  searchApi?: WenoSearchApi;
+  formularyDebounceMs?: number;
   onChange: (draft: PrescriptionDraft) => void;
   onSave: () => void;
   onCancel?: () => void;
@@ -73,7 +114,34 @@ export function withDrugText(
   return {
     ...draft,
     drug,
+    drugDbCode: undefined,
+    drugDbCodeQualifier: undefined,
+    quantityUnitOfMeasureCode: undefined,
     ...(isControlledSubstanceDrug(drug, terms) ? { transmissionMethod: "phoned-in" as const } : {}),
+  };
+}
+
+export function withFormularyResult(
+  draft: PrescriptionDraft,
+  result: FormularyResult,
+): PrescriptionDraft {
+  return {
+    ...draft,
+    drug: result.psnDescription,
+    drugDbCode: result.drugDbCode,
+    drugDbCodeQualifier: result.drugDbCodeQualifier,
+    quantityUnitOfMeasureCode: result.quantityUnitOfMeasureCode,
+  };
+}
+
+export function withDirectoryResult(
+  draft: PrescriptionDraft,
+  result: DirectoryResult,
+): PrescriptionDraft {
+  return {
+    ...draft,
+    pharmacy: directoryDisplay(result),
+    pharmacyNcpdpId: result.ncpdpId || undefined,
   };
 }
 
@@ -83,24 +151,112 @@ export function PrescriptionEditor({
   controlledSubstanceTerms = CONTROLLED_SUBSTANCE_DRUG_TERMS,
   saving = false,
   editing = false,
+  searchApi = DEFAULT_WENO_SEARCH_API,
+  formularyDebounceMs = 280,
   onChange,
   onSave,
   onCancel,
 }: EditorProps) {
   const controlled = isControlledSubstanceDrug(draft.drug, controlledSubstanceTerms);
   const set = (next: Partial<PrescriptionDraft>) => onChange({ ...draft, ...next });
+  const [formularyResults, setFormularyResults] = useState<FormularyResult[]>([]);
+  const [formularyStatus, setFormularyStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
+  const [directoryPlace, setDirectoryPlace] = useState("");
+  const [directoryState, setDirectoryState] = useState("");
+  const [directorySearchType, setDirectorySearchType] = useState<"local-retail" | "mail-order">("local-retail");
+  const [directoryResults, setDirectoryResults] = useState<DirectoryResult[]>([]);
+  const [directoryStatus, setDirectoryStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
+
+  useEffect(() => {
+    const query = draft.drug.trim();
+    if (!query || draft.drugDbCode) {
+      setFormularyResults([]);
+      setFormularyStatus("idle");
+      return;
+    }
+    const controller = new AbortController();
+    let active = true;
+    const timeout = setTimeout(() => {
+      setFormularyStatus("searching");
+      void searchApi.searchFormulary(query, controller.signal)
+        .then((results) => {
+          if (!active) return;
+          setFormularyResults(results);
+          setFormularyStatus("ready");
+        })
+        .catch((caught) => {
+          if (!active || (caught instanceof Error && caught.name === "AbortError")) return;
+          setFormularyResults([]);
+          setFormularyStatus("error");
+        });
+    }, formularyDebounceMs);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [draft.drug, draft.drugDbCode, formularyDebounceMs, searchApi]);
+
+  async function runDirectorySearch() {
+    const place = directoryPlace.trim();
+    const state = directoryState.trim();
+    if (!place || !state) return;
+    setDirectoryStatus("searching");
+    try {
+      setDirectoryResults(await searchApi.searchDirectory({
+        place,
+        state,
+        searchType: directorySearchType,
+      }));
+      setDirectoryStatus("ready");
+    } catch {
+      setDirectoryResults([]);
+      setDirectoryStatus("error");
+    }
+  }
 
   return (
     <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Field label="Drug">
+        <Field label="Formulary">
           <input
-            aria-label="Drug"
+            aria-label="Formulary"
             className="sidebar-input"
             value={draft.drug}
             onChange={(event) => onChange(withDrugText(draft, event.target.value, controlledSubstanceTerms))}
-            placeholder="Prednisolone acetate 1%"
+            placeholder="Start typing a medication or enter it as written"
           />
+          {draft.drugDbCode && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-emerald-200/80">
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1">Coded — from WENO drug database</span>
+              <span>RxCUI {draft.drugDbCode}</span>
+            </div>
+          )}
+          {formularyStatus === "searching" && <SearchNote>Searching the Formulary…</SearchNote>}
+          {formularyStatus === "error" && <SearchNote>The Formulary is unavailable. You can keep this entry as written.</SearchNote>}
+          {formularyStatus === "ready" && formularyResults.length === 0 && (
+            <SearchNote>No Formulary matches. You can keep this entry as written.</SearchNote>
+          )}
+          {formularyResults.length > 0 && (
+            <div className="mt-2 max-h-56 overflow-y-auto rounded border border-white/10 bg-bg-panel shadow-xl">
+              {formularyResults.map((result) => (
+                <button
+                  key={`${result.drugDbCode}:${result.drugDbCodeQualifier}`}
+                  type="button"
+                  className="block w-full border-b border-white/5 px-3 py-2 text-left normal-case tracking-normal last:border-b-0 hover:bg-white/5"
+                  aria-label={`Choose ${result.psnDescription} from the Formulary`}
+                  onClick={() => {
+                    onChange(withFormularyResult(draft, result));
+                    setFormularyResults([]);
+                    setFormularyStatus("idle");
+                  }}
+                >
+                  <span className="block text-sm font-semibold text-white">{result.psnDescription}</span>
+                  <span className="mt-0.5 block text-xs text-white/50">{formularyDetails(result)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </Field>
         <Field label="Sig">
           <input aria-label="Sig" className="sidebar-input" value={draft.sig} onChange={(event) => set({ sig: event.target.value })} placeholder="1 drop OU four times daily" />
@@ -130,14 +286,64 @@ export function PrescriptionEditor({
         <Field label="Indication fallback">
           <input aria-label="Indication fallback" className="sidebar-input" value={draft.indicationText} onChange={(event) => set({ indicationText: event.target.value })} placeholder="Free text when no diagnosis is linked" />
         </Field>
-        <Field label="Pharmacy name and phone">
-          <input aria-label="Pharmacy name and phone" className="sidebar-input" value={draft.pharmacy} onChange={(event) => set({ pharmacy: event.target.value })} placeholder="Main Street Pharmacy · 555-0100" />
+        <Field label="Directory">
+          <input
+            aria-label="Directory entry"
+            className="sidebar-input"
+            value={draft.pharmacy}
+            onChange={(event) => set({ pharmacy: event.target.value, pharmacyNcpdpId: undefined })}
+            placeholder="Type a name or phone, or choose from the Directory"
+          />
+          {draft.pharmacyNcpdpId && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-sky-200/80">
+              <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-1">Coded — from the WENO Directory</span>
+              <span>NCPDP {draft.pharmacyNcpdpId}</span>
+            </div>
+          )}
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
+            <input aria-label="Directory ZIP or city" className="sidebar-input" value={directoryPlace} onChange={(event) => setDirectoryPlace(event.target.value)} placeholder="ZIP or city" />
+            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => setDirectoryState(event.target.value.toUpperCase())} placeholder="State" />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 normal-case tracking-normal">
+            <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
+              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("local-retail")}>Local</button>
+              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("mail-order")}>Mail order</button>
+            </div>
+            <button type="button" className="sidebar-button" disabled={!directoryPlace.trim() || !directoryState.trim() || directoryStatus === "searching"} onClick={() => void runDirectorySearch()}>
+              {directoryStatus === "searching" ? "Searching…" : "Search Directory"}
+            </button>
+          </div>
+          {directoryStatus === "error" && <SearchNote>The Directory is unavailable. You can keep this entry as written.</SearchNote>}
+          {directoryStatus === "ready" && directoryResults.length === 0 && <SearchNote>No Directory matches. You can keep this entry as written.</SearchNote>}
+          {directoryResults.length > 0 && (
+            <div className="mt-2 max-h-64 overflow-y-auto rounded border border-white/10 bg-bg-panel shadow-xl">
+              {directoryResults.map((result, index) => (
+                <button
+                  key={`${result.ncpdpId}:${result.businessName}:${index}`}
+                  type="button"
+                  className="block w-full border-b border-white/5 px-3 py-2 text-left normal-case tracking-normal last:border-b-0 hover:bg-white/5"
+                  aria-label={`Choose ${result.businessName} from the Directory`}
+                  onClick={() => {
+                    onChange(withDirectoryResult(draft, result));
+                    setDirectoryResults([]);
+                    setDirectoryStatus("idle");
+                  }}
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                    {result.businessName}
+                    {result.onWeno && <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-sky-100">On WENO</span>}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-white/50">{directoryAddress(result)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </Field>
       </div>
 
       {controlled && (
         <div role="alert" className="mt-4 rounded border border-amber-400/40 bg-amber-400/10 p-3 text-sm font-semibold text-amber-100">
-          Controlled substance — WENO e-Rx not available for this drug. Call it in to the pharmacy.
+          Controlled substance — WENO e-Rx not available for this medication. Call it in to the pharmacy.
         </div>
       )}
 
@@ -241,6 +447,9 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         practitionerReference,
         encounterReference,
         medicationText: draft.drug.trim(),
+        drugDbCode: draft.drugDbCode,
+        drugDbCodeQualifier: draft.drugDbCodeQualifier,
+        quantityUnitOfMeasureCode: draft.quantityUnitOfMeasureCode,
         dosageText: draft.sig.trim(),
         quantity: optionalText(draft.quantity),
         refills: optionalInteger(draft.refills, "Refills", 0),
@@ -249,6 +458,7 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         reasonReference: optionalText(draft.indicationReference),
         indicationText: draft.indicationReference ? undefined : optionalText(draft.indicationText),
         pharmacyText: optionalText(draft.pharmacy),
+        pharmacyNcpdpId: draft.pharmacyNcpdpId,
         isControlledSubstance: controlled,
         transmissionMethod,
       });
@@ -327,7 +537,16 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block text-xs font-semibold uppercase tracking-wide text-white/45">{label}<span className="mt-1 block">{children}</span></label>;
+  return (
+    <div className="block text-xs font-semibold uppercase tracking-wide text-white/45">
+      <div>{label}</div>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+function SearchNote({ children }: { children: React.ReactNode }) {
+  return <div role="status" className="mt-2 text-xs font-normal normal-case tracking-normal text-white/45">{children}</div>;
 }
 
 function optionalText(value: string): string | undefined {
@@ -343,6 +562,53 @@ function optionalInteger(value: string, label: string, minimum: number): number 
   return parsed;
 }
 
+const DEFAULT_WENO_SEARCH_API: WenoSearchApi = {
+  async searchFormulary(query, signal) {
+    const params = new URLSearchParams({ q: query });
+    const response = await fetch(`${clinicalGraphApiBase()}/weno/drugs/search?${params}`, {
+      headers: authHeaders(),
+      signal,
+    });
+    const body = await response.json() as { results?: FormularyResult[]; error?: string };
+    if (!response.ok) throw new Error(body.error ?? `Formulary search failed: ${response.status}`);
+    return body.results ?? [];
+  },
+  async searchDirectory(input, signal) {
+    const params = new URLSearchParams({
+      state: input.state,
+      searchType: input.searchType,
+      all: "true",
+    });
+    if (/^\d{5}(?:-?\d{4})?$/.test(input.place)) {
+      params.set("zip", input.place);
+    } else {
+      params.set("city", input.place);
+    }
+    const response = await fetch(`${clinicalGraphApiBase()}/weno/pharmacies/search?${params}`, {
+      headers: authHeaders(),
+      signal,
+    });
+    const body = await response.json() as { results?: DirectoryResult[]; error?: string };
+    if (!response.ok) throw new Error(body.error ?? `Directory search failed: ${response.status}`);
+    return body.results ?? [];
+  },
+};
+
+function formularyDetails(result: FormularyResult): string {
+  return [result.route, result.strength].filter(Boolean).join(" · ") || "Route and strength not supplied";
+}
+
+function directoryAddress(result: DirectoryResult): string {
+  return [
+    [result.addressLine1, result.addressLine2].filter(Boolean).join(" "),
+    [result.city, result.state, result.zip].filter(Boolean).join(" "),
+  ].filter(Boolean).join(" · ");
+}
+
+function directoryDisplay(result: DirectoryResult): string {
+  return [result.businessName, directoryAddress(result), result.phone].filter(Boolean).join(" · ");
+}
+
 function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in" {
   const value = request.extension
     ?.find((extension) => extension.url === ODOS_TRANSMISSION_METHOD_EXTENSION_URL)
@@ -351,8 +617,17 @@ function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in"
 }
 
 function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
+  const coding = request.medicationCodeableConcept?.coding
+    ?.find((entry) => entry.system === RXNORM_CODE_SYSTEM);
   return {
     drug: request.medicationCodeableConcept?.text ?? "",
+    drugDbCode: coding?.code,
+    drugDbCodeQualifier: coding?.extension
+      ?.find((extension) => extension.url === ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL)
+      ?.valueCode,
+    quantityUnitOfMeasureCode: coding?.extension
+      ?.find((extension) => extension.url === ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL)
+      ?.valueCode,
     sig: request.dosageInstruction?.[0]?.text ?? "",
     quantity: request.dispenseRequest?.quantity?.unit ?? "",
     refills: request.dispenseRequest?.numberOfRepeatsAllowed?.toString() ?? "0",
@@ -361,6 +636,9 @@ function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
     indicationReference: request.reasonReference?.[0]?.reference ?? "",
     indicationText: request.reasonCode?.[0]?.text ?? "",
     pharmacy: request.dispenseRequest?.performer?.display ?? "",
+    pharmacyNcpdpId: request.dispenseRequest?.performer?.identifier?.system === NCPDP_PROVIDER_IDENTIFIER_SYSTEM
+      ? request.dispenseRequest.performer.identifier.value
+      : undefined,
     transmissionMethod: transmissionMethod(request),
   };
 }
