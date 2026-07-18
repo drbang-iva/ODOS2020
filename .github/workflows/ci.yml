@@ -32,6 +32,21 @@ jobs:
             package-lock.json
             mcp/package-lock.json
             ui/package-lock.json
+      - name: start Medplum contract backend
+        run: >-
+          docker-compose -p odos-contract-ci -f docker-compose.dr-drill.yml
+          up -d postgres redis medplum-server
+      - name: wait for Medplum healthcheck
+        run: |
+          for attempt in {1..90}; do
+            if curl --fail --silent http://localhost:18103/healthcheck >/dev/null; then
+              docker-compose -p odos-contract-ci -f docker-compose.dr-drill.yml ps
+              exit 0
+            fi
+            sleep 2
+          done
+          docker-compose -p odos-contract-ci -f docker-compose.dr-drill.yml logs medplum-server
+          exit 1
       - name: install root deps
         run: npm ci
       - name: install mcp deps
@@ -63,6 +78,21 @@ jobs:
             ../tests/agentops/**/*.test.ts \
             ../tests/bulk-data/**/*.test.ts \
             ../tests/mandate-8/**/*.test.ts
+      - name: run Medplum search contract smoke lane
+        working-directory: mcp
+        env:
+          MEDPLUM_BASE_URL: http://localhost:18103
+          MEDPLUM_ADMIN_EMAIL: contract-admin@odos.local
+          MEDPLUM_ADMIN_PASSWORD: Odos-contract-CI-Password-1!
+          MEDPLUM_CONTRACT_BOOTSTRAP: "1"
+        run: |
+          node --import tsx --test --test-concurrency=1 tests/searchParamMedplumSmoke.test.ts
+          node --import tsx --test --test-concurrency=1 tests/profile-validation.test.ts
+      - name: stop Medplum contract backend
+        if: always()
+        run: >-
+          docker-compose -p odos-contract-ci -f docker-compose.dr-drill.yml
+          down -v
 
   ui:
     name: ui — install + typecheck + build
