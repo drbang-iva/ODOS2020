@@ -16,6 +16,7 @@ export const LENS_CATALOG_OPTION_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-lens-catalog-option";
 export const LENS_VOCABULARY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-lens-vocabulary";
+export const LENS_RETAIL_MARKUP_MULTIPLIER = 2.2;
 
 const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const PRACTICE_ID = "odos-practice";
@@ -664,7 +665,7 @@ export function evaluateModifierAutoTrigger(
 
 export function suggestedRetailPerPairCents(wholesalePerPairCents: number): number {
   assertCents(wholesalePerPairCents, "Wholesale price per pair");
-  return Math.round((wholesalePerPairCents * 22) / 1000) * 100 - 2;
+  return Math.round((wholesalePerPairCents * LENS_RETAIL_MARKUP_MULTIPLIER) / 100) * 100 - 2;
 }
 
 export function assertLensProduct(item: LensProduct): LensProduct {

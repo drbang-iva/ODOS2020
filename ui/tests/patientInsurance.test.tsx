@@ -19,6 +19,7 @@ import {
   fetchPatientInsurance,
   fetchVisionBenefits,
   hasActiveApplicableBenefit,
+  latestBenefitsByCoverage,
   nextEligibleDate,
   savePatientInsurance,
   saveVisionBenefits,
@@ -246,6 +247,8 @@ test("all six benefit statuses are derived from period, authorization, exclusion
 test("claim context is active only when a current Coverage has an active applicable lens benefit", () => {
   const response = responseFixture();
   assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [response], ["lens"], "2026-07-10"), true);
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [{ ...response, status: "cancelled" }], ["lens"], "2026-07-10"), false);
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [{ ...response, outcome: "error" }], ["lens"], "2026-07-10"), false);
   assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [], ["lens"], "2026-07-10"), false);
   assert.equal(
     hasActiveApplicableBenefit([{ ...LEGACY_COVERAGE, status: "cancelled" }], [response], ["lens"], "2026-07-10"),
@@ -338,6 +341,19 @@ test("claim context is active only when a current Coverage has an active applica
   };
   assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [excludedLens], ["lens"], "2026-07-10"), false);
   assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [excludedLens], ["exam"], "2026-07-10"), true);
+});
+
+test("latest benefit selection treats malformed created timestamps as older than valid responses", () => {
+  const valid = responseFixture();
+  const malformed: CoverageEligibilityResponse = {
+    ...valid,
+    id: "malformed-created",
+    created: "not-a-fhir-instant",
+    insurance: [{ ...valid.insurance![0], inforce: false }],
+  };
+  const latest = latestBenefitsByCoverage([malformed, valid]);
+  assert.equal(latest.get("Coverage/legacy-coverage")?.id, valid.id);
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [malformed, valid], ["lens"], "2026-07-10"), true);
 });
 
 test("both insurance clients use their dedicated routes and preserve transaction bodies", async () => {

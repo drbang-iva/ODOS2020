@@ -1,7 +1,11 @@
 import type { Coverage, CoverageEligibilityResponse, VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { CollectPanel } from "../components/CollectPanel";
-import { AttachedLensPanel, LensesOrderSurface } from "../components/LensesOrderSurface";
+import {
+  AttachedLensPanel,
+  LensesOrderSurface,
+  type LensesOrderSurfaceProps,
+} from "../components/LensesOrderSurface";
 import type { OpenChargeLine, OpticalCollectionOrder } from "../lib/collect";
 import {
   buildLabOrder,
@@ -112,8 +116,29 @@ const QUICK_ADVANCE: Array<{ label: string; status: OpticalOrderStatusCode }> = 
   { label: "Cancelled", status: "cancelled" },
 ];
 
-export function OpticalOrder() {
-  const params = new URLSearchParams(window.location.search);
+interface OpticalOrderProps {
+  search?: string;
+  initialVisionPrescription?: VisionPrescription;
+  api?: {
+    fetchPatientInsurance?: typeof fetchPatientInsurance;
+    fetchVisionBenefits?: typeof fetchVisionBenefits;
+    searchFrameCatalog?: typeof searchFrameCatalog;
+    loadPracticeFrameInventory?: typeof loadPracticeFrameInventory;
+  };
+  lensCatalog?: Pick<LensesOrderSurfaceProps, "products" | "coatings" | "modifiers" | "resolver">;
+}
+
+export function OpticalOrder({
+  search = window.location.search,
+  initialVisionPrescription,
+  api,
+  lensCatalog,
+}: OpticalOrderProps = {}) {
+  const params = new URLSearchParams(search);
+  const fetchInsurance = api?.fetchPatientInsurance ?? fetchPatientInsurance;
+  const fetchBenefits = api?.fetchVisionBenefits ?? fetchVisionBenefits;
+  const searchFrames = api?.searchFrameCatalog ?? searchFrameCatalog;
+  const loadFrameInventory = api?.loadPracticeFrameInventory ?? loadPracticeFrameInventory;
   const [patientReference] = useState(params.get("patient") ?? "");
   const [rxReference] = useState(params.get("rx") ?? "");
   const [encounterReference] = useState(params.get("encounter") ?? "");
@@ -153,12 +178,12 @@ export function OpticalOrder() {
   const [frameType, setFrameType] = useState("");
   const [frameMatches, setFrameMatches] = useState<FramePosLookupMatch[]>([]);
   const [inventoryRows, setInventoryRows] = useState<PracticeFrameInventoryItem[]>([]);
-  const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
+  const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(initialVisionPrescription ?? null);
   const [insuranceContext, setInsuranceContext] = useState<{
     coverages: Coverage[];
     responses: CoverageEligibilityResponse[];
   }>({ coverages: [], responses: [] });
-  const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
+  const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(initialVisionPrescription ?? null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
   const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
   const [labTransportState, setLabTransportState] = useState<string | null>(null);
@@ -192,8 +217,8 @@ export function OpticalOrder() {
     }
     let cancelled = false;
     Promise.all([
-      fetchPatientInsurance(patientReference),
-      fetchVisionBenefits(patientReference),
+      fetchInsurance(patientReference),
+      fetchBenefits(patientReference),
     ]).then(([insurance, benefits]) => {
       if (!cancelled) {
         setInsuranceContext({ coverages: insurance.coverages, responses: benefits.responses });
@@ -207,7 +232,7 @@ export function OpticalOrder() {
     return () => {
       cancelled = true;
     };
-  }, [patientReference]);
+  }, [fetchBenefits, fetchInsurance, patientReference]);
 
   useEffect(() => {
     if (!rxReference) {
@@ -232,7 +257,7 @@ export function OpticalOrder() {
   useEffect(() => {
     let cancelled = false;
     const query = Object.values(frameCriteria).filter(Boolean).join(" ");
-    Promise.all([searchFrameCatalog(query), loadPracticeFrameInventory()])
+    Promise.all([searchFrames(query), loadFrameInventory()])
       .then(([catalog, inventory]) => {
         if (cancelled) return;
         setInventoryRows(inventory);
@@ -244,7 +269,7 @@ export function OpticalOrder() {
     return () => {
       cancelled = true;
     };
-  }, [frameCriteria]);
+  }, [frameCriteria, loadFrameInventory, searchFrames]);
 
   const opticalCollectCharges = useMemo<OpenChargeLine[]>(() =>
     chargeLines.filter((line) => line.selected).map((line) => ({
@@ -707,6 +732,10 @@ export function OpticalOrder() {
         rx={visionPrescription}
         initialSelection={attachedLenses}
         claimBound={claimBound}
+        products={lensCatalog?.products}
+        coatings={lensCatalog?.coatings}
+        modifiers={lensCatalog?.modifiers}
+        resolver={lensCatalog?.resolver}
         onCancel={() => setLensesOpen(false)}
         onCommit={attachLenses}
       />
