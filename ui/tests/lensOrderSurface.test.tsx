@@ -77,8 +77,8 @@ test("prism modifiers sum horizontal and vertical prism per eye, use the worse e
 
   assert.equal(prism?.eye, "OD");
   assert.equal(prism?.prismTotal, 5.5);
-  assert.equal(prism?.chargeCents, 983);
-  assert.equal(prism?.chargeCents, Math.round(1.5 * 298 * LENS_RETAIL_MARKUP_MULTIPLIER));
+  assert.equal(prism?.chargeCents, 998);
+  assert.equal(prism?.chargeCents, suggestedRetailPerPairCents(Math.round(1.5 * 298)));
   const wholesaleCents = 7798;
   assert.equal(
     suggestedRetailPerPairCents(wholesaleCents),

@@ -1,7 +1,6 @@
 import type { VisionPrescription, VisionPrescriptionLensSpecification } from "@medplum/fhirtypes";
 import {
   evaluateModifierAutoTrigger,
-  LENS_RETAIL_MARKUP_MULTIPLIER,
   lensProductChargeItemDefinitionCanonical,
   suggestedRetailPerPairCents,
   type CoatingOption,
@@ -374,10 +373,7 @@ export function resolveLensSelectionBilling(
 
 function modifierChargeCents(modifier: ModifierOption, actual: number | undefined): number {
   if (modifier.unit === "perDiopter") {
-    const threshold = typeof modifier.autoTrigger?.value === "number" ? modifier.autoTrigger.value : 0;
-    const billable = Math.max(0, (actual ?? 0) - threshold);
-    // Per-diopter cent rounding deliberately differs from catalog dollar-minus-2; reconciliation is a pricing decision.
-    return Math.round(billable * modifier.priceCents * LENS_RETAIL_MARKUP_MULTIPLIER);
+    return addOnRetailCents(modifierSourceCostCents(modifier, actual));
   }
   return addOnRetailCents(modifier.priceCents);
 }
