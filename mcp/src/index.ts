@@ -14,7 +14,7 @@
  *
  * Zero Medplum SDK — plain fetch against the FHIR REST API.
  */
-
+import { registerReferralRoutes } from "./referral/referral-routes.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -6404,6 +6404,11 @@ async function main(): Promise<void> {
         authenticate: authenticateStaffRoute,
         drugs: new PostgresWenoDrugDatabaseStorage(),
         pharmacies: new PostgresWenoPharmacyDirectoryStorage(),
+      });
+      registerReferralRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRouteForAction("chart.write"),
+        serviceFhir: fhir,
       });
 
       app.post("/claims/submit", async (req, res) => {
