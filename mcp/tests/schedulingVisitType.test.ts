@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import {
   DISCIPLINE_COLOR_BANDS,
-  OSOD_DISPLAY_COLOR_EXTENSION_URL,
-  OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
-  OSOD_INTAKE_FORM_EXTENSION_URL,
-  OSOD_VISIT_DURATION_EXTENSION_URL,
-  OSOD_VISIT_TYPE_SYSTEM,
+  ODOS_DISPLAY_COLOR_EXTENSION_URL,
+  ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+  ODOS_INTAKE_FORM_EXTENSION_URL,
+  ODOS_VISIT_DURATION_EXTENSION_URL,
+  ODOS_VISIT_TYPE_SYSTEM,
+  ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
   SCHEDULER_PALETTE,
   buildVisitType,
   defaultVisitTypeCatalog,
   visitTypeCode,
+  visitTypeCategory,
   visitTypeColor,
   visitTypeDiscipline,
   visitTypeDurationMinutes,
@@ -31,15 +33,15 @@ test("buildVisitType builds a HealthcareService catalog entry: discipline catego
   assert.equal(hs.active, true);
   assert.equal(hs.appointmentRequired, true);
   const categoryCoding = hs.category?.[0]?.coding?.[0];
-  assert.equal(categoryCoding?.system, OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(categoryCoding?.system, ODOS_DISCIPLINE_SYSTEM);
   assert.equal(categoryCoding?.code, "eyecare");
   const typeCoding = hs.type?.[0]?.coding?.[0];
-  assert.equal(typeCoding?.system, OSOD_VISIT_TYPE_SYSTEM);
+  assert.equal(typeCoding?.system, ODOS_VISIT_TYPE_SYSTEM);
   assert.equal(typeCoding?.code, "routine-exam-new");
   assert.equal(typeCoding?.display, "Routine Exam (New)");
 });
 
-test("duration rides in the osod-visit-duration extension as positiveInt minutes", () => {
+test("duration rides in the odos-visit-duration extension as positiveInt minutes", () => {
   const hs = buildVisitType({
     code: "aesthetics-treatment",
     name: "Aesthetics Treatment",
@@ -47,12 +49,12 @@ test("duration rides in the osod-visit-duration extension as positiveInt minutes
     durationMinutes: 60,
     color: "#ee6699",
   });
-  const ext = hs.extension?.find((e) => e.url === OSOD_VISIT_DURATION_EXTENSION_URL);
+  const ext = hs.extension?.find((e) => e.url === ODOS_VISIT_DURATION_EXTENSION_URL);
   assert.equal(ext?.valuePositiveInt, 60);
   assert.equal(visitTypeDurationMinutes(hs), 60);
 });
 
-test("color rides in the osod-display-color extension; the catalog owns the color (brief §4)", () => {
+test("color rides in the odos-display-color extension; the catalog owns the color (brief §4)", () => {
   const hs = buildVisitType({
     code: "office-visit",
     name: "Office Visit",
@@ -60,7 +62,7 @@ test("color rides in the osod-display-color extension; the catalog owns the colo
     durationMinutes: 20,
     color: "#ff8844",
   });
-  const ext = hs.extension?.find((e) => e.url === OSOD_DISPLAY_COLOR_EXTENSION_URL);
+  const ext = hs.extension?.find((e) => e.url === ODOS_DISPLAY_COLOR_EXTENSION_URL);
   assert.equal(ext?.valueString, "#ff8844");
   assert.equal(visitTypeColor(hs), "#ff8844");
 });
@@ -82,7 +84,7 @@ test("color defaults to the discipline's primary band color when the operator om
   assert.equal(visitTypeColor(aesthetics), SCHEDULER_PALETTE.aestheticsCyan);
 });
 
-test("eligible resources ride as repeating osod-eligible-resource valueReference extensions", () => {
+test("eligible resources ride as repeating odos-eligible-resource valueReference extensions", () => {
   const hs = buildVisitType({
     code: "special-testing",
     name: "Special Testing",
@@ -92,7 +94,7 @@ test("eligible resources ride as repeating osod-eligible-resource valueReference
     eligibleResourceReferences: ["Device/oct-1", "Location/testing-room"],
   });
   const refs = hs.extension
-    ?.filter((e) => e.url === OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL)
+    ?.filter((e) => e.url === ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL)
     .map((e) => e.valueReference?.reference);
   assert.deepEqual(refs, ["Device/oct-1", "Location/testing-room"]);
   assert.deepEqual(visitTypeEligibleResourceReferences(hs), [
@@ -101,7 +103,7 @@ test("eligible resources ride as repeating osod-eligible-resource valueReference
   ]);
 });
 
-test("an intake form rides in the osod-intake-form extension (GHL service-menu model)", () => {
+test("an intake form rides in the odos-intake-form extension (GHL service-menu model)", () => {
   const hs = buildVisitType({
     code: "aesthetics-consult",
     name: "Aesthetics Consult",
@@ -110,7 +112,7 @@ test("an intake form rides in the osod-intake-form extension (GHL service-menu m
     color: "#22aabb",
     intakeFormReference: "Questionnaire/aesthetics-intake",
   });
-  const ext = hs.extension?.find((e) => e.url === OSOD_INTAKE_FORM_EXTENSION_URL);
+  const ext = hs.extension?.find((e) => e.url === ODOS_INTAKE_FORM_EXTENSION_URL);
   assert.equal(ext?.valueReference?.reference, "Questionnaire/aesthetics-intake");
 });
 
@@ -134,6 +136,23 @@ test("readers recover code + discipline from a catalog entry (round-trip)", () =
   });
   assert.equal(visitTypeCode(hs), "routine-exam-established");
   assert.equal(visitTypeDiscipline(hs), "eyecare");
+});
+
+test("category is a second HealthcareService.category axis and discipline remains untouched", () => {
+  const hs = buildVisitType({
+    code: "dry-eye-consult",
+    name: "Dry Eye Consult",
+    discipline: "eyecare",
+    categoryCode: "dry-eye",
+    categoryLabel: "Dry Eye",
+    durationMinutes: 45,
+  });
+  assert.equal(hs.category?.length, 2);
+  assert.equal(hs.category?.[0]?.coding?.[0]?.system, ODOS_DISCIPLINE_SYSTEM);
+  assert.equal(hs.category?.[0]?.coding?.[0]?.code, "eyecare");
+  assert.equal(hs.category?.[1]?.coding?.[0]?.system, ODOS_VISIT_TYPE_CATEGORY_SYSTEM);
+  assert.equal(visitTypeCategory(hs)?.code, "dry-eye");
+  assert.equal(visitTypeCategory(hs)?.display, "Dry Eye");
 });
 
 test("the default catalog filters by clinic mode — modularity exercised at the catalog layer (brief §1)", () => {

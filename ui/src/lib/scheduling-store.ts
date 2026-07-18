@@ -1,13 +1,15 @@
 import type { Appointment, Basic, Bundle, Extension, HealthcareService, Resource, Schedule } from "@medplum/fhirtypes";
 import { create } from "zustand";
 import { fhir } from "./fhir";
+import { searchAll } from "./fhir-search";
+export { searchAll } from "./fhir-search";
 import {
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-  OSOD_DISCIPLINE_SYSTEM,
-  OSOD_FOLLOW_UP_EXTENSION_URL,
-  OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
-  OSOD_VISION_COVERAGE_EXTENSION_URL,
-  OSOD_VISIT_TYPE_SYSTEM,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_DISCIPLINE_SYSTEM,
+  ODOS_FOLLOW_UP_EXTENSION_URL,
+  ODOS_MEDICAL_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_VISIT_TYPE_SYSTEM,
   V2_0276_APPOINTMENT_TYPE_SYSTEM,
   FIND_OPEN_DEFAULT_LIMIT,
   FIND_OPEN_HORIZON_DAYS,
@@ -38,10 +40,11 @@ import {
   type BookSchedulingAppointmentInput,
   type ClinicMode,
   type CoverageInput,
-  type OsodAppointmentStatus,
+  type OdosAppointmentStatus,
   type SchedulingOpening,
   type SchedulingPracticeConfig,
 } from "./scheduling";
+import { ODOS_FLOOR_STATE_EXTENSION_URL, floorStateExtension, parseFloorState } from "./floor-state";
 import {
   bucketAppointmentsByPracticeDay,
   reconcileWeekResourceReference,
@@ -52,8 +55,8 @@ import {
 import { resourceScheduleReferencesOf } from "./scheduler-appointment-ui";
 import { validateSchedulingPracticeSettings } from "./scheduling-settings";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig,
 } from "./scheduling-config";
@@ -96,6 +99,54 @@ export const DEFAULT_SCHEDULING_PRACTICE_CONFIG: SchedulingPracticeConfig = {
 export const SCHEDULER_ZOOM_MIN = 0.5;
 export const SCHEDULER_ZOOM_MAX = 1.75;
 export const SCHEDULER_ZOOM_STEP = 0.25;
+export const SCHEDULER_SLOT_MINUTES_STORAGE_KEY = "odos-scheduler-slot-minutes";
+export const SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY = "odos-scheduler-hidden-resources";
+export const SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS = [30, 15, 10] as const;
+
+type SchedulerSlotMinutesOverride = (typeof SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS)[number];
+
+function browserLocalStorage(): Storage | undefined {
+  return typeof localStorage === "undefined" ? undefined : localStorage;
+}
+
+export function readSchedulerSlotMinutesOverride(
+  storage = browserLocalStorage(),
+): SchedulerSlotMinutesOverride | null {
+  const value = Number(storage?.getItem(SCHEDULER_SLOT_MINUTES_STORAGE_KEY));
+  return SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS.includes(value as SchedulerSlotMinutesOverride)
+    ? value as SchedulerSlotMinutesOverride
+    : null;
+}
+
+export function schedulerSlotMinutesState(
+  config: SchedulingPracticeConfig,
+  officeId: string | "all",
+  storage = browserLocalStorage(),
+): { slotMinutes: number; slotMinutesOverride: SchedulerSlotMinutesOverride | null } {
+  const slotMinutesOverride = readSchedulerSlotMinutesOverride(storage);
+  return {
+    slotMinutesOverride,
+    slotMinutes: slotMinutesOverride ?? resolveSlotMinutes(config, officeId),
+  };
+}
+
+export function readSchedulerHiddenResourceRefs(
+  storage = browserLocalStorage(),
+): string[] {
+  const stored = storage?.getItem(SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY);
+  if (!stored) {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return Array.isArray(parsed)
+      ? [...new Set(parsed.filter((reference): reference is string => typeof reference === "string" && reference.length > 0))]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function clampZoom(zoom: number): number {
   return Number.isFinite(zoom)
     ? Math.min(SCHEDULER_ZOOM_MAX, Math.max(SCHEDULER_ZOOM_MIN, zoom))
@@ -124,7 +175,7 @@ export interface AppointmentChangeInput {
   resourceScheduleReferences?: string[];
   start?: string;
   durationMinutes?: number;
-  status?: OsodAppointmentStatus;
+  status?: OdosAppointmentStatus;
   confirmation?: AppointmentConfirmationStatus;
   visionCoverage?: CoverageInput | null;
   medicalCoverage?: CoverageInput | null;
@@ -132,6 +183,8 @@ export interface AppointmentChangeInput {
   urgent?: boolean;
   followUp?: boolean;
   allowDoubleBook?: boolean;
+  /** Floor board station id (cockpit Phase 3a). null clears the floor-state extension. */
+  floorStation?: string | null;
 }
 
 export interface MoveAppointmentInput {
@@ -161,6 +214,8 @@ export interface SchedulingStoreState {
   view: SchedulerView;
   date: string;
   slotMinutes: number;
+  slotMinutesOverride: SchedulerSlotMinutesOverride | null;
+  hiddenResourceRefs: string[];
   zoom: number;
   resources: Schedule[];
   visitTypes: HealthcareService[];
@@ -180,6 +235,9 @@ export interface SchedulingStoreState {
   setView: (view: SchedulerView) => void;
   setDate: (date: string) => void;
   openDay: (date: string) => void;
+  setSlotMinutes: (minutes: SchedulerSlotMinutesOverride | null) => void;
+  setResourceHidden: (reference: string, hidden: boolean) => void;
+  clearHiddenResources: () => void;
   setOfficeId: (officeId: string | "all") => void;
   setWeekResourceScheduleReference: (reference: string | undefined) => void;
   clearConfigError: () => void;
@@ -206,7 +264,7 @@ export interface SchedulingStoreState {
   ) => Promise<void>;
   setAppointmentStatus: (
     appointment: Appointment,
-    osodStatus: OsodAppointmentStatus,
+    odosStatus: OdosAppointmentStatus,
     deps?: SchedulingWriteDeps,
   ) => Promise<void>;
   setConfirmationStatus: (
@@ -221,11 +279,15 @@ export interface SchedulingStoreState {
   ) => Promise<void>;
 }
 
+const initialSlotMinutesState = schedulerSlotMinutesState(DEFAULT_SCHEDULING_PRACTICE_CONFIG, "all");
+const initialHiddenResourceRefs = readSchedulerHiddenResourceRefs();
+
 export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   clinicMode: "both",
   view: "day",
   date: todayYmd(new Date(), DEFAULT_SCHEDULING_PRACTICE_CONFIG.timezoneOffset),
-  slotMinutes: resolveSlotMinutes(DEFAULT_SCHEDULING_PRACTICE_CONFIG, "all"),
+  ...initialSlotMinutesState,
+  hiddenResourceRefs: initialHiddenResourceRefs,
   zoom: 1,
   resources: [],
   visitTypes: [],
@@ -276,10 +338,39 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         officeId: state.officeId,
       }),
     })),
+  setSlotMinutes: (minutes) => {
+    const storage = browserLocalStorage();
+    if (minutes === null) {
+      storage?.removeItem(SCHEDULER_SLOT_MINUTES_STORAGE_KEY);
+    } else {
+      storage?.setItem(SCHEDULER_SLOT_MINUTES_STORAGE_KEY, String(minutes));
+    }
+    set((state) => ({
+      slotMinutesOverride: minutes,
+      slotMinutes: minutes ?? resolveSlotMinutes(state.config, state.officeId),
+    }));
+  },
+  setResourceHidden: (reference, hidden) =>
+    set((state) => {
+      const hiddenResourceRefs = hidden
+        ? state.hiddenResourceRefs.includes(reference)
+          ? state.hiddenResourceRefs
+          : [...state.hiddenResourceRefs, reference]
+        : state.hiddenResourceRefs.filter((candidate) => candidate !== reference);
+      browserLocalStorage()?.setItem(
+        SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY,
+        JSON.stringify(hiddenResourceRefs),
+      );
+      return { hiddenResourceRefs };
+    }),
+  clearHiddenResources: () => {
+    browserLocalStorage()?.removeItem(SCHEDULER_HIDDEN_RESOURCES_STORAGE_KEY);
+    set({ hiddenResourceRefs: [] });
+  },
   setOfficeId: (officeId) =>
     set((state) => ({
       officeId,
-      slotMinutes: resolveSlotMinutes(state.config, officeId),
+      slotMinutes: state.slotMinutesOverride ?? resolveSlotMinutes(state.config, officeId),
       weekResourceScheduleReference: reconcileWeekResourceReference({
         currentReference: state.weekResourceScheduleReference,
         resources: state.resources,
@@ -520,12 +611,12 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   async updateAppointment(appointment, changes, deps) {
     await writeAppointmentUpdate(get, set, appointment, changes, deps, SCHEDULING_SOURCE_TAGS.update);
   },
-  async setAppointmentStatus(appointment, osodStatus, deps) {
+  async setAppointmentStatus(appointment, odosStatus, deps) {
     await writeAppointmentUpdate(
       get,
       set,
       appointment,
-      { status: osodStatus },
+      { status: odosStatus },
       deps,
       SCHEDULING_SOURCE_TAGS.status,
     );
@@ -584,30 +675,6 @@ export function todayYmd(
     .slice(0, 10);
 }
 
-export async function searchAll<T extends Resource>(
-  client: SchedulingFhirClient,
-  resourceType: T["resourceType"],
-  params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
-): Promise<T[]> {
-  let bundle = await client.search<T>(resourceType, paramsWithCount(params));
-  const resources: T[] = [];
-  for (;;) {
-    resources.push(
-      ...(bundle.entry ?? [])
-        .map((entry) => entry.resource)
-        .filter((resource): resource is T => Boolean(resource)),
-    );
-    const nextUrl = bundle.link?.find((link) => link.relation === "next")?.url;
-    if (!nextUrl) {
-      return resources;
-    }
-    if (!client.searchUrl) {
-      throw new Error(`FHIR search returned a next link for ${resourceType}, but the client cannot fetch it.`);
-    }
-    bundle = await client.searchUrl<T>(nextUrl);
-  }
-}
-
 async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
   config: SchedulingPracticeConfig;
   resource?: Basic;
@@ -616,7 +683,7 @@ async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
   const bundle = await client.search<Basic>(
     "Basic",
     new URLSearchParams([
-      ["code", `${OSOD_SCHEDULING_CONFIG_SYSTEM}|${OSOD_SCHEDULING_CONFIG_CODE}`],
+      ["code", `${ODOS_SCHEDULING_CONFIG_SYSTEM}|${ODOS_SCHEDULING_CONFIG_CODE}`],
       ["_count", "10"],
     ]),
   );
@@ -678,19 +745,9 @@ function configStatePatch(
     configError,
     configReadFailed,
     officeId,
-    slotMinutes: resolveSlotMinutes(config, officeId),
+    slotMinutes: state.slotMinutesOverride ?? resolveSlotMinutes(config, officeId),
     ...extra,
   };
-}
-
-function paramsWithCount(
-  params?: Record<string, string> | URLSearchParams | Array<[string, string]>,
-): URLSearchParams {
-  const searchParams = new URLSearchParams(params);
-  if (!searchParams.has("_count")) {
-    searchParams.set("_count", "100");
-  }
-  return searchParams;
 }
 
 function timezoneOffsetMinutes(timezoneOffset: string): number {
@@ -715,7 +772,7 @@ async function writeAppointmentUpdate(
   try {
     const state = get();
     const current = currentAppointment(state, appointment);
-    const updated = rebuildAppointmentForUpdate(state, current, changes);
+    const updated = rebuildAppointmentForUpdate(state, current, changes, deps);
     if (shouldCheckUpdateConflicts(current, updated, changes)) {
       const conflicts = await fetchTargetConflictAppointmentsForAppointment(state, client, updated);
       assertNoAppointmentConflicts(updated, conflicts, current.id);
@@ -745,6 +802,7 @@ function rebuildAppointmentForUpdate(
   state: SchedulingStoreState,
   appointment: Appointment,
   changes: AppointmentChangeInput,
+  deps: SchedulingWriteDeps | undefined,
 ): Appointment {
   const updated: Appointment = {
     ...appointment,
@@ -784,13 +842,16 @@ function rebuildAppointmentForUpdate(
     applyStatusChange(updated, changes.status);
   }
   if (changes.confirmation !== undefined) {
-    replaceExtension(updated, OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL, appointmentConfirmationExtension(changes.confirmation));
+    replaceExtension(updated, ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL, appointmentConfirmationExtension(changes.confirmation));
   }
   if (changes.visionCoverage !== undefined) {
-    applyCoverageChange(updated, OSOD_VISION_COVERAGE_EXTENSION_URL, changes.visionCoverage);
+    applyCoverageChange(updated, ODOS_VISION_COVERAGE_EXTENSION_URL, changes.visionCoverage);
   }
   if (changes.medicalCoverage !== undefined) {
-    applyCoverageChange(updated, OSOD_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
+    applyCoverageChange(updated, ODOS_MEDICAL_COVERAGE_EXTENSION_URL, changes.medicalCoverage);
+  }
+  if (changes.floorStation !== undefined) {
+    applyFloorStationChange(updated, changes.floorStation, deps?.now);
   }
   if (changes.notes !== undefined) {
     setOptional(updated, "comment", cleanOptionalString(changes.notes));
@@ -805,8 +866,8 @@ function rebuildAppointmentForUpdate(
   if (changes.followUp !== undefined) {
     replaceExtension(
       updated,
-      OSOD_FOLLOW_UP_EXTENSION_URL,
-      changes.followUp ? { url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true } : undefined,
+      ODOS_FOLLOW_UP_EXTENSION_URL,
+      changes.followUp ? { url: ODOS_FOLLOW_UP_EXTENSION_URL, valueBoolean: true } : undefined,
     );
   }
 
@@ -1020,7 +1081,7 @@ function applyVisitTypeChange(
     {
       coding: [
         {
-          system: OSOD_DISCIPLINE_SYSTEM,
+          system: ODOS_DISCIPLINE_SYSTEM,
           code: discipline,
           display: discipline === "eyecare" ? "Eyecare" : "Aesthetics",
         },
@@ -1031,7 +1092,7 @@ function applyVisitTypeChange(
     {
       coding: [
         {
-          system: OSOD_VISIT_TYPE_SYSTEM,
+          system: ODOS_VISIT_TYPE_SYSTEM,
           code,
           ...(entry.name ? { display: entry.name } : {}),
         },
@@ -1098,7 +1159,7 @@ function applyResourceScheduleReferences(
   appointment.participant = [...patientParticipants, ...resourceParticipants];
 }
 
-function applyStatusChange(appointment: Appointment, status: OsodAppointmentStatus): void {
+function applyStatusChange(appointment: Appointment, status: OdosAppointmentStatus): void {
   const mapped = toFhirAppointmentStatus(status);
   appointment.status = mapped.status;
   if (mapped.appointmentTypeCode) {
@@ -1149,6 +1210,29 @@ function applyCoverageChange(
           },
         }
       : undefined,
+  );
+}
+
+function applyFloorStationChange(
+  appointment: Appointment,
+  station: string | null,
+  now: (() => string) | undefined,
+): void {
+  if (!station) {
+    // Checkout: clear the whole floor-state (station + since + checkedInAt).
+    replaceExtension(appointment, ODOS_FLOOR_STATE_EXTENSION_URL, undefined);
+    return;
+  }
+  const timestamp = (now ?? (() => new Date().toISOString()))();
+  // Preserve the original check-in time across station moves; set it fresh only on the
+  // first check-in (when no floor-state exists yet). `appointment` here is the update
+  // clone still carrying the pre-change extension, so parseFloorState reads the CURRENT
+  // (pre-move) state.
+  const existingCheckedInAt = parseFloorState(appointment)?.checkedInAt;
+  replaceExtension(
+    appointment,
+    ODOS_FLOOR_STATE_EXTENSION_URL,
+    floorStateExtension(station, timestamp, existingCheckedInAt ?? timestamp),
   );
 }
 

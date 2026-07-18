@@ -1,33 +1,33 @@
 #!/usr/bin/env tsx
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import {
-  OSOD_AUDIT_EVENT_TYPES,
-  buildOsodAuditEventRow,
-  type OsodAuditEventType,
-} from "../mcp/src/authz/osodAudit.js";
+  ODOS_AUDIT_EVENT_TYPES,
+  buildOdosAuditEventRow,
+  type OdosAuditEventType,
+} from "../mcp/src/authz/odosAudit.js";
 
 loadRepoEnv();
 
-const eventType = process.argv[2] as OsodAuditEventType | undefined;
-if (!eventType || !OSOD_AUDIT_EVENT_TYPES.includes(eventType)) {
+const eventType = process.argv[2] as OdosAuditEventType | undefined;
+if (!eventType || !ODOS_AUDIT_EVENT_TYPES.includes(eventType)) {
   throw new Error(`Usage: tsx scripts/record-audit-event.ts <event-type> [reason]`);
 }
 
 const reason = process.argv.slice(3).join(" ") || undefined;
-const audit = createLiveOsodAuditRuntime({
-  postgresUrl: process.env.OSOD_POSTGRES_URL,
+const audit = createLiveOdosAuditRuntime({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
   medplumBaseUrl: process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103",
-  medplumAccessToken: process.env.OSOD_AUDIT_MEDPLUM_ACCESS_TOKEN ?? process.env.MEDPLUM_ACCESS_TOKEN,
-  medplumEmail: process.env.OSOD_AUDIT_MEDPLUM_EMAIL ?? process.env.MEDPLUM_ADMIN_EMAIL,
-  medplumPassword: process.env.OSOD_AUDIT_MEDPLUM_PASSWORD ?? process.env.MEDPLUM_ADMIN_PASSWORD,
+  medplumAccessToken: process.env.ODOS_AUDIT_MEDPLUM_ACCESS_TOKEN ?? process.env.MEDPLUM_ACCESS_TOKEN,
+  medplumEmail: process.env.ODOS_AUDIT_MEDPLUM_EMAIL ?? process.env.MEDPLUM_ADMIN_EMAIL,
+  medplumPassword: process.env.ODOS_AUDIT_MEDPLUM_PASSWORD ?? process.env.MEDPLUM_ADMIN_PASSWORD,
 });
 
 await audit.record(
-  buildOsodAuditEventRow({
+  buildOdosAuditEventRow({
     eventType,
-    actorId: process.env.OSOD_AUDIT_ACTOR_ID ?? "osod-operator",
+    actorId: process.env.ODOS_AUDIT_ACTOR_ID ?? "odos-operator",
     actorRole: "system",
     actionOutcome: eventType.includes("failed") ? "denied" : "granted",
     actionReason: reason,

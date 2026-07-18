@@ -5,15 +5,15 @@ import { test } from "node:test";
 import type { AccessPolicy, AuditEvent, Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
   AuditEventProjectionQueue,
-  InMemoryOsodAuditRepository,
-  OSOD_AUDIT_EVENT_TYPES,
+  InMemoryOdosAuditRepository,
+  ODOS_AUDIT_EVENT_TYPES,
   assertAuditMutationAllowed,
   buildAuditEventProjection,
-  buildOsodAuditEventRow,
+  buildOdosAuditEventRow,
   executePhiOperationWithAudit,
   ocrStyleAuditQuery,
-} from "../src/authz/osodAudit.js";
-import { createLiveOsodAuditRuntime } from "../src/authz/liveAudit.js";
+} from "../src/authz/odosAudit.js";
+import { createLiveOdosAuditRuntime } from "../src/authz/liveAudit.js";
 import { verifyRestoreIntegrity } from "../src/authz/restoreIntegrity.js";
 import { informationBlockingExceptionForDenial } from "../src/policy/ib-exception-map.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration } from "../src/authz/roles.js";
@@ -61,28 +61,28 @@ test("v0.5b audit event type ValueSet covers the required read, write, security,
     "preflight-block",
     "noop",
   ];
-  assert.deepEqual(OSOD_AUDIT_EVENT_TYPES.slice(0, v05bRequiredEventTypes.length), v05bRequiredEventTypes);
-  assert.equal(OSOD_AUDIT_EVENT_TYPES.includes("smart-token-issue"), true);
-  assert.equal(OSOD_AUDIT_EVENT_TYPES.includes("smart-sandbox-register"), true);
+  assert.deepEqual(ODOS_AUDIT_EVENT_TYPES.slice(0, v05bRequiredEventTypes.length), v05bRequiredEventTypes);
+  assert.equal(ODOS_AUDIT_EVENT_TYPES.includes("smart-token-issue"), true);
+  assert.equal(ODOS_AUDIT_EVENT_TYPES.includes("smart-sandbox-register"), true);
   assert.equal(auditEventTypeForFhirWrite("AccessPolicy", "update"), "policy-change");
   assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "create"), "projectmembership-lifecycle");
   assert.equal(auditEventTypeForFhirWrite("ProjectMembership", "patch"), "role-change");
 });
 
-test("v0.5b SQL migration creates append-only osod_audit_events table with required indexes and guards", () => {
+test("v0.5b SQL migration creates append-only odos_audit_events table with required indexes and guards", () => {
   const sql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-04-29-v05b-osod-audit-events.sql"),
+    resolve(process.cwd(), "../data/migrations/2026-04-29-v05b-odos-audit-events.sql"),
     "utf8",
   );
 
-  assert.match(sql, /CREATE TABLE IF NOT EXISTS osod_audit_events/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS odos_audit_events/);
   assert.match(sql, /event_time TIMESTAMPTZ NOT NULL DEFAULT now\(\)/);
   assert.match(sql, /ib_actor_classification TEXT NOT NULL DEFAULT 'health-care-provider'/);
-  assert.match(sql, /CREATE INDEX IF NOT EXISTS osod_audit_events_patient_time_idx/);
-  assert.match(sql, /CREATE INDEX IF NOT EXISTS osod_audit_events_actor_time_idx/);
-  assert.match(sql, /BEFORE UPDATE OR DELETE ON osod_audit_events/);
-  assert.match(sql, /BEFORE TRUNCATE ON osod_audit_events/);
-  assert.match(sql, /REVOKE UPDATE, DELETE, TRUNCATE ON TABLE osod_audit_events FROM PUBLIC/);
+  assert.match(sql, /CREATE INDEX IF NOT EXISTS odos_audit_events_patient_time_idx/);
+  assert.match(sql, /CREATE INDEX IF NOT EXISTS odos_audit_events_actor_time_idx/);
+  assert.match(sql, /BEFORE UPDATE OR DELETE ON odos_audit_events/);
+  assert.match(sql, /BEFORE TRUNCATE ON odos_audit_events/);
+  assert.match(sql, /REVOKE UPDATE, DELETE, TRUNCATE ON TABLE odos_audit_events FROM PUBLIC/);
   assert.match(sql, /WHERE NOT rolsuper/);
 });
 
@@ -103,7 +103,7 @@ test("OCR-style 90-day audit query returns structured role, outcome, and IB cont
 });
 
 test("denied AccessPolicy compartment isolation writes privacy IB exception and FHIR AuditEvent outcome=8", () => {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType: "denied",
     actorId: "clinician-1",
     actorRole: "clinician",
@@ -112,7 +112,7 @@ test("denied AccessPolicy compartment isolation writes privacy IB exception and 
     resourceId: "patient-outside-compartment",
     actionOutcome: "denied",
     actionReason: "access-policy-compartment-isolation",
-    policyUrl: "AccessPolicy/osod-clinician",
+    policyUrl: "AccessPolicy/odos-clinician",
   });
   const auditEvent = buildAuditEventProjection(row);
 
@@ -124,7 +124,7 @@ test("denied AccessPolicy compartment isolation writes privacy IB exception and 
 });
 
 test("AuditEvent projection field placement uses agent.role, agent.who, agent.policy, outcome, and entity", () => {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType: "read",
     actorId: "doctor-1",
     actorRole: "clinician",
@@ -132,7 +132,7 @@ test("AuditEvent projection field placement uses agent.role, agent.who, agent.po
     resourceType: "Observation",
     resourceId: "obs-1",
     actionOutcome: "granted",
-    policyUrl: "AccessPolicy/osod-clinician",
+    policyUrl: "AccessPolicy/odos-clinician",
   });
   const auditEvent = buildAuditEventProjection(row);
 
@@ -140,18 +140,18 @@ test("AuditEvent projection field placement uses agent.role, agent.who, agent.po
   assert.equal(auditEvent.subtype?.[0]?.code, "read");
   assert.equal(auditEvent.agent[0].role?.[0]?.coding?.[0]?.code, "clinician");
   assert.equal(auditEvent.agent[0].who?.reference, "Practitioner/doctor-1");
-  assert.equal(auditEvent.agent[0].policy?.[0], "AccessPolicy/osod-clinician");
-  assert.equal(auditEvent.source.observer?.reference, "Device/osod-instance");
+  assert.equal(auditEvent.agent[0].policy?.[0], "AccessPolicy/odos-clinician");
+  assert.equal(auditEvent.source.observer?.reference, "Device/odos-instance");
   assert.equal(auditEvent.entity?.some((entity) => entity.what?.reference === "Patient/patient-x"), true);
   assert.equal(auditEvent.entity?.some((entity) => entity.what?.reference === "Observation/obs-1"), true);
 });
 
-test("originating PHI operation rolls back when osod_audit_events insert fails", async () => {
+test("originating PHI operation rolls back when odos_audit_events insert fails", async () => {
   let operationCalled = false;
   await assert.rejects(
     () =>
       executePhiOperationWithAudit({
-        auditRow: buildOsodAuditEventRow({
+        auditRow: buildOdosAuditEventRow({
           eventType: "read",
           patientId: "patient-x",
           actionOutcome: "granted",
@@ -169,10 +169,10 @@ test("originating PHI operation rolls back when osod_audit_events insert fails",
 });
 
 test("FHIR AuditEvent projection failure leaves DB row and queues retry without rolling back PHI operation", async () => {
-  const repository = new InMemoryOsodAuditRepository();
+  const repository = new InMemoryOdosAuditRepository();
   const queue = new AuditEventProjectionQueue();
   let operationCalled = false;
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType: "read",
     patientId: "patient-x",
     actionOutcome: "granted",
@@ -247,7 +247,7 @@ test("audit UI model is auditor/practice-admin gated and exports OCR query rows 
 });
 
 test("restore integrity suite passes all five v0.5b post-restore checks", () => {
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType: "read",
     eventTime: "2026-04-29T12:00:00.000Z",
     patientId: "patient-x",
@@ -265,7 +265,7 @@ test("restore integrity suite passes all five v0.5b post-restore checks", () => 
         resourceType: "Provenance",
         target: [{ reference: "Observation/obs-1" }],
         recorded: "2026-04-29T12:00:00.000Z",
-        agent: [{ who: { display: "OSOD" } }],
+        agent: [{ who: { display: "ODOS" } }],
         signature: [{ type: [{ system: "urn:iso-astm:E1762-95:2013", code: "1.2.840.10065.1.12.1.5" }], when: "2026-04-29T12:00:00.000Z", who: { reference: "Practitioner/doctor-1" }, data: "c2ln" }],
       },
     ],
@@ -294,8 +294,8 @@ test(
     }
 
     const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
-    const audit = createLiveOsodAuditRuntime({
-      postgresUrl: process.env.OSOD_POSTGRES_URL,
+    const audit = createLiveOdosAuditRuntime({
+      postgresUrl: process.env.ODOS_POSTGRES_URL,
       medplumBaseUrl: baseUrl,
       medplumEmail: email,
       medplumPassword: password,
@@ -317,7 +317,7 @@ test(
       email,
       password,
       accessToken,
-      clientName: "osod-mcp-v05b-live-audit-admin",
+      clientName: "odos-mcp-v05b-live-audit-admin",
     });
     t.after(async () => {
       await adminMcp.client.close();
@@ -342,7 +342,7 @@ test(
       email,
       password,
       accessToken: auditorToken,
-      clientName: "osod-mcp-v05b-live-audit-auditor-denial",
+      clientName: "odos-mcp-v05b-live-audit-auditor-denial",
     });
     t.after(async () => {
       await auditorMcp.client.close();
@@ -356,7 +356,7 @@ test(
 
     const rows = await audit.queryRows({
       patientId: patient.id,
-      actorId: "osod-mcp",
+      actorId: "odos-mcp",
       eventTypes: ["read", "patch", "denied"],
       limit: 50,
     });
@@ -370,8 +370,8 @@ test(
     );
     for (const row of rows.filter((candidate) => candidate.eventType !== "denied").slice(0, 2)) {
       assert.ok(
-        auditEvents.some((auditEvent) => auditEventHasOsodRowId(auditEvent, row.id)),
-        `Expected projected AuditEvent for osod_audit_events row ${row.id}`,
+        auditEvents.some((auditEvent) => auditEventHasOdosRowId(auditEvent, row.id)),
+        `Expected projected AuditEvent for odos_audit_events row ${row.id}`,
       );
     }
   },
@@ -379,7 +379,7 @@ test(
 
 function seedNinetyDays(patientId: string) {
   return [
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "read",
       eventTime: "2026-04-28T12:00:00.000Z",
       actorId: "doctor-1",
@@ -388,9 +388,9 @@ function seedNinetyDays(patientId: string) {
       resourceType: "Patient",
       resourceId: patientId,
       actionOutcome: "granted",
-      policyUrl: "AccessPolicy/osod-clinician",
+      policyUrl: "AccessPolicy/odos-clinician",
     }),
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "search",
       eventTime: "2026-04-20T12:00:00.000Z",
       actorId: "front-1",
@@ -398,9 +398,9 @@ function seedNinetyDays(patientId: string) {
       patientId,
       resourceType: "Encounter",
       actionOutcome: "granted",
-      policyUrl: "AccessPolicy/osod-front-desk",
+      policyUrl: "AccessPolicy/odos-front-desk",
     }),
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "update",
       eventTime: "2026-04-05T12:00:00.000Z",
       actorId: "doctor-1",
@@ -411,7 +411,7 @@ function seedNinetyDays(patientId: string) {
       actionOutcome: "granted",
       provenanceId: "Provenance/prov-1",
     }),
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "denied",
       eventTime: "2026-03-15T12:00:00.000Z",
       actorId: "doctor-2",
@@ -422,7 +422,7 @@ function seedNinetyDays(patientId: string) {
       actionOutcome: "denied",
       actionReason: "access-policy-compartment-isolation",
     }),
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "break-glass-invoked",
       eventTime: "2026-02-10T12:00:00.000Z",
       actorId: "doctor-3",
@@ -434,7 +434,7 @@ function seedNinetyDays(patientId: string) {
       breakGlass: true,
       breakGlassReason: "Emergency care.",
     }),
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType: "read",
       eventTime: "2025-12-01T12:00:00.000Z",
       actorId: "doctor-1",
@@ -458,7 +458,7 @@ async function createAuditorClientToken(input: {
   assert.ok(me.project?.id, "Could not resolve project id from /auth/me.");
 
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
-  policy.name = `OSOD v0.5b Auditor Denial ${Date.now()}`;
+  policy.name = `ODOS v0.5b Auditor Denial ${Date.now()}`;
   const createdPolicy = await input.fhir.create<AccessPolicy>(policy);
   assert.ok(createdPolicy.id);
 
@@ -502,11 +502,11 @@ function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {
   return bundle.entry?.map((entry) => entry.resource).filter((resource): resource is T => Boolean(resource)) ?? [];
 }
 
-function auditEventHasOsodRowId(auditEvent: AuditEvent, rowId: string): boolean {
+function auditEventHasOdosRowId(auditEvent: AuditEvent, rowId: string): boolean {
   return (
     auditEvent.entity?.some((entity) =>
       entity.detail?.some(
-        (detail) => detail.type === "osod_audit_event_id" && detail.valueString === rowId,
+        (detail) => detail.type === "odos_audit_event_id" && detail.valueString === rowId,
       ),
     ) ?? false
   );

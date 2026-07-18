@@ -1,7 +1,4 @@
 import type {
-  Bundle,
-  ChargeItem,
-  DeviceRequest,
   Invoice,
   InvoiceLineItemPriceComponent,
   Task,
@@ -9,14 +6,16 @@ import type {
   VisionPrescriptionLensSpecification,
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
+import type { OpticalCollectionCharge } from "./collect";
 import type { LabOrderFrame } from "./optical-lab-order";
+import { frameChargeItemDefinitionCanonical } from "./optical-pricing-catalog";
 
-export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
-export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
-export const OSOD_PAYMENT_TENDER_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-tender";
-export const OSOD_PAYMENT_TENDER_SYSTEM = "https://osod.dev/fhir/CodeSystem/payment-tender";
-export const OSOD_OPTICAL_ADJUSTMENT_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-adjustment";
+export const ODOS_OPTICAL_ORDER_STATUS_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-status";
+export const ODOS_OPTICAL_ORDER_TYPE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-type";
+export const ODOS_PAYMENT_TENDER_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender";
+export const ODOS_PAYMENT_TENDER_SYSTEM = "https://odos2020.com/fhir/CodeSystem/payment-tender";
+export const ODOS_OPTICAL_ADJUSTMENT_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-adjustment";
 export const HCPCS_SYSTEM = "https://bluebutton.cms.gov/resources/codesystem/hcpcs";
 
 export const OPTICAL_ORDER_STATUSES = [
@@ -50,6 +49,7 @@ export const OPTICAL_ORDER_TYPES = [
 export const PAYMENT_TENDERS = [
   { code: "CASH", display: "Cash" },
   { code: "CHECK", display: "Check" },
+  { code: "CARD_MANUAL", display: "Card — manual entry" },
 ] as const;
 
 export const CHECKOUT_TENDERS = [
@@ -67,26 +67,28 @@ export const OPTICAL_ADJUSTMENTS = [
 ] as const;
 
 export const RX_COLUMNS = [
-  "Sphere",
-  "Cylinder",
-  "Axis",
-  "Dist(PD)",
-  "Near(PD)",
-  "Form",
-  "I/O",
-  "Prism",
-  "U/D",
-  "Prism",
-  "BSize",
-  "Base",
-  "Lens CPT",
-  "Remarks",
-  "Add",
-  "Seght",
-  "Eye",
-  "Prism Units",
-  "Prism Pts",
+  { key: "sphere", label: "Sphere" },
+  { key: "cylinder", label: "Cylinder" },
+  { key: "axis", label: "Axis" },
+  { key: "distPd", label: "Dist(PD)" },
+  { key: "nearPd", label: "Near(PD)" },
+  { key: "form", label: "Form" },
+  { key: "horizontalBase", label: "I/O" },
+  { key: "horizontalPrism", label: "Prism" },
+  { key: "verticalBase", label: "U/D" },
+  { key: "verticalPrism", label: "Prism" },
+  { key: "bSize", label: "BSize" },
+  { key: "base", label: "Base" },
+  { key: "lensCpt", label: "Lens CPT" },
+  { key: "remarks", label: "Remarks" },
+  { key: "add", label: "Add" },
+  { key: "segHt", label: "Seght" },
+  { key: "eye", label: "Eye" },
+  { key: "prismUnits", label: "Prism Units" },
+  { key: "prismPoints", label: "Prism Pts" },
 ] as const;
+
+export type RxColumnKey = (typeof RX_COLUMNS)[number]["key"];
 
 export const CHARGE_COLUMNS = [
   "Procedure",
@@ -109,10 +111,11 @@ export type OpticalOrderStatusCode = (typeof OPTICAL_ORDER_STATUSES)[number]["co
 export type OpticalOrderTypeCode = (typeof OPTICAL_ORDER_TYPES)[number]["code"];
 export type PaymentTenderCode = (typeof PAYMENT_TENDERS)[number]["code"];
 export type CheckoutTenderCode = (typeof CHECKOUT_TENDERS)[number]["code"];
+export type RecordedCheckoutTenderCode = Exclude<CheckoutTenderCode, "CARD_TERMINAL">;
 
 export interface RxDisplayRow {
   eye: "OD" | "OS";
-  values: Record<(typeof RX_COLUMNS)[number], string>;
+  values: Record<RxColumnKey, string>;
 }
 
 export interface OpticalChargeLineDraft {
@@ -156,14 +159,21 @@ export interface OpticalCashOrderDraft {
   businessStatus: OpticalOrderStatusCode;
   orderType: OpticalOrderTypeCode;
   charges: OpticalChargeLineDraft[];
-  tender?: PaymentTenderCode;
+  tender?: RecordedCheckoutTenderCode;
 }
 
-export interface CreatedOpticalOrderIds {
-  deviceRequestId: string;
-  taskId: string;
-  chargeItemIds: string[];
-  invoiceId: string;
+export function opticalCollectionChargeFromDraft(line: OpticalChargeLineDraft): OpticalCollectionCharge {
+  return {
+    id: line.id,
+    code: line.procedure,
+    feeCents: line.feeCents,
+    taxCents: line.taxCents,
+    quantity: line.units,
+    discount: line.discount,
+    ...(line.frame
+      ? { definitionCanonical: frameChargeItemDefinitionCanonical(line.frame.canonicalUrl) }
+      : {}),
+  };
 }
 
 export interface OpticalCardChargeInput {
@@ -231,18 +241,6 @@ export function canTransitionOpticalOrderStatus(from: string, to: string): boole
   return from === to || from !== "cancelled";
 }
 
-export async function createOpticalCashOrder(input: OpticalCashOrderDraft): Promise<CreatedOpticalOrderIds> {
-  const requestBundle = assembleOpticalCashOrder(input);
-  const responseBundle = await fhir.executeTransaction(requestBundle, "optical.cash-order");
-  const created = createdIdsByRequestResourceType(requestBundle, responseBundle);
-  return {
-    deviceRequestId: oneCreatedId(created, "DeviceRequest"),
-    taskId: oneCreatedId(created, "Task"),
-    chargeItemIds: created.get("ChargeItem") ?? [],
-    invoiceId: oneCreatedId(created, "Invoice"),
-  };
-}
-
 export async function chargeOpticalCardPayment(
   input: OpticalCardChargeInput,
   deps: { authHeader?: () => string | undefined; fetchImpl?: typeof fetch } = {},
@@ -277,6 +275,34 @@ export async function chargeOpticalCardPayment(
   return body as TransactionResult;
 }
 
+export async function loadConfiguredPaymentMethods(
+  deps: { authHeader?: () => string | undefined; fetchImpl?: typeof fetch } = {},
+): Promise<string[]> {
+  const authHeader = (deps.authHeader ?? fhir.authHeader)();
+  if (!authHeader) {
+    throw new Error("A signed-in FHIR session is required to load payment methods.");
+  }
+  const response = await (deps.fetchImpl ?? fetch)("/payments/methods", {
+    headers: {
+      Authorization: authHeader,
+      Accept: "application/json",
+    },
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(paymentErrorMessage(response, body));
+  }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !Array.isArray((body as { methods?: unknown }).methods) ||
+    !(body as { methods: unknown[] }).methods.every((method) => typeof method === "string")
+  ) {
+    throw new Error("Payment methods response is invalid.");
+  }
+  return (body as { methods: string[] }).methods;
+}
+
 export function invoiceTotalNetCents(invoice: Invoice): number {
   const totalNet = invoice.totalNet?.value;
   if (typeof totalNet !== "number" || !Number.isFinite(totalNet)) {
@@ -304,82 +330,6 @@ export async function transitionOpticalOrderStatus(
     "optical.order-status",
     current.meta?.versionId,
   );
-}
-
-function assembleOpticalCashOrder(input: OpticalCashOrderDraft): Bundle {
-  if (!input.charges.length) {
-    throw new Error("A cash optical order requires at least one charge line.");
-  }
-  const deviceRequestUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const taskUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const chargeUrns = input.charges.map(() => `urn:uuid:${crypto.randomUUID()}`);
-  const invoiceUrn = `urn:uuid:${crypto.randomUUID()}`;
-  const charges = input.charges.map((line) => buildOpticalChargeItem(input, line, deviceRequestUrn));
-  return {
-    resourceType: "Bundle",
-    type: "transaction",
-    entry: [
-      entry(deviceRequestUrn, buildSpectacleOrderDeviceRequest(input)),
-      entry(taskUrn, buildOpticalOrderTask(input, deviceRequestUrn)),
-      ...charges.map((charge, index) => entry(chargeUrns[index], charge)),
-      entry(invoiceUrn, buildOpticalInvoice(input, chargeUrns)),
-    ],
-  };
-}
-
-function buildSpectacleOrderDeviceRequest(input: OpticalCashOrderDraft): DeviceRequest {
-  return {
-    resourceType: "DeviceRequest",
-    status: "active",
-    intent: "order",
-    codeCodeableConcept: {
-      coding: [
-        {
-          system: HCPCS_SYSTEM,
-          code: input.orderHcpcsCode,
-          ...(input.orderHcpcsDisplay ? { display: input.orderHcpcsDisplay } : {}),
-        },
-      ],
-    },
-    subject: { reference: input.patientReference },
-    basedOn: [{ reference: input.visionPrescriptionReference }],
-  };
-}
-
-function buildOpticalOrderTask(input: OpticalCashOrderDraft, deviceRequestReference: string): Task {
-  return {
-    resourceType: "Task",
-    status: "in-progress",
-    intent: "order",
-    code: opticalOrderTypeConcept(input.orderType),
-    focus: { reference: deviceRequestReference },
-    for: { reference: input.patientReference },
-    businessStatus: opticalOrderStatusConcept(input.businessStatus),
-  };
-}
-
-function buildOpticalChargeItem(
-  order: OpticalCashOrderDraft,
-  line: OpticalChargeLineDraft,
-  deviceRequestReference: string,
-): ChargeItem {
-  return {
-    resourceType: "ChargeItem",
-    status: "billable",
-    code: {
-      coding: [
-        {
-          system: HCPCS_SYSTEM,
-          code: line.procedure,
-        },
-      ],
-    },
-    subject: { reference: order.patientReference },
-    ...(order.encounterReference ? { context: { reference: order.encounterReference } } : {}),
-    quantity: { value: line.units },
-    priceOverride: { value: line.feeCents / 100, currency: "USD" },
-    supportingInformation: [{ reference: deviceRequestReference }],
-  };
 }
 
 export function buildOpticalInvoice(input: OpticalCashOrderDraft, chargeItemReferences: string[]): Invoice {
@@ -414,7 +364,7 @@ function linePriceComponents(line: OpticalChargeLineDraft): InvoiceLineItemPrice
       code: {
         coding: [
           {
-            system: OSOD_OPTICAL_ADJUSTMENT_SYSTEM,
+            system: ODOS_OPTICAL_ADJUSTMENT_SYSTEM,
             code: line.discount.code,
             ...(opticalAdjustmentDisplay(line.discount.code)
               ? { display: opticalAdjustmentDisplay(line.discount.code) }
@@ -428,38 +378,33 @@ function linePriceComponents(line: OpticalChargeLineDraft): InvoiceLineItemPrice
   return components;
 }
 
-function entry(fullUrl: string, resource: DeviceRequest | Task | ChargeItem | Invoice) {
-  return {
-    fullUrl,
-    resource,
-    request: { method: "POST" as const, url: resource.resourceType },
-  };
-}
-
 function rxValues(
   lens: VisionPrescriptionLensSpecification | undefined,
   eye: "OD" | "OS",
-): Record<(typeof RX_COLUMNS)[number], string> {
-  const firstPrism = lens?.prism?.[0];
+): Record<RxColumnKey, string> {
+  const prisms = lens?.prism ?? [];
+  const horizontalPrism = prisms.find((prism) => prism.base === "in" || prism.base === "out");
+  const verticalPrism = prisms.find((prism) => prism.base === "up" || prism.base === "down");
   return {
-    Sphere: formatNumber(lens?.sphere),
-    Cylinder: formatNumber(lens?.cylinder),
-    Axis: formatNumber(lens?.axis),
-    "Dist(PD)": "",
-    "Near(PD)": "",
-    Form: lens?.product.text ?? "",
-    "I/O": firstPrism?.base === "in" || firstPrism?.base === "out" ? firstPrism.base.toUpperCase() : "",
-    Prism: formatNumber(firstPrism?.amount),
-    "U/D": firstPrism?.base === "up" || firstPrism?.base === "down" ? firstPrism.base.toUpperCase() : "",
-    BSize: "",
-    Base: firstPrism?.base ?? "",
-    "Lens CPT": "",
-    Remarks: lens?.note?.map((note) => note.text).filter(Boolean).join("; ") ?? "",
-    Add: formatNumber(lens?.add),
-    Seght: "",
-    Eye: eye,
-    "Prism Units": firstPrism?.amount === undefined ? "" : "PD",
-    "Prism Pts": formatNumber(firstPrism?.amount),
+    sphere: formatNumber(lens?.sphere),
+    cylinder: formatNumber(lens?.cylinder),
+    axis: formatNumber(lens?.axis),
+    distPd: "",
+    nearPd: "",
+    form: lens?.product.text ?? "",
+    horizontalBase: horizontalPrism?.base.toUpperCase() ?? "",
+    horizontalPrism: formatNumber(horizontalPrism?.amount),
+    verticalBase: verticalPrism?.base.toUpperCase() ?? "",
+    verticalPrism: formatNumber(verticalPrism?.amount),
+    bSize: "",
+    base: [horizontalPrism, verticalPrism].flatMap((prism) => prism?.base ?? []).join(" / "),
+    lensCpt: "",
+    remarks: lens?.note?.map((note) => note.text).filter(Boolean).join("; ") ?? "",
+    add: formatNumber(lens?.add),
+    segHt: "",
+    eye,
+    prismUnits: prisms.length ? "PD" : "",
+    prismPoints: "",
   };
 }
 
@@ -469,31 +414,20 @@ function opticalOrderStatusConcept(code: OpticalOrderStatusCode) {
     throw new Error(`Unknown optical order status "${code}".`);
   }
   return {
-    coding: [{ system: OSOD_OPTICAL_ORDER_STATUS_SYSTEM, code: status.code, display: status.display }],
+    coding: [{ system: ODOS_OPTICAL_ORDER_STATUS_SYSTEM, code: status.code, display: status.display }],
     text: status.display,
   };
 }
 
-function opticalOrderTypeConcept(code: OpticalOrderTypeCode) {
-  const type = OPTICAL_ORDER_TYPES.find((candidate) => candidate.code === code);
-  if (!type) {
-    throw new Error(`Unknown optical order type "${code}".`);
-  }
-  return {
-    coding: [{ system: OSOD_OPTICAL_ORDER_TYPE_SYSTEM, code: type.code, display: type.display }],
-    text: type.display,
-  };
-}
-
-function paymentTenderExtension(code: PaymentTenderCode) {
-  const tender = PAYMENT_TENDERS.find((candidate) => candidate.code === code);
+function paymentTenderExtension(code: RecordedCheckoutTenderCode) {
+  const tender = CHECKOUT_TENDERS.find((candidate) => candidate.code === code);
   if (!tender) {
     throw new Error(`Unknown payment tender "${code}".`);
   }
   return {
-    url: OSOD_PAYMENT_TENDER_EXTENSION_URL,
+    url: ODOS_PAYMENT_TENDER_EXTENSION_URL,
     valueCodeableConcept: {
-      coding: [{ system: OSOD_PAYMENT_TENDER_SYSTEM, code: tender.code, display: tender.display }],
+      coding: [{ system: ODOS_PAYMENT_TENDER_SYSTEM, code: tender.code, display: tender.display }],
       text: tender.display,
     },
   };
@@ -523,7 +457,7 @@ function opticalAdjustmentDisplay(code: string): string | undefined {
 
 function currentOpticalBusinessStatus(task: Task): OpticalOrderStatusCode {
   const code = task.businessStatus?.coding?.find(
-    (coding) => coding.system === OSOD_OPTICAL_ORDER_STATUS_SYSTEM,
+    (coding) => coding.system === ODOS_OPTICAL_ORDER_STATUS_SYSTEM,
   )?.code;
   assertOpticalOrderStatus(code ?? "");
   return code as OpticalOrderStatusCode;
@@ -539,32 +473,6 @@ function fhirTaskStatusForOpticalStatus(status: OpticalOrderStatusCode): Task["s
   if (status === "cancelled") return "cancelled";
   if (status === "dispensed") return "completed";
   return "in-progress";
-}
-
-function createdIdsByRequestResourceType(
-  requestBundle: Bundle,
-  responseBundle: Bundle,
-): Map<string, string[]> {
-  const byType = new Map<string, string[]>();
-  const requestEntries = requestBundle.entry ?? [];
-  const responseEntries = responseBundle.entry ?? [];
-  requestEntries.forEach((requestEntry, index) => {
-    const resourceType = requestEntry.resource?.resourceType;
-    const id = responseEntries[index]?.response?.location?.match(/^[A-Za-z]+\/([^/]+)/)?.[1];
-    if (!resourceType || !id) return;
-    const ids = byType.get(resourceType) ?? [];
-    ids.push(id);
-    byType.set(resourceType, ids);
-  });
-  return byType;
-}
-
-function oneCreatedId(created: Map<string, string[]>, resourceType: string): string {
-  const ids = created.get(resourceType) ?? [];
-  if (ids.length !== 1) {
-    throw new Error(`Expected exactly one created ${resourceType}; got ${ids.length}.`);
-  }
-  return ids[0];
 }
 
 function formatNumber(value: number | undefined): string {

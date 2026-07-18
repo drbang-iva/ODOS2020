@@ -1,4 +1,4 @@
-import type { CodeableConcept, Condition, Encounter, Extension, Reference } from "@medplum/fhirtypes";
+import type { CodeableConcept, Condition, Encounter, Extension, Identifier, Reference } from "@medplum/fhirtypes";
 
 export const US_CORE_CONDITION_ENCOUNTER_DIAGNOSIS_PROFILE =
   "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition-encounter-diagnosis";
@@ -61,6 +61,8 @@ export interface ConditionBaseInput {
   recordedDate?: string;
   bodyStructureReference?: string;
   bodySiteText?: string;
+  identifiers?: Identifier[];
+  evidenceObservationReferences?: string[];
 }
 
 export interface EncounterDiagnosisConditionInput extends ConditionBaseInput {
@@ -162,6 +164,23 @@ export function hasConditionCategory(condition: Condition, category: ConditionCa
   );
 }
 
+export function isConfirmedEncounterDiagnosis(condition: Condition): boolean {
+  return hasConditionCategory(condition, "encounter-diagnosis") &&
+    condition.verificationStatus?.coding?.some(
+      (coding) => coding.system === FHIR_CONDITION_VERIFICATION_STATUS_CODE_SYSTEM && coding.code === "confirmed",
+    ) === true &&
+    /^Encounter\/[^/]+$/.test(condition.encounter?.reference ?? "");
+}
+
+export function conditionEncounterId(condition: Condition): string | undefined {
+  return referenceId(condition.encounter?.reference, "Encounter");
+}
+
+export function referenceId(reference: string | undefined, resourceType: string): string | undefined {
+  const [type, id, extra] = reference?.split("/") ?? [];
+  return type === resourceType && id && !extra ? id : undefined;
+}
+
 export function conditionBodySiteReferenceExtension(bodyStructureReference: string): Extension {
   return {
     url: CONDITION_BODY_SITE_EXTENSION_URL,
@@ -230,6 +249,10 @@ function buildCondition(
       ? { clinicalStatus: clinicalStatusConcept(input.clinicalStatus ?? "active") }
       : {}),
     verificationStatus: verificationStatusConcept(verificationStatus),
+    ...(input.identifiers?.length ? { identifier: input.identifiers } : {}),
+    ...(input.evidenceObservationReferences?.length
+      ? { evidence: [{ detail: input.evidenceObservationReferences.map(reference) }] }
+      : {}),
     ...(input.onsetDateTime ? { onsetDateTime: input.onsetDateTime } : {}),
     ...(input.abatementDateTime ? { abatementDateTime: input.abatementDateTime } : {}),
     ...(input.recordedDate ? { recordedDate: input.recordedDate } : {}),
@@ -253,7 +276,7 @@ function codeableConcept(input: ConditionCodeInput): CodeableConcept {
 }
 
 function isCodeableConcept(input: ConditionCodeInput | CodeableConcept): input is CodeableConcept {
-  return "coding" in input;
+  return !("system" in input);
 }
 
 function categoryDisplay(category: ConditionCategoryCode): string {

@@ -4,7 +4,7 @@ import type {
   InvoiceLineItemPriceComponent,
   PaymentReconciliation,
 } from "@medplum/fhirtypes";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "./optical-order";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "./optical-order";
 
 /**
  * Slice-3c patient receipt / financial summary. Assembles the patient money document from the
@@ -143,17 +143,26 @@ export function buildFinancialSummary(input: BuildFinancialSummaryInput): Financ
 
 export function paymentReconciliationsToTenderLines(
   paymentReconciliations: PaymentReconciliation[],
+  invoiceReference?: string,
 ): FinancialSummaryTenderLine[] {
-  return paymentReconciliations.map((pr) => {
-    const coding = pr.extension?.find((ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  return paymentReconciliations.flatMap((pr) => {
+    if (pr.status === "cancelled") {
+      return [];
+    }
+    const coding = pr.extension?.find((ext) => ext.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
       ?.valueCodeableConcept?.coding?.[0];
     const tender = coding?.display ?? coding?.code;
     if (!tender) {
       throw new Error(
-        "PaymentReconciliation is missing the osod-payment-tender extension — cannot derive the receipt tender label.",
+        "PaymentReconciliation is missing the odos-payment-tender extension — cannot derive the receipt tender label.",
       );
     }
-    return { tender, amountCents: toCents(pr.paymentAmount?.value ?? NaN) };
+    const amountCents = invoiceReference
+      ? sum((pr.detail ?? [])
+          .filter((detail) => detail.request?.reference === invoiceReference)
+          .map((detail) => toCents(detail.amount?.value ?? NaN)))
+      : toCents(pr.paymentAmount?.value ?? NaN);
+    return amountCents > 0 ? [{ tender, amountCents }] : [];
   });
 }
 
@@ -191,18 +200,18 @@ export function renderReceiptSheet(summary: FinancialSummary): string {
     .map((line) => `<tr><td>${text(line.tender)}</td><td>${money(line.amountCents)}</td></tr>`)
     .join("\n    ");
 
-  return `<section class="osod-receipt">
+  return `<section class="odos-receipt">
 <style>
-  .osod-receipt { font-family: system-ui, sans-serif; color: #111; max-width: 8.5in; }
-  .osod-receipt h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
-  .osod-receipt h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #ccc; margin: 1rem 0 .4rem; padding-bottom: .15rem; }
-  .osod-receipt table { border-collapse: collapse; width: 100%; font-size: .85rem; }
-  .osod-receipt th, .osod-receipt td { border: 1px solid #ddd; padding: .25rem .4rem; text-align: left; }
-  .osod-receipt .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; font-size: .85rem; }
-  .osod-receipt .kv b { color: #555; font-weight: 600; }
-  .osod-receipt .totals td:first-child { font-weight: 600; color: #555; }
-  .osod-receipt .due { font-size: 1.05rem; font-weight: 700; border: 2px solid #111; padding: .5rem .75rem; margin-top: .75rem; display: inline-block; }
-  @media print { .osod-receipt { max-width: none; } }
+  .odos-receipt { font-family: system-ui, sans-serif; color: #111; max-width: 8.5in; }
+  .odos-receipt h1 { font-size: 1.2rem; margin: 0 0 .25rem; }
+  .odos-receipt h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: #555; border-bottom: 1px solid #ccc; margin: 1rem 0 .4rem; padding-bottom: .15rem; }
+  .odos-receipt table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  .odos-receipt th, .odos-receipt td { border: 1px solid #ddd; padding: .25rem .4rem; text-align: left; }
+  .odos-receipt .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem .75rem; font-size: .85rem; }
+  .odos-receipt .kv b { color: #555; font-weight: 600; }
+  .odos-receipt .totals td:first-child { font-weight: 600; color: #555; }
+  .odos-receipt .due { font-size: 1.05rem; font-weight: 700; border: 2px solid #111; padding: .5rem .75rem; margin-top: .75rem; display: inline-block; }
+  @media print { .odos-receipt { max-width: none; } }
 </style>
 <h1>Receipt / Financial Summary</h1>
 <div class="kv">
@@ -246,10 +255,10 @@ function componentCents(components: InvoiceLineItemPriceComponent[] | undefined,
 }
 
 function invoiceTender(invoice: Invoice): string {
-  const tender = invoice.extension?.find((ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  const tender = invoice.extension?.find((ext) => ext.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0]?.code;
   if (!tender) {
-    throw new Error("Financial summary could not derive the payment tender from the Invoice (osod-payment-tender extension missing).");
+    throw new Error("Financial summary could not derive the payment tender from the Invoice (odos-payment-tender extension missing).");
   }
   return tender;
 }

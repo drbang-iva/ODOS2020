@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { OSOD_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
+import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import {
   RESOURCE_KINDS,
   buildSchedulingResource,
@@ -28,7 +28,7 @@ test("a provider resource is a Schedule whose actor is the Practitioner", () => 
   assert.equal(schedule.actor[0]?.reference, "Practitioner/bang-eric");
   assert.equal(schedule.actor[0]?.display, "Bang, Eric");
   const coding = schedule.serviceCategory?.[0]?.coding?.[0];
-  assert.equal(coding?.system, OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(coding?.system, ODOS_DISCIPLINE_SYSTEM);
   assert.equal(coding?.code, "eyecare");
 });
 

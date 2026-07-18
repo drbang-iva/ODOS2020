@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 
 test("buildOpticalInvoice builds an issued cash Invoice referencing ChargeItems with matching totals + tender extension", () => {
   const invoice = buildOpticalInvoice({
@@ -33,8 +33,8 @@ test("buildOpticalInvoice builds an issued cash Invoice referencing ChargeItems 
   assert.equal(invoice.totalNet?.value, 305);
   assert.equal(invoice.totalNet?.currency, "USD");
 
-  // R4 trap #5: CASH/CHECK tender lives in the osod-payment-tender extension
-  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  // R4 trap #5: the record-only tender lives in the odos-payment-tender extension
+  const tenderExt = invoice.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CASH");
 });
 
@@ -70,8 +70,29 @@ test("buildOpticalInvoice carries a CHECK tender", () => {
     tender: "CHECK",
     lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 5000 }],
   });
-  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  const tenderExt = invoice.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
   assert.equal(tenderExt?.valueCodeableConcept?.coding?.[0]?.code, "CHECK");
+});
+
+test("buildOpticalInvoice carries native date and standard data-entry participant when supplied", () => {
+  const invoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    tender: "CASH",
+    date: "2026-07-15T14:30:00.000Z",
+    staffReference: "PractitionerRole/front-1",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 5000 }],
+  });
+  assert.equal(invoice.date, "2026-07-15T14:30:00.000Z");
+  assert.deepEqual(invoice.participant, [{
+    role: {
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+        code: "ENT",
+        display: "data entry person",
+      }],
+    },
+    actor: { reference: "PractitionerRole/front-1" },
+  }]);
 });
 
 test("buildOpticalInvoice with no tender issues the bill untendered (processor path — the tender lives on the PaymentReconciliation)", () => {
@@ -80,13 +101,23 @@ test("buildOpticalInvoice with no tender issues the bill untendered (processor p
     lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 5000 }],
   });
   assert.equal(invoice.status, "issued");
-  const tenderExt = invoice.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL);
+  const tenderExt = invoice.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
   assert.equal(tenderExt, undefined);
   // the bill is otherwise complete — totals still computed
   assert.equal(invoice.totalNet?.value, 50);
 });
 
-test("buildOpticalInvoice rejects a tender outside CASH/CHECK", () => {
+test("buildOpticalInvoice accepts CARD_MANUAL as record-only and rejects processor tenders", () => {
+  const manualCard = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    tender: "CARD_MANUAL",
+    lineItems: [{ chargeItemReference: "ChargeItem/ci1", amountCents: 100 }],
+  });
+  assert.equal(
+    manualCard.extension?.find((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
+      ?.valueCodeableConcept?.coding?.[0]?.code,
+    "CARD_MANUAL",
+  );
   assert.throws(
     () =>
       buildOpticalInvoice({

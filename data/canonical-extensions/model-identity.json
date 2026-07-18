@@ -1,9 +1,9 @@
 {
   "resourceType": "StructureDefinition",
   "id": "model-identity",
-  "url": "https://osod.dev/fhir/StructureDefinition/model-identity",
+  "url": "https://odos2020.com/fhir/StructureDefinition/model-identity",
   "version": "0.55d",
-  "name": "OSODModelIdentity",
+  "name": "ODOSModelIdentity",
   "status": "active",
   "kind": "complex-type",
   "abstract": false,
@@ -16,7 +16,7 @@
   "type": "Extension",
   "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
   "derivation": "constraint",
-  "description": "OSOD AgentOps metadata for a FHIR Device representing an underlying AI model.",
+  "description": "ODOS AgentOps metadata for a FHIR Device representing an underlying AI model.",
   "differential": {
     "element": [
       {
@@ -48,7 +48,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/model-identity"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/model-identity"
       }
     ]
   }

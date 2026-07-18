@@ -39,7 +39,7 @@ test("update_patient MCP write tool integrates with Medplum", { timeout: 90_000 
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-patient-update-test",
+    clientName: "odos-mcp-patient-update-test",
   });
   t.after(async () => {
     await mcp.client.close();

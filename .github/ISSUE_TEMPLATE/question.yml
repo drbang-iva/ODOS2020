@@ -1,5 +1,5 @@
 name: Question
-description: Ask about how OSOD works, how to use it, or its direction
+description: Ask about how ODOS works, how to use it, or its direction
 title: "[question] "
 labels: ["question", "triage"]
 body:

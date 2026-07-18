@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://osod.dev/fhir/StructureDefinition/Observation-VA",
+  "url": "https://odos2020.com/fhir/StructureDefinition/Observation-VA",
   "version": "0.3.0",
-  "name": "OSODObservationVA",
-  "title": "OSOD Observation - Visual Acuity",
+  "name": "ODOSObservationVA",
+  "title": "ODOS Observation - Visual Acuity",
   "status": "draft",
-  "publisher": "OSOD",
-  "description": "OSOD v0.3 profile for visual acuity Observations.",
+  "publisher": "ODOS",
+  "description": "ODOS v0.3 profile for visual acuity Observations.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -100,43 +100,43 @@
             "xpath": "not(f:*[starts-with(local-name(.), 'value')] and (for $coding in f:code/f:coding return f:component/f:code/f:coding[f:code/@value=$coding/f:code/@value] [f:system/@value=$coding/f:system/@value]))"
           },
           {
-            "key": "osod-va-profile",
+            "key": "odos-va-profile",
             "severity": "error",
             "human": "meta.profile must declare Observation-VA.",
-            "expression": "meta.profile.where($this = 'https://osod.dev/fhir/StructureDefinition/Observation-VA').exists()"
+            "expression": "meta.profile.where($this = 'https://odos2020.com/fhir/StructureDefinition/Observation-VA').exists()"
           },
           {
-            "key": "osod-va-code",
+            "key": "odos-va-code",
             "severity": "error",
             "human": "Observation.code must include a supported visual acuity SNOMED code.",
             "expression": "code.coding.where(system = 'http://snomed.info/sct' and (code = '420050001' or code = '397536007' or code = '419775003' or code = '419475002' or code = '251743004' or code = '251747003' or code = '422673001' or code = '413077008' or code = '413078003' or code = '251739003')).exists()"
           },
           {
-            "key": "osod-va-category",
+            "key": "odos-va-category",
             "severity": "error",
             "human": "Observation.category must include exam.",
             "expression": "category.coding.where(system = 'http://terminology.hl7.org/CodeSystem/observation-category' and code = 'exam').exists()"
           },
           {
-            "key": "osod-va-body-site",
+            "key": "odos-va-body-site",
             "severity": "error",
             "human": "Observation.bodySite extension must reference BodyStructure.",
             "expression": "bodySite.extension.where(url = 'http://hl7.org/fhir/StructureDefinition/bodySite').value.exists()"
           },
           {
-            "key": "osod-va-subject",
+            "key": "odos-va-subject",
             "severity": "error",
             "human": "Observation.subject is required.",
             "expression": "subject.exists()"
           },
           {
-            "key": "osod-va-encounter",
+            "key": "odos-va-encounter",
             "severity": "error",
             "human": "Observation.encounter is required.",
             "expression": "encounter.exists()"
           },
           {
-            "key": "osod-va-effective",
+            "key": "odos-va-effective",
             "severity": "error",
             "human": "Observation.effectiveDateTime is required.",
             "expression": "effectiveDateTime.exists()"
@@ -2689,28 +2689,28 @@
         "path": "Observation",
         "min": 0,
         "max": "*",
-        "definition": "Observation constrained by https://osod.dev/fhir/StructureDefinition/Observation-VA"
+        "definition": "Observation constrained by https://odos2020.com/fhir/StructureDefinition/Observation-VA"
       },
       {
         "id": "Observation.subject",
         "path": "Observation.subject",
         "min": 1,
         "max": "1",
-        "definition": "Observation.subject constrained by https://osod.dev/fhir/StructureDefinition/Observation-VA"
+        "definition": "Observation.subject constrained by https://odos2020.com/fhir/StructureDefinition/Observation-VA"
       },
       {
         "id": "Observation.encounter",
         "path": "Observation.encounter",
         "min": 1,
         "max": "1",
-        "definition": "Observation.encounter constrained by https://osod.dev/fhir/StructureDefinition/Observation-VA"
+        "definition": "Observation.encounter constrained by https://odos2020.com/fhir/StructureDefinition/Observation-VA"
       },
       {
         "id": "Observation.effectiveDateTime",
         "path": "Observation.effectiveDateTime",
         "min": 1,
         "max": "1",
-        "definition": "Observation.effectiveDateTime constrained by https://osod.dev/fhir/StructureDefinition/Observation-VA"
+        "definition": "Observation.effectiveDateTime constrained by https://odos2020.com/fhir/StructureDefinition/Observation-VA"
       }
     ]
   }

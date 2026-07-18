@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { buildOsodAuditEventRow, type OsodAuditEventRow } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventRow } from "../authz/odosAudit.js";
 import { CDS_SERVICE_REGISTRY_POLICY_URL, type CdsFeedbackItem, type CdsFeedbackRequest } from "./types.js";
 
 export interface PersistedCdsFeedback {
@@ -53,10 +53,10 @@ export async function persistCdsFeedback(input: {
   readonly patientId?: string;
   readonly encounterId?: string;
   readonly now?: Date;
-}): Promise<{ readonly rows: readonly PersistedCdsFeedback[]; readonly auditEvents: readonly OsodAuditEventRow[] }> {
+}): Promise<{ readonly rows: readonly PersistedCdsFeedback[]; readonly auditEvents: readonly OdosAuditEventRow[] }> {
   const now = input.now ?? new Date();
   const rows: PersistedCdsFeedback[] = [];
-  const auditEvents: OsodAuditEventRow[] = [];
+  const auditEvents: OdosAuditEventRow[] = [];
   for (const item of input.request.feedback) {
     const reason = reasonCoding(item);
     const row: PersistedCdsFeedback = {
@@ -76,13 +76,13 @@ export async function persistCdsFeedback(input: {
     };
     rows.push(await input.repository.save(row));
     auditEvents.push(
-      buildOsodAuditEventRow({
+      buildOdosAuditEventRow({
         eventType: item.outcome === "accepted" ? "cds.feedback.accepted" : "cds.feedback.overridden",
         eventTime: now.toISOString(),
         actorId: input.userId,
         actorRole: "clinician",
         patientId: input.patientId,
-        resourceType: "osod_cds_feedback",
+        resourceType: "odos_cds_feedback",
         resourceId: row.feedbackId,
         policyUrl: CDS_SERVICE_REGISTRY_POLICY_URL,
         actionReason: `CDS feedback ${item.outcome} for card ${item.card}.`,

@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://osod.dev/fhir/StructureDefinition/Observation-IOP",
+  "url": "https://odos2020.com/fhir/StructureDefinition/Observation-IOP",
   "version": "0.3.0",
-  "name": "OSODObservationIOP",
-  "title": "OSOD Observation - Intraocular Pressure",
+  "name": "ODOSObservationIOP",
+  "title": "ODOS Observation - Intraocular Pressure",
   "status": "draft",
-  "publisher": "OSOD",
-  "description": "OSOD v0.3 profile for intraocular pressure Observations.",
+  "publisher": "ODOS",
+  "description": "ODOS v0.3 profile for intraocular pressure Observations.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -100,49 +100,49 @@
             "xpath": "not(f:*[starts-with(local-name(.), 'value')] and (for $coding in f:code/f:coding return f:component/f:code/f:coding[f:code/@value=$coding/f:code/@value] [f:system/@value=$coding/f:system/@value]))"
           },
           {
-            "key": "osod-iop-profile",
+            "key": "odos-iop-profile",
             "severity": "error",
             "human": "meta.profile must declare Observation-IOP.",
-            "expression": "meta.profile.where($this = 'https://osod.dev/fhir/StructureDefinition/Observation-IOP').exists()"
+            "expression": "meta.profile.where($this = 'https://odos2020.com/fhir/StructureDefinition/Observation-IOP').exists()"
           },
           {
-            "key": "osod-iop-code",
+            "key": "odos-iop-code",
             "severity": "error",
             "human": "Observation.code must include SNOMED 41633001.",
             "expression": "code.coding.where(system = 'http://snomed.info/sct' and code = '41633001').exists()"
           },
           {
-            "key": "osod-iop-category",
+            "key": "odos-iop-category",
             "severity": "error",
             "human": "Observation.category must include exam.",
             "expression": "category.coding.where(system = 'http://terminology.hl7.org/CodeSystem/observation-category' and code = 'exam').exists()"
           },
           {
-            "key": "osod-iop-body-site",
+            "key": "odos-iop-body-site",
             "severity": "error",
             "human": "Observation.bodySite extension must reference BodyStructure.",
             "expression": "bodySite.extension.where(url = 'http://hl7.org/fhir/StructureDefinition/bodySite').value.exists()"
           },
           {
-            "key": "osod-iop-subject",
+            "key": "odos-iop-subject",
             "severity": "error",
             "human": "Observation.subject is required.",
             "expression": "subject.exists()"
           },
           {
-            "key": "osod-iop-encounter",
+            "key": "odos-iop-encounter",
             "severity": "error",
             "human": "Observation.encounter is required.",
             "expression": "encounter.exists()"
           },
           {
-            "key": "osod-iop-effective",
+            "key": "odos-iop-effective",
             "severity": "error",
             "human": "Observation.effectiveDateTime is required.",
             "expression": "effectiveDateTime.exists()"
           },
           {
-            "key": "osod-iop-ucum",
+            "key": "odos-iop-ucum",
             "severity": "error",
             "human": "IOP must use UCUM mm[Hg].",
             "expression": "valueQuantity.unit = 'mm[Hg]' and valueQuantity.system = 'http://unitsofmeasure.org' and valueQuantity.code = 'mm[Hg]'"
@@ -2695,28 +2695,28 @@
         "path": "Observation",
         "min": 0,
         "max": "*",
-        "definition": "Observation constrained by https://osod.dev/fhir/StructureDefinition/Observation-IOP"
+        "definition": "Observation constrained by https://odos2020.com/fhir/StructureDefinition/Observation-IOP"
       },
       {
         "id": "Observation.subject",
         "path": "Observation.subject",
         "min": 1,
         "max": "1",
-        "definition": "Observation.subject constrained by https://osod.dev/fhir/StructureDefinition/Observation-IOP"
+        "definition": "Observation.subject constrained by https://odos2020.com/fhir/StructureDefinition/Observation-IOP"
       },
       {
         "id": "Observation.encounter",
         "path": "Observation.encounter",
         "min": 1,
         "max": "1",
-        "definition": "Observation.encounter constrained by https://osod.dev/fhir/StructureDefinition/Observation-IOP"
+        "definition": "Observation.encounter constrained by https://odos2020.com/fhir/StructureDefinition/Observation-IOP"
       },
       {
         "id": "Observation.effectiveDateTime",
         "path": "Observation.effectiveDateTime",
         "min": 1,
         "max": "1",
-        "definition": "Observation.effectiveDateTime constrained by https://osod.dev/fhir/StructureDefinition/Observation-IOP"
+        "definition": "Observation.effectiveDateTime constrained by https://odos2020.com/fhir/StructureDefinition/Observation-IOP"
       }
     ]
   }

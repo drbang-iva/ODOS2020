@@ -13,7 +13,7 @@ import {
   FHIR_CONDITION_CLINICAL_STATUS_CODE_SYSTEM,
 } from "./fhir-clinical/condition";
 import {
-  OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+  ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
   type EpisodeOfCareTypeCode,
 } from "./fhir-clinical/episodeOfCare";
 import {
@@ -115,7 +115,7 @@ export function careTeamParticipantLabel(participant: NonNullable<CareTeam["part
 
 export function episodeTypeLabel(episode: EpisodeOfCare): string {
   const code = episode.type?.[0]?.coding?.find(
-    (coding) => coding.system === OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+    (coding) => coding.system === ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
   )?.code as EpisodeOfCareTypeCode | undefined;
 
   if (code === "myopia-management") return "Myopia management";

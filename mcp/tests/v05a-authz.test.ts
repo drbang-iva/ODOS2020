@@ -84,11 +84,12 @@ test("front-desk can create the dispensary order + financial resources at practi
   }
 });
 
-test("front-desk can create but NOT update a PaymentReconciliation (payment records are immutable)", () => {
+test("front-desk cannot update or delete PaymentReconciliation outside the guarded Phase 6a handlers", () => {
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
   const pr = policy.resource?.find((r) => r.resourceType === "PaymentReconciliation");
   assert.deepEqual(pr?.interaction, ["create", "read", "search", "history", "vread"]);
   assert.equal(pr?.interaction?.includes("update"), false);
+  assert.equal(pr?.interaction?.includes("delete"), false);
   assert.equal(pr?.criteria, undefined);
 });
 
@@ -107,7 +108,7 @@ test("every role's AccessPolicy carries a machine-readable practice-role identif
   for (const roleId of ["front-desk", "practice-admin", "clinician", "auditor", "aesthetics-provider"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const tag = policy.meta?.tag?.find(
-      (t) => t.system === "https://osod.dev/fhir/NamingSystem/practice-role",
+      (t) => t.system === "https://odos2020.com/fhir/NamingSystem/practice-role",
     );
     assert.equal(tag?.code, roleId, roleId);
   }
@@ -115,7 +116,7 @@ test("every role's AccessPolicy carries a machine-readable practice-role identif
 
 test("ProjectMembership access builder emits parameterized provider, patient, and state-license values", () => {
   const access = buildProjectMembershipAccess({
-    policyReference: "AccessPolicy/osod-aesthetics-provider",
+    policyReference: "AccessPolicy/odos-aesthetics-provider",
     parameters: {
       providerProfileReference: "Practitioner/provider-1",
       patientCompartmentReference: "Patient/patient-1",
@@ -124,7 +125,7 @@ test("ProjectMembership access builder emits parameterized provider, patient, an
     },
   });
 
-  assert.equal(access[0].policy.reference, "AccessPolicy/osod-aesthetics-provider");
+  assert.equal(access[0].policy.reference, "AccessPolicy/odos-aesthetics-provider");
   assert.deepEqual(access[0].parameter, [
     { name: "provider_profile", valueReference: { reference: "Practitioner/provider-1" } },
     { name: "patient_compartment", valueString: "Patient/patient-1" },
@@ -326,7 +327,7 @@ test("AccessPolicy generator POST round-trip is accepted by Medplum when integra
 
   const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
   const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
-  policy.name = `OSOD v0.5a Auditor Roundtrip ${Date.now()}`;
+  policy.name = `ODOS v0.5a Auditor Roundtrip ${Date.now()}`;
   const created = await fhir.create<AccessPolicy>(policy);
 
   assert.equal(created.resourceType, "AccessPolicy");
@@ -363,7 +364,7 @@ test(
 
     // 2. Generate a fresh auditor AccessPolicy from the v0.5a generator and POST it as the admin.
     const policy = buildMedplumAccessPolicy(getRoleDeclaration("auditor"));
-    policy.name = `OSOD v0.5a Auditor Enforcement ${Date.now()}`;
+    policy.name = `ODOS v0.5a Auditor Enforcement ${Date.now()}`;
     const createdPolicy = await fhir.create<AccessPolicy>(policy);
     assert.ok(createdPolicy.id, "AccessPolicy create did not return an id.");
 

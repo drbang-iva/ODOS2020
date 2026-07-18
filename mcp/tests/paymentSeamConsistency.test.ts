@@ -74,6 +74,7 @@ test("the same order paid by cash vs by processor renders identical money — on
     {
       read: async <T,>(_rt: string, _id: string): Promise<T> =>
         structuredClone(cashStore.invoice) as T,
+      search: async () => ({ resourceType: "Bundle" as const, type: "searchset" as const }),
       update: async <T,>(_rt: string, _id: string, next: T): Promise<T> => {
         cashStore.invoice = structuredClone(next) as Invoice;
         return next;
@@ -108,11 +109,12 @@ test("the same order paid by cash vs by processor renders identical money — on
     createdIso: "2026-07-05T15:00:00.000Z",
     paymentDate: "2026-07-05",
     amountCents: 24400,
+    subjectReference: "Patient/p1",
     invoiceReference: "Invoice/inv-card",
     taskReference: "Task/task1",
     staffReference: "Practitioner/staff1",
     processorTransactionId: "ch_test_abc123",
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/stripe-transaction",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/stripe-transaction",
     feesCents: 738,
     surface: "online",
     tender: { code: "CARD", display: "VISA ****4242" },

@@ -1,0 +1,63 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-charge-item",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item",
+  "version": "claim-remittance-linkage",
+  "name": "ODOSClaimChargeItem",
+  "title": "ODOS Claim ChargeItem Provenance",
+  "status": "active",
+  "date": "2026-07-15",
+  "publisher": "ODOS",
+  "description": "Persisted ChargeItem that supplied one professional Claim item or was identity-echoed for its corresponding ClaimResponse item.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Claim.item"
+    },
+    {
+      "type": "element",
+      "expression": "ClaimResponse.item"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "ChargeItem provenance for a Claim or ClaimResponse item",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/ChargeItem"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

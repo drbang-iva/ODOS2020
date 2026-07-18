@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-benefit-frequency-months",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months",
+  "version": "claims-phase7a",
+  "name": "ODOSBenefitFrequencyMonths",
+  "title": "ODOS Benefit Frequency Months",
+  "status": "active",
+  "date": "2026-07-10",
+  "publisher": "ODOS",
+  "description": "Whole-month eligibility frequency for a manually entered vision-plan benefit.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "CoverageEligibilityResponse.insurance.item"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Benefit eligibility frequency in months",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-benefit-frequency-months"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "unsignedInt"
+          }
+        ]
+      }
+    ]
+  }
+}

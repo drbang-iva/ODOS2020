@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/visualAcuity.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/visualAcuity.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type {
   BuildResult,
   EyeLaterality,
@@ -10,7 +10,7 @@ import { dualCoding } from "./codeBindings.js";
 import {
   applyCommonObservationFields,
   component,
-  osodConcept,
+  odosConcept,
   quantity,
 } from "./extensions.js";
 
@@ -63,10 +63,10 @@ export function buildVisualAcuityObservation(
       valueString: input.snellen,
     }),
     component("VA_CHART_TYPE", "Visual acuity chart type", {
-      valueCodeableConcept: osodConcept(input.chartType, input.chartType),
+      valueCodeableConcept: odosConcept(input.chartType, input.chartType),
     }),
     component("VA_CORRECTION", "Visual acuity correction", {
-      valueCodeableConcept: osodConcept(input.correction, input.correction),
+      valueCodeableConcept: odosConcept(input.correction, input.correction),
     }),
   ];
 
@@ -109,21 +109,21 @@ export function buildVisualAcuityObservation(
   const observation = applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
+      status: "preliminary",
       code: {
         coding: dualCoding(
           "VISUAL_ACUITY",
           "Visual acuity",
-          osodVAtoSnomed(visualAcuityDistanceKind(input), input.correction, input.chartType, input.eye),
+          odosVAtoSnomed(visualAcuityDistanceKind(input), input.correction, input.chartType, input.eye),
         ),
         text: "Visual acuity",
       },
-      method: input.method ? osodConcept(input.method, input.method) : undefined,
+      method: input.method ? odosConcept(input.method, input.method) : undefined,
       component: components,
     },
     {
       ...input,
-      method: input.method ? osodConcept(input.method, input.method) : undefined,
+      method: input.method ? odosConcept(input.method, input.method) : undefined,
     },
   );
 
@@ -141,7 +141,7 @@ function roundLogmar(value: number): number {
   return Math.round(value * 1000) / 1000;
 }
 
-export function osodVAtoSnomed(
+export function odosVAtoSnomed(
   distance: "distance" | "near",
   correction: VisualAcuityCorrection,
   chartType: VisualAcuityChartType = "UNKNOWN",

@@ -5,16 +5,16 @@
     {
       "resource": {
         "resourceType": "Group",
-        "id": "osod-exportable-group",
+        "id": "odos-exportable-group",
         "type": "person",
         "actual": true,
         "identifier": [
           {
-            "system": "https://osod.dev/fhir/NamingSystem/local-bulk-data-group",
-            "value": "osod-exportable-group"
+            "system": "https://odos2020.com/fhir/NamingSystem/local-bulk-data-group",
+            "value": "odos-exportable-group"
           }
         ],
-        "name": "OSOD exportable patient group",
+        "name": "ODOS exportable patient group",
         "member": [
           {
             "entity": {

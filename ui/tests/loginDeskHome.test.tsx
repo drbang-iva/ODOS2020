@@ -1,0 +1,408 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { LoginScreen, PASSWORD_RESET_CONFIRMATION, requestPasswordReset, submitLogin } from "../src/scenes/LoginScreen";
+import { PasswordResetTransportError } from "../src/lib/auth-api";
+import { fetchWhoAmI } from "../src/lib/practice-roles";
+import { submitSetPassword } from "../src/scenes/SetPasswordScreen";
+import { CLINIC_PATH, COCKPIT_HOVER_CLOSE_DELAY_MS, DESK_CARD_STORAGE_KEY, DESK_HOME_PATH, DeskHome, displayStat, loadDeskCardIds, reorderDeskCards, sanitizeDeskCardIds } from "../src/scenes/DeskHome";
+import { clearCockpitPanelPosition, COCKPIT_PANEL_POSITION_STORAGE_KEY, loadCockpitPanelPosition, saveCockpitPanelPosition } from "../src/scenes/frontdesk/CockpitGuestPanel";
+import type { DeskSummary } from "../src/lib/desk-summary";
+
+test("login screen renders real email and password fields with no environment credential fallback", () => {
+  const html = renderToStaticMarkup(<LoginScreen returnTo={DESK_HOME_PATH} onAuthenticated={() => undefined} />);
+  assert.match(html, /type="email"/);
+  assert.match(html, /autoComplete="username"/);
+  assert.match(html, /type="password"/);
+  assert.match(html, /autoComplete="current-password"/);
+  assert.doesNotMatch(html, /VITE_MEDPLUM_ADMIN/);
+});
+
+test("successful login navigates to the requested Desk home and authenticates", async () => {
+  const events: string[] = [];
+  await submitLogin({
+    email: "admin@example.test",
+    password: "valid",
+    returnTo: DESK_HOME_PATH,
+    login: async () => { events.push("login"); },
+    navigate: (path) => events.push(`navigate:${path}`),
+    onAuthenticated: () => events.push("authenticated"),
+  });
+  assert.deepEqual(events, ["login", `navigate:${DESK_HOME_PATH}`, "authenticated"]);
+});
+
+test("failed login never navigates or authenticates", async () => {
+  const events: string[] = [];
+  await assert.rejects(() => submitLogin({
+    email: "admin@example.test",
+    password: "invalid",
+    returnTo: DESK_HOME_PATH,
+    login: async () => { throw new Error("Invalid credentials"); },
+    navigate: (path) => events.push(`navigate:${path}`),
+    onAuthenticated: () => events.push("authenticated"),
+  }), /Invalid credentials/);
+  assert.deepEqual(events, []);
+});
+
+test("set-password submit passes the email-link credentials and new password", async () => {
+  const calls: unknown[][] = [];
+  await submitSetPassword({
+    id: "user-id",
+    secret: "email-secret",
+    password: "new-password",
+    confirmPassword: "new-password",
+    setPassword: async (...args) => { calls.push(args); },
+  });
+  assert.deepEqual(calls, [["user-id", "email-secret", "new-password"]]);
+});
+
+test("set-password submit surfaces server failures", async () => {
+  await assert.rejects(() => submitSetPassword({
+    id: "user-id",
+    secret: "expired-secret",
+    password: "new-password",
+    confirmPassword: "new-password",
+    setPassword: async () => { throw new Error("FHIR 400 Bad Request: Reset link expired"); },
+  }), /Reset link expired/);
+});
+
+test("forgot-password confirmation is neutral on success and failure", async () => {
+  const success = await requestPasswordReset("known@example.test", async () => undefined);
+  const failure = await requestPasswordReset("unknown@example.test", async () => {
+    throw new Error("Account not found");
+  });
+  assert.equal(success, PASSWORD_RESET_CONFIRMATION);
+  assert.equal(failure, PASSWORD_RESET_CONFIRMATION);
+});
+
+test("forgot-password transport failure does not claim an email is coming", async () => {
+  await assert.rejects(
+    () => requestPasswordReset("person@example.test", async () => {
+      throw new PasswordResetTransportError(new Error("connection refused"));
+    }),
+    /could not reach ODOS/,
+  );
+});
+
+test("whoami no-role errors render the server detail instead of only the machine code", async () => {
+  await assert.rejects(
+    () => fetchWhoAmI(async () => new Response(JSON.stringify({
+      error: "no-practice-role",
+      detail: "Account person@example.test has no practice role. An administrator must grant one.",
+    }), { status: 403, headers: { "Content-Type": "application/json" } })),
+    /Account person@example.test has no practice role/,
+  );
+});
+
+test("Desk home keeps Customize on-page and leaves global navigation to AppShell", () => {
+  const html = renderToStaticMarkup(<DeskHome />);
+  assert.match(html, /The Desk/);
+  assert.match(html, /Customize/);
+  assert.match(html, /Electronic remits/);
+  assert.match(html, /href="\/billing\/statements"/);
+  assert.doesNotMatch(html, /odos-desk-topbar/);
+  assert.doesNotMatch(html, new RegExp(`href="${CLINIC_PATH}"[^>]*target="_blank"`));
+});
+
+test("Desk card configuration sanitizes and reorders only catalog cards", () => {
+  assert.deepEqual(sanitizeDeskCardIds(["claims", "claims", "bogus", "schedule"]), ["claims", "schedule"]);
+  assert.deepEqual(reorderDeskCards(["schedule", "attention", "claims"], "claims", "schedule"), ["claims", "schedule", "attention"]);
+});
+
+test("Desk customization persists reorder, remove, add-back, and Reset for all ten cards", () => {
+  const defaults = loadDeskCardIds(undefined);
+  assert.equal(defaults.length, 10);
+  assert.ok(defaults.includes("front-line"));
+  assert.ok(defaults.includes("office"));
+  const reordered = reorderDeskCards(defaults, "statements", "schedule");
+  const removed = reordered.filter((id) => id !== "front-line");
+  const addedBack = [...removed, "front-line"];
+  const storage = { getItem: (key: string) => key === DESK_CARD_STORAGE_KEY ? JSON.stringify(addedBack) : null };
+  assert.deepEqual(loadDeskCardIds(storage), addedBack);
+  assert.deepEqual(sanitizeDeskCardIds(defaults), defaults);
+});
+
+test("Front Line without a CommsProvider renders one wiring panel and no zero placeholders", () => {
+  const html = renderToStaticMarkup(<DeskHome initialSummary={emptyDeskSummary()} />);
+  const frontLine = html.match(/Front Line[\s\S]*?Open desk inbox →/)?.[0] ?? "";
+  assert.match(frontLine, /Comms counts arrive with the GHL adapter — Phase 3b/);
+  assert.doesNotMatch(frontLine, />0</);
+  assert.doesNotMatch(frontLine, /Need reply/);
+});
+
+test("Needs attention renders the exact all-clear state when every target is met", () => {
+  const html = renderToStaticMarkup(<DeskHome initialSummary={emptyDeskSummary()} />);
+  assert.match(html, /All clear — nothing needs you\./);
+  assert.match(html, /Day open · \$0\.00 collected/);
+  assert.match(html, /href="\/desk\/ledger"/);
+});
+
+test("Desk statement date-time formatting degrades malformed values to an em dash", () => {
+  assert.equal(displayStat("not-a-date", "date-time"), "—");
+});
+
+test("Desk comms rail resolves hover, delayed retract, pinning, switching, Escape, close, and touch input", (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  const originalWindow = globalThis.window;
+  const originalDocument = globalThis.document;
+  let keydown: ((event: KeyboardEvent) => void) | undefined;
+  let resize: (() => void) | undefined;
+  const storage = memoryStorage();
+  const windowStub = {
+    innerHeight: 900,
+    innerWidth: 1200,
+    localStorage: storage,
+    matchMedia: () => ({ matches: true }),
+    addEventListener: (type: string, listener: EventListener) => {
+      if (type === "resize") resize = listener as () => void;
+    },
+    removeEventListener: (type: string, listener: EventListener) => {
+      if (type === "resize" && resize === listener) resize = undefined;
+    },
+  } as unknown as Window & typeof globalThis;
+  const documentStub = {
+    addEventListener: (type: string, listener: EventListener) => {
+      if (type === "keydown") keydown = listener as (event: KeyboardEvent) => void;
+    },
+    removeEventListener: (type: string, listener: EventListener) => {
+      if (type === "keydown" && keydown === listener) keydown = undefined;
+    },
+  } as unknown as Document;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  Object.defineProperty(globalThis, "document", { configurable: true, value: documentStub });
+
+  let renderer!: ReactTestRenderer;
+  let capturedPointer: number | undefined;
+  let releasedPointer: number | undefined;
+  const panelRect = () => {
+    const style = renderer.root.findByType("aside").props.style;
+    const x = Number.parseFloat(style?.["--odos-cockpit-panel-x"] ?? "0");
+    const y = Number.parseFloat(style?.["--odos-cockpit-panel-y"] ?? "0");
+    return { left: 760 + x, top: 40 + y, width: 380, height: 820 };
+  };
+  const panelNode = {
+    getBoundingClientRect: panelRect,
+    querySelector: (selector: string) => selector === "header" ? headerNode : null,
+  };
+  const headerNode = {
+    getBoundingClientRect: () => ({ left: 760, top: 40, width: 380, height: 48 }),
+    setPointerCapture: (pointerId: number) => { capturedPointer = pointerId; },
+    hasPointerCapture: (pointerId: number) => capturedPointer === pointerId,
+    releasePointerCapture: (pointerId: number) => { releasedPointer = pointerId; capturedPointer = undefined; },
+  };
+  const button = (label: string) => renderer.root.findAllByType("button").find((candidate) => candidate.props["aria-label"] === label)!;
+  const dock = () => renderer.root.findByProps({ "aria-label": "Cockpit dock" });
+  const panel = () => renderer.root.findByType("aside");
+  const dragHandle = () => renderer.root.findByProps({ "data-testid": "cockpit-panel-drag-handle" });
+  const panelBody = () => renderer.root.findAllByType("div").find((candidate) => candidate.props.className?.includes("select-text"))!;
+  const panelOpen = () => panel().props.role === "dialog";
+
+  try {
+    act(() => {
+      renderer = create(<DeskHome initialSummary={emptyDeskSummary()} initialOfficeMessages={[]} />, {
+        createNodeMock: (element) => element.type === "aside" ? panelNode : {},
+      });
+    });
+    assert.equal(panelOpen(), false);
+
+    act(() => button("Messages").props.onPointerEnter({ pointerType: "mouse" }));
+    assert.equal(button("Messages").props["aria-expanded"], true);
+    assert.equal(button("Messages").props["aria-pressed"], false);
+    assert.equal(panelOpen(), true);
+    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Two-way messaging/);
+
+    act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS - 1));
+    assert.equal(panelOpen(), true);
+    act(() => context.mock.timers.tick(1));
+    assert.equal(panelOpen(), false);
+
+    act(() => button("Messages").props.onPointerEnter({ pointerType: "mouse" }));
+    act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(100));
+    act(() => panel().props.onPointerEnter({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
+    assert.equal(panelOpen(), true);
+
+    act(() => button("Messages").props.onClick());
+    assert.equal(button("Messages").props["aria-pressed"], true);
+    act(() => button("Calls").props.onPointerEnter({ pointerType: "mouse" }));
+    assert.equal(button("Messages").props["aria-expanded"], true);
+    assert.equal(button("Messages").props["aria-pressed"], true);
+    assert.equal(button("Calls").props["aria-expanded"], false);
+    assert.equal(button("Calls").props["aria-pressed"], false);
+    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Two-way messaging/);
+    act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
+    assert.equal(panelOpen(), true);
+    act(() => button("Messages").props.onClick());
+    assert.equal(panelOpen(), false);
+
+    act(() => button("Messages").props.onClick());
+    act(() => button("Calls").props.onClick());
+    assert.equal(button("Messages").props["aria-expanded"], false);
+    assert.equal(button("Calls").props["aria-expanded"], true);
+    assert.equal(button("Calls").props["aria-pressed"], true);
+    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Call history/);
+
+    assert.ok(keydown);
+    act(() => keydown?.({ key: "Escape" } as KeyboardEvent));
+    assert.equal(panelOpen(), false);
+
+    act(() => button("Requests").props.onPointerEnter({ pointerType: "touch" }));
+    assert.equal(panelOpen(), false);
+    act(() => button("Requests").props.onClick());
+    assert.equal(panelOpen(), true);
+    act(() => button("Close panel").props.onClick());
+    assert.equal(panelOpen(), false);
+
+    act(() => button("Messages").props.onPointerEnter({ pointerType: "mouse" }));
+    assert.equal(panelBody().props.onPointerDown, undefined);
+    act(() => dragHandle().props.onPointerDown({
+      button: 0,
+      clientX: 900,
+      clientY: 60,
+      currentTarget: headerNode,
+      pointerId: 6,
+    }));
+    act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 6 }));
+    assert.equal(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY), null);
+    act(() => dragHandle().props.onPointerDown({
+      button: 0,
+      clientX: 900,
+      clientY: 60,
+      currentTarget: headerNode,
+      pointerId: 7,
+    }));
+    assert.equal(capturedPointer, 7);
+    act(() => dragHandle().props.onPointerMove({
+      clientX: 2_000,
+      clientY: 2_000,
+      currentTarget: headerNode,
+      pointerId: 7,
+      preventDefault: () => undefined,
+    }));
+    assert.equal(panel().props.style["--odos-cockpit-panel-x"], "60px");
+    assert.equal(panel().props.style["--odos-cockpit-panel-y"], "812px");
+    assert.match(panel().props.className, /is-floating/);
+    assert.equal(button("Messages").props["aria-pressed"], true);
+    assert.equal(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY), null);
+    act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
+    assert.equal(panelOpen(), true);
+    act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 7 }));
+    assert.equal(releasedPointer, 7);
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: 60, y: 812 });
+
+    windowStub.innerWidth = 900;
+    windowStub.innerHeight = 500;
+    assert.ok(resize);
+    act(() => resize?.());
+    assert.equal(panel().props.style["--odos-cockpit-panel-x"], "-240px");
+    assert.equal(panel().props.style["--odos-cockpit-panel-y"], "412px");
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -240, y: 412 });
+    assert.equal(panelRect().left, 520);
+    assert.equal(panelRect().top + 48, 500);
+    assert.ok(button("Dock panel to rail"));
+
+    windowStub.innerWidth = 1200;
+    windowStub.innerHeight = 900;
+    act(() => dragHandle().props.onPointerDown({
+      button: 0,
+      clientX: 900,
+      clientY: 860,
+      currentTarget: headerNode,
+      pointerId: 8,
+    }));
+    act(() => dragHandle().props.onPointerMove({
+      clientX: -2_000,
+      clientY: -2_000,
+      currentTarget: headerNode,
+      pointerId: 8,
+      preventDefault: () => undefined,
+    }));
+    assert.equal(panel().props.style["--odos-cockpit-panel-x"], "-760px");
+    assert.equal(panel().props.style["--odos-cockpit-panel-y"], "-40px");
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -240, y: 412 });
+    act(() => dragHandle().props.onPointerUp({ currentTarget: headerNode, pointerId: 8 }));
+    assert.deepEqual(JSON.parse(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY)!), { floating: true, x: -760, y: -40 });
+
+    act(() => button("Calls").props.onClick());
+    assert.equal(button("Calls").props["aria-pressed"], true);
+    assert.match(panel().findAllByType("div").flatMap((node) => node.children).join(" "), /Call history/);
+    act(() => button("Dock panel to rail").props.onClick());
+    assert.doesNotMatch(panel().props.className, /is-floating/);
+    assert.equal(panel().props.style, undefined);
+    assert.equal(storage.getItem(COCKPIT_PANEL_POSITION_STORAGE_KEY), null);
+    act(() => dock().props.onPointerLeave({ pointerType: "mouse" }));
+    act(() => context.mock.timers.tick(COCKPIT_HOVER_CLOSE_DELAY_MS));
+    assert.equal(panelOpen(), false);
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    context.mock.timers.reset();
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("Desk comms panel position storage round-trips and swallows unavailable storage", () => {
+  const storage = memoryStorage();
+  const position = { floating: true as const, x: -145, y: 212 };
+  saveCockpitPanelPosition(position, storage);
+  assert.deepEqual(loadCockpitPanelPosition(storage), position);
+  clearCockpitPanelPosition(storage);
+  assert.equal(loadCockpitPanelPosition(storage), null);
+
+  const throwingStorage = {
+    getItem: () => { throw new Error("blocked"); },
+    setItem: () => { throw new Error("blocked"); },
+    removeItem: () => { throw new Error("blocked"); },
+  };
+  assert.doesNotThrow(() => saveCockpitPanelPosition(position, throwingStorage));
+  assert.doesNotThrow(() => clearCockpitPanelPosition(throwingStorage));
+  assert.equal(loadCockpitPanelPosition(throwingStorage), null);
+});
+
+test("Desk comms panel uses a reduced-motion-safe translate transition", () => {
+  const css = readFileSync(new URL("../src/styles/desk-home.css", import.meta.url), "utf8");
+  assert.match(css, /\.odos-cockpit-panel \{[^}]*right: 60px;[^}]*width: min\(380px, calc\(100vw - 76px\)\);[^}]*height: min\(820px, calc\(100vh - 32px\)\);[^}]*border-radius: 28px;/);
+  assert.match(css, /\.odos-cockpit-panel \{[^}]*translate3d\(calc\(100% \+ 60px\), -50%, 0\)/);
+  assert.match(css, /\.odos-cockpit-panel\.is-open \{[^}]*translate3d\(0, -50%, 0\)/);
+  assert.match(css, /\.odos-cockpit-panel\.is-floating \{[^}]*--odos-cockpit-panel-x[^}]*--odos-cockpit-panel-y/);
+  assert.match(css, /prefers-reduced-motion: reduce[^}]*\.odos-cockpit-panel \{ transition: none/);
+});
+
+function emptyDeskSummary(): DeskSummary {
+  const n = { value: 0, tone: "ok" as const };
+  const off = { value: null, tone: "off" as const, unavailableReason: "Not wired." };
+  return {
+    day: { collectedCents: { value: 0, tone: "info" } },
+    cards: {
+      schedule: { today: n, confirmed: n, checkedIn: { value: 0, tone: "info" }, webRequests: n, agenda: [] },
+      attention: { items: [] },
+      frontLine: { available: false, message: "Comms counts arrive with the GHL adapter — Phase 3b", needsReply: off, missedCalls: off, voicemails: off, urgent: off, messages: [] },
+      pendingRx: { spectacle: { value: 0, tone: "info" }, contactLens: off, labOrdersUnsent: off, oldestWaiting: { value: null, tone: "off" } },
+      productPickup: { openOrders: { value: 0, tone: "info" }, atLab: { value: 0, tone: "info" }, readyNotNotified: off, awaitingPickup: { value: 0, tone: "info" } },
+      claims: { failed: n, inProcess: { value: 0, tone: "info" }, paperQueue: off, heldCents: n, lastTransmission: { value: null, tone: "off" } },
+      payments: { unappliedCount: n, unappliedCents: n, patientCreditsOpen: n, patientOpenBalanceCents: { value: 0, tone: "info" }, terminalMode: { value: "LIVE", tone: "ok" } },
+      remits: { waitingToPost: n, unpostedCents: n },
+      statements: { available: true, cadence: { value: "Weekly · Wednesdays recommended", tone: "info" }, invalidRejects: n, lastStatement: { value: null, tone: "off" } },
+    },
+    pulse: { itemsNeedingYou: 0, everythingElseAtTarget: true, lastClaimTransmission: null, lastClaimTransmissionTone: "off" },
+  };
+}
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); },
+  };
+}

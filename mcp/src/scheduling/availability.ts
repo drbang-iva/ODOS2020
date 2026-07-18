@@ -14,11 +14,11 @@ import type { Slot } from "@medplum/fhirtypes";
  * inputs always generate the same slots (mirrors the payments-slice injected-clock discipline).
  */
 
-export const OSOD_BLOCKED_TIME_KIND_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-blocked-time-kind";
+export const ODOS_BLOCKED_TIME_KIND_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-blocked-time-kind";
 
-export const OSOD_BLOCKED_TIME_KIND_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/blocked-time-kind";
+export const ODOS_BLOCKED_TIME_KIND_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/blocked-time-kind";
 
 export const BLOCKED_TIME_KINDS = [
   { code: "office-closed", display: "Office Closed" },
@@ -179,11 +179,11 @@ export function generateSlots(input: SlotGenerationInput): Slot[] {
                 ...(blocking.block.description ? { comment: blocking.block.description } : {}),
                 extension: [
                   {
-                    url: OSOD_BLOCKED_TIME_KIND_EXTENSION_URL,
+                    url: ODOS_BLOCKED_TIME_KIND_EXTENSION_URL,
                     valueCodeableConcept: {
                       coding: [
                         {
-                          system: OSOD_BLOCKED_TIME_KIND_SYSTEM,
+                          system: ODOS_BLOCKED_TIME_KIND_SYSTEM,
                           code: blocking.block.kind,
                           display: KIND_BY_CODE.get(blocking.block.kind)!.display,
                         },
@@ -204,7 +204,7 @@ export function generateSlots(input: SlotGenerationInput): Slot[] {
 /** The blocked-time kind on a busy-unavailable slot (undefined on free slots). */
 export function blockedTimeKindOf(slot: Slot): BlockedTimeKind | undefined {
   const coding = slot.extension
-    ?.find((e) => e.url === OSOD_BLOCKED_TIME_KIND_EXTENSION_URL)
-    ?.valueCodeableConcept?.coding?.find((c) => c.system === OSOD_BLOCKED_TIME_KIND_SYSTEM);
+    ?.find((e) => e.url === ODOS_BLOCKED_TIME_KIND_EXTENSION_URL)
+    ?.valueCodeableConcept?.coding?.find((c) => c.system === ODOS_BLOCKED_TIME_KIND_SYSTEM);
   return coding?.code as BlockedTimeKind | undefined;
 }

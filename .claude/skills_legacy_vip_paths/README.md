@@ -6,11 +6,11 @@ These 11 broken symlinks were originally at `.claude/skills/` and point to `/Use
 
 ## Why quarantine and not delete
 
-osod is a code repo (open-source PMS/EHR for optometry). Code repos don't need brain skills (mb is for operator authoring workflows, not coding). The vip-path symlinks were leftover from the pre-`mb`-pipx era. Quarantining (not deleting) keeps them as historical record per the audit's no-delete rule.
+odos is a code repo (open-source PMS/EHR for optometry). Code repos don't need brain skills (mb is for operator authoring workflows, not coding). The vip-path symlinks were leftover from the pre-`mb`-pipx era. Quarantining (not deleting) keeps them as historical record per the audit's no-delete rule.
 
-## If skills are ever needed in osod
+## If skills are ever needed in odos
 
-Run `mb skill link --repo .` from osod root to relink to current mb pipx engine. Then this folder can stay as historical record or be removed by operator decision.
+Run `mb skill link --repo .` from odos root to relink to current mb pipx engine. Then this folder can stay as historical record or be removed by operator decision.
 
 ## Restore (if quarantine was wrong)
 

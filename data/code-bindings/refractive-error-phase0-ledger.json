@@ -1,0 +1,69 @@
+{
+  "ledger": "refractive-error-phase0",
+  "status": "phase0-seeded",
+  "mandate": "Mandate 14",
+  "accessDate": "2026-07-09",
+  "scope": "Refractive-error diagnosis suggestions from Manifest refraction findings only.",
+  "sources": {
+    "cdcIcd10Cm2026CodeDescriptions": {
+      "type": "primary",
+      "name": "CDC/NCHS ICD-10-CM FY2026 Code Descriptions in Tabular Order",
+      "url": "https://stacks.cdc.gov/view/cdc/250974/cdc_250974_DS4.zip",
+      "supportingPage": "https://stacks.cdc.gov/view/cdc/250974",
+      "accessDate": "2026-07-09"
+    },
+    "nlmClinicalTablesIcd10Cm": {
+      "type": "primary-official-nih",
+      "name": "NLM Clinical Tables ICD-10-CM API",
+      "url": "https://clinicaltables.nlm.nih.gov/apidoc/icd10cm/v3/doc.html",
+      "verificationQuery": "https://clinicaltables.nlm.nih.gov/api/icd10cm/v3/search?terms=H52&sf=code&df=code,name&maxList=500",
+      "accessDate": "2026-07-11"
+    }
+  },
+  "diagnosisFamilies": [
+    {
+      "family": "H52.0-",
+      "description": "Hypermetropia",
+      "lateralityDigits": { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H52.1-",
+      "description": "Myopia",
+      "lateralityDigits": { "0": "unspecified", "1": "OD", "2": "OS", "3": "bilateral" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H52.20-",
+      "description": "Unspecified astigmatism",
+      "lateralityDigits": { "1": "OD", "2": "OS", "3": "bilateral", "9": "unspecified" },
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H52.31",
+      "description": "Anisometropia",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    },
+    {
+      "family": "H52.4",
+      "description": "Presbyopia",
+      "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"]
+    }
+  ],
+  "diagnosisCodes": [
+    { "code": "H52.00", "display": "Hypermetropia, unspecified eye", "family": "H52.0-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.01", "display": "Hypermetropia, right eye", "family": "H52.0-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.02", "display": "Hypermetropia, left eye", "family": "H52.0-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.03", "display": "Hypermetropia, bilateral", "family": "H52.0-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.10", "display": "Myopia, unspecified eye", "family": "H52.1-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.11", "display": "Myopia, right eye", "family": "H52.1-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.12", "display": "Myopia, left eye", "family": "H52.1-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.13", "display": "Myopia, bilateral", "family": "H52.1-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.201", "display": "Unspecified astigmatism, right eye", "family": "H52.20-", "laterality": "OD", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.202", "display": "Unspecified astigmatism, left eye", "family": "H52.20-", "laterality": "OS", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.203", "display": "Unspecified astigmatism, bilateral", "family": "H52.20-", "laterality": "OU", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.209", "display": "Unspecified astigmatism, unspecified eye", "family": "H52.20-", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.31", "display": "Anisometropia", "family": "H52.31", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] },
+    { "code": "H52.4", "display": "Presbyopia", "family": "H52.4", "laterality": "UNKNOWN", "sourceRefs": ["cdcIcd10Cm2026CodeDescriptions", "nlmClinicalTablesIcd10Cm"] }
+  ]
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 const baseUrl = (process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103").replace(/\/$/, "");
-const projectId = process.env.MEDPLUM_PROJECT_ID ?? process.env.OSOD_MEDPLUM_PROJECT_ID;
-const accessToken = process.env.MEDPLUM_ACCESS_TOKEN ?? process.env.OSOD_MEDPLUM_ACCESS_TOKEN;
+const projectId = process.env.MEDPLUM_PROJECT_ID ?? process.env.ODOS_MEDPLUM_PROJECT_ID;
+const accessToken = process.env.MEDPLUM_ACCESS_TOKEN ?? process.env.ODOS_MEDPLUM_ACCESS_TOKEN;
 
 export async function probeMedplumClientAppEndpoint(input: {
   readonly baseUrl?: string;

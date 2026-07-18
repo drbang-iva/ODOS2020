@@ -1,5 +1,5 @@
 /**
- * OSOD v0.0.1 — First FHIR flow.
+ * ODOS v0.0.1 — First FHIR flow.
  *
  * Proves the Medplum foundation works by creating:
  *   Patient → Encounter → ChargeItem (deferred procedure concept)
@@ -22,7 +22,7 @@ const BASE_URL = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
 const EMAIL = process.env.MEDPLUM_ADMIN_EMAIL;
 const PASSWORD = process.env.MEDPLUM_ADMIN_PASSWORD;
 const DEFERRED_PROCEDURE_CONCEPT_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/deferred-procedure-concepts";
+  "https://odos2020.com/fhir/CodeSystem/deferred-procedure-concepts";
 const CPT_CODE_SYSTEM = "urn:ama:cpt";
 
 interface DeferredCptBoundProcedure {
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
     console.log(`ChargeItem: ChargeItem/${c.id}  (${procedures[i].conceptKey})`);
   }
   console.log(
-    "\nChargeItems use OSOD-local concept keys with CPT binding deferred to\n" +
+    "\nChargeItems use ODOS-local concept keys with CPT binding deferred to\n" +
       "the practice's licensed adapter. No CPT value or descriptor ships in\n" +
       "this public demo.",
   );

@@ -2,6 +2,10 @@ import type { Schedule } from "@medplum/fhirtypes";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  TimeWindowWeekdayField,
+  WeeklyHoursEditor,
+} from "../../components/settings/CatalogFields";
+import {
   BLOCKED_TIME_KINDS,
   DEFAULT_SLOT_MINUTES,
   SCHEDULING_SLOT_OPTIONS,
@@ -9,8 +13,6 @@ import {
   scheduleReference,
   type BlockedTime,
   type SchedulingPracticeConfig,
-  type Weekday,
-  type WeeklyHours,
 } from "../../lib/scheduling";
 import {
   addSchedulingOffice,
@@ -20,22 +22,11 @@ import {
   clone,
   copyWeeklyHoursBetweenSchedules,
   deleteSchedulingBlock,
-  nextAvailableHoursWindow,
   removeSchedulingOffice,
   renameSchedulingOffice,
   replaceSchedulingBlock,
   validateSchedulingPracticeSettings,
 } from "../../lib/scheduling-settings";
-
-const WEEKDAYS: Array<{ code: Weekday; display: string }> = [
-  { code: "mon", display: "Mon" },
-  { code: "tue", display: "Tue" },
-  { code: "wed", display: "Wed" },
-  { code: "thu", display: "Thu" },
-  { code: "fri", display: "Fri" },
-  { code: "sat", display: "Sat" },
-  { code: "sun", display: "Sun" },
-];
 
 export function SchedulingSettingsModal({
   config,
@@ -121,6 +112,9 @@ export function SchedulingSettingsModal({
           <div>
             <div className="text-xs uppercase text-white/45">Scheduler Settings</div>
             <h2 className="text-lg font-semibold">Hours, Blocks, Offices</h2>
+            <a className="mt-1 inline-block text-xs text-blue-300 hover:text-blue-200" href="/settings/visit-types">
+              Manage visit types
+            </a>
           </div>
           <button className="scheduler-icon-button" type="button" aria-label="Close" onClick={onClose}>
             x
@@ -409,96 +403,6 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function WeeklyHoursEditor({
-  hours,
-  onChange,
-}: {
-  hours: WeeklyHours;
-  onChange: (hours: WeeklyHours) => void;
-}) {
-  function updateDay(day: Weekday, windows: Array<{ start: string; end: string }>) {
-    onChange({ ...hours, [day]: windows });
-  }
-  return (
-    <div className="grid gap-2">
-      {WEEKDAYS.map((day) => {
-        const windows = hours[day.code] ?? [];
-        const closed = windows.length === 0;
-        return (
-          <div key={day.code} className="grid gap-2 border border-white/10 bg-white/[0.03] p-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="w-10 text-sm font-semibold text-white/75">{day.display}</div>
-              <label className="flex items-center gap-2 text-sm text-white/70">
-                <input
-                  type="checkbox"
-                  checked={closed}
-                  onChange={(event) =>
-                    updateDay(day.code, event.target.checked ? [] : [{ start: "09:00", end: "17:00" }])
-                  }
-                />
-                <span>Closed</span>
-              </label>
-              {!closed && (
-                <button
-                  className="scheduler-button"
-                  type="button"
-                  disabled={!nextAvailableHoursWindow(windows)}
-                  onClick={() => {
-                    const next = nextAvailableHoursWindow(windows);
-                    if (next) {
-                      updateDay(day.code, [...windows, next]);
-                    }
-                  }}
-                >
-                  Add Window
-                </button>
-              )}
-            </div>
-            {!closed &&
-              windows.map((window, index) => (
-                <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                  <input
-                    className="scheduler-input"
-                    type="time"
-                    value={window.start}
-                    onChange={(event) =>
-                      updateDay(
-                        day.code,
-                        windows.map((candidate, candidateIndex) =>
-                          candidateIndex === index ? { ...candidate, start: event.target.value } : candidate,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    className="scheduler-input"
-                    type="time"
-                    value={window.end}
-                    onChange={(event) =>
-                      updateDay(
-                        day.code,
-                        windows.map((candidate, candidateIndex) =>
-                          candidateIndex === index ? { ...candidate, end: event.target.value } : candidate,
-                        ),
-                      )
-                    }
-                  />
-                  <button
-                    className="scheduler-button"
-                    type="button"
-                    onClick={() => updateDay(day.code, windows.filter((_, candidateIndex) => candidateIndex !== index))}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function CopyHoursControl({
   resources,
   selectedResource,
@@ -541,7 +445,6 @@ function BlockEditor({
   onScopeError: (message: string | null) => void;
   onDelete: () => void;
 }) {
-  const allDay = !block.start && !block.end;
   const [scopeMode, setScopeMode] = useState(blockScopeState(block).mode);
   const [selectedReferences, setSelectedReferences] = useState(blockScopeState(block).scheduleReferences);
 
@@ -597,61 +500,21 @@ function BlockEditor({
           onChange={(event) => onChange({ ...block, date: event.target.value || undefined })}
         />
       </label>
-      <fieldset className="border border-white/10 p-2">
-        <legend className="px-1 text-xs uppercase text-white/45">Weekdays</legend>
-        <div className="flex flex-wrap gap-3">
-          {WEEKDAYS.map((weekday) => (
-            <label key={weekday.code} className="flex items-center gap-1 text-sm text-white/75">
-              <input
-                type="checkbox"
-                checked={block.weekdays?.includes(weekday.code) ?? false}
-                onChange={(event) => {
-                  const current = new Set(block.weekdays ?? []);
-                  if (event.target.checked) {
-                    current.add(weekday.code);
-                  } else {
-                    current.delete(weekday.code);
-                  }
-                  onChange({ ...block, weekdays: [...current] });
-                }}
-              />
-              <span>{weekday.display}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <label className="flex items-center gap-2 text-sm text-white/75">
-        <input
-          type="checkbox"
-          checked={allDay}
-          onChange={(event) =>
-            onChange(event.target.checked ? withoutTimes(block) : { ...block, start: "09:00", end: "17:00" })
-          }
-        />
-        <span>All Day</span>
-      </label>
-      {!allDay && (
-        <div className="grid gap-2 md:grid-cols-2">
-          <label className="scheduler-field">
-            <span>Start</span>
-            <input
-              className="scheduler-input"
-              type="time"
-              value={block.start ?? ""}
-              onChange={(event) => onChange({ ...block, start: event.target.value || undefined })}
-            />
-          </label>
-          <label className="scheduler-field">
-            <span>End</span>
-            <input
-              className="scheduler-input"
-              type="time"
-              value={block.end ?? ""}
-              onChange={(event) => onChange({ ...block, end: event.target.value || undefined })}
-            />
-          </label>
-        </div>
-      )}
+      <TimeWindowWeekdayField
+        value={{
+          weekdays: block.weekdays ?? [],
+          ...(block.start ? { start: block.start } : {}),
+          ...(block.end ? { end: block.end } : {}),
+        }}
+        onChange={(value) =>
+          onChange({
+            ...block,
+            weekdays: value.weekdays,
+            start: value.start,
+            end: value.end,
+          })
+        }
+      />
       <fieldset className="border border-white/10 p-2">
         <legend className="px-1 text-xs uppercase text-white/45">Applies To</legend>
         <div className="mb-2 flex flex-wrap gap-3">
@@ -707,11 +570,4 @@ function BlockEditor({
       </div>
     </div>
   );
-}
-
-function withoutTimes(block: BlockedTime): BlockedTime {
-  const { start, end, ...rest } = block;
-  void start;
-  void end;
-  return rest;
 }

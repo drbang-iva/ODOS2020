@@ -1,10 +1,10 @@
 {
   "resourceType": "CodeSystem",
   "id": "smart-app-activity",
-  "url": "https://osod.dev/fhir/CodeSystem/smart-app-activity",
+  "url": "https://odos2020.com/fhir/CodeSystem/smart-app-activity",
   "version": "0.55b",
-  "name": "OSODSmartAppActivityCodeSystem",
-  "title": "OSOD SMART App Activity Codes",
+  "name": "ODOSSmartAppActivityCodeSystem",
+  "title": "ODOS SMART App Activity Codes",
   "status": "active",
   "content": "complete",
   "concept": [

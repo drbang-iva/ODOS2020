@@ -6,8 +6,8 @@ import { promisify } from "node:util";
 import { test } from "node:test";
 import type { CodeSystem, ValueSet } from "@medplum/fhirtypes";
 import {
-  OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
-  OSOD_EPISODE_OF_CARE_TYPE_VALUE_SET,
+  ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+  ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET,
 } from "../src/fhir/episodeOfCare.js";
 import {
   createAuthenticatedFhirClient,
@@ -16,7 +16,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 
-test("profile installer idempotently installs OSOD EpisodeOfCare terminology", { timeout: 120_000 }, async (t) => {
+test("profile installer idempotently installs ODOS EpisodeOfCare terminology", { timeout: 120_000 }, async (t) => {
   loadRepoEnv();
 
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
@@ -44,12 +44,12 @@ test("profile installer idempotently installs OSOD EpisodeOfCare terminology", {
 
   await t.test("CodeSystem is retrievable by canonical URL", async () => {
     const bundle = await fhir.search<CodeSystem>("CodeSystem", {
-      url: OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+      url: ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
       _count: "1",
     });
     const codeSystem = bundle.entry?.[0]?.resource;
 
-    assert.equal(codeSystem?.url, OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
+    assert.equal(codeSystem?.url, ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
     assert.deepEqual(
       codeSystem?.concept?.map((concept) => concept.code),
       ["myopia-management", "glaucoma", "dry-eye", "diabetic-eye-care"],
@@ -58,15 +58,15 @@ test("profile installer idempotently installs OSOD EpisodeOfCare terminology", {
 
   await t.test("ValueSet is retrievable by canonical URL", async () => {
     const bundle = await fhir.search<ValueSet>("ValueSet", {
-      url: OSOD_EPISODE_OF_CARE_TYPE_VALUE_SET,
+      url: ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET,
       _count: "1",
     });
     const valueSet = bundle.entry?.[0]?.resource;
 
-    assert.equal(valueSet?.url, OSOD_EPISODE_OF_CARE_TYPE_VALUE_SET);
+    assert.equal(valueSet?.url, ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET);
     assert.equal(
       valueSet?.compose?.include?.[0]?.system,
-      OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+      ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
     );
   });
 
@@ -84,7 +84,7 @@ test("profile installer idempotently installs OSOD EpisodeOfCare terminology", {
       ),
     ) as ValueSet;
 
-    assert.equal(codeSystem.url, OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
-    assert.equal(valueSet.url, OSOD_EPISODE_OF_CARE_TYPE_VALUE_SET);
+    assert.equal(codeSystem.url, ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
+    assert.equal(valueSet.url, ODOS_EPISODE_OF_CARE_TYPE_VALUE_SET);
   });
 });

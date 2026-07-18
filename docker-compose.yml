@@ -1,4 +1,4 @@
-# OSOD — Medplum FHIR foundation (dev)
+# ODOS — Medplum FHIR foundation (dev)
 # Runs locally on laptop. Same file deploys to Iris unchanged.
 #
 # Start:   docker compose up -d
@@ -26,7 +26,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - osod-internal
+      - odos-internal
 
   redis:
     image: redis:7-alpine
@@ -40,28 +40,31 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - osod-internal
+      - odos-internal
 
+  # Upgrade server + app together only after the scoped-clinician live RBAC gates pass.
   medplum-server:
-    image: medplum/medplum-server:latest
+    image: medplum/medplum-server:5.1.8
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    env_file:
+      - .env
     volumes:
       - ./medplum.config.json:/config/medplum.config.json:ro
       - medplum-binary:/data/binary
       - ./backup:/backup
     ports:
       - "8103:8103"
-    command: ["file:/config/medplum.config.json"]
+    command: ["file:/config/medplum.config.json,env"]
     networks:
-      - osod-internal
+      - odos-internal
 
   medplum-app:
-    image: medplum/medplum-app:latest
+    image: medplum/medplum-app:5.1.8
     restart: unless-stopped
     depends_on:
       - medplum-server
@@ -70,17 +73,17 @@ services:
     environment:
       MEDPLUM_BASE_URL: http://localhost:8103/
     networks:
-      - osod-internal
+      - odos-internal
 
-  osod-core:
+  odos-core:
     image: node:22-alpine
     profiles: ["agentops"]
     working_dir: /workspace
     command: ["npm", "--prefix", "mcp", "run", "start"]
     environment:
       MEDPLUM_BASE_URL: http://medplum-server:8103/
-      OSOD_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
-      OSOD_AGENTOPS_RUNTIME: supervisor
+      ODOS_POSTGRES_URL: postgresql://medplum:medplum@postgres:5432/medplum
+      ODOS_AGENTOPS_RUNTIME: supervisor
       NODE_OPTIONS: --experimental-network-imports=false
     volumes:
       - ./:/workspace:ro
@@ -88,30 +91,30 @@ services:
       medplum-server:
         condition: service_started
     networks:
-      - osod-internal
-      - osod-egress
+      - odos-internal
+      - odos-egress
 
-  osod-agent-iris:
+  odos-agent-iris:
     image: node:22-alpine
     profiles: ["agentops"]
     working_dir: /workspace
     command: ["node", "mcp/dist/agentops/runtime/agent-process.js"]
     environment:
-      AGENT_DEVICE_ID: https://osod.dev/agents/iris
+      AGENT_DEVICE_ID: https://odos2020.com/agents/iris
       MEDPLUM_BASE_URL: http://medplum-server:8103/
-      OSOD_CORE_IPC_URL: http://osod-core:8787/
+      ODOS_CORE_IPC_URL: http://odos-core:8787/
     volumes:
       - ./:/workspace:ro
     depends_on:
-      - osod-core
+      - odos-core
     networks:
-      - osod-internal
+      - odos-internal
 
 volumes:
   postgres-data:
   medplum-binary:
 
 networks:
-  osod-internal:
+  odos-internal:
     driver: bridge
-  osod-egress:
+  odos-egress:

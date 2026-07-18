@@ -14,7 +14,15 @@ export type EyeLaterality = "OD" | "OS" | "OU" | "UNKNOWN";
 export type VisualAcuityChartType = "SNELLEN" | "ETDRS" | "LOGMAR" | "JAEGER" | "OTHER" | "UNKNOWN";
 export type VisualAcuityCorrection = "SC" | "CC" | "BCVA" | "PH" | "NI" | "OTHER" | "UNKNOWN";
 export type IopMethod = "GAT" | "ICARE" | "TONOPEN" | "NCT" | "PERKINS" | "OTHER" | "UNKNOWN";
-export type RefractionType = "AUTOREFRACTION" | "MANIFEST" | "CYCLOPLEGIC" | "FINAL_RX" | "OTHER";
+export type RefractionType =
+  | "AUTOREFRACTION"
+  | "RETINOSCOPY"
+  | "MANIFEST"
+  | "CYCLOPLEGIC"
+  | "FINAL_RX"
+  | "OVER_REFRACTION"
+  | "POST_ORTHO_K"
+  | "OTHER";
 export type SourceType = "manual" | "parser" | "device" | "vendor-export" | "unknown";
 
 export interface BuildResult<T extends Resource> {
@@ -58,10 +66,18 @@ export interface IopInput extends CommonObservationInput {
 
 export interface RefractionInput extends CommonObservationInput {
   refractionType: RefractionType;
+  refractionTypeDisplay?: string;
+  blockId?: string;
+  purpose?: string;
   sphere?: number;
   cylinder?: number;
   axis?: number;
   add?: number;
+  visualAcuity?: {
+    distance?: string;
+    near?: string;
+    distancePinhole?: string;
+  };
   prism?: {
     amount?: number;
     base?: string;

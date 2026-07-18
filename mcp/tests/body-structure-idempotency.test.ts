@@ -65,7 +65,7 @@ async function saveIop(
       patientReference: `Patient/${patientId}`,
       encounterReference: `Encounter/${encounterId}`,
       section: "iop",
-      operatorDisplay: "OSOD body structure idempotency test",
+      operatorDisplay: "ODOS body structure idempotency test",
       entries: [{ laterality, value, method: "GAT" }],
     }),
   );

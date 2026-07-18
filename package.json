@@ -1,12 +1,12 @@
 {
-  "name": "osod",
+  "name": "odos2020",
   "version": "0.0.1",
   "description": "Open Source Optometry — practitioner-owned EHR on Medplum FHIR foundation",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "bin": {
-    "osod": "./scripts/osod.ts"
+    "odos": "./scripts/odos.ts"
   },
   "scripts": {
     "up": "docker-compose up -d",
@@ -17,6 +17,10 @@
     "seed-scheduler": "tsx scripts/seed-scheduler-demo.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
+    "repair-practice-roles": "tsx --env-file-if-exists=.env scripts/repair-practice-roles.ts",
+    "cleanup-practice-role-memberships": "tsx --env-file-if-exists=.env scripts/cleanup-practice-role-memberships.ts",
+    "reseed-role-tags": "tsx scripts/reseed-practice-role-tags.ts",
+    "seed-demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
     "preflight": "tsx scripts/preflight-lint.ts",
     "dr-drill": "tsx scripts/dr-drill.ts",
     "audit-verify": "tsx scripts/verify-tier1-visit-audit.ts",

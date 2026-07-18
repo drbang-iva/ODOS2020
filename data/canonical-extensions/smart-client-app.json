@@ -1,14 +1,14 @@
 {
   "resourceType": "StructureDefinition",
   "id": "smart-client-app",
-  "url": "https://osod.dev/fhir/StructureDefinition/smart-client-app",
+  "url": "https://odos2020.com/fhir/StructureDefinition/smart-client-app",
   "version": "0.55e",
-  "name": "OSODSmartClientApp",
-  "title": "OSOD SMART Client App",
+  "name": "ODOSSmartClientApp",
+  "title": "ODOS SMART Client App",
   "status": "active",
   "date": "2026-05-05",
-  "publisher": "OSOD",
-  "description": "OSOD local-only SMART app registry metadata carried on Endpoint or Device.",
+  "publisher": "ODOS",
+  "description": "ODOS local-only SMART app registry metadata carried on Endpoint or Device.",
   "fhirVersion": "4.0.1",
   "kind": "complex-type",
   "abstract": false,
@@ -30,7 +30,7 @@
       {
         "id": "Extension",
         "path": "Extension",
-        "short": "OSOD SMART app registry metadata",
+        "short": "ODOS SMART app registry metadata",
         "definition": "Local-only SMART app registration and install policy metadata.",
         "min": 0,
         "max": "1"
@@ -188,7 +188,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/smart-client-app"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/smart-client-app"
       },
       {
         "id": "Extension.value[x]",

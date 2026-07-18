@@ -1,6 +1,6 @@
 import type { HealthcareService } from "@medplum/fhirtypes";
 import {
-  OSOD_DISCIPLINE_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM,
   type SchedulingDiscipline,
   assertDiscipline,
   disciplineCoding,
@@ -17,26 +17,29 @@ import {
  *
  * R4 name traps verified against @medplum/fhirtypes: HealthcareService's categorization element
  * is `category` (Appointment/Slot call theirs `serviceCategory`); duration/color have no native
- * R4 home on HealthcareService, so they ride osod-* extensions.
+ * R4 home on HealthcareService, so they ride odos-* extensions.
  */
 
-export const OSOD_VISIT_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/visit-type";
+export const ODOS_VISIT_TYPE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/visit-type";
 
-export const OSOD_VISIT_DURATION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-visit-duration";
+export const ODOS_VISIT_TYPE_CATEGORY_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/visit-type-category";
 
-export const OSOD_DISPLAY_COLOR_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-display-color";
+export const ODOS_VISIT_DURATION_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration";
 
-export const OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-eligible-resource";
+export const ODOS_DISPLAY_COLOR_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-display-color";
 
-export const OSOD_INTAKE_FORM_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-intake-form";
+export const ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-eligible-resource";
+
+export const ODOS_INTAKE_FORM_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-intake-form";
 
 /**
  * The v8 front-desk palette — the shipped color defaults (brief §4, hex extracted from
- * osod-timeline-v8-frontdesk.html). Operator-reconfigurable per visit type; the catalog owns the
+ * odos-timeline-v8-frontdesk.html). Operator-reconfigurable per visit type; the catalog owns the
  * color. Dark theme.
  */
 export const SCHEDULER_PALETTE = {
@@ -94,6 +97,8 @@ export interface VisitTypeInput {
   /** Front-desk display name. */
   name: string;
   discipline: string;
+  categoryCode?: string;
+  categoryLabel?: string;
   /** Default booking duration in whole minutes. */
   durationMinutes: number;
   /** Block color (#rrggbb). Defaults to the discipline's primary band color. */
@@ -121,30 +126,49 @@ export function buildVisitType(input: VisitTypeInput): HealthcareService {
   if (!HEX_COLOR.test(color)) {
     throw new Error(`Visit type color must be a #rrggbb hex value, got "${color}".`);
   }
+  if (input.categoryLabel && !input.categoryCode) {
+    throw new Error("Visit type categoryLabel requires categoryCode.");
+  }
 
   return {
     resourceType: "HealthcareService",
     active: input.active ?? true,
     appointmentRequired: true,
     name: input.name,
-    category: [{ coding: [disciplineCoding(input.discipline)] }],
+    category: [
+      { coding: [disciplineCoding(input.discipline)] },
+      ...(input.categoryCode
+        ? [
+            {
+              coding: [
+                {
+                  system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
+                  code: input.categoryCode,
+                  ...(input.categoryLabel ? { display: input.categoryLabel } : {}),
+                },
+              ],
+              ...(input.categoryLabel ? { text: input.categoryLabel } : {}),
+            },
+          ]
+        : []),
+    ],
     type: [
       {
-        coding: [{ system: OSOD_VISIT_TYPE_SYSTEM, code: input.code, display: input.name }],
+        coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: input.code, display: input.name }],
         text: input.name,
       },
     ],
     extension: [
-      { url: OSOD_VISIT_DURATION_EXTENSION_URL, valuePositiveInt: input.durationMinutes },
-      { url: OSOD_DISPLAY_COLOR_EXTENSION_URL, valueString: color },
+      { url: ODOS_VISIT_DURATION_EXTENSION_URL, valuePositiveInt: input.durationMinutes },
+      { url: ODOS_DISPLAY_COLOR_EXTENSION_URL, valueString: color },
       ...(input.eligibleResourceReferences ?? []).map((reference) => ({
-        url: OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
+        url: ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
         valueReference: { reference },
       })),
       ...(input.intakeFormReference
         ? [
             {
-              url: OSOD_INTAKE_FORM_EXTENSION_URL,
+              url: ODOS_INTAKE_FORM_EXTENSION_URL,
               valueReference: { reference: input.intakeFormReference },
             },
           ]
@@ -155,31 +179,38 @@ export function buildVisitType(input: VisitTypeInput): HealthcareService {
 
 /** The catalog code of a visit-type entry. */
 export function visitTypeCode(hs: HealthcareService): string | undefined {
-  return hs.type?.[0]?.coding?.find((c) => c.system === OSOD_VISIT_TYPE_SYSTEM)?.code;
+  return hs.type?.[0]?.coding?.find((c) => c.system === ODOS_VISIT_TYPE_SYSTEM)?.code;
 }
 
 /** The discipline a visit-type entry belongs to (drives clinic-mode filtering). */
 export function visitTypeDiscipline(hs: HealthcareService): SchedulingDiscipline | undefined {
   const code = hs.category
     ?.flatMap((c) => c.coding ?? [])
-    .find((c) => c.system === OSOD_DISCIPLINE_SYSTEM)?.code;
+    .find((c) => c.system === ODOS_DISCIPLINE_SYSTEM)?.code;
   return code as SchedulingDiscipline | undefined;
+}
+
+/** The practice-defined category coding used to group a visit-type entry. */
+export function visitTypeCategory(hs: HealthcareService) {
+  return hs.category
+    ?.flatMap((concept) => concept.coding ?? [])
+    .find((coding) => coding.system === ODOS_VISIT_TYPE_CATEGORY_SYSTEM);
 }
 
 /** Default booking duration in minutes. */
 export function visitTypeDurationMinutes(hs: HealthcareService): number | undefined {
-  return hs.extension?.find((e) => e.url === OSOD_VISIT_DURATION_EXTENSION_URL)?.valuePositiveInt;
+  return hs.extension?.find((e) => e.url === ODOS_VISIT_DURATION_EXTENSION_URL)?.valuePositiveInt;
 }
 
 /** Block display color (#rrggbb). */
 export function visitTypeColor(hs: HealthcareService): string | undefined {
-  return hs.extension?.find((e) => e.url === OSOD_DISPLAY_COLOR_EXTENSION_URL)?.valueString;
+  return hs.extension?.find((e) => e.url === ODOS_DISPLAY_COLOR_EXTENSION_URL)?.valueString;
 }
 
 /** Resource references eligible to host this visit type (empty = any resource). */
 export function visitTypeEligibleResourceReferences(hs: HealthcareService): string[] {
   return (hs.extension ?? [])
-    .filter((e) => e.url === OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL)
+    .filter((e) => e.url === ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL)
     .map((e) => e.valueReference?.reference)
     .filter((reference): reference is string => Boolean(reference));
 }

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { Invoice } from "@medplum/fhirtypes";
+import type { Invoice, PaymentReconciliation } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../../fhir-client.js";
 import {
-  OSOD_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
   assertPaymentTender,
   paymentTenderExtension,
-} from "../../fhir/osodPaymentTender.js";
+} from "../../fhir/odosPaymentTender.js";
 import type {
   ChargeRequest,
   PaymentProcessorAdapter,
@@ -18,12 +18,19 @@ import type {
   VoidRequest,
   VoidResult,
 } from "../payment-processor-adapter.js";
+import { buildPaymentReconciliation } from "../payment-reconciliation.js";
+import { assertDayNotSealed } from "../../desk/day-seal.js";
+import { practiceDate } from "../../desk/day-ledger.js";
+
+export const MANUAL_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/manual-payment";
+const DATA_ENTRY_PARTICIPANT_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType";
+const DATA_ENTRY_PARTICIPANT_CODE = "ENT";
 
 /**
  * The manual cash/check adapter — the shipped Slice-3 cash path formalized behind the
  * PaymentProcessorAdapter interface. Zero vendor, zero new money movement.
  *
- * charge() records the tender on the Invoice's osod-payment-tender extension and balances the bill
+ * charge() records the tender on the Invoice's odos-payment-tender extension and balances the bill
  * when fully paid. Per the seam spec §4, a manual tender emits NO PaymentReconciliation — the
  * tendered Invoice IS the canonical payment record (cash never settles through a processor batch;
  * the absence of a PR is the correct answer for v0.7 settlement reconciliation). The exactly-one-
@@ -34,10 +41,11 @@ import type {
 export interface ManualCashAdapterOptions {
   /** Injected clock (ISO dateTime) for deterministic tests; defaults to system time. */
   now?: () => string;
+  timeZone?: string;
 }
 
 export function createManualCashAdapter(
-  fhir: Pick<MedplumClient, "read" | "update">,
+  fhir: Pick<MedplumClient, "read" | "search" | "update" | "create">,
   options?: ManualCashAdapterOptions,
 ): PaymentProcessorAdapter {
   const now = options?.now ?? (() => new Date().toISOString());
@@ -55,11 +63,40 @@ export function createManualCashAdapter(
       if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
         throw new Error("Charge amount (amountCents) must be a positive integer number of cents.");
       }
+      const chargedAt = now();
+      const chargedDate = practiceDate(chargedAt, options?.timeZone);
+      await assertDayNotSealed(fhir, chargedAt, options?.timeZone);
+      if (args.invoiceReference === undefined) {
+        const transactionId = `manual-${randomUUID()}`;
+        const created = await fhir.create<PaymentReconciliation>(
+          buildPaymentReconciliation({
+            outcome: "success",
+            createdIso: chargedAt,
+            paymentDate: chargedDate,
+            amountCents: args.amountCents,
+            subjectReference: args.patientReference,
+            staffReference: args.staffReference,
+            processorTransactionId: transactionId,
+            processorTransactionSystem: MANUAL_PAYMENT_SYSTEM,
+            surface: "manual",
+            tender: args.tender,
+            description: args.description,
+          }),
+        );
+        return {
+          transactionId,
+          paymentRecord: { resourceType: "PaymentReconciliation", id: created.id! },
+          outcome: "success",
+          amountChargedCents: args.amountCents,
+          feesCents: 0,
+          settlementDate: chargedDate,
+        };
+      }
       const invoiceId = invoiceIdFromReference(args.invoiceReference);
 
       const invoice = await fhir.read<Invoice>("Invoice", invoiceId);
       const existingTender = invoice.extension?.some(
-        (ext) => ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL,
+        (ext) => ext.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
       );
       if (existingTender) {
         throw new Error(
@@ -73,9 +110,26 @@ export function createManualCashAdapter(
       }
 
       const paidInFull = args.amountCents >= netCents;
-      const chargedAt = now();
       const updated: Invoice = {
         ...invoice,
+        date: chargedAt,
+        participant: [
+          ...(invoice.participant ?? []).filter((participant) =>
+            !participant.role?.coding?.some((coding) =>
+              coding.system === DATA_ENTRY_PARTICIPANT_SYSTEM && coding.code === DATA_ENTRY_PARTICIPANT_CODE,
+            ),
+          ),
+          {
+            role: {
+              coding: [{
+                system: DATA_ENTRY_PARTICIPANT_SYSTEM,
+                code: DATA_ENTRY_PARTICIPANT_CODE,
+                display: "data entry person",
+              }],
+            },
+            actor: { reference: args.staffReference },
+          },
+        ],
         extension: [...(invoice.extension ?? []), paymentTenderExtension(args.tender.code)],
         ...(paidInFull ? { status: "balanced" as const } : {}),
       };
@@ -87,7 +141,7 @@ export function createManualCashAdapter(
         outcome: "success",
         amountChargedCents: args.amountCents,
         feesCents: 0,
-        settlementDate: chargedAt.slice(0, 10),
+        settlementDate: chargedDate,
       };
     },
 
@@ -96,7 +150,7 @@ export function createManualCashAdapter(
     },
 
     async void(_args: VoidRequest): Promise<VoidResult> {
-      throw new Error("Manual voids are deferred to the v0.7 refund authorization workflow.");
+      return { outcome: "success" };
     },
 
     async settle(_args: SettleRequest): Promise<SettlementBatch> {

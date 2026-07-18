@@ -1,13 +1,14 @@
 {
-  "name": "osod-ui",
+  "name": "odos-ui",
   "version": "0.2.0",
-  "description": "OSOD Director UI \u2014 Vite + React + r3f. Talks plain FHIR to Medplum.",
+  "description": "ODOS Director UI \u2014 Vite + React + r3f. Talks plain FHIR to Medplum.",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit --skipLibCheck && vite build",
+    "test": "node --import tsx --test tests/**/*.test.tsx",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,12 +24,18 @@
   "devDependencies": {
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/react-test-renderer": "^18.3.1",
     "@types/three": "^0.170.0",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "react-test-renderer": "^18.3.1",
     "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vite": "^6.4.2"
+  },
+  "overrides": {
+    "scheduler": "0.23.2"
   }
 }

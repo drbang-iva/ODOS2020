@@ -1,6 +1,6 @@
 # v0.55e Bulk Data and Patient Access
 
-Population-level export and Patient Access run on the practice's own OSOD server. Bulk export jobs are local async jobs; NDJSON files stay on the practice-controlled filesystem unless an authorized user or app retrieves them.
+Population-level export and Patient Access run on the practice's own ODOS server. Bulk export jobs are local async jobs; NDJSON files stay on the practice-controlled filesystem unless an authorized user or app retrieves them.
 
 ## What Ships
 
@@ -24,11 +24,11 @@ Kickoff requires `Accept: application/fhir+json` and `Prefer: respond-async`. Po
 
 ## Local Job Storage
 
-`osod_bulk_export_jobs` is the source-of-truth job table. Job IDs and file URLs are high-entropy URL-safe nonces with no patient names, MRNs, dates of birth, SSNs, or sequential counters. Files are serialized under the configured local output root, with default 7-day retention and a 90-day maximum.
+`odos_bulk_export_jobs` is the source-of-truth job table. Job IDs and file URLs are high-entropy URL-safe nonces with no patient names, MRNs, dates of birth, SSNs, or sequential counters. Files are serialized under the configured local output root, with default 7-day retention and a 90-day maximum.
 
 ## Authorization
 
-Manifest files advertise `requiresAccessToken: true`, and OSOD enforces that at file retrieval. Download tokens are validated as OSOD-issued or OSOD-introspected access tokens. The download middleware does not validate Bearer tokens against a client's JWKS, because client JWKS only authenticates client assertions at `/oauth2/token`.
+Manifest files advertise `requiresAccessToken: true`, and ODOS enforces that at file retrieval. Download tokens are validated as ODOS-issued or ODOS-introspected access tokens. The download middleware does not validate Bearer tokens against a client's JWKS, because client JWKS only authenticates client assertions at `/oauth2/token`.
 
 SMART Backend Services clients register through the existing local SMART app registry with `private_key_jwt` and a local `jwks_uri`. v0.55e does not add a parallel Bulk Data client registry.
 
@@ -58,7 +58,7 @@ Bulk Data refusals consume the v0.55d Safety Valve and exception mapper unchange
 
 ## Why This Is Not a Marketplace
 
-OSOD does not ship a hosted export gateway, hosted app catalog, remote PHI job table, or vendor-managed Patient Access directory. Practices run the endpoint on their hardware and decide which apps can connect.
+ODOS does not ship a hosted export gateway, hosted app catalog, remote PHI job table, or vendor-managed Patient Access directory. Practices run the endpoint on their hardware and decide which apps can connect.
 
 ## Forward Gates
 

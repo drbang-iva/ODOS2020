@@ -1,4 +1,4 @@
-import { buildAuditEventProjection, buildOsodAuditEventRow } from "../../authz/osodAudit.js";
+import { buildAuditEventProjection, buildOdosAuditEventRow } from "../../authz/odosAudit.js";
 import { streamTextLines } from "../frames/parsers/stream-lines.js";
 
 export interface HcpcsTerminologyRow {
@@ -39,10 +39,10 @@ export async function* parseHcpcsCsv(
     if (!code) {
       throw new Error("HCPCS parser: missing code column");
     }
-    const auditRow = buildOsodAuditEventRow({
+    const auditRow = buildOdosAuditEventRow({
       eventType: "catalog_sync.hcpcs.delta.upserted",
       actorRole: "system",
-      resourceType: "osod_terminology_hcpcs",
+      resourceType: "odos_terminology_hcpcs",
       resourceId: code,
       actionReason: "HCPCS quarterly terminology sync",
     });
@@ -66,10 +66,10 @@ export async function* parseHcpcsCsv(
 
 export function seedFrameHcpcsRows(version: string, sourceVersion: string, effectiveFrom: string): HcpcsTerminologyRow[] {
   return FRAME_LATERALITY_EXEMPT_HCPCS.map((code) => {
-    const auditRow = buildOsodAuditEventRow({
+    const auditRow = buildOdosAuditEventRow({
       eventType: "catalog_sync.hcpcs.delta.upserted",
       actorRole: "system",
-      resourceType: "osod_terminology_hcpcs",
+      resourceType: "odos_terminology_hcpcs",
       resourceId: code,
       actionReason: "Seed HCPCS laterality exemption metadata from v0.6 ledger row 8",
     });

@@ -1,17 +1,15 @@
-import type { ChargeItem, Invoice, PaymentReconciliation, VisionPrescription } from "@medplum/fhirtypes";
-import { useEffect, useState } from "react";
-import { fhir } from "../lib/fhir";
-import {
-  buildFinancialSummary,
-  paymentReconciliationsToTenderLines,
-  renderReceiptSheet,
-} from "../lib/optical-financial-summary";
+import type { VisionPrescription } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useState } from "react";
+import { CollectPanel } from "../components/CollectPanel";
+import type { OpenChargeLine, OpticalCollectionOrder } from "../lib/collect";
 import {
   buildLabOrder,
   labOrderToExport,
   renderLabOrderSheet,
   type BuildLabOrderInput,
   type LabOrderFrame,
+  type LabOrderFrameOwnership,
+  type LabOrderFrameSource,
   type LabOrderRxEye,
 } from "../lib/optical-lab-order";
 import {
@@ -22,11 +20,10 @@ import {
   OPTICAL_ORDER_TYPES,
   RX_COLUMNS,
   canTransitionOpticalOrderStatus,
-  chargeOpticalCardPayment,
-  createOpticalCashOrder,
-  invoiceTotalNetCents,
   labOrderFrameFromAttachedFrame,
+  loadConfiguredPaymentMethods,
   loadVisionPrescription,
+  opticalCollectionChargeFromDraft,
   transitionOpticalOrderStatus,
   visionPrescriptionRows,
   type AttachedFrame,
@@ -45,6 +42,7 @@ import {
   type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
 import { openPrintWindow } from "../lib/print-window";
+import { advanceLabOrderTransport, cancelLabOrder, submitLabOrder } from "../lib/lab-order-transport";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -59,22 +57,16 @@ interface OrderHeaderState {
   orderNumber: string;
 }
 
-interface ReceiptSourceIds {
-  invoiceId: string;
-  chargeItemIds: string[];
-  paymentKind: "invoice-tender" | "payment-reconciliation";
-  paymentReconciliationIds?: string[];
-}
-
 type FrameCriteriaKey = "upc" | "barcode" | "designer" | "material" | "category" | "name";
 
 const IVA_LABS = ["Best Price Digital Lab", "Cherry Optical Lab", "Zeiss (VISUSTORE)"] as const;
 const LAB_OTHER_OPTION = "Other";
 const LAB_ORDER_JOB_TYPES = ["Rx", "Frame To Come", "Frame Only", "Lenses Only"] as const;
-const FRAME_SOURCE_OPTIONS: Array<{ value: LabOrderFrame["source"]; label: string }> = [
-  { value: "frame-to-come", label: "Frame To Come" },
-  { value: "patient-own", label: "Patient Own" },
-  { value: "stock", label: "Stock" },
+const FRAME_SOURCE_OPTIONS: Array<{ value: LabOrderFrameSource; label: string }> = [
+  { value: 0, label: "0 — Lenses Only" },
+  { value: 1, label: "1 — Lab supply" },
+  { value: 3, label: "3 — Frame-to-come" },
+  { value: 4, label: "4 — Frame enclosed" },
 ];
 
 interface LabOrderEyeFittingState {
@@ -93,7 +85,8 @@ interface LabOrderCaptureState {
   specialInstructions: string;
   commentsToLab: string;
   lensCpt: string;
-  frameSource: LabOrderFrame["source"];
+  frameSource: LabOrderFrameSource;
+  frameOwnership?: LabOrderFrameOwnership;
   frameTraceRef: string;
   fitting: {
     od: LabOrderEyeFittingState;
@@ -134,8 +127,6 @@ export function OpticalOrder() {
     newChargeLine("Lenses", false),
   ]);
   const [selectedChargeId, setSelectedChargeId] = useState(chargeLines[0].id);
-  const [tender, setTender] = useState<CheckoutTenderCode>("CASH");
-  const [paymentAmount, setPaymentAmount] = useState("");
   const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
   const [discountPercent, setDiscountPercent] = useState("20");
   const [discountAmount, setDiscountAmount] = useState("");
@@ -158,12 +149,13 @@ export function OpticalOrder() {
   const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(null);
   const [rxRows, setRxRows] = useState<RxDisplayRow[]>(visionPrescriptionRows(null));
   const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
-  const [receiptSourceIds, setReceiptSourceIds] = useState<ReceiptSourceIds | null>(null);
+  const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
+  const [labTransportState, setLabTransportState] = useState<string | null>(null);
+  const [labOrderBusy, setLabOrderBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const selectedCharge = chargeLines.find((line) => line.id === selectedChargeId) ?? chargeLines[0];
   const selectedLines = chargeLines.filter((line) => line.selected);
-  const selectedTotalCents = selectedLines.reduce((sum, line) => sum + patientBalanceCents(line), 0);
   const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
   const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
   const canPrintLabSheet = Boolean(
@@ -207,28 +199,29 @@ export function OpticalOrder() {
     };
   }, [frameCriteria]);
 
-  useEffect(() => {
-    setPaymentAmount(formatMoneyInput(selectedTotalCents));
-  }, [selectedTotalCents]);
-
-  const hasPendingCardPayment = Boolean(
-    createdTaskId &&
-      receiptSourceIds?.paymentKind === "payment-reconciliation" &&
-      !receiptSourceIds.paymentReconciliationIds?.length,
-  );
-  const canProcessPayment =
-    patientReference &&
-    rxReference &&
-    selectedLines.length > 0 &&
-    (!createdTaskId || (tender === "CARD_TERMINAL" && hasPendingCardPayment));
-  const canPrintReceipt = Boolean(
-    createdTaskId &&
-      receiptSourceIds &&
-      receiptSourceIds.invoiceId &&
-      receiptSourceIds.chargeItemIds.length > 0 &&
-      (receiptSourceIds.paymentKind === "invoice-tender" ||
-        Boolean(receiptSourceIds.paymentReconciliationIds?.length)),
-  );
+  const opticalCollectCharges = useMemo<OpenChargeLine[]>(() =>
+    chargeLines.filter((line) => line.selected).map((line) => ({
+      id: line.id,
+      amountCents: patientBalanceCents(line),
+      description: line.procedure || "Optical charge",
+      date: header.serviceDate,
+      source: "optical",
+      code: line.procedure,
+      quantity: line.units,
+      feeCents: line.feeCents,
+      taxCents: line.taxCents,
+      ...(line.discount ? { discount: line.discount } : {}),
+    })), [chargeLines, header.serviceDate]);
+  const opticalCollectionOrder = useMemo<OpticalCollectionOrder>(() => ({
+    patientReference,
+    visionPrescriptionReference: visionPrescriptionReference(rxReference),
+    ...(encounterReference ? { encounterReference } : {}),
+    orderHcpcsCode: primaryOrderCode(selectedLines),
+    ...(primaryOrderCode(selectedLines) === "V2020" ? { orderHcpcsDisplay: "Frames, purchases" } : {}),
+    businessStatus: header.orderStatus,
+    orderType: header.orderType,
+    charges: selectedLines.map(opticalCollectionChargeFromDraft),
+  }), [patientReference, rxReference, encounterReference, selectedLines, header.orderStatus, header.orderType]);
   const selectedFrameLocked = Boolean(selectedCharge.frame);
 
   function selectLabOption(option: string) {
@@ -290,160 +283,6 @@ export function OpticalOrder() {
       await transitionOpticalOrderStatus(createdTaskId, next);
     }
     setHeader((current) => ({ ...current, orderStatus: next }));
-  }
-
-  async function processPayment() {
-    setError(null);
-    setStatus("");
-    if (!canProcessPayment) {
-      setError("Patient, signed Rx, and selected charge lines are required before payment.");
-      return;
-    }
-    const expectedAmount = formatMoneyInput(selectedTotalCents);
-    if (paymentAmount !== expectedAmount) {
-      setError(`Payment amount must equal selected patient balance ${expectedAmount}.`);
-      return;
-    }
-    try {
-      if (tender === "CARD_TERMINAL") {
-        await processCardPayment();
-        return;
-      }
-      const created = await createOpticalCashOrder({
-        patientReference,
-        visionPrescriptionReference: visionPrescriptionReference(rxReference),
-        encounterReference: encounterReference || undefined,
-        orderHcpcsCode: primaryOrderCode(selectedLines),
-        orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
-        businessStatus: header.orderStatus,
-        orderType: header.orderType,
-        charges: selectedLines,
-        tender,
-      });
-      setCreatedTaskId(created.taskId);
-      setReceiptSourceIds({
-        invoiceId: created.invoiceId,
-        chargeItemIds: created.chargeItemIds,
-        paymentKind: "invoice-tender",
-      });
-      setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
-      setStatus(`Order ${created.deviceRequestId} paid by ${tender}.`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function processCardPayment() {
-    let order =
-      createdTaskId && receiptSourceIds?.paymentKind === "payment-reconciliation"
-        ? {
-            taskId: createdTaskId,
-            invoiceId: receiptSourceIds.invoiceId,
-            chargeItemIds: receiptSourceIds.chargeItemIds,
-            deviceRequestId: header.orderNumber,
-          }
-        : null;
-
-    if (!order) {
-      const created = await createOpticalCashOrder({
-        patientReference,
-        visionPrescriptionReference: visionPrescriptionReference(rxReference),
-        encounterReference: encounterReference || undefined,
-        orderHcpcsCode: primaryOrderCode(selectedLines),
-        orderHcpcsDisplay: primaryOrderCode(selectedLines) === "V2020" ? "Frames, purchases" : undefined,
-        businessStatus: "waiting-on-payment",
-        orderType: header.orderType,
-        charges: selectedLines,
-      });
-      order = created;
-      setCreatedTaskId(created.taskId);
-      setReceiptSourceIds({
-        invoiceId: created.invoiceId,
-        chargeItemIds: created.chargeItemIds,
-        paymentKind: "payment-reconciliation",
-      });
-      setHeader((current) => ({ ...current, orderNumber: created.deviceRequestId }));
-    }
-
-    const invoice = await fhir.read<Invoice>("Invoice", order.invoiceId);
-    const result = await chargeOpticalCardPayment({
-      amountCents: invoiceTotalNetCents(invoice),
-      patientReference,
-      invoiceReference: `Invoice/${order.invoiceId}`,
-      taskReference: `Task/${order.taskId}`,
-    });
-
-    if (result.outcome !== "success") {
-      setHeader((current) => ({ ...current, orderStatus: "waiting-on-payment" }));
-      setError(result.declineReason ?? `Card payment ${result.outcome}.`);
-      setStatus(`Order ${order.deviceRequestId || order.taskId} is waiting on payment.`);
-      return;
-    }
-
-    if (result.paymentRecord?.resourceType !== "PaymentReconciliation" || !result.paymentRecord.id) {
-      throw new Error("Card payment succeeded but did not return a PaymentReconciliation id.");
-    }
-
-    const paidSources: ReceiptSourceIds = {
-      invoiceId: order.invoiceId,
-      chargeItemIds: order.chargeItemIds,
-      paymentKind: "payment-reconciliation",
-      paymentReconciliationIds: [result.paymentRecord.id],
-    };
-    setReceiptSourceIds(paidSources);
-
-    if (header.orderStatus !== "waiting-on-payment") {
-      await transitionOpticalOrderStatus(order.taskId, header.orderStatus);
-    }
-
-    const printed = await renderReceiptFromSources(paidSources, false);
-    if (!printed) return;
-    setStatus(`Order ${order.deviceRequestId || order.taskId} paid by card terminal. Receipt ready.`);
-  }
-
-  async function printReceipt() {
-    setError(null);
-    setStatus("");
-    if (!createdTaskId || !receiptSourceIds) {
-      setError("A paid order is required before printing a receipt.");
-      return;
-    }
-    try {
-      await renderReceiptFromSources(receiptSourceIds, true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function renderReceiptFromSources(sourceIds: ReceiptSourceIds, announce: boolean): Promise<boolean> {
-    const paymentReconciliationIds = sourceIds.paymentReconciliationIds ?? [];
-    const [invoice, chargeItems, paymentReconciliations] = await Promise.all([
-      fhir.read<Invoice>("Invoice", sourceIds.invoiceId),
-      Promise.all(sourceIds.chargeItemIds.map((id) => fhir.read<ChargeItem>("ChargeItem", id))),
-      Promise.all(paymentReconciliationIds.map((id) => fhir.read<PaymentReconciliation>("PaymentReconciliation", id))),
-    ]);
-    const summary = buildFinancialSummary({
-      practiceName: optionalString(header.staffLocation) ?? "Integrated Vision & Aesthetics",
-      patientName: labOrderCapture.patientName.trim(),
-      patientRef: patientReference || undefined,
-      receiptDate: header.serviceDate,
-      orderId: header.orderNumber || createdTaskId || sourceIds.invoiceId,
-      providerName: optionalString(header.provider),
-      invoice,
-      chargeItems,
-      ...(paymentReconciliations.length
-        ? { payments: paymentReconciliationsToTenderLines(paymentReconciliations) }
-        : {}),
-    });
-    const printed = openPrintWindow(`Receipt ${summary.header.orderId}`, renderReceiptSheet(summary));
-    if (!printed) {
-      setError("The browser blocked the receipt print window.");
-      return false;
-    }
-    if (announce) {
-      setStatus(`Receipt ready for order ${summary.header.orderId}.`);
-    }
-    return true;
   }
 
   function applyDiscount() {
@@ -530,7 +369,11 @@ export function OpticalOrder() {
         od: fittingEye(labOrderCapture.fitting.od),
         os: fittingEye(labOrderCapture.fitting.os),
       },
-      frame: labOrderFrameFromAttachedFrame(attachedLabFrame, labOrderCapture.frameSource),
+      frameSource: labOrderCapture.frameSource,
+      frameOwnership: labOrderCapture.frameOwnership,
+      frame: labOrderCapture.frameSource === 0 || labOrderCapture.frameSource === 1
+        ? undefined
+        : labOrderFrameFromAttachedFrame(attachedLabFrame, legacyFrameSource(labOrderCapture.frameSource, labOrderCapture.frameOwnership)),
       lensCpt: optionalString(labOrderCapture.lensCpt),
       frameTraceRef: optionalString(labOrderCapture.frameTraceRef),
     };
@@ -567,6 +410,57 @@ export function OpticalOrder() {
     setStatus(`Lab order JSON downloaded for ${input.lab}.`);
   }
 
+  async function sendLabOrder() {
+    const input = assembleLabOrderInput();
+    if (!input || !createdTaskId) return;
+    setLabOrderBusy(true);
+    setStatus("");
+    try {
+      const result = await submitLabOrder({
+        order: buildLabOrder(input),
+        orderTaskReference: `Task/${createdTaskId}`,
+        lab: header.lab.trim(),
+      });
+      setLabOrderReference(result.labOrderReference);
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${result.labOrderReference} sent to ${input.lab}.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
+  async function markLabOrderReceived() {
+    if (!labOrderReference) return;
+    setLabOrderBusy(true);
+    setError(null);
+    try {
+      const result = await advanceLabOrderTransport(labOrderReference, "received");
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${labOrderReference} marked received.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
+  async function cancelActiveLabOrder() {
+    if (!labOrderReference) return;
+    setLabOrderBusy(true);
+    setError(null);
+    try {
+      const result = await cancelLabOrder(labOrderReference);
+      setLabTransportState(result.transportState);
+      setStatus(`Lab order ${labOrderReference} cancelled.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setLabOrderBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg-deep text-white">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-4 px-4 py-4">
@@ -590,8 +484,8 @@ export function OpticalOrder() {
               <thead className="bg-white/[0.03] text-white/55">
                 <tr>
                   {RX_COLUMNS.map((column) => (
-                    <th key={column} className="border-r border-white/10 px-2 py-2 last:border-r-0">
-                      {column}
+                    <th key={column.key} className="border-r border-white/10 px-2 py-2 last:border-r-0">
+                      {column.label}
                     </th>
                   ))}
                 </tr>
@@ -600,8 +494,8 @@ export function OpticalOrder() {
                 {rxRows.map((row) => (
                   <tr key={row.eye} className="border-t border-white/10 text-white/80">
                     {RX_COLUMNS.map((column) => (
-                      <td key={`${row.eye}-${column}`} className="border-r border-white/10 px-2 py-2 last:border-r-0">
-                        {row.values[column]}
+                      <td key={`${row.eye}-${column.key}`} className="border-r border-white/10 px-2 py-2 last:border-r-0">
+                        {row.values[column.key]}
                       </td>
                     ))}
                   </tr>
@@ -628,16 +522,19 @@ export function OpticalOrder() {
           </section>
 
           <div className="grid gap-4">
-            <PaymentPanel
-              tender={tender}
-              paymentAmount={paymentAmount}
-              selectedTotalCents={selectedTotalCents}
-              canProcessPayment={Boolean(canProcessPayment)}
-              canPrintReceipt={canPrintReceipt}
-              onTenderChange={setTender}
-              onAmountChange={setPaymentAmount}
-              onProcess={() => void processPayment()}
-              onPrintReceipt={() => void printReceipt()}
+            <CollectPanel
+              embedded
+              disabled={!patientReference || !rxReference || Boolean(createdTaskId)}
+              patientReference={patientReference}
+              patientName={labOrderCapture.patientName.trim() || undefined}
+              initialCharges={opticalCollectCharges}
+              opticalOrder={opticalCollectionOrder}
+              onClose={() => undefined}
+              onCollected={(result) => {
+                setCreatedTaskId(result.taskId);
+                setHeader((current) => ({ ...current, orderNumber: result.deviceRequestId }));
+                setStatus(`Order ${result.deviceRequestId} paid. Receipt ready.`);
+              }}
             />
             <DiscountPanel
               mode={discountMode}
@@ -659,6 +556,10 @@ export function OpticalOrder() {
               attachedFrame={attachedLabFrame}
               capture={labOrderCapture}
               canPrint={canPrintLabSheet}
+              canSend={Boolean(canPrintLabSheet && createdTaskId)}
+              labOrderReference={labOrderReference}
+              labTransportState={labTransportState}
+              busy={labOrderBusy}
               onHeaderChange={setHeader}
               onCapturePatch={patchLabOrderCapture}
               onTreatmentChange={updateTreatment}
@@ -667,6 +568,9 @@ export function OpticalOrder() {
               onFittingChange={updateFitting}
               onPrint={printLabSheet}
               onDownload={downloadLabOrderJson}
+              onSend={() => void sendLabOrder()}
+              onMarkReceived={() => void markLabOrderReceived()}
+              onCancel={() => void cancelActiveLabOrder()}
             />
           </div>
         </div>
@@ -910,7 +814,7 @@ function ChargeTable({
   );
 }
 
-function PaymentPanel({
+export function PaymentPanel({
   tender,
   paymentAmount,
   selectedTotalCents,
@@ -920,6 +824,7 @@ function PaymentPanel({
   onAmountChange,
   onProcess,
   onPrintReceipt,
+  loadPaymentMethods = loadConfiguredPaymentMethods,
 }: {
   tender: CheckoutTenderCode;
   paymentAmount: string;
@@ -930,14 +835,35 @@ function PaymentPanel({
   onAmountChange: (amount: string) => void;
   onProcess: () => void;
   onPrintReceipt: () => void;
+  loadPaymentMethods?: () => Promise<string[]>;
 }) {
+  const [configuredMethods, setConfiguredMethods] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadPaymentMethods()
+      .then((methods) => {
+        if (!cancelled) setConfiguredMethods(methods);
+      })
+      .catch(() => {
+        if (!cancelled) setConfiguredMethods([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadPaymentMethods]);
+
+  const availableTenders = CHECKOUT_TENDERS.filter(
+    (entry) => entry.code !== "CARD_TERMINAL" || configuredMethods.includes("clover"),
+  );
+
   return (
     <section className="rounded border border-white/10 p-3">
       <div className="grid gap-3 md:grid-cols-3">
         <label className="grid gap-1 text-xs text-white/60">
           <span>Tender</span>
           <select className="sidebar-input" value={tender} onChange={(event) => onTenderChange(event.target.value as CheckoutTenderCode)}>
-            {CHECKOUT_TENDERS.map((entry) => (
+            {availableTenders.map((entry) => (
               <option key={entry.code} value={entry.code}>
                 {entry.display}
               </option>
@@ -1026,6 +952,10 @@ function LabOrderPanel({
   attachedFrame,
   capture,
   canPrint,
+  canSend,
+  labOrderReference,
+  labTransportState,
+  busy,
   onHeaderChange,
   onCapturePatch,
   onTreatmentChange,
@@ -1034,6 +964,9 @@ function LabOrderPanel({
   onFittingChange,
   onPrint,
   onDownload,
+  onSend,
+  onMarkReceived,
+  onCancel,
 }: {
   header: OrderHeaderState;
   patientReference: string;
@@ -1041,6 +974,10 @@ function LabOrderPanel({
   attachedFrame: AttachedFrame | undefined;
   capture: LabOrderCaptureState;
   canPrint: boolean;
+  canSend: boolean;
+  labOrderReference: string | null;
+  labTransportState: string | null;
+  busy: boolean;
   onHeaderChange: (next: OrderHeaderState) => void;
   onCapturePatch: (patch: Partial<LabOrderCaptureState>) => void;
   onTreatmentChange: (index: number, value: string) => void;
@@ -1049,7 +986,13 @@ function LabOrderPanel({
   onFittingChange: (eye: "od" | "os", field: keyof LabOrderEyeFittingState, value: string) => void;
   onPrint: () => void;
   onDownload: () => void;
+  onSend: () => void;
+  onMarkReceived: () => void;
+  onCancel: () => void;
 }) {
+  const activeLabOrder = Boolean(
+    labOrderReference && labTransportState !== "received" && labTransportState !== "cancelled",
+  );
   return (
     <section className="rounded border border-white/10 p-3">
       <div className="mb-3 text-sm font-semibold">Lab Sheet</div>
@@ -1081,7 +1024,13 @@ function LabOrderPanel({
           <select
             className="sidebar-input"
             value={capture.frameSource}
-            onChange={(event) => onCapturePatch({ frameSource: event.target.value as LabOrderFrame["source"] })}
+            onChange={(event) => {
+              const frameSource = Number(event.target.value) as LabOrderFrameSource;
+              onCapturePatch({
+                frameSource,
+                frameOwnership: frameSource === 3 || frameSource === 4 ? capture.frameOwnership ?? "in-house" : undefined,
+              });
+            }}
           >
             {FRAME_SOURCE_OPTIONS.map((source) => (
               <option key={source.value} value={source.value}>
@@ -1090,6 +1039,19 @@ function LabOrderPanel({
             ))}
           </select>
         </label>
+        {(capture.frameSource === 3 || capture.frameSource === 4) && (
+          <label className="grid gap-1 text-xs text-white/60">
+            <span>Frame Ownership</span>
+            <select
+              className="sidebar-input"
+              value={capture.frameOwnership ?? "in-house"}
+              onChange={(event) => onCapturePatch({ frameOwnership: event.target.value as LabOrderFrameOwnership })}
+            >
+              <option value="in-house">In-house</option>
+              <option value="patients-own">Patient's Own Frame (POF)</option>
+            </select>
+          </label>
+        )}
         <Field label="Frame Trace Ref" value={capture.frameTraceRef} onChange={(frameTraceRef) => onCapturePatch({ frameTraceRef })} />
         <Field label="Active Rx" value={activeRxLoaded ? "Loaded" : ""} readOnly onChange={() => undefined} />
         <Field label="Attached Frame" value={attachedFrame ? attachedFrame.model : ""} readOnly onChange={() => undefined} />
@@ -1137,16 +1099,53 @@ function LabOrderPanel({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 md:grid-cols-2">
-        <button className="sidebar-button" disabled={!canPrint} onClick={onPrint}>
-          Print Lab Sheet
-        </button>
-        <button className="sidebar-button" disabled={!canPrint} onClick={onDownload}>
-          Download Order (JSON)
-        </button>
-      </div>
+      <LabOrderActionButtons
+        canPrint={canPrint}
+        canSend={canSend}
+        activeLabOrder={activeLabOrder}
+        busy={busy}
+        onPrint={onPrint}
+        onDownload={onDownload}
+        onSend={onSend}
+        onMarkReceived={onMarkReceived}
+        onCancel={onCancel}
+      />
     </section>
   );
+}
+
+export function LabOrderActionButtons({
+  canPrint,
+  canSend,
+  activeLabOrder,
+  busy,
+  onPrint,
+  onDownload,
+  onSend,
+  onMarkReceived,
+  onCancel,
+}: {
+  canPrint: boolean;
+  canSend: boolean;
+  activeLabOrder: boolean;
+  busy: boolean;
+  onPrint: () => void;
+  onDownload: () => void;
+  onSend: () => void;
+  onMarkReceived: () => void;
+  onCancel: () => void;
+}) {
+  return <>
+    <div className="mt-3 grid gap-2 md:grid-cols-3">
+      <button className="sidebar-button" disabled={!canPrint} onClick={onPrint}>Print Lab Sheet</button>
+      <button className="sidebar-button" disabled={!canPrint} onClick={onDownload}>Download Order (JSON)</button>
+      <button className="sidebar-button" disabled={!canSend || activeLabOrder || busy} onClick={onSend}>Send to Lab</button>
+    </div>
+    {activeLabOrder ? <div className="mt-2 grid gap-2 md:grid-cols-2">
+      <button className="sidebar-button py-1" disabled={busy} onClick={onMarkReceived}>Mark Received</button>
+      <button className="sidebar-button py-1" disabled={busy} onClick={onCancel}>Cancel Lab Order</button>
+    </div> : null}
+  </>;
 }
 
 function FittingEyeFields({
@@ -1467,13 +1466,22 @@ function initialLabOrderCapture(): LabOrderCaptureState {
     specialInstructions: "",
     commentsToLab: "",
     lensCpt: "",
-    frameSource: "stock",
+    frameSource: 4,
+    frameOwnership: "in-house",
     frameTraceRef: "",
     fitting: {
       od: emptyFittingEye(),
       os: emptyFittingEye(),
     },
   };
+}
+
+function legacyFrameSource(
+  frameSource: LabOrderFrameSource,
+  ownership: LabOrderFrameOwnership | undefined,
+): LabOrderFrame["source"] {
+  if (frameSource === 3) return "frame-to-come";
+  return ownership === "patients-own" ? "patient-own" : "stock";
 }
 
 function emptyFittingEye(): LabOrderEyeFittingState {

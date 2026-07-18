@@ -1,4 +1,4 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/extensions.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/extensions.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type {
   CodeableConcept,
   Extension,
@@ -11,11 +11,11 @@ import type { CommonObservationInput, EyeLaterality } from "./types.js";
 import { dualCoding } from "./codeBindings.js";
 import { attachBodyStructureToObservation, buildEyeBodyStructure } from "./bodyStructure.js";
 
-export const OSOD_EXTENSION_URLS = {
-  qualityScore: "https://osod.dev/fhir/StructureDefinition/quality-score",
-  confidenceScore: "https://osod.dev/fhir/StructureDefinition/confidence-score",
-  eyeLaterality: "https://osod.dev/fhir/StructureDefinition/eye-laterality",
-  sourceSha256: "https://osod.dev/fhir/StructureDefinition/source-sha256",
+export const ODOS_EXTENSION_URLS = {
+  qualityScore: "https://odos2020.com/fhir/StructureDefinition/quality-score",
+  confidenceScore: "https://odos2020.com/fhir/StructureDefinition/confidence-score",
+  eyeLaterality: "https://odos2020.com/fhir/StructureDefinition/eye-laterality",
+  sourceSha256: "https://odos2020.com/fhir/StructureDefinition/source-sha256",
 } as const;
 
 const LATERALITY_DISPLAY: Record<EyeLaterality, string> = {
@@ -25,11 +25,11 @@ const LATERALITY_DISPLAY: Record<EyeLaterality, string> = {
   UNKNOWN: "Unknown eye laterality",
 };
 
-export function osodCoding(code: string, display?: string) {
+export function odosCoding(code: string, display?: string) {
   return dualCoding(code, display)[0];
 }
 
-export function osodConcept(code: string, display?: string): CodeableConcept {
+export function odosConcept(code: string, display?: string): CodeableConcept {
   return {
     coding: dualCoding(code, display),
     text: display ?? code,
@@ -60,12 +60,12 @@ export function normalizeLaterality(value: string): EyeLaterality {
 }
 
 export function lateralityConcept(eye: EyeLaterality): CodeableConcept {
-  return osodConcept(eye, LATERALITY_DISPLAY[eye]);
+  return odosConcept(eye, LATERALITY_DISPLAY[eye]);
 }
 
 export function lateralityExtension(eye: EyeLaterality): Extension {
   return {
-    url: OSOD_EXTENSION_URLS.eyeLaterality,
+    url: ODOS_EXTENSION_URLS.eyeLaterality,
     valueCodeableConcept: lateralityConcept(eye),
   };
 }
@@ -75,7 +75,7 @@ export function decimalExtension(url: string, value: number): Extension {
 }
 
 export function sourceSha256Extension(value: string): Extension {
-  return { url: OSOD_EXTENSION_URLS.sourceSha256, valueString: value };
+  return { url: ODOS_EXTENSION_URLS.sourceSha256, valueString: value };
 }
 
 export function validateScore(name: string, value: number | undefined): void {
@@ -98,7 +98,7 @@ export function quantity(value: number, unit: string, system?: string, code?: st
 
 export function component(code: string, display: string, value: Partial<ObservationComponent>) {
   return {
-    code: osodConcept(code, display),
+    code: odosConcept(code, display),
     ...value,
   } satisfies ObservationComponent;
 }
@@ -113,11 +113,11 @@ export function applyCommonObservationFields(
   const extensions: Extension[] = [lateralityExtension(input.eye)];
 
   if (input.qualityScore !== undefined) {
-    extensions.push(decimalExtension(OSOD_EXTENSION_URLS.qualityScore, input.qualityScore));
+    extensions.push(decimalExtension(ODOS_EXTENSION_URLS.qualityScore, input.qualityScore));
   }
 
   if (input.confidenceScore !== undefined) {
-    extensions.push(decimalExtension(OSOD_EXTENSION_URLS.confidenceScore, input.confidenceScore));
+    extensions.push(decimalExtension(ODOS_EXTENSION_URLS.confidenceScore, input.confidenceScore));
   }
 
   const noteText = [input.sourceType && `sourceType=${input.sourceType}`, input.sourceLabel]

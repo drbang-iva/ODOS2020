@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://osod.dev/fhir/StructureDefinition/Observation-AxialLength",
+  "url": "https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength",
   "version": "0.3.0",
-  "name": "OSODObservationAxialLength",
-  "title": "OSOD Observation - Axial Length",
+  "name": "ODOSObservationAxialLength",
+  "title": "ODOS Observation - Axial Length",
   "status": "draft",
-  "publisher": "OSOD",
-  "description": "OSOD v0.3 placeholder profile for v0.4 axial length Observations.",
+  "publisher": "ODOS",
+  "description": "ODOS v0.3 placeholder profile for v0.4 axial length Observations.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -100,49 +100,49 @@
             "xpath": "not(f:*[starts-with(local-name(.), 'value')] and (for $coding in f:code/f:coding return f:component/f:code/f:coding[f:code/@value=$coding/f:code/@value] [f:system/@value=$coding/f:system/@value]))"
           },
           {
-            "key": "osod-axial-profile",
+            "key": "odos-axial-profile",
             "severity": "error",
             "human": "meta.profile must declare Observation-AxialLength.",
-            "expression": "meta.profile.where($this = 'https://osod.dev/fhir/StructureDefinition/Observation-AxialLength').exists()"
+            "expression": "meta.profile.where($this = 'https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength').exists()"
           },
           {
-            "key": "osod-axial-code",
+            "key": "odos-axial-code",
             "severity": "error",
-            "human": "Observation.code must include OSOD AXIAL_LENGTH.",
-            "expression": "code.coding.where(system = 'https://osod.dev/fhir/CodeSystem/ophthalmology' and code = 'AXIAL_LENGTH').exists()"
+            "human": "Observation.code must include ODOS AXIAL_LENGTH.",
+            "expression": "code.coding.where(system = 'https://odos2020.com/fhir/CodeSystem/ophthalmology' and code = 'AXIAL_LENGTH').exists()"
           },
           {
-            "key": "osod-axial-category",
+            "key": "odos-axial-category",
             "severity": "error",
             "human": "Observation.category must include exam.",
             "expression": "category.coding.where(system = 'http://terminology.hl7.org/CodeSystem/observation-category' and code = 'exam').exists()"
           },
           {
-            "key": "osod-axial-body-site",
+            "key": "odos-axial-body-site",
             "severity": "error",
             "human": "Observation.bodySite extension must reference BodyStructure.",
             "expression": "bodySite.extension.where(url = 'http://hl7.org/fhir/StructureDefinition/bodySite').value.exists()"
           },
           {
-            "key": "osod-axial-subject",
+            "key": "odos-axial-subject",
             "severity": "error",
             "human": "Observation.subject is required.",
             "expression": "subject.exists()"
           },
           {
-            "key": "osod-axial-encounter",
+            "key": "odos-axial-encounter",
             "severity": "error",
             "human": "Observation.encounter is required.",
             "expression": "encounter.exists()"
           },
           {
-            "key": "osod-axial-effective",
+            "key": "odos-axial-effective",
             "severity": "error",
             "human": "Observation.effectiveDateTime is required.",
             "expression": "effectiveDateTime.exists()"
           },
           {
-            "key": "osod-axial-mm",
+            "key": "odos-axial-mm",
             "severity": "error",
             "human": "Axial length must be measured in millimeters.",
             "expression": "valueQuantity.system = 'http://unitsofmeasure.org' and valueQuantity.code = 'mm'"
@@ -2695,28 +2695,28 @@
         "path": "Observation",
         "min": 0,
         "max": "*",
-        "definition": "Observation constrained by https://osod.dev/fhir/StructureDefinition/Observation-AxialLength"
+        "definition": "Observation constrained by https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength"
       },
       {
         "id": "Observation.subject",
         "path": "Observation.subject",
         "min": 1,
         "max": "1",
-        "definition": "Observation.subject constrained by https://osod.dev/fhir/StructureDefinition/Observation-AxialLength"
+        "definition": "Observation.subject constrained by https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength"
       },
       {
         "id": "Observation.encounter",
         "path": "Observation.encounter",
         "min": 1,
         "max": "1",
-        "definition": "Observation.encounter constrained by https://osod.dev/fhir/StructureDefinition/Observation-AxialLength"
+        "definition": "Observation.encounter constrained by https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength"
       },
       {
         "id": "Observation.effectiveDateTime",
         "path": "Observation.effectiveDateTime",
         "min": 1,
         "max": "1",
-        "definition": "Observation.effectiveDateTime constrained by https://osod.dev/fhir/StructureDefinition/Observation-AxialLength"
+        "definition": "Observation.effectiveDateTime constrained by https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength"
       }
     ]
   }

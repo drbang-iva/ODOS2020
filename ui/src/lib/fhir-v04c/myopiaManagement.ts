@@ -11,17 +11,17 @@ import type {
 } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir";
 
-export const OSOD_FHIR_BASE = "https://osod.dev/fhir";
+export const ODOS_FHIR_BASE = "https://odos2020.com/fhir";
 export const MYOPIA_MANAGEMENT_CAREPLAN_PROFILE_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/CarePlan-MyopiaManagement`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/CarePlan-MyopiaManagement`;
 export const MYOPIA_CAREPLAN_ACTIVITY_INTERVENTION_EXTENSION_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/myopia-careplan-activity-intervention`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/myopia-careplan-activity-intervention`;
 export const OBSERVATION_AXIAL_LENGTH_PROFILE_URL =
-  `${OSOD_FHIR_BASE}/StructureDefinition/Observation-AxialLength`;
+  `${ODOS_FHIR_BASE}/StructureDefinition/Observation-AxialLength`;
 export const MYOPIA_CONTROL_INTERVENTION_CODE_SYSTEM =
-  `${OSOD_FHIR_BASE}/CodeSystem/myopia-control-intervention`;
+  `${ODOS_FHIR_BASE}/CodeSystem/myopia-control-intervention`;
 export const ATROPINE_CONCENTRATION_UCUM_CODE_SYSTEM =
-  `${OSOD_FHIR_BASE}/CodeSystem/atropine-concentration-ucum`;
+  `${ODOS_FHIR_BASE}/CodeSystem/atropine-concentration-ucum`;
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 export const LOINC_CODE_SYSTEM = "http://loinc.org";
 export const AXIAL_LENGTH_LOINC_BY_EYE = {
@@ -188,7 +188,7 @@ export function buildMyopiaAxialLengthObservation(input: {
 }): Observation {
   return {
     resourceType: "Observation",
-    status: "final",
+    status: "preliminary",
     meta: { profile: [OBSERVATION_AXIAL_LENGTH_PROFILE_URL] },
     code: axialLengthConcept(input.eye),
     valueQuantity: { value: input.valueMm, unit: "mm", system: UCUM_CODE_SYSTEM, code: "mm" },
@@ -209,7 +209,7 @@ export function buildMyopiaAxialLengthObservation(input: {
     bodySite: lateralityConcept(input.eye),
     extension: [
       {
-        url: `${OSOD_FHIR_BASE}/StructureDefinition/eye-laterality`,
+        url: `${ODOS_FHIR_BASE}/StructureDefinition/eye-laterality`,
         valueCodeableConcept: lateralityConcept(input.eye),
       },
     ],
@@ -218,14 +218,14 @@ export function buildMyopiaAxialLengthObservation(input: {
 }
 
 export function axialLengthConcept(eye: EyeLaterality): CodeableConcept {
-  const osod = osodConcept("AXIAL_LENGTH", "Axial length");
+  const odos = odosConcept("AXIAL_LENGTH", "Axial length");
   const loinc = eye === "OD" || eye === "OS" ? AXIAL_LENGTH_LOINC_BY_EYE[eye] : undefined;
   return {
     coding: [
       ...(loinc ? [{ system: LOINC_CODE_SYSTEM, code: loinc.code, display: loinc.display }] : []),
-      ...(osod.coding ?? []),
+      ...(odos.coding ?? []),
     ],
-    text: osod.text,
+    text: odos.text,
   };
 }
 
@@ -322,10 +322,10 @@ function myopiaManagementCategory(): CodeableConcept {
   return { text: "Myopia management" };
 }
 
-function osodConcept(code: string, display: string): CodeableConcept {
+function odosConcept(code: string, display: string): CodeableConcept {
   return {
     coding: [
-      { system: `${OSOD_FHIR_BASE}/CodeSystem/ophthalmology`, code, display },
+      { system: `${ODOS_FHIR_BASE}/CodeSystem/ophthalmology`, code, display },
       { system: "http://snomed.info/sct", code: "363787002", display: "Observable entity" },
     ],
     text: display,
@@ -335,7 +335,7 @@ function osodConcept(code: string, display: string): CodeableConcept {
 function lateralityConcept(value: EyeLaterality): CodeableConcept {
   const display = value === "OD" ? "Right eye" : value === "OS" ? "Left eye" : "Both eyes";
   return {
-    coding: [{ system: `${OSOD_FHIR_BASE}/CodeSystem/ophthalmology`, code: value, display }],
+    coding: [{ system: `${ODOS_FHIR_BASE}/CodeSystem/ophthalmology`, code: value, display }],
     text: display,
   };
 }

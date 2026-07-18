@@ -1,5 +1,5 @@
 /**
- * Browser-side FHIR client. Mirrors osod/src/fhir-client.ts (node-side) but uses
+ * Browser-side FHIR client. Mirrors odos/src/fhir-client.ts (node-side) but uses
  * Web Crypto API for PKCE. Zero Medplum SDK coupling — swappable backend.
  */
 
@@ -7,15 +7,30 @@ import type { Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
 
 const BASE = "/fhir/R4"; // Vite dev proxy -> http://localhost:8103
 const AUTH = "";
+export const SESSION_STORAGE_KEY = "odos.session.v1";
 
 let token: string | undefined;
+let sessionStorageBackend: Storage | undefined;
+const sessionClearedListeners = new Set<() => void>();
+
+interface PersistedSession {
+  accessToken: string;
+  expiresAt: number;
+  refreshToken?: string;
+}
+
+interface TokenResponse {
+  access_token: string;
+  expires_in: number;
+  refresh_token?: string;
+}
 
 export type JsonPatchOperation =
   | { op: "add" | "replace" | "test"; path: string; value: unknown }
   | { op: "remove"; path: string }
   | { op: "move" | "copy"; from: string; path: string };
 
-type TransactionResponse<T> = Bundle & { readonly __osodResponseType?: T };
+type TransactionResponse<T> = Bundle & { readonly __odosResponseType?: T };
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
@@ -29,7 +44,7 @@ async function pkce(): Promise<{ verifier: string; challenge: string }> {
   return { verifier, challenge };
 }
 
-async function toError(res: Response): Promise<Error> {
+export async function toError(res: Response): Promise<Error> {
   const body = await res.text();
   let detail = body;
   try {
@@ -53,13 +68,86 @@ function headers(): HeadersInit {
 function sourceHeaders(sourceTag: string): HeadersInit {
   return {
     ...headers(),
-    "X-OSOD-Source": `ui/${sourceTag}`,
+    "X-ODOS-Source": `ui/${sourceTag}`,
   };
 }
 
+function browserSessionStorage(): Storage | undefined {
+  return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
+}
+
+function persistSession(session: PersistedSession, storage = browserSessionStorage()): void {
+  storage?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+}
+
+function readPersistedSession(storage = browserSessionStorage()): PersistedSession | undefined {
+  const value = storage?.getItem(SESSION_STORAGE_KEY);
+  if (!value) return undefined;
+  try {
+    const session = JSON.parse(value) as Partial<PersistedSession>;
+    if (typeof session.accessToken !== "string"
+      || typeof session.expiresAt !== "number"
+      || !Number.isFinite(session.expiresAt)
+      || session.expiresAt <= Date.now()
+      || (session.refreshToken !== undefined && typeof session.refreshToken !== "string")) {
+      storage?.removeItem(SESSION_STORAGE_KEY);
+      return undefined;
+    }
+    return session as PersistedSession;
+  } catch {
+    storage?.removeItem(SESSION_STORAGE_KEY);
+    return undefined;
+  }
+}
+
 export const fhir = {
+  rehydrateSession(storage = browserSessionStorage()): boolean {
+    sessionStorageBackend = storage;
+    const session = readPersistedSession(storage);
+    token = session?.accessToken;
+    return token !== undefined;
+  },
+
+  isAuthenticated(): boolean {
+    return token !== undefined;
+  },
+
+  logout(storage = sessionStorageBackend ?? browserSessionStorage()): void {
+    const hadSession = token !== undefined || storage?.getItem(SESSION_STORAGE_KEY) != null;
+    token = undefined;
+    storage?.removeItem(SESSION_STORAGE_KEY);
+    sessionStorageBackend = undefined;
+    if (hadSession) {
+      for (const listener of sessionClearedListeners) listener();
+    }
+  },
+
+  onSessionCleared(listener: () => void): () => void {
+    sessionClearedListeners.add(listener);
+    return () => sessionClearedListeners.delete(listener);
+  },
+
+  interceptUnauthorizedResponses(host: { fetch: typeof fetch }): () => void {
+    const originalFetch = host.fetch;
+    const interceptedFetch: typeof fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 401 && token) fhir.logout();
+      return response;
+    };
+    host.fetch = interceptedFetch;
+    return () => {
+      if (host.fetch === interceptedFetch) host.fetch = originalFetch;
+    };
+  },
+
   authHeader(): string | undefined {
     return token ? `Bearer ${token}` : undefined;
+  },
+
+  practitionerId(): string | undefined {
+    const profile = tokenClaims(token)?.profile;
+    if (typeof profile !== "string" || !profile.startsWith("Practitioner/")) return undefined;
+    return profile.slice("Practitioner/".length) || undefined;
   },
 
   async login(email: string, password: string): Promise<void> {
@@ -87,8 +175,17 @@ export const fhir = {
       }),
     });
     if (!tokenRes.ok) throw await toError(tokenRes);
-    const { access_token } = (await tokenRes.json()) as { access_token: string };
+    const { access_token, expires_in, refresh_token } = (await tokenRes.json()) as TokenResponse;
     token = access_token;
+    sessionStorageBackend = browserSessionStorage();
+    const expiresAt = Date.now() + expires_in * 1_000;
+    if (Number.isFinite(expiresAt) && expiresAt > Date.now()) {
+      persistSession({
+        accessToken: access_token,
+        expiresAt,
+        ...(refresh_token ? { refreshToken: refresh_token } : {}),
+      }, sessionStorageBackend);
+    }
   },
 
   async search<T extends Resource>(
@@ -180,15 +277,28 @@ export const fhir = {
   },
 };
 
+function tokenClaims(accessToken: string | undefined): Record<string, unknown> | undefined {
+  const payload = accessToken?.split(".")[1];
+  if (!payload) return undefined;
+  try {
+    const normalized = payload.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const bytes = Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
 function normalizeFhirSearchUrl(url: string): string {
-  const parsed = new URL(url, "http://osod.local");
+  const parsed = new URL(url, "http://odos.local");
   if (parsed.pathname.startsWith(BASE)) {
     return `${parsed.pathname}${parsed.search}`;
   }
   return url;
 }
 
-function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
+export function formatOperationOutcome(outcome: OperationOutcome): string | undefined {
   return outcome.issue
     ?.map((issue) => {
       const expression = issue.expression?.length

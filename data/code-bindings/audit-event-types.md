@@ -1,13 +1,13 @@
 ---
-title: OSOD Audit Event Type ValueSet
+title: ODOS Audit Event Type ValueSet
 date: 2026-04-29
 status: verified
 ledger: data/code-bindings/v0.5-verification-ledger.md
 ---
 
-# OSOD Audit Event Type ValueSet
+# ODOS Audit Event Type ValueSet
 
-The DB table `osod_audit_events` is the source of truth for the local HIPAA
+The DB table `odos_audit_events` is the source of truth for the local HIPAA
 security log. FHIR `AuditEvent` resources are projections for interoperability.
 
 ## Event Types
@@ -68,6 +68,19 @@ security log. FHIR `AuditEvent` resources are projections for interoperability.
 | `payment.charge.attempted` | payment-event | Payment charge initiated through a processor adapter. Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.charge.completed` | payment-event | Payment charge completed; the payment record is a PaymentReconciliation (processor) or the tendered Invoice (manual). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.charge.failed` | payment-event | Payment charge declined or failed; audited against the Invoice it attempted to settle — no PaymentReconciliation is created. Ledger: payment-reconciliation-seam-ledger.md. |
+| `claim.submit.completed` | claim-event | Claim.MD professional claim submission completed; audited against the created Claim. Ledger: claimmd-clearinghouse-ledger.md. |
+| `claim.submit.failed` | claim-event | Claim.MD professional claim submission failed; audited against the Claim when one was created. Ledger: claimmd-clearinghouse-ledger.md. |
+| `eligibility.check.completed` | claim-event | Claim.MD 270/271 eligibility check completed; audited against the CoverageEligibilityResponse. Ledger: claimmd-clearinghouse-ledger.md. |
+| `eligibility.check.failed` | claim-event | Claim.MD eligibility check failed; audited against the CoverageEligibilityRequest when one was created. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.import.completed` | claim-event | Claim.MD ERA import completed; audited against the created PaymentReconciliation when payment posted. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.import.failed` | claim-event | Claim.MD ERA import failed; audited against the ERA id. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.denial.flagged` | claim-event | A matched zero-pay ERA claim created a claimable denial Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.line-linkage.flagged` | claim-event | A matched ERA claim created a dedicated review Task because its service-line identity could not be verified. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.underpayment.flagged` | claim-event | A paid ERA claim with a true allowed-minus-paid-minus-patient-responsibility shortfall created an underpayment Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `era.unmatched.flagged` | claim-event | An ERA claim without a local PCN mapping created a recoverable unmatched Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `claim.rejected.flagged` | claim-event | A pre-remittance Claim.MD rejection created a claimable correction Task. Ledger: claimmd-clearinghouse-ledger.md. |
+| `claim.status.checked` | claim-event | Claim.MD status polling completed or failed; audited against the ClaimResponse or Claim. Ledger: claimmd-clearinghouse-ledger.md. |
+| `claim.manual-eob.posted` | claim-event | Staff posted a manual payer EOB claim allocation; audited against the created ClaimResponse. Ledger: claimmd-clearinghouse-ledger.md. |
 | `payment.refund.attempted` | payment-event | Refund initiated (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.refund.completed` | payment-event | Refund completed (workflow deferred to v0.7 refund authorization). Ledger: payment-reconciliation-seam-ledger.md. |
 | `payment.void.attempted` | payment-event | Transaction void initiated (workflow deferred to v0.7). Ledger: payment-reconciliation-seam-ledger.md. |

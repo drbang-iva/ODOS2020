@@ -8,7 +8,7 @@ import {
   renderReceiptSheet,
 } from "../src/fhir/opticalFinancialSummary.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
 
 // Real Slice-3 builders as fixtures — the receipt reads what the kernel actually produces.
 const CHARGES = [
@@ -168,9 +168,10 @@ function processorPayment(amountCents: number, display?: string) {
     createdIso: "2026-07-05T14:30:00.000Z",
     paymentDate: "2026-07-05",
     amountCents,
+    subjectReference: "Patient/p1",
     invoiceReference: "Invoice/inv1",
     processorTransactionId: `txn-${amountCents}`,
-    processorTransactionSystem: "https://osod.dev/fhir/NamingSystem/stripe-transaction",
+    processorTransactionSystem: "https://odos2020.com/fhir/NamingSystem/stripe-transaction",
     surface: "online",
     tender: { code: "CARD", ...(display ? { display } : {}) },
   });
@@ -194,7 +195,7 @@ test("paymentReconciliationsToTenderLines falls back to the raw code for a pract
   const custom = {
     ...pr,
     extension: pr.extension?.map((ext) =>
-      ext.url === OSOD_PAYMENT_TENDER_EXTENSION_URL
+      ext.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
         ? { url: ext.url, valueCodeableConcept: { coding: [{ code: "GIFTCERT" }] } }
         : ext,
     ),
@@ -243,7 +244,7 @@ test("a partial processor payment (deposit) leaves the balance due", () => {
   assert.equal(summary.amountDueNowCents, 8500);
 });
 
-test("paymentReconciliationsToTenderLines rejects a PR without the osod-payment-tender extension", () => {
+test("paymentReconciliationsToTenderLines rejects a PR without the odos-payment-tender extension", () => {
   const pr = processorPayment(1000);
   const stripped = { ...pr, extension: pr.extension?.filter((e) => !e.url.includes("payment-tender")) };
   assert.throws(() => paymentReconciliationsToTenderLines([stripped]), /tender/i);

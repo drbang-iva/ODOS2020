@@ -36,7 +36,7 @@ export function validateSmartClientAppStructureDefinition(path: string): string[
     differential?: { element?: Array<{ id?: string; sliceName?: string; fixedBoolean?: boolean; fixedUri?: string }> };
   };
   if (resource.resourceType !== "StructureDefinition") issues.push("resourceType must be StructureDefinition");
-  if (resource.url !== "https://osod.dev/fhir/StructureDefinition/smart-client-app") issues.push("unexpected url");
+  if (resource.url !== "https://odos2020.com/fhir/StructureDefinition/smart-client-app") issues.push("unexpected url");
   if (resource.type !== "Extension") issues.push("type must be Extension");
   if (resource.baseDefinition !== "http://hl7.org/fhir/StructureDefinition/Extension") issues.push("baseDefinition must be the FHIR R4 Extension base");
   const contexts = new Set(resource.context?.map((context) => context.expression));
@@ -56,7 +56,7 @@ export function validateSmartClientAppStructureDefinition(path: string): string[
   const fixedUrl = resource.differential?.element?.some(
     (element) =>
       element.id === "Extension.url" &&
-      element.fixedUri === "https://osod.dev/fhir/StructureDefinition/smart-client-app",
+      element.fixedUri === "https://odos2020.com/fhir/StructureDefinition/smart-client-app",
   );
   if (!fixedUrl) issues.push("Extension.url fixedUri is required");
   return issues;

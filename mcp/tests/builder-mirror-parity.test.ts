@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { Observation } from "@medplum/fhirtypes";
 import { buildEyeBodyStructure as buildMcpEyeBodyStructure } from "../src/fhir/ophthalmology/bodyStructure.js";
 import { buildIopObservation as buildMcpIopObservation } from "../src/fhir/ophthalmology/iop.js";
 import { buildRefractionObservation as buildMcpRefractionObservation } from "../src/fhir/ophthalmology/refraction.js";
@@ -10,8 +11,8 @@ import { buildIopObservation as buildUiIopObservation } from "../../ui/src/lib/f
 import { buildRefractionObservation as buildUiRefractionObservation } from "../../ui/src/lib/fhir-ophthalmology/refraction.js";
 import { buildSectionSaveBundle as buildUiSectionSaveBundle } from "../../ui/src/lib/fhir-ophthalmology/save-section-bundle.js";
 import { buildVisualAcuityObservation as buildUiVisualAcuityObservation } from "../../ui/src/lib/fhir-ophthalmology/visualAcuity.js";
-import { osodConcept as mcpOsodConcept } from "../src/fhir/ophthalmology/extensions.js";
-import { osodConcept as uiOsodConcept } from "../../ui/src/lib/fhir-ophthalmology/extensions.js";
+import { odosConcept as mcpOdosConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { odosConcept as uiOdosConcept } from "../../ui/src/lib/fhir-ophthalmology/extensions.js";
 import { buildEpisodeOfCare as buildMcpEpisodeOfCare } from "../src/fhir/episodeOfCare.js";
 import { buildEpisodeOfCare as buildUiEpisodeOfCare } from "../../ui/src/lib/fhir-clinical/episodeOfCare.js";
 import {
@@ -48,6 +49,8 @@ import { buildDryEyeTreatmentProcedure as buildMcpDryEyeTreatmentProcedure } fro
 import { buildDryEyeTreatmentProcedure as buildUiDryEyeTreatmentProcedure } from "../../ui/src/lib/fhir-dry-eye/procedure.js";
 import { buildOphthalmicMedicationStatement as buildMcpOphthalmicMedicationStatement } from "../src/fhir/ophthalmicMedicationStatement.js";
 import { buildOphthalmicMedicationStatement as buildUiOphthalmicMedicationStatement } from "../../ui/src/lib/fhir-dry-eye/ophthalmicMedicationStatement.js";
+import { buildMedicationRequest as buildMcpMedicationRequest } from "../src/fhir/medicationOrder.js";
+import { buildMedicationRequest as buildUiMedicationRequest } from "../../ui/src/lib/fhir-medication-order.js";
 import { buildDryEyeAdverseEvent as buildMcpDryEyeAdverseEvent } from "../src/fhir/dryEyeAdverseEvent.js";
 import { buildDryEyeAdverseEvent as buildUiDryEyeAdverseEvent } from "../../ui/src/lib/fhir-dry-eye/adverseEvent.js";
 import {
@@ -62,10 +65,12 @@ import {
 } from "../../ui/src/lib/fhir-v04c/orthoK.js";
 import {
   buildAtropineMedicationStatement as buildMcpAtropineMedicationStatement,
+  buildMyopiaAxialLengthObservation as buildMcpMyopiaAxialLengthObservation,
   buildMyopiaManagementCarePlan as buildMcpMyopiaManagementCarePlan,
 } from "../src/fhir/myopiaManagement.js";
 import {
   buildAtropineMedicationStatement as buildUiAtropineMedicationStatement,
+  buildMyopiaAxialLengthObservation as buildUiMyopiaAxialLengthObservation,
   buildMyopiaManagementCarePlan as buildUiMyopiaManagementCarePlan,
 } from "../../ui/src/lib/fhir-v04c/myopiaManagement.js";
 import { buildOpticalInvoice as buildMcpOpticalInvoice } from "../src/fhir/opticalInvoice.js";
@@ -85,17 +90,37 @@ const common = {
   measuredAt: "2026-04-25T12:00:00.000Z",
 };
 
+test("UI medication-order mirror matches the canonical MCP builder output", () => {
+  const input = {
+    patientReference: "Patient/p1",
+    practitionerReference: "Practitioner/dr1",
+    encounterReference: "Encounter/e1",
+    medicationText: "Prednisolone acetate 1%",
+    dosageText: "1 drop OU four times daily",
+    quantity: "5 mL",
+    refills: 1,
+    daysSupply: 30,
+    routeText: "Ophthalmic",
+    reasonReference: "Condition/c1",
+    pharmacyText: "Main Street Pharmacy · 555-0100",
+    transmissionMethod: "printed" as const,
+    authoredOn: "2026-07-11T14:00:00.000Z",
+  };
+
+  assertJsonEqual(buildMcpMedicationRequest(input), buildUiMedicationRequest(input));
+});
+
 test("UI ophthalmology mirror matches MCP IOP builder output", () => {
   assertJsonEqual(
     buildMcpIopObservation({
       ...common,
       value: 14,
-      method: mcpOsodConcept("GAT", "GAT"),
+      method: mcpOdosConcept("GAT", "GAT"),
     }),
     buildUiIopObservation({
       ...common,
       value: 14,
-      method: uiOsodConcept("GAT", "GAT"),
+      method: uiOdosConcept("GAT", "GAT"),
     }),
   );
 });
@@ -145,24 +170,48 @@ test("UI ophthalmology mirror matches MCP BodyStructure builder output", () => {
   );
 });
 
-test("UI ophthalmology mirror matches MCP section-save composer output", () => {
-  const input = {
+test("UI ophthalmology mirror keeps every section-save Observation preliminary", () => {
+  const commonInput = {
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
-    section: "iop" as const,
-    operatorDisplay: "OSOD parity test",
+    operatorDisplay: "ODOS parity test",
     measuredAt: "2026-04-25T12:00:00.000Z",
     recordedAt: "2026-04-25T12:00:00.001Z",
-    entries: [
-      { laterality: "OD" as const, value: 14, method: "GAT" as const },
-      { laterality: "OS" as const, value: 15, method: "GAT" as const },
-    ],
   };
+  const inputs: Array<Parameters<typeof buildMcpSectionSaveBundle>[0]> = [
+    {
+      ...commonInput,
+      section: "va",
+      entries: [{ laterality: "OD", snellen: "20/20", chartType: "SNELLEN", correction: "SC" }],
+    },
+    {
+      ...commonInput,
+      section: "iop",
+      entries: [{ laterality: "OD", value: 14, method: "GAT" }],
+    },
+    {
+      ...commonInput,
+      section: "refraction",
+      entries: [{ laterality: "OD", refractionType: "MANIFEST", sphere: -1.25 }],
+    },
+  ];
 
-  assertJsonEqual(
-    buildMcpSectionSaveBundle(input),
-    buildUiSectionSaveBundle(input),
-  );
+  for (const input of inputs) {
+    const mcpBundle = buildMcpSectionSaveBundle(input);
+    const uiBundle = buildUiSectionSaveBundle(input);
+    assertJsonEqual(mcpBundle, uiBundle);
+    for (const bundle of [mcpBundle, uiBundle]) {
+      const observations = bundle.entry
+        ?.map((entry) => entry.resource)
+        .filter((resource): resource is Observation => resource?.resourceType === "Observation") ?? [];
+      assert.equal(observations.length, input.entries.length);
+      assert.equal(
+        observations.every((observation) => observation.status === "preliminary"),
+        true,
+        `${input.section} Observation status`,
+      );
+    }
+  }
 });
 
 test("UI clinical mirror matches MCP EpisodeOfCare builder output", () => {
@@ -423,6 +472,16 @@ test("UI v0.4c myopia mirror matches MCP CarePlan and atropine builders", () => 
     buildMcpAtropineMedicationStatement(atropineInput),
     buildUiAtropineMedicationStatement(atropineInput),
   );
+
+  const axialLengthInput = {
+    patientReference: "Patient/p1",
+    encounterReference: "Encounter/e1",
+    eye: "OD" as const,
+    measuredAt: "2026-04-28T12:00:00.000Z",
+    valueMm: 24.1,
+  };
+  assert.equal(buildMcpMyopiaAxialLengthObservation(axialLengthInput).status, "preliminary");
+  assert.equal(buildUiMyopiaAxialLengthObservation(axialLengthInput).status, "preliminary");
 });
 
 test("UI optical Invoice mirror matches MCP for tendered and untendered orders", () => {

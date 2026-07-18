@@ -15,7 +15,7 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
       registration_endpoint: string;
       token_endpoint_auth_methods_supported: string[];
       token_endpoint_auth_signing_alg_values_supported: string[];
-      osod_extensions: {
+      odos_extensions: {
         agentops_endpoint: string;
         agentops_capabilities: string[];
         bulk_data: {
@@ -37,20 +37,20 @@ test("v0.55a SMART discovery is dynamic and reflects local state mutations", asy
     assert.equal(firstJson.registration_endpoint, `${server.origin}/oauth2/register`);
     assert.equal(firstJson.token_endpoint_auth_methods_supported.includes("private_key_jwt"), true);
     assert.equal(firstJson.token_endpoint_auth_signing_alg_values_supported.some((alg) => alg === "RS384" || alg === "ES384"), true);
-    assert.equal(firstJson.osod_extensions.agentops_endpoint, `${server.origin}/agentops`);
-    assert.deepEqual(firstJson.osod_extensions.agentops_capabilities, [
+    assert.equal(firstJson.odos_extensions.agentops_endpoint, `${server.origin}/agentops`);
+    assert.deepEqual(firstJson.odos_extensions.agentops_capabilities, [
       "agent_registration",
       "threshold_matrix_query",
       "safety_valve_inspection",
       "audit_record_query",
     ]);
-    assert.deepEqual(firstJson.osod_extensions.bulk_data.export_endpoints, {
+    assert.deepEqual(firstJson.odos_extensions.bulk_data.export_endpoints, {
       group_export: "Group/{id}/$export",
       patient_export: "Patient/$export",
       system_export: "$export",
     });
-    assert.equal(firstJson.osod_extensions.bulk_data.requires_access_token_default, true);
-    assert.equal(firstJson.osod_extensions.bulk_data.supported_type_filter, false);
+    assert.equal(firstJson.odos_extensions.bulk_data.requires_access_token_default, true);
+    assert.equal(firstJson.odos_extensions.bulk_data.supported_type_filter, false);
     const firstEtag = first.headers.get("etag");
 
     server.state.clients.set("symmetric-client", symmetricClient(server.origin));
@@ -83,7 +83,7 @@ test("v0.55a SMART public authorization-code flow enforces PKCE S256 and returns
         intent: "launch",
         need_patient_banner: "true",
       },
-      { "X-OSOD-Role": "clinician", "X-OSOD-Actor-Id": "practitioner-1" },
+      { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
     );
     assert.equal(authorize.status, 302);
     const location = authorize.headers.get("location");
@@ -125,7 +125,7 @@ test("v0.55a SMART introspection is confidential-client protected", async () => 
         code_challenge_method: "S256",
         patient: "Patient/patient-1",
       },
-      { "X-OSOD-Role": "clinician", "X-OSOD-Actor-Id": "practitioner-1" },
+      { "X-ODOS-Role": "clinician", "X-ODOS-Actor-Id": "practitioner-1" },
     );
     const code = new URL(authorize.headers.get("location")!).searchParams.get("code")!;
     const token = await server.token({

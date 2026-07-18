@@ -47,7 +47,7 @@ export function buildSmokingStatusObservation(
   return {
     resourceType: "Observation",
     meta: { profile: [US_CORE_SMOKING_STATUS_PROFILE] },
-    status: "final",
+    status: "preliminary",
     category: [
       {
         coding: [

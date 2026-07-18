@@ -1,6 +1,6 @@
 # Observation Attestation UI State ValueSet
 
-URL: `https://osod.dev/fhir/ValueSet/observation-attestation-ui-state`
+URL: `https://odos2020.com/fhir/ValueSet/observation-attestation-ui-state`
 
 | Code | Display | Meaning |
 |---|---|---|

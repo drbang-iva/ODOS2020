@@ -6,8 +6,11 @@ import {
   createCloverAdapter,
 } from "../src/payments/adapters/clover-adapter.js";
 import type { ChargeRequest } from "../src/payments/payment-processor-adapter.js";
-import { OSOD_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/osodPaymentTender.js";
-import { OSOD_PAYMENT_SURFACE_EXTENSION_URL } from "../src/payments/payment-reconciliation.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../src/fhir/odosPaymentTender.js";
+import {
+  ODOS_PAYMENT_SUBJECT_EXTENSION_URL,
+  ODOS_PAYMENT_SURFACE_EXTENSION_URL,
+} from "../src/payments/payment-reconciliation.js";
 
 /**
  * Clover REST Pay Display (cloud) adapter tests. Endpoint shapes doc-verified 2026-07-05 against
@@ -45,7 +48,7 @@ const CONFIG = {
   baseUrl: "https://apisandbox.dev.clover.com",
   accessToken: "test-oauth-token-abc",
   deviceId: "C030UQ01234567",
-  posId: "OSOD-Dispensary",
+  posId: "ODOS-Dispensary",
 };
 
 function chargeRequest(overrides?: Partial<ChargeRequest>): ChargeRequest {
@@ -123,12 +126,12 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(req.method, "POST");
   assert.equal(req.headers["Authorization"], "Bearer test-oauth-token-abc");
   assert.equal(req.headers["X-Clover-Device-Id"], "C030UQ01234567");
-  assert.equal(req.headers["X-POS-Id"], "OSOD-Dispensary");
+  assert.equal(req.headers["X-POS-Id"], "ODOS-Dispensary");
   assert.equal(req.headers["Content-Type"], "application/json");
   assert.ok(req.headers["Idempotency-Key"], "payment requests require an Idempotency-Key");
   assert.equal(req.body.amount, 24400);
   assert.equal(req.body.final, true);
-  assert.ok(String(req.body.externalPaymentId).startsWith("osod-"));
+  assert.ok(String(req.body.externalPaymentId).startsWith("odos-"));
 
   // the transaction result
   assert.equal(result.outcome, "success");
@@ -142,6 +145,8 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(pr.resourceType, "PaymentReconciliation");
   assert.equal(pr.outcome, "complete");
   assert.equal(pr.detail?.[0]?.request?.reference, "Invoice/inv1");
+  assert.equal(pr.extension?.find((extension) => extension.url === ODOS_PAYMENT_SUBJECT_EXTENSION_URL)
+    ?.valueReference?.reference, "Patient/p1");
   assert.equal(pr.request?.reference, "Task/task1");
   assert.equal(pr.requestor?.reference, "Practitioner/staff1");
   assert.equal(pr.paymentIdentifier?.system, CLOVER_TRANSACTION_SYSTEM);
@@ -149,12 +154,12 @@ test("a successful device charge posts to /connect/v1/payments and settles the I
   assert.equal(pr.created, "2026-07-05T16:00:00.000Z");
   assert.equal(pr.paymentDate, "2021-03-22"); // derived from the response createdTime epoch
 
-  const tender = pr.extension?.find((e) => e.url === OSOD_PAYMENT_TENDER_EXTENSION_URL)
+  const tender = pr.extension?.find((e) => e.url === ODOS_PAYMENT_TENDER_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.[0];
   assert.equal(tender?.code, "CLOVER");
   assert.equal(tender?.display, "VISA ****0010");
 
-  const surfaceExt = pr.extension?.find((e) => e.url === OSOD_PAYMENT_SURFACE_EXTENSION_URL);
+  const surfaceExt = pr.extension?.find((e) => e.url === ODOS_PAYMENT_SURFACE_EXTENSION_URL);
   assert.equal(surfaceExt?.extension?.find((e) => e.url === "surface")?.valueCode, "in-clinic-pos");
   assert.equal(
     surfaceExt?.extension?.find((e) => e.url === "terminal-id")?.valueString,
@@ -179,6 +184,21 @@ test("a declined device charge creates NO PaymentReconciliation (money that did 
   assert.equal(result.transactionId, "DECL123");
   assert.equal(result.paymentRecord, undefined);
   assert.equal(fhir.created.length, 0);
+});
+
+test("a successful pre-payment omits the Invoice and creates an empty allocation list", async () => {
+  const { fetchImpl } = fakeTransport(200, CLOVER_SUCCESS_RESPONSE);
+  const fhir = fakeFhir();
+  const adapter = createCloverAdapter(CONFIG, fhir, {
+    fetchImpl,
+    now: () => "2026-07-10T14:00:00.000Z",
+  });
+
+  await adapter.charge(chargeRequest({ invoiceReference: undefined, amountCents: 7500 }));
+
+  assert.deepEqual(fhir.created[0].detail, []);
+  assert.equal(fhir.created[0].extension?.find((extension) =>
+    extension.url === ODOS_PAYMENT_SUBJECT_EXTENSION_URL)?.valueReference?.reference, "Patient/p1");
 });
 
 test("a transport/auth failure maps to outcome failed with the HTTP status, and no record is written", async () => {
@@ -214,13 +234,34 @@ test("two charges use distinct idempotency keys and external payment ids", async
   assert.notEqual(captured[0].body.externalPaymentId, captured[1].body.externalPaymentId);
 });
 
-test("refund / void / settle / status are explicit v0.7 deferrals (scope fence)", async () => {
-  const adapter = createCloverAdapter(CONFIG, fakeFhir());
+test("same-day void calls Clover while refund / settle / status remain v0.7 deferrals", async () => {
+  const { captured, fetchImpl } = fakeTransport(200, {
+    paymentId: "75MYGBEV8EM3Y",
+    voidReason: "USER_CANCEL",
+    voidStatus: "SENT_TO_SERVER",
+  });
+  const adapter = createCloverAdapter(CONFIG, fakeFhir(), { fetchImpl, generateId: () => "void-id" });
   await assert.rejects(
     () => adapter.refund({ transactionId: "t", amountCents: 1, reason: "r", staffReference: "s" }),
     /v0\.7/,
   );
-  await assert.rejects(() => adapter.void({ transactionId: "t", staffReference: "s" }), /v0\.7/);
+  assert.deepEqual(
+    await adapter.void({ transactionId: "75MYGBEV8EM3Y", staffReference: "s" }),
+    { outcome: "success" },
+  );
+  assert.equal(captured[0].url, "https://apisandbox.dev.clover.com/connect/v1/payments/75MYGBEV8EM3Y/void");
+  assert.equal(captured[0].method, "POST");
+  assert.equal(captured[0].body.voidReason, "USER_CANCEL");
+  assert.equal(captured[0].headers["Idempotency-Key"], "void-id");
   await assert.rejects(() => adapter.settle({ settlementDate: "2026-07-05" }), /v0\.7/);
   await assert.rejects(() => adapter.status("t"), /v0\.7/);
+});
+
+test("Clover's HTTP 209 operation-canceled response does not cancel the local ledger", async () => {
+  const { fetchImpl } = fakeTransport(209, { message: "Operation was canceled" });
+  const adapter = createCloverAdapter(CONFIG, fakeFhir(), { fetchImpl });
+  assert.deepEqual(
+    await adapter.void({ transactionId: "75MYGBEV8EM3Y", staffReference: "s" }),
+    { outcome: "failed" },
+  );
 });

@@ -1,9 +1,9 @@
 {
   "resourceType": "StructureDefinition",
   "id": "agentops-blocked-payload",
-  "url": "https://osod.dev/fhir/StructureDefinition/agentops-blocked-payload",
+  "url": "https://odos2020.com/fhir/StructureDefinition/agentops-blocked-payload",
   "version": "0.55d",
-  "name": "OSODAgentOpsBlockedPayload",
+  "name": "ODOSAgentOpsBlockedPayload",
   "status": "active",
   "kind": "complex-type",
   "abstract": false,
@@ -27,7 +27,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/agentops-blocked-payload"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/agentops-blocked-payload"
       }
     ]
   }

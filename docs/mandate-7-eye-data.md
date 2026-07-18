@@ -1,9 +1,9 @@
 # Mandate 7 Eye Data Reference
 
 The authoritative mandate lives in `performance-od/reference/domain/open-source-od/mandates.md`.
-This in-repo note is only a pointer for OSOD code work.
+This in-repo note is only a pointer for ODOS code work.
 
-Relevant implementation rules for OSOD:
+Relevant implementation rules for ODOS:
 
 - Raw ophthalmic assets must be preserved.
 - Device metadata must be stored when available.

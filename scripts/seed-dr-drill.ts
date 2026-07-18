@@ -11,25 +11,25 @@ import type {
   Patient,
   Provenance,
 } from "@medplum/fhirtypes";
-import { createLiveOsodAuditRuntime } from "../mcp/src/authz/liveAudit.js";
+import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import {
-  buildOsodAuditEventRow,
-  type OsodAuditEventType,
-} from "../mcp/src/authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosAuditEventType,
+} from "../mcp/src/authz/odosAudit.js";
 import { buildMedplumAccessPolicy, getRoleDeclaration, PRACTICE_ROLE_IDS } from "../mcp/src/authz/roles.js";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
 import { parserBinaryHeaders, prepareBinaryForParserCreate } from "../mcp/src/parsers/binarySecurityContext.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:18103";
-const email = process.env.MEDPLUM_ADMIN_EMAIL ?? "drill-admin@osod.local";
-const password = process.env.MEDPLUM_ADMIN_PASSWORD ?? "Osod-dr-drill-Password-1!";
+const email = process.env.MEDPLUM_ADMIN_EMAIL ?? "drill-admin@odos.local";
+const password = process.env.MEDPLUM_ADMIN_PASSWORD ?? "Odos-dr-drill-Password-1!";
 const postgresUrl =
-  process.env.OSOD_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:15432/medplum";
+  process.env.ODOS_POSTGRES_URL ?? "postgresql://medplum:medplum@127.0.0.1:15432/medplum";
 
 await waitForMedplum(baseUrl);
 const accessToken = await ensureAdminAccessToken({ baseUrl, email, password });
 const fhir = createMedplumClient({ baseUrl, accessToken });
-const audit = createLiveOsodAuditRuntime({
+const audit = createLiveOdosAuditRuntime({
   postgresUrl,
   medplumBaseUrl: baseUrl,
   medplumEmail: email,
@@ -67,7 +67,7 @@ for (const [index, observation] of observations.entries()) {
       resourceType: "Provenance",
       target: [{ reference: `Observation/${observation.id}` }],
       recorded: new Date(Date.now() - index * 60_000).toISOString(),
-      agent: [{ who: { display: "OSOD DR drill seed" } }],
+      agent: [{ who: { display: "ODOS DR drill seed" } }],
       signature: [
         {
           type: [
@@ -110,7 +110,7 @@ let memberships = 0;
 for (const roleId of PRACTICE_ROLE_IDS) {
   const policy = await fhir.create<AccessPolicy>({
     ...buildMedplumAccessPolicy(getRoleDeclaration(roleId)),
-    name: `OSOD DR drill ${roleId} ${Date.now()}`,
+    name: `ODOS DR drill ${roleId} ${Date.now()}`,
   });
   if (!policy.id) {
     throw new Error(`AccessPolicy create for ${roleId} returned no id.`);
@@ -126,7 +126,7 @@ for (const roleId of PRACTICE_ROLE_IDS) {
 }
 
 const eventCounts = new Map<string, number>();
-const seedTypes: OsodAuditEventType[] = [
+const seedTypes: OdosAuditEventType[] = [
   "read",
   "search",
   "create",
@@ -143,7 +143,7 @@ const seedTypes: OsodAuditEventType[] = [
 for (let index = 0; index < 60; index += 1) {
   const eventType = seedTypes[index % seedTypes.length] ?? "read";
   const denied = eventType === "denied";
-  const row = buildOsodAuditEventRow({
+  const row = buildOdosAuditEventRow({
     eventType,
     actorId: `drill-actor-${index % 5}`,
     actorRole: PRACTICE_ROLE_IDS[index % PRACTICE_ROLE_IDS.length],
@@ -156,7 +156,7 @@ for (let index = 0; index < 60; index += 1) {
       : eventType === "break-glass-invoked"
         ? "Emergency on-call care."
         : `dr-drill-${eventType}`,
-    policyUrl: `AccessPolicy/osod-${PRACTICE_ROLE_IDS[index % PRACTICE_ROLE_IDS.length]}`,
+    policyUrl: `AccessPolicy/odos-${PRACTICE_ROLE_IDS[index % PRACTICE_ROLE_IDS.length]}`,
     breakGlass: eventType === "break-glass-invoked",
     breakGlassReason: eventType === "break-glass-invoked" ? "Emergency on-call care." : undefined,
   });
@@ -224,7 +224,7 @@ async function registerAdmin(input: { baseUrl: string; email: string; password: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       projectId: "new",
-      firstName: "OSOD",
+      firstName: "ODOS",
       lastName: "DR Drill",
       email: input.email,
       password: input.password,
@@ -249,7 +249,7 @@ async function registerAdmin(input: { baseUrl: string; email: string; password: 
   const projectResponse = await fetch(`${base}/auth/newproject`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login: newUser.login, projectName: "OSOD DR Drill" }),
+    body: JSON.stringify({ login: newUser.login, projectName: "ODOS DR Drill" }),
   });
   if (!projectResponse.ok) {
     throw new Error(
@@ -352,7 +352,7 @@ async function createClientMembership(input: {
       },
       body: JSON.stringify({
         name: input.name,
-        description: "OSOD v0.5b isolated DR drill membership seed",
+        description: "ODOS v0.5b isolated DR drill membership seed",
         accessPolicy: { reference: input.policyReference },
       }),
     },
@@ -363,7 +363,7 @@ async function createClientMembership(input: {
 }
 
 function seedBinaryVolumeFiles(patientId: string): void {
-  const dir = mkdtempSync(join(tmpdir(), "osod-dr-drill-binary-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-dr-drill-binary-"));
   for (let index = 0; index < 4; index += 1) {
     writeFileSync(
       join(dir, `parser-accepted-${patientId}-${index + 1}.txt`),
@@ -375,8 +375,8 @@ function seedBinaryVolumeFiles(patientId: string): void {
 
 function compose(...args: string[]): void {
   const composeArgs = [
-    ...(process.env.OSOD_COMPOSE_PROJECT ? ["-p", process.env.OSOD_COMPOSE_PROJECT] : ["-p", "osod-dr-drill"]),
-    ...(process.env.OSOD_COMPOSE_FILE ? ["-f", process.env.OSOD_COMPOSE_FILE] : ["-f", "docker-compose.dr-drill.yml"]),
+    ...(process.env.ODOS_COMPOSE_PROJECT ? ["-p", process.env.ODOS_COMPOSE_PROJECT] : ["-p", "odos-dr-drill"]),
+    ...(process.env.ODOS_COMPOSE_FILE ? ["-f", process.env.ODOS_COMPOSE_FILE] : ["-f", "docker-compose.dr-drill.yml"]),
     ...args,
   ];
   const command = hasCommand("docker-compose") ? "docker-compose" : "docker";

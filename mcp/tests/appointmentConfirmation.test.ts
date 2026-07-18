@@ -3,8 +3,8 @@ import { test } from "node:test";
 import type { Appointment } from "@medplum/fhirtypes";
 import {
   APPOINTMENT_CONFIRMATION_STATUSES,
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-  OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_APPOINTMENT_CONFIRMATION_SYSTEM,
   appointmentConfirmationExtension,
   assertConfirmationStatus,
   confirmationStatusOf,
@@ -21,11 +21,11 @@ test("the confirmation vocabulary is the Eyefinity four, verbatim (brief §2.5)"
   );
 });
 
-test("appointmentConfirmationExtension builds the osod extension with a coded value", () => {
+test("appointmentConfirmationExtension builds the odos extension with a coded value", () => {
   const ext = appointmentConfirmationExtension("left-message");
-  assert.equal(ext.url, OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL);
+  assert.equal(ext.url, ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL);
   const coding = ext.valueCodeableConcept?.coding?.[0];
-  assert.equal(coding?.system, OSOD_APPOINTMENT_CONFIRMATION_SYSTEM);
+  assert.equal(coding?.system, ODOS_APPOINTMENT_CONFIRMATION_SYSTEM);
   assert.equal(coding?.code, "left-message");
   assert.equal(coding?.display, "Left Message");
 });

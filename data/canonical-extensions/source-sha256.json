@@ -1,9 +1,9 @@
 {
   "resourceType": "StructureDefinition",
   "id": "source-sha256",
-  "url": "https://osod.dev/fhir/StructureDefinition/source-sha256",
+  "url": "https://odos2020.com/fhir/StructureDefinition/source-sha256",
   "version": "0.55d",
-  "name": "OSODSourceSha256",
+  "name": "ODOSSourceSha256",
   "status": "active",
   "kind": "complex-type",
   "abstract": false,
@@ -27,7 +27,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/source-sha256"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/source-sha256"
       },
       {
         "id": "Extension.valueString",

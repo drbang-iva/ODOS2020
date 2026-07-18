@@ -1,9 +1,9 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/codeBindings.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/codeBindings.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { Coding } from "@medplum/fhirtypes";
 
 export const OPHTHALMOLOGY_CODE_BINDING_VERSION = "0.3.0";
-export const OSOD_OPHTHALMOLOGY_CODE_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/ophthalmology";
+export const ODOS_OPHTHALMOLOGY_CODE_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/ophthalmology";
 export const SNOMED_CT_CODE_SYSTEM = "http://snomed.info/sct";
 
 export const OPHTHALMOLOGY_CONCEPT_IDS = [
@@ -31,7 +31,7 @@ export const OPHTHALMOLOGY_CONCEPT_IDS = [
 
 export type OphthalmologyConceptId = (typeof OPHTHALMOLOGY_CONCEPT_IDS)[number];
 
-export const OSOD_TO_SNOMED: Partial<
+export const ODOS_TO_SNOMED: Partial<
   Record<OphthalmologyConceptId, { code: string; display: string }>
 > = {
   INTRAOCULAR_PRESSURE: {
@@ -63,18 +63,18 @@ export function isOphthalmologyConceptId(value: string): boolean {
 }
 
 export function dualCoding(
-  osodCode: string,
+  odosCode: string,
   display?: string,
   snomedOverride?: { code: string; display: string },
 ): Coding[] {
   const coding: Coding[] = [
     {
-      system: OSOD_OPHTHALMOLOGY_CODE_SYSTEM,
-      code: osodCode,
-      display: display ?? osodCode,
+      system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      code: odosCode,
+      display: display ?? odosCode,
     },
   ];
-  const snomed = snomedOverride ?? OSOD_TO_SNOMED[osodCode as OphthalmologyConceptId];
+  const snomed = snomedOverride ?? ODOS_TO_SNOMED[odosCode as OphthalmologyConceptId];
 
   if (snomed) {
     coding.push({

@@ -9,7 +9,7 @@ import {
 import { addAiastSecurity, assertNoPractitionerAiastContradiction, AIAST_CODING } from "../../mcp/src/agentops/types.js";
 
 const baseRegistration = {
-  agentUri: "https://osod.dev/agents/iris",
+  agentUri: "https://odos2020.com/agents/iris",
   agentLogicalName: "Iris",
   agentRole: "strategic",
   agentRiskClass: "HIGH" as const,
@@ -19,7 +19,7 @@ const baseRegistration = {
   adminReviewStatus: "approved" as const,
   adminBaaConfirmation: true,
   model: {
-    modelUri: "https://osod.dev/models/claude-opus-4-7",
+    modelUri: "https://odos2020.com/models/claude-opus-4-7",
     vendorName: "Anthropic",
     modelName: "claude-opus-4-7",
     modelVersion: "4.7",
@@ -33,8 +33,8 @@ test("v0.55d AgentOps registry builds agent Device linked to model Device", () =
   const model = buildModelDevice(baseRegistration.model);
   assert.equal(agent.resourceType, "Device");
   assert.equal(agent.parent?.reference, `Device/${model.id}`);
-  assert.equal(agent.extension?.[0]?.url, "https://osod.dev/fhir/StructureDefinition/agent-identity");
-  assert.equal(model.extension?.[0]?.url, "https://osod.dev/fhir/StructureDefinition/model-identity");
+  assert.equal(agent.extension?.[0]?.url, "https://odos2020.com/fhir/StructureDefinition/agent-identity");
+  assert.equal(model.extension?.[0]?.url, "https://odos2020.com/fhir/StructureDefinition/model-identity");
   assert.equal("installDate" in (model.version?.[0] ?? {}), false);
   assert.equal(hasPredictiveDsiSourceAttributes(agent), true);
 });
@@ -54,8 +54,8 @@ test("v0.55d AgentOps registration requires staged admin approval", () => {
   const registry = new InMemoryAgentOpsDeviceRegistry();
   const pending = registry.register({ ...baseRegistration, adminReviewStatus: "pending" });
   assert.equal(pending.status, "pending-review");
-  assert.equal(registry.getDevice("https://osod.dev/agents/iris"), undefined);
+  assert.equal(registry.getDevice("https://odos2020.com/agents/iris"), undefined);
   const registered = registry.register(baseRegistration);
   assert.equal(registered.status, "registered");
-  assert.ok(registry.getDevice("https://osod.dev/agents/iris"));
+  assert.ok(registry.getDevice("https://odos2020.com/agents/iris"));
 });

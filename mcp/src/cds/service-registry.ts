@@ -12,7 +12,7 @@ import {
   type CdsPhiBoundary,
   type CdsRiskClass,
 } from "./types.js";
-import type { OsodActorRole } from "../authz/osodAudit.js";
+import type { OdosActorRole } from "../authz/odosAudit.js";
 
 export interface CdsServiceRegistrationInput {
   readonly service_id?: string;
@@ -243,7 +243,7 @@ export function buildCdsServiceProvenance(input: {
   readonly activityCode: "register" | "nullify" | "amend";
   readonly recorded: string;
   readonly actorId: string;
-  readonly actorRole: OsodActorRole;
+  readonly actorRole: OdosActorRole;
 }): Provenance {
   return {
     resourceType: "Provenance",
@@ -263,7 +263,7 @@ export function buildCdsServiceProvenance(input: {
     agent: [
       {
         role: [{ text: input.actorRole }],
-        who: { reference: input.actorRole === "system" ? "Device/osod-instance" : `Practitioner/${input.actorId}` },
+        who: { reference: input.actorRole === "system" ? "Device/odos-instance" : `Practitioner/${input.actorId}` },
       },
     ],
   };
@@ -395,7 +395,7 @@ function positiveInteger(value: number, field: string): number {
 }
 
 function practiceJurisdiction(): string | undefined {
-  return process.env.OSOD_PRACTICE_JURISDICTION ?? process.env.OSOD_PRACTICE_STATE;
+  return process.env.ODOS_PRACTICE_JURISDICTION ?? process.env.ODOS_PRACTICE_STATE;
 }
 
 function normalizeJurisdiction(value: string | undefined): string | undefined {

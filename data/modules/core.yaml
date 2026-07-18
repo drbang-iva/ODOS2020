@@ -1,13 +1,13 @@
 module: core
 version: 0.4.0
 status: active
-description: OSOD core FHIR foundation and longitudinal chart infrastructure.
+description: ODOS core FHIR foundation and longitudinal chart infrastructure.
 profiles:
-  - https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam
-  - https://osod.dev/fhir/StructureDefinition/Observation-VA
-  - https://osod.dev/fhir/StructureDefinition/Observation-IOP
-  - https://osod.dev/fhir/StructureDefinition/Observation-Refraction
-  - https://osod.dev/fhir/StructureDefinition/Observation-AxialLength
+  - https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam
+  - https://odos2020.com/fhir/StructureDefinition/Observation-VA
+  - https://odos2020.com/fhir/StructureDefinition/Observation-IOP
+  - https://odos2020.com/fhir/StructureDefinition/Observation-Refraction
+  - https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength
 event_types:
   - clinical-resource-created
   - clinical-resource-updated

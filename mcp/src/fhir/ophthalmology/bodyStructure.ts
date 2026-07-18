@@ -104,7 +104,7 @@ export function bodyStructureReferenceExtension(bodyStructureReference: string):
 }
 
 function eyeBodyStructureId(laterality: Exclude<EyeLaterality, "UNKNOWN">): string {
-  return `osod-eye-${laterality.toLowerCase()}`;
+  return `odos-eye-${laterality.toLowerCase()}`;
 }
 
 function snomedConcept(code: string, display: string): CodeableConcept {

@@ -1,25 +1,41 @@
-import type { Extension, PaymentReconciliation } from "@medplum/fhirtypes";
-import { paymentTenderExtensionForReconciliation } from "../fhir/osodPaymentTender.js";
+import type { ClaimResponse, Extension, PaymentReconciliation } from "@medplum/fhirtypes";
+import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
+import { paymentTenderExtensionForReconciliation } from "../fhir/odosPaymentTender.js";
 import type { PaymentSurface } from "./payment-processor-adapter.js";
 
 /**
- * FHIR R4 PaymentReconciliation emitter — the settling payment for a processor charge.
+ * FHIR R4 PaymentReconciliation emitter — the collected patient payment.
  *
- * The Invoice is the bill; this resource is the payment that settles it, linked via
- * detail[0].request → Invoice (R4-verified: detail.request targets Any). Manual cash/check tenders
- * do NOT come through here — they live on the Invoice's osod-payment-tender extension (Slice-3
- * trap #2 preserved). Contract: performance-od
- * decisions/2026-07-05-odos-payment-reconciliation-seam-spec.md §5.
+ * An immediate payment links to its Invoice through detail[].request. A pre-payment has an empty
+ * detail[] until charges post. Manual cash/check still lives on the Invoice when the bill already
+ * exists; only the no-Invoice-yet exception emits a PaymentReconciliation. Contract: performance-od
+ * decisions/2026-07-09-odos-unapplied-credit-seam-addendum.md §2-§3.
  */
 
-export const OSOD_PROCESSOR_FEES_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-processor-fees";
+export const ODOS_PROCESSOR_FEES_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-processor-fees";
 
-export const OSOD_PAYMENT_SURFACE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-payment-surface";
+export const ODOS_PAYMENT_SURFACE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-surface";
+
+export const ODOS_PAYMENT_SUBJECT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-payment-subject";
 
 /** HL7 payment-type CodeSystem for PaymentReconciliation.detail.type (payment | adjustment | advance). */
 export const HL7_PAYMENT_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/payment-type";
+
+/** Identifier namespace for Claim.MD ERA ids carried on insurance PaymentReconciliations. */
+export const CLAIMMD_ERA_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/claimmd-era";
+export const STEDI_ERA_PAYMENT_SYSTEM = "https://odos2020.com/fhir/NamingSystem/stedi-era";
+export const ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/insurance-payment-detail-level";
+export const INSURANCE_CLAIM_ROLLUP_DETAIL_CODE = "claim-rollup";
+export const INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE = "charge-item-allocation";
+
+export interface PatientPaymentAllocationInput {
+  invoiceReference: string;
+  amountCents: number;
+}
 
 export interface ProcessorPaymentInput {
   /**
@@ -34,8 +50,12 @@ export interface ProcessorPaymentInput {
   paymentDate: string;
   /** Amount charged in whole cents. */
   amountCents: number;
-  /** The bill this payment settles — detail[0].request (THE LINK, seam spec §2). */
-  invoiceReference: string;
+  /** The Patient account that owns the payment or unapplied credit. */
+  subjectReference: string;
+  /** Existing bill settled immediately. Omit for a pre-payment with no Invoice yet. */
+  invoiceReference?: string;
+  /** Explicit plural allocations. Omit to use invoiceReference or to collect fully unapplied. */
+  allocations?: PatientPaymentAllocationInput[];
   /** The order's 17-status lifecycle Task (PaymentReconciliation.request). */
   taskReference?: string;
   /** The staff member who initiated the transaction (PaymentReconciliation.requestor). */
@@ -44,7 +64,7 @@ export interface ProcessorPaymentInput {
   processorTransactionId: string;
   /** Adapter transaction-id namespace (PaymentReconciliation.paymentIdentifier.system). */
   processorTransactionSystem: string;
-  /** Processor fees in whole cents (osod-processor-fees extension; v0.7 settlement recon input). */
+  /** Processor fees in whole cents (odos-processor-fees extension; v0.7 settlement recon input). */
   feesCents?: number;
   surface: PaymentSurface;
   /** Receipt tender label: coded tender + optional instrument display (e.g. "VISA ****4242"). */
@@ -71,8 +91,14 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
   if (input.feesCents !== undefined && (!Number.isInteger(input.feesCents) || input.feesCents < 0)) {
     throw new Error("Processor fees (feesCents) must be a nonnegative integer number of cents.");
   }
-  if (!input.invoiceReference) {
-    throw new Error("A PaymentReconciliation requires the Invoice reference it settles (the bill).");
+  if (!/^Patient\/[^/]+$/.test(input.subjectReference)) {
+    throw new Error('Payment subject must be a local "Patient/<id>" reference.');
+  }
+  if (input.invoiceReference !== undefined && !/^Invoice\/[^/]+$/.test(input.invoiceReference)) {
+    throw new Error('invoiceReference must be a local "Invoice/<id>" reference when supplied.');
+  }
+  if (input.invoiceReference !== undefined && input.allocations !== undefined) {
+    throw new Error("Supply invoiceReference or allocations, not both.");
   }
   if (!input.processorTransactionId || !input.processorTransactionSystem) {
     throw new Error("A PaymentReconciliation requires the processor transaction id and its namespace.");
@@ -85,9 +111,27 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
   }
 
   const amount = { value: input.amountCents / 100, currency: "USD" as const };
+  const allocations = input.allocations ?? (input.invoiceReference
+    ? [{ invoiceReference: input.invoiceReference, amountCents: input.amountCents }]
+    : []);
+  let allocatedCents = 0;
+  for (const allocation of allocations) {
+    if (!/^Invoice\/[^/]+$/.test(allocation.invoiceReference)) {
+      throw new Error('Every payment allocation must reference a local "Invoice/<id>".');
+    }
+    if (!Number.isInteger(allocation.amountCents) || allocation.amountCents <= 0) {
+      throw new Error("Payment allocation amountCents must be a positive integer number of cents.");
+    }
+    allocatedCents += allocation.amountCents;
+  }
+  if (allocatedCents > input.amountCents) {
+    throw new Error(
+      `Payment allocations total ${allocatedCents} cents but paymentAmount is only ${input.amountCents} cents.`,
+    );
+  }
 
   const surfaceExtension: Extension = {
-    url: OSOD_PAYMENT_SURFACE_EXTENSION_URL,
+    url: ODOS_PAYMENT_SURFACE_EXTENSION_URL,
     extension: [
       { url: "surface", valueCode: input.surface },
       ...(input.inClinicTerminalId
@@ -116,21 +160,23 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
       ? { paymentIssuer: { reference: input.practiceOrgReference } }
       : {}),
     ...(input.description ? { disposition: input.description } : {}),
-    detail: [
-      {
-        type: {
-          coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
-        },
-        request: { reference: input.invoiceReference },
-        amount,
+    detail: allocations.map((allocation) => ({
+      type: {
+        coding: [{ system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" }],
       },
-    ],
+      request: { reference: allocation.invoiceReference },
+      amount: { value: allocation.amountCents / 100, currency: "USD" },
+    })),
     extension: [
+      {
+        url: ODOS_PAYMENT_SUBJECT_EXTENSION_URL,
+        valueReference: { reference: input.subjectReference },
+      },
       paymentTenderExtensionForReconciliation(input.tender),
       ...(input.feesCents !== undefined
         ? [
             {
-              url: OSOD_PROCESSOR_FEES_EXTENSION_URL,
+              url: ODOS_PROCESSOR_FEES_EXTENSION_URL,
               valueMoney: { value: input.feesCents / 100, currency: "USD" as const },
             },
           ]
@@ -138,4 +184,148 @@ export function buildPaymentReconciliation(input: ProcessorPaymentInput): Paymen
       surfaceExtension,
     ],
   };
+}
+
+export interface InsurancePaymentReconciliationInput {
+  createdIso: string;
+  paymentDate: string;
+  amountCents: number;
+  claimReference: string;
+  claimResponseReference: string;
+  insurerReference?: string;
+  practiceOrgReference?: string;
+  processorTransactionId: string;
+  processorTransactionSystem: string;
+  description?: string;
+  lineAllocations?: InsurancePaymentLineAllocationInput[];
+}
+
+export interface InsurancePaymentLineAllocationInput {
+  chargeItemReference: string;
+  amountCents: number;
+}
+
+export function claimResponseLinePaymentAllocations(
+  response: ClaimResponse,
+): InsurancePaymentLineAllocationInput[] {
+  return (response.item ?? []).flatMap((item) => {
+    const chargeItemReference = item.extension?.find(
+      (extension) => extension.url === ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
+    )?.valueReference?.reference;
+    const paid = item.adjudication.find((entry) => /^paid$/i.test(entry.category.text ?? ""));
+    if (!chargeItemReference || !paid?.amount || (paid.amount.value ?? 0) <= 0) return [];
+    return [{
+      chargeItemReference,
+      amountCents: wholeUsdCents(paid.amount.value, paid.amount.currency, "ClaimResponse paid amount"),
+    }];
+  });
+}
+
+export function buildInsurancePaymentReconciliation(
+  input: InsurancePaymentReconciliationInput,
+): PaymentReconciliation {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    throw new Error("Insurance payment amount (amountCents) must be a positive integer number of cents.");
+  }
+  if (!/^Claim\//.test(input.claimReference)) {
+    throw new Error('Insurance PaymentReconciliation detail.request must reference a local "Claim/<id>".');
+  }
+  if (!/^ClaimResponse\//.test(input.claimResponseReference)) {
+    throw new Error('Insurance PaymentReconciliation detail.response must reference a local "ClaimResponse/<id>".');
+  }
+  if (!input.processorTransactionId || !input.processorTransactionSystem) {
+    throw new Error("Insurance PaymentReconciliation requires an ERA/payment identifier and namespace.");
+  }
+  if (!input.createdIso) {
+    throw new Error("Insurance PaymentReconciliation requires a created timestamp.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.paymentDate)) {
+    throw new Error("paymentDate must be an R4 date (YYYY-MM-DD).");
+  }
+
+  const lineAllocations = input.lineAllocations ?? [];
+  const seenChargeItems = new Set<string>();
+  let lineAllocationTotalCents = 0;
+  for (const allocation of lineAllocations) {
+    if (!/^ChargeItem\/[A-Za-z0-9.-]{1,64}$/.test(allocation.chargeItemReference)) {
+      throw new Error('Insurance line allocation must reference a local "ChargeItem/<id>".');
+    }
+    if (!Number.isInteger(allocation.amountCents) || allocation.amountCents <= 0) {
+      throw new Error("Insurance line allocation amountCents must be a positive integer number of cents.");
+    }
+    if (seenChargeItems.has(allocation.chargeItemReference)) {
+      throw new Error("Insurance line allocations must contain unique ChargeItem references.");
+    }
+    seenChargeItems.add(allocation.chargeItemReference);
+    lineAllocationTotalCents += allocation.amountCents;
+  }
+  if (lineAllocationTotalCents > input.amountCents) {
+    throw new Error("Insurance line allocations cannot exceed the whole-claim payment amount.");
+  }
+
+  const amount = { value: input.amountCents / 100, currency: "USD" as const };
+  const unallocatedCents = input.amountCents - lineAllocationTotalCents;
+
+  return {
+    resourceType: "PaymentReconciliation",
+    status: "active",
+    outcome: "complete",
+    created: input.createdIso,
+    paymentDate: input.paymentDate,
+    paymentAmount: amount,
+    paymentIdentifier: {
+      system: input.processorTransactionSystem,
+      value: input.processorTransactionId,
+    },
+    ...(input.insurerReference ? { paymentIssuer: { reference: input.insurerReference } } : {}),
+    ...(input.practiceOrgReference ? { requestor: { reference: input.practiceOrgReference } } : {}),
+    ...(input.description ? { disposition: input.description } : {}),
+    detail: [
+      {
+        type: {
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CLAIM_ROLLUP_DETAIL_CODE,
+              display: "Claim rollup",
+            },
+          ],
+        },
+        request: { reference: input.claimReference },
+        response: { reference: input.claimResponseReference },
+        ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
+        ...(unallocatedCents > 0
+          ? { amount: { value: unallocatedCents / 100, currency: "USD" as const } }
+          : {}),
+      },
+      ...lineAllocations.map((allocation) => ({
+        type: {
+          coding: [
+            { system: HL7_PAYMENT_TYPE_SYSTEM, code: "payment", display: "Payment" },
+            {
+              system: ODOS_INSURANCE_PAYMENT_DETAIL_LEVEL_SYSTEM,
+              code: INSURANCE_CHARGE_ITEM_ALLOCATION_DETAIL_CODE,
+              display: "ChargeItem allocation",
+            },
+          ],
+        },
+        request: { reference: allocation.chargeItemReference },
+        response: { reference: input.claimResponseReference },
+        ...(input.practiceOrgReference ? { payee: { reference: input.practiceOrgReference } } : {}),
+        amount: { value: allocation.amountCents / 100, currency: "USD" as const },
+      })),
+    ],
+  };
+}
+
+function wholeUsdCents(value: number | undefined, currency: string | undefined, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || (currency && currency !== "USD")) {
+    throw new Error(`${label} must be a nonnegative USD amount.`);
+  }
+  const cents = Math.round(value * 100);
+  if (Math.abs(value * 100 - cents) > 1e-6) {
+    throw new Error(`${label} must resolve to whole cents.`);
+  }
+  return cents;
 }

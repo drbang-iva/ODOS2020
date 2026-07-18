@@ -3,14 +3,17 @@ import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import {
   CLINIC_MODES,
+  RESOURCE_KINDS,
   SCHEDULER_PALETTE,
   appointmentGeometry,
   buildAppointmentBlockContent,
   buildTimeAxis,
+  filterSchedulingResourcesByHiddenActorReferences,
   isoFromDateAndMinutes,
   minutesFromIsoDateTime,
   resourceActorReference,
   resourceDisplay,
+  resourceKind,
   scheduleReference,
   visibleAppointmentsForMode,
   visibleSchedulingResourcesForOffice,
@@ -27,7 +30,11 @@ import {
   schedulerWindowForView,
   type SchedulerView,
 } from "../lib/scheduling-calendar";
-import { todayYmd, useSchedulingStore } from "../lib/scheduling-store";
+import {
+  SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS,
+  todayYmd,
+  useSchedulingStore,
+} from "../lib/scheduling-store";
 import {
   confirmDoubleBookAndRetry,
   type AppointmentModalDraft,
@@ -52,6 +59,8 @@ export function SchedulerDayGrid() {
   const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
   const slotMinutes = useSchedulingStore((state) => state.slotMinutes);
+  const slotMinutesOverride = useSchedulingStore((state) => state.slotMinutesOverride);
+  const hiddenResourceRefs = useSchedulingStore((state) => state.hiddenResourceRefs);
   const resources = useSchedulingStore((state) => state.resources);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const appointments = useSchedulingStore((state) => state.appointments);
@@ -64,6 +73,9 @@ export function SchedulerDayGrid() {
   const configError = useSchedulingStore((state) => state.configError);
   const setClinicMode = useSchedulingStore((state) => state.setClinicMode);
   const setView = useSchedulingStore((state) => state.setView);
+  const setSlotMinutes = useSchedulingStore((state) => state.setSlotMinutes);
+  const setResourceHidden = useSchedulingStore((state) => state.setResourceHidden);
+  const clearHiddenResources = useSchedulingStore((state) => state.clearHiddenResources);
   const setOfficeId = useSchedulingStore((state) => state.setOfficeId);
   const openDay = useSchedulingStore((state) => state.openDay);
   const setWeekResourceScheduleReference = useSchedulingStore((state) => state.setWeekResourceScheduleReference);
@@ -127,9 +139,13 @@ export function SchedulerDayGrid() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [moveSource]);
 
-  const visibleResources = useMemo(
+  const baseVisibleResources = useMemo(
     () => visibleSchedulingResourcesForOffice(resources, clinicMode, config, officeId),
     [resources, clinicMode, config, officeId],
+  );
+  const visibleResources = useMemo(
+    () => filterSchedulingResourcesByHiddenActorReferences(baseVisibleResources, hiddenResourceRefs),
+    [baseVisibleResources, hiddenResourceRefs],
   );
   const visibleVisitTypes = useMemo(
     () => visibleSchedulingVisitTypes(visitTypes, clinicMode),
@@ -157,8 +173,8 @@ export function SchedulerDayGrid() {
     [appointments, moveSource],
   );
   const timeAxis = useMemo(
-    () => buildTimeAxis({ date, resources: visibleResources, config, slotMinutes, appointments: visibleAppointments }),
-    [date, visibleResources, config, slotMinutes, visibleAppointments],
+    () => buildTimeAxis({ date, resources: baseVisibleResources, config, slotMinutes, appointments: visibleAppointments }),
+    [date, baseVisibleResources, config, slotMinutes, visibleAppointments],
   );
   const positionedAppointments = useMemo(
     () =>
@@ -211,7 +227,7 @@ export function SchedulerDayGrid() {
         date: appointmentDate,
         startMinutes,
         timezoneOffset: config.timezoneOffset,
-        resources: visibleResources,
+        resources: baseVisibleResources,
         visitTypes,
         clinicMode,
         resource,
@@ -273,7 +289,7 @@ export function SchedulerDayGrid() {
   }
 
   function handleWalkIn() {
-    const resource = visibleResources[0];
+    const resource = baseVisibleResources[0];
     if (!resource) {
       return;
     }
@@ -292,7 +308,7 @@ export function SchedulerDayGrid() {
   }
 
   function handleOpeningSelect(opening: SchedulingOpening, selectedVisitTypeCode: string) {
-    const resource = visibleResources.find((candidate) => scheduleReference(candidate) === opening.scheduleReference);
+    const resource = baseVisibleResources.find((candidate) => scheduleReference(candidate) === opening.scheduleReference);
     const visitType = visitTypes.find((candidate) => visitTypeCode(candidate) === selectedVisitTypeCode);
     if (!resource) {
       return;
@@ -301,7 +317,7 @@ export function SchedulerDayGrid() {
       date: opening.start.slice(0, 10),
       startMinutes: minutesFromIsoDateTime(opening.start, config.timezoneOffset),
       timezoneOffset: config.timezoneOffset,
-      resources: visibleResources,
+      resources: baseVisibleResources,
       visitTypes,
       clinicMode,
       resource,
@@ -342,6 +358,9 @@ export function SchedulerDayGrid() {
         onPrevious={() => shiftDate(-1)}
         onOfficeChange={setOfficeId}
         onSettings={() => openSettings()}
+        onSlotMinutesChange={setSlotMinutes}
+        onResourceHiddenChange={setResourceHidden}
+        onShowAllResources={clearHiddenResources}
         onToday={today}
         onViewChange={setView}
         onWalkIn={handleWalkIn}
@@ -350,6 +369,9 @@ export function SchedulerDayGrid() {
         zoomEnabled={view !== "month"}
         officeId={officeId}
         offices={config.offices}
+        resources={baseVisibleResources}
+        hiddenResourceRefs={hiddenResourceRefs}
+        slotMinutesOverride={slotMinutesOverride}
         moveActive={Boolean(moveSource)}
         moveEnabled={Boolean(quickCardAppointment)}
         view={view}
@@ -358,7 +380,7 @@ export function SchedulerDayGrid() {
         <FindOpenPanel
           clinicMode={clinicMode}
           defaultDate={todayYmd(new Date(), config.timezoneOffset)}
-          resources={visibleResources}
+          resources={baseVisibleResources}
           timezoneOffset={config.timezoneOffset}
           visitTypes={visitTypes}
           onClose={() => setFindOpenVisible(false)}
@@ -483,7 +505,7 @@ export function SchedulerDayGrid() {
           initialDraft={"draft" in details ? details.draft : undefined}
           clinicMode={clinicMode}
           timezoneOffset={config.timezoneOffset}
-          resources={visibleResources}
+          resources={baseVisibleResources}
           visitTypes={visitTypes}
           onClose={() => setDetails(null)}
           onCreate={createAppointment}
@@ -508,13 +530,16 @@ export function SchedulerDayGrid() {
   );
 }
 
-function SchedulerToolbar({
+export function SchedulerToolbar({
   clinicMode,
   date,
   dayActionsEnabled,
   legendOpen,
   officeId,
   offices,
+  resources,
+  hiddenResourceRefs,
+  slotMinutesOverride,
   onClinicModeChange,
   onFindOpen,
   onLegendToggle,
@@ -523,6 +548,9 @@ function SchedulerToolbar({
   onOfficeChange,
   onPrevious,
   onSettings,
+  onSlotMinutesChange,
+  onResourceHiddenChange,
+  onShowAllResources,
   onToday,
   onViewChange,
   onWalkIn,
@@ -539,6 +567,9 @@ function SchedulerToolbar({
   legendOpen: boolean;
   officeId: string | "all";
   offices: Array<{ id: string; name: string }>;
+  resources: Schedule[];
+  hiddenResourceRefs: string[];
+  slotMinutesOverride: 10 | 15 | 30 | null;
   onClinicModeChange: (mode: ClinicMode) => void;
   onFindOpen: () => void;
   onLegendToggle: () => void;
@@ -547,6 +578,9 @@ function SchedulerToolbar({
   onOfficeChange: (officeId: string | "all") => void;
   onPrevious: () => void;
   onSettings: () => void;
+  onSlotMinutesChange: (minutes: 10 | 15 | 30 | null) => void;
+  onResourceHiddenChange: (reference: string, hidden: boolean) => void;
+  onShowAllResources: () => void;
   onToday: () => void;
   onViewChange: (view: SchedulerView) => void;
   onWalkIn: () => void;
@@ -603,6 +637,33 @@ function SchedulerToolbar({
             +
           </button>
         </div>
+      )}
+      {zoomEnabled && (
+        <select
+          className="scheduler-select"
+          aria-label="Grid interval"
+          value={slotMinutesOverride ?? "auto"}
+          onChange={(event) =>
+            onSlotMinutesChange(
+              event.target.value === "auto"
+                ? null
+                : Number(event.target.value) as 10 | 15 | 30,
+            )
+          }
+        >
+          <option value="auto">Auto (config)</option>
+          {SCHEDULER_SLOT_MINUTES_VIEW_OPTIONS.map((minutes) => (
+            <option key={minutes} value={minutes}>{minutes} min</option>
+          ))}
+        </select>
+      )}
+      {zoomEnabled && (
+        <SchedulerColumnsControl
+          resources={resources}
+          hiddenResourceRefs={hiddenResourceRefs}
+          onResourceHiddenChange={onResourceHiddenChange}
+          onShowAll={onShowAllResources}
+        />
       )}
       {dayActionsEnabled && (
         <button className="scheduler-button" type="button" onClick={onWalkIn}>
@@ -661,6 +722,79 @@ function SchedulerToolbar({
   );
 }
 
+export function SchedulerColumnsControl({
+  resources,
+  hiddenResourceRefs,
+  onResourceHiddenChange,
+  onShowAll,
+}: {
+  resources: Schedule[];
+  hiddenResourceRefs: string[];
+  onResourceHiddenChange: (reference: string, hidden: boolean) => void;
+  onShowAll: () => void;
+}) {
+  const hidden = new Set(hiddenResourceRefs);
+  const groupLabels = {
+    provider: "Providers",
+    room: "Rooms",
+    equipment: "Equipment",
+  } as const;
+
+  return (
+    <details className="relative">
+      <summary className="scheduler-button cursor-pointer list-none">Columns</summary>
+      <div className="absolute left-0 top-full z-40 mt-2 min-w-64 rounded border border-white/15 bg-[#10101c] p-3 shadow-2xl">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Visible columns</span>
+          <button
+            className="text-xs font-semibold text-cyan-300 hover:text-cyan-200 disabled:text-white/30"
+            type="button"
+            disabled={hiddenResourceRefs.length === 0}
+            onClick={onShowAll}
+          >
+            Show all
+          </button>
+        </div>
+        <div className="space-y-3" aria-label="Scheduler columns">
+          {RESOURCE_KINDS.map((kind) => {
+            const group = resources.filter((resource) => resourceKind(resource) === kind.code);
+            if (group.length === 0) {
+              return null;
+            }
+            return (
+              <div key={kind.code}>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-white/40">
+                  {groupLabels[kind.code]}
+                </div>
+                <div className="space-y-1">
+                  {group.map((resource) => {
+                    const reference = resourceActorReference(resource);
+                    if (!reference) {
+                      return null;
+                    }
+                    const display = resourceDisplay(resource);
+                    return (
+                      <label key={reference} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm text-white/80 hover:bg-white/[0.06]">
+                        <input
+                          aria-label={`Show ${display} column`}
+                          type="checkbox"
+                          checked={!hidden.has(reference)}
+                          onChange={(event) => onResourceHiddenChange(reference, !event.target.checked)}
+                        />
+                        <span>{display}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function SchedulerLegend({ visitTypes }: { visitTypes: HealthcareService[] }) {
   return (
     <div className="flex flex-wrap gap-2 border-b border-white/10 bg-black/20 px-4 py-2">
@@ -686,7 +820,10 @@ function SchedulerLegend({ visitTypes }: { visitTypes: HealthcareService[] }) {
 
 function ResourceHeader({ resource }: { resource: Schedule }) {
   return (
-    <div className="border-r border-white/10 bg-black/30 px-3 py-2">
+    <div
+      className="border-r border-white/10 bg-black/30 px-3 py-2"
+      data-scheduler-resource-column={resourceActorReference(resource)}
+    >
       <div className="truncate text-sm font-semibold text-white">{resourceDisplay(resource)}</div>
       <div className="truncate text-xs text-white/45">{resource.actor?.[0]?.reference ?? "No actor"}</div>
     </div>

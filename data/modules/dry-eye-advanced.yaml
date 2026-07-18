@@ -15,9 +15,9 @@ eventTypes:
   - ophthalmic-medication-status-changed
   - dry-eye-adverse-event-recorded
 profiles:
-  - https://osod.dev/fhir/StructureDefinition/Observation-MeibomianGlandScore
-  - https://osod.dev/fhir/StructureDefinition/Observation-TBUT
-  - https://osod.dev/fhir/StructureDefinition/Observation-Schirmer
+  - https://odos2020.com/fhir/StructureDefinition/Observation-MeibomianGlandScore
+  - https://odos2020.com/fhir/StructureDefinition/Observation-TBUT
+  - https://odos2020.com/fhir/StructureDefinition/Observation-Schirmer
   - http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse
   - http://hl7.org/fhir/StructureDefinition/Procedure
   - http://hl7.org/fhir/StructureDefinition/MedicationStatement

@@ -7,7 +7,7 @@
   "signingKeyId": "dev-signing-key",
   "signingKey": "dev-only-key-replace-before-production",
   "signingKeyPassphrase": "dev",
-  "supportEmail": "admin@osod.local",
+  "supportEmail": "admin@odos.local",
   "database": {
     "host": "postgres",
     "port": 5432,

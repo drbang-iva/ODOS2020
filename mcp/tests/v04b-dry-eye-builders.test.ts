@@ -43,7 +43,9 @@ test("dry-eye QuestionnaireResponse builder uses canonical instrument and derive
   });
 
   assert.equal(response.questionnaire, DRY_EYE_QUESTIONNAIRE_URLS.OSDI);
+  assert.equal(response.status, "completed");
   assert.equal(response.subject?.reference, "Patient/p1");
+  assert.equal(score.status, "preliminary");
   assert.equal(score.derivedFrom?.[0]?.reference, "QuestionnaireResponse/qr1");
   assert.equal(score.subject.reference, "Patient/p1");
   assert.equal(score.valueQuantity?.value, 50);
@@ -77,6 +79,7 @@ test("meibography Observation derives from DocumentReference and preserves lid/l
   });
 
   assert.equal(observation.derivedFrom?.[0]?.reference, "DocumentReference/img1");
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.bodySite?.text, "OD upper lid");
   assert.equal(observation.component?.length, 3);
 });

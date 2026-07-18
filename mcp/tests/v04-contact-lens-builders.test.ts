@@ -7,8 +7,8 @@ import {
   DEVICE_ORTHO_K_LENS_PROFILE_URL,
   DEVICE_SCLERAL_LENS_PROFILE_URL,
   OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL,
-  OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
-  OSOD_SUBSTANCE_IDENTIFIER_SYSTEM,
+  ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+  ODOS_SUBSTANCE_IDENTIFIER_SYSTEM,
   PARAMETER_VALUE_SET_URLS,
   UCUM_CODE_SYSTEM,
   buildConceptMap,
@@ -125,7 +125,7 @@ test("DeviceDefinition builder creates lab catalog blueprints with identifiers",
     materialCodes: ["Boston-XO"],
   });
 
-  assert.equal(definition.identifier?.[0]?.system, OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM);
+  assert.equal(definition.identifier?.[0]?.system, ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM);
   assert.equal(definition.identifier?.[0]?.value, "paragon-crt");
   assert.equal(definition.deviceName?.[0]?.name, "Paragon CRT");
   assert.equal(definition.material?.[0]?.substance.coding?.[0]?.code, "Boston-XO");
@@ -144,16 +144,16 @@ test("Substance builder records material and coating registry entries", () => {
     kind: "coating",
   });
 
-  assert.equal(material.identifier?.[0]?.system, OSOD_SUBSTANCE_IDENTIFIER_SYSTEM);
+  assert.equal(material.identifier?.[0]?.system, ODOS_SUBSTANCE_IDENTIFIER_SYSTEM);
   assert.match(material.description ?? "", /Dk 141/);
   assert.equal(coating.code.coding?.[0]?.code, "Hydra-PEG");
 });
 
-test("ConceptMap builder uses OSOD source URI and lab-specific target URI", () => {
+test("ConceptMap builder uses ODOS source URI and lab-specific target URI", () => {
   const conceptMap = buildConceptMap({
     labCode: "bostonsight",
     labDisplay: "BostonSight",
-    targetUri: "urn:osod:contact-lens-lab:bostonsight:parameter",
+    targetUri: "urn:odos:contact-lens-lab:bostonsight:parameter",
     organizationReference: "Organization/bostonsight",
     mappings: [
       {
@@ -181,6 +181,7 @@ test("contact lens fit finding observations are patient-subject and lens-focused
   });
 
   assert.equal(observation.meta?.profile?.[0], OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL);
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.subject.reference, "Patient/p1");
   assert.equal(observation.focus?.[0]?.reference, "Device/lens1");
   assert.equal(observation.component?.[0]?.valueQuantity?.code, "ms");

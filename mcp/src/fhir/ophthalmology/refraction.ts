@@ -2,13 +2,13 @@ import type { BuildResult, RefractionInput } from "./types.js";
 import {
   applyCommonObservationFields,
   component,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "./extensions.js";
 
 export function buildRefractionObservation(
-  input: RefractionInput,
+  input: RefractionInput & { remarks?: string },
 ): BuildResult<import("./types.js").Observation> {
   validateOptionalNumber("sphere", input.sphere);
   validateOptionalNumber("cylinder", input.cylinder);
@@ -23,9 +23,36 @@ export function buildRefractionObservation(
 
   const components = [
     component("REFRACTION_TYPE", "Refraction type", {
-      valueCodeableConcept: osodConcept(input.refractionType, input.refractionType),
+      valueCodeableConcept: odosConcept(
+        input.refractionType,
+        input.refractionTypeDisplay ?? input.refractionType,
+      ),
     }),
   ];
+
+  if (input.blockId) {
+    components.push(
+      component("REFRACTION_BLOCK_ID", "Refraction block ID", {
+        valueString: input.blockId,
+      }),
+    );
+  }
+
+  if (input.purpose) {
+    components.push(
+      component("PURPOSE", "Purpose", {
+        valueString: input.purpose,
+      }),
+    );
+  }
+
+  if (input.remarks) {
+    components.push(
+      component("REMARKS", "Remarks", {
+        valueString: input.remarks,
+      }),
+    );
+  }
 
   if (input.sphere !== undefined) {
     components.push(
@@ -59,6 +86,30 @@ export function buildRefractionObservation(
     );
   }
 
+  if (input.visualAcuity?.distance) {
+    components.push(
+      component("DISTANCE_VA", "Distance visual acuity", {
+        valueString: input.visualAcuity.distance,
+      }),
+    );
+  }
+
+  if (input.visualAcuity?.near) {
+    components.push(
+      component("NEAR_VA", "Near visual acuity", {
+        valueString: input.visualAcuity.near,
+      }),
+    );
+  }
+
+  if (input.visualAcuity?.distancePinhole) {
+    components.push(
+      component("DISTANCE_PH_VA", "Distance pinhole visual acuity", {
+        valueString: input.visualAcuity.distancePinhole,
+      }),
+    );
+  }
+
   if (input.prism) {
     if (input.prism.amount !== undefined) {
       validateOptionalNumber("prism.amount", input.prism.amount);
@@ -81,8 +132,8 @@ export function buildRefractionObservation(
   const observation = applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
-      code: osodConcept("REFRACTION", "Refraction"),
+      status: "preliminary",
+      code: odosConcept("REFRACTION", "Refraction"),
       component: components,
       ...(input.visualAcuityWithCorrectionReference
         ? { hasMember: [reference(input.visualAcuityWithCorrectionReference)] }
@@ -90,7 +141,10 @@ export function buildRefractionObservation(
     },
     {
       ...input,
-      method: input.method ?? osodConcept(input.refractionType, input.refractionType),
+      method: input.method ?? odosConcept(
+        input.refractionType,
+        input.refractionTypeDisplay ?? input.refractionType,
+      ),
     },
   );
 

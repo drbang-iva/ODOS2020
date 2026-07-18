@@ -213,10 +213,10 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
 
   function markSaved(summary: string) {
     const next = {
-      completed: true,
+      completed: false,
       summary,
       savedAt: new Date().toISOString(),
-      operator: "OSOD UI myopia_management",
+      operator: "ODOS UI myopia_management",
     };
     setStatus(next);
     onSaved(next);
@@ -349,7 +349,7 @@ async function createUiProvenance(sourceTag: string, targetReferences: string[])
       activity: {
         coding: [{ system: "http://terminology.hl7.org/CodeSystem/v3-DataOperation", code: "CREATE", display: "Create" }],
       },
-      agent: [{ who: { display: `OSOD UI ${sourceTag}` } }],
+      agent: [{ who: { display: `ODOS UI ${sourceTag}` } }],
     },
     sourceTag,
   );

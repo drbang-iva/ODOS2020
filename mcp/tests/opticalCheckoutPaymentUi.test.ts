@@ -8,17 +8,47 @@ import { test } from "node:test";
 const UI_SRC = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "ui", "src");
 import {
   CHECKOUT_TENDERS,
+  buildOpticalInvoice,
   chargeOpticalCardPayment,
   invoiceTotalNetCents,
 } from "../../ui/src/lib/optical-order.js";
 import type { Invoice } from "@medplum/fhirtypes";
 
-test("checkout tender picker exposes card terminal without making it an Invoice tender", () => {
+test("checkout tenders list record-only manual card separately from the dormant terminal tender", () => {
   assert.deepEqual(CHECKOUT_TENDERS.map((tender) => tender.code), [
     "CASH",
     "CHECK",
+    "CARD_MANUAL",
     "CARD_TERMINAL",
   ]);
+});
+
+test("CARD_MANUAL records its exact record-only tender code and display on the Invoice", () => {
+  const invoice = buildOpticalInvoice({
+    patientReference: "Patient/p1",
+    visionPrescriptionReference: "VisionPrescription/rx1",
+    orderHcpcsCode: "V2020",
+    businessStatus: "quote",
+    orderType: "rx",
+    tender: "CARD_MANUAL",
+    charges: [{
+      id: "line-1",
+      procedure: "V2020",
+      modifier: "",
+      diagnosis: "",
+      units: 1,
+      feeCents: 24400,
+      taxCents: 0,
+      selected: true,
+      taxable: false,
+    }],
+  }, ["ChargeItem/charge-1"]);
+  const coding = invoice.extension?.[0]?.valueCodeableConcept?.coding?.[0];
+  assert.deepEqual(coding, {
+    system: "https://odos2020.com/fhir/CodeSystem/payment-tender",
+    code: "CARD_MANUAL",
+    display: "Card — manual entry",
+  });
 });
 
 test("UI card charge helper posts only the server-owned Clover charge request", async () => {
@@ -53,7 +83,7 @@ test("UI card charge helper posts only the server-owned Clover charge request", 
   assert.equal(captured?.init?.method, "POST");
   assert.equal((captured?.init?.headers as Record<string, string>).Authorization, "Bearer ui-token");
   // No role header — the server derives the role from the verified token (decision 2026-07-05 §3).
-  assert.equal((captured?.init?.headers as Record<string, string>)["X-OSOD-Role"], undefined);
+  assert.equal((captured?.init?.headers as Record<string, string>)["X-ODOS-Role"], undefined);
   const body = JSON.parse(String(captured?.init?.body)) as Record<string, unknown>;
   assert.deepEqual(body, {
     method: "clover",
@@ -103,6 +133,14 @@ test("ui source does not import Clover processor config", () => {
     .join("\n");
   assert.doesNotMatch(text, /CLOVER_(BASE_URL|ACCESS_TOKEN|DEVICE_ID|POS_ID)/);
   assert.doesNotMatch(text, /payment-config|clover-adapter/i);
+});
+
+test("optical collection no longer contains a browser-direct FHIR payment transaction", () => {
+  const opticalScene = readFileSync(join(UI_SRC, "scenes", "OpticalOrder.tsx"), "utf8");
+  const collectionClient = readFileSync(join(UI_SRC, "lib", "collect.ts"), "utf8");
+  assert.doesNotMatch(opticalScene, /executeTransaction|createOpticalCashOrder/);
+  assert.doesNotMatch(collectionClient, /executeTransaction|\/payments\/charge/);
+  assert.match(collectionClient, /\/payments\/collect/);
 });
 
 function listFiles(dir: string): string[] {

@@ -1,16 +1,16 @@
 import type { Extension, ProjectMembership } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir-client.js";
 import {
-  buildOsodAuditEventRow,
+  buildOdosAuditEventRow,
   buildPlaceholderAuditEvent,
-  type OsodAuditEventRow,
-} from "./osodAudit.js";
+  type OdosAuditEventRow,
+} from "./odosAudit.js";
 import type { PracticeRoleId } from "./roles.js";
 
 export const PROJECT_MEMBERSHIP_LIFECYCLE_STATE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/project-membership-lifecycle-state";
+  "https://odos2020.com/fhir/StructureDefinition/project-membership-lifecycle-state";
 export const PROJECT_MEMBERSHIP_ROLE_REVIEW_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/project-membership-role-review";
+  "https://odos2020.com/fhir/StructureDefinition/project-membership-role-review";
 
 export const PROJECT_MEMBERSHIP_LIFECYCLE_STATES = [
   "invited",
@@ -46,7 +46,7 @@ export interface ProjectMembershipLifecycleInput {
 export interface ProjectMembershipLifecycleResult {
   membership: ProjectMembership;
   patch: JsonPatchOperation[];
-  auditRow: OsodAuditEventRow;
+  auditRow: OdosAuditEventRow;
   auditEvent: ReturnType<typeof buildPlaceholderAuditEvent>;
 }
 
@@ -61,7 +61,7 @@ export function transitionProjectMembershipLifecycle(
   const targetReference = input.membership.id
     ? `ProjectMembership/${input.membership.id}`
     : "ProjectMembership/(pending)";
-  const auditRow = buildOsodAuditEventRow({
+  const auditRow = buildOdosAuditEventRow({
     eventType: "projectmembership-lifecycle",
     occurredAt,
     actorReference: input.actorReference,

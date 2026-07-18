@@ -1,9 +1,9 @@
-// MIRROR of osod/mcp/src/fhir/ophthalmology/refraction.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
+// MIRROR of odos/mcp/src/fhir/ophthalmology/refraction.ts. Source of truth lives in MCP. Sync manually until v0.5 monorepo refactor. Parity guarded by mcp/tests/builder-mirror-parity.test.ts.
 import type { BuildResult, RefractionInput } from "./types.js";
 import {
   applyCommonObservationFields,
   component,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "./extensions.js";
@@ -24,7 +24,7 @@ export function buildRefractionObservation(
 
   const components = [
     component("REFRACTION_TYPE", "Refraction type", {
-      valueCodeableConcept: osodConcept(input.refractionType, input.refractionType),
+      valueCodeableConcept: odosConcept(input.refractionType, input.refractionType),
     }),
   ];
 
@@ -82,8 +82,8 @@ export function buildRefractionObservation(
   const observation = applyCommonObservationFields(
     {
       resourceType: "Observation",
-      status: "final",
-      code: osodConcept("REFRACTION", "Refraction"),
+      status: "preliminary",
+      code: odosConcept("REFRACTION", "Refraction"),
       component: components,
       ...(input.visualAcuityWithCorrectionReference
         ? { hasMember: [reference(input.visualAcuityWithCorrectionReference)] }
@@ -91,7 +91,7 @@ export function buildRefractionObservation(
     },
     {
       ...input,
-      method: input.method ?? osodConcept(input.refractionType, input.refractionType),
+      method: input.method ?? odosConcept(input.refractionType, input.refractionType),
     },
   );
 

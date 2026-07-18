@@ -1,1 +1,1 @@
-export const OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD = "derivedFrom";
+export const ODOS_APPEND_OBSERVATION_RELATIONSHIP_FIELD = "derivedFrom";

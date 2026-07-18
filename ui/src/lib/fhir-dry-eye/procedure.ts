@@ -80,7 +80,7 @@ export function buildDryEyeTreatmentProcedure(input: {
       ? {
           identifier: [
             {
-              system: "https://osod.dev/fhir/Identifier/dry-eye-treatment-session",
+              system: "https://odos2020.com/fhir/Identifier/dry-eye-treatment-session",
               value: input.sessionNumber && input.totalSessions
                 ? `${input.sessionNumber}-of-${input.totalSessions}`
                 : String(input.sessionNumber ?? input.totalSessions),

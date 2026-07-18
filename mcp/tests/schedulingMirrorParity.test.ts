@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Appointment, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import {
   CLINIC_MODES as MCP_CLINIC_MODES,
-  OSOD_DISCIPLINE_SYSTEM as MCP_OSOD_DISCIPLINE_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM as MCP_ODOS_DISCIPLINE_SYSTEM,
   SCHEDULING_DISCIPLINES as MCP_SCHEDULING_DISCIPLINES,
   disciplinesForMode as mcpDisciplinesForMode,
   isDisciplineVisible as mcpIsDisciplineVisible,
@@ -17,15 +17,17 @@ import {
 } from "../src/fhir/schedulingResource.js";
 import {
   DISCIPLINE_COLOR_BANDS as MCP_DISCIPLINE_COLOR_BANDS,
-  OSOD_DISPLAY_COLOR_EXTENSION_URL as MCP_OSOD_DISPLAY_COLOR_EXTENSION_URL,
-  OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL as MCP_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
-  OSOD_INTAKE_FORM_EXTENSION_URL as MCP_OSOD_INTAKE_FORM_EXTENSION_URL,
-  OSOD_VISIT_DURATION_EXTENSION_URL as MCP_OSOD_VISIT_DURATION_EXTENSION_URL,
-  OSOD_VISIT_TYPE_SYSTEM as MCP_OSOD_VISIT_TYPE_SYSTEM,
+  ODOS_DISPLAY_COLOR_EXTENSION_URL as MCP_ODOS_DISPLAY_COLOR_EXTENSION_URL,
+  ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL as MCP_ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+  ODOS_INTAKE_FORM_EXTENSION_URL as MCP_ODOS_INTAKE_FORM_EXTENSION_URL,
+  ODOS_VISIT_DURATION_EXTENSION_URL as MCP_ODOS_VISIT_DURATION_EXTENSION_URL,
+  ODOS_VISIT_TYPE_SYSTEM as MCP_ODOS_VISIT_TYPE_SYSTEM,
+  ODOS_VISIT_TYPE_CATEGORY_SYSTEM as MCP_ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
   SCHEDULER_PALETTE as MCP_SCHEDULER_PALETTE,
   buildVisitType,
   defaultVisitTypeCatalog,
   visitTypeCode as mcpVisitTypeCode,
+  visitTypeCategory as mcpVisitTypeCategory,
   visitTypeColor as mcpVisitTypeColor,
   visitTypeDiscipline as mcpVisitTypeDiscipline,
   visitTypeDurationMinutes as mcpVisitTypeDurationMinutes,
@@ -33,19 +35,19 @@ import {
 } from "../src/fhir/schedulingVisitType.js";
 import {
   APPOINTMENT_CONFIRMATION_STATUSES as MCP_APPOINTMENT_CONFIRMATION_STATUSES,
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL as MCP_OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-  OSOD_APPOINTMENT_CONFIRMATION_SYSTEM as MCP_OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL as MCP_ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_APPOINTMENT_CONFIRMATION_SYSTEM as MCP_ODOS_APPOINTMENT_CONFIRMATION_SYSTEM,
   confirmationStatusOf as mcpConfirmationStatusOf,
 } from "../src/fhir/appointmentConfirmation.js";
 import {
-  OSOD_APPOINTMENT_STATUSES as MCP_OSOD_APPOINTMENT_STATUSES,
+  ODOS_APPOINTMENT_STATUSES as MCP_ODOS_APPOINTMENT_STATUSES,
   V2_0276_APPOINTMENT_TYPE_SYSTEM as MCP_V2_0276_APPOINTMENT_TYPE_SYSTEM,
-  osodAppointmentStatusOf as mcpOsodAppointmentStatusOf,
+  odosAppointmentStatusOf as mcpOdosAppointmentStatusOf,
 } from "../src/fhir/schedulingAppointmentStatus.js";
 import {
-  OSOD_FOLLOW_UP_EXTENSION_URL as MCP_OSOD_FOLLOW_UP_EXTENSION_URL,
-  OSOD_MEDICAL_COVERAGE_EXTENSION_URL as MCP_OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
-  OSOD_VISION_COVERAGE_EXTENSION_URL as MCP_OSOD_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_FOLLOW_UP_EXTENSION_URL as MCP_ODOS_FOLLOW_UP_EXTENSION_URL,
+  ODOS_MEDICAL_COVERAGE_EXTENSION_URL as MCP_ODOS_MEDICAL_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL as MCP_ODOS_VISION_COVERAGE_EXTENSION_URL,
   appointmentVisitTypeCode as mcpAppointmentVisitTypeCode,
   buildSchedulingAppointment,
   isFollowUpAppointment as mcpIsFollowUpAppointment,
@@ -55,15 +57,15 @@ import {
 } from "../src/fhir/schedulingAppointment.js";
 import {
   BLOCKED_TIME_KINDS as MCP_BLOCKED_TIME_KINDS,
-  OSOD_BLOCKED_TIME_KIND_EXTENSION_URL as MCP_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL,
-  OSOD_BLOCKED_TIME_KIND_SYSTEM as MCP_OSOD_BLOCKED_TIME_KIND_SYSTEM,
+  ODOS_BLOCKED_TIME_KIND_EXTENSION_URL as MCP_ODOS_BLOCKED_TIME_KIND_EXTENSION_URL,
+  ODOS_BLOCKED_TIME_KIND_SYSTEM as MCP_ODOS_BLOCKED_TIME_KIND_SYSTEM,
   blockedTimeKindOf as mcpBlockedTimeKindOf,
   generateSlots,
 } from "../src/scheduling/availability.js";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE as MCP_OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_EXTENSION_URL as MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
-  OSOD_SCHEDULING_CONFIG_SYSTEM as MCP_OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE as MCP_ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_EXTENSION_URL as MCP_ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
+  ODOS_SCHEDULING_CONFIG_SYSTEM as MCP_ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource as mcpBuildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig as mcpParseSchedulingPracticeConfig,
   type PersistedSchedulingPracticeConfig as McpPersistedSchedulingPracticeConfig,
@@ -73,20 +75,21 @@ import {
   BLOCKED_TIME_KINDS as UI_BLOCKED_TIME_KINDS,
   CLINIC_MODES as UI_CLINIC_MODES,
   DISCIPLINE_COLOR_BANDS as UI_DISCIPLINE_COLOR_BANDS,
-  OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL as UI_OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-  OSOD_APPOINTMENT_CONFIRMATION_SYSTEM as UI_OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
-  OSOD_APPOINTMENT_STATUSES as UI_OSOD_APPOINTMENT_STATUSES,
-  OSOD_BLOCKED_TIME_KIND_EXTENSION_URL as UI_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL,
-  OSOD_BLOCKED_TIME_KIND_SYSTEM as UI_OSOD_BLOCKED_TIME_KIND_SYSTEM,
-  OSOD_DISCIPLINE_SYSTEM as UI_OSOD_DISCIPLINE_SYSTEM,
-  OSOD_DISPLAY_COLOR_EXTENSION_URL as UI_OSOD_DISPLAY_COLOR_EXTENSION_URL,
-  OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL as UI_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL,
-  OSOD_FOLLOW_UP_EXTENSION_URL as UI_OSOD_FOLLOW_UP_EXTENSION_URL,
-  OSOD_INTAKE_FORM_EXTENSION_URL as UI_OSOD_INTAKE_FORM_EXTENSION_URL,
-  OSOD_MEDICAL_COVERAGE_EXTENSION_URL as UI_OSOD_MEDICAL_COVERAGE_EXTENSION_URL,
-  OSOD_VISION_COVERAGE_EXTENSION_URL as UI_OSOD_VISION_COVERAGE_EXTENSION_URL,
-  OSOD_VISIT_DURATION_EXTENSION_URL as UI_OSOD_VISIT_DURATION_EXTENSION_URL,
-  OSOD_VISIT_TYPE_SYSTEM as UI_OSOD_VISIT_TYPE_SYSTEM,
+  ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL as UI_ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+  ODOS_APPOINTMENT_CONFIRMATION_SYSTEM as UI_ODOS_APPOINTMENT_CONFIRMATION_SYSTEM,
+  ODOS_APPOINTMENT_STATUSES as UI_ODOS_APPOINTMENT_STATUSES,
+  ODOS_BLOCKED_TIME_KIND_EXTENSION_URL as UI_ODOS_BLOCKED_TIME_KIND_EXTENSION_URL,
+  ODOS_BLOCKED_TIME_KIND_SYSTEM as UI_ODOS_BLOCKED_TIME_KIND_SYSTEM,
+  ODOS_DISCIPLINE_SYSTEM as UI_ODOS_DISCIPLINE_SYSTEM,
+  ODOS_DISPLAY_COLOR_EXTENSION_URL as UI_ODOS_DISPLAY_COLOR_EXTENSION_URL,
+  ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL as UI_ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+  ODOS_FOLLOW_UP_EXTENSION_URL as UI_ODOS_FOLLOW_UP_EXTENSION_URL,
+  ODOS_INTAKE_FORM_EXTENSION_URL as UI_ODOS_INTAKE_FORM_EXTENSION_URL,
+  ODOS_MEDICAL_COVERAGE_EXTENSION_URL as UI_ODOS_MEDICAL_COVERAGE_EXTENSION_URL,
+  ODOS_VISION_COVERAGE_EXTENSION_URL as UI_ODOS_VISION_COVERAGE_EXTENSION_URL,
+  ODOS_VISIT_DURATION_EXTENSION_URL as UI_ODOS_VISIT_DURATION_EXTENSION_URL,
+  ODOS_VISIT_TYPE_SYSTEM as UI_ODOS_VISIT_TYPE_SYSTEM,
+  ODOS_VISIT_TYPE_CATEGORY_SYSTEM as UI_ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
   NON_BLOCKING_APPOINTMENT_STATUSES as UI_NON_BLOCKING_APPOINTMENT_STATUSES,
   RESOURCE_KINDS as UI_RESOURCE_KINDS,
   SCHEDULER_PALETTE as UI_SCHEDULER_PALETTE,
@@ -94,6 +97,8 @@ import {
   V2_0276_APPOINTMENT_TYPE_SYSTEM as UI_V2_0276_APPOINTMENT_TYPE_SYSTEM,
   appointmentVisitTypeCode as uiAppointmentVisitTypeCode,
   blockedTimeKindOf as uiBlockedTimeKindOf,
+  buildVisitType as uiBuildVisitType,
+  defaultVisitTypeCatalog as uiDefaultVisitTypeCatalog,
   buildSchedulingAppointment as uiBuildSchedulingAppointment,
   confirmationStatusOf as uiConfirmationStatusOf,
   disciplinesForMode as uiDisciplinesForMode,
@@ -102,11 +107,12 @@ import {
   isResourceVisibleInMode as uiIsResourceVisibleInMode,
   isUrgentAppointment as uiIsUrgentAppointment,
   medicalCoverageOf as uiMedicalCoverageOf,
-  osodAppointmentStatusOf as uiOsodAppointmentStatusOf,
+  odosAppointmentStatusOf as uiOdosAppointmentStatusOf,
   validateAndBuildSchedulingAppointment as uiValidateAndBuildSchedulingAppointment,
   resourceDisciplines as uiResourceDisciplines,
   resourceKind as uiResourceKind,
   visitTypeCode as uiVisitTypeCode,
+  visitTypeCategory as uiVisitTypeCategory,
   visitTypeColor as uiVisitTypeColor,
   visitTypeDiscipline as uiVisitTypeDiscipline,
   visitTypeDisplayColor as uiVisitTypeDisplayColor,
@@ -115,12 +121,22 @@ import {
   visionCoverageOf as uiVisionCoverageOf,
 } from "../../ui/src/lib/scheduling.js";
 import {
-  OSOD_SCHEDULING_CONFIG_CODE as UI_OSOD_SCHEDULING_CONFIG_CODE,
-  OSOD_SCHEDULING_CONFIG_EXTENSION_URL as UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
-  OSOD_SCHEDULING_CONFIG_SYSTEM as UI_OSOD_SCHEDULING_CONFIG_SYSTEM,
+  ODOS_SCHEDULING_CONFIG_CODE as UI_ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_EXTENSION_URL as UI_ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
+  ODOS_SCHEDULING_CONFIG_SYSTEM as UI_ODOS_SCHEDULING_CONFIG_SYSTEM,
   buildSchedulingPracticeConfigResource as uiBuildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig as uiParseSchedulingPracticeConfig,
 } from "../../ui/src/lib/scheduling-config.js";
+import {
+  buildCatalogFields as mcpBuildCatalogFields,
+  parseCatalogFields as mcpParseCatalogFields,
+  type CatalogFieldDefinition as McpCatalogFieldDefinition,
+} from "../src/settings/catalog-field-kernel.js";
+import {
+  buildCatalogFields as uiBuildCatalogFields,
+  parseCatalogFields as uiParseCatalogFields,
+  type CatalogFieldDefinition as UiCatalogFieldDefinition,
+} from "../../ui/src/lib/catalog-field-kernel.js";
 
 function defaultMirrorCatalog(): HealthcareService[] {
   return defaultVisitTypeCatalog("both").map((visitType, index) => ({
@@ -182,38 +198,56 @@ const PRACTICE_CONFIG: McpPersistedSchedulingPracticeConfig = {
 test("UI scheduler mirror constants match the Phase-1 kernel", () => {
   assert.deepEqual(UI_CLINIC_MODES, MCP_CLINIC_MODES);
   assert.deepEqual(UI_SCHEDULING_DISCIPLINES, MCP_SCHEDULING_DISCIPLINES);
-  assert.equal(UI_OSOD_DISCIPLINE_SYSTEM, MCP_OSOD_DISCIPLINE_SYSTEM);
+  assert.equal(UI_ODOS_DISCIPLINE_SYSTEM, MCP_ODOS_DISCIPLINE_SYSTEM);
   assert.deepEqual(UI_RESOURCE_KINDS, MCP_RESOURCE_KINDS);
-  assert.equal(UI_OSOD_VISIT_TYPE_SYSTEM, MCP_OSOD_VISIT_TYPE_SYSTEM);
-  assert.equal(UI_OSOD_VISIT_DURATION_EXTENSION_URL, MCP_OSOD_VISIT_DURATION_EXTENSION_URL);
-  assert.equal(UI_OSOD_DISPLAY_COLOR_EXTENSION_URL, MCP_OSOD_DISPLAY_COLOR_EXTENSION_URL);
-  assert.equal(UI_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL, MCP_OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL);
-  assert.equal(UI_OSOD_INTAKE_FORM_EXTENSION_URL, MCP_OSOD_INTAKE_FORM_EXTENSION_URL);
+  assert.equal(UI_ODOS_VISIT_TYPE_SYSTEM, MCP_ODOS_VISIT_TYPE_SYSTEM);
+  assert.equal(UI_ODOS_VISIT_TYPE_CATEGORY_SYSTEM, MCP_ODOS_VISIT_TYPE_CATEGORY_SYSTEM);
+  assert.equal(UI_ODOS_VISIT_DURATION_EXTENSION_URL, MCP_ODOS_VISIT_DURATION_EXTENSION_URL);
+  assert.equal(UI_ODOS_DISPLAY_COLOR_EXTENSION_URL, MCP_ODOS_DISPLAY_COLOR_EXTENSION_URL);
+  assert.equal(UI_ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL, MCP_ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL);
+  assert.equal(UI_ODOS_INTAKE_FORM_EXTENSION_URL, MCP_ODOS_INTAKE_FORM_EXTENSION_URL);
   assert.deepEqual(UI_SCHEDULER_PALETTE, MCP_SCHEDULER_PALETTE);
   assert.deepEqual(UI_DISCIPLINE_COLOR_BANDS, MCP_DISCIPLINE_COLOR_BANDS);
   assert.equal(
-    UI_OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
-    MCP_OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+    UI_ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+    MCP_ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
   );
-  assert.equal(UI_OSOD_APPOINTMENT_CONFIRMATION_SYSTEM, MCP_OSOD_APPOINTMENT_CONFIRMATION_SYSTEM);
+  assert.equal(UI_ODOS_APPOINTMENT_CONFIRMATION_SYSTEM, MCP_ODOS_APPOINTMENT_CONFIRMATION_SYSTEM);
   assert.deepEqual(UI_APPOINTMENT_CONFIRMATION_STATUSES, MCP_APPOINTMENT_CONFIRMATION_STATUSES);
-  assert.deepEqual(UI_OSOD_APPOINTMENT_STATUSES, MCP_OSOD_APPOINTMENT_STATUSES);
+  assert.deepEqual(UI_ODOS_APPOINTMENT_STATUSES, MCP_ODOS_APPOINTMENT_STATUSES);
   assert.equal(UI_V2_0276_APPOINTMENT_TYPE_SYSTEM, MCP_V2_0276_APPOINTMENT_TYPE_SYSTEM);
-  assert.equal(UI_OSOD_VISION_COVERAGE_EXTENSION_URL, MCP_OSOD_VISION_COVERAGE_EXTENSION_URL);
-  assert.equal(UI_OSOD_MEDICAL_COVERAGE_EXTENSION_URL, MCP_OSOD_MEDICAL_COVERAGE_EXTENSION_URL);
-  assert.equal(UI_OSOD_FOLLOW_UP_EXTENSION_URL, MCP_OSOD_FOLLOW_UP_EXTENSION_URL);
-  assert.equal(UI_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL, MCP_OSOD_BLOCKED_TIME_KIND_EXTENSION_URL);
-  assert.equal(UI_OSOD_BLOCKED_TIME_KIND_SYSTEM, MCP_OSOD_BLOCKED_TIME_KIND_SYSTEM);
+  assert.equal(UI_ODOS_VISION_COVERAGE_EXTENSION_URL, MCP_ODOS_VISION_COVERAGE_EXTENSION_URL);
+  assert.equal(UI_ODOS_MEDICAL_COVERAGE_EXTENSION_URL, MCP_ODOS_MEDICAL_COVERAGE_EXTENSION_URL);
+  assert.equal(UI_ODOS_FOLLOW_UP_EXTENSION_URL, MCP_ODOS_FOLLOW_UP_EXTENSION_URL);
+  assert.equal(UI_ODOS_BLOCKED_TIME_KIND_EXTENSION_URL, MCP_ODOS_BLOCKED_TIME_KIND_EXTENSION_URL);
+  assert.equal(UI_ODOS_BLOCKED_TIME_KIND_SYSTEM, MCP_ODOS_BLOCKED_TIME_KIND_SYSTEM);
   assert.deepEqual(UI_BLOCKED_TIME_KINDS, MCP_BLOCKED_TIME_KINDS);
   assert.deepEqual(UI_NON_BLOCKING_APPOINTMENT_STATUSES, ["cancelled", "entered-in-error"]);
 });
 
+test("UI visit-type builder mirrors category mapping and the unchanged default catalog", () => {
+  const input = {
+    code: "dry-eye-consult",
+    name: "Dry Eye Consult",
+    discipline: "eyecare",
+    categoryCode: "dry-eye",
+    categoryLabel: "Dry Eye",
+    durationMinutes: 45,
+    color: MCP_SCHEDULER_PALETTE.specialTestingPurple,
+  };
+  const mcp = buildVisitType(input);
+  const ui = uiBuildVisitType(input);
+  assert.deepEqual(ui, mcp);
+  assert.deepEqual(uiVisitTypeCategory(ui), mcpVisitTypeCategory(mcp));
+  assert.deepEqual(uiDefaultVisitTypeCatalog("both"), defaultVisitTypeCatalog("both"));
+});
+
 test("UI scheduler practice-config mirror constants match the Phase-4a kernel", () => {
-  assert.equal(UI_OSOD_SCHEDULING_CONFIG_SYSTEM, MCP_OSOD_SCHEDULING_CONFIG_SYSTEM);
-  assert.equal(UI_OSOD_SCHEDULING_CONFIG_CODE, MCP_OSOD_SCHEDULING_CONFIG_CODE);
+  assert.equal(UI_ODOS_SCHEDULING_CONFIG_SYSTEM, MCP_ODOS_SCHEDULING_CONFIG_SYSTEM);
+  assert.equal(UI_ODOS_SCHEDULING_CONFIG_CODE, MCP_ODOS_SCHEDULING_CONFIG_CODE);
   assert.equal(
-    UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
-    MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL,
+    UI_ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
+    MCP_ODOS_SCHEDULING_CONFIG_EXTENSION_URL,
   );
 });
 
@@ -322,20 +356,20 @@ test("UI scheduler practice-config mirror parse errors match the kernel verbatim
     {
       resourceType: "Basic",
       code: { coding: [{ system: "https://wrong.example", code: "wrong" }] },
-      extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: validRaw }],
+      extension: [{ url: UI_ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: validRaw }],
     },
     {
       resourceType: "Basic",
       code: {
-        coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+        coding: [{ system: UI_ODOS_SCHEDULING_CONFIG_SYSTEM, code: UI_ODOS_SCHEDULING_CONFIG_CODE }],
       },
     },
     {
       resourceType: "Basic",
       code: {
-        coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+        coding: [{ system: UI_ODOS_SCHEDULING_CONFIG_SYSTEM, code: UI_ODOS_SCHEDULING_CONFIG_CODE }],
       },
-      extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
+      extension: [{ url: UI_ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: "{" }],
     },
   ] as const;
 
@@ -358,20 +392,89 @@ test("UI scheduler practice-config mirror parse drops unknown forward-compat key
   const uiBasic = {
     resourceType: "Basic",
     code: {
-      coding: [{ system: UI_OSOD_SCHEDULING_CONFIG_SYSTEM, code: UI_OSOD_SCHEDULING_CONFIG_CODE }],
+      coding: [{ system: UI_ODOS_SCHEDULING_CONFIG_SYSTEM, code: UI_ODOS_SCHEDULING_CONFIG_CODE }],
     },
-    extension: [{ url: UI_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
+    extension: [{ url: UI_ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
   } as const;
   const mcpBasic = {
     ...uiBasic,
     code: {
-      coding: [{ system: MCP_OSOD_SCHEDULING_CONFIG_SYSTEM, code: MCP_OSOD_SCHEDULING_CONFIG_CODE }],
+      coding: [{ system: MCP_ODOS_SCHEDULING_CONFIG_SYSTEM, code: MCP_ODOS_SCHEDULING_CONFIG_CODE }],
     },
-    extension: [{ url: MCP_OSOD_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
+    extension: [{ url: MCP_ODOS_SCHEDULING_CONFIG_EXTENSION_URL, valueString: raw }],
   } as const;
 
   assert.deepEqual(uiParseSchedulingPracticeConfig(uiBasic), mcpParseSchedulingPracticeConfig(mcpBasic));
   assert.equal("futureKnob" in uiParseSchedulingPracticeConfig(uiBasic), false);
+});
+
+test("UI catalog field build/parse pair matches the settings kernel", () => {
+  const fields = [
+    { type: "text", key: "label", label: "Label", required: true, unique: true },
+    { type: "color", key: "color", label: "Color", palette: ["#4a7dff", "#44ddaa"] },
+    { type: "duration", key: "duration", label: "Duration", min: 5, max: 120 },
+    {
+      type: "select",
+      key: "kind",
+      label: "Kind",
+      options: [{ value: "house", label: "House" }],
+    },
+    { type: "reference-picker", key: "plan", label: "Plan" },
+    { type: "toggle", key: "active", label: "Active" },
+    { type: "weekly-hours", key: "hours", label: "Hours" },
+    { type: "time-window-weekdays", key: "window", label: "Window" },
+  ] as const satisfies readonly McpCatalogFieldDefinition[] & readonly UiCatalogFieldDefinition[];
+  const item = {
+    id: "fixture-1",
+    label: "  Comprehensive  ",
+    color: "#4a7dff",
+    duration: 30,
+    kind: "house",
+    plan: "InsurancePlan/fixture-plan",
+    active: true,
+    hours: { mon: [{ start: "09:00", end: "17:00" }] },
+    window: { weekdays: ["tue", "thu"], start: "10:00", end: "12:00" },
+  };
+
+  assert.deepEqual(uiParseCatalogFields(item, fields), mcpParseCatalogFields(item, fields));
+  assert.deepEqual(
+    uiBuildCatalogFields(item, fields, [], item.id),
+    mcpBuildCatalogFields(item, fields, [], item.id),
+  );
+});
+
+test("UI catalog field validation errors match the settings kernel verbatim", () => {
+  const cases: Array<{ field: McpCatalogFieldDefinition & UiCatalogFieldDefinition; value: unknown }> = [
+    { field: { type: "text", key: "value", label: "Label", required: true }, value: "" },
+    { field: { type: "color", key: "value", label: "Color", palette: ["#4a7dff"] }, value: "#fff" },
+    { field: { type: "number", key: "value", label: "Count", min: 1 }, value: 0 },
+    { field: { type: "duration", key: "value", label: "Duration", min: 1 }, value: 12.5 },
+    {
+      field: { type: "select", key: "value", label: "Kind", options: [{ value: "a", label: "A" }] },
+      value: "b",
+    },
+    { field: { type: "reference-picker", key: "value", label: "Plan" }, value: "not-a-reference" },
+    { field: { type: "toggle", key: "value", label: "Active" }, value: "yes" },
+    {
+      field: { type: "weekly-hours", key: "value", label: "Hours" },
+      value: { mon: [{ start: "17:00", end: "09:00" }] },
+    },
+    {
+      field: { type: "time-window-weekdays", key: "value", label: "Window" },
+      value: { weekdays: ["funday"] },
+    },
+  ];
+
+  for (const { field, value } of cases) {
+    assert.throws(
+      () => uiBuildCatalogFields({ value }, [field]),
+      (error) => {
+        assert.ok(error instanceof Error);
+        assert.throws(() => mcpBuildCatalogFields({ value }, [field]), { message: error.message });
+        return true;
+      },
+    );
+  }
 });
 
 test("UI scheduler mirror clinic-mode helpers match the kernel", () => {
@@ -462,7 +565,7 @@ test("UI scheduler mirror appointment readers match the kernel", () => {
 
   assert.equal(uiAppointmentVisitTypeCode(appointment), mcpAppointmentVisitTypeCode(appointment));
   assert.equal(uiConfirmationStatusOf(appointment), mcpConfirmationStatusOf(appointment));
-  assert.equal(uiOsodAppointmentStatusOf(appointment), mcpOsodAppointmentStatusOf(appointment));
+  assert.equal(uiOdosAppointmentStatusOf(appointment), mcpOdosAppointmentStatusOf(appointment));
   assert.deepEqual(uiVisionCoverageOf(appointment), mcpVisionCoverageOf(appointment));
   assert.deepEqual(uiMedicalCoverageOf(appointment), mcpMedicalCoverageOf(appointment));
   assert.equal(uiIsUrgentAppointment(appointment), mcpIsUrgentAppointment(appointment));
@@ -632,8 +735,8 @@ test("UI scheduler mirror appointment status reader matches non-walk-in kernel c
     { status: "fulfilled" as const, expected: "checked-out" },
   ];
   for (const entry of cases) {
-    assert.equal(uiOsodAppointmentStatusOf(entry), entry.expected);
-    assert.equal(uiOsodAppointmentStatusOf(entry), mcpOsodAppointmentStatusOf(entry));
+    assert.equal(uiOdosAppointmentStatusOf(entry), entry.expected);
+    assert.equal(uiOdosAppointmentStatusOf(entry), mcpOdosAppointmentStatusOf(entry));
   }
 });
 
@@ -647,7 +750,7 @@ test("UI visit-type display color owns the full palette fallback chain", () => {
   });
   const colorlessAesthetics: HealthcareService = {
     resourceType: "HealthcareService",
-    category: [{ coding: [{ system: MCP_OSOD_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
+    category: [{ coding: [{ system: MCP_ODOS_DISCIPLINE_SYSTEM, code: "aesthetics" }] }],
   };
   const noDiscipline: HealthcareService = { resourceType: "HealthcareService" };
 

@@ -8,17 +8,17 @@ import {
   loadRepoEnv,
 } from "./integration-helpers.js";
 import { buildEyeBodyStructure, BODY_SITE_REFERENCE_EXTENSION_URL } from "../src/fhir/ophthalmology/bodyStructure.js";
-import { osodConcept } from "../src/fhir/ophthalmology/extensions.js";
+import { odosConcept } from "../src/fhir/ophthalmology/extensions.js";
 import { buildIopObservation } from "../src/fhir/ophthalmology/iop.js";
 import { buildRefractionObservation } from "../src/fhir/ophthalmology/refraction.js";
 import { buildVisualAcuityObservation } from "../src/fhir/ophthalmology/visualAcuity.js";
 
 const PROFILE = {
-  encounter: "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam",
-  va: "https://osod.dev/fhir/StructureDefinition/Observation-VA",
-  iop: "https://osod.dev/fhir/StructureDefinition/Observation-IOP",
-  refraction: "https://osod.dev/fhir/StructureDefinition/Observation-Refraction",
-  axial: "https://osod.dev/fhir/StructureDefinition/Observation-AxialLength",
+  encounter: "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam",
+  va: "https://odos2020.com/fhir/StructureDefinition/Observation-VA",
+  iop: "https://odos2020.com/fhir/StructureDefinition/Observation-IOP",
+  refraction: "https://odos2020.com/fhir/StructureDefinition/Observation-Refraction",
+  axial: "https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength",
 } as const;
 
 let fhir: Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
@@ -78,7 +78,6 @@ async function installProfilesForTest(): Promise<void> {
   }
 }
 
-// TODO(osod#11): integration tests skip when MEDPLUM env is unset. CI has no Medplum backend yet — see issue 11.
 test("profile validation accepts conformant v0.3 resources", async (t) => {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const email = process.env.MEDPLUM_ADMIN_EMAIL;
@@ -246,7 +245,7 @@ function buildIopProfileObservation(): Observation {
     eye: "OD",
     measuredAt: new Date().toISOString(),
     value: 14,
-    method: osodConcept("GAT", "GAT"),
+    method: odosConcept("GAT", "GAT"),
   }).resource;
   return withProfile(withBodyStructureReference(observation), PROFILE.iop);
 }
@@ -270,7 +269,7 @@ function buildAxialLengthObservation(): Observation {
     resourceType: "Observation",
     status: "final",
     meta: { profile: [PROFILE.axial] },
-    code: osodConcept("AXIAL_LENGTH", "Axial length"),
+    code: odosConcept("AXIAL_LENGTH", "Axial length"),
     category: [
       {
         coding: [
@@ -286,7 +285,7 @@ function buildAxialLengthObservation(): Observation {
     encounter: { reference: `Encounter/${encounter.id}` },
     effectiveDateTime: new Date().toISOString(),
     bodySite: {
-      coding: [{ system: "https://osod.dev/fhir/CodeSystem/ophthalmology", code: "OD" }],
+      coding: [{ system: "https://odos2020.com/fhir/CodeSystem/ophthalmology", code: "OD" }],
       extension: [
         {
           url: BODY_SITE_REFERENCE_EXTENSION_URL,

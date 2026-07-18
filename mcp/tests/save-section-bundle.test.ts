@@ -10,7 +10,7 @@ import {
 const baseInput = {
   patientReference: "Patient/p1",
   encounterReference: "Encounter/e1",
-  operatorDisplay: "OSOD save-section test",
+  operatorDisplay: "ODOS save-section test",
   measuredAt: "2026-04-25T12:00:00.000Z",
   recordedAt: "2026-04-25T12:00:00.001Z",
 };
@@ -81,6 +81,7 @@ function assertSectionBundle(
     assert.equal(observation.resource?.resourceType, "Observation");
 
     const obs = observation.resource as Observation;
+    assert.equal(obs.status, "preliminary");
     assert.equal(obs.subject?.reference, "Patient/p1");
     assert.equal(obs.encounter?.reference, "Encounter/e1");
     assert.equal(obs.effectiveDateTime, baseInput.measuredAt);

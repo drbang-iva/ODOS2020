@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicyResource } from "@medplum/fhirtypes";
 import {
-  OSOD_PRACTICE_ROLE_SYSTEM,
+  ODOS_PRACTICE_ROLE_SYSTEM,
   buildMedplumAccessPolicy,
   getRoleDeclaration,
 } from "../src/authz/roles.js";
@@ -29,6 +29,17 @@ test("front-desk reads the visit-type catalog (HealthcareService) at practice sc
   assert.equal(rule.criteria, undefined);
   assert.ok(rule.interaction?.includes("read"));
   assert.ok(rule.interaction?.includes("search"));
+  assert.ok(!rule.interaction?.includes("create"));
+  assert.ok(!rule.interaction?.includes("update"));
+  assert.ok(!rule.interaction?.includes("delete"));
+});
+
+test("front-desk reads the frame catalog but cannot manage DeviceDefinition", () => {
+  const rules = rulesFor("front-desk", "DeviceDefinition");
+  assert.equal(rules.length, 1);
+  const rule = rules[0]!;
+  assert.equal(rule.criteria, undefined);
+  assert.deepEqual(rule.interaction, ["read", "search", "history", "vread"]);
   assert.ok(!rule.interaction?.includes("create"));
   assert.ok(!rule.interaction?.includes("update"));
   assert.ok(!rule.interaction?.includes("delete"));
@@ -74,7 +85,7 @@ test("the scheduling.manage business action and the role↔policy meta.tag link 
   const role = getRoleDeclaration("front-desk");
   assert.ok(role.businessActions.includes("scheduling.manage"));
   const policy = buildMedplumAccessPolicy(role);
-  const tag = policy.meta?.tag?.find((candidate) => candidate.system === OSOD_PRACTICE_ROLE_SYSTEM);
+  const tag = policy.meta?.tag?.find((candidate) => candidate.system === ODOS_PRACTICE_ROLE_SYSTEM);
   assert.equal(tag?.code, "front-desk");
 });
 
@@ -84,19 +95,71 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
   assert.equal(rulesFor("clinician", "Schedule").length, 0);
 });
 
-test("front-desk reads + writes ONLY the scheduling-config Basic singleton (criteria-scoped, Phase 4a)", () => {
+test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
-  assert.equal(rules.length, 1);
-  const rule = rules[0]!;
-  assert.equal(
-    rule.criteria,
-    "Basic?code=https://osod.dev/fhir/CodeSystem/scheduling-config|osod-scheduling-config",
-    "the grant must be fenced to the config singleton, never all Basic resources",
+  const writeTierCriteria = [
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
+  ];
+  const readTierCriteria = [
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
+  ];
+  const createOnceCriteria = [
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/day-seal|day-seal",
+  ];
+  assert.deepEqual(
+    rules.map((rule) => rule.criteria).sort(),
+    [...writeTierCriteria, ...readTierCriteria, ...createOnceCriteria].sort(),
   );
-  for (const interaction of ["create", "read", "update", "search"]) {
-    assert.ok(rule.interaction?.includes(interaction as never), `Basic config needs ${interaction}`);
+
+  for (const criteria of writeTierCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
+    for (const interaction of ["create", "read", "update", "search"]) {
+      assert.ok(rule.interaction?.includes(interaction as never), `Basic resource needs ${interaction}`);
+    }
+    assert.ok(!rule.interaction?.includes("delete"));
   }
-  assert.ok(!rule.interaction?.includes("delete"));
+
+  for (const criteria of readTierCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
+    assert.ok(rule.interaction?.includes("read"));
+    assert.ok(rule.interaction?.includes("search"));
+    assert.ok(!rule.interaction?.includes("create"));
+    assert.ok(!rule.interaction?.includes("update"));
+    assert.ok(!rule.interaction?.includes("delete"));
+  }
+
+  for (const criteria of createOnceCriteria) {
+    const rule = rules.find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, criteria);
+    for (const interaction of ["create", "read", "search"]) {
+      assert.ok(rule.interaction?.includes(interaction as never), `DaySeal Basic needs ${interaction}`);
+    }
+    assert.ok(!rule.interaction?.includes("update"));
+    assert.ok(!rule.interaction?.includes("delete"));
+  }
+
+  const inventoryCriteria =
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory";
+  const inventoryRule = rules.find((candidate) => candidate.criteria === inventoryCriteria);
+  assert.ok(inventoryRule?.interaction?.includes("read"));
+  assert.ok(inventoryRule?.interaction?.includes("update"));
+  assert.equal(
+    rules.some(
+      (candidate) =>
+        candidate.criteria === undefined ||
+        candidate.criteria ===
+          "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|frames-data-subscription",
+    ),
+    false,
+    "no blanket Basic or frames-data-subscription grant may bypass the inventory criteria fence",
+  );
 });
 
 test("clinician and auditor get no Basic grant (regression guard)", () => {

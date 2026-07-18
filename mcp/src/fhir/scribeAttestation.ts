@@ -10,10 +10,10 @@ import type {
   Resource,
 } from "@medplum/fhirtypes";
 import {
-  OSOD_CLINICAL_AMENDMENT_POLICY_URL,
-  OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+  ODOS_CLINICAL_AMENDMENT_POLICY_URL,
+  ODOS_CLINICAL_ATTESTATION_POLICY_URL,
 } from "../../../policy/attestation-policy-urls.js";
-import { OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD } from "../../../policy/observation-relationship-types.js";
+import { ODOS_APPEND_OBSERVATION_RELATIONSHIP_FIELD } from "../../../policy/observation-relationship-types.js";
 import {
   assertObservationStatusTransition,
   isObservationStatus,
@@ -22,22 +22,22 @@ import {
 import {
   activityForClinicalIntent,
   assertProvenanceActivityCode,
-  type OsodClinicalProvenanceIntent,
-  type OsodV05cClinicalActivityCode,
+  type OdosClinicalProvenanceIntent,
+  type OdosV05cClinicalActivityCode,
 } from "../../../policy/provenance-activity-map.js";
 import {
   FHIR_AUTHOR_SIGNATURE_TYPE_CODE,
   FHIR_AUTHOR_SIGNATURE_TYPE_DISPLAY,
   FHIR_AUTHOR_SIGNATURE_TYPE_SYSTEM,
-  OSOD_PROVENANCE_SIGNATURE_FORMAT,
+  ODOS_PROVENANCE_SIGNATURE_FORMAT,
 } from "../../../policy/signature-formats.js";
-import { OSOD_ROLE_CODE_SYSTEM, buildOsodAuditEventRow } from "../authz/osodAudit.js";
-import type { OsodAuditEventRecord } from "../authz/osodAudit.js";
+import { ODOS_ROLE_CODE_SYSTEM, buildOdosAuditEventRow } from "../authz/odosAudit.js";
+import type { OdosAuditEventRecord } from "../authz/odosAudit.js";
 import type { JsonPatchOperation } from "../fhir-client.js";
 import { buildProvenance } from "./ophthalmology/provenance.js";
 
 export const OBSERVATION_ATTESTATION_UI_STATE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/observation-attestation-ui-state";
+  "https://odos2020.com/fhir/StructureDefinition/observation-attestation-ui-state";
 
 export const OBSERVATION_ATTESTATION_UI_STATE_CODES = [
   "pending-clinician-review",
@@ -214,7 +214,7 @@ export function buildAttestationTransaction(input: {
     clinicianId: input.clinicianId,
     recorded,
     intent: "first-final-attestation",
-    policyUrl: OSOD_CLINICAL_ATTESTATION_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_ATTESTATION_POLICY_URL,
     signatureDataBase64: input.signatureDataBase64,
   });
   const patchOperations = statusPatchOperations(input.observation, "final");
@@ -247,7 +247,7 @@ export function buildAmendmentTransaction(input: {
   bundle: Bundle;
   provenance: Provenance;
   patchOperations: JsonPatchOperation[];
-  activityCode: OsodV05cClinicalActivityCode;
+  activityCode: OdosV05cClinicalActivityCode;
 } {
   assertObservationStatusTransition({
     from: observationStatusBefore(input.observation),
@@ -265,7 +265,7 @@ export function buildAmendmentTransaction(input: {
     clinicianId: input.clinicianId,
     recorded,
     intent,
-    policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
     signatureDataBase64: input.signatureDataBase64,
   });
   const patchOperations = [
@@ -321,7 +321,7 @@ export function buildAppendObservationTransaction(input: {
     effectiveDateTime: recorded,
     issued: recorded,
     performer: [{ reference: normalizeReference(input.appendInput.clinician_id, "Practitioner") }],
-    [OSOD_APPEND_OBSERVATION_RELATIONSHIP_FIELD]: [{ reference: sourceReference }],
+    [ODOS_APPEND_OBSERVATION_RELATIONSHIP_FIELD]: [{ reference: sourceReference }],
     note: [
       {
         time: recorded,
@@ -338,7 +338,7 @@ export function buildAppendObservationTransaction(input: {
     clinicianId: input.appendInput.clinician_id,
     recorded,
     intent: "append-clinical-context",
-    policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
     signatureDataBase64: input.appendInput.signature_data_base64,
   });
 
@@ -367,8 +367,8 @@ export function buildClinicalWriteAuditRow(input: {
   provenanceId?: string;
   policyUrl?: string;
   actionReason?: string;
-}): OsodAuditEventRecord {
-  return buildOsodAuditEventRow({
+}): OdosAuditEventRecord {
+  return buildOdosAuditEventRow({
     eventType: input.eventType,
     eventTime: input.eventTime,
     actorId: normalizeReferenceId(input.actorId, "Practitioner"),
@@ -391,8 +391,8 @@ export function buildRejectedClinicalWriteAuditRow(input: {
   observation: Observation;
   actionReason: string;
   policyUrl?: string;
-}): OsodAuditEventRecord {
-  return buildOsodAuditEventRow({
+}): OdosAuditEventRecord {
+  return buildOdosAuditEventRow({
     eventType: input.eventType ?? "update",
     actorId: normalizeReferenceId(input.actorId, "Practitioner"),
     actorRole: input.actorRole,
@@ -409,7 +409,7 @@ export function buildRejectedClinicalWriteAuditRow(input: {
 export function buildSignedObservationDeleteAttemptAuditRow(input: {
   actorId: string;
   observation: Observation;
-}): OsodAuditEventRecord {
+}): OdosAuditEventRecord {
   return buildRejectedClinicalWriteAuditRow({
     eventType: "delete-attempt",
     actorId: input.actorId,
@@ -417,7 +417,7 @@ export function buildSignedObservationDeleteAttemptAuditRow(input: {
     observation: input.observation,
     actionReason:
       "Hard-delete rejected for signed clinical Observation; use entered-in-error transition with NULLIFY Provenance as the canonical retract path.",
-    policyUrl: OSOD_CLINICAL_AMENDMENT_POLICY_URL,
+    policyUrl: ODOS_CLINICAL_AMENDMENT_POLICY_URL,
   });
 }
 
@@ -454,7 +454,7 @@ export function buildSignedClinicalProvenance(input: {
   targetReferences: string[];
   clinicianId: string;
   recorded: string;
-  intent: OsodClinicalProvenanceIntent;
+  intent: OdosClinicalProvenanceIntent;
   policyUrl: string;
   signatureDataBase64: string;
 }): Provenance {
@@ -487,7 +487,7 @@ export function buildSignedClinicalProvenance(input: {
           ],
           when: input.recorded,
           who: { reference: clinicianReference },
-          sigFormat: OSOD_PROVENANCE_SIGNATURE_FORMAT,
+          sigFormat: ODOS_PROVENANCE_SIGNATURE_FORMAT,
           data: input.signatureDataBase64,
         },
       ],
@@ -498,7 +498,7 @@ export function buildSignedClinicalProvenance(input: {
 
 function amendmentIntentForTargetStatus(
   targetStatus: AmendmentTargetStatus,
-): OsodClinicalProvenanceIntent {
+): OdosClinicalProvenanceIntent {
   switch (targetStatus) {
     case "amended":
       return "post-final-amendment";
@@ -576,7 +576,7 @@ function clinicianRoleConcept(): CodeableConcept {
     text: "clinician",
     coding: [
       {
-        system: OSOD_ROLE_CODE_SYSTEM,
+        system: ODOS_ROLE_CODE_SYSTEM,
         code: "clinician",
         display: "clinician",
       },

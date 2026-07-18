@@ -2,7 +2,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import express, { type Request, type Response, type Router } from "express";
 import type { Resource } from "@medplum/fhirtypes";
-import { buildOsodAuditEventRow, type OsodAuditEventType } from "../authz/osodAudit.js";
+import { buildOdosAuditEventRow, type OdosAuditEventType } from "../authz/odosAudit.js";
 import type { FhirAuditRecorder } from "../authz/liveAudit.js";
 import type { SmartAuthorizationState } from "../smart/authorization-server.js";
 import {
@@ -35,7 +35,7 @@ const GROUP_EXPORT_ROUTE_SHAPE = "/Group/:id/$export";
 const PATIENT_EXPORT_ROUTE_SHAPE = "/Patient/$export";
 const SYSTEM_EXPORT_ROUTE_SHAPE = "/$export";
 const DEFAULT_RESOURCES: readonly Resource[] = [
-  { resourceType: "Group", id: "osod-exportable-group", type: "person", actual: true },
+  { resourceType: "Group", id: "odos-exportable-group", type: "person", actual: true },
   { resourceType: "Patient", id: "patient-1" },
   {
     resourceType: "Observation",
@@ -56,7 +56,7 @@ const DEFAULT_RESOURCES: readonly Resource[] = [
     id: "provenance-1",
     target: [{ reference: "Observation/observation-1" }],
     recorded: "2026-05-05T00:00:00.000Z",
-    agent: [{ who: { reference: "Device/osod-core" } }],
+    agent: [{ who: { reference: "Device/odos-core" } }],
   },
 ] as const;
 
@@ -66,7 +66,7 @@ export function createBulkDataRouter(options: BulkDataRouterOptions): Router {
   const store = options.store ?? new LocalBulkExportJobStore(config);
   const fixture = options.fixture ?? {
     resources: DEFAULT_RESOURCES,
-    groups: new Map([["osod-exportable-group", ["patient-1"]]]),
+    groups: new Map([["odos-exportable-group", ["patient-1"]]]),
   };
   const accessTokenValidator = options.accessTokenValidator ?? createStateBackedAccessTokenValidator(options.state);
   const now = options.now ?? (() => new Date());
@@ -87,7 +87,7 @@ export function createBulkDataRouter(options: BulkDataRouterOptions): Router {
 
   router.get(/^\/Patient\/\$export$/, async (req, res) => {
     if (!config.patientExportEnabled) {
-      sendOperationOutcome(res, 501, "not-supported", "Patient/$export is disabled on this local OSOD instance.");
+      sendOperationOutcome(res, 501, "not-supported", "Patient/$export is disabled on this local ODOS instance.");
       return;
     }
     await kickoff(req, res, {
@@ -164,7 +164,7 @@ export function createBulkDataRouter(options: BulkDataRouterOptions): Router {
       now: now(),
     });
     if (!validation.ok) {
-      await emitAudit(options.audit, "agentops.action.blocked" as OsodAuditEventType, req, job, validation.reason);
+      await emitAudit(options.audit, "agentops.action.blocked" as OdosAuditEventType, req, job, validation.reason);
       res.status(401).json({ error: "unauthorized", error_description: "Bearer token is not authorized for this export file." });
       return;
     }
@@ -181,7 +181,7 @@ export function createBulkDataRouter(options: BulkDataRouterOptions): Router {
     res: Response,
     input: {
       readonly endpoint: BulkExportEndpoint | `Group/${string}/$export`;
-      readonly auditEventType: OsodAuditEventType;
+      readonly auditEventType: OdosAuditEventType;
       readonly groupId?: string;
       readonly selectResources: () => readonly Resource[];
     },
@@ -250,9 +250,9 @@ function bulkDataConfig(config: Partial<BulkDataRuntimeConfig> | undefined): Bul
   return {
     patientExportEnabled: config?.patientExportEnabled ?? false,
     systemExportEnabled: config?.systemExportEnabled ?? false,
-    retentionDays: Math.min(config?.retentionDays ?? Number(process.env.OSOD_BULK_EXPORT_RETENTION_DAYS ?? 7), 90),
-    outputRoot: config?.outputRoot ?? process.env.OSOD_BULK_EXPORT_OUTPUT_DIR ?? join(tmpdir(), "osod-bulk-data"),
-    practicePublicBaseUrl: config?.practicePublicBaseUrl ?? process.env.OSOD_PRACTICE_PUBLIC_BASE_URL ?? "http://127.0.0.1:8104",
+    retentionDays: Math.min(config?.retentionDays ?? Number(process.env.ODOS_BULK_EXPORT_RETENTION_DAYS ?? 7), 90),
+    outputRoot: config?.outputRoot ?? process.env.ODOS_BULK_EXPORT_OUTPUT_DIR ?? join(tmpdir(), "odos-bulk-data"),
+    practicePublicBaseUrl: config?.practicePublicBaseUrl ?? process.env.ODOS_PRACTICE_PUBLIC_BASE_URL ?? "http://127.0.0.1:8104",
     supportedTypeFilter: config?.supportedTypeFilter ?? false,
   };
 }
@@ -323,9 +323,9 @@ function tokenFromRequest(req: Request): string | undefined {
 }
 
 function isGeographicFenceDenied(req: Request): boolean {
-  return req.header("X-OSOD-Practice-State")?.toUpperCase() === "SC" &&
-    req.header("X-OSOD-Client-State")?.toUpperCase() !== "SC" &&
-    req.header("X-OSOD-Autonomous-Cohort-Export") === "true";
+  return req.header("X-ODOS-Practice-State")?.toUpperCase() === "SC" &&
+    req.header("X-ODOS-Client-State")?.toUpperCase() !== "SC" &&
+    req.header("X-ODOS-Autonomous-Cohort-Export") === "true";
 }
 
 function sendOperationOutcome(res: Response, status: number, code: string, diagnostics: string): void {
@@ -357,17 +357,17 @@ function sendRefusal(
 
 async function emitAudit(
   audit: FhirAuditRecorder | undefined,
-  eventType: OsodAuditEventType,
+  eventType: OdosAuditEventType,
   req: Request,
   job?: BulkExportJob,
   reason?: string,
 ): Promise<void> {
   await audit?.record(
-    buildOsodAuditEventRow({
+    buildOdosAuditEventRow({
       eventType,
-      actorId: req.header("X-OSOD-Actor-Id") ?? job?.requestingClientId ?? "bulk-data-client",
+      actorId: req.header("X-ODOS-Actor-Id") ?? job?.requestingClientId ?? "bulk-data-client",
       actorRole: "system",
-      resourceType: "osod_bulk_export_jobs",
+      resourceType: "odos_bulk_export_jobs",
       resourceId: job?.id,
       actionOutcome: eventType.includes("rejected") || eventType.includes("blocked") ? "denied" : "granted",
       actionReason: reason ?? job?.kickoffEndpoint ?? "Bulk Data export event",

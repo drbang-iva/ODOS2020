@@ -1,15 +1,15 @@
 import {
-  buildOsodAuditEventRow,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "../authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "../authz/odosAudit.js";
 
 /**
- * Payment audit substrate (v0.6c) — every adapter call lands an osod_audit_events row (and its
- * FHIR AuditEvent projection) alongside the financial record. The 9 payment.* event types are the
- * 2026-05-05 payment-processor-architecture enumeration; count and list must stay in lockstep with
- * the registry (v0.55c Lesson 10). The staff member's practice role passes through as the actor
+ * Payment audit substrate (v0.6c) — every adapter call lands an odos_audit_events row (and its
+ * FHIR AuditEvent projection) alongside the financial record. The 10 payment.* event types are the
+ * processor architecture enumeration plus Phase 6a credit application; count and list must stay
+ * in lockstep with the registry (v0.55c Lesson 10). The staff member's practice role passes as the actor
  * role — the PAYMENT_INITIATOR notion is carried by the payment.* event family itself.
  */
 export const PAYMENT_AUDIT_EVENT_TYPES = [
@@ -19,10 +19,11 @@ export const PAYMENT_AUDIT_EVENT_TYPES = [
   "payment.refund.attempted",
   "payment.refund.completed",
   "payment.void.attempted",
+  "payment.credit.applied",
   "payment.settle.batch",
   "payment.financing.preauthorized",
   "payment.financing.declined",
-] as const satisfies readonly OsodAuditEventType[];
+] as const satisfies readonly OdosAuditEventType[];
 
 export type PaymentAuditEventType = (typeof PAYMENT_AUDIT_EVENT_TYPES)[number];
 
@@ -36,7 +37,7 @@ export interface BuildPaymentAuditRecordInput {
   eventType: PaymentAuditEventType;
   /** The staff member who initiated the transaction (Practitioner / PractitionerRole reference). */
   staffReference: string;
-  actorRole: OsodActorRole;
+  actorRole: OdosActorRole;
   patientReference?: string;
   /**
    * The payment record the event is about: the PaymentReconciliation for a processor payment, or
@@ -51,8 +52,8 @@ export interface BuildPaymentAuditRecordInput {
   timestamp?: string;
 }
 
-export function buildPaymentAuditRecord(input: BuildPaymentAuditRecordInput): OsodAuditEventRecord {
-  return buildOsodAuditEventRow({
+export function buildPaymentAuditRecord(input: BuildPaymentAuditRecordInput): OdosAuditEventRecord {
+  return buildOdosAuditEventRow({
     eventType: input.eventType,
     actorReference: input.staffReference,
     actorRole: input.actorRole,

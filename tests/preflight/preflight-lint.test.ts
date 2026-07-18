@@ -12,7 +12,7 @@ import {
 } from "../../scripts/preflight-lint.ts";
 
 test("v0.5d preflight pass 1 log scrub is clean on clean input and warns on salted PHI-shaped logs", () => {
-  const clean = runLogScrubPass({ logText: "medplum-server ready\nosod-mcp ready\n" });
+  const clean = runLogScrubPass({ logText: "medplum-server ready\nodos-mcp ready\n" });
   assert.equal(clean.status, "pass");
   assert.equal(clean.findings.length, 0);
 
@@ -38,11 +38,11 @@ test("v0.5d preflight pass 2 resource-name lint warns on a Binary title with PHI
 });
 
 test("v0.5d preflight pass 3 env-var PHI check hard-blocks and emits a preflight-block audit row", () => {
-  const clean = runEnvVarPhiPass({ env: { OSOD_MODE: "local", MEDPLUM_BASE_URL: "http://localhost:8103" } });
+  const clean = runEnvVarPhiPass({ env: { ODOS_MODE: "local", MEDPLUM_BASE_URL: "http://localhost:8103" } });
   assert.equal(clean.status, "pass");
   assert.equal(clean.auditRows.length, 0);
 
-  const salted = runEnvVarPhiPass({ env: { OSOD_PATIENT_FIXTURE: "Patient: John Smith" } });
+  const salted = runEnvVarPhiPass({ env: { ODOS_PATIENT_FIXTURE: "Patient: John Smith" } });
   assert.equal(salted.status, "hard-block");
   assert.equal(salted.findings[0]?.severity, "hard-block");
   assert.equal(salted.auditRows[0]?.eventType, "preflight-block");
@@ -74,12 +74,12 @@ test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures",
     files: [
       {
         path: "mcp/src/bad.ts",
-        text: `const url = "${["https://osod.dev/fhir/StructureDefinition", "not-in-registry"].join("/")}";\n`,
+        text: `const url = "${["https://odos2020.com/fhir/StructureDefinition", "not-in-registry"].join("/")}";\n`,
       },
     ],
   });
   assert.equal(extension.status, "hard-block");
-  assert.equal(extension.findings[0]?.code, "osod-extension-url-shape");
+  assert.equal(extension.findings[0]?.code, "odos-extension-url-shape");
 
   const migration = runVendorCanonicalShapePass({
     files: [
@@ -101,10 +101,10 @@ test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures",
 test("v0.55c preflight pass 4 hard-blocks CDS hook and copy boundary fixtures", () => {
   const mixedHookIds = runVendorCanonicalShapePass({
     files: [
-      { path: "mcp/src/cds/services/a.ts", text: 'export const a = { discovery: { id: "osod-a" } };\n' },
+      { path: "mcp/src/cds/services/a.ts", text: 'export const a = { discovery: { id: "odos-a" } };\n' },
       {
         path: "mcp/src/cds/services/b.ts",
-        text: 'export const b = { discovery: { id: "https://osod.dev/cds-hooks/b" } };\n',
+        text: 'export const b = { discovery: { id: "https://odos2020.com/cds-hooks/b" } };\n',
       },
     ],
   });
@@ -175,7 +175,7 @@ test("v0.55d preflight pass 4 hard-blocks AgentOps response and AIAST fixtures",
   assert.equal(aiast.findings[0]?.code, "agentops-aiast-system-uri-required");
 
   const leak = runVendorCanonicalShapePass({
-    files: [{ path: "mcp/src/agentops/safety-valve.ts", text: "res.setHeader('X-OSOD-IB-Exception', 'x');\n" }],
+    files: [{ path: "mcp/src/agentops/safety-valve.ts", text: "res.setHeader('X-ODOS-IB-Exception', 'x');\n" }],
   });
   assert.equal(leak.status, "hard-block");
   assert.equal(leak.findings[0]?.code, "agentops-safety-valve-no-protectingcareaccess-leak");
@@ -260,11 +260,11 @@ test("v0.55e preflight pass 4 enforces CapabilityStatement claim backing tests a
 });
 
 test("v0.5d preflight aggregate writes structured reports when requested", () => {
-  const dir = mkdtempSync(join(tmpdir(), "osod-preflight-"));
+  const dir = mkdtempSync(join(tmpdir(), "odos-preflight-"));
   try {
     const report = runPreflightLint({
       logText: "clean\n",
-      env: { OSOD_MODE: "local" },
+      env: { ODOS_MODE: "local" },
       resources: [],
       files: [{ path: join(dir, "clean.ts"), text: "export const ok = true;\n" }],
       writeReports: false,

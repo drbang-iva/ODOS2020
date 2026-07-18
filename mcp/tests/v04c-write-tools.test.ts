@@ -53,7 +53,7 @@ test("v0.4c Ortho-K and myopia MCP write tools create resources with mandatory P
     email,
     password,
     accessToken,
-    clientName: "osod-mcp-v04c-write-tools-test",
+    clientName: "odos-mcp-v04c-write-tools-test",
   });
   t.after(async () => {
     await mcp.client.close();

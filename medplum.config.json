@@ -7,7 +7,7 @@
   "signingKeyId": "dev-signing-key",
   "signingKey": "dev-only-key-replace-before-production",
   "signingKeyPassphrase": "dev",
-  "supportEmail": "admin@osod.local",
+  "supportEmail": "admin@odos.local",
   "database": {
     "host": "postgres",
     "port": 5432,
@@ -24,6 +24,7 @@
   "maxBatchSize": "50mb",
   "allowedOrigins": "*",
   "introspectionEnabled": true,
+  "registerEnabled": false,
   "botLambdaLayerName": "",
   "botCustomFunctionsEnabled": true,
   "vmContextBotsEnabled": true,

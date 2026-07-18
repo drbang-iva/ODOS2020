@@ -14,8 +14,8 @@ import type {
 } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
 import {
-  OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
-  OSOD_SUBSTANCE_IDENTIFIER_SYSTEM,
+  ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+  ODOS_SUBSTANCE_IDENTIFIER_SYSTEM,
   buildConceptMap,
   buildV04CanonicalResources,
   buildV04DeviceDefinitionSeeds,
@@ -23,6 +23,7 @@ import {
   type ConceptMapMappingInput,
 } from "../mcp/src/fhir/contactLens.js";
 import { buildDryEyeCanonicalResources } from "../mcp/src/fhir/dryEyeTerminology.js";
+import { buildAestheticsCanonicalResources } from "../mcp/src/fhir/aestheticsConsent.js";
 import { buildMyopiaCanonicalResources } from "../mcp/src/fhir/myopiaManagement.js";
 
 loadRepoEnv();
@@ -76,6 +77,10 @@ for (const resource of buildDryEyeCanonicalResources()) {
   await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
 }
 
+for (const resource of buildAestheticsCanonicalResources()) {
+  await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
+}
+
 for (const resource of buildMyopiaCanonicalResources()) {
   await installCanonicalResource(resource, resource.url ?? resource.name ?? resource.resourceType);
 }
@@ -112,7 +117,7 @@ if (existsSync(labMappingsDir)) {
 for (const resource of buildV04DeviceDefinitionSeeds()) {
   await installIdentifiedResource(
     resource,
-    OSOD_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
+    ODOS_DEVICE_DEFINITION_IDENTIFIER_SYSTEM,
     resource.identifier?.[0]?.value,
   );
 }
@@ -120,7 +125,7 @@ for (const resource of buildV04DeviceDefinitionSeeds()) {
 for (const resource of buildV04SubstanceSeeds()) {
   await installIdentifiedResource(
     resource,
-    OSOD_SUBSTANCE_IDENTIFIER_SYSTEM,
+    ODOS_SUBSTANCE_IDENTIFIER_SYSTEM,
     resource.identifier?.[0]?.value,
   );
 }
@@ -176,7 +181,7 @@ async function hydrateStructureDefinitionSnapshot<T extends CanonicalResource>(
   }
 
   const baseDefinition =
-    resource.baseDefinition?.startsWith("https://osod.dev/fhir/StructureDefinition/")
+    resource.baseDefinition?.startsWith("https://odos2020.com/fhir/StructureDefinition/")
       ? `http://hl7.org/fhir/StructureDefinition/${resource.type}`
       : resource.baseDefinition;
   if (!baseDefinition) {

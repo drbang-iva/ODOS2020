@@ -1,4 +1,4 @@
-# OSOD Observation Relationship Types
+# ODOS Observation Relationship Types
 
 Verified in `data/code-bindings/v0.5-verification-ledger.md` row 44.
 

@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccessPolicy, Bundle, ProjectMembership } from "@medplum/fhirtypes";
-import { assertBusinessActionAllowed, OSOD_PRACTICE_ROLE_SYSTEM } from "../src/authz/roles.js";
+import {
+  assertBusinessActionAllowed,
+  ODOS_PRACTICE_ROLE_SYSTEM,
+  resolveBusinessActionRole,
+} from "../src/authz/roles.js";
 import {
   paymentAdapterRegistrationsFromEnv,
   resolveStaffRole,
+  resolveStaffRoles,
+  StaffRoleServiceUnavailableError,
   verifyMedplumStaffToken,
 } from "../src/payments/payment-endpoint.js";
 
@@ -15,10 +21,26 @@ test("front-desk and practice-admin hold the payment.charge business action", ()
   assertBusinessActionAllowed("practice-admin", "payment.charge");
 });
 
+test("only front-desk and practice-admin hold payment.seal-day", () => {
+  assertBusinessActionAllowed("front-desk", "payment.seal-day");
+  assertBusinessActionAllowed("practice-admin", "payment.seal-day");
+  for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
+    assert.throws(() => assertBusinessActionAllowed(role, "payment.seal-day"), /lacks business action/);
+  }
+});
+
 test("clinician, auditor, and aesthetics-provider do NOT hold payment.charge", () => {
   for (const role of ["clinician", "auditor", "aesthetics-provider"] as const) {
     assert.throws(() => assertBusinessActionAllowed(role, "payment.charge"), /lacks business action/);
   }
+});
+
+test("business-action acting roles are selected from the full set in registry order", () => {
+  const roles = ["clinician", "front-desk", "practice-admin"] as const;
+  assert.equal(resolveBusinessActionRole(roles, "chart.write"), "clinician");
+  assert.equal(resolveBusinessActionRole(roles, "payment.charge"), "practice-admin");
+  assert.equal(resolveBusinessActionRole(roles, "claims.manage"), "practice-admin");
+  assert.equal(resolveBusinessActionRole(["clinician"], "claims.manage"), undefined);
 });
 
 // --- Adapter registrations from env (service-start configuration) ---
@@ -28,7 +50,7 @@ test("manual-cash is always registered; clover registers when its four env vars 
     CLOVER_BASE_URL: "https://apisandbox.dev.clover.com",
     CLOVER_ACCESS_TOKEN: "tok",
     CLOVER_DEVICE_ID: "DEV1",
-    CLOVER_POS_ID: "OSOD-Dispensary",
+    CLOVER_POS_ID: "ODOS-Dispensary",
   });
   assert.deepEqual(
     registrations.map((r) => r.method).sort(),
@@ -41,7 +63,7 @@ test("manual-cash is always registered; clover registers when its four env vars 
       baseUrl: "https://apisandbox.dev.clover.com",
       accessToken: "tok",
       deviceId: "DEV1",
-      posId: "OSOD-Dispensary",
+      posId: "ODOS-Dispensary",
     },
   });
 });
@@ -55,6 +77,41 @@ test("a partially configured clover fails fast at service start, naming the miss
   assert.throws(
     () => paymentAdapterRegistrationsFromEnv({ CLOVER_BASE_URL: "https://apisandbox.dev.clover.com" }),
     /CLOVER_ACCESS_TOKEN/,
+  );
+});
+
+test("stripe registers from a test secret, defaulting its API base URL", () => {
+  const registrations = paymentAdapterRegistrationsFromEnv({
+    STRIPE_SECRET_KEY: "sk_test_env_fixture",
+  });
+  assert.deepEqual(registrations.find((r) => r.method === "stripe"), {
+    method: "stripe",
+    config: {
+      baseUrl: "https://api.stripe.com",
+      secretKey: "sk_test_env_fixture",
+    },
+  });
+});
+
+test("a Stripe base URL without its secret fails fast at service start", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_BASE_URL: "https://api.stripe.com" }),
+    /STRIPE_SECRET_KEY/,
+  );
+});
+
+test("Stripe env registration rejects live keys and non-HTTPS secret destinations", () => {
+  assert.throws(
+    () => paymentAdapterRegistrationsFromEnv({ STRIPE_SECRET_KEY: "sk_live_forbidden" }),
+    /test-mode/,
+  );
+  assert.throws(
+    () =>
+      paymentAdapterRegistrationsFromEnv({
+        STRIPE_SECRET_KEY: "sk_test_env_fixture",
+        STRIPE_BASE_URL: "http://stripe-proxy.test",
+      }),
+    /HTTPS/,
   );
 });
 
@@ -118,8 +175,8 @@ function frontDeskPolicy(): AccessPolicy {
   return {
     resourceType: "AccessPolicy",
     id: "ap-front-desk",
-    name: "OSOD Front Desk",
-    meta: { tag: [{ system: OSOD_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
+    name: "ODOS Front Desk",
+    meta: { tag: [{ system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" }] },
   };
 }
 
@@ -165,6 +222,53 @@ test("resolveStaffRole derives the role from the caller's bound AccessPolicy ide
   assert.deepEqual(svc.calls.read[0], { rt: "AccessPolicy", id: "ap-front-desk" });
 });
 
+test("resolveStaffRole refreshes an expired service client once and retries the shared role lookup", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  let expired = true;
+  let refreshes = 0;
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => {
+      if (expired) throw Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: MEMBERSHIP_FRONT_DESK as unknown as T }] };
+    },
+    read: async <T,>(): Promise<T> => frontDeskPolicy() as unknown as T,
+  };
+
+  const staff = await resolveStaffRole({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+    refreshServiceClient: async () => {
+      refreshes += 1;
+      expired = false;
+    },
+  });
+
+  assert.deepEqual(staff, { staffReference: "Practitioner/staff1", role: "front-desk" });
+  assert.equal(refreshes, 1);
+});
+
+test("resolveStaffRole reports a service outage when refresh cannot recover an expired token", async () => {
+  const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
+  const unauthorized = Object.assign(new Error("FHIR 401 Unauthorized: Unauthorized"), { status: 401 });
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => { throw unauthorized; },
+    read: async <T,>(): Promise<T> => { throw unauthorized; },
+  };
+
+  await assert.rejects(
+    resolveStaffRole({
+      baseUrl: "http://x",
+      authHeader: "Bearer good",
+      serviceClient,
+      fetchImpl,
+      refreshServiceClient: async () => undefined,
+    }),
+    StaffRoleServiceUnavailableError,
+  );
+});
+
 test("resolveStaffRole returns null for an invalid token and never reaches the service client", async () => {
   const { fetchImpl } = meTransport(401, {});
   const svc = serviceClient({ membership: MEMBERSHIP_FRONT_DESK, policy: frontDeskPolicy() });
@@ -188,7 +292,7 @@ test("resolveStaffRole returns null when the AccessPolicy carries no practice-ro
   const { fetchImpl } = meTransport(200, { profile: { resourceType: "Practitioner", id: "staff1" } });
   const svc = serviceClient({
     membership: MEMBERSHIP_FRONT_DESK,
-    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "OSOD Front Desk" },
+    policy: { resourceType: "AccessPolicy", id: "ap-front-desk", name: "ODOS Front Desk" },
   });
   assert.equal(
     await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl }),
@@ -208,4 +312,84 @@ test("resolveStaffRole also reads the legacy single accessPolicy binding", async
   const svc = serviceClient({ membership: legacyMembership, policy: frontDeskPolicy() });
   const staff = await resolveStaffRole({ baseUrl: "http://x", authHeader: "Bearer good", serviceClient: svc, fetchImpl });
   assert.equal(staff?.role, "front-desk");
+});
+
+test("resolveStaffRoles returns every recognized practice-role tag across the caller's policy bindings", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "staff@example.test" },
+  });
+  const membership: ProjectMembership = {
+    ...MEMBERSHIP_FRONT_DESK,
+    access: [
+      { policy: { reference: "AccessPolicy/ap-clinical" } },
+      { policy: { reference: "AccessPolicy/ap-desk" } },
+    ],
+  };
+  const policies: Record<string, AccessPolicy> = {
+    "ap-clinical": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "clinician" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "aesthetics-provider" },
+      ] },
+    },
+    "ap-desk": {
+      resourceType: "AccessPolicy",
+      meta: { tag: [
+        { system: "https://example.test/unrelated", code: "front-desk" },
+        { system: ODOS_PRACTICE_ROLE_SYSTEM, code: "front-desk" },
+      ] },
+    },
+  };
+  const serviceClient = {
+    search: async <T,>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset", entry: [{ resource: membership as unknown as T }] }),
+    read: async <T,>(_resourceType: string, id: string): Promise<T> => policies[id] as unknown as T,
+  };
+
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "staff@example.test",
+    roles: ["clinician", "front-desk", "aesthetics-provider"],
+  });
+
+  const reversed = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: {
+      ...serviceClient,
+      search: async <T,>(): Promise<Bundle<T>> => ({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: { ...membership, access: [...membership.access!].reverse() } as unknown as T }],
+      }),
+    },
+    fetchImpl,
+  });
+  assert.deepEqual(reversed?.roles, staff?.roles);
+});
+
+test("resolveStaffRoles preserves authenticated identity when no role-bearing policy exists", async () => {
+  const { fetchImpl } = meTransport(200, {
+    profile: { resourceType: "Practitioner", id: "staff1" },
+    user: { resourceType: "User", id: "u1", email: "roleless@example.test" },
+  });
+  const svc = serviceClient({ membership: null });
+  const staff = await resolveStaffRoles({
+    baseUrl: "http://x",
+    authHeader: "Bearer good",
+    serviceClient: svc,
+    fetchImpl,
+  });
+  assert.deepEqual(staff, {
+    staffReference: "Practitioner/staff1",
+    email: "roleless@example.test",
+    roles: [],
+  });
 });

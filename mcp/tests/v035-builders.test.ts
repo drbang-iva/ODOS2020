@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Procedure } from "@medplum/fhirtypes";
 import {
   EPISODE_OF_CARE_TYPE_CODES,
-  OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
+  ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM,
   buildEpisodeOfCare,
   episodeOfCareTypeConcept,
   episodeOfCareTypeDefinition,
@@ -56,9 +56,9 @@ import {
   deferredProcedureCode,
 } from "./fixtures/deferred-procedure-constants.js";
 
-test("EpisodeOfCare.type uses the OSOD CodeSystem", () => {
+test("EpisodeOfCare.type uses the ODOS CodeSystem", () => {
   const concept = episodeOfCareTypeConcept("glaucoma");
-  assert.equal(concept.coding?.[0]?.system, OSOD_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
+  assert.equal(concept.coding?.[0]?.system, ODOS_EPISODE_OF_CARE_TYPE_CODE_SYSTEM);
   assert.equal(concept.coding?.[0]?.code, "glaucoma");
 });
 
@@ -237,6 +237,7 @@ test("Smoking Status Observation uses US Core profile and LOINC 72166-2", () => 
   });
 
   assert.equal(observation.meta?.profile?.[0], US_CORE_SMOKING_STATUS_PROFILE);
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.code.coding?.[0]?.system, LOINC_CODE_SYSTEM);
   assert.equal(observation.code.coding?.[0]?.code, TOBACCO_SMOKING_STATUS_LOINC_CODE);
 });
@@ -340,14 +341,14 @@ test("Procedure body-structure helper removes target extension when omitted", ()
         url: PROCEDURE_TARGET_BODY_STRUCTURE_EXTENSION_URL,
         valueReference: { reference: "BodyStructure/old" },
       },
-      { url: "https://osod.dev/fhir/StructureDefinition/example", valueString: "keep" },
+      { url: "https://odos2020.com/fhir/StructureDefinition/example", valueString: "keep" },
     ],
   };
 
   const updated = withProcedureTargetBodyStructure(procedure, undefined);
   assert.deepEqual(
     updated.extension?.map((extension) => extension.url),
-    ["https://osod.dev/fhir/StructureDefinition/example"],
+    ["https://odos2020.com/fhir/StructureDefinition/example"],
   );
 });
 

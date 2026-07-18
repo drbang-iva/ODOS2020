@@ -1,11 +1,11 @@
 import {
-  buildOsodAuditEventRow,
+  buildOdosAuditEventRow,
   buildPlaceholderAuditEvent,
-  type OsodAuditEventRow,
-} from "./osodAudit.js";
+  type OdosAuditEventRow,
+} from "./odosAudit.js";
 import { buildProjectMembershipAccess, type PracticeRoleId } from "./roles.js";
 
-export const BREAK_GLASS_POLICY_URL = "https://osod.dev/fhir/AccessPolicy/break-glass";
+export const BREAK_GLASS_POLICY_URL = "https://odos2020.com/fhir/AccessPolicy/break-glass";
 export const DEFAULT_BREAK_GLASS_DURATION_MINUTES = 60;
 
 export interface BreakGlassRequest {
@@ -33,7 +33,7 @@ export interface BreakGlassGrant {
 
 export interface BreakGlassResult {
   grant: BreakGlassGrant;
-  auditRow: OsodAuditEventRow;
+  auditRow: OdosAuditEventRow;
   auditEvent: ReturnType<typeof buildPlaceholderAuditEvent>;
 }
 
@@ -60,7 +60,7 @@ export function invokeBreakGlass(input: BreakGlassRequest): BreakGlassResult {
       parameters: { patientCompartmentReference: input.patientReference },
     }),
   };
-  const auditRow = buildOsodAuditEventRow({
+  const auditRow = buildOdosAuditEventRow({
     eventType: "break-glass-invoked",
     occurredAt: grantedAt,
     actorReference: input.actorReference,

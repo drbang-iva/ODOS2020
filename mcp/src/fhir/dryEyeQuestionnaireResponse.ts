@@ -4,7 +4,7 @@ import type {
   QuestionnaireResponseItem,
   QuestionnaireResponseItemAnswer,
 } from "@medplum/fhirtypes";
-import { OSOD_FHIR_BASE } from "./contactLens.js";
+import { ODOS_FHIR_BASE } from "./contactLens.js";
 import {
   type DryEyeQuestionnaireInstrument,
   DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
@@ -79,9 +79,9 @@ export function buildDryEyeQuestionnaireScoreObservation(
   return {
     resourceType: "Observation",
     meta: {
-      profile: [`${OSOD_FHIR_BASE}/StructureDefinition/Observation-DryEyeQuestionnaireScore`],
+      profile: [`${ODOS_FHIR_BASE}/StructureDefinition/Observation-DryEyeQuestionnaireScore`],
     },
-    status: "final",
+    status: "preliminary",
     category: [
       {
         coding: [

@@ -1,8 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_MEDPLUM_ADMIN_EMAIL: string;
-  readonly VITE_MEDPLUM_ADMIN_PASSWORD: string;
+  readonly VITE_ODOS_MCP_BASE_URL?: string;
 }
 
 interface ImportMeta {

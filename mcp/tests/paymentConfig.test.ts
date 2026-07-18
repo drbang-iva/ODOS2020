@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { PaymentReconciliation } from "@medplum/fhirtypes";
+import type { Bundle, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import { createPaymentDispatch } from "../src/payments/payment-config.js";
 import { CLOVER_SANDBOX_BASE_URL } from "../src/payments/adapters/clover-adapter.js";
 
@@ -8,12 +8,14 @@ const CLOVER_CONFIG = {
   baseUrl: CLOVER_SANDBOX_BASE_URL,
   accessToken: "tok",
   deviceId: "DEV1",
-  posId: "OSOD",
+  posId: "ODOS",
 };
+const STRIPE_CONFIG = { baseUrl: "https://api.stripe.com", secretKey: "sk_test_dispatch" };
 
 function fakeFhir() {
   return {
     read: async <T,>(): Promise<T> => ({}) as T,
+    search: async <T extends Resource>(): Promise<Bundle<T>> => ({ resourceType: "Bundle", type: "searchset" }),
     update: async <T,>(_rt: string, _id: string, r: T): Promise<T> => r,
     create: async <T,>(r: T): Promise<T> => ({ ...(r as object), id: "pr-1" }) as T,
   };
@@ -23,6 +25,7 @@ test("getAdapter resolves the configured method to its adapter instance (unified
   const dispatch = createPaymentDispatch([
     { method: "manual-cash" },
     { method: "clover", config: CLOVER_CONFIG },
+    { method: "stripe", config: STRIPE_CONFIG },
   ]);
 
   const cash = dispatch.getAdapter("manual-cash", fakeFhir());
@@ -32,14 +35,19 @@ test("getAdapter resolves the configured method to its adapter instance (unified
   const clover = dispatch.getAdapter("clover", fakeFhir());
   assert.equal(clover.name, "clover");
   assert.equal(clover.surface, "in-clinic-pos");
+
+  const stripe = dispatch.getAdapter("stripe", fakeFhir());
+  assert.equal(stripe.name, "stripe");
+  assert.equal(stripe.surface, "online");
 });
 
 test("methods() lists exactly the registered, enabled payment methods (drives the practice's checkout buttons)", () => {
   const dispatch = createPaymentDispatch([
     { method: "manual-cash" },
     { method: "clover", config: CLOVER_CONFIG },
+    { method: "stripe", config: STRIPE_CONFIG },
   ]);
-  assert.deepEqual(dispatch.methods().sort(), ["clover", "manual-cash"]);
+  assert.deepEqual(dispatch.methods().sort(), ["clover", "manual-cash", "stripe"]);
 });
 
 test("getAdapter throws for a method the practice has not configured", () => {

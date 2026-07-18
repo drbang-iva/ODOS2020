@@ -1,3 +1,13 @@
+@import "./desk-home.css";
+@import "./day-ledger.css";
+@import "./day-close.css";
+@import "./margin-ledger.css";
+@import "./practice-settings.css";
+@import "./clinic-home.css";
+@import "./lab-orders.css";
+@import "./patient-overview.css";
+@import "./charting.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

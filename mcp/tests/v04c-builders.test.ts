@@ -66,6 +66,7 @@ test("Ortho-K fit observation uses Observation.focus and never derivedFrom Devic
   });
 
   assert.ok(observation.meta?.profile?.includes(OBSERVATION_CONTACT_LENS_FIT_FINDING_PROFILE_URL));
+  assert.equal(observation.status, "preliminary");
   assert.equal(observation.focus?.[0]?.reference, "Device/l1");
   assert.equal(observation.subject?.reference, "Patient/p1");
   assert.equal(observation.derivedFrom, undefined);
@@ -130,6 +131,7 @@ test("Axial length builder uses existing v0.3 profile and mm UCUM", () => {
   });
 
   assert.equal(observation.valueQuantity?.code, "mm");
+  assert.equal(observation.status, "preliminary");
   assert.deepEqual(observation.code.coding?.[0], {
     system: "http://loinc.org",
     code: "64742-0",

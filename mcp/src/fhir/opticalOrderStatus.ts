@@ -8,7 +8,7 @@ import type { CodeableConcept } from "@medplum/fhirtypes";
  * code system), bound to `Task.businessStatus` on the optical order; `Task.status` stays on the
  * FHIR R4 required workflow vocabulary. See the Slice-3 spec §4/§7.
  */
-export const OSOD_OPTICAL_ORDER_STATUS_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-status";
+export const ODOS_OPTICAL_ORDER_STATUS_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-status";
 
 export const OPTICAL_ORDER_STATUSES = [
   { code: "quote", display: "Quote" },
@@ -50,7 +50,7 @@ export function opticalOrderStatusConcept(code: string): CodeableConcept {
   return {
     coding: [
       {
-        system: OSOD_OPTICAL_ORDER_STATUS_SYSTEM,
+        system: ODOS_OPTICAL_ORDER_STATUS_SYSTEM,
         code: status.code,
         display: status.display,
       },

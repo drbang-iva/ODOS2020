@@ -1,6 +1,6 @@
-# OSOD Local Backup and At-Rest Encryption
+# ODOS Local Backup and At-Rest Encryption
 
-OSOD backups are local files. Use the practice's own filesystem or attached drive, then protect that destination with host-level at-rest encryption and physical safeguards.
+ODOS backups are local files. Use the practice's own filesystem or attached drive, then protect that destination with host-level at-rest encryption and physical safeguards.
 
 The practice is the responsible actor for physical safeguards around devices and media. Ledger row 46 verifies HIPAA 45 CFR §164.310 and HHS physical-safeguard guidance.
 
@@ -17,7 +17,7 @@ The helper script does not enforce encryption. It emits warnings so the practice
 ## Verify a Destination
 
 ```bash
-npm run verify-backup-destination -- /path/to/osod-backups
+npm run verify-backup-destination -- /path/to/odos-backups
 ```
 
 The report checks:
@@ -46,11 +46,11 @@ npm run dr-drill
 Operator-only outline:
 
 ```bash
-docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+docker-compose -p odos-dr-drill -f docker-compose.dr-drill.yml up -d
 npx tsx scripts/seed-dr-drill.ts
-OSOD_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
-docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml down -v
-docker-compose -p osod-dr-drill -f docker-compose.dr-drill.yml up -d
+ODOS_BACKUP_DIR="$PWD/backup-dr-drill" scripts/backup.sh
+docker-compose -p odos-dr-drill -f docker-compose.dr-drill.yml down -v
+docker-compose -p odos-dr-drill -f docker-compose.dr-drill.yml up -d
 scripts/restore.sh "$PWD/backup-dr-drill/manifest-<timestamp>.json"
 ```
 
@@ -60,5 +60,5 @@ The restore integrity suite verifies audit rows, signed Provenance samples, Bina
 
 - Keep backup media physically controlled by the practice.
 - Do not store backup manifests or media in the repo.
-- Do not commit `.osod/`, `.osod-setup-state.json`, `.env`, backup directories, or restored data volumes.
+- Do not commit `.odos/`, `.odos-setup-state.json`, `.env`, backup directories, or restored data volumes.
 - Run `npm run preflight` after setup and before live use so env-var PHI hard-blocks are caught early.

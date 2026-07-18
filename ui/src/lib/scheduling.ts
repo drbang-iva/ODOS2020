@@ -15,16 +15,18 @@ export const SCHEDULING_DISCIPLINES = [
 
 export type SchedulingDiscipline = (typeof SCHEDULING_DISCIPLINES)[number]["code"];
 
-export const OSOD_DISCIPLINE_SYSTEM = "https://osod.dev/fhir/CodeSystem/scheduling-discipline";
-export const OSOD_VISIT_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/visit-type";
-export const OSOD_VISIT_DURATION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-visit-duration";
-export const OSOD_DISPLAY_COLOR_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-display-color";
-export const OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-eligible-resource";
-export const OSOD_INTAKE_FORM_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-intake-form";
+export const ODOS_DISCIPLINE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/scheduling-discipline";
+export const ODOS_VISIT_TYPE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/visit-type";
+export const ODOS_VISIT_TYPE_CATEGORY_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/visit-type-category";
+export const ODOS_VISIT_DURATION_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-visit-duration";
+export const ODOS_DISPLAY_COLOR_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-display-color";
+export const ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-eligible-resource";
+export const ODOS_INTAKE_FORM_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-intake-form";
 
 export const SCHEDULER_PALETTE = {
   surfaceBase: "#060610",
@@ -71,10 +73,10 @@ export const RESOURCE_KINDS = [
 
 export type ResourceKind = (typeof RESOURCE_KINDS)[number]["code"];
 
-export const OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-appointment-confirmation";
-export const OSOD_APPOINTMENT_CONFIRMATION_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/appointment-confirmation";
+export const ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-appointment-confirmation";
+export const ODOS_APPOINTMENT_CONFIRMATION_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/appointment-confirmation";
 
 export const APPOINTMENT_CONFIRMATION_STATUSES = [
   { code: "not-confirmed", display: "Not Confirmed" },
@@ -89,7 +91,7 @@ export type AppointmentConfirmationStatus =
 export const V2_0276_APPOINTMENT_TYPE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/v2-0276";
 
-export const OSOD_APPOINTMENT_STATUSES = [
+export const ODOS_APPOINTMENT_STATUSES = [
   { code: "scheduled", display: "Scheduled", fhirStatus: "booked" },
   { code: "checked-in", display: "Checked In", fhirStatus: "checked-in" },
   { code: "checked-out", display: "Checked Out", fhirStatus: "fulfilled" },
@@ -98,19 +100,19 @@ export const OSOD_APPOINTMENT_STATUSES = [
   { code: "cancelled", display: "Cancelled", fhirStatus: "cancelled" },
 ] as const;
 
-export type OsodAppointmentStatus = (typeof OSOD_APPOINTMENT_STATUSES)[number]["code"];
+export type OdosAppointmentStatus = (typeof ODOS_APPOINTMENT_STATUSES)[number]["code"];
 
-export const OSOD_VISION_COVERAGE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-vision-coverage";
-export const OSOD_MEDICAL_COVERAGE_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-medical-coverage";
-export const OSOD_FOLLOW_UP_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-appointment-follow-up";
+export const ODOS_VISION_COVERAGE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-vision-coverage";
+export const ODOS_MEDICAL_COVERAGE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-medical-coverage";
+export const ODOS_FOLLOW_UP_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-appointment-follow-up";
 
-export const OSOD_BLOCKED_TIME_KIND_EXTENSION_URL =
-  "https://osod.dev/fhir/StructureDefinition/osod-blocked-time-kind";
-export const OSOD_BLOCKED_TIME_KIND_SYSTEM =
-  "https://osod.dev/fhir/CodeSystem/blocked-time-kind";
+export const ODOS_BLOCKED_TIME_KIND_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-blocked-time-kind";
+export const ODOS_BLOCKED_TIME_KIND_SYSTEM =
+  "https://odos2020.com/fhir/CodeSystem/blocked-time-kind";
 
 export const BLOCKED_TIME_KINDS = [
   { code: "office-closed", display: "Office Closed" },
@@ -179,7 +181,7 @@ export interface BookSchedulingAppointmentInput {
   resourceScheduleReferences: string[];
   start: string;
   durationMinutes?: number;
-  status?: OsodAppointmentStatus;
+  status?: OdosAppointmentStatus;
   confirmation?: AppointmentConfirmationStatus;
   visionCoverage?: CoverageInput;
   medicalCoverage?: CoverageInput;
@@ -301,7 +303,7 @@ export interface AppointmentBlockContent {
   visitTypeDisplay: string;
   visitTypeCode?: string;
   color: string;
-  status?: OsodAppointmentStatus;
+  status?: OdosAppointmentStatus;
   statusDisplay: string;
   confirmation?: AppointmentConfirmationStatus;
   confirmationDisplay: string;
@@ -325,8 +327,8 @@ const CONFIRMATION_BY_CODE = new Map<
   string,
   (typeof APPOINTMENT_CONFIRMATION_STATUSES)[number]
 >(APPOINTMENT_CONFIRMATION_STATUSES.map((status) => [status.code, status]));
-const STATUS_BY_CODE = new Map<string, (typeof OSOD_APPOINTMENT_STATUSES)[number]>(
-  OSOD_APPOINTMENT_STATUSES.map((status) => [status.code, status]),
+const STATUS_BY_CODE = new Map<string, (typeof ODOS_APPOINTMENT_STATUSES)[number]>(
+  ODOS_APPOINTMENT_STATUSES.map((status) => [status.code, status]),
 );
 const BLOCKED_KIND_BY_CODE = new Map<string, (typeof BLOCKED_TIME_KINDS)[number]>(
   BLOCKED_TIME_KINDS.map((kind) => [kind.code, kind]),
@@ -336,6 +338,7 @@ const DEFAULT_COLOR_BY_DISCIPLINE: Record<SchedulingDiscipline, string> = {
   eyecare: SCHEDULER_PALETTE.newExamBlue,
   aesthetics: SCHEDULER_PALETTE.aestheticsCyan,
 };
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const WEEKDAY_BY_UTC_DAY: Weekday[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const TIME_HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const ISO_WITH_OFFSET =
@@ -367,9 +370,9 @@ export function assertConfirmationStatus(
   }
 }
 
-export function assertOsodAppointmentStatus(
+export function assertOdosAppointmentStatus(
   code: string,
-): asserts code is OsodAppointmentStatus {
+): asserts code is OdosAppointmentStatus {
   if (!STATUS_BY_CODE.has(code)) {
     throw new Error(
       `Unknown appointment status "${code}" — must be one of the six front-desk lifecycle values.`,
@@ -381,7 +384,7 @@ export function toFhirAppointmentStatus(code: string): {
   status: Appointment["status"];
   appointmentTypeCode?: string;
 } {
-  assertOsodAppointmentStatus(code);
+  assertOdosAppointmentStatus(code);
   const status = STATUS_BY_CODE.get(code)!;
   return {
     status: status.fhirStatus,
@@ -413,11 +416,11 @@ export function appointmentConfirmationExtension(code: string): Extension {
   assertConfirmationStatus(code);
   const status = CONFIRMATION_BY_CODE.get(code)!;
   return {
-    url: OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
+    url: ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL,
     valueCodeableConcept: {
       coding: [
         {
-          system: OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
+          system: ODOS_APPOINTMENT_CONFIRMATION_SYSTEM,
           code: status.code,
           display: status.display,
         },
@@ -466,7 +469,7 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
       {
         coding: [
           {
-            system: OSOD_VISIT_TYPE_SYSTEM,
+            system: ODOS_VISIT_TYPE_SYSTEM,
             code: input.visitTypeCode,
             ...(input.visitTypeDisplay ? { display: input.visitTypeDisplay } : {}),
           },
@@ -507,12 +510,12 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
     extension: [
       appointmentConfirmationExtension(input.confirmation ?? "not-confirmed"),
       ...(input.visionCoverage
-        ? [coverageExtension(OSOD_VISION_COVERAGE_EXTENSION_URL, input.visionCoverage)]
+        ? [coverageExtension(ODOS_VISION_COVERAGE_EXTENSION_URL, input.visionCoverage)]
         : []),
       ...(input.medicalCoverage
-        ? [coverageExtension(OSOD_MEDICAL_COVERAGE_EXTENSION_URL, input.medicalCoverage)]
+        ? [coverageExtension(ODOS_MEDICAL_COVERAGE_EXTENSION_URL, input.medicalCoverage)]
         : []),
-      ...(input.followUp ? [{ url: OSOD_FOLLOW_UP_EXTENSION_URL, valueBoolean: true }] : []),
+      ...(input.followUp ? [{ url: ODOS_FOLLOW_UP_EXTENSION_URL, valueBoolean: true }] : []),
     ],
   };
 }
@@ -631,30 +634,187 @@ export function isDisciplineVisible(discipline: string, mode: string): boolean {
   return disciplinesForMode(mode).includes(discipline);
 }
 
+export interface VisitTypeInput {
+  code: string;
+  name: string;
+  discipline: string;
+  categoryCode?: string;
+  categoryLabel?: string;
+  durationMinutes: number;
+  color?: string;
+  eligibleResourceReferences?: string[];
+  intakeFormReference?: string;
+  active?: boolean;
+}
+
+export function buildVisitType(input: VisitTypeInput): HealthcareService {
+  if (!input.code) {
+    throw new Error("Visit type requires a stable catalog code.");
+  }
+  if (!input.name) {
+    throw new Error("Visit type requires a front-desk display name.");
+  }
+  assertDiscipline(input.discipline);
+  if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
+    throw new Error("Visit type duration (durationMinutes) must be a positive integer.");
+  }
+  const color = input.color ?? DEFAULT_COLOR_BY_DISCIPLINE[input.discipline];
+  if (!HEX_COLOR.test(color)) {
+    throw new Error(`Visit type color must be a #rrggbb hex value, got "${color}".`);
+  }
+  if (input.categoryLabel && !input.categoryCode) {
+    throw new Error("Visit type categoryLabel requires categoryCode.");
+  }
+
+  return {
+    resourceType: "HealthcareService",
+    active: input.active ?? true,
+    appointmentRequired: true,
+    name: input.name,
+    category: [
+      {
+        coding: [
+          {
+            system: ODOS_DISCIPLINE_SYSTEM,
+            code: input.discipline,
+            display: SCHEDULING_DISCIPLINES.find((entry) => entry.code === input.discipline)?.display,
+          },
+        ],
+      },
+      ...(input.categoryCode
+        ? [
+            {
+              coding: [
+                {
+                  system: ODOS_VISIT_TYPE_CATEGORY_SYSTEM,
+                  code: input.categoryCode,
+                  ...(input.categoryLabel ? { display: input.categoryLabel } : {}),
+                },
+              ],
+              ...(input.categoryLabel ? { text: input.categoryLabel } : {}),
+            },
+          ]
+        : []),
+    ],
+    type: [
+      {
+        coding: [{ system: ODOS_VISIT_TYPE_SYSTEM, code: input.code, display: input.name }],
+        text: input.name,
+      },
+    ],
+    extension: [
+      { url: ODOS_VISIT_DURATION_EXTENSION_URL, valuePositiveInt: input.durationMinutes },
+      { url: ODOS_DISPLAY_COLOR_EXTENSION_URL, valueString: color },
+      ...(input.eligibleResourceReferences ?? []).map((reference) => ({
+        url: ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL,
+        valueReference: { reference },
+      })),
+      ...(input.intakeFormReference
+        ? [
+            {
+              url: ODOS_INTAKE_FORM_EXTENSION_URL,
+              valueReference: { reference: input.intakeFormReference },
+            },
+          ]
+        : []),
+    ],
+  };
+}
+
+const DEFAULT_VISIT_TYPES: VisitTypeInput[] = [
+  {
+    code: "routine-exam-new",
+    name: "Routine Exam (New)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.newExamBlue,
+  },
+  {
+    code: "routine-exam-established",
+    name: "Routine Exam (Established)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.establishedTeal,
+  },
+  {
+    code: "medicaid-exam",
+    name: "Medicaid Exam",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.lightSurfaceBright,
+  },
+  {
+    code: "office-visit",
+    name: "Office Visit (Medical)",
+    discipline: "eyecare",
+    durationMinutes: 20,
+    color: SCHEDULER_PALETTE.officeVisitOrange,
+  },
+  {
+    code: "special-testing",
+    name: "Special Testing (VF / OCT / Dry Eye)",
+    discipline: "eyecare",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.specialTestingPurple,
+  },
+  {
+    code: "aesthetics-consult",
+    name: "Aesthetics Consult",
+    discipline: "aesthetics",
+    durationMinutes: 30,
+    color: SCHEDULER_PALETTE.aestheticsCyan,
+  },
+  {
+    code: "aesthetics-treatment",
+    name: "Aesthetics Treatment",
+    discipline: "aesthetics",
+    durationMinutes: 60,
+    color: SCHEDULER_PALETTE.aestheticsRose,
+  },
+  {
+    code: "aesthetics-follow-up",
+    name: "Aesthetics Follow-Up",
+    discipline: "aesthetics",
+    durationMinutes: 15,
+    color: SCHEDULER_PALETTE.aestheticsSky,
+  },
+];
+
+export function defaultVisitTypeCatalog(mode: string): HealthcareService[] {
+  const visible = new Set<string>(disciplinesForMode(mode));
+  return DEFAULT_VISIT_TYPES.filter((visitType) => visible.has(visitType.discipline)).map(buildVisitType);
+}
+
 export function visitTypeCode(hs: HealthcareService): string | undefined {
-  return hs.type?.[0]?.coding?.find((coding) => coding.system === OSOD_VISIT_TYPE_SYSTEM)?.code;
+  return hs.type?.[0]?.coding?.find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM)?.code;
 }
 
 export function visitTypeDiscipline(hs: HealthcareService): SchedulingDiscipline | undefined {
   const code = hs.category
     ?.flatMap((concept) => concept.coding ?? [])
-    .find((coding) => coding.system === OSOD_DISCIPLINE_SYSTEM)?.code;
+    .find((coding) => coding.system === ODOS_DISCIPLINE_SYSTEM)?.code;
   return code as SchedulingDiscipline | undefined;
 }
 
+export function visitTypeCategory(hs: HealthcareService) {
+  return hs.category
+    ?.flatMap((concept) => concept.coding ?? [])
+    .find((coding) => coding.system === ODOS_VISIT_TYPE_CATEGORY_SYSTEM);
+}
+
 export function visitTypeDurationMinutes(hs: HealthcareService): number | undefined {
-  return hs.extension?.find((extension) => extension.url === OSOD_VISIT_DURATION_EXTENSION_URL)
+  return hs.extension?.find((extension) => extension.url === ODOS_VISIT_DURATION_EXTENSION_URL)
     ?.valuePositiveInt;
 }
 
 export function visitTypeColor(hs: HealthcareService): string | undefined {
-  return hs.extension?.find((extension) => extension.url === OSOD_DISPLAY_COLOR_EXTENSION_URL)
+  return hs.extension?.find((extension) => extension.url === ODOS_DISPLAY_COLOR_EXTENSION_URL)
     ?.valueString;
 }
 
 export function visitTypeEligibleResourceReferences(hs: HealthcareService): string[] {
   return (hs.extension ?? [])
-    .filter((extension) => extension.url === OSOD_ELIGIBLE_RESOURCE_EXTENSION_URL)
+    .filter((extension) => extension.url === ODOS_ELIGIBLE_RESOURCE_EXTENSION_URL)
     .map((extension) => extension.valueReference?.reference)
     .filter((reference): reference is string => Boolean(reference));
 }
@@ -662,7 +822,7 @@ export function visitTypeEligibleResourceReferences(hs: HealthcareService): stri
 export function resourceDisciplines(schedule: Schedule): SchedulingDiscipline[] {
   return (schedule.serviceCategory ?? [])
     .flatMap((concept) => concept.coding ?? [])
-    .filter((coding) => coding.system === OSOD_DISCIPLINE_SYSTEM)
+    .filter((coding) => coding.system === ODOS_DISCIPLINE_SYSTEM)
     .map((coding) => coding.code as SchedulingDiscipline);
 }
 
@@ -680,24 +840,24 @@ export function confirmationStatusOf(
   appointment: Appointment,
 ): AppointmentConfirmationStatus | undefined {
   const coding = appointment.extension
-    ?.find((extension) => extension.url === OSOD_APPOINTMENT_CONFIRMATION_EXTENSION_URL)
+    ?.find((extension) => extension.url === ODOS_APPOINTMENT_CONFIRMATION_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.find(
-      (candidate) => candidate.system === OSOD_APPOINTMENT_CONFIRMATION_SYSTEM,
+      (candidate) => candidate.system === ODOS_APPOINTMENT_CONFIRMATION_SYSTEM,
     );
   return coding?.code as AppointmentConfirmationStatus | undefined;
 }
 
-export function osodAppointmentStatusOf(appointment: {
+export function odosAppointmentStatusOf(appointment: {
   status: Appointment["status"];
   appointmentType?: Appointment["appointmentType"];
-}): OsodAppointmentStatus | undefined {
+}): OdosAppointmentStatus | undefined {
   if (appointment.status === "arrived") {
     const isWalkIn = appointment.appointmentType?.coding?.some(
       (coding) => coding.system === V2_0276_APPOINTMENT_TYPE_SYSTEM && coding.code === "WALKIN",
     );
     return isWalkIn ? "walk-in" : "checked-in";
   }
-  const match = OSOD_APPOINTMENT_STATUSES.find(
+  const match = ODOS_APPOINTMENT_STATUSES.find(
     (status) => status.fhirStatus === appointment.status && !("appointmentTypeCode" in status),
   );
   return match?.code;
@@ -706,15 +866,15 @@ export function osodAppointmentStatusOf(appointment: {
 export function appointmentVisitTypeCode(appointment: Appointment): string | undefined {
   return appointment.serviceType
     ?.flatMap((concept) => concept.coding ?? [])
-    .find((coding) => coding.system === OSOD_VISIT_TYPE_SYSTEM)?.code;
+    .find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM)?.code;
 }
 
 export function visionCoverageOf(appointment: Appointment): CoverageDisplay | undefined {
-  return coverageOf(appointment, OSOD_VISION_COVERAGE_EXTENSION_URL);
+  return coverageOf(appointment, ODOS_VISION_COVERAGE_EXTENSION_URL);
 }
 
 export function medicalCoverageOf(appointment: Appointment): CoverageDisplay | undefined {
-  return coverageOf(appointment, OSOD_MEDICAL_COVERAGE_EXTENSION_URL);
+  return coverageOf(appointment, ODOS_MEDICAL_COVERAGE_EXTENSION_URL);
 }
 
 export function isUrgentAppointment(appointment: Appointment): boolean {
@@ -723,16 +883,16 @@ export function isUrgentAppointment(appointment: Appointment): boolean {
 
 export function isFollowUpAppointment(appointment: Appointment): boolean {
   return (
-    appointment.extension?.find((extension) => extension.url === OSOD_FOLLOW_UP_EXTENSION_URL)
+    appointment.extension?.find((extension) => extension.url === ODOS_FOLLOW_UP_EXTENSION_URL)
       ?.valueBoolean === true
   );
 }
 
 export function blockedTimeKindOf(slot: Slot): BlockedTimeKind | undefined {
   const coding = slot.extension
-    ?.find((extension) => extension.url === OSOD_BLOCKED_TIME_KIND_EXTENSION_URL)
+    ?.find((extension) => extension.url === ODOS_BLOCKED_TIME_KIND_EXTENSION_URL)
     ?.valueCodeableConcept?.coding?.find(
-      (candidate) => candidate.system === OSOD_BLOCKED_TIME_KIND_SYSTEM,
+      (candidate) => candidate.system === ODOS_BLOCKED_TIME_KIND_SYSTEM,
     );
   return coding?.code as BlockedTimeKind | undefined;
 }
@@ -761,6 +921,17 @@ export function visibleSchedulingResourcesForOffice(
     const assignedOffice = reference ? config.officeBySchedule[reference] : undefined;
     // Unassigned resources remain visible in every office until the practice assigns them.
     return assignedOffice === undefined || assignedOffice === officeId;
+  });
+}
+
+export function filterSchedulingResourcesByHiddenActorReferences(
+  resources: Schedule[],
+  hiddenActorReferences: readonly string[],
+): Schedule[] {
+  const hidden = new Set(hiddenActorReferences);
+  return resources.filter((resource) => {
+    const actorReference = resourceActorReference(resource);
+    return !actorReference || !hidden.has(actorReference);
   });
 }
 
@@ -1134,7 +1305,7 @@ export function buildAppointmentBlockContent(
   const code = appointmentVisitTypeCode(appointment);
   const visitType = code ? visitTypes.find((candidate) => visitTypeCode(candidate) === code) : undefined;
   const discipline = (visitType && visitTypeDiscipline(visitType)) ?? appointmentDiscipline(appointment);
-  const status = osodAppointmentStatusOf(appointment);
+  const status = odosAppointmentStatusOf(appointment);
   const confirmation = confirmationStatusOf(appointment) ?? "not-confirmed";
   const badges = appointmentBadges(appointment, isNonPatient, status);
 
@@ -1188,7 +1359,7 @@ function coverageExtension(url: string, coverage: CoverageInput): Extension {
 function disciplineCoding(discipline: string) {
   assertDiscipline(discipline);
   return {
-    system: OSOD_DISCIPLINE_SYSTEM,
+    system: ODOS_DISCIPLINE_SYSTEM,
     code: discipline,
     display: DISCIPLINE_BY_CODE.get(discipline)?.display,
   };
@@ -1406,7 +1577,7 @@ function patientParticipant(appointment: Appointment) {
 function appointmentDiscipline(appointment: Appointment): SchedulingDiscipline | undefined {
   const code = appointment.serviceCategory
     ?.flatMap((concept) => concept.coding ?? [])
-    .find((coding) => coding.system === OSOD_DISCIPLINE_SYSTEM)?.code;
+    .find((coding) => coding.system === ODOS_DISCIPLINE_SYSTEM)?.code;
   return code as SchedulingDiscipline | undefined;
 }
 
@@ -1418,7 +1589,7 @@ function visitTypeDisplay(
   return (
     visitType?.name ??
     appointment.serviceType?.[0]?.text ??
-    appointment.serviceType?.[0]?.coding?.find((coding) => coding.system === OSOD_VISIT_TYPE_SYSTEM)
+    appointment.serviceType?.[0]?.coding?.find((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM)
       ?.display ??
     code ??
     "Appointment"
@@ -1438,7 +1609,7 @@ function coverageLabel(coverage: CoverageDisplay | undefined): string {
 function appointmentBadges(
   appointment: Appointment,
   isNonPatient: boolean,
-  status: OsodAppointmentStatus | undefined,
+  status: OdosAppointmentStatus | undefined,
 ): AppointmentBlockBadge[] {
   const badges: AppointmentBlockBadge[] = [];
   if (isUrgentAppointment(appointment)) {

@@ -1,9 +1,9 @@
 import type { AgentOpsThresholdMatrixStore } from "../threshold-matrix-loader.js";
 import type { InitiationMode } from "../types.js";
 
-export const AGENTOPS_CORE_SERVICE_NAME = "osod-core";
-export const AGENTOPS_INTERNAL_NETWORK = "osod-internal";
-export const AGENTOPS_EGRESS_NETWORK = "osod-egress";
+export const AGENTOPS_CORE_SERVICE_NAME = "odos-core";
+export const AGENTOPS_INTERNAL_NETWORK = "odos-internal";
+export const AGENTOPS_EGRESS_NETWORK = "odos-egress";
 
 export interface AgentSidecarSpec {
   readonly serviceName: string;
@@ -21,7 +21,7 @@ export interface AgentOpsSupervisorConfig {
 
 export function sidecarNameForAgent(agentDeviceId: string): string {
   const name = agentDeviceId.split("/").filter(Boolean).at(-1) ?? agentDeviceId;
-  return `osod-agent-${name.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`;
+  return `odos-agent-${name.toLowerCase().replace(/[^a-z0-9-]/g, "-")}`;
 }
 
 export function buildAgentSidecarSpec(input: {

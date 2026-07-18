@@ -10,7 +10,7 @@ Use GitHub's private vulnerability reporting:
 2. Click **Report a vulnerability**
 3. Fill out the form
 
-If you cannot use GitHub's private reporting, email **drbang@ivaeyecare.com** with the subject line `OSOD security report`.
+If you cannot use GitHub's private reporting, email **drbang@ivaeyecare.com** with the subject line `ODOS security report`.
 
 ## What to include
 
@@ -22,7 +22,7 @@ If you cannot use GitHub's private reporting, email **drbang@ivaeyecare.com** wi
 
 ## Response expectations
 
-OSOD is a single-practitioner-led project. Acknowledgement may take up to 7 days. Critical issues affecting deployed practices get priority. Non-critical issues are triaged alongside other work.
+ODOS is a single-practitioner-led project. Acknowledgement may take up to 7 days. Critical issues affecting deployed practices get priority. Non-critical issues are triaged alongside other work.
 
 You will be credited in the fix commit and release notes unless you ask not to be.
 
@@ -36,7 +36,7 @@ You will be credited in the fix commit and release notes unless you ask not to b
 - Data leakage outside the local practice deployment (telemetry, phone-home, default cloud calls)
 - CDS Hooks 2.0.1 service-trust enforcement
 - Information Blocking Safety Valve composition
-- Dependency vulnerabilities reachable through OSOD code paths
+- Dependency vulnerabilities reachable through ODOS code paths
 
 ## What is not in scope
 

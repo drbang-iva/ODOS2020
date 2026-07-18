@@ -36,17 +36,17 @@ test("comprehensive Encounter lifecycle records history and Provenance per state
           class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
           subject: { reference: `Patient/${patient.id}` },
           period: { start: startedAt },
-          meta: { profile: ["https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam"] },
+          meta: { profile: ["https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam"] },
         },
         request: { method: "POST", url: "Encounter" },
       },
     ],
   });
   const encounterId = idFromLocation(createResponse.entry?.[0]?.response?.location, "Encounter");
-  await createProvenance(fhir, `Encounter/${encounterId}`, "CREATE", "OSOD lifecycle create");
+  await createProvenance(fhir, `Encounter/${encounterId}`, "CREATE", "ODOS lifecycle create");
 
   const inProgressResponse = await fhir.executeTransaction(
-    patchEncounterBundle(encounterId, [{ op: "replace", path: "/status", value: "in-progress" }], "OSOD lifecycle in-progress"),
+    patchEncounterBundle(encounterId, [{ op: "replace", path: "/status", value: "in-progress" }], "ODOS lifecycle in-progress"),
   );
   assert.ok(inProgressResponse.entry?.every((entry) => entry.response?.status?.match(/^2\d\d/)));
 
@@ -58,7 +58,7 @@ test("comprehensive Encounter lifecycle records history and Provenance per state
         { op: "replace", path: "/status", value: "finished" },
         { op: "add", path: "/period/end", value: finishedAt },
       ],
-      "OSOD lifecycle finish",
+      "ODOS lifecycle finish",
     ),
   );
   assert.ok(finishedResponse.entry?.every((entry) => entry.response?.status?.match(/^2\d\d/)));

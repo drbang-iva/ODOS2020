@@ -26,11 +26,12 @@ import type { EyeLaterality, SourceType } from "../fhir/ophthalmology/types.js";
 import {
   applyCommonObservationFields,
   lateralityConcept,
-  osodConcept,
+  odosConcept,
   quantity,
   reference,
 } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const GLAUCOMA_PHASE0_LEDGER_PATH = resolve(
@@ -48,14 +49,10 @@ export const ICD10_CM_CODE_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
  */
 export const CPT_CODE_SYSTEM = "urn:ama:cpt";
 
-/**
- * Glaucoma-minimum cup/disc split used to create OSOD-local suggestion edges, not diagnoses.
- */
-export const GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD = 0.6;
-
 export const GLAUCOMA_FINDING_DEFINITION_KEYS = [
   "cup_disc_ratio",
   "intraocular_pressure",
+  "corneal_hysteresis",
   "pachymetry_um",
   "rnfl_gcc",
 ] as const;
@@ -78,6 +75,11 @@ const GLAUCOMA_FINDING_STUB_METADATA: Record<
     anatomyTarget: "eye",
     valueKind: "quantity",
   },
+  corneal_hysteresis: {
+    sectionKey: "tonometry",
+    anatomyTarget: "cornea",
+    valueKind: "quantity",
+  },
   pachymetry_um: {
     sectionKey: "cornea",
     anatomyTarget: "cornea",
@@ -90,7 +92,7 @@ const GLAUCOMA_FINDING_STUB_METADATA: Record<
   },
 };
 
-/** Source class recorded on OSOD-local graph rows for provenance and audit context. */
+/** Source class recorded on ODOS-local graph rows for provenance and audit context. */
 export type ClinicalGraphSource =
   | "manual"
   | "device"
@@ -113,7 +115,7 @@ export type SuggestionVisitState =
   | "expired"
   | "superseded";
 
-/** Kinds of protocol actions the OSOD-local graph can prefill before clinician review. */
+/** Kinds of protocol actions the ODOS-local graph can prefill before clinician review. */
 export type ProtocolActionKind =
   | "finding-prompt"
   | "plan-text"
@@ -140,7 +142,7 @@ export type ChargeProposalStatus = "suggested" | "selected" | "removed" | "overr
 /** Mandate-14 coding state; only verified rows may project code-bearing FHIR artifacts. */
 export type CodingStatus = "verified" | "placeholder" | "provisional";
 
-/** Provenance carried by OSOD-local graph rows and copied into derived artifacts when useful. */
+/** Provenance carried by ODOS-local graph rows and copied into derived artifacts when useful. */
 export interface ClinicalGraphProvenance {
   source: ClinicalGraphSource;
   recordedAt: string;
@@ -148,6 +150,13 @@ export interface ClinicalGraphProvenance {
   sourceReferences?: string[];
   ledgerRefs?: string[];
   note?: string;
+}
+
+export function patientScopedProvenanceTargets(
+  primaryReference: string,
+  patientReference: string,
+): Reference[] {
+  return [reference(primaryReference), reference(patientReference)];
 }
 
 /** Practice-editable definition for a neutral clinical finding that can project to Observation. */
@@ -161,9 +170,53 @@ export interface ClinicalFindingDefinition {
   normalSemantics?: Record<string, unknown>;
   sourceStatus: "verified-seed" | "unseeded-needs-operator-input" | "local-practice";
   fhirObservationCode?: CodeableConcept;
+  diagnosisCandidates?: DiagnosisCandidateEntry[];
+  allowDiagnosisMapping?: boolean;
   notBillReady: boolean;
   active: boolean;
   provenance: ClinicalGraphProvenance;
+}
+
+export type MappingTrigger =
+  | { kind: "always" }
+  | { kind: "abnormal" }
+  | { kind: "numeric"; field: string; op: ">=" | "<=" | ">" | "<" | "=="; value: number }
+  | { kind: "option"; field: string; anyOf: string[] };
+
+export interface DiagnosisCandidateEntry {
+  id: string;
+  diagnosisKey: string;
+  trigger: MappingTrigger;
+  priority?: boolean;
+  origin: "seed" | "practice";
+  active: boolean;
+}
+
+export interface KeyFindingEntry {
+  findingKey: string;
+  label?: string;
+  satisfiedBy: "this-encounter" | "any-on-file";
+  withinMonths?: number;
+  origin: "seed" | "practice";
+  active: boolean;
+}
+
+export type DiagnosisIcd10 =
+  | { code: string; display?: string }
+  | {
+      pattern: {
+        unspecifiedEye?: string;
+        right?: string;
+        left?: string;
+        bilateral?: string;
+      };
+    };
+
+export interface DiagnosisCatalogRow extends DiagnosisDefinition {
+  icd10?: DiagnosisIcd10;
+  snomed?: { code: string; display: string };
+  keyFindings?: KeyFindingEntry[];
+  origin: "seed" | "practice";
 }
 
 /** A patient encounter finding instance; it remains independent of diagnoses until linked as evidence. */
@@ -220,7 +273,7 @@ export interface DiagnosisDefinition {
   provenance: ClinicalGraphProvenance;
 }
 
-/** OSOD-local ranked candidate edge from a neutral finding to a possible diagnosis. */
+/** ODOS-local ranked candidate edge from a neutral finding to a possible diagnosis. */
 export interface DiagnosisSuggestionEdge {
   id: string;
   sourceFindingDefinitionId?: string;
@@ -359,11 +412,23 @@ export interface GlaucomaFindingDefinitionStubRow {
   status: ClinicalFindingDefinition["sourceStatus"];
   notBillReady: boolean;
   externalCode: null;
+  valueSchema?: Record<string, unknown>;
+  normalSemantics?: Record<string, unknown>;
 }
 
 /** Input to the glaucoma cup/disc predicate; produces a finding plus local suggestion edge only. */
 export interface GlaucomaPredicateInput {
   cupDiscRatio: number;
+  horizontalCupDiscRatio?: number;
+  verticalCupDiscRatioOd?: number;
+  verticalCupDiscRatioOs?: number;
+  discAppearanceDescriptors?: string[];
+  discNerveSize?: string;
+  methodSource?: string;
+  notVisualized?: boolean;
+  riskConfig?: GlaucomaCupDiscRiskConfig;
+  findingDefinition?: ClinicalFindingDefinition;
+  ledger?: GlaucomaPhase0Ledger;
   laterality: EyeLaterality;
   patientReference: string;
   encounterReference: string;
@@ -371,6 +436,17 @@ export interface GlaucomaPredicateInput {
   findingInstanceId: string;
   recordedAt: string;
   provenance: ClinicalGraphProvenance;
+}
+
+export interface GlaucomaCupDiscRiskConfig {
+  lowFloor?: number;
+  highFloor?: number;
+  asymmetryLow?: number;
+  asymmetryHigh?: number;
+}
+
+export interface GlaucomaIopRiskConfig {
+  ohtnThreshold?: number;
 }
 
 export interface CaptureGlaucomaFindingInput {
@@ -403,11 +479,40 @@ export interface GlaucomaSuggestionEngineInput {
   provenance: ClinicalGraphProvenance;
   encounterReference?: string;
   ledger?: GlaucomaPhase0Ledger;
+  riskConfig?: GlaucomaCupDiscRiskConfig;
+}
+
+export interface GlaucomaIopSuggestionEngineInput
+  extends Omit<GlaucomaSuggestionEngineInput, "riskConfig"> {
+  riskConfig?: GlaucomaIopRiskConfig;
 }
 
 export interface DiagnosisSuggestionEvaluation {
   diagnosisDefinition: DiagnosisDefinition;
   suggestionEdge: DiagnosisSuggestionEdge;
+}
+
+export interface GlaucomaCupDiscSuggestionResult {
+  finding: FindingInstance;
+  diagnosisDefinition?: DiagnosisDefinition;
+  suggestionEdge?: DiagnosisSuggestionEdge;
+}
+
+export type GlaucomaIopRiskTier = "normal" | "ohtn";
+
+export interface GlaucomaIopRiskEvaluation {
+  riskTier: GlaucomaIopRiskTier;
+  threshold: number;
+  value?: number;
+  notVisualized: boolean;
+  signals: string[];
+}
+
+export interface ClinicalFindingOption {
+  code: string;
+  display: string;
+  active?: boolean;
+  highRiskDriver?: boolean;
 }
 
 /**
@@ -421,6 +526,7 @@ export function buildClinicalFindingDefinition(
     ...input,
     id: input.id ?? randomUUID(),
     active: input.active ?? true,
+    allowDiagnosisMapping: input.allowDiagnosisMapping ?? true,
     notBillReady: input.notBillReady ?? input.sourceStatus !== "verified-seed",
   };
 }
@@ -453,8 +559,8 @@ export function projectFindingInstanceToObservation(
     id: finding.observationReference?.startsWith("Observation/")
       ? finding.observationReference.slice("Observation/".length)
       : undefined,
-    status: "final",
-    code: definition.fhirObservationCode ?? osodConcept(definition.stableKey, definition.display),
+    status: "preliminary",
+    code: definition.fhirObservationCode ?? odosConcept(definition.stableKey, definition.display),
     ...(findingValueToObservationValue(finding.value)),
   };
 
@@ -502,7 +608,7 @@ export function buildDiagnosisDefinition(
 }
 
 /**
- * Builds a non-committal suggestion edge; it is OSOD-local and never a confirmed diagnosis by itself.
+ * Builds a non-committal suggestion edge; it is ODOS-local and never a confirmed diagnosis by itself.
  */
 export function buildDiagnosisSuggestionEdge(
   input: Omit<DiagnosisSuggestionEdge, "id" | "visitState" | "evidenceFindingInstanceIds" | "score"> &
@@ -522,7 +628,7 @@ export function buildDiagnosisSuggestionEdge(
 }
 
 /**
- * Builds an OSOD-local encounter diagnosis; confirmation requires explicit status plus timestamp.
+ * Builds an ODOS-local encounter diagnosis; confirmation requires explicit status plus timestamp.
  */
 export function buildEncounterDiagnosis(
   input: Omit<EncounterDiagnosis, "id" | "clinicalStatus" | "verificationStatus" | "rank" | "evidenceFindingInstanceIds" | "evidenceObservationReferences" | "confirmedAt"> &
@@ -692,22 +798,26 @@ export function buildChargeProposal(
  */
 export function buildGlaucomaOpenAngleDiagnosisDefinition(input: {
   laterality: EyeLaterality;
-  riskBucket: "low" | "high";
+  riskTier: GlaucomaCupDiscSuspectRiskTier;
   provenance: ClinicalGraphProvenance;
   findingDefinitionIds?: string[];
   id?: string;
   ledger?: GlaucomaPhase0Ledger;
 }): DiagnosisDefinition {
-  const code = glaucomaOpenAngleBorderlineCode(input.riskBucket, input.laterality);
+  const catalogRow = buildDiagnosisCatalogSeeds().find((row) =>
+    row.stableKey === `glaucoma_suspect_open_angle_${input.riskTier}`
+  );
+  if (!catalogRow) throw new Error(`Glaucoma ${input.riskTier}-risk diagnosis catalog seed is missing.`);
+  const code = diagnosisCatalogCode(catalogRow, input.laterality);
   const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
-  const display = ledgerHit?.display ?? `Glaucoma suspect open angle ${input.riskBucket} risk ${input.laterality}`;
+  const display = ledgerHit?.display ?? `Glaucoma suspect open angle ${input.riskTier} risk ${input.laterality}`;
   const codingStatus: CodingStatus = ledgerHit ? "verified" : "placeholder";
   return buildDiagnosisDefinition({
     id: input.id,
-    stableKey: `glaucoma_suspect_open_angle_${input.riskBucket}_${input.laterality.toLowerCase()}`,
+    stableKey: `glaucoma_suspect_open_angle_${input.riskTier}_${input.laterality.toLowerCase()}`,
     display,
     clinicalFamily: "glaucoma-suspect",
-    icd10Family: input.riskBucket === "high" ? "H40.02-" : "H40.01-",
+    icd10Family: input.riskTier === "high" ? "H40.02-" : "H40.01-",
     ...(ledgerHit ? { icd10Code: ledgerHit.code, icd10Display: ledgerHit.display } : {}),
     codingStatus,
     lateralityRequired: true,
@@ -732,28 +842,15 @@ export function buildGlaucomaFindingDefinitionStub(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition {
   const metadata = GLAUCOMA_FINDING_STUB_METADATA[row.key];
+  const seeded = row.valueSchema !== undefined;
   return buildClinicalFindingDefinition({
     id: `finding-def-${row.key.replaceAll("_", "-")}`,
     stableKey: row.key,
     display: row.display,
     sectionKey: metadata.sectionKey,
     anatomyTarget: metadata.anatomyTarget,
-    valueSchema: {
-      valueKind: metadata.valueKind,
-      operatorInputRequired: true,
-      units: "TODO: operator input required before bill-ready use.",
-      normalRange: "TODO: operator input required before bill-ready use.",
-      seededPredicateExamples: row.key === "cup_disc_ratio"
-        ? [
-            {
-              predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
-              threshold: GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
-              source: "canon Phase-1 predicate example",
-            },
-          ]
-        : [],
-    },
-    normalSemantics: {
+    valueSchema: row.valueSchema ?? glaucomaOperatorGatedValueSchema(metadata.valueKind),
+    normalSemantics: row.normalSemantics ?? {
       status: "TODO: operator input required before clinical normal/abnormal semantics are seeded.",
     },
     sourceStatus: row.status,
@@ -763,10 +860,83 @@ export function buildGlaucomaFindingDefinitionStub(
       ...provenance,
       note: [
         provenance.note,
-        "Operator-gated glaucoma finding definition stub; no clinical value-set, unit binding, normal range, or threshold seeded except canon cup/disc >= 0.6 predicate example.",
+        seeded
+          ? "Seeded glaucoma finding definition; practice may edit option lists and risk parameter data before local use."
+          : "Operator-gated glaucoma finding definition stub; no clinical value-set, unit binding, normal range, or threshold seeded.",
       ].filter(Boolean).join(" "),
     },
   });
+}
+
+export function glaucomaOperatorGatedValueSchema(
+  valueKind: "quantity" | "component-panel",
+): Record<string, unknown> {
+  return {
+    valueKind,
+    operatorInputRequired: true,
+    units: "TODO: operator input required before bill-ready use.",
+    normalRange: "TODO: operator input required before bill-ready use.",
+    seededPredicateExamples: [],
+  };
+}
+
+export function getGlaucomaCupDiscDescriptorOptions(
+  definition: ClinicalFindingDefinition,
+): ClinicalFindingOption[] {
+  return getClinicalFindingFieldOptions(definition, "discAppearanceDescriptors");
+}
+
+export function addGlaucomaCupDiscDescriptorOption(
+  definition: ClinicalFindingDefinition,
+  option: ClinicalFindingOption,
+): ClinicalFindingDefinition {
+  return addClinicalFindingFieldOption(definition, "discAppearanceDescriptors", option);
+}
+
+export function getGlaucomaIopMethodOptions(
+  definition: ClinicalFindingDefinition,
+): ClinicalFindingOption[] {
+  return getClinicalFindingFieldOptions(definition, "method");
+}
+
+export function addGlaucomaIopMethodOption(
+  definition: ClinicalFindingDefinition,
+  option: ClinicalFindingOption,
+): ClinicalFindingDefinition {
+  return addClinicalFindingFieldOption(definition, "method", option);
+}
+
+function getClinicalFindingFieldOptions(
+  definition: ClinicalFindingDefinition,
+  fieldKey: string,
+): ClinicalFindingOption[] {
+  const options = asRecord(asRecord(definition.valueSchema.fields)[fieldKey]).options;
+  return Array.isArray(options)
+    ? options
+        .map((option) => parseClinicalFindingOption(option))
+        .filter((option): option is ClinicalFindingOption => Boolean(option))
+    : [];
+}
+
+function addClinicalFindingFieldOption(
+  definition: ClinicalFindingDefinition,
+  fieldKey: string,
+  option: ClinicalFindingOption,
+): ClinicalFindingDefinition {
+  const valueSchema = { ...definition.valueSchema };
+  const fields = { ...asRecord(valueSchema.fields) };
+  const field = { ...asRecord(fields[fieldKey]) };
+  const options = getClinicalFindingFieldOptions(definition, fieldKey);
+  field.options = [
+    ...options.filter((candidate) => candidate.code !== option.code),
+    option,
+  ];
+  fields[fieldKey] = field;
+  valueSchema.fields = fields;
+  return {
+    ...definition,
+    valueSchema,
+  };
 }
 
 export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): CapturedGlaucomaFinding {
@@ -810,7 +980,7 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
         : {
             typeCode: "author",
             typeDisplay: "Author",
-            whoDisplay: `OSOD ${input.provenance.source} evidence source`,
+            whoDisplay: `ODOS ${input.provenance.source} evidence source`,
           },
     ],
     entityReferences: sourceReferences,
@@ -828,44 +998,44 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
  */
 export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
   finding: FindingInstance;
-  diagnosisDefinition: DiagnosisDefinition;
-  suggestionEdge: DiagnosisSuggestionEdge;
+  diagnosisDefinition?: DiagnosisDefinition;
+  suggestionEdge?: DiagnosisSuggestionEdge;
 } {
-  const riskBucket = input.cupDiscRatio >= GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD ? "high" : "low";
+  const definition = input.findingDefinition ??
+    defaultGlaucomaCupDiscFindingDefinition(input.provenance, input.ledger);
+  const evidence = cupDiscEvidenceFromPredicateInput(input);
+  const risk = evaluateCupDiscRisk(evidence, definition, input.riskConfig);
   const finding = buildFindingInstance({
     id: input.findingInstanceId,
     findingDefinitionId: input.findingDefinitionId,
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
     laterality: input.laterality,
-    value: { type: "quantity", value: input.cupDiscRatio, unit: "ratio", code: "1" },
-    interpretation: riskBucket === "high" ? "abnormal" : "borderline",
+    value: cupDiscFindingValueFromPredicateInput(input),
+    interpretation: evidence.notVisualized ? "unknown" : cupDiscInterpretationForRiskTier(risk.riskTier),
     recordedAt: input.recordedAt,
     provenance: input.provenance,
   });
+  if (evidence.notVisualized || risk.riskTier === "normal") {
+    return { finding };
+  }
   const diagnosisDefinition = buildGlaucomaOpenAngleDiagnosisDefinition({
     laterality: input.laterality,
-    riskBucket,
+    riskTier: risk.riskTier,
     provenance: input.provenance,
     findingDefinitionIds: [input.findingDefinitionId],
+    ledger: input.ledger,
   });
   const suggestionEdge = buildDiagnosisSuggestionEdge({
     sourceFindingInstanceId: finding.id,
     targetDiagnosisDefinitionId: diagnosisDefinition.id,
-    predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
-    predicateExpression: {
-      finding: "cup_disc_ratio",
-      operator: riskBucket === "high" ? ">=" : "<",
-      threshold: GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
-      deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
-    },
+    predicateKey: "glaucoma_suspect_cup_disc_multisignal_v1",
+    predicateExpression: cupDiscPredicateExpression(risk, evidence),
     rank: 1,
-    score: riskBucket === "high" ? 0.8 : 0.55,
-    confidence: riskBucket === "high" ? 0.8 : 0.55,
-    explanation:
-      riskBucket === "high"
-        ? "Cup/disc ratio meets the glaucoma-minimum high-risk branch."
-        : "Cup/disc ratio stays below the glaucoma-minimum high-risk branch.",
+    score: cupDiscSuggestionScore(risk.riskTier),
+    confidence: cupDiscSuggestionScore(risk.riskTier),
+    explanation: cupDiscRiskExplanation(risk),
+    ruleVersion: "glaucoma-cup-disc-multisignal-v1",
     provenance: input.provenance,
   });
 
@@ -876,54 +1046,58 @@ export function evaluateGlaucomaDiagnosisSuggestions(
   input: GlaucomaSuggestionEngineInput,
 ): DiagnosisSuggestionEvaluation[] {
   const definitionsById = new Map(input.findingDefinitions.map((definition) => [definition.id, definition]));
-  const evaluations = input.findings
+  const cupDiscFindings = input.findings
     .filter((finding) => !input.encounterReference || finding.encounterReference === input.encounterReference)
     .filter((finding) => definitionsById.get(finding.findingDefinitionId)?.stableKey === "cup_disc_ratio")
-    .filter((finding) => finding.value.type === "quantity" && Number.isFinite(finding.value.value))
-    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id))
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id));
+  const evidenceByFindingId = new Map(
+    cupDiscFindings.map((finding) => [finding.id, cupDiscEvidenceFromFindingValue(finding.value, finding)]),
+  );
+  const evaluations = cupDiscFindings
     .map((finding) => {
       const definition = definitionsById.get(finding.findingDefinitionId);
-      if (!definition || finding.value.type !== "quantity") {
+      const evidence = evidenceByFindingId.get(finding.id);
+      if (!definition || !evidence || evidence.notVisualized) {
         return undefined;
       }
-      const riskBucket = finding.value.value >= GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD ? "high" : "low";
+      const enrichedEvidence = withCrossFindingCupDiscAsymmetry(
+        finding,
+        evidence,
+        cupDiscFindings,
+        evidenceByFindingId,
+      );
+      const risk = evaluateCupDiscRisk(enrichedEvidence, definition, input.riskConfig);
+      if (risk.riskTier === "normal") {
+        return undefined;
+      }
       const diagnosisDefinition = buildGlaucomaOpenAngleDiagnosisDefinition({
-        id: deterministicGraphId("dx-def", "glaucoma-suspect-open-angle", riskBucket, finding.laterality),
+        id: deterministicGraphId("dx-def", "glaucoma-suspect-open-angle", risk.riskTier, finding.laterality),
         laterality: finding.laterality,
-        riskBucket,
+        riskTier: risk.riskTier,
         provenance: input.provenance,
         findingDefinitionIds: [definition.id],
         ledger: input.ledger,
       });
-      const score = riskBucket === "high" ? 0.8 : 0.55;
+      const score = cupDiscSuggestionScore(risk.riskTier);
       const suggestionEdge = buildDiagnosisSuggestionEdge({
         id: deterministicGraphId(
           "suggestion",
           finding.id,
           "glaucoma-suspect-open-angle",
-          riskBucket,
+          risk.riskTier,
           finding.laterality,
         ),
         sourceFindingDefinitionId: definition.id,
         sourceFindingInstanceId: finding.id,
         targetDiagnosisDefinitionId: diagnosisDefinition.id,
-        predicateKey: "glaucoma_suspect_cup_disc_threshold_v0",
-        predicateExpression: {
-          finding: "cup_disc_ratio",
-          operator: riskBucket === "high" ? ">=" : "<",
-          threshold: GLAUCOMA_CUP_DISC_HIGH_RISK_THRESHOLD,
-          observedValue: finding.value.value,
-          deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
-        },
+        predicateKey: "glaucoma_suspect_cup_disc_multisignal_v1",
+        predicateExpression: cupDiscPredicateExpression(risk, enrichedEvidence),
         rank: 1,
         score,
         confidence: score,
-        explanation:
-          riskBucket === "high"
-            ? "Cup/disc ratio meets the glaucoma-minimum high-risk suggestion branch."
-            : "Cup/disc ratio stays below the glaucoma-minimum high-risk branch and maps to the low-risk suggestion branch.",
+        explanation: cupDiscRiskExplanation(risk),
         evidenceFindingInstanceIds: [finding.id],
-        ruleVersion: "glaucoma-minimum-v0",
+        ruleVersion: "glaucoma-cup-disc-multisignal-v1",
         visitState: "unreviewed",
         provenance: {
           ...input.provenance,
@@ -934,11 +1108,146 @@ export function evaluateGlaucomaDiagnosisSuggestions(
           ],
           note: [
             input.provenance.note,
-            "Pure glaucoma-minimum evaluator: finding evidence in, suggestion edge out; no EncounterDiagnosis, Condition, charge, or coverage side effects.",
+            "Pure glaucoma cup/disc evaluator: finding evidence in, suggestion edge out; no EncounterDiagnosis, Condition, charge, or coverage side effects.",
           ].filter(Boolean).join(" "),
         },
       });
 
+      return { diagnosisDefinition, suggestionEdge };
+    })
+    .filter((result): result is DiagnosisSuggestionEvaluation => Boolean(result))
+    .sort((a, b) =>
+      b.suggestionEdge.score - a.suggestionEdge.score ||
+      a.suggestionEdge.id.localeCompare(b.suggestionEdge.id));
+
+  return evaluations.map((evaluation, index) => ({
+    diagnosisDefinition: evaluation.diagnosisDefinition,
+    suggestionEdge: {
+      ...evaluation.suggestionEdge,
+      rank: index + 1,
+    },
+  }));
+}
+
+export function buildOcularHypertensionDiagnosisDefinition(input: {
+  laterality: EyeLaterality;
+  provenance: ClinicalGraphProvenance;
+  findingDefinitionIds?: string[];
+  id?: string;
+  ledger?: GlaucomaPhase0Ledger;
+}): DiagnosisDefinition {
+  const catalogRow = buildDiagnosisCatalogSeeds().find((row) => row.stableKey === "ocular_hypertension");
+  if (!catalogRow) throw new Error("Ocular-hypertension diagnosis catalog seed is missing.");
+  const code = diagnosisCatalogCode(catalogRow, input.laterality);
+  const ledgerHit = resolveGlaucomaLedgerDiagnosis(code, input.ledger);
+  if (!ledgerHit) {
+    throw new Error(`Ocular hypertension ICD-10-CM code ${code} is missing from the Phase 0 ledger.`);
+  }
+  return buildDiagnosisDefinition({
+    id: input.id,
+    stableKey: `ocular_hypertension_${input.laterality.toLowerCase()}`,
+    display: ledgerHit.display,
+    clinicalFamily: "ocular-hypertension",
+    icd10Family: "H40.05-",
+    icd10Code: ledgerHit.code,
+    icd10Display: ledgerHit.display,
+    codingStatus: "verified",
+    lateralityRequired: true,
+    applicableFindingDefinitionIds: input.findingDefinitionIds,
+    provenance: input.provenance,
+  });
+}
+
+export function evaluateIopFindingRisk(
+  finding: FindingInstance,
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaIopRiskConfig,
+): GlaucomaIopRiskEvaluation {
+  const evidence = iopEvidenceFromFindingValue(finding.value);
+  const threshold = resolveIopRiskThreshold(definition, riskConfig);
+  if (evidence.notVisualized || evidence.value === undefined) {
+    return {
+      riskTier: "normal",
+      threshold,
+      notVisualized: evidence.notVisualized,
+      signals: [],
+    };
+  }
+  const riskTier: GlaucomaIopRiskTier = evidence.value >= threshold ? "ohtn" : "normal";
+  return {
+    riskTier,
+    threshold,
+    value: evidence.value,
+    notVisualized: false,
+    signals: riskTier === "ohtn" ? ["iop-threshold"] : [],
+  };
+}
+
+export function evaluateIopDiagnosisSuggestions(
+  input: GlaucomaIopSuggestionEngineInput,
+): DiagnosisSuggestionEvaluation[] {
+  const definitionsById = new Map(input.findingDefinitions.map((definition) => [definition.id, definition]));
+  const iopFindings = input.findings
+    .filter((finding) => !input.encounterReference || finding.encounterReference === input.encounterReference)
+    .filter((finding) => definitionsById.get(finding.findingDefinitionId)?.stableKey === "intraocular_pressure")
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id));
+
+  const evaluations = iopFindings
+    .map((finding) => {
+      const definition = definitionsById.get(finding.findingDefinitionId);
+      if (!definition) {
+        return undefined;
+      }
+      const risk = evaluateIopFindingRisk(finding, definition, input.riskConfig);
+      if (risk.riskTier === "normal" || risk.value === undefined) {
+        return undefined;
+      }
+      const diagnosisDefinition = buildOcularHypertensionDiagnosisDefinition({
+        id: deterministicGraphId("dx-def", "ocular-hypertension", finding.laterality),
+        laterality: finding.laterality,
+        provenance: input.provenance,
+        findingDefinitionIds: [definition.id],
+        ledger: input.ledger,
+      });
+      const suggestionEdge = buildDiagnosisSuggestionEdge({
+        id: deterministicGraphId("suggestion", finding.id, "ocular-hypertension", finding.laterality),
+        sourceFindingDefinitionId: definition.id,
+        sourceFindingInstanceId: finding.id,
+        targetDiagnosisDefinitionId: diagnosisDefinition.id,
+        predicateKey: "ocular_hypertension_iop_single_tier_v1",
+        predicateExpression: {
+          finding: "intraocular_pressure",
+          predicate: "single-tier-ocular-hypertension-iop",
+          riskTier: risk.riskTier,
+          threshold: risk.threshold,
+          observed: definedRecord({
+            intraocularPressure: risk.value,
+            unit: "mmHg",
+            notVisualized: risk.notVisualized,
+          }),
+          signals: risk.signals,
+          deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
+        },
+        rank: 1,
+        score: 0.65,
+        confidence: 0.65,
+        explanation: `Ocular-hypertension suspect suggestion because IOP ${risk.value} mmHg is >= threshold ${risk.threshold} mmHg.`,
+        evidenceFindingInstanceIds: [finding.id],
+        ruleVersion: "ocular-hypertension-iop-v1",
+        visitState: "unreviewed",
+        provenance: {
+          ...input.provenance,
+          source: "rule",
+          sourceReferences: [
+            ...(finding.observationReference ? [finding.observationReference] : []),
+            ...(input.provenance.sourceReferences ?? []),
+          ],
+          note: [
+            input.provenance.note,
+            "Pure IOP evaluator: finding evidence in, ocular-hypertension suggestion edge out; no EncounterDiagnosis, Condition, charge, or coverage side effects.",
+          ].filter(Boolean).join(" "),
+        },
+      });
       return { diagnosisDefinition, suggestionEdge };
     })
     .filter((result): result is DiagnosisSuggestionEvaluation => Boolean(result))
@@ -977,7 +1286,7 @@ export function rejectDiagnosisSuggestionEdge(
 }
 
 /**
- * Records clinician reconciliation of accepted Conditions and rejected OSOD-local suggestions.
+ * Records clinician reconciliation of accepted Conditions and rejected ODOS-local suggestions.
  */
 export function buildSuggestionReconciliationClinicalImpression(input: {
   patientReference: string;
@@ -997,7 +1306,7 @@ export function buildSuggestionReconciliationClinicalImpression(input: {
     investigation: input.reviewedObservationReferences.length
       ? [
           {
-            code: osodConcept("reviewed-observations", "Reviewed observations"),
+            code: odosConcept("reviewed-observations", "Reviewed observations"),
             item: input.reviewedObservationReferences.map((r) => reference<Observation>(r)),
           },
         ]
@@ -1027,7 +1336,7 @@ export function buildCoverageWarningDetectedIssue(input: {
   return {
     resourceType: "DetectedIssue",
     status: "final",
-    code: osodConcept("coverage-warning", "Coverage warning"),
+    code: odosConcept("coverage-warning", "Coverage warning"),
     severity: "moderate",
     patient: reference(input.patientReference),
     identifiedDateTime: input.identifiedDateTime,
@@ -1077,12 +1386,12 @@ export function buildClaimWithDiagnosisPointers(input: {
   return {
     resourceType: "Claim",
     status: "active",
-    type: osodConcept("professional", "Professional"),
+    type: odosConcept("professional", "Professional"),
     use: "claim",
     patient: reference(input.patientReference),
     created: input.created,
     provider: reference(input.providerReference),
-    priority: osodConcept("normal", "Normal"),
+    priority: odosConcept("normal", "Normal"),
     insurance: [
       {
         sequence: 1,
@@ -1114,7 +1423,7 @@ export function projectProtocolDefinitionToPlanDefinition(protocol: ProtocolDefi
     action: protocol.actionTemplates.map((action) => ({
       id: action.actionKey,
       title: action.display,
-      code: [osodConcept(action.actionKind, action.actionKind)],
+      code: [odosConcept(action.actionKind, action.actionKind)],
       precheckBehavior: action.defaultSelected ? "yes" : "no",
     })),
   };
@@ -1133,7 +1442,7 @@ export function projectProtocolActionToActivityDefinition(
     name: `${protocol.stableKey}_${action.actionKey}`,
     title: action.display,
     kind: "Task",
-    code: osodConcept(action.actionKind, action.actionKind),
+    code: odosConcept(action.actionKind, action.actionKind),
   };
 }
 
@@ -1147,11 +1456,498 @@ export function encounterDiagnosisComponent(
   return buildEncounterDiagnosisComponent(conditionReference, diagnosis.rank);
 }
 
+interface IopRiskEvidence {
+  value?: number;
+  notVisualized: boolean;
+}
+
+function iopEvidenceFromFindingValue(value: FindingValue): IopRiskEvidence {
+  if (value.type === "quantity") {
+    return { value: value.value, notVisualized: false };
+  }
+  if (value.type === "json") {
+    return {
+      value: readNumber(value.value.value) ??
+        readNumber(value.value.intraocularPressure) ??
+        readNumber(value.value.iop),
+      notVisualized: readBoolean(value.value.notVisualized) ??
+        readBoolean(value.value.deferred) ??
+        false,
+    };
+  }
+  if (value.type === "components") {
+    const evidence: IopRiskEvidence = { notVisualized: false };
+    for (const component of value.components) {
+      const code = normalizeDescriptorCode(component.code);
+      if (code === "intraocular-pressure" || code === "iop") {
+        evidence.value = readNumber(component.value);
+      } else if (code === "not-visualized" || code === "deferred" || code === "not-visualized-deferred") {
+        evidence.notVisualized = readBoolean(component.value) ?? evidence.notVisualized;
+      }
+    }
+    return evidence;
+  }
+  return { notVisualized: false };
+}
+
+export function resolveIopRiskThreshold(
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaIopRiskConfig,
+): number {
+  if (riskConfig?.ohtnThreshold !== undefined) {
+    return assertIopThreshold(riskConfig.ohtnThreshold, "ohtnThreshold");
+  }
+  const riskPredicate = asRecord(definition.normalSemantics?.riskPredicate);
+  const thresholdParameters = asRecord(riskPredicate.thresholdParameters);
+  const parameter = asRecord(thresholdParameters.ohtnThreshold);
+  const defaultValue = readNumber(parameter.defaultValue);
+  if (defaultValue === undefined) {
+    throw new Error("IOP risk parameter ohtnThreshold defaultValue is missing from the finding definition.");
+  }
+  return assertIopThreshold(defaultValue, "IOP risk parameter ohtnThreshold default");
+}
+
+function assertIopThreshold(value: number, name: string): number {
+  if (!Number.isFinite(value) || value < 3 || value > 80) {
+    throw new Error(`${name} must be a finite IOP value from 3 to 80 mmHg.`);
+  }
+  return value;
+}
+
+interface CupDiscRiskEvidence {
+  verticalCupDiscRatio?: number;
+  horizontalCupDiscRatio?: number;
+  verticalCupDiscRatioOd?: number;
+  verticalCupDiscRatioOs?: number;
+  asymmetry?: number;
+  descriptors: string[];
+  discNerveSize?: string;
+  methodSource?: string;
+  notVisualized: boolean;
+}
+
+interface CupDiscRiskSignal {
+  key: string;
+  display: string;
+  observedValue?: number | string;
+}
+
+export type GlaucomaCupDiscRiskTier = "normal" | "low" | "high";
+export type GlaucomaCupDiscSuspectRiskTier = Exclude<GlaucomaCupDiscRiskTier, "normal">;
+
+interface CupDiscRiskThresholds {
+  lowFloor: number;
+  highFloor: number;
+  asymmetryLow: number;
+  asymmetryHigh: number;
+}
+
+interface CupDiscRiskEvaluation {
+  riskTier: GlaucomaCupDiscRiskTier;
+  thresholds: CupDiscRiskThresholds;
+  lowSignals: CupDiscRiskSignal[];
+  highSignals: CupDiscRiskSignal[];
+}
+
+function defaultGlaucomaCupDiscFindingDefinition(
+  provenance: ClinicalGraphProvenance,
+  ledger?: GlaucomaPhase0Ledger,
+): ClinicalFindingDefinition {
+  const definition = buildGlaucomaFindingDefinitionStubs({ provenance, ledger })
+    .find((row) => row.stableKey === "cup_disc_ratio");
+  if (!definition) {
+    throw new Error("Glaucoma cup/disc finding definition seed is missing.");
+  }
+  return definition;
+}
+
+function cupDiscFindingValueFromPredicateInput(input: GlaucomaPredicateInput): FindingValue {
+  const descriptorSelections = input.discAppearanceDescriptors ?? [];
+  const hasExtendedPayload =
+    input.horizontalCupDiscRatio !== undefined ||
+    input.verticalCupDiscRatioOd !== undefined ||
+    input.verticalCupDiscRatioOs !== undefined ||
+    descriptorSelections.length > 0 ||
+    input.discNerveSize !== undefined ||
+    input.methodSource !== undefined ||
+    input.notVisualized === true;
+  if (!hasExtendedPayload) {
+    return { type: "quantity", value: input.cupDiscRatio, unit: "ratio", code: "1" };
+  }
+  return {
+    type: "json",
+    value: definedRecord({
+      verticalCupDiscRatio: input.cupDiscRatio,
+      horizontalCupDiscRatio: input.horizontalCupDiscRatio,
+      verticalCupDiscRatioOd: input.verticalCupDiscRatioOd,
+      verticalCupDiscRatioOs: input.verticalCupDiscRatioOs,
+      discAppearanceDescriptors: descriptorSelections,
+      discNerveSize: input.discNerveSize,
+      methodSource: input.methodSource,
+      notVisualized: input.notVisualized === true,
+    }),
+  };
+}
+
+function cupDiscEvidenceFromPredicateInput(input: GlaucomaPredicateInput): CupDiscRiskEvidence {
+  return addDerivedCupDiscAsymmetry({
+    verticalCupDiscRatio: input.cupDiscRatio,
+    horizontalCupDiscRatio: input.horizontalCupDiscRatio,
+    verticalCupDiscRatioOd: input.verticalCupDiscRatioOd,
+    verticalCupDiscRatioOs: input.verticalCupDiscRatioOs,
+    descriptors: input.discAppearanceDescriptors ?? [],
+    discNerveSize: input.discNerveSize,
+    methodSource: input.methodSource,
+    notVisualized: input.notVisualized === true,
+  });
+}
+
+function cupDiscEvidenceFromFindingValue(
+  value: FindingValue,
+  finding: FindingInstance,
+): CupDiscRiskEvidence {
+  const evidence: CupDiscRiskEvidence = {
+    descriptors: [],
+    notVisualized: false,
+  };
+  if (value.type === "quantity") {
+    evidence.verticalCupDiscRatio = value.value;
+    if (finding.laterality === "OD") {
+      evidence.verticalCupDiscRatioOd = value.value;
+    }
+    if (finding.laterality === "OS") {
+      evidence.verticalCupDiscRatioOs = value.value;
+    }
+    return addDerivedCupDiscAsymmetry(evidence);
+  }
+  if (value.type === "json") {
+    const payload = value.value;
+    evidence.verticalCupDiscRatio = readNumber(payload.verticalCupDiscRatio) ??
+      readNumber(payload.cupDiscRatio);
+    evidence.horizontalCupDiscRatio = readNumber(payload.horizontalCupDiscRatio);
+    evidence.verticalCupDiscRatioOd = readNumber(payload.verticalCupDiscRatioOd);
+    evidence.verticalCupDiscRatioOs = readNumber(payload.verticalCupDiscRatioOs);
+    evidence.asymmetry = readNumber(payload.cupDiscAsymmetry) ?? readNumber(payload.asymmetry);
+    evidence.descriptors = readStringArray(payload.discAppearanceDescriptors)
+      .concat(readStringArray(payload.descriptors));
+    evidence.discNerveSize = readString(payload.discNerveSize);
+    evidence.methodSource = readString(payload.methodSource);
+    evidence.notVisualized = readBoolean(payload.notVisualized) ??
+      readBoolean(payload.deferred) ??
+      false;
+    if (finding.laterality === "OD" && evidence.verticalCupDiscRatio !== undefined) {
+      evidence.verticalCupDiscRatioOd ??= evidence.verticalCupDiscRatio;
+    }
+    if (finding.laterality === "OS" && evidence.verticalCupDiscRatio !== undefined) {
+      evidence.verticalCupDiscRatioOs ??= evidence.verticalCupDiscRatio;
+    }
+    return addDerivedCupDiscAsymmetry(evidence);
+  }
+  if (value.type === "components") {
+    for (const component of value.components) {
+      const code = normalizeDescriptorCode(component.code);
+      if (code === "vertical-cup-disc-ratio" || code === "vertical-cd-ratio" || code === "cup-disc-ratio") {
+        evidence.verticalCupDiscRatio = readNumber(component.value);
+      } else if (code === "horizontal-cup-disc-ratio" || code === "horizontal-cd-ratio") {
+        evidence.horizontalCupDiscRatio = readNumber(component.value);
+      } else if (code === "vertical-cup-disc-ratio-od" || code === "vertical-cd-ratio-od") {
+        evidence.verticalCupDiscRatioOd = readNumber(component.value);
+      } else if (code === "vertical-cup-disc-ratio-os" || code === "vertical-cd-ratio-os") {
+        evidence.verticalCupDiscRatioOs = readNumber(component.value);
+      } else if (code === "cup-disc-asymmetry" || code === "cd-asymmetry") {
+        evidence.asymmetry = readNumber(component.value);
+      } else if (code === "disc-appearance-descriptor") {
+        evidence.descriptors.push(...readStringArray(component.value));
+      } else if (code === "not-visualized" || code === "deferred" || code === "not-visualized-deferred") {
+        evidence.notVisualized = readBoolean(component.value) ?? evidence.notVisualized;
+      }
+    }
+    if (finding.laterality === "OD" && evidence.verticalCupDiscRatio !== undefined) {
+      evidence.verticalCupDiscRatioOd ??= evidence.verticalCupDiscRatio;
+    }
+    if (finding.laterality === "OS" && evidence.verticalCupDiscRatio !== undefined) {
+      evidence.verticalCupDiscRatioOs ??= evidence.verticalCupDiscRatio;
+    }
+    return addDerivedCupDiscAsymmetry(evidence);
+  }
+  return evidence;
+}
+
+function withCrossFindingCupDiscAsymmetry(
+  finding: FindingInstance,
+  evidence: CupDiscRiskEvidence,
+  cupDiscFindings: readonly FindingInstance[],
+  evidenceByFindingId: ReadonlyMap<string, CupDiscRiskEvidence>,
+): CupDiscRiskEvidence {
+  if (evidence.asymmetry !== undefined) {
+    return evidence;
+  }
+  const related = cupDiscFindings
+    .filter((candidate) =>
+      candidate.findingDefinitionId === finding.findingDefinitionId &&
+      candidate.patientReference === finding.patientReference &&
+      candidate.encounterReference === finding.encounterReference)
+    .map((candidate) => ({ finding: candidate, evidence: evidenceByFindingId.get(candidate.id) }))
+    .filter((candidate): candidate is { finding: FindingInstance; evidence: CupDiscRiskEvidence } =>
+      candidate.evidence !== undefined && !candidate.evidence.notVisualized);
+  const od = latestCupDiscVerticalForLaterality(related, "OD") ?? evidence.verticalCupDiscRatioOd;
+  const os = latestCupDiscVerticalForLaterality(related, "OS") ?? evidence.verticalCupDiscRatioOs;
+  if (od === undefined || os === undefined) {
+    return evidence;
+  }
+  return addDerivedCupDiscAsymmetry({
+    ...evidence,
+    verticalCupDiscRatioOd: od,
+    verticalCupDiscRatioOs: os,
+  });
+}
+
+function latestCupDiscVerticalForLaterality(
+  candidates: ReadonlyArray<{ finding: FindingInstance; evidence: CupDiscRiskEvidence }>,
+  laterality: "OD" | "OS",
+): number | undefined {
+  const matching = candidates
+    .filter((candidate) => candidate.finding.laterality === laterality)
+    .filter((candidate) => candidate.evidence.verticalCupDiscRatio !== undefined)
+    .sort((a, b) =>
+      b.finding.recordedAt.localeCompare(a.finding.recordedAt) ||
+      b.finding.id.localeCompare(a.finding.id));
+  return matching[0]?.evidence.verticalCupDiscRatio;
+}
+
+function addDerivedCupDiscAsymmetry(evidence: CupDiscRiskEvidence): CupDiscRiskEvidence {
+  if (
+    evidence.asymmetry === undefined &&
+    evidence.verticalCupDiscRatioOd !== undefined &&
+    evidence.verticalCupDiscRatioOs !== undefined
+  ) {
+    return {
+      ...evidence,
+      asymmetry: Number(Math.abs(evidence.verticalCupDiscRatioOd - evidence.verticalCupDiscRatioOs).toFixed(3)),
+    };
+  }
+  return evidence;
+}
+
+function evaluateCupDiscRisk(
+  evidence: CupDiscRiskEvidence,
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaCupDiscRiskConfig,
+): CupDiscRiskEvaluation {
+  const thresholds = resolveCupDiscRiskThresholds(definition, riskConfig);
+  const lowSignals: CupDiscRiskSignal[] = [];
+  const highSignals: CupDiscRiskSignal[] = [];
+  if (evidence.verticalCupDiscRatio !== undefined && evidence.verticalCupDiscRatio >= thresholds.highFloor) {
+    highSignals.push({
+      key: "vertical-cup-disc-ratio",
+      display: `vertical C/D ${evidence.verticalCupDiscRatio.toFixed(2)} >= high floor ${thresholds.highFloor.toFixed(2)}`,
+      observedValue: evidence.verticalCupDiscRatio,
+    });
+  } else if (evidence.verticalCupDiscRatio !== undefined && evidence.verticalCupDiscRatio >= thresholds.lowFloor) {
+    lowSignals.push({
+      key: "vertical-cup-disc-ratio",
+      display: `vertical C/D ${evidence.verticalCupDiscRatio.toFixed(2)} >= low floor ${thresholds.lowFloor.toFixed(2)}`,
+      observedValue: evidence.verticalCupDiscRatio,
+    });
+  }
+  const selectedDescriptorCodes = new Set(evidence.descriptors.map(normalizeDescriptorCode));
+  for (const option of getGlaucomaCupDiscDescriptorOptions(definition)) {
+    if (
+      option.active !== false &&
+      option.highRiskDriver === true &&
+      selectedDescriptorCodes.has(normalizeDescriptorCode(option.code))
+    ) {
+      highSignals.push({
+        key: `descriptor:${option.code}`,
+        display: option.display,
+        observedValue: option.code,
+      });
+    }
+  }
+  if (evidence.asymmetry !== undefined && evidence.asymmetry >= thresholds.asymmetryHigh) {
+    highSignals.push({
+      key: "cup-disc-asymmetry",
+      display: `C/D asymmetry ${evidence.asymmetry.toFixed(2)} >= high threshold ${thresholds.asymmetryHigh.toFixed(2)}`,
+      observedValue: evidence.asymmetry,
+    });
+  } else if (evidence.asymmetry !== undefined && evidence.asymmetry >= thresholds.asymmetryLow) {
+    lowSignals.push({
+      key: "cup-disc-asymmetry",
+      display: `C/D asymmetry ${evidence.asymmetry.toFixed(2)} >= low threshold ${thresholds.asymmetryLow.toFixed(2)}`,
+      observedValue: evidence.asymmetry,
+    });
+  }
+  return {
+    riskTier: highSignals.length > 0 ? "high" : lowSignals.length > 0 ? "low" : "normal",
+    thresholds,
+    lowSignals,
+    highSignals,
+  };
+}
+
+function cupDiscPredicateExpression(
+  risk: CupDiscRiskEvaluation,
+  evidence: CupDiscRiskEvidence,
+): Record<string, unknown> {
+  return {
+    finding: "cup_disc_ratio",
+    predicate: "three-tier-borderline-suspect-cup-disc",
+    riskTier: risk.riskTier,
+    thresholds: risk.thresholds,
+    observed: definedRecord({
+      verticalCupDiscRatio: evidence.verticalCupDiscRatio,
+      horizontalCupDiscRatio: evidence.horizontalCupDiscRatio,
+      verticalCupDiscRatioOd: evidence.verticalCupDiscRatioOd,
+      verticalCupDiscRatioOs: evidence.verticalCupDiscRatioOs,
+      cupDiscAsymmetry: evidence.asymmetry,
+      discAppearanceDescriptors: evidence.descriptors,
+      notVisualized: evidence.notVisualized,
+    }),
+    lowRiskSignals: risk.lowSignals.map((signal) => signal.key),
+    highRiskSignals: risk.highSignals.map((signal) => signal.key),
+    deferred: ["rule-versioning", "recalc-invalidation", "cross-recompute-persistence"],
+  };
+}
+
+function cupDiscRiskExplanation(risk: CupDiscRiskEvaluation): string {
+  if (risk.riskTier === "high") {
+    return `High-risk glaucoma-suspect suggestion because ${risk.highSignals.map((signal) => signal.display).join(", ")} fired.`;
+  }
+  if (risk.riskTier === "low") {
+    return `Low-risk glaucoma-suspect suggestion because ${risk.lowSignals.map((signal) => signal.display).join(", ")} fired and no high-risk signal fired.`;
+  }
+  return "Normal cup/disc finding: no glaucoma-suspect suggestion edge emitted.";
+}
+
+function cupDiscInterpretationForRiskTier(riskTier: GlaucomaCupDiscRiskTier): FindingInterpretation {
+  if (riskTier === "high") return "abnormal";
+  if (riskTier === "low") return "borderline";
+  return "normal";
+}
+
+function cupDiscSuggestionScore(riskTier: GlaucomaCupDiscSuspectRiskTier): number {
+  return riskTier === "high" ? 0.8 : 0.55;
+}
+
+function resolveCupDiscRiskThresholds(
+  definition: ClinicalFindingDefinition,
+  riskConfig?: GlaucomaCupDiscRiskConfig,
+): CupDiscRiskThresholds {
+  const riskPredicate = asRecord(definition.normalSemantics?.riskPredicate);
+  const thresholdParameters = asRecord(riskPredicate.thresholdParameters);
+  const thresholds = {
+    lowFloor: resolveCupDiscRiskParameter(thresholdParameters, "lowFloor", riskConfig?.lowFloor),
+    highFloor: resolveCupDiscRiskParameter(thresholdParameters, "highFloor", riskConfig?.highFloor),
+    asymmetryLow: resolveCupDiscRiskParameter(thresholdParameters, "asymmetryLow", riskConfig?.asymmetryLow),
+    asymmetryHigh: resolveCupDiscRiskParameter(thresholdParameters, "asymmetryHigh", riskConfig?.asymmetryHigh),
+  };
+  if (thresholds.lowFloor > thresholds.highFloor) {
+    throw new Error("lowFloor must be less than or equal to highFloor.");
+  }
+  if (thresholds.asymmetryLow > thresholds.asymmetryHigh) {
+    throw new Error("asymmetryLow must be less than or equal to asymmetryHigh.");
+  }
+  return thresholds;
+}
+
+function resolveCupDiscRiskParameter(
+  thresholdParameters: Record<string, unknown>,
+  key: keyof GlaucomaCupDiscRiskConfig,
+  override: number | undefined,
+): number {
+  if (override !== undefined) {
+    return assertRatio(override, key);
+  }
+  const parameter = asRecord(thresholdParameters[key]);
+  const defaultValue = readNumber(parameter.defaultValue);
+  if (defaultValue === undefined) {
+    throw new Error(`Cup/disc risk parameter ${key} defaultValue is missing from the finding definition.`);
+  }
+  return assertRatio(
+    defaultValue,
+    `cup/disc risk parameter ${key} default`,
+  );
+}
+
+function assertRatio(value: number, name: string): number {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(`${name} must be a finite ratio from 0.00 to 1.00.`);
+  }
+  return value;
+}
+
+function getCupDiscDescriptorField(definition: ClinicalFindingDefinition): Record<string, unknown> {
+  const fields = asRecord(definition.valueSchema.fields);
+  return asRecord(fields.discAppearanceDescriptors);
+}
+
+function parseClinicalFindingOption(value: unknown): ClinicalFindingOption | undefined {
+  const record = asRecord(value);
+  const code = readString(record.code);
+  const display = readString(record.display);
+  if (!code || !display) {
+    return undefined;
+  }
+  return {
+    code,
+    display,
+    ...(typeof record.active === "boolean" ? { active: record.active } : {}),
+    ...(typeof record.highRiskDriver === "boolean" ? { highRiskDriver: record.highRiskDriver } : {}),
+  };
+}
+
+function readNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+function readStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim() !== "");
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function definedRecord(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) =>
+      item !== undefined &&
+      (!Array.isArray(item) || item.length > 0)),
+  );
+}
+
+function normalizeDescriptorCode(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
 function glaucomaOpenAngleBorderlineCode(
-  riskBucket: "low" | "high",
+  riskTier: GlaucomaCupDiscSuspectRiskTier,
   laterality: EyeLaterality,
 ): string {
-  const prefix = riskBucket === "high" ? "H40.02" : "H40.01";
+  const prefix = riskTier === "high" ? "H40.02" : "H40.01";
   return `${prefix}${lateralityDigit(laterality)}`;
 }
 
@@ -1164,7 +1960,7 @@ function resolveGlaucomaLedgerDiagnosis(
   return ledger.diagnosisCodes.find((row) => row.code === code);
 }
 
-function loadGlaucomaPhase0Ledger(): GlaucomaPhase0Ledger {
+export function loadGlaucomaPhase0Ledger(): GlaucomaPhase0Ledger {
   cachedGlaucomaPhase0Ledger ??= JSON.parse(
     readFileSync(GLAUCOMA_PHASE0_LEDGER_PATH, "utf8"),
   ) as GlaucomaPhase0Ledger;
@@ -1188,6 +1984,17 @@ function lateralityDigit(laterality: EyeLaterality): "1" | "2" | "3" | "9" {
   if (laterality === "OS") return "2";
   if (laterality === "OU") return "3";
   return "9";
+}
+
+function diagnosisCatalogCode(definition: DiagnosisCatalogRow, laterality: EyeLaterality): string {
+  if (!definition.icd10) throw new Error(`Diagnosis catalog seed ${definition.stableKey} has no ICD-10-CM coding.`);
+  if ("code" in definition.icd10) return definition.icd10.code;
+  const code = laterality === "OD" ? definition.icd10.pattern.right
+    : laterality === "OS" ? definition.icd10.pattern.left
+    : laterality === "OU" ? definition.icd10.pattern.bilateral
+    : definition.icd10.pattern.unspecifiedEye;
+  if (!code) throw new Error(`Diagnosis catalog seed ${definition.stableKey} lacks ${laterality} coding.`);
+  return code;
 }
 
 function lateralityDisplay(laterality: EyeLaterality): string {
@@ -1216,7 +2023,7 @@ function findingValueToObservationValue(
   if (value.type === "components") {
     return {
       component: value.components.map((item) => ({
-        code: osodConcept(item.code, item.display),
+        code: odosConcept(item.code, item.display),
         ...(typeof item.value === "number"
           ? {
               valueQuantity: quantity(

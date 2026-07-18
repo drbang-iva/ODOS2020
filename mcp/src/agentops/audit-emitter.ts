@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import {
-  buildOsodAuditEventRow,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "../authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "../authz/odosAudit.js";
 import type {
   AgentOpsAttemptedAction,
   AgentOpsAuditFields,
@@ -16,7 +16,7 @@ import type {
 } from "./types.js";
 
 export interface BuildAgentOpsAuditRecordInput {
-  readonly eventType: Extract<OsodAuditEventType, `agentops.${string}`>;
+  readonly eventType: Extract<OdosAuditEventType, `agentops.${string}`>;
   readonly agentIdentity: string;
   readonly attemptedAction: AgentOpsAttemptedAction;
   readonly targetFhirResource: AgentOpsTargetFhirResource;
@@ -36,10 +36,10 @@ export interface BuildAgentOpsAuditRecordInput {
   readonly timestamp?: string;
 }
 
-export function buildAgentOpsAuditRecord(input: BuildAgentOpsAuditRecordInput): OsodAuditEventRecord {
+export function buildAgentOpsAuditRecord(input: BuildAgentOpsAuditRecordInput): OdosAuditEventRecord {
   const timestamp = input.timestamp ?? new Date().toISOString();
   const agentOps = buildAgentOpsAuditFields(input, timestamp);
-  return buildOsodAuditEventRow({
+  return buildOdosAuditEventRow({
     eventType: input.eventType,
     actorReference: input.agentIdentity,
     actorRole: "autonomous-agent",

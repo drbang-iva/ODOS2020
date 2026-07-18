@@ -2,13 +2,13 @@ import type { Bundle, Encounter, OperationOutcome, Provenance, Resource } from "
 import type { JsonPatchOperation } from "./fhir";
 
 export const ENCOUNTER_COMPREHENSIVE_EXAM_PROFILE =
-  "https://osod.dev/fhir/StructureDefinition/Encounter-ComprehensiveExam";
+  "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam";
 
 const V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
 const PROVENANCE_PARTICIPANT_TYPE_SYSTEM =
   "http://terminology.hl7.org/CodeSystem/provenance-participant-type";
-const FALLBACK_PRACTITIONER_REFERENCE = "Practitioner/osod-admin";
+const FALLBACK_PRACTITIONER_REFERENCE = "Practitioner/odos-admin";
 
 export function buildStartEncounterCreateBundle(input: {
   patientId: string;
@@ -47,10 +47,11 @@ export function buildStartEncounterCreateBundle(input: {
         fullUrl: `urn:uuid:provenance-start-${crypto.randomUUID()}`,
         resource: buildProvenance({
           targetReference: encounterFullUrl,
+          patientReference,
           recorded: input.now,
           activityCode: "CREATE",
           activityDisplay: "Create",
-          operatorDisplay: "OSOD UI start_encounter",
+          operatorDisplay: "ODOS UI start_encounter",
           practitionerReference: input.practitionerReference,
         }),
         request: { method: "POST", url: "Provenance" },
@@ -61,6 +62,7 @@ export function buildStartEncounterCreateBundle(input: {
 
 export function buildEncounterStatusPatchBundle(input: {
   encounterId: string;
+  patientId: string;
   ops: JsonPatchOperation[];
   recorded: string;
   operatorDisplay: string;
@@ -69,6 +71,9 @@ export function buildEncounterStatusPatchBundle(input: {
   const encounterReference = input.encounterId.startsWith("Encounter/")
     ? input.encounterId
     : `Encounter/${input.encounterId}`;
+  const patientReference = input.patientId.startsWith("Patient/")
+    ? input.patientId
+    : `Patient/${input.patientId}`;
 
   return {
     resourceType: "Bundle",
@@ -85,6 +90,7 @@ export function buildEncounterStatusPatchBundle(input: {
         fullUrl: `urn:uuid:provenance-encounter-${crypto.randomUUID()}`,
         resource: buildProvenance({
           targetReference: encounterReference,
+          patientReference,
           recorded: input.recorded,
           activityCode: "UPDATE",
           activityDisplay: "Update",
@@ -133,6 +139,7 @@ export function createdIdFromEntry(
 
 function buildProvenance(input: {
   targetReference: string;
+  patientReference: string;
   recorded: string;
   activityCode: "CREATE" | "UPDATE";
   activityDisplay: string;
@@ -141,7 +148,10 @@ function buildProvenance(input: {
 }): Provenance {
   return {
     resourceType: "Provenance",
-    target: [{ reference: input.targetReference }],
+    target: [
+      { reference: input.targetReference },
+      { reference: input.patientReference },
+    ],
     recorded: input.recorded,
     activity: {
       coding: [

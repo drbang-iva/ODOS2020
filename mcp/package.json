@@ -1,12 +1,12 @@
 {
-  "name": "osod-mcp",
+  "name": "odos-mcp",
   "version": "0.1.0",
-  "description": "OSOD MCP server — exposes Medplum FHIR tools to Claude / Iris / any MCP client",
+  "description": "ODOS MCP server — exposes Medplum FHIR tools to Claude / Iris / any MCP client",
   "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "bin": {
-    "osod-mcp": "./dist/index.js"
+    "odos-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -17,7 +17,9 @@
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "csv-parse": "^7.0.1",
     "express": "^4.21.1",
+    "fflate": "^0.8.3",
     "pg": "^8.20.0",
     "zod": "^3.23.8"
   },

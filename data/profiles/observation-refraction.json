@@ -1,12 +1,12 @@
 {
   "resourceType": "StructureDefinition",
-  "url": "https://osod.dev/fhir/StructureDefinition/Observation-Refraction",
+  "url": "https://odos2020.com/fhir/StructureDefinition/Observation-Refraction",
   "version": "0.3.0",
-  "name": "OSODObservationRefraction",
-  "title": "OSOD Observation - Refraction",
+  "name": "ODOSObservationRefraction",
+  "title": "ODOS Observation - Refraction",
   "status": "draft",
-  "publisher": "OSOD",
-  "description": "OSOD v0.3 profile for refraction Observations.",
+  "publisher": "ODOS",
+  "description": "ODOS v0.3 profile for refraction Observations.",
   "fhirVersion": "4.0.1",
   "kind": "resource",
   "abstract": false,
@@ -100,55 +100,55 @@
             "xpath": "not(f:*[starts-with(local-name(.), 'value')] and (for $coding in f:code/f:coding return f:component/f:code/f:coding[f:code/@value=$coding/f:code/@value] [f:system/@value=$coding/f:system/@value]))"
           },
           {
-            "key": "osod-rx-profile",
+            "key": "odos-rx-profile",
             "severity": "error",
             "human": "meta.profile must declare Observation-Refraction.",
-            "expression": "meta.profile.where($this = 'https://osod.dev/fhir/StructureDefinition/Observation-Refraction').exists()"
+            "expression": "meta.profile.where($this = 'https://odos2020.com/fhir/StructureDefinition/Observation-Refraction').exists()"
           },
           {
-            "key": "osod-rx-code",
+            "key": "odos-rx-code",
             "severity": "error",
             "human": "Observation.code must include SNOMED 251794006.",
             "expression": "code.coding.where(system = 'http://snomed.info/sct' and code = '251794006').exists()"
           },
           {
-            "key": "osod-rx-category",
+            "key": "odos-rx-category",
             "severity": "error",
             "human": "Observation.category must include exam.",
             "expression": "category.coding.where(system = 'http://terminology.hl7.org/CodeSystem/observation-category' and code = 'exam').exists()"
           },
           {
-            "key": "osod-rx-body-site",
+            "key": "odos-rx-body-site",
             "severity": "error",
             "human": "Observation.bodySite extension must reference BodyStructure.",
             "expression": "bodySite.extension.where(url = 'http://hl7.org/fhir/StructureDefinition/bodySite').value.exists()"
           },
           {
-            "key": "osod-rx-subject",
+            "key": "odos-rx-subject",
             "severity": "error",
             "human": "Observation.subject is required.",
             "expression": "subject.exists()"
           },
           {
-            "key": "osod-rx-encounter",
+            "key": "odos-rx-encounter",
             "severity": "error",
             "human": "Observation.encounter is required.",
             "expression": "encounter.exists()"
           },
           {
-            "key": "osod-rx-effective",
+            "key": "odos-rx-effective",
             "severity": "error",
             "human": "Observation.effectiveDateTime is required.",
             "expression": "effectiveDateTime.exists()"
           },
           {
-            "key": "osod-rx-sphere",
+            "key": "odos-rx-sphere",
             "severity": "error",
             "human": "Sphere component is required.",
             "expression": "component.where(code.coding.where(system = 'http://snomed.info/sct' and code = '251795007').exists()).exists()"
           },
           {
-            "key": "osod-rx-cyl-axis",
+            "key": "odos-rx-cyl-axis",
             "severity": "error",
             "human": "Cylinder and axis are co-required.",
             "expression": "component.where(code.coding.where(system = 'http://snomed.info/sct' and code = '251797004').exists()).exists() = component.where(code.coding.where(system = 'http://snomed.info/sct' and code = '251799001').exists()).exists()"
@@ -2701,28 +2701,28 @@
         "path": "Observation",
         "min": 0,
         "max": "*",
-        "definition": "Observation constrained by https://osod.dev/fhir/StructureDefinition/Observation-Refraction"
+        "definition": "Observation constrained by https://odos2020.com/fhir/StructureDefinition/Observation-Refraction"
       },
       {
         "id": "Observation.subject",
         "path": "Observation.subject",
         "min": 1,
         "max": "1",
-        "definition": "Observation.subject constrained by https://osod.dev/fhir/StructureDefinition/Observation-Refraction"
+        "definition": "Observation.subject constrained by https://odos2020.com/fhir/StructureDefinition/Observation-Refraction"
       },
       {
         "id": "Observation.encounter",
         "path": "Observation.encounter",
         "min": 1,
         "max": "1",
-        "definition": "Observation.encounter constrained by https://osod.dev/fhir/StructureDefinition/Observation-Refraction"
+        "definition": "Observation.encounter constrained by https://odos2020.com/fhir/StructureDefinition/Observation-Refraction"
       },
       {
         "id": "Observation.effectiveDateTime",
         "path": "Observation.effectiveDateTime",
         "min": 1,
         "max": "1",
-        "definition": "Observation.effectiveDateTime constrained by https://osod.dev/fhir/StructureDefinition/Observation-Refraction"
+        "definition": "Observation.effectiveDateTime constrained by https://odos2020.com/fhir/StructureDefinition/Observation-Refraction"
       }
     ]
   }

@@ -10,7 +10,7 @@ export const FHIR_R4_PROVENANCE_ACTIVITY_CODES = [
   "NULLIFY",
 ] as const;
 
-export const OSOD_V05C_CLINICAL_ACTIVITY_CODES = [
+export const ODOS_V05C_CLINICAL_ACTIVITY_CODES = [
   "CREATE",
   "UPDATE",
   "REVISE",
@@ -20,10 +20,10 @@ export const OSOD_V05C_CLINICAL_ACTIVITY_CODES = [
 
 export type FhirR4ProvenanceActivityCode =
   (typeof FHIR_R4_PROVENANCE_ACTIVITY_CODES)[number];
-export type OsodV05cClinicalActivityCode =
-  (typeof OSOD_V05C_CLINICAL_ACTIVITY_CODES)[number];
+export type OdosV05cClinicalActivityCode =
+  (typeof ODOS_V05C_CLINICAL_ACTIVITY_CODES)[number];
 
-export type OsodClinicalProvenanceIntent =
+export type OdosClinicalProvenanceIntent =
   | "first-final-attestation"
   | "post-final-amendment"
   | "post-final-correction"
@@ -57,35 +57,35 @@ export const PROVENANCE_ACTIVITY_BY_CLINICAL_INTENT = {
     description: "New linked Observation adds successor context while the original remains final.",
   },
 } as const satisfies Record<
-  OsodClinicalProvenanceIntent,
+  OdosClinicalProvenanceIntent,
   {
-    code: OsodV05cClinicalActivityCode;
+    code: OdosV05cClinicalActivityCode;
     display: string;
     description: string;
   }
 >;
 
 export function activityForClinicalIntent(
-  intent: OsodClinicalProvenanceIntent,
-): (typeof PROVENANCE_ACTIVITY_BY_CLINICAL_INTENT)[OsodClinicalProvenanceIntent] {
+  intent: OdosClinicalProvenanceIntent,
+): (typeof PROVENANCE_ACTIVITY_BY_CLINICAL_INTENT)[OdosClinicalProvenanceIntent] {
   return PROVENANCE_ACTIVITY_BY_CLINICAL_INTENT[intent];
 }
 
 export function assertProvenanceActivityCode(
   code: string,
-): asserts code is OsodV05cClinicalActivityCode {
+): asserts code is OdosV05cClinicalActivityCode {
   const normalized = code.trim().toUpperCase();
-  if (!OSOD_V05C_CLINICAL_ACTIVITY_CODES.includes(normalized as OsodV05cClinicalActivityCode)) {
+  if (!ODOS_V05C_CLINICAL_ACTIVITY_CODES.includes(normalized as OdosV05cClinicalActivityCode)) {
     throw new Error(
-      `ledger row 21: v3-DataOperation only for v0.5c Provenance.activity (${OSOD_V05C_CLINICAL_ACTIVITY_CODES.join(", ")}).`,
+      `ledger row 21: v3-DataOperation only for v0.5c Provenance.activity (${ODOS_V05C_CLINICAL_ACTIVITY_CODES.join(", ")}).`,
     );
   }
 }
 
-export function isOsodV05cClinicalActivityCode(
+export function isOdosV05cClinicalActivityCode(
   code: string,
-): code is OsodV05cClinicalActivityCode {
-  return OSOD_V05C_CLINICAL_ACTIVITY_CODES.includes(
-    code.trim().toUpperCase() as OsodV05cClinicalActivityCode,
+): code is OdosV05cClinicalActivityCode {
+  return ODOS_V05C_CLINICAL_ACTIVITY_CODES.includes(
+    code.trim().toUpperCase() as OdosV05cClinicalActivityCode,
   );
 }

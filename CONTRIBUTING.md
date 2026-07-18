@@ -1,6 +1,6 @@
-# Contributing to OSOD
+# Contributing to ODOS
 
-OSOD is built by a practicing optometrist and refined at his own practice. The repo is public so others can read, learn, fork, and — if helpful — contribute. Pull requests are welcome but reviewed at the pace of a working clinical practice. Thanks for understanding.
+ODOS is built by a practicing optometrist and refined at his own practice. The repo is public so others can read, learn, fork, and — if helpful — contribute. Pull requests are welcome but reviewed at the pace of a working clinical practice. Thanks for understanding.
 
 ## Before opening an issue
 
@@ -16,16 +16,36 @@ OSOD is built by a practicing optometrist and refined at his own practice. The r
 - Include tests for new behavior. The repo's verification posture is real, not decorative.
 - Don't break the AgentOps governance, audit/DR, or local-only data posture. These are load-bearing.
 
+## Independent evaluation gate
+
+Every PR into `main` needs an independent Fable or Opus evaluation. CodeRabbit
+is a first-pass review, not the final evaluator. A well-formed final marker from
+Fable or Opus passes from any GitHub account. Author != evaluator remains a
+procedural expectation stated in coding kickoffs, not a mechanically enforced
+login rule.
+
+The marker must include exactly one verdict line and the full current PR head
+SHA:
+
+```text
+Evaluated-by: Opus 4.8 — PASS
+Head-SHA: 0123456789abcdef0123456789abcdef01234567
+```
+
+Only Fable or Opus can issue the final verdict. Any new commit requires a new
+marker for the new head. The `evaluated` label is an explicit operator override
+that bypasses marker and head-SHA enforcement.
+
 ## License terms for contributions
 
-OSOD is licensed under **AGPL-3.0-or-later**. By submitting a pull request, you agree your contribution is licensed under the same terms.
+ODOS is licensed under **AGPL-3.0-or-later**. By submitting a pull request, you agree your contribution is licensed under the same terms.
 
-The AGPL is intentional. OSOD exists so practices own their software. The AGPL ensures no one — including a future commercial reseller — can take this code, run it as a hosted service, and lock practices out of their own data again. If that's a problem for your use case, OSOD probably isn't the right project for you.
+The AGPL is intentional. ODOS exists so practices own their software. The AGPL ensures no one — including a future commercial reseller — can take this code, run it as a hosted service, and lock practices out of their own data again. If that's a problem for your use case, ODOS probably isn't the right project for you.
 
 ## Things that will get a PR closed without review
 
 - Adding cloud calls, telemetry, "phone home" features, or remote logging by default.
-- Embedding licensed code-set content (CPT, SNOMED, ICD-10-CM, LOINC, RxNorm) directly in the repo. OSOD references these; it does not redistribute them.
+- Embedding licensed code-set content (CPT, SNOMED, ICD-10-CM, LOINC, RxNorm) directly in the repo. ODOS references these; it does not redistribute them.
 - Submitting AI-generated PRs with no understanding of the code, no tests, and no engagement with reviewer comments.
 - Bypassing AgentOps, audit, or access-policy enforcement.
 - Vendoring large third-party SDK surface that creates lock-in to a single backend.

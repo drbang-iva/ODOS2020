@@ -34,3 +34,20 @@ By submitting this PR, I agree my contribution is licensed under the project's *
 ## Anything reviewers should know
 
 <!-- Migration steps, follow-up work, known limitations. -->
+
+## Independent evaluation
+
+The newest well-formed marker decides the `check-evaluation` gate, regardless
+of which GitHub account posts it. The named model must be Fable or Opus, and a
+passing evaluation must bind itself to the full current PR head SHA:
+
+```text
+Evaluated-by: Fable 5 — PASS
+Head-SHA: 0123456789abcdef0123456789abcdef01234567
+```
+
+The separators `--` and `-` are also accepted. `FAIL`, `BLOCKED`, and
+`NEEDS-WORK` keep the gate red. A new commit makes every earlier marker stale.
+The `evaluated` label remains the deliberate operator override and bypasses
+the marker and head-SHA checks. Author != evaluator remains a procedural
+expectation stated in coding kickoffs, not a mechanically enforced login rule.

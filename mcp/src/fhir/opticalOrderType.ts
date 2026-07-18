@@ -1,6 +1,6 @@
 import type { CodeableConcept } from "@medplum/fhirtypes";
 
-export const OSOD_OPTICAL_ORDER_TYPE_SYSTEM = "https://osod.dev/fhir/CodeSystem/optical-order-type";
+export const ODOS_OPTICAL_ORDER_TYPE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/optical-order-type";
 
 export const OPTICAL_ORDER_TYPES = [
   { code: "rx", display: "Rx" },
@@ -30,7 +30,7 @@ export function opticalOrderTypeConcept(code: string): CodeableConcept {
   return {
     coding: [
       {
-        system: OSOD_OPTICAL_ORDER_TYPE_SYSTEM,
+        system: ODOS_OPTICAL_ORDER_TYPE_SYSTEM,
         code: type.code,
         display: type.display,
       },

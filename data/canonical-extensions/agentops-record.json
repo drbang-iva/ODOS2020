@@ -1,9 +1,9 @@
 {
   "resourceType": "StructureDefinition",
   "id": "agentops-record",
-  "url": "https://osod.dev/fhir/StructureDefinition/agentops-record",
+  "url": "https://odos2020.com/fhir/StructureDefinition/agentops-record",
   "version": "0.55d",
-  "name": "OSODAgentOpsRecord",
+  "name": "ODOSAgentOpsRecord",
   "status": "active",
   "kind": "complex-type",
   "abstract": false,
@@ -16,7 +16,7 @@
   "type": "Extension",
   "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
   "derivation": "constraint",
-  "description": "OSOD AgentOps audit-record extension carrying threshold, verdict, rationale, source identity, AIAST confirmation, and initiation_mode.",
+  "description": "ODOS AgentOps audit-record extension carrying threshold, verdict, rationale, source identity, AIAST confirmation, and initiation_mode.",
   "differential": {
     "element": [
       {
@@ -27,7 +27,7 @@
       {
         "id": "Extension.url",
         "path": "Extension.url",
-        "fixedUri": "https://osod.dev/fhir/StructureDefinition/agentops-record"
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/agentops-record"
       }
     ]
   }

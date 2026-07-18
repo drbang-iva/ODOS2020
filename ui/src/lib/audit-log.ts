@@ -152,8 +152,8 @@ export async function fetchAuditLogRows(
 
   const response = await fetch(`${auditApiBase()}/audit/events?${params.toString()}`, {
     headers: {
-      "X-OSOD-Role": role,
-      "X-OSOD-Actor-Id": actorId,
+      "X-ODOS-Role": role,
+      "X-ODOS-Actor-Id": actorId,
     },
   });
   if (!response.ok) {
@@ -212,7 +212,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       resourceType: "Patient",
       resourceId: patientId,
       actionOutcome: "granted",
-      policyUrl: "AccessPolicy/osod-clinician",
+      policyUrl: "AccessPolicy/odos-clinician",
       sessionId: "session-own",
       breakGlass: false,
       ibActorClassification: "health-care-provider",
@@ -229,7 +229,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       resourceId: patientId,
       actionOutcome: "denied",
       actionReason: "access-policy-compartment-isolation",
-      policyUrl: "AccessPolicy/osod-clinician",
+      policyUrl: "AccessPolicy/odos-clinician",
       sessionId: "session-denied",
       breakGlass: false,
       ibActorClassification: "health-care-provider",
@@ -247,7 +247,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
       resourceId: "emergency-encounter",
       actionOutcome: "granted",
       actionReason: "Emergency on-call care.",
-      policyUrl: "https://osod.dev/fhir/AccessPolicy/break-glass",
+      policyUrl: "https://odos2020.com/fhir/AccessPolicy/break-glass",
       sessionId: "session-break-glass",
       breakGlass: true,
       breakGlassReason: "Emergency on-call care.",
@@ -259,7 +259,7 @@ export function sampleAuditRows(now = new Date("2026-04-29T12:00:00.000Z")): Aud
 
 function auditApiBase(): string {
   const meta = import.meta as ImportMeta & { env?: Record<string, string | undefined> };
-  return meta.env?.VITE_OSOD_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+  return meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
 }
 
 function csvEscape(value: string): string {

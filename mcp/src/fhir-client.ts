@@ -1,17 +1,17 @@
 /**
- * Node-side FHIR client for the OSOD MCP server.
- * Mirrors osod/src/fhir-client.ts (the POC) — PKCE OAuth2, zero SDK coupling.
+ * Node-side FHIR client for the ODOS MCP server.
+ * Mirrors odos/src/fhir-client.ts (the POC) — PKCE OAuth2, zero SDK coupling.
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import type { Binary, Bundle, OperationOutcome, Resource } from "@medplum/fhirtypes";
+import type { Binary, Bundle, OperationOutcome, ProjectMembership, Resource } from "@medplum/fhirtypes";
 import {
-  buildOsodAuditEventRow,
-  type BuildOsodAuditEventInput,
-  type OsodActorRole,
-  type OsodAuditEventRecord,
-  type OsodAuditEventType,
-} from "./authz/osodAudit.js";
+  buildOdosAuditEventRow,
+  type BuildOdosAuditEventInput,
+  type OdosActorRole,
+  type OdosAuditEventRecord,
+  type OdosAuditEventType,
+} from "./authz/odosAudit.js";
 import {
   assertBinaryCreateThroughParser,
   assertBinaryPatchAllowed,
@@ -24,7 +24,7 @@ export type JsonPatchOperation =
 
 export interface FhirAuditContext {
   actorId?: string;
-  actorRole?: OsodActorRole;
+  actorRole?: OdosActorRole;
   sessionId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -32,8 +32,8 @@ export interface FhirAuditContext {
 }
 
 export interface FhirAuditRecorder {
-  record<T>(row: OsodAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
-  recordDenied(row: OsodAuditEventRecord): Promise<void>;
+  record<T>(row: OdosAuditEventRecord, operation: () => Promise<T> | T): Promise<T>;
+  recordDenied(row: OdosAuditEventRecord): Promise<void>;
 }
 
 export interface MedplumClient {
@@ -41,8 +41,9 @@ export interface MedplumClient {
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
   search<T extends Resource>(
     rt: T["resourceType"],
-    params?: Record<string, string>,
+    params?: FhirSearchParams,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   history<T extends Resource>(
     rt: T["resourceType"],
     id?: string,
@@ -63,18 +64,37 @@ export interface MedplumClient {
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
   executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
+  getActiveProjectId(): Promise<string>;
+  invitePractitioner(
+    projectId: string,
+    input: MedplumPractitionerInvite,
+  ): Promise<ProjectMembership>;
   deleteAttempt(rt: string, id: string, reason?: string): Promise<never>;
   nullifyAttempt(rt: string, id: string, reason?: string): Promise<never>;
+}
+
+export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
+
+export interface MedplumPractitionerInvite {
+  resourceType: "Practitioner";
+  email: string;
+  firstName: string;
+  lastName: string;
+  sendEmail: true;
 }
 
 export function createMedplumClient(opts: {
   baseUrl: string;
   accessToken?: string;
+  refreshAuthentication?: () => Promise<void>;
+  now?: () => number;
   audit?: FhirAuditRecorder;
   auditContext?: FhirAuditContext;
 }): MedplumClient {
   const base = opts.baseUrl.replace(/\/$/, "");
   let token: string | undefined = opts.accessToken;
+  let refreshPromise: Promise<void> | undefined;
+  let loginCredentials: { email: string; password: string } | undefined;
   const audit = opts.audit;
   const auditContext = opts.auditContext ?? {};
 
@@ -85,6 +105,33 @@ export function createMedplumClient(opts: {
     };
     if (token) h.Authorization = `Bearer ${token}`;
     return h;
+  }
+
+  async function refresh(): Promise<void> {
+    const operation = opts.refreshAuthentication ?? (loginCredentials
+      ? () => performLogin(loginCredentials!.email, loginCredentials!.password)
+      : undefined);
+    if (!operation) return;
+    refreshPromise ??= operation().finally(() => {
+      refreshPromise = undefined;
+    });
+    await refreshPromise;
+  }
+
+  async function authorizedFetch(
+    url: string | URL,
+    init: () => RequestInit,
+  ): Promise<Response> {
+    const canRefresh = Boolean(opts.refreshAuthentication || loginCredentials);
+    if (canRefresh && tokenExpiresSoon(token, opts.now?.() ?? Date.now())) {
+      await refresh();
+    }
+    let response = await fetch(url, init());
+    if (response.status === 401 && canRefresh) {
+      await refresh();
+      response = await fetch(url, init());
+    }
+    return response;
   }
 
   async function toError(res: Response): Promise<Error> {
@@ -102,7 +149,7 @@ export function createMedplumClient(opts: {
   }
 
   async function audited<T>(
-    input: BuildOsodAuditEventInput,
+    input: BuildOdosAuditEventInput,
     operation: () => Promise<T>,
   ): Promise<T> {
     if (!audit) {
@@ -110,11 +157,11 @@ export function createMedplumClient(opts: {
     }
 
     try {
-      return await audit.record(buildOsodAuditEventRow({ ...auditContext, ...input }), operation);
+      return await audit.record(buildOdosAuditEventRow({ ...auditContext, ...input }), operation);
     } catch (error) {
       if (isAccessDeniedError(error)) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             ...input,
             eventType: "denied",
@@ -134,7 +181,7 @@ export function createMedplumClient(opts: {
 
     try {
       await audit.record(
-        buildOsodAuditEventRow({
+        buildOdosAuditEventRow({
           ...auditContext,
           eventType: "login",
           actorId: auditContext.actorId ?? email,
@@ -147,7 +194,7 @@ export function createMedplumClient(opts: {
     } catch (error) {
       if (!isAuditSubstrateError(error)) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "login-failed",
             actorId: auditContext.actorId ?? email,
@@ -161,38 +208,43 @@ export function createMedplumClient(opts: {
     }
   }
 
+  async function performLogin(email: string, password: string): Promise<void> {
+    await auditedLogin(email, async () => {
+      const verifier = randomBytes(32).toString("base64url");
+      const challenge = createHash("sha256").update(verifier).digest("base64url");
+
+      const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          codeChallenge: challenge,
+          codeChallengeMethod: "S256",
+        }),
+      });
+      if (!loginRes.ok) throw await toError(loginRes);
+      const { code } = (await loginRes.json()) as { login: string; code: string };
+
+      const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          code_verifier: verifier,
+        }),
+      });
+      if (!tokenRes.ok) throw await toError(tokenRes);
+      const { access_token } = (await tokenRes.json()) as { access_token: string };
+      token = access_token;
+    });
+  }
+
   return {
     async login(email: string, password: string): Promise<void> {
-      await auditedLogin(email, async () => {
-        const verifier = randomBytes(32).toString("base64url");
-        const challenge = createHash("sha256").update(verifier).digest("base64url");
-
-        const loginRes = await fetchWithThrottleRetry(`${base}/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            password,
-            codeChallenge: challenge,
-            codeChallengeMethod: "S256",
-          }),
-        });
-        if (!loginRes.ok) throw await toError(loginRes);
-        const { code } = (await loginRes.json()) as { login: string; code: string };
-
-        const tokenRes = await fetchWithThrottleRetry(`${base}/oauth2/token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "authorization_code",
-            code,
-            code_verifier: verifier,
-          }),
-        });
-        if (!tokenRes.ok) throw await toError(tokenRes);
-        const { access_token } = (await tokenRes.json()) as { access_token: string };
-        token = access_token;
-      });
+      loginCredentials = { email, password };
+      await performLogin(email, password);
     },
 
     async read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T> {
@@ -206,7 +258,7 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, { headers: headers() });
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({ headers: headers() }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -215,7 +267,7 @@ export function createMedplumClient(opts: {
 
     async search<T extends Resource>(
       rt: T["resourceType"],
-      params: Record<string, string> = {},
+      params: FhirSearchParams = {},
     ): Promise<Bundle<T>> {
       return audited(
         {
@@ -226,9 +278,38 @@ export function createMedplumClient(opts: {
         },
         async () => {
           const qs = new URLSearchParams(params).toString();
-          const res = await fetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
-          });
+          }));
+          if (!res.ok) throw await toError(res);
+          return (await res.json()) as Bundle<T>;
+        },
+      );
+    },
+
+    async searchUrl<T extends Resource>(url: string, expectedResourceType: T["resourceType"]): Promise<Bundle<T>> {
+      const resolved = new URL(url, `${base}/fhir/R4/${expectedResourceType}`);
+      const fhirRoot = new URL(`${base}/fhir/R4/`);
+      if (resolved.origin !== fhirRoot.origin || !resolved.pathname.startsWith(fhirRoot.pathname)) {
+        throw new Error("FHIR next link must stay within the configured FHIR endpoint.");
+      }
+      const resourceType = resolved.pathname.slice(fhirRoot.pathname.length).split("/")[0];
+      if (!resourceType) {
+        throw new Error("FHIR next link does not identify a resource search.");
+      }
+      if (resourceType !== expectedResourceType) {
+        throw new Error(`FHIR next link changed resource type from ${expectedResourceType} to ${resourceType}.`);
+      }
+      const params = Object.fromEntries(resolved.searchParams);
+      return audited(
+        {
+          eventType: "search",
+          resourceType,
+          patientId: patientIdFromSearch(resourceType, params),
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await authorizedFetch(resolved, () => ({ headers: headers() }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
@@ -252,9 +333,9 @@ export function createMedplumClient(opts: {
         async () => {
           const qs = new URLSearchParams(params).toString();
           const path = id ? `${rt}/${id}/_history` : `${rt}/_history`;
-          const res = await fetch(`${base}/fhir/R4/${path}${qs ? "?" + qs : ""}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${path}${qs ? "?" + qs : ""}`, () => ({
             headers: headers(),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as Bundle<T>;
         },
@@ -276,9 +357,9 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}/_history/${versionId}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}/_history/${versionId}`, () => ({
             headers: headers(),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -302,11 +383,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${r.resourceType}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${r.resourceType}`, () => ({
             method: "POST",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -332,11 +413,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({
             method: "PUT",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(r),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -362,7 +443,7 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4/${rt}/${id}`, {
+          const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({
             method: "PATCH",
             headers: {
               ...headers(),
@@ -370,7 +451,7 @@ export function createMedplumClient(opts: {
               ...extraHeaders,
             },
             body: JSON.stringify(operations),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
         },
@@ -392,11 +473,11 @@ export function createMedplumClient(opts: {
           actionOutcome: "granted",
         },
         async () => {
-          const res = await fetch(`${base}/fhir/R4`, {
+          const res = await authorizedFetch(`${base}/fhir/R4`, () => ({
             method: "POST",
             headers: { ...headers(), ...extraHeaders },
             body: JSON.stringify(transactionBundle),
-          });
+          }));
           if (!res.ok) throw await toError(res);
           const responseBundle = (await res.json()) as Bundle;
           if (hasEntryFailure(responseBundle)) {
@@ -407,10 +488,31 @@ export function createMedplumClient(opts: {
       );
     },
 
+    async getActiveProjectId(): Promise<string> {
+      const res = await authorizedFetch(`${base}/auth/me`, () => ({ headers: headers() }));
+      if (!res.ok) throw await toError(res);
+      const body = (await res.json()) as { project?: { id?: string } };
+      if (!body.project?.id) throw new Error("The service session has no active Medplum project.");
+      return body.project.id;
+    },
+
+    async invitePractitioner(
+      projectId: string,
+      input: MedplumPractitionerInvite,
+    ): Promise<ProjectMembership> {
+      const res = await authorizedFetch(`${base}/admin/projects/${encodeURIComponent(projectId)}/invite`, () => ({
+        method: "POST",
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }));
+      if (!res.ok) throw await toError(res);
+      return (await res.json()) as ProjectMembership;
+    },
+
     async deleteAttempt(rt: string, id: string, reason = "mandate-8-boundary delete-attempt"): Promise<never> {
       if (audit) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "delete-attempt",
             resourceType: rt,
@@ -422,13 +524,13 @@ export function createMedplumClient(opts: {
           }),
         );
       }
-      throw new Error("OSOD FHIR DELETE is disabled; use entered-in-error/nullification workflows.");
+      throw new Error("ODOS FHIR DELETE is disabled; use entered-in-error/nullification workflows.");
     },
 
     async nullifyAttempt(rt: string, id: string, reason = "mandate-8-boundary nullify-attempt"): Promise<never> {
       if (audit) {
         await audit.recordDenied(
-          buildOsodAuditEventRow({
+          buildOdosAuditEventRow({
             ...auditContext,
             eventType: "nullify-attempt",
             resourceType: rt,
@@ -440,7 +542,7 @@ export function createMedplumClient(opts: {
           }),
         );
       }
-      throw new Error("OSOD FHIR nullification must use an explicit clinical status workflow.");
+      throw new Error("ODOS FHIR nullification must use an explicit clinical status workflow.");
     },
   };
 }
@@ -449,14 +551,29 @@ function isBinaryResource(resource: Resource): resource is Binary {
   return resource.resourceType === "Binary";
 }
 
-function patientIdFromSearch(resourceType: string, params: Record<string, string>): string | undefined {
+export function tokenExpiresSoon(token: string | undefined, nowMs: number): boolean {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as {
+      exp?: number;
+    };
+    return typeof payload.exp === "number" && payload.exp * 1000 <= nowMs + 5 * 60_000;
+  } catch {
+    return false;
+  }
+}
+
+function patientIdFromSearch(resourceType: string, params: FhirSearchParams): string | undefined {
+  const values = params instanceof URLSearchParams
+    ? params
+    : new URLSearchParams(params);
   if (resourceType === "Patient") {
-    return stripReferenceId(params._id ?? params.id, "Patient");
+    return stripReferenceId(values.get("_id") ?? values.get("id") ?? undefined, "Patient");
   }
   return (
-    stripReferenceId(params.subject, "Patient") ??
-    stripReferenceId(params.patient, "Patient") ??
-    stripReferenceId(params.context, "Patient")
+    stripReferenceId(values.get("subject") ?? undefined, "Patient") ??
+    stripReferenceId(values.get("patient") ?? undefined, "Patient") ??
+    stripReferenceId(values.get("context") ?? undefined, "Patient")
   );
 }
 
@@ -496,8 +613,8 @@ function patientIdFromResource(resource: Resource): string | undefined {
 
 export function auditEventTypeForFhirWrite(
   resourceType: string,
-  fallback: Extract<OsodAuditEventType, "create" | "update" | "patch">,
-): OsodAuditEventType {
+  fallback: Extract<OdosAuditEventType, "create" | "update" | "patch">,
+): OdosAuditEventType {
   if (resourceType === "AccessPolicy") {
     return "policy-change";
   }

@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS osod_clinical_finding_definitions (
+CREATE TABLE IF NOT EXISTS odos_clinical_finding_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     stable_key TEXT NOT NULL UNIQUE CHECK (stable_key ~ '^[a-z0-9][a-z0-9_-]*$'),
     display TEXT NOT NULL CHECK (display <> ''),
@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS osod_clinical_finding_definitions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS osod_finding_instances (
+CREATE TABLE IF NOT EXISTS odos_finding_instances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    finding_definition_id UUID NOT NULL REFERENCES osod_clinical_finding_definitions(id),
+    finding_definition_id UUID NOT NULL REFERENCES odos_clinical_finding_definitions(id),
     patient_reference TEXT NOT NULL CHECK (patient_reference ~ '^Patient/.+'),
     encounter_reference TEXT NOT NULL CHECK (encounter_reference ~ '^Encounter/.+'),
     observation_reference TEXT UNIQUE,
@@ -34,11 +34,11 @@ CREATE TABLE IF NOT EXISTS osod_finding_instances (
 );
 
 CREATE INDEX IF NOT EXISTS idx_finding_instances_patient_encounter
-    ON osod_finding_instances (patient_reference, encounter_reference);
+    ON odos_finding_instances (patient_reference, encounter_reference);
 CREATE INDEX IF NOT EXISTS idx_finding_instances_definition
-    ON osod_finding_instances (finding_definition_id);
+    ON odos_finding_instances (finding_definition_id);
 
-CREATE TABLE IF NOT EXISTS osod_diagnosis_definitions (
+CREATE TABLE IF NOT EXISTS odos_diagnosis_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     stable_key TEXT NOT NULL UNIQUE CHECK (stable_key ~ '^[a-z0-9][a-z0-9_-]*$'),
     display TEXT NOT NULL CHECK (display <> ''),
@@ -59,11 +59,11 @@ CREATE TABLE IF NOT EXISTS osod_diagnosis_definitions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS osod_diagnosis_suggestion_edges (
+CREATE TABLE IF NOT EXISTS odos_diagnosis_suggestion_edges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    source_finding_definition_id UUID REFERENCES osod_clinical_finding_definitions(id),
-    source_finding_instance_id UUID REFERENCES osod_finding_instances(id),
-    target_diagnosis_definition_id UUID NOT NULL REFERENCES osod_diagnosis_definitions(id),
+    source_finding_definition_id UUID REFERENCES odos_clinical_finding_definitions(id),
+    source_finding_instance_id UUID REFERENCES odos_finding_instances(id),
+    target_diagnosis_definition_id UUID NOT NULL REFERENCES odos_diagnosis_definitions(id),
     predicate_key TEXT NOT NULL CHECK (predicate_key <> ''),
     predicate_expression JSONB NOT NULL DEFAULT '{}'::jsonb,
     rank INTEGER NOT NULL CHECK (rank >= 1),
@@ -85,13 +85,13 @@ CREATE TABLE IF NOT EXISTS osod_diagnosis_suggestion_edges (
 );
 
 CREATE INDEX IF NOT EXISTS idx_suggestion_edges_instance
-    ON osod_diagnosis_suggestion_edges (source_finding_instance_id);
+    ON odos_diagnosis_suggestion_edges (source_finding_instance_id);
 CREATE INDEX IF NOT EXISTS idx_suggestion_edges_target
-    ON osod_diagnosis_suggestion_edges (target_diagnosis_definition_id);
+    ON odos_diagnosis_suggestion_edges (target_diagnosis_definition_id);
 
-CREATE TABLE IF NOT EXISTS osod_encounter_diagnoses (
+CREATE TABLE IF NOT EXISTS odos_encounter_diagnoses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    diagnosis_definition_id UUID NOT NULL REFERENCES osod_diagnosis_definitions(id),
+    diagnosis_definition_id UUID NOT NULL REFERENCES odos_diagnosis_definitions(id),
     patient_reference TEXT NOT NULL CHECK (patient_reference ~ '^Patient/.+'),
     encounter_reference TEXT NOT NULL CHECK (encounter_reference ~ '^Encounter/.+'),
     condition_reference TEXT UNIQUE,
@@ -113,21 +113,21 @@ CREATE TABLE IF NOT EXISTS osod_encounter_diagnoses (
     )
 );
 
-CREATE TABLE IF NOT EXISTS osod_encounter_diagnosis_evidence (
-    encounter_diagnosis_id UUID NOT NULL REFERENCES osod_encounter_diagnoses(id) ON DELETE CASCADE,
-    finding_instance_id UUID NOT NULL REFERENCES osod_finding_instances(id),
+CREATE TABLE IF NOT EXISTS odos_encounter_diagnosis_evidence (
+    encounter_diagnosis_id UUID NOT NULL REFERENCES odos_encounter_diagnoses(id) ON DELETE CASCADE,
+    finding_instance_id UUID NOT NULL REFERENCES odos_finding_instances(id),
     evidence_role TEXT NOT NULL DEFAULT 'supporting' CHECK (evidence_role IN ('supporting', 'refuting', 'context')),
     PRIMARY KEY (encounter_diagnosis_id, finding_instance_id, evidence_role)
 );
 
 CREATE INDEX IF NOT EXISTS idx_encounter_diagnosis_evidence_finding
-    ON osod_encounter_diagnosis_evidence (finding_instance_id);
+    ON odos_encounter_diagnosis_evidence (finding_instance_id);
 
-CREATE TABLE IF NOT EXISTS osod_protocol_definitions (
+CREATE TABLE IF NOT EXISTS odos_protocol_definitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     stable_key TEXT NOT NULL UNIQUE CHECK (stable_key ~ '^[a-z0-9][a-z0-9_-]*$'),
     display TEXT NOT NULL CHECK (display <> ''),
-    diagnosis_definition_id UUID REFERENCES osod_diagnosis_definitions(id),
+    diagnosis_definition_id UUID REFERENCES odos_diagnosis_definitions(id),
     source_status TEXT NOT NULL DEFAULT 'unseeded-needs-operator-input'
         CHECK (source_status IN ('verified-seed', 'unseeded-needs-operator-input', 'local-practice')),
     action_templates JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -137,10 +137,10 @@ CREATE TABLE IF NOT EXISTS osod_protocol_definitions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS osod_plan_action_instances (
+CREATE TABLE IF NOT EXISTS odos_plan_action_instances (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    protocol_definition_id UUID REFERENCES osod_protocol_definitions(id),
-    encounter_diagnosis_id UUID REFERENCES osod_encounter_diagnoses(id),
+    protocol_definition_id UUID REFERENCES odos_protocol_definitions(id),
+    encounter_diagnosis_id UUID REFERENCES odos_encounter_diagnoses(id),
     linked_finding_instance_ids UUID[] NOT NULL DEFAULT '{}',
     action_key TEXT NOT NULL CHECK (action_key <> ''),
     action_kind TEXT NOT NULL CHECK (action_kind IN ('finding-prompt', 'plan-text', 'order', 'procedure', 'education', 'follow-up', 'charge-proposal')),
@@ -151,9 +151,9 @@ CREATE TABLE IF NOT EXISTS osod_plan_action_instances (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS osod_procedure_charge_rules (
+CREATE TABLE IF NOT EXISTS odos_procedure_charge_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    diagnosis_definition_id UUID REFERENCES osod_diagnosis_definitions(id),
+    diagnosis_definition_id UUID REFERENCES odos_diagnosis_definitions(id),
     diagnosis_family TEXT,
     procedure_system TEXT NOT NULL CHECK (procedure_system <> ''),
     procedure_code TEXT NOT NULL CHECK (procedure_code <> ''),
@@ -175,9 +175,9 @@ CREATE TABLE IF NOT EXISTS osod_procedure_charge_rules (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS osod_charge_proposals (
+CREATE TABLE IF NOT EXISTS odos_charge_proposals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    plan_action_instance_id UUID REFERENCES osod_plan_action_instances(id),
+    plan_action_instance_id UUID REFERENCES odos_plan_action_instances(id),
     procedure_system TEXT NOT NULL CHECK (procedure_system <> ''),
     procedure_code TEXT NOT NULL CHECK (procedure_code <> ''),
     linked_encounter_diagnosis_ids UUID[] NOT NULL DEFAULT '{}',

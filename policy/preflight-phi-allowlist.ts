@@ -5,11 +5,11 @@ export interface PreflightPhiAllowlistEntry {
 
 export const DEFAULT_PREFLIGHT_PHI_ALLOWLIST: readonly PreflightPhiAllowlistEntry[] = [
   {
-    pattern: /\bosod\.local\b/i,
+    pattern: /\bodos\.local\b/i,
     reason: "Synthetic local-domain install examples are not patient identifiers.",
   },
   {
-    pattern: /\bdrill-admin@osod\.local\b/i,
+    pattern: /\bdrill-admin@odos\.local\b/i,
     reason: "Synthetic DR drill account is an operator fixture.",
   },
 ];

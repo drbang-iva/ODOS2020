@@ -1,7 +1,7 @@
-# OSOD Build Status
+# ODOS Build Status
 
 **Generated:** 2026-07-07
-**Current osod tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, the ODOS scheduler #24–#30, and the scheduler Pass-2 follow-ons #31–#34, #36, #38 — all currently untagged; v0.6c tags at slice close)
+**Current odos tag:** `v0.6a` at commit `ce6e94f` (main has since shipped Tier-2 cash dispensary #19–#21, the v0.6c payments kernel + card path #22–#23, the ODOS scheduler #24–#30, and the scheduler Pass-2 follow-ons #31–#34, #36, #38 — all currently untagged; v0.6c tags at slice close)
 **Branch:** `main` at `ccc097e`
 
 This is the operator-facing dashboard: what works end-to-end, what's verified, what's not production-ready, what's next. Full per-milestone build narrative is in [`docs/build-log/`](docs/build-log/). Architectural rationale lives in the companion private business repo at [`performance-od`](https://github.com/drbang-iva/performance-od).
@@ -12,7 +12,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 ## What works end-to-end today
 
-### v0.55 integration spine (SHIPPED 2026-05-05, osod tag `v0.55` at `e8c8d9e`)
+### v0.55 integration spine (SHIPPED 2026-05-05, odos tag `v0.55` at `e8c8d9e`)
 
 - SMART on FHIR v2 authorization with patient-directed token revocation per §170.315(g)(10)(vi) 1-hour window
 - SMART app registry — third-party SMART apps integrate via the local registry; seed catalog ships empty
@@ -36,11 +36,11 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 - HL7 v3 ActCode + ObservationValue (AIAST / DICTAST / CPLYCUI)
 - Clinical encounter UI baseline (patient picker, comprehensive exam start, structured-finding section saves, sign + finish)
 
-### v0.6a Frames Data (SHIPPED 2026-05-09, osod tag `v0.6a` at `ce6e94f`)
+### v0.6a Frames Data (SHIPPED 2026-05-09, odos tag `v0.6a` at `ce6e94f`)
 
-- HCPCS V-series terminology sync (`osod_terminology_hcpcs`)
-- `osod_frames_catalog` — append-only Type-2 SCD catalog table (~500K-1M industry SKU capacity)
-- `osod_practice_frames_inventory` — per-practice inventory state with FK to canonical catalog
+- HCPCS V-series terminology sync (`odos_terminology_hcpcs`)
+- `odos_frames_catalog` — append-only Type-2 SCD catalog table (~500K-1M industry SKU capacity)
+- `odos_practice_frames_inventory` — per-practice inventory state with FK to canonical catalog
 - FHIR `ChargeItemDefinition` builder cross-referencing frame SKUs via canonical URLs
 - Frames Data ingest — bulk-file-ingest pathway (Access-Point-like local-subscriber workflow; no outbound HTTP to vendor)
 - Inventory management UI primitive
@@ -48,7 +48,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 ### Tier-2 cash dispensary (SHIPPED 2026-07-03/04, PRs #19–#21)
 
-- Cash spectacle order kernel — DeviceRequest (order, `basedOn → VisionPrescription`) + Task 17-status lifecycle (`businessStatus`) + ChargeItem lines + CASH/CHECK Invoice with `osod-payment-tender` extension + PPAY/FAMILY discount priceComponents; single FHIR transaction Bundle
+- Cash spectacle order kernel — DeviceRequest (order, `basedOn → VisionPrescription`) + Task 17-status lifecycle (`businessStatus`) + ChargeItem lines + CASH/CHECK Invoice with `odos-payment-tender` extension + PPAY/FAMILY discount priceComponents; single FHIR transaction Bundle
 - Frame attach/dispense with version-guarded inventory decrement (reuses v0.6a Frames Data)
 - Lab-order emitter T0 — DCS/OMA-shaped model + printable lab sheet (transport-independent; T1 direct-DCS deferred)
 - Patient receipt / financial summary — hard-reconciled to `Invoice.totalGross/totalNet` (throws on mismatch); printable
@@ -58,7 +58,7 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 - Invoice↔PaymentReconciliation seam — Invoice = the bill; PaymentReconciliation = the settling processor payment (`detail[0].request → Invoice`); manual cash/check keeps the Invoice tender extension and emits no PR (seam spec, performance-od 2026-07-05)
 - Vendor-neutral `PaymentProcessorAdapter` (charge/refund/void/settle/status) + manual-cash adapter + Clover REST Pay Display adapter (cloud, doc-verified shapes; OAuth token never persisted)
-- Unified `POST /payments/charge` on osod-core — the processor secret lives server-side only; 9 new `payment.*` audit event types
+- Unified `POST /payments/charge` on odos-core — the processor secret lives server-side only; 9 new `payment.*` audit event types
 - Payments authorization model — caller-token PR writes governed by Medplum AccessPolicy; front-desk dispensary RBAC grants at practice scope (also fixes the latent gap that made the cash order flow admin-only); identity-derived role gate via the `practice-role` `meta.tag` on AccessPolicy (no client role header)
 - Dispensary card checkout UI — untendered order → device charge → PR-backed receipt; declined/failed leaves the order payable; receipt-consistency guard (cash vs card render identical money) mutation-proven
 
@@ -66,11 +66,11 @@ For the architectural overview + working-directory conventions, see [`AGENTS.md`
 
 Front-desk-first scheduler serving three clinic modes (eyecare-only / aesthetics-only / both-combined) selected by practice config; design brief in performance-od 2026-07-06. Built one slice per PR, each through a multi-agent close audit + fix round (~48 confirmed findings caught-and-fixed across the series, zero broken merges).
 
-- **Data model + service layer** (#24) — clinic-mode axis (discipline visibility filtering); visit-type catalog as `HealthcareService` (duration/color/eligible-resources via `osod-*` extensions, new types are DATA); resources as `Schedule` actors (Practitioner/Location/Device); `Appointment` builder on the Eyefinity model — serviceType, vision+medical coverage extensions, two status axes (Appointment Status ↔ R4 `appointment-status`; Confirmation Status extension), urgent/follow-up; availability → `Slot` from operating hours + blocked time. Service layer has zero UI coupling.
+- **Data model + service layer** (#24) — clinic-mode axis (discipline visibility filtering); visit-type catalog as `HealthcareService` (duration/color/eligible-resources via `odos-*` extensions, new types are DATA); resources as `Schedule` actors (Practitioner/Location/Device); `Appointment` builder on the Eyefinity model — serviceType, vision+medical coverage extensions, two status axes (Appointment Status ↔ R4 `appointment-status`; Confirmation Status extension), urgent/follow-up; availability → `Slot` from operating hours + blocked time. Service layer has zero UI coupling.
 - **Day-view resource grid** (#25) — columns = mode-filtered resources, color-by-type blocks with billing-context-on-block, free/busy/blocked shading, v8 dark palette; live clinic-mode selector.
 - **Appointment CRUD** (#26) — Eyefinity details modal, patient quick-card (masked SSN, balance), book/edit/move/cancel/check-in, non-patient blocks; merge-onto-real-resource update path (preserves `slot`/foreign extensions), server-side conflict scope.
 - **Front-desk scheduling RBAC** (#27) — `Appointment` create/read/update + `Schedule`/`Slot`/`HealthcareService` read at practice scope; the scheduler is operable under a real front-desk login.
-- **Config persistence** (#28) — practice scheduling config (hours, per-resource templates, blocked time, offices) persists as one coded `Basic` singleton (`osod-scheduling-config`), criteria-fenced front-desk grant.
+- **Config persistence** (#28) — practice scheduling config (hours, per-resource templates, blocked time, offices) persists as one coded `Basic` singleton (`odos-scheduling-config`), criteria-fenced front-desk grant.
 - **Settings + offices + find-next-available** (#29) — hours/blocked-time/offices editors, config hydration, office selector, Find Open (Eyefinity "Find Open") feeding the booking modal.
 - **Week + month views** (#30) — Monday-start week (single resource × 7 days) and month density-scan calendar; one ranged query per window; verified-correct calendar math (leap Feb, day-of-month clamp, practice-local bucketing).
 
@@ -155,11 +155,11 @@ Plus the operational lessons that carry forward into v0.6b: see [`docs/operator-
 
 ## Known gaps + safety limits
 
-- **Medplum AuditEvent does not surface `X-OSOD-Source` in 5.1.8.** Verified empirically at v0.2.5. OSOD still sends the header for ingress attribution; FHIR `Provenance` is the durable per-resource attribution path.
-- **Medplum 5.1.8 mixed transaction-response handling.** Server can return a mixed transaction-response instead of rolling back every successful entry after a later entry failure. OSOD client transaction helpers compensate by deleting resources created in the failed response. Section-save tests assert no created clinical resource persists after the covered failure mode.
+- **Medplum AuditEvent does not surface `X-ODOS-Source` in 5.1.8.** Verified empirically at v0.2.5. ODOS still sends the header for ingress attribution; FHIR `Provenance` is the durable per-resource attribution path.
+- **Medplum 5.1.8 mixed transaction-response handling.** Server can return a mixed transaction-response instead of rolling back every successful entry after a later entry failure. ODOS client transaction helpers compensate by deleting resources created in the failed response. Section-save tests assert no created clinical resource persists after the covered failure mode.
 - **Frames Data AV-roster Ledger #8** carries a `[provisional — single-source as of 2026-05-09]` flag in v0.6a error messages until a secondary independent source corroborates beyond Noridian DME MAC.
 - **Profile snapshots are intentionally checked in.** Medplum profile validation requires snapshots in this stack; source files in `data/profiles/` are larger than hand-written differentials.
-- **No claim of HIPAA "compliance" as a software product.** The practice is the covered entity. OSOD ships infrastructure that makes compliance *operationally achievable* (local-only, audit-by-default, BAA-free posture). The pilot README states this explicitly.
+- **No claim of HIPAA "compliance" as a software product.** The practice is the covered entity. ODOS ships infrastructure that makes compliance *operationally achievable* (local-only, audit-by-default, BAA-free posture). The pilot README states this explicitly.
 - **No claim of ONC certification.** §170.315(g)(10) Patient Access *surface* shipped at v0.55e; full ONC certification is a v0.8+ gate.
 - **No claim of production-readiness at v0.6a.** This is developmental code under milestone-locked development.
 
@@ -189,11 +189,11 @@ Shipped since the #24–#30 core (all 2026-07-07): Pass-2 foundation (#31), out-
 
 - [ ] Author Wave-1 codex prompt (substrate + builders + UI per Lesson 33 sub-prompt split)
 - [ ] Drive Gem `gem-knowledge-v0.6b` folder + GPT custom-instructions refresh (Mandate 16 absence-audit pre-flight)
-- [ ] Wave-2 OSOD Architect GPT pressure-test
-- [ ] Wave-3 OSOD Architect Gem independent review (fresh chat, no Wave-2 exposure)
-- [ ] Wave-4 OSOD Architect Gem triangulation (Wave-2 in Knowledge folder)
+- [ ] Wave-2 ODOS Architect GPT pressure-test
+- [ ] Wave-3 ODOS Architect Gem independent review (fresh chat, no Wave-2 exposure)
+- [ ] Wave-4 ODOS Architect Gem triangulation (Wave-2 in Knowledge folder)
 - [ ] Integrate binding amendments into Wave-1 prompt
-- [ ] Operator paste into Codex Cloud → execute on osod branch `drbang-iva/v0.6b-pverify`
+- [ ] Operator paste into Codex Cloud → execute on odos branch `drbang-iva/v0.6b-pverify`
 - [ ] All Wave-1 acceptance criteria gates clear (fixtures + Pass 4 lint + DR drill + broad suite + ledger pre-flight)
 - [ ] PR review + squash-merge + tag `v0.6b`
 - [ ] Close audit: PROVISIONAL ledger items, HTI-5 named-checkpoint status, Anthropic per-commit re-verify if surface touched, operational lessons captured
@@ -209,7 +209,7 @@ Tier-1 has zero in-flight v0.6 dependencies. v0.55 + v0.6a substrate is what we 
 - [ ] Confirm `npm run preflight` clean on non-dev hardware
 - [ ] Onboard admin Practitioner + AccessPolicies via setup wizard
 - [ ] Chart a real test visit (refraction, IOP, anterior/posterior segment, sign + finish)
-- [ ] Verify `AuditEvent` count for the visit: canonical synthetic Tier-1 visit baseline is 8 OSOD audit rows + 8 FHIR AuditEvent projections (`npm run audit-verify`)
+- [ ] Verify `AuditEvent` count for the visit: canonical synthetic Tier-1 visit baseline is 8 ODOS audit rows + 8 FHIR AuditEvent projections (`npm run audit-verify`)
 - [ ] Run DR drill on practice hardware — broad restore integrity plus v0.6a frames 32/32 + 5/5 must pass
 - [ ] Patient Access API returns valid bulk NDJSON for the test patient
 - [ ] CapabilityStatement reflects truthful certification posture (not certified as a complete system; specific surfaces named)
@@ -241,7 +241,7 @@ cd ui && npm install && npm run build
 
 # 5. Run preflight + DR drill
 npm run preflight  # Pass 4 lint, 19 rules, 0 warnings
-npm run audit-verify  # 8 OSOD audit rows + 8 FHIR AuditEvent projections
+npm run audit-verify  # 8 ODOS audit rows + 8 FHIR AuditEvent projections
 npm run dr-drill      # broad restore integrity + v0.6a frames 32/32 + 5/5
 
 # 6. Smoke test

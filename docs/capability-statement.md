@@ -1,6 +1,6 @@
 # Truthful CapabilityStatement
 
-v0.55e synthesizes `/metadata` from structured rules backed by integration tests. OSOD only advertises structured claims that the local build can prove.
+v0.55e synthesizes `/metadata` from structured rules backed by integration tests. ODOS only advertises structured claims that the local build can prove.
 
 ## Structured Claim Rules
 

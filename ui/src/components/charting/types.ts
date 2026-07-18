@@ -1,11 +1,27 @@
-export type ChartSectionId =
+export type BuiltInSectionId =
+  | "aesthetics-consent"
+  | "hpi"
+  | "wearing"
+  | "auto-refraction"
   | "va"
   | "refraction"
+  | "soft-contact-lens"
+  | "specialty-contact-lens"
+  | "refraction-history"
   | "ortho-k"
   | "dry-eye"
   | "myopia-management"
+  | "cup-disc"
+  | "imaging"
   | "iop"
-  | "assessment";
+  | "assessment"
+  | "prescription";
+
+export type ChartSectionId =
+  | BuiltInSectionId
+  | `custom:${string}`
+  | `ocular-health:${string}`
+  | `procedure:${string}`;
 
 export interface SectionSaveStatus {
   completed: boolean;
@@ -14,4 +30,10 @@ export interface SectionSaveStatus {
   operator?: string;
 }
 
-export type SectionStatusMap = Record<ChartSectionId, SectionSaveStatus>;
+export type SectionStatusMap = Partial<Record<ChartSectionId, SectionSaveStatus>>;
+
+const INCOMPLETE_STATUS: SectionSaveStatus = { completed: false };
+
+export function sectionStatus(statuses: SectionStatusMap, id: ChartSectionId): SectionSaveStatus {
+  return statuses[id] ?? INCOMPLETE_STATUS;
+}

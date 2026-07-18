@@ -24,7 +24,7 @@ export function lateralityConcept(value: DryEyeLaterality): CodeableConcept {
   return {
     coding: [
       {
-        system: "https://osod.dev/fhir/CodeSystem/ophthalmology",
+        system: "https://odos2020.com/fhir/CodeSystem/ophthalmology",
         code: value,
         display: LATERALITY_DISPLAY[value],
       },

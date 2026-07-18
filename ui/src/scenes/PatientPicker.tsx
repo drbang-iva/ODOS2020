@@ -2,10 +2,49 @@ import { useEffect, useMemo, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { fhir } from "../lib/fhir";
 import { patientName } from "../lib/scheduler-appointment-ui";
-import { useViewState } from "../lib/view-state";
+import { patientOverviewView, useViewState } from "../lib/view-state";
 
 export function PatientPicker() {
   const setView = useViewState((state) => state.setView);
+  return (
+    <div className="min-h-screen bg-bg-deep text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
+        <header className="flex items-center justify-between border-b border-white/10 pb-5">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-white/40">ODOS</div>
+            <h1 className="mt-1 text-2xl font-semibold">Patient Picker</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => window.location.assign("/patient/new")} className="rounded bg-blue-500 px-4 py-2 text-sm font-semibold text-white">
+              + New Patient
+            </button>
+            <div className="rounded border border-white/10 px-3 py-1 text-xs text-white/50">
+              v0.3 clinical entry
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 py-8">
+          <PatientSearch
+            autoFocus
+            actionLabel="Open"
+            onSelect={(patient) => patient.id && setView(patientOverviewView(patient.id))}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export function PatientSearch({
+  onSelect,
+  actionLabel = "Select",
+  autoFocus = false,
+}: {
+  onSelect: (patient: Patient) => void;
+  actionLabel?: string;
+  autoFocus?: boolean;
+}) {
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,71 +91,59 @@ export function PatientPicker() {
   }, [loading, patients.length]);
 
   return (
-    <div className="min-h-screen bg-bg-deep text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
-        <header className="flex items-center justify-between border-b border-white/10 pb-5">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-white/40">OSOD</div>
-            <h1 className="mt-1 text-2xl font-semibold">Patient Picker</h1>
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <label className="block w-full max-w-xl">
+          <span className="text-sm text-white/60">Search patients</span>
+          <input
+            autoFocus={autoFocus}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Name"
+            className="mt-2 h-12 w-full rounded border border-white/15 bg-bg-panel px-4 text-base text-white outline-none transition focus:border-brand"
+          />
+        </label>
+        <div className="text-sm text-white/45">{statusText}</div>
+      </div>
+
+      {error && (
+        <div className="mt-6 rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-3">
+        {loading && (
+          <div className="rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
+            Loading patients…
           </div>
-          <div className="rounded border border-white/10 px-3 py-1 text-xs text-white/50">
-            v0.3 clinical entry
+        )}
+
+        {!loading && !error && patients.length === 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
+            <span>No patients found.</span>
+            <button type="button" onClick={() => window.location.assign("/patient/new")} className="rounded border border-blue-400/30 px-3 py-2 font-semibold text-blue-200">+ New Patient</button>
           </div>
-        </header>
+        )}
 
-        <main className="flex-1 py-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <label className="block w-full max-w-xl">
-              <span className="text-sm text-white/60">Search patients</span>
-              <input
-                autoFocus
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Name"
-                className="mt-2 h-12 w-full rounded border border-white/15 bg-bg-panel px-4 text-base text-white outline-none transition focus:border-brand"
-              />
-            </label>
-            <div className="text-sm text-white/45">{statusText}</div>
-          </div>
-
-          {error && (
-            <div className="mt-6 rounded border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
-              {error}
-            </div>
-          )}
-
-          <div className="mt-6 grid gap-3">
-            {loading && (
-              <div className="rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
-                Loading patients…
-              </div>
-            )}
-
-            {!loading && !error && patients.length === 0 && (
-              <div className="rounded border border-white/10 bg-bg-panel p-5 text-sm text-white/50">
-                No patients found.
-              </div>
-            )}
-
-            {!loading && patients.map((patient) => (
-              <button
-                key={patient.id}
-                disabled={!patient.id}
-                onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}
-                className="group grid min-h-24 grid-cols-[1fr_auto] items-center gap-4 rounded border border-white/10 bg-bg-panel p-5 text-left transition hover:border-brand/60 hover:bg-bg-mid disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span>
-                  <span className="block text-lg font-semibold text-white">{patientName(patient)}</span>
-                  <span className="mt-2 flex flex-wrap gap-3 text-sm text-white/45">
-                    <span>DOB {patient.birthDate ?? "unknown"}</span>
-                    <span>ID {shortId(patient.id)}</span>
-                  </span>
-                </span>
-                <span className="text-sm text-white/35 transition group-hover:text-brand">Open</span>
-              </button>
-            ))}
-          </div>
-        </main>
+        {!loading && patients.map((patient) => (
+          <button
+            type="button"
+            key={patient.id}
+            disabled={!patient.id}
+            onClick={() => onSelect(patient)}
+            className="group grid min-h-24 grid-cols-[1fr_auto] items-center gap-4 rounded border border-white/10 bg-bg-panel p-5 text-left transition hover:border-brand/60 hover:bg-bg-mid disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span>
+              <span className="block text-lg font-semibold text-white">{patientName(patient)}</span>
+              <span className="mt-2 flex flex-wrap gap-3 text-sm text-white/45">
+                <span>DOB {patient.birthDate ?? "unknown"}</span>
+                <span>ID {shortId(patient.id)}</span>
+              </span>
+            </span>
+            <span className="text-sm text-white/35 transition group-hover:text-brand">{actionLabel}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
