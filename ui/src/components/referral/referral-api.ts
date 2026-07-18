@@ -25,7 +25,7 @@ export interface ReferralDraftUpdate {
   targetReference?: string;
   includeList?: ReferralIncludeList;
   priority?: ReferralPriority;
-  reasonText?: string;
+  reasonText?: string | null;
 }
 
 export interface ReferralArtifactResponse {

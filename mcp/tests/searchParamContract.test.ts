@@ -81,7 +81,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
-  "src/referral/referral-service.ts:444": [
+  "src/referral/referral-service.ts:448": [
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
@@ -147,11 +147,26 @@ test("static audit finds zero invalid search parameters", () => {
   assert.deepEqual(violations, []);
 });
 
+test("static audit rejects a mistyped dynamic override key", () => {
+  const overrides = { ...DYNAMIC_SEARCH_SPECS };
+  delete overrides["src/referral/referral-service.ts:448"];
+  overrides["src/referral/referral-service.ts:449"] = [
+    spec("Observation", "patient", "encounter", "_count"),
+  ];
+
+  assert.throws(
+    () => collectSearchSpecs(overrides),
+    /src\/referral\/referral-service\.ts:448 has unresolved search parameters and no contract override/,
+  );
+});
+
 function spec(resourceType: ContractResourceType, ...parameterKeys: string[]): SearchSpec {
   return { resourceType, parameterKeys };
 }
 
-function collectSearchSpecs(): Array<{ location: string; spec: SearchSpec }> {
+function collectSearchSpecs(
+  overrides: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = DYNAMIC_SEARCH_SPECS,
+): Array<{ location: string; spec: SearchSpec }> {
   return collectDirectFhirSearchCalls().flatMap((call) => {
     if (call.resourceType && call.parameterKeys) {
       return [{
@@ -159,8 +174,11 @@ function collectSearchSpecs(): Array<{ location: string; spec: SearchSpec }> {
         spec: spec(call.resourceType as ContractResourceType, ...call.parameterKeys),
       }];
     }
-    const override = DYNAMIC_SEARCH_SPECS[call.location];
-    return override === DYNAMIC_FHIR_SEARCH ? [] : (override ?? []).map((current) => ({
+    const override = overrides[call.location];
+    if (override === undefined) {
+      throw new Error(`${call.location} has unresolved search parameters and no contract override`);
+    }
+    return override === DYNAMIC_FHIR_SEARCH ? [] : override.map((current) => ({
       location: call.location,
       spec: current,
     }));

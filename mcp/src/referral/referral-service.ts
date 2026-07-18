@@ -82,7 +82,7 @@ export interface UpdateReferralDraftInput {
   targetReference?: string;
   includeList?: ReferralIncludeList;
   priority?: ReferralPriority;
-  reasonText?: string;
+  reasonText?: string | null;
 }
 
 export interface GenerateReferralLetterInput {
@@ -277,8 +277,12 @@ export class ReferralService {
         ),
       } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
-      ...(input.reasonText ? { reasonCode: [{ text: input.reasonText }] } : {}),
     };
+    if (input.reasonText !== undefined) {
+      const reasonText = input.reasonText?.trim();
+      if (reasonText) updated.reasonCode = [{ text: reasonText }];
+      else delete updated.reasonCode;
+    }
     try {
       return await this.fhir.update<ServiceRequest>(
         "ServiceRequest",

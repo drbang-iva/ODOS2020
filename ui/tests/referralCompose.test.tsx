@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { ServiceRequest } from "@medplum/fhirtypes";
 import {
   ReferralCompose,
@@ -14,6 +15,7 @@ import {
   createReferralApi,
   readReferralLetterBody,
   type ReferralApi,
+  type ReferralDraftUpdate,
   type ReferralIncludeList,
 } from "../src/components/referral/referral-api";
 
@@ -52,7 +54,9 @@ test("the compose surface presents the locked clinical rail and honest transport
   assert.match(html, /Urgent|urgent/);
   assert.match(html, /Stat|stat/);
   assert.match(html, /Fax · soon/);
-  assert.match(html, /disabled=""[^>]*>Fax · soon|>Fax · soon<\/button>/);
+  const disabledFaxButton = /<button[^>]*disabled=""[^>]*>Fax · soon<\/button>/;
+  assert.match(html, disabledFaxButton);
+  assert.doesNotMatch("<button>Fax · soon</button>", disabledFaxButton);
   assert.match(html, /Sending records a disclosure/);
   assert.match(html, /Return to chart/);
 });
@@ -121,6 +125,7 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
     reasonText: "  macular change  ",
   });
   await api.updateReferral("p1", "r1", { priority: "stat" });
+  await api.updateReferral("p1", "r1", { reasonText: null });
   await api.regenerateReferral("p1", "r1");
   await api.previewReferral("p1", "r1", "Edited preview");
   await api.sendReferral("p1", "r1", "Edited send");
@@ -131,6 +136,7 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
     ["GET", "/referrals/consultants/recent"],
     ["GET", "/referrals/consultants?q=retina"],
     ["POST", "/referrals/patients/p1"],
+    ["PATCH", "/referrals/patients/p1/r1"],
     ["PATCH", "/referrals/patients/p1/r1"],
     ["POST", "/referrals/patients/p1/r1/regenerate"],
     ["POST", "/referrals/patients/p1/r1/preview"],
@@ -144,8 +150,9 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
     reasonText: "macular change",
   });
   assert.deepEqual(calls[5]?.body, { priority: "stat" });
-  assert.deepEqual(calls[7]?.body, { editedLetterBody: "Edited preview" });
-  assert.deepEqual(calls[8]?.body, { editedLetterBody: "Edited send" });
+  assert.deepEqual(calls[6]?.body, { reasonText: null });
+  assert.deepEqual(calls[8]?.body, { editedLetterBody: "Edited preview" });
+  assert.deepEqual(calls[9]?.body, { editedLetterBody: "Edited send" });
 });
 
 test("the referral API turns documented 409 responses into a reopen-required conflict", async () => {
@@ -154,6 +161,114 @@ test("the referral API turns documented 409 responses into a reopen-required con
     api.updateReferral("p1", "r1", { priority: "urgent" }),
     (error: unknown) => error instanceof ReferralConflictError && error.message === "stale",
   );
+});
+
+test("clearing the composed reason sends an explicit null draft update", async () => {
+  const originalWindow = globalThis.window;
+  const updates: ReferralDraftUpdate[] = [];
+  let current = referral();
+  const api: ReferralApi = {
+    ...apiStub(),
+    loadRecentConsultants: async () => [{ reference: "Organization/o1", display: "Retina Group" }],
+    createReferral: async () => current,
+    updateReferral: async (_patientId, _referralId, input) => {
+      updates.push(input);
+      current = withDraftUpdate(current, input);
+      return current;
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+  try {
+    await act(async () => {
+      renderer = create(<ReferralCompose patientReference="Patient/p1" encounterReference="Encounter/e1" onClose={() => undefined} api={api} loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })} />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      consultantButton(renderer.root).props.onClick();
+      await flushMicrotasks();
+    });
+    const reasonInput = renderer.root.findByProps({ "aria-label": "Referral reason" });
+    await act(async () => {
+      reasonInput.props.onChange({ target: { value: "Retinal concern" } });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Referral reason" }).props.onChange({ target: { value: "" } });
+      await flushMicrotasks();
+    });
+    assert.deepEqual(updates, [
+      { reasonText: "Retinal concern" },
+      { reasonText: null },
+    ]);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("sending freezes composition and ignores previews that finish after the sent artifact", async () => {
+  const originalWindow = globalThis.window;
+  const preview = deferred<{ serviceRequestReference: string; artifact: string }>();
+  const update = deferred<ServiceRequest>();
+  const send = deferred<{ serviceRequestReference: string; artifact: string }>();
+  const sentPayloads: Array<{ referralId: string; letter: string }> = [];
+  let closeCalls = 0;
+  let renderer!: ReactTestRenderer;
+  const api: ReferralApi = {
+    ...apiStub(),
+    loadRecentConsultants: async () => [{ reference: "Organization/o1", display: "Retina Group" }],
+    createReferral: async () => referral(),
+    updateReferral: async () => update.promise,
+    previewReferral: async () => preview.promise,
+    sendReferral: async (_patientId, referralId, letter) => {
+      sentPayloads.push({ referralId, letter });
+      return send.promise;
+    },
+  };
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+  try {
+    await act(async () => {
+      renderer = create(<ReferralCompose patientReference="Patient/p1" encounterReference="Encounter/e1" onClose={() => { closeCalls += 1; }} api={api} loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })} />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      consultantButton(renderer.root).props.onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      renderer.root.findByProps({ "aria-label": "Referral reason" }).props.onChange({ target: { value: "Retinal concern" } });
+      renderer.root.findByProps({ "aria-label": "Referral letter" }).props.onChange({ target: { value: "Final clinician letter" } });
+    });
+    const sendButton = buttonNamed(renderer.root, "Send packet");
+    act(() => sendButton.props.onClick());
+
+    const closeButton = buttonNamed(renderer.root, "Return to chart");
+    assert.equal(closeButton.props.disabled, true);
+    assert.ok(renderer.root.findAllByType("input").every((input) => input.props.disabled));
+    assert.equal(renderer.root.findByProps({ "aria-label": "Referral letter" }).props.disabled, true);
+    act(() => closeButton.props.onClick());
+    assert.equal(closeCalls, 0);
+
+    await act(async () => {
+      update.resolve(withDraftUpdate(referral(), { reasonText: "Retinal concern" }));
+      await flushMicrotasks();
+    });
+    assert.deepEqual(sentPayloads, [{ referralId: "r1", letter: "Final clinician letter" }]);
+
+    await act(async () => {
+      send.resolve({ serviceRequestReference: "ServiceRequest/r1", artifact: "<html>sent artifact</html>" });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      preview.resolve({ serviceRequestReference: "ServiceRequest/r1", artifact: "<html>late preview</html>" });
+      await flushMicrotasks();
+    });
+    assert.equal(renderer.root.findByType("iframe").props.srcDoc, "<html>sent artifact</html>");
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("the created ServiceRequest supplies the editable generated letter without another fetch", () => {
@@ -191,6 +306,52 @@ function apiStub(): ReferralApi {
     previewReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
     sendReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
   };
+}
+
+function consultantButton(root: ReactTestInstance): ReactTestInstance {
+  const button = root.findAllByType("button").find((candidate) =>
+    candidate.findAllByType("span").some((span) => span.children.join("") === "Retina Group"),
+  );
+  assert.ok(button);
+  return button;
+}
+
+function buttonNamed(root: ReactTestInstance, label: string): ReactTestInstance {
+  const button = root.findAllByType("button").find((candidate) => candidate.children.join("") === label);
+  assert.ok(button);
+  return button;
+}
+
+function withDraftUpdate(serviceRequest: ServiceRequest, input: ReferralDraftUpdate): ServiceRequest {
+  const updated = { ...serviceRequest };
+  if (input.reasonText !== undefined) {
+    if (input.reasonText) updated.reasonCode = [{ text: input.reasonText }];
+    else delete updated.reasonCode;
+  }
+  return updated;
+}
+
+function immediateTimerWindow(): Window & typeof globalThis {
+  return {
+    setTimeout: (handler: TimerHandler) => {
+      queueMicrotask(() => { if (typeof handler === "function") handler(); });
+      return 1;
+    },
+    clearTimeout: () => undefined,
+    confirm: () => true,
+  } as unknown as Window & typeof globalThis;
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

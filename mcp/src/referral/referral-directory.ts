@@ -5,7 +5,10 @@ import type {
   Resource,
   ServiceRequest,
 } from "@medplum/fhirtypes";
-import type { ReferralFhirClient } from "./referral-service.js";
+import {
+  REFERRAL_INCLUDE_LIST_EXTENSION_URL,
+  type ReferralFhirClient,
+} from "./referral-service.js";
 
 export interface ReferralConsultant {
   reference: string;
@@ -48,6 +51,9 @@ export class ReferralDirectory {
     });
     const ordered = resources(bundle)
       .filter((referral) => referral.requester?.reference === staffReference)
+      .filter((referral) => referral.extension?.some(
+        (extension) => extension.url === REFERRAL_INCLUDE_LIST_EXTENSION_URL,
+      ))
       .sort((left, right) => (right.authoredOn ?? "").localeCompare(left.authoredOn ?? ""))
       .flatMap((referral) => {
         const target = referral.performer?.[0];

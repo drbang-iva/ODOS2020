@@ -87,10 +87,15 @@ export function ReferralCompose({
     hasPlan: false,
   });
   const referralRef = useRef<ServiceRequest>();
+  const reasonTextRef = useRef("");
+  const letterBodyRef = useRef("");
   const letterTouchedRef = useRef(false);
+  const sendingRef = useRef(false);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewSequence = useRef(0);
+  const isSending = busy === "send";
+  const composerLocked = Boolean(sent) || isSending;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -110,6 +115,7 @@ export function ReferralCompose({
   }, [api, encounterReference, loadContext]);
 
   useEffect(() => {
+    if (isSending) return;
     const normalized = query.trim();
     if (normalized.length < 2) {
       setResults([]);
@@ -135,18 +141,20 @@ export function ReferralCompose({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [api, query]);
+  }, [api, isSending, query]);
 
   useEffect(() => {
-    if (!referral?.id || !reasonText.trim() || sent) return;
+    if (!referral?.id || sent || isSending) return;
+    const normalized = reasonText.trim() || null;
+    if (referralReasonText(referral) === normalized) return;
     const timer = window.setTimeout(() => {
-      void patchDraft({ reasonText: reasonText.trim() }).catch(handleFailure);
+      if (!sendingRef.current) void patchDraft({ reasonText: normalized }).catch(handleFailure);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [reasonText, referral?.id, sent]);
+  }, [isSending, reasonText, referral, sent]);
 
   useEffect(() => {
-    if (!referral?.id || !letterBody || sent) return;
+    if (!referral?.id || !letterBody || sent || isSending) return;
     const sequence = ++previewSequence.current;
     const timer = window.setTimeout(() => {
       setPreviewBusy(true);
@@ -155,13 +163,15 @@ export function ReferralCompose({
         .then((response) => {
           if (previewSequence.current === sequence) setArtifact(response.artifact);
         })
-        .catch(handleFailure)
+        .catch((caught) => {
+          if (previewSequence.current === sequence) handleFailure(caught);
+        })
         .finally(() => {
           if (previewSequence.current === sequence) setPreviewBusy(false);
         });
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [api, includeList, letterBody, patientId, priority, reasonText, referral?.id, selectedConsultant?.reference, sent]);
+  }, [api, includeList, isSending, letterBody, patientId, priority, reasonText, referral?.id, selectedConsultant?.reference, sent]);
 
   function setCurrentReferral(next: ServiceRequest): ServiceRequest {
     referralRef.current = next;
@@ -172,6 +182,16 @@ export function ReferralCompose({
   function setLetterTouched(value: boolean): void {
     letterTouchedRef.current = value;
     setLetterTouchedState(value);
+  }
+
+  function setCurrentReasonText(value: string): void {
+    reasonTextRef.current = value;
+    setReasonText(value);
+  }
+
+  function setCurrentLetterBody(value: string): void {
+    letterBodyRef.current = value;
+    setLetterBody(value);
   }
 
   function enqueueMutation(operation: (current: ServiceRequest) => Promise<ServiceRequest>): Promise<ServiceRequest> {
@@ -193,7 +213,7 @@ export function ReferralCompose({
   }
 
   async function chooseConsultant(consultant: ReferralConsultant): Promise<void> {
-    if (sent) return;
+    if (sent || sendingRef.current) return;
     setBusy("consultant");
     setError(undefined);
     setConflict(false);
@@ -208,7 +228,7 @@ export function ReferralCompose({
           ...(reasonText.trim() ? { reasonText: reasonText.trim() } : {}),
         }));
         const generated = readReferralLetterBody(created);
-        setLetterBody(generated);
+        setCurrentLetterBody(generated);
         setLetterTouched(false);
       } else if (selectedConsultant?.reference !== consultant.reference) {
         await patchDraft({ targetReference: consultant.reference });
@@ -217,7 +237,7 @@ export function ReferralCompose({
         } else {
           const regenerated = await regenerateDraft();
           const generated = readReferralLetterBody(regenerated);
-          setLetterBody(generated);
+          setCurrentLetterBody(generated);
           setLetterTouched(false);
           setConsultantWarning(false);
         }
@@ -234,14 +254,14 @@ export function ReferralCompose({
   }
 
   async function regenerate(confirmDiscard = letterTouchedRef.current): Promise<void> {
-    if (!referralRef.current) return;
+    if (!referralRef.current || sent || sendingRef.current) return;
     if (confirmDiscard && !window.confirm("Regenerate this letter and discard your edits?")) return;
     setBusy("regenerate");
     setError(undefined);
     try {
       const regenerated = await regenerateDraft();
       const generated = readReferralLetterBody(regenerated);
-      setLetterBody(generated);
+      setCurrentLetterBody(generated);
       setLetterTouched(false);
       setConsultantWarning(false);
     } catch (caught) {
@@ -252,16 +272,19 @@ export function ReferralCompose({
   }
 
   function updateIncludeList(next: ReferralIncludeList): void {
+    if (sent || sendingRef.current) return;
     setIncludeList(next);
     if (referralRef.current && !sent) void patchDraft({ includeList: next }).catch(handleFailure);
   }
 
   function updatePriority(next: ReferralPriority): void {
+    if (sent || sendingRef.current) return;
     setPriority(next);
     if (referralRef.current && !sent) void patchDraft({ priority: next }).catch(handleFailure);
   }
 
   async function saveDefaults(): Promise<void> {
+    if (sent || sendingRef.current) return;
     setBusy("defaults");
     setError(undefined);
     try {
@@ -274,14 +297,26 @@ export function ReferralCompose({
   }
 
   async function sendPacket(): Promise<void> {
+    if (sendingRef.current) return;
     const current = referralRef.current;
-    if (!current?.id || !letterBody) return;
+    if (!current?.id || !letterBodyRef.current) return;
+    sendingRef.current = true;
     setBusy("send");
     setError(undefined);
     setConflict(false);
+    previewSequence.current += 1;
+    setPreviewBusy(false);
     try {
       await mutationQueue.current;
-      const response = await api.sendReferral(patientId, current.id, letterBody);
+      let finalReferral = referralRef.current;
+      if (!finalReferral?.id) throw new Error("Choose a consultant before sending this referral.");
+      const finalReasonText = reasonTextRef.current.trim() || null;
+      if (referralReasonText(finalReferral) !== finalReasonText) {
+        finalReferral = await patchDraft({ reasonText: finalReasonText });
+      }
+      const finalLetterBody = letterBodyRef.current;
+      if (!finalLetterBody) throw new Error("A referral letter is required before sending.");
+      const response = await api.sendReferral(patientId, finalReferral.id!, finalLetterBody);
       setArtifact(response.artifact);
       setSent({
         provenanceReference: response.provenanceReference,
@@ -290,6 +325,7 @@ export function ReferralCompose({
     } catch (caught) {
       handleFailure(caught);
     } finally {
+      sendingRef.current = false;
       setBusy(undefined);
     }
   }
@@ -323,7 +359,7 @@ export function ReferralCompose({
             <div className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">Referral packet</div>
             <h1 className="mt-1 text-xl font-semibold">One packet, one send</h1>
           </div>
-          <button type="button" className="sidebar-button" onClick={onClose}>Return to chart</button>
+          <button type="button" className="sidebar-button" disabled={isSending} onClick={() => { if (!sendingRef.current) onClose(); }}>Return to chart</button>
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
@@ -334,10 +370,10 @@ export function ReferralCompose({
                 id="referral-consultant"
                 className="sidebar-input mt-2 w-full"
                 value={query}
-                disabled={Boolean(sent)}
+                disabled={composerLocked}
                 placeholder="Name or organization"
                 autoComplete="off"
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => { if (!sendingRef.current) setQuery(event.target.value); }}
               />
               <div className="mt-2 text-xs text-[color:var(--odos-muted)]" aria-live="polite">
                 {directoryStatus === "searching" ? "Searching…" : directoryStatus === "error" ? "Directory unavailable" : ""}
@@ -348,7 +384,7 @@ export function ReferralCompose({
                     <button
                       key={consultant.reference}
                       type="button"
-                      disabled={busy === "consultant" || Boolean(sent)}
+                      disabled={busy === "consultant" || composerLocked}
                       className="flex w-full items-center justify-between gap-3 border-b border-[color:var(--odos-line)] px-3 py-2 text-left last:border-b-0 hover:bg-[var(--odos-surface-2)] disabled:opacity-50"
                       onClick={() => void chooseConsultant(consultant)}
                     >
@@ -365,8 +401,8 @@ export function ReferralCompose({
                 <div role="alert" className="mt-3 rounded border border-amber-300/35 bg-amber-300/10 p-3 text-sm text-amber-50">
                   <div className="font-semibold">Consultant changed — this letter may still address the previous consultant.</div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <button type="button" className="rounded border border-amber-200/40 px-3 py-1.5 text-xs font-semibold" onClick={() => void regenerate(true)}>Regenerate and discard edits</button>
-                    <button type="button" className="rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs" onClick={() => setConsultantWarning(false)}>I’ll fix it manually</button>
+                    <button type="button" disabled={composerLocked} className="rounded border border-amber-200/40 px-3 py-1.5 text-xs font-semibold" onClick={() => void regenerate(true)}>Regenerate and discard edits</button>
+                    <button type="button" disabled={composerLocked} className="rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-xs" onClick={() => { if (!sendingRef.current) setConsultantWarning(false); }}>I’ll fix it manually</button>
                   </div>
                 </div>
               )}
@@ -377,16 +413,16 @@ export function ReferralCompose({
                 aria-label="Referral reason"
                 className="sidebar-input w-full"
                 value={reasonText}
-                disabled={Boolean(sent)}
+                disabled={composerLocked}
                 placeholder="Reason for consultation"
-                onChange={(event) => setReasonText(event.target.value)}
+                onChange={(event) => { if (!sendingRef.current) setCurrentReasonText(event.target.value); }}
               />
               <div className="mt-3 grid grid-cols-3 overflow-hidden rounded border border-[color:var(--odos-line)]" role="group" aria-label="Referral urgency">
                 {(["routine", "urgent", "stat"] as const).map((value) => (
                   <button
                     key={value}
                     type="button"
-                    disabled={Boolean(sent)}
+                    disabled={composerLocked}
                     aria-pressed={priority === value}
                     className={`px-2 py-2 text-xs font-semibold uppercase tracking-wide ${priority === value ? "bg-brand text-black" : "bg-[var(--odos-surface-2)] text-[color:var(--odos-muted)] hover:brightness-110"}`}
                     onClick={() => updatePriority(value)}
@@ -400,18 +436,20 @@ export function ReferralCompose({
                 aria-label="Referral letter"
                 className="sidebar-input min-h-48 w-full resize-y font-serif leading-relaxed"
                 value={letterBody}
-                disabled={!referral || Boolean(sent)}
+                disabled={!referral || composerLocked}
                 placeholder="Choose a consultant to generate the letter."
                 onChange={(event) => {
-                  setLetterBody(event.target.value);
-                  setLetterTouched(true);
+                  if (!sendingRef.current) {
+                    setCurrentLetterBody(event.target.value);
+                    setLetterTouched(true);
+                  }
                 }}
               />
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--odos-muted)]">
                 <span>{letterTouched
                   ? `Edited by ${context.doctorDisplay} — the packet sends your words`
                   : `Generated from ${context.findingCount} findings · ${context.hasPlan ? "plan" : "no plan recorded"}`}</span>
-                <button type="button" disabled={!referral || busy === "regenerate" || Boolean(sent)} className="text-brand disabled:opacity-40" onClick={() => void regenerate()}>
+                <button type="button" disabled={!referral || busy === "regenerate" || composerLocked} className="text-brand disabled:opacity-40" onClick={() => void regenerate()}>
                   ↺ Regenerate
                 </button>
               </div>
@@ -425,7 +463,7 @@ export function ReferralCompose({
                       <input
                         type="checkbox"
                         checked={includeList[row.key]}
-                        disabled={Boolean(sent)}
+                        disabled={composerLocked}
                         className="h-4 w-4 accent-brand"
                         onChange={(event) => updateIncludeList({ ...includeList, [row.key]: event.target.checked })}
                       />
@@ -433,15 +471,15 @@ export function ReferralCompose({
                     </span>
                     {row.key === "history" && (
                       <span className="flex items-center overflow-hidden rounded border border-[color:var(--odos-line)]">
-                        <button type="button" aria-label="Reduce history count" disabled={Boolean(sent) || includeList.history_count <= 1} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) }); }}>−</button>
+                        <button type="button" aria-label="Reduce history count" disabled={composerLocked || includeList.history_count <= 1} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) }); }}>−</button>
                         <span className="min-w-7 text-center text-xs">{includeList.history_count}</span>
-                        <button type="button" aria-label="Increase history count" disabled={Boolean(sent) || includeList.history_count >= 50} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) }); }}>+</button>
+                        <button type="button" aria-label="Increase history count" disabled={composerLocked || includeList.history_count >= 50} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) }); }}>+</button>
                       </span>
                     )}
                   </label>
                 ))}
               </div>
-              <button type="button" disabled={busy === "defaults" || Boolean(sent)} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>
+              <button type="button" disabled={busy === "defaults" || composerLocked} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>
                 Save as my default
               </button>
             </Tile>
@@ -457,11 +495,11 @@ export function ReferralCompose({
               ) : (
                 <>
                   <div className="grid grid-cols-3 overflow-hidden rounded border border-[color:var(--odos-line)]">
-                    <button type="button" disabled={!artifact} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => iframeRef.current?.contentWindow?.print()}>Print</button>
-                    <button type="button" disabled={!artifact} className="border-x border-[color:var(--odos-line)] px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={downloadPacket}>Download</button>
+                    <button type="button" disabled={!artifact || isSending} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => iframeRef.current?.contentWindow?.print()}>Print</button>
+                    <button type="button" disabled={!artifact || isSending} className="border-x border-[color:var(--odos-line)] px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={downloadPacket}>Download</button>
                     <button type="button" disabled className="px-2 py-2 text-xs text-[color:var(--odos-faint)]">Fax · soon</button>
                   </div>
-                  <button type="button" disabled={!referral || !letterBody || busy === "send" || conflict} className="mt-3 w-full rounded bg-brand px-4 py-3 text-sm font-bold text-black disabled:opacity-35" onClick={() => void sendPacket()}>
+                  <button type="button" disabled={!referral || !letterBody || Boolean(busy) || conflict} className="mt-3 w-full rounded bg-brand px-4 py-3 text-sm font-bold text-black disabled:opacity-35" onClick={() => void sendPacket()}>
                     {busy === "send" ? "Sending…" : "Send packet"}
                   </button>
                   <p className="mt-2 text-xs leading-relaxed text-[color:var(--odos-faint)]">Sending records a disclosure — who sent what, to whom, and when.</p>
@@ -509,6 +547,10 @@ export function ReferralCompose({
 
 export function consultantChangeAction(letterTouched: boolean): "regenerate" | "warn" {
   return letterTouched ? "warn" : "regenerate";
+}
+
+function referralReasonText(referral: ServiceRequest): string | null {
+  return referral.reasonCode?.[0]?.text?.trim() || null;
 }
 
 function Tile({ title, index, children }: { title: string; index: string; children: React.ReactNode }) {

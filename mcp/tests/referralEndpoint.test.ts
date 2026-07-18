@@ -212,6 +212,17 @@ test("recent consultants are requester-scoped, distinct, and newest first", asyn
     "Other Provider Consultant",
     "2026-07-19T18:00:00.000Z",
   ));
+  fhir.put({
+    resourceType: "ServiceRequest",
+    id: "own-non-referral-plan",
+    status: "active",
+    intent: "plan",
+    code: { text: "Glaucoma workup" },
+    subject: { reference: "Patient/p1" },
+    requester: { reference: "Practitioner/clinician-1" },
+    performer: [{ reference: "Organization/protocol-performer", display: "Protocol Performer" }],
+    authoredOn: "2026-07-20T18:00:00.000Z",
+  } satisfies ServiceRequest);
 
   const result = await handleRecentReferralConsultantsRequest(deps(fhir), { authHeader: AUTH });
 
@@ -249,7 +260,29 @@ test("draft update persists each supported field and rejects active or stale mut
   assert.equal(updated.priority, "stat");
   assert.deepEqual(updated.reasonCode, [{ text: "Acute metamorphopsia" }]);
 
-  fhir.put({ ...updated, status: "active" });
+  const cleared = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { reasonText: null },
+  });
+  assert.equal(cleared.status, 200);
+  assert.equal((cleared.body as { serviceRequest: ServiceRequest }).serviceRequest.reasonCode, undefined);
+
+  const reset = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { reasonText: "  Persistent diplopia  " },
+  });
+  assert.equal(reset.status, 200);
+  const omitted = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { priority: "routine" },
+  });
+  assert.deepEqual(
+    (omitted.body as { serviceRequest: ServiceRequest }).serviceRequest.reasonCode,
+    [{ text: "Persistent diplopia" }],
+  );
+
+  const latest = (omitted.body as { serviceRequest: ServiceRequest }).serviceRequest;
+  fhir.put({ ...latest, status: "active" });
   const beforeActiveAttempt = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
   const active = await handleUpdateReferralDraftRequest(deps(fhir), {
     ...common,
@@ -258,14 +291,14 @@ test("draft update persists each supported field and rejects active or stale mut
   assert.equal(active.status, 409);
   assert.deepEqual(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1"), beforeActiveAttempt);
 
-  fhir.put({ ...updated, status: "draft" });
+  fhir.put({ ...latest, status: "draft" });
   fhir.failNextUpdate(412);
   const stale = await handleUpdateReferralDraftRequest(deps(fhir), {
     ...common,
     body: { priority: "urgent" },
   });
   assert.equal(stale.status, 409);
-  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")).priority, "stat");
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")).priority, "routine");
 });
 
 test("regeneration uses the current consultant and fresh encounter findings without changing active or stale referrals", async () => {
