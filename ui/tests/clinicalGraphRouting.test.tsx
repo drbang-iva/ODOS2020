@@ -112,6 +112,20 @@ test("no UI source references the obsolete odos_access_token key", () => {
   }
 });
 
+test("WENO searches use the authenticated shared client boundary", () => {
+  const prescription = readFileSync(
+    join(UI_ROOT, "components", "charting", "PrescriptionSection.tsx"),
+    "utf8",
+  );
+  const client = readFileSync(join(UI_ROOT, "lib", "fhir.ts"), "utf8");
+  assert.match(prescription, /fhir\.searchWenoFormulary\(clinicalGraphApiBase\(\), query, signal\)/);
+  assert.match(prescription, /fhir\.searchWenoDirectory\(clinicalGraphApiBase\(\), input, signal\)/);
+  assert.doesNotMatch(prescription, /fetch\([^)]*\/weno\//);
+  assert.match(client, /async searchWenoFormulary\(/);
+  assert.match(client, /async searchWenoDirectory\(/);
+  assert.match(client, /Authorization: `Bearer \$\{token\}`/);
+});
+
 function assertAuthenticatedDefinitionAndSave(path: string, kind: "soft" | "specialty"): void {
   const source = readFileSync(path, "utf8");
   assert.match(source, /import \{ authHeaders, clinicalGraphApiBase \} from "\.\.\/\.\.\/lib\/clinical-graph-client";/);

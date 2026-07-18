@@ -11,6 +11,7 @@ import {
   type FormularyResult,
   type PrescriptionDraft,
   type WenoSearchApi,
+  draftFromRequest,
   formatDate,
   isControlledSubstanceDrug,
   mergeMedicationRequestUpdate,
@@ -163,6 +164,7 @@ test("selecting a Formulary result stores coded fields and later text edits clea
     renderer!.root.findByProps({ "aria-label": `Choose ${result.psnDescription} from the Formulary` }).props.onClick();
   });
   assert.equal(latestDraft.drugDbCode, result.drugDbCode);
+  assert.equal(latestDraft.route, result.route);
   assert.match(JSON.stringify(renderer!.toJSON()), /Coded — from WENO drug database/);
 
   await act(async () => {
@@ -202,6 +204,75 @@ test("the Directory waits for both place and state before firing a search", asyn
   await act(async () => { await searchButton().props.onClick(); });
   assert.equal(calls, 1);
   await act(async () => renderer!.unmount());
+});
+
+test("changing Directory criteria invalidates a stale response", async () => {
+  let resolveSearch!: (results: DirectoryResult[]) => void;
+  const pending = new Promise<DirectoryResult[]>((resolve) => { resolveSearch = resolve; });
+  const searchApi = searchApiStub({ directory: async () => pending });
+  let renderer: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <PrescriptionEditor
+        draft={EMPTY_PRESCRIPTION_DRAFT}
+        conditions={[]}
+        searchApi={searchApi}
+        onChange={NOOP}
+        onSave={NOOP}
+      />,
+    );
+  });
+  const place = renderer!.root.findByProps({ "aria-label": "Directory ZIP or city" });
+  const state = renderer!.root.findByProps({ "aria-label": "Directory state" });
+  await act(async () => {
+    place.props.onChange({ target: { value: "29646" } });
+    state.props.onChange({ target: { value: "SC" } });
+  });
+  const searchButton = renderer!.root.findAllByType("button")
+    .find((button) => button.children.includes("Search Directory"))!;
+  await act(async () => { void searchButton.props.onClick(); });
+  await act(async () => { place.props.onChange({ target: { value: "29649" } }); });
+  await act(async () => { resolveSearch([directoryResult()]); await pending; });
+  assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Greenwood Pharmacy/);
+  await act(async () => renderer!.unmount());
+});
+
+test("MedicationRequest readback restores WENO fields only as a complete group", () => {
+  const request: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-1" },
+    medicationCodeableConcept: {
+      text: "Latanoprost 0.005% ophthalmic solution",
+      coding: [{
+        system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+        code: "196502",
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/odos-weno-drug-db-code-qualifier",
+          valueCode: "SCD",
+        }],
+      }],
+    },
+  };
+  assert.equal(draftFromRequest(request).drugDbCode, undefined);
+
+  request.medicationCodeableConcept!.coding![0]!.extension!.push({
+    url: "https://odos2020.com/fhir/StructureDefinition/odos-weno-quantity-unit-of-measure-code",
+    valueCode: "C48542",
+  });
+  assert.deepEqual(
+    {
+      drugDbCode: draftFromRequest(request).drugDbCode,
+      drugDbCodeQualifier: draftFromRequest(request).drugDbCodeQualifier,
+      quantityUnitOfMeasureCode: draftFromRequest(request).quantityUnitOfMeasureCode,
+    },
+    {
+      drugDbCode: "196502",
+      drugDbCodeQualifier: "SCD",
+      quantityUnitOfMeasureCode: "C48542",
+    },
+  );
 });
 
 test("a failed Formulary search leaves the field typeable as freeform text", async () => {

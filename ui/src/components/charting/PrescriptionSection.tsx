@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Condition, Encounter, MedicationRequest } from "@medplum/fhirtypes";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Coding, Condition, Encounter, MedicationRequest } from "@medplum/fhirtypes";
 import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../../lib/clinical-view-model";
-import { fhir } from "../../lib/fhir";
+import {
+  fhir,
+  type WenoDrugSearchResult,
+  type WenoPharmacySearchResult,
+} from "../../lib/fhir";
 import {
   buildMedicationRequest,
   NCPDP_PROVIDER_IDENTIFIER_SYSTEM,
@@ -11,7 +15,7 @@ import {
   RXNORM_CODE_SYSTEM,
   type MedicationTransmissionMethod,
 } from "../../lib/fhir-medication-order";
-import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -37,26 +41,8 @@ export interface PrescriptionDraft {
   transmissionMethod: "printed" | "phoned-in";
 }
 
-export interface FormularyResult {
-  drugDbCode: string;
-  drugDbCodeQualifier: string;
-  quantityUnitOfMeasureCode: string;
-  psnDescription: string;
-  route: string;
-  strength: string;
-}
-
-export interface DirectoryResult {
-  ncpdpId: string;
-  businessName: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  zip: string;
-  phone: string;
-  onWeno: boolean;
-}
+export type FormularyResult = WenoDrugSearchResult;
+export type DirectoryResult = WenoPharmacySearchResult;
 
 export interface WenoSearchApi {
   searchFormulary(query: string, signal?: AbortSignal): Promise<FormularyResult[]>;
@@ -131,6 +117,7 @@ export function withFormularyResult(
     drugDbCode: result.drugDbCode,
     drugDbCodeQualifier: result.drugDbCodeQualifier,
     quantityUnitOfMeasureCode: result.quantityUnitOfMeasureCode,
+    route: result.route || draft.route,
   };
 }
 
@@ -166,6 +153,8 @@ export function PrescriptionEditor({
   const [directorySearchType, setDirectorySearchType] = useState<"local-retail" | "mail-order">("local-retail");
   const [directoryResults, setDirectoryResults] = useState<DirectoryResult[]>([]);
   const [directoryStatus, setDirectoryStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
+  const directoryRequest = useRef(0);
+  const directoryAbort = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     const query = draft.drug.trim();
@@ -197,21 +186,45 @@ export function PrescriptionEditor({
     };
   }, [draft.drug, draft.drugDbCode, formularyDebounceMs, searchApi]);
 
+  useEffect(() => () => {
+    directoryRequest.current += 1;
+    directoryAbort.current?.abort();
+  }, []);
+
+  function invalidateDirectorySearch() {
+    directoryRequest.current += 1;
+    directoryAbort.current?.abort();
+    directoryAbort.current = undefined;
+    setDirectoryResults([]);
+    setDirectoryStatus("idle");
+  }
+
   async function runDirectorySearch() {
     const place = directoryPlace.trim();
     const state = directoryState.trim();
     if (!place || !state) return;
+    const request = directoryRequest.current + 1;
+    directoryRequest.current = request;
+    directoryAbort.current?.abort();
+    const controller = new AbortController();
+    directoryAbort.current = controller;
     setDirectoryStatus("searching");
     try {
-      setDirectoryResults(await searchApi.searchDirectory({
+      const results = await searchApi.searchDirectory({
         place,
         state,
         searchType: directorySearchType,
-      }));
+      }, controller.signal);
+      if (directoryRequest.current !== request) return;
+      setDirectoryResults(results);
       setDirectoryStatus("ready");
-    } catch {
+    } catch (caught) {
+      if (directoryRequest.current !== request
+        || (caught instanceof Error && caught.name === "AbortError")) return;
       setDirectoryResults([]);
       setDirectoryStatus("error");
+    } finally {
+      if (directoryRequest.current === request) directoryAbort.current = undefined;
     }
   }
 
@@ -301,13 +314,13 @@ export function PrescriptionEditor({
             </div>
           )}
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
-            <input aria-label="Directory ZIP or city" className="sidebar-input" value={directoryPlace} onChange={(event) => setDirectoryPlace(event.target.value)} placeholder="ZIP or city" />
-            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => setDirectoryState(event.target.value.toUpperCase())} placeholder="State" />
+            <input aria-label="Directory ZIP or city" className="sidebar-input" value={directoryPlace} onChange={(event) => { invalidateDirectorySearch(); setDirectoryPlace(event.target.value); }} placeholder="ZIP or city" />
+            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => { invalidateDirectorySearch(); setDirectoryState(event.target.value.toUpperCase()); }} placeholder="State" />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3 normal-case tracking-normal">
             <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
-              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("local-retail")}>Local</button>
-              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("mail-order")}>Mail order</button>
+              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => { invalidateDirectorySearch(); setDirectorySearchType("local-retail"); }}>Local</button>
+              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => { invalidateDirectorySearch(); setDirectorySearchType("mail-order"); }}>Mail order</button>
             </div>
             <button type="button" className="sidebar-button" disabled={!directoryPlace.trim() || !directoryState.trim() || directoryStatus === "searching"} onClick={() => void runDirectorySearch()}>
               {directoryStatus === "searching" ? "Searching…" : "Search Directory"}
@@ -563,34 +576,11 @@ function optionalInteger(value: string, label: string, minimum: number): number 
 }
 
 const DEFAULT_WENO_SEARCH_API: WenoSearchApi = {
-  async searchFormulary(query, signal) {
-    const params = new URLSearchParams({ q: query });
-    const response = await fetch(`${clinicalGraphApiBase()}/weno/drugs/search?${params}`, {
-      headers: authHeaders(),
-      signal,
-    });
-    const body = await response.json() as { results?: FormularyResult[]; error?: string };
-    if (!response.ok) throw new Error(body.error ?? `Formulary search failed: ${response.status}`);
-    return body.results ?? [];
+  searchFormulary(query, signal) {
+    return fhir.searchWenoFormulary(clinicalGraphApiBase(), query, signal);
   },
-  async searchDirectory(input, signal) {
-    const params = new URLSearchParams({
-      state: input.state,
-      searchType: input.searchType,
-      all: "true",
-    });
-    if (/^\d{5}(?:-?\d{4})?$/.test(input.place)) {
-      params.set("zip", input.place);
-    } else {
-      params.set("city", input.place);
-    }
-    const response = await fetch(`${clinicalGraphApiBase()}/weno/pharmacies/search?${params}`, {
-      headers: authHeaders(),
-      signal,
-    });
-    const body = await response.json() as { results?: DirectoryResult[]; error?: string };
-    if (!response.ok) throw new Error(body.error ?? `Directory search failed: ${response.status}`);
-    return body.results ?? [];
+  searchDirectory(input, signal) {
+    return fhir.searchWenoDirectory(clinicalGraphApiBase(), input, signal);
   },
 };
 
@@ -616,18 +606,13 @@ function transmissionMethod(request: MedicationRequest): "printed" | "phoned-in"
   return value === "phoned-in" ? "phoned-in" : "printed";
 }
 
-function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
+export function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
   const coding = request.medicationCodeableConcept?.coding
     ?.find((entry) => entry.system === RXNORM_CODE_SYSTEM);
+  const codedDrug = completeWenoDrugCoding(coding);
   return {
     drug: request.medicationCodeableConcept?.text ?? "",
-    drugDbCode: coding?.code,
-    drugDbCodeQualifier: coding?.extension
-      ?.find((extension) => extension.url === ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL)
-      ?.valueCode,
-    quantityUnitOfMeasureCode: coding?.extension
-      ?.find((extension) => extension.url === ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL)
-      ?.valueCode,
+    ...codedDrug,
     sig: request.dosageInstruction?.[0]?.text ?? "",
     quantity: request.dispenseRequest?.quantity?.unit ?? "",
     refills: request.dispenseRequest?.numberOfRepeatsAllowed?.toString() ?? "0",
@@ -641,6 +626,21 @@ function draftFromRequest(request: MedicationRequest): PrescriptionDraft {
       : undefined,
     transmissionMethod: transmissionMethod(request),
   };
+}
+
+function completeWenoDrugCoding(
+  coding: Coding | undefined,
+): Pick<PrescriptionDraft, "drugDbCode" | "drugDbCodeQualifier" | "quantityUnitOfMeasureCode"> {
+  const drugDbCode = coding?.code?.trim();
+  const drugDbCodeQualifier = coding?.extension
+    ?.find((extension) => extension.url === ODOS_WENO_DRUG_DB_CODE_QUALIFIER_EXTENSION_URL)
+    ?.valueCode?.trim();
+  const quantityUnitOfMeasureCode = coding?.extension
+    ?.find((extension) => extension.url === ODOS_WENO_QUANTITY_UNIT_OF_MEASURE_CODE_EXTENSION_URL)
+    ?.valueCode?.trim();
+  return drugDbCode && drugDbCodeQualifier && quantityUnitOfMeasureCode
+    ? { drugDbCode, drugDbCodeQualifier, quantityUnitOfMeasureCode }
+    : {};
 }
 
 export function mergeMedicationRequestUpdate(
