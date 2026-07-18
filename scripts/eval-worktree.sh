@@ -4,6 +4,8 @@ set -uo pipefail
 # Evaluation is deliberately split in two: this script prepares and verifies an
 # exact-head worktree; eval-post-verdict.sh posts only the evaluator's deliberate
 # verdict. Neither script merges, preserving the final human-in-the-loop step.
+# This executes same-repository PR npm scripts on the host and is not an OS
+# sandbox. Fork PRs are refused; evaluate untrusted code in a credential-free runner.
 
 usage() {
   echo "Usage: scripts/eval-worktree.sh <PR#> [--keep]" >&2
@@ -61,13 +63,18 @@ run_step() {
   local directory="$3"
   shift 3
   local slug log_path status result detail
+  local -a pipeline_status
   slug="$(printf '%s' "$label" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-')"
   log_path="$log_dir/$slug.log"
 
   echo
   echo "==> $label"
   (cd "$directory" && "$@") 2>&1 | tee "$log_path"
-  status="${PIPESTATUS[0]}"
+  pipeline_status=("${PIPESTATUS[@]}")
+  status="${pipeline_status[0]}"
+  if [[ "${pipeline_status[1]}" -ne 0 ]]; then
+    status="${pipeline_status[1]}"
+  fi
   if [[ "$status" -eq 0 ]]; then
     result="PASS"
   else
@@ -103,8 +110,10 @@ require_command mktemp
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git -C "$script_dir" rev-parse --show-toplevel)"
 repo_name="${GH_REPO:-$(cd "$repo_root" && gh repo view --json nameWithOwner --jq .nameWithOwner)}"
-head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .headRefOid)"
+pr_metadata="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid,isCrossRepository --jq '[.headRefOid, .isCrossRepository] | @tsv')"
+IFS=$'\t' read -r head_sha is_cross_repository <<<"$pr_metadata"
 [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || die "could not resolve a full head SHA for PR #$pr_number"
+[[ "$is_cross_repository" == "false" ]] || die "fork PRs are not executed on the host; use a credential-free isolated runner"
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
 
 if ! git -C "$repo_root" cat-file -e "${head_sha}^{commit}" 2>/dev/null; then

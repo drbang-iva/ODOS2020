@@ -57,6 +57,9 @@ if [[ "$dry_run" == true ]]; then
   exit 0
 fi
 
+existing_check_ids="$(gh api "repos/$repo_name/commits/$head_sha/check-runs?check_name=check-evaluation&per_page=100" \
+  --jq '.check_runs[] | select(.name == "check-evaluation") | .id')"
+
 echo "Posting evaluator-supplied marker for PR #$pr_number at $head_sha..."
 gh pr comment "$pr_number" --repo "$repo_name" --body "$marker"
 
@@ -75,8 +78,15 @@ latest_state="not found"
 echo "Polling check-evaluation for up to ${timeout_seconds}s; existing failures are expected and will not stop the poll."
 
 while [[ $(date +%s) -lt "$deadline" ]]; do
-  check_line="$(gh api "repos/$repo_name/commits/$head_sha/check-runs?check_name=check-evaluation&per_page=100" \
-    --jq '[.check_runs[] | select(.name == "check-evaluation")] | sort_by(.started_at) | last | if . == null then [] else [.status, (.conclusion // ""), .html_url, .started_at] end | @tsv' 2>/dev/null || true)"
+  check_rows="$(gh api "repos/$repo_name/commits/$head_sha/check-runs?check_name=check-evaluation&per_page=100" \
+    --jq '[.check_runs[] | select(.name == "check-evaluation")] | sort_by(.started_at)[] | [.id, .status, (.conclusion // ""), .html_url, .started_at] | @tsv' 2>/dev/null || true)"
+  check_line=""
+  while IFS=$'\t' read -r check_id check_status check_conclusion check_url check_started; do
+    [[ -n "$check_id" ]] || continue
+    if ! printf '%s\n' "$existing_check_ids" | grep -Fxq "$check_id"; then
+      check_line="$check_status"$'\t'"$check_conclusion"$'\t'"$check_url"$'\t'"$check_started"
+    fi
+  done <<<"$check_rows"
   if [[ -n "$check_line" ]]; then
     IFS=$'\t' read -r check_status check_conclusion check_url check_started <<<"$check_line"
     latest_state="status=${check_status:-unknown} conclusion=${check_conclusion:-pending} started=${check_started:-unknown}"
