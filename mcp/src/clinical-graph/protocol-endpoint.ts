@@ -7,6 +7,8 @@ import type { ProtocolFhirClient } from "./protocol-store.js";
 import { protocolFindingToGonioObservation } from "./gonioscopy.js";
 import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-types.js";
 
+const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
+
 interface LiveFhir extends ProtocolFhirClient {
   read<T extends Observation | ServiceRequest | CarePlan>(resourceType: T["resourceType"], id: string): Promise<T>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
@@ -167,7 +169,7 @@ function protocolFindingObservation(finding: ProtocolFindingInstance): Observati
       ? { valueQuantity: { value: finding.value, unit: "ratio", code: "1" } }
       : { valueString: finding.value === undefined ? "promptOnly" : String(finding.value) }),
     extension: [{
-      url: "https://odos2020.com/fhir/StructureDefinition/finding-source",
+      url: FINDING_SOURCE_URL,
       valueCode: finding.provenance.source,
     }],
   };
