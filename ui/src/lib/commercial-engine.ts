@@ -57,9 +57,48 @@ export class PackageFinalizationError extends Error {
   }
 }
 
+export interface PendingPackageSale {
+  patientReference: string;
+  definition: PackageDefinition;
+  tender: PackageSaleTender;
+  invoiceReference: string;
+}
+
+const PENDING_PACKAGE_SALE_STORAGE_PREFIX = "odos.pending-package-sale.v1:";
+
 interface ApiOptions {
   fetchImpl?: typeof fetch;
   authHeader?: () => string | undefined;
+  storage?: Storage;
+}
+
+export function readPendingPackageSale(
+  patientReference: string,
+  storage = browserSessionStorage(),
+): PendingPackageSale | undefined {
+  const storageKey = pendingPackageSaleStorageKey(patientReference);
+  const value = storage?.getItem(storageKey);
+  if (!value) return undefined;
+  try {
+    const pending = JSON.parse(value) as Partial<PendingPackageSale>;
+    if (pending.patientReference !== patientReference
+      || !pending.definition
+      || typeof pending.definition.id !== "string"
+      || typeof pending.invoiceReference !== "string"
+      || !pending.invoiceReference.startsWith("Invoice/")
+      || !(["CASH", "CHECK", "CARD_MANUAL"] as const).includes(pending.tender as PackageSaleTender)) {
+      storage?.removeItem(storageKey);
+      return undefined;
+    }
+    return pending as PendingPackageSale;
+  } catch {
+    storage?.removeItem(storageKey);
+    return undefined;
+  }
+}
+
+function pendingPackageSaleStorageKey(patientReference: string): string {
+  return `${PENDING_PACKAGE_SALE_STORAGE_PREFIX}${encodeURIComponent(patientReference)}`;
 }
 
 export async function fetchPackageDefinitions(
@@ -137,12 +176,23 @@ export async function sellPackage(
     }, options);
     if (charged.outcome !== "success") throw new Error(`Package payment did not complete (${charged.outcome}).`);
   }
+  const storage = options.storage ?? browserSessionStorage();
+  const storageKey = pendingPackageSaleStorageKey(input.patientReference);
+  storage?.setItem(storageKey, JSON.stringify({
+    patientReference: input.patientReference,
+    definition: input.definition,
+    tender: input.tender,
+    invoiceReference,
+  } satisfies PendingPackageSale));
   try {
     const finalized = await post<{ package: PatientPackageInstance }>("/commercial-engine/sales/finalize", {
       patientReference: input.patientReference,
       definitionId: input.definition.id,
       invoiceReference,
     }, options);
+    if (readPendingPackageSale(input.patientReference, storage)?.invoiceReference === invoiceReference) {
+      storage?.removeItem(storageKey);
+    }
     return finalized.package;
   } catch (cause) {
     throw new PackageFinalizationError(
@@ -150,6 +200,10 @@ export async function sellPackage(
       invoiceReference,
     );
   }
+}
+
+function browserSessionStorage(): Storage | undefined {
+  return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
 }
 
 export async function redeemPackage(

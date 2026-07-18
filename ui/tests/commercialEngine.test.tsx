@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   PackageFinalizationError,
+  readPendingPackageSale,
   sellPackage,
   type PackageDefinition,
 } from "../src/lib/commercial-engine";
@@ -21,6 +22,7 @@ const definition: PackageDefinition = {
 };
 
 test("a paid package sale retries only finalization with the original Invoice", async () => {
+  const storage = memoryStorage();
   const firstPaths: string[] = [];
   const firstResponses = [
     response(200, { invoiceReference: "Invoice/sale-1" }),
@@ -33,6 +35,7 @@ test("a paid package sale retries only finalization with the original Invoice", 
       { patientReference: "Patient/patient-1", definition, tender: "CASH" },
       {
         authHeader: () => "Bearer synthetic",
+        storage,
         fetchImpl: async (input) => {
           firstPaths.push(String(input));
           return firstResponses.shift()!;
@@ -44,6 +47,9 @@ test("a paid package sale retries only finalization with the original Invoice", 
     else throw cause;
   }
   assert.equal(failure?.invoiceReference, "Invoice/sale-1");
+  const pending = readPendingPackageSale("Patient/patient-1", storage);
+  assert.equal(pending?.invoiceReference, "Invoice/sale-1");
+  assert.equal(pending?.definition.id, definition.id);
   assert.deepEqual(firstPaths, [
     "/commercial-engine/sales/prepare",
     "/payments/charge",
@@ -71,10 +77,11 @@ test("a paid package sale retries only finalization with the original Invoice", 
       patientReference: "Patient/patient-1",
       definition,
       tender: "CASH",
-      paidInvoiceReference: failure!.invoiceReference,
+      paidInvoiceReference: pending!.invoiceReference,
     },
     {
       authHeader: () => "Bearer synthetic",
+      storage,
       fetchImpl: async (input) => {
         retryPaths.push(String(input));
         return response(200, { package: packageInstance });
@@ -84,7 +91,20 @@ test("a paid package sale retries only finalization with the original Invoice", 
 
   assert.deepEqual(retryPaths, ["/commercial-engine/sales/finalize"]);
   assert.equal(activated.id, "instance-1");
+  assert.equal(readPendingPackageSale("Patient/patient-1", storage), undefined);
 });
+
+function memoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() { return values.size; },
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => { values.set(key, value); },
+  };
+}
 
 function response(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

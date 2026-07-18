@@ -1,7 +1,11 @@
 import type { Invoice, PaymentReconciliation, Resource } from "@medplum/fhirtypes";
 import { resolveBusinessActionRole } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
-import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
+import {
+  ODOS_PAYMENT_TENDER_EXTENSION_URL,
+  ODOS_PAYMENT_TENDER_SYSTEM,
+  PAYMENT_TENDERS,
+} from "../fhir/odosPaymentTender.js";
 import type { AuthenticatedStaff } from "../payments/payment-charge-handler.js";
 import {
   isBalanceFundingInvoice,
@@ -124,7 +128,13 @@ export function projectServiceProduction(
   for (const invoice of invoices) {
     const reference = invoice.id ? `Invoice/${invoice.id}` : undefined;
     const allocatedCents = reference ? allocatedCentsByInvoice.get(reference) ?? 0 : 0;
-    const tenderedInvoice = invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
+    const tenderedInvoice = invoice.extension?.some((extension) =>
+      extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
+      && extension.valueCodeableConcept?.coding?.some((coding) =>
+        coding.system === ODOS_PAYMENT_TENDER_SYSTEM
+        && PAYMENT_TENDERS.some((tender) => tender.code === coding.code),
+      ),
+    ) ?? false;
     const netCents = invoiceNetCents(invoice);
     const collected = invoice.status === "balanced" || tenderedInvoice || allocatedCents >= netCents;
     if (!collected) continue;

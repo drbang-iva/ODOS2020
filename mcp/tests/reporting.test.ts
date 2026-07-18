@@ -13,7 +13,10 @@ import {
   ODOS_PACKAGE_CREDIT_TENDER_CODE,
   ODOS_REVENUE_CLASS_SYSTEM,
 } from "../src/commercial-engine/package-service.js";
-import { paymentTenderExtensionForReconciliation } from "../src/fhir/odosPaymentTender.js";
+import {
+  ODOS_PAYMENT_TENDER_SYSTEM,
+  paymentTenderExtensionForReconciliation,
+} from "../src/fhir/odosPaymentTender.js";
 
 test("AR dashboard hand-computes average age, aging buckets, and open-worklist counts", () => {
   const claims = [10, 45, 75, 120].map(claimRow);
@@ -52,7 +55,7 @@ test("a $3,600 package sale and one $1,200 redemption recognize exactly $1,200 o
     meta: { tag: [{ system: ODOS_REVENUE_CLASS_SYSTEM, code: ODOS_BALANCE_FUNDING_CODE }] },
     extension: [{
       url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
-      valueCodeableConcept: { coding: [{ code: "CASH" }] },
+      valueCodeableConcept: { coding: [{ system: ODOS_PAYMENT_TENDER_SYSTEM, code: "CASH" }] },
     }],
     lineItem: [{
       sequence: 1,
@@ -124,6 +127,33 @@ test("partial allocations do not recognize an Invoice as fully collected product
   assert.equal(report.cashCollectedCents, 60_000);
   assert.equal(report.productionCents, 0);
   assert.equal(report.productionInvoiceCount, 0);
+});
+
+test("an unrecognized tender extension cannot mark an issued Invoice collected", () => {
+  const invoice: Invoice = {
+    resourceType: "Invoice",
+    id: "spoofed-tender",
+    status: "issued",
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
+      valueCodeableConcept: { coding: [{ system: "https://example.test/not-odos", code: "CASH" }] },
+    }],
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Synthetic service" },
+      priceComponent: [{ type: "base", amount: usd(12_000) }],
+    }],
+    totalGross: usd(12_000),
+    totalNet: usd(12_000),
+  };
+
+  assert.deepEqual(projectServiceProduction("2026-07", [invoice], []), {
+    period: "2026-07",
+    cashCollectedCents: 0,
+    productionCents: 0,
+    balanceFundingCents: 0,
+    productionInvoiceCount: 0,
+  });
 });
 
 function claimRow(daysSinceSubmission: number): ClaimSearchRow {

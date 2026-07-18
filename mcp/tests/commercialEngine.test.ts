@@ -12,7 +12,12 @@ import {
 import type {
   CommercialEngineStore,
   PackageDefinition,
+  PackageRedemptionOperation,
   PatientPackageInstance,
+} from "../src/commercial-engine/ledger-store.js";
+import {
+  CommercialEngineInputError,
+  PgCommercialEngineStore,
 } from "../src/commercial-engine/ledger-store.js";
 
 const definition: PackageDefinition = {
@@ -116,6 +121,8 @@ test("applicable package matching requires code, unexpired balance, and explicit
 
 test("redemption keeps the real procedure price, records package credit, and links consumption", async () => {
   const created: Resource[] = [];
+  const events: string[] = [];
+  const conditionalHeaders: Array<Record<string, string> | undefined> = [];
   let consumed: Parameters<CommercialEngineStore["consume"]>[0] | undefined;
   const procedure: Procedure = {
     resourceType: "Procedure",
@@ -139,16 +146,23 @@ test("redemption keeps the real procedure price, records package credit, and lin
         ...store(),
         listPatientPackages: async () => [instance()],
         consume: async (input) => {
+          events.push("consume");
           consumed = input;
           return { ...instance(), remainingSessions: 1 };
+        },
+        completeRedemption: async (procedureFhirId, completedAt) => {
+          events.push("complete");
+          return redemption({ procedureFhirId, completedAt });
         },
       },
       now: () => "2026-07-18T15:00:00Z",
     },
     {
       read: async <T>(_resourceType: string, id: string): Promise<T> => (id === "procedure-1" ? procedure : chargeItem) as T,
-      create: async <T extends Resource>(resource: T): Promise<T> => {
+      create: async <T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T> => {
         const saved = { ...resource, id: resource.resourceType === "Invoice" ? "redeem-invoice" : "package-payment" } as T;
+        events.push(resource.resourceType);
+        conditionalHeaders.push(headers);
         created.push(saved);
         return saved;
       },
@@ -172,6 +186,8 @@ test("redemption keeps the real procedure price, records package credit, and lin
   assert.equal(consumed?.linkedFhirInvoiceId, "redeem-invoice");
   assert.equal(consumed?.linkedFhirProcedureId, "procedure-1");
   assert.equal(result.package.remainingSessions, 1);
+  assert.deepEqual(events, ["Invoice", "consume", "PaymentReconciliation", "complete"]);
+  assert.equal(conditionalHeaders.every((headers) => Boolean(headers?.["If-None-Exist"])), true);
 });
 
 test("a completed redemption retry reuses its persisted FHIR records without writing again", async () => {
@@ -232,6 +248,172 @@ test("a completed redemption retry reuses its persisted FHIR records without wri
   assert.equal(result.paymentReference, "PaymentReconciliation/package-payment");
 });
 
+test("redemption retries reject a different package, charge, or patient", async () => {
+  const completed = redemption({ completedAt: "2026-07-18T15:00:00Z" });
+  const cases = [
+    { patientReference: "Patient/patient-1", packageInstanceId: "different-package", chargeItemReference: "ChargeItem/charge-1" },
+    { patientReference: "Patient/patient-1", packageInstanceId: instance().id, chargeItemReference: "ChargeItem/charge-2" },
+    { patientReference: "Patient/patient-2", packageInstanceId: instance().id, chargeItemReference: "ChargeItem/charge-1" },
+  ];
+  for (const input of cases) {
+    const patientId = input.patientReference.replace("Patient/", "");
+    const chargeId = input.chargeItemReference.replace("ChargeItem/", "");
+    await assert.rejects(redeemPackageSession(
+      {
+        store: {
+          ...store(),
+          listPatientPackages: async () => [instance()],
+          getRedemption: async () => completed,
+          beginRedemption: async () => completed,
+        },
+      },
+      {
+        read: async <T>(_resourceType: string, id: string): Promise<T> => (id === "procedure-1"
+          ? {
+              resourceType: "Procedure",
+              id,
+              status: "completed",
+              subject: { reference: input.patientReference },
+              code: { coding: [{ code: "procedure:dry-eye-ipl" }] },
+            }
+          : {
+              resourceType: "ChargeItem",
+              id: chargeId,
+              status: "billable",
+              code: { text: "Dry-Eye IPL" },
+              subject: { reference: `Patient/${patientId}` },
+              supportingInformation: [{ reference: "Procedure/procedure-1" }],
+              priceOverride: { value: 1_200, currency: "USD" },
+            }) as T,
+        create: async <T>(resource: T): Promise<T> => resource,
+        search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
+      } as never,
+      {
+        ...input,
+        procedureReference: "Procedure/procedure-1",
+        staffReference: "Practitioner/staff-1",
+      },
+    ), /different package redemption operation/);
+  }
+});
+
+test("a referenced redemption Invoice is revalidated on retry", async () => {
+  const existing = redemption({ paymentFhirId: undefined, completedAt: undefined });
+  await assert.rejects(redeemPackageSession(
+    {
+      store: {
+        ...store(),
+        listPatientPackages: async () => [instance()],
+        getRedemption: async () => existing,
+        beginRedemption: async () => existing,
+      },
+    },
+    {
+      read: async <T>(resourceType: string): Promise<T> => (resourceType === "Procedure"
+        ? {
+            resourceType: "Procedure",
+            id: "procedure-1",
+            status: "completed",
+            subject: { reference: "Patient/patient-1" },
+            code: { coding: [{ code: "procedure:dry-eye-ipl" }] },
+          }
+        : resourceType === "ChargeItem"
+          ? {
+              resourceType: "ChargeItem",
+              id: "charge-1",
+              status: "billable",
+              code: { text: "Dry-Eye IPL" },
+              subject: { reference: "Patient/patient-1" },
+              supportingInformation: [{ reference: "Procedure/procedure-1" }],
+              priceOverride: { value: 1_200, currency: "USD" },
+            }
+          : {
+              resourceType: "Invoice",
+              id: "redeem-invoice",
+              status: "issued",
+              subject: { reference: "Patient/different-patient" },
+              lineItem: [{ sequence: 1, chargeItemReference: { reference: "ChargeItem/charge-1" } }],
+              totalNet: { value: 1_200, currency: "USD" },
+            }) as T,
+      create: async <T>(resource: T): Promise<T> => resource,
+      search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      packageInstanceId: instance().id,
+      procedureReference: "Procedure/procedure-1",
+      chargeItemReference: "ChargeItem/charge-1",
+      staffReference: "Practitioner/staff-1",
+    },
+  ), /recovered package redemption Invoice does not match/);
+});
+
+test("an incomplete redemption identifier search fails closed before FHIR creation", async () => {
+  let createCalls = 0;
+  await assert.rejects(redeemPackageSession(
+    {
+      store: { ...store(), listPatientPackages: async () => [instance()] },
+    },
+    {
+      read: async <T>(resourceType: string): Promise<T> => (resourceType === "Procedure"
+        ? {
+            resourceType: "Procedure",
+            id: "procedure-1",
+            status: "completed",
+            subject: { reference: "Patient/patient-1" },
+            code: { coding: [{ code: "procedure:dry-eye-ipl" }] },
+          }
+        : {
+            resourceType: "ChargeItem",
+            id: "charge-1",
+            status: "billable",
+            code: { text: "Dry-Eye IPL" },
+            subject: { reference: "Patient/patient-1" },
+            supportingInformation: [{ reference: "Procedure/procedure-1" }],
+            priceOverride: { value: 1_200, currency: "USD" },
+          }) as T,
+      create: async <T>(resource: T): Promise<T> => { createCalls += 1; return resource; },
+      search: async () => ({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [],
+        link: [{ relation: "next", url: "http://synthetic.test/next" }],
+      }),
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      packageInstanceId: instance().id,
+      procedureReference: "Procedure/procedure-1",
+      chargeItemReference: "ChargeItem/charge-1",
+      staffReference: "Practitioner/staff-1",
+    },
+  ), /search was incomplete/);
+  assert.equal(createCalls, 0);
+});
+
+test("sale snapshots reject whitespace-only eligibility codes before persistence", async () => {
+  const store = new PgCommercialEngineStore({
+    pool: {
+      connect: async () => { throw new Error("database should not be reached"); },
+      query: async () => { throw new Error("database should not be reached"); },
+      end: async () => undefined,
+    } as never,
+  });
+  await assert.rejects(store.finalizeSale({
+    definitionId: definition.id,
+    patientFhirId: "patient-1",
+    sourceSaleInvoiceId: "sale-invoice",
+    actorUserId: "Practitioner/staff-1",
+    soldAt: "2026-07-18T14:00:00Z",
+    snapshotName: definition.name,
+    snapshotEligibleProcedureTypeCodes: ["  "],
+    snapshotSessionCount: definition.sessionCount,
+    snapshotPriceCents: definition.priceCents,
+    snapshotExpiryDays: definition.expiryDays,
+    snapshotRefundPolicy: definition.refundPolicy,
+  }), CommercialEngineInputError);
+});
+
 test("commercial package ledger migration enforces append-only mutation rejection", async () => {
   const sql = await readFile(new URL("../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url), "utf8");
   assert.match(sql, /BEFORE UPDATE OR DELETE ON odos_package_ledger/);
@@ -239,6 +421,7 @@ test("commercial package ledger migration enforces append-only mutation rejectio
   assert.match(sql, /snapshot_name TEXT NOT NULL/);
   assert.match(sql, /snapshot_eligible_procedure_type_codes TEXT\[\] NOT NULL/);
   assert.match(sql, /CREATE TABLE IF NOT EXISTS odos_package_redemptions/);
+  assert.match(sql, /consumed_at TIMESTAMPTZ/);
   assert.match(sql, /sessions_delta INTEGER NOT NULL/);
   const storeSource = await readFile(new URL("../src/commercial-engine/ledger-store.ts", import.meta.url), "utf8");
   assert.match(storeSource, /ON CONFLICT \(source_sale_invoice_id\) DO NOTHING/);
@@ -298,6 +481,21 @@ function store(): CommercialEngineStore {
       paymentFhirId,
       createdAt: "2026-07-18T15:00:00Z",
     }),
+    completeRedemption: async (procedureFhirId, completedAt) => redemption({ procedureFhirId, completedAt }),
     consume: async () => instance(),
+  };
+}
+
+function redemption(overrides: Partial<PackageRedemptionOperation> = {}): PackageRedemptionOperation {
+  return {
+    procedureFhirId: "procedure-1",
+    patientFhirId: "patient-1",
+    packageInstanceId: instance().id,
+    chargeItemFhirId: "charge-1",
+    amountCents: 120_000,
+    invoiceFhirId: "redeem-invoice",
+    paymentFhirId: "package-payment",
+    createdAt: "2026-07-18T15:00:00Z",
+    ...overrides,
   };
 }

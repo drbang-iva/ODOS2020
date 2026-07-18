@@ -164,8 +164,17 @@ export async function redeemPackageSession(
   }
   const procedureCodes = procedure.code?.coding?.flatMap((coding) => coding.code ?? []) ?? [];
   if (procedureCodes.length === 0) throw new CommercialEngineInputError("The procedure has no coded type for package matching.");
+  const amountCents = moneyCents(chargeItem.priceOverride?.value, "Procedure charge price");
+  if (amountCents <= 0) throw new CommercialEngineInputError("The procedure charge must have a positive real price.");
   const packages = await deps.store.listPatientPackages(patientId);
   const existingOperation = await deps.store.getRedemption(procedureId);
+  if (existingOperation
+    && (existingOperation.patientFhirId !== patientId
+      || existingOperation.packageInstanceId !== input.packageInstanceId
+      || existingOperation.chargeItemFhirId !== chargeItemId
+      || existingOperation.amountCents !== amountCents)) {
+    throw new CommercialEngineConflictError("This procedure already has a different package redemption operation.");
+  }
   const selectedPackage = existingOperation
     ? packages.find((instance) => instance.id === input.packageInstanceId)
     : applicablePackages(packages, procedureCodes, (deps.now?.() ?? new Date().toISOString()).slice(0, 10))
@@ -173,8 +182,6 @@ export async function redeemPackageSession(
   if (!selectedPackage) {
     throw new CommercialEngineConflictError("The selected package is not currently eligible for this procedure.");
   }
-  const amountCents = moneyCents(chargeItem.priceOverride?.value, "Procedure charge price");
-  if (amountCents <= 0) throw new CommercialEngineInputError("The procedure charge must have a positive real price.");
   const requestedAt = deps.now?.() ?? new Date().toISOString();
   let operation = await deps.store.beginRedemption({
     procedureFhirId: procedureId,
@@ -203,7 +210,17 @@ export async function redeemPackageSession(
       createdAt: consumedAt,
     });
   if (!invoice.id) throw new Error("Package redemption Invoice creation did not return an id.");
+  assertRedemptionInvoice(invoice, input.patientReference, input.chargeItemReference, amountCents);
   operation = await deps.store.recordRedemptionInvoice(procedureId, invoice.id);
+  const packageInstance = await deps.store.consume({
+    packageInstanceId: input.packageInstanceId,
+    patientFhirId: patientId,
+    procedureTypeCodes: procedureCodes,
+    linkedFhirInvoiceId: invoice.id,
+    linkedFhirProcedureId: procedureId,
+    actorUserId: input.staffReference,
+    consumedAt,
+  });
   const transactionId = `${input.packageInstanceId}:${procedureId}`;
   const payment = operation.paymentFhirId
     ? await fhir.read<PaymentReconciliation>("PaymentReconciliation", operation.paymentFhirId)
@@ -219,15 +236,7 @@ export async function redeemPackageSession(
   if (!payment.id) throw new Error("Package credit PaymentReconciliation creation did not return an id.");
   assertPackageCreditPayment(payment, `Invoice/${invoice.id}`, amountCents, transactionId);
   await deps.store.recordRedemptionPayment(procedureId, payment.id);
-  const packageInstance = await deps.store.consume({
-    packageInstanceId: input.packageInstanceId,
-    patientFhirId: patientId,
-    procedureTypeCodes: procedureCodes,
-    linkedFhirInvoiceId: invoice.id,
-    linkedFhirProcedureId: procedureId,
-    actorUserId: input.staffReference,
-    consumedAt,
-  });
+  await deps.store.completeRedemption(procedureId, requestedAt);
   return {
     package: packageInstance,
     invoiceReference: `Invoice/${invoice.id}`,
@@ -321,10 +330,12 @@ async function findOrCreateRedemptionInvoice(
     createdAt: string;
   },
 ): Promise<Invoice> {
-  const found = resources(await fhir.search<Invoice>("Invoice", {
+  const search = await fhir.search<Invoice>("Invoice", {
     identifier: `${ODOS_PACKAGE_REDEMPTION_INVOICE_SYSTEM}|${input.procedureId}`,
     _count: "2",
-  }));
+  });
+  assertCompleteIdentifierSearch(search, "package redemption Invoice");
+  const found = resources(search);
   if (found.length > 1) throw new CommercialEngineConflictError("Multiple package redemption Invoices exist for this procedure.");
   const invoice = found[0] ?? await fhir.create<Invoice>({
     resourceType: "Invoice",
@@ -340,12 +351,10 @@ async function findOrCreateRedemptionInvoice(
     }],
     totalGross: usd(input.amountCents),
     totalNet: usd(input.amountCents),
+  }, {
+    "If-None-Exist": `identifier=${ODOS_PACKAGE_REDEMPTION_INVOICE_SYSTEM}|${input.procedureId}`,
   });
-  if (invoice.subject?.reference !== input.patientReference
-    || moneyCents(invoice.totalNet?.value, "Package redemption Invoice total") !== input.amountCents
-    || !invoice.lineItem?.some((line) => line.chargeItemReference?.reference === input.chargeItemReference)) {
-    throw new CommercialEngineConflictError("The recovered package redemption Invoice does not match this procedure charge.");
-  }
+  assertRedemptionInvoice(invoice, input.patientReference, input.chargeItemReference, input.amountCents);
   return invoice;
 }
 
@@ -361,10 +370,12 @@ async function findOrCreateRedemptionPayment(
     description: string;
   },
 ): Promise<PaymentReconciliation> {
-  const found = resources(await fhir.search<PaymentReconciliation>("PaymentReconciliation", {
+  const search = await fhir.search<PaymentReconciliation>("PaymentReconciliation", {
     identifier: `${ODOS_PACKAGE_CREDIT_TRANSACTION_SYSTEM}|${input.transactionId}`,
     _count: "2",
-  }));
+  });
+  assertCompleteIdentifierSearch(search, "package-credit payment");
+  const found = resources(search);
   if (found.length > 1) throw new CommercialEngineConflictError("Multiple package-credit payments exist for this procedure.");
   return found[0] ?? fhir.create<PaymentReconciliation>(buildPaymentReconciliation({
     outcome: "success",
@@ -379,7 +390,31 @@ async function findOrCreateRedemptionPayment(
     surface: "manual",
     tender: { code: ODOS_PACKAGE_CREDIT_TENDER_CODE, display: "Package credit" },
     description: input.description,
-  }));
+  }), {
+    "If-None-Exist": `identifier=${ODOS_PACKAGE_CREDIT_TRANSACTION_SYSTEM}|${input.transactionId}`,
+  });
+}
+
+function assertRedemptionInvoice(
+  invoice: Invoice,
+  patientReference: string,
+  chargeItemReference: string,
+  amountCents: number,
+): void {
+  if (invoice.subject?.reference !== patientReference
+    || moneyCents(invoice.totalNet?.value, "Package redemption Invoice total") !== amountCents
+    || !invoice.lineItem?.some((line) => line.chargeItemReference?.reference === chargeItemReference)) {
+    throw new CommercialEngineConflictError("The recovered package redemption Invoice does not match this procedure charge.");
+  }
+}
+
+function assertCompleteIdentifierSearch(
+  bundle: { link?: Array<{ relation: string }> },
+  label: string,
+): void {
+  if (bundle.link?.some((link) => link.relation === "next")) {
+    throw new CommercialEngineConflictError(`The ${label} search was incomplete.`);
+  }
 }
 
 function assertPackageCreditPayment(

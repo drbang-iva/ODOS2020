@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   fetchPackageDefinitions,
   PackageFinalizationError,
+  readPendingPackageSale,
   sellPackage,
   type PackageDefinition,
   type PackageSaleTender,
@@ -25,13 +26,14 @@ export function SaleSheet({
   onClose: () => void;
   onSold?: (packageInstance: PatientPackageInstance) => void;
 }) {
-  const [definitions, setDefinitions] = useState<PackageDefinition[]>([]);
-  const [definitionId, setDefinitionId] = useState("");
-  const [tender, setTender] = useState<PackageSaleTender>("CASH");
+  const [pending] = useState(() => readPendingPackageSale(patientReference));
+  const [definitions, setDefinitions] = useState<PackageDefinition[]>(() => pending ? [pending.definition] : []);
+  const [definitionId, setDefinitionId] = useState(pending?.definition.id ?? "");
+  const [tender, setTender] = useState<PackageSaleTender>(pending?.tender ?? "CASH");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-  const [paidInvoiceReference, setPaidInvoiceReference] = useState<string>();
+  const [paidInvoiceReference, setPaidInvoiceReference] = useState<string | undefined>(pending?.invoiceReference);
   const selected = useMemo(() => definitions.find((definition) => definition.id === definitionId), [definitionId, definitions]);
 
   useEffect(() => {
@@ -40,13 +42,15 @@ export function SaleSheet({
       .then((items) => {
         if (cancelled) return;
         const active = items.filter((item) => item.active);
-        setDefinitions(active);
-        setDefinitionId(active[0]?.id ?? "");
+        setDefinitions(pending && !active.some((item) => item.id === pending.definition.id)
+          ? [pending.definition, ...active]
+          : active);
+        if (!pending) setDefinitionId(active[0]?.id ?? "");
       })
       .catch((cause) => !cancelled && setError(messageOf(cause)))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, []);
+  }, [pending]);
 
   async function sell() {
     if (!selected) return;

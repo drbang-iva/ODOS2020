@@ -80,6 +80,7 @@ export interface PackageRedemptionOperation {
   amountCents: number;
   invoiceFhirId?: string;
   paymentFhirId?: string;
+  consumedAt?: string;
   completedAt?: string;
   createdAt: string;
 }
@@ -114,6 +115,7 @@ export interface CommercialEngineStore {
   }): Promise<PackageRedemptionOperation>;
   recordRedemptionInvoice(procedureFhirId: string, invoiceFhirId: string): Promise<PackageRedemptionOperation>;
   recordRedemptionPayment(procedureFhirId: string, paymentFhirId: string): Promise<PackageRedemptionOperation>;
+  completeRedemption(procedureFhirId: string, completedAt: string): Promise<PackageRedemptionOperation>;
   consume(input: {
     packageInstanceId: string;
     patientFhirId: string;
@@ -273,6 +275,25 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
     return this.recordRedemptionReference(procedureFhirId, "payment_fhir_id", paymentFhirId);
   }
 
+  async completeRedemption(procedureFhirId: string, completedAt: string): Promise<PackageRedemptionOperation> {
+    assertFhirId(procedureFhirId, "Procedure id");
+    assertInstant(completedAt, "Redemption completion timestamp");
+    await this.ensureSchema();
+    const result = await this.pool.query<PackageRedemptionRow>(`
+      UPDATE odos_package_redemptions
+      SET completed_at = coalesce(completed_at, $2)
+      WHERE procedure_fhir_id = $1
+        AND consumed_at IS NOT NULL
+        AND invoice_fhir_id IS NOT NULL
+        AND payment_fhir_id IS NOT NULL
+      RETURNING *
+    `, [procedureFhirId, completedAt]);
+    if (!result.rows[0]) {
+      throw new CommercialEngineConflictError("The redemption cannot complete before consumption and settlement are recorded.");
+    }
+    return redemptionFromRow(result.rows[0]);
+  }
+
   async finalizeSale(input: {
     definitionId: string;
     patientFhirId: string;
@@ -290,7 +311,11 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
     assertFhirId(input.sourceSaleInvoiceId, "Invoice id");
     assertActor(input.actorUserId);
     assertInstant(input.soldAt, "Sale timestamp");
-    if (!input.snapshotName.trim() || input.snapshotEligibleProcedureTypeCodes.length === 0) {
+    const snapshotName = input.snapshotName.trim();
+    const snapshotEligibleProcedureTypeCodes = input.snapshotEligibleProcedureTypeCodes.map((code) => code.trim());
+    if (!snapshotName
+      || snapshotEligibleProcedureTypeCodes.length === 0
+      || snapshotEligibleProcedureTypeCodes.some((code) => !code)) {
       throw new CommercialEngineInputError("Package sale snapshot is incomplete.");
     }
     assertPositiveInteger(input.snapshotSessionCount, "Snapshot session count");
@@ -316,8 +341,8 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
           candidateId,
           input.patientFhirId,
           input.definitionId,
-          input.snapshotName,
-          input.snapshotEligibleProcedureTypeCodes,
+          snapshotName,
+          snapshotEligibleProcedureTypeCodes,
           input.snapshotSessionCount,
           input.snapshotPriceCents,
           input.soldAt,
@@ -399,7 +424,7 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
           throw new CommercialEngineConflictError("This procedure already consumed a different package session.");
         }
         await client.query(
-          "UPDATE odos_package_redemptions SET completed_at = coalesce(completed_at, $2) WHERE procedure_fhir_id = $1",
+          "UPDATE odos_package_redemptions SET consumed_at = coalesce(consumed_at, $2) WHERE procedure_fhir_id = $1",
           [input.linkedFhirProcedureId, input.consumedAt],
         );
         await client.query("COMMIT");
@@ -438,7 +463,7 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
         throw new CommercialEngineConflictError("This procedure has already consumed a package session.");
       }
       await client.query(
-        "UPDATE odos_package_redemptions SET completed_at = coalesce(completed_at, $2) WHERE procedure_fhir_id = $1",
+        "UPDATE odos_package_redemptions SET consumed_at = coalesce(consumed_at, $2) WHERE procedure_fhir_id = $1",
         [input.linkedFhirProcedureId, input.consumedAt],
       );
       await client.query("COMMIT");
@@ -585,6 +610,7 @@ interface PackageRedemptionRow {
   amount_cents: string;
   invoice_fhir_id: string | null;
   payment_fhir_id: string | null;
+  consumed_at: Date | string | null;
   completed_at: Date | string | null;
   created_at: Date | string;
 }
@@ -626,6 +652,7 @@ function redemptionFromRow(row: PackageRedemptionRow): PackageRedemptionOperatio
     amountCents: safeInteger(row.amount_cents, "Redemption amount"),
     ...(row.invoice_fhir_id ? { invoiceFhirId: row.invoice_fhir_id } : {}),
     ...(row.payment_fhir_id ? { paymentFhirId: row.payment_fhir_id } : {}),
+    ...(row.consumed_at ? { consumedAt: iso(row.consumed_at) } : {}),
     ...(row.completed_at ? { completedAt: iso(row.completed_at) } : {}),
     createdAt: iso(row.created_at),
   };
