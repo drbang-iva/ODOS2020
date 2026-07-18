@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { EncounterCharting } from "./scenes/EncounterCharting";
+import { ProcedureDefinitionsSettings } from "./scenes/settings/ProcedureDefinitionsSettings";
 import { AuditLog } from "./scenes/AuditLog";
 import { PatientDirector } from "./scenes/PatientDirector";
 import { PatientOverview } from "./scenes/PatientOverview";
@@ -330,6 +331,8 @@ export function RouteSwitch({
       return <PackageDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/treatment-protocols":
       return <ProtocolDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/procedure-definitions":
+      return <ProcedureDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/statement-messages":
       return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
     default:
