@@ -18,6 +18,7 @@
     "@medplum/fhirtypes": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "express": "^4.21.1",
+    "fast-xml-parser": "^5.3.8",
     "pg": "^8.20.0",
     "zod": "^3.23.8"
   },
