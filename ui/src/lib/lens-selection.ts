@@ -193,12 +193,13 @@ export function modifierLinesForSelection(
       if (automatic && !evaluateModifierAutoTrigger(modifier.autoTrigger, context)) return [];
       const prismDriven = modifier.autoTrigger?.field === "rxPrismTotal" && prism;
       const chargeCents = modifierChargeCents(modifier, prismDriven ? prism.total : undefined);
+      const sourcePriceCents = modifierSourceCostCents(modifier, prismDriven ? prism.total : undefined);
       const threshold = typeof modifier.autoTrigger?.value === "number" ? modifier.autoTrigger.value : undefined;
       return [{
         id: modifier.id,
         name: modifier.name,
         lab: modifier.lab,
-        sourcePriceCents: modifier.priceCents,
+        sourcePriceCents,
         chargeCents,
         unit: modifier.unit,
         automatic,
@@ -228,6 +229,7 @@ export function commitLensSelection(
   selection: LensSelection,
   createId: () => string = () => crypto.randomUUID(),
 ): CommittedLensSelection {
+  if (selection.billing.status === "unverified") throw new Error(selection.billing.reason);
   const baseIndex = lines.findIndex((line) => line.lens || (!line.lensAddOn && line.procedure === "Lenses"));
   if (baseIndex < 0) throw new Error("The optical order is missing its Lenses charge line.");
 
@@ -236,7 +238,8 @@ export function commitLensSelection(
   const confirmedModifiers = selection.modifiers.filter((modifier) => modifier.confirmed);
   const coatingChargeCents = selection.coating ? addOnRetailCents(selection.coating.pricePerPairCents) : 0;
   const billingCodes = selection.billing.status === "resolved" ? selection.billing.codes.map((code) => ({ ...code })) : [];
-  const productCanonicalUrl = lensProductChargeItemDefinitionCanonical(selection.product.id);
+  const productCanonicalUrl = selection.product.resource?.url
+    ?? lensProductChargeItemDefinitionCanonical(selection.product.id);
   const attached: AttachedLensSelection = {
     selectionId,
     lab: selection.product.lab,
@@ -269,7 +272,9 @@ export function commitLensSelection(
       ...(modifier.prismTotal !== undefined ? { prismTotal: modifier.prismTotal } : {}),
     })),
     fulfillment: selection.fulfillment,
-    wholesalePerPairCents: selection.product.wholesalePerPairCents + (selection.coating?.pricePerPairCents ?? 0),
+    wholesalePerPairCents: selection.product.wholesalePerPairCents
+      + (selection.coating?.pricePerPairCents ?? 0)
+      + confirmedModifiers.reduce((sum, modifier) => sum + modifier.sourcePriceCents, 0),
     retailPerPairCents: selection.product.retailPerPairCents + coatingChargeCents
       + confirmedModifiers.reduce((sum, modifier) => sum + modifier.chargeCents, 0),
     billingCodes,
@@ -356,6 +361,12 @@ function modifierChargeCents(modifier: ModifierOption, actual: number | undefine
     return Math.round(billable * modifier.priceCents * 2.2);
   }
   return addOnRetailCents(modifier.priceCents);
+}
+
+function modifierSourceCostCents(modifier: ModifierOption, actual: number | undefined): number {
+  if (modifier.unit !== "perDiopter") return modifier.priceCents;
+  const threshold = typeof modifier.autoTrigger?.value === "number" ? modifier.autoTrigger.value : 0;
+  return Math.round(Math.max(0, (actual ?? 0) - threshold) * modifier.priceCents);
 }
 
 function addOnRetailCents(sourcePriceCents: number): number {

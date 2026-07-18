@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { VisionPrescription } from "@medplum/fhirtypes";
 import React from "react";
 import { act, create, type ReactTestInstance } from "react-test-renderer";
-import { LensesOrderSurface } from "../src/components/LensesOrderSurface";
+import { AttachedLensPanel, LensesOrderSurface } from "../src/components/LensesOrderSurface";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
   COATING_OPTION_SEEDS,
@@ -103,6 +103,8 @@ test("VCodeResolver resolves verified per-eye power bands and progressive add-on
   if (progressive.status === "resolved") {
     assert.deepEqual(progressive.codes.map((code) => code.code), ["V2203", "V2781", "V2200", "V2781"]);
   }
+  assert.equal(resolveVCode("V2781", rx, true).status, "unverified");
+  assert.equal(resolveVCode("V21+V2781", rx, true).status, "unverified");
   assert.equal(resolveVCode("V21", { od: { sphere: 4.05 } }, true).status, "unverified");
   assert.equal(resolveVCode("V23", { od: { sphere: 0, cylinder: 2.12 } }, true).status, "unverified");
   const verifiedTrifocal = resolveVCode("V23", { od: { sphere: 0, cylinder: 2.25 } }, true);
@@ -135,6 +137,11 @@ test("order wiring snapshots the full selection, auto-fills the existing lab spe
     && candidate.material.key === "deluxe"
     && candidate.treatment.brand === "XTRActive",
   )!);
+  product.resource = {
+    resourceType: "ChargeItemDefinition",
+    status: "active",
+    url: "https://example.test/custom-lens-canonical",
+  };
   const modifiers = modifierLinesForSelection(MODIFIER_OPTION_SEEDS, "bp-digital", lensOrderRxFromVisionPrescription(TEST_RX));
   const selection: LensSelection = {
     product,
@@ -160,6 +167,13 @@ test("order wiring snapshots the full selection, auto-fills the existing lab spe
     "Base edging fee",
   ]);
   assert.equal(committed.chargeLines.find((line) => line.lens)?.feeCents, product.retailPerPairCents);
+  assert.equal(committed.attached.productCanonicalUrl, product.resource.url);
+  assert.equal(
+    committed.attached.wholesalePerPairCents,
+    product.wholesalePerPairCents
+      + selection.coating!.pricePerPairCents
+      + modifiers.reduce((sum, modifier) => sum + modifier.sourcePriceCents, 0),
+  );
   assert.ok(committed.chargeLines.slice(1).every((line) => !line.taxable));
   assert.ok(committed.chargeLines.slice(1).every((line) => opticalCollectionChargeFromDraft(line).definitionCanonical === committed.attached.productCanonicalUrl));
 
@@ -168,6 +182,24 @@ test("order wiring snapshots the full selection, auto-fills the existing lab spe
   selection.coating!.pricePerPairCents = 1;
   assert.equal(committed.attached.retailPerPairCents, snapshotRetail);
   assert.notEqual(committed.chargeLines.find((line) => line.lens)?.feeCents, 1);
+});
+
+test("commit boundary rejects unverified billing before creating charge identifiers", () => {
+  let idCalls = 0;
+  const selection: LensSelection = {
+    product: structuredClone(BP_DIGITAL_LENS_PRODUCTS[0]!),
+    modifiers: [],
+    fulfillment: "lab",
+    billing: resolveVCode(undefined, { od: { sphere: 0 } }, true),
+  };
+  assert.throws(
+    () => commitLensSelection([charge("lenses", "Lenses", false)], selection, () => {
+      idCalls += 1;
+      return "should-not-be-created";
+    }),
+    /UNVERIFIED/,
+  );
+  assert.equal(idCalls, 0);
 });
 
 test("guided BP path reaches a complete selection in four decisions with lab and coating pre-set", async () => {
@@ -225,6 +257,54 @@ test("claim-bound selection remains blocked when its catalog row has no verified
 
   assert.equal(buttonByText(renderer!.root, "Add to order").props.disabled, true);
   assert.match(nodeText(renderer!.root.findByProps({ className: "lenses-billing is-unverified" })), /UNVERIFIED/);
+});
+
+test("changing an attached selection preserves no coating, deselected modifiers, and locked mutation controls", async () => {
+  const product = structuredClone(BP_DIGITAL_LENS_PRODUCTS.find((candidate) =>
+    candidate.design.productName === "Alpha Comfort"
+    && candidate.material.key === "poly"
+    && candidate.treatment.brand === "Clear",
+  )!);
+  const attached = commitLensSelection(
+    [charge("lenses", "Lenses", false)],
+    { product, modifiers: [], fulfillment: "lab", billing: resolveVCode(undefined, {}, false) },
+    () => "attached-without-addons",
+  ).attached;
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <LensesOrderSurface
+        open
+        rx={TEST_RX}
+        initialSelection={attached}
+        products={BP_DIGITAL_LENS_PRODUCTS}
+        coatings={COATING_OPTION_SEEDS}
+        modifiers={MODIFIER_OPTION_SEEDS}
+        onCancel={() => undefined}
+        onCommit={() => undefined}
+      />,
+    );
+  });
+
+  assert.ok(renderer!.root.findAllByProps({ className: "lenses-coating is-selected" })
+    .some((node) => nodeText(node).startsWith("●None")));
+  assert.ok(renderer!.root.findAllByProps({ type: "checkbox" }).every((input) => input.props.checked === false));
+
+  let changed = false;
+  let unattached = false;
+  let panel: ReturnType<typeof create>;
+  act(() => {
+    panel = create(<AttachedLensPanel
+      lens={attached}
+      disabled
+      onChange={() => { changed = true; }}
+      onUnattach={() => { unattached = true; }}
+    />);
+  });
+  const lockedButtons = panel!.root.findAllByType("button");
+  assert.ok(lockedButtons.every((button) => button.props.disabled === true));
+  assert.equal(changed, false);
+  assert.equal(unattached, false);
 });
 
 function boundedProduct(patch: Partial<LensProduct> = {}): LensProduct {

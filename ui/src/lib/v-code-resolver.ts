@@ -118,6 +118,9 @@ function parseFamilyHint(familyHint: string | undefined):
     }
     return unverified(`UNVERIFIED: unsupported HCPCS lens family "${familyHint}".`);
   }
+  if (progressive && powerFamily !== "V22" && powerFamily !== "V23") {
+    return unverified("UNVERIFIED: V2781 requires a bifocal or trifocal base-code family.");
+  }
   if (!powerFamily && !progressive) return unverified(`UNVERIFIED: unsupported HCPCS lens family "${familyHint}".`);
   return { status: "parsed", powerFamily, progressive, exactBaseCode };
 }

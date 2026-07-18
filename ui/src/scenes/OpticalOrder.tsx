@@ -161,6 +161,7 @@ export function OpticalOrder() {
   const selectedLines = chargeLines.filter((line) => line.selected);
   const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
   const attachedLenses = chargeLines.find((line) => line.lens)?.lens;
+  const lensesLocked = Boolean(createdTaskId || labOrderReference);
   const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
   const canPrintLabSheet = Boolean(
     patientReference && signedVisionPrescription && header.lab.trim() && labOrderCapture.patientName.trim(),
@@ -322,6 +323,7 @@ export function OpticalOrder() {
   }
 
   function attachLenses(selection: LensSelection) {
+    if (lensesLocked) return;
     const committed = commitLensSelection(chargeLines, selection);
     setChargeLines(committed.chargeLines);
     setLabOrderCapture((current) => ({
@@ -344,6 +346,7 @@ export function OpticalOrder() {
   }
 
   function unattachLenses() {
+    if (lensesLocked) return;
     setChargeLines((lines) => unattachLensSelection(lines));
     setLabOrderCapture((current) => ({
       ...current,
@@ -561,12 +564,13 @@ export function OpticalOrder() {
                   <div className="text-sm font-semibold">Lenses</div>
                   <div className="text-xs text-white/45">Rx-aware Lens Catalog selection writes into this order's existing lens fields.</div>
                 </div>
-                <button className="sidebar-button" type="button" onClick={() => setLensesOpen(true)}>
+                <button className="sidebar-button" type="button" disabled={lensesLocked} onClick={() => setLensesOpen(true)}>
                   {attachedLenses ? "Change lenses" : "Add lenses"}
                 </button>
               </div>
               {attachedLenses ? <AttachedLensPanel
                 lens={attachedLenses}
+                disabled={lensesLocked}
                 onChange={() => setLensesOpen(true)}
                 onUnattach={unattachLenses}
               /> : null}
@@ -657,9 +661,10 @@ export function OpticalOrder() {
         {status ? <div className="rounded border border-emerald-500/40 bg-emerald-950/20 p-3 text-sm text-emerald-100">{status}</div> : null}
       </div>
       <LensesOrderSurface
-        open={lensesOpen}
+        open={lensesOpen && !lensesLocked}
         rx={visionPrescription}
         initialSelection={attachedLenses}
+        claimBound={false}
         onCancel={() => setLensesOpen(false)}
         onCommit={attachLenses}
       />

@@ -1,5 +1,5 @@
 import type { VisionPrescription } from "@medplum/fhirtypes";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { fhir } from "../lib/fhir";
 import {
   LENS_DESIGN_TYPES,
@@ -62,7 +62,23 @@ export function LensesOrderSurface({
   const [query, setQuery] = useState("");
   const [clickCount, setClickCount] = useState(0);
   const [loadError, setLoadError] = useState("");
+  const dialogRef = useRef<HTMLElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const rxContext = useMemo(() => lensOrderRxFromVisionPrescription(rx), [rx]);
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>(focusableSelector())?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      const returnTarget = returnFocusRef.current;
+      returnFocusRef.current = null;
+      returnTarget?.focus();
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,8 +105,12 @@ export function LensesOrderSurface({
         setDesignName(prior.design.productName);
         setMaterialKey(prior.material.key);
         setProductId(prior.id);
-        setCoatingId(initialSelection.coating?.id ?? houseDefault(nextCoatings, prior.lab)?.id ?? "");
-        setConfirmedModifiers(Object.fromEntries(initialSelection.modifiers.map((modifier) => [modifier.id, true])));
+        setCoatingId(initialSelection.coating?.id ?? "");
+        const selectedModifierIds = new Set(initialSelection.modifiers.map((modifier) => modifier.id));
+        setConfirmedModifiers(Object.fromEntries(
+          modifierLinesForSelection(nextModifiers, prior.lab, rxContext)
+            .map((modifier) => [modifier.id, selectedModifierIds.has(modifier.id)]),
+        ));
         setFulfillment(initialSelection.fulfillment);
       } else {
         setSelectedLab("bp-digital");
@@ -106,7 +126,7 @@ export function LensesOrderSurface({
       if (!cancelled) setLoadError(cause instanceof Error ? cause.message : String(cause));
     });
     return () => { cancelled = true; };
-  }, [open, initialSelection, suppliedProducts, suppliedCoatings, suppliedModifiers]);
+  }, [open, initialSelection, suppliedProducts, suppliedCoatings, suppliedModifiers, rxContext]);
 
   const validProducts = useMemo(
     () => products.filter((product) => lensProductEnvelopeCheck(product, rxContext).fits),
@@ -223,9 +243,39 @@ export function LensesOrderSurface({
     });
   }
 
+  function handleDialogKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector()) ?? [])];
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     <div className="lenses-surface-backdrop" role="presentation">
-      <section className="lenses-surface" role="dialog" aria-modal="true" aria-labelledby="lenses-title">
+      <section
+        ref={dialogRef}
+        className="lenses-surface"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lenses-title"
+        onKeyDown={handleDialogKeyDown}
+      >
         <header className="lenses-surface-header">
           <div>
             <span>Optical order</span>
@@ -340,7 +390,17 @@ export function LensesOrderSurface({
             </FlowRow>
 
             <FlowRow number="6" label="Coatings" note="House default pre-selected">
-              {concreteLab ? coatingOptions.map((coating) => (
+              {concreteLab ? <>
+                <button
+                  type="button"
+                  className={`lenses-coating${coatingId === "" ? " is-selected" : ""}`}
+                  onClick={() => count(() => setCoatingId(""))}
+                >
+                  <span aria-hidden>{coatingId === "" ? "●" : "○"}</span>
+                  <strong>None</strong>
+                  <em>{formatPair(0)}</em>
+                </button>
+                {coatingOptions.map((coating) => (
                 <button
                   key={coating.id}
                   type="button"
@@ -351,7 +411,8 @@ export function LensesOrderSurface({
                   <strong>{coating.name}{coating.isHouseDefault ? <small>house default</small> : null}</strong>
                   <em>{formatPair(addOnRetailCents(coating.pricePerPairCents))}</em>
                 </button>
-              )) : <RowPrompt text="Choose a design to return to its lab coating menu." />}
+                ))}
+              </> : <RowPrompt text="Choose a design to return to its lab coating menu." />}
             </FlowRow>
           </div>
 
@@ -395,10 +456,12 @@ export function LensesOrderSurface({
 
 export function AttachedLensPanel({
   lens,
+  disabled = false,
   onChange,
   onUnattach,
 }: {
   lens: AttachedLensSelection;
+  disabled?: boolean;
   onChange: () => void;
   onUnattach: () => void;
 }) {
@@ -411,8 +474,8 @@ export function AttachedLensPanel({
       <div><span>Coating</span><strong>{lens.coating?.name ?? "None"}</strong></div>
       <div><span>Fulfillment</span><strong>{lens.fulfillment === "lab" ? `Send to ${labLabel(lens.lab)}` : "In-house"}</strong></div>
       <div className="attached-lens-actions">
-        <button type="button" className="sidebar-button" onClick={onChange}>Change lenses</button>
-        <button type="button" className="sidebar-button" onClick={onUnattach}>Unattach lenses</button>
+        <button type="button" className="sidebar-button" disabled={disabled} onClick={onChange}>Change lenses</button>
+        <button type="button" className="sidebar-button" disabled={disabled} onClick={onUnattach}>Unattach lenses</button>
       </div>
     </section>
   );
@@ -495,4 +558,8 @@ function designTypeLabel(type: LensDesignType): string {
     lenticular: "Lenticular",
   };
   return labels[type];
+}
+
+function focusableSelector(): string {
+  return "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex='-1'])";
 }
