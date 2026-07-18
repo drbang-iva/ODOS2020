@@ -42,6 +42,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/billing/claims/patient-payments": [{ label: "Billing" }, { label: "Claims" }, { label: "Patient payments" }],
   "/billing/claims/reports/accounts-receivable": [{ label: "Billing" }, { label: "Reports" }, { label: "Accounts receivable" }],
   "/billing/statements": [{ label: "Billing" }, { label: "Statements" }],
+  "/financials/practice/margins": [{ label: "Financials" }, { label: "Practice" }, { label: "Margins" }],
   "/patient/insurance": [{ label: "Patients", href: "/clinic/patients" }, { label: "Insurance" }],
   "/patient/new": [{ label: "Patients", href: "/clinic/patients" }, { label: "New patient" }],
   "/patient/vision-benefits": [{ label: "Patients", href: "/clinic/patients" }, { label: "Vision benefits" }],
@@ -174,6 +175,7 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
           <DrawerLink icon="⚭" title="Integrations" detail="Frames Data" href="/admin/practice/settings/frames-data" onClick={route} />
         </DrawerGroup>
         <DrawerGroup label="Practice">
+          {roles.includes("practice-admin") && <DrawerLink icon="×" title="Margin ledger" detail="monthly product margin truth" href="/financials/practice/margins" onClick={route} />}
           <DrawerLink icon="≡" title="Audit log" detail="every access and change" href="/audit/log" onClick={route} />
           {roles.includes("practice-admin") && <DrawerLink icon="⚙" title="Administration / Settings" detail="practice configuration" href="/settings" onClick={route} />}
           <DrawerLink icon="◉" title="Clinic" detail="Clinic home and patients" href={CLINIC_PATH} onClick={route} />

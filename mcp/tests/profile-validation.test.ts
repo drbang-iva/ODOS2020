@@ -78,7 +78,6 @@ async function installProfilesForTest(): Promise<void> {
   }
 }
 
-// TODO(odos#11): integration tests skip when MEDPLUM env is unset. CI has no Medplum backend yet — see issue 11.
 test("profile validation accepts conformant v0.3 resources", async (t) => {
   const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
   const email = process.env.MEDPLUM_ADMIN_EMAIL;

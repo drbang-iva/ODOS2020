@@ -55,6 +55,9 @@ import { registerDeskRoutes } from "./desk/desk-routes.js";
 import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
+import { PostgresWenoDrugDatabaseStorage } from "./jobs/syncWenoDrugDatabase.js";
+import { PostgresWenoPharmacyDirectoryStorage } from "./jobs/syncWenoPharmacyDirectory.js";
+import { registerWenoSearchRoutes } from "./weno/weno-search-routes.js";
 import {
   createLabOrderDispatch,
   labOrderRoutingFromEnv,
@@ -6315,6 +6318,10 @@ async function main(): Promise<void> {
         planProfiles: {
           authenticate: authenticateStaffRoute,
         },
+        marginLedger: {
+          authenticate: authenticateStaffRoute,
+          targetMultiplierMilli: Number(process.env.ODOS_MARGIN_TARGET_MULTIPLIER_MILLI ?? "3000"),
+        },
       });
       registerDeskRoutes(app, {
         authenticateService: authenticateWithMedplum,
@@ -6391,6 +6398,12 @@ async function main(): Promise<void> {
       registerOfficeRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
+      });
+      registerWenoSearchRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        drugs: new PostgresWenoDrugDatabaseStorage(),
+        pharmacies: new PostgresWenoPharmacyDirectoryStorage(),
       });
 
       app.post("/claims/submit", async (req, res) => {

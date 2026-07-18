@@ -17,8 +17,10 @@
   "dependencies": {
     "@medplum/fhirtypes": "^4.0.0",
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "csv-parse": "^7.0.1",
     "express": "^4.21.1",
     "fast-xml-parser": "^5.3.8",
+    "fflate": "^0.8.3",
     "pg": "^8.20.0",
     "zod": "^3.23.8"
   },

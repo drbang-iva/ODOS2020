@@ -9,7 +9,7 @@ import { officeActingRole, registerOfficeRoutes } from "../src/office/office-rou
 const LAB_CATEGORY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/communication-category";
 const LAB_CATEGORY_CODE = "optical-lab-order";
 
-test("Office channel closes the real FHIR-store round trip and keeps Office and lab Communications disjoint", async () => {
+test("Office channel keeps Communications disjoint and counts only Office acknowledgements in mixed Provenance", async () => {
   const store = new InMemoryFhirStore();
   store.seed(
     practitioner("desk-1", "Hannah", "Desk"),
@@ -34,6 +34,17 @@ test("Office channel closes the real FHIR-store round trip and keeps Office and 
     assert.equal(clinicPoll.body.length, 1);
     assert.equal(clinicPoll.body[0].id, sent.body.id);
 
+    store.seed({
+      resourceType: "Provenance",
+      id: "unrelated-provenance",
+      target: [{ reference: `Communication/${sent.body.id}` }],
+      recorded: "2026-07-11T14:30:00.000Z",
+      activity: { coding: [{ system: OFFICE_ACK_SYSTEM, code: "unrelated" }] },
+      agent: [{ who: { reference: "Practitioner/doctor-2", display: "Dr. Nadia Cole" } }],
+    } satisfies Provenance);
+    const mixedPoll = await request(server.base, "/clinic/office/messages", "doctor");
+    assert.equal(mixedPoll.body[0].acknowledgement, undefined);
+
     const officeResources = await store.search<Communication>("Communication", { category: `${OFFICE_CATEGORY_SYSTEM}|${OFFICE_CATEGORY_CODE}` });
     const labResources = await store.search<Communication>("Communication", { category: `${LAB_CATEGORY_SYSTEM}|${LAB_CATEGORY_CODE}` });
     assert.deepEqual(officeResources.entry?.map((entry) => entry.resource?.id), [sent.body.id]);
@@ -50,7 +61,9 @@ test("Office channel closes the real FHIR-store round trip and keeps Office and 
     const secondClinicianAck = await request(server.base, `/clinic/office/messages/${sent.body.id}/ack`, "doctor-2", { method: "POST" });
     assert.equal(secondClinicianAck.response.status, 200);
     assert.deepEqual(secondClinicianAck.body.acknowledgement, acknowledged.body.acknowledgement);
-    assert.equal(store.resources.filter((resource) => resource.resourceType === "Provenance").length, 1);
+    const provenances = store.resources.filter((resource): resource is Provenance => resource.resourceType === "Provenance");
+    assert.equal(provenances.length, 2);
+    assert.equal(provenances.filter((event) => event.activity?.coding?.some((coding) => coding.system === OFFICE_ACK_SYSTEM && coding.code === OFFICE_ACK_CODE)).length, 1);
 
     const deskPoll = await request(server.base, "/desk/office/messages", "desk");
     assert.equal(deskPoll.response.status, 200);
@@ -146,10 +159,6 @@ class InMemoryFhirStore {
     if (resourceType === "Communication" && params.category) {
       const [system, code] = params.category.split("|");
       matches = matches.filter((resource) => (resource as Communication).category?.some((category) => category.coding?.some((coding) => coding.system === system && coding.code === code)));
-    }
-    if (resourceType === "Provenance" && params.activity) {
-      const [system, code] = params.activity.split("|");
-      matches = matches.filter((resource) => (resource as Provenance).activity?.coding?.some((coding) => coding.system === system && coding.code === code));
     }
     if (resourceType === "Provenance" && params.target) {
       const targets = params.target.split(",");

@@ -33,6 +33,27 @@ export type JsonPatchOperation =
 type TransactionResponse<T> = Bundle & { readonly __odosResponseType?: T };
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
+export interface WenoDrugSearchResult {
+  drugDbCode: string;
+  drugDbCodeQualifier: string;
+  quantityUnitOfMeasureCode: string;
+  psnDescription: string;
+  route: string;
+  strength: string;
+}
+
+export interface WenoPharmacySearchResult {
+  ncpdpId: string;
+  businessName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  onWeno: boolean;
+}
+
 async function pkce(): Promise<{ verifier: string; challenge: string }> {
   const verifierBytes = new Uint8Array(32);
   crypto.getRandomValues(verifierBytes);
@@ -205,6 +226,41 @@ export const fhir = {
     return (await res.json()) as Bundle<T>;
   },
 
+  async searchWenoFormulary(
+    baseUrl: string,
+    query: string,
+    signal?: AbortSignal,
+  ): Promise<WenoDrugSearchResult[]> {
+    const params = new URLSearchParams({ q: query });
+    return apiSearch<WenoDrugSearchResult>(
+      `${baseUrl}/weno/drugs/search?${params}`,
+      "Formulary",
+      signal,
+    );
+  },
+
+  async searchWenoDirectory(
+    baseUrl: string,
+    input: { state: string; place: string; searchType: "local-retail" | "mail-order" },
+    signal?: AbortSignal,
+  ): Promise<WenoPharmacySearchResult[]> {
+    const params = new URLSearchParams({
+      state: input.state,
+      searchType: input.searchType,
+      all: "true",
+    });
+    if (/^\d{5}(?:-?\d{4})?$/.test(input.place)) {
+      params.set("zip", input.place);
+    } else {
+      params.set("city", input.place);
+    }
+    return apiSearch<WenoPharmacySearchResult>(
+      `${baseUrl}/weno/pharmacies/search?${params}`,
+      "Directory",
+      signal,
+    );
+  },
+
   async read<T extends Resource>(
     resourceType: T["resourceType"],
     id: string,
@@ -276,6 +332,16 @@ export const fhir = {
     return responseBundle;
   },
 };
+
+async function apiSearch<T>(url: string, label: string, signal?: AbortSignal): Promise<T[]> {
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    signal,
+  });
+  const body = await res.json() as { results?: T[]; error?: string };
+  if (!res.ok) throw new Error(body.error ?? `${label} search failed: ${res.status}`);
+  return body.results ?? [];
+}
 
 function tokenClaims(accessToken: string | undefined): Record<string, unknown> | undefined {
   const payload = accessToken?.split(".")[1];
