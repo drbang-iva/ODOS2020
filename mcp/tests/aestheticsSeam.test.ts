@@ -140,6 +140,7 @@ test("three aesthetics procedure types are seeded as procedure-definition data a
     assert.equal(seed.discipline, "aesthetics");
     assert.equal(seed.sourceStatus, "verified-seed");
     assert.equal(seed.notBillReady, true);
+    assert.equal(seed.photo_posture, "compare");
     assert.equal(seed.fhirProcedureCode.coding, undefined);
     assert.equal("system" in seed.fhirProcedureCode && seed.fhirProcedureCode.system, AESTHETICS_PROCEDURE_TYPE_SYSTEM);
     const local = {
@@ -198,6 +199,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
       body: {
         action: "update-definition",
         display: "Local glabella neurotoxin",
+        photo_posture: "timeline",
       },
     },
   );
@@ -214,6 +216,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
   assert.equal(rows.length, 3);
   assert.equal(rows[0]?.display, "Local glabella neurotoxin");
   assert.equal(rows[0]?.sourceStatus, "local-practice");
+  assert.equal((rows[0] as unknown as { photo_posture: string }).photo_posture, "timeline");
   assert.deepEqual(fhir.writes[0], {
     resourceType: "Basic",
     source: PROCEDURE_DEFINITION_WRITE_HEADERS["X-ODOS-Source"],

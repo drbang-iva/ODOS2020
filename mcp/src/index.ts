@@ -75,6 +75,9 @@ import {
 } from "./clinical-graph/cup-disc-endpoint.js";
 import {
   handleImagingCaptureRequest,
+  handleLongitudinalImagingCaptureRequest,
+  handleLongitudinalImagingListRequest,
+  LONGITUDINAL_IMAGING_CONTENT_TYPE,
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
 import {
@@ -5516,6 +5519,10 @@ async function main(): Promise<void> {
         "/clinical-graph/imaging",
         express.json({ type: MANUAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
       );
+      app.use(
+        "/clinical-graph/longitudinal-imaging",
+        express.json({ type: LONGITUDINAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
+      );
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
@@ -6008,6 +6015,34 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/imaging failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "imaging upload route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingListRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging list failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging list failed" });
+        }
+      });
+
+      app.post("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingCaptureRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging capture failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging capture failed" });
         }
       });
 
