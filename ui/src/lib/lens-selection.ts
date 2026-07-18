@@ -45,6 +45,7 @@ export interface LensModifierLine {
   eye?: LensEye;
   prismTotal?: number;
   ruleLabel?: string;
+  retained?: boolean;
 }
 
 export interface LensSelection {
@@ -65,6 +66,7 @@ export interface AttachedLensModifierSnapshot {
   automatic: boolean;
   eye?: LensEye;
   prismTotal?: number;
+  ruleLabel?: string;
 }
 
 export interface AttachedLensSelection {
@@ -79,6 +81,7 @@ export interface AttachedLensSelection {
   coating?: {
     id: string;
     name: string;
+    category: CoatingOption["category"];
     sourcePriceCents: number;
     chargeCents: number;
   };
@@ -257,6 +260,7 @@ export function commitLensSelection(
       coating: {
         id: selection.coating.id,
         name: selection.coating.name,
+        category: selection.coating.category,
         sourcePriceCents: selection.coating.pricePerPairCents,
         chargeCents: coatingChargeCents,
       },
@@ -270,6 +274,7 @@ export function commitLensSelection(
       automatic: modifier.automatic,
       ...(modifier.eye ? { eye: modifier.eye } : {}),
       ...(modifier.prismTotal !== undefined ? { prismTotal: modifier.prismTotal } : {}),
+      ...(modifier.ruleLabel ? { ruleLabel: modifier.ruleLabel } : {}),
     })),
     fulfillment: selection.fulfillment,
     wholesalePerPairCents: selection.product.wholesalePerPairCents

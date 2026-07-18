@@ -307,6 +307,54 @@ test("changing an attached selection preserves no coating, deselected modifiers,
   assert.equal(unattached, false);
 });
 
+test("changing a selection retains inactive referenced coating and modifier snapshots", async () => {
+  const product = structuredClone(BP_DIGITAL_LENS_PRODUCTS.find((candidate) =>
+    candidate.design.productName === "Alpha Comfort"
+    && candidate.material.key === "poly"
+    && candidate.treatment.brand === "Clear",
+  )!);
+  const modifier = modifierLinesForSelection(
+    MODIFIER_OPTION_SEEDS,
+    "bp-digital",
+    lensOrderRxFromVisionPrescription(TEST_RX),
+  )[0]!;
+  const attached = commitLensSelection(
+    [charge("lenses", "Lenses", false)],
+    {
+      product,
+      coating: structuredClone(COATING_OPTION_SEEDS[0]!),
+      modifiers: [modifier],
+      fulfillment: "lab",
+      billing: resolveVCode(undefined, {}, false),
+    },
+    () => crypto.randomUUID(),
+  ).attached;
+  let recommitted: LensSelection | undefined;
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <LensesOrderSurface
+        open
+        rx={TEST_RX}
+        initialSelection={attached}
+        products={BP_DIGITAL_LENS_PRODUCTS}
+        coatings={COATING_OPTION_SEEDS.filter((coating) => coating.id !== attached.coating?.id)}
+        modifiers={[]}
+        onCancel={() => undefined}
+        onCommit={(selection) => { recommitted = selection; }}
+      />,
+    );
+  });
+
+  assert.match(nodeText(renderer!.root), /retained · no longer active/);
+  const retainedModifier = renderer!.root.findAllByProps({ type: "checkbox" })
+    .find((input) => input.props.disabled === true);
+  assert.equal(retainedModifier?.props.checked, true);
+  act(() => buttonByText(renderer!.root, "Add to order").props.onClick());
+  assert.equal(recommitted?.coating?.id, attached.coating?.id);
+  assert.deepEqual(recommitted?.modifiers.map((line) => line.id), [modifier.id]);
+});
+
 function boundedProduct(patch: Partial<LensProduct> = {}): LensProduct {
   return {
     ...structuredClone(BP_DIGITAL_LENS_PRODUCTS[0]!),

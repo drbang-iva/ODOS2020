@@ -134,7 +134,21 @@ export function LensesOrderSurface({
   );
   const concreteLab = selectedLab === "all" ? undefined : selectedLab;
   const selectedProduct = products.find((product) => product.id === productId);
-  const selectedCoating = coatings.find((coating) => coating.id === coatingId);
+  const activeSelectedCoating = coatings.find((coating) => coating.id === coatingId);
+  const retainedCoating = !activeSelectedCoating
+    && initialSelection
+    && selectedProduct?.id === initialSelection.productId
+    && coatingId === initialSelection.coating?.id
+      ? {
+          id: initialSelection.coating.id,
+          active: false,
+          lab: initialSelection.lab,
+          category: initialSelection.coating.category,
+          name: initialSelection.coating.name,
+          pricePerPairCents: initialSelection.coating.sourcePriceCents,
+        } satisfies CoatingOption
+      : undefined;
+  const selectedCoating = activeSelectedCoating ?? retainedCoating;
   const labOptions = unique(products.map((product) => product.lab));
   const typeProducts = validProducts.filter((product) =>
     product.design.type === designType && (!concreteLab || product.lab === concreteLab),
@@ -166,10 +180,21 @@ export function LensesOrderSurface({
   const rawModifierLines = selectedProduct
     ? modifierLinesForSelection(modifiers, selectedProduct.lab, rxContext)
     : [];
-  const modifierLines = rawModifierLines.map((line) => ({
+  const currentModifierIds = new Set(rawModifierLines.map((line) => line.id));
+  const retainedModifierLines: LensModifierLine[] = initialSelection && selectedProduct?.id === initialSelection.productId
+    ? initialSelection.modifiers
+        .filter((modifier) => !currentModifierIds.has(modifier.id))
+        .map((modifier) => ({
+          ...modifier,
+          lab: initialSelection.lab,
+          confirmed: true,
+          retained: true,
+        }))
+    : [];
+  const modifierLines = [...rawModifierLines.map((line) => ({
     ...line,
     confirmed: confirmedModifiers[line.id] ?? true,
-  }));
+  })), ...retainedModifierLines];
   const billing = resolveVCode(
     selectedProduct?.defaultBillingCodeFamily,
     { od: rxContext.od, os: rxContext.os },
@@ -400,6 +425,15 @@ export function LensesOrderSurface({
                   <strong>None</strong>
                   <em>{formatPair(0)}</em>
                 </button>
+                {retainedCoating ? <button
+                  type="button"
+                  className="lenses-coating is-selected"
+                  disabled
+                >
+                  <span aria-hidden>●</span>
+                  <strong>{retainedCoating.name}<small>retained · no longer active</small></strong>
+                  <em>{formatPair(addOnRetailCents(retainedCoating.pricePerPairCents))}</em>
+                </button> : null}
                 {coatingOptions.map((coating) => (
                 <button
                   key={coating.id}
@@ -498,7 +532,7 @@ function SummaryLine({ label, cents }: { label: string; cents: number }) {
 }
 
 function ModifierSummaryLine({ line, onChange }: { line: LensModifierLine; onChange: (confirmed: boolean) => void }) {
-  return <label className="lenses-summary-line is-modifier"><span><input type="checkbox" checked={line.confirmed} onChange={(event) => onChange(event.target.checked)} />{line.automatic ? <small>auto</small> : null}{line.ruleLabel ?? line.name}</span><strong>{formatPair(line.chargeCents)}</strong></label>;
+  return <label className="lenses-summary-line is-modifier"><span><input type="checkbox" checked={line.confirmed} disabled={line.retained} onChange={(event) => onChange(event.target.checked)} />{line.automatic ? <small>auto</small> : null}{line.retained ? <small>retained</small> : null}{line.ruleLabel ?? line.name}</span><strong>{formatPair(line.chargeCents)}</strong></label>;
 }
 
 function houseDefault(options: readonly CoatingOption[], lab: string): CoatingOption | undefined {
