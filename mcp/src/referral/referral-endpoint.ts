@@ -10,12 +10,11 @@ import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignmen
 import { ReferralDefaultsStore } from "./referral-defaults-store.js";
 import {
   readReferralIncludeList,
+  ReferralSendConflictError,
   ReferralService,
   type ReferralFhirClient,
   type ReferralIncludeList,
 } from "./referral-service.js";
-
-export const REFERRAL_WRITE_HEADERS = { "X-ODOS-Source": "mcp/referral-send" } as const;
 
 export interface ReferralEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<{
@@ -127,34 +126,44 @@ export async function handleReferralArtifactRequest(
     };
   }
 
-  const sentServiceRequest = await service.markReferralSent(
-    serviceRequest,
-    parsedBody.data.editedLetterBody,
-  );
-  const artifact = await service.assembleReferralArtifact(referralId);
-  const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const provenance = await context.staff.fhir.create<Provenance>(buildProvenance({
-    targetReferences: [serviceRequestReference],
-    occurredDateTime: recordedAt,
-    recorded: recordedAt,
-    activityCode: "READ",
-    activityDisplay: "Disclose referral",
-    agents: [{
-      typeCode: "transmitter",
-      typeDisplay: "Transmitter",
-      whoReference: context.staff.staffReference,
-    }],
-    entityValues: disclosedIncludeListEntities(readReferralIncludeList(sentServiceRequest)),
-  }), REFERRAL_WRITE_HEADERS);
+  try {
+    const preparedServiceRequest = await service.prepareReferralSend(
+      serviceRequest,
+      parsedBody.data.editedLetterBody,
+    );
+    const artifact = await service.assembleReferralArtifactFrom(preparedServiceRequest);
+    const recordedAt = deps.now?.() ?? new Date().toISOString();
+    const provenance: Provenance = buildProvenance({
+      targetReferences: [serviceRequestReference],
+      occurredDateTime: recordedAt,
+      recorded: recordedAt,
+      activityCode: "READ",
+      activityDisplay: "Disclose referral",
+      agents: [{
+        typeCode: "transmitter",
+        typeDisplay: "Transmitter",
+        whoReference: context.staff.staffReference,
+      }],
+      entityValues: disclosedIncludeListEntities(readReferralIncludeList(preparedServiceRequest)),
+    });
+    const committed = await service.commitReferralSend(preparedServiceRequest, provenance);
 
-  return {
-    status: 200,
-    body: {
-      serviceRequestReference,
-      artifact,
-      ...(provenance.id ? { provenanceReference: `Provenance/${provenance.id}` } : {}),
-    },
-  };
+    return {
+      status: 200,
+      body: {
+        serviceRequestReference,
+        artifact,
+        ...(committed.provenanceReference
+          ? { provenanceReference: committed.provenanceReference }
+          : {}),
+      },
+    };
+  } catch (error) {
+    if (error instanceof ReferralSendConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 export async function handleReadReferralDefaultsRequest(

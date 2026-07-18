@@ -22,7 +22,11 @@ import {
   type ReferralEndpointDeps,
 } from "../src/referral/referral-endpoint.js";
 import { registerReferralRoutes } from "../src/referral/referral-routes.js";
-import { SYSTEM_REFERRAL_INCLUDE_DEFAULTS } from "../src/referral/referral-defaults-store.js";
+import {
+  buildReferralDefaultsResource,
+  ReferralDefaultsStore,
+  SYSTEM_REFERRAL_INCLUDE_DEFAULTS,
+} from "../src/referral/referral-defaults-store.js";
 import {
   buildReferralServiceRequest,
   REFERRAL_LETTER_BODY_EXTENSION_URL,
@@ -168,6 +172,52 @@ test("preview is write-free while send records one clinician-attributed disclosu
     "Referral history_count: 2",
   ]);
   assert.equal((sent.body as { provenanceReference: string }).provenanceReference, `Provenance/${provenance.id}`);
+
+  const duplicateSend = await handleReferralArtifactRequest(endpointDeps, {
+    ...previewInput,
+    action: "send",
+    body: { editedLetterBody: "Overwriting retry" },
+  });
+  assert.equal(duplicateSend.status, 409);
+  assert.equal(fhir.provenances.length, 1);
+  assert.equal(referralLetterBody(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")), sentLetter);
+});
+
+test("failed artifact assembly leaves the edited referral draft and creates no Provenance", async () => {
+  const fhir = seededFhir();
+  fhir.failNextSearch("Encounter");
+
+  await assert.rejects(handleReferralArtifactRequest(deps(fhir), {
+    authHeader: AUTH,
+    patientId: "p1",
+    referralId: "referral-1",
+    action: "send",
+    body: { editedLetterBody: "Edited draft before failed assembly" },
+  }), /Simulated Encounter search failure/);
+
+  const persisted = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
+  assert.equal(persisted.status, "draft");
+  assert.equal(referralLetterBody(persisted), "Edited draft before failed assembly");
+  assert.equal(fhir.provenances.length, 0);
+});
+
+test("stale final send transaction returns conflict without activation or Provenance", async () => {
+  const fhir = seededFhir();
+  fhir.failNextTransaction(412);
+
+  const result = await handleReferralArtifactRequest(deps(fhir), {
+    authHeader: AUTH,
+    patientId: "p1",
+    referralId: "referral-1",
+    action: "send",
+    body: { editedLetterBody: "Edited draft before stale commit" },
+  });
+
+  assert.equal(result.status, 409);
+  const persisted = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
+  assert.equal(persisted.status, "draft");
+  assert.equal(referralLetterBody(persisted), "Edited draft before stale commit");
+  assert.equal(fhir.provenances.length, 0);
 });
 
 test("preview rejects a referral whose subject does not match the compartment-scoped route patient", async () => {
@@ -251,6 +301,27 @@ test("referral defaults require authentication and chart.write", async () => {
   assert.equal(unauthenticated.status, 401);
   assert.equal(forbidden.status, 403);
   assert.equal(fhir.resources("Basic").length, 0);
+});
+
+test("referral defaults complete a save when conditional create finds a concurrent resource", async () => {
+  const fhir = seededFhir();
+  const providerReference = "Practitioner/clinician-1";
+  fhir.put({
+    ...buildReferralDefaultsResource(providerReference, SYSTEM_REFERRAL_INCLUDE_DEFAULTS),
+    id: "concurrent-defaults",
+  });
+  fhir.hideNextBasicSearch();
+  const requested: ReferralIncludeList = {
+    ...SYSTEM_REFERRAL_INCLUDE_DEFAULTS,
+    images: true,
+    history_count: 5,
+  };
+
+  const saved = await new ReferralDefaultsStore(fhir).save(providerReference, requested);
+
+  assert.deepEqual(saved, requested);
+  assert.equal(fhir.resources("Basic").length, 1);
+  assert.equal(fhir.resources("Basic")[0]?.id, "concurrent-defaults");
 });
 
 test("registered HTTP routes expose defaults, create, preview, and distinct send actions", async () => {
@@ -358,13 +429,31 @@ function deps(
 class MemoryReferralFhir implements ReferralFhirClient {
   private readonly rows = new Map<string, Resource>();
   private sequence = 0;
+  private hiddenBasicSearches = 0;
+  private failedSearchResourceType: Resource["resourceType"] | undefined;
+  private failedTransactionStatus: 409 | 412 | undefined;
   readonly created: Resource[] = [];
   readonly provenances: Provenance[] = [];
   readonly readKeys: string[] = [];
 
   put(resource: Resource): void {
     if (!resource.id) throw new Error("Seeded resources require an id.");
-    this.rows.set(`${resource.resourceType}/${resource.id}`, structuredClone(resource));
+    this.rows.set(`${resource.resourceType}/${resource.id}`, structuredClone({
+      ...resource,
+      meta: { ...resource.meta, versionId: resource.meta?.versionId ?? "1" },
+    }));
+  }
+
+  hideNextBasicSearch(): void {
+    this.hiddenBasicSearches += 1;
+  }
+
+  failNextSearch(resourceType: Resource["resourceType"]): void {
+    this.failedSearchResourceType = resourceType;
+  }
+
+  failNextTransaction(status: 409 | 412): void {
+    this.failedTransactionStatus = status;
   }
 
   resources(resourceType: Resource["resourceType"]): Resource[] {
@@ -384,6 +473,14 @@ class MemoryReferralFhir implements ReferralFhirClient {
     resourceType: T["resourceType"],
     params: FhirSearchParams = {},
   ): Promise<Bundle<T>> {
+    if (resourceType === this.failedSearchResourceType) {
+      this.failedSearchResourceType = undefined;
+      throw new Error(`Simulated ${resourceType} search failure`);
+    }
+    if (resourceType === "Basic" && this.hiddenBasicSearches > 0) {
+      this.hiddenBasicSearches -= 1;
+      return { resourceType: "Bundle", type: "searchset", entry: [] };
+    }
     const query = searchRecord(params);
     const resources = [...this.rows.values()]
       .filter((resource) => resource.resourceType === resourceType)
@@ -395,10 +492,20 @@ class MemoryReferralFhir implements ReferralFhirClient {
 
   async create<T extends Resource>(
     resource: T,
-    _extraHeaders?: Record<string, string>,
+    extraHeaders: Record<string, string> = {},
   ): Promise<T> {
+    const conditionalIdentifier = extraHeaders["If-None-Exist"]?.match(/^identifier=(.+)$/)?.[1];
+    if (resource.resourceType === "Basic" && conditionalIdentifier) {
+      const existing = [...this.rows.values()].find((candidate) =>
+        resourceHasIdentifier(candidate, conditionalIdentifier));
+      if (existing) return structuredClone(existing) as T;
+    }
     const id = resource.id ?? `${resource.resourceType.toLowerCase()}-${++this.sequence}`;
-    const stored = structuredClone({ ...resource, id }) as T;
+    const stored = structuredClone({
+      ...resource,
+      id,
+      meta: { ...resource.meta, versionId: "1" },
+    }) as T;
     this.rows.set(`${resource.resourceType}/${id}`, stored);
     this.created.push(stored);
     if (stored.resourceType === "Provenance") this.provenances.push(stored as Provenance);
@@ -409,14 +516,67 @@ class MemoryReferralFhir implements ReferralFhirClient {
     resourceType: T["resourceType"],
     id: string,
     resource: T,
-    _extraHeaders?: Record<string, string>,
+    extraHeaders: Record<string, string> = {},
   ): Promise<T> {
     assert.equal(resource.resourceType, resourceType);
     assert.equal(resource.id, id);
-    if (!this.rows.has(`${resourceType}/${id}`)) throw new Error(`Missing ${resourceType}/${id}`);
-    const stored = structuredClone(resource);
+    const current = this.rows.get(`${resourceType}/${id}`);
+    if (!current) throw new Error(`Missing ${resourceType}/${id}`);
+    const ifMatch = extraHeaders["If-Match"]?.match(/"(.+)"/)?.[1];
+    if (ifMatch && ifMatch !== current.meta?.versionId) throw fhirConflict(412);
+    const stored = structuredClone({
+      ...resource,
+      meta: {
+        ...resource.meta,
+        versionId: String(Number(current.meta?.versionId ?? "0") + 1),
+      },
+    }) as T;
     this.rows.set(`${resourceType}/${id}`, stored);
     return structuredClone(stored);
+  }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    if (this.failedTransactionStatus) {
+      const status = this.failedTransactionStatus;
+      this.failedTransactionStatus = undefined;
+      throw fhirConflict(status);
+    }
+    const serviceRequest = bundle.entry?.[0]?.resource;
+    const provenance = bundle.entry?.[1]?.resource;
+    if (serviceRequest?.resourceType !== "ServiceRequest" || !serviceRequest.id) {
+      throw new Error("Expected a ServiceRequest transaction update.");
+    }
+    if (provenance?.resourceType !== "Provenance") {
+      throw new Error("Expected a Provenance transaction create.");
+    }
+    const current = this.rows.get(`ServiceRequest/${serviceRequest.id}`);
+    if (!current) throw new Error(`Missing ServiceRequest/${serviceRequest.id}`);
+    const ifMatch = bundle.entry?.[0]?.request?.ifMatch?.match(/"(.+)"/)?.[1];
+    if (ifMatch !== current.meta?.versionId) throw fhirConflict(412);
+
+    const serviceRequestVersion = String(Number(current.meta?.versionId ?? "0") + 1);
+    const storedServiceRequest = structuredClone({
+      ...serviceRequest,
+      meta: { ...serviceRequest.meta, versionId: serviceRequestVersion },
+    });
+    const provenanceId = provenance.id ?? `provenance-${++this.sequence}`;
+    const storedProvenance = structuredClone({
+      ...provenance,
+      id: provenanceId,
+      meta: { ...provenance.meta, versionId: "1" },
+    });
+    this.rows.set(`ServiceRequest/${serviceRequest.id}`, storedServiceRequest);
+    this.rows.set(`Provenance/${provenanceId}`, storedProvenance);
+    this.created.push(storedProvenance);
+    this.provenances.push(storedProvenance);
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [
+        { response: { status: "200", location: `ServiceRequest/${serviceRequest.id}/_history/${serviceRequestVersion}` } },
+        { response: { status: "201", location: `Provenance/${provenanceId}/_history/1` } },
+      ],
+    };
   }
 }
 
@@ -484,4 +644,8 @@ function resourceHasIdentifier(resource: Resource, token: string): boolean {
   const [system, value] = token.split("|");
   return resource.identifier?.some((identifier) =>
     identifier.system === system && identifier.value === value) ?? false;
+}
+
+function fhirConflict(status: 409 | 412): Error & { status: number } {
+  return Object.assign(new Error(`FHIR ${status}`), { status });
 }

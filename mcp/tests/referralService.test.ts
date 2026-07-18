@@ -362,11 +362,15 @@ class MemoryFhir implements ReferralFhirClient {
     resourceType: T["resourceType"],
     id: string,
     resource: T,
+    extraHeaders: Record<string, string> = {},
   ): Promise<T> {
     if (!resource.id) throw new Error("Memory update requires an id.");
     assert.equal(resource.resourceType, resourceType);
     assert.equal(resource.id, id);
     const current = this.rows.get(`${resourceType}/${id}`);
+    if (!current) throw new Error(`Missing ${resourceType}/${id}`);
+    const ifMatch = extraHeaders["If-Match"]?.match(/"(.+)"/)?.[1];
+    if (ifMatch && ifMatch !== current.meta?.versionId) throw fhirConflict(412);
     const versionId = String(Number(current?.meta?.versionId ?? "0") + 1);
     const stored = structuredClone({
       ...resource,
@@ -374,6 +378,41 @@ class MemoryFhir implements ReferralFhirClient {
     }) as T;
     this.rows.set(`${resourceType}/${id}`, stored);
     return structuredClone(stored);
+  }
+
+  async executeTransaction(bundle: Bundle): Promise<Bundle> {
+    const serviceRequest = bundle.entry?.[0]?.resource;
+    const provenance = bundle.entry?.[1]?.resource;
+    if (serviceRequest?.resourceType !== "ServiceRequest" || !serviceRequest.id) {
+      throw new Error("Expected a ServiceRequest transaction update.");
+    }
+    if (provenance?.resourceType !== "Provenance") {
+      throw new Error("Expected a Provenance transaction create.");
+    }
+    const current = this.rows.get(`ServiceRequest/${serviceRequest.id}`);
+    if (!current) throw new Error(`Missing ServiceRequest/${serviceRequest.id}`);
+    const ifMatch = bundle.entry?.[0]?.request?.ifMatch?.match(/"(.+)"/)?.[1];
+    if (ifMatch !== current.meta?.versionId) throw fhirConflict(412);
+    const storedServiceRequest = structuredClone({
+      ...serviceRequest,
+      meta: {
+        ...serviceRequest.meta,
+        versionId: String(Number(current.meta?.versionId ?? "0") + 1),
+        lastUpdated: NOW,
+      },
+    });
+    const provenanceId = provenance.id ?? `provenance-${++this.sequence}`;
+    const storedProvenance = structuredClone({ ...provenance, id: provenanceId });
+    this.rows.set(`ServiceRequest/${serviceRequest.id}`, storedServiceRequest);
+    this.rows.set(`Provenance/${provenanceId}`, storedProvenance);
+    return {
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [
+        { response: { status: "200", location: `ServiceRequest/${serviceRequest.id}/_history/${storedServiceRequest.meta.versionId}` } },
+        { response: { status: "201", location: `Provenance/${provenanceId}/_history/1` } },
+      ],
+    };
   }
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -549,4 +588,8 @@ function summaryResource(resource: Resource, summary: boolean): Resource {
   const content = { ...resource.content };
   delete content.data;
   return { ...resource, content };
+}
+
+function fhirConflict(status: 409 | 412): Error & { status: number } {
+  return Object.assign(new Error(`FHIR ${status}`), { status });
 }

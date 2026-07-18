@@ -80,7 +80,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
-  "src/referral/referral-service.ts:282": [
+  "src/referral/referral-service.ts:342": [
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],

@@ -14,6 +14,7 @@ import type {
   Patient,
   Practitioner,
   PractitionerRole,
+  Provenance,
   Resource,
   ServiceRequest,
 } from "@medplum/fhirtypes";
@@ -58,9 +59,12 @@ export interface ReferralFhirClient {
     resource: T,
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export type ReferralPriority = "routine" | "urgent" | "stat";
+
+export class ReferralSendConflictError extends Error {}
 
 export interface CreateReferralInput {
   subjectReference: string;
@@ -212,23 +216,71 @@ export class ReferralService {
     }), { "X-ODOS-Source": "mcp/referral-send" });
   }
 
-  async markReferralSent(
+  async prepareReferralSend(
     serviceRequest: ServiceRequest,
     editedLetterBody?: string,
   ): Promise<ServiceRequest> {
-    if (!serviceRequest.id) throw new Error("Referral ServiceRequest must have an id before send.");
-    const extension = editedLetterBody === undefined
-      ? serviceRequest.extension
-      : replaceExtension(serviceRequest.extension, {
-          url: REFERRAL_LETTER_BODY_EXTENSION_URL,
-          valueString: editedLetterBody,
-        });
-    return this.fhir.update<ServiceRequest>(
-      "ServiceRequest",
-      serviceRequest.id,
-      { ...serviceRequest, status: "active", extension },
-      { "X-ODOS-Source": "mcp/referral-send" },
-    );
+    assertDraftReferral(serviceRequest);
+    if (editedLetterBody === undefined) return serviceRequest;
+    const id = referralId(serviceRequest);
+    const versionId = referralVersionId(serviceRequest);
+    try {
+      return await this.fhir.update<ServiceRequest>(
+        "ServiceRequest",
+        id,
+        {
+          ...serviceRequest,
+          extension: replaceExtension(serviceRequest.extension, {
+            url: REFERRAL_LETTER_BODY_EXTENSION_URL,
+            valueString: editedLetterBody,
+          }),
+        },
+        {
+          "X-ODOS-Source": "mcp/referral-send",
+          "If-Match": `W/"${versionId}"`,
+        },
+      );
+    } catch (error) {
+      throwReferralConflict(error);
+    }
+  }
+
+  async commitReferralSend(
+    serviceRequest: ServiceRequest,
+    provenance: Provenance,
+  ): Promise<{ serviceRequest: ServiceRequest; provenanceReference?: string }> {
+    assertDraftReferral(serviceRequest);
+    const id = referralId(serviceRequest);
+    const versionId = referralVersionId(serviceRequest);
+    const activeServiceRequest: ServiceRequest = { ...serviceRequest, status: "active" };
+    let response: Bundle;
+    try {
+      response = await this.fhir.executeTransaction({
+        resourceType: "Bundle",
+        type: "transaction",
+        entry: [
+          {
+            resource: activeServiceRequest,
+            request: {
+              method: "PUT",
+              url: `ServiceRequest/${id}`,
+              ifMatch: `W/"${versionId}"`,
+            },
+          },
+          {
+            resource: provenance,
+            request: { method: "POST", url: "Provenance" },
+          },
+        ],
+      }, { "X-ODOS-Source": "mcp/referral-send" });
+    } catch (error) {
+      throwReferralConflict(error);
+    }
+    const provenanceId = transactionResponseId(response, 1, "Provenance");
+    return {
+      serviceRequest: activeServiceRequest,
+      ...(provenanceId ? { provenanceReference: `Provenance/${provenanceId}` } : {}),
+    };
   }
 
   async assembleReferralArtifact(
@@ -236,6 +288,14 @@ export class ReferralService {
     options: { editedLetterBody?: string } = {},
   ): Promise<string> {
     const serviceRequest = await this.fhir.read<ServiceRequest>("ServiceRequest", serviceRequestId);
+    return this.assembleReferralArtifactFrom(serviceRequest, options);
+  }
+
+  async assembleReferralArtifactFrom(
+    serviceRequest: ServiceRequest,
+    options: { editedLetterBody?: string } = {},
+  ): Promise<string> {
+    const serviceRequestId = referralId(serviceRequest);
     const includeList = readReferralIncludeList(serviceRequest);
     const patientId = assertReference(serviceRequest.subject.reference, "Patient");
     const encounterId = serviceRequest.encounter?.reference
@@ -382,6 +442,42 @@ function replaceExtension(
 ): Extension[] {
   const retained = (extensions ?? []).filter((extension) => extension.url !== replacement.url);
   return [...retained, replacement];
+}
+
+function assertDraftReferral(serviceRequest: ServiceRequest): void {
+  if (serviceRequest.status !== "draft") {
+    throw new ReferralSendConflictError("Only a draft referral can be sent.");
+  }
+}
+
+function referralId(serviceRequest: ServiceRequest): string {
+  if (!serviceRequest.id) throw new Error("Referral ServiceRequest must have an id before send.");
+  return serviceRequest.id;
+}
+
+function referralVersionId(serviceRequest: ServiceRequest): string {
+  const versionId = serviceRequest.meta?.versionId;
+  if (!versionId) throw new Error("Referral ServiceRequest must have a version before send.");
+  return versionId;
+}
+
+function throwReferralConflict(error: unknown): never {
+  const status = (error as { status?: unknown })?.status;
+  const message = error instanceof Error ? error.message : String(error);
+  if (status === 409 || status === 412 || /FHIR (409|412)\b/.test(message)) {
+    throw new ReferralSendConflictError("The referral changed before send; reopen it and try again.");
+  }
+  throw error;
+}
+
+function transactionResponseId(
+  response: Bundle,
+  entryIndex: number,
+  resourceType: string,
+): string | undefined {
+  const entry = response.entry?.[entryIndex];
+  if (entry?.resource?.resourceType === resourceType && entry.resource.id) return entry.resource.id;
+  return entry?.response?.location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
 }
 
 function validateIncludeList(includeList: ReferralIncludeList): void {

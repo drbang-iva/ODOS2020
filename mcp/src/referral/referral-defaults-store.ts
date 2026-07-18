@@ -46,18 +46,30 @@ export class ReferralDefaultsStore {
   ): Promise<ReferralIncludeList> {
     const existing = await this.readResource(providerReference);
     const resource = buildReferralDefaultsResource(providerReference, includeList, existing?.resource);
-    const persisted = existing?.resource.id
-      ? await this.fhir.update(
-          "Basic",
-          existing.resource.id,
-          resource,
-          REFERRAL_INCLUDE_DEFAULTS_WRITE_HEADERS,
-        )
-      : await this.fhir.create(resource, {
-          ...REFERRAL_INCLUDE_DEFAULTS_WRITE_HEADERS,
-          "If-None-Exist": `identifier=${REFERRAL_INCLUDE_DEFAULTS_IDENTIFIER_SYSTEM}|${providerReference}`,
-        });
-    return parseReferralDefaultsResource(persisted, providerReference);
+    if (existing?.resource.id) {
+      const updated = await this.fhir.update(
+        "Basic",
+        existing.resource.id,
+        resource,
+        REFERRAL_INCLUDE_DEFAULTS_WRITE_HEADERS,
+      );
+      return parseReferralDefaultsResource(updated, providerReference);
+    }
+
+    const created = await this.fhir.create(resource, {
+      ...REFERRAL_INCLUDE_DEFAULTS_WRITE_HEADERS,
+      "If-None-Exist": `identifier=${REFERRAL_INCLUDE_DEFAULTS_IDENTIFIER_SYSTEM}|${providerReference}`,
+    });
+    const createdIncludeList = parseReferralDefaultsResource(created, providerReference);
+    if (includeListsEqual(createdIncludeList, includeList)) return createdIncludeList;
+    if (!created.id) throw new Error("Conditional referral defaults create returned a resource without an id.");
+    const updated = await this.fhir.update(
+      "Basic",
+      created.id,
+      buildReferralDefaultsResource(providerReference, includeList, created),
+      REFERRAL_INCLUDE_DEFAULTS_WRITE_HEADERS,
+    );
+    return parseReferralDefaultsResource(updated, providerReference);
   }
 
   private async readResource(providerReference: string): Promise<{
@@ -130,4 +142,14 @@ function assertProviderReference(value: string): void {
   if (!/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]{1,64}$/.test(value)) {
     throw new Error("A provider reference is required for referral include defaults.");
   }
+}
+
+function includeListsEqual(left: ReferralIncludeList, right: ReferralIncludeList): boolean {
+  return left.letter === right.letter
+    && left.demographics === right.demographics
+    && left.history === right.history
+    && left.clinical_summary === right.clinical_summary
+    && left.images === right.images
+    && left.hipaa_cover_sheet === right.hipaa_cover_sheet
+    && left.history_count === right.history_count;
 }
