@@ -3,7 +3,6 @@
   "ui/src/components/AppShell.tsx": 8,
   "ui/src/components/CdsCardPanel.tsx": 8,
   "ui/src/components/charting/AestheticsConsentSection.tsx": 8,
-  "ui/src/components/charting/AssessmentSection.tsx": 14,
   "ui/src/components/charting/AutoRefractionSection.tsx": 39,
   "ui/src/components/charting/CupDiscSection.tsx": 24,
   "ui/src/components/charting/CustomFieldEditor.tsx": 21,

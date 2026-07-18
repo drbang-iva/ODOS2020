@@ -56,6 +56,9 @@ const INITIAL_FORM: FormState = {
   tier: "principal",
 };
 
+const INPUT_CLASS = "h-10 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none transition placeholder:text-[color:var(--odos-faint)] focus:border-[color:var(--odos-accent-border)]";
+const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none transition hover:bg-[color:var(--odos-accent-tint-lo)] focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:cursor-not-allowed disabled:opacity-50";
+
 export function AssessmentSection({ patientReference, encounterReference, onSaved }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
@@ -365,75 +368,75 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       <div className="max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-white">Assessment</h2>
-            <p className="mt-1 text-sm text-white/45">
+            <h2 className="text-lg font-semibold text-[color:var(--odos-text)]">Assessment</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">
               Visit diagnoses are separate from the longitudinal problem list.
             </p>
           </div>
-          <span className="rounded border border-white/10 px-3 py-2 text-xs text-white/45">
+          <span className="rounded border border-[color:var(--odos-line)] px-3 py-2 text-xs text-[color:var(--odos-muted)]">
             {sortedConditions.length} visit diagnoses
           </span>
         </div>
 
         {canShowEditing && (
-          <div data-testid="diagnosis-tier-tagger" className="mt-5 rounded border border-white/10 bg-bg-panel/70 p-4">
+          <div data-testid="diagnosis-tier-tagger" className="mt-5 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-[150px_150px_1fr_1fr_auto]">
-              <select value={form.tier} onChange={(event) => setForm({ ...form, tier: event.target.value as DiagnosisTierChoice })} className="sidebar-input">
+              <select value={form.tier} onChange={(event) => setForm({ ...form, tier: event.target.value as DiagnosisTierChoice })} className={INPUT_CLASS}>
                 <option value="principal">Principal</option>
                 <option value="secondary">Secondary</option>
               </select>
-              <select value={form.laterality} onChange={(event) => setForm({ ...form, laterality: event.target.value as EyeChoice })} className="sidebar-input">
+              <select value={form.laterality} onChange={(event) => setForm({ ...form, laterality: event.target.value as EyeChoice })} className={INPUT_CLASS}>
                 <option value="OD">OD</option>
                 <option value="OS">OS</option>
                 <option value="OU">OU</option>
               </select>
-              <input value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} className="sidebar-input" placeholder="ICD-10" />
-              <input value={form.display} onChange={(event) => setForm({ ...form, display: event.target.value })} className="sidebar-input" placeholder="Diagnosis label" />
-              <button disabled={busy !== null || !form.code.trim()} onClick={addDiagnosis} className="sidebar-button">
+              <input value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} className={INPUT_CLASS} placeholder="ICD-10" />
+              <input value={form.display} onChange={(event) => setForm({ ...form, display: event.target.value })} className={INPUT_CLASS} placeholder="Diagnosis label" />
+              <button disabled={busy !== null || !form.code.trim()} onClick={addDiagnosis} className={BUTTON_CLASS}>
                 Add diagnosis
               </button>
             </div>
           </div>
         )}
 
-        {error && <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">{error}</div>}
+        {error && <div className="mt-4 rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-alert)]">{error}</div>}
 
         {canShowEditing && protocolDiagnosis && protocolOffer && (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded border border-brand/35 bg-brand/10 p-4">
+          <div className="mt-4 flex items-center justify-between gap-3 rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] p-4">
             <div>
-              <div className="text-sm font-semibold text-white">Glaucoma Suspect — Initial Workup</div>
-              <div className="mt-1 text-xs text-white/55">Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.</div>
+              <div className="text-sm font-semibold text-[color:var(--odos-text)]">Glaucoma Suspect — Initial Workup</div>
+              <div className="mt-1 text-xs text-[color:var(--odos-muted)]">Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.</div>
             </div>
-            <button ref={protocolTriggerRef} disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className="sidebar-button">
+            <button ref={protocolTriggerRef} disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className={BUTTON_CLASS}>
               {protocolApplied ? "Un-apply" : "Apply protocol"}
             </button>
           </div>
         )}
 
         {protocolSheetOpen && protocolOffer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Protocol staging sheet">
-            <div ref={protocolDialogRef} tabIndex={-1} className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
-              <h3 className="text-lg font-semibold text-white">{protocolOffer.title}</h3>
-              <p className="mt-1 text-sm text-white/50">Review each proposed item before committing it to this encounter.</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--odos-chart-scrim)] p-4" role="dialog" aria-modal="true" aria-label="Protocol staging sheet">
+            <div ref={protocolDialogRef} tabIndex={-1} className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface)] p-5 shadow-2xl">
+              <h3 className="text-lg font-semibold text-[color:var(--odos-text)]">{protocolOffer.title}</h3>
+              <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Review each proposed item before committing it to this encounter.</p>
               <div className="mt-4 space-y-2">
                 {protocolOffer.items.map((item) => (
-                  <label key={item.itemKey} className="flex items-start gap-3 rounded border border-white/10 p-3">
+                  <label key={item.itemKey} className="flex items-start gap-3 rounded border border-[color:var(--odos-line)] p-3">
                     <input type="checkbox" checked={protocolSelections[item.itemKey] ?? false}
                       onChange={(event) => setProtocolSelections((current) => ({ ...current, [item.itemKey]: event.target.checked }))}
-                      className="mt-1 h-4 w-4 accent-brand" />
+                      className="mt-1 h-4 w-4 accent-[var(--odos-accent)]" />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-white">{protocolItemLabel(item)}</span>
-                      <span className="mt-0.5 block text-xs text-white/45">{item.itemType} · {item.itemKey}</span>
+                      <span className="block text-sm font-semibold text-[color:var(--odos-text)]">{protocolItemLabel(item)}</span>
+                      <span className="mt-0.5 block text-xs text-[color:var(--odos-muted)]">{item.itemType} · {item.itemKey}</span>
                     </span>
                     {item.itemType === "charge-seed" && (
-                      <span className="rounded border border-white/15 bg-white/5 px-2 py-1 text-xs text-white/50">no rule</span>
+                      <span className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-muted)]">no rule</span>
                     )}
                   </label>
                 ))}
               </div>
               <div className="mt-5 flex justify-end gap-3">
-                <button type="button" onClick={() => setProtocolSheetOpen(false)} className="sidebar-button">Cancel</button>
-                <button type="button" disabled={busy !== null} onClick={applyGlaucomaSuspectProtocol} className="sidebar-button">
+                <button type="button" onClick={() => setProtocolSheetOpen(false)} className={BUTTON_CLASS}>Cancel</button>
+                <button type="button" disabled={busy !== null} onClick={applyGlaucomaSuspectProtocol} className={BUTTON_CLASS}>
                   {busy === "protocol" ? "Applying..." : "Confirm and apply"}
                 </button>
               </div>
@@ -443,7 +446,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
         <div className="mt-5 space-y-3">
           {sortedConditions.length === 0 ? (
-            <div className="rounded border border-white/10 bg-bg-panel/60 p-4 text-sm text-white/45">
+            <div className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4 text-sm text-[color:var(--odos-muted)]">
               No assessment diagnoses yet.
             </div>
           ) : (
@@ -528,7 +531,7 @@ function DiagnosisCard({
   );
 
   return (
-    <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-amber-300/30 bg-amber-400/[0.06] px-4 py-3" : "rounded border border-white/10 bg-bg-panel/70 p-4"}>
+    <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface-2)] px-4 py-3" : "rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4"}>
       <button
         type="button"
         onClick={canShowEditing ? onToggle : undefined}
@@ -536,53 +539,53 @@ function DiagnosisCard({
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <div className="text-base font-semibold text-white">{displayCode(condition.code)}</div>
-            <div className="mt-1 text-xs text-white/45">
+            <div className="text-base font-semibold text-[color:var(--odos-text)]">{displayCode(condition.code)}</div>
+            <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
               {possible ? "Possible" : rank === 1 ? "Principal" : `Secondary rank ${rank ?? "unranked"}`} · {clinicalStatus(condition)}
             </div>
-            {provenanceLine && <div className="mt-1 text-xs text-brand/75">← from {provenanceLine}</div>}
+            {provenanceLine && <div className="mt-1 text-xs text-[color:var(--odos-accent)]">← from {provenanceLine}</div>}
           </div>
-          {canShowEditing && !possible && <span className="text-xs text-brand">Edit</span>}
+          {canShowEditing && !possible && <span className="text-xs text-[color:var(--odos-accent)]">Edit</span>}
         </div>
       </button>
 
       {possible && canShowEditing && (
         <div className="mt-2 flex gap-2">
-          <button disabled={busy !== null} onClick={onConfirm} className="rounded border border-emerald-300/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 disabled:opacity-45">Confirm</button>
-          <button disabled={busy !== null} onClick={onDiscard} className="rounded border border-red-300/35 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-100 disabled:opacity-45">Discard</button>
+          <button disabled={busy !== null} onClick={onConfirm} className="rounded border border-[color:var(--odos-emerald)] bg-[color:var(--odos-surface-2)] px-3 py-1.5 text-xs font-semibold text-[color:var(--odos-emerald)] disabled:opacity-45">Confirm</button>
+          <button disabled={busy !== null} onClick={onDiscard} className="rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] px-3 py-1.5 text-xs font-semibold text-[color:var(--odos-alert)] disabled:opacity-45">Discard</button>
         </div>
       )}
 
       {editing && !possible && (
-        <div className="mt-4 grid gap-3 border-t border-white/10 pt-4">
+        <div className="mt-4 grid gap-3 border-t border-[color:var(--odos-line)] pt-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_auto]">
-            <select value={laterality} onChange={(event) => setLaterality(event.target.value as EyeChoice)} className="sidebar-input">
+            <select value={laterality} onChange={(event) => setLaterality(event.target.value as EyeChoice)} className={INPUT_CLASS}>
               <option value="OD">OD</option>
               <option value="OS">OS</option>
               <option value="OU">OU</option>
             </select>
-            <div className="text-sm text-white/45 self-center">Laterality correction</div>
-            <button disabled={busy !== null} onClick={() => onLaterality(laterality)} className="sidebar-button">Save</button>
+            <div className="self-center text-sm text-[color:var(--odos-muted)]">Laterality correction</div>
+            <button disabled={busy !== null} onClick={() => onLaterality(laterality)} className={BUTTON_CLASS}>Save</button>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto]">
-            <input value={code} onChange={(event) => setCode(event.target.value)} className="sidebar-input" />
-            <input value={display} onChange={(event) => setDisplay(event.target.value)} className="sidebar-input" />
-            <button disabled={busy !== null || !code.trim()} onClick={() => onCode(code, display)} className="sidebar-button">Recode</button>
+            <input value={code} onChange={(event) => setCode(event.target.value)} className={INPUT_CLASS} />
+            <input value={display} onChange={(event) => setDisplay(event.target.value)} className={INPUT_CLASS} />
+            <button disabled={busy !== null || !code.trim()} onClick={() => onCode(code, display)} className={BUTTON_CLASS}>Recode</button>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_auto]">
-            <input value={nextRank} onChange={(event) => setNextRank(event.target.value)} inputMode="numeric" className="sidebar-input" />
-            <div className="text-sm text-white/45 self-center">Tier rank</div>
-            <button disabled={busy !== null || !Number(nextRank)} onClick={() => onTier(Number(nextRank))} className="sidebar-button">Save tier</button>
+            <input value={nextRank} onChange={(event) => setNextRank(event.target.value)} inputMode="numeric" className={INPUT_CLASS} />
+            <div className="self-center text-sm text-[color:var(--odos-muted)]">Tier rank</div>
+            <button disabled={busy !== null || !Number(nextRank)} onClick={() => onTier(Number(nextRank))} className={BUTTON_CLASS}>Save tier</button>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr_auto_auto]">
-            <select value={status} onChange={(event) => setStatus(event.target.value as "active" | "recurrence" | "resolved")} className="sidebar-input">
+            <select value={status} onChange={(event) => setStatus(event.target.value as "active" | "recurrence" | "resolved")} className={INPUT_CLASS}>
               <option value="active">active</option>
               <option value="recurrence">recurrence</option>
               <option value="resolved">resolved</option>
             </select>
-            <div className="text-sm text-white/45 self-center">Clinical status</div>
-            <button disabled={busy !== null} onClick={() => onStatus(status)} className="sidebar-button">Save status</button>
-            <button disabled={busy !== null} onClick={onEnteredInError} className="rounded border border-red-400/50 bg-red-400/10 px-3 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-400/20">
+            <div className="self-center text-sm text-[color:var(--odos-muted)]">Clinical status</div>
+            <button disabled={busy !== null} onClick={() => onStatus(status)} className={BUTTON_CLASS}>Save status</button>
+            <button disabled={busy !== null} onClick={onEnteredInError} className="rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-alert)] transition hover:bg-[color:var(--odos-surface)]">
               Entered in error
             </button>
           </div>
