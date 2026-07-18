@@ -43,3 +43,8 @@ outputs/
 .claude/skills/mb-think
 .claude/skills/mb-update
 .claude/skills/mb-wiki
+
+# Local ODOS setup state and generated artifacts — never commit.
+# .osod/keys holds local signing keys; .osod-setup-state.json is per-machine setup state.
+.osod/
+.osod-setup-state.json
