@@ -29,7 +29,7 @@ test("Practice landing groups existing settings and the owner-only plan-profile 
   for (const href of ALL_SETTINGS_HREFS) {
     assert.match(html, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
   }
-  for (const group of ["People &amp; Access", "Clinical", "Schedule", "Financial", "Inventory", "Communications", "Practice"]) {
+  for (const group of ["People &amp; Access", "Clinical", "Schedule", "Financial", "Inventory", "Communications", "Appearance", "Practice"]) {
     assert.match(html, new RegExp(`>${group}<`));
   }
   assert.match(html, /practice-settings-tone-gold/);
