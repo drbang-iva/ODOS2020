@@ -205,7 +205,9 @@ ${renderFooterMessage(receipt.receiptFooterMessage)}
 }
 
 function renderFooterMessage(message: string | undefined): string {
-  return message?.trim() ? `<p class="practice-message">${escapeHtml(message)}</p>` : "";
+  return message?.trim()
+    ? `<p class="practice-message" style="white-space: pre-line">${escapeHtml(message)}</p>`
+    : "";
 }
 
 export function paymentSubjectReference(pr: PaymentReconciliation): string | undefined {

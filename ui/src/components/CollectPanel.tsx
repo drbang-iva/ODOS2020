@@ -226,7 +226,28 @@ function ReceiptView({
   receipt: { result: CollectPanelResult; lines: OpenChargeLine[] };
   onClose: () => void;
 }) {
-  const print = () => void printReceipt({ patientReference, patientName, tender, receipt });
+  const [footer, setFooter] = useState<{ ready: boolean; message?: string }>({ ready: false });
+  useEffect(() => {
+    let cancelled = false;
+    loadStatementMessageConfigSingleton(fhir)
+      .then(({ config }) => {
+        if (!cancelled) setFooter({ ready: true, message: config.receiptFooterMessage });
+      })
+      .catch((error: unknown) => {
+        console.error("Receipt footer message read skipped.", error);
+        if (!cancelled) setFooter({ ready: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const print = () => {
+    try {
+      printReceipt({ patientReference, patientName, tender, receipt, receiptFooterMessage: footer.message });
+    } catch (error) {
+      console.error("Receipt printing failed.", error);
+    }
+  };
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-white/10 px-4 py-4">
@@ -238,44 +259,39 @@ function ReceiptView({
         {receipt.lines.map((line) => <div key={line.id} className="flex justify-between border-b border-white/10 py-2 text-sm"><span>{line.description}</span><span>{money(line.amountCents)}</span></div>)}
       </div>
       <footer className="flex justify-end gap-2 border-t border-white/10 p-4">
-        <button type="button" onClick={print} className="rounded border border-white/15 px-4 py-2">Print receipt</button>
+        <button type="button" disabled={!footer.ready} onClick={print} className="rounded border border-white/15 px-4 py-2 disabled:opacity-40">Print receipt</button>
         <button type="button" onClick={onClose} className="rounded bg-blue-600 px-5 py-2 font-bold">Done</button>
       </footer>
     </div>
   );
 }
 
-export async function printReceipt(
+export function printReceipt(
   input: {
     patientReference: string;
     patientName?: string;
     tender: CollectTender;
     receipt: { result: CollectPanelResult; lines: OpenChargeLine[] };
+    receiptFooterMessage?: string;
   },
   deps: {
-    loadReceiptFooterMessage?: () => Promise<string | undefined>;
     openPrint?: typeof openPrintWindow;
   } = {},
-): Promise<void> {
+): void {
   const summary = receiptSummary(
     input.patientReference,
     input.patientName,
     input.tender,
     input.receipt,
   );
-  let receiptFooterMessage: string | undefined;
-  try {
-    const loadReceiptFooterMessage = deps.loadReceiptFooterMessage ?? (async () =>
-      (await loadStatementMessageConfigSingleton(fhir)).config.receiptFooterMessage);
-    receiptFooterMessage = await loadReceiptFooterMessage();
-  } catch (error) {
-    console.error("Receipt footer message read skipped.", error);
-  }
-  const printable = receiptFooterMessage ? { ...summary, receiptFooterMessage } : summary;
-  (deps.openPrint ?? openPrintWindow)(
+  const printable = input.receiptFooterMessage
+    ? { ...summary, receiptFooterMessage: input.receiptFooterMessage }
+    : summary;
+  const opened = (deps.openPrint ?? openPrintWindow)(
     `Receipt ${summary.header.orderId}`,
     renderReceiptSheet(printable),
   );
+  if (!opened) throw new Error("The browser blocked the receipt print window.");
 }
 
 function receiptSummary(

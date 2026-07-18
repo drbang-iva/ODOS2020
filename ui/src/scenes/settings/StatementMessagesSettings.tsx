@@ -4,6 +4,7 @@ import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
 import {
   ODOS_STATEMENT_MESSAGE_CONFIG_CODE,
+  ODOS_STATEMENT_MESSAGE_CONFIG_RESOURCE_ID,
   ODOS_STATEMENT_MESSAGE_CONFIG_SYSTEM,
   STATEMENT_MESSAGE_MAX_LENGTH,
   buildStatementMessageConfigResource,
@@ -18,7 +19,7 @@ type LoadedStatementMessages = {
 
 export type StatementMessagesSettingsClient = Pick<
   typeof fhir,
-  "search" | "searchUrl" | "create" | "update"
+  "search" | "searchUrl" | "update"
 >;
 
 export function StatementMessagesSettings({
@@ -98,9 +99,12 @@ export function StatementMessagesSettingsReady({
     setStatus(null);
     try {
       const built = buildStatementMessageConfigResource(draft, currentResource);
-      const saved = currentResource?.id
-        ? await client.update(built, "statement-message-config")
-        : await client.create(built, "statement-message-config");
+      const saved = await client.update(
+        currentResource?.id
+          ? built
+          : { ...built, id: ODOS_STATEMENT_MESSAGE_CONFIG_RESOURCE_ID },
+        "statement-message-config",
+      );
       setCurrentResource(saved);
       setDraft(parseStatementMessageConfig(saved));
       setStatus("Statement and receipt messages saved.");

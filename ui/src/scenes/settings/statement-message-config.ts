@@ -5,6 +5,7 @@ export const ODOS_STATEMENT_MESSAGE_CONFIG_SYSTEM =
 export const ODOS_STATEMENT_MESSAGE_CONFIG_CODE = "odos-statement-message-config";
 export const ODOS_STATEMENT_MESSAGE_CONFIG_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-statement-message-config";
+export const ODOS_STATEMENT_MESSAGE_CONFIG_RESOURCE_ID = "statement-message-config";
 export const STATEMENT_MESSAGE_MAX_LENGTH = 320;
 
 export interface PersistedStatementMessageConfig {
@@ -64,18 +65,22 @@ export function parseStatementMessageConfig(basic: Basic): PersistedStatementMes
   if (!raw) {
     throw new Error("Statement-message-config singleton is missing its config extension.");
   }
-  let parsed: Record<string, unknown>;
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as Record<string, unknown>;
+    parsed = JSON.parse(raw) as unknown;
   } catch {
     throw new Error("Statement-message-config JSON is malformed and cannot be parsed.");
   }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Statement-message-config JSON is malformed and cannot be parsed.");
+  }
+  const values = parsed as Record<string, unknown>;
   const config: PersistedStatementMessageConfig = {
-    ...(parsed.statementFooterMessage !== undefined
-      ? { statementFooterMessage: parsed.statementFooterMessage as string }
+    ...(values.statementFooterMessage !== undefined
+      ? { statementFooterMessage: values.statementFooterMessage as string }
       : {}),
-    ...(parsed.receiptFooterMessage !== undefined
-      ? { receiptFooterMessage: parsed.receiptFooterMessage as string }
+    ...(values.receiptFooterMessage !== undefined
+      ? { receiptFooterMessage: values.receiptFooterMessage as string }
       : {}),
   };
   validateStatementMessageConfig(config);

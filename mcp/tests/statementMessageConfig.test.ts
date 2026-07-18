@@ -40,3 +40,12 @@ test("statement-message config rejects either field above 320 characters", () =>
     { message: "Receipt footer message must be 320 characters or fewer." },
   );
 });
+
+test("statement-message config rejects non-object JSON with the controlled parser error", () => {
+  const malformed = buildStatementMessageConfigResource({});
+  malformed.extension![0]!.valueString = "null";
+  assert.throws(
+    () => parseStatementMessageConfig(malformed),
+    { message: "Statement-message-config JSON is malformed and cannot be parsed." },
+  );
+});

@@ -260,3 +260,15 @@ test("unapplied-credit receipt prints an escaped configured footer and omits an 
   });
   assert.doesNotMatch(renderUnappliedCreditReceipt(unset), /class="practice-message"/);
 });
+
+test("unapplied-credit receipt preserves configured footer line breaks", () => {
+  const receipt = buildUnappliedCreditReceipt({
+    paymentReconciliation: payment(),
+    staff: "Alex Front Desk",
+    practice: "Integrated Vision & Aesthetics",
+    receiptFooterMessage: "First line\nSecond line",
+  });
+  const html = renderUnappliedCreditReceipt(receipt);
+  assert.match(html, /style="white-space: pre-line"/);
+  assert.match(html, /First line\nSecond line/);
+});

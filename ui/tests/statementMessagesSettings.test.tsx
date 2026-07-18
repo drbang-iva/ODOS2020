@@ -22,10 +22,6 @@ function clientFixture() {
     async searchUrl() {
       return { resourceType: "Bundle" as const, type: "searchset" as const };
     },
-    async create<T extends Basic>(resource: T, sourceTag: string) {
-      writes.push({ resource, sourceTag });
-      return { ...resource, id: "created-message-config", meta: { versionId: "1" } } as T;
-    },
     async update<T extends Basic>(resource: T, sourceTag: string) {
       writes.push({ resource, sourceTag });
       return resource;
@@ -103,4 +99,23 @@ test("statement-message settings are read-only without practice-admin access", (
   assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
   assert.doesNotMatch(html, /Save messages/);
   assert.match(html, /Practice-admin access is required/);
+});
+
+test("concurrent initial saves target one deterministic singleton resource", async () => {
+  const fixture = clientFixture();
+  const renderers: ReactTestRenderer[] = [];
+  await act(async () => {
+    renderers.push(
+      create(<StatementMessagesSettingsReady config={{ statementFooterMessage: "First" }} canWrite client={fixture.client} />),
+      create(<StatementMessagesSettingsReady config={{ statementFooterMessage: "Second" }} canWrite client={fixture.client} />),
+    );
+  });
+  await act(async () => {
+    await Promise.all(renderers.map((renderer) =>
+      renderer.root.findByType("form").props.onSubmit({ preventDefault() {} }),
+    ));
+  });
+  assert.equal(fixture.writes.length, 2);
+  assert.deepEqual(new Set(fixture.writes.map(({ resource }) => resource.id)), new Set(["statement-message-config"]));
+  for (const renderer of renderers) act(() => renderer.unmount());
 });

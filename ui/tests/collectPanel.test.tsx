@@ -84,13 +84,13 @@ test("CARD_MANUAL posts to the record-only collection endpoint with no processor
   assert.equal("method" in (captured?.body ?? {}), false);
 });
 
-test("live receipt printing fetches and passes the configured receipt footer message", async () => {
-  let loadCalls = 0;
+test("live receipt printing passes the preloaded configured receipt footer message", () => {
   let printed: { title: string; html: string } | undefined;
-  await printReceipt({
+  printReceipt({
     patientReference: "Patient/patient-1",
     patientName: "Alex Rivera",
     tender: "CASH",
+    receiptFooterMessage: "Thank you for trusting our practice.",
     receipt: {
       result: {
         deviceRequestId: "",
@@ -104,17 +104,33 @@ test("live receipt printing fetches and passes the configured receipt footer mes
       lines: [CHARGES[0]!],
     },
   }, {
-    loadReceiptFooterMessage: async () => {
-      loadCalls += 1;
-      return "Thank you for trusting our practice.";
-    },
     openPrint: (title, html) => {
       printed = { title, html };
       return true;
     },
   });
-
-  assert.equal(loadCalls, 1);
   assert.equal(printed?.title, "Receipt invoice-1");
   assert.match(printed?.html ?? "", /class="practice-message">Thank you for trusting our practice\.<\/p>/);
+});
+
+test("receipt printing reports a blocked print window", () => {
+  assert.throws(
+    () => printReceipt({
+      patientReference: "Patient/patient-1",
+      tender: "CASH",
+      receipt: {
+        result: {
+          deviceRequestId: "",
+          taskId: "",
+          chargeItemIds: ["charge-1"],
+          invoiceId: "invoice-1",
+          outcome: "success",
+          amountChargedCents: 10_000,
+          tender: "CASH",
+        },
+        lines: [CHARGES[0]!],
+      },
+    }, { openPrint: () => false }),
+    /browser blocked the receipt print window/i,
+  );
 });

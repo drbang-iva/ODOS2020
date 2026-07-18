@@ -30,3 +30,10 @@ test("UI statement-message config mirror matches the MCP kernel", () => {
   assert.deepEqual(uiBuild(CONFIG), mcpBuild(CONFIG));
   assert.deepEqual(uiParse(uiBuild(CONFIG)), mcpParse(mcpBuild(CONFIG)));
 });
+
+test("UI and MCP mirrors reject non-object JSON identically", () => {
+  const malformed = mcpBuild({});
+  malformed.extension![0]!.valueString = "null";
+  assert.throws(() => mcpParse(malformed), /JSON is malformed/);
+  assert.throws(() => uiParse(malformed), /JSON is malformed/);
+});
