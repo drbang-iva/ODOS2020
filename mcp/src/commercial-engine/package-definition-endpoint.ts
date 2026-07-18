@@ -8,6 +8,11 @@ import {
   type PackageDefinitionDraft,
 } from "./ledger-store.js";
 import {
+  finalizeCreditBankDeposit,
+  prepareCreditBankDeposit,
+  spendCreditBankAtCheckout,
+} from "./credit-bank-service.js";
+import {
   applicablePackages,
   finalizePackageSale,
   preparePackageSale,
@@ -29,9 +34,15 @@ export function registerCommercialEngineRoutes(
   post(app, "/commercial-engine/definitions/:id/archive", deps, (req) => handleArchiveDefinition(deps, req));
   get(app, "/commercial-engine/patients/:patientId/packages", deps, (req) => handlePatientPackages(deps, req));
   get(app, "/commercial-engine/patients/:patientId/applicable", deps, (req) => handleApplicablePackages(deps, req));
+  get(app, "/commercial-engine/patients/:patientId/credit-bank", deps, (req) => handleCreditBank(deps, req));
   post(app, "/commercial-engine/sales/prepare", deps, (req) => handlePrepareSale(deps, req));
   post(app, "/commercial-engine/sales/finalize", deps, (req) => handleFinalizeSale(deps, req));
   post(app, "/commercial-engine/redemptions", deps, (req) => handleRedemption(deps, req));
+  post(app, "/commercial-engine/credit-bank/deposits/prepare", deps, (req) => handlePrepareCreditBankDeposit(deps, req));
+  post(app, "/commercial-engine/credit-bank/deposits/finalize", deps, (req) => handleFinalizeCreditBankDeposit(deps, req));
+  post(app, "/commercial-engine/credit-bank/spends", deps, (req) => handleCreditBankSpend(deps, req));
+  post(app, "/commercial-engine/packages/convert-to-credit-bank", deps, (req) => handlePackageConversion(deps, req));
+  post(app, "/commercial-engine/packages/attest-cash-refund", deps, (req) => handlePackageCashRefund(deps, req));
 }
 
 async function handleDefinitions(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
@@ -76,6 +87,13 @@ async function handleApplicablePackages(deps: CommercialEngineRouteDeps, req: Re
   return { status: 200, body: { packages: applicablePackages(packages, codes, (deps.now?.() ?? new Date().toISOString()).slice(0, 10)) } };
 }
 
+async function handleCreditBank(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
+  const staff = await authenticated(deps, req);
+  if (!staff) return unauthorized();
+  if (!mayReadPatientPackages(staff.roles ?? [])) return forbidden("Patient Credit Bank read role required.");
+  return { status: 200, body: { creditBank: await deps.store.getCreditBank(patientIdParam(req)) } };
+}
+
 async function handlePrepareSale(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
   const staff = await paymentStaff(deps, req);
   if ("status" in staff) return staff;
@@ -115,6 +133,86 @@ async function handleRedemption(deps: CommercialEngineRouteDeps, req: Request): 
   return { status: 200, body: result };
 }
 
+async function handlePrepareCreditBankDeposit(
+  deps: CommercialEngineRouteDeps,
+  req: Request,
+): Promise<ChargeHandlerResult> {
+  const staff = await paymentStaff(deps, req);
+  if ("status" in staff) return staff;
+  const body = record(req.body);
+  const bonusCents = optionalNumber(body.bonusCents, "bonusCents") ?? 0;
+  if (bonusCents > 0 && !staff.roles?.includes("practice-admin")) {
+    return forbidden("Practice-admin role required for promotional bonus credit.");
+  }
+  const invoice = await prepareCreditBankDeposit(deps, staff.fhir, {
+    patientReference: requiredString(body.patientReference, "patientReference"),
+    depositCents: requiredNumber(body.depositCents, "depositCents"),
+    bonusCents,
+    ...(typeof body.bonusReason === "string" ? { bonusReason: body.bonusReason } : {}),
+    staffReference: staff.staffReference,
+  });
+  return { status: 200, body: { invoiceReference: `Invoice/${invoice.id}` } };
+}
+
+async function handleFinalizeCreditBankDeposit(
+  deps: CommercialEngineRouteDeps,
+  req: Request,
+): Promise<ChargeHandlerResult> {
+  const staff = await paymentStaff(deps, req);
+  if ("status" in staff) return staff;
+  const body = record(req.body);
+  const creditBank = await finalizeCreditBankDeposit(deps, staff.fhir, {
+    patientReference: requiredString(body.patientReference, "patientReference"),
+    invoiceReference: requiredString(body.invoiceReference, "invoiceReference"),
+    staffReference: staff.staffReference,
+    allowBonus: Boolean(staff.roles?.includes("practice-admin")),
+  });
+  return { status: 200, body: { creditBank } };
+}
+
+async function handleCreditBankSpend(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
+  const staff = await paymentStaff(deps, req);
+  if ("status" in staff) return staff;
+  const body = record(req.body);
+  const result = await spendCreditBankAtCheckout(deps, staff.fhir, {
+    patientReference: requiredString(body.patientReference, "patientReference"),
+    chargeItemReference: requiredString(body.chargeItemReference, "chargeItemReference"),
+    staffReference: staff.staffReference,
+  });
+  return { status: 200, body: result };
+}
+
+async function handlePackageConversion(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
+  const staff = await practiceAdmin(deps, req);
+  if ("status" in staff) return staff;
+  const body = record(req.body);
+  const patientReference = requiredString(body.patientReference, "patientReference");
+  const result = await deps.store.convertPackageToCreditBank({
+    packageInstanceId: requiredString(body.packageInstanceId, "packageInstanceId"),
+    patientFhirId: localPatientId(patientReference),
+    actorUserId: staff.staffReference,
+    reason: requiredString(body.reason, "reason"),
+    convertedAt: deps.now?.() ?? new Date().toISOString(),
+  });
+  return { status: 200, body: result };
+}
+
+async function handlePackageCashRefund(deps: CommercialEngineRouteDeps, req: Request): Promise<ChargeHandlerResult> {
+  const staff = await practiceAdmin(deps, req);
+  if ("status" in staff) return staff;
+  const body = record(req.body);
+  const patientReference = requiredString(body.patientReference, "patientReference");
+  const result = await deps.store.attestPackageCashRefund({
+    packageInstanceId: requiredString(body.packageInstanceId, "packageInstanceId"),
+    patientFhirId: localPatientId(patientReference),
+    actorUserId: staff.staffReference,
+    reason: requiredString(body.reason, "reason"),
+    externalReference: requiredString(body.externalReference, "externalReference"),
+    refundedAt: deps.now?.() ?? new Date().toISOString(),
+  });
+  return { status: 200, body: result };
+}
+
 async function paymentStaff(
   deps: CommercialEngineRouteDeps,
   req: Request,
@@ -122,6 +220,16 @@ async function paymentStaff(
   const staff = await authenticated(deps, req);
   if (!staff) return unauthorized();
   if (!resolveBusinessActionRole(staff.roles ?? [], "payment.charge")) return forbidden("payment.charge role required");
+  return staff;
+}
+
+async function practiceAdmin(
+  deps: CommercialEngineRouteDeps,
+  req: Request,
+): Promise<AuthenticatedStaff | ChargeHandlerResult> {
+  const staff = await authenticated(deps, req);
+  if (!staff) return unauthorized();
+  if (!staff.roles?.includes("practice-admin")) return forbidden("Practice-admin role required.");
   return staff;
 }
 
@@ -165,6 +273,17 @@ function requiredString(value: unknown, label: string): string {
 function requiredNumber(value: unknown, label: string): number {
   if (typeof value !== "number") throw new CommercialEngineInputError(`${label} must be a number.`);
   return value;
+}
+
+function optionalNumber(value: unknown, label: string): number | undefined {
+  if (value === undefined) return undefined;
+  return requiredNumber(value, label);
+}
+
+function localPatientId(reference: string): string {
+  const match = reference.match(/^Patient\/([A-Za-z0-9.-]+)$/);
+  if (!match) throw new CommercialEngineInputError("patientReference is invalid.");
+  return match[1];
 }
 
 function stringList(value: unknown): string[] {

@@ -33,6 +33,7 @@ import {
   standaloneEncounters,
 } from "../lib/clinical-view-model";
 import { SMOKING_STATUS_CODES, smokingStatusAnswerConcept, type SmokingStatusCode } from "../lib/fhir-clinical/smokingStatus";
+import { LongitudinalImagingCard } from "./LongitudinalImagingCard";
 
 interface ChartData {
   allergies: AllergyIntolerance[];
@@ -171,6 +172,9 @@ export function ChartSidebar({ patient }: { patient: Patient }) {
             conditions={data.problemList}
             onChanged={load}
           />
+        )}
+        {density("longitudinal-imaging") !== "hidden" && patient.id && (
+          <LongitudinalImagingCard patientReference={`Patient/${patient.id}`} />
         )}
       </div>
     </aside>

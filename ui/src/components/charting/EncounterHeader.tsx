@@ -20,6 +20,12 @@ import {
   type DiagnosisCompleteness,
 } from "../../lib/clinical-graph-client";
 import { BalanceChips } from "../commercial/BalanceChips";
+import {
+  formatSeriesDueWindow,
+  formatSeriesSignOffPrompt,
+  signOffSeriesProcedures,
+  type SeriesSignOffPrompt,
+} from "../../lib/series-tracker";
 
 interface Props {
   patient: Patient;
@@ -34,6 +40,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   const [busy, setBusy] = useState<"checking" | "finish" | "abandon" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [completenessAdvisories, setCompletenessAdvisories] = useState<DiagnosisCompleteness["diagnoses"]>([]);
+  const [seriesPrompt, setSeriesPrompt] = useState<SeriesSignOffPrompt>();
   const completenessCheckVersion = useRef(0);
 
   useEffect(() => {
@@ -114,7 +121,12 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "finish_encounter",
       );
       assertTransactionSuccess(response);
-      setView(patientOverviewView(patient.id));
+      const seriesSignOff = await signOffSeriesProcedures(encounterId);
+      if (seriesSignOff.prompt) {
+        setSeriesPrompt(seriesSignOff.prompt);
+      } else {
+        setView(patientOverviewView(patient.id));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -241,7 +253,36 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           onAddFindings={() => setCompletenessAdvisories([])}
         />
       )}
+      {seriesPrompt && (
+        <SeriesSignOffNotice
+          prompt={seriesPrompt}
+          onClose={() => setView(patientOverviewView(patient.id ?? ""))}
+        />
+      )}
     </header>
+  );
+}
+
+export function SeriesSignOffNotice({
+  prompt,
+  onClose,
+}: {
+  prompt: SeriesSignOffPrompt;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Next series session due">
+      <div className="w-full max-w-md rounded border border-violet-300/25 bg-bg-panel p-5 shadow-2xl">
+        <div className="text-xs uppercase tracking-widest text-violet-200/55">Series updated</div>
+        <h2 className="mt-2 text-lg font-semibold text-white">{prompt.protocolTitle}</h2>
+        <p className="mt-3 text-sm text-white/75">{formatSeriesSignOffPrompt(prompt)}</p>
+        <p className="mt-2 text-sm font-medium text-violet-100">{formatSeriesDueWindow(prompt.dueWindow)}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" className="scheduler-button" onClick={onClose}>Return to chart</button>
+          <a className="scheduler-button" href="/scheduler/day">Open scheduler</a>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -7,6 +7,8 @@ import type {
 } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 import type { OpticalCollectionCharge } from "./collect";
+import type { AttachedLensChargeSource, AttachedLensSelection } from "./lens-selection";
+import type { ResolvedVCode } from "./v-code-resolver";
 import type { LabOrderFrame } from "./optical-lab-order";
 import { frameChargeItemDefinitionCanonical } from "./optical-pricing-catalog";
 
@@ -130,8 +132,13 @@ export interface OpticalChargeLineDraft {
   taxable: boolean;
   discount?: { code: string; amountCents: number };
   frame?: AttachedFrame;
+  lens?: AttachedLensSelection;
+  lensAddOn?: AttachedLensChargeSource;
+  billingCodes?: ResolvedVCode[];
   dispensed?: boolean;
 }
+
+export type { AttachedLensSelection } from "./lens-selection";
 
 export interface AttachedFrame {
   inventoryId?: string;
@@ -163,6 +170,7 @@ export interface OpticalCashOrderDraft {
 }
 
 export function opticalCollectionChargeFromDraft(line: OpticalChargeLineDraft): OpticalCollectionCharge {
+  const lensCanonical = line.lens?.productCanonicalUrl ?? line.lensAddOn?.productCanonicalUrl;
   return {
     id: line.id,
     code: line.procedure,
@@ -172,7 +180,7 @@ export function opticalCollectionChargeFromDraft(line: OpticalChargeLineDraft): 
     discount: line.discount,
     ...(line.frame
       ? { definitionCanonical: frameChargeItemDefinitionCanonical(line.frame.canonicalUrl) }
-      : {}),
+      : lensCanonical ? { definitionCanonical: lensCanonical } : {}),
   };
 }
 

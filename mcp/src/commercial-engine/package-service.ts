@@ -5,10 +5,6 @@ import type {
   Procedure,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import {
-  ODOS_PAYMENT_TENDER_EXTENSION_URL,
-  ODOS_PAYMENT_TENDER_SYSTEM,
-} from "../fhir/odosPaymentTender.js";
 import { buildPaymentReconciliation } from "../payments/payment-reconciliation.js";
 import {
   CommercialEngineConflictError,
@@ -105,7 +101,7 @@ export async function finalizePackageSale(
   if (invoice.subject?.reference !== input.patientReference || !isBalanceFundingInvoice(invoice)) {
     throw new CommercialEngineConflictError("The Invoice is not this patient's package-funding Invoice.");
   }
-  if (!await invoiceIsPaid(fhir, invoice)) {
+  if (!await balanceFundingInvoiceIsPaid(fhir, invoice)) {
     throw new CommercialEngineConflictError("Package activation requires a successful payment.");
   }
   const terms = packageSaleTerms(invoice);
@@ -262,11 +258,11 @@ export function isBalanceFundingInvoice(invoice: Invoice): boolean {
   ));
 }
 
-async function invoiceIsPaid(fhir: CommercialFhirClient, invoice: Invoice): Promise<boolean> {
-  if (invoice.status === "balanced" || invoice.extension?.some((extension) =>
-    extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
-    && extension.valueCodeableConcept?.coding?.some((coding) => coding.system === ODOS_PAYMENT_TENDER_SYSTEM),
-  )) return true;
+export async function balanceFundingInvoiceIsPaid(
+  fhir: CommercialFhirClient,
+  invoice: Invoice,
+): Promise<boolean> {
+  if (invoice.status === "balanced") return true;
   if (!invoice.id) return false;
   const reconciliations = await fhir.search<PaymentReconciliation>("PaymentReconciliation", {
     request: `Invoice/${invoice.id}`,
@@ -282,7 +278,7 @@ async function invoiceIsPaid(fhir: CommercialFhirClient, invoice: Invoice): Prom
         ? sum + moneyCents(detail.amount?.value, "Payment allocation")
         : sum, 0);
   }, 0);
-  return allocatedCents >= moneyCents(invoice.totalNet?.value, "Package sale Invoice total");
+  return allocatedCents >= moneyCents(invoice.totalNet?.value, "Balance funding Invoice total");
 }
 
 function packageSaleTerms(invoice: Invoice): {

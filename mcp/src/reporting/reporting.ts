@@ -11,6 +11,7 @@ import {
   isBalanceFundingInvoice,
   ODOS_PACKAGE_CREDIT_TENDER_CODE,
 } from "../commercial-engine/package-service.js";
+import { ODOS_BANK_CREDIT_TENDER_CODE } from "../commercial-engine/credit-bank-service.js";
 import type { PaymentCreditHandlerDeps, PatientPaymentRow } from "../payments/payment-credit-handler.js";
 import {
   handlePaymentReconciliationsRequest,
@@ -147,7 +148,7 @@ export function projectServiceProduction(
     if (tenderedInvoice) cashCollectedCents += netCents;
   }
   cashCollectedCents += reconciliations
-    .filter((payment) => payment.status === "active" && payment.outcome === "complete" && !isPackageCredit(payment))
+    .filter((payment) => payment.status === "active" && payment.outcome === "complete" && !isStoredValueCredit(payment))
     .reduce((sum, payment) => sum + moneyCents(payment.paymentAmount?.value, "PaymentReconciliation paymentAmount"), 0);
   return { period, cashCollectedCents, productionCents, balanceFundingCents, productionInvoiceCount };
 }
@@ -420,10 +421,13 @@ function moneyCents(value: number | undefined, label: string): number {
   return cents;
 }
 
-function isPackageCredit(payment: PaymentReconciliation): boolean {
+function isStoredValueCredit(payment: PaymentReconciliation): boolean {
   return payment.extension?.some((extension) =>
     extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL
-    && extension.valueCodeableConcept?.coding?.some((coding) => coding.code === ODOS_PACKAGE_CREDIT_TENDER_CODE),
+    && extension.valueCodeableConcept?.coding?.some((coding) =>
+      coding.system === ODOS_PAYMENT_TENDER_SYSTEM
+      && (coding.code === ODOS_PACKAGE_CREDIT_TENDER_CODE || coding.code === ODOS_BANK_CREDIT_TENDER_CODE),
+    ),
   ) ?? false;
 }
 

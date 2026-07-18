@@ -2,6 +2,8 @@ import type { Application, Request, Response } from "express";
 import {
   handleCreateReferralRequest,
   handleReferralArtifactRequest,
+  handleReadReferralDefaultsRequest,
+  handleSaveReferralDefaultsRequest,
   type ReferralEndpointDeps,
   type ReferralEndpointResult,
 } from "./referral-endpoint.js";
@@ -11,9 +13,28 @@ export interface ReferralRouteDeps extends ReferralEndpointDeps {
 }
 
 export function registerReferralRoutes(
-  app: Pick<Application, "post">,
+  app: Pick<Application, "get" | "post" | "put">,
   deps: ReferralRouteDeps,
 ): void {
+  app.get("/referrals/defaults", async (req, res) => route(
+    "/referrals/defaults",
+    deps,
+    req,
+    res,
+    () => handleReadReferralDefaultsRequest(deps, {
+      authHeader: req.header("authorization"),
+    }),
+  ));
+  app.put("/referrals/defaults", async (req, res) => route(
+    "/referrals/defaults",
+    deps,
+    req,
+    res,
+    () => handleSaveReferralDefaultsRequest(deps, {
+      authHeader: req.header("authorization"),
+      body: req.body,
+    }),
+  ));
   post(app, "/referrals/patients/:patientId", deps, (req) =>
     handleCreateReferralRequest(deps, {
       authHeader: req.header("authorization"),

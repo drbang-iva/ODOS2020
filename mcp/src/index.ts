@@ -51,6 +51,11 @@ import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { PgCommercialEngineStore } from "./commercial-engine/ledger-store.js";
 import { registerCommercialEngineRoutes } from "./commercial-engine/package-definition-endpoint.js";
+import {
+  packageExpirySweepIntervalMs,
+  startPackageExpiryWorker,
+} from "./jobs/expireCommercialPackages.js";
+import { registerSeriesTrackerRoutes } from "./series-tracker/series-tracker-endpoint.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
 import { registerDeskRoutes } from "./desk/desk-routes.js";
@@ -86,6 +91,9 @@ import {
 } from "./clinical-graph/protocol-endpoint.js";
 import {
   handleImagingCaptureRequest,
+  handleLongitudinalImagingCaptureRequest,
+  handleLongitudinalImagingListRequest,
+  LONGITUDINAL_IMAGING_CONTENT_TYPE,
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
 import {
@@ -466,6 +474,10 @@ const auditRuntime = createLiveOdosAuditRuntime({
 auditRuntime.startProjectionWorker();
 const commercialEngineStore = new PgCommercialEngineStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+startPackageExpiryWorker({
+  store: commercialEngineStore,
+  intervalMs: packageExpirySweepIntervalMs(process.env.ODOS_PACKAGE_EXPIRY_SWEEP_MS),
 });
 
 const fhir = createMedplumClient({
@@ -5527,6 +5539,10 @@ async function main(): Promise<void> {
         "/clinical-graph/imaging",
         express.json({ type: MANUAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
       );
+      app.use(
+        "/clinical-graph/longitudinal-imaging",
+        express.json({ type: LONGITUDINAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
+      );
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
@@ -6120,6 +6136,34 @@ async function main(): Promise<void> {
         }
       });
 
+      app.get("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingListRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging list failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging list failed" });
+        }
+      });
+
+      app.post("/clinical-graph/longitudinal-imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleLongitudinalImagingCaptureRequest(
+            await procedureDefinitionRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: longitudinal imaging capture failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "longitudinal imaging capture failed" });
+        }
+      });
+
       app.get("/clinical-graph/iop/definition", async (req, res) => {
         try {
           await authenticateWithMedplum();
@@ -6410,6 +6454,11 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         store: commercialEngineStore,
+      });
+      registerSeriesTrackerRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
       });
       registerLabOrderRoutes(app, {
         authenticateService: authenticateWithMedplum,

@@ -14,8 +14,14 @@ import { fhir } from "../lib/fhir";
 import { openPrintWindow } from "../lib/print-window";
 import { BalanceChips } from "./commercial/BalanceChips";
 import { CheckoutRedeem } from "./commercial/CheckoutRedeem";
+import { CheckoutBankCredit } from "./commercial/CheckoutBankCredit";
+import { CreditBankDepositSheet } from "./commercial/CreditBankDepositSheet";
 import { SaleSheet } from "./commercial/SaleSheet";
 import { loadStatementMessageConfigSingleton } from "../scenes/settings/StatementMessagesSettings";
+import {
+  fetchCreditBank,
+  type PatientCreditBank,
+} from "../lib/commercial-engine";
 
 const TENDERS: Array<{ code: CollectTender; label: string }> = [
   { code: "CASH", label: "Cash" },
@@ -59,7 +65,11 @@ export function CollectPanel({
   const [error, setError] = useState<string>();
   const [receipt, setReceipt] = useState<{ result: CollectPanelResult; lines: OpenChargeLine[] }>();
   const [sellingPackage, setSellingPackage] = useState(false);
+  const [depositingCreditBank, setDepositingCreditBank] = useState(false);
   const [packageRevision, setPackageRevision] = useState(0);
+  const [creditBank, setCreditBank] = useState<PatientCreditBank>();
+  const [creditBankLoading, setCreditBankLoading] = useState(false);
+  const [creditBankError, setCreditBankError] = useState<string>();
 
   useEffect(() => {
     if (initialCharges) {
@@ -85,6 +95,35 @@ export function CollectPanel({
       });
     return () => { cancelled = true; };
   }, [initialCharges, loadCharges, patientReference]);
+
+  useEffect(() => {
+    if (disabled) {
+      setCreditBank(undefined);
+      setCreditBankError(undefined);
+      setCreditBankLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setCreditBankLoading(true);
+    setCreditBankError(undefined);
+    fetchCreditBank(patientReference)
+      .then((bank) => {
+        if (!cancelled) setCreditBank(bank);
+      })
+      .catch((cause) => {
+        if (!cancelled) setCreditBankError(messageOf(cause));
+      })
+      .finally(() => {
+        if (!cancelled) setCreditBankLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [disabled, packageRevision, patientReference]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    setDepositingCreditBank(false);
+    setSellingPackage(false);
+  }, [disabled]);
 
   const selectedCharges = useMemo(
     () => charges.filter((charge) => selectedIds.has(charge.id)),
@@ -145,12 +184,20 @@ export function CollectPanel({
           <p className="text-sm text-white/50">Open balance {money(openBalanceCents)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setSellingPackage(true)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-xs font-bold text-cyan-100">Add package</button>
+          {!disabled && <button type="button" onClick={() => setDepositingCreditBank(true)} className="rounded border border-emerald-300/25 bg-emerald-950/20 px-3 py-2 text-xs font-bold text-emerald-100">Deposit Credit Bank</button>}
+          {!disabled && <button type="button" onClick={() => setSellingPackage(true)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-xs font-bold text-cyan-100">Add package</button>}
           {!embedded && <button type="button" aria-label="Close collect panel" onClick={onClose} className="text-white/60 hover:text-white">✕</button>}
         </div>
       </header>
       <div className="space-y-4 p-4">
-        <BalanceChips patientReference={patientReference} revision={packageRevision} />
+        {!disabled && <BalanceChips
+          patientReference={patientReference}
+          revision={packageRevision}
+          onBalanceChanged={() => {
+            setPackageRevision((current) => current + 1);
+            onPackageBalanceChanged?.();
+          }}
+        />}
         {loading ? <p className="text-sm text-white/50">Loading open charges…</p> : (
           <div className="flex flex-wrap gap-2" aria-label="Open charges">
             {charges.map((charge) => {
@@ -159,6 +206,7 @@ export function CollectPanel({
                 <div key={charge.id} className="min-w-[240px] flex-1">
                   <button
                     type="button"
+                    disabled={disabled}
                     aria-pressed={selected}
                     onClick={() => setSelectedIds((current) => {
                       const next = new Set(current);
@@ -170,7 +218,7 @@ export function CollectPanel({
                     <span className="block font-bold">{charge.description} · {money(charge.amountCents)}</span>
                     <span className="text-[11px] opacity-60">{charge.source === "optical" ? "Optical" : "Other"}{charge.date ? ` · ${charge.date}` : ""}</span>
                   </button>
-                  <CheckoutRedeem
+                  {!disabled && <CheckoutRedeem
                     patientReference={patientReference}
                     chargeItemReference={`ChargeItem/${charge.id}`}
                     procedureReference={charge.procedureReference}
@@ -186,7 +234,26 @@ export function CollectPanel({
                       setPackageRevision((current) => current + 1);
                       onPackageBalanceChanged?.();
                     }}
-                  />
+                  />}
+                  {!disabled && <CheckoutBankCredit
+                    patientReference={patientReference}
+                    chargeItemReference={`ChargeItem/${charge.id}`}
+                    amountCents={charge.amountCents}
+                    creditBank={creditBank}
+                    loading={creditBankLoading}
+                    loadError={creditBankError}
+                    onSpent={(nextBank) => {
+                      setCreditBank(nextBank);
+                      setCharges((current) => current.filter((item) => item.id !== charge.id));
+                      setSelectedIds((current) => {
+                        const next = new Set(current);
+                        next.delete(charge.id);
+                        return next;
+                      });
+                      setPackageRevision((current) => current + 1);
+                      onPackageBalanceChanged?.();
+                    }}
+                  />}
                 </div>
               );
             })}
@@ -204,6 +271,7 @@ export function CollectPanel({
               <button
                 key={entry.code}
                 type="button"
+                disabled={disabled}
                 aria-pressed={tender === entry.code}
                 onClick={() => setTender(entry.code)}
                 className={`rounded border px-3 py-2 text-sm ${tender === entry.code ? "border-blue-400 bg-blue-600 font-bold" : "border-white/15 text-white/60"}`}
@@ -216,7 +284,7 @@ export function CollectPanel({
           <input
             aria-label="Collection amount"
             inputMode="decimal"
-            disabled={!selectedCharges.length}
+            disabled={disabled || !selectedCharges.length}
             value={amountInput}
             onChange={(event) => setAmountInput(event.target.value)}
             className="mt-1.5 h-10 w-full rounded border border-white/15 bg-black/30 px-3 text-sm text-white disabled:opacity-40"
@@ -230,12 +298,23 @@ export function CollectPanel({
           {busy ? "Collecting…" : "Collect"}
         </button>
       </footer>
-      {sellingPackage && (
+      {!disabled && sellingPackage && (
         <SaleSheet
           patientReference={patientReference}
           patientName={patientName}
           onClose={() => setSellingPackage(false)}
           onSold={() => {
+            setPackageRevision((current) => current + 1);
+            onPackageBalanceChanged?.();
+          }}
+        />
+      )}
+      {!disabled && depositingCreditBank && (
+        <CreditBankDepositSheet
+          patientReference={patientReference}
+          patientName={patientName}
+          onClose={() => setDepositingCreditBank(false)}
+          onDeposited={() => {
             setPackageRevision((current) => current + 1);
             onPackageBalanceChanged?.();
           }}

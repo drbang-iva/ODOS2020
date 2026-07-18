@@ -51,6 +51,7 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Former smoker/);
   assert.ok(html.indexOf("Jun 30") < html.indexOf("Feb 02"));
   assert.match(html, /DX-NEW/);
+  assert.match(html, /Deposit Credit Bank/);
   assert.match(html, /Start today&#x27;s visit →/);
 });
 

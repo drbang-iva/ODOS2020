@@ -25,6 +25,10 @@ const RESOURCE_CAPABILITIES = {
   presetSeed: false,
 } as const;
 
+export function lensProductChargeItemDefinitionCanonical(productId: string): string {
+  return `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/lens-products/${encodeURIComponent(productId)}`;
+}
+
 export const LENS_DESIGN_TYPES = [
   "single-vision",
   "flat-top-28",
@@ -427,7 +431,7 @@ export function buildLensProductResource(input: LensProduct): ChargeItemDefiniti
   return {
     ...original,
     resourceType: "ChargeItemDefinition",
-    url: original?.url ?? `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/lens-products/${encodeURIComponent(item.id)}`,
+    url: original?.url ?? lensProductChargeItemDefinitionCanonical(item.id),
     version: original?.version ?? "1",
     status: item.active ? "active" : "retired",
     title: item.design.productName,

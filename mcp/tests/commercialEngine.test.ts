@@ -19,6 +19,7 @@ import {
   CommercialEngineInputError,
   PgCommercialEngineStore,
 } from "../src/commercial-engine/ledger-store.js";
+import { paymentTenderExtension } from "../src/fhir/odosPaymentTender.js";
 
 const definition: PackageDefinition = {
   id: "9f707c89-4b51-4b16-85cb-95b48e235fd2",
@@ -109,6 +110,64 @@ test("sale finalization reads immutable terms from the paid Invoice and requires
   assert.deepEqual(finalized?.snapshotEligibleProcedureTypeCodes, definition.eligibleProcedureTypeCodes);
   assert.equal(finalized?.snapshotSessionCount, 3);
   assert.equal(finalized?.snapshotPriceCents, 360_000);
+});
+
+test("package activation ignores tender metadata and requires full funding", async (t) => {
+  const prepared = await preparePackageSale(
+    { store: store(), now: () => "2026-07-18T14:00:00Z" },
+    {
+      create: async <T>(resource: T): Promise<T> => ({ ...(resource as object), id: "sale-invoice" }) as T,
+      read: async () => { throw new Error("not used"); },
+      search: async () => { throw new Error("not used"); },
+    } as never,
+    { patientReference: "Patient/patient-1", definitionId: definition.id, staffReference: "Practitioner/staff-1" },
+  );
+  const input = {
+    patientReference: "Patient/patient-1",
+    definitionId: definition.id,
+    invoiceReference: "Invoice/sale-invoice",
+    staffReference: "Practitioner/staff-1",
+  };
+
+  await t.test("partial manual payment does not activate the package", async () => {
+    let activated = false;
+    await assert.rejects(finalizePackageSale(
+      { store: { ...store(), finalizeSale: async () => { activated = true; return instance(); } } },
+      {
+        create: async () => { throw new Error("not used"); },
+        read: async () => ({ ...prepared.invoice, status: "issued" as const, extension: [paymentTenderExtension("CASH")] }),
+        search: async () => ({
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: [{
+            resource: {
+              resourceType: "PaymentReconciliation",
+              status: "active",
+              outcome: "complete",
+              paymentAmount: { value: 1_000, currency: "USD" },
+              detail: [{ request: { reference: "Invoice/sale-invoice" }, amount: { value: 1_000, currency: "USD" } }],
+            },
+          }],
+        }),
+      } as never,
+      input,
+    ), /successful payment/);
+    assert.equal(activated, false);
+  });
+
+  await t.test("unpaid Invoice created with tender metadata does not activate the package", async () => {
+    let activated = false;
+    await assert.rejects(finalizePackageSale(
+      { store: { ...store(), finalizeSale: async () => { activated = true; return instance(); } } },
+      {
+        create: async () => { throw new Error("not used"); },
+        read: async () => ({ ...prepared.invoice, status: "issued" as const, extension: [paymentTenderExtension("CHECK")] }),
+        search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
+      } as never,
+      input,
+    ), /successful payment/);
+    assert.equal(activated, false);
+  });
 });
 
 test("applicable package matching requires code, unexpired balance, and explicit remaining sessions", () => {

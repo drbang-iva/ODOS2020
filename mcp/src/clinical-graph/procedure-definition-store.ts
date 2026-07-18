@@ -33,6 +33,7 @@ export interface ClinicalProcedureDefinition {
   sourceStatus: "verified-seed" | "unseeded-needs-operator-input" | "local-practice";
   fhirProcedureCode: ProcedureCodeInput | CodeableConcept;
   valueSchema: Record<string, unknown>;
+  photo_posture: "timeline" | "compare";
   defaultStatus: ProcedureStatusCode;
   notBillReady: boolean;
   active: boolean;
@@ -208,7 +209,10 @@ export function parseProcedureDefinitionResource(resource: Basic): ClinicalProce
   } catch {
     throw new Error("Procedure-definition JSON is malformed and cannot be parsed.");
   }
-  const definition = assertClinicalProcedureDefinition(parsed);
+  const normalized = isRecord(parsed) && parsed.photo_posture === undefined
+    ? { ...parsed, photo_posture: parsed.discipline === "aesthetics" ? "compare" : "timeline" }
+    : parsed;
+  const definition = assertClinicalProcedureDefinition(normalized);
   const identifier = resource.identifier?.find((candidate) =>
     candidate.system === PROCEDURE_DEFINITION_IDENTIFIER_SYSTEM
   )?.value;
@@ -244,6 +248,7 @@ function procedureSeed(
       perEye: false,
       fields: {},
     },
+    photo_posture: "compare",
     defaultStatus: "completed",
     notBillReady: true,
     active: true,
@@ -283,6 +288,9 @@ function assertClinicalProcedureDefinition(value: unknown): ClinicalProcedureDef
   }
   if (!isRecord(value.valueSchema)) {
     throw new Error("Procedure definition valueSchema must be an object.");
+  }
+  if (value.photo_posture !== "timeline" && value.photo_posture !== "compare") {
+    throw new Error("Procedure definition photo_posture must be timeline or compare.");
   }
   if (![
     "preparation",
