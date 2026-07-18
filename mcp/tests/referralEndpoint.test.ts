@@ -44,18 +44,28 @@ const CREATE_BODY = {
 
 test("referral endpoint fails closed for unauthenticated, non-chart-write, and out-of-compartment callers", async () => {
   const fhir = seededFhir();
+  const forbiddenAuth = "Bearer front-desk-denied";
+  const outsideCompartmentAuth = "Bearer compartment-denied";
   const unauthenticated = await handleCreateReferralRequest(deps(fhir, { authenticated: false }), {
     authHeader: undefined,
     patientId: "p1",
     body: CREATE_BODY,
   });
-  const forbidden = await handleCreateReferralRequest(deps(fhir, { role: "front-desk" }), {
-    authHeader: AUTH,
+  const forbidden = await handleCreateReferralRequest(deps(fhir, {
+    role: "front-desk",
+    authToken: forbiddenAuth,
+    staffReference: "Practitioner/front-desk-denied",
+  }), {
+    authHeader: forbiddenAuth,
     patientId: "p1",
     body: CREATE_BODY,
   });
-  const outsideCompartment = await handleReferralArtifactRequest(deps(fhir, { patientGrant: "Patient/other" }), {
-    authHeader: AUTH,
+  const outsideCompartment = await handleReferralArtifactRequest(deps(fhir, {
+    authToken: outsideCompartmentAuth,
+    staffReference: "Practitioner/compartment-denied",
+    patientGrant: "Patient/other",
+  }), {
+    authHeader: outsideCompartmentAuth,
     patientId: "p1",
     referralId: "referral-1",
     action: "preview",
@@ -188,15 +198,19 @@ function deps(
   options: {
     authenticated?: boolean;
     role?: "clinician" | "front-desk";
+    authToken?: string;
+    staffReference?: string;
     patientGrant?: string;
   } = {},
 ): ReferralEndpointDeps {
   const authenticated = options.authenticated ?? true;
   const role = options.role ?? "clinician";
+  const authToken = options.authToken ?? AUTH;
+  const staffReference = options.staffReference ?? "Practitioner/clinician-1";
   const patientGrant = options.patientGrant ?? "Patient/p1";
   return {
-    authenticate: async (header) => authenticated && header === AUTH
-      ? { staffReference: "Practitioner/clinician-1", actorRole: role, fhir }
+    authenticate: async (header) => authenticated && header === authToken
+      ? { staffReference, actorRole: role, fhir }
       : null,
     serviceFhir: {
       search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
@@ -205,7 +219,7 @@ function deps(
           resourceType: "ProjectMembership",
           id: "membership-1",
           project: { reference: "Project/project-1" },
-          profile: { reference: "Practitioner/clinician-1" },
+          profile: { reference: staffReference },
           access: [{
             parameter: [{ name: "patient_compartment", valueString: patientGrant }],
           }],
