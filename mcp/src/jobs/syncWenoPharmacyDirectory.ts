@@ -86,6 +86,7 @@ export interface PharmacyDirectoryRow {
 export interface ParsedPharmacyDirectory {
   rows: PharmacyDirectoryRow[];
   malformedRows: number;
+  deduplicatedRows: number;
 }
 
 export interface WenoPharmacyDirectoryStorageClient {
@@ -242,6 +243,7 @@ export interface SyncWenoPharmacyDirectoryResult {
   parsed: number;
   stored: number;
   malformedRows?: number;
+  deduplicatedRows?: number;
 }
 
 export async function syncWenoPharmacyDirectory(
@@ -259,6 +261,7 @@ export async function syncWenoPharmacyDirectory(
     parsed: parsed.rows.length,
     stored,
     malformedRows: parsed.malformedRows,
+    deduplicatedRows: parsed.deduplicatedRows,
   };
 }
 
@@ -281,7 +284,7 @@ export function parsePharmacyDirectoryZip(bytes: ArrayBuffer): ParsedPharmacyDir
     if (!filename.toLowerCase().endsWith(".csv")) continue;
     const parsed = parseCsv(contents);
     if (parsed.records.length < 2) continue;
-    const headers = parsed.records[1].map((value) => value.trim());
+    const headers = parsed.records[1].map(canonicalizeLiteHeader);
     if (!LITE_HEADERS.every((header) => headers.includes(header))) continue;
     if (headers.some((header) => FULL_ONLY_HEADERS.has(header))) continue;
     candidates.push({ filename, headers, records: parsed.records, skipped: parsed.skipped });
@@ -300,17 +303,24 @@ export function parsePharmacyDirectoryZip(bytes: ArrayBuffer): ParsedPharmacyDir
 
   const candidate = candidates[0];
   const indexes = new Map(candidate.headers.map((header, index) => [header, index]));
-  const rows: PharmacyDirectoryRow[] = [];
+  const rowsByKey = new Map<string, PharmacyDirectoryRow>();
   let malformedRows = candidate.skipped;
+  let deduplicatedRows = 0;
   for (const record of candidate.records.slice(2)) {
     if (record.every((value) => value.trim() === "")) continue;
     try {
-      rows.push(parseDirectoryRow(record, indexes));
+      const row = parseDirectoryRow(record, indexes);
+      const key = pharmacyDirectoryKey(row);
+      if (rowsByKey.has(key)) {
+        deduplicatedRows += 1;
+        rowsByKey.delete(key);
+      }
+      rowsByKey.set(key, row);
     } catch {
       malformedRows += 1;
     }
   }
-  return { rows, malformedRows };
+  return { rows: [...rowsByKey.values()], malformedRows, deduplicatedRows };
 }
 
 export function searchPharmacies(
@@ -415,6 +425,13 @@ interface StoredPharmacyDirectoryRow {
   open_24_hours: PharmacyOpen24Hours;
 }
 
+function canonicalizeLiteHeader(value: string): string {
+  const header = value.trim();
+  return header === "Mail_Order_ US_Territories_Serviced"
+    ? "Mail_Order_US_Territories_Serviced"
+    : header;
+}
+
 function parseCsv(contents: Uint8Array): { records: string[][]; skipped: number } {
   let skipped = 0;
   const records = parse(new TextDecoder().decode(contents), {
@@ -438,9 +455,9 @@ function parseDirectoryRow(
     return index === undefined ? "" : (record[index] ?? "").trim();
   };
   const row: PharmacyDirectoryRow = {
-    created: parseDateTime(get("Created"), "Created"),
-    modified: parseDateTime(get("Modified"), "Modified"),
-    deleted: parseDateTime(get("Deleted"), "Deleted"),
+    created: parseDateTime(get("Created")),
+    modified: parseDateTime(get("Modified")),
+    deleted: parseDeletedDateTime(get("Deleted")),
     ncpdpId: stripSafeBrackets(get("NCPDP_safe")),
     mutuallyDefinedId: stripSafeBrackets(get("Mutually_Defined_ID_safe")),
     npi: stripSafeBrackets(get("NPI_safe")),
@@ -456,7 +473,7 @@ function parseDirectoryRow(
     longitude: parseCoordinate(get("Longitude")),
     phone: stripSafeBrackets(get("Pharmacy_Phone_safe")),
     testPharmacy: parseBoolean(get("Test_Pharmacy"), "Test_Pharmacy"),
-    stateWideMailOrder: parseBoolean(get("State_Wide_Mail_Order"), "State_Wide_Mail_Order"),
+    stateWideMailOrder: parseStateWideMailOrder(get("State_Wide_Mail_Order")),
     mailOrderStatesServiced: parseServiceArea(get("Mail_Order_US_State_Serviced")),
     mailOrderTerritoriesServiced: parseServiceArea(get("Mail_Order_US_Territories_Serviced")),
     onWeno: parseBoolean(get("On_WENO"), "On_WENO"),
@@ -478,13 +495,64 @@ function nullableText(value: string): string {
   return normalized.toUpperCase() === "NULL" ? "" : normalized;
 }
 
-function parseDateTime(value: string, field: string): string | undefined {
+function parseDateTime(value: string): string | undefined {
   const normalized = nullableText(value);
   if (!normalized) return undefined;
-  const utcValue = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized) ? normalized : `${normalized}Z`;
+  return parseIsoDateTime(normalized) ?? parseUsDateTime(normalized);
+}
+
+function parseDeletedDateTime(value: string): string | undefined {
+  const normalized = nullableText(value);
+  if (!normalized) return undefined;
+  const parsed = parseDateTime(normalized);
+  if (!parsed) {
+    throw new Error("WENO pharmacy directory Deleted is not a valid datetime.");
+  }
+  return parsed;
+}
+
+function parseIsoDateTime(value: string): string | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/i.test(value)) {
+    return undefined;
+  }
+  const utcValue = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T00:00:00Z`
+    : /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}Z`;
   const parsed = new Date(utcValue);
-  if (Number.isNaN(parsed.valueOf())) {
-    throw new Error(`WENO pharmacy directory ${field} is not a valid datetime.`);
+  return Number.isNaN(parsed.valueOf()) ? undefined : parsed.toISOString();
+}
+
+function parseUsDateTime(value: string): string | undefined {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}):(\d{2})\s+(AM|PM))?$/i.exec(value);
+  if (!match) return undefined;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  const twelveHour = match[4] ? Number(match[4]) : 12;
+  const minute = match[5] ? Number(match[5]) : 0;
+  const second = match[6] ? Number(match[6]) : 0;
+  const meridiem = match[7]?.toUpperCase() ?? "AM";
+  if (
+    month < 1 || month > 12
+    || day < 1 || day > 31
+    || twelveHour < 1 || twelveHour > 12
+    || minute > 59
+    || second > 59
+  ) {
+    return undefined;
+  }
+  const hour = twelveHour % 12 + (meridiem === "PM" ? 12 : 0);
+  const timestamp = Date.UTC(year, month - 1, day, hour, minute, second);
+  const parsed = new Date(timestamp);
+  if (
+    parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
+    || parsed.getUTCHours() !== hour
+    || parsed.getUTCMinutes() !== minute
+    || parsed.getUTCSeconds() !== second
+  ) {
+    return undefined;
   }
   return parsed.toISOString();
 }
@@ -494,6 +562,13 @@ function parseBoolean(value: string, field: string): boolean {
   if (["true", "t", "yes", "y", "1"].includes(normalized)) return true;
   if (["", "false", "f", "no", "n", "0"].includes(normalized)) return false;
   throw new Error(`WENO pharmacy directory ${field} is not a recognized boolean.`);
+}
+
+function parseStateWideMailOrder(value: string): boolean {
+  const normalized = nullableText(value).toLowerCase();
+  if (normalized === "local") return false;
+  if (normalized === "state") return true;
+  throw new Error("WENO pharmacy directory State_Wide_Mail_Order must be Local or State.");
 }
 
 function parseCoordinate(value: string): number | undefined {
@@ -516,10 +591,10 @@ function parseServiceArea(value: string): PharmacyServiceArea {
 
 function parseOpen24Hours(value: string): PharmacyOpen24Hours {
   const normalized = nullableText(value).toLowerCase();
-  if (normalized === "y") return "yes";
-  if (normalized === "n") return "no";
+  if (normalized === "y" || normalized === "yes") return "yes";
+  if (normalized === "n" || normalized === "no") return "no";
   if (normalized === "unknown" || normalized === "") return "unknown";
-  throw new Error("WENO pharmacy directory 24HR must be Y, N, or Unknown.");
+  throw new Error("WENO pharmacy directory 24HR must be Yes, No, blank, Y, N, or Unknown.");
 }
 
 function validatedTextFilter(field: string, value: string | undefined): string | undefined {

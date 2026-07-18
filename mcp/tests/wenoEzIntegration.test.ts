@@ -248,7 +248,7 @@ test("pharmacy directory parser finds the LITE CSV by row-2 headers and preserve
     ZipCode_safe: "[00701]",
     Pharmacy_Phone_safe: "[0123456789]",
     Mail_Order_US_State_Serviced: "TX|OK",
-    Mail_Order_US_Territories_Serviced: "All",
+    "Mail_Order_ US_Territories_Serviced": "All",
     "24HR": "Y",
   });
   const bytes = syntheticDirectoryZip([row], { extraLiteColumn: true, includeFull: true });
@@ -257,6 +257,7 @@ test("pharmacy directory parser finds the LITE CSV by row-2 headers and preserve
   const withoutTrailingColumn = parsePharmacyDirectoryZip(syntheticDirectoryZip([row]));
 
   assert.equal(parsed.malformedRows, 0);
+  assert.equal(parsed.deduplicatedRows, 0);
   assert.equal(parsed.rows.length, 1);
   assert.deepEqual(parsed, withoutTrailingColumn);
   assert.equal(parsed.rows[0].ncpdpId, "0234567");
@@ -293,6 +294,114 @@ test("pharmacy directory parser counts malformed rows and retains deleted tombst
   assert.equal(parsed.malformedRows, 1);
   assert.equal(parsed.rows.length, 1);
   assert.equal(parsed.rows[0].deleted, "2026-07-17T01:02:03.000Z");
+});
+
+test("pharmacy directory parser reads WENO US dates as explicit UTC instants", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({
+      NCPDP_safe: "[1000101]",
+      Created: "2/26/2018",
+      Modified: "2/26/2018 1:23:45 PM",
+    }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 0);
+  assert.equal(parsed.rows[0].created, "2018-02-26T00:00:00.000Z");
+  assert.equal(parsed.rows[0].modified, "2018-02-26T13:23:45.000Z");
+});
+
+test("pharmacy directory parser keeps bad metadata dates but rejects an unreadable tombstone", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({
+      NCPDP_safe: "[1000102]",
+      Created: "not-a-date",
+      Modified: "also-not-a-date",
+    }),
+    syntheticPharmacy({ NCPDP_safe: "[1000103]", Deleted: "not-a-date" }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 1);
+  assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.rows[0].ncpdpId, "1000102");
+  assert.equal(parsed.rows[0].created, undefined);
+  assert.equal(parsed.rows[0].modified, undefined);
+});
+
+test("pharmacy directory parser strictly maps the Local and State service models", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000106]", State_Wide_Mail_Order: " local " }),
+    syntheticPharmacy({ NCPDP_safe: "[1000107]", State_Wide_Mail_Order: "STATE" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000108]", State_Wide_Mail_Order: "National" }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 1);
+  assert.equal(parsed.rows.length, 2);
+  assert.equal(parsed.rows[0].stateWideMailOrder, false);
+  assert.equal(parsed.rows[1].stateWideMailOrder, true);
+});
+
+test("pharmacy directory parser maps real and documented 24HR encodings", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000109]", "24HR": " yes " }),
+    syntheticPharmacy({ NCPDP_safe: "[1000110]", "24HR": "NO" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000111]", "24HR": "" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000112]", "24HR": "Y" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000113]", "24HR": "n" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000114]", "24HR": "Unknown" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000115]", "24HR": "Sometimes" }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 1);
+  assert.deepEqual(parsed.rows.map((row) => row.open24Hours), [
+    "yes",
+    "no",
+    "unknown",
+    "yes",
+    "no",
+    "unknown",
+  ]);
+});
+
+test("pharmacy directory parser accepts both territories header spellings", () => {
+  const fixedHeaders = SYNTHETIC_LITE_HEADERS.map((header) =>
+    header === "Mail_Order_ US_Territories_Serviced"
+      ? "Mail_Order_US_Territories_Serviced"
+      : header
+  );
+  const row = {
+    ...syntheticPharmacy(),
+    Mail_Order_US_Territories_Serviced: "All",
+  };
+  const bytes = zipToArrayBuffer(zipSync({
+    "fixed-header.csv": new TextEncoder().encode(csvFixture(fixedHeaders, [row])),
+  }));
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 0);
+  assert.deepEqual(parsed.rows[0].mailOrderTerritoriesServiced, { type: "all" });
+});
+
+test("pharmacy directory parser deduplicates routing keys with the last file occurrence winning", () => {
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000104]", Business_Name: "Earlier Pharmacy" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000104]", Business_Name: "Later Pharmacy" }),
+  ]);
+
+  const parsed = parsePharmacyDirectoryZip(bytes);
+
+  assert.equal(parsed.malformedRows, 0);
+  assert.equal(parsed.deduplicatedRows, 1);
+  assert.equal(parsed.rows.length, 1);
+  assert.equal(parsed.rows[0].businessName, "Later Pharmacy");
 });
 
 test("pharmacy directory parser rejects an archive without a recognizable LITE row-2 header", () => {
@@ -345,7 +454,43 @@ test("pharmacy directory sync downloads, reports malformed rows, and stores pars
       parsed: 1,
       stored: 1,
       malformedRows: 1,
+      deduplicatedRows: 0,
     });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pharmacy directory sync stores one last-occurrence row in both incremental and replace modes", async () => {
+  const originalFetch = globalThis.fetch;
+  const bytes = syntheticDirectoryZip([
+    syntheticPharmacy({ NCPDP_safe: "[1000105]", Business_Name: "Earlier Pharmacy" }),
+    syntheticPharmacy({ NCPDP_safe: "[1000105]", Business_Name: "Later Pharmacy" }),
+  ]);
+  globalThis.fetch = (async () => new Response(bytes, { status: 200 })) as typeof fetch;
+  try {
+    for (const [daily, expectedMode] of [["Y", "incremental"], ["N", "replace"]] as const) {
+      let storedRows: PharmacyDirectoryRow[] = [];
+      let storedMode = "";
+      const result = await syncWenoPharmacyDirectory({
+        trigger: "manual",
+        config: CONFIG,
+        request: { ...pharmacyDirectoryRequest(), Daily: daily },
+        storage: {
+          async store(rows, mode) {
+            storedRows = rows;
+            storedMode = mode;
+            return rows.length;
+          },
+        },
+      });
+
+      assert.equal(storedMode, expectedMode);
+      assert.equal(storedRows.length, 1);
+      assert.equal(storedRows[0].businessName, "Later Pharmacy");
+      assert.equal(result.stored, 1);
+      assert.equal(result.deduplicatedRows, 1);
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -680,7 +825,7 @@ const SYNTHETIC_LITE_HEADERS = [
   "Test_Pharmacy",
   "State_Wide_Mail_Order",
   "Mail_Order_US_State_Serviced",
-  "Mail_Order_US_Territories_Serviced",
+  "Mail_Order_ US_Territories_Serviced",
   "On_WENO",
   "24HR",
 ] as const;
@@ -707,9 +852,9 @@ function syntheticPharmacy(overrides: Partial<SyntheticPharmacy> = {}): Syntheti
     Longitude: "-97.7431",
     Pharmacy_Phone_safe: "[05125550100]",
     Test_Pharmacy: "False",
-    State_Wide_Mail_Order: "False",
+    State_Wide_Mail_Order: "Local",
     Mail_Order_US_State_Serviced: "NULL",
-    Mail_Order_US_Territories_Serviced: "NULL",
+    "Mail_Order_ US_Territories_Serviced": "NULL",
     On_WENO: "True",
     "24HR": "Unknown",
     ...overrides,
