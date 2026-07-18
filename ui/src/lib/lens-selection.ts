@@ -9,7 +9,7 @@ import {
 } from "./lens-catalog";
 import type { LabOrderLensSpec } from "./optical-lab-order";
 import type { OpticalChargeLineDraft } from "./optical-order";
-import type { ResolvedVCode, VCodeResolution } from "./v-code-resolver";
+import { resolveVCode, type ResolvedVCode, type VCodeOrderRx, type VCodeResolution } from "./v-code-resolver";
 
 export type LensEye = "OD" | "OS";
 export type LensFulfillment = "lab" | "in-house";
@@ -357,6 +357,18 @@ export function lensSelectionToLabOrderSpec(
     lensMaterial: selection.product.material.name,
     treatments: [treatment, selection.coating?.name].filter((value): value is string => Boolean(value)),
   };
+}
+
+export function resolveLensSelectionBilling(
+  familyHint: string | undefined,
+  rx: VCodeOrderRx,
+  claimBound: boolean,
+  resolver: typeof resolveVCode = resolveVCode,
+): VCodeResolution {
+  if (!claimBound) {
+    return { status: "not-required", codes: [], reason: "Cash-pay order — HCPCS resolution is not required." };
+  }
+  return resolver(familyHint, rx, true);
 }
 
 function modifierChargeCents(modifier: ModifierOption, actual: number | undefined): number {

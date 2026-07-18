@@ -354,13 +354,53 @@ export function nextEligibleDate(item: CoverageEligibilityResponseInsuranceItem 
 }
 
 export function latestBenefitsByCoverage(responses: readonly CoverageEligibilityResponse[]): Map<string, CoverageEligibilityResponse> {
-  const sorted = [...responses].sort((left, right) => right.created.localeCompare(left.created));
+  const sorted = [...responses].sort((left, right) => Date.parse(right.created) - Date.parse(left.created));
   const latest = new Map<string, CoverageEligibilityResponse>();
   for (const response of sorted) {
-    const reference = response.insurance?.[0]?.coverage.reference;
-    if (reference && !latest.has(reference)) latest.set(reference, response);
+    for (const insurance of response.insurance ?? []) {
+      const reference = coverageReferenceKey(insurance.coverage.reference);
+      if (reference && !latest.has(reference)) latest.set(reference, response);
+    }
   }
   return latest;
+}
+
+export function hasActiveApplicableBenefit(
+  coverages: readonly Coverage[],
+  responses: readonly CoverageEligibilityResponse[],
+  kinds: readonly BenefitKind[],
+  serviceDate: string,
+): boolean {
+  const latest = latestBenefitsByCoverage(responses);
+  return coverages.some((coverage) => {
+    if (!coverage.id || coverage.status !== "active") return false;
+    const coverageStart = coverage.period?.start?.slice(0, 10);
+    const coverageEnd = coverage.period?.end?.slice(0, 10);
+    if (coverageStart && coverageStart > serviceDate) return false;
+    if (coverageEnd && coverageEnd < serviceDate) return false;
+    const coverageKey = `Coverage/${coverage.id}`;
+    const response = latest.get(coverageKey);
+    if (!response || response.status !== "active" || response.outcome !== "complete") return false;
+    const insurance = response.insurance?.find(
+      (candidate) => coverageReferenceKey(candidate.coverage.reference) === coverageKey,
+    );
+    if (!insurance) return false;
+    const benefitPeriod = insurance.benefitPeriod;
+    const benefitStart = benefitPeriod?.start?.slice(0, 10);
+    const benefitEnd = benefitPeriod?.end?.slice(0, 10);
+    if (benefitStart && benefitStart > serviceDate) return false;
+    if (benefitEnd && benefitEnd < serviceDate) return false;
+    const matchedResponse = { ...response, insurance: [insurance] };
+    return kinds.some((kind) => {
+      const status = deriveBenefitStatus(matchedResponse, benefitItem(matchedResponse, kind), serviceDate);
+      return status === "Authorized" || status === "Eligibility Active";
+    });
+  });
+}
+
+function coverageReferenceKey(reference: string | undefined): string | undefined {
+  const match = reference?.match(/(?:^|\/)Coverage\/([^/?#]+)/);
+  return match?.[1] ? `Coverage/${match[1]}` : undefined;
 }
 
 export async function fetchPatientInsurance(patientReference: string, options: ClaimsApiOptions = {}): Promise<InsuranceScreenData> {
