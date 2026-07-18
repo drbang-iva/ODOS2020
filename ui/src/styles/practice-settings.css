@@ -435,6 +435,8 @@
 .appearance-accent-swatch[data-accent-swatch="sapphire"] { background: var(--odos-sapphire); }
 .appearance-accent-swatch[data-accent-swatch="emerald"] { background: var(--odos-emerald); }
 .appearance-accent-swatch[data-accent-swatch="amethyst"] { background: var(--odos-amethyst); }
+.appearance-accent-swatch[data-accent-swatch="deep-sapphire"] { background: #3057bd; }
+.appearance-accent-swatch[data-accent-swatch="deep-amethyst"] { background: #7443cc; }
 .appearance-settings-note, .appearance-settings-status { margin: 0; color: var(--odos-muted); font-size: 12px; }
 .appearance-settings .settings-primary-action { justify-self: start; }
 

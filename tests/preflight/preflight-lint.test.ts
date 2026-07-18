@@ -294,6 +294,8 @@ test("v0.5d preflight aggregate writes structured reports when requested", () =>
       env: { ODOS_MODE: "local" },
       resources: [],
       files: [{ path: join(dir, "clean.ts"), text: "export const ok = true;\n" }],
+      appearanceDebtFiles: [],
+      appearanceDebtBaseline: {},
       writeReports: false,
       now: "2026-04-30T00:00:00.000Z",
     });

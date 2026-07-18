@@ -23,9 +23,11 @@ const SURFACE_LABELS: Record<AppearanceSurface, string> = {
 
 const ACCENT_LABELS: Record<AppearanceAccent, string> = {
   gold: "Gold",
-  sapphire: "Sapphire",
   emerald: "Emerald",
+  sapphire: "Sapphire",
   amethyst: "Amethyst",
+  "deep-sapphire": "Deep Sapphire",
+  "deep-amethyst": "Deep Amethyst",
 };
 
 type LoadedAppearance = {

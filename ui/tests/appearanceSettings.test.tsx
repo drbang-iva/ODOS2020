@@ -74,12 +74,12 @@ function contrastRatio(first: string, second: string): number {
   return (lighter! + 0.05) / (darker! + 0.05);
 }
 
-test("all 12 Surface × Accent combinations resolve the approved variable values", () => {
+test("all 18 Surface × Accent combinations resolve the approved variable values", () => {
   const combinations: AppearanceConfig[] = [];
   for (const surface of APPEARANCE_SURFACES) {
     for (const accent of APPEARANCE_ACCENTS) combinations.push({ surface, accent });
   }
-  assert.equal(combinations.length, 12);
+  assert.equal(combinations.length, 18);
 
   for (const config of combinations) {
     const variables = appearanceVariables(config);
@@ -189,11 +189,15 @@ test("Appearance offers only the two ready surfaces and no custom color input", 
     <AppearanceSettingsReady config={DEFAULT_APPEARANCE} canWrite client={fixture.client} />,
   );
   const inputs = renderer.root.findAllByType("input");
-  assert.equal(inputs.length, 6);
+  assert.equal(inputs.length, 8);
   assert.ok(inputs.every((input) => input.props.type === "radio"));
   assert.deepEqual(inputs.map((input) => input.props.value), [
-    "midnight", "space-black", "gold", "sapphire", "emerald", "amethyst",
+    "midnight", "space-black", "gold", "emerald", "sapphire", "amethyst", "deep-sapphire", "deep-amethyst",
   ]);
+  assert.deepEqual(
+    renderer.root.findAllByType("label").map((label) => label.findAllByType("span").at(-1)?.children.join("")),
+    ["Midnight", "Space Black", "Gold", "Emerald", "Sapphire", "Amethyst", "Deep Sapphire", "Deep Amethyst"],
+  );
   assert.deepEqual(SELECTABLE_APPEARANCE_SURFACES, ["midnight", "space-black"]);
   assert.equal(inputs.some((input) => input.props.value === "light"), false);
   act(() => renderer.unmount());
@@ -206,4 +210,13 @@ test("a persisted Light configuration remains valid and resolves its variables",
 
   assert.deepEqual(loaded.config, { surface: "light", accent: "gold" });
   assert.equal(appearanceVariables(loaded.config)["--odos-ground"], SURFACE_VARIABLES.light["--odos-ground"]);
+});
+
+test("a persisted Sapphire configuration remains valid and resolves the bright ramp", async () => {
+  const persisted = buildAppearanceConfigResource({ surface: "midnight", accent: "sapphire" });
+  const fixture = clientFixture(persisted);
+  const loaded = await loadAppearanceConfigSingleton(fixture.client);
+
+  assert.deepEqual(loaded.config, { surface: "midnight", accent: "sapphire" });
+  assert.equal(appearanceVariables(loaded.config)["--odos-accent"], "#6d97f0");
 });
