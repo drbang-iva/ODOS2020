@@ -254,7 +254,14 @@ export class ProtocolService {
     linkedDx: string[],
     at: string,
   ): Promise<void> {
-    const existing = item.mergeKey ? (await this.actions.list()).find((row) =>
+    const actions = await this.actions.list();
+    const existingForItem = actions.find((row) =>
+      row.protocolApplicationId === application.id &&
+      row.sourceItemKey === item.itemKey &&
+      !["removed", "cancelled"].includes(row.state)
+    );
+    if (existingForItem) return;
+    const existing = item.mergeKey ? actions.find((row) =>
       row.encounterId === application.encounterId && row.mergeKey === item.mergeKey &&
       !["removed", "cancelled"].includes(row.state)
     ) : undefined;

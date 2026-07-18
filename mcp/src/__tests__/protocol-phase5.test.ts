@@ -185,7 +185,7 @@ test("unapply removes only charges staged by its protocol application", async ()
   assert.equal(chargesAfter.filter((row) => row.protocolApplicationId === openedB.application.id).length, 5);
 });
 
-test("commit retry after a partial failure skips committed findings and staged charges, then confirms once", async () => {
+test("commit retry after a late partial failure skips all completed writes, then confirms once", async () => {
   const { service, projectedFindings, materialized, projectionControl } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
@@ -200,16 +200,16 @@ test("commit retry after a partial failure skips committed findings and staged c
     if (application.confirmed) confirmedSaves += 1;
     return saveApplication(application);
   };
-  projectionControl.failOnceOnActionType = "counseling";
+  projectionControl.failOnceOnActionType = "follow-up";
 
   await assert.rejects(
     service.commit(opened.application.id, [], ["Condition/c-retry"]),
-    /Simulated counseling projection failure/,
+    /Simulated follow-up projection failure/,
   );
   assert.equal((await service.applications.get(opened.application.id))?.confirmed, false);
   assert.equal(projectedFindings.length, 14);
   assert.equal((await service.charges.list()).length, 5);
-  assert.equal(materialized.length, 5);
+  assert.equal(materialized.length, 7);
 
   await service.commit(opened.application.id, [], ["Condition/c-retry"]);
 
@@ -219,6 +219,11 @@ test("commit retry after a partial failure skips committed findings and staged c
   assert.equal(new Set((await service.charges.list()).map((row) =>
     `${row.protocolApplicationId}:${row.planActionRef}`
   )).size, 5);
+  const actions = await service.actions.list();
+  assert.equal(actions.length, 8);
+  assert.equal(new Set(actions.map((row) =>
+    `${row.protocolApplicationId}:${row.sourceItemKey}`
+  )).size, 8);
   assert.equal(materialized.length, 8);
   assert.equal((await service.applications.get(opened.application.id))?.confirmed, true);
   assert.equal(confirmedSaves, 1);
