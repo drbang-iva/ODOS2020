@@ -40,6 +40,24 @@ test("AppShell renders every global control and a linked breadcrumb on a deep ro
   assert.match(html, /Invite a staff member/);
 });
 
+test("AppShell registers the statement-message settings breadcrumb", () => {
+  const html = renderToStaticMarkup(
+    <AppShell
+      path="/settings/statement-messages"
+      roles={["practice-admin"]}
+      homePath="/desk"
+      side="desk"
+      email="admin@example.test"
+    >
+      <main />
+    </AppShell>,
+  );
+  assert.match(
+    html,
+    /aria-label="Breadcrumb"[\s\S]*href="\/settings"[\s\S]*Statement and receipt messages/,
+  );
+});
+
 test("unified Sections includes Schedule and applies the existing practice-admin Settings gate", () => {
   const frontDesk = renderToStaticMarkup(<AppShell path="/desk" roles={["front-desk"]} homePath="/desk" side="desk" email="desk@example.test"><main /></AppShell>);
   const admin = renderToStaticMarkup(<AppShell path="/desk" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test"><main /></AppShell>);

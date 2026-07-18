@@ -62,6 +62,7 @@ export interface StatementRow {
   unappliedCreditCents?: number;
   balanceDueCents?: number;
   creditBalanceCents?: number;
+  statementFooterMessage?: string;
   detail?: StatementDetail;
 }
 
@@ -128,6 +129,7 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
   .totals { width: min(420px, 100%); margin: 28px 0 0 auto; } .totals td:first-child { text-align: left; }
   .balance td { border-top: 2px solid #111; border-bottom: 3px double #111; font-size: 18px; font-weight: 800; }
   .note { margin-top: 28px; color: #555; }
+  .practice-message { margin-top: 20px; color: #333; white-space: pre-line; }
   @media print { .odos-statement { max-width: none; } }
 </style>
 <h1>Balance-forward statement</h1>
@@ -143,6 +145,7 @@ export function renderBalanceForwardStatement(statement: StatementRow): string {
   ${credit.creditBalanceCents > 0 ? `<tr class="credit"><td><strong>Credit balance</strong></td><td><strong>${formatStatementMoney(credit.creditBalanceCents)}</strong></td></tr>` : ""}
 </tbody></table>
 <p class="note">This balance is reconciled to the listed Invoice totals and recorded payment allocations as of the statement date.</p>
+${renderFooterMessage(statement.statementFooterMessage, "practice-message")}
 </section></body></html>`;
 }
 
@@ -206,6 +209,7 @@ function renderDetailedStatement(statement: StatementRow): string {
     .activity td { border-top: 0; } .muted { color: #555; } tfoot th { background: #f1f1f1; }
     .detail-total { margin-top: 12px; } .detail-total th:first-child { text-align: right; }
     .statement-total { width: 48%; margin: 18px 0 0 auto; } .statement-total .due th { border-top: 2px solid #111; font-size: 16px; }
+    .practice-message { margin: 20px 0 0; color: #333; white-space: pre-line; }
     .tear { margin-top: 28px; padding-top: 16px; border-top: 2px dashed #555; break-inside: avoid; } .tear-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     .fields { display: grid; grid-template-columns: 1fr 72px 72px; gap: 9px; margin-top: 12px; } .blank { display: block; min-height: 22px; border-bottom: 1px solid #111; }
     .signature { margin-top: 14px; } @media print { .mailer { max-width: none; } }
@@ -217,6 +221,7 @@ function renderDetailedStatement(statement: StatementRow): string {
   ${orders}
   <table class="detail-total"><tbody><tr><th colspan="2">Total</th><th>${escapeHtml(String(detailTotals.quantity))}</th><th>${formatStatementMoney(detailTotals.retailCents)}</th><th>${formatStatementMoney(detailTotals.insuranceCents)}</th><th>${formatStatementMoney(detailTotals.patientCents)}</th></tr></tbody></table>
   <table class="statement-total"><tbody><tr><th>Invoice balance</th><td>${formatStatementMoney(statement.balanceCents)}</td></tr><tr><th>Unapplied credit</th><td>−${formatStatementMoney(credit.unappliedCreditCents)}</td></tr><tr class="due"><th>PAY THIS AMOUNT</th><td>${formatStatementMoney(credit.balanceDueCents)}</td></tr></tbody></table>
+  ${renderFooterMessage(statement.statementFooterMessage, "practice-message")}
   <section class="tear"><div class="tear-grid"><div><strong>Detach and return with payment</strong><br>Due: Upon Receipt<br>Make checks payable to ${escapeHtml(detail.header.practiceName)}.</div><div><span class="label">Amount enclosed</span><span class="blank"></span><br>☐ VISA &nbsp;&nbsp; ☐ MasterCard &nbsp;&nbsp; ☐ Check</div></div>
   <div class="fields"><div><span class="label">Card number</span><span class="blank"></span></div><div><span class="label">Exp.</span><span class="blank"></span></div><div><span class="label">CVV</span><span class="blank"></span></div></div>
   <div class="signature">I authorize the practice to charge the amount written above to the card listed on this form.<br><span class="blank"></span><span class="label">Signature</span></div></section>
@@ -235,6 +240,10 @@ function renderPatientPayments(payments: StatementPaymentRow[]): string {
 function renderAddress(address: StatementAddress | undefined): string {
   if (!address) return "";
   return [...address.lines, address.cityStatePostal].filter(Boolean).map((line) => escapeHtml(line!)).join("<br>");
+}
+
+function renderFooterMessage(message: string | undefined, className: string): string {
+  return message?.trim() ? `<p class="${className}">${escapeHtml(message)}</p>` : "";
 }
 
 function assertReconciled(statement: StatementRow): void {

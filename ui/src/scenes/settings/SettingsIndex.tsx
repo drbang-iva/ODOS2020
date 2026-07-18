@@ -87,6 +87,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         synonyms: ["insurance", "payer", "reimbursement", "margin", "estimate", "allowance"],
         practiceAdminOnly: true,
       },
+      {
+        href: "/settings/statement-messages",
+        title: "Statement and receipt messages",
+        description: "Set the practice-wide footer notes printed on statements and receipts.",
+        synonyms: ["footer", "message", "receipt", "statement", "collections", "portal"],
+        practiceAdminOnly: true,
+      },
     ],
   },
   {

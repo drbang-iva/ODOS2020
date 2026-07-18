@@ -107,6 +107,21 @@ test("UI receipt sheet renderer mirrors the MCP renderer output", () => {
   assert.equal(renderUiReceiptSheet(uiSummary), renderMcpReceiptSheet(mcpSummary));
 });
 
+test("UI receipt renderer prints an escaped configured footer and omits an unset footer element", () => {
+  const configured = buildUiFinancialSummary({
+    ...INPUT,
+    receiptFooterMessage: '<script>alert("receipt")</script>',
+  });
+  const html = renderUiReceiptSheet(configured);
+  assert.match(html, /class="practice-message"/);
+  assert.match(html, /&lt;script&gt;alert\(&quot;receipt&quot;\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(
+    renderUiReceiptSheet(buildUiFinancialSummary(INPUT)),
+    /class="practice-message"/,
+  );
+});
+
 test("UI PaymentReconciliation tender projection mirrors the MCP projection output", () => {
   assert.deepEqual(
     uiPaymentReconciliationsToTenderLines([CARD_PAYMENT]),

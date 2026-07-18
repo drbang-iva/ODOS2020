@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { act, create } from "react-test-renderer";
-import { CollectPanel } from "../src/components/CollectPanel";
+import { CollectPanel, printReceipt } from "../src/components/CollectPanel";
 import { collectRecordedTender, type OpenChargeLine } from "../src/lib/collect";
 
 const CHARGES: OpenChargeLine[] = [
@@ -82,4 +82,55 @@ test("CARD_MANUAL posts to the record-only collection endpoint with no processor
   assert.equal(captured?.url, "/payments/collect");
   assert.equal(captured?.body.tender, "CARD_MANUAL");
   assert.equal("method" in (captured?.body ?? {}), false);
+});
+
+test("live receipt printing passes the preloaded configured receipt footer message", () => {
+  let printed: { title: string; html: string } | undefined;
+  printReceipt({
+    patientReference: "Patient/patient-1",
+    patientName: "Alex Rivera",
+    tender: "CASH",
+    receiptFooterMessage: "Thank you for trusting our practice.",
+    receipt: {
+      result: {
+        deviceRequestId: "",
+        taskId: "",
+        chargeItemIds: ["charge-1"],
+        invoiceId: "invoice-1",
+        outcome: "success",
+        amountChargedCents: 10_000,
+        tender: "CASH",
+      },
+      lines: [CHARGES[0]!],
+    },
+  }, {
+    openPrint: (title, html) => {
+      printed = { title, html };
+      return true;
+    },
+  });
+  assert.equal(printed?.title, "Receipt invoice-1");
+  assert.match(printed?.html ?? "", /class="practice-message">Thank you for trusting our practice\.<\/p>/);
+});
+
+test("receipt printing reports a blocked print window", () => {
+  assert.throws(
+    () => printReceipt({
+      patientReference: "Patient/patient-1",
+      tender: "CASH",
+      receipt: {
+        result: {
+          deviceRequestId: "",
+          taskId: "",
+          chargeItemIds: ["charge-1"],
+          invoiceId: "invoice-1",
+          outcome: "success",
+          amountChargedCents: 10_000,
+          tender: "CASH",
+        },
+        lines: [CHARGES[0]!],
+      },
+    }, { openPrint: () => false }),
+    /browser blocked the receipt print window/i,
+  );
 });

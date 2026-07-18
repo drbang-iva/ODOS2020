@@ -70,6 +70,18 @@ test("the plan-profile route reaches the owner settings scene with actual-role w
   assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
+test("the statement-message route reaches the practice-admin editor", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch
+      view={{ kind: "picker" }}
+      path="/settings/statement-messages"
+      roles={["practice-admin"]}
+    />,
+  );
+  assert.match(html, /Statement and receipt messages/);
+  assert.match(html, /Loading statement and receipt messages/);
+});
+
 test("the Financials Practice margin route reaches the read-only ledger surface", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch view={{ kind: "picker" }} path="/financials/practice/margins" search="?period=2026-07" roles={["practice-admin"]} />,

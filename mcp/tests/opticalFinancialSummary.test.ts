@@ -158,6 +158,21 @@ test("renderReceiptSheet shows $0.00 due when paid in full and em-dash for absen
   assert.doesNotMatch(html, /undefined/);
 });
 
+test("MCP receipt renderer prints the configured footer message", () => {
+  const html = renderReceiptSheet(
+    buildFinancialSummary({
+      ...IDENTITY,
+      invoice: INVOICE,
+      chargeItems: CHARGES,
+      receiptFooterMessage: "Thank you for trusting our practice.",
+    }),
+  );
+  assert.match(
+    html,
+    /class="practice-message">Thank you for trusting our practice\.<\/p>/,
+  );
+});
+
 // --- Invoice ↔ PaymentReconciliation seam: the projection feeding the existing payments? hook ---
 // (seam spec 2026-07-05 §3: payments come from exactly one source — PaymentReconciliation[] when any
 // exist for the Invoice, else the Invoice tender extension — never both.)
