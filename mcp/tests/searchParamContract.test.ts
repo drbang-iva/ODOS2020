@@ -5,6 +5,7 @@ import { test } from "node:test";
 import ts from "typescript";
 import {
   assertSearchParameterKeys,
+  FHIR_R4_SEARCH_RESULT_PARAMETERS,
   invalidSearchParameterKeys,
   MEDPLUM_5_1_8_SEARCH_PARAMETERS,
   MEDPLUM_SEARCH_PARAMETER_SOURCE,
@@ -16,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 58;
+const EXPECTED_DIRECT_SEARCH_CALLS = 65;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -79,6 +80,10 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
+  "src/referral/referral-service.ts:245": [
+    spec("Observation", "patient", "encounter", "_count"),
+    spec("CarePlan", "patient", "encounter", "_count"),
+  ],
   "src/scheduling/scheduling-service.ts:104": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),
@@ -90,7 +95,8 @@ test("contract is frozen from Medplum 5.1.8's published definition bundles", () 
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.package, "@medplum/definitions");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.version, "5.1.8");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.files.length, 3);
-  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 28);
+  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 30);
+  assert.deepEqual(FHIR_R4_SEARCH_RESULT_PARAMETERS, ["_summary"]);
 });
 
 test("historical ChargeItem status search is rejected while known-valid searches pass", () => {
@@ -104,7 +110,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 58 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 65 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();
