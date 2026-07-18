@@ -141,6 +141,56 @@ test("NewRx builder defaults substitutions to allowed and place of service can b
   assert.match(built, /<PrescriberPlaceOfService>12<\/PrescriberPlaceOfService>/);
 });
 
+test("NewRx builder extracts numeric Quantity Value from UI quantity strings", () => {
+  for (const [unit, expected] of [
+    ["2.5 mL", "2.5"],
+    ["30 tablets", "30"],
+    ["1 bottle", "1"],
+  ]) {
+    const built = buildWenoSwitchNewRx({
+      ...buildInput("1223456789abcdef0123456789abcdef"),
+      medicationRequest: {
+        ...MEDICATION_REQUEST,
+        dispenseRequest: {
+          ...MEDICATION_REQUEST.dispenseRequest,
+          quantity: { unit },
+        },
+      },
+    });
+    assert.match(built, new RegExp(`<Quantity><Value>${expected.replace(".", "\\.")}<\\/Value>`), unit);
+  }
+
+  const numericValue = buildWenoSwitchNewRx({
+    ...buildInput("1323456789abcdef0123456789abcdef"),
+    medicationRequest: {
+      ...MEDICATION_REQUEST,
+      dispenseRequest: {
+        ...MEDICATION_REQUEST.dispenseRequest,
+        quantity: { value: 5, unit: "bottle" },
+      },
+    },
+  });
+  assert.match(numericValue, /<Quantity><Value>5<\/Value>/);
+});
+
+test("NewRx builder rejects quantity text without a leading number", () => {
+  for (const unit of ["as needed", "N/A"]) {
+    assert.throws(
+      () => buildWenoSwitchNewRx({
+        ...buildInput("1423456789abcdef0123456789abcdef"),
+        medicationRequest: {
+          ...MEDICATION_REQUEST,
+          dispenseRequest: {
+            ...MEDICATION_REQUEST.dispenseRequest,
+            quantity: { unit },
+          },
+        },
+      }),
+      new RegExp(`Quantity must begin with a numeric value; received ${JSON.stringify(unit).replace("/", "\\/")}`),
+    );
+  }
+});
+
 test("NewRx builder rejects a required FHIR field and an overlong drug description", () => {
   assert.throws(
     () => buildWenoSwitchNewRx({
@@ -197,6 +247,28 @@ test("send validates before HTTP, posts only to cert, and preserves unknown Stat
     Accept: "application/xml",
     "Content-Type": "application/xml; charset=utf-8",
   });
+});
+
+test("send requires a full date-time before accepting Z or a numeric UTC offset", async () => {
+  let calls = 0;
+  const fetchImpl = (async () => {
+    calls += 1;
+    return new Response(statusResponse("001", "Accepted"), { status: 200 });
+  }) as typeof fetch;
+
+  await sendWenoSwitchNewRx(buildFixture("1523456789abcdef0123456789abcdef"), { fetchImpl });
+  const explicitOffsets = buildFixture("1623456789abcdef0123456789abcdef")
+    .replace("2026-07-17T17:31:00.000Z", "2026-07-17T17:31:00+05:00")
+    .replace("2026-07-17T17:30:00.000Z", "2026-07-17T17:30:00-0800");
+  await sendWenoSwitchNewRx(explicitOffsets, { fetchImpl });
+
+  const bareDate = buildFixture("1723456789abcdef0123456789abcdef")
+    .replace("2026-07-17T17:31:00.000Z", "2026-07-18");
+  await assert.rejects(
+    sendWenoSwitchNewRx(bareDate, { fetchImpl }),
+    /SentTime must include a UTC offset/,
+  );
+  assert.equal(calls, 2);
 });
 
 test("send parses a synchronous WENO Error without treating it as transport failure", async () => {

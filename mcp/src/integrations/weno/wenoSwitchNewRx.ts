@@ -354,7 +354,12 @@ function validateMessageId(messageId: string): void {
 function medicationQuantity(request: MedicationRequest): string {
   const quantity = request.dispenseRequest?.quantity;
   if (quantity?.value !== undefined) return String(quantity.value);
-  return required(quantity?.unit, "Quantity");
+  const raw = required(quantity?.unit, "Quantity");
+  const leadingNumber = raw.match(/^\s*(\d+(?:\.\d+)?)/)?.[1];
+  if (!leadingNumber) {
+    throw new Error(`WENO NewRx Quantity must begin with a numeric value; received ${JSON.stringify(raw)}.`);
+  }
+  return leadingNumber;
 }
 
 function requiredNumber(value: number | undefined, label: string): string {
@@ -450,7 +455,8 @@ function attributedTextAt(value: Record<string, unknown>, key: string, label: st
 }
 
 function requireOffset(value: string, label: string): void {
-  if (!/(?:Z|[+-]\d{2}(?::?\d{2})?)$/.test(value)) {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})$/.test(value)
+    || Number.isNaN(Date.parse(value))) {
     throw new Error(`WENO NewRx ${label} must include a UTC offset.`);
   }
 }
