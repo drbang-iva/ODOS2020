@@ -1,6 +1,7 @@
 import type { VisionPrescription } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { CollectPanel } from "../components/CollectPanel";
+import { AttachedLensPanel, LensesOrderSurface } from "../components/LensesOrderSurface";
 import type { OpenChargeLine, OpticalCollectionOrder } from "../lib/collect";
 import {
   buildLabOrder,
@@ -43,6 +44,7 @@ import {
 } from "../lib/optical-frames";
 import { openPrintWindow } from "../lib/print-window";
 import { advanceLabOrderTransport, cancelLabOrder, submitLabOrder } from "../lib/lab-order-transport";
+import { commitLensSelection, unattachLensSelection, type LensSelection } from "../lib/lens-selection";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -152,11 +154,14 @@ export function OpticalOrder() {
   const [labOrderReference, setLabOrderReference] = useState<string | null>(null);
   const [labTransportState, setLabTransportState] = useState<string | null>(null);
   const [labOrderBusy, setLabOrderBusy] = useState(false);
+  const [lensesOpen, setLensesOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const selectedCharge = chargeLines.find((line) => line.id === selectedChargeId) ?? chargeLines[0];
   const selectedLines = chargeLines.filter((line) => line.selected);
   const attachedLabFrame = chargeLines.find((line) => line.frame)?.frame;
+  const attachedLenses = chargeLines.find((line) => line.lens)?.lens;
+  const lensesLocked = Boolean(createdTaskId || labOrderReference);
   const signedVisionPrescription = visionPrescription?.status === "active" ? visionPrescription : null;
   const canPrintLabSheet = Boolean(
     patientReference && signedVisionPrescription && header.lab.trim() && labOrderCapture.patientName.trim(),
@@ -315,6 +320,40 @@ export function OpticalOrder() {
           : line,
       ),
     );
+  }
+
+  function attachLenses(selection: LensSelection) {
+    if (lensesLocked) return;
+    const committed = commitLensSelection(chargeLines, selection);
+    setChargeLines(committed.chargeLines);
+    setLabOrderCapture((current) => ({
+      ...current,
+      lensDesign: committed.labOrderLensSpec.lensDesign,
+      lensMaterial: committed.labOrderLensSpec.lensMaterial,
+      treatments: [...committed.labOrderLensSpec.treatments],
+    }));
+    const orderLab = catalogLabToOrderLab(committed.attached.lab);
+    if (IVA_LABS.includes(orderLab as (typeof IVA_LABS)[number])) {
+      setLabOption(orderLab);
+      setOtherLab("");
+    } else {
+      setLabOption(LAB_OTHER_OPTION);
+      setOtherLab(orderLab);
+    }
+    setHeader((current) => ({ ...current, lab: orderLab }));
+    setSelectedChargeId(committed.chargeLines.find((line) => line.lens)?.id ?? selectedChargeId);
+    setLensesOpen(false);
+  }
+
+  function unattachLenses() {
+    if (lensesLocked) return;
+    setChargeLines((lines) => unattachLensSelection(lines));
+    setLabOrderCapture((current) => ({
+      ...current,
+      lensDesign: "",
+      lensMaterial: "",
+      treatments: [],
+    }));
   }
 
   async function dispenseSelectedFrame() {
@@ -519,6 +558,23 @@ export function OpticalOrder() {
               onSelectCharge={setSelectedChargeId}
               onChange={setChargeLines}
             />
+            <div className="border-t border-white/10 bg-white/[0.02] p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Lenses</div>
+                  <div className="text-xs text-white/45">Rx-aware Lens Catalog selection writes into this order's existing lens fields.</div>
+                </div>
+                <button className="sidebar-button" type="button" disabled={lensesLocked} onClick={() => setLensesOpen(true)}>
+                  {attachedLenses ? "Change lenses" : "Add lenses"}
+                </button>
+              </div>
+              {attachedLenses ? <AttachedLensPanel
+                lens={attachedLenses}
+                disabled={lensesLocked}
+                onChange={() => setLensesOpen(true)}
+                onUnattach={unattachLenses}
+              /> : null}
+            </div>
           </section>
 
           <div className="grid gap-4">
@@ -604,6 +660,14 @@ export function OpticalOrder() {
         {error ? <div className="rounded border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</div> : null}
         {status ? <div className="rounded border border-emerald-500/40 bg-emerald-950/20 p-3 text-sm text-emerald-100">{status}</div> : null}
       </div>
+      <LensesOrderSurface
+        open={lensesOpen && !lensesLocked}
+        rx={visionPrescription}
+        initialSelection={attachedLenses}
+        claimBound={false}
+        onCancel={() => setLensesOpen(false)}
+        onCommit={attachLenses}
+      />
     </div>
   );
 }
@@ -1444,6 +1508,12 @@ function criteriaLabel(key: FrameCriteriaKey): string {
     category: "Category",
     name: "Name",
   }[key];
+}
+
+function catalogLabToOrderLab(lab: string): string {
+  if (lab === "bp-digital") return "Best Price Digital Lab";
+  if (lab === "cherry-optical") return "Cherry Optical Lab";
+  return lab.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ");
 }
 
 function dollarsToCents(value: string): number {
