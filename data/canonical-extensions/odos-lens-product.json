@@ -1,0 +1,256 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-lens-product",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-lens-product",
+  "version": "lens-catalog-a1-1",
+  "name": "ODOSLensProduct",
+  "title": "ODOS Lens Product",
+  "status": "active",
+  "date": "2026-07-18",
+  "publisher": "ODOS",
+  "description": "Lab, provenance, canonical lens axes, explicit price unit, optional Rx envelope, and billing-code-family hint for a matrix-priced lens ChargeItemDefinition.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ChargeItemDefinition"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Matrix-priced lens product attributes",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [{ "type": "value", "path": "url" }],
+          "rules": "closed"
+        },
+        "min": 8,
+        "max": "11"
+      },
+      {
+        "id": "Extension.extension:lab",
+        "path": "Extension.extension",
+        "sliceName": "lab",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:lab.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "lab"
+      },
+      {
+        "id": "Extension.extension:lab.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.extension:import-batch",
+        "path": "Extension.extension",
+        "sliceName": "import-batch",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:import-batch.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "import-batch"
+      },
+      {
+        "id": "Extension.extension:import-batch.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.extension:source-ref",
+        "path": "Extension.extension",
+        "sliceName": "source-ref",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:source-ref.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "source-ref"
+      },
+      {
+        "id": "Extension.extension:source-ref.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.extension:effective-date",
+        "path": "Extension.extension",
+        "sliceName": "effective-date",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:effective-date.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "effective-date"
+      },
+      {
+        "id": "Extension.extension:effective-date.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "date" }]
+      },
+      {
+        "id": "Extension.extension:unit",
+        "path": "Extension.extension",
+        "sliceName": "unit",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:unit.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "unit"
+      },
+      {
+        "id": "Extension.extension:unit.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "code" }]
+      },
+      {
+        "id": "Extension.extension:design",
+        "path": "Extension.extension",
+        "sliceName": "design",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:design.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "design"
+      },
+      {
+        "id": "Extension.extension:design.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:material",
+        "path": "Extension.extension",
+        "sliceName": "material",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:material.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "material"
+      },
+      {
+        "id": "Extension.extension:material.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:treatment",
+        "path": "Extension.extension",
+        "sliceName": "treatment",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:treatment.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "treatment"
+      },
+      {
+        "id": "Extension.extension:treatment.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:rx-envelope",
+        "path": "Extension.extension",
+        "sliceName": "rx-envelope",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:rx-envelope.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "rx-envelope"
+      },
+      {
+        "id": "Extension.extension:rx-envelope.value[x]",
+        "path": "Extension.extension.value[x]",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:single-lens-price",
+        "path": "Extension.extension",
+        "sliceName": "single-lens-price",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:single-lens-price.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "single-lens-price"
+      },
+      {
+        "id": "Extension.extension:single-lens-price.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "Money" }]
+      },
+      {
+        "id": "Extension.extension:default-billing-code-family",
+        "path": "Extension.extension",
+        "sliceName": "default-billing-code-family",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:default-billing-code-family.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "default-billing-code-family"
+      },
+      {
+        "id": "Extension.extension:default-billing-code-family.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [{ "code": "string" }]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-lens-product"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

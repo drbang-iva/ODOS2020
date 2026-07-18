@@ -77,8 +77,15 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
       {
         href: "/settings/optical-pricing",
         title: "Optical pricing",
-        description: "Manage frame, per-lab lens, and contact lens wholesale and retail prices.",
-        synonyms: ["prices", "retail", "wholesale", "lens", "contact lens", "frames", "cost"],
+        description: "Manage frame and contact lens wholesale and retail prices.",
+        synonyms: ["prices", "retail", "wholesale", "contact lens", "frames", "cost"],
+      },
+      {
+        href: "/settings/lens-catalog",
+        title: "Lens Catalog",
+        description: "Manage per-lab lens products, coatings, modifiers, and shared vocabularies.",
+        synonyms: ["lens", "lenses", "lab", "matrix", "coating", "modifier", "wholesale", "margin"],
+        practiceAdminOnly: true,
       },
       {
         href: "/settings/plan-profiles",

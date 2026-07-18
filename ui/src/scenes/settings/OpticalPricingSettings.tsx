@@ -4,10 +4,8 @@ import { fhir } from "../../lib/fhir";
 import {
   contactLensPricingAdapter,
   framePricingAdapter,
-  lensPricingAdapter,
   type ContactLensPricingItem,
   type FramePricingItem,
-  type LensPricingItem,
 } from "../../lib/optical-pricing-catalog";
 import { useRole } from "../../lib/role-context";
 import {
@@ -20,12 +18,7 @@ export function OpticalPricingSettings() {
   const { role } = useRole();
   const canWrite = role === "practice-admin";
   const frameAdapter = useMemo(() => framePricingAdapter(fhir), []);
-  const lensAdapter = useMemo(() => lensPricingAdapter(fhir), []);
   const contactLensAdapter = useMemo(() => contactLensPricingAdapter(fhir), []);
-  const lensDescriptor = useMemo(
-    () => lensPricingDescriptor(lensAdapter),
-    [lensAdapter],
-  );
   const frameDescriptor = useMemo(
     () => framePricingDescriptor(frameAdapter),
     [frameAdapter],
@@ -43,7 +36,6 @@ export function OpticalPricingSettings() {
         </div>
       )}
       <CatalogSection descriptor={frameDescriptor} canWrite={canWrite} />
-      <CatalogSection descriptor={lensDescriptor} canWrite={canWrite} />
       <CatalogSection descriptor={contactLensDescriptor} canWrite={canWrite} />
     </CatalogScene>
   );
@@ -81,72 +73,6 @@ export function framePricingDescriptor(
       searchPlaceholder: "Search frame pricing",
       searchText: (item) => `${item.catalogCanonicalUrl} ${item.retailPriceCents} ${item.wholesaleCostCents ?? ""}`,
       deactivateConsequence: () => "The frame keeps its catalog identity and pricing history; this pricing row becomes inactive.",
-    },
-  };
-}
-
-export function lensPricingDescriptor(
-  adapter: CatalogAdapter<LensPricingItem>,
-): CatalogDescriptor<LensPricingItem> {
-  return {
-    title: "Lens pricing",
-    singularLabel: "lens price",
-    adapter,
-    fields: [
-      { type: "text", key: "lab", label: "Lab" },
-      {
-        type: "select",
-        key: "category",
-        label: "Category",
-        required: true,
-        options: [
-          { value: "design", label: "Lens design" },
-          { value: "material", label: "Material" },
-          { value: "treatment", label: "Treatment" },
-        ],
-      },
-      { type: "text", key: "label", label: "Lens item", required: true },
-      { type: "text", key: "billingCode", label: "CPT/HCPCS code" },
-      {
-        type: "number",
-        key: "perLensWholesaleCostCents",
-        label: "Wholesale cost per lens (cents)",
-        min: 0,
-      },
-      {
-        type: "number",
-        key: "perLensRetailPriceCents",
-        label: "Retail price per lens (cents)",
-        required: true,
-        min: 0,
-      },
-    ],
-    createItem: () => ({
-      id: `lens-price-${crypto.randomUUID()}`,
-      active: true,
-      label: "",
-      category: "design",
-      billingCode: "",
-      lab: "",
-      perLensRetailPriceCents: 0,
-    }),
-    label: (item) => item.label,
-    chips: (item) => [categoryLabel(item.category), "PER LENS"],
-    facts: (item) => [
-      item.billingCode || "Code TBD",
-      `${money(item.perLensRetailPriceCents)} retail per lens`,
-      item.perLensWholesaleCostCents === undefined
-        ? "Wholesale TBD"
-        : `${money(item.perLensWholesaleCostCents)} wholesale per lens`,
-    ],
-    groupBy: {
-      label: "Lab",
-      value: (item) => item.lab || "Unassigned lab",
-    },
-    listGrammar: {
-      searchPlaceholder: "Search lens pricing",
-      searchText: (item) => `${item.label} ${item.lab} ${item.category} ${item.billingCode}`,
-      deactivateConsequence: (item) => `${item.label || "This lens price"} remains in historical records and leaves the active pricing list.`,
     },
   };
 }
@@ -189,14 +115,6 @@ export function contactLensPricingDescriptor(
       deactivateConsequence: (item) => `${item.productDisplay || "This contact lens price"} remains in historical records and leaves the active pricing list.`,
     },
   };
-}
-
-function categoryLabel(category: LensPricingItem["category"]): string {
-  return category === "design"
-    ? "Lens design"
-    : category === "material"
-      ? "Material"
-      : "Treatment";
 }
 
 function money(cents: number): string {
