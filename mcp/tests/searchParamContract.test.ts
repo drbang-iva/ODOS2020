@@ -62,9 +62,9 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/index.ts:2595": DYNAMIC_FHIR_SEARCH,
   "src/index.ts:4193": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/index.ts:4215": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/office/office-channel.ts:178": [
+  "src/office/office-channel.ts:176": [
     spec("Communication", "category", "_count", "_sort"),
-    spec("Provenance", "activity", "target", "_count", "_sort"),
+    spec("Provenance", "target", "_count", "_sort"),
   ],
   "src/reporting/margin-ledger.ts:524": [
     spec("Invoice", "date", "_count", "_sort"),
@@ -124,7 +124,7 @@ test("all 54 direct fhir.search call sites are statically resolved or explicitly
   assert.deepEqual([...usedOverrides].sort(), Object.keys(DYNAMIC_SEARCH_SPECS).sort());
 });
 
-test("static audit pins the one disclosed pre-existing invalid search", () => {
+test("static audit finds zero invalid search parameters", () => {
   const violations = collectSearchSpecs().flatMap(({ location, spec: current }) =>
     invalidSearchParameterKeys(current.resourceType, current.parameterKeys).map((parameter) => ({
       location,
@@ -133,11 +133,7 @@ test("static audit pins the one disclosed pre-existing invalid search", () => {
     })),
   );
 
-  assert.deepEqual(violations, [{
-    location: "src/office/office-channel.ts:178",
-    resourceType: "Provenance",
-    parameter: "activity",
-  }]);
+  assert.deepEqual(violations, []);
 });
 
 function spec(resourceType: ContractResourceType, ...parameterKeys: string[]): SearchSpec {
