@@ -235,3 +235,7 @@ risks/follow-ups, patch/diff/commands if needed, status (done/blocked/needs-revi
 Full pattern: `performance-od/core/sealed-bundle-handoff.md`. The bundle accompanies
 the diff; it never replaces the evaluator reading the actual code and check output.
 Full rationale: private PerformanceOD foundation decision dated 2026-04-22.
+
+**Never push to `main`, never self-merge.** Every session — Codex Cloud, local Codex,
+either machine, either account — works on a branch and opens a PR. Nobody merges their
+own PR without the evaluation step above actually happening.
