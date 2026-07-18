@@ -7,6 +7,7 @@ import {
 import type { MedplumClient } from "../fhir-client.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignment-endpoint.js";
+import { ReferralDefaultsStore } from "./referral-defaults-store.js";
 import {
   readReferralIncludeList,
   ReferralService,
@@ -22,7 +23,7 @@ export interface ReferralEndpointDeps {
     actorRole: PracticeRoleId;
     fhir: ReferralFhirClient;
   } | null>;
-  serviceFhir: Pick<MedplumClient, "search">;
+  serviceFhir: Pick<MedplumClient, "search" | "create" | "update">;
   now?: () => string;
 }
 
@@ -45,7 +46,10 @@ const createReferralSchema = z.object({
   targetReference: z.string().regex(/^(Practitioner|PractitionerRole|Organization)\/[A-Za-z0-9.-]{1,64}$/),
   encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]{1,64}$/),
   includeList: includeListSchema,
+  priority: z.enum(["routine", "urgent", "stat"]).optional(),
+  reasonText: z.string().trim().min(1).optional(),
 }).strict();
+const saveDefaultsSchema = z.object({ includeList: includeListSchema }).strict();
 const artifactSchema = z.object({
   editedLetterBody: z.string().optional(),
 }).strict();
@@ -71,6 +75,8 @@ export async function handleCreateReferralRequest(
     targetReference: parsed.data.targetReference,
     encounterReference: parsed.data.encounterReference,
     includeList: parsed.data.includeList,
+    priority: parsed.data.priority,
+    reasonText: parsed.data.reasonText,
   });
   const serviceRequestReference = referralReference(serviceRequest);
 
@@ -111,18 +117,21 @@ export async function handleReferralArtifactRequest(
     return { status: 409, body: { error: "The referral does not belong to the requested patient." } };
   }
 
-  const artifact = await new ReferralService(context.staff.fhir, deps.now).assembleReferralArtifact(
-    referralId,
-    parsedBody.data,
-  );
+  const service = new ReferralService(context.staff.fhir, deps.now);
   const serviceRequestReference = `ServiceRequest/${referralId}`;
   if (input.action === "preview") {
+    const artifact = await service.assembleReferralArtifact(referralId, parsedBody.data);
     return {
       status: 200,
       body: { serviceRequestReference, artifact },
     };
   }
 
+  const sentServiceRequest = await service.markReferralSent(
+    serviceRequest,
+    parsedBody.data.editedLetterBody,
+  );
+  const artifact = await service.assembleReferralArtifact(referralId);
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const provenance = await context.staff.fhir.create<Provenance>(buildProvenance({
     targetReferences: [serviceRequestReference],
@@ -135,7 +144,7 @@ export async function handleReferralArtifactRequest(
       typeDisplay: "Transmitter",
       whoReference: context.staff.staffReference,
     }],
-    entityValues: disclosedIncludeListEntities(readReferralIncludeList(serviceRequest)),
+    entityValues: disclosedIncludeListEntities(readReferralIncludeList(sentServiceRequest)),
   }), REFERRAL_WRITE_HEADERS);
 
   return {
@@ -146,6 +155,38 @@ export async function handleReferralArtifactRequest(
       ...(provenance.id ? { provenanceReference: `Provenance/${provenance.id}` } : {}),
     },
   };
+}
+
+export async function handleReadReferralDefaultsRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in context) return context.result;
+  const includeList = await new ReferralDefaultsStore(deps.serviceFhir).read(
+    context.staff.staffReference,
+  );
+  return { status: 200, body: { includeList } };
+}
+
+export async function handleSaveReferralDefaultsRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in context) return context.result;
+  const parsed = saveDefaultsSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid referral defaults." },
+    };
+  }
+  const includeList = await new ReferralDefaultsStore(deps.serviceFhir).save(
+    context.staff.staffReference,
+    parsed.data.includeList,
+  );
+  return { status: 200, body: { includeList } };
 }
 
 async function authorizeReferralPatient(
@@ -159,13 +200,9 @@ async function authorizeReferralPatient(
     }
   | { result: ReferralEndpointResult }
 > {
-  const staff = await deps.authenticate(authHeader);
-  if (!staff) {
-    return { result: { status: 401, body: { error: "Authentication required to manage referrals." } } };
-  }
-  if (!staffMayWriteChart(staff.actorRole)) {
-    return { result: { status: 403, body: { error: "chart.write role required" } } };
-  }
+  const context = await authorizeReferralStaff(deps, authHeader);
+  if ("result" in context) return context;
+  const { staff } = context;
 
   const parsedPatientId = fhirIdSchema.safeParse(patientId);
   if (!parsedPatientId.success) {
@@ -186,6 +223,23 @@ async function authorizeReferralPatient(
   }
 
   return { staff, patientReference };
+}
+
+async function authorizeReferralStaff(
+  deps: ReferralEndpointDeps,
+  authHeader: string | undefined,
+): Promise<
+  | { staff: NonNullable<Awaited<ReturnType<ReferralEndpointDeps["authenticate"]>>> }
+  | { result: ReferralEndpointResult }
+> {
+  const staff = await deps.authenticate(authHeader);
+  if (!staff) {
+    return { result: { status: 401, body: { error: "Authentication required to manage referrals." } } };
+  }
+  if (!staffMayWriteChart(staff.actorRole)) {
+    return { result: { status: 403, body: { error: "chart.write role required" } } };
+  }
+  return { staff };
 }
 
 function staffMayWriteChart(role: PracticeRoleId): boolean {

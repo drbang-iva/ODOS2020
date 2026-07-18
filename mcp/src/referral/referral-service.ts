@@ -52,7 +52,15 @@ export interface ReferralFhirClient {
     params?: FhirSearchParams,
   ): Promise<Bundle<T>>;
   create<T extends Resource>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  update<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
 }
+
+export type ReferralPriority = "routine" | "urgent" | "stat";
 
 export interface CreateReferralInput {
   subjectReference: string;
@@ -61,6 +69,8 @@ export interface CreateReferralInput {
   targetReference: string;
   encounterReference: string;
   includeList: ReferralIncludeList;
+  priority?: ReferralPriority;
+  reasonText?: string;
   authoredOn?: string;
 }
 
@@ -83,6 +93,8 @@ export function buildReferralServiceRequest(input: {
   includeList: ReferralIncludeList;
   letterBody: string;
   authoredOn: string;
+  priority?: ReferralPriority;
+  reasonText?: string;
 }): ServiceRequest {
   assertReference(input.subjectReference, "Patient");
   assertReference(input.encounterReference, "Encounter");
@@ -92,9 +104,11 @@ export function buildReferralServiceRequest(input: {
 
   return {
     resourceType: "ServiceRequest",
-    status: "active",
+    status: "draft",
     intent: "order",
     code: { text: "Specialist referral" },
+    ...(input.priority ? { priority: input.priority } : {}),
+    ...(input.reasonText ? { reasonCode: [{ text: input.reasonText }] } : {}),
     subject: { reference: input.subjectReference, display: input.subjectDisplay },
     encounter: { reference: input.encounterReference },
     authoredOn: input.authoredOn,
@@ -104,7 +118,7 @@ export function buildReferralServiceRequest(input: {
     },
     performer: [{ reference: input.targetReference, display: input.targetDisplay }],
     extension: [
-      includeListExtension(input.includeList),
+      buildReferralIncludeListExtension(input.includeList),
       { url: REFERRAL_LETTER_BODY_EXTENSION_URL, valueString: input.letterBody },
     ],
   };
@@ -116,6 +130,10 @@ export function readReferralIncludeList(serviceRequest: ServiceRequest): Referra
   );
   if (!includeList) throw new Error("Referral ServiceRequest is missing its structured include-list extension.");
 
+  return readReferralIncludeListExtension(includeList);
+}
+
+export function readReferralIncludeListExtension(includeList: Extension): ReferralIncludeList {
   const flags = Object.fromEntries(INCLUDE_FLAG_NAMES.map((name) => {
     const value = includeList.extension?.find((extension) => extension.url === name)?.valueBoolean;
     if (value === undefined) throw new Error(`Referral include-list is missing ${name}.`);
@@ -192,6 +210,25 @@ export class ReferralService {
       letterBody,
       authoredOn: input.authoredOn ?? this.now(),
     }), { "X-ODOS-Source": "mcp/referral-send" });
+  }
+
+  async markReferralSent(
+    serviceRequest: ServiceRequest,
+    editedLetterBody?: string,
+  ): Promise<ServiceRequest> {
+    if (!serviceRequest.id) throw new Error("Referral ServiceRequest must have an id before send.");
+    const extension = editedLetterBody === undefined
+      ? serviceRequest.extension
+      : replaceExtension(serviceRequest.extension, {
+          url: REFERRAL_LETTER_BODY_EXTENSION_URL,
+          valueString: editedLetterBody,
+        });
+    return this.fhir.update<ServiceRequest>(
+      "ServiceRequest",
+      serviceRequest.id,
+      { ...serviceRequest, status: "active", extension },
+      { "X-ODOS-Source": "mcp/referral-send" },
+    );
   }
 
   async assembleReferralArtifact(
@@ -328,7 +365,8 @@ interface ClinicalSummary {
   allergies: AllergyIntolerance[];
 }
 
-function includeListExtension(includeList: ReferralIncludeList): Extension {
+export function buildReferralIncludeListExtension(includeList: ReferralIncludeList): Extension {
+  validateIncludeList(includeList);
   return {
     url: REFERRAL_INCLUDE_LIST_EXTENSION_URL,
     extension: [
@@ -336,6 +374,14 @@ function includeListExtension(includeList: ReferralIncludeList): Extension {
       { url: "history_count", valuePositiveInt: includeList.history_count },
     ],
   };
+}
+
+function replaceExtension(
+  extensions: readonly Extension[] | undefined,
+  replacement: Extension,
+): Extension[] {
+  const retained = (extensions ?? []).filter((extension) => extension.url !== replacement.url);
+  return [...retained, replacement];
 }
 
 function validateIncludeList(includeList: ReferralIncludeList): void {

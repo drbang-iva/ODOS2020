@@ -74,10 +74,38 @@ test("referral round-trips its ServiceRequest links, structured include-list, an
   assert.equal(persisted.performer?.[0]?.reference, `Organization/${target.id}`);
   assert.equal(persisted.performer?.[0]?.display, "Bergstrom Retina Associates");
   assert.equal(persisted.encounter?.reference, "Encounter/current");
+  assert.equal(persisted.status, "draft");
   assert.deepEqual(readReferralIncludeList(persisted), ALL_FLAGS);
   const html = await service.assembleReferralArtifact(created.id!);
   assert.match(html, /Macular finding: New central distortion/);
   assert.match(html, /Retina consultation within one week/);
+});
+
+test("referral priority and reason text each map to their core ServiceRequest fields", async () => {
+  const fhir = seededFhir();
+  const target = await fhir.create<Organization>({
+    resourceType: "Organization",
+    name: "Retina Group",
+  });
+  const service = new ReferralService(fhir, () => NOW);
+  const common = {
+    subjectReference: "Patient/p1",
+    requesterReference: "Practitioner/referrer-1",
+    targetReference: `Organization/${target.id}`,
+    encounterReference: "Encounter/current",
+    includeList: flagsOff(),
+  };
+
+  const priorityReferral = await service.createReferral({ ...common, priority: "urgent" });
+  const reasonReferral = await service.createReferral({
+    ...common,
+    reasonText: "New central distortion",
+  });
+
+  assert.equal(priorityReferral.priority, "urgent");
+  assert.equal(priorityReferral.reasonCode, undefined);
+  assert.equal(reasonReferral.priority, undefined);
+  assert.deepEqual(reasonReferral.reasonCode, [{ text: "New central distortion" }]);
 });
 
 test("referral letters include only finalized findings", () => {
@@ -226,7 +254,11 @@ test("an old referral keeps its snapshotted target display after the target reso
   });
   const before = await service.assembleReferralArtifact(referral.id!);
 
-  await fhir.update<Organization>({ ...target, name: "Bergstrom Retina Associates" });
+  await fhir.update<Organization>(
+    "Organization",
+    target.id!,
+    { ...target, name: "Bergstrom Retina Associates" },
+  );
   const persisted = await fhir.read<ServiceRequest>("ServiceRequest", referral.id!);
   const after = await service.assembleReferralArtifact(persisted.id!);
 
@@ -326,15 +358,21 @@ class MemoryFhir implements ReferralFhirClient {
     return structuredClone(stored);
   }
 
-  async update<T extends Resource>(resource: T): Promise<T> {
+  async update<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+  ): Promise<T> {
     if (!resource.id) throw new Error("Memory update requires an id.");
-    const current = this.rows.get(`${resource.resourceType}/${resource.id}`);
+    assert.equal(resource.resourceType, resourceType);
+    assert.equal(resource.id, id);
+    const current = this.rows.get(`${resourceType}/${id}`);
     const versionId = String(Number(current?.meta?.versionId ?? "0") + 1);
     const stored = structuredClone({
       ...resource,
       meta: { ...resource.meta, versionId, lastUpdated: NOW },
     }) as T;
-    this.rows.set(`${resource.resourceType}/${resource.id}`, stored);
+    this.rows.set(`${resourceType}/${id}`, stored);
     return structuredClone(stored);
   }
 
