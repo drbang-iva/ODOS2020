@@ -17,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 72;
+const EXPECTED_DIRECT_SEARCH_CALLS = 76;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -57,12 +57,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2558": [spec("Patient", "name", "_count")],
-  "src/index.ts:2599": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2607": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2615": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4213": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4235": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2569": [spec("Patient", "name", "_count")],
+  "src/index.ts:2610": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2618": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2626": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4224": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4246": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:176": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "target", "_count", "_sort"),
@@ -110,7 +110,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 72 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 76 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();
@@ -187,7 +187,7 @@ function collectDirectFhirSearchCalls(): Array<{
         const resourceType = stringLiteral(node.arguments[0]);
         const parameterKeys = extractParameterKeys(node.arguments[1]);
         calls.push({
-          location: `${relative(process.cwd(), file)}:${position.line + 1}`,
+          location: `${relative(process.cwd(), file).replaceAll("\\", "/")}:${position.line + 1}`,
           ...(resourceType ? { resourceType } : {}),
           ...(parameterKeys ? { parameterKeys } : {}),
         });

@@ -222,6 +222,8 @@ export interface DiagnosisCatalogRow extends DiagnosisDefinition {
 /** A patient encounter finding instance; it remains independent of diagnoses until linked as evidence. */
 export interface FindingInstance {
   id: string;
+  /** Proposed findings are epistemically inert and may not project to Observation or diagnosis evidence. */
+  state: "proposed" | "committed";
   findingDefinitionId: string;
   patientReference: string;
   encounterReference: string;
@@ -554,6 +556,9 @@ export function projectFindingInstanceToObservation(
   finding: FindingInstance,
   definition: ClinicalFindingDefinition,
 ): Observation {
+  if (finding.state !== "committed") {
+    throw new Error("Proposed findings are epistemically inert and cannot project to Observation.");
+  }
   const base: Observation = {
     resourceType: "Observation",
     id: finding.observationReference?.startsWith("Observation/")
@@ -948,6 +953,7 @@ export function captureGlaucomaFinding(input: CaptureGlaucomaFindingInput): Capt
   const sourceReferences = input.sourceReferences ?? input.provenance.sourceReferences ?? [];
   const finding = buildFindingInstance({
     id: findingId,
+    state: "committed",
     findingDefinitionId: input.definition.id,
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
@@ -1007,6 +1013,7 @@ export function buildGlaucomaCupDiscSuggestion(input: GlaucomaPredicateInput): {
   const risk = evaluateCupDiscRisk(evidence, definition, input.riskConfig);
   const finding = buildFindingInstance({
     id: input.findingInstanceId,
+    state: "committed",
     findingDefinitionId: input.findingDefinitionId,
     patientReference: input.patientReference,
     encounterReference: input.encounterReference,
@@ -1047,6 +1054,7 @@ export function evaluateGlaucomaDiagnosisSuggestions(
 ): DiagnosisSuggestionEvaluation[] {
   const definitionsById = new Map(input.findingDefinitions.map((definition) => [definition.id, definition]));
   const cupDiscFindings = input.findings
+    .filter((finding) => finding.state === "committed")
     .filter((finding) => !input.encounterReference || finding.encounterReference === input.encounterReference)
     .filter((finding) => definitionsById.get(finding.findingDefinitionId)?.stableKey === "cup_disc_ratio")
     .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt) || a.id.localeCompare(b.id));

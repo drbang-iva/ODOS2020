@@ -77,7 +77,18 @@ import {
 import {
   handleCupDiscCaptureRequest,
   handleCupDiscDefinitionRequest,
+  handleCupDiscReadRequest,
 } from "./clinical-graph/cup-disc-endpoint.js";
+import {
+  handleGonioscopyCaptureRequest,
+  handleGonioscopyReadRequest,
+} from "./clinical-graph/gonioscopy-endpoint.js";
+import {
+  handleProtocolApplyRequest,
+  handleProtocolOffersRequest,
+  handleProtocolUnapplyRequest,
+  handleProtocolSignCleanupRequest,
+} from "./clinical-graph/protocol-endpoint.js";
 import {
   handleImagingCaptureRequest,
   handleLongitudinalImagingCaptureRequest,
@@ -6010,6 +6021,104 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "cup/disc clinical-graph route failed" });
           }
+        }
+      });
+
+      app.get("/clinical-graph/glaucoma/cup-disc", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCupDiscReadRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: GET /clinical-graph/glaucoma/cup-disc failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "cup/disc read route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/gonioscopy", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleGonioscopyReadRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: GET /clinical-graph/gonioscopy failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "gonioscopy read route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/offers", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolOffersRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol offers route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol offers route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/apply", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolApplyRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol apply route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol apply route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/:applicationId/unapply", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolUnapplyRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol un-apply route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol un-apply route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/encounters/:encounterId/sign-cleanup", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolSignCleanupRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol sign cleanup route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol sign cleanup route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/gonioscopy", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleGonioscopyCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: POST /clinical-graph/gonioscopy failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "gonioscopy capture route failed" });
         }
       });
 

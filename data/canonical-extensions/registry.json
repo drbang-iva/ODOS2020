@@ -3,6 +3,18 @@
   "generatedAt": "2026-07-18",
   "extensions": [
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/finding-source",
+      "namespace": "protocol-gonioscopy",
+      "status": "active",
+      "sliceConsumer": "protocol-phase5"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/gonio-entry-mode",
+      "namespace": "protocol-gonioscopy",
+      "status": "active",
+      "sliceConsumer": "protocol-phase5"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-plan-profile",
       "namespace": "margin",
       "status": "active",

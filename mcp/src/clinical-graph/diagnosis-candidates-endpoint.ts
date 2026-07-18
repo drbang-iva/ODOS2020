@@ -190,6 +190,7 @@ function observationToFinding(
   if (!value) return [];
   return [{
     id,
+    state: "committed",
     findingDefinitionId: definition.id,
     patientReference,
     encounterReference,
