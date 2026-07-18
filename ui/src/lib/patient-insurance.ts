@@ -372,10 +372,17 @@ export function hasActiveApplicableBenefit(
   const latest = latestBenefitsByCoverage(responses);
   return coverages.some((coverage) => {
     if (!coverage.id || coverage.status !== "active") return false;
-    if (coverage.period?.start && coverage.period.start > serviceDate) return false;
-    if (coverage.period?.end && coverage.period.end < serviceDate) return false;
+    const coverageStart = coverage.period?.start?.slice(0, 10);
+    const coverageEnd = coverage.period?.end?.slice(0, 10);
+    if (coverageStart && coverageStart > serviceDate) return false;
+    if (coverageEnd && coverageEnd < serviceDate) return false;
     const response = latest.get(`Coverage/${coverage.id}`);
     if (!response || response.status !== "active" || response.outcome !== "complete") return false;
+    const benefitPeriod = response.insurance?.[0]?.benefitPeriod;
+    const benefitStart = benefitPeriod?.start?.slice(0, 10);
+    const benefitEnd = benefitPeriod?.end?.slice(0, 10);
+    if (benefitStart && benefitStart > serviceDate) return false;
+    if (benefitEnd && benefitEnd < serviceDate) return false;
     return kinds.some((kind) => {
       const status = deriveBenefitStatus(response, benefitItem(response, kind), serviceDate);
       return status === "Authorized" || status === "Eligibility Active";

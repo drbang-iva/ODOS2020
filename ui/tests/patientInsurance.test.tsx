@@ -255,6 +255,31 @@ test("claim context is active only when a current Coverage has an active applica
     hasActiveApplicableBenefit([{ ...LEGACY_COVERAGE, period: { end: "2026-07-09" } }], [response], ["lens"], "2026-07-10"),
     false,
   );
+  assert.equal(
+    hasActiveApplicableBenefit(
+      [{ ...LEGACY_COVERAGE, period: { start: "2026-07-10T23:59:59Z" } }],
+      [response],
+      ["lens"],
+      "2026-07-10",
+    ),
+    true,
+  );
+  const futureBenefit: CoverageEligibilityResponse = {
+    ...response,
+    insurance: [{
+      ...response.insurance![0],
+      benefitPeriod: { start: "2026-07-11T00:00:00Z", end: "2027-06-30T23:59:59Z" },
+    }],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [futureBenefit], ["lens"], "2026-07-10"), false);
+  const sameDayBenefit: CoverageEligibilityResponse = {
+    ...futureBenefit,
+    insurance: [{
+      ...futureBenefit.insurance![0],
+      benefitPeriod: { start: "2026-07-10T23:59:59Z", end: "2026-07-10T23:59:59Z" },
+    }],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [sameDayBenefit], ["lens"], "2026-07-10"), true);
   const excludedLens: CoverageEligibilityResponse = {
     ...response,
     insurance: [{
