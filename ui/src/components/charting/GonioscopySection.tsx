@@ -114,27 +114,27 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <h2 className="text-lg font-semibold text-white">Gonioscopy</h2>
+        <h2 className="text-lg font-semibold text-[color:var(--odos-text)]">Gonioscopy</h2>
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
           {EYES.map((eye) => {
             const eyeRecords = QUADRANTS.map((quadrant) => records.find((row) => row.eye === eye && row.quadrant === quadrant));
             const uniform = eyeRecords.every(Boolean) && eyeRecords.every((row) => row?.value === eyeRecords[0]?.value)
               ? eyeRecords[0]?.value : "";
             return (
-              <div key={eye} className="rounded border border-white/10 bg-white/[0.02] p-4">
-                <div className="text-sm font-semibold text-white">{eye}</div>
-                <label className="mt-4 block text-xs uppercase tracking-widest text-white/35">
+              <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
+                <div className="text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                   All quadrants
                   <select aria-label={`${eye} all quadrants`} value={uniform}
                     onChange={(event) => event.target.value && setAll(eye, event.target.value as Structure)}
-                    className="mt-1 h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white">
+                    className="mt-1 h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-[color:var(--odos-text)]">
                     <option value="">{eyeRecords.some(Boolean) ? "Mixed" : "Select"}</option>
                     {OPTIONS.map((value) => <option key={value} value={value}>{value.toUpperCase()}</option>)}
                   </select>
                 </label>
                 <button type="button" aria-expanded={expanded[eye]}
                   onClick={() => setExpanded((current) => ({ ...current, [eye]: !current[eye] }))}
-                  className="mt-3 text-sm text-brand-light">
+                  className="mt-3 rounded text-sm text-[color:var(--odos-accent-hi)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)]">
                   {expanded[eye] ? "⌄ Hide quadrants" : "› Show quadrants"}
                 </button>
                 {expanded[eye] && (
@@ -144,12 +144,12 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
                       return (
                         <label key={quadrant} className={[
                           "grid grid-cols-2 items-center rounded border px-3 py-2 text-sm",
-                          row?.entryMode === "quadrant-specific" ? "border-brand/70 bg-brand/10" : "border-white/10",
+                          row?.entryMode === "quadrant-specific" ? "border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)]" : "border-[color:var(--odos-line)]",
                         ].join(" ")}>
-                          <span className="capitalize text-white/70">{quadrant}</span>
+                          <span className="capitalize text-[color:var(--odos-muted)]">{quadrant}</span>
                           <select aria-label={`${eye} ${quadrant}`} value={row?.value ?? ""}
                             onChange={(event) => event.target.value && setQuadrant(eye, quadrant, event.target.value as Structure)}
-                            className="h-9 rounded border border-white/15 bg-bg-deep px-2 text-white">
+                            className="h-9 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-2 text-[color:var(--odos-text)]">
                             <option value="">Select</option>
                             {OPTIONS.map((value) => <option key={value} value={value}>{value.toUpperCase()}</option>)}
                           </select>
@@ -158,10 +158,10 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
                     })}
                   </div>
                 )}
-                <label className="mt-4 block text-xs uppercase tracking-widest text-white/35">
+                <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                   TM pigmentation
                   <select aria-label={`${eye} TM pigmentation`} value={pigmentation[eye] ?? ""} onChange={(event) => setPigmentation((current) => ({ ...current, [eye]: event.target.value }))}
-                    className="mt-1 h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white">
+                    className="mt-1 h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-[color:var(--odos-text)]">
                     <option value="">Select</option>
                     {PIGMENT.map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
@@ -170,15 +170,15 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
             );
           })}
         </div>
-        <label className="mt-4 block text-xs uppercase tracking-widest text-white/35">
+        <label className="mt-4 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
           Note
           <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3}
-            className="mt-1 w-full rounded border border-white/15 bg-bg-deep p-3 text-white" />
+            className="mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] p-3 text-[color:var(--odos-text)]" />
         </label>
         <div className="mt-5 flex items-center justify-between gap-3">
-          <div className="text-sm text-red-200">{error}</div>
+          <div className="text-sm text-[color:var(--odos-alert)]">{error}</div>
           <button onClick={save} disabled={saving}
-            className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            className="rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:opacity-50">
             {saving ? "Saving..." : "Save Gonioscopy"}
           </button>
         </div>
