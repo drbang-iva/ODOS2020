@@ -94,6 +94,40 @@ test("a paid package sale retries only finalization with the original Invoice", 
   assert.equal(readPendingPackageSale("Patient/patient-1", storage), undefined);
 });
 
+test("browser storage failures cannot change payment finalization outcomes", async () => {
+  const storage = throwingStorage();
+  const packageInstance = {
+    id: "instance-1",
+    patientFhirId: "patient-1",
+    definitionId: definition.id,
+    name: definition.name,
+    eligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
+    sessionCount: 3,
+    priceCents: 360_000,
+    expiryDate: "2027-07-18",
+    refundPolicy: "non_refundable" as const,
+    sourceSaleInvoiceId: "sale-1",
+    remainingSessions: 3,
+    createdAt: "2026-07-18T12:00:00Z",
+    ledger: [],
+  };
+  const activated = await sellPackage(
+    {
+      patientReference: "Patient/patient-1",
+      definition,
+      tender: "CASH",
+      paidInvoiceReference: "Invoice/sale-1",
+    },
+    {
+      authHeader: () => "Bearer synthetic",
+      storage,
+      fetchImpl: async () => response(200, { package: packageInstance }),
+    },
+  );
+  assert.equal(activated.id, "instance-1");
+  assert.equal(readPendingPackageSale("Patient/patient-1", storage), undefined);
+});
+
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
   return {
@@ -104,6 +138,18 @@ function memoryStorage(): Storage {
     removeItem: (key) => { values.delete(key); },
     setItem: (key, value) => { values.set(key, value); },
   };
+}
+
+function throwingStorage(): Storage {
+  const failure = () => { throw new DOMException("Storage blocked", "SecurityError"); };
+  return {
+    get length() { return failure(); },
+    clear: failure,
+    getItem: failure,
+    key: failure,
+    removeItem: failure,
+    setItem: failure,
+  } as Storage;
 }
 
 function response(status: number, body: unknown): Response {

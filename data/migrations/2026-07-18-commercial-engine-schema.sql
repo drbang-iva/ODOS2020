@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS odos_package_redemptions (
   amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
   invoice_fhir_id TEXT UNIQUE CHECK (invoice_fhir_id IS NULL OR invoice_fhir_id ~ '^[A-Za-z0-9.-]+$'),
   payment_fhir_id TEXT UNIQUE CHECK (payment_fhir_id IS NULL OR payment_fhir_id ~ '^[A-Za-z0-9.-]+$'),
-  consumed_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   FOREIGN KEY (package_instance_id, patient_fhir_id)

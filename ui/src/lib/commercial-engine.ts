@@ -77,7 +77,7 @@ export function readPendingPackageSale(
   storage = browserSessionStorage(),
 ): PendingPackageSale | undefined {
   const storageKey = pendingPackageSaleStorageKey(patientReference);
-  const value = storage?.getItem(storageKey);
+  const value = storageValue(storage, storageKey);
   if (!value) return undefined;
   try {
     const pending = JSON.parse(value) as Partial<PendingPackageSale>;
@@ -87,12 +87,12 @@ export function readPendingPackageSale(
       || typeof pending.invoiceReference !== "string"
       || !pending.invoiceReference.startsWith("Invoice/")
       || !(["CASH", "CHECK", "CARD_MANUAL"] as const).includes(pending.tender as PackageSaleTender)) {
-      storage?.removeItem(storageKey);
+      removeStorageValue(storage, storageKey);
       return undefined;
     }
     return pending as PendingPackageSale;
   } catch {
-    storage?.removeItem(storageKey);
+    removeStorageValue(storage, storageKey);
     return undefined;
   }
 }
@@ -178,12 +178,12 @@ export async function sellPackage(
   }
   const storage = options.storage ?? browserSessionStorage();
   const storageKey = pendingPackageSaleStorageKey(input.patientReference);
-  storage?.setItem(storageKey, JSON.stringify({
+  persistPendingPackageSale(storage, storageKey, {
     patientReference: input.patientReference,
     definition: input.definition,
     tender: input.tender,
     invoiceReference,
-  } satisfies PendingPackageSale));
+  });
   try {
     const finalized = await post<{ package: PatientPackageInstance }>("/commercial-engine/sales/finalize", {
       patientReference: input.patientReference,
@@ -191,7 +191,7 @@ export async function sellPackage(
       invoiceReference,
     }, options);
     if (readPendingPackageSale(input.patientReference, storage)?.invoiceReference === invoiceReference) {
-      storage?.removeItem(storageKey);
+      removeStorageValue(storage, storageKey);
     }
     return finalized.package;
   } catch (cause) {
@@ -203,7 +203,39 @@ export async function sellPackage(
 }
 
 function browserSessionStorage(): Storage | undefined {
-  return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
+  try {
+    return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function storageValue(storage: Storage | undefined, key: string): string | null | undefined {
+  try {
+    return storage?.getItem(key);
+  } catch {
+    return undefined;
+  }
+}
+
+function persistPendingPackageSale(
+  storage: Storage | undefined,
+  key: string,
+  pending: PendingPackageSale,
+): void {
+  try {
+    storage?.setItem(key, JSON.stringify(pending));
+  } catch {
+    return;
+  }
+}
+
+function removeStorageValue(storage: Storage | undefined, key: string): void {
+  try {
+    storage?.removeItem(key);
+  } catch {
+    return;
+  }
 }
 
 export async function redeemPackage(

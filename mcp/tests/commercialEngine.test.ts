@@ -416,15 +416,19 @@ test("sale snapshots reject whitespace-only eligibility codes before persistence
 
 test("commercial package ledger migration enforces append-only mutation rejection", async () => {
   const sql = await readFile(new URL("../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url), "utf8");
+  const recoverySql = await readFile(new URL("../../data/migrations/2026-07-18-commercial-engine-redemption-recovery.sql", import.meta.url), "utf8");
   assert.match(sql, /BEFORE UPDATE OR DELETE ON odos_package_ledger/);
   assert.match(sql, /source_sale_invoice_id TEXT NOT NULL UNIQUE/);
   assert.match(sql, /snapshot_name TEXT NOT NULL/);
   assert.match(sql, /snapshot_eligible_procedure_type_codes TEXT\[\] NOT NULL/);
   assert.match(sql, /CREATE TABLE IF NOT EXISTS odos_package_redemptions/);
-  assert.match(sql, /consumed_at TIMESTAMPTZ/);
+  assert.doesNotMatch(sql, /consumed_at TIMESTAMPTZ/);
+  assert.match(recoverySql, /ALTER TABLE odos_package_redemptions/);
+  assert.match(recoverySql, /ADD COLUMN IF NOT EXISTS consumed_at TIMESTAMPTZ/);
   assert.match(sql, /sessions_delta INTEGER NOT NULL/);
   const storeSource = await readFile(new URL("../src/commercial-engine/ledger-store.ts", import.meta.url), "utf8");
   assert.match(storeSource, /ON CONFLICT \(source_sale_invoice_id\) DO NOTHING/);
+  assert.match(storeSource, /2026-07-18-commercial-engine-redemption-recovery\.sql/);
 });
 
 function instance(): PatientPackageInstance {

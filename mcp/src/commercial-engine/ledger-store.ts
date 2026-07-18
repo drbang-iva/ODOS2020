@@ -8,9 +8,10 @@ const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplu
 const SCHEMA_LEDGER_FILE = fileURLToPath(
   new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
 );
-const COMMERCIAL_SCHEMA_FILE = fileURLToPath(
-  new URL("../../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url),
-);
+const COMMERCIAL_SCHEMA_FILES = [
+  "2026-07-18-commercial-engine-schema.sql",
+  "2026-07-18-commercial-engine-redemption-recovery.sql",
+].map((filename) => fileURLToPath(new URL(`../../../data/migrations/${filename}`, import.meta.url)));
 
 export const PACKAGE_REFUND_POLICIES = [
   "non_refundable",
@@ -546,11 +547,13 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
       await client.query(await readFile(SCHEMA_LEDGER_FILE, "utf8"));
       await client.query("BEGIN");
       await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
-      const filename = basename(COMMERCIAL_SCHEMA_FILE);
-      const applied = await client.query("SELECT 1 FROM odos_schema_migrations WHERE filename = $1", [filename]);
-      if (!applied.rowCount) {
-        await client.query(await readFile(COMMERCIAL_SCHEMA_FILE, "utf8"));
-        await client.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+      for (const schemaFile of COMMERCIAL_SCHEMA_FILES) {
+        const filename = basename(schemaFile);
+        const applied = await client.query("SELECT 1 FROM odos_schema_migrations WHERE filename = $1", [filename]);
+        if (!applied.rowCount) {
+          await client.query(await readFile(schemaFile, "utf8"));
+          await client.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+        }
       }
       await client.query("COMMIT");
     } catch (error) {
