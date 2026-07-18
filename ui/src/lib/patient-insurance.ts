@@ -354,10 +354,10 @@ export function nextEligibleDate(item: CoverageEligibilityResponseInsuranceItem 
 }
 
 export function latestBenefitsByCoverage(responses: readonly CoverageEligibilityResponse[]): Map<string, CoverageEligibilityResponse> {
-  const sorted = [...responses].sort((left, right) => right.created.localeCompare(left.created));
+  const sorted = [...responses].sort((left, right) => Date.parse(right.created) - Date.parse(left.created));
   const latest = new Map<string, CoverageEligibilityResponse>();
   for (const response of sorted) {
-    const reference = response.insurance?.[0]?.coverage.reference;
+    const reference = coverageReferenceKey(response.insurance?.[0]?.coverage.reference);
     if (reference && !latest.has(reference)) latest.set(reference, response);
   }
   return latest;
@@ -388,6 +388,11 @@ export function hasActiveApplicableBenefit(
       return status === "Authorized" || status === "Eligibility Active";
     });
   });
+}
+
+function coverageReferenceKey(reference: string | undefined): string | undefined {
+  const match = reference?.match(/(?:^|\/)Coverage\/([^/?#]+)/);
+  return match?.[1] ? `Coverage/${match[1]}` : undefined;
 }
 
 export async function fetchPatientInsurance(patientReference: string, options: ClaimsApiOptions = {}): Promise<InsuranceScreenData> {

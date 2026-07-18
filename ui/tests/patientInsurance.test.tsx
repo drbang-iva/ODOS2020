@@ -280,6 +280,42 @@ test("claim context is active only when a current Coverage has an active applica
     }],
   };
   assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [sameDayBenefit], ["lens"], "2026-07-10"), true);
+  const expiredBenefit: CoverageEligibilityResponse = {
+    ...response,
+    insurance: [{
+      ...response.insurance![0],
+      benefitPeriod: { start: "2026-07-01", end: "2026-07-09T23:59:59Z" },
+    }],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [expiredBenefit], ["lens"], "2026-07-10"), false);
+  const absoluteReference: CoverageEligibilityResponse = {
+    ...response,
+    insurance: [{
+      ...response.insurance![0],
+      coverage: { reference: "https://fhir.example/Coverage/legacy-coverage" },
+    }],
+  };
+  assert.equal(hasActiveApplicableBenefit([LEGACY_COVERAGE], [absoluteReference], ["lens"], "2026-07-10"), true);
+  const chronologicallyNewerExpired: CoverageEligibilityResponse = {
+    ...response,
+    id: "response-newer",
+    created: "2026-07-09T23:30:00-02:00",
+    insurance: [{ ...response.insurance![0], inforce: false }],
+  };
+  const lexicallyNewerButOlder: CoverageEligibilityResponse = {
+    ...response,
+    id: "response-older",
+    created: "2026-07-10T00:00:00Z",
+  };
+  assert.equal(
+    hasActiveApplicableBenefit(
+      [LEGACY_COVERAGE],
+      [lexicallyNewerButOlder, chronologicallyNewerExpired],
+      ["lens"],
+      "2026-07-10",
+    ),
+    false,
+  );
   const excludedLens: CoverageEligibilityResponse = {
     ...response,
     insurance: [{
