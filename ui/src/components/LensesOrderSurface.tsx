@@ -24,8 +24,9 @@ import {
   type LensModifierLine,
   type LensSelection,
 } from "../lib/lens-selection";
+import { resolveVCode } from "../lib/v-code-resolver";
 
-interface LensesOrderSurfaceProps {
+export interface LensesOrderSurfaceProps {
   open: boolean;
   rx: VisionPrescription | null;
   initialSelection?: AttachedLensSelection;
@@ -33,6 +34,7 @@ interface LensesOrderSurfaceProps {
   products?: readonly LensProduct[];
   coatings?: readonly CoatingOption[];
   modifiers?: readonly ModifierOption[];
+  resolver?: typeof resolveVCode;
   onCancel: () => void;
   onCommit: (selection: LensSelection) => void;
 }
@@ -45,6 +47,7 @@ export function LensesOrderSurface({
   products: suppliedProducts,
   coatings: suppliedCoatings,
   modifiers: suppliedModifiers,
+  resolver = resolveVCode,
   onCancel,
   onCommit,
 }: LensesOrderSurfaceProps) {
@@ -203,6 +206,7 @@ export function LensesOrderSurface({
     selectedProduct?.defaultBillingCodeFamily,
     { od: rxContext.od, os: rxContext.os },
     claimBound,
+    resolver,
   );
   const envelope = selectedProduct ? lensProductEnvelopeCheck(selectedProduct, rxContext) : undefined;
   const coatingRetailCents = selectedCoating ? addOnRetailCents(selectedCoating.pricePerPairCents) : 0;

@@ -354,7 +354,7 @@ export function nextEligibleDate(item: CoverageEligibilityResponseInsuranceItem 
 }
 
 export function latestBenefitsByCoverage(responses: readonly CoverageEligibilityResponse[]): Map<string, CoverageEligibilityResponse> {
-  const sorted = [...responses].sort((left, right) => Date.parse(right.created) - Date.parse(left.created));
+  const sorted = [...responses].sort((left, right) => compareCreatedDescending(left.created, right.created));
   const latest = new Map<string, CoverageEligibilityResponse>();
   for (const response of sorted) {
     for (const insurance of response.insurance ?? []) {
@@ -363,6 +363,18 @@ export function latestBenefitsByCoverage(responses: readonly CoverageEligibility
     }
   }
   return latest;
+}
+
+function compareCreatedDescending(left: string | undefined, right: string | undefined): number {
+  const leftTime = createdTime(left);
+  const rightTime = createdTime(right);
+  if (leftTime === rightTime) return 0;
+  return rightTime > leftTime ? 1 : -1;
+}
+
+function createdTime(created: string | undefined): number {
+  const parsed = created ? Date.parse(created) : Number.NaN;
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 }
 
 export function hasActiveApplicableBenefit(

@@ -1,13 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { VisionPrescription } from "@medplum/fhirtypes";
+import type { Coverage, CoverageEligibilityResponse, VisionPrescription } from "@medplum/fhirtypes";
 import React from "react";
-import { act, create, type ReactTestInstance } from "react-test-renderer";
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { AttachedLensPanel, LensesOrderSurface } from "../src/components/LensesOrderSurface";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
   COATING_OPTION_SEEDS,
+  LENS_RETAIL_MARKUP_MULTIPLIER,
   MODIFIER_OPTION_SEEDS,
+  suggestedRetailPerPairCents,
   type LensProduct,
 } from "../src/lib/lens-catalog";
 import {
@@ -22,6 +24,7 @@ import {
 } from "../src/lib/lens-selection";
 import { opticalCollectionChargeFromDraft, type OpticalChargeLineDraft } from "../src/lib/optical-order";
 import { resolveVCode } from "../src/lib/v-code-resolver";
+import { OpticalOrder } from "../src/scenes/OpticalOrder";
 
 const TEST_RX: VisionPrescription = {
   resourceType: "VisionPrescription",
@@ -75,6 +78,12 @@ test("prism modifiers sum horizontal and vertical prism per eye, use the worse e
   assert.equal(prism?.eye, "OD");
   assert.equal(prism?.prismTotal, 5.5);
   assert.equal(prism?.chargeCents, 983);
+  assert.equal(prism?.chargeCents, Math.round(1.5 * 298 * LENS_RETAIL_MARKUP_MULTIPLIER));
+  const wholesaleCents = 7798;
+  assert.equal(
+    suggestedRetailPerPairCents(wholesaleCents),
+    Math.round((wholesaleCents * LENS_RETAIL_MARKUP_MULTIPLIER) / 100) * 100 - 2,
+  );
   assert.match(prism?.ruleLabel ?? "", /Prism over 4Δ \(OD 5.5Δ\) — BP rule/);
   assert.ok(lines.some((line) => line.id === "bp-base-edging-fee" && !line.automatic));
 
@@ -145,6 +154,148 @@ test("lens selection invokes the V-code resolver only for claim-bound orders", (
   assert.equal(calls, 0);
   assert.equal(resolveLensSelectionBilling("V21", rx, true, resolver).status, "resolved");
   assert.equal(calls, 1);
+});
+
+test("OpticalOrder turns active fetched lens benefits into claim-bound V-codes on the selection", async () => {
+  let resolverCalls = 0;
+  const resolver: typeof resolveVCode = (familyHint, rx, claimBound) => {
+    resolverCalls += 1;
+    return resolveVCode(familyHint, rx, claimBound);
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <OpticalOrder
+        search="?patient=Patient%2Flens-a2"
+        initialVisionPrescription={TEST_RX}
+        api={opticalOrderApi()}
+        lensCatalog={lensCatalog(resolver)}
+      />,
+    );
+    await flushPromises();
+  });
+
+  assert.equal(renderer.root.findByType(LensesOrderSurface).props.claimBound, true);
+  await openSceneLensPicker(renderer);
+  chooseSingleVision(renderer);
+  assert.ok(resolverCalls > 0);
+  assert.match(nodeText(renderer.root), /V2103 · OD/);
+  assert.match(nodeText(renderer.root), /V2103 · OS/);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder treats either rejected benefit fetch as cash-pay without invoking the V-code resolver", async () => {
+  for (const rejected of ["insurance", "benefits"] as const) {
+    let resolverCalls = 0;
+    const logged: unknown[][] = [];
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => { logged.push(args); };
+    let renderer: ReactTestRenderer | undefined;
+    try {
+      const failure = new Error(`${rejected} unavailable`);
+      await act(async () => {
+        renderer = create(
+          <OpticalOrder
+            search="?patient=Patient%2Flens-a2"
+            api={opticalOrderApi({ rejected, failure })}
+            lensCatalog={lensCatalog((familyHint, rx, claimBound) => {
+              resolverCalls += 1;
+              return resolveVCode(familyHint, rx, claimBound);
+            })}
+          />,
+        );
+        await flushPromises();
+      });
+
+      assert.equal(renderer.root.findByType(LensesOrderSurface).props.claimBound, false);
+      await openSceneLensPicker(renderer);
+      chooseSingleVision(renderer);
+      assert.equal(resolverCalls, 0);
+      assert.match(nodeText(renderer.root), /Cash-pay order/);
+      assert.ok(logged.some(([message, cause]) =>
+        message === "Optical-order benefit context unavailable; treating order as cash-pay."
+        && cause === failure));
+    } finally {
+      if (renderer) act(() => renderer!.unmount());
+      console.error = originalConsoleError;
+    }
+  }
+});
+
+test("OpticalOrder skips benefit fetches and V-code resolution when no patient is attached", async () => {
+  let insuranceCalls = 0;
+  let benefitCalls = 0;
+  let resolverCalls = 0;
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <OpticalOrder
+        search=""
+        api={opticalOrderApi({
+          fetchInsurance: async () => {
+            insuranceCalls += 1;
+            return { coverages: [ACTIVE_COVERAGE], relatedPeople: [] };
+          },
+          fetchBenefits: async () => {
+            benefitCalls += 1;
+            return { responses: [activeLensBenefit()] };
+          },
+        })}
+        lensCatalog={lensCatalog((familyHint, rx, claimBound) => {
+          resolverCalls += 1;
+          return resolveVCode(familyHint, rx, claimBound);
+        })}
+      />,
+    );
+    await flushPromises();
+  });
+
+  assert.equal(insuranceCalls, 0);
+  assert.equal(benefitCalls, 0);
+  assert.equal(renderer.root.findByType(LensesOrderSurface).props.claimBound, false);
+  await openSceneLensPicker(renderer);
+  chooseSingleVision(renderer);
+  assert.equal(resolverCalls, 0);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder ignores benefit responses that resolve after unmount", async () => {
+  let resolveInsurance!: (value: { coverages: Coverage[]; relatedPeople: [] }) => void;
+  let resolveBenefits!: (value: { responses: CoverageEligibilityResponse[] }) => void;
+  const insurance = new Promise<{ coverages: Coverage[]; relatedPeople: [] }>((resolve) => { resolveInsurance = resolve; });
+  const benefits = new Promise<{ responses: CoverageEligibilityResponse[] }>((resolve) => { resolveBenefits = resolve; });
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args); };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <OpticalOrder
+          search="?patient=Patient%2Flens-a2"
+          api={opticalOrderApi({
+            fetchInsurance: async () => insurance,
+            fetchBenefits: async () => benefits,
+          })}
+          lensCatalog={lensCatalog(resolveVCode)}
+        />,
+      );
+      await Promise.resolve();
+    });
+    act(() => renderer!.unmount());
+    await act(async () => {
+      resolveInsurance({ coverages: [ACTIVE_COVERAGE], relatedPeople: [] });
+      resolveBenefits({ responses: [activeLensBenefit()] });
+      await flushPromises();
+    });
+    assert.equal(
+      logged.some((args) => args.some((value) => typeof value === "string" && /state update|unmounted component|not wrapped in act/i.test(value))),
+      false,
+    );
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    console.error = originalConsoleError;
+  }
 });
 
 test("search-first returns the same catalog row as the guided axes and leaves blocked hits visible", () => {
@@ -479,6 +630,81 @@ function boundedProduct(patch: Partial<LensProduct> = {}): LensProduct {
     addMax: 2.5,
     ...patch,
   };
+}
+
+const ACTIVE_COVERAGE: Coverage = {
+  resourceType: "Coverage",
+  id: "lens-coverage",
+  status: "active",
+  beneficiary: { reference: "Patient/lens-a2" },
+  payor: [{ reference: "Organization/vision-plan" }],
+  period: { start: "2026-01-01", end: "2027-12-31" },
+};
+
+function activeLensBenefit(): CoverageEligibilityResponse {
+  return {
+    resourceType: "CoverageEligibilityResponse",
+    status: "active",
+    purpose: ["benefits"],
+    patient: { reference: "Patient/lens-a2" },
+    created: "2026-07-18T12:00:00Z",
+    request: { reference: "CoverageEligibilityRequest/lens-request" },
+    outcome: "complete",
+    insurer: { reference: "Organization/vision-plan" },
+    insurance: [{
+      coverage: { reference: "Coverage/lens-coverage" },
+      inforce: true,
+      benefitPeriod: { start: "2026-01-01", end: "2027-12-31" },
+      item: [{ category: { text: "Lens" }, name: "lens", excluded: false }],
+    }],
+  };
+}
+
+function opticalOrderApi(options: {
+  rejected?: "insurance" | "benefits";
+  failure?: Error;
+  fetchInsurance?: () => Promise<{ coverages: Coverage[]; relatedPeople: [] }>;
+  fetchBenefits?: () => Promise<{ responses: CoverageEligibilityResponse[] }>;
+} = {}) {
+  const failure = options.failure ?? new Error("benefit context unavailable");
+  return {
+    fetchPatientInsurance: options.fetchInsurance ?? (async () => {
+      if (options.rejected === "insurance") throw failure;
+      return { coverages: [ACTIVE_COVERAGE], relatedPeople: [] };
+    }),
+    fetchVisionBenefits: options.fetchBenefits ?? (async () => {
+      if (options.rejected === "benefits") throw failure;
+      return { responses: [activeLensBenefit()] };
+    }),
+    searchFrameCatalog: async () => [],
+    loadPracticeFrameInventory: async () => [],
+  };
+}
+
+function lensCatalog(resolver: typeof resolveVCode) {
+  return {
+    products: BP_DIGITAL_LENS_PRODUCTS,
+    coatings: COATING_OPTION_SEEDS,
+    modifiers: MODIFIER_OPTION_SEEDS,
+    resolver,
+  };
+}
+
+async function openSceneLensPicker(renderer: ReactTestRenderer): Promise<void> {
+  act(() => buttonByText(renderer.root, "Add lenses").props.onClick());
+  await act(async () => { await flushPromises(); });
+}
+
+function chooseSingleVision(renderer: ReactTestRenderer): void {
+  clickButton(renderer, "Single Vision");
+  clickButton(renderer, "BP Digital SV");
+  clickButton(renderer, "Poly");
+  clickButton(renderer, "Clear");
+}
+
+async function flushPromises(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 function charge(id: string, procedure: string, selected: boolean): OpticalChargeLineDraft {
