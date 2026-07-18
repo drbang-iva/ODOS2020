@@ -85,6 +85,7 @@ import {
 } from "./clinical-graph/gonioscopy-endpoint.js";
 import {
   handleProtocolApplyRequest,
+  handleProtocolApplicationsRequest,
   handleProtocolOffersRequest,
   handleProtocolUnapplyRequest,
   handleProtocolSignCleanupRequest,
@@ -6077,6 +6078,20 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: protocol apply route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "protocol apply route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/protocols/applications", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolApplicationsRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol applications route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol applications route failed" });
         }
       });
 

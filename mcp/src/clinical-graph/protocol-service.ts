@@ -67,6 +67,10 @@ export class ProtocolService {
   }> {
     const protocol = await this.definitions.get(protocolId);
     if (!protocol || protocol.status !== "active") throw new Error("Active protocol not found.");
+    if ((await this.applications.list()).some((application) =>
+      application.encounterId === input.encounterId && application.protocolId === protocolId &&
+      application.confirmed && application.undoState === "active"
+    )) throw new Error("Protocol is already applied to this encounter.");
     if (!input.diagnosis.confirmed || protocol.trigger.kind !== "diagnosis" ||
       !protocol.trigger.dxKeys.some((pattern) => matchesCode(input.diagnosis.code, pattern))) {
       throw new Error("Confirmed diagnosis does not match protocol trigger.");
@@ -129,6 +133,9 @@ export class ProtocolService {
       const selected = choice?.selected ?? item.defaultSelected;
       if (!selected) {
         dispositions.push({ itemKey: item.itemKey, outcome: "opted-out" });
+        for (const finding of proposed.filter((row) =>
+          row.sourceItemKey === item.itemKey && row.state === "proposed"
+        )) await this.findings.save({ ...finding, state: "removed" });
         continue;
       }
       const payload = choice?.payload ?? item.payload;
@@ -150,7 +157,10 @@ export class ProtocolService {
               at,
             },
           };
-          committed.observationReference = await this.projection.commitFinding(committed);
+          const observationReference = committed.value === undefined
+            ? undefined
+            : await this.projection.commitFinding(committed);
+          if (observationReference) committed.observationReference = observationReference;
           await this.findings.save(committed);
         }
       } else if (item.itemType === "charge-seed") {
@@ -311,7 +321,7 @@ export class ProtocolService {
       encounterId: application.encounterId,
       protocolApplicationId: application.id,
       planActionRef: item.itemKey,
-      cptConcept: String(payload.cptConcept),
+      procedureConceptKey: String(payload.procedureConceptKey),
       units: 1,
       laterality: "OU",
       dxPointers: linkedDx,

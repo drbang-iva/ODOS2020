@@ -2,6 +2,7 @@ import type { Observation } from "@medplum/fhirtypes";
 import type { ClinicalFindingDefinition, ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 import type { ProtocolFindingInstance } from "./protocol-types.js";
 
+// Operator-approved local-practice convention; see data/code-bindings/gonioscopy-local-practice-ledger.md.
 export const GONIO_EYES = ["OD", "OS"] as const;
 export const GONIO_QUADRANTS = ["superior", "nasal", "inferior", "temporal"] as const;
 export const GONIO_STRUCTURES = ["closed", "sl", "atm", "ptm", "ss", "cb"] as const;
@@ -14,6 +15,7 @@ export type GonioEntryMode = "propagated-uniform" | "quadrant-specific";
 const ODOS = "https://odos2020.com/fhir";
 const ENTRY_MODE_URL = `${ODOS}/StructureDefinition/gonio-entry-mode`;
 const SOURCE_URL = `${ODOS}/StructureDefinition/finding-source`;
+export const GONIO_PROVENANCE_LEDGER = "data/code-bindings/gonioscopy-local-practice-ledger.md";
 
 export interface GonioQuadrantRecord {
   eye: GonioEye;
@@ -104,12 +106,13 @@ export function parseGonioQuadrantObservation(observation: Observation): GonioQu
   if (!isEye(eye) || !isQuadrant(quadrant) || !isStructure(value)) return undefined;
   const entryMode = observation.extension?.find((row) => row.url === ENTRY_MODE_URL)?.valueCode;
   const source = observation.extension?.find((row) => row.url === SOURCE_URL)?.valueCode;
+  if (!isEntryMode(entryMode) || !isSource(source)) return undefined;
   return {
     eye,
     quadrant,
     value,
-    entryMode: entryMode === "quadrant-specific" ? entryMode : "propagated-uniform",
-    source: source === "protocol-default" ? source : "clinician-entered",
+    entryMode,
+    source,
     ...(observation.id ? { observationReference: `Observation/${observation.id}` } : {}),
   };
 }
@@ -147,4 +150,10 @@ function isQuadrant(value: unknown): value is GonioQuadrant {
 }
 function isStructure(value: unknown): value is GonioStructure {
   return GONIO_STRUCTURES.includes(value as GonioStructure);
+}
+function isEntryMode(value: unknown): value is GonioEntryMode {
+  return value === "propagated-uniform" || value === "quadrant-specific";
+}
+function isSource(value: unknown): value is GonioQuadrantRecord["source"] {
+  return value === "protocol-default" || value === "clinician-entered";
 }

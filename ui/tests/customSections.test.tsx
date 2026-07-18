@@ -828,7 +828,7 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps the 17 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
+test("EncounterCharting keeps the 18 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
   assert.equal((source.match(/activeSection === "/g) ?? []).length, 18);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
