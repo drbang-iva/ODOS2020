@@ -13,6 +13,7 @@ import {
   ODOS_PACKAGE_CREDIT_TENDER_CODE,
   ODOS_REVENUE_CLASS_SYSTEM,
 } from "../src/commercial-engine/package-service.js";
+import { ODOS_BANK_CREDIT_TENDER_CODE } from "../src/commercial-engine/credit-bank-service.js";
 import {
   ODOS_PAYMENT_TENDER_SYSTEM,
   paymentTenderExtensionForReconciliation,
@@ -95,6 +96,58 @@ test("a $3,600 package sale and one $1,200 redemption recognize exactly $1,200 o
   assert.equal(report.cashCollectedCents, 360_000);
   assert.equal(report.balanceFundingCents, 360_000);
   assert.equal(report.productionCents, 120_000);
+  assert.equal(report.productionInvoiceCount, 1);
+});
+
+test("a $500 Credit Bank deposit plus $50 bonus funds $550 production without fabricating cash", () => {
+  const funding: Invoice = {
+    resourceType: "Invoice",
+    id: "bank-funding",
+    status: "balanced",
+    date: "2026-07-18T14:00:00Z",
+    meta: { tag: [{ system: ODOS_REVENUE_CLASS_SYSTEM, code: ODOS_BALANCE_FUNDING_CODE }] },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",
+      valueCodeableConcept: { coding: [{ system: ODOS_PAYMENT_TENDER_SYSTEM, code: "CASH" }] },
+    }],
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Credit Bank deposit" },
+      priceComponent: [{ type: "base", amount: usd(50_000) }],
+    }],
+    totalGross: usd(50_000),
+    totalNet: usd(50_000),
+  };
+  const service: Invoice = {
+    resourceType: "Invoice",
+    id: "bank-service",
+    status: "issued",
+    date: "2026-07-19T14:00:00Z",
+    lineItem: [{
+      sequence: 1,
+      chargeItemReference: { reference: "ChargeItem/service-1" },
+      priceComponent: [{ type: "base", amount: usd(55_000) }],
+    }],
+    totalGross: usd(55_000),
+    totalNet: usd(55_000),
+  };
+  const bankCredit: PaymentReconciliation = {
+    resourceType: "PaymentReconciliation",
+    id: "bank-credit-1",
+    status: "active",
+    outcome: "complete",
+    created: "2026-07-19T14:00:00Z",
+    paymentDate: "2026-07-19",
+    paymentAmount: usd(55_000),
+    detail: [{ request: { reference: "Invoice/bank-service" }, amount: usd(55_000) }],
+    extension: [paymentTenderExtensionForReconciliation({ code: ODOS_BANK_CREDIT_TENDER_CODE })],
+  };
+
+  const report = projectServiceProduction("2026-07", [funding, service], [bankCredit]);
+
+  assert.equal(report.cashCollectedCents, 50_000);
+  assert.equal(report.productionCents, 55_000);
+  assert.equal(report.balanceFundingCents, 50_000);
   assert.equal(report.productionInvoiceCount, 1);
 });
 

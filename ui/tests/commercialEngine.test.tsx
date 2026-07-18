@@ -128,6 +128,60 @@ test("browser storage failures cannot change payment finalization outcomes", asy
   assert.equal(readPendingPackageSale("Patient/patient-1", storage), undefined);
 });
 
+test("pending package recovery is keyed by Invoice so one finalization cannot erase another", async () => {
+  const storage = memoryStorage();
+  for (const invoiceReference of ["Invoice/sale-1", "Invoice/sale-2"]) {
+    await assert.rejects(sellPackage(
+      {
+        patientReference: "Patient/patient-1",
+        definition,
+        tender: "CASH",
+        paidInvoiceReference: invoiceReference,
+      },
+      {
+        authHeader: () => "Bearer synthetic",
+        storage,
+        fetchImpl: async () => response(500, { error: "temporary activation failure" }),
+      },
+    ), PackageFinalizationError);
+  }
+  assert.equal(storage.length, 2);
+  assert.equal(readPendingPackageSale("Patient/patient-1", storage)?.invoiceReference, "Invoice/sale-1");
+
+  await sellPackage(
+    {
+      patientReference: "Patient/patient-1",
+      definition,
+      tender: "CASH",
+      paidInvoiceReference: "Invoice/sale-1",
+    },
+    {
+      authHeader: () => "Bearer synthetic",
+      storage,
+      fetchImpl: async () => response(200, {
+        package: {
+          id: "instance-1",
+          patientFhirId: "patient-1",
+          definitionId: definition.id,
+          name: definition.name,
+          eligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
+          sessionCount: 3,
+          priceCents: 360_000,
+          expiryDate: "2027-07-18",
+          refundPolicy: "non_refundable",
+          sourceSaleInvoiceId: "sale-1",
+          remainingSessions: 3,
+          createdAt: "2026-07-18T12:00:00Z",
+          ledger: [],
+        },
+      }),
+    },
+  );
+
+  assert.equal(storage.length, 1);
+  assert.equal(readPendingPackageSale("Patient/patient-1", storage)?.invoiceReference, "Invoice/sale-2");
+});
+
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
   return {

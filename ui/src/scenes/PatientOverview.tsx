@@ -13,6 +13,7 @@ import { useViewState } from "../lib/view-state";
 import { CLINIC_PATH } from "./DeskHome";
 import { PinnedOfficeNote } from "../components/OfficeChannel";
 import { BalanceChips } from "../components/commercial/BalanceChips";
+import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepositSheet";
 import { SaleSheet } from "../components/commercial/SaleSheet";
 import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
@@ -51,6 +52,7 @@ export function PatientOverview({
   const [historyError, setHistoryError] = useState<string>();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sellingPackage, setSellingPackage] = useState(false);
+  const [depositingCreditBank, setDepositingCreditBank] = useState(false);
   const [packageRevision, setPackageRevision] = useState(0);
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
@@ -161,6 +163,7 @@ export function PatientOverview({
             />
           )}
           <div className="odos-overview-actions">
+            <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>
             <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
           </div>
@@ -257,6 +260,14 @@ export function PatientOverview({
             patientName={name}
             onClose={() => setSellingPackage(false)}
             onSold={() => setPackageRevision((current) => current + 1)}
+          />
+        )}
+        {depositingCreditBank && patient.id && (
+          <CreditBankDepositSheet
+            patientReference={`Patient/${patient.id}`}
+            patientName={name}
+            onClose={() => setDepositingCreditBank(false)}
+            onDeposited={() => setPackageRevision((current) => current + 1)}
           />
         )}
       </section>

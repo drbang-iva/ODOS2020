@@ -24,7 +24,30 @@ export interface PackageLedgerEntry {
   reason?: string;
   linkedFhirInvoiceId?: string;
   linkedFhirProcedureId?: string;
+  externalReference?: string;
   createdAt: string;
+}
+
+export interface CreditBankLedgerEntry {
+  id: string;
+  entryType: "deposit" | "bonus" | "spend" | "refund_in" | "adjustment" | "expiry";
+  amountCents: number;
+  actorUserId: string;
+  reason?: string;
+  linkedFhirInvoiceId?: string;
+  createdAt: string;
+}
+
+export interface PatientCreditBank {
+  patientFhirId: string;
+  balanceCents: number;
+  ledger: CreditBankLedgerEntry[];
+}
+
+export interface PackageLifecycleResult {
+  package: PatientPackageInstance;
+  amountCents: number;
+  creditBank?: PatientCreditBank;
 }
 
 export interface PatientPackageInstance {
@@ -57,6 +80,13 @@ export class PackageFinalizationError extends Error {
   }
 }
 
+export class CreditBankFinalizationError extends Error {
+  constructor(message: string, readonly invoiceReference: string) {
+    super(message);
+    this.name = "CreditBankFinalizationError";
+  }
+}
+
 export interface PendingPackageSale {
   patientReference: string;
   definition: PackageDefinition;
@@ -65,6 +95,7 @@ export interface PendingPackageSale {
 }
 
 const PENDING_PACKAGE_SALE_STORAGE_PREFIX = "odos.pending-package-sale.v1:";
+const PENDING_CREDIT_BANK_DEPOSIT_STORAGE_PREFIX = "odos.pending-credit-bank-deposit.v1:";
 
 interface ApiOptions {
   fetchImpl?: typeof fetch;
@@ -76,29 +107,30 @@ export function readPendingPackageSale(
   patientReference: string,
   storage = browserSessionStorage(),
 ): PendingPackageSale | undefined {
-  const storageKey = pendingPackageSaleStorageKey(patientReference);
-  const value = storageValue(storage, storageKey);
-  if (!value) return undefined;
-  try {
-    const pending = JSON.parse(value) as Partial<PendingPackageSale>;
-    if (pending.patientReference !== patientReference
-      || !pending.definition
-      || typeof pending.definition.id !== "string"
-      || typeof pending.invoiceReference !== "string"
-      || !pending.invoiceReference.startsWith("Invoice/")
-      || !(["CASH", "CHECK", "CARD_MANUAL"] as const).includes(pending.tender as PackageSaleTender)) {
+  for (const storageKey of storageKeys(storage, PENDING_PACKAGE_SALE_STORAGE_PREFIX)) {
+    const value = storageValue(storage, storageKey);
+    if (!value) continue;
+    try {
+      const pending = JSON.parse(value) as Partial<PendingPackageSale>;
+      if (!pending.definition
+        || typeof pending.definition.id !== "string"
+        || typeof pending.invoiceReference !== "string"
+        || storageKey !== pendingPackageSaleStorageKey(pending.invoiceReference)
+        || !pending.invoiceReference.startsWith("Invoice/")
+        || !(["CASH", "CHECK", "CARD_MANUAL"] as const).includes(pending.tender as PackageSaleTender)) {
+        removeStorageValue(storage, storageKey);
+        continue;
+      }
+      if (pending.patientReference === patientReference) return pending as PendingPackageSale;
+    } catch {
       removeStorageValue(storage, storageKey);
-      return undefined;
     }
-    return pending as PendingPackageSale;
-  } catch {
-    removeStorageValue(storage, storageKey);
-    return undefined;
   }
+  return undefined;
 }
 
-function pendingPackageSaleStorageKey(patientReference: string): string {
-  return `${PENDING_PACKAGE_SALE_STORAGE_PREFIX}${encodeURIComponent(patientReference)}`;
+function pendingPackageSaleStorageKey(invoiceReference: string): string {
+  return `${PENDING_PACKAGE_SALE_STORAGE_PREFIX}${encodeURIComponent(invoiceReference)}`;
 }
 
 export async function fetchPackageDefinitions(
@@ -134,6 +166,14 @@ export async function fetchPatientPackages(patientReference: string, options: Ap
   const body = await json(response);
   if (!response.ok) throw apiError(response, body);
   return arrayField<PatientPackageInstance>(body, "packages");
+}
+
+export async function fetchCreditBank(patientReference: string, options: ApiOptions = {}): Promise<PatientCreditBank> {
+  const patientId = patientReference.replace(/^Patient\//, "");
+  const response = await authorizedFetch(`/commercial-engine/patients/${encodeURIComponent(patientId)}/credit-bank`, undefined, options);
+  const body = await json(response);
+  if (!response.ok) throw apiError(response, body);
+  return objectField<PatientCreditBank>(body, "creditBank");
 }
 
 export async function fetchApplicablePackages(
@@ -177,7 +217,7 @@ export async function sellPackage(
     if (charged.outcome !== "success") throw new Error(`Package payment did not complete (${charged.outcome}).`);
   }
   const storage = options.storage ?? browserSessionStorage();
-  const storageKey = pendingPackageSaleStorageKey(input.patientReference);
+  const storageKey = pendingPackageSaleStorageKey(invoiceReference);
   persistPendingPackageSale(storage, storageKey, {
     patientReference: input.patientReference,
     definition: input.definition,
@@ -190,9 +230,7 @@ export async function sellPackage(
       definitionId: input.definition.id,
       invoiceReference,
     }, options);
-    if (readPendingPackageSale(input.patientReference, storage)?.invoiceReference === invoiceReference) {
-      removeStorageValue(storage, storageKey);
-    }
+    removeStorageValue(storage, storageKey);
     return finalized.package;
   } catch (cause) {
     throw new PackageFinalizationError(
@@ -200,6 +238,116 @@ export async function sellPackage(
       invoiceReference,
     );
   }
+}
+
+export async function depositCreditBank(
+  input: {
+    patientReference: string;
+    depositCents: number;
+    bonusCents?: number;
+    bonusReason?: string;
+    tender: PackageSaleTender;
+    paidInvoiceReference?: string;
+  },
+  options: ApiOptions = {},
+): Promise<PatientCreditBank> {
+  let invoiceReference = input.paidInvoiceReference;
+  if (!invoiceReference) {
+    const prepared = await post<{ invoiceReference: string }>("/commercial-engine/credit-bank/deposits/prepare", {
+      patientReference: input.patientReference,
+      depositCents: input.depositCents,
+      bonusCents: input.bonusCents ?? 0,
+      ...(input.bonusReason ? { bonusReason: input.bonusReason } : {}),
+    }, options);
+    invoiceReference = prepared.invoiceReference;
+    const charged = await post<{ outcome: string }>("/payments/charge", {
+      method: "manual-cash",
+      amountCents: input.depositCents,
+      patientReference: input.patientReference,
+      invoiceReference,
+      description: "Credit Bank deposit",
+      surface: "manual",
+      tender: { code: input.tender },
+    }, options);
+    if (charged.outcome !== "success") throw new Error(`Credit Bank payment did not complete (${charged.outcome}).`);
+  }
+  const storage = options.storage ?? browserSessionStorage();
+  const storageKey = pendingCreditBankDepositStorageKey(invoiceReference);
+  persistPendingCreditBankDeposit(storage, storageKey, {
+    patientReference: input.patientReference,
+    depositCents: input.depositCents,
+    bonusCents: input.bonusCents ?? 0,
+    ...(input.bonusReason ? { bonusReason: input.bonusReason } : {}),
+    tender: input.tender,
+    invoiceReference,
+  });
+  try {
+    const finalized = await post<{ creditBank: PatientCreditBank }>("/commercial-engine/credit-bank/deposits/finalize", {
+      patientReference: input.patientReference,
+      invoiceReference,
+    }, options);
+    removeStorageValue(storage, storageKey);
+    return finalized.creditBank;
+  } catch (cause) {
+    throw new CreditBankFinalizationError(
+      `Payment succeeded, but Credit Bank funding needs retry: ${cause instanceof Error ? cause.message : String(cause)}`,
+      invoiceReference,
+    );
+  }
+}
+
+export interface PendingCreditBankDeposit {
+  patientReference: string;
+  depositCents: number;
+  bonusCents: number;
+  bonusReason?: string;
+  tender: PackageSaleTender;
+  invoiceReference: string;
+}
+
+export function readPendingCreditBankDeposit(
+  patientReference: string,
+  storage = browserSessionStorage(),
+): PendingCreditBankDeposit | undefined {
+  for (const storageKey of storageKeys(storage, PENDING_CREDIT_BANK_DEPOSIT_STORAGE_PREFIX)) {
+    const value = storageValue(storage, storageKey);
+    if (!value) continue;
+    try {
+      const pending = JSON.parse(value) as Partial<PendingCreditBankDeposit>;
+      if (pending.patientReference === patientReference
+        && typeof pending.depositCents === "number"
+        && typeof pending.bonusCents === "number"
+        && typeof pending.invoiceReference === "string"
+        && storageKey === pendingCreditBankDepositStorageKey(pending.invoiceReference)
+        && (["CASH", "CHECK", "CARD_MANUAL"] as const).includes(pending.tender as PackageSaleTender)) {
+        return pending as PendingCreditBankDeposit;
+      }
+    } catch {
+      removeStorageValue(storage, storageKey);
+    }
+  }
+  return undefined;
+}
+
+export async function spendCreditBank(
+  input: { patientReference: string; chargeItemReference: string },
+  options: ApiOptions = {},
+): Promise<{ creditBank: PatientCreditBank; invoiceReference: string; paymentReference: string }> {
+  return post("/commercial-engine/credit-bank/spends", input, options);
+}
+
+export async function convertPackageToCreditBank(
+  input: { patientReference: string; packageInstanceId: string; reason: string },
+  options: ApiOptions = {},
+): Promise<PackageLifecycleResult> {
+  return post("/commercial-engine/packages/convert-to-credit-bank", input, options);
+}
+
+export async function attestPackageCashRefund(
+  input: { patientReference: string; packageInstanceId: string; reason: string; externalReference: string },
+  options: ApiOptions = {},
+): Promise<PackageLifecycleResult> {
+  return post("/commercial-engine/packages/attest-cash-refund", input, options);
 }
 
 function browserSessionStorage(): Storage | undefined {
@@ -227,6 +375,32 @@ function persistPendingPackageSale(
     storage?.setItem(key, JSON.stringify(pending));
   } catch {
     return;
+  }
+}
+
+function persistPendingCreditBankDeposit(
+  storage: Storage | undefined,
+  key: string,
+  pending: PendingCreditBankDeposit,
+): void {
+  try {
+    storage?.setItem(key, JSON.stringify(pending));
+  } catch {
+    return;
+  }
+}
+
+function pendingCreditBankDepositStorageKey(invoiceReference: string): string {
+  return `${PENDING_CREDIT_BANK_DEPOSIT_STORAGE_PREFIX}${encodeURIComponent(invoiceReference)}`;
+}
+
+function storageKeys(storage: Storage | undefined, prefix: string): string[] {
+  try {
+    if (!storage) return [];
+    return Array.from({ length: storage.length }, (_, index) => storage.key(index))
+      .filter((key): key is string => Boolean(key?.startsWith(prefix)));
+  } catch {
+    return [];
   }
 }
 

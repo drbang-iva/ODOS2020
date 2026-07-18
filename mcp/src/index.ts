@@ -51,6 +51,10 @@ import { createPaymentDispatch } from "./payments/payment-config.js";
 import { registerPatientPaymentRoutes } from "./payments/payment-routes.js";
 import { PgCommercialEngineStore } from "./commercial-engine/ledger-store.js";
 import { registerCommercialEngineRoutes } from "./commercial-engine/package-definition-endpoint.js";
+import {
+  packageExpirySweepIntervalMs,
+  startPackageExpiryWorker,
+} from "./jobs/expireCommercialPackages.js";
 import { registerSeriesTrackerRoutes } from "./series-tracker/series-tracker-endpoint.js";
 import { registerPatientInsuranceRoutes } from "./insurance/patient-insurance-routes.js";
 import { registerReportingRoutes } from "./reporting/reporting-routes.js";
@@ -459,6 +463,10 @@ const auditRuntime = createLiveOdosAuditRuntime({
 auditRuntime.startProjectionWorker();
 const commercialEngineStore = new PgCommercialEngineStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+startPackageExpiryWorker({
+  store: commercialEngineStore,
+  intervalMs: packageExpirySweepIntervalMs(process.env.ODOS_PACKAGE_EXPIRY_SWEEP_MS),
 });
 
 const fhir = createMedplumClient({
