@@ -98,6 +98,8 @@ export interface WenoPharmacyDirectoryStorageClient {
 
 export type PharmacySearchType = "local-retail" | "mail-order";
 
+export class WenoPharmacySearchValidationError extends Error {}
+
 export interface PharmacySearchInput {
   state?: string;
   zip?: string;
@@ -329,19 +331,19 @@ export function searchPharmacies(
 ): PharmacyDirectoryRow[] {
   const state = input.state?.trim().toUpperCase();
   if (!state) {
-    throw new Error("Pharmacy search requires a state.");
+    throw new WenoPharmacySearchValidationError("Pharmacy search requires a state.");
   }
   const zip = input.zip?.trim();
   const city = input.city?.trim();
   const county = input.county?.trim();
   if (!zip && !city && !county) {
-    throw new Error("Pharmacy search requires a place: ZIP, city, or county.");
+    throw new WenoPharmacySearchValidationError("Pharmacy search requires a place: ZIP, city, or county.");
   }
   if (!input.searchType) {
-    throw new Error("Pharmacy search requires a search type: local-retail or mail-order.");
+    throw new WenoPharmacySearchValidationError("Pharmacy search requires a search type: local-retail or mail-order.");
   }
   if (input.searchType === "local-retail" && county && !zip && !city) {
-    throw new Error(
+    throw new WenoPharmacySearchValidationError(
       "County-only local-retail search is unavailable because the WENO LITE directory has no county column; provide a ZIP or city.",
     );
   }
@@ -354,7 +356,7 @@ export function searchPharmacies(
     || input.open24hr === true
     || input.all === true;
   if (!hasAdditionalFilter) {
-    throw new Error(
+    throw new WenoPharmacySearchValidationError(
       "Pharmacy search requires onWeno, a name or street of at least 3 characters, open24hr, or explicit all.",
     );
   }
@@ -601,7 +603,7 @@ function validatedTextFilter(field: string, value: string | undefined): string |
   const normalized = value?.trim();
   if (!normalized) return undefined;
   if (normalized.length < 3) {
-    throw new Error(`Pharmacy search ${field} must be at least 3 characters.`);
+    throw new WenoPharmacySearchValidationError(`Pharmacy search ${field} must be at least 3 characters.`);
   }
   return normalized.toLocaleLowerCase();
 }
