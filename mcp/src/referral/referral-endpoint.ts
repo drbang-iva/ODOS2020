@@ -8,6 +8,7 @@ import type { MedplumClient } from "../fhir-client.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
 import { hasPatientCompartmentGrant } from "../clinical-graph/provider-assignment-endpoint.js";
 import { ReferralDefaultsStore } from "./referral-defaults-store.js";
+import { ReferralDirectory } from "./referral-directory.js";
 import {
   readReferralIncludeList,
   ReferralSendConflictError,
@@ -32,6 +33,7 @@ export interface ReferralEndpointResult {
 }
 
 const fhirIdSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
+const targetReferenceSchema = z.string().regex(/^(Practitioner|PractitionerRole|Organization)\/[A-Za-z0-9.-]{1,64}$/);
 const includeListSchema = z.object({
   letter: z.boolean(),
   demographics: z.boolean(),
@@ -42,12 +44,20 @@ const includeListSchema = z.object({
   history_count: z.number().int().min(1).max(50),
 }).strict();
 const createReferralSchema = z.object({
-  targetReference: z.string().regex(/^(Practitioner|PractitionerRole|Organization)\/[A-Za-z0-9.-]{1,64}$/),
+  targetReference: targetReferenceSchema,
   encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]{1,64}$/),
   includeList: includeListSchema,
   priority: z.enum(["routine", "urgent", "stat"]).optional(),
   reasonText: z.string().trim().min(1).optional(),
 }).strict();
+const updateReferralSchema = z.object({
+  targetReference: targetReferenceSchema.optional(),
+  includeList: includeListSchema.optional(),
+  priority: z.enum(["routine", "urgent", "stat"]).optional(),
+  reasonText: z.string().trim().min(1).optional(),
+}).strict().refine((value) => Object.values(value).some((field) => field !== undefined), {
+  message: "At least one referral field is required.",
+});
 const saveDefaultsSchema = z.object({ includeList: includeListSchema }).strict();
 const artifactSchema = z.object({
   editedLetterBody: z.string().optional(),
@@ -83,6 +93,81 @@ export async function handleCreateReferralRequest(
     status: 201,
     body: { serviceRequest, serviceRequestReference },
   };
+}
+
+export async function handleSearchReferralConsultantsRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in context) return context.result;
+  const query = typeof input.query === "string" ? input.query : "";
+  const consultants = await new ReferralDirectory(context.staff.fhir).search(query);
+  return { status: 200, body: { consultants } };
+}
+
+export async function handleRecentReferralConsultantsRequest(
+  deps: ReferralEndpointDeps,
+  input: { authHeader: string | undefined },
+): Promise<ReferralEndpointResult> {
+  const context = await authorizeReferralStaff(deps, input.authHeader);
+  if ("result" in context) return context.result;
+  const consultants = await new ReferralDirectory(context.staff.fhir).recent(
+    context.staff.staffReference,
+  );
+  return { status: 200, body: { consultants } };
+}
+
+export async function handleUpdateReferralDraftRequest(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    patientId: unknown;
+    referralId: unknown;
+    body: unknown;
+  },
+): Promise<ReferralEndpointResult> {
+  const context = await readPatientReferral(deps, input);
+  if ("result" in context) return context.result;
+  const parsed = updateReferralSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return {
+      status: 400,
+      body: { error: parsed.error.issues[0]?.message ?? "Invalid referral update." },
+    };
+  }
+  try {
+    const serviceRequest = await new ReferralService(context.staff.fhir, deps.now)
+      .updateReferralDraft(context.serviceRequest, parsed.data);
+    return { status: 200, body: { serviceRequest } };
+  } catch (error) {
+    if (error instanceof ReferralSendConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
+}
+
+export async function handleRegenerateReferralLetterRequest(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    patientId: unknown;
+    referralId: unknown;
+  },
+): Promise<ReferralEndpointResult> {
+  const context = await readPatientReferral(deps, input);
+  if ("result" in context) return context.result;
+  try {
+    const serviceRequest = await new ReferralService(context.staff.fhir, deps.now)
+      .regenerateReferralLetter(context.serviceRequest);
+    return { status: 200, body: { serviceRequest } };
+  } catch (error) {
+    if (error instanceof ReferralSendConflictError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 export async function handleReferralArtifactRequest(
@@ -232,6 +317,42 @@ async function authorizeReferralPatient(
   }
 
   return { staff, patientReference };
+}
+
+async function readPatientReferral(
+  deps: ReferralEndpointDeps,
+  input: {
+    authHeader: string | undefined;
+    patientId: unknown;
+    referralId: unknown;
+  },
+): Promise<
+  | {
+      staff: NonNullable<Awaited<ReturnType<ReferralEndpointDeps["authenticate"]>>>;
+      patientReference: string;
+      serviceRequest: ServiceRequest;
+    }
+  | { result: ReferralEndpointResult }
+> {
+  const context = await authorizeReferralPatient(deps, input.authHeader, input.patientId);
+  if ("result" in context) return context;
+  const parsedReferralId = fhirIdSchema.safeParse(input.referralId);
+  if (!parsedReferralId.success) {
+    return { result: { status: 400, body: { error: "A valid referral ServiceRequest id is required." } } };
+  }
+  const serviceRequest = await context.staff.fhir.read<ServiceRequest>(
+    "ServiceRequest",
+    parsedReferralId.data,
+  );
+  if (serviceRequest.subject.reference !== context.patientReference) {
+    return {
+      result: {
+        status: 409,
+        body: { error: "The referral does not belong to the requested patient." },
+      },
+    };
+  }
+  return { ...context, serviceRequest };
 }
 
 async function authorizeReferralStaff(

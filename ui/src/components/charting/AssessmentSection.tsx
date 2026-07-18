@@ -30,6 +30,7 @@ interface Props {
   patientReference: string;
   encounterReference: string;
   onSaved: (status: SectionSaveStatus) => void;
+  onRefer?: () => void;
 }
 
 interface FormState {
@@ -56,7 +57,7 @@ const INITIAL_FORM: FormState = {
   tier: "principal",
 };
 
-export function AssessmentSection({ patientReference, encounterReference, onSaved }: Props) {
+export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -370,9 +371,14 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               Visit diagnoses are separate from the longitudinal problem list.
             </p>
           </div>
-          <span className="rounded border border-white/10 px-3 py-2 text-xs text-white/45">
-            {sortedConditions.length} visit diagnoses
-          </span>
+          <div className="flex items-center gap-2">
+            {canShowEditing && onRefer && (
+              <button type="button" className="sidebar-button" onClick={onRefer}>Refer to…</button>
+            )}
+            <span className="rounded border border-white/10 px-3 py-2 text-xs text-white/45">
+              {sortedConditions.length} visit diagnoses
+            </span>
+          </div>
         </div>
 
         {canShowEditing && (
