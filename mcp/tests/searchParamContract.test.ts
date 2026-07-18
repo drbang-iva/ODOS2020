@@ -16,7 +16,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 53;
+const EXPECTED_DIRECT_SEARCH_CALLS = 54;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -66,6 +66,15 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "activity", "target", "_count", "_sort"),
   ],
+  "src/reporting/margin-ledger.ts:524": [
+    spec("Invoice", "date", "_count", "_sort"),
+    spec("PaymentReconciliation", "status", "created", "_count", "_sort"),
+    spec("Claim", "_count", "_sort"),
+    spec("ClaimResponse", "_count", "_sort"),
+    spec("Task", "code", "_count", "_sort"),
+    spec("ChargeItemDefinition", "_count"),
+    spec("ChargeItem", "_id", "_count"),
+  ],
   "src/scheduling/scheduling-service.ts:104": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),
@@ -77,7 +86,7 @@ test("contract is frozen from Medplum 5.1.8's published definition bundles", () 
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.package, "@medplum/definitions");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.version, "5.1.8");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.files.length, 3);
-  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 27);
+  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 28);
 });
 
 test("historical ChargeItem status search is rejected while known-valid searches pass", () => {
@@ -91,7 +100,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 53 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 54 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();

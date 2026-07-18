@@ -6315,6 +6315,10 @@ async function main(): Promise<void> {
         planProfiles: {
           authenticate: authenticateStaffRoute,
         },
+        marginLedger: {
+          authenticate: authenticateStaffRoute,
+          targetMultiplierMilli: Number(process.env.ODOS_MARGIN_TARGET_MULTIPLIER_MILLI ?? "3000"),
+        },
       });
       registerDeskRoutes(app, {
         authenticateService: authenticateWithMedplum,
