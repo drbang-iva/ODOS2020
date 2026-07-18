@@ -44,6 +44,36 @@ function clientFixture(initial?: Basic) {
   return { client: client as AppearanceSettingsClient, writes };
 }
 
+const appearanceCss = readFileSync(new URL("../src/styles/appearance.css", import.meta.url), "utf8");
+
+function cssAccentVariables(accent: (typeof APPEARANCE_ACCENTS)[number]): Record<string, string> {
+  const selector = accent === "gold" ? ":root" : `:root[data-accent="${accent}"]`;
+  const blockStart = appearanceCss.indexOf(`${selector} {`);
+  assert.notEqual(blockStart, -1, `${selector} must exist`);
+  const blockEnd = appearanceCss.indexOf("}", blockStart);
+  assert.notEqual(blockEnd, -1, `${selector} must close`);
+  return Object.fromEntries(
+    [...appearanceCss.slice(blockStart, blockEnd).matchAll(/(--odos-accent(?:-[a-z-]+)?):\s*([^;]+);/g)]
+      .map((match) => [match[1]!, match[2]!.trim()]),
+  );
+}
+
+function relativeLuminance(hex: string): number {
+  const channels = hex.match(/[0-9a-f]{2}/gi);
+  assert.equal(channels?.length, 3, `${hex} must be a six-digit hex color`);
+  const [red, green, blue] = channels.map((channel) => {
+    const srgb = Number.parseInt(channel, 16) / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+}
+
+function contrastRatio(first: string, second: string): number {
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)]
+    .sort((a, b) => b - a);
+  return (lighter! + 0.05) / (darker! + 0.05);
+}
+
 test("all 12 Surface × Accent combinations resolve the approved variable values", () => {
   const combinations: AppearanceConfig[] = [];
   for (const surface of APPEARANCE_SURFACES) {
@@ -64,25 +94,27 @@ test("all 12 Surface × Accent combinations resolve the approved variable values
   }
 });
 
-test("the stylesheet carries every approved selector value and keeps Midnight × Gold as the default", () => {
-  const css = readFileSync(new URL("../src/styles/appearance.css", import.meta.url), "utf8");
-  assert.match(css, /:root\s*\{/);
-  assert.match(css, /:root\[data-surface="space-black"\]/);
-  assert.match(css, /:root\[data-surface="light"\]/);
-  for (const accent of ["sapphire", "emerald", "amethyst"]) {
-    assert.match(css, new RegExp(`:root\\[data-accent="${accent}"\\]`));
+test("the stylesheet and JS-applied accent tokens stay identical", () => {
+  for (const accent of APPEARANCE_ACCENTS) {
+    assert.deepEqual(cssAccentVariables(accent), ACCENT_VARIABLES[accent], accent);
   }
-  for (const value of new Set([
-    ...Object.values(SURFACE_VARIABLES.midnight),
-    ...Object.values(SURFACE_VARIABLES.light),
-    ...Object.values(SURFACE_VARIABLES["space-black"]),
-    ...Object.values(ACCENT_VARIABLES.gold),
-    ...Object.values(ACCENT_VARIABLES.sapphire),
-    ...Object.values(ACCENT_VARIABLES.emerald),
-    ...Object.values(ACCENT_VARIABLES.amethyst),
-  ])) {
-    assert.ok(css.includes(value), value);
+});
+
+test("every accent ink clears WCAG AA across all three gradient stops", () => {
+  for (const accent of APPEARANCE_ACCENTS) {
+    const variables = ACCENT_VARIABLES[accent];
+    const ink = variables["--odos-accent-ink"]!;
+    for (const stop of ["--odos-accent-hi", "--odos-accent", "--odos-accent-lo"]) {
+      const ratio = contrastRatio(variables[stop]!, ink);
+      assert.ok(ratio >= 4.5, `${accent} ${stop} contrast ${ratio.toFixed(2)} must be at least 4.5:1`);
+    }
   }
+});
+
+test("Midnight × Gold remains the default appearance", () => {
+  assert.match(appearanceCss, /:root\s*\{/);
+  assert.match(appearanceCss, /:root\[data-surface="space-black"\]/);
+  assert.match(appearanceCss, /:root\[data-surface="light"\]/);
 
   const defaults = appearanceVariables(DEFAULT_APPEARANCE);
   assert.equal(defaults["--odos-ground"], "#0a0e1a");
