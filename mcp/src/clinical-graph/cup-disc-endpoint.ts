@@ -1,4 +1,4 @@
-import type { CodeableConcept, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Bundle, CodeableConcept, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { odosConcept } from "../fhir/ophthalmology/extensions.js";
@@ -16,10 +16,40 @@ import {
 } from "./glaucoma-suspect.js";
 
 export interface CupDiscFhirClient {
+  search<T extends Observation>(
+    resourceType: T["resourceType"],
+    params?: Record<string, string>,
+  ): Promise<Bundle<T>>;
   create<T extends Observation | Provenance>(
     resource: T,
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
+}
+
+export async function handleCupDiscReadRequest(
+  deps: Pick<CupDiscEndpointDeps, "authenticate">,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<CupDiscEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read cup/disc findings." } };
+  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
+  const parsed = z.object({ encounterReference: z.string().regex(/^Encounter\/[^/]+$/) }).safeParse(input.query);
+  if (!parsed.success) return { status: 400, body: { error: "encounterReference is required." } };
+  const bundle = await staff.fhir.search<Observation>("Observation", {
+    encounter: parsed.data.encounterReference,
+    code: "https://odos2020.com/fhir/CodeSystem/odos|cup_disc_ratio",
+    _count: "20",
+    _sort: "-date",
+  });
+  const eyes: Partial<Record<Eye, { verticalCupDiscRatio: number }>> = {};
+  for (const observation of (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])) {
+    const eye = observation.bodySite?.coding?.[0]?.code;
+    const value = observation.valueQuantity?.value;
+    if ((eye === "OD" || eye === "OS") && typeof value === "number" && !eyes[eye]) {
+      eyes[eye] = { verticalCupDiscRatio: value };
+    }
+  }
+  return { status: 200, body: { eyes } };
 }
 
 export interface CupDiscAuthenticatedStaff {

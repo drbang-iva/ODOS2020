@@ -5,6 +5,7 @@ import { AestheticsConsentSection } from "../components/charting/AestheticsConse
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
+import { GonioscopySection } from "../components/charting/GonioscopySection";
 import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
 import { CustomSectionEditor, type CustomSectionEditorValue } from "../components/charting/CustomSectionEditor";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
@@ -296,6 +297,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("cup-disc", status)}
+            />
+          )}
+          {activeSection === "gonioscopy" && (
+            <GonioscopySection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("gonioscopy", status)}
             />
           )}
           {activeSection === "imaging" && (

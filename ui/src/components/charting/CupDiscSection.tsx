@@ -122,6 +122,26 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/glaucoma/cup-disc?encounterReference=${encodeURIComponent(encounterReference)}`, {
+      headers: authHeaders(), signal: controller.signal,
+    }).then(async (response) => {
+      if (!response.ok) return;
+      const body = await response.json() as { eyes?: Partial<Record<Eye, { verticalCupDiscRatio?: number }>> };
+      setRows((current) => Object.fromEntries(EYES.map((eye) => [
+        eye,
+        {
+          ...current[eye],
+          ...(body.eyes?.[eye]?.verticalCupDiscRatio !== undefined
+            ? { verticalCupDiscRatio: String(body.eyes[eye]!.verticalCupDiscRatio) }
+            : {}),
+        },
+      ])) as Record<Eye, EyeState>);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [encounterReference]);
+
   const fields = definition?.fields ?? {};
   const verticalField = fields.verticalCupDiscRatio ?? {};
   const horizontalField = fields.horizontalCupDiscRatio ?? {};

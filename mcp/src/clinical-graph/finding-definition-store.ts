@@ -4,6 +4,7 @@ import {
   type ClinicalFindingDefinition,
   type ClinicalGraphProvenance,
 } from "./glaucoma-suspect.js";
+import { buildGonioscopyFindingDefinitions } from "./gonioscopy.js";
 import { buildRefractionFindingDefinitionStub } from "./refraction-suspect.js";
 import {
   buildSoftContactLensFindingDefinitionStub,
@@ -127,6 +128,7 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
   return [
     buildHpiFindingDefinition(provenance),
     ...buildGlaucomaFindingDefinitionStubs({ provenance }),
+    ...buildGonioscopyFindingDefinitions(provenance),
     buildRefractionFindingDefinitionStub(provenance),
     buildSoftContactLensFindingDefinitionStub(provenance),
     buildSpecialtyContactLensFindingDefinitionStub(provenance),

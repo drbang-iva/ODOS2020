@@ -19,7 +19,7 @@ import {
   isEncounterDiagnosisCondition,
 } from "../../lib/clinical-view-model";
 import type { SectionSaveStatus } from "./types";
-import { submitDiagnosisPick } from "../../lib/clinical-graph-client";
+import { authHeaders, clinicalGraphApiBase, submitDiagnosisPick } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
@@ -36,6 +36,16 @@ interface FormState {
   display: string;
   laterality: EyeChoice;
   tier: DiagnosisTierChoice;
+}
+interface ProtocolOffer {
+  id: string;
+  title: string;
+  items: Array<{
+    itemKey: string;
+    itemType: string;
+    defaultSelected: boolean;
+    payload: Record<string, unknown>;
+  }>;
 }
 
 const INITIAL_FORM: FormState = {
@@ -55,6 +65,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [protocolApplied, setProtocolApplied] = useState(false);
+  const [protocolApplicationId, setProtocolApplicationId] = useState<string>();
+  const [protocolOffer, setProtocolOffer] = useState<ProtocolOffer>();
+  const [protocolSheetOpen, setProtocolSheetOpen] = useState(false);
+  const [protocolSelections, setProtocolSelections] = useState<Record<string, boolean>>({});
   const encounterId = encounterReference.replace(/^Encounter\//, "");
 
   async function load() {
@@ -212,6 +227,75 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     }
   }
 
+  const protocolDiagnosis = sortedConditions.find((condition) =>
+    verificationStatus(condition) === "confirmed" &&
+    condition.code?.coding?.some((coding) => coding.code?.startsWith("H40.0"))
+  );
+
+  useEffect(() => {
+    if (!protocolDiagnosis?.id) {
+      setProtocolOffer(undefined);
+      return;
+    }
+    const coding = protocolDiagnosis.code?.coding?.find((row) => row.code?.startsWith("H40.0"));
+    if (!coding?.code) return;
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/offers`, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        diagnoses: [{ reference: `Condition/${protocolDiagnosis.id}`, code: coding.code, confirmed: true }],
+      }),
+    }).then(async (response) => {
+      const body = await response.json() as { protocols?: ProtocolOffer[] };
+      if (!response.ok) return;
+      const offer = body.protocols?.[0];
+      setProtocolOffer(offer);
+      if (offer) setProtocolSelections(Object.fromEntries(offer.items.map((item) => [item.itemKey, item.defaultSelected])));
+    }).catch(() => undefined);
+  }, [protocolDiagnosis?.id]);
+
+  async function applyGlaucomaSuspectProtocol() {
+    if (!protocolDiagnosis?.id) return;
+    const code = protocolDiagnosis.code?.coding?.find((coding) => coding.code?.startsWith("H40.0"))?.code;
+    if (!code) return;
+    setBusy("protocol"); setError(null);
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/apply`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          protocolId: protocolOffer?.id ?? "glaucoma-suspect-initial",
+          encounterId,
+          patientId: patientReference.replace(/^Patient\//, ""),
+          diagnosis: { reference: `Condition/${protocolDiagnosis.id}`, code, confirmed: true },
+          selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
+        }),
+      });
+      const body = await response.json() as { error?: string; application?: { id?: string } };
+      if (!response.ok) throw new Error(body.error ?? `Protocol apply failed: ${response.status}`);
+      setProtocolApplied(true);
+      setProtocolApplicationId(body.application?.id);
+      setProtocolSheetOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setBusy(null); }
+  }
+
+  async function unapplyProtocol() {
+    if (!protocolApplicationId) return;
+    setBusy("protocol-unapply"); setError(null);
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/${encodeURIComponent(protocolApplicationId)}/unapply`, {
+        method: "POST", headers: authHeaders(),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? `Protocol un-apply failed: ${response.status}`);
+      setProtocolApplied(false); setProtocolApplicationId(undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally { setBusy(null); }
+  }
+
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-5xl">
@@ -250,6 +334,49 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
         {error && <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">{error}</div>}
 
+        {canShowEditing && protocolDiagnosis && protocolOffer && (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded border border-brand/35 bg-brand/10 p-4">
+            <div>
+              <div className="text-sm font-semibold text-white">Glaucoma Suspect — Initial Workup</div>
+              <div className="mt-1 text-xs text-white/55">Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.</div>
+            </div>
+            <button disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className="sidebar-button">
+              {protocolApplied ? "Un-apply" : "Apply protocol"}
+            </button>
+          </div>
+        )}
+
+        {protocolSheetOpen && protocolOffer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-label="Protocol staging sheet">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-white/15 bg-bg-panel p-5 shadow-2xl">
+              <h3 className="text-lg font-semibold text-white">{protocolOffer.title}</h3>
+              <p className="mt-1 text-sm text-white/50">Review each proposed item before committing it to this encounter.</p>
+              <div className="mt-4 space-y-2">
+                {protocolOffer.items.map((item) => (
+                  <label key={item.itemKey} className="flex items-start gap-3 rounded border border-white/10 p-3">
+                    <input type="checkbox" checked={protocolSelections[item.itemKey] ?? false}
+                      onChange={(event) => setProtocolSelections((current) => ({ ...current, [item.itemKey]: event.target.checked }))}
+                      className="mt-1 h-4 w-4 accent-brand" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-white">{protocolItemLabel(item)}</span>
+                      <span className="mt-0.5 block text-xs text-white/45">{item.itemType} · {item.itemKey}</span>
+                    </span>
+                    {item.itemType === "charge-seed" && (
+                      <span className="rounded border border-white/15 bg-white/5 px-2 py-1 text-xs text-white/50">no rule</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-5 flex justify-end gap-3">
+                <button type="button" onClick={() => setProtocolSheetOpen(false)} className="sidebar-button">Cancel</button>
+                <button type="button" disabled={busy !== null} onClick={applyGlaucomaSuspectProtocol} className="sidebar-button">
+                  {busy === "protocol" ? "Applying..." : "Confirm and apply"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-5 space-y-3">
           {sortedConditions.length === 0 ? (
             <div className="rounded border border-white/10 bg-bg-panel/60 p-4 text-sm text-white/45">
@@ -280,6 +407,18 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         </div>
       </div>
     </section>
+  );
+}
+
+function protocolItemLabel(item: ProtocolOffer["items"][number]): string {
+  return String(
+    item.payload.cptConcept ??
+    item.payload.orderableKey ??
+    item.payload.topicKey ??
+    item.payload.assetRef ??
+    item.payload.reason ??
+    item.payload.findingDefKey ??
+    item.itemKey
   );
 }
 

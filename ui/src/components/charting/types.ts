@@ -12,6 +12,7 @@ export type BuiltInSectionId =
   | "dry-eye"
   | "myopia-management"
   | "cup-disc"
+  | "gonioscopy"
   | "imaging"
   | "iop"
   | "assessment"

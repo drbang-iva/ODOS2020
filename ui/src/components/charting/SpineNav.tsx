@@ -22,6 +22,7 @@ const SECTIONS: SpineSection[] = [
   { id: "ortho-k", label: "Ortho-K", group: "CONTACT LENSES" },
   { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
   { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" },
+  { id: "gonioscopy", label: "Gonioscopy", group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
   { id: "imaging", label: "Manual imaging", group: "IMAGING" },
   { id: "assessment", label: "Assessment", group: "ASSESSMENT & PLAN" },

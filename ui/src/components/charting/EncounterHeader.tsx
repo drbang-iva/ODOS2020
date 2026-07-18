@@ -14,6 +14,8 @@ import {
 } from "../../lib/clinical-view-model";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
+  authHeaders,
+  clinicalGraphApiBase,
   readDiagnosisCompleteness,
   type DiagnosisCompleteness,
 } from "../../lib/clinical-graph-client";
@@ -92,6 +94,11 @@ export function EncounterHeader({ patient, encounterId }: Props) {
     setBusy("finish");
     setError(null);
     try {
+      const cleanup = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/encounters/${encodeURIComponent(encounterId)}/sign-cleanup`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!cleanup.ok) throw new Error(`Protocol sign cleanup failed: ${cleanup.status}`);
       const now = new Date().toISOString();
       const response = await fhir.executeTransaction(
         buildEncounterStatusPatchBundle({
