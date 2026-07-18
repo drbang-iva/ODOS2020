@@ -107,6 +107,18 @@ test("the statement-message route reaches the practice-admin editor", () => {
   assert.match(html, /Loading statement and receipt messages/);
 });
 
+test("the Appearance route reaches the practice-level scheme picker", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch
+      view={{ kind: "picker" }}
+      path="/settings/appearance"
+      roles={["practice-admin"]}
+    />,
+  );
+  assert.match(html, /Appearance/);
+  assert.match(html, /Loading appearance/);
+});
+
 test("the Financials Practice margin route reaches the read-only ledger surface", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch view={{ kind: "picker" }} path="/financials/practice/margins" search="?period=2026-07" roles={["practice-admin"]} />,

@@ -149,6 +149,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     tone: "slate",
     links: [
       {
+        href: "/settings/appearance",
+        title: "Appearance",
+        description: "Choose the practice surface and coordinated accent scheme.",
+        synonyms: ["theme", "surface", "color", "accent", "light", "midnight", "space black"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/floor-config",
         title: "Floor config",
         description: "Manage floor stations, lane thresholds, and payer cues.",

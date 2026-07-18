@@ -289,7 +289,26 @@ const SCHEDULING_RESOURCE_RULES: OdosResourceRule[] = [
         "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
     },
   },
+  {
+    resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+    },
+  },
 ];
+
+const APPEARANCE_CONFIG_READ_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: READ_INTERACTIONS,
+  scope: {
+    kind: "practice-search",
+    criteria:
+      "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+  },
+};
 
 export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
   "practice-admin": {
@@ -346,6 +365,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
       ...OFFICE_CHANNEL_RESOURCE_RULES,
+      APPEARANCE_CONFIG_READ_RULE,
     ],
   },
   "front-desk": {
@@ -382,6 +402,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     resourceRules: [
       { resourceType: "AuditEvent", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
       { resourceType: "Provenance", interactions: READ_INTERACTIONS, scope: { kind: "audit-only" } },
+      APPEARANCE_CONFIG_READ_RULE,
     ],
   },
   "aesthetics-provider": {
@@ -448,6 +469,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         interactions: ["create", ...READ_INTERACTIONS],
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
+      APPEARANCE_CONFIG_READ_RULE,
     ],
   },
 };

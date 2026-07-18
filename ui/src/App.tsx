@@ -39,6 +39,7 @@ import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { PackageDefinitionsSettings } from "./components/commercial/PackageDefinitionsSettings";
 import { ProtocolDefinitionsSettings } from "./components/series-tracker/ProtocolDefinitionsSettings";
 import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
+import { AppearanceSettings } from "./scenes/settings/AppearanceSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
 import { MarginLedger } from "./scenes/MarginLedger";
@@ -51,6 +52,7 @@ import { SetPasswordScreen } from "./scenes/SetPasswordScreen";
 import { resolveSessionRoles, type PracticeRoleId, type WhoAmIResponse } from "./lib/practice-roles";
 import { interceptAppNavigation } from "./lib/navigation";
 import type { Patient } from "@medplum/fhirtypes";
+import { loadAndApplyAppearance } from "./lib/appearance";
 
 export function App({
   resolveRoles = resolveSessionRoles,
@@ -138,6 +140,15 @@ export function App({
       });
     return () => { active = false; };
   }, [authed, resolveRoles, setView]);
+
+  useEffect(() => {
+    if (!authed || typeof document === "undefined") return;
+    let active = true;
+    loadAndApplyAppearance().catch((error: unknown) => {
+      if (active) console.error("Appearance config could not be loaded; using Midnight and Gold.", error);
+    });
+    return () => { active = false; };
+  }, [authed]);
 
   if (!authed) {
     const returnTo = initialClinicView.current.kind === "picker" ? "/" : `${CLINIC_PATH}${initialSearch.current}`;
@@ -335,6 +346,8 @@ export function RouteSwitch({
       return <ProcedureDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/statement-messages":
       return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/appearance":
+      return <AppearanceSettings canWrite={roles.includes("practice-admin")} />;
     default:
       return <ViewRouter view={view} />;
   }

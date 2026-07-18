@@ -553,6 +553,12 @@
       "namespace": "statements",
       "status": "active",
       "sliceConsumer": "statement-receipt-messages"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-appearance-config",
+      "namespace": "appearance",
+      "status": "active",
+      "sliceConsumer": "appearance-settings"
     }
   ]
 }

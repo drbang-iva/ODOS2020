@@ -5,6 +5,7 @@ import {
   ODOS_PRACTICE_ROLE_SYSTEM,
   buildMedplumAccessPolicy,
   getRoleDeclaration,
+  type PracticeRoleId,
 } from "../src/authz/roles.js";
 
 /**
@@ -17,7 +18,7 @@ import {
  * dispensary practice-scope precedent (decision 2026-07-05 §2).
  */
 
-function rulesFor(roleId: "front-desk" | "clinician", resourceType: string): AccessPolicyResource[] {
+function rulesFor(roleId: PracticeRoleId, resourceType: string): AccessPolicyResource[] {
   const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
   return (policy.resource ?? []).filter((rule) => rule.resourceType === resourceType);
 }
@@ -106,6 +107,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
   ];
   const readTierCriteria = [
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
   ];
@@ -163,6 +165,22 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   );
 });
 
-test("clinician and auditor get no Basic grant (regression guard)", () => {
-  assert.equal(rulesFor("clinician", "Basic").length, 0);
+test("clinician gets only the read-only practice appearance Basic grant", () => {
+  const rules = rulesFor("clinician", "Basic");
+  assert.equal(rules.length, 1);
+  assert.equal(
+    rules[0]?.criteria,
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+  );
+  assert.deepEqual(rules[0]?.interaction, ["read", "search", "history", "vread"]);
+});
+
+test("every non-admin app role can read but never write the appearance singleton", () => {
+  const criteria =
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config";
+  for (const role of ["front-desk", "clinician", "auditor", "aesthetics-provider"] as const) {
+    const rule = rulesFor(role, "Basic").find((candidate) => candidate.criteria === criteria);
+    assert.ok(rule, role);
+    assert.deepEqual(rule.interaction, ["read", "search", "history", "vread"]);
+  }
 });

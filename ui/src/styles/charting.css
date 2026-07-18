@@ -37,7 +37,7 @@
   width: 100%;
   height: 100%;
   border-top: 0;
-  border-left: 1px solid rgb(255 255 255 / .1);
+  border-left: 1px solid var(--odos-overlay-line);
 }
 
 .odos-chart-sidebar-toggle,
@@ -102,12 +102,12 @@
     justify-content: center;
     gap: 6px;
     padding: 9px 7px;
-    border: 1px solid rgb(255 255 255 / .16);
+    border: 1px solid var(--odos-overlay-line-2);
     border-right: 0;
     border-radius: 12px 0 0 12px;
-    background: rgb(17 25 44 / .97);
+    background: var(--odos-chart-toggle);
     box-shadow: -8px 8px 28px rgb(0 0 0 / .32);
-    color: rgb(255 255 255 / .72);
+    color: var(--odos-chart-toggle-text);
     font: inherit;
     font-size: 11px;
     letter-spacing: .12em;
@@ -134,7 +134,7 @@
     width: 100cqw;
     padding: 0;
     border: 0;
-    background: rgb(3 6 14 / .42);
+    background: var(--odos-chart-scrim);
     opacity: 0;
     transition: opacity .22s ease;
     pointer-events: none;
