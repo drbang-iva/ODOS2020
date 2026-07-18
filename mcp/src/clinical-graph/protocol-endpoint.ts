@@ -78,7 +78,7 @@ export async function handleProtocolApplyRequest(
       application: await service.applications.get(opened.application.id),
       findings: (await service.findings.list()).filter((row) => row.protocolApplicationId === opened.application.id),
       actions: (await service.actions.list()).filter((row) => row.protocolApplicationId === opened.application.id),
-      charges: (await service.charges.list()).filter((row) => row.provenance.protocolId === parsed.data.protocolId),
+      charges: (await service.charges.list()).filter((row) => row.protocolApplicationId === opened.application.id),
     },
   };
 }

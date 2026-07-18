@@ -224,7 +224,7 @@ export class ProtocolService {
         removed.push(finding.id);
       } else if (finding.state !== "removed") preserved.push(finding.id);
     }
-    for (const charge of (await this.charges.list()).filter((row) => row.provenance.protocolId === application.protocolId)) {
+    for (const charge of (await this.charges.list()).filter((row) => row.protocolApplicationId === application.id)) {
       if (charge.state === "staged") {
         await this.charges.save({ ...charge, state: "removed" });
         removed.push(charge.id);
@@ -296,6 +296,7 @@ export class ProtocolService {
     await this.charges.save({
       id: this.id(),
       encounterId: application.encounterId,
+      protocolApplicationId: application.id,
       planActionRef: item.itemKey,
       cptConcept: String(payload.cptConcept),
       units: 1,

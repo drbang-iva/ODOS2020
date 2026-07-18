@@ -146,6 +146,38 @@ test("manual mergeKey collision resumes existing action and unapply preserves cl
   assert.equal((await service.actions.get(before.id))?.state, "modified");
 });
 
+test("unapply removes only charges staged by its protocol application", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const openedA = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
+    encounterId: "enc-a", patientId: "patient-a",
+    diagnosis: { reference: "Condition/c-a", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  });
+  const openedB = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
+    encounterId: "enc-b", patientId: "patient-b",
+    diagnosis: { reference: "Condition/c-b", code: "H40.022", confirmed: true },
+    actor: "Practitioner/test",
+  });
+  await service.commit(openedA.application.id, [], ["Condition/c-a"]);
+  await service.commit(openedB.application.id, [], ["Condition/c-b"]);
+
+  const chargesBefore = await service.charges.list();
+  assert.equal(chargesBefore.filter((row) => row.protocolApplicationId === openedA.application.id).length, 5);
+  assert.equal(chargesBefore.filter((row) => row.protocolApplicationId === openedB.application.id).length, 5);
+
+  await service.unapply(openedA.application.id);
+
+  const chargesAfter = await service.charges.list();
+  assert.equal(chargesAfter.filter((row) =>
+    row.protocolApplicationId === openedA.application.id && row.state === "removed"
+  ).length, 5);
+  assert.equal(chargesAfter.filter((row) =>
+    row.protocolApplicationId === openedB.application.id && row.state === "staged"
+  ).length, 5);
+  assert.equal(chargesAfter.filter((row) => row.protocolApplicationId === openedB.application.id).length, 5);
+});
+
 test("signing abandons an unconfirmed application and deletes all proposed findings", async () => {
   const { service } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
