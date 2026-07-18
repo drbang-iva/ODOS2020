@@ -19,11 +19,16 @@ import {
   handlePlanProfilesRequest,
   type PlanProfileEndpointDeps,
 } from "./plan-profiles.js";
+import {
+  handleMarginLedgerRequest,
+  type MarginLedgerEndpointDeps,
+} from "./margin-ledger.js";
 
 export interface ReportingRouteDeps extends ReportingHandlerDeps {
   authenticateService(): Promise<void>;
   statements: StatementHandlerDeps;
   planProfiles: PlanProfileEndpointDeps;
+  marginLedger: MarginLedgerEndpointDeps;
 }
 
 export function registerReportingRoutes(
@@ -51,6 +56,10 @@ export function registerReportingRoutes(
   }));
   get(app, "/practice/plan-profiles", deps, (req) => handlePlanProfilesRequest(deps.planProfiles, {
     authHeader: req.header("authorization"),
+  }));
+  get(app, "/practice/margin-ledger", deps, (req) => handleMarginLedgerRequest(deps.marginLedger, {
+    authHeader: req.header("authorization"),
+    period: stringQuery(req.query.period),
   }));
   get(app, "/statements", deps, (req) => handleStatementListRequest(deps.statements, {
     authHeader: req.header("authorization"),

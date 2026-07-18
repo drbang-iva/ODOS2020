@@ -36,6 +36,7 @@ import { PlanProfilesSettings } from "./scenes/settings/PlanProfilesSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
+import { MarginLedger } from "./scenes/MarginLedger";
 import { CloseDay, DaySealArchive } from "./scenes/CloseDay";
 import { ClinicHome, CLINIC_PATIENTS_PATH } from "./scenes/ClinicHome";
 import { OfficeChannelShell } from "./components/OfficeChannel";
@@ -266,6 +267,8 @@ export function RouteSwitch({
       return <CloseDay roles={roles} date={new URLSearchParams(search).get("date") ?? undefined} />;
     case "/desk/ledger/archive":
       return <DaySealArchive />;
+    case "/financials/practice/margins":
+      return <MarginLedger initialPeriod={new URLSearchParams(search).get("period") ?? undefined} />;
     case CLINIC_PATH: {
       const clinicView = clinicRouteView(search, view);
       return clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />;

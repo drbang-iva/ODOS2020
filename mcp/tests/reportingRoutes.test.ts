@@ -93,6 +93,35 @@ test("plan-profile route grants practice-admin and returns legible 403s to desk 
   }
 });
 
+test("margin-ledger route shares margin.read and returns the requested monthly period", async () => {
+  const fixture = await server();
+  try {
+    assert.equal((await fetch(`${fixture.baseUrl}/practice/margin-ledger?period=2026-07`)).status, 401);
+    const admin = await fetch(`${fixture.baseUrl}/practice/margin-ledger?period=2026-07`, {
+      headers: { Authorization: "Bearer admin" },
+    });
+    assert.equal(admin.status, 200);
+    assert.deepEqual(await admin.json(), {
+      period: "2026-07",
+      genesisDate: "2026-07-15",
+      targetMultiplierMilli: 3000,
+      realizedMarginCents: 0,
+      inFlightCents: 0,
+      driftCents: 0,
+      settledLineCount: 0,
+      inFlightLineCount: 0,
+      lines: [],
+    });
+    const denied = await fetch(`${fixture.baseUrl}/practice/margin-ledger?period=2026-07`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(denied.status, 403);
+    assert.match(await denied.text(), /margin\.read role required/);
+  } finally {
+    await fixture.close();
+  }
+});
+
 async function server() {
   let serviceAuthCalls = 0;
   const fhir = {
@@ -134,6 +163,10 @@ async function server() {
     },
     planProfiles: {
       authenticate,
+    },
+    marginLedger: {
+      authenticate,
+      now: () => "2026-07-17T12:00:00.000Z",
     },
   });
   const listener = app.listen(0, "127.0.0.1");

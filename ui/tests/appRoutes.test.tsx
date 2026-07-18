@@ -70,6 +70,15 @@ test("the plan-profile route reaches the owner settings scene with actual-role w
   assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
+test("the Financials Practice margin route reaches the read-only ledger surface", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/financials/practice/margins" search="?period=2026-07" roles={["practice-admin"]} />,
+  );
+  assert.match(html, /Product <span>Margin Ledger<\/span>/);
+  assert.match(html, /The ledger begins <strong>2026-07-15<\/strong>/);
+  assert.doesNotMatch(html, /Save|Reprice|Write back/);
+});
+
 test("the suggested-diagnoses route reaches the shared catalog editor scene", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch view={{ kind: "picker" }} path="/settings/suggested-diagnoses" />,
