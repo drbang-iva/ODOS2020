@@ -144,6 +144,20 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     links: [],
   },
   {
+    title: "Appearance",
+    description: "Coordinate the practice surface and accent scheme.",
+    tone: "gold",
+    links: [
+      {
+        href: "/settings/appearance",
+        title: "Appearance",
+        description: "Choose the practice surface and coordinated accent scheme.",
+        synonyms: ["theme", "surface", "color", "accent", "light", "midnight", "space black"],
+        practiceAdminOnly: true,
+      },
+    ],
+  },
+  {
     title: "Practice",
     description: "Tune the operational floor to match how this practice works.",
     tone: "slate",

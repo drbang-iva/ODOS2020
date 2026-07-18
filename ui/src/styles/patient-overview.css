@@ -1,15 +1,15 @@
 .odos-patient-overview {
-  --overview-ground: #0a0e1a;
-  --overview-surface: #121a2e;
-  --overview-surface-2: #17203a;
-  --overview-line: rgba(154, 178, 224, 0.13);
-  --overview-line-2: rgba(154, 178, 224, 0.22);
-  --overview-text: #e9edf6;
-  --overview-muted: #97a1b8;
-  --overview-faint: #5e6880;
-  --overview-gold: #e0bc7e;
-  --overview-emerald: #2fbf8f;
-  --overview-amethyst: #9d71f0;
+  --overview-ground: var(--odos-ground);
+  --overview-surface: var(--odos-surface);
+  --overview-surface-2: var(--odos-surface-2);
+  --overview-line: var(--odos-line);
+  --overview-line-2: var(--odos-line-2);
+  --overview-text: var(--odos-text);
+  --overview-muted: var(--odos-muted);
+  --overview-faint: var(--odos-faint);
+  --overview-gold: var(--odos-accent);
+  --overview-emerald: var(--odos-emerald);
+  --overview-amethyst: var(--odos-amethyst);
 
   min-height: 100vh;
   background: var(--overview-ground);
@@ -28,15 +28,15 @@
 .odos-overview-button { padding: 8px 16px; border: 1px solid var(--overview-line-2); border-radius: 10px; background: none; color: var(--overview-muted); font: inherit; font-size: 12.5px; cursor: pointer; }
 .odos-overview-button.is-primary { border-color: rgba(47, 191, 143, 0.5); background: rgba(47, 191, 143, 0.1); color: var(--overview-emerald); }
 
-.odos-sticky-note { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; padding: 11px 16px; border: 1px solid rgba(224, 188, 126, 0.35); border-radius: 14px; background: linear-gradient(180deg, rgba(224, 188, 126, 0.09), rgba(224, 188, 126, 0.05)); }
+.odos-sticky-note { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; padding: 11px 16px; border: 1px solid color-mix(in srgb, var(--odos-accent) 35%, transparent); border-radius: 14px; background: linear-gradient(180deg, color-mix(in srgb, var(--odos-accent) 9%, transparent), color-mix(in srgb, var(--odos-accent) 5%, transparent)); }
 .odos-sticky-tag { flex: none; color: var(--overview-gold); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
 .odos-sticky-text, .odos-sticky-empty { font-size: 13.5px; }
 .odos-sticky-empty { color: var(--overview-faint); font-style: italic; }
 .odos-sticky-stamp { margin-left: auto; color: var(--overview-faint); font-size: 10.5px; white-space: nowrap; }
 .odos-sticky-note button { border: 0; background: none; color: var(--overview-gold); font: inherit; font-size: 11.5px; cursor: pointer; }
 .odos-sticky-note button:disabled { opacity: 0.45; cursor: default; }
-.odos-sticky-note textarea { flex: 1; min-height: 62px; resize: vertical; border: 1px solid rgba(224, 188, 126, 0.35); border-radius: 8px; background: rgba(10, 14, 26, 0.7); color: var(--overview-text); padding: 8px 10px; font: inherit; font-size: 13px; }
-.odos-sticky-history { margin: -7px 0 18px; padding: 14px 16px; border: 1px solid rgba(224, 188, 126, 0.25); border-radius: 12px; background: var(--overview-surface); }
+.odos-sticky-note textarea { flex: 1; min-height: 62px; resize: vertical; border: 1px solid color-mix(in srgb, var(--odos-accent) 35%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--odos-ground) 70%, transparent); color: var(--overview-text); padding: 8px 10px; font: inherit; font-size: 13px; }
+.odos-sticky-history { margin: -7px 0 18px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--odos-accent) 25%, transparent); border-radius: 12px; background: var(--overview-surface); }
 .odos-sticky-history > div { display: flex; justify-content: space-between; align-items: center; }
 .odos-sticky-history h2 { margin: 0; color: var(--overview-gold); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
 .odos-sticky-history button { border: 0; background: none; color: var(--overview-muted); cursor: pointer; }
@@ -46,7 +46,7 @@
 .odos-sticky-history article small { color: var(--overview-faint); }
 
 .odos-overview-grid { display: grid; grid-template-columns: minmax(300px, 5fr) minmax(520px, 7fr); gap: 18px; }
-.odos-overview-card { position: relative; overflow: hidden; padding: 18px 20px 14px; border: 1px solid var(--overview-line); border-radius: 18px; background: linear-gradient(180deg, rgba(23, 32, 58, 0.75), rgba(18, 26, 46, 0.85)); }
+.odos-overview-card { position: relative; overflow: hidden; padding: 18px 20px 14px; border: 1px solid var(--overview-line); border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--odos-surface-2) 75%, transparent), color-mix(in srgb, var(--odos-surface) 85%, transparent)); }
 .odos-overview-edge { position: absolute; top: 0; left: 18px; right: 18px; height: 2px; }
 .odos-snapshot-card .odos-overview-edge { background: linear-gradient(90deg, var(--overview-emerald), transparent 70%); }
 .odos-ledger-card .odos-overview-edge { background: linear-gradient(90deg, var(--overview-amethyst), transparent 70%); }

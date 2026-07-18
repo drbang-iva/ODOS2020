@@ -14,15 +14,15 @@
 .odos-orders-alarms button.is-amber > span { background: var(--odos-amber); box-shadow: 0 0 6px rgba(231,169,76,.5); }
 
 .odos-orders-rail { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-.odos-orders-rail button { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 13px; border: 1px solid var(--odos-line); border-radius: 12px; background: rgba(18,26,46,.6); color: var(--odos-muted); font: inherit; font-size: 12px; }
+.odos-orders-rail button { display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 13px; border: 1px solid var(--odos-line); border-radius: 12px; background: color-mix(in srgb, var(--odos-surface) 60%, transparent); color: var(--odos-muted); font: inherit; font-size: 12px; }
 .odos-orders-rail button b { color: var(--odos-text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.odos-orders-rail button.is-active { border-color: rgba(224,188,126,.5); background: rgba(224,188,126,.07); color: var(--odos-gold); }
-.odos-orders-rail button.is-active b { color: var(--odos-gold); }
+.odos-orders-rail button.is-active { border-color: color-mix(in srgb, var(--odos-accent) 50%, transparent); background: color-mix(in srgb, var(--odos-accent) 7%, transparent); color: var(--odos-accent); }
+.odos-orders-rail button.is-active b { color: var(--odos-accent); }
 .odos-orders-rail button.is-zero { opacity: .45; }
 .odos-orders-rail-sep { align-self: center; padding: 0 2px; color: var(--odos-faint); font-size: 10px; }
 .odos-orders-rail-note { margin: 2px 0 14px; color: var(--odos-faint); font-size: 10.5px; }
 
-.odos-orders-board { overflow: visible; border: 1px solid var(--odos-line); border-radius: 18px; background: linear-gradient(180deg, rgba(23,32,58,.75), rgba(18,26,46,.85)); }
+.odos-orders-board { overflow: visible; border: 1px solid var(--odos-line); border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--odos-surface-2) 75%, transparent), color-mix(in srgb, var(--odos-surface) 85%, transparent)); }
 .odos-orders-row { position: relative; display: grid; grid-template-columns: 92px 1.15fr 1.5fr 110px 150px 92px 96px 170px; gap: 12px; align-items: center; padding: 11px 18px; border-top: 1px solid var(--odos-line); font-size: 12.5px; }
 .odos-orders-row:first-child { border-top: 0; }
 .odos-orders-row.is-head { padding: 9px 18px; background: rgba(154,178,224,.03); color: var(--odos-faint); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
@@ -59,7 +59,7 @@
 .odos-orders-actions button.is-hot { border-color: rgba(47,191,143,.45); background: rgba(47,191,143,.1); color: #6fd9b4; }
 .odos-orders-actions button.is-warn { border-color: rgba(231,169,76,.45); background: rgba(231,169,76,.09); color: var(--odos-amber); }
 .odos-orders-actions > button.odos-orders-more { width: 27px; height: 27px; padding: 0; border-color: var(--odos-line); background: transparent; color: var(--odos-faint); font-size: 13px; }
-.odos-orders-menu, .odos-orders-notify { position: absolute; z-index: 15; top: calc(100% + 6px); right: 0; min-width: 205px; overflow: hidden; border: 1px solid var(--odos-line-2); border-radius: 12px; background: rgba(16,22,40,.98); box-shadow: 0 18px 50px rgba(0,0,0,.55); backdrop-filter: blur(20px); }
+.odos-orders-menu, .odos-orders-notify { position: absolute; z-index: 15; top: calc(100% + 6px); right: 0; min-width: 205px; overflow: hidden; border: 1px solid var(--odos-line-2); border-radius: 12px; background: var(--odos-popover); box-shadow: 0 18px 50px rgba(0,0,0,.55); backdrop-filter: blur(20px); }
 .odos-orders-menu button, .odos-orders-notify button { display: block; width: 100%; padding: 9px 14px; border: 0; background: transparent; color: var(--odos-text); font: inherit; font-size: 12px; text-align: left; }
 .odos-orders-menu button:hover, .odos-orders-notify button:not(:disabled):hover { background: rgba(154,178,224,.07); }
 .odos-orders-notify button small { display: block; margin-top: 1px; color: var(--odos-faint); font-size: 10px; }
@@ -71,7 +71,7 @@
 .odos-orders-flagline b { color: var(--odos-alert); }
 .odos-orders-flagline small { margin-left: auto; color: var(--odos-faint); font-size: 10px; }
 .odos-orders-flagline button { flex: none; padding: 3px 10px; border: 1px solid rgba(226,92,106,.45); border-radius: 999px; background: transparent; color: #f2a3ac; font: inherit; font-size: 10.5px; }
-.odos-orders-flagform { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(160px,.5fr) minmax(240px,1fr) auto; gap: 10px; align-items: end; padding: 10px; border: 1px solid rgba(226,92,106,.3); border-radius: 10px; background: rgba(10,14,26,.7); }
+.odos-orders-flagform { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(160px,.5fr) minmax(240px,1fr) auto; gap: 10px; align-items: end; padding: 10px; border: 1px solid rgba(226,92,106,.3); border-radius: 10px; background: color-mix(in srgb, var(--odos-ground) 70%, transparent); }
 .odos-orders-flagform label { display: grid; gap: 4px; color: var(--odos-faint); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .odos-orders-flagform select, .odos-orders-flagform input { height: 36px; padding: 0 10px; border: 1px solid var(--odos-line-2); border-radius: 8px; background: var(--odos-surface); color: var(--odos-text); font: inherit; font-size: 12px; }
 .odos-orders-flagform button { height: 36px; padding: 0 14px; border: 1px solid rgba(226,92,106,.45); border-radius: 999px; background: rgba(226,92,106,.1); color: #f2a3ac; font: inherit; font-size: 11px; }

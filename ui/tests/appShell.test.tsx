@@ -58,6 +58,22 @@ test("AppShell registers the statement-message settings breadcrumb", () => {
   );
 });
 
+test("AppShell registers the Appearance settings breadcrumb", () => {
+  const html = renderToStaticMarkup(
+    <AppShell
+      path="/settings/appearance"
+      roles={["practice-admin"]}
+      homePath="/desk"
+      side="desk"
+      email="admin@example.test"
+    >
+      <main />
+    </AppShell>,
+  );
+  assert.match(html, /href="\/settings"/);
+  assert.match(html, />Appearance</);
+});
+
 test("AppShell registers the Lens Catalog settings breadcrumb", () => {
   const html = renderToStaticMarkup(
     <AppShell

@@ -19,6 +19,7 @@ const ALL_SETTINGS_HREFS = [
   "/settings/plan-profiles",
   "/settings/packages",
   "/settings/statement-messages",
+  "/settings/appearance",
   "/admin/practice/settings/frames-data",
 ] as const;
 
@@ -28,11 +29,11 @@ test("Practice landing groups existing settings and the owner-only plan-profile 
   for (const href of ALL_SETTINGS_HREFS) {
     assert.match(html, new RegExp(`href="${href.replaceAll("/", "\\/")}"`));
   }
-  for (const group of ["People &amp; Access", "Clinical", "Schedule", "Financial", "Inventory", "Communications", "Practice"]) {
+  for (const group of ["People &amp; Access", "Clinical", "Schedule", "Financial", "Inventory", "Communications", "Appearance", "Practice"]) {
     assert.match(html, new RegExp(`>${group}<`));
   }
   assert.match(html, /practice-settings-tone-gold/);
-  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 14);
+  assert.equal((html.match(/class="practice-settings-manage"/g) ?? []).length, 15);
 });
 
 test("Find a setting filters static Manage links and Cmd-K focuses the search", async () => {

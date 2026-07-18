@@ -52,6 +52,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/settings/vision-plan-templates": [{ label: "Settings", href: "/settings" }, { label: "Vision plan templates" }],
   "/settings/visit-types": [{ label: "Settings", href: "/settings" }, { label: "Visit types" }],
   "/settings/statement-messages": [{ label: "Settings", href: "/settings" }, { label: "Statement and receipt messages" }],
+  "/settings/appearance": [{ label: "Settings", href: "/settings" }, { label: "Appearance" }],
   "/settings/suggested-diagnoses": [{ label: "Settings", href: "/settings" }, { label: "Suggested diagnoses" }],
   "/settings/lens-catalog": [{ label: "Settings", href: "/settings" }, { label: "Lens Catalog" }],
   "/settings/optical-pricing": [{ label: "Settings", href: "/settings" }, { label: "Optical pricing" }],

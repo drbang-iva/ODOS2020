@@ -1,3 +1,4 @@
+@import "./appearance.css";
 @import "./desk-home.css";
 @import "./day-ledger.css";
 @import "./day-close.css";
@@ -19,7 +20,7 @@ body {
   background:
     radial-gradient(ellipse at top, rgba(96, 165, 250, 0.08), transparent 60%),
     radial-gradient(ellipse at bottom, rgba(110, 231, 183, 0.05), transparent 60%),
-    #0a0b14;
+    var(--odos-page-ground);
 }
 
 /* Orbital pulse animation — used on problem regions in Director */
