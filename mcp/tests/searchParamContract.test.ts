@@ -16,7 +16,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 54;
+const EXPECTED_DIRECT_SEARCH_CALLS = 61;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -75,6 +75,10 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("ChargeItemDefinition", "_count"),
     spec("ChargeItem", "_id", "_count"),
   ],
+  "src/referral/referral-service.ts:239": [
+    spec("Observation", "patient", "encounter", "_count"),
+    spec("CarePlan", "patient", "encounter", "_count"),
+  ],
   "src/scheduling/scheduling-service.ts:104": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),
@@ -86,7 +90,7 @@ test("contract is frozen from Medplum 5.1.8's published definition bundles", () 
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.package, "@medplum/definitions");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.version, "5.1.8");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.files.length, 3);
-  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 28);
+  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 30);
 });
 
 test("historical ChargeItem status search is rejected while known-valid searches pass", () => {
@@ -100,7 +104,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 54 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 61 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();

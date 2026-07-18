@@ -505,6 +505,18 @@
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "settings-s3"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/referral-include-list",
+      "namespace": "referral",
+      "status": "active",
+      "sliceConsumer": "referral-send-mvp"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/referral-letter-body",
+      "namespace": "referral",
+      "status": "active",
+      "sliceConsumer": "referral-send-mvp"
     }
   ]
 }
