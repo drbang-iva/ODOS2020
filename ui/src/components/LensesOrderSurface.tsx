@@ -180,10 +180,14 @@ export function LensesOrderSurface({
   const rawModifierLines = selectedProduct
     ? modifierLinesForSelection(modifiers, selectedProduct.lab, rxContext)
     : [];
-  const currentModifierIds = new Set(rawModifierLines.map((line) => line.id));
+  const activeCatalogModifierIds = new Set(
+    modifiers
+      .filter((modifier) => modifier.active && modifier.lab === selectedProduct?.lab)
+      .map((modifier) => modifier.id),
+  );
   const retainedModifierLines: LensModifierLine[] = initialSelection && selectedProduct?.id === initialSelection.productId
     ? initialSelection.modifiers
-        .filter((modifier) => !currentModifierIds.has(modifier.id))
+        .filter((modifier) => !activeCatalogModifierIds.has(modifier.id))
         .map((modifier) => ({
           ...modifier,
           lab: initialSelection.lab,

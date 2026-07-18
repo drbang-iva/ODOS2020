@@ -355,6 +355,50 @@ test("changing a selection retains inactive referenced coating and modifier snap
   assert.deepEqual(recommitted?.modifiers.map((line) => line.id), [modifier.id]);
 });
 
+test("changing Rx drops an active automatic modifier whose trigger no longer matches", async () => {
+  const product = structuredClone(BP_DIGITAL_LENS_PRODUCTS.find((candidate) =>
+    candidate.design.productName === "Alpha Comfort"
+    && candidate.material.key === "poly"
+    && candidate.treatment.brand === "Clear",
+  )!);
+  const triggered = modifierLinesForSelection(
+    MODIFIER_OPTION_SEEDS,
+    "bp-digital",
+    lensOrderRxFromVisionPrescription(TEST_RX),
+  ).filter((modifier) => modifier.automatic);
+  const attached = commitLensSelection(
+    [charge("lenses", "Lenses", false)],
+    { product, modifiers: triggered, fulfillment: "lab", billing: resolveVCode(undefined, {}, false) },
+    () => crypto.randomUUID(),
+  ).attached;
+  const boundaryRx: VisionPrescription = {
+    ...TEST_RX,
+    lensSpecification: TEST_RX.lensSpecification.map((lens) => lens.eye === "right"
+      ? { ...lens, prism: [{ amount: 4, base: "in" }] }
+      : lens),
+  };
+  let recommitted: LensSelection | undefined;
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <LensesOrderSurface
+        open
+        rx={boundaryRx}
+        initialSelection={attached}
+        products={BP_DIGITAL_LENS_PRODUCTS}
+        coatings={COATING_OPTION_SEEDS}
+        modifiers={MODIFIER_OPTION_SEEDS}
+        onCancel={() => undefined}
+        onCommit={(selection) => { recommitted = selection; }}
+      />,
+    );
+  });
+
+  assert.doesNotMatch(nodeText(renderer!.root), /Prism over 4Δ/);
+  act(() => buttonByText(renderer!.root, "Add to order").props.onClick());
+  assert.deepEqual(recommitted?.modifiers.filter((modifier) => modifier.confirmed), []);
+});
+
 function boundedProduct(patch: Partial<LensProduct> = {}): LensProduct {
   return {
     ...structuredClone(BP_DIGITAL_LENS_PRODUCTS[0]!),
