@@ -143,6 +143,7 @@ test("preview is write-free while send records one clinician-attributed disclosu
   assert.equal(firstPreview.status, 200);
   assert.equal(secondPreview.status, 200);
   assert.equal(fhir.provenances.length, 0);
+  assert.equal(fhir.readKeys.filter((key) => key === "ServiceRequest/referral-1").length, 2);
   const afterPreviews = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
   assert.equal(afterPreviews.status, "draft");
   assert.equal(referralLetterBody(afterPreviews), "Please evaluate this patient.");

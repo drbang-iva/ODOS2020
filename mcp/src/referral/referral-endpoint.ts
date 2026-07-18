@@ -119,7 +119,7 @@ export async function handleReferralArtifactRequest(
   const service = new ReferralService(context.staff.fhir, deps.now);
   const serviceRequestReference = `ServiceRequest/${referralId}`;
   if (input.action === "preview") {
-    const artifact = await service.assembleReferralArtifact(referralId, parsedBody.data);
+    const artifact = await service.assembleReferralArtifactFrom(serviceRequest, parsedBody.data);
     return {
       status: 200,
       body: { serviceRequestReference, artifact },
