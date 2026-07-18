@@ -1,4 +1,4 @@
-import { fhir } from "./fhir";
+import { authHeaders, clinicalGraphApiBase } from "./clinical-graph-client";
 
 export type PackageRefundPolicy = "non_refundable" | "store_credit_only" | "prorated_cash";
 
@@ -49,6 +49,13 @@ export type PackageDefinitionDraft = Pick<
 > & { id?: string };
 
 export type PackageSaleTender = "CASH" | "CHECK" | "CARD_MANUAL";
+
+export class PackageFinalizationError extends Error {
+  constructor(message: string, readonly invoiceReference: string) {
+    super(message);
+    this.name = "PackageFinalizationError";
+  }
+}
 
 interface ApiOptions {
   fetchImpl?: typeof fetch;
@@ -108,29 +115,41 @@ export async function sellPackage(
     patientReference: string;
     definition: PackageDefinition;
     tender: PackageSaleTender;
+    paidInvoiceReference?: string;
   },
   options: ApiOptions = {},
 ): Promise<PatientPackageInstance> {
-  const prepared = await post<{ invoiceReference: string }>("/commercial-engine/sales/prepare", {
-    patientReference: input.patientReference,
-    definitionId: input.definition.id,
-  }, options);
-  const charged = await post<{ outcome: string }>("/payments/charge", {
-    method: "manual-cash",
-    amountCents: input.definition.priceCents,
-    patientReference: input.patientReference,
-    invoiceReference: prepared.invoiceReference,
-    description: input.definition.name,
-    surface: "manual",
-    tender: { code: input.tender },
-  }, options);
-  if (charged.outcome !== "success") throw new Error(`Package payment did not complete (${charged.outcome}).`);
-  const finalized = await post<{ package: PatientPackageInstance }>("/commercial-engine/sales/finalize", {
-    patientReference: input.patientReference,
-    definitionId: input.definition.id,
-    invoiceReference: prepared.invoiceReference,
-  }, options);
-  return finalized.package;
+  let invoiceReference = input.paidInvoiceReference;
+  if (!invoiceReference) {
+    const prepared = await post<{ invoiceReference: string }>("/commercial-engine/sales/prepare", {
+      patientReference: input.patientReference,
+      definitionId: input.definition.id,
+    }, options);
+    invoiceReference = prepared.invoiceReference;
+    const charged = await post<{ outcome: string }>("/payments/charge", {
+      method: "manual-cash",
+      amountCents: input.definition.priceCents,
+      patientReference: input.patientReference,
+      invoiceReference,
+      description: input.definition.name,
+      surface: "manual",
+      tender: { code: input.tender },
+    }, options);
+    if (charged.outcome !== "success") throw new Error(`Package payment did not complete (${charged.outcome}).`);
+  }
+  try {
+    const finalized = await post<{ package: PatientPackageInstance }>("/commercial-engine/sales/finalize", {
+      patientReference: input.patientReference,
+      definitionId: input.definition.id,
+      invoiceReference,
+    }, options);
+    return finalized.package;
+  } catch (cause) {
+    throw new PackageFinalizationError(
+      `Payment succeeded, but package activation needs retry: ${cause instanceof Error ? cause.message : String(cause)}`,
+      invoiceReference,
+    );
+  }
 }
 
 export async function redeemPackage(
@@ -154,9 +173,9 @@ async function post<T>(path: string, body: unknown, options: ApiOptions): Promis
 }
 
 async function authorizedFetch(path: string, body: unknown | undefined, options: ApiOptions): Promise<Response> {
-  const authorization = (options.authHeader ?? fhir.authHeader)();
+  const authorization = options.authHeader?.() ?? authHeaders().Authorization;
   if (!authorization) throw new Error("A signed-in staff session is required.");
-  return (options.fetchImpl ?? fetch)(path, {
+  return (options.fetchImpl ?? fetch)(`${clinicalGraphApiBase()}${path}`, {
     ...(body === undefined ? {} : { method: "POST", body: JSON.stringify(body) }),
     headers: {
       Authorization: authorization,

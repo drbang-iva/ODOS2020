@@ -72,6 +72,18 @@ export interface PatientPackageInstance {
   ledger: PackageLedgerEntry[];
 }
 
+export interface PackageRedemptionOperation {
+  procedureFhirId: string;
+  patientFhirId: string;
+  packageInstanceId: string;
+  chargeItemFhirId: string;
+  amountCents: number;
+  invoiceFhirId?: string;
+  paymentFhirId?: string;
+  completedAt?: string;
+  createdAt: string;
+}
+
 export interface CommercialEngineStore {
   listDefinitions(options?: { includeArchived?: boolean }): Promise<PackageDefinition[]>;
   getDefinition(id: string): Promise<PackageDefinition | undefined>;
@@ -84,7 +96,24 @@ export interface CommercialEngineStore {
     sourceSaleInvoiceId: string;
     actorUserId: string;
     soldAt: string;
+    snapshotName: string;
+    snapshotEligibleProcedureTypeCodes: readonly string[];
+    snapshotSessionCount: number;
+    snapshotPriceCents: number;
+    snapshotExpiryDays: number;
+    snapshotRefundPolicy: PackageRefundPolicy;
   }): Promise<PatientPackageInstance>;
+  getRedemption(procedureFhirId: string): Promise<PackageRedemptionOperation | undefined>;
+  beginRedemption(input: {
+    procedureFhirId: string;
+    patientFhirId: string;
+    packageInstanceId: string;
+    chargeItemFhirId: string;
+    amountCents: number;
+    createdAt: string;
+  }): Promise<PackageRedemptionOperation>;
+  recordRedemptionInvoice(procedureFhirId: string, invoiceFhirId: string): Promise<PackageRedemptionOperation>;
+  recordRedemptionPayment(procedureFhirId: string, paymentFhirId: string): Promise<PackageRedemptionOperation>;
   consume(input: {
     packageInstanceId: string;
     patientFhirId: string;
@@ -181,62 +210,137 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
     return this.listPatientPackagesWith(this.pool, patientFhirId);
   }
 
+  async getRedemption(procedureFhirId: string): Promise<PackageRedemptionOperation | undefined> {
+    assertFhirId(procedureFhirId, "Procedure id");
+    await this.ensureSchema();
+    const result = await this.pool.query<PackageRedemptionRow>(
+      "SELECT * FROM odos_package_redemptions WHERE procedure_fhir_id = $1",
+      [procedureFhirId],
+    );
+    return result.rows[0] ? redemptionFromRow(result.rows[0]) : undefined;
+  }
+
+  async beginRedemption(input: {
+    procedureFhirId: string;
+    patientFhirId: string;
+    packageInstanceId: string;
+    chargeItemFhirId: string;
+    amountCents: number;
+    createdAt: string;
+  }): Promise<PackageRedemptionOperation> {
+    assertFhirId(input.procedureFhirId, "Procedure id");
+    assertFhirId(input.patientFhirId, "Patient id");
+    assertFhirId(input.chargeItemFhirId, "ChargeItem id");
+    assertPositiveInteger(input.amountCents, "Redemption amount");
+    assertInstant(input.createdAt, "Redemption timestamp");
+    await this.ensureSchema();
+    await this.pool.query(`
+      INSERT INTO odos_package_redemptions (
+        procedure_fhir_id, patient_fhir_id, package_instance_id, charge_item_fhir_id,
+        amount_cents, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (procedure_fhir_id) DO NOTHING
+    `, [
+      input.procedureFhirId,
+      input.patientFhirId,
+      input.packageInstanceId,
+      input.chargeItemFhirId,
+      input.amountCents,
+      input.createdAt,
+    ]);
+    const operation = await this.getRedemption(input.procedureFhirId);
+    if (!operation
+      || operation.patientFhirId !== input.patientFhirId
+      || operation.packageInstanceId !== input.packageInstanceId
+      || operation.chargeItemFhirId !== input.chargeItemFhirId
+      || operation.amountCents !== input.amountCents) {
+      throw new CommercialEngineConflictError("This procedure already has a different package redemption operation.");
+    }
+    return operation;
+  }
+
+  async recordRedemptionInvoice(
+    procedureFhirId: string,
+    invoiceFhirId: string,
+  ): Promise<PackageRedemptionOperation> {
+    return this.recordRedemptionReference(procedureFhirId, "invoice_fhir_id", invoiceFhirId);
+  }
+
+  async recordRedemptionPayment(
+    procedureFhirId: string,
+    paymentFhirId: string,
+  ): Promise<PackageRedemptionOperation> {
+    return this.recordRedemptionReference(procedureFhirId, "payment_fhir_id", paymentFhirId);
+  }
+
   async finalizeSale(input: {
     definitionId: string;
     patientFhirId: string;
     sourceSaleInvoiceId: string;
     actorUserId: string;
     soldAt: string;
+    snapshotName: string;
+    snapshotEligibleProcedureTypeCodes: readonly string[];
+    snapshotSessionCount: number;
+    snapshotPriceCents: number;
+    snapshotExpiryDays: number;
+    snapshotRefundPolicy: PackageRefundPolicy;
   }): Promise<PatientPackageInstance> {
     assertFhirId(input.patientFhirId, "Patient id");
     assertFhirId(input.sourceSaleInvoiceId, "Invoice id");
     assertActor(input.actorUserId);
     assertInstant(input.soldAt, "Sale timestamp");
+    if (!input.snapshotName.trim() || input.snapshotEligibleProcedureTypeCodes.length === 0) {
+      throw new CommercialEngineInputError("Package sale snapshot is incomplete.");
+    }
+    assertPositiveInteger(input.snapshotSessionCount, "Snapshot session count");
+    assertPositiveInteger(input.snapshotPriceCents, "Snapshot package price");
+    assertPositiveInteger(input.snapshotExpiryDays, "Snapshot expiry days");
+    if (!PACKAGE_REFUND_POLICIES.includes(input.snapshotRefundPolicy)) {
+      throw new CommercialEngineInputError("Snapshot refund policy is invalid.");
+    }
     await this.ensureSchema();
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
+      const candidateId = randomUUID();
+      const inserted = await client.query<{ id: string }>(`
+          INSERT INTO odos_package_instances (
+            id, patient_fhir_id, definition_id, snapshot_name,
+            snapshot_eligible_procedure_type_codes, snapshot_session_count, snapshot_price_cents,
+            snapshot_expiry_date, snapshot_refund_policy, source_sale_invoice_id, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, ($8::timestamptz + ($9 || ' days')::interval)::date, $10, $11, $8)
+          ON CONFLICT (source_sale_invoice_id) DO NOTHING
+          RETURNING id::text
+        `, [
+          candidateId,
+          input.patientFhirId,
+          input.definitionId,
+          input.snapshotName,
+          input.snapshotEligibleProcedureTypeCodes,
+          input.snapshotSessionCount,
+          input.snapshotPriceCents,
+          input.soldAt,
+          input.snapshotExpiryDays,
+          input.snapshotRefundPolicy,
+          input.sourceSaleInvoiceId,
+        ]);
       const existing = await client.query<{ id: string; patient_fhir_id: string; definition_id: string }>(
         "SELECT id::text, patient_fhir_id, definition_id::text FROM odos_package_instances WHERE source_sale_invoice_id = $1",
         [input.sourceSaleInvoiceId],
       );
-      const existingRow = existing.rows[0];
-      if (existingRow && (existingRow.patient_fhir_id !== input.patientFhirId || existingRow.definition_id !== input.definitionId)) {
+      const row = existing.rows[0];
+      if (!row || row.patient_fhir_id !== input.patientFhirId || row.definition_id !== input.definitionId) {
         throw new CommercialEngineConflictError("The sale Invoice is already linked to a different package instance.");
       }
-      let instanceId = existingRow?.id;
-      if (!instanceId) {
-        const definition = await client.query<PackageDefinitionRow>(`
-          SELECT d.*, '0'::text AS sold_count
-          FROM odos_package_definitions d
-          WHERE d.id = $1 AND d.active = true
-          FOR UPDATE
-        `, [input.definitionId]);
-        const row = definition.rows[0];
-        if (!row) throw new CommercialEngineConflictError("The selected package definition is not active.");
-        instanceId = randomUUID();
-        await client.query(`
-          INSERT INTO odos_package_instances (
-            id, patient_fhir_id, definition_id, snapshot_session_count, snapshot_price_cents,
-            snapshot_expiry_date, snapshot_refund_policy, source_sale_invoice_id, created_at
-          ) VALUES ($1, $2, $3, $4, $5, ($6::timestamptz + ($7 || ' days')::interval)::date, $8, $9, $6)
-        `, [
-          instanceId,
-          input.patientFhirId,
-          input.definitionId,
-          row.session_count,
-          row.price_cents,
-          input.soldAt,
-          row.expiry_days,
-          row.refund_policy,
-          input.sourceSaleInvoiceId,
-        ]);
+      const instanceId = row.id;
+      if (inserted.rowCount) {
         await client.query(`
           INSERT INTO odos_package_ledger (
             id, patient_fhir_id, package_instance_id, entry_type, sessions_delta,
             actor_user_id, linked_fhir_invoice_id, created_at
           ) VALUES ($1, $2, $3, 'deposit', $4, $5, $6, $7)
-        `, [randomUUID(), input.patientFhirId, instanceId, row.session_count, input.actorUserId, input.sourceSaleInvoiceId, input.soldAt]);
+        `, [randomUUID(), input.patientFhirId, instanceId, input.snapshotSessionCount, input.actorUserId, input.sourceSaleInvoiceId, input.soldAt]);
       }
       await client.query("COMMIT");
       return await this.packageById(client, input.patientFhirId, instanceId);
@@ -268,15 +372,38 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
     try {
       await client.query("BEGIN");
       const instance = await client.query<Omit<ConsumableInstanceRow, "remaining_sessions">>(`
-        SELECT i.patient_fhir_id, i.snapshot_expiry_date::text, d.eligible_procedure_type_codes
+        SELECT i.patient_fhir_id, i.snapshot_expiry_date::text,
+               i.snapshot_eligible_procedure_type_codes
         FROM odos_package_instances i
-        JOIN odos_package_definitions d ON d.id = i.definition_id
         WHERE i.id = $1
         FOR UPDATE OF i
       `, [input.packageInstanceId]);
       const row = instance.rows[0];
       if (!row || row.patient_fhir_id !== input.patientFhirId) {
         throw new CommercialEngineConflictError("The selected package does not belong to this patient.");
+      }
+      const existingConsumption = await client.query<{
+        patient_fhir_id: string;
+        package_instance_id: string;
+        linked_fhir_invoice_id: string;
+      }>(`
+        SELECT patient_fhir_id, package_instance_id::text, linked_fhir_invoice_id
+        FROM odos_package_ledger
+        WHERE entry_type = 'consumption' AND linked_fhir_procedure_id = $1
+      `, [input.linkedFhirProcedureId]);
+      if (existingConsumption.rows[0]) {
+        const existing = existingConsumption.rows[0];
+        if (existing.patient_fhir_id !== input.patientFhirId
+          || existing.package_instance_id !== input.packageInstanceId
+          || existing.linked_fhir_invoice_id !== input.linkedFhirInvoiceId) {
+          throw new CommercialEngineConflictError("This procedure already consumed a different package session.");
+        }
+        await client.query(
+          "UPDATE odos_package_redemptions SET completed_at = coalesce(completed_at, $2) WHERE procedure_fhir_id = $1",
+          [input.linkedFhirProcedureId, input.consumedAt],
+        );
+        await client.query("COMMIT");
+        return await this.packageById(client, input.patientFhirId, input.packageInstanceId);
       }
       if (row.snapshot_expiry_date < input.consumedAt.slice(0, 10)) {
         throw new CommercialEngineConflictError("The selected package is expired.");
@@ -288,7 +415,7 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
       if (Number(balance.rows[0].remaining_sessions) <= 0) {
         throw new CommercialEngineConflictError("The selected package has no sessions remaining.");
       }
-      if (!input.procedureTypeCodes.some((code) => row.eligible_procedure_type_codes.includes(code))) {
+      if (!input.procedureTypeCodes.some((code) => row.snapshot_eligible_procedure_type_codes.includes(code))) {
         throw new CommercialEngineConflictError("The procedure is not eligible for the selected package.");
       }
       const inserted = await client.query(`
@@ -310,6 +437,10 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
       if (!inserted.rowCount) {
         throw new CommercialEngineConflictError("This procedure has already consumed a package session.");
       }
+      await client.query(
+        "UPDATE odos_package_redemptions SET completed_at = coalesce(completed_at, $2) WHERE procedure_fhir_id = $1",
+        [input.linkedFhirProcedureId, input.consumedAt],
+      );
       await client.query("COMMIT");
       return await this.packageById(client, input.patientFhirId, input.packageInstanceId);
     } catch (error) {
@@ -336,14 +467,12 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
     instanceId?: string,
   ): Promise<PatientPackageInstance[]> {
     const instances = await client.query<PackageInstanceRow>(`
-      SELECT i.*, d.name, d.eligible_procedure_type_codes,
-             coalesce(sum(l.sessions_delta), 0)::text AS remaining_sessions
+      SELECT i.*, coalesce(sum(l.sessions_delta), 0)::text AS remaining_sessions
       FROM odos_package_instances i
-      JOIN odos_package_definitions d ON d.id = i.definition_id
       LEFT JOIN odos_package_ledger l ON l.package_instance_id = i.id
       WHERE i.patient_fhir_id = $1 ${instanceId ? "AND i.id = $2" : ""}
-      GROUP BY i.id, d.id
-      ORDER BY i.snapshot_expiry_date, lower(d.name), i.created_at
+      GROUP BY i.id
+      ORDER BY i.snapshot_expiry_date, lower(i.snapshot_name), i.created_at
     `, instanceId ? [patientFhirId, instanceId] : [patientFhirId]);
     if (instances.rows.length === 0) return [];
     const ids = instances.rows.map((row) => row.id);
@@ -364,6 +493,26 @@ export class PgCommercialEngineStore implements CommercialEngineStore {
   private async ensureSchema(): Promise<void> {
     this.schemaReady ??= this.initializeSchema();
     await this.schemaReady;
+  }
+
+  private async recordRedemptionReference(
+    procedureFhirId: string,
+    column: "invoice_fhir_id" | "payment_fhir_id",
+    fhirId: string,
+  ): Promise<PackageRedemptionOperation> {
+    assertFhirId(procedureFhirId, "Procedure id");
+    assertFhirId(fhirId, "Redemption FHIR id");
+    await this.ensureSchema();
+    const result = await this.pool.query<PackageRedemptionRow>(`
+      UPDATE odos_package_redemptions
+      SET ${column} = $2
+      WHERE procedure_fhir_id = $1 AND (${column} IS NULL OR ${column} = $2)
+      RETURNING *
+    `, [procedureFhirId, fhirId]);
+    if (!result.rows[0]) {
+      throw new CommercialEngineConflictError("The redemption already references a different FHIR record.");
+    }
+    return redemptionFromRow(result.rows[0]);
   }
 
   private async initializeSchema(): Promise<void> {
@@ -410,22 +559,34 @@ interface PackageInstanceRow {
   id: string;
   patient_fhir_id: string;
   definition_id: string;
+  snapshot_name: string;
+  snapshot_eligible_procedure_type_codes: string[];
   snapshot_session_count: number;
   snapshot_price_cents: string;
   snapshot_expiry_date: Date | string;
   snapshot_refund_policy: PackageRefundPolicy;
   source_sale_invoice_id: string;
   created_at: Date | string;
-  name: string;
-  eligible_procedure_type_codes: string[];
   remaining_sessions: string;
 }
 
 interface ConsumableInstanceRow {
   patient_fhir_id: string;
   snapshot_expiry_date: string;
-  eligible_procedure_type_codes: string[];
+  snapshot_eligible_procedure_type_codes: string[];
   remaining_sessions: string;
+}
+
+interface PackageRedemptionRow {
+  procedure_fhir_id: string;
+  patient_fhir_id: string;
+  package_instance_id: string;
+  charge_item_fhir_id: string;
+  amount_cents: string;
+  invoice_fhir_id: string | null;
+  payment_fhir_id: string | null;
+  completed_at: Date | string | null;
+  created_at: Date | string;
 }
 
 interface PackageLedgerRow {
@@ -456,13 +617,27 @@ function definitionFromRow(row: PackageDefinitionRow): PackageDefinition {
   };
 }
 
+function redemptionFromRow(row: PackageRedemptionRow): PackageRedemptionOperation {
+  return {
+    procedureFhirId: row.procedure_fhir_id,
+    patientFhirId: row.patient_fhir_id,
+    packageInstanceId: row.package_instance_id,
+    chargeItemFhirId: row.charge_item_fhir_id,
+    amountCents: safeInteger(row.amount_cents, "Redemption amount"),
+    ...(row.invoice_fhir_id ? { invoiceFhirId: row.invoice_fhir_id } : {}),
+    ...(row.payment_fhir_id ? { paymentFhirId: row.payment_fhir_id } : {}),
+    ...(row.completed_at ? { completedAt: iso(row.completed_at) } : {}),
+    createdAt: iso(row.created_at),
+  };
+}
+
 function instanceFromRow(row: PackageInstanceRow, ledger: PackageLedgerEntry[]): PatientPackageInstance {
   return {
     id: row.id,
     patientFhirId: row.patient_fhir_id,
     definitionId: row.definition_id,
-    name: row.name,
-    eligibleProcedureTypeCodes: row.eligible_procedure_type_codes,
+    name: row.snapshot_name,
+    eligibleProcedureTypeCodes: row.snapshot_eligible_procedure_type_codes,
     sessionCount: row.snapshot_session_count,
     priceCents: safeInteger(row.snapshot_price_cents, "Package snapshot price"),
     expiryDate: dateOnly(row.snapshot_expiry_date),

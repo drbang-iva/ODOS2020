@@ -95,6 +95,37 @@ test("a $3,600 package sale and one $1,200 redemption recognize exactly $1,200 o
   assert.equal(report.productionInvoiceCount, 1);
 });
 
+test("partial allocations do not recognize an Invoice as fully collected production", () => {
+  const invoice: Invoice = {
+    resourceType: "Invoice",
+    id: "partially-paid-service",
+    status: "issued",
+    date: "2026-07-20T14:00:00Z",
+    lineItem: [{
+      sequence: 1,
+      chargeItemCodeableConcept: { text: "Synthetic service" },
+      priceComponent: [{ type: "base", amount: usd(120_000) }],
+    }],
+    totalGross: usd(120_000),
+    totalNet: usd(120_000),
+  };
+  const partial: PaymentReconciliation = {
+    resourceType: "PaymentReconciliation",
+    status: "active",
+    outcome: "complete",
+    created: "2026-07-20T14:00:00Z",
+    paymentDate: "2026-07-20",
+    paymentAmount: usd(60_000),
+    detail: [{ request: { reference: "Invoice/partially-paid-service" }, amount: usd(60_000) }],
+  };
+
+  const report = projectServiceProduction("2026-07", [invoice], [partial]);
+
+  assert.equal(report.cashCollectedCents, 60_000);
+  assert.equal(report.productionCents, 0);
+  assert.equal(report.productionInvoiceCount, 0);
+});
+
 function claimRow(daysSinceSubmission: number): ClaimSearchRow {
   return {
     claimReference: `Claim/claim-${daysSinceSubmission}`,

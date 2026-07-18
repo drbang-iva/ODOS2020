@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   fetchPackageDefinitions,
+  PackageFinalizationError,
   sellPackage,
   type PackageDefinition,
   type PackageSaleTender,
@@ -30,6 +31,7 @@ export function SaleSheet({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [paidInvoiceReference, setPaidInvoiceReference] = useState<string>();
   const selected = useMemo(() => definitions.find((definition) => definition.id === definitionId), [definitionId, definitions]);
 
   useEffect(() => {
@@ -51,10 +53,16 @@ export function SaleSheet({
     setBusy(true);
     setError(undefined);
     try {
-      const packageInstance = await sellPackage({ patientReference, definition: selected, tender });
+      const packageInstance = await sellPackage({
+        patientReference,
+        definition: selected,
+        tender,
+        ...(paidInvoiceReference ? { paidInvoiceReference } : {}),
+      });
       onSold?.(packageInstance);
       onClose();
     } catch (cause) {
+      if (cause instanceof PackageFinalizationError) setPaidInvoiceReference(cause.invoiceReference);
       setError(messageOf(cause));
     } finally {
       setBusy(false);
@@ -75,7 +83,7 @@ export function SaleSheet({
         {loading ? <p className="text-sm text-white/50">Loading package definitions…</p> : (
           <label className="grid gap-2 text-sm font-semibold text-white/70">
             Package
-            <select className="scheduler-input" value={definitionId} onChange={(event) => setDefinitionId(event.target.value)}>
+            <select disabled={Boolean(paidInvoiceReference)} className="scheduler-input" value={definitionId} onChange={(event) => setDefinitionId(event.target.value)}>
               {definitions.map((definition) => <option key={definition.id} value={definition.id}>{definition.name}</option>)}
             </select>
           </label>
@@ -94,7 +102,7 @@ export function SaleSheet({
           <legend className="mb-2 text-xs font-bold uppercase tracking-wide text-white/40">Payment collected as</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {TENDERS.map((entry) => (
-              <button key={entry.code} type="button" aria-pressed={tender === entry.code} onClick={() => setTender(entry.code)} className={`rounded border px-3 py-2 text-sm ${tender === entry.code ? "border-blue-400 bg-blue-600 font-bold" : "border-white/15 text-white/60"}`}>
+              <button key={entry.code} type="button" disabled={Boolean(paidInvoiceReference)} aria-pressed={tender === entry.code} onClick={() => setTender(entry.code)} className={`rounded border px-3 py-2 text-sm disabled:opacity-40 ${tender === entry.code ? "border-blue-400 bg-blue-600 font-bold" : "border-white/15 text-white/60"}`}>
                 {entry.label}
               </button>
             ))}
@@ -105,7 +113,7 @@ export function SaleSheet({
       </div>
       <footer className="flex justify-end gap-2 border-t border-white/10 p-4">
         <button type="button" onClick={onClose} className="rounded border border-white/15 px-4 py-2 text-white/65">Cancel</button>
-        <button type="button" disabled={busy || !selected} onClick={() => void sell()} className="rounded bg-blue-600 px-5 py-2 font-bold disabled:opacity-40">{busy ? "Collecting…" : selected ? `Collect ${money(selected.priceCents)}` : "No active packages"}</button>
+        <button type="button" disabled={busy || !selected} onClick={() => void sell()} className="rounded bg-blue-600 px-5 py-2 font-bold disabled:opacity-40">{busy ? (paidInvoiceReference ? "Activating…" : "Collecting…") : paidInvoiceReference ? "Retry package activation" : selected ? `Collect ${money(selected.priceCents)}` : "No active packages"}</button>
       </footer>
     </aside>
   );

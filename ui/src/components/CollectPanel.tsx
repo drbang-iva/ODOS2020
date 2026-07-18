@@ -32,6 +32,7 @@ export function CollectPanel({
   embedded = false,
   disabled = false,
   onCollected,
+  onPackageBalanceChanged,
   loadCharges = fetchOpenCharges,
 }: {
   patientReference: string;
@@ -42,6 +43,7 @@ export function CollectPanel({
   embedded?: boolean;
   disabled?: boolean;
   onCollected?: (result: CollectPanelResult) => void;
+  onPackageBalanceChanged?: () => void;
   loadCharges?: (patientReference: string) => Promise<OpenChargeLine[]>;
 }) {
   const [charges, setCharges] = useState<OpenChargeLine[]>(initialCharges ? [...initialCharges] : []);
@@ -171,13 +173,16 @@ export function CollectPanel({
                     chargeItemReference={`ChargeItem/${charge.id}`}
                     procedureReference={charge.procedureReference}
                     procedureCode={charge.code}
+                    revision={packageRevision}
                     onRedeemed={() => {
+                      setCharges((current) => current.filter((item) => item.id !== charge.id));
                       setSelectedIds((current) => {
                         const next = new Set(current);
                         next.delete(charge.id);
                         return next;
                       });
                       setPackageRevision((current) => current + 1);
+                      onPackageBalanceChanged?.();
                     }}
                   />
                 </div>
@@ -228,7 +233,10 @@ export function CollectPanel({
           patientReference={patientReference}
           patientName={patientName}
           onClose={() => setSellingPackage(false)}
-          onSold={() => setPackageRevision((current) => current + 1)}
+          onSold={() => {
+            setPackageRevision((current) => current + 1);
+            onPackageBalanceChanged?.();
+          }}
         />
       )}
     </>

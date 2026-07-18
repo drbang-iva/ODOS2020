@@ -84,9 +84,9 @@ export function packageDescriptor(
     fields: [
       { type: "text", key: "name", label: "Name", required: true, unique: true },
       { type: "multi-select", key: "eligibleProcedureTypeCodes", label: "Eligible procedure types", required: true, options: procedureOptions },
-      { type: "number", key: "sessionCount", label: "Session count", required: true, min: 1 },
-      { type: "number", key: "priceCents", label: "Package price (cents)", required: true, min: 1 },
-      { type: "number", key: "expiryDays", label: "Expiry (days)", required: true, min: 1 },
+      { type: "number", key: "sessionCount", label: "Session count", required: true, min: 1, integer: true },
+      { type: "number", key: "priceCents", label: "Package price (cents)", required: true, min: 1, integer: true },
+      { type: "number", key: "expiryDays", label: "Expiry (days)", required: true, min: 1, integer: true },
       {
         type: "select",
         key: "refundPolicy",

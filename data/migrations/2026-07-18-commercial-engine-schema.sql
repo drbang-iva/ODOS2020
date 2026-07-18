@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS odos_package_instances (
   id UUID PRIMARY KEY,
   patient_fhir_id TEXT NOT NULL CHECK (patient_fhir_id ~ '^[A-Za-z0-9.-]+$'),
   definition_id UUID NOT NULL REFERENCES odos_package_definitions(id) ON DELETE RESTRICT,
+  snapshot_name TEXT NOT NULL CHECK (btrim(snapshot_name) <> ''),
+  snapshot_eligible_procedure_type_codes TEXT[] NOT NULL
+    CHECK (cardinality(snapshot_eligible_procedure_type_codes) > 0),
   snapshot_session_count INTEGER NOT NULL CHECK (snapshot_session_count > 0),
   snapshot_price_cents BIGINT NOT NULL CHECK (snapshot_price_cents > 0),
   snapshot_expiry_date DATE NOT NULL,
@@ -56,6 +59,20 @@ CREATE INDEX IF NOT EXISTS odos_package_ledger_instance_idx
 CREATE UNIQUE INDEX IF NOT EXISTS odos_package_ledger_consumption_once_idx
   ON odos_package_ledger (linked_fhir_procedure_id)
   WHERE entry_type = 'consumption';
+
+CREATE TABLE IF NOT EXISTS odos_package_redemptions (
+  procedure_fhir_id TEXT PRIMARY KEY CHECK (procedure_fhir_id ~ '^[A-Za-z0-9.-]+$'),
+  patient_fhir_id TEXT NOT NULL CHECK (patient_fhir_id ~ '^[A-Za-z0-9.-]+$'),
+  package_instance_id UUID NOT NULL,
+  charge_item_fhir_id TEXT NOT NULL CHECK (charge_item_fhir_id ~ '^[A-Za-z0-9.-]+$'),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
+  invoice_fhir_id TEXT UNIQUE CHECK (invoice_fhir_id IS NULL OR invoice_fhir_id ~ '^[A-Za-z0-9.-]+$'),
+  payment_fhir_id TEXT UNIQUE CHECK (payment_fhir_id IS NULL OR payment_fhir_id ~ '^[A-Za-z0-9.-]+$'),
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  FOREIGN KEY (package_instance_id, patient_fhir_id)
+    REFERENCES odos_package_instances(id, patient_fhir_id) ON DELETE RESTRICT
+);
 
 CREATE OR REPLACE FUNCTION odos_reject_package_ledger_mutation()
 RETURNS trigger

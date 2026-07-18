@@ -107,15 +107,14 @@ export function projectServiceProduction(
   invoices: readonly Invoice[],
   reconciliations: readonly PaymentReconciliation[],
 ): ServiceProductionReport {
-  const reconciliationByInvoice = new Map<string, PaymentReconciliation[]>();
+  const allocatedCentsByInvoice = new Map<string, number>();
   for (const payment of reconciliations) {
     if (payment.status !== "active" || payment.outcome !== "complete") continue;
     for (const detail of payment.detail ?? []) {
       const invoiceReference = detail.request?.reference;
       if (!/^Invoice\/[A-Za-z0-9.-]+$/.test(invoiceReference ?? "")) continue;
-      const rows = reconciliationByInvoice.get(invoiceReference!) ?? [];
-      rows.push(payment);
-      reconciliationByInvoice.set(invoiceReference!, rows);
+      const amountCents = moneyCents(detail.amount?.value, "PaymentReconciliation detail amount");
+      allocatedCentsByInvoice.set(invoiceReference!, (allocatedCentsByInvoice.get(invoiceReference!) ?? 0) + amountCents);
     }
   }
   let cashCollectedCents = 0;
@@ -124,11 +123,11 @@ export function projectServiceProduction(
   let productionInvoiceCount = 0;
   for (const invoice of invoices) {
     const reference = invoice.id ? `Invoice/${invoice.id}` : undefined;
-    const payments = reference ? reconciliationByInvoice.get(reference) ?? [] : [];
+    const allocatedCents = reference ? allocatedCentsByInvoice.get(reference) ?? 0 : 0;
     const tenderedInvoice = invoice.extension?.some((extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL);
-    const collected = invoice.status === "balanced" || tenderedInvoice || payments.length > 0;
-    if (!collected) continue;
     const netCents = invoiceNetCents(invoice);
+    const collected = invoice.status === "balanced" || tenderedInvoice || allocatedCents >= netCents;
+    if (!collected) continue;
     if (isBalanceFundingInvoice(invoice)) {
       balanceFundingCents += netCents;
     } else {

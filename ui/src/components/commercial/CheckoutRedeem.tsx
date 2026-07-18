@@ -10,12 +10,14 @@ export function CheckoutRedeem({
   chargeItemReference,
   procedureReference,
   procedureCode,
+  revision = 0,
   onRedeemed,
 }: {
   patientReference: string;
   chargeItemReference: string;
   procedureReference?: string;
   procedureCode?: string;
+  revision?: number;
   onRedeemed?: (packageInstance: PatientPackageInstance) => void;
 }) {
   const [packages, setPackages] = useState<PatientPackageInstance[]>([]);
@@ -33,10 +35,11 @@ export function CheckoutRedeem({
       .then((items) => !cancelled && setPackages(items))
       .catch((cause) => !cancelled && setError(messageOf(cause)));
     return () => { cancelled = true; };
-  }, [patientReference, procedureCode, procedureReference]);
+  }, [patientReference, procedureCode, procedureReference, revision]);
 
   if (!procedureReference || !procedureCode || (packages.length === 0 && !error && !done)) return null;
   async function apply(instance: PatientPackageInstance) {
+    if (done) return;
     setBusyId(instance.id);
     setError(undefined);
     try {
@@ -58,7 +61,7 @@ export function CheckoutRedeem({
   return (
     <div className="mt-2 grid gap-2">
       {packages.map((instance) => (
-        <button key={instance.id} type="button" disabled={Boolean(busyId)} onClick={() => void apply(instance)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-left text-xs text-cyan-100 disabled:opacity-40">
+        <button key={instance.id} type="button" disabled={Boolean(busyId) || Boolean(done)} onClick={() => void apply(instance)} className="rounded border border-cyan-300/25 bg-cyan-950/20 px-3 py-2 text-left text-xs text-cyan-100 disabled:opacity-40">
           <strong>Package available: {instance.name}</strong> — {instance.remainingSessions} of {instance.sessionCount} remaining
           <span className="ml-2 font-bold">Apply credit</span>
         </button>

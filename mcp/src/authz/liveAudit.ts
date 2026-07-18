@@ -65,6 +65,7 @@ const AUDIT_MIGRATION_TABLES = [
   "odos_package_definitions",
   "odos_package_instances",
   "odos_package_ledger",
+  "odos_package_redemptions",
 ] as const;
 
 const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =

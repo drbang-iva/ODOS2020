@@ -18,7 +18,7 @@ type FieldBase = {
 export type CatalogFieldDefinition =
   | (FieldBase & { type: "text"; unique?: boolean })
   | (FieldBase & { type: "color"; palette: readonly string[] })
-  | (FieldBase & { type: "duration" | "number"; min?: number; max?: number })
+  | (FieldBase & { type: "duration" | "number"; min?: number; max?: number; integer?: boolean })
   | (FieldBase & { type: "select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "multi-select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "reference-picker"; valueKind?: "reference" | "text" })
@@ -109,8 +109,11 @@ function validateField(
       if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be a number.`);
       }
-      if (field.type === "duration" && !Number.isInteger(value)) {
-        throw new CatalogFieldValidationError(field.key, `${field.label} must be a whole number of minutes.`);
+      if ((field.type === "duration" || field.integer) && !Number.isInteger(value)) {
+        throw new CatalogFieldValidationError(
+          field.key,
+          field.type === "duration" ? `${field.label} must be a whole number of minutes.` : `${field.label} must be a whole number.`,
+        );
       }
       if (field.min !== undefined && value < field.min) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be at least ${field.min}.`);

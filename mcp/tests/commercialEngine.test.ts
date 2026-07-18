@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { ChargeItem, Invoice, PaymentReconciliation, Procedure, Resource } from "@medplum/fhirtypes";
 import {
   applicablePackages,
+  finalizePackageSale,
   isBalanceFundingInvoice,
   preparePackageSale,
   redeemPackageSession,
@@ -46,6 +47,63 @@ test("package sale Invoice is balance-funding revenue at the frozen definition p
   assert.equal(result.invoice.lineItem?.[0].priceComponent?.[0].amount?.value, 3_600);
   assert.equal(isBalanceFundingInvoice(result.invoice), true);
   assert.equal(created?.subject?.reference, "Patient/patient-1");
+  assert.equal(created?.identifier?.some((identifier) => identifier.value === definition.id), true);
+});
+
+test("sale finalization reads immutable terms from the paid Invoice and requires full allocation", async () => {
+  const prepared = await preparePackageSale(
+    { store: store(), now: () => "2026-07-18T14:00:00Z" },
+    {
+      create: async <T>(resource: T): Promise<T> => ({ ...(resource as object), id: "sale-invoice" }) as T,
+      read: async () => { throw new Error("not used"); },
+      search: async () => { throw new Error("not used"); },
+    } as never,
+    { patientReference: "Patient/patient-1", definitionId: definition.id, staffReference: "Practitioner/staff-1" },
+  );
+  let finalized: Parameters<CommercialEngineStore["finalizeSale"]>[0] | undefined;
+  const testStore = {
+    ...store(),
+    finalizeSale: async (input: Parameters<CommercialEngineStore["finalizeSale"]>[0]) => {
+      finalized = input;
+      return instance();
+    },
+  };
+  const paidInvoice = { ...prepared.invoice, status: "issued" as const };
+  const fhir = (allocatedCents: number) => ({
+    create: async () => { throw new Error("not used"); },
+    read: async () => paidInvoice,
+    search: async () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{
+        resource: {
+          resourceType: "PaymentReconciliation",
+          status: "active",
+          outcome: "complete",
+          created: "2026-07-18T14:01:00Z",
+          paymentDate: "2026-07-18",
+          paymentAmount: { value: allocatedCents / 100, currency: "USD" },
+          detail: [{ request: { reference: "Invoice/sale-invoice" }, amount: { value: allocatedCents / 100, currency: "USD" } }],
+        },
+      }],
+    }),
+  });
+  const input = {
+    patientReference: "Patient/patient-1",
+    definitionId: definition.id,
+    invoiceReference: "Invoice/sale-invoice",
+    staffReference: "Practitioner/staff-1",
+  };
+
+  await assert.rejects(
+    finalizePackageSale({ store: testStore }, fhir(359_999) as never, input),
+    /successful payment/,
+  );
+  await finalizePackageSale({ store: testStore }, fhir(360_000) as never, input);
+  assert.equal(finalized?.snapshotName, definition.name);
+  assert.deepEqual(finalized?.snapshotEligibleProcedureTypeCodes, definition.eligibleProcedureTypeCodes);
+  assert.equal(finalized?.snapshotSessionCount, 3);
+  assert.equal(finalized?.snapshotPriceCents, 360_000);
 });
 
 test("applicable package matching requires code, unexpired balance, and explicit remaining sessions", () => {
@@ -94,7 +152,7 @@ test("redemption keeps the real procedure price, records package credit, and lin
         created.push(saved);
         return saved;
       },
-      search: async () => { throw new Error("not used"); },
+      search: async () => ({ resourceType: "Bundle", type: "searchset", entry: [] }),
     } as never,
     {
       patientReference: "Patient/patient-1",
@@ -116,11 +174,74 @@ test("redemption keeps the real procedure price, records package credit, and lin
   assert.equal(result.package.remainingSessions, 1);
 });
 
+test("a completed redemption retry reuses its persisted FHIR records without writing again", async () => {
+  const completed = {
+    procedureFhirId: "procedure-1",
+    patientFhirId: "patient-1",
+    packageInstanceId: instance().id,
+    chargeItemFhirId: "charge-1",
+    amountCents: 120_000,
+    invoiceFhirId: "redeem-invoice",
+    paymentFhirId: "package-payment",
+    completedAt: "2026-07-18T15:00:00Z",
+    createdAt: "2026-07-18T15:00:00Z",
+  };
+  let createCalls = 0;
+  const result = await redeemPackageSession(
+    {
+      store: {
+        ...store(),
+        listPatientPackages: async () => [instance()],
+        getRedemption: async () => completed,
+        beginRedemption: async () => completed,
+      },
+      now: () => "2026-07-18T16:00:00Z",
+    },
+    {
+      read: async <T>(_resourceType: string, id: string): Promise<T> => (id === "procedure-1"
+        ? {
+            resourceType: "Procedure",
+            id,
+            status: "completed",
+            subject: { reference: "Patient/patient-1" },
+            code: { coding: [{ code: "procedure:dry-eye-ipl" }] },
+          }
+        : {
+            resourceType: "ChargeItem",
+            id,
+            status: "billable",
+            code: { text: "Dry-Eye IPL" },
+            subject: { reference: "Patient/patient-1" },
+            supportingInformation: [{ reference: "Procedure/procedure-1" }],
+            priceOverride: { value: 1_200, currency: "USD" },
+          }) as T,
+      create: async <T>(resource: T): Promise<T> => { createCalls += 1; return resource; },
+      search: async () => { throw new Error("not used"); },
+    } as never,
+    {
+      patientReference: "Patient/patient-1",
+      packageInstanceId: instance().id,
+      procedureReference: "Procedure/procedure-1",
+      chargeItemReference: "ChargeItem/charge-1",
+      staffReference: "Practitioner/staff-1",
+    },
+  );
+
+  assert.equal(createCalls, 0);
+  assert.equal(result.invoiceReference, "Invoice/redeem-invoice");
+  assert.equal(result.paymentReference, "PaymentReconciliation/package-payment");
+});
+
 test("commercial package ledger migration enforces append-only mutation rejection", async () => {
   const sql = await readFile(new URL("../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url), "utf8");
   assert.match(sql, /BEFORE UPDATE OR DELETE ON odos_package_ledger/);
   assert.match(sql, /source_sale_invoice_id TEXT NOT NULL UNIQUE/);
+  assert.match(sql, /snapshot_name TEXT NOT NULL/);
+  assert.match(sql, /snapshot_eligible_procedure_type_codes TEXT\[\] NOT NULL/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS odos_package_redemptions/);
   assert.match(sql, /sessions_delta INTEGER NOT NULL/);
+  const storeSource = await readFile(new URL("../src/commercial-engine/ledger-store.ts", import.meta.url), "utf8");
+  assert.match(storeSource, /ON CONFLICT \(source_sale_invoice_id\) DO NOTHING/);
 });
 
 function instance(): PatientPackageInstance {
@@ -149,6 +270,34 @@ function store(): CommercialEngineStore {
     archiveDefinition: async () => ({ ...definition, active: false }),
     listPatientPackages: async () => [],
     finalizeSale: async () => instance(),
+    getRedemption: async () => undefined,
+    beginRedemption: async (input) => ({
+      procedureFhirId: input.procedureFhirId,
+      patientFhirId: input.patientFhirId,
+      packageInstanceId: input.packageInstanceId,
+      chargeItemFhirId: input.chargeItemFhirId,
+      amountCents: input.amountCents,
+      createdAt: input.createdAt,
+    }),
+    recordRedemptionInvoice: async (procedureFhirId, invoiceFhirId) => ({
+      procedureFhirId,
+      patientFhirId: "patient-1",
+      packageInstanceId: instance().id,
+      chargeItemFhirId: "charge-1",
+      amountCents: 120_000,
+      invoiceFhirId,
+      createdAt: "2026-07-18T15:00:00Z",
+    }),
+    recordRedemptionPayment: async (procedureFhirId, paymentFhirId) => ({
+      procedureFhirId,
+      patientFhirId: "patient-1",
+      packageInstanceId: instance().id,
+      chargeItemFhirId: "charge-1",
+      amountCents: 120_000,
+      invoiceFhirId: "redeem-invoice",
+      paymentFhirId,
+      createdAt: "2026-07-18T15:00:00Z",
+    }),
     consume: async () => instance(),
   };
 }

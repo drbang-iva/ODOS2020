@@ -38,6 +38,7 @@ export function PatientPayments() {
   const [appliedDateFilters, setAppliedDateFilters] = useState<{ startDate?: string; endDate?: string }>({});
   const [exporting, setExporting] = useState(false);
   const [collecting, setCollecting] = useState(false);
+  const [packageRevision, setPackageRevision] = useState(0);
   const api = patientPaymentApiOptions();
 
   const load = async (
@@ -154,7 +155,7 @@ export function PatientPayments() {
       ) : (
         <>
           <section className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-400/20 bg-blue-950/20 px-4 py-3">
-            <div><strong>{patientName(patient)}</strong><span className="ml-2 text-xs text-white/45">Patient/{patient.id}</span>{patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}</div>
+            <div><strong>{patientName(patient)}</strong><span className="ml-2 text-xs text-white/45">Patient/{patient.id}</span>{patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} revision={packageRevision} />}</div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setCollecting(true)} className="rounded bg-blue-600 px-4 py-2 text-sm font-bold">Collect</button>
               <div className="flex rounded border border-white/10 bg-black/20 p-1">
@@ -205,6 +206,7 @@ export function PatientPayments() {
           patientName={patientName(patient)}
           onClose={() => setCollecting(false)}
           onCollected={() => void load(`Patient/${patient.id}`, appliedDateFilters)}
+          onPackageBalanceChanged={() => setPackageRevision((current) => current + 1)}
         />
       )}
     </main>

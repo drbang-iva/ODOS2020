@@ -127,6 +127,7 @@ function CatalogFieldControl({
             type="number"
             min={field.min}
             max={field.max}
+            step={field.type === "duration" || field.integer ? 1 : undefined}
             value={typeof value === "number" ? value : ""}
             aria-describedby={describedBy}
             onChange={(event) =>
