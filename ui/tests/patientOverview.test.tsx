@@ -7,7 +7,8 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import { fetchPatientOverview, type PatientOverviewPayload } from "../src/lib/patient-overview";
-import { patientOverviewView, useViewState } from "../src/lib/view-state";
+import { openPatientOverview, patientOverviewView, useViewState } from "../src/lib/view-state";
+import { opticalOrderPath } from "../src/lib/optical-order";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { PatientOverview } from "../src/scenes/PatientOverview";
 
@@ -39,8 +40,31 @@ test("every remaining patient-opening entry point uses the shared overview trans
     "../src/components/charting/EncounterHeader.tsx",
   ]) {
     const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
-    assert.match(source, /patientOverviewView\(/, `${relativePath} must enter the overview`);
+    assert.match(source, /openPatientOverview\(/, `${relativePath} must enter the overview`);
   }
+});
+
+test("the shared patient transition keeps the selected patient in browser URL state", () => {
+  const originalWindow = globalThis.window;
+  let pushed = "";
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    history: { pushState: (_state: unknown, _unused: string, url?: string | URL | null) => { pushed = String(url); } },
+    dispatchEvent: () => true,
+  } });
+  try {
+    openPatientOverview("patient/with spaces");
+    assert.equal(pushed, "/clinic?patientId=patient%2Fwith%20spaces");
+    assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "patient/with spaces" });
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("patient overview builds a concrete optical-order route from patient and active Rx", () => {
+  assert.equal(
+    opticalOrderPath("patient-1", "rx-1"),
+    "/dispensary/orders?patient=Patient%2Fpatient-1&rx=VisionPrescription%2Frx-1",
+  );
 });
 
 test("seeded overview renders real snapshot data, newest-first visits, and linked dx chips", () => {

@@ -170,7 +170,7 @@ test("App rehydrates an unexpired session on boot", async () => {
   }
 });
 
-test("logout and any intercepted 401 clear the persisted session", async () => {
+test("logout and an authenticated intercepted 401 clear the persisted session", async () => {
   const storage = memoryStorage();
   const seedSession = () => {
     storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
@@ -195,10 +195,10 @@ test("logout and any intercepted 401 clear the persisted session", async () => {
   seedSession();
   let cleared = 0;
   const stopListening = fhir.onSessionCleared(() => { cleared += 1; });
-  const host = { fetch: async () => new Response(null, { status: 401 }) as Promise<Response> };
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
   const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
   try {
-    const response = await host.fetch("/any-api");
+    const response = await host.fetch("/any-api", { headers: { Authorization: "Bearer session-token" } });
     assert.equal(response.status, 401);
     assert.equal(storage.getItem(SESSION_STORAGE_KEY), null);
     assert.equal(fhir.authHeader(), undefined);
@@ -206,6 +206,26 @@ test("logout and any intercepted 401 clear the persisted session", async () => {
   } finally {
     stopIntercepting();
     stopListening();
+    fhir.logout(storage);
+  }
+});
+
+test("an unauthenticated 401 cannot clear a different active session", async () => {
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const response = await host.fetch("/public-api");
+    assert.equal(response.status, 401);
+    assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), "Bearer session-token");
+  } finally {
+    stopIntercepting();
     fhir.logout(storage);
   }
 });
@@ -318,4 +338,49 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
     useViewState.setState({ view: { kind: "picker" } });
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
+});
+
+test("authenticated bootstrap preserves non-root hard-reload routes", async () => {
+  const originalWindow = globalThis.window;
+  for (const requestedPath of [
+    "/settings/packages",
+    "/billing/claims/worklist",
+    "/financials/practice/margins",
+  ]) {
+    const location = { pathname: requestedPath, search: "" };
+    const windowStub = {
+      location,
+      history: {
+        replaceState: (_state: unknown, _title: string, url: string) => {
+          const next = new URL(url, "http://localhost");
+          location.pathname = next.pathname;
+          location.search = next.search;
+        },
+      },
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      setInterval: () => 1,
+      clearInterval: () => undefined,
+    } as unknown as Window & typeof globalThis;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+    let renderer!: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(<App
+          resolveRoles={async () => ({ roles: ["practice-admin", "front-desk"] })}
+          login={async () => undefined}
+          RouteComponent={RouteProbe}
+        />);
+      });
+      await act(async () => {
+        renderer.root.findByType(LoginScreen).props.onAuthenticated();
+        await Promise.resolve();
+      });
+      assert.equal(renderer.root.findByType(RouteProbe).props.path, requestedPath);
+      assert.equal(location.pathname, requestedPath);
+    } finally {
+      if (renderer) act(() => renderer.unmount());
+    }
+  }
+  Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
 });

@@ -282,12 +282,17 @@ function FramesDataSettings() {
   }, []);
 
   async function save() {
-    await saveFramesDataSubscriptionSettings({
-      practiceId: "odos-practice",
-      actorId: actingPractitionerId(),
-      settings,
-    });
-    setStatus("Saved");
+    setStatus("Saving…");
+    try {
+      await saveFramesDataSubscriptionSettings({
+        practiceId: "odos-practice",
+        actorId: actingPractitionerId(),
+        settings,
+      });
+      setStatus("Saved");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
   }
 
   return (
@@ -326,7 +331,7 @@ function FramesDataSettings() {
               />
             </label>
             {sourceFile ? <div className="text-sm text-white/60">{sourceFile}</div> : null}
-            <button className="sidebar-button w-fit" onClick={() => void save()}>Save</button>
+            <button className="sidebar-button w-fit" onClick={() => void save()} disabled={status === "Saving…"}>Save</button>
             {status ? <div className="text-sm text-white/60">{status}</div> : null}
           </div>
         </div>

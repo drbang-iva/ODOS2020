@@ -82,6 +82,7 @@ export function App({
   const view = useViewState((state) => state.view);
   const setView = useViewState((state) => state.setView);
   const previousPath = useRef(path);
+  const initialPath = useRef(window.location.pathname);
   const initialSearch = useRef(window.location.search);
   const initialClinicView = useRef(clinicViewFromSearch(initialSearch.current, { kind: "picker" }));
 
@@ -124,9 +125,11 @@ export function App({
       .then((whoami) => {
         if (!active) return;
         const destination = defaultHomePath(whoami.roles);
-        const clinicDeepLink = initialClinicView.current.kind !== "picker";
-        const destinationUrl = clinicDeepLink ? `${CLINIC_PATH}${initialSearch.current}` : destination;
-        const renderedPath = clinicDeepLink ? CLINIC_PATH : destination;
+        const requestedPath = initialPath.current;
+        const rootRequest = requestedPath === "/";
+        const clinicDeepLink = requestedPath === CLINIC_PATH && initialClinicView.current.kind !== "picker";
+        const renderedPath = rootRequest ? destination : requestedPath;
+        const destinationUrl = rootRequest ? destination : `${requestedPath}${initialSearch.current}`;
         setRoles(whoami.roles);
         if (clinicDeepLink) setView(initialClinicView.current);
         window.history.replaceState({}, "", destinationUrl);
@@ -325,15 +328,15 @@ export function RouteSwitch({
         ? <StaffSettings />
         : <main role="alert">Practice-admin access is required to manage staff.</main>;
     case "/settings/floor-config":
-      return <FloorConfigSettings />;
+      return <FloorConfigSettings canWrite={roles.includes("practice-admin") || roles.includes("front-desk")} />;
     case "/settings/vision-plan-templates":
-      return <VisionPlanTemplatesSettings />;
+      return <VisionPlanTemplatesSettings canWrite={roles.includes("practice-admin") || roles.includes("front-desk")} />;
     case "/settings/visit-types":
-      return <VisitTypeSettings />;
+      return <VisitTypeSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/suggested-diagnoses":
       return <DiagnosisSettings />;
     case "/settings/optical-pricing":
-      return <OpticalPricingSettings />;
+      return <OpticalPricingSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/lens-catalog":
       return <LensCatalogSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/plan-profiles":

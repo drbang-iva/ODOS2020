@@ -9,7 +9,7 @@ import {
   type PatientDemographicsDraft,
 } from "../lib/patient-registration";
 import { patientName } from "../lib/scheduler-appointment-ui";
-import { patientOverviewView, useViewState } from "../lib/view-state";
+import { openPatientOverview, useViewState } from "../lib/view-state";
 
 export function NewPatient() {
   const setView = useViewState((state) => state.setView);
@@ -21,8 +21,7 @@ export function NewPatient() {
 
   const openPatient = (patient: Patient) => {
     if (patient.id) {
-      window.history.replaceState({}, "", "/");
-      setView(patientOverviewView(patient.id));
+      openPatientOverview(patient.id, "replace");
     }
   };
 

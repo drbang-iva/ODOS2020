@@ -87,6 +87,10 @@ test("margin ledger client binds the requested period and surfaces endpoint erro
     () => fetchMarginLedger("2026-07", async () => new Response(JSON.stringify({ error: "margin.read role required" }), { status: 403 })),
     /margin\.read role required/,
   );
+  await assert.rejects(
+    () => fetchMarginLedger("2026-07", async () => new Response("", { status: 404 })),
+    /Margin ledger failed with HTTP 404/,
+  );
 });
 
 function line(overrides: Partial<MarginLine> & Pick<MarginLine, "id" | "item" | "vendor" | "state" | "estimatedMarginCents">): MarginLine {

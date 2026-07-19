@@ -15,7 +15,7 @@ import {
 export function AuditLog() {
   const role = auditRoleFromLocation();
   const dateRange = useMemo(() => defaultAuditDateRange(), []);
-  const [patientId, setPatientId] = useState("patient-x");
+  const [patientId, setPatientId] = useState("");
   const [actorId, setActorId] = useState("");
   const [from, setFrom] = useState(dateRange.from);
   const [to, setTo] = useState(dateRange.to);

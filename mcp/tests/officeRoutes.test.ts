@@ -160,10 +160,6 @@ class InMemoryFhirStore {
       const [system, code] = params.category.split("|");
       matches = matches.filter((resource) => (resource as Communication).category?.some((category) => category.coding?.some((coding) => coding.system === system && coding.code === code)));
     }
-    if (resourceType === "Provenance" && params.target) {
-      const targets = params.target.split(",");
-      matches = matches.filter((resource) => (resource as Provenance).target?.some((target) => targets.includes(target.reference ?? "")));
-    }
     return { resourceType: "Bundle", type: "searchset", entry: matches.map((resource) => ({ resource })) };
   }
 

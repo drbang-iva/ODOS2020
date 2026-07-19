@@ -54,6 +54,7 @@ import {
   fetchVisionBenefits,
   hasActiveApplicableBenefit,
 } from "../lib/patient-insurance";
+import { fhir } from "../lib/fhir";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -216,9 +217,13 @@ export function OpticalOrder({
       return;
     }
     let cancelled = false;
+    const options = {
+      authorization: fhir.authHeader(),
+      baseUrl: import.meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "",
+    };
     Promise.all([
-      fetchInsurance(patientReference),
-      fetchBenefits(patientReference),
+      fetchInsurance(patientReference, options),
+      fetchBenefits(patientReference, options),
     ]).then(([insurance, benefits]) => {
       if (!cancelled) {
         setInsuranceContext({ coverages: insurance.coverages, responses: benefits.responses });

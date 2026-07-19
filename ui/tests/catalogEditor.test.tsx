@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create } from "react-test-renderer";
 import type {
   CatalogAdapter,
   CatalogCapabilities,
@@ -147,4 +148,30 @@ test("CatalogEditor exposes one Save and Discard bar for a dirty singleton trans
   assert.match(html, />Discard</);
   assert.match(html, />Apply to draft</);
   assert.equal(html.match(/>Save</g)?.length, 1);
+});
+
+test("the draft-status toast cannot intercept the transaction Save control", async () => {
+  const transaction: CatalogDraftTransaction = {
+    dirty: true,
+    async commit() {
+      return { resourceType: "Basic", code: { text: "Fixture" } };
+    },
+    discard() {},
+  };
+  const renderer = create(
+    <CatalogEditor
+      descriptor={descriptor([ACTIVE], transaction)}
+      canWrite
+      initialState={{ items: [ACTIVE], selectedId: ACTIVE.id }}
+    />,
+  );
+  const apply = renderer.root.findAllByType("button").find((button) => button.children.includes("Apply to draft"));
+  assert.ok(apply);
+  await act(async () => apply.props.onClick());
+  const status = renderer.root.findByProps({ role: "status" });
+  assert.match(status.props.className, /pointer-events-none/);
+  assert.equal(
+    renderer.root.findAllByType("button").filter((button) => button.children.includes("Save")).length,
+    1,
+  );
 });

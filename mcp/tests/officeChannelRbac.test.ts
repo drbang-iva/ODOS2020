@@ -7,7 +7,7 @@ test("Clinic and Desk roles can exchange category-fenced Office messages and ack
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
     const expectedCriteria = new Map([
       ["Communication", "Communication?category=https://odos2020.com/fhir/CodeSystem/communication-category|internal-office"],
-      ["Provenance", "Provenance?activity=https://odos2020.com/fhir/CodeSystem/office-message-activity|acknowledged"],
+      ["Provenance", "Provenance?_tag=https://odos2020.com/fhir/CodeSystem/office-message-kind|acknowledgement"],
     ]);
     for (const resourceType of ["Communication", "Provenance"]) {
       const rule = policy.resource?.find((candidate) => candidate.resourceType === resourceType && candidate.criteria === expectedCriteria.get(resourceType));

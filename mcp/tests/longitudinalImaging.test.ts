@@ -30,11 +30,22 @@ class PhotoFhir {
   readonly provenances: Provenance[] = [];
   readonly responses: QuestionnaireResponse[] = [];
   readonly sources: string[] = [];
+  readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
 
   async search<T extends Media | QuestionnaireResponse>(
     resourceType: T["resourceType"],
+    params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
-    const rows = resourceType === "Media" ? this.media : this.responses;
+    this.searches.push({ resourceType, params: { ...params } });
+    let rows: Array<Media | QuestionnaireResponse> = resourceType === "Media" ? this.media : this.responses;
+    if (resourceType === "Media" && params.subject) {
+      rows = rows.filter((resource) => (resource as Media).subject?.reference === params.subject);
+    }
+    if (resourceType === "QuestionnaireResponse") {
+      if (params.patient) rows = rows.filter((resource) => (resource as QuestionnaireResponse).subject?.reference === params.patient);
+      if (params.status) rows = rows.filter((resource) => (resource as QuestionnaireResponse).status === params.status);
+      if (params.questionnaire) rows = rows.filter((resource) => (resource as QuestionnaireResponse).questionnaire === params.questionnaire);
+    }
     return {
       resourceType: "Bundle",
       type: "searchset",
@@ -79,6 +90,7 @@ test("longitudinal capture blocks before any Media write when cosmetic consent i
 test("consented capture tags Media to patient, series, session, and structure", async () => {
   const fhir = new PhotoFhir();
   fhir.responses.push(consent());
+  fhir.responses.push({ ...consent(), subject: { reference: "Patient/other" } });
   const result = await handleLongitudinalImagingCaptureRequest(deps(fhir), {
     authHeader: AUTH,
     body: BODY,
@@ -93,6 +105,10 @@ test("consented capture tags Media to patient, series, session, and structure", 
   assert.equal(fhir.media[0]?.content.data, DATA);
   assert.deepEqual(fhir.sources, ["mcp/longitudinal_imaging", "mcp/longitudinal_imaging"]);
   assert.equal((result.body as { defaultLens: string }).defaultLens, "compare");
+  const consentSearch = fhir.searches.find((search) => search.resourceType === "QuestionnaireResponse");
+  assert.equal(consentSearch?.params.patient, "Patient/p1");
+  assert.equal(consentSearch?.params.status, "completed");
+  assert.equal(consentSearch?.params.questionnaire, undefined);
 });
 
 test("timeline read returns patient images and suggests the same-series comparison", async () => {

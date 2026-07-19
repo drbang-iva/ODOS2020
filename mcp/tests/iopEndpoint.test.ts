@@ -78,6 +78,28 @@ test("IOP definition endpoint serves editable method data and CH field data", as
   assert.equal(body.definitions.cornealHysteresis.fields.value.unit, "corneobiomechanics score");
 });
 
+test("IOP validation names the missing field and lists valid method options", async () => {
+  const missingEyes = await handleIopCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: BODY,
+  });
+  assert.equal(missingEyes.status, 400);
+  assert.match((missingEyes.body as { error: string }).error, /^eyes: Required$/);
+
+  const invalidMethod = await handleIopCaptureRequest(deps().deps, {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      eyes: { OD: { value: 18, method: "UNKNOWN", date: "2026-07-09", timeOfDay: "09:15" } },
+    },
+  });
+  assert.equal(invalidMethod.status, 400);
+  assert.match(
+    (invalidMethod.body as { error: string }).error,
+    /OD method contains an unknown option: UNKNOWN\. Valid options: GAT, NCT, ICARE, TONOPEN, PALPATION, IOPCC, IOPG\./,
+  );
+});
+
 test("IOP endpoint persists neutral Observation and returns normal without an ICD code", async () => {
   const { created, deps: d } = deps();
 

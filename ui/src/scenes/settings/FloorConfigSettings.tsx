@@ -18,7 +18,6 @@ import {
 } from "../../lib/floor-config-settings";
 import { DEFAULT_FLOOR_BOARD_CONFIG } from "../../lib/floor-board";
 import { parseFloorState } from "../../lib/floor-state";
-import { useRole } from "../../lib/role-context";
 import {
   loadFloorConfigSingleton,
   publishFloorBoardConfig,
@@ -48,11 +47,9 @@ type LoadedFloorSettings = {
   onBoardStationIds: ReadonlySet<string>;
 };
 
-export function FloorConfigSettings() {
-  const { role } = useRole();
+export function FloorConfigSettings({ canWrite }: { canWrite: boolean }) {
   const [loaded, setLoaded] = useState<LoadedFloorSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const canWrite = role === "practice-admin" || role === "front-desk";
 
   useEffect(() => {
     let cancelled = false;

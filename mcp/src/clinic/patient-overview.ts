@@ -150,9 +150,17 @@ export async function loadPatientOverview(
     encounterParams._id = diagnosisEncounterIds.join(",");
   }
   const encounters = await searchAll<Encounter>(fhir, "Encounter", encounterParams);
-  const encounterReferences = encounters.flatMap((encounter) => encounter.id ? [`Encounter/${encounter.id}`] : []);
-  const provenances = encounterReferences.length
-    ? await searchAll<Provenance>(fhir, "Provenance", { target: encounterReferences.join(","), _count: "100", _sort: "-recorded" })
+  const encounterReferences = new Set(encounters.flatMap((encounter) =>
+    encounter.id ? [`Encounter/${encounter.id}`] : [],
+  ));
+  const provenances = encounters.length
+    ? (await searchAll<Provenance>(fhir, "Provenance", {
+        patient: patientReference,
+        _count: "100",
+        _sort: "recorded",
+      })).filter((provenance) => provenance.target.some((target) =>
+        encounterReferences.has(target.reference ?? ""),
+      ))
     : [];
 
   return projectOverview({

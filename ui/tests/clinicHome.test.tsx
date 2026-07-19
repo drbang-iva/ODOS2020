@@ -114,6 +114,7 @@ test("Vite serves Desk and Clinic navigations from the SPA while preserving thei
     assert.match(proxy, /req\.headers\.accept \|\| ""/);
     assert.match(proxy, /return "\/index\.html"/);
   }
+  assert.match(config, /"\/practice": \{ target: mcpTarget, changeOrigin: true \}/);
 });
 
 function fixture(flow: ClinicFlowRow[]): ClinicSummary {

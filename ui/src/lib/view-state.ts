@@ -10,6 +10,19 @@ export function patientOverviewView(patientId: string): ViewState {
   return { kind: "overview", patientId };
 }
 
+export function openPatientOverview(patientId: string, historyMode: "push" | "replace" = "push"): void {
+  const path = `/clinic?patientId=${encodeURIComponent(patientId)}`;
+  if (typeof window !== "undefined") {
+    if (historyMode === "replace") {
+      window.history.replaceState({}, "", path);
+    } else {
+      window.history.pushState({}, "", path);
+    }
+    window.dispatchEvent(new Event("popstate"));
+  }
+  useViewState.getState().setView(patientOverviewView(patientId));
+}
+
 interface ViewStateStore {
   view: ViewState;
   setView: (view: ViewState) => void;

@@ -69,6 +69,8 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
 | `ODOS_SETUP_INTERACTIVE_ACK` | no | Set to `human-supervised` only when a human is intentionally running without a TTY. |
+| `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
+| `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
 
 ## Setup Wizard
@@ -131,6 +133,17 @@ Start the two checked-in launch configurations in `.claude/launch.json`:
 |---|---|---|
 | `odos-mcp` | `http://localhost:3333` | ODOS service routes used by Desk, Statements, and Clinic. |
 | `odos-ui` | `http://localhost:5173` | Browser UI. |
+
+The `odos-mcp` launch must run with `ODOS_MCP_TRANSPORT=sse`; otherwise it starts only the stdio MCP transport and does not expose the browser-facing HTTP routes. Generate the local SMART signing key once before starting the backend:
+
+```bash
+mkdir -p .odos/keys
+odos certs generate --purpose smart-signing --out .odos/keys/smart-signing.pem
+chmod 600 .odos/keys/smart-signing.pem
+export ODOS_SMART_SIGNING_KEY_PATH="$PWD/.odos/keys/smart-signing.pem"
+```
+
+Keep the private key outside git and preserve its `0600` permissions. The service fails closed when a signing-required action has no usable key.
 
 Open `http://localhost:5173`, then sign in through the ODOS login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` service identity; no password is stored in this repository.
 

@@ -38,16 +38,37 @@ test("the settings index route reaches the shared settings stub", () => {
 });
 
 test("the optical-pricing route keeps frame and contact-lens pricing separate from the Lens Catalog", () => {
-  const html = renderToStaticMarkup(
-    <RoleProvider>
-      <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" />
-    </RoleProvider>,
+  const admin = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["practice-admin"]} />,
   );
-  assert.match(html, /Optical pricing/);
-  assert.match(html, /Frame pricing/);
-  assert.match(html, /Contact lens pricing/);
-  assert.doesNotMatch(html, />Lens pricing</);
-  assert.match(html, /Read only. Practice-admin access is required/);
+  const desk = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/optical-pricing" roles={["front-desk"]} />,
+  );
+  assert.match(admin, /Optical pricing/);
+  assert.match(admin, /Frame pricing/);
+  assert.match(admin, /Contact lens pricing/);
+  assert.doesNotMatch(admin, />Lens pricing</);
+  assert.doesNotMatch(admin, /Read only. Practice-admin access is required/);
+  assert.match(desk, /Read only. Practice-admin access is required/);
+});
+
+test("the four round-two settings screens derive writes only from App roles", () => {
+  for (const scene of [
+    "OpticalPricingSettings.tsx",
+    "FloorConfigSettings.tsx",
+    "VisitTypeSettings.tsx",
+    "VisionPlanTemplatesSettings.tsx",
+  ]) {
+    const source = readFileSync(new URL(`../src/scenes/settings/${scene}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /useRole\(/, scene);
+    assert.match(source, /canWrite/, scene);
+  }
+});
+
+test("audit log starts with no patient filter", () => {
+  const source = readFileSync(new URL("../src/scenes/AuditLog.tsx", import.meta.url), "utf8");
+  assert.match(source, /useState\(""\)/);
+  assert.doesNotMatch(source, /useState\("patient-x"\)/);
 });
 
 test("the Lens Catalog route reaches its dedicated manager with practice-admin write gating", () => {

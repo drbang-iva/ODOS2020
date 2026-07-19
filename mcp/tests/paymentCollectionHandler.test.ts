@@ -161,7 +161,7 @@ test("recorded optical collection threads date and verified staff into its Invoi
       amountCents: 12_345,
       tender: "CASH",
       opticalOrder: {
-        patientReference: "Patient/patient-1",
+        patientReference: "patient-1",
         visionPrescriptionReference: "VisionPrescription/rx-1",
         orderHcpcsCode: "V2020",
         charges: [{ id: "charge-1", code: "V2020", feeCents: 12_345 }],

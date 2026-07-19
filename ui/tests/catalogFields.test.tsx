@@ -7,6 +7,7 @@ import {
   CATALOG_COLOR_PALETTE,
   CatalogFieldKit,
   CurrencyInput,
+  WeeklyHoursEditor,
   type CatalogFieldDescriptor,
 } from "../src/components/settings/CatalogFields";
 import { packageDescriptor } from "../src/components/commercial/PackageDefinitionsSettings";
@@ -105,6 +106,17 @@ test("currency control displays dollars, emits integer cents, and formats two de
   assert.equal(renderer.root.findByType("input").props.value, "425.00");
   assert.match(JSON.stringify(renderer.toJSON()), /\$/);
   act(() => renderer.unmount());
+});
+
+test("weekly hours uses positive Open semantics and checking a closed day adds working hours", () => {
+  let nextHours: Record<string, Array<{ start: string; end: string }>> | undefined;
+  const renderer = create(<WeeklyHoursEditor hours={{}} onChange={(hours) => { nextHours = hours; }} />);
+  const monday = renderer.root.findAllByType("input")[0];
+  assert.equal(monday.props.type, "checkbox");
+  assert.equal(monday.props.checked, false);
+  assert.match(JSON.stringify(renderer.toJSON()), /Open/);
+  act(() => monday.props.onChange({ target: { checked: true } }));
+  assert.deepEqual(nextHours?.mon, [{ start: "09:00", end: "17:00" }]);
 });
 
 test("every settings cents field accepts $425.00 through the currency kernel and stores 42500 cents", () => {

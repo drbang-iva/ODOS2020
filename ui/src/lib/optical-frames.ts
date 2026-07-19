@@ -1,4 +1,5 @@
 import type { AuditEvent, Basic, Binary, Bundle, DeviceDefinition, Provenance } from "@medplum/fhirtypes";
+import { assertTransactionSuccess } from "./encounter-bundles";
 import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
@@ -185,6 +186,10 @@ export async function saveFramesDataSubscriptionSettings(input: {
   readonly settings: FramesDataSubscriptionSettings;
 }): Promise<void> {
   const now = new Date().toISOString();
+  const username = input.settings.username.trim();
+  if (input.settings.active && !username) {
+    throw new Error("Frames Data username is required when the subscription is active.");
+  }
   const settingsBasic: Basic = {
     resourceType: "Basic",
     code: {
@@ -197,7 +202,9 @@ export async function saveFramesDataSubscriptionSettings(input: {
     },
     subject: { reference: `Organization/${input.practiceId}` },
     extension: [
-      extension(EXTENSION_URLS.framesDataUsername, { valueString: input.settings.username }),
+      ...(username
+        ? [extension(EXTENSION_URLS.framesDataUsername, { valueString: username })]
+        : []),
       extension(EXTENSION_URLS.framesDataSubscriptionActive, { valueBoolean: input.settings.active }),
       ...(input.settings.lastIngestAt
         ? [extension(EXTENSION_URLS.framesDataLastIngestAt, { valueDateTime: input.settings.lastIngestAt })]
@@ -225,7 +232,7 @@ export async function saveFramesDataSubscriptionSettings(input: {
     target: [{ reference: `Organization/${input.practiceId}` }],
     agent: [{ who: { reference: `Practitioner/${input.actorId}` } }],
   };
-  await fhir.executeTransaction(
+  const response = await fhir.executeTransaction(
     {
       resourceType: "Bundle",
       type: "transaction",
@@ -237,6 +244,7 @@ export async function saveFramesDataSubscriptionSettings(input: {
     },
     "practice.frames-data-subscription",
   );
+  assertTransactionSuccess(response);
 }
 
 export function canExportFrameCatalogCsv(role: RoleId): boolean {

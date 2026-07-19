@@ -15,6 +15,7 @@ import type {
 } from "@medplum/fhirtypes";
 import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../claims/claimmd-fhir.js";
 import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibility-invoice.js";
+import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
 import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
@@ -262,14 +263,24 @@ export function buildStatementSnapshot(input: {
 
   const invoices = input.invoices.map((invoice) => {
     const invoiceReference = invoiceReferenceOf(invoice);
-    if (invoice.status !== "issued") {
-      throw new StatementValidationError(`${invoiceReference} is ${invoice.status}, not issued.`);
+    if (invoice.status !== "issued" && invoice.status !== "balanced") {
+      throw new StatementValidationError(`${invoiceReference} is ${invoice.status}, not issued or balanced.`);
     }
     if (invoice.subject?.reference !== patientReference) {
       throw new StatementValidationError(`${invoiceReference} does not belong to ${patientReference}.`);
     }
     const totals = reconcileInvoiceTotals(invoice);
-    const paymentsAppliedCents = payments.reduce((sum, payment) => sum + allocationCents(payment, invoiceReference), 0);
+    const carriesRecordOnlyTender = invoice.extension?.some(
+      (extension) => extension.url === ODOS_PAYMENT_TENDER_EXTENSION_URL,
+    ) ?? false;
+    if (carriesRecordOnlyTender && invoice.status !== "balanced") {
+      throw new StatementValidationError(
+        `${invoiceReference} carries a record-only tender but is not balanced; its paid amount cannot be determined safely.`,
+      );
+    }
+    const paymentsAppliedCents = carriesRecordOnlyTender
+      ? totals.netCents
+      : payments.reduce((sum, payment) => sum + allocationCents(payment, invoiceReference), 0);
     if (paymentsAppliedCents > totals.netCents) {
       throw new StatementValidationError(
         `${invoiceReference} has ${paymentsAppliedCents} paid cents against ${totals.netCents} net cents.`,

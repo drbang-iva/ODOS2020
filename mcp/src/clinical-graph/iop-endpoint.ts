@@ -136,7 +136,9 @@ export async function handleIopCaptureRequest(
 
   const parsed = iopRequestSchema.safeParse(input.body);
   if (!parsed.success) {
-    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid IOP request." } };
+    const issue = parsed.error.issues[0];
+    const field = issue?.path.join(".");
+    return { status: 400, body: { error: issue ? `${field || "IOP request"}: ${issue.message}` : "Invalid IOP request." } };
   }
 
   const definitions = resolveIopDefinitions(deps.findingDefinitions?.());
@@ -342,8 +344,10 @@ function validateOption(
   label: string,
 ): string | undefined {
   if (!value) return undefined;
-  const allowed = new Set(fieldOptions(definition, fieldKey).map((option) => option.code));
-  return allowed.has(value) ? undefined : `${label} contains an unknown option: ${value}.`;
+  const allowed = fieldOptions(definition, fieldKey).map((option) => option.code);
+  return allowed.includes(value)
+    ? undefined
+    : `${label} contains an unknown option: ${value}. Valid options: ${allowed.join(", ")}.`;
 }
 
 function iopFindingValue(payload: IopEyePayload): FindingValue {

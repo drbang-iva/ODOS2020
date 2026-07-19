@@ -317,7 +317,9 @@ function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: 
       selectedOpenChargeLineIds: body.selectedOpenChargeLineIds as string[],
       amountCents: body.amountCents,
       tender: body.tender,
-      ...(body.opticalOrder ? { opticalOrder: body.opticalOrder as OpticalOrderDraft } : {}),
+      ...(body.opticalOrder ? {
+        opticalOrder: { ...body.opticalOrder as OpticalOrderDraft, patientReference },
+      } : {}),
     },
   };
 }

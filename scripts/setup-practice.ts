@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
-import type { AccessPolicy, Practitioner, Project, ProjectMembership, User } from "@medplum/fhirtypes";
+import type { AccessPolicy, Basic, Practitioner, Project, ProjectMembership, Schedule, User } from "@medplum/fhirtypes";
 import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 import {
@@ -19,6 +19,12 @@ import {
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
+import { buildSchedulingResource } from "../mcp/src/fhir/schedulingResource.js";
+import {
+  buildSchedulingPracticeConfigResource,
+  ODOS_SCHEDULING_CONFIG_CODE,
+  ODOS_SCHEDULING_CONFIG_SYSTEM,
+} from "../mcp/src/scheduling/practice-config.js";
 
 export const SETUP_WIZARD_HEADER =
   "Run ODOS on your own hardware. Your patients, your machines, your data.";
@@ -50,6 +56,9 @@ export interface SetupPracticeState {
   projectId?: string;
   practitionerCreated?: boolean;
   practitionerId?: string;
+  schedulingProvisioned?: boolean;
+  scheduleId?: string;
+  schedulingConfigId?: string;
   accessPolicyCreated?: boolean;
   accessPolicyId?: string;
   accessPolicyAssigned?: boolean;
@@ -67,10 +76,21 @@ export interface SetupPracticeAdapter {
   isPracticeProvisioned(config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean>;
   createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession>;
   createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner>;
+  createSchedulingFoundation(input: {
+    config: SetupPracticeConfig;
+    session: AdminSession;
+    practitioner: Practitioner;
+  }): Promise<{
+    schedule: Schedule;
+    scheduleCreated: boolean;
+    practiceConfig: Basic;
+    practiceConfigCreated: boolean;
+  }>;
   createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
     role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
+    updated: boolean;
   }[]>;
   grantFirstAdminRoles(input: {
     config: SetupPracticeConfig;
@@ -188,6 +208,35 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     );
   }
 
+  if (!state.schedulingProvisioned) {
+    const scheduling = await adapter.createSchedulingFoundation({ config, session, practitioner });
+    if (!scheduling.schedule.id || !scheduling.practiceConfig.id) {
+      throw new Error("Setup wizard scheduling foundation returned a resource without an id.");
+    }
+    state = persistSetupState(config.statePath, {
+      ...state,
+      schedulingProvisioned: true,
+      scheduleId: scheduling.schedule.id,
+      schedulingConfigId: scheduling.practiceConfig.id,
+    });
+    if (scheduling.scheduleCreated) {
+      await emit(buildSetupAuditRow({
+        eventType: "create",
+        resourceType: "Schedule",
+        resourceId: scheduling.schedule.id,
+        actionReason: SETUP_WIZARD_ACTION_REASON,
+      }));
+    }
+    if (scheduling.practiceConfigCreated) {
+      await emit(buildSetupAuditRow({
+        eventType: "create",
+        resourceType: "Basic",
+        resourceId: scheduling.practiceConfig.id,
+        actionReason: SETUP_WIZARD_ACTION_REASON,
+      }));
+    }
+  }
+
   const resolvedPolicies = await adapter.createFirstAdminAccessPolicies(config, session);
   const allPolicies = new Map<PracticeRoleId, AccessPolicy>();
   for (const resolvedPolicy of resolvedPolicies) {
@@ -195,10 +244,10 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
       throw new Error(`Setup wizard ${resolvedPolicy.role} AccessPolicy create returned no id.`);
     }
     allPolicies.set(resolvedPolicy.role, resolvedPolicy.policy);
-    if (resolvedPolicy.created) {
+    if (resolvedPolicy.created || resolvedPolicy.updated) {
       await emit(
         buildSetupAuditRow({
-          eventType: "create",
+          eventType: resolvedPolicy.created ? "create" : "update",
           resourceType: "AccessPolicy",
           resourceId: resolvedPolicy.policy.id,
           actionReason: SETUP_WIZARD_ACTION_REASON,
@@ -258,6 +307,8 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
 export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   readonly admins: AdminSession[] = [];
   readonly practitioners: Practitioner[] = [];
+  readonly schedules: Schedule[] = [];
+  readonly schedulingConfigs: Basic[] = [];
   readonly policies: AccessPolicy[] = [];
   readonly assignments: { id: string; practitionerId?: string; policyId?: string }[] = [];
   readonly membership: ProjectMembership = {
@@ -274,7 +325,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
   practiceProvisioned = false;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
-    return this.practiceProvisioned || Boolean(state.completed);
+    return this.practiceProvisioned || Boolean(state.completed && state.schedulingProvisioned);
   }
 
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
@@ -305,6 +356,28 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return practitioner;
   }
 
+  async createSchedulingFoundation(input: {
+    config: SetupPracticeConfig;
+    practitioner: Practitioner;
+  }): Promise<{
+    schedule: Schedule;
+    scheduleCreated: boolean;
+    practiceConfig: Basic;
+    practiceConfigCreated: boolean;
+  }> {
+    const schedule = {
+      ...buildFirstAdminSchedule(input.config, input.practitioner),
+      id: `schedule-${this.schedules.length + 1}`,
+    };
+    this.schedules.push(schedule);
+    const practiceConfig = {
+      ...buildFirstSchedulingConfig(schedule.id),
+      id: `scheduling-config-${this.schedulingConfigs.length + 1}`,
+    };
+    this.schedulingConfigs.push(practiceConfig);
+    return { schedule, scheduleCreated: true, practiceConfig, practiceConfigCreated: true };
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -312,6 +385,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
+    updated: boolean;
   }[]> {
     return this.resolveCanonicalPolicies(async (role) => {
       const policy: AccessPolicy = {
@@ -376,9 +450,14 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
         throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
       }
       if (existing[0]) {
-        resolved.push({ role: roleId, policy: existing[0], created: false });
+        const desired = buildMedplumAccessPolicy(role);
+        const updated = accessPolicyNeedsReconciliation(existing[0], desired);
+        if (updated) {
+          Object.assign(existing[0], reconciledAccessPolicy(existing[0], desired));
+        }
+        resolved.push({ role: roleId, policy: existing[0], created: false, updated });
       } else {
-        resolved.push({ role: roleId, policy: await createPolicy(roleId), created: true });
+        resolved.push({ role: roleId, policy: await createPolicy(roleId), created: true, updated: false });
       }
     }
     return resolved;
@@ -395,7 +474,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   private audit?: ReturnType<typeof createLiveOdosAuditRuntime>;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
-    return Boolean(state.completed);
+    return Boolean(state.completed && state.schedulingProvisioned);
   }
 
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
@@ -456,6 +535,50 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     });
   }
 
+  async createSchedulingFoundation(input: {
+    config: SetupPracticeConfig;
+    practitioner: Practitioner;
+  }): Promise<{
+    schedule: Schedule;
+    scheduleCreated: boolean;
+    practiceConfig: Basic;
+    practiceConfigCreated: boolean;
+  }> {
+    const practitionerReference = `Practitioner/${input.practitioner.id}`;
+    const schedules = (await searchAll<Schedule>(this.client(), "Schedule", {
+      actor: practitionerReference,
+      _count: "100",
+    })).filter((schedule) => schedule.actor?.some((actor) => actor.reference === practitionerReference));
+    if (schedules.length > 1) {
+      throw new Error(`Expected at most one first-admin Schedule; found ${schedules.length}.`);
+    }
+    const schedule = schedules[0] ?? await this.client().create<Schedule>(
+      buildFirstAdminSchedule(input.config, input.practitioner),
+    );
+    if (!schedule.id) {
+      throw new Error("Setup wizard Schedule create returned no id.");
+    }
+
+    const configs = (await searchAll<Basic>(this.client(), "Basic", {
+      code: `${ODOS_SCHEDULING_CONFIG_SYSTEM}|${ODOS_SCHEDULING_CONFIG_CODE}`,
+      _count: "100",
+    })).filter((basic) => basic.code?.coding?.some((coding) =>
+      coding.system === ODOS_SCHEDULING_CONFIG_SYSTEM && coding.code === ODOS_SCHEDULING_CONFIG_CODE
+    ));
+    if (configs.length > 1) {
+      throw new Error(`Expected at most one scheduling-config Basic; found ${configs.length}.`);
+    }
+    const practiceConfig = configs[0] ?? await this.client().create<Basic>(
+      buildFirstSchedulingConfig(schedule.id),
+    );
+    return {
+      schedule,
+      scheduleCreated: schedules.length === 0,
+      practiceConfig,
+      practiceConfigCreated: configs.length === 0,
+    };
+  }
+
   async createFirstAdminAccessPolicies(
     _config: SetupPracticeConfig,
     session: AdminSession,
@@ -463,6 +586,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
+    updated: boolean;
   }[]> {
     const resolved = [];
     for (const roleId of PRACTICE_ROLE_IDS) {
@@ -475,7 +599,16 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
         throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
       }
       if (existing[0]) {
-        resolved.push({ role: roleId, policy: existing[0], created: false });
+        const desired = buildMedplumAccessPolicy(role);
+        const updated = accessPolicyNeedsReconciliation(existing[0], desired);
+        const policy = updated
+          ? await this.serviceClient().update<AccessPolicy>(
+              "AccessPolicy",
+              requireConfigValue(existing[0].id, `${policyName} AccessPolicy id`),
+              reconciledAccessPolicy(existing[0], desired),
+            )
+          : existing[0];
+        resolved.push({ role: roleId, policy, created: false, updated });
       } else {
         const policy = buildMedplumAccessPolicy(role);
         resolved.push({
@@ -488,6 +621,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
             },
           }),
           created: true,
+          updated: false,
         });
       }
     }
@@ -576,6 +710,71 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     });
     return this.audit;
   }
+}
+
+function accessPolicyNeedsReconciliation(existing: AccessPolicy, desired: AccessPolicy): boolean {
+  const roleTag = desired.meta?.tag?.[0];
+  const hasRoleTag = roleTag
+    ? existing.meta?.tag?.some((tag) => tag.system === roleTag.system && tag.code === roleTag.code) === true
+    : true;
+  return !hasRoleTag || existing.name !== desired.name || JSON.stringify(existing.resource ?? []) !== JSON.stringify(desired.resource ?? []);
+}
+
+function reconciledAccessPolicy(existing: AccessPolicy, desired: AccessPolicy): AccessPolicy {
+  const desiredRoleTag = desired.meta?.tag?.[0];
+  const preservedTags = (existing.meta?.tag ?? []).filter((tag) => tag.system !== desiredRoleTag?.system);
+  return {
+    ...existing,
+    name: desired.name,
+    meta: {
+      ...existing.meta,
+      tag: [...preservedTags, ...(desiredRoleTag ? [desiredRoleTag] : [])],
+    },
+    resource: desired.resource,
+  };
+}
+
+function buildFirstAdminSchedule(
+  config: SetupPracticeConfig,
+  practitioner: Practitioner,
+): Schedule {
+  if (!practitioner.id) {
+    throw new Error("Setup wizard cannot create a Schedule for a Practitioner without an id.");
+  }
+  return buildSchedulingResource({
+    kind: "provider",
+    actorReference: `Practitioner/${practitioner.id}`,
+    actorDisplay: practitioner.name?.[0]?.text ?? config.adminName,
+    disciplines: ["eyecare"],
+    comment: "First-admin provider schedule",
+  });
+}
+
+function buildFirstSchedulingConfig(scheduleId: string): Basic {
+  const scheduleReference = `Schedule/${scheduleId}`;
+  const weekdayHours = [{ start: "09:00", end: "17:00" }];
+  return buildSchedulingPracticeConfigResource({
+    timezoneOffset: localTimezoneOffset(),
+    defaultWeeklyHours: {
+      mon: weekdayHours,
+      tue: weekdayHours,
+      wed: weekdayHours,
+      thu: weekdayHours,
+      fri: weekdayHours,
+    },
+    weeklyHoursBySchedule: {},
+    blocks: [],
+    offices: [{ id: "main", name: "Main Office", slotMinutes: 30 }],
+    officeBySchedule: { [scheduleReference]: "main" },
+    defaultSlotMinutes: 30,
+  });
+}
+
+function localTimezoneOffset(now = new Date()): string {
+  const minutes = -now.getTimezoneOffset();
+  const sign = minutes >= 0 ? "+" : "-";
+  const absolute = Math.abs(minutes);
+  return `${sign}${String(Math.floor(absolute / 60)).padStart(2, "0")}:${String(absolute % 60).padStart(2, "0")}`;
 }
 
 function firstAdminGrant(target: string) {

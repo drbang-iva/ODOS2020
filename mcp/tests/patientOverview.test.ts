@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type {
   Bundle,
@@ -13,6 +14,8 @@ import type {
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
+import express from "express";
+import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import {
   loadPatientOverview,
   loadPatientStickyNoteHistory,
@@ -32,7 +35,7 @@ test("patient overview projects real snapshot resources and newest-first encount
   fake.add({ resourceType: "Observation", id: "smoking", status: "final", code: { text: "Tobacco smoking status" }, subject: { reference: "Patient/p1" }, valueCodeableConcept: { text: "Former smoker" } } satisfies Observation);
   fake.add(encounter("older", "2025-06-01T14:00:00Z"));
   fake.add(encounter("newer", "2026-06-01T14:00:00Z"));
-  fake.add({ resourceType: "Provenance", id: "signed-newer", target: [{ reference: "Encounter/newer" }], recorded: "2026-06-01T14:00:00Z", agent: [{ who: { display: "Dr. Clinician" } }] } satisfies Provenance);
+  fake.add({ resourceType: "Provenance", id: "signed-newer", target: [{ reference: "Encounter/newer" }, { reference: "Patient/p1" }], recorded: "2026-06-01T14:00:00Z", agent: [{ who: { display: "Dr. Clinician" } }] } satisfies Provenance);
   fake.add(condition("dx-old", "Older diagnosis", { category: "encounter-diagnosis", encounterId: "older", code: "DX-OLD" }));
   fake.add(condition("dx-new", "Newer diagnosis", { category: "encounter-diagnosis", encounterId: "newer", code: "DX-NEW" }));
   const resolved = condition("dx-resolved", "Resolved historical diagnosis", { category: "encounter-diagnosis", encounterId: "older", code: "DX-RESOLVED" });
@@ -51,6 +54,69 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.deepEqual(overview.visits.map((visit) => visit.diagnoses[0]?.code), ["DX-NEW", "DX-OLD"]);
   assert.deepEqual(overview.visits[1]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-OLD", "DX-RESOLVED"]);
   assert.deepEqual(overview.visits.map((visit) => visit.status), ["Final", "Preliminary"]);
+  const provenanceSearch = fake.searches.find((row) => row.resourceType === "Provenance");
+  assert.equal(provenanceSearch?.params.target, undefined);
+  assert.equal(provenanceSearch?.params.patient, "Patient/p1");
+  assert.equal(provenanceSearch?.params.recorded, undefined);
+  assert.equal(provenanceSearch?.params._sort, "recorded");
+});
+
+test("patient overview route stays available with more than 1000 other-patient Provenance rows", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("signed-visit", "2026-06-01T14:00:00Z"));
+  fake.add({
+    resourceType: "Provenance",
+    id: "signed-visit-proof",
+    target: [{ reference: "Encounter/signed-visit" }, { reference: "Patient/p1" }],
+    recorded: "2026-06-01T14:00:00Z",
+    agent: [{ who: { display: "Dr. Clinician" } }],
+  } satisfies Provenance);
+  for (let index = 0; index < 1_001; index += 1) {
+    fake.add({
+      resourceType: "Provenance",
+      id: `other-patient-${index}`,
+      target: [{ reference: `Observation/other-${index}` }, { reference: `Patient/other-${index}` }],
+      recorded: "2026-06-01T14:30:00Z",
+      agent: [{ who: { reference: "Practitioner/other" } }],
+    } satisfies Provenance);
+  }
+
+  const app = express();
+  registerClinicRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async (header) => header === "Bearer good"
+      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: fake as never }
+      : null,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as { visits: Array<{ encounterId: string; status: string }> };
+    assert.deepEqual(body.visits, [{
+      encounterId: "signed-visit",
+      date: "2026-06-01T14:00:00Z",
+      provider: "Dr. Clinician",
+      facility: "Practice location",
+      visitType: "Comprehensive exam",
+      status: "Final",
+      diagnoses: [],
+    }]);
+    assert.equal(
+      fake.searches.find((row) => row.resourceType === "Provenance")?.params.patient,
+      "Patient/p1",
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test("empty snapshot stays honestly empty and visit filters issue distinct FHIR searches", async () => {
@@ -205,6 +271,11 @@ class FakeFhir {
       const requestedTypes = params.type.split(",");
       rows = rows.filter((resource) => (resource as Encounter).type?.some((concept) =>
         concept.coding?.some((coding) => requestedTypes.includes(`${coding.system}|${coding.code}`)),
+      ));
+    }
+    if (resourceType === "Provenance" && params.patient) {
+      rows = rows.filter((resource) => (resource as Provenance).target.some(
+        (target) => target.reference === params.patient,
       ));
     }
     return bundle(rows);
