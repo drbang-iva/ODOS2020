@@ -20,7 +20,7 @@ type SearchSpec = {
 const EXPECTED_DIRECT_SEARCH_CALLS = 79;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
-  "src/clinic/clinic-summary.ts:231": [
+  "src/clinic/clinic-summary.ts:233": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Encounter", "date", "_count", "_sort"),
     spec("Task", "code", "_count", "_sort"),
@@ -65,7 +65,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/index.ts:2627": DYNAMIC_FHIR_SEARCH,
   "src/index.ts:4225": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/index.ts:4247": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/office/office-channel.ts:184": [
+  "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
   ],

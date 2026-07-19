@@ -106,6 +106,14 @@ test("CatalogEditor read-only mode keeps list visible and removes editor afforda
   assert.doesNotMatch(html, /role="dialog"/);
 });
 
+test("CatalogEditor read-only empty state hides preset mutation actions", () => {
+  const html = renderToStaticMarkup(
+    <CatalogEditor descriptor={descriptor()} canWrite={false} initialState={{ items: [] }} />,
+  );
+  assert.match(html, /No fixture catalog yet/);
+  assert.doesNotMatch(html, /Use starter presets/);
+});
+
 test("CatalogEditor groups active catalogs, collapses zero-active groups, and opens a settings drawer", () => {
   const inactive: FixtureItem = {
     ...ACTIVE,
@@ -151,6 +159,8 @@ test("CatalogEditor exposes one Save and Discard bar for a dirty singleton trans
 });
 
 test("the draft-status toast cannot intercept the transaction Save control", async () => {
+  let resolveSave!: (item: FixtureItem) => void;
+  const pendingSave = new Promise<FixtureItem>((resolve) => { resolveSave = resolve; });
   const transaction: CatalogDraftTransaction = {
     dirty: true,
     async commit() {
@@ -158,16 +168,27 @@ test("the draft-status toast cannot intercept the transaction Save control", asy
     },
     discard() {},
   };
+  const asyncDescriptor = descriptor([ACTIVE], transaction);
+  asyncDescriptor.adapter.save = () => pendingSave;
   const renderer = create(
     <CatalogEditor
-      descriptor={descriptor([ACTIVE], transaction)}
+      descriptor={asyncDescriptor}
       canWrite
       initialState={{ items: [ACTIVE], selectedId: ACTIVE.id }}
     />,
   );
   const apply = renderer.root.findAllByType("button").find((button) => button.children.includes("Apply to draft"));
   assert.ok(apply);
-  await act(async () => apply.props.onClick());
+  let saveRequest!: Promise<void>;
+  await act(async () => {
+    saveRequest = apply.props.onClick();
+    await Promise.resolve();
+  });
+  assert.equal(renderer.root.findAllByProps({ role: "status" }).length, 0);
+  await act(async () => {
+    resolveSave(ACTIVE);
+    await saveRequest;
+  });
   const status = renderer.root.findByProps({ role: "status" });
   assert.match(status.props.className, /pointer-events-none/);
   assert.equal(

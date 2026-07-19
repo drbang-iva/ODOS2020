@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create } from "react-test-renderer";
 import { RouteSwitch } from "../src/App";
 import { RoleProvider } from "../src/lib/role-context";
 
@@ -52,23 +53,51 @@ test("the optical-pricing route keeps frame and contact-lens pricing separate fr
   assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
-test("the four round-two settings screens derive writes only from App roles", () => {
-  for (const scene of [
-    "OpticalPricingSettings.tsx",
-    "FloorConfigSettings.tsx",
-    "VisitTypeSettings.tsx",
-    "VisionPlanTemplatesSettings.tsx",
-  ]) {
-    const source = readFileSync(new URL(`../src/scenes/settings/${scene}`, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /useRole\(/, scene);
-    assert.match(source, /canWrite/, scene);
+test("the four round-two settings routes render write controls only for authorized App roles", async () => {
+  const cases: Array<{
+    path: string;
+    writeRoles: Array<"practice-admin" | "front-desk" | "clinician">;
+    readRoles: Array<"practice-admin" | "front-desk" | "clinician">;
+    writeControl: RegExp;
+  }> = [
+    { path: "/settings/optical-pricing", writeRoles: ["practice-admin"], readRoles: ["front-desk"], writeControl: /New contact lens price/ },
+    { path: "/settings/floor-config", writeRoles: ["front-desk"], readRoles: ["clinician"], writeControl: /\+ Add .*station/ },
+    { path: "/settings/visit-types", writeRoles: ["practice-admin"], readRoles: ["front-desk"], writeControl: /Use starter categories/ },
+    { path: "/settings/vision-plan-templates", writeRoles: ["front-desk"], readRoles: ["clinician"], writeControl: /\+ Add .*plan template/ },
+  ];
+  for (const route of cases) {
+    const writable = await renderAsyncRoute(route.path, route.writeRoles);
+    const readOnly = await renderAsyncRoute(route.path, route.readRoles);
+    assert.match(writable, route.writeControl, `${route.path} authorized UI`);
+    assert.doesNotMatch(readOnly, route.writeControl, `${route.path} read-only UI`);
   }
 });
 
-test("audit log starts with no patient filter", () => {
-  const source = readFileSync(new URL("../src/scenes/AuditLog.tsx", import.meta.url), "utf8");
-  assert.match(source, /useState\(""\)/);
-  assert.doesNotMatch(source, /useState\("patient-x"\)/);
+test("audit log renders an empty patient filter", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { location: { search: "?role=auditor" } },
+  });
+  globalThis.fetch = async () => new Response(JSON.stringify({ rows: [] }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+  try {
+    let renderer!: ReturnType<typeof create>;
+    await act(async () => {
+      renderer = create(<RouteSwitch view={{ kind: "picker" }} path="/audit/log" />);
+      await Promise.resolve();
+    });
+    const patientLabel = renderer.root.findAllByType("label").find((label) => label.children.includes("Patient"));
+    assert.ok(patientLabel);
+    assert.equal(patientLabel.findByType("input").props.value, "");
+    act(() => renderer.unmount());
+  } finally {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("the Lens Catalog route reaches its dedicated manager with practice-admin write gating", () => {
@@ -224,3 +253,29 @@ test("insurance screens expose the MCP base URL as a literal Vite environment re
     assert.doesNotMatch(source, /const meta = import\.meta as/);
   }
 });
+
+async function renderAsyncRoute(path: string, roles: Array<"practice-admin" | "front-desk" | "clinician">): Promise<string> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("/api/audit")) {
+      return new Response(JSON.stringify({ rows: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ resourceType: "Bundle", type: "searchset", entry: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/fhir+json" },
+    });
+  };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<RouteSwitch view={{ kind: "picker" }} path={path} roles={roles} />);
+      await Promise.resolve();
+      await Promise.resolve();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+    return JSON.stringify(renderer.toJSON());
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+}

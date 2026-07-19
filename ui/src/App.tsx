@@ -107,6 +107,11 @@ export function App({
   useEffect(() => {
     const stopIntercepting = fhir.interceptUnauthorizedResponses(window);
     const stopListening = fhir.onSessionCleared(() => {
+      initialPath.current = window.location.pathname;
+      initialSearch.current = window.location.search;
+      initialClinicView.current = clinicViewFromSearch(initialSearch.current, { kind: "picker" });
+      previousPath.current = initialPath.current;
+      setPath(initialPath.current);
       setAuthed(false);
       setRoles(undefined);
       setAccountEmail(undefined);
@@ -117,6 +122,15 @@ export function App({
       stopIntercepting();
     };
   }, []);
+
+  useEffect(() => {
+    if (authed) return;
+    initialPath.current = window.location.pathname;
+    initialSearch.current = window.location.search;
+    initialClinicView.current = clinicViewFromSearch(initialSearch.current, { kind: "picker" });
+    previousPath.current = initialPath.current;
+    setPath(initialPath.current);
+  }, [authed]);
 
   useEffect(() => {
     if (!authed) return;

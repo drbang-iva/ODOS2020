@@ -47,6 +47,7 @@ export interface SetupPracticeConfig {
   readonly serviceIdentityEmail?: string;
   readonly serviceIdentityPassword?: string;
   readonly postgresUrl?: string;
+  readonly timezoneOffset?: string;
   readonly statePath: string;
 }
 
@@ -213,13 +214,15 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
     if (!scheduling.schedule.id || !scheduling.practiceConfig.id) {
       throw new Error("Setup wizard scheduling foundation returned a resource without an id.");
     }
+    const scheduleAuditRequired = scheduling.scheduleCreated || state.scheduleId === scheduling.schedule.id;
+    const practiceConfigAuditRequired = scheduling.practiceConfigCreated
+      || state.schedulingConfigId === scheduling.practiceConfig.id;
     state = persistSetupState(config.statePath, {
       ...state,
-      schedulingProvisioned: true,
       scheduleId: scheduling.schedule.id,
       schedulingConfigId: scheduling.practiceConfig.id,
     });
-    if (scheduling.scheduleCreated) {
+    if (scheduleAuditRequired) {
       await emit(buildSetupAuditRow({
         eventType: "create",
         resourceType: "Schedule",
@@ -227,7 +230,7 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
         actionReason: SETUP_WIZARD_ACTION_REASON,
       }));
     }
-    if (scheduling.practiceConfigCreated) {
+    if (practiceConfigAuditRequired) {
       await emit(buildSetupAuditRow({
         eventType: "create",
         resourceType: "Basic",
@@ -235,6 +238,10 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
         actionReason: SETUP_WIZARD_ACTION_REASON,
       }));
     }
+    state = persistSetupState(config.statePath, {
+      ...state,
+      schedulingProvisioned: true,
+    });
   }
 
   const resolvedPolicies = await adapter.createFirstAdminAccessPolicies(config, session);
@@ -371,7 +378,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     };
     this.schedules.push(schedule);
     const practiceConfig = {
-      ...buildFirstSchedulingConfig(schedule.id),
+      ...buildFirstSchedulingConfig(schedule.id, input.config.timezoneOffset),
       id: `scheduling-config-${this.schedulingConfigs.length + 1}`,
     };
     this.schedulingConfigs.push(practiceConfig);
@@ -569,7 +576,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       throw new Error(`Expected at most one scheduling-config Basic; found ${configs.length}.`);
     }
     const practiceConfig = configs[0] ?? await this.client().create<Basic>(
-      buildFirstSchedulingConfig(schedule.id),
+      buildFirstSchedulingConfig(schedule.id, input.config.timezoneOffset),
     );
     return {
       schedule,
@@ -750,17 +757,16 @@ function buildFirstAdminSchedule(
   });
 }
 
-function buildFirstSchedulingConfig(scheduleId: string): Basic {
+function buildFirstSchedulingConfig(scheduleId: string, timezoneOffset?: string): Basic {
   const scheduleReference = `Schedule/${scheduleId}`;
-  const weekdayHours = [{ start: "09:00", end: "17:00" }];
   return buildSchedulingPracticeConfigResource({
-    timezoneOffset: localTimezoneOffset(),
+    timezoneOffset: timezoneOffset ?? localTimezoneOffset(),
     defaultWeeklyHours: {
-      mon: weekdayHours,
-      tue: weekdayHours,
-      wed: weekdayHours,
-      thu: weekdayHours,
-      fri: weekdayHours,
+      mon: [{ start: "09:00", end: "17:00" }],
+      tue: [{ start: "09:00", end: "17:00" }],
+      wed: [{ start: "09:00", end: "17:00" }],
+      thu: [{ start: "09:00", end: "17:00" }],
+      fri: [{ start: "09:00", end: "17:00" }],
     },
     weeklyHoursBySchedule: {},
     blocks: [],
@@ -812,6 +818,7 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
     serviceIdentityEmail: (config.serviceIdentityEmail ?? env.MEDPLUM_ADMIN_EMAIL)?.trim() || undefined,
     serviceIdentityPassword: config.serviceIdentityPassword ?? env.MEDPLUM_ADMIN_PASSWORD,
     postgresUrl: config.postgresUrl ?? env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
+    timezoneOffset: config.timezoneOffset,
     statePath: options.statePath ?? config.statePath ?? env.ODOS_SETUP_STATE_PATH ?? DEFAULT_STATE_PATH,
   };
   if (

@@ -230,6 +230,29 @@ test("an unauthenticated 401 cannot clear a different active session", async () 
   }
 });
 
+test("an authenticated Request with an explicit empty header override cannot clear the session on 401", async () => {
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "session-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  assert.equal(fhir.rehydrateSession(storage), true);
+  const host = { fetch: async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 401 }) as Promise<Response> };
+  const stopIntercepting = fhir.interceptUnauthorizedResponses(host);
+  try {
+    const request = new Request("http://localhost/private", {
+      headers: { Authorization: "Bearer session-token" },
+    });
+    const response = await host.fetch(request, { headers: {} });
+    assert.equal(response.status, 401);
+    assert.notEqual(storage.getItem(SESSION_STORAGE_KEY), null);
+    assert.equal(fhir.authHeader(), "Bearer session-token");
+  } finally {
+    stopIntercepting();
+    fhir.logout(storage);
+  }
+});
+
 test("single-role users do not render a cross-side switch pill", () => {
   const clinic = renderToStaticMarkup(<AppShell path={CLINIC_PATH} roles={["clinician"]} homePath={CLINIC_PATH} side="clinic" email="doctor@example.test"><RouteSwitch view={{ kind: "picker" }} path={CLINIC_PATH} roles={["clinician"]} /></AppShell>);
   const desk = renderToStaticMarkup(<AppShell path={DESK_HOME_PATH} roles={["front-desk"]} homePath={DESK_HOME_PATH} side="desk" email="desk@example.test"><RouteSwitch view={{ kind: "picker" }} path={DESK_HOME_PATH} roles={["front-desk"]} /></AppShell>);
@@ -340,47 +363,106 @@ test("a Clinic deep link stays on the chart after front-desk-only role routing",
   }
 });
 
+test("logout and re-login route from the current address instead of the first bootstrap address", async () => {
+  const originalWindow = globalThis.window;
+  const originalStorage = globalThis.sessionStorage;
+  const storage = memoryStorage();
+  storage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    accessToken: "persisted-access-token",
+    expiresAt: Date.now() + 60_000,
+  }));
+  const location = { pathname: DESK_HOME_PATH, search: "" };
+  const windowStub = {
+    location,
+    history: {
+      replaceState: (_state: unknown, _title: string, url: string) => {
+        const next = new URL(url, "http://localhost");
+        location.pathname = next.pathname;
+        location.search = next.search;
+      },
+    },
+    fetch: globalThis.fetch,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    setInterval: () => 1,
+    clearInterval: () => undefined,
+  } as unknown as Window & typeof globalThis;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+  Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: storage });
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<App
+        resolveRoles={async () => ({ roles: ["practice-admin"] })}
+        login={async () => undefined}
+        RouteComponent={RouteProbe}
+      />);
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByType(RouteProbe).props.path, DESK_HOME_PATH);
+
+    location.pathname = "/settings/packages";
+    await act(async () => fhir.logout(storage));
+    assert.equal(renderer.root.findAllByType(LoginScreen).length, 1);
+    await act(async () => {
+      renderer.root.findByType(LoginScreen).props.onAuthenticated();
+      await Promise.resolve();
+    });
+    assert.equal(renderer.root.findByType(RouteProbe).props.path, "/settings/packages");
+    assert.deepEqual(location, { pathname: "/settings/packages", search: "" });
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    fhir.logout(storage);
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: originalStorage });
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("authenticated bootstrap preserves non-root hard-reload routes", async () => {
   const originalWindow = globalThis.window;
-  for (const requestedPath of [
-    "/settings/packages",
-    "/billing/claims/worklist",
-    "/financials/practice/margins",
-  ]) {
-    const location = { pathname: requestedPath, search: "" };
-    const windowStub = {
-      location,
-      history: {
-        replaceState: (_state: unknown, _title: string, url: string) => {
-          const next = new URL(url, "http://localhost");
-          location.pathname = next.pathname;
-          location.search = next.search;
+  try {
+    for (const requestedPath of [
+      "/settings/packages",
+      "/billing/claims/worklist",
+      "/financials/practice/margins",
+    ]) {
+      const location = { pathname: requestedPath, search: "" };
+      const windowStub = {
+        location,
+        history: {
+          replaceState: (_state: unknown, _title: string, url: string) => {
+            const next = new URL(url, "http://localhost");
+            location.pathname = next.pathname;
+            location.search = next.search;
+          },
         },
-      },
-      addEventListener: () => undefined,
-      removeEventListener: () => undefined,
-      setInterval: () => 1,
-      clearInterval: () => undefined,
-    } as unknown as Window & typeof globalThis;
-    Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
-    let renderer!: ReactTestRenderer;
-    try {
-      await act(async () => {
-        renderer = create(<App
-          resolveRoles={async () => ({ roles: ["practice-admin", "front-desk"] })}
-          login={async () => undefined}
-          RouteComponent={RouteProbe}
-        />);
-      });
-      await act(async () => {
-        renderer.root.findByType(LoginScreen).props.onAuthenticated();
-        await Promise.resolve();
-      });
-      assert.equal(renderer.root.findByType(RouteProbe).props.path, requestedPath);
-      assert.equal(location.pathname, requestedPath);
-    } finally {
-      if (renderer) act(() => renderer.unmount());
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        setInterval: () => 1,
+        clearInterval: () => undefined,
+      } as unknown as Window & typeof globalThis;
+      Object.defineProperty(globalThis, "window", { configurable: true, value: windowStub });
+      let renderer!: ReactTestRenderer;
+      try {
+        await act(async () => {
+          renderer = create(<App
+            resolveRoles={async () => ({ roles: ["practice-admin", "front-desk"] })}
+            login={async () => undefined}
+            RouteComponent={RouteProbe}
+          />);
+        });
+        await act(async () => {
+          renderer.root.findByType(LoginScreen).props.onAuthenticated();
+          await Promise.resolve();
+        });
+        assert.equal(renderer.root.findByType(RouteProbe).props.path, requestedPath);
+        assert.equal(location.pathname, requestedPath);
+      } finally {
+        if (renderer) act(() => renderer.unmount());
+      }
     }
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
-  Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
 });

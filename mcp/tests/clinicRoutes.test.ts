@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { Appointment, Bundle, DocumentReference, Encounter, Patient, Provenance, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
+import { loadClinicSummary } from "../src/clinic/clinic-summary.js";
 import { PATIENT_STICKY_NOTE_IDENTIFIER_SYSTEM } from "../src/clinic/patient-overview.js";
 
 test("GET /clinic/summary authenticates once and returns every section from seeded FHIR data", async () => {
@@ -45,6 +46,64 @@ test("GET /clinic/summary authenticates once and returns every section from seed
   } finally {
     await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
   }
+});
+
+test("Clinic summary follows multiple FHIR pages and fails loudly at the five-page cap", async () => {
+  const appointment = (id: string): Appointment => ({
+    resourceType: "Appointment",
+    id,
+    status: "booked",
+    start: "2026-07-11T14:00:00.000Z",
+    participant: [{ actor: { reference: `Patient/${id}` }, status: "accepted" }],
+  });
+  let nextCalls = 0;
+  const multipage = {
+    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => {
+      if (resourceType === "Appointment") {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: [{ resource: appointment("p1") as T }],
+          link: [{ relation: "next", url: "/appointments-page-2" }],
+        };
+      }
+      if (resourceType === "Patient") {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: ["p1", "p2"].map((id) => ({ resource: { resourceType: "Patient", id } as T })),
+        };
+      }
+      return { resourceType: "Bundle", type: "searchset" };
+    },
+    searchUrl: async <T extends Resource>(url: string): Promise<Bundle<T>> => {
+      nextCalls += 1;
+      assert.equal(url, "/appointments-page-2");
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: appointment("p2") as T }] };
+    },
+  };
+  const summary = await loadClinicSummary(multipage as never, {
+    now: "2026-07-11T15:00:00.000Z",
+    date: "2026-07-11",
+  });
+  assert.deepEqual(summary.flow.map((row) => row.appointmentId), ["p1", "p2"]);
+  assert.equal(nextCalls, 1);
+
+  let cappedCalls = 0;
+  const capped = {
+    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Appointment"
+      ? { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] }
+      : { resourceType: "Bundle", type: "searchset" },
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      cappedCalls += 1;
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] };
+    },
+  };
+  await assert.rejects(
+    loadClinicSummary(capped as never, { now: "2026-07-11T15:00:00.000Z", date: "2026-07-11" }),
+    /FHIR Appointment query exceeded 5 pages; no partial result was returned/,
+  );
+  assert.equal(cappedCalls, 4);
 });
 
 test("patient overview routes issue filtered FHIR searches and expose native sticky-note versions", async () => {

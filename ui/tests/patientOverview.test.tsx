@@ -8,7 +8,7 @@ import type { Patient } from "@medplum/fhirtypes";
 import type { ClinicSummary } from "../src/lib/clinic-summary";
 import { fetchPatientOverview, type PatientOverviewPayload } from "../src/lib/patient-overview";
 import { openPatientOverview, patientOverviewView, useViewState } from "../src/lib/view-state";
-import { opticalOrderPath } from "../src/lib/optical-order";
+import { normalizeFhirReference, opticalOrderPath } from "../src/lib/optical-order";
 import { ClinicHome } from "../src/scenes/ClinicHome";
 import { PatientOverview } from "../src/scenes/PatientOverview";
 
@@ -46,6 +46,7 @@ test("every remaining patient-opening entry point uses the shared overview trans
 
 test("the shared patient transition keeps the selected patient in browser URL state", () => {
   const originalWindow = globalThis.window;
+  const originalView = useViewState.getState().view;
   let pushed = "";
   Object.defineProperty(globalThis, "window", { configurable: true, value: {
     history: { pushState: (_state: unknown, _unused: string, url?: string | URL | null) => { pushed = String(url); } },
@@ -56,6 +57,7 @@ test("the shared patient transition keeps the selected patient in browser URL st
     assert.equal(pushed, "/clinic?patientId=patient%2Fwith%20spaces");
     assert.deepEqual(useViewState.getState().view, { kind: "overview", patientId: "patient/with spaces" });
   } finally {
+    useViewState.setState({ view: originalView });
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
@@ -63,6 +65,14 @@ test("the shared patient transition keeps the selected patient in browser URL st
 test("patient overview builds a concrete optical-order route from patient and active Rx", () => {
   assert.equal(
     opticalOrderPath("patient-1", "rx-1"),
+    "/dispensary/orders?patient=Patient%2Fpatient-1&rx=VisionPrescription%2Frx-1",
+  );
+  assert.equal(normalizeFhirReference("https://fhir.example.test/R4/Patient/patient-1", "Patient"), "Patient/patient-1");
+  assert.equal(
+    opticalOrderPath(
+      "https://fhir.example.test/R4/Patient/patient-1",
+      "https://fhir.example.test/R4/VisionPrescription/rx-1",
+    ),
     "/dispensary/orders?patient=Patient%2Fpatient-1&rx=VisionPrescription%2Frx-1",
   );
 });
@@ -196,6 +206,30 @@ test("initial overview loading skips patients without a FHIR id", () => {
   const rendered = JSON.stringify(renderer.toJSON());
   assert.match(rendered, /Patient id is unavailable/);
   assert.doesNotMatch(rendered, /Loading patient overview/);
+});
+
+test("skipping active-Rx lookup clears a prior lookup error", async () => {
+  const api = {
+    fetchOverview: async () => fixture(),
+    saveNote: async () => fixture().stickyNote!,
+    fetchHistory: async () => [],
+    findActiveRx: async () => { throw new Error("synthetic Rx lookup failure"); },
+  };
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={fixture()} api={api} />);
+    await Promise.resolve();
+  });
+  let orderButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start optical order");
+  assert.equal(orderButton?.props.title, "synthetic Rx lookup failure");
+
+  await act(async () => {
+    renderer.update(<PatientOverview patient={{ ...patient, id: undefined }} initialOverview={fixture()} api={api} />);
+    await Promise.resolve();
+  });
+  orderButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Start optical order");
+  assert.equal(orderButton?.props.title, "An active vision prescription is required");
+  act(() => renderer.unmount());
 });
 
 test("rapid visit-filter requests cannot overwrite the latest result out of order", async () => {

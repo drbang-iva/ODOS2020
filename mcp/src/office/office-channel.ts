@@ -1,5 +1,6 @@
 import type { Communication, Patient, Practitioner, PractitionerRole, Provenance, Resource } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
+import { collectBoundedSearch } from "../fhir-search.js";
 
 export const OFFICE_CATEGORY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/communication-category";
 export const OFFICE_CATEGORY_CODE = "internal-office";
@@ -11,8 +12,9 @@ export const OFFICE_ACK_TAG_SYSTEM = "https://odos2020.com/fhir/CodeSystem/offic
 export const OFFICE_ACK_TAG_CODE = "acknowledgement";
 export const OFFICE_TEXT_LIMIT = 1000;
 const RECENT_ACKNOWLEDGED_TAIL = 20;
+const OFFICE_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
 
-export type OfficeFhir = Pick<MedplumClient, "read" | "search" | "create">;
+export type OfficeFhir = Pick<MedplumClient, "read" | "search" | "searchUrl" | "create">;
 export type OfficeTier = "ambient" | "urgent" | "patient-pinned";
 export type OfficeMailbox = "clinic" | "desk";
 
@@ -71,7 +73,7 @@ export async function listOfficeMessages(
   fhir: OfficeFhir,
   input: { mailbox: OfficeMailbox; staffReference: string },
 ): Promise<OfficeMessageRow[]> {
-  const communications = await searchOnePage<Communication>(fhir, "Communication", {
+  const communications = await searchOfficePages<Communication>(fhir, "Communication", {
     category: `${OFFICE_CATEGORY_SYSTEM}|${OFFICE_CATEGORY_CODE}`,
     _count: "1000",
     _sort: "-sent",
@@ -82,7 +84,7 @@ export async function listOfficeMessages(
     .sort((left, right) => Date.parse(right.sent ?? "") - Date.parse(left.sent ?? ""));
   const targets = visible.flatMap((message) => message.id ? [`Communication/${message.id}`] : []);
   const earliestSent = visible.at(-1)?.sent;
-  const acknowledgements = targets.length === 0 ? [] : await searchOnePage<Provenance>(fhir, "Provenance", {
+  const acknowledgements = targets.length === 0 ? [] : await searchOfficePages<Provenance>(fhir, "Provenance", {
     _tag: `${OFFICE_ACK_TAG_SYSTEM}|${OFFICE_ACK_TAG_CODE}`,
     ...(earliestSent ? { recorded: `ge${earliestSent}` } : {}),
     _count: "1000",
@@ -105,7 +107,7 @@ export async function acknowledgeOfficeMessage(
   if (!isOfficeMessage(message) || !isClinicAudience(message)) {
     throw new OfficeMessageValidationError("Office message is not available to the Clinic channel.");
   }
-  const existing = (await searchOnePage<Provenance>(fhir, "Provenance", {
+  const existing = (await searchOfficePages<Provenance>(fhir, "Provenance", {
     _tag: `${OFFICE_ACK_TAG_SYSTEM}|${OFFICE_ACK_TAG_CODE}`,
     ...(message.sent ? { recorded: `ge${message.sent}` } : {}),
     _count: "1000",
@@ -180,10 +182,13 @@ function resourceId(value: string): boolean {
   return /^[A-Za-z0-9.-]{1,64}$/.test(value);
 }
 
-async function searchOnePage<T extends Resource>(fhir: Pick<OfficeFhir, "search">, resourceType: T["resourceType"], params: Record<string, string>): Promise<T[]> {
-  const bundle = await fhir.search<T>(resourceType, params);
-  if (bundle.link?.some((link) => link.relation === "next")) throw new Error(`${resourceType} Office query exceeded one FHIR page; refusing partial state.`);
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+async function searchOfficePages<T extends Resource>(
+  fhir: Pick<OfficeFhir, "search" | "searchUrl">,
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<T[]> {
+  const firstBundle = await fhir.search<T>(resourceType, params);
+  return collectBoundedSearch(fhir, resourceType, firstBundle, OFFICE_SEARCH_LIMITS);
 }
 
 async function staffDisplay(fhir: Pick<OfficeFhir, "read">, reference: string): Promise<string> {

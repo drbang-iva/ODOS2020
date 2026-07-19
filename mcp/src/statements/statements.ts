@@ -278,9 +278,17 @@ export function buildStatementSnapshot(input: {
         `${invoiceReference} carries a record-only tender but is not balanced; its paid amount cannot be determined safely.`,
       );
     }
+    const linkedPayments = payments.filter((payment) =>
+      (payment.detail ?? []).some((detail) => detail.request?.reference === invoiceReference),
+    );
+    if (carriesRecordOnlyTender && linkedPayments.length > 0) {
+      throw new StatementValidationError(
+        `${invoiceReference} carries both a record-only tender and an active PaymentReconciliation allocation; its paid amount is ambiguous.`,
+      );
+    }
     const paymentsAppliedCents = carriesRecordOnlyTender
       ? totals.netCents
-      : payments.reduce((sum, payment) => sum + allocationCents(payment, invoiceReference), 0);
+      : linkedPayments.reduce((sum, payment) => sum + allocationCents(payment, invoiceReference), 0);
     if (paymentsAppliedCents > totals.netCents) {
       throw new StatementValidationError(
         `${invoiceReference} has ${paymentsAppliedCents} paid cents against ${totals.netCents} net cents.`,

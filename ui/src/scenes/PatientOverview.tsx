@@ -91,6 +91,7 @@ export function PatientOverview({
   useEffect(() => {
     if (!patient.id || !api.findActiveRx) {
       setActiveRxId(null);
+      setRxError(undefined);
       return;
     }
     let cancelled = false;

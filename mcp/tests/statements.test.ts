@@ -63,6 +63,18 @@ test("a record-only tender Invoice is fully paid without a separate PaymentRecon
   assert.deepEqual(statement.invoices.map((row) => row.balanceCents), [0]);
 });
 
+test("a record-only tender Invoice with an active linked allocation is rejected as ambiguous", () => {
+  const paidInvoice = invoice("i1", "p1", 18_900);
+  paidInvoice.status = "balanced";
+  paidInvoice.extension = [paymentTenderExtension("CASH")];
+  assert.throws(() => buildStatementSnapshot({
+    patient: patient("p1", "Alex Rivera"),
+    invoices: [paidInvoice],
+    paymentReconciliations: [payment("pay-1", "p1", "i1", 18_900)],
+    generatedAt: GENERATED_AT,
+  }), /both a record-only tender and an active PaymentReconciliation allocation/);
+});
+
 test("an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement", () => {
   const partialInvoice = invoice("i1", "p1", 18_900);
   partialInvoice.extension = [paymentTenderExtension("CASH")];
