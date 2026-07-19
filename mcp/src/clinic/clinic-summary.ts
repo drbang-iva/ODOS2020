@@ -7,6 +7,7 @@ import type {
   Task,
 } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
+import { collectBoundedSearch } from "../fhir-search.js";
 import { projectLabOrderBoard, type LabOrderBoardSummary } from "../fhir/labOrderStatus.js";
 import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
@@ -14,6 +15,7 @@ import {
 } from "../lab-orders/adapters/manual-lab-order-adapter.js";
 
 const FLOOR_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
+const CLINIC_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
 
 export type ClinicFlowState = "with-you" | "roomed" | "waiting" | "checked-out" | "scheduled";
 
@@ -185,15 +187,15 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
 }
 
 export async function loadClinicSummary(
-  fhir: Pick<MedplumClient, "search">,
+  fhir: Pick<MedplumClient, "search" | "searchUrl">,
   options: { now?: string; date?: string; timeZone?: string } = {},
 ): Promise<ClinicSummary> {
   const now = options.now ?? new Date().toISOString();
   const date = options.date ?? practiceDate(now, options.timeZone);
   const [appointments, encounters, labOrders] = await Promise.all([
-    searchOnePage<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
-    searchOnePage<Encounter>(fhir, "Encounter", { date, _count: "1000", _sort: "date" }),
-    searchOnePage<Task>(fhir, "Task", {
+    searchClinicPages<Appointment>(fhir, "Appointment", { date, _count: "1000", _sort: "date" }),
+    searchClinicPages<Encounter>(fhir, "Encounter", { date, _count: "1000", _sort: "date" }),
+    searchClinicPages<Task>(fhir, "Task", {
       code: `${ODOS_LAB_ORDER_TASK_CODE_SYSTEM}|${LAB_ORDER_TRANSMISSION_TASK_CODE}`,
       _count: "1000",
       _sort: "-authored-on",
@@ -207,7 +209,7 @@ export async function loadClinicSummary(
     encounter.id ? [`Encounter/${encounter.id}`] : [],
   ));
   const [provenances, patients] = await Promise.all([
-    encounterReferences.size === 0 || patientIds.length === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
+    encounterReferences.size === 0 || patientIds.length === 0 ? Promise.resolve([]) : searchClinicPages<Provenance>(fhir, "Provenance", {
       patient: patientIds.map((patientId) => `Patient/${patientId}`).join(","),
       recorded: `ge${date}`,
       _count: "1000",
@@ -215,7 +217,7 @@ export async function loadClinicSummary(
     }).then((events) => events.filter((event) => event.target.some((target) =>
       encounterReferences.has(target.reference ?? ""),
     ))),
-    patientIds.length === 0 ? Promise.resolve([]) : searchOnePage<Patient>(fhir, "Patient", {
+    patientIds.length === 0 ? Promise.resolve([]) : searchClinicPages<Patient>(fhir, "Patient", {
       _id: patientIds.join(","),
       _count: String(patientIds.length),
     }),
@@ -223,16 +225,13 @@ export async function loadClinicSummary(
   return projectClinicSummary({ appointments, encounters, patients, provenances, labOrders, now, date, timeZone: options.timeZone });
 }
 
-async function searchOnePage<T extends Resource>(
-  fhir: Pick<MedplumClient, "search">,
+async function searchClinicPages<T extends Resource>(
+  fhir: Pick<MedplumClient, "search" | "searchUrl">,
   resourceType: T["resourceType"],
   params: Record<string, string>,
 ): Promise<T[]> {
-  const bundle = await fhir.search<T>(resourceType, params);
-  if (bundle.link?.some((link) => link.relation === "next")) {
-    throw new Error(`${resourceType} clinic-summary query exceeded one FHIR page; refusing partial counts.`);
-  }
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+  const firstBundle = await fhir.search<T>(resourceType, params);
+  return collectBoundedSearch(fhir, resourceType, firstBundle, CLINIC_SEARCH_LIMITS);
 }
 
 function encounterForAppointment(

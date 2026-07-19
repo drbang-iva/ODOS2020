@@ -227,14 +227,14 @@ export function labOrderFrameFromAttachedFrame(
 }
 
 export async function loadVisionPrescription(reference: string): Promise<VisionPrescription> {
-  const id = reference.replace(/^VisionPrescription\//, "").trim();
+  const id = normalizeFhirReference(reference, "VisionPrescription").slice("VisionPrescription/".length);
   return fhir.read<VisionPrescription>("VisionPrescription", id);
 }
 
 export async function findLatestActiveVisionPrescription(
   patientId: string,
 ): Promise<VisionPrescription | null> {
-  const patientReference = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
+  const patientReference = normalizeFhirReference(patientId, "Patient");
   const bundle = await fhir.search<VisionPrescription>("VisionPrescription", {
     patient: patientReference,
     status: "active",
@@ -246,18 +246,35 @@ export async function findLatestActiveVisionPrescription(
     .find((resource): resource is VisionPrescription =>
       resource?.resourceType === "VisionPrescription" &&
       resource.status === "active" &&
-      resource.patient?.reference === patientReference &&
+      normalizedReference(resource.patient?.reference, "Patient") === patientReference &&
       Boolean(resource.id)
     ) ?? null;
 }
 
 export function opticalOrderPath(patientId: string, prescriptionId: string): string {
-  const patientReference = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
-  const prescriptionReference = prescriptionId.startsWith("VisionPrescription/")
-    ? prescriptionId
-    : `VisionPrescription/${prescriptionId}`;
+  const patientReference = normalizeFhirReference(patientId, "Patient");
+  const prescriptionReference = normalizeFhirReference(prescriptionId, "VisionPrescription");
   const params = new URLSearchParams({ patient: patientReference, rx: prescriptionReference });
   return `/dispensary/orders?${params}`;
+}
+
+export function normalizeFhirReference(reference: string, resourceType: string): string {
+  const trimmed = reference.trim();
+  const path = /^https?:\/\//i.test(trimmed) ? new URL(trimmed).pathname : trimmed;
+  const escapedType = resourceType.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const typed = path.match(new RegExp(`(?:^|/)${escapedType}/([A-Za-z0-9.-]{1,64})/?$`));
+  if (typed) return `${resourceType}/${typed[1]}`;
+  if (/^[A-Za-z0-9.-]{1,64}$/.test(path)) return `${resourceType}/${path}`;
+  throw new Error(`${reference} is not a valid ${resourceType} reference.`);
+}
+
+function normalizedReference(reference: string | undefined, resourceType: string): string | undefined {
+  if (!reference) return undefined;
+  try {
+    return normalizeFhirReference(reference, resourceType);
+  } catch {
+    return undefined;
+  }
 }
 
 export function visionPrescriptionRows(rx: VisionPrescription | null): RxDisplayRow[] {

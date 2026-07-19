@@ -218,6 +218,91 @@ test("a completed legacy setup without the scheduling marker resumes and seeds t
   }
 });
 
+test("scheduling provisioning is not committed until both create audits succeed and retry re-emits them", async () => {
+  class RetryableSchedulingAuditAdapter extends InMemorySetupPracticeAdapter {
+    failBasicAudit = true;
+
+    override async createSchedulingFoundation(
+      input: Parameters<InMemorySetupPracticeAdapter["createSchedulingFoundation"]>[0],
+    ) {
+      const schedule = this.schedules[0];
+      const practiceConfig = this.schedulingConfigs[0];
+      if (schedule && practiceConfig) {
+        return { schedule, scheduleCreated: false, practiceConfig, practiceConfigCreated: false };
+      }
+      return super.createSchedulingFoundation(input);
+    }
+
+    override async emitAudit(row: Parameters<InMemorySetupPracticeAdapter["emitAudit"]>[0]) {
+      if (this.failBasicAudit && row.resourceType === "Basic" && row.eventType === "create") {
+        this.failBasicAudit = false;
+        throw new Error("synthetic scheduling audit failure");
+      }
+      return super.emitAudit(row);
+    }
+  }
+
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-audit-retry-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    const adapter = new RetryableSchedulingAuditAdapter();
+    const config = {
+      baseUrl: "http://localhost:8103",
+      practiceName: "ODOS Test Practice",
+      adminEmail: "human-admin@example.test",
+      adminName: "ODOS Admin",
+      adminPassword: "not-real-password",
+      statePath,
+    };
+
+    await assert.rejects(
+      () => runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true }),
+      /synthetic scheduling audit failure/,
+    );
+    const failedState = JSON.parse(readFileSync(statePath, "utf8")) as {
+      schedulingProvisioned?: boolean;
+      scheduleId?: string;
+      schedulingConfigId?: string;
+    };
+    assert.equal(failedState.schedulingProvisioned, undefined);
+    assert.equal(failedState.scheduleId, "schedule-1");
+    assert.equal(failedState.schedulingConfigId, "scheduling-config-1");
+
+    const retried = await runSetupPractice({ adapter, config, skipInteractiveBoundaryCheck: true });
+    assert.equal(retried.state.schedulingProvisioned, true);
+    assert.equal(adapter.schedules.length, 1);
+    assert.equal(adapter.schedulingConfigs.length, 1);
+    assert.equal(adapter.auditRows.filter((row) => row.resourceType === "Schedule" && row.eventType === "create").length, 2);
+    assert.equal(adapter.auditRows.filter((row) => row.resourceType === "Basic" && row.eventType === "create").length, 1);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
+test("setup accepts an explicit scheduling timezone offset instead of the host fallback", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-timezone-"));
+  try {
+    const adapter = new InMemorySetupPracticeAdapter();
+    await runSetupPractice({
+      adapter,
+      config: {
+        baseUrl: "http://localhost:8103",
+        practiceName: "ODOS Test Practice",
+        adminEmail: "human-admin@example.test",
+        adminName: "ODOS Admin",
+        adminPassword: "not-real-password",
+        timezoneOffset: "+05:45",
+        statePath: join(dir, ".odos-setup-state.json"),
+      },
+      skipInteractiveBoundaryCheck: true,
+    });
+    const schedulingConfig = parseSchedulingPracticeConfig(adapter.schedulingConfigs[0]!);
+    assert.equal(schedulingConfig.timezoneOffset, "+05:45");
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
 test("setup fails before provisioning when the human admin email collides with the service identity", async () => {
   const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-identity-collision-"));
   try {

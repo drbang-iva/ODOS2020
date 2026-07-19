@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Bundle, Communication, Patient, Practitioner, Provenance, Resource } from "@medplum/fhirtypes";
 import express from "express";
-import { OFFICE_ACK_CODE, OFFICE_ACK_SYSTEM, OFFICE_AUDIENCE_CODE, OFFICE_AUDIENCE_SYSTEM, OFFICE_CATEGORY_CODE, OFFICE_CATEGORY_SYSTEM } from "../src/office/office-channel.js";
+import { listOfficeMessages, OFFICE_ACK_CODE, OFFICE_ACK_SYSTEM, OFFICE_AUDIENCE_CODE, OFFICE_AUDIENCE_SYSTEM, OFFICE_CATEGORY_CODE, OFFICE_CATEGORY_SYSTEM } from "../src/office/office-channel.js";
 import { officeActingRole, registerOfficeRoutes } from "../src/office/office-routes.js";
 
 const LAB_CATEGORY_SYSTEM = "https://odos2020.com/fhir/CodeSystem/communication-category";
@@ -71,6 +71,53 @@ test("Office channel keeps Communications disjoint and counts only Office acknow
   } finally {
     await server.close();
   }
+});
+
+test("Office message listing follows multiple FHIR pages and fails loudly at the five-page cap", async () => {
+  const officeMessage = (id: string): Communication => ({
+    ...communication(id, OFFICE_CATEGORY_SYSTEM, OFFICE_CATEGORY_CODE),
+    recipient: [{ identifier: { system: OFFICE_AUDIENCE_SYSTEM, value: OFFICE_AUDIENCE_CODE } }],
+  });
+  let nextCalls = 0;
+  const multipage = {
+    search: async <T extends Resource>(resourceType: T["resourceType"]): Promise<Bundle<T>> => resourceType === "Communication"
+      ? {
+          resourceType: "Bundle",
+          type: "searchset",
+          entry: [{ resource: officeMessage("office-1") as T }],
+          link: [{ relation: "next", url: "/office-page-2" }],
+        }
+      : { resourceType: "Bundle", type: "searchset" },
+    searchUrl: async <T extends Resource>(url: string): Promise<Bundle<T>> => {
+      nextCalls += 1;
+      assert.equal(url, "/office-page-2");
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: officeMessage("office-2") as T }] };
+    },
+  };
+  const rows = await listOfficeMessages(multipage as never, {
+    mailbox: "clinic",
+    staffReference: "Practitioner/doctor-1",
+  });
+  assert.deepEqual(rows.map((row) => row.id), ["office-1", "office-2"]);
+  assert.equal(nextCalls, 1);
+
+  let cappedCalls = 0;
+  const capped = {
+    search: async <T extends Resource>(): Promise<Bundle<T>> => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      link: [{ relation: "next", url: "/next" }],
+    }),
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      cappedCalls += 1;
+      return { resourceType: "Bundle", type: "searchset", link: [{ relation: "next", url: "/next" }] };
+    },
+  };
+  await assert.rejects(
+    listOfficeMessages(capped as never, { mailbox: "clinic", staffReference: "Practitioner/doctor-1" }),
+    /FHIR Communication query exceeded 5 pages; no partial result was returned/,
+  );
+  assert.equal(cappedCalls, 4);
 });
 
 test("Office routes enforce Desk and Clinic roles plus unauthenticated rejection", async () => {

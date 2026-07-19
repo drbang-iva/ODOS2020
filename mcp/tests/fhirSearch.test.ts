@@ -4,7 +4,12 @@ import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import { createMedplumClient } from "../src/fhir-client.js";
-import { FhirSearchLimitError, searchAll } from "../src/fhir-search.js";
+import {
+  FhirSearchLimitError,
+  FhirSearchPageLimitError,
+  searchAll,
+  searchBounded,
+} from "../src/fhir-search.js";
 
 test("MCP searchAll follows every next link and defaults the page size to 100", async () => {
   let params: Record<string, string> | undefined;
@@ -59,6 +64,31 @@ test("MCP searchAll fails when a returned next link cannot be followed", async (
       searchUrl: async <T extends Resource>() => page<T>([]),
     }, "Patient"),
     /next link for Patient without a URL/,
+  );
+});
+
+test("MCP bounded search enforces explicit page and row caps without partial results", async () => {
+  let pageCalls = 0;
+  const pagedClient = {
+    search: async <T extends Resource>() => page<T>([patient("patient-1")], "/next-2"),
+    searchUrl: async <T extends Resource>() => {
+      pageCalls += 1;
+      return page<T>([patient(`patient-${pageCalls + 1}`)], `/next-${pageCalls + 2}`);
+    },
+  };
+  await assert.rejects(
+    searchBounded<Patient>(pagedClient, "Patient", { _count: "1000" }, { maxPages: 5, maxRows: 5_000 }),
+    (error: unknown) => error instanceof FhirSearchPageLimitError
+      && error.maxPages === 5
+      && error.message === "FHIR Patient query exceeded 5 pages; no partial result was returned.",
+  );
+  assert.equal(pageCalls, 4);
+
+  await assert.rejects(
+    searchBounded<Patient>({
+      search: async <T extends Resource>() => page<T>(Array.from({ length: 5_001 }, (_, index) => patient(`patient-${index}`))),
+    }, "Patient", { _count: "1000" }, { maxPages: 5, maxRows: 5_000 }),
+    (error: unknown) => error instanceof FhirSearchLimitError && error.maxRows === 5_000,
   );
 });
 

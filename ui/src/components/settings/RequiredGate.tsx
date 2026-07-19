@@ -18,7 +18,7 @@ export function RequiredGate({
   fieldId: (key: string) => string;
   saveLabel?: string;
   saving?: boolean;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }) {
   const missing = fields.filter((field) => !hasRequiredValue(values[field.key]));
 

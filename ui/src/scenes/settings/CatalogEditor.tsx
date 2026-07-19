@@ -347,7 +347,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
         ) : items.length === 0 ? (
           <CatalogEmptyState
             title={`No ${descriptor.title.toLocaleLowerCase()} yet`}
-            presetSeedOffer={descriptor.adapter.capabilities.presetSeed ? descriptor.presetSeedOffer : undefined}
+            presetSeedOffer={canWrite && descriptor.adapter.capabilities.presetSeed ? descriptor.presetSeedOffer : undefined}
           />
         ) : visibleItems.length === 0 ? (
           <div className="settings-list-no-results">No matches for “{query.trim()}”.</div>
@@ -407,7 +407,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
           saveLabel={transaction ? "Apply to draft" : "Save"}
           useListGrammar={Boolean(descriptor.listGrammar)}
           onChange={(key, value) => setDraftFields((current) => ({ ...current, [key]: value }))}
-          onSave={() => void saveItem()}
+          onSave={saveItem}
           onDeactivate={() => void deactivateSelected()}
           onClose={closeEditor}
         />
@@ -506,7 +506,7 @@ function CatalogEditorDrawer<Item extends CatalogItemBase>({
   saveLabel: string;
   useListGrammar: boolean;
   onChange: (key: string, value: unknown) => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   onDeactivate: () => void;
   onClose: () => void;
 }) {

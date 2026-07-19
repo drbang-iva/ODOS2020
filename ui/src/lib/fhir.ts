@@ -338,8 +338,9 @@ export const fhir = {
 };
 
 function authorizationHeader(input: RequestInfo | URL, init?: RequestInit): string | undefined {
-  const initAuthorization = new Headers(init?.headers).get("Authorization") ?? undefined;
-  if (initAuthorization) return initAuthorization;
+  if (init && "headers" in init) {
+    return new Headers(init.headers).get("Authorization") ?? undefined;
+  }
   return typeof Request !== "undefined" && input instanceof Request
     ? input.headers.get("Authorization") ?? undefined
     : undefined;
