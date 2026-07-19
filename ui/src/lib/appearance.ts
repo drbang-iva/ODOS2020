@@ -3,7 +3,14 @@ import { fhir } from "./fhir";
 import { searchAll } from "./fhir-search";
 
 export const APPEARANCE_SURFACES = ["light", "midnight", "space-black"] as const;
-export const APPEARANCE_ACCENTS = ["gold", "sapphire", "emerald", "amethyst"] as const;
+export const APPEARANCE_ACCENTS = [
+  "gold",
+  "emerald",
+  "sapphire",
+  "amethyst",
+  "deep-sapphire",
+  "deep-amethyst",
+] as const;
 
 export type AppearanceSurface = (typeof APPEARANCE_SURFACES)[number];
 export type AppearanceAccent = (typeof APPEARANCE_ACCENTS)[number];
@@ -129,44 +136,70 @@ export const ACCENT_VARIABLES: Record<AppearanceAccent, Readonly<Record<string, 
     "--odos-accent-tint-hi": "rgba(224, 188, 126, 0.12)",
     "--odos-accent-tint-lo": "rgba(224, 188, 126, 0.05)",
   },
-  sapphire: {
-    "--odos-accent": "#4c7fe8",
-    "--odos-accent-hi": "#7ea4f2",
-    "--odos-accent-lo": "#3560c4",
-    "--odos-accent-ink": "#f4f8ff",
-    "--odos-accent-border": "rgba(76, 127, 232, 0.55)",
-    "--odos-accent-ring": "rgba(76, 127, 232, 0.10)",
-    "--odos-accent-glow": "0 8px 28px rgba(76, 127, 232, 0.26)",
-    "--odos-accent-glow-hover": "0 12px 34px rgba(76, 127, 232, 0.34)",
-    "--odos-accent-hairline": "rgba(76, 127, 232, 0.4)",
-    "--odos-accent-tint-hi": "rgba(76, 127, 232, 0.14)",
-    "--odos-accent-tint-lo": "rgba(76, 127, 232, 0.06)",
-  },
   emerald: {
-    "--odos-accent": "#2fbf8f",
-    "--odos-accent-hi": "#5cd8ae",
-    "--odos-accent-lo": "#1f9a72",
+    "--odos-accent": "#3ccb9b",
+    "--odos-accent-hi": "#6fdfbb",
+    "--odos-accent-lo": "#28a87e",
     "--odos-accent-ink": "#04231a",
-    "--odos-accent-border": "rgba(47, 191, 143, 0.55)",
-    "--odos-accent-ring": "rgba(47, 191, 143, 0.10)",
-    "--odos-accent-glow": "0 8px 28px rgba(47, 191, 143, 0.24)",
-    "--odos-accent-glow-hover": "0 12px 34px rgba(47, 191, 143, 0.32)",
-    "--odos-accent-hairline": "rgba(47, 191, 143, 0.4)",
-    "--odos-accent-tint-hi": "rgba(47, 191, 143, 0.13)",
-    "--odos-accent-tint-lo": "rgba(47, 191, 143, 0.05)",
+    "--odos-accent-border": "rgba(60, 203, 155, 0.55)",
+    "--odos-accent-ring": "rgba(60, 203, 155, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(60, 203, 155, 0.24)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(60, 203, 155, 0.32)",
+    "--odos-accent-hairline": "rgba(60, 203, 155, 0.4)",
+    "--odos-accent-tint-hi": "rgba(60, 203, 155, 0.13)",
+    "--odos-accent-tint-lo": "rgba(60, 203, 155, 0.05)",
+  },
+  sapphire: {
+    "--odos-accent": "#6d97f0",
+    "--odos-accent-hi": "#8fb0f4",
+    "--odos-accent-lo": "#4c7fe8",
+    "--odos-accent-ink": "#0b0e18",
+    "--odos-accent-border": "rgba(109, 151, 240, 0.55)",
+    "--odos-accent-ring": "rgba(109, 151, 240, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(109, 151, 240, 0.26)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(109, 151, 240, 0.34)",
+    "--odos-accent-hairline": "rgba(109, 151, 240, 0.4)",
+    "--odos-accent-tint-hi": "rgba(109, 151, 240, 0.14)",
+    "--odos-accent-tint-lo": "rgba(109, 151, 240, 0.06)",
   },
   amethyst: {
-    "--odos-accent": "#9d71f0",
-    "--odos-accent-hi": "#b895f6",
-    "--odos-accent-lo": "#7d4fd8",
+    "--odos-accent": "#ae87f4",
+    "--odos-accent-hi": "#c2a4f8",
+    "--odos-accent-lo": "#9d71f0",
+    "--odos-accent-ink": "#0b0e18",
+    "--odos-accent-border": "rgba(174, 135, 244, 0.55)",
+    "--odos-accent-ring": "rgba(174, 135, 244, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(174, 135, 244, 0.26)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(174, 135, 244, 0.34)",
+    "--odos-accent-hairline": "rgba(174, 135, 244, 0.4)",
+    "--odos-accent-tint-hi": "rgba(174, 135, 244, 0.14)",
+    "--odos-accent-tint-lo": "rgba(174, 135, 244, 0.06)",
+  },
+  "deep-sapphire": {
+    "--odos-accent": "#3057bd",
+    "--odos-accent-hi": "#3f6ad2",
+    "--odos-accent-lo": "#22417f",
+    "--odos-accent-ink": "#f4f8ff",
+    "--odos-accent-border": "rgba(48, 87, 189, 0.55)",
+    "--odos-accent-ring": "rgba(48, 87, 189, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(48, 87, 189, 0.26)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(48, 87, 189, 0.34)",
+    "--odos-accent-hairline": "rgba(48, 87, 189, 0.4)",
+    "--odos-accent-tint-hi": "rgba(48, 87, 189, 0.14)",
+    "--odos-accent-tint-lo": "rgba(48, 87, 189, 0.06)",
+  },
+  "deep-amethyst": {
+    "--odos-accent": "#7443cc",
+    "--odos-accent-hi": "#7f4ed6",
+    "--odos-accent-lo": "#5a3099",
     "--odos-accent-ink": "#f6f2ff",
-    "--odos-accent-border": "rgba(157, 113, 240, 0.55)",
-    "--odos-accent-ring": "rgba(157, 113, 240, 0.10)",
-    "--odos-accent-glow": "0 8px 28px rgba(157, 113, 240, 0.26)",
-    "--odos-accent-glow-hover": "0 12px 34px rgba(157, 113, 240, 0.34)",
-    "--odos-accent-hairline": "rgba(157, 113, 240, 0.4)",
-    "--odos-accent-tint-hi": "rgba(157, 113, 240, 0.14)",
-    "--odos-accent-tint-lo": "rgba(157, 113, 240, 0.06)",
+    "--odos-accent-border": "rgba(116, 67, 204, 0.55)",
+    "--odos-accent-ring": "rgba(116, 67, 204, 0.10)",
+    "--odos-accent-glow": "0 8px 28px rgba(116, 67, 204, 0.26)",
+    "--odos-accent-glow-hover": "0 12px 34px rgba(116, 67, 204, 0.34)",
+    "--odos-accent-hairline": "rgba(116, 67, 204, 0.4)",
+    "--odos-accent-tint-hi": "rgba(116, 67, 204, 0.14)",
+    "--odos-accent-tint-lo": "rgba(116, 67, 204, 0.06)",
   },
 };
 
@@ -271,7 +304,7 @@ function validateAppearanceConfig(value: unknown): asserts value is AppearanceCo
     throw new Error("Appearance surface must be light, midnight, or space-black.");
   }
   if (!APPEARANCE_ACCENTS.includes(config.accent as AppearanceAccent)) {
-    throw new Error("Appearance accent must be gold, sapphire, emerald, or amethyst.");
+    throw new Error("Appearance accent must be gold, emerald, sapphire, amethyst, deep-sapphire, or deep-amethyst.");
   }
 }
 
