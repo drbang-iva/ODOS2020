@@ -78,6 +78,13 @@ export interface CreateReferralInput {
   authoredOn?: string;
 }
 
+export interface UpdateReferralDraftInput {
+  targetReference?: string;
+  includeList?: ReferralIncludeList;
+  priority?: ReferralPriority;
+  reasonText?: string | null;
+}
+
 export interface GenerateReferralLetterInput {
   patientDisplay: string;
   targetDisplay: string;
@@ -233,6 +240,105 @@ export class ReferralService {
           extension: replaceExtension(serviceRequest.extension, {
             url: REFERRAL_LETTER_BODY_EXTENSION_URL,
             valueString: editedLetterBody,
+          }),
+        },
+        {
+          "X-ODOS-Source": "mcp/referral-send",
+          "If-Match": `W/"${versionId}"`,
+        },
+      );
+    } catch (error) {
+      throwReferralConflict(error);
+    }
+  }
+
+  async updateReferralDraft(
+    serviceRequest: ServiceRequest,
+    input: UpdateReferralDraftInput,
+  ): Promise<ServiceRequest> {
+    assertDraftReferral(serviceRequest);
+    const id = referralId(serviceRequest);
+    const versionId = referralVersionId(serviceRequest);
+    const target = input.targetReference
+      ? await readReferralTarget(this.fhir, input.targetReference)
+      : undefined;
+    const updated: ServiceRequest = {
+      ...serviceRequest,
+      ...(input.targetReference && target ? {
+        performer: [{
+          reference: input.targetReference,
+          display: referralTargetDisplay(target),
+        }],
+      } : {}),
+      ...(input.includeList ? {
+        extension: replaceExtension(
+          serviceRequest.extension,
+          buildReferralIncludeListExtension(input.includeList),
+        ),
+      } : {}),
+      ...(input.priority ? { priority: input.priority } : {}),
+    };
+    if (input.reasonText !== undefined) {
+      const reasonText = input.reasonText?.trim();
+      if (reasonText) updated.reasonCode = [{ text: reasonText }];
+      else delete updated.reasonCode;
+    }
+    try {
+      return await this.fhir.update<ServiceRequest>(
+        "ServiceRequest",
+        id,
+        updated,
+        {
+          "X-ODOS-Source": "mcp/referral-send",
+          "If-Match": `W/"${versionId}"`,
+        },
+      );
+    } catch (error) {
+      throwReferralConflict(error);
+    }
+  }
+
+  async regenerateReferralLetter(serviceRequest: ServiceRequest): Promise<ServiceRequest> {
+    assertDraftReferral(serviceRequest);
+    const id = referralId(serviceRequest);
+    const versionId = referralVersionId(serviceRequest);
+    const patientId = assertReference(serviceRequest.subject.reference, "Patient");
+    const encounterId = serviceRequest.encounter?.reference
+      ? assertReference(serviceRequest.encounter.reference, "Encounter")
+      : undefined;
+    if (!encounterId) throw new Error("Referral ServiceRequest is missing its encounter reference.");
+    const targetReference = serviceRequest.performer?.[0]?.reference;
+    if (!targetReference) throw new Error("Referral ServiceRequest is missing its target reference.");
+    const [patient, encounter, target, findings, plans] = await Promise.all([
+      this.fhir.read<Patient>("Patient", patientId),
+      this.fhir.read<Encounter>("Encounter", encounterId),
+      readReferralTarget(this.fhir, targetReference),
+      this.searchEncounterResources<Observation>("Observation", patientId, encounterId),
+      this.searchEncounterResources<CarePlan>("CarePlan", patientId, encounterId),
+    ]);
+    if (encounter.subject?.reference !== serviceRequest.subject.reference) {
+      throw new Error("Referral encounter does not belong to the subject patient.");
+    }
+    const letterBody = generateReferralLetterBody({
+      patientDisplay: patientName(patient),
+      targetDisplay: referralTargetDisplay(target),
+      requesterDisplay: serviceRequest.requester?.display,
+      findings,
+      plans,
+    });
+    try {
+      return await this.fhir.update<ServiceRequest>(
+        "ServiceRequest",
+        id,
+        {
+          ...serviceRequest,
+          performer: [{
+            reference: targetReference,
+            display: referralTargetDisplay(target),
+          }],
+          extension: replaceExtension(serviceRequest.extension, {
+            url: REFERRAL_LETTER_BODY_EXTENSION_URL,
+            valueString: letterBody,
           }),
         },
         {
@@ -446,7 +552,7 @@ function replaceExtension(
 
 function assertDraftReferral(serviceRequest: ServiceRequest): void {
   if (serviceRequest.status !== "draft") {
-    throw new ReferralSendConflictError("Only a draft referral can be sent.");
+    throw new ReferralSendConflictError("Only a draft referral can be changed or sent.");
   }
 }
 
@@ -465,7 +571,7 @@ function throwReferralConflict(error: unknown): never {
   const status = (error as { status?: unknown })?.status;
   const message = error instanceof Error ? error.message : String(error);
   if (status === 409 || status === 412 || /FHIR (409|412)\b/.test(message)) {
-    throw new ReferralSendConflictError("The referral changed before send; reopen it and try again.");
+    throw new ReferralSendConflictError("The referral changed; reopen it and try again.");
   }
   throw error;
 }

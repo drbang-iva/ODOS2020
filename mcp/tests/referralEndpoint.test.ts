@@ -4,9 +4,13 @@ import { test } from "node:test";
 import type {
   Basic,
   Bundle,
+  CarePlan,
   Encounter,
+  Observation,
   Organization,
   Patient,
+  Practitioner,
+  PractitionerRole,
   ProjectMembership,
   Provenance,
   Resource,
@@ -17,8 +21,12 @@ import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   handleCreateReferralRequest,
   handleReferralArtifactRequest,
+  handleRecentReferralConsultantsRequest,
+  handleRegenerateReferralLetterRequest,
   handleReadReferralDefaultsRequest,
+  handleSearchReferralConsultantsRequest,
   handleSaveReferralDefaultsRequest,
+  handleUpdateReferralDraftRequest,
   type ReferralEndpointDeps,
 } from "../src/referral/referral-endpoint.js";
 import { registerReferralRoutes } from "../src/referral/referral-routes.js";
@@ -29,6 +37,7 @@ import {
 } from "../src/referral/referral-defaults-store.js";
 import {
   buildReferralServiceRequest,
+  readReferralIncludeList,
   REFERRAL_LETTER_BODY_EXTENSION_URL,
   type ReferralFhirClient,
   type ReferralIncludeList,
@@ -123,6 +132,219 @@ test("referral creation rejects unsupported priority and blank reason text", asy
 
   assert.equal(invalidPriority.status, 400);
   assert.equal(blankReason.status, 400);
+});
+
+test("consultant search spans Practitioner, PractitionerRole, and Organization while short queries stay write-free", async () => {
+  const fhir = seededFhir();
+  fhir.put({
+    resourceType: "Practitioner",
+    id: "vision-specialist",
+    name: [{ text: "Dr. Vera Vision" }],
+  } satisfies Practitioner);
+  fhir.put({
+    resourceType: "PractitionerRole",
+    id: "vision-role",
+    practitioner: { reference: "Practitioner/vision-specialist", display: "Dr. Vera Vision" },
+    specialty: [{ text: "Vision rehabilitation" }],
+  } satisfies PractitionerRole);
+  fhir.put({
+    resourceType: "Organization",
+    id: "vision-group",
+    name: "Vision Retina Group",
+  } satisfies Organization);
+
+  const beforeShortQuery = fhir.searchCalls.length;
+  const short = await handleSearchReferralConsultantsRequest(deps(fhir), {
+    authHeader: AUTH,
+    query: "v",
+  });
+  const afterShortQuery = fhir.searchCalls.length;
+  const found = await handleSearchReferralConsultantsRequest(deps(fhir), {
+    authHeader: AUTH,
+    query: "vision",
+  });
+
+  assert.deepEqual((short.body as { consultants: unknown[] }).consultants, []);
+  assert.equal(afterShortQuery, beforeShortQuery);
+  assert.equal(fhir.searchCalls.length, beforeShortQuery + 3);
+  assert.deepEqual(
+    (found.body as { consultants: Array<{ reference: string }> }).consultants.map((row) => row.reference),
+    [
+      "Practitioner/vision-specialist",
+      "PractitionerRole/vision-role",
+      "Organization/vision-group",
+    ],
+  );
+  assert.deepEqual(fhir.searchCalls.slice(-3).map((call) => call.params), [
+    { "name:contains": "vision", _count: "20" },
+    { "practitioner.name:contains": "vision", _count: "20" },
+    { "name:contains": "vision", _count: "20" },
+  ]);
+});
+
+test("recent consultants are requester-scoped, distinct, and newest first", async () => {
+  const fhir = seededFhir();
+  fhir.put(referralForRequester(
+    "own-newest",
+    "Practitioner/clinician-1",
+    "Organization/newest",
+    "Newest Retina",
+    "2026-07-18T18:00:00.000Z",
+  ));
+  fhir.put(referralForRequester(
+    "own-older",
+    "Practitioner/clinician-1",
+    "Practitioner/older",
+    "Older Consultant",
+    "2026-07-17T18:00:00.000Z",
+  ));
+  fhir.put(referralForRequester(
+    "own-duplicate",
+    "Practitioner/clinician-1",
+    "Organization/newest",
+    "Newest Retina",
+    "2026-07-16T18:00:00.000Z",
+  ));
+  fhir.put(referralForRequester(
+    "other-provider",
+    "Practitioner/clinician-2",
+    "Organization/private",
+    "Other Provider Consultant",
+    "2026-07-19T18:00:00.000Z",
+  ));
+  fhir.put({
+    resourceType: "ServiceRequest",
+    id: "own-non-referral-plan",
+    status: "active",
+    intent: "plan",
+    code: { text: "Glaucoma workup" },
+    subject: { reference: "Patient/p1" },
+    requester: { reference: "Practitioner/clinician-1" },
+    performer: [{ reference: "Organization/protocol-performer", display: "Protocol Performer" }],
+    authoredOn: "2026-07-20T18:00:00.000Z",
+  } satisfies ServiceRequest);
+
+  const result = await handleRecentReferralConsultantsRequest(deps(fhir), { authHeader: AUTH });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as { consultants: unknown[] }).consultants, [
+    { reference: "Organization/newest", display: "Newest Retina" },
+    { reference: "Organization/retina-1", display: "Retina Associates" },
+    { reference: "Practitioner/older", display: "Older Consultant" },
+  ]);
+  assert.deepEqual(fhir.searchCalls.at(-1)?.params, {
+    requester: "Practitioner/clinician-1",
+    _sort: "-authored",
+    _count: "20",
+  });
+});
+
+test("draft update persists each supported field and rejects active or stale mutations", async () => {
+  const fhir = seededFhir();
+  fhir.put({ resourceType: "Organization", id: "retina-2", name: "Macula Center" } satisfies Organization);
+  const nextIncludeList = { ...INCLUDE_LIST, images: true, history_count: 4 };
+  const common = { authHeader: AUTH, patientId: "p1", referralId: "referral-1" };
+
+  for (const body of [
+    { targetReference: "Organization/retina-2" },
+    { includeList: nextIncludeList },
+    { priority: "stat" },
+    { reasonText: "Acute metamorphopsia" },
+  ]) {
+    const result = await handleUpdateReferralDraftRequest(deps(fhir), { ...common, body });
+    assert.equal(result.status, 200);
+  }
+  const updated = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
+  assert.deepEqual(updated.performer, [{ reference: "Organization/retina-2", display: "Macula Center" }]);
+  assert.deepEqual(readReferralIncludeList(updated), nextIncludeList);
+  assert.equal(updated.priority, "stat");
+  assert.deepEqual(updated.reasonCode, [{ text: "Acute metamorphopsia" }]);
+
+  const cleared = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { reasonText: null },
+  });
+  assert.equal(cleared.status, 200);
+  assert.equal((cleared.body as { serviceRequest: ServiceRequest }).serviceRequest.reasonCode, undefined);
+
+  const reset = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { reasonText: "  Persistent diplopia  " },
+  });
+  assert.equal(reset.status, 200);
+  const omitted = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { priority: "routine" },
+  });
+  assert.deepEqual(
+    (omitted.body as { serviceRequest: ServiceRequest }).serviceRequest.reasonCode,
+    [{ text: "Persistent diplopia" }],
+  );
+
+  const latest = (omitted.body as { serviceRequest: ServiceRequest }).serviceRequest;
+  fhir.put({ ...latest, status: "active" });
+  const beforeActiveAttempt = await fhir.read<ServiceRequest>("ServiceRequest", "referral-1");
+  const active = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { priority: "routine" },
+  });
+  assert.equal(active.status, 409);
+  assert.deepEqual(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1"), beforeActiveAttempt);
+
+  fhir.put({ ...latest, status: "draft" });
+  fhir.failNextUpdate(412);
+  const stale = await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { priority: "urgent" },
+  });
+  assert.equal(stale.status, 409);
+  assert.equal((await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")).priority, "routine");
+});
+
+test("regeneration uses the current consultant and fresh encounter findings without changing active or stale referrals", async () => {
+  const fhir = seededFhir();
+  fhir.put({ resourceType: "Organization", id: "retina-2", name: "Macula Center" } satisfies Organization);
+  fhir.put({
+    resourceType: "Observation",
+    id: "finding-1",
+    status: "final",
+    code: { text: "Macular finding" },
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/current" },
+    valueString: "Fresh distortion",
+  } satisfies Observation);
+  fhir.put({
+    resourceType: "CarePlan",
+    id: "plan-1",
+    status: "active",
+    intent: "plan",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/current" },
+    activity: [{ detail: { status: "not-started", description: "Urgent retina review" } }],
+  } satisfies CarePlan);
+  const common = { authHeader: AUTH, patientId: "p1", referralId: "referral-1" };
+  await handleUpdateReferralDraftRequest(deps(fhir), {
+    ...common,
+    body: { targetReference: "Organization/retina-2" },
+  });
+
+  const regenerated = await handleRegenerateReferralLetterRequest(deps(fhir), common);
+  assert.equal(regenerated.status, 200);
+  const fresh = (regenerated.body as { serviceRequest: ServiceRequest }).serviceRequest;
+  assert.match(referralLetterBody(fresh) ?? "", /^Dear Macula Center,/);
+  assert.match(referralLetterBody(fresh) ?? "", /Macular finding: Fresh distortion/);
+  assert.match(referralLetterBody(fresh) ?? "", /Urgent retina review/);
+
+  fhir.put({ ...fresh, status: "active" });
+  const active = await handleRegenerateReferralLetterRequest(deps(fhir), common);
+  assert.equal(active.status, 409);
+  assert.equal(referralLetterBody(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")), referralLetterBody(fresh));
+
+  fhir.put({ ...fresh, status: "draft" });
+  fhir.failNextUpdate(412);
+  const stale = await handleRegenerateReferralLetterRequest(deps(fhir), common);
+  assert.equal(stale.status, 409);
+  assert.equal(referralLetterBody(await fhir.read<ServiceRequest>("ServiceRequest", "referral-1")), referralLetterBody(fresh));
 });
 
 test("preview is write-free while send records one clinician-attributed disclosure Provenance", async () => {
@@ -325,7 +547,7 @@ test("referral defaults complete a save when conditional create finds a concurre
   assert.equal(fhir.resources("Basic")[0]?.id, "concurrent-defaults");
 });
 
-test("registered HTTP routes expose defaults, create, preview, and distinct send actions", async () => {
+test("registered HTTP routes expose directory, draft mutation, defaults, create, preview, and send actions", async () => {
   const fhir = seededFhir();
   let serviceAuthCalls = 0;
   const app = express();
@@ -354,6 +576,18 @@ test("registered HTTP routes expose defaults, create, preview, and distinct send
       headers,
       body: JSON.stringify(CREATE_BODY),
     });
+    const consultants = await fetch(`http://127.0.0.1:${port}/referrals/consultants?q=retina`, { headers });
+    const recent = await fetch(`http://127.0.0.1:${port}/referrals/consultants/recent`, { headers });
+    const updated = await fetch(`http://127.0.0.1:${port}/referrals/patients/p1/referral-1`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ priority: "urgent" }),
+    });
+    const regenerated = await fetch(`http://127.0.0.1:${port}/referrals/patients/p1/referral-1/regenerate`, {
+      method: "POST",
+      headers,
+      body: "{}",
+    });
     const previewed = await fetch(`http://127.0.0.1:${port}/referrals/patients/p1/referral-1/preview`, {
       method: "POST",
       headers,
@@ -368,9 +602,13 @@ test("registered HTTP routes expose defaults, create, preview, and distinct send
     assert.equal(readDefaults.status, 200);
     assert.equal(saveDefaults.status, 200);
     assert.equal(created.status, 201);
+    assert.equal(consultants.status, 200);
+    assert.equal(recent.status, 200);
+    assert.equal(updated.status, 200);
+    assert.equal(regenerated.status, 200);
     assert.equal(previewed.status, 200);
     assert.equal(sent.status, 200);
-    assert.equal(serviceAuthCalls, 5);
+    assert.equal(serviceAuthCalls, 9);
     assert.equal(fhir.provenances.length, 1);
   } finally {
     await new Promise<void>((resolve, reject) =>
@@ -433,9 +671,11 @@ class MemoryReferralFhir implements ReferralFhirClient {
   private hiddenBasicSearches = 0;
   private failedSearchResourceType: Resource["resourceType"] | undefined;
   private failedTransactionStatus: 409 | 412 | undefined;
+  private failedUpdateStatus: 409 | 412 | undefined;
   readonly created: Resource[] = [];
   readonly provenances: Provenance[] = [];
   readonly readKeys: string[] = [];
+  readonly searchCalls: Array<{ resourceType: string; params: Record<string, string> }> = [];
 
   put(resource: Resource): void {
     if (!resource.id) throw new Error("Seeded resources require an id.");
@@ -455,6 +695,10 @@ class MemoryReferralFhir implements ReferralFhirClient {
 
   failNextTransaction(status: 409 | 412): void {
     this.failedTransactionStatus = status;
+  }
+
+  failNextUpdate(status: 409 | 412): void {
+    this.failedUpdateStatus = status;
   }
 
   resources(resourceType: Resource["resourceType"]): Resource[] {
@@ -483,11 +727,31 @@ class MemoryReferralFhir implements ReferralFhirClient {
       return { resourceType: "Bundle", type: "searchset", entry: [] };
     }
     const query = searchRecord(params);
-    const resources = [...this.rows.values()]
+    this.searchCalls.push({ resourceType, params: { ...query } });
+    let rows = [...this.rows.values()]
       .filter((resource) => resource.resourceType === resourceType)
       .filter((resource) => !query.code || resourceHasCode(resource, query.code))
-      .filter((resource) => !query.identifier || resourceHasIdentifier(resource, query.identifier))
-      .map((resource) => ({ resource: structuredClone(resource) as T }));
+      .filter((resource) => !query.identifier || resourceHasIdentifier(resource, query.identifier));
+    if (query.requester) {
+      rows = rows.filter((resource) => resource.resourceType === "ServiceRequest"
+        && resource.requester?.reference === query.requester);
+    }
+    const nameQuery = query["name:contains"];
+    if (nameQuery) rows = rows.filter((resource) => resourceMatchesName(resource, nameQuery, this.rows));
+    const practitionerNameQuery = query["practitioner.name:contains"];
+    if (practitionerNameQuery) {
+      rows = rows.filter((resource) => resource.resourceType === "PractitionerRole"
+        && resourceMatchesPractitionerName(resource, practitionerNameQuery, this.rows));
+    }
+    if (resourceType === "ServiceRequest" && query._sort === "-authored") {
+      rows.sort((left, right) => {
+        const leftDate = left.resourceType === "ServiceRequest" ? left.authoredOn ?? "" : "";
+        const rightDate = right.resourceType === "ServiceRequest" ? right.authoredOn ?? "" : "";
+        return rightDate.localeCompare(leftDate);
+      });
+    }
+    if (query._count) rows = rows.slice(0, Number(query._count));
+    const resources = rows.map((resource) => ({ resource: structuredClone(resource) as T }));
     return { resourceType: "Bundle", type: "searchset", entry: resources };
   }
 
@@ -519,6 +783,11 @@ class MemoryReferralFhir implements ReferralFhirClient {
     resource: T,
     extraHeaders: Record<string, string> = {},
   ): Promise<T> {
+    if (this.failedUpdateStatus) {
+      const status = this.failedUpdateStatus;
+      this.failedUpdateStatus = undefined;
+      throw fhirConflict(status);
+    }
     assert.equal(resource.resourceType, resourceType);
     assert.equal(resource.id, id);
     const current = this.rows.get(`${resourceType}/${id}`);
@@ -621,6 +890,21 @@ function referral(id: string, subjectReference: string): ServiceRequest {
   };
 }
 
+function referralForRequester(
+  id: string,
+  requesterReference: string,
+  targetReference: string,
+  targetDisplay: string,
+  authoredOn: string,
+): ServiceRequest {
+  return {
+    ...referral(id, "Patient/p1"),
+    authoredOn,
+    requester: { reference: requesterReference },
+    performer: [{ reference: targetReference, display: targetDisplay }],
+  };
+}
+
 function referralLetterBody(serviceRequest: ServiceRequest): string | undefined {
   return serviceRequest.extension?.find(
     (extension) => extension.url === REFERRAL_LETTER_BODY_EXTENSION_URL,
@@ -645,6 +929,38 @@ function resourceHasIdentifier(resource: Resource, token: string): boolean {
   const [system, value] = token.split("|");
   return resource.identifier?.some((identifier) =>
     identifier.system === system && identifier.value === value) ?? false;
+}
+
+function resourceMatchesName(
+  resource: Resource,
+  query: string,
+  rows: ReadonlyMap<string, Resource>,
+): boolean {
+  const normalized = query.toLowerCase();
+  if (resource.resourceType === "Organization") {
+    return resource.name?.toLowerCase().includes(normalized) ?? false;
+  }
+  if (resource.resourceType === "Practitioner") {
+    return JSON.stringify(resource.name ?? []).toLowerCase().includes(normalized);
+  }
+  if (resource.resourceType === "PractitionerRole") {
+    return resourceMatchesPractitionerName(resource, query, rows);
+  }
+  return false;
+}
+
+function resourceMatchesPractitionerName(
+  role: PractitionerRole,
+  query: string,
+  rows: ReadonlyMap<string, Resource>,
+): boolean {
+  const normalized = query.toLowerCase();
+  if (role.practitioner?.display?.toLowerCase().includes(normalized)) return true;
+  const practitioner = role.practitioner?.reference
+    ? rows.get(role.practitioner.reference)
+    : undefined;
+  return practitioner?.resourceType === "Practitioner"
+    && JSON.stringify(practitioner.name ?? []).toLowerCase().includes(normalized);
 }
 
 function fhirConflict(status: 409 | 412): Error & { status: number } {

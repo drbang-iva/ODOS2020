@@ -17,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 75;
+const EXPECTED_DIRECT_SEARCH_CALLS = 79;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:226": [
@@ -81,7 +81,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
-  "src/referral/referral-service.ts:342": [
+  "src/referral/referral-service.ts:448": [
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
@@ -96,7 +96,7 @@ test("contract is frozen from Medplum 5.1.8's published definition bundles", () 
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.package, "@medplum/definitions");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.version, "5.1.8");
   assert.equal(MEDPLUM_SEARCH_PARAMETER_SOURCE.files.length, 3);
-  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 32);
+  assert.equal(Object.keys(MEDPLUM_5_1_8_SEARCH_PARAMETERS).length, 36);
   assert.deepEqual(FHIR_R4_SEARCH_RESULT_PARAMETERS, ["_summary"]);
 });
 
@@ -111,7 +111,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 75 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 79 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();
@@ -147,11 +147,26 @@ test("static audit finds zero invalid search parameters", () => {
   assert.deepEqual(violations, []);
 });
 
+test("static audit rejects a mistyped dynamic override key", () => {
+  const overrides = { ...DYNAMIC_SEARCH_SPECS };
+  delete overrides["src/referral/referral-service.ts:448"];
+  overrides["src/referral/referral-service.ts:449"] = [
+    spec("Observation", "patient", "encounter", "_count"),
+  ];
+
+  assert.throws(
+    () => collectSearchSpecs(overrides),
+    /src\/referral\/referral-service\.ts:448 has unresolved search parameters and no contract override/,
+  );
+});
+
 function spec(resourceType: ContractResourceType, ...parameterKeys: string[]): SearchSpec {
   return { resourceType, parameterKeys };
 }
 
-function collectSearchSpecs(): Array<{ location: string; spec: SearchSpec }> {
+function collectSearchSpecs(
+  overrides: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = DYNAMIC_SEARCH_SPECS,
+): Array<{ location: string; spec: SearchSpec }> {
   return collectDirectFhirSearchCalls().flatMap((call) => {
     if (call.resourceType && call.parameterKeys) {
       return [{
@@ -159,8 +174,11 @@ function collectSearchSpecs(): Array<{ location: string; spec: SearchSpec }> {
         spec: spec(call.resourceType as ContractResourceType, ...call.parameterKeys),
       }];
     }
-    const override = DYNAMIC_SEARCH_SPECS[call.location];
-    return override === DYNAMIC_FHIR_SEARCH ? [] : (override ?? []).map((current) => ({
+    const override = overrides[call.location];
+    if (override === undefined) {
+      throw new Error(`${call.location} has unresolved search parameters and no contract override`);
+    }
+    return override === DYNAMIC_FHIR_SEARCH ? [] : override.map((current) => ({
       location: call.location,
       spec: current,
     }));

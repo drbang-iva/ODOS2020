@@ -30,6 +30,7 @@ interface Props {
   patientReference: string;
   encounterReference: string;
   onSaved: (status: SectionSaveStatus) => void;
+  onRefer?: () => void;
 }
 
 interface FormState {
@@ -59,7 +60,7 @@ const INITIAL_FORM: FormState = {
 const INPUT_CLASS = "h-10 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none transition placeholder:text-[color:var(--odos-faint)] focus:border-[color:var(--odos-accent-border)]";
 const BUTTON_CLASS = "rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-text)] outline-none transition hover:bg-[color:var(--odos-accent-tint-lo)] focus-visible:ring-2 focus-visible:ring-[color:var(--odos-accent-border)] disabled:cursor-not-allowed disabled:opacity-50";
 
-export function AssessmentSection({ patientReference, encounterReference, onSaved }: Props) {
+export function AssessmentSection({ patientReference, encounterReference, onSaved, onRefer }: Props) {
   const { role } = useRole();
   const canShowEditing = role !== "front-desk";
   const [encounter, setEncounter] = useState<Encounter | null>(null);
@@ -373,9 +374,14 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               Visit diagnoses are separate from the longitudinal problem list.
             </p>
           </div>
-          <span className="rounded border border-[color:var(--odos-line)] px-3 py-2 text-xs text-[color:var(--odos-muted)]">
-            {sortedConditions.length} visit diagnoses
-          </span>
+          <div className="flex items-center gap-2">
+            {canShowEditing && onRefer && (
+              <button type="button" className="sidebar-button" onClick={onRefer}>Refer to…</button>
+            )}
+            <span className="rounded border border-[color:var(--odos-line)] px-3 py-2 text-xs text-[color:var(--odos-muted)]">
+              {sortedConditions.length} visit diagnoses
+            </span>
+          </div>
         </div>
 
         {canShowEditing && (

@@ -2,8 +2,12 @@ import type { Application, Request, Response } from "express";
 import {
   handleCreateReferralRequest,
   handleReferralArtifactRequest,
+  handleRecentReferralConsultantsRequest,
+  handleRegenerateReferralLetterRequest,
   handleReadReferralDefaultsRequest,
+  handleSearchReferralConsultantsRequest,
   handleSaveReferralDefaultsRequest,
+  handleUpdateReferralDraftRequest,
   type ReferralEndpointDeps,
   type ReferralEndpointResult,
 } from "./referral-endpoint.js";
@@ -13,9 +17,28 @@ export interface ReferralRouteDeps extends ReferralEndpointDeps {
 }
 
 export function registerReferralRoutes(
-  app: Pick<Application, "get" | "post" | "put">,
+  app: Pick<Application, "get" | "patch" | "post" | "put">,
   deps: ReferralRouteDeps,
 ): void {
+  app.get("/referrals/consultants/recent", async (req, res) => route(
+    "/referrals/consultants/recent",
+    deps,
+    req,
+    res,
+    () => handleRecentReferralConsultantsRequest(deps, {
+      authHeader: req.header("authorization"),
+    }),
+  ));
+  app.get("/referrals/consultants", async (req, res) => route(
+    "/referrals/consultants",
+    deps,
+    req,
+    res,
+    () => handleSearchReferralConsultantsRequest(deps, {
+      authHeader: req.header("authorization"),
+      query: req.query.q,
+    }),
+  ));
   app.get("/referrals/defaults", async (req, res) => route(
     "/referrals/defaults",
     deps,
@@ -40,6 +63,24 @@ export function registerReferralRoutes(
       authHeader: req.header("authorization"),
       patientId: routeParam(req.params.patientId),
       body: req.body,
+    }));
+  app.patch("/referrals/patients/:patientId/:referralId", async (req, res) => route(
+    "/referrals/patients/:patientId/:referralId",
+    deps,
+    req,
+    res,
+    () => handleUpdateReferralDraftRequest(deps, {
+      authHeader: req.header("authorization"),
+      patientId: routeParam(req.params.patientId),
+      referralId: routeParam(req.params.referralId),
+      body: req.body,
+    }),
+  ));
+  post(app, "/referrals/patients/:patientId/:referralId/regenerate", deps, (req) =>
+    handleRegenerateReferralLetterRequest(deps, {
+      authHeader: req.header("authorization"),
+      patientId: routeParam(req.params.patientId),
+      referralId: routeParam(req.params.referralId),
     }));
   for (const action of ["preview", "send"] as const) {
     post(app, `/referrals/patients/:patientId/:referralId/${action}`, deps, (req) =>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Encounter, Patient } from "@medplum/fhirtypes";
 import { ChartSidebar } from "../components/ChartSidebar";
+import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
@@ -58,6 +59,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [creatingSection, setCreatingSection] = useState(false);
   const [savingSection, setSavingSection] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
+  const [referralComposeOpen, setReferralComposeOpen] = useState(false);
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -318,6 +320,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("assessment", status)}
+              onRefer={() => setReferralComposeOpen(true)}
             />
           )}
           {activeSection === "prescription" && (
@@ -390,6 +393,13 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           saving={savingSection}
           onCancel={() => setCreatingSection(false)}
           onSave={createSection}
+        />
+      )}
+      {referralComposeOpen && (
+        <ReferralCompose
+          patientReference={patientReference}
+          encounterReference={encounterReference}
+          onClose={() => setReferralComposeOpen(false)}
         />
       )}
     </div>

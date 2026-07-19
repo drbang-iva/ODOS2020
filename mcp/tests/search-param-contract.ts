@@ -34,17 +34,25 @@ export const MEDPLUM_5_1_8_SEARCH_PARAMETERS = {
   MedicationRequest: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text authoredon category code date encounter identifier intended-dispenser intended-performer intended-performertype intent medication patient priority priority-order requester status subject".split(" "),
   MedicationStatement: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text category code context effective identifier medication part-of patient source status subject".split(" "),
   Observation: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text based-on category code code-value-concept code-value-date code-value-quantity code-value-string combo-code combo-code-value-concept combo-code-value-quantity combo-data-absent-reason combo-value-concept combo-value-quantity component-code component-code-value-concept component-code-value-quantity component-data-absent-reason component-value-concept component-value-quantity data-absent-reason date derived-from device encounter focus has-member identifier method part-of patient performer specimen status subject value-concept value-date value-quantity value-string".split(" "),
+  Organization: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active address address-city address-country address-postalcode address-state address-use endpoint identifier name partof phonetic type".split(" "),
   Patient: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active address address-city address-country address-postalcode address-state address-use birthdate death-date deceased email ethnicity family gender gender-identity general-practitioner given identifier language link name organization phone phonetic race telecom".split(" "),
   PaymentReconciliation: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text created disposition identifier outcome payment-issuer request requestor status".split(" "),
   PlanDefinition: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text composed-of date definition depends-on derived-from description effective identifier jurisdiction name predecessor publisher status successor title topic type url version".split(" "),
+  Practitioner: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active address address-city address-country address-postalcode address-state address-use communication email family gender given identifier name phone phonetic qualification-code qualification-davinci-pdex-where-valid telecom".split(" "),
+  PractitionerRole: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active date email endpoint identifier location organization phone practitioner role service specialty telecom".split(" "),
   Procedure: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text based-on category code date encounter identifier instantiates-canonical instantiates-uri location part-of patient performer reason-code reason-reference status subject".split(" "),
   Provenance: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text agent agent-role agent-type entity location patient recorded signature-type target when".split(" "),
   QuestionnaireResponse: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text author authored based-on encounter identifier part-of patient questionnaire source status subject".split(" "),
   Schedule: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text active actor date identifier service-category service-type specialty".split(" "),
+  ServiceRequest: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text authored based-on body-site category code encounter identifier instantiates-canonical instantiates-uri intent occurrence order-detail patient performer performer-type priority priority-order reason-code replaces requester requisition specimen status subject".split(" "),
   Task: "_content _count _id _lastUpdated _profile _query _security _sort _source _tag _text authored-on based-on business-status code due-date encounter focus group-identifier identifier intent modified owner part-of patient performer period priority priority-order requester status subject".split(" "),
 } as const;
 
 export type ContractResourceType = keyof typeof MEDPLUM_5_1_8_SEARCH_PARAMETERS;
+
+export const MEDPLUM_5_1_8_CHAINED_SEARCH_PARAMETERS = {
+  PractitionerRole: ["practitioner.name"],
+} as const;
 
 export const FHIR_R4_SEARCH_RESULT_PARAMETERS = ["_summary"] as const;
 
@@ -56,8 +64,16 @@ export function invalidSearchParameterKeys(
     ...MEDPLUM_5_1_8_SEARCH_PARAMETERS[resourceType],
     ...FHIR_R4_SEARCH_RESULT_PARAMETERS,
   ]);
+  const allowedChains = new Set<string>(
+    resourceType === "PractitionerRole"
+      ? MEDPLUM_5_1_8_CHAINED_SEARCH_PARAMETERS.PractitionerRole
+      : [],
+  );
   return [...parameterKeys]
-    .filter((key) => !allowed.has(key.split(":", 1)[0]))
+    .filter((key) => {
+      const parameter = key.split(":", 1)[0];
+      return !allowed.has(parameter) && !allowedChains.has(parameter);
+    })
     .sort();
 }
 
