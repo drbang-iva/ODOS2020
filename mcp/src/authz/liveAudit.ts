@@ -42,7 +42,7 @@ const AUDIT_DDL_FILES = [
   new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-17-weno-pharmacy-directory.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-17-weno-drug-database.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-15-era-line-linkage-event-validate.sql", import.meta.url),
+  new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.validate.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-18-commercial-engine-redemption-recovery.sql", import.meta.url),
   new URL("../../../data/migrations/2026-07-18-commercial-engine-credit-bank.sql", import.meta.url),
@@ -76,7 +76,7 @@ const AUDIT_MIGRATION_TABLES = [
 const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =
   "restored database predates this code's migration set; the ledger backfill cannot be trusted — restore a newer backup or apply migrations manually";
 const AUDIT_EVENT_CONSTRAINT_VALIDATE_MIGRATION =
-  "2026-07-15-era-line-linkage-event-validate.sql";
+  "2026-07-15-era-line-linkage-event.validate.sql";
 
 export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;

@@ -53,6 +53,9 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: ${MEDPLUM_ADMIN_EMAIL}
+      MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD}
     volumes:
       - ./medplum.config.json:/config/medplum.config.json:ro
       - medplum-binary:/data/binary

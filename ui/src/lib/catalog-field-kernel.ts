@@ -19,6 +19,7 @@ export type CatalogFieldDefinition =
   | (FieldBase & { type: "text"; unique?: boolean })
   | (FieldBase & { type: "color"; palette: readonly string[] })
   | (FieldBase & { type: "duration" | "number"; min?: number; max?: number; integer?: boolean })
+  | (FieldBase & { type: "currency"; min?: number; max?: number })
   | (FieldBase & { type: "select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "multi-select"; options: readonly { value: string; label: string }[] })
   | (FieldBase & { type: "reference-picker"; valueKind?: "reference" | "text" })
@@ -123,6 +124,18 @@ function validateField(
       }
       return value;
     }
+    case "currency": {
+      if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} must be a dollar amount with no more than two decimal places.`);
+      }
+      if (field.min !== undefined && value < field.min) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} must be at least ${currencyDisplay(field.min)}.`);
+      }
+      if (field.max !== undefined && value > field.max) {
+        throw new CatalogFieldValidationError(field.key, `${field.label} must be at most ${currencyDisplay(field.max)}.`);
+      }
+      return value;
+    }
     case "select":
       if (typeof value !== "string" || !field.options.some((option) => option.value === value)) {
         throw new CatalogFieldValidationError(field.key, `${field.label} must be a listed option.`);
@@ -162,6 +175,22 @@ function validateField(
     case "time-window-weekdays":
       return validateTimeWindowWeekdays(field, value);
   }
+}
+
+export function centsFromCurrencyInput(input: string): number | undefined {
+  const match = input.trim().replace(/^\$/, "").match(/^(\d+)(?:\.(\d{0,2}))?$/);
+  if (!match) return undefined;
+  const total = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
+  return Number.isSafeInteger(total) ? total : undefined;
+}
+
+export function currencyInputFromCents(cents: number): string {
+  if (!Number.isSafeInteger(cents)) return "";
+  return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+}
+
+function currencyDisplay(cents: number): string {
+  return `$${currencyInputFromCents(cents)}`;
 }
 
 function validateWeeklyHours(field: CatalogFieldDefinition, value: unknown): CatalogWeeklyHours {

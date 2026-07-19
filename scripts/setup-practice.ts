@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
-import type { AccessPolicy, Practitioner, ProjectMembership, User } from "@medplum/fhirtypes";
+import type { AccessPolicy, Practitioner, Project, ProjectMembership, User } from "@medplum/fhirtypes";
 import { createLiveOdosAuditRuntime } from "../mcp/src/authz/liveAudit.js";
 import { buildOdosAuditEventRow, type OdosAuditEventRecord } from "../mcp/src/authz/odosAudit.js";
 import {
@@ -14,6 +14,7 @@ import {
 import {
   buildMedplumAccessPolicy,
   getRoleDeclaration,
+  PRACTICE_ROLE_IDS,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
@@ -38,6 +39,7 @@ export interface SetupPracticeConfig {
   readonly adminName: string;
   readonly adminPassword: string;
   readonly serviceIdentityEmail?: string;
+  readonly serviceIdentityPassword?: string;
   readonly postgresUrl?: string;
   readonly statePath: string;
 }
@@ -57,6 +59,7 @@ export interface SetupPracticeState {
 export interface AdminSession {
   readonly accessToken: string;
   readonly projectId: string;
+  readonly practitionerId?: string;
   readonly loginUrl: string;
 }
 
@@ -65,7 +68,7 @@ export interface SetupPracticeAdapter {
   createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession>;
   createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner>;
   createFirstAdminAccessPolicies(config: SetupPracticeConfig, session: AdminSession): Promise<readonly {
-    role: FirstAdminGrantRole;
+    role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
   }[]>;
@@ -186,12 +189,12 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
   }
 
   const resolvedPolicies = await adapter.createFirstAdminAccessPolicies(config, session);
-  const policies = new Map<FirstAdminGrantRole, AccessPolicy>();
+  const allPolicies = new Map<PracticeRoleId, AccessPolicy>();
   for (const resolvedPolicy of resolvedPolicies) {
     if (!resolvedPolicy.policy.id) {
       throw new Error(`Setup wizard ${resolvedPolicy.role} AccessPolicy create returned no id.`);
     }
-    policies.set(resolvedPolicy.role, resolvedPolicy.policy);
+    allPolicies.set(resolvedPolicy.role, resolvedPolicy.policy);
     if (resolvedPolicy.created) {
       await emit(
         buildSetupAuditRow({
@@ -202,6 +205,11 @@ export async function runSetupPractice(options: SetupPracticeOptions = {}): Prom
         }),
       );
     }
+  }
+  const policies = new Map<FirstAdminGrantRole, AccessPolicy>();
+  for (const role of FIRST_ADMIN_GRANT_ROLES) {
+    const policy = allPolicies.get(role);
+    if (policy) policies.set(role, policy);
   }
   const clinicianPolicy = policies.get("clinician");
   if (!clinicianPolicy?.id || policies.size !== FIRST_ADMIN_GRANT_ROLES.length) {
@@ -297,12 +305,15 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return practitioner;
   }
 
-  async createFirstAdminAccessPolicies(): Promise<readonly {
-    role: FirstAdminGrantRole;
+  async createFirstAdminAccessPolicies(
+    _config: SetupPracticeConfig,
+    session: AdminSession,
+  ): Promise<readonly {
+    role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
   }[]> {
-    return this.resolveFirstAdminPolicies(async (role) => {
+    return this.resolveCanonicalPolicies(async (role) => {
       const policy: AccessPolicy = {
         ...buildMedplumAccessPolicy(getRoleDeclaration(role)),
         id: `access-policy-${this.policies.length + 1}`,
@@ -353,11 +364,11 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
     return assignment;
   }
 
-  private async resolveFirstAdminPolicies(
-    createPolicy: (role: FirstAdminGrantRole) => Promise<AccessPolicy>,
-  ): Promise<readonly { role: FirstAdminGrantRole; policy: AccessPolicy; created: boolean }[]> {
+  private async resolveCanonicalPolicies(
+    createPolicy: (role: PracticeRoleId) => Promise<AccessPolicy>,
+  ): Promise<readonly { role: PracticeRoleId; policy: AccessPolicy; created: boolean }[]> {
     const resolved = [];
-    for (const roleId of FIRST_ADMIN_GRANT_ROLES) {
+    for (const roleId of PRACTICE_ROLE_IDS) {
       const role = getRoleDeclaration(roleId);
       const policyName = `ODOS ${role.display}`;
       const existing = this.policies.filter((policy) => policy.name === policyName);
@@ -380,6 +391,7 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
 
 class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
   private fhir?: MedplumClient;
+  private serviceFhir?: MedplumClient;
   private audit?: ReturnType<typeof createLiveOdosAuditRuntime>;
 
   async isPracticeProvisioned(_config: SetupPracticeConfig, state: SetupPracticeState): Promise<boolean> {
@@ -388,21 +400,48 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
 
   async createOrLoginAdmin(config: SetupPracticeConfig): Promise<AdminSession> {
     await waitForMedplum(config.baseUrl);
+    const serviceIdentityEmail = requireConfigValue(config.serviceIdentityEmail, "MEDPLUM_ADMIN_EMAIL");
+    const serviceIdentityPassword = requireConfigValue(config.serviceIdentityPassword, "MEDPLUM_ADMIN_PASSWORD");
+    const serviceAccessToken = await loginForIdentity(
+      config.baseUrl,
+      serviceIdentityEmail,
+      serviceIdentityPassword,
+    );
+    this.serviceFhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken: serviceAccessToken });
+
     try {
       const accessToken = await loginForAccessToken(config);
       const projectId = await resolveProjectId({ baseUrl: config.baseUrl, accessToken });
       this.fhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken });
-      return { accessToken, projectId, loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin` };
-    } catch {
-      await createAdminUserAndProject(config);
+      const membership = await this.resolveHumanMembership(config.adminEmail, projectId);
+      return {
+        accessToken,
+        projectId,
+        practitionerId: practitionerIdFromMembership(membership),
+        loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin`,
+      };
+    } catch (loginError) {
+      await ensureAdminUserAndProject(config, serviceAccessToken, this.serviceClient());
       const accessToken = await loginForAccessToken(config);
       const projectId = await resolveProjectId({ baseUrl: config.baseUrl, accessToken });
       this.fhir = createMedplumClient({ baseUrl: config.baseUrl, accessToken });
-      return { accessToken, projectId, loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin` };
+      const membership = await this.resolveHumanMembership(config.adminEmail, projectId);
+      if (!membership.id) {
+        throw new Error("Medplum practice provisioning returned a ProjectMembership without an id.", { cause: loginError });
+      }
+      return {
+        accessToken,
+        projectId,
+        practitionerId: practitionerIdFromMembership(membership),
+        loginUrl: `${config.baseUrl.replace(/\/$/, "")}/signin`,
+      };
     }
   }
 
-  async createPractitioner(config: SetupPracticeConfig): Promise<Practitioner> {
+  async createPractitioner(config: SetupPracticeConfig, session: AdminSession): Promise<Practitioner> {
+    if (session.practitionerId) {
+      return this.serviceClient().read<Practitioner>("Practitioner", session.practitionerId);
+    }
     return this.client().create<Practitioner>({
       resourceType: "Practitioner",
       active: true,
@@ -417,27 +456,37 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     });
   }
 
-  async createFirstAdminAccessPolicies(): Promise<readonly {
-    role: FirstAdminGrantRole;
+  async createFirstAdminAccessPolicies(
+    _config: SetupPracticeConfig,
+    session: AdminSession,
+  ): Promise<readonly {
+    role: PracticeRoleId;
     policy: AccessPolicy;
     created: boolean;
   }[]> {
     const resolved = [];
-    for (const roleId of FIRST_ADMIN_GRANT_ROLES) {
+    for (const roleId of PRACTICE_ROLE_IDS) {
       const role = getRoleDeclaration(roleId);
       const policyName = `ODOS ${role.display}`;
-      const existing = (await searchAll<AccessPolicy>(this.client(), "AccessPolicy", {
+      const existing = (await searchAll<AccessPolicy>(this.serviceClient(), "AccessPolicy", {
         "name:exact": policyName,
-      })).filter((policy) => policy.name === policyName);
+      })).filter((policy) => policy.name === policyName && policy.meta?.project === session.projectId);
       if (existing.length > 1) {
         throw new Error(`Expected at most one ${policyName} AccessPolicy; found ${existing.length}.`);
       }
       if (existing[0]) {
         resolved.push({ role: roleId, policy: existing[0], created: false });
       } else {
+        const policy = buildMedplumAccessPolicy(role);
         resolved.push({
           role: roleId,
-          policy: await this.client().create<AccessPolicy>(buildMedplumAccessPolicy(role)),
+          policy: await this.serviceClient().create<AccessPolicy>({
+            ...policy,
+            meta: {
+              ...policy.meta,
+              project: session.projectId,
+            },
+          }),
           created: true,
         });
       }
@@ -456,15 +505,15 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       {
         serviceIdentityEmail: input.config.serviceIdentityEmail,
         resolveTarget: async (target) => {
-          const users = (await searchAll<User>(this.client(), "User", { email: target })).filter(
+          const users = (await searchAll<User>(this.serviceClient(), "User", { email: target })).filter(
             (user) => user.email?.toLowerCase() === target.toLowerCase(),
           );
           if (users.length !== 1 || !users[0]?.id) {
             throw new Error(`Expected one setup User for ${target}; found ${users.length}.`);
           }
-          const memberships = await searchAll<ProjectMembership>(this.client(), "ProjectMembership", {
+          const memberships = (await searchAll<ProjectMembership>(this.serviceClient(), "ProjectMembership", {
             user: `User/${users[0].id}`,
-          });
+          })).filter((membership) => membership.project?.reference === `Project/${input.session.projectId}`);
           if (memberships.length !== 1) {
             throw new Error(`Expected one setup ProjectMembership for ${target}; found ${memberships.length}.`);
           }
@@ -476,7 +525,7 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
           return policy;
         },
         patchMembership: (id, operations, versionId) =>
-          this.client().patch("ProjectMembership", id, operations, {
+          this.serviceClient().patch("ProjectMembership", id, operations, {
             "If-Match": `W/\"${versionId}\"`,
           }),
         recordMembershipChange: (target, operation) =>
@@ -495,6 +544,29 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
       throw new Error("Setup wizard FHIR client is not initialized.");
     }
     return this.fhir;
+  }
+
+  private serviceClient(): MedplumClient {
+    if (!this.serviceFhir) {
+      throw new Error("Setup wizard service-identity FHIR client is not initialized.");
+    }
+    return this.serviceFhir;
+  }
+
+  private async resolveHumanMembership(email: string, projectId: string): Promise<ProjectMembership> {
+    const users = (await searchAll<User>(this.serviceClient(), "User", { email })).filter(
+      (user) => user.email?.toLowerCase() === email.toLowerCase(),
+    );
+    if (users.length !== 1 || !users[0]?.id) {
+      throw new Error(`Expected one setup User for ${email}; found ${users.length}.`);
+    }
+    const memberships = (await searchAll<ProjectMembership>(this.serviceClient(), "ProjectMembership", {
+      user: `User/${users[0].id}`,
+    })).filter((membership) => membership.project?.reference === `Project/${projectId}`);
+    if (memberships.length !== 1) {
+      throw new Error(`Expected one setup ProjectMembership for ${email}; found ${memberships.length}.`);
+    }
+    return memberships[0]!;
   }
 
   private auditRuntime(): ReturnType<typeof createLiveOdosAuditRuntime> {
@@ -539,6 +611,7 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
       "ODOS_ADMIN_PASSWORD",
     ),
     serviceIdentityEmail: (config.serviceIdentityEmail ?? env.MEDPLUM_ADMIN_EMAIL)?.trim() || undefined,
+    serviceIdentityPassword: config.serviceIdentityPassword ?? env.MEDPLUM_ADMIN_PASSWORD,
     postgresUrl: config.postgresUrl ?? env.ODOS_POSTGRES_URL ?? DEFAULT_POSTGRES_URL,
     statePath: options.statePath ?? config.statePath ?? env.ODOS_SETUP_STATE_PATH ?? DEFAULT_STATE_PATH,
   };
@@ -627,80 +700,110 @@ async function waitForMedplum(url: string): Promise<void> {
   throw new Error(`Timed out waiting for local Medplum at ${base}`, { cause: lastError });
 }
 
-async function createAdminUserAndProject(config: SetupPracticeConfig): Promise<void> {
-  const base = config.baseUrl.replace(/\/$/, "");
-  const verifier = randomBytes(32).toString("base64url");
-  const challenge = createHash("sha256").update(verifier).digest("base64url");
-  const [firstName, ...lastParts] = config.adminName.split(/\s+/);
-  const response = await fetch(`${base}/auth/newuser`, {
+async function ensureAdminUserAndProject(
+  config: SetupPracticeConfig,
+  serviceAccessToken: string,
+  serviceFhir: MedplumClient,
+): Promise<void> {
+  const users = (await searchAll<User>(serviceFhir, "User", { email: config.adminEmail })).filter(
+    (user) => user.email?.toLowerCase() === config.adminEmail.toLowerCase(),
+  );
+  if (users.length > 1) {
+    throw new Error(`Expected at most one setup User for ${config.adminEmail}; found ${users.length}.`);
+  }
+
+  if (users[0]?.id) {
+    const memberships = await searchAll<ProjectMembership>(serviceFhir, "ProjectMembership", {
+      user: `User/${users[0].id}`,
+    });
+    if (memberships.length === 0) {
+      await initializePracticeProject(config, serviceAccessToken, { reference: `User/${users[0].id}` });
+    } else if (memberships.length > 1) {
+      throw new Error(`Expected at most one setup ProjectMembership for ${config.adminEmail}; found ${memberships.length}.`);
+    }
+  } else {
+    await initializePracticeProject(config, serviceAccessToken, undefined);
+  }
+
+  const passwordResponse = await fetch(`${config.baseUrl.replace(/\/$/, "")}/admin/super/setpassword`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      projectId: "new",
-      firstName: firstName || "ODOS",
-      lastName: lastParts.join(" ") || "Admin",
-      email: config.adminEmail,
-      password: config.adminPassword,
-      remember: false,
-      codeChallengeMethod: "S256",
-      codeChallenge: challenge,
-      recaptchaToken: "",
-    }),
+    headers: {
+      Authorization: `Bearer ${serviceAccessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email: config.adminEmail, password: config.adminPassword }),
   });
-  if (!response.ok) {
-    throw new Error(`Medplum auth/newuser failed: ${response.status} ${await response.text()}`);
-  }
-  const newUser = (await response.json()) as { login?: string; code?: string };
-  if (newUser.code) {
-    await exchangeRegistrationCode({ baseUrl: config.baseUrl, code: newUser.code, verifier });
-    return;
-  }
-  if (!newUser.login) {
-    throw new Error("Medplum auth/newuser response did not include login or code.");
-  }
-  const projectResponse = await fetch(`${base}/auth/newproject`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login: newUser.login, projectName: config.practiceName }),
-  });
-  if (!projectResponse.ok) {
-    throw new Error(`Medplum auth/newproject failed: ${projectResponse.status} ${await projectResponse.text()}`);
-  }
-  const newProject = (await projectResponse.json()) as { code?: string };
-  if (newProject.code) {
-    await exchangeRegistrationCode({ baseUrl: config.baseUrl, code: newProject.code, verifier });
+  if (!passwordResponse.ok) {
+    throw new Error(`Medplum admin set-password failed: ${passwordResponse.status} ${await passwordResponse.text()}`);
   }
 }
 
-async function exchangeRegistrationCode(input: {
-  baseUrl: string;
-  code: string;
-  verifier: string;
-}): Promise<void> {
-  const response = await fetch(`${input.baseUrl.replace(/\/$/, "")}/oauth2/token`, {
+async function initializePracticeProject(
+  config: SetupPracticeConfig,
+  serviceAccessToken: string,
+  owner: { reference: string } | undefined,
+): Promise<void> {
+  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/fhir/R4/Project/$init`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code: input.code,
-      code_verifier: input.verifier,
+    headers: {
+      Authorization: `Bearer ${serviceAccessToken}`,
+      "Content-Type": "application/fhir+json",
+      Accept: "application/fhir+json",
+    },
+    body: JSON.stringify({
+      resourceType: "Parameters",
+      parameter: [
+        { name: "name", valueString: config.practiceName },
+        owner
+          ? { name: "owner", valueReference: owner }
+          : { name: "ownerEmail", valueString: config.adminEmail },
+      ],
     }),
   });
   if (!response.ok) {
-    throw new Error(`Medplum registration token exchange failed: ${response.status} ${await response.text()}`);
+    throw new Error(`Medplum Project/$init failed: ${response.status} ${await response.text()}`);
   }
+  const body = (await response.json()) as Project | {
+    resourceType?: string;
+    parameter?: Array<{ name?: string; resource?: { resourceType?: string; id?: string } }>;
+  };
+  if (!projectFromInitResponse(body)) {
+    throw new Error("Medplum Project/$init response did not include the created Project.");
+  }
+}
+
+export function projectFromInitResponse(body: unknown): Project | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const resource = body as Project & {
+    parameter?: Array<{ name?: string; resource?: Project }>;
+  };
+  if (resource.resourceType === "Project" && resource.id) return resource;
+  const project = resource.parameter?.find((parameter) => parameter.name === "return")?.resource;
+  return project?.resourceType === "Project" && project.id ? project : undefined;
+}
+
+function practitionerIdFromMembership(membership: ProjectMembership): string {
+  const reference = membership.profile?.reference;
+  if (!reference?.startsWith("Practitioner/") || reference.length === "Practitioner/".length) {
+    throw new Error("Setup ProjectMembership does not reference a Practitioner profile.");
+  }
+  return reference.slice("Practitioner/".length);
 }
 
 async function loginForAccessToken(config: SetupPracticeConfig): Promise<string> {
-  const base = config.baseUrl.replace(/\/$/, "");
+  return loginForIdentity(config.baseUrl, config.adminEmail, config.adminPassword);
+}
+
+async function loginForIdentity(baseUrl: string, email: string, password: string): Promise<string> {
+  const base = baseUrl.replace(/\/$/, "");
   const verifier = randomBytes(32).toString("base64url");
   const challenge = createHash("sha256").update(verifier).digest("base64url");
   const loginResponse = await fetch(`${base}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      email: config.adminEmail,
-      password: config.adminPassword,
+      email,
+      password,
       codeChallenge: challenge,
       codeChallengeMethod: "S256",
     }),

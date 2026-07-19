@@ -43,8 +43,8 @@ test("frame pricing descriptor is edit-only and uses the shared CatalogEditor fi
   const descriptor = framePricingDescriptor(framePricingAdapter(resourceClient([], [])));
   assert.equal(descriptor.canCreate, false);
   assert.deepEqual(descriptor.fields.map((field) => [field.key, field.label]), [
-    ["wholesaleCostCents", "Wholesale cost (cents)"],
-    ["retailPriceCents", "Retail price (cents)"],
+    ["wholesaleCostCents", "Wholesale cost"],
+    ["retailPriceCents", "Retail price"],
   ]);
 });
 

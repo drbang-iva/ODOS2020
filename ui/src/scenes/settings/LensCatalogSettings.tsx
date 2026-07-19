@@ -30,6 +30,7 @@ import {
   CatalogSection,
   type CatalogDescriptor,
 } from "./CatalogEditor";
+import { CurrencyInput } from "../../components/settings/CatalogFields";
 
 type LensCatalogSettingsProps = {
   canWrite: boolean;
@@ -356,9 +357,13 @@ export function BulkPasteGrid({
                         value: event.target.value === "multiplier" ? DEFAULT_LENS_RETAIL_RULE.value : 0,
                       })}>
                         <option value="multiplier">Multiplier</option>
-                        <option value="flat-adder">Flat adder (cents)</option>
+                        <option value="flat-adder">Flat adder</option>
                       </select>
-                      <input aria-label={`${category} retail value`} className="scheduler-input text-xs" type="number" min="0" step={rule.strategy === "multiplier" ? "0.1" : "1"} value={rule.value} onChange={(event) => updateRule(category, { value: Number(event.target.value) })} />
+                      {rule.strategy === "multiplier" ? (
+                        <input aria-label={`${category} retail multiplier`} className="scheduler-input text-xs" type="number" min="0" step="0.1" value={rule.value} onChange={(event) => updateRule(category, { value: Number(event.target.value) })} />
+                      ) : (
+                        <CurrencyInput ariaLabel={`${category} flat adder`} className="scheduler-input text-xs" value={rule.value} onChange={(value) => updateRule(category, { value: value ?? 0 })} />
+                      )}
                       <select aria-label={`${category} retail rounding`} className="scheduler-input text-xs" value={rule.rounding} onChange={(event) => updateRule(category, { rounding: event.target.value as LensRetailRule["rounding"] })}>
                         <option value="dollar-minus-2">Round to .98</option>
                         <option value="nearest-dollar">Nearest dollar</option>
@@ -392,15 +397,12 @@ export function BulkPasteGrid({
                   <td className="px-2 py-3 text-[color:var(--odos-muted)]">{money(row.incoming.wholesalePerPairCents)}/pair</td>
                   <td className="px-2 py-3">
                     {row.classification === "DISCONTINUED" ? money(row.incoming.retailPerPairCents) : <>
-                      <input
-                          aria-label={`Retail ${row.incoming.id}`}
-                          className="scheduler-input min-w-28 text-xs"
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={row.incoming.retailPerPairCents}
-                          onChange={(event) => updateRetail(index, Number(event.target.value))}
-                        />
+                      <CurrencyInput
+                        ariaLabel={`Retail ${row.incoming.id}`}
+                        className="scheduler-input min-w-28 text-xs"
+                        value={row.incoming.retailPerPairCents}
+                        onChange={(value) => updateRetail(index, value ?? 0)}
+                      />
                       {row.classification === "CHANGED" && row.incoming.retailPerPairCents !== row.suggestedRetailPerPairCents && (
                         <span className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--odos-muted)]">
                           Suggested {money(row.suggestedRetailPerPairCents)}
@@ -438,7 +440,7 @@ export function coatingOptionDescriptor(
       { type: "text", key: "lab", label: "Lab", required: true },
       { type: "select", key: "category", label: "Category", required: true, options: ["AR", "scratch", "mirror", "tint", "uv"].map((value) => ({ value, label: value })) },
       { type: "text", key: "name", label: "Name", required: true },
-      { type: "number", key: "pricePerPairCents", label: "Price per pair (cents)", required: true, min: 0 },
+      { type: "currency", key: "pricePerPairCents", label: "Price per pair", required: true, min: 0 },
       { type: "toggle", key: "uvProtection", label: "UV protection" },
       { type: "toggle", key: "hydrophobic", label: "Hydrophobic" },
       { type: "toggle", key: "hevProtection", label: "HEV protection" },
@@ -479,7 +481,7 @@ export function modifierOptionDescriptor(
     fields: [
       { type: "text", key: "lab", label: "Lab", required: true },
       { type: "text", key: "name", label: "Name", required: true },
-      { type: "number", key: "priceCents", label: "Price (cents)", required: true, min: 0 },
+      { type: "currency", key: "priceCents", label: "Price", required: true, min: 0 },
       { type: "select", key: "unit", label: "Unit", required: true, options: [
         { value: "pair", label: "Pair" },
         { value: "perDiopter", label: "Per diopter" },

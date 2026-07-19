@@ -32,7 +32,7 @@ test("the 10 payment.* audit event types are registered — count and enumeratio
 
 test("the latest audit migration pair matches the TypeScript union and separates validation", () => {
   const migrationFile = "2026-07-15-era-line-linkage-event.sql";
-  const validationFile = "2026-07-15-era-line-linkage-event-validate.sql";
+  const validationFile = "2026-07-15-era-line-linkage-event.validate.sql";
   const sql = readFileSync(
     resolve(process.cwd(), "../data/migrations", migrationFile),
     "utf8",
@@ -52,6 +52,7 @@ test("the latest audit migration pair matches the TypeScript union and separates
   const liveAuditSource = readFileSync(resolve(process.cwd(), "src/authz/liveAudit.ts"), "utf8");
   assert.match(liveAuditSource, new RegExp(`AUDIT_DDL_FILES[\\s\\S]*${migrationFile.replaceAll(".", "\\.")}`));
   assert.match(liveAuditSource, new RegExp(`${migrationFile.replaceAll(".", "\\.")}[\\s\\S]*${validationFile.replaceAll(".", "\\.")}`));
+  assert.ok(migrationFile.localeCompare(validationFile) < 0, "base migration must sort before validation");
 });
 
 test("buildPaymentAuditRecord attributes a completed charge to the staff member and the payment record", () => {

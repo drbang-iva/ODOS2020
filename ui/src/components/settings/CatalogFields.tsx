@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CATALOG_WEEKDAYS,
+  centsFromCurrencyInput,
+  currencyInputFromCents,
   type CatalogFieldDefinition,
   type CatalogTimeWindowWeekdays,
   type CatalogWeekday,
@@ -136,6 +138,17 @@ function CatalogFieldControl({
           />
         </FieldFrame>
       );
+    case "currency":
+      return (
+        <FieldFrame field={field} error={error} showRequired={showRequired}>
+          <CurrencyInput
+            id={inputId}
+            value={typeof value === "number" ? value : undefined}
+            ariaDescribedBy={describedBy}
+            onChange={onChange}
+          />
+        </FieldFrame>
+      );
     case "select":
       return (
         <FieldFrame field={field} error={error} showRequired={showRequired}>
@@ -230,6 +243,64 @@ function CatalogFieldControl({
         </FieldFrame>
       );
   }
+}
+
+export function CurrencyInput({
+  id,
+  value,
+  ariaDescribedBy,
+  ariaLabel,
+  className = "scheduler-input",
+  onChange,
+}: {
+  id?: string;
+  value?: number;
+  ariaDescribedBy?: string;
+  ariaLabel?: string;
+  className?: string;
+  onChange: (value: number | undefined) => void;
+}) {
+  const [input, setInput] = useState(() => value === undefined ? "" : currencyInputFromCents(value));
+  const editing = useRef(false);
+
+  useEffect(() => {
+    if (!editing.current) setInput(value === undefined ? "" : currencyInputFromCents(value));
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--odos-muted)]" aria-hidden="true">$</span>
+      <input
+        id={id}
+        className={`${className} pl-7`}
+        type="text"
+        inputMode="decimal"
+        value={input}
+        aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        onFocus={() => { editing.current = true; }}
+        onChange={(event) => {
+          const next = event.target.value;
+          setInput(next);
+          if (next === "") onChange(undefined);
+          else {
+            const cents = centsFromCurrencyInput(next);
+            if (cents !== undefined) onChange(cents);
+          }
+        }}
+        onBlur={() => {
+          editing.current = false;
+          const cents = centsFromCurrencyInput(input);
+          if (cents === undefined) {
+            setInput(value === undefined ? "" : currencyInputFromCents(value));
+            return;
+          }
+          setInput(currencyInputFromCents(cents));
+          onChange(cents);
+        }}
+      />
+    </div>
+  );
 }
 
 function FieldFrame({

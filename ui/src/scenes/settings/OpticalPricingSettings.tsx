@@ -50,8 +50,8 @@ export function framePricingDescriptor(
     adapter,
     canCreate: false,
     fields: [
-      { type: "number", key: "wholesaleCostCents", label: "Wholesale cost (cents)", min: 0 },
-      { type: "number", key: "retailPriceCents", label: "Retail price (cents)", required: true, min: 0 },
+      { type: "currency", key: "wholesaleCostCents", label: "Wholesale cost", min: 0 },
+      { type: "currency", key: "retailPriceCents", label: "Retail price", required: true, min: 0 },
     ],
     createItem: () => ({
       id: "",
@@ -89,8 +89,8 @@ export function contactLensPricingDescriptor(
       { type: "text", key: "manufacturerDisplay", label: "Brand", required: true },
       { type: "text", key: "productCode", label: "Product code", required: true },
       { type: "text", key: "productDisplay", label: "Product name", required: true },
-      { type: "number", key: "wholesaleCostCents", label: "Wholesale cost (cents)", min: 0 },
-      { type: "number", key: "retailPriceCents", label: "Retail price (cents)", required: true, min: 0 },
+      { type: "currency", key: "wholesaleCostCents", label: "Wholesale cost", min: 0 },
+      { type: "currency", key: "retailPriceCents", label: "Retail price", required: true, min: 0 },
     ],
     createItem: () => ({
       id: `contact-lens-price-${crypto.randomUUID()}`,

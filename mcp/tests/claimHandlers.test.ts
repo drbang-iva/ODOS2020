@@ -1510,7 +1510,7 @@ test("line-linkage audit migration uses drop-and-re-add and registers its claims
     "utf8",
   );
   const validationSql = readFileSync(
-    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event-validate.sql"),
+    resolve(process.cwd(), "../data/migrations/2026-07-15-era-line-linkage-event.validate.sql"),
     "utf8",
   );
   const dropIndex = sql.indexOf("DROP CONSTRAINT IF EXISTS odos_audit_events_event_type_check");
