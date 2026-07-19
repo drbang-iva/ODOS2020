@@ -150,7 +150,7 @@ export function CatalogScene({
         )}
 
         {toast && (
-          <div role="status" className="fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
+          <div role="status" className="pointer-events-none fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
             {toast}
           </div>
         )}
@@ -414,7 +414,7 @@ export function CatalogSection<Item extends CatalogItemBase>({
       )}
 
       {toast && (
-        <div role="status" className="fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
+        <div role="status" className="pointer-events-none fixed bottom-5 right-5 z-50 border border-emerald-300/30 bg-emerald-950 px-4 py-3 text-sm text-emerald-100 shadow-2xl">
           {toast}
         </div>
       )}
