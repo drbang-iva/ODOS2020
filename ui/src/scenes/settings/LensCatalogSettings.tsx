@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { CatalogAdapter } from "../../lib/catalog-adapter";
 import { fhir } from "../../lib/fhir";
 import {
-  LENS_PRODUCT_PASTE_COLUMNS,
+  DEFAULT_LENS_RETAIL_RULE,
+  approveLensImport,
+  buildLensImportReview,
   parseLensProductPaste,
+  type LensImportReview,
+  type LensRetailRule,
 } from "../../lib/lens-bulk-paste";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
@@ -15,6 +19,7 @@ import {
   modifierOptionAdapter,
   validateCoatingHouseDefaults,
   type CoatingOption,
+  type LensDesignType,
   type LensProduct,
   type LensVocabularyItem,
   type LensVocabularyKind,
@@ -239,6 +244,7 @@ function LensProductManager({
       {canWrite && (
         <BulkPasteGrid
           adapter={adapter}
+          existingProducts={products}
           onCommitted={(saved) => setProducts((current) => mergeProducts(current, saved))}
         />
       )}
@@ -248,32 +254,37 @@ function LensProductManager({
 
 export function BulkPasteGrid({
   adapter,
+  existingProducts = [],
   onCommitted,
 }: {
   adapter: CatalogAdapter<LensProduct>;
+  existingProducts?: readonly LensProduct[];
   onCommitted?: (rows: LensProduct[]) => void;
 }) {
   const [paste, setPaste] = useState("");
-  const [preview, setPreview] = useState<LensProduct[]>([]);
+  const [review, setReview] = useState<LensImportReview | null>(null);
+  const [categories, setCategories] = useState<LensDesignType[]>([]);
+  const [retailRules, setRetailRules] = useState<Partial<Record<LensDesignType, LensRetailRule>>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
 
-  function parsePreview() {
-    const result = parseLensProductPaste(paste);
-    setPreview(result.rows);
-    setErrors(result.errors);
+  function parsePreview(rules = retailRules) {
+    const result = parseLensProductPaste(paste, undefined, { retailRules: rules });
+    setReview(buildLensImportReview(result, existingProducts));
+    setCategories(unique(result.rows.map((row) => row.design.type)) as LensDesignType[]);
+    setErrors([]);
     setSavedCount(0);
   }
 
-  async function commit() {
+  async function approve() {
+    if (!review) return;
     setSaving(true);
     setErrors([]);
     try {
-      const saved: LensProduct[] = [];
-      for (const row of preview) saved.push(await adapter.save(row));
+      const saved = await approveLensImport(review, adapter);
       setSavedCount(saved.length);
-      setPreview([]);
+      setReview(null);
       setPaste("");
       onCommitted?.(saved);
     } catch (error) {
@@ -283,59 +294,133 @@ export function BulkPasteGrid({
     }
   }
 
-  function updatePreview(index: number, update: Partial<LensProduct>) {
-    setPreview((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, ...update } : row));
+  function updateRetail(index: number, retailPerPairCents: number) {
+    setReview((current) => current ? {
+      ...current,
+      rows: current.rows.map((row, rowIndex) => rowIndex === index && row.classification !== "UNPARSED"
+        ? { ...row, incoming: { ...row.incoming, retailPerPairCents } }
+        : row),
+    } : current);
+  }
+
+  function updateRule(category: LensDesignType, update: Partial<LensRetailRule>) {
+    const current = retailRules[category] ?? DEFAULT_LENS_RETAIL_RULE;
+    const next = { ...retailRules, [category]: { ...current, ...update } };
+    setRetailRules(next);
+    parsePreview(next);
   }
 
   return (
     <div className="border-t border-white/10 bg-[#0c1325]/70 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-white/90">Bulk-paste grid</h3>
-          <p className="mt-1 text-xs text-white/45">Paste tab- or comma-delimited rows in this fixed order:</p>
+          <h3 className="font-semibold text-white/90">Import review</h3>
+          <p className="mt-1 text-xs text-white/45">Paste a Lens Catalog v1 JSON file. Catalog data does not change until Approve.</p>
         </div>
-        <button type="button" className="scheduler-button" onClick={parsePreview}>Preview rows</button>
+        <button type="button" className="scheduler-button" onClick={() => parsePreview()}>Review file</button>
       </div>
-      <code className="mt-3 block overflow-x-auto whitespace-nowrap rounded-lg border border-white/10 bg-black/20 p-3 text-[11px] text-[#d8c49e]">
-        {LENS_PRODUCT_PASTE_COLUMNS.join(" · ")}
-      </code>
       <textarea
-        className="scheduler-input mt-3 min-h-28 w-full font-mono text-xs"
+        className="scheduler-input mt-3 min-h-36 w-full font-mono text-xs"
         value={paste}
-        aria-label="Pasted lens product rows"
-        placeholder={LENS_PRODUCT_PASTE_COLUMNS.join("\t")}
+        aria-label="Lens catalog import JSON"
+        placeholder={'{"schemaVersion":1,"lab":"bp-digital",...}'}
         onChange={(event) => setPaste(event.target.value)}
       />
-      {errors.length > 0 && (
+      {(errors.length > 0 || (review?.errors.length ?? 0) > 0) && (
         <div role="alert" className="mt-3 border border-red-400/30 bg-red-950/40 p-3 text-sm text-red-100">
-          {errors.map((message) => <div key={message}>{message}</div>)}
+          {[...errors, ...(review?.errors ?? [])].map((message) => <div key={message}>{message}</div>)}
         </div>
       )}
-      {savedCount > 0 && <div role="status" className="mt-3 text-sm text-emerald-300">Saved {savedCount} lens products.</div>}
-      {preview.length > 0 && (
-        <div className="mt-4 overflow-x-auto">
+      {savedCount > 0 && <div role="status" className="mt-3 text-sm text-emerald-300">Approved {savedCount} catalog changes.</div>}
+      {review && (
+        <div className="mt-4 grid gap-4">
+          <div className="flex flex-wrap gap-2 text-xs text-[color:var(--odos-muted)]">
+            <span className="rounded-full border border-[color:var(--odos-line)] px-3 py-1">Base cells {review.report.parsedBaseCells}{review.report.declaredBaseCells === undefined ? "" : ` of ${review.report.declaredBaseCells}`}</span>
+            <span className="rounded-full border border-[color:var(--odos-line)] px-3 py-1">Materialized {review.report.materializedRows}{review.report.declaredMaterializedRows === undefined ? "" : ` of ${review.report.declaredMaterializedRows}`}</span>
+            <span className="rounded-full border border-[color:var(--odos-line)] px-3 py-1">Unchanged {review.unchangedCount}</span>
+            {review.metadata && <span className="rounded-full border border-[color:var(--odos-line)] px-3 py-1">Batch {review.metadata.importBatch}</span>}
+          </div>
+
+          {categories.length > 0 && (
+            <section className="rounded-xl border border-[color:var(--odos-line)] bg-[color:var(--odos-deep-surface)] p-4">
+              <h4 className="text-sm font-semibold text-[color:var(--odos-text)]">Suggested-retail rules</h4>
+              <p className="mt-1 text-xs text-[color:var(--odos-muted)]">Defaults use the canonical multiplier and .98 rounding. Rules apply by design category.</p>
+              <div className="mt-3 grid gap-2">
+                {categories.map((category) => {
+                  const rule = retailRules[category] ?? DEFAULT_LENS_RETAIL_RULE;
+                  return (
+                    <div key={category} className="grid gap-2 sm:grid-cols-[minmax(9rem,1fr)_10rem_8rem_12rem]">
+                      <span className="self-center text-xs font-semibold text-[color:var(--odos-muted)]">{category}</span>
+                      <select aria-label={`${category} retail strategy`} className="scheduler-input text-xs" value={rule.strategy} onChange={(event) => updateRule(category, {
+                        strategy: event.target.value as LensRetailRule["strategy"],
+                        value: event.target.value === "multiplier" ? DEFAULT_LENS_RETAIL_RULE.value : 0,
+                      })}>
+                        <option value="multiplier">Multiplier</option>
+                        <option value="flat-adder">Flat adder (cents)</option>
+                      </select>
+                      <input aria-label={`${category} retail value`} className="scheduler-input text-xs" type="number" min="0" step={rule.strategy === "multiplier" ? "0.1" : "1"} value={rule.value} onChange={(event) => updateRule(category, { value: Number(event.target.value) })} />
+                      <select aria-label={`${category} retail rounding`} className="scheduler-input text-xs" value={rule.rounding} onChange={(event) => updateRule(category, { rounding: event.target.value as LensRetailRule["rounding"] })}>
+                        <option value="dollar-minus-2">Round to .98</option>
+                        <option value="nearest-dollar">Nearest dollar</option>
+                        <option value="nearest-cent">Nearest cent</option>
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          <div className="overflow-x-auto">
           <table className="min-w-full text-left text-xs">
-            <thead className="text-white/45"><tr>{["Product", "Lab", "Material", "Index", "Treatment", "Wholesale", "Retail", "Source"].map((heading) => <th key={heading} className="px-2 py-2">{heading}</th>)}</tr></thead>
+            <thead className="text-[color:var(--odos-muted)]"><tr>{["Status", "Product", "Old → new", "Wholesale", "Suggested retail", "Provenance"].map((heading) => <th key={heading} className="px-2 py-2">{heading}</th>)}</tr></thead>
             <tbody className="divide-y divide-white/10">
-              {preview.map((row, index) => (
-                <tr key={row.id}>
-                  <PreviewInput value={row.design.productName} label="Product" onChange={(value) => updatePreview(index, { design: { ...row.design, productName: value } })} />
-                  <PreviewInput value={row.lab} label="Lab" onChange={(value) => updatePreview(index, { lab: value })} />
-                  <PreviewInput value={row.material.name} label="Material" onChange={(value) => updatePreview(index, { material: { ...row.material, name: value } })} />
-                  <PreviewInput value={String(row.material.index)} label="Index" type="number" onChange={(value) => updatePreview(index, { material: { ...row.material, index: Number(value) } })} />
-                  <PreviewInput value={row.treatment.brand} label="Treatment" onChange={(value) => updatePreview(index, { treatment: { ...row.treatment, brand: value } })} />
-                  <PreviewInput value={String(row.wholesalePerPairCents)} label="Wholesale" type="number" onChange={(value) => updatePreview(index, { wholesalePerPairCents: Number(value) })} />
-                  <PreviewInput value={String(row.retailPerPairCents)} label="Retail" type="number" onChange={(value) => updatePreview(index, { retailPerPairCents: Number(value) })} />
-                  <PreviewInput value={row.sourceRef} label="Source" onChange={(value) => updatePreview(index, { sourceRef: value })} />
+              {review.rows.map((row, index) => row.classification === "UNPARSED" ? (
+                <tr key={`${row.sourceRow}-${index}`}>
+                  <td className="px-2 py-3 font-semibold text-red-300">UNPARSED</td>
+                  <td className="px-2 py-3 text-[color:var(--odos-muted)]">{row.sourceRow}</td>
+                  <td className="px-2 py-3 text-red-200" colSpan={4}>{row.reason}</td>
+                </tr>
+              ) : (
+                <tr key={`${row.classification}-${row.incoming.id}`}>
+                  <td className="px-2 py-3 font-semibold text-[#f2d9aa]">{row.classification}</td>
+                  <td className="px-2 py-3">
+                    <strong className="block text-[color:var(--odos-text)]">{row.incoming.design.productName}</strong>
+                    <span className="text-[color:var(--odos-muted)]">{row.incoming.material.name} · {row.incoming.treatment.brand}</span>
+                  </td>
+                  <td className="max-w-80 px-2 py-3 text-[color:var(--odos-muted)]">{row.changes.join("; ")}{row.retailPreserved && <span className="mt-1 block text-emerald-300">Existing retail preserved</span>}</td>
+                  <td className="px-2 py-3 text-[color:var(--odos-muted)]">{money(row.incoming.wholesalePerPairCents)}/pair</td>
+                  <td className="px-2 py-3">
+                    {row.classification === "DISCONTINUED" ? money(row.incoming.retailPerPairCents) : <>
+                      <input
+                          aria-label={`Retail ${row.incoming.id}`}
+                          className="scheduler-input min-w-28 text-xs"
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={row.incoming.retailPerPairCents}
+                          onChange={(event) => updateRetail(index, Number(event.target.value))}
+                        />
+                      {row.classification === "CHANGED" && row.incoming.retailPerPairCents !== row.suggestedRetailPerPairCents && (
+                        <span className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--odos-muted)]">
+                          Suggested {money(row.suggestedRetailPerPairCents)}
+                          <button type="button" className="text-[#f2d9aa] underline" onClick={() => updateRetail(index, row.suggestedRetailPerPairCents)}>Use</button>
+                        </span>
+                      )}
+                    </>}
+                  </td>
+                  <td className="max-w-56 px-2 py-3 text-[color:var(--odos-muted)]">{row.incoming.importBatch}<br />{row.incoming.sourceRef}<br />{row.incoming.effectiveDate}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {review.rows.length === 0 && <div className="p-5 text-center text-sm text-emerald-300">No catalog changes. This file is already applied.</div>}
           <div className="mt-3 flex justify-end">
-            <button type="button" className="scheduler-button" disabled={saving} onClick={() => void commit()}>
-              {saving ? "Saving..." : `Commit ${preview.length} ${preview.length === 1 ? "row" : "rows"}`}
+            <button type="button" className="scheduler-button" disabled={saving || !review.approvable} onClick={() => void approve()}>
+              {saving ? "Approving..." : `Approve ${review.rows.filter((row) => row.classification !== "UNPARSED").length} changes`}
             </button>
           </div>
+        </div>
         </div>
       )}
     </div>
@@ -465,20 +550,6 @@ function Facet({
       </select>
     </label>
   );
-}
-
-function PreviewInput({
-  value,
-  label,
-  type = "text",
-  onChange,
-}: {
-  value: string;
-  label: string;
-  type?: "text" | "number";
-  onChange: (value: string) => void;
-}) {
-  return <td className="px-1 py-2"><input className="scheduler-input min-w-28 text-xs" aria-label={`Preview ${label}`} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></td>;
 }
 
 function unique(values: string[]): string[] {

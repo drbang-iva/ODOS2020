@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "lab": "bp-digital",
+  "importBatch": "bp-digital-2025-a1",
+  "sourceRef": "BP Digital 2025 price list",
+  "effectiveDate": "2025",
+  "declaredBaseCellCount": 15,
+  "declaredMaterializedRowCount": 30,
+  "baseCells": [
+    { "designType": "progressive", "productName": "Alpha Comfort", "minFitHeight": 14, "onSite": true, "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 7798, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Alpha Comfort", "minFitHeight": 14, "onSite": true, "materialKey": "trivex", "materialIndex": 1.53, "wholesalePrice": { "cents": 8298, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Alpha Comfort", "minFitHeight": 14, "onSite": true, "materialKey": "hi-index", "materialIndex": 1.6, "wholesalePrice": { "cents": 9798, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Alpha Comfort", "minFitHeight": 14, "onSite": true, "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 11298, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Alpha Luxury", "minFitHeight": 14, "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 8798, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Alpha Luxury", "minFitHeight": 14, "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 12298, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "designType": "progressive", "productName": "Autograph III", "minFitHeight": 11, "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 9798, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.5" },
+    { "designType": "progressive", "productName": "Autograph III", "minFitHeight": 11, "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 11898, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.5" },
+    { "designType": "progressive", "productName": "Omnilux Custom", "minFitHeight": 19, "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 6398, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.4" },
+    { "designType": "progressive", "productName": "Omnilux Custom", "minFitHeight": 19, "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 10498, "unit": "pair" }, "sourceRef": "BP Digital 2025 price list p.4" },
+    { "designType": "single-vision", "productName": "BP Digital SV", "onSite": true, "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 2698, "unit": "pair" }, "defaultBillingCodeFamily": "V21", "sourceRef": "BP Digital 2025 price list p.2" },
+    { "designType": "single-vision", "productName": "BP Digital SV", "onSite": true, "materialKey": "trivex", "materialIndex": 1.53, "wholesalePrice": { "cents": 4098, "unit": "pair" }, "defaultBillingCodeFamily": "V21", "sourceRef": "BP Digital 2025 price list p.2" },
+    { "designType": "single-vision", "productName": "BP Digital SV", "onSite": true, "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 7998, "unit": "pair" }, "defaultBillingCodeFamily": "V21", "sourceRef": "BP Digital 2025 price list p.2" },
+    { "designType": "single-vision", "productName": "Regular SV", "materialKey": "poly", "materialIndex": 1.586, "wholesalePrice": { "cents": 1698, "unit": "pair" }, "defaultBillingCodeFamily": "V21", "sourceRef": "BP Digital 2025 price list p.2" },
+    { "designType": "single-vision", "productName": "Regular SV", "materialKey": "deluxe", "materialIndex": 1.67, "wholesalePrice": { "cents": 6998, "unit": "pair" }, "defaultBillingCodeFamily": "V21", "sourceRef": "BP Digital 2025 price list p.2" }
+  ],
+  "treatmentAdders": [
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Transitions GEN8", "adderPrice": { "cents": 6000, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "XTRActive", "adderPrice": { "cents": 6100, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Neochrome", "adderPrice": { "cents": 3400, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "polarized", "treatmentBrand": "Polarized", "adderPrice": { "cents": 3500, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Transitions GEN8", "adderPrice": { "cents": 6200, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["trivex"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Transitions GEN8", "adderPrice": { "cents": 5500, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["deluxe"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "XTRActive", "adderPrice": { "cents": 5600, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["deluxe"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Neochrome", "adderPrice": { "cents": 4500, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["deluxe"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "polarized", "treatmentBrand": "Polarized", "adderPrice": { "cents": 4100, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Comfort"], "materialKeys": ["deluxe"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Transitions GEN8", "adderPrice": { "cents": 6000, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Luxury"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "XTRActive", "adderPrice": { "cents": 5600, "unit": "pair" }, "appliesTo": { "productNames": ["Alpha Luxury"], "materialKeys": ["deluxe"] }, "sourceRef": "BP Digital 2025 price list p.3" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Transitions GEN8", "adderPrice": { "cents": 5900, "unit": "pair" }, "appliesTo": { "productNames": ["BP Digital SV"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.2" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "XTRActive", "adderPrice": { "cents": 6700, "unit": "pair" }, "appliesTo": { "productNames": ["BP Digital SV"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.2" },
+    { "treatmentFamily": "photochromic", "treatmentBrand": "Neochrome", "adderPrice": { "cents": 4600, "unit": "pair" }, "appliesTo": { "productNames": ["BP Digital SV"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.2" },
+    { "treatmentFamily": "polarized", "treatmentBrand": "Polarized", "adderPrice": { "cents": 5000, "unit": "pair" }, "appliesTo": { "productNames": ["BP Digital SV"], "materialKeys": ["poly"] }, "sourceRef": "BP Digital 2025 price list p.2" }
+  ]
+}

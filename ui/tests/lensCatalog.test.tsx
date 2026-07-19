@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create } from "react-test-renderer";
 import type { CatalogAdapter } from "../src/lib/catalog-adapter";
 import {
+  DEFAULT_LENS_RETAIL_RULE,
   LENS_PRODUCT_PASTE_COLUMNS,
+  approveLensImport,
+  buildLensImportReview,
   parseLensProductPaste,
+  suggestedRetailForRule,
 } from "../src/lib/lens-bulk-paste";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
@@ -32,6 +37,8 @@ import {
   BulkPasteGrid,
   LensCatalogSettings,
 } from "../src/scenes/settings/LensCatalogSettings";
+
+const BP_IMPORT_JSON = readFileSync(new URL("./fixtures/bp-digital-lens-import-v1.json", import.meta.url), "utf8");
 
 test("canonical lens axes preserve the locked vocabulary and numeric material indexes", () => {
   assert.deepEqual(LENS_DESIGN_TYPES, [
@@ -79,6 +86,35 @@ test("BP Digital seeds contain the 30 source-priced matrix rows with cents-safe 
   assert.equal(alphaComfort?.retailPerPairCents, 17198);
   assert.equal(suggestedRetailPerPairCents(7798), 17198);
   assert.equal(BP_DIGITAL_LENS_PRODUCTS.some((product) => product.singleLensCents !== undefined), false);
+});
+
+test("v1 matrix materialization reproduces all 30 known-correct BP seed rows exactly", () => {
+  const parsed = parseLensProductPaste(BP_IMPORT_JSON);
+
+  assert.deepEqual(parsed.errors, []);
+  assert.deepEqual(parsed.unparsed, []);
+  assert.deepEqual(parsed.report, {
+    parsedBaseCells: 15,
+    declaredBaseCells: 15,
+    materializedRows: 30,
+    declaredMaterializedRows: 30,
+  });
+  assert.deepEqual(
+    [...parsed.rows].sort((left, right) => left.id.localeCompare(right.id)),
+    [...BP_DIGITAL_LENS_PRODUCTS].sort((left, right) => left.id.localeCompare(right.id)),
+  );
+  assert.equal(
+    parsed.rows.find((row) => row.id === "bp-alpha-comfort-poly-transitions-gen8")?.wholesalePerPairCents,
+    13798,
+  );
+});
+
+test("retail rules support per-category strategies and rounding without changing the default", () => {
+  assert.equal(suggestedRetailForRule(7798), suggestedRetailPerPairCents(7798));
+  assert.equal(suggestedRetailForRule(7798, { strategy: "multiplier", value: 2, rounding: "nearest-dollar" }), 15600);
+  assert.equal(suggestedRetailForRule(7798, { strategy: "flat-adder", value: 5000, rounding: "nearest-cent" }), 12798);
+  assert.equal(suggestedRetailForRule(7798, { strategy: "multiplier", value: 0, rounding: "dollar-minus-2" }), 0);
+  assert.deepEqual(DEFAULT_LENS_RETAIL_RULE, { strategy: "multiplier", value: 2.2, rounding: "dollar-minus-2" });
 });
 
 test("LensProduct validates required fields and numeric index, while optional Rx envelopes round-trip through FHIR", () => {
@@ -181,21 +217,190 @@ test("bulk paste parses a valid fixed-order row and reports malformed input with
 
   assert.doesNotThrow(() => parseLensProductPaste('"unclosed'));
   assert.match(parseLensProductPaste('"unclosed').errors[0] ?? "", /unclosed quoted value/);
-  assert.match(parseLensProductPaste("too,few,columns").errors[0] ?? "", /expected 29 columns/);
+  assert.match(parseLensProductPaste("too,few,columns").errors[0] ?? "", /expected 30 columns/);
 });
 
-test("bulk-paste preview remains editable and commits every preview row through CatalogAdapter.save", async () => {
+test("materialized rows reject mixed provenance metadata and disable discontinuation metadata", () => {
+  for (const column of ["lab", "importBatch", "sourceRef", "effectiveDate"] as const) {
+    const second = validPasteLine().split("\t");
+    const columnIndex = LENS_PRODUCT_PASTE_COLUMNS.indexOf(column);
+    second[columnIndex] = column === "effectiveDate" ? "2026" : `${second[columnIndex]}-different`;
+    let id = 0;
+    const parsed = parseLensProductPaste(`${validPasteLine()}\n${second.join("\t")}`, () => String(++id));
+
+    assert.match(parsed.errors.join("\n"), /Every materialized row must share lab, importBatch, sourceRef, and effectiveDate/);
+    assert.equal(parsed.metadata, undefined);
+    assert.equal(buildLensImportReview(parsed, []).approvable, false);
+  }
+});
+
+test("FHIR dates preserve partial precision and reject impossible calendar values", () => {
+  for (const effectiveDate of ["2025", "2026-02", "2024-02-29"]) {
+    const document = smallImportDocument();
+    document.effectiveDate = effectiveDate;
+    assert.deepEqual(parseLensProductPaste(JSON.stringify(document)).errors, []);
+  }
+  for (const effectiveDate of ["2026-00", "2026-13", "2026-02-29", "2026-04-31", "2026-99-99"]) {
+    const document = smallImportDocument();
+    document.effectiveDate = effectiveDate;
+    assert.match(parseLensProductPaste(JSON.stringify(document)).errors.join("\n"), /effectiveDate must be a FHIR date/);
+  }
+});
+
+test("validation rejects undeclared units and classifies implausible prices and unknown vocabulary as UNPARSED", () => {
+  const barePrice = smallImportDocument();
+  barePrice.baseCells[0]!.wholesalePrice = 7798;
+  const bareResult = parseLensProductPaste(JSON.stringify(barePrice));
+  assert.equal(bareResult.rows.length, 1);
+  assert.match(bareResult.unparsed[0]?.reason ?? "", /bare numbers are rejected/);
+  assert.equal(buildLensImportReview(bareResult, []).approvable, false);
+
+  const outOfRange = smallImportDocument();
+  outOfRange.baseCells[0]!.wholesalePrice = { cents: 900_000, unit: "pair" };
+  const rangeResult = parseLensProductPaste(JSON.stringify(outOfRange));
+  assert.match(rangeResult.unparsed[0]?.reason ?? "", /through 500000/);
+
+  const unknownMaterial = smallImportDocument();
+  unknownMaterial.baseCells[0]!.materialKey = "mystery-plastic";
+  const materialResult = parseLensProductPaste(JSON.stringify(unknownMaterial));
+  assert.match(materialResult.unparsed[0]?.reason ?? "", /Unknown materialKey/);
+
+  const unknownTreatment = smallImportDocument();
+  unknownTreatment.treatmentAdders.push({
+    treatmentFamily: "magic",
+    treatmentBrand: "Unknown",
+    adderPrice: { cents: 1000, unit: "pair" },
+    appliesTo: { productNames: ["Alpha Comfort"] },
+  });
+  unknownTreatment.declaredMaterializedRowCount = 2;
+  const treatmentResult = parseLensProductPaste(JSON.stringify(unknownTreatment));
+  assert.match(treatmentResult.unparsed[0]?.reason ?? "", /Unknown treatmentFamily/);
+
+  const misspelledSelector = smallImportDocument();
+  misspelledSelector.treatmentAdders.push({
+    treatmentFamily: "photochromic",
+    treatmentBrand: "Transitions GEN8",
+    adderPrice: { cents: 6000, unit: "pair" },
+    appliesTo: { materialKey: ["poly"] },
+  });
+  const selectorResult = parseLensProductPaste(JSON.stringify(misspelledSelector));
+  assert.match(selectorResult.unparsed[0]?.reason ?? "", /appliesTo contains unknown field: materialKey/);
+});
+
+test("review classifies NEW, CHANGED, DISCONTINUED, and UNPARSED with an old-to-new price", () => {
+  const document = smallImportDocument();
+  document.baseCells[0]!.wholesalePrice = { cents: 7898, unit: "pair" };
+  document.treatmentAdders.push({
+    treatmentFamily: "unknown",
+    treatmentBrand: "Unreadable",
+    adderPrice: { cents: 1000, unit: "pair" },
+  });
+  const existing = [
+    BP_DIGITAL_LENS_PRODUCTS.find((row) => row.id === "bp-alpha-comfort-poly-clear")!,
+    BP_DIGITAL_LENS_PRODUCTS.find((row) => row.id === "bp-regular-sv-poly-clear")!,
+  ];
+  const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(document)), existing);
+
+  assert.deepEqual(new Set(review.rows.map((row) => row.classification)), new Set(["NEW", "CHANGED", "DISCONTINUED", "UNPARSED"]));
+  const changed = review.rows.find((row) => row.classification === "CHANGED");
+  assert.ok(changed && changed.classification === "CHANGED");
+  assert.ok(changed.changes.includes("Wholesale $77.98 → $78.98"));
+  assert.equal(review.approvable, false);
+});
+
+test("matched manual retail survives a changed import and is marked preserved", () => {
+  const document = smallImportDocument();
+  document.baseCells.splice(1, 1);
+  document.declaredBaseCellCount = 1;
+  document.declaredMaterializedRowCount = 1;
+  document.baseCells[0]!.wholesalePrice = { cents: 7898, unit: "pair" };
+  const existing = {
+    ...BP_DIGITAL_LENS_PRODUCTS.find((row) => row.id === "bp-alpha-comfort-poly-clear")!,
+    retailPerPairCents: 54_321,
+    singleLensCents: 27_160,
+  };
+  const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(document)), [existing]);
+  const changed = review.rows.find((row) => row.classification === "CHANGED");
+
+  assert.ok(changed && changed.classification === "CHANGED");
+  assert.equal(changed.incoming.retailPerPairCents, 54_321);
+  assert.equal(changed.incoming.singleLensCents, 27_160);
+  assert.equal(changed.retailPreserved, true);
+  assert.equal(changed.suggestedRetailPerPairCents, suggestedRetailPerPairCents(7898));
+});
+
+test("stable id collision blocks approval without overwriting manual retail", async () => {
+  const document = smallImportDocument();
+  document.baseCells.splice(1, 1);
+  document.declaredBaseCellCount = 1;
+  document.declaredMaterializedRowCount = 1;
+  document.baseCells[0]!.productName = "Alpha-Comfort";
+  document.baseCells[0]!.wholesalePrice = { cents: 9_998, unit: "pair" };
+  const existing = {
+    ...structuredClone(BP_DIGITAL_LENS_PRODUCTS.find((row) => row.id === "bp-alpha-comfort-poly-clear")!),
+    wholesalePerPairCents: 9_998,
+    retailPerPairCents: 54_321,
+  };
+  const saved = [existing];
+  const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(document)), saved);
+  const incoming = review.rows.find((row) => row.classification === "NEW");
+
+  assert.ok(incoming && incoming.classification === "NEW");
+  assert.equal(incoming.incoming.id, existing.id);
+  assert.equal(incoming.incoming.retailPerPairCents, 21_998);
+  assert.match(review.errors.join("\n"), /Stable id bp-alpha-comfort-poly-clear/);
+  assert.equal(review.approvable, false);
+  await assert.rejects(() => approveLensImport(review, memoryAdapter(saved)), /Resolve every import error/);
+  assert.equal(saved[0]?.retailPerPairCents, 54_321);
+});
+
+test("Approve stamps provenance, deactivates absent rows, and identical re-import is idempotent", async () => {
+  const saved: LensProduct[] = [{
+    ...structuredClone(BP_DIGITAL_LENS_PRODUCTS[0]!),
+    id: "bp-retired-design-poly-clear",
+    design: { ...BP_DIGITAL_LENS_PRODUCTS[0]!.design, productName: "Retired Design" },
+  }];
+  const adapter = memoryAdapter(saved);
+  const firstReview = buildLensImportReview(parseLensProductPaste(BP_IMPORT_JSON), saved);
+  const committed = await approveLensImport(firstReview, adapter);
+
+  assert.equal(committed.length, 31);
+  assert.equal(new Set(saved.map((row) => row.id)).size, 31);
+  assert.ok(saved.every((row) => row.importBatch === "bp-digital-2025-a1"));
+  assert.ok(saved.every((row) => row.sourceRef.startsWith("BP Digital 2025 price list")));
+  assert.ok(saved.every((row) => row.effectiveDate === "2025"));
+  assert.equal(saved.find((row) => row.id === "bp-retired-design-poly-clear")?.active, false);
+
+  const secondReview = buildLensImportReview(parseLensProductPaste(BP_IMPORT_JSON), saved);
+  assert.equal(secondReview.rows.length, 0);
+  assert.equal(secondReview.unchangedCount, 30);
+  assert.equal(secondReview.approvable, false);
+  assert.equal(saved.length, 31);
+});
+
+test("import review does not mutate before Approve and commits the complete reviewed batch", async () => {
   const saved: LensProduct[] = [];
   const adapter = memoryAdapter(saved);
-  const renderer = create(<BulkPasteGrid adapter={adapter} />);
-  const textarea = renderer.root.findByProps({ "aria-label": "Pasted lens product rows" });
+  const renderer = create(<BulkPasteGrid adapter={adapter} existingProducts={[]} />);
+  const textarea = renderer.root.findByProps({ "aria-label": "Lens catalog import JSON" });
 
-  await act(async () => textarea.props.onChange({ target: { value: validPasteLine() } }));
-  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Preview rows")?.props.onClick());
-  assert.equal(renderer.root.findAllByProps({ "aria-label": "Preview Product" }).length, 1);
-  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Commit 1 row")?.props.onClick());
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0]?.design.productName, "Alpha Comfort");
+  await act(async () => textarea.props.onChange({ target: { value: JSON.stringify(smallImportDocument()) } }));
+  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Review file")?.props.onClick());
+  assert.equal(saved.length, 0);
+  assert.equal(renderer.root.findAll((node) => node.children.join("") === "NEW").length, 2);
+  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Approve 2 changes")?.props.onClick());
+  assert.equal(saved.length, 2);
+});
+
+test("Approve validates every edited retail value before the first catalog write", async () => {
+  const saved: LensProduct[] = [];
+  const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(smallImportDocument())), []);
+  const second = review.rows.findLast((row) => row.classification !== "UNPARSED");
+  assert.ok(second && second.classification !== "UNPARSED");
+  second.incoming.retailPerPairCents = Number.NaN;
+
+  await assert.rejects(() => approveLensImport(review, memoryAdapter(saved)), /Retail price per pair must be a nonnegative whole number of cents/);
+  assert.equal(saved.length, 0);
 });
 
 test("Lens Catalog manager renders the 30 BP rows, required facets, manager-only margin, and option editors", () => {
@@ -219,11 +424,54 @@ test("Lens Catalog manager renders the 30 BP rows, required facets, manager-only
   }
   assert.match(html, /Alpha Comfort/);
   assert.match(html, /Autograph III/);
-  assert.match(html, /Bulk-paste grid/);
+  assert.match(html, /Import review/);
   assert.match(html, /Canonical vocabularies/);
   assert.match(html, /Ultra HMC AR/);
   assert.match(html, /Prism over 4Δ/);
 });
+
+function smallImportDocument(): {
+  schemaVersion: number;
+  lab: string;
+  importBatch: string;
+  sourceRef: string;
+  effectiveDate: string;
+  declaredBaseCellCount: number;
+  declaredMaterializedRowCount: number;
+  baseCells: Array<Record<string, unknown>>;
+  treatmentAdders: Array<Record<string, unknown>>;
+} {
+  return {
+    schemaVersion: 1,
+    lab: "bp-digital",
+    importBatch: "bp-digital-review-test",
+    sourceRef: "BP Digital review fixture",
+    effectiveDate: "2026-07-18",
+    declaredBaseCellCount: 2,
+    declaredMaterializedRowCount: 2,
+    baseCells: [
+      {
+        designType: "progressive",
+        productName: "Alpha Comfort",
+        minFitHeight: 14,
+        onSite: true,
+        materialKey: "poly",
+        materialIndex: 1.586,
+        wholesalePrice: { cents: 7798, unit: "pair" },
+        sourceRef: "BP Digital review fixture p.1",
+      },
+      {
+        designType: "single-vision",
+        productName: "New Digital SV",
+        materialKey: "poly",
+        materialIndex: 1.586,
+        wholesalePrice: { cents: 2898, unit: "pair" },
+        sourceRef: "BP Digital review fixture p.2",
+      },
+    ],
+    treatmentAdders: [],
+  };
+}
 
 function validPasteLine(): string {
   const values: Record<(typeof LENS_PRODUCT_PASTE_COLUMNS)[number], string> = {
@@ -242,6 +490,7 @@ function validPasteLine(): string {
     treatmentFamily: "clear",
     treatmentBrand: "Clear",
     color: "",
+    unit: "pair",
     wholesalePerPairCents: "7798",
     retailPerPairCents: "17198",
     singleLensCents: "",
@@ -265,7 +514,9 @@ function memoryAdapter(saved: LensProduct[]): CatalogAdapter<LensProduct> {
     capabilities: { reorder: false, deactivate: true, presetSeed: false },
     list: () => [...saved],
     save(item) {
-      saved.push(item);
+      const index = saved.findIndex((candidate) => candidate.id === item.id);
+      if (index === -1) saved.push(item);
+      else saved[index] = item;
       return item;
     },
     deactivate(item) {
