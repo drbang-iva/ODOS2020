@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { AuditEvent, Basic, Bundle, Provenance } from "@medplum/fhirtypes";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { addFrameToInventory, type FrameCatalogItem, type PracticeFrameInventoryItem } from "../src/lib/optical-frames";
+import { addFrameToInventory, saveFramesDataSubscriptionSettings, type FrameCatalogItem, type PracticeFrameInventoryItem } from "../src/lib/optical-frames";
 import { OpticalFrames } from "../src/scenes/OpticalFrames";
 
 const CATALOG_URL = "https://odos2020.com/catalog/frames/SKU-100";
@@ -66,6 +66,55 @@ test("addFrameToInventory creates qty 1 with the inventory extensions, AuditEven
   assert.equal(provenance.resourceType, "Provenance");
   assert.equal(provenance.agent[0]?.who.reference, `Practitioner/${ACTOR_ID}`);
   assert.equal(provenance.target[0]?.reference, fullUrl);
+});
+
+test("Frames Data settings omit an invalid empty FHIR string and surface transaction failures", async () => {
+  let transaction: Bundle | undefined;
+  await withFetch(async (_input, init) => {
+    transaction = JSON.parse(String(init?.body)) as Bundle;
+    return jsonResponse({
+      resourceType: "Bundle",
+      type: "transaction-response",
+      entry: [
+        { response: { status: "201 Created", location: "Basic/settings-1/_history/1" } },
+        { response: { status: "201 Created", location: "AuditEvent/audit-1/_history/1" } },
+        { response: { status: "201 Created", location: "Provenance/provenance-1/_history/1" } },
+      ],
+    });
+  }, () => saveFramesDataSubscriptionSettings({
+    practiceId: "odos-practice",
+    actorId: ACTOR_ID,
+    settings: { username: "", active: false },
+  }));
+  const settings = transaction?.entry?.[0]?.resource as Basic;
+  assert.equal(settings.extension?.some((extension) => extension.url?.endsWith("frames-data-username")), false);
+
+  await assert.rejects(withFetch(async () => jsonResponse({
+    resourceType: "Bundle",
+    type: "transaction-response",
+    entry: [
+      { response: { status: "400 Bad Request", outcome: { resourceType: "OperationOutcome", issue: [{ severity: "error", code: "invalid", diagnostics: "Invalid settings Basic" }] } } },
+      { response: { status: "424 Failed Dependency" } },
+      { response: { status: "424 Failed Dependency" } },
+    ],
+  }), () => saveFramesDataSubscriptionSettings({
+    practiceId: "odos-practice",
+    actorId: ACTOR_ID,
+    settings: { username: "frames-user", active: true },
+  })), /400 Bad Request.*Invalid settings Basic/);
+});
+
+test("Frames Data active subscriptions require a nonempty username before writing", async () => {
+  let requests = 0;
+  await assert.rejects(withFetch(async () => {
+    requests += 1;
+    return jsonResponse({});
+  }, () => saveFramesDataSubscriptionSettings({
+    practiceId: "odos-practice",
+    actorId: ACTOR_ID,
+    settings: { username: "   ", active: true },
+  })), /username is required/);
+  assert.equal(requests, 0);
 });
 
 test("addFrameToInventory reads the current version and increments through an audited transaction PATCH", async () => {

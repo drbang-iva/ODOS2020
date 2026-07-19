@@ -442,7 +442,7 @@ export function WeeklyHoursEditor({
     <div className="grid gap-2">
       {CATALOG_WEEKDAYS.map((day) => {
         const windows = hours[day] ?? [];
-        const closed = windows.length === 0;
+        const open = windows.length > 0;
         return (
           <div key={day} className="grid gap-2 border border-white/10 bg-white/[0.03] p-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -450,14 +450,14 @@ export function WeeklyHoursEditor({
               <label className="flex items-center gap-2 text-sm text-white/70">
                 <input
                   type="checkbox"
-                  checked={closed}
+                  checked={open}
                   onChange={(event) =>
-                    updateDay(day, event.target.checked ? [] : [{ start: "09:00", end: "17:00" }])
+                    updateDay(day, event.target.checked ? [{ start: "09:00", end: "17:00" }] : [])
                   }
                 />
-                <span>Closed</span>
+                <span>Open</span>
               </label>
-              {!closed && (
+              {open && (
                 <button
                   className="scheduler-button"
                   type="button"
@@ -471,7 +471,7 @@ export function WeeklyHoursEditor({
                 </button>
               )}
             </div>
-            {!closed &&
+            {open &&
               windows.map((window, index) => (
                 <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
                   <input

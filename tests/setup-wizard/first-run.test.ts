@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -10,6 +10,7 @@ import {
   SETUP_WIZARD_NOOP_REASON,
   runSetupPractice,
 } from "../../scripts/setup-practice.ts";
+import { parseSchedulingPracticeConfig } from "../../mcp/src/scheduling/practice-config.ts";
 
 test("fresh Compose startup maps ODOS service credentials into Medplum's super-admin seed settings", () => {
   const compose = readFileSync(new URL("../../docker-compose.yml", import.meta.url), "utf8");
@@ -48,9 +49,14 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(firstRun.noOp, false);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
+    assert.equal(adapter.schedules.length, 1);
+    assert.equal(adapter.schedulingConfigs.length, 1);
     assert.equal(adapter.policies.length, 5);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(firstRun.state.completed, true);
+    assert.equal(firstRun.state.schedulingProvisioned, true);
+    assert.equal(firstRun.state.scheduleId, "schedule-1");
+    assert.equal(firstRun.state.schedulingConfigId, "scheduling-config-1");
     assert.equal(firstRun.practitionerId, "practitioner-1");
     assert.equal(firstRun.accessPolicyId, "access-policy-2");
     assert.deepEqual(adapter.policies.map((policy) => policy.name), [
@@ -68,8 +74,15 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
       "AccessPolicy/access-policy-1",
       "AccessPolicy/access-policy-2",
     ]);
+    assert.equal(adapter.schedules[0]?.actor?.[0]?.reference, "Practitioner/practitioner-1");
+    const schedulingConfig = parseSchedulingPracticeConfig(adapter.schedulingConfigs[0]!);
+    assert.deepEqual(schedulingConfig.defaultWeeklyHours.mon, [{ start: "09:00", end: "17:00" }]);
+    assert.equal(schedulingConfig.offices[0]?.name, "Main Office");
+    assert.equal(schedulingConfig.officeBySchedule["Schedule/schedule-1"], "main");
 
     assert.deepEqual(firstRun.auditRows.map((row) => row.eventType), [
+      "create",
+      "create",
       "create",
       "create",
       "create",
@@ -98,6 +111,8 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(secondRun.noOp, true);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
+    assert.equal(adapter.schedules.length, 1);
+    assert.equal(adapter.schedulingConfigs.length, 1);
     assert.equal(adapter.policies.length, 5);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(secondRun.auditRows.length, 1);
@@ -146,17 +161,58 @@ test("setup reuses a pre-existing canonical clinician policy while creating the 
     assert.deepEqual(result.auditRows.map((row) => row.resourceType), [
       "Project",
       "Practitioner",
+      "Schedule",
+      "Basic",
+      "AccessPolicy",
       "AccessPolicy",
       "AccessPolicy",
       "AccessPolicy",
       "AccessPolicy",
       "ProjectMembership",
     ]);
+    assert.equal(result.auditRows.filter((row) => row.eventType === "update" && row.resourceId === "existing-clinician-policy").length, 1);
+    assert.equal(adapter.policies.find((policy) => policy.id === "existing-clinician-policy")?.resource?.length! > 0, true);
     assert.deepEqual(adapter.membership.access?.map((access) => access.policy.reference), [
       "AccessPolicy/access-policy-3",
       "AccessPolicy/access-policy-2",
       "AccessPolicy/existing-clinician-policy",
     ]);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
+test("a completed legacy setup without the scheduling marker resumes and seeds the missing foundation", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-legacy-state-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    const adapter = new InMemorySetupPracticeAdapter();
+    writeFileSync(statePath, JSON.stringify({
+      version: "v0.5d",
+      adminProjectCreated: true,
+      practitionerCreated: true,
+      practitionerId: "existing-practitioner",
+      accessPolicyAssigned: true,
+      completed: true,
+    }));
+
+    const result = await runSetupPractice({
+      adapter,
+      config: {
+        baseUrl: "http://localhost:8103",
+        practiceName: "ODOS Test Practice",
+        adminEmail: "human-admin@example.test",
+        adminName: "ODOS Admin",
+        adminPassword: "not-real-password",
+        statePath,
+      },
+      skipInteractiveBoundaryCheck: true,
+    });
+
+    assert.equal(result.noOp, false);
+    assert.equal(result.state.schedulingProvisioned, true);
+    assert.equal(adapter.schedules[0]?.actor?.[0]?.reference, "Practitioner/existing-practitioner");
+    assert.equal(adapter.schedulingConfigs.length, 1);
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }

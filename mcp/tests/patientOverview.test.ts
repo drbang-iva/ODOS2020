@@ -32,7 +32,7 @@ test("patient overview projects real snapshot resources and newest-first encount
   fake.add({ resourceType: "Observation", id: "smoking", status: "final", code: { text: "Tobacco smoking status" }, subject: { reference: "Patient/p1" }, valueCodeableConcept: { text: "Former smoker" } } satisfies Observation);
   fake.add(encounter("older", "2025-06-01T14:00:00Z"));
   fake.add(encounter("newer", "2026-06-01T14:00:00Z"));
-  fake.add({ resourceType: "Provenance", id: "signed-newer", target: [{ reference: "Encounter/newer" }], recorded: "2026-06-01T14:00:00Z", agent: [{ who: { display: "Dr. Clinician" } }] } satisfies Provenance);
+  fake.add({ resourceType: "Provenance", id: "signed-newer", target: [{ reference: "Encounter/newer" }, { reference: "Patient/p1" }], recorded: "2026-06-01T14:00:00Z", agent: [{ who: { display: "Dr. Clinician" } }] } satisfies Provenance);
   fake.add(condition("dx-old", "Older diagnosis", { category: "encounter-diagnosis", encounterId: "older", code: "DX-OLD" }));
   fake.add(condition("dx-new", "Newer diagnosis", { category: "encounter-diagnosis", encounterId: "newer", code: "DX-NEW" }));
   const resolved = condition("dx-resolved", "Resolved historical diagnosis", { category: "encounter-diagnosis", encounterId: "older", code: "DX-RESOLVED" });
@@ -51,6 +51,10 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.deepEqual(overview.visits.map((visit) => visit.diagnoses[0]?.code), ["DX-NEW", "DX-OLD"]);
   assert.deepEqual(overview.visits[1]?.diagnoses.map((diagnosis) => diagnosis.code), ["DX-OLD", "DX-RESOLVED"]);
   assert.deepEqual(overview.visits.map((visit) => visit.status), ["Final", "Preliminary"]);
+  const provenanceSearch = fake.searches.find((row) => row.resourceType === "Provenance");
+  assert.equal(provenanceSearch?.params.target, undefined);
+  assert.equal(provenanceSearch?.params.patient, undefined);
+  assert.equal(provenanceSearch?.params.recorded, "ge2025-06-01T14:00:00Z");
 });
 
 test("empty snapshot stays honestly empty and visit filters issue distinct FHIR searches", async () => {

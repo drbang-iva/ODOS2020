@@ -181,7 +181,7 @@ const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   {
     resourceType: "Provenance",
     interactions: CREATE_READ_INTERACTIONS,
-    scope: { kind: "practice-search", criteria: "Provenance?activity=https://odos2020.com/fhir/CodeSystem/office-message-activity|acknowledged" },
+    scope: { kind: "practice-search", criteria: "Provenance?_tag=https://odos2020.com/fhir/CodeSystem/office-message-kind|acknowledgement" },
   },
 ];
 

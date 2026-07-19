@@ -4,7 +4,6 @@ import { createSingletonConfigDraft } from "../../lib/catalog-adapter";
 import { CATALOG_COLOR_PALETTE } from "../../components/settings/CatalogFields";
 import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
-import { useRole } from "../../lib/role-context";
 import {
   SCHEDULER_PALETTE,
   SCHEDULING_DISCIPLINES,
@@ -42,8 +41,7 @@ export type VisitTypeSettingsClient = Pick<
   "search" | "searchUrl" | "create" | "update"
 >;
 
-export function VisitTypeSettings() {
-  const { role } = useRole();
+export function VisitTypeSettings({ canWrite }: { canWrite: boolean }) {
   const [loaded, setLoaded] = useState<LoadedVisitTypeSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +68,7 @@ export function VisitTypeSettings() {
   return (
     <VisitTypeSettingsReady
       {...loaded}
-      canWrite={role === "practice-admin"}
+      canWrite={canWrite}
       client={fhir}
     />
   );

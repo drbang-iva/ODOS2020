@@ -16,6 +16,7 @@ import type {
 import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
 import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
+import { paymentTenderExtension } from "../src/fhir/odosPaymentTender.js";
 import {
   addStatementDetail,
   buildStatementSnapshot,
@@ -45,6 +46,32 @@ test("a partial payment produces a balance-forward statement exactly reconciled 
   assert.equal(statement.paymentsAppliedCents, 4_000);
   assert.equal(statement.balanceCents, 6_000);
   assert.deepEqual(statement.invoices.map((row) => row.balanceCents), [6_000]);
+});
+
+test("a record-only tender Invoice is fully paid without a separate PaymentReconciliation", () => {
+  const paidInvoice = invoice("i1", "p1", 18_900);
+  paidInvoice.status = "balanced";
+  paidInvoice.extension = [paymentTenderExtension("CASH")];
+  const statement = buildStatementSnapshot({
+    patient: patient("p1", "Alex Rivera"),
+    invoices: [paidInvoice],
+    paymentReconciliations: [],
+    generatedAt: GENERATED_AT,
+  });
+  assert.equal(statement.paymentsAppliedCents, 18_900);
+  assert.equal(statement.balanceCents, 0);
+  assert.deepEqual(statement.invoices.map((row) => row.balanceCents), [0]);
+});
+
+test("an issued Invoice with a record-only tender is rejected because a partial deposit is not full settlement", () => {
+  const partialInvoice = invoice("i1", "p1", 18_900);
+  partialInvoice.extension = [paymentTenderExtension("CASH")];
+  assert.throws(() => buildStatementSnapshot({
+    patient: patient("p1", "Alex Rivera"),
+    invoices: [partialInvoice],
+    paymentReconciliations: [],
+    generatedAt: GENERATED_AT,
+  }), /record-only tender but is not balanced/);
 });
 
 test("configured statement message originates in the Basic singleton and round-trips through persisted statement data", async () => {

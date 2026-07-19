@@ -5,7 +5,7 @@ import {
   assertTransactionSuccess,
   buildEncounterStatusPatchBundle,
 } from "../../lib/encounter-bundles";
-import { patientOverviewView, useViewState } from "../../lib/view-state";
+import { openPatientOverview } from "../../lib/view-state";
 import { RoleSelector } from "../RoleSelector";
 import {
   computeMdmHint,
@@ -33,7 +33,6 @@ interface Props {
 }
 
 export function EncounterHeader({ patient, encounterId }: Props) {
-  const setView = useViewState((state) => state.setView);
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [encounterConditions, setEncounterConditions] = useState<Condition[]>([]);
   const [problemListConditions, setProblemListConditions] = useState<Condition[]>([]);
@@ -125,7 +124,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       if (seriesSignOff.prompt) {
         setSeriesPrompt(seriesSignOff.prompt);
       } else {
-        setView(patientOverviewView(patient.id));
+        openPatientOverview(patient.id, "replace");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -175,7 +174,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         "abandon_encounter",
       );
       assertTransactionSuccess(response);
-      setView(patientOverviewView(patient.id));
+      openPatientOverview(patient.id, "replace");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -256,7 +255,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       {seriesPrompt && (
         <SeriesSignOffNotice
           prompt={seriesPrompt}
-          onClose={() => setView(patientOverviewView(patient.id ?? ""))}
+          onClose={() => patient.id && openPatientOverview(patient.id, "replace")}
         />
       )}
     </header>

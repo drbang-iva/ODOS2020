@@ -231,6 +231,35 @@ export async function loadVisionPrescription(reference: string): Promise<VisionP
   return fhir.read<VisionPrescription>("VisionPrescription", id);
 }
 
+export async function findLatestActiveVisionPrescription(
+  patientId: string,
+): Promise<VisionPrescription | null> {
+  const patientReference = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
+  const bundle = await fhir.search<VisionPrescription>("VisionPrescription", {
+    patient: patientReference,
+    status: "active",
+    _count: "20",
+    _sort: "-datewritten",
+  });
+  return (bundle.entry ?? [])
+    .map((entry) => entry.resource)
+    .find((resource): resource is VisionPrescription =>
+      resource?.resourceType === "VisionPrescription" &&
+      resource.status === "active" &&
+      resource.patient?.reference === patientReference &&
+      Boolean(resource.id)
+    ) ?? null;
+}
+
+export function opticalOrderPath(patientId: string, prescriptionId: string): string {
+  const patientReference = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
+  const prescriptionReference = prescriptionId.startsWith("VisionPrescription/")
+    ? prescriptionId
+    : `VisionPrescription/${prescriptionId}`;
+  const params = new URLSearchParams({ patient: patientReference, rx: prescriptionReference });
+  return `/dispensary/orders?${params}`;
+}
+
 export function visionPrescriptionRows(rx: VisionPrescription | null): RxDisplayRow[] {
   return ["OD", "OS"].map((eye) => {
     const lens = rx?.lensSpecification.find((candidate) =>

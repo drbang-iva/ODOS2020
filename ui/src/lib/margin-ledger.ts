@@ -60,7 +60,14 @@ export async function fetchMarginLedger(
       ...(fhir.authHeader() ? { Authorization: fhir.authHeader()! } : {}),
     },
   });
-  const body = await response.json() as MarginLedger & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Margin ledger failed with HTTP ${response.status}.`);
+  const text = await response.text();
+  let body: (MarginLedger & { error?: string }) | undefined;
+  try {
+    body = text ? JSON.parse(text) as MarginLedger & { error?: string } : undefined;
+  } catch {
+    if (response.ok) throw new Error("Margin ledger returned an invalid response.");
+  }
+  if (!response.ok) throw new Error(body?.error ?? `Margin ledger failed with HTTP ${response.status}.`);
+  if (!body) throw new Error("Margin ledger returned an empty response.");
   return body;
 }

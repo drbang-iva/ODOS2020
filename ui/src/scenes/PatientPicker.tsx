@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { Patient } from "@medplum/fhirtypes";
 import { fhir } from "../lib/fhir";
 import { patientName } from "../lib/scheduler-appointment-ui";
-import { patientOverviewView, useViewState } from "../lib/view-state";
+import { openPatientOverview } from "../lib/view-state";
 
 export function PatientPicker() {
-  const setView = useViewState((state) => state.setView);
   return (
     <div className="min-h-screen bg-bg-deep text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
@@ -28,7 +27,7 @@ export function PatientPicker() {
           <PatientSearch
             autoFocus
             actionLabel="Open"
-            onSelect={(patient) => patient.id && setView(patientOverviewView(patient.id))}
+            onSelect={(patient) => patient.id && openPatientOverview(patient.id)}
           />
         </main>
       </div>

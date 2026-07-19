@@ -21,6 +21,7 @@ export default defineConfig(({ mode }) => {
         "/eligibility": { target: mcpTarget, changeOrigin: true },
         "/statements": { target: mcpTarget, changeOrigin: true },
         "/reports": { target: mcpTarget, changeOrigin: true },
+        "/practice": { target: mcpTarget, changeOrigin: true },
         "/lab-orders": { target: mcpTarget, changeOrigin: true },
         "/insurance": { target: mcpTarget, changeOrigin: true },
         "/referrals": { target: mcpTarget, changeOrigin: true },

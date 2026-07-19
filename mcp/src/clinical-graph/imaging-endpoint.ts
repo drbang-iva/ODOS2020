@@ -346,7 +346,6 @@ async function hasAestheticsConsent(
 ): Promise<boolean> {
   const bundle = await fhir.search<QuestionnaireResponse>("QuestionnaireResponse", {
     patient: patientReference,
-    questionnaire: AESTHETICS_COSMETIC_CONSENT_URL,
     status: "completed",
     _sort: "-authored",
     _count: "20",

@@ -1,12 +1,11 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
-import { patientOverviewView, useViewState } from "../lib/view-state";
+import { openPatientOverview } from "../lib/view-state";
 import { PinnedOfficeNote, ageLabel as officeAgeLabel, useClinicSummaryContext, useOfficeChannel } from "../components/OfficeChannel";
 
 export const CLINIC_PATIENTS_PATH = "/clinic/patients";
 
 export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary } = {}) {
-  const setView = useViewState((state) => state.setView);
   const shellState = useClinicSummaryContext();
   const [standaloneSummary, setStandaloneSummary] = useState(initialSummary);
   const [standaloneError, setStandaloneError] = useState<string>();
@@ -24,7 +23,7 @@ export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary 
   const error = shellState?.error ?? standaloneError;
 
   const date = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date());
-  const openPatient = (patientId: string | undefined) => patientId && setView(patientOverviewView(patientId));
+  const openPatient = (patientId: string | undefined) => patientId && openPatientOverview(patientId);
 
   return (
     <main className="odos-clinic-home">

@@ -199,17 +199,21 @@ export async function loadClinicSummary(
       _sort: "-authored-on",
     }),
   ]);
-  const encounterReferences = encounters.flatMap((encounter) => encounter.id ? [`Encounter/${encounter.id}`] : []);
   const patientIds = unique([
     ...appointments.flatMap((appointment) => patientReferenceOf(appointment)?.match(/^Patient\/([^/]+)$/)?.[1] ?? []),
     ...encounters.flatMap((encounter) => encounter.subject?.reference?.match(/^Patient\/([^/]+)$/)?.[1] ?? []),
   ]);
+  const encounterReferences = new Set(encounters.flatMap((encounter) =>
+    encounter.id ? [`Encounter/${encounter.id}`] : [],
+  ));
   const [provenances, patients] = await Promise.all([
-    encounterReferences.length === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
-      target: encounterReferences.join(","),
+    encounterReferences.size === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
+      recorded: `ge${date}`,
       _count: "1000",
       _sort: "-recorded",
-    }),
+    }).then((events) => events.filter((event) => event.target.some((target) =>
+      encounterReferences.has(target.reference ?? ""),
+    ))),
     patientIds.length === 0 ? Promise.resolve([]) : searchOnePage<Patient>(fhir, "Patient", {
       _id: patientIds.join(","),
       _count: String(patientIds.length),

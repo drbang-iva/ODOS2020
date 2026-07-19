@@ -14,7 +14,6 @@ import {
   validatePlanTemplateRow,
   type PlanTemplateRow,
 } from "../../lib/plan-template-settings";
-import { useRole } from "../../lib/role-context";
 import {
   CatalogScene,
   CatalogSection,
@@ -26,14 +25,12 @@ type InsuranceSettingsClient = {
   update<T extends Basic>(resource: T, sourceTag: string): Promise<T>;
 };
 
-export function VisionPlanTemplatesSettings() {
-  const { role } = useRole();
+export function VisionPlanTemplatesSettings({ canWrite }: { canWrite: boolean }) {
   const [loaded, setLoaded] = useState<{
     resource?: Basic;
     config: PersistedInsuranceConfig;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const canWrite = role === "practice-admin" || role === "front-desk";
 
   useEffect(() => {
     let cancelled = false;

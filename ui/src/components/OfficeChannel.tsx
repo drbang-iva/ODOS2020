@@ -4,8 +4,7 @@ import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, fetchDeskOfficeMes
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { fhir } from "../lib/fhir";
 import { patientName } from "../lib/scheduler-appointment-ui";
-import { patientOverviewView, useViewState } from "../lib/view-state";
-import { CLINIC_PATH } from "../lib/app-paths";
+import { openPatientOverview } from "../lib/view-state";
 
 export interface OfficeInboxApi {
   list: typeof fetchClinicOfficeMessages;
@@ -140,7 +139,6 @@ export function ClinicOfficeShell(props: Omit<Parameters<typeof OfficeChannelShe
 }
 
 export function ClinicPatientSearch() {
-  const setView = useViewState((state) => state.setView);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -184,8 +182,7 @@ export function ClinicPatientSearch() {
     if (!patient.id) return;
     setQuery("");
     setOpen(false);
-    navigateTo(`${CLINIC_PATH}?patientId=${encodeURIComponent(patient.id)}`);
-    setView(patientOverviewView(patient.id));
+    openPatientOverview(patient.id);
   }
 
   return (
@@ -328,10 +325,5 @@ function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   window.history.pushState({}, "", event.currentTarget.href);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
-function navigateTo(path: string) {
-  window.history.pushState({}, "", path);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }

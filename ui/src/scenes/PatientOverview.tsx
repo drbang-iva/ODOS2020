@@ -17,17 +17,23 @@ import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepos
 import { SaleSheet } from "../components/commercial/SaleSheet";
 import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
+import {
+  findLatestActiveVisionPrescription,
+  opticalOrderPath,
+} from "../lib/optical-order";
 
 interface PatientOverviewApi {
   fetchOverview: typeof fetchPatientOverview;
   fetchHistory: typeof fetchStickyNoteHistory;
   saveNote: typeof saveStickyNote;
+  findActiveRx?: typeof findLatestActiveVisionPrescription;
 }
 
 const defaultPatientOverviewApi: PatientOverviewApi = {
   fetchOverview: fetchPatientOverview,
   fetchHistory: fetchStickyNoteHistory,
   saveNote: saveStickyNote,
+  findActiveRx: findLatestActiveVisionPrescription,
 };
 
 export function PatientOverview({
@@ -54,6 +60,8 @@ export function PatientOverview({
   const [sellingPackage, setSellingPackage] = useState(false);
   const [depositingCreditBank, setDepositingCreditBank] = useState(false);
   const [packageRevision, setPackageRevision] = useState(0);
+  const [activeRxId, setActiveRxId] = useState<string | null>();
+  const [rxError, setRxError] = useState<string>();
   const requestIdRef = useRef(0);
   const historyRequestIdRef = useRef(0);
 
@@ -79,6 +87,29 @@ export function PatientOverview({
       if (requestId === requestIdRef.current) requestIdRef.current += 1;
     };
   }, [api, initialOverview, patient.id]);
+
+  useEffect(() => {
+    if (!patient.id || !api.findActiveRx) {
+      setActiveRxId(null);
+      return;
+    }
+    let cancelled = false;
+    setActiveRxId(undefined);
+    setRxError(undefined);
+    api.findActiveRx(patient.id)
+      .then((rx) => {
+        if (!cancelled) setActiveRxId(rx?.id ?? null);
+      })
+      .catch((reason) => {
+        if (!cancelled) {
+          setActiveRxId(null);
+          setRxError(messageOf(reason));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, patient.id]);
 
   const name = patientName(patient);
   const age = patientAge(patient.birthDate);
@@ -165,6 +196,11 @@ export function PatientOverview({
           <div className="odos-overview-actions">
             <button type="button" className="odos-overview-button" onClick={() => setDepositingCreditBank(true)}>Deposit Credit Bank</button>
             <button type="button" className="odos-overview-button" onClick={() => setSellingPackage(true)}>Sell package</button>
+            {patient.id && activeRxId ? (
+              <a className="odos-overview-button" href={opticalOrderPath(patient.id, activeRxId)} onClick={navigateWithinApp}>Start optical order</a>
+            ) : (
+              <button type="button" className="odos-overview-button" disabled title={rxError ?? (activeRxId === undefined ? "Checking for an active prescription" : "An active vision prescription is required")}>Start optical order</button>
+            )}
             <button type="button" className="odos-overview-button is-primary" onClick={() => patient.id && setView({ kind: "director", patientId: patient.id })}>Start today&apos;s visit →</button>
           </div>
           <PinnedOfficeNote patientId={patient.id} />

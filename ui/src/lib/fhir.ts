@@ -151,8 +151,12 @@ export const fhir = {
   interceptUnauthorizedResponses(host: { fetch: typeof fetch }): () => void {
     const originalFetch = host.fetch;
     const interceptedFetch: typeof fetch = async (...args) => {
+      const sessionAuthorization = token ? `Bearer ${token}` : undefined;
+      const requestAuthorization = authorizationHeader(args[0], args[1]);
       const response = await originalFetch(...args);
-      if (response.status === 401 && token) fhir.logout();
+      if (response.status === 401 && sessionAuthorization && requestAuthorization === sessionAuthorization) {
+        fhir.logout();
+      }
       return response;
     };
     host.fetch = interceptedFetch;
@@ -332,6 +336,14 @@ export const fhir = {
     return responseBundle;
   },
 };
+
+function authorizationHeader(input: RequestInfo | URL, init?: RequestInit): string | undefined {
+  const initAuthorization = new Headers(init?.headers).get("Authorization") ?? undefined;
+  if (initAuthorization) return initAuthorization;
+  return typeof Request !== "undefined" && input instanceof Request
+    ? input.headers.get("Authorization") ?? undefined
+    : undefined;
+}
 
 async function apiSearch<T>(url: string, label: string, signal?: AbortSignal): Promise<T[]> {
   const res = await fetch(url, {

@@ -7,6 +7,8 @@ export const OFFICE_AUDIENCE_SYSTEM = "https://odos2020.com/fhir/NamingSystem/of
 export const OFFICE_AUDIENCE_CODE = "clinic-side";
 export const OFFICE_ACK_SYSTEM = "https://odos2020.com/fhir/CodeSystem/office-message-activity";
 export const OFFICE_ACK_CODE = "acknowledged";
+export const OFFICE_ACK_TAG_SYSTEM = "https://odos2020.com/fhir/CodeSystem/office-message-kind";
+export const OFFICE_ACK_TAG_CODE = "acknowledgement";
 export const OFFICE_TEXT_LIMIT = 1000;
 const RECENT_ACKNOWLEDGED_TAIL = 20;
 
@@ -79,11 +81,12 @@ export async function listOfficeMessages(
     .filter((message) => input.mailbox === "clinic" ? isClinicAudience(message) : message.sender?.reference === input.staffReference)
     .sort((left, right) => Date.parse(right.sent ?? "") - Date.parse(left.sent ?? ""));
   const targets = visible.flatMap((message) => message.id ? [`Communication/${message.id}`] : []);
+  const earliestSent = visible.at(-1)?.sent;
   const acknowledgements = targets.length === 0 ? [] : await searchOnePage<Provenance>(fhir, "Provenance", {
-    target: targets.join(","),
+    ...(earliestSent ? { recorded: `ge${earliestSent}` } : {}),
     _count: "1000",
     _sort: "recorded",
-  });
+  }).then((events) => events.filter((event) => event.target?.some((target) => targets.includes(target.reference ?? ""))));
   const byMessage = groupAcknowledgements(acknowledgements);
   const rows = visible.flatMap((message) => message.id ? [projectMessage(message, byMessage.get(message.id) ?? [])] : []);
   if (input.mailbox === "desk") return rows;
@@ -102,15 +105,18 @@ export async function acknowledgeOfficeMessage(
     throw new OfficeMessageValidationError("Office message is not available to the Clinic channel.");
   }
   const existing = (await searchOnePage<Provenance>(fhir, "Provenance", {
-    target: `Communication/${input.messageId}`,
+    ...(message.sent ? { recorded: `ge${message.sent}` } : {}),
     _count: "1000",
     _sort: "recorded",
-  })).filter(isAcknowledgement);
+  })).filter((event) =>
+    isAcknowledgement(event) && event.target?.some((target) => target.reference === `Communication/${input.messageId}`),
+  );
   if (existing.length === 0) {
     const at = input.now ?? new Date().toISOString();
     const display = await staffDisplay(fhir, input.staffReference);
     existing.push(await fhir.create<Provenance>({
       resourceType: "Provenance",
+      meta: { tag: [{ system: OFFICE_ACK_TAG_SYSTEM, code: OFFICE_ACK_TAG_CODE }] },
       target: [{ reference: `Communication/${input.messageId}` }],
       occurredDateTime: at,
       recorded: at,

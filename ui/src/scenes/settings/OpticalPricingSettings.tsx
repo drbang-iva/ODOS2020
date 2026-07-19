@@ -7,16 +7,13 @@ import {
   type ContactLensPricingItem,
   type FramePricingItem,
 } from "../../lib/optical-pricing-catalog";
-import { useRole } from "../../lib/role-context";
 import {
   CatalogScene,
   CatalogSection,
   type CatalogDescriptor,
 } from "./CatalogEditor";
 
-export function OpticalPricingSettings() {
-  const { role } = useRole();
-  const canWrite = role === "practice-admin";
+export function OpticalPricingSettings({ canWrite }: { canWrite: boolean }) {
   const frameAdapter = useMemo(() => framePricingAdapter(fhir), []);
   const contactLensAdapter = useMemo(() => contactLensPricingAdapter(fhir), []);
   const frameDescriptor = useMemo(
