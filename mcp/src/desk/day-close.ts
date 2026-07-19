@@ -47,7 +47,6 @@ export async function loadDayClose(
     loadDayLedger(fhir, options),
     loadDaySeal(fhir, options.date),
     searchAvailablePage<ChargeItem>(fhir, "ChargeItem", [
-      ["status", "billable"],
       ["occurrence", `ge${range.start}`],
       ["occurrence", `lt${range.end}`],
       ["_count", "1000"],
@@ -74,13 +73,14 @@ export async function loadDayClose(
   const attached = new Set(invoices.resources.flatMap((invoice) =>
     (invoice.lineItem ?? []).flatMap((line) => line.chargeItemReference?.reference ?? []),
   ));
+  const billableCharges = charges.resources.filter((charge) => charge.status === "billable");
   return {
     date: options.date,
     ledger,
     ...(seal ? { seal } : {}),
     review: {
       available: true,
-      unattachedCharges: charges.resources.flatMap((charge) => {
+      unattachedCharges: billableCharges.flatMap((charge) => {
         if (!charge.id || attached.has(`ChargeItem/${charge.id}`)) return [];
         return [{
           chargeItemReference: `ChargeItem/${charge.id}`,
@@ -90,7 +90,7 @@ export async function loadDayClose(
         }];
       }),
       heldCreditsToday: ledger.heldCreditsToday,
-      patientSkim: projectPatientSkim(ledger, charges.resources),
+      patientSkim: projectPatientSkim(ledger, billableCharges),
     },
   };
 }

@@ -30,7 +30,7 @@ const AUDIT_MIGRATION_FILENAMES = [
   "2026-07-15-era-line-linkage-event.sql",
   "2026-07-17-weno-pharmacy-directory.sql",
   "2026-07-17-weno-drug-database.sql",
-  "2026-07-15-era-line-linkage-event-validate.sql",
+  "2026-07-15-era-line-linkage-event.validate.sql",
 ] as const;
 const VALIDATE_MIGRATION_FILENAME = AUDIT_MIGRATION_FILENAMES.at(-1)!;
 

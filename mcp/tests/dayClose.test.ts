@@ -100,8 +100,10 @@ test("a persisted seal blocks a later backdated manual payment before its Invoic
 test("close review finds billable charges missing from same-day Invoice lines and derives patient skim from ledger detail", async () => {
   const attached = charge("attached", "Patient/p1", 5000);
   const unattached = charge("unattached", "Patient/p2", 3750);
+  const enteredInError = { ...charge("entered-in-error", "Patient/p3", 9900), status: "entered-in-error" as const };
   const invoice = paidInvoice("invoice-1", "Patient/p1", "ChargeItem/attached", 5000);
-  const result = await loadDayClose(fixture([attached, unattached, invoice]), {
+  const fhir = fixture([attached, unattached, enteredInError, invoice]);
+  const result = await loadDayClose(fhir, {
     date: "2026-07-15",
     timeZone: "America/New_York",
   });
@@ -123,6 +125,52 @@ test("close review finds billable charges missing from same-day Invoice lines an
     chargesTotalCents: 3750,
     paidTotalCents: 0,
   }]);
+  const chargeSearch = fhir.searches.find((search) => search.resourceType === "ChargeItem");
+  assert.equal(chargeSearch?.params.has("status"), false);
+  assert.deepEqual(chargeSearch?.params.getAll("occurrence"), [
+    "ge2026-07-15T04:00:00.000Z",
+    "lt2026-07-16T04:00:00.000Z",
+  ]);
+});
+
+test("GET /desk/ledger/close returns 200 when Medplum rejects ChargeItem status searches", async () => {
+  const base = fixture([
+    charge("unattached", "Patient/p2", 3750),
+    paidInvoice("invoice-1", "Patient/p1", "ChargeItem/attached", 5000),
+  ]);
+  const originalSearch = base.search;
+  base.search = async <T extends Resource>(resourceType: T["resourceType"], params: FhirSearchParams): Promise<Bundle<T>> => {
+    const query = new URLSearchParams(params);
+    if (resourceType === "ChargeItem" && query.has("status")) {
+      throw new Error("Medplum 5.1.8 rejects ChargeItem?status");
+    }
+    return originalSearch(resourceType, params);
+  };
+  const app = express();
+  registerDeskRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({
+      staffReference: "Practitioner/staff-1",
+      actorRole: "front-desk",
+      roles: ["front-desk"],
+      fhir: base as never,
+    }),
+    resolveRoles: async () => null,
+    terminalMode: "NOT CONFIGURED",
+    timeZone: "America/New_York",
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => { listener.once("listening", resolve); listener.once("error", reject); });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/desk/ledger/close?date=2026-07-15`);
+    assert.equal(response.status, 200);
+    const body = await response.json() as { review: { available: boolean; unattachedCharges: Array<{ amountCents: number }> } };
+    assert.equal(body.review.available, true);
+    assert.equal(body.review.unattachedCharges[0]?.amountCents, 3750);
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test("close review refuses partial ChargeItem results and seal refuses unavailable money totals", async () => {

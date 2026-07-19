@@ -66,9 +66,9 @@ before(async () => {
 
 const searches: SmokeSearch[] = [
   {
-    name: "ChargeItem subject",
+    name: "ChargeItem occurrence range with sort",
     resourceType: "ChargeItem",
-    params: (current) => ({ subject: current.references.patient, _count: "10" }),
+    params: (current) => ({ occurrence: `ge${current.timestamp}`, _sort: "-occurrence", _count: "10" }),
     expectedReference: (current) => current.references.chargeItem,
   },
   {

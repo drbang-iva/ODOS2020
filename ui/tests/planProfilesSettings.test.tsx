@@ -158,7 +158,8 @@ test("plan-profile descriptor inherits required-gate, list-header, and confirm-d
   const editor = renderToStaticMarkup(
     <CatalogSection descriptor={descriptor} canWrite initialState={{ items: [saved], selectedId: saved.id }} />,
   );
-  assert.match(editor, /Contact lens per box \(cents\)/);
+  assert.match(editor, /Contact lens per box/);
+  assert.doesNotMatch(editor, /Contact lens per box \(cents\)/);
   assert.match(editor, /contact lens \/ box unpriced/);
   act(() => renderer.unmount());
 });

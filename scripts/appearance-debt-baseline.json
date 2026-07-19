@@ -77,7 +77,7 @@
   "ui/src/scenes/settings/CatalogEditor.tsx": 38,
   "ui/src/scenes/settings/DiagnosisSettings.tsx": 3,
   "ui/src/scenes/settings/FloorConfigSettings.tsx": 6,
-  "ui/src/scenes/settings/LensCatalogSettings.tsx": 30,
+  "ui/src/scenes/settings/LensCatalogSettings.tsx": 27,
   "ui/src/scenes/settings/ProcedureDefinitionsSettings.tsx": 6,
   "ui/src/scenes/settings/StaffSettings.tsx": 17,
   "ui/src/scenes/settings/StatementMessagesSettings.tsx": 16,

@@ -18,6 +18,9 @@ test("Vite proxies relative clinical-graph requests to the MCP server", () => {
   assert.match(config, /const mcpTarget = env\.VITE_ODOS_MCP_BASE_URL \|\| "http:\/\/localhost:3333"/);
   assert.match(config, /"\/clinical-graph": \{ target: mcpTarget, changeOrigin: true \}/);
   assert.match(config, /"\/weno": \{ target: mcpTarget, changeOrigin: true \}/);
+  for (const route of ["commercial-engine", "series-tracker", "referrals", "eligibility", "mcp"]) {
+    assert.match(config, new RegExp(`"/${route}": \\{ target: mcpTarget, changeOrigin: true \\}`));
+  }
 });
 
 test("clinical-graph requests share the literal Vite route and Medplum authorization helpers", () => {

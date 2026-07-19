@@ -15,11 +15,16 @@ export default defineConfig(({ mode }) => {
         "/oauth2": { target: "http://localhost:8103", changeOrigin: true },
         // odos-core payment charge boundary (processor secrets live server-side only)
         "/payments": { target: mcpTarget, changeOrigin: true },
+        "/commercial-engine": { target: mcpTarget, changeOrigin: true },
+        "/series-tracker": { target: mcpTarget, changeOrigin: true },
         "/claims": { target: mcpTarget, changeOrigin: true },
+        "/eligibility": { target: mcpTarget, changeOrigin: true },
         "/statements": { target: mcpTarget, changeOrigin: true },
         "/reports": { target: mcpTarget, changeOrigin: true },
         "/lab-orders": { target: mcpTarget, changeOrigin: true },
         "/insurance": { target: mcpTarget, changeOrigin: true },
+        "/referrals": { target: mcpTarget, changeOrigin: true },
+        "/mcp": { target: mcpTarget, changeOrigin: true },
         "/audit": {
           target: mcpTarget,
           changeOrigin: true,

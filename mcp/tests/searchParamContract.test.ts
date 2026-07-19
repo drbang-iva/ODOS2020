@@ -47,6 +47,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/desk/day-ledger.ts:234": [
     spec("Invoice", "date", "_count", "_sort"),
     spec("PaymentReconciliation", "status", "created", "_count", "_sort"),
+    spec("ChargeItem", "occurrence", "_count", "_sort"),
   ],
   "src/desk/desk-summary.ts:446": [
     spec("Appointment", "date", "_count", "_sort"),
@@ -106,6 +107,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
     /Medplum 5\.1\.8 rejects ChargeItem\?status/,
   );
   assert.doesNotThrow(() => assertSearchParameterKeys("ChargeItem", ["subject", "context", "_count"]));
+  assert.doesNotThrow(() => assertSearchParameterKeys("ChargeItem", ["occurrence", "_count", "_sort"]));
   assert.doesNotThrow(() => assertSearchParameterKeys("PaymentReconciliation", ["status", "created", "_sort"]));
   assert.doesNotThrow(() => assertSearchParameterKeys("Task", ["code", "business-status", "_sort"]));
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));

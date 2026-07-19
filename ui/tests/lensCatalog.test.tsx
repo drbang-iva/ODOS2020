@@ -392,6 +392,24 @@ test("import review does not mutate before Approve and commits the complete revi
   assert.equal(saved.length, 2);
 });
 
+test("Lens Catalog retail review accepts $425.00 and persists 42500 cents", async () => {
+  const saved: LensProduct[] = [];
+  const renderer = create(<BulkPasteGrid adapter={memoryAdapter(saved)} existingProducts={[]} />);
+  const textarea = renderer.root.findByProps({ "aria-label": "Lens catalog import JSON" });
+  await act(async () => textarea.props.onChange({ target: { value: JSON.stringify(smallImportDocument()) } }));
+  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Review file")?.props.onClick());
+  const retail = renderer.root.findAllByType("input").find((input) => String(input.props["aria-label"] ?? "").startsWith("Retail "));
+  assert.ok(retail);
+  assert.match(retail.props.value, /^\d+\.\d{2}$/);
+  act(() => retail.props.onFocus());
+  act(() => retail.props.onChange({ target: { value: "425.00" } }));
+  act(() => retail.props.onBlur());
+  assert.equal(renderer.root.findAllByType("input").find((input) => input.props["aria-label"] === retail.props["aria-label"])?.props.value, "425.00");
+  await act(async () => renderer.root.findAllByType("button").find((button) => button.children.join("") === "Approve 2 changes")?.props.onClick());
+  assert.equal(saved.some((product) => product.retailPerPairCents === 42_500), true);
+  act(() => renderer.unmount());
+});
+
 test("Approve validates every edited retail value before the first catalog write", async () => {
   const saved: LensProduct[] = [];
   const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(smallImportDocument())), []);

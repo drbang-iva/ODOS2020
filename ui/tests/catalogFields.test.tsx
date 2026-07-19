@@ -2,17 +2,29 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create } from "react-test-renderer";
 import {
   CATALOG_COLOR_PALETTE,
   CatalogFieldKit,
+  CurrencyInput,
   type CatalogFieldDescriptor,
 } from "../src/components/settings/CatalogFields";
+import { packageDescriptor } from "../src/components/commercial/PackageDefinitionsSettings";
 import {
   CatalogFieldValidationError,
   buildCatalogFields,
   parseCatalogFields,
 } from "../src/lib/catalog-field-kernel";
 import { SCHEDULER_PALETTE } from "../src/lib/scheduling";
+import {
+  coatingOptionDescriptor,
+  modifierOptionDescriptor,
+} from "../src/scenes/settings/LensCatalogSettings";
+import {
+  contactLensPricingDescriptor,
+  framePricingDescriptor,
+} from "../src/scenes/settings/OpticalPricingSettings";
+import { planProfileDescriptor } from "../src/scenes/settings/PlanProfilesSettings";
 
 const FIELDS: readonly CatalogFieldDescriptor[] = [
   { type: "text", key: "label", label: "Label", required: true, unique: true },
@@ -24,6 +36,7 @@ const FIELDS: readonly CatalogFieldDescriptor[] = [
   },
   { type: "duration", key: "duration", label: "Duration", min: 5, max: 120 },
   { type: "number", key: "threshold", label: "Threshold", min: 1, max: 60, integer: true },
+  { type: "currency", key: "priceCents", label: "Price", min: 0 },
   {
     type: "select",
     key: "kind",
@@ -49,6 +62,7 @@ const VALUES = {
   color: SCHEDULER_PALETTE.newExamBlue,
   duration: 30,
   threshold: 10,
+  priceCents: 42_500,
   kind: "house",
   plan: "InsurancePlan/fixture",
   active: true,
@@ -77,6 +91,41 @@ test("CatalogFieldKit renders every S1 field type including extracted scheduler 
   assert.match(html, /All Day/);
   assert.match(html, /Tue/);
   assert.match(html, /Label must be unique within this catalog/);
+});
+
+test("currency control displays dollars, emits integer cents, and formats two decimals on blur", () => {
+  const changes: Array<number | undefined> = [];
+  const renderer = create(<CurrencyInput value={42_500} ariaLabel="Package price" onChange={(value) => changes.push(value)} />);
+  const input = renderer.root.findByType("input");
+  assert.equal(input.props.value, "425.00");
+  act(() => input.props.onFocus());
+  act(() => input.props.onChange({ target: { value: "425.00" } }));
+  assert.equal(changes.at(-1), 42_500);
+  act(() => input.props.onBlur());
+  assert.equal(renderer.root.findByType("input").props.value, "425.00");
+  assert.match(JSON.stringify(renderer.toJSON()), /\$/);
+  act(() => renderer.unmount());
+});
+
+test("every settings cents field accepts $425.00 through the currency kernel and stores 42500 cents", () => {
+  const adapter = {} as never;
+  const descriptors = [
+    packageDescriptor(adapter, []),
+    framePricingDescriptor(adapter),
+    contactLensPricingDescriptor(adapter),
+    coatingOptionDescriptor(adapter),
+    modifierOptionDescriptor(adapter),
+    planProfileDescriptor(adapter),
+  ];
+  const centsFields = descriptors.flatMap((descriptor) =>
+    descriptor.fields.filter((field) => field.key.endsWith("Cents")),
+  );
+  assert.equal(centsFields.length, 11);
+  for (const field of centsFields) {
+    assert.equal(field.type, "currency", field.key);
+    assert.doesNotMatch(field.label, /cents/i, field.key);
+    assert.equal(buildCatalogFields({ [field.key]: 42_500 }, [field])[field.key], 42_500, field.key);
+  }
 });
 
 test("catalog field build/parse validates uniqueness, bounds, palette, references, and time windows verbatim", () => {
