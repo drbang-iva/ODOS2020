@@ -6,7 +6,6 @@ import type { AuditEvent } from "@medplum/fhirtypes";
 import { createMedplumClient, type MedplumClient } from "../fhir-client.js";
 import {
   AuditEventProjectionQueue,
-  ODOS_AUDIT_EVENT_TYPES,
   buildAuditEventProjection,
   type OdosActionOutcome,
   type OdosActorRole,
@@ -19,64 +18,59 @@ const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplu
 const SCHEMA_MIGRATIONS_DDL_FILE = fileURLToPath(
   new URL("../../../data/migrations/2026-07-17-odos-schema-migrations.sql", import.meta.url),
 );
+
+type AuditMigrationSentinel =
+  | { readonly kind: "table"; readonly table: string }
+  | { readonly kind: "column"; readonly table: string; readonly column: string }
+  | { readonly kind: "event-type"; readonly eventType: OdosAuditEventType }
+  | { readonly kind: "constraint-validated"; readonly table: string; readonly constraint: string };
+
+interface AuditDdlFile {
+  readonly path: string;
+  readonly sentinel: AuditMigrationSentinel;
+}
+
+const migrationPath = (filename: string): string =>
+  fileURLToPath(new URL(`../../../data/migrations/${filename}`, import.meta.url));
+
 const AUDIT_DDL_FILES = [
-  new URL("../../../data/migrations/2026-04-29-v05b-odos-audit-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-01-v055a-smart-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-01-v055a-smart-clients.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-01-v055a-smart-scope-decisions.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-01-v055b-smart-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-01-v055b-smart-app-installations.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-02-v055c-cds-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-02-v055c-cds-feedback.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-02-v055c-cds-service-keys.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-04-v055d-agentops-records.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-04-v055d-agentops-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-05-v055e-bulk-data-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-05-09-v06a-frames-data.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-09-era-worklist-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-09-claim-rejected-event.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-10-manual-eob-event.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-10-payment-credit-event.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-10-phase7a-insurance-audit-events.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-12-staff-invite-event.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-17-weno-pharmacy-directory.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-17-weno-drug-database.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-15-era-line-linkage-event.validate.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-18-commercial-engine-schema.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-18-commercial-engine-redemption-recovery.sql", import.meta.url),
-  new URL("../../../data/migrations/2026-07-18-commercial-engine-credit-bank.sql", import.meta.url),
-].map((url) => fileURLToPath(url));
-
-// Keep in sync with CREATE TABLE statements in AUDIT_DDL_FILES.
-const AUDIT_MIGRATION_TABLES = [
-  "odos_audit_events",
-  "odos_smart_clients",
-  "odos_smart_scope_decisions",
-  "odos_smart_app_installations",
-  "odos_cds_feedback",
-  "odos_cds_services_keys",
-  "odos_agentops_agent_keys",
-  "odos_catalog_sync_runs",
-  "odos_catalog_overlays",
-  "odos_frames_catalog",
-  "odos_practice_frames_inventory",
-  "odos_terminology_hcpcs",
-  "odos_weno_pharmacy_directory",
-  "odos_weno_drug_database",
-  "odos_package_definitions",
-  "odos_package_instances",
-  "odos_package_ledger",
-  "odos_package_redemptions",
-  "odos_credit_bank_accounts",
-  "odos_credit_bank_ledger",
-  "odos_credit_bank_spends",
-] as const;
-
-const UNTRUSTED_LEGACY_BACKFILL_MESSAGE =
-  "restored database predates this code's migration set; the ledger backfill cannot be trusted — restore a newer backup or apply migrations manually";
-const AUDIT_EVENT_CONSTRAINT_VALIDATE_MIGRATION =
-  "2026-07-15-era-line-linkage-event.validate.sql";
+  { path: migrationPath("2026-04-29-v05b-odos-audit-events.sql"), sentinel: { kind: "table", table: "odos_audit_events" } },
+  { path: migrationPath("2026-05-01-v055a-smart-events.sql"), sentinel: { kind: "event-type", eventType: "smart-token-issue" } },
+  { path: migrationPath("2026-05-01-v055a-smart-clients.sql"), sentinel: { kind: "table", table: "odos_smart_clients" } },
+  { path: migrationPath("2026-05-01-v055a-smart-scope-decisions.sql"), sentinel: { kind: "table", table: "odos_smart_scope_decisions" } },
+  { path: migrationPath("2026-05-01-v055b-smart-events.sql"), sentinel: { kind: "event-type", eventType: "smart-app-registered" } },
+  { path: migrationPath("2026-05-01-v055b-smart-app-installations.sql"), sentinel: { kind: "table", table: "odos_smart_app_installations" } },
+  { path: migrationPath("2026-05-02-v055c-cds-events.sql"), sentinel: { kind: "event-type", eventType: "cds.discovery.served" } },
+  { path: migrationPath("2026-05-02-v055c-cds-feedback.sql"), sentinel: { kind: "table", table: "odos_cds_feedback" } },
+  { path: migrationPath("2026-05-02-v055c-cds-service-keys.sql"), sentinel: { kind: "table", table: "odos_cds_services_keys" } },
+  { path: migrationPath("2026-05-04-v055d-agentops-records.sql"), sentinel: { kind: "table", table: "odos_agentops_agent_keys" } },
+  { path: migrationPath("2026-05-04-v055d-agentops-events.sql"), sentinel: { kind: "event-type", eventType: "agentops.action.attempted" } },
+  { path: migrationPath("2026-05-05-v055e-bulk-data-events.sql"), sentinel: { kind: "event-type", eventType: "bulk_export.kickoff.group" } },
+  { path: migrationPath("2026-05-09-v06a-frames-data.sql"), sentinel: { kind: "table", table: "odos_terminology_hcpcs" } },
+  { path: migrationPath("2026-07-09-era-worklist-events.sql"), sentinel: { kind: "event-type", eventType: "era.import.completed" } },
+  { path: migrationPath("2026-07-09-claim-rejected-event.sql"), sentinel: { kind: "event-type", eventType: "claim.rejected.flagged" } },
+  { path: migrationPath("2026-07-10-manual-eob-event.sql"), sentinel: { kind: "event-type", eventType: "claim.manual-eob.posted" } },
+  { path: migrationPath("2026-07-10-payment-credit-event.sql"), sentinel: { kind: "event-type", eventType: "payment.credit.applied" } },
+  { path: migrationPath("2026-07-10-phase7a-insurance-audit-events.sql"), sentinel: { kind: "event-type", eventType: "coverage.write" } },
+  { path: migrationPath("2026-07-12-staff-invite-event.sql"), sentinel: { kind: "event-type", eventType: "staff.invite" } },
+  { path: migrationPath("2026-07-15-era-line-linkage-event.sql"), sentinel: { kind: "event-type", eventType: "era.line-linkage.flagged" } },
+  { path: migrationPath("2026-07-17-weno-pharmacy-directory.sql"), sentinel: { kind: "table", table: "odos_weno_pharmacy_directory" } },
+  { path: migrationPath("2026-07-17-weno-drug-database.sql"), sentinel: { kind: "table", table: "odos_weno_drug_database" } },
+  {
+    path: migrationPath("2026-07-15-era-line-linkage-event.validate.sql"),
+    sentinel: {
+      kind: "constraint-validated",
+      table: "odos_audit_events",
+      constraint: "odos_audit_events_event_type_check",
+    },
+  },
+  { path: migrationPath("2026-07-18-commercial-engine-schema.sql"), sentinel: { kind: "table", table: "odos_package_redemptions" } },
+  {
+    path: migrationPath("2026-07-18-commercial-engine-redemption-recovery.sql"),
+    sentinel: { kind: "column", table: "odos_package_redemptions", column: "consumed_at" },
+  },
+  { path: migrationPath("2026-07-18-commercial-engine-credit-bank.sql"), sentinel: { kind: "table", table: "odos_credit_bank_spends" } },
+] satisfies readonly AuditDdlFile[];
 
 export interface LiveAuditRuntimeOptions {
   postgresUrl?: string;
@@ -270,83 +264,31 @@ export class LiveOdosAuditRuntime implements FhirAuditRecorder {
   private async initializeSchema(): Promise<void> {
     const client = await this.pool.connect();
     try {
-      const auditTable = await client.query<{ exists: boolean }>(
-        "SELECT to_regclass('odos_audit_events') IS NOT NULL AS exists",
-      );
       await client.query(await readFile(SCHEMA_MIGRATIONS_DDL_FILE, "utf8"));
 
-      await runInTransaction(client, async () => {
-        await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
-        const ledger = await client.query<{ count: string }>(
-          "SELECT count(*)::text AS count FROM odos_schema_migrations",
-        );
-        if (auditTable.rows[0].exists && ledger.rows[0].count === "0") {
-          const eventTypeConstraintValidated = await this.verifyLegacyBackfill(client);
-          for (const path of AUDIT_DDL_FILES) {
-            const filename = basename(path);
-            if (
-              filename === AUDIT_EVENT_CONSTRAINT_VALIDATE_MIGRATION &&
-              !eventTypeConstraintValidated
-            ) {
-              continue;
-            }
-            await client.query(
-              "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
-              [filename],
-            );
-          }
-        }
-      });
-
-      for (const path of AUDIT_DDL_FILES) {
+      for (const migration of AUDIT_DDL_FILES) {
         await runInTransaction(client, async () => {
           await client.query("LOCK TABLE odos_schema_migrations IN SHARE ROW EXCLUSIVE MODE");
           const applied = await client.query(
             "SELECT 1 FROM odos_schema_migrations WHERE filename = $1",
-            [basename(path)],
+            [basename(migration.path)],
           );
           if (applied.rowCount) {
             return;
           }
 
-          await client.query(await readFile(path, "utf8"));
+          if (!(await migrationEffectExists(client, migration.sentinel))) {
+            await client.query(await readFile(migration.path, "utf8"));
+          }
           await client.query(
             "INSERT INTO odos_schema_migrations (filename) VALUES ($1)",
-            [basename(path)],
+            [basename(migration.path)],
           );
         });
       }
     } finally {
       client.release();
     }
-  }
-
-  private async verifyLegacyBackfill(client: PoolClient): Promise<boolean> {
-    const constraint = await client.query<{ definition: string; convalidated: boolean }>(`
-      SELECT pg_get_constraintdef(oid) AS definition, convalidated
-      FROM pg_constraint
-      WHERE conrelid = 'odos_audit_events'::regclass
-        AND conname = 'odos_audit_events_event_type_check'
-    `);
-    const acceptedEventTypes = new Set(
-      [...(constraint.rows[0]?.definition.matchAll(/'((?:''|[^'])*)'::text/g) ?? [])]
-        .map((match) => match[1].replaceAll("''", "'")),
-    );
-    const eventTypesComplete = ODOS_AUDIT_EVENT_TYPES.every((eventType) =>
-      acceptedEventTypes.has(eventType),
-    );
-
-    const tables = await client.query<{ exists: boolean }>(
-      `
-        SELECT to_regclass(table_name) IS NOT NULL AS exists
-        FROM unnest($1::text[]) AS table_name
-      `,
-      [[...AUDIT_MIGRATION_TABLES]],
-    );
-    if (!eventTypesComplete || tables.rows.some((row) => !row.exists)) {
-      throw new Error(UNTRUSTED_LEGACY_BACKFILL_MESSAGE);
-    }
-    return constraint.rows[0].convalidated;
   }
 
   private async insertRow(
@@ -606,6 +548,66 @@ function iso(value: unknown): string {
 
 function optionalString(value: unknown): string | undefined {
   return value === null || value === undefined ? undefined : String(value);
+}
+
+async function migrationEffectExists(
+  client: PoolClient,
+  sentinel: AuditMigrationSentinel,
+): Promise<boolean> {
+  switch (sentinel.kind) {
+    case "table": {
+      const result = await client.query<{ exists: boolean }>(
+        "SELECT to_regclass($1) IS NOT NULL AS exists",
+        [sentinel.table],
+      );
+      return result.rows[0].exists;
+    }
+    case "column": {
+      const result = await client.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM pg_attribute
+            WHERE attrelid = to_regclass($1)
+              AND attname = $2
+              AND NOT attisdropped
+          ) AS exists
+        `,
+        [sentinel.table, sentinel.column],
+      );
+      return result.rows[0].exists;
+    }
+    case "event-type": {
+      const result = await client.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conrelid = to_regclass('odos_audit_events')
+              AND conname = 'odos_audit_events_event_type_check'
+              AND position(quote_literal($1) || '::text' IN pg_get_constraintdef(oid)) > 0
+          ) AS exists
+        `,
+        [sentinel.eventType],
+      );
+      return result.rows[0].exists;
+    }
+    case "constraint-validated": {
+      const result = await client.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conrelid = to_regclass($1)
+              AND conname = $2
+              AND convalidated
+          ) AS exists
+        `,
+        [sentinel.table, sentinel.constraint],
+      );
+      return result.rows[0].exists;
+    }
+  }
 }
 
 async function rollbackQuietly(client: PoolClient): Promise<void> {

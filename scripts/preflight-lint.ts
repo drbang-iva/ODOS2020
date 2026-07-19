@@ -471,6 +471,9 @@ export function runVendorCanonicalShapePass(
   for (const finding of auditEventCountConsistencyFindings(options.files ? files : [...files, ...readAuditEventCountFiles()])) {
     findings.push(finding);
   }
+  for (const finding of auditMigrationSentinelFindings(files)) {
+    findings.push(finding);
+  }
 
   for (const file of copyFilesForPass(options, files)) {
     const lines = file.text.split(/\r?\n/);
@@ -1349,6 +1352,45 @@ function auditEventCountConsistencyFindings(files: readonly { path: string; text
         lesson: "v0.55e Binding #11",
       });
     }
+  }
+  return findings;
+}
+
+function auditMigrationSentinelFindings(files: readonly { path: string; text: string }[]): PreflightFinding[] {
+  const file = files.find((candidate) => displayPath(candidate.path) === "mcp/src/authz/liveAudit.ts");
+  if (!file) {
+    return [];
+  }
+  const block = /const AUDIT_DDL_FILES\s*=\s*\[([\s\S]*?)\]\s*satisfies readonly AuditDdlFile\[\];/.exec(
+    file.text,
+  );
+  if (!block) {
+    return [{
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "audit-migration-sentinel-required",
+      message: "AUDIT_DDL_FILES must remain a statically verifiable list of migration paths with companion sentinels.",
+      source: displayPath(file.path),
+      line: 1,
+    }];
+  }
+  const entries = block[1]
+    .split(/(?=\{\s*path:\s*migrationPath\()/)
+    .filter((entry) => /\bpath:\s*migrationPath\(/.test(entry));
+  const findings: PreflightFinding[] = [];
+  for (const entry of entries) {
+    if (/\bsentinel\s*:/.test(entry)) {
+      continue;
+    }
+    const filename = /migrationPath\("([^"]+)"\)/.exec(entry)?.[1] ?? "unknown migration";
+    findings.push({
+      pass: "vendor-canonical-shapes",
+      severity: "hard-block",
+      code: "audit-migration-sentinel-required",
+      message: `${filename} is listed in AUDIT_DDL_FILES without a companion sentinel.`,
+      source: displayPath(file.path),
+      line: lineForIndex(file.text, file.text.indexOf(entry)),
+    });
   }
   return findings;
 }

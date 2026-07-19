@@ -89,6 +89,28 @@ test("v0.5d preflight pass 4 source-tree canonical-shape lint passes live tree a
   assert.equal(salted.findings[0]?.code, "observation-attestation-property");
 });
 
+test("preflight requires every live audit migration to declare a sentinel", () => {
+  const salted = runVendorCanonicalShapePass({
+    files: [
+      {
+        path: "mcp/src/authz/liveAudit.ts",
+        text: `
+          const AUDIT_DDL_FILES = [
+            { path: migrationPath("migration-with-sentinel.sql"), sentinel: { kind: "table", table: "present" } },
+            { path: migrationPath("migration-without-sentinel.sql") },
+          ] satisfies readonly AuditDdlFile[];
+        `,
+      },
+    ],
+  });
+  assert.equal(salted.status, "hard-block");
+  assert.deepEqual(
+    salted.findings.map((finding) => finding.code),
+    ["audit-migration-sentinel-required"],
+  );
+  assert.match(salted.findings[0]!.message, /migration-without-sentinel\.sql/);
+});
+
 test("v0.55b preflight pass 4 hard-blocks smart app registry boundary fixtures", () => {
   const clientAppShape = ["Client", "Application"].join("");
   const clientApp = runVendorCanonicalShapePass({
