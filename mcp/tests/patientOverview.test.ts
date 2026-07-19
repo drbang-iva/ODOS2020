@@ -21,7 +21,6 @@ import {
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
-import { FhirSearchLimitError } from "../src/fhir-search.js";
 import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
@@ -278,9 +277,6 @@ class FakeFhir {
       rows = rows.filter((resource) => (resource as Provenance).target.some(
         (target) => target.reference === params.patient,
       ));
-    }
-    if (resourceType === "Provenance" && !params.patient && rows.length > 1_000) {
-      throw new FhirSearchLimitError("Provenance", 1_000);
     }
     return bundle(rows);
   }
