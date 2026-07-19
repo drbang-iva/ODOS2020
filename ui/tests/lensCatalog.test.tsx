@@ -113,6 +113,7 @@ test("retail rules support per-category strategies and rounding without changing
   assert.equal(suggestedRetailForRule(7798), suggestedRetailPerPairCents(7798));
   assert.equal(suggestedRetailForRule(7798, { strategy: "multiplier", value: 2, rounding: "nearest-dollar" }), 15600);
   assert.equal(suggestedRetailForRule(7798, { strategy: "flat-adder", value: 5000, rounding: "nearest-cent" }), 12798);
+  assert.equal(suggestedRetailForRule(7798, { strategy: "multiplier", value: 0, rounding: "dollar-minus-2" }), 0);
   assert.deepEqual(DEFAULT_LENS_RETAIL_RULE, { strategy: "multiplier", value: 2.2, rounding: "dollar-minus-2" });
 });
 
@@ -219,6 +220,33 @@ test("bulk paste parses a valid fixed-order row and reports malformed input with
   assert.match(parseLensProductPaste("too,few,columns").errors[0] ?? "", /expected 30 columns/);
 });
 
+test("materialized rows reject mixed provenance metadata and disable discontinuation metadata", () => {
+  for (const column of ["lab", "importBatch", "sourceRef", "effectiveDate"] as const) {
+    const second = validPasteLine().split("\t");
+    const columnIndex = LENS_PRODUCT_PASTE_COLUMNS.indexOf(column);
+    second[columnIndex] = column === "effectiveDate" ? "2026" : `${second[columnIndex]}-different`;
+    let id = 0;
+    const parsed = parseLensProductPaste(`${validPasteLine()}\n${second.join("\t")}`, () => String(++id));
+
+    assert.match(parsed.errors.join("\n"), /Every materialized row must share lab, importBatch, sourceRef, and effectiveDate/);
+    assert.equal(parsed.metadata, undefined);
+    assert.equal(buildLensImportReview(parsed, []).approvable, false);
+  }
+});
+
+test("FHIR dates preserve partial precision and reject impossible calendar values", () => {
+  for (const effectiveDate of ["2025", "2026-02", "2024-02-29"]) {
+    const document = smallImportDocument();
+    document.effectiveDate = effectiveDate;
+    assert.deepEqual(parseLensProductPaste(JSON.stringify(document)).errors, []);
+  }
+  for (const effectiveDate of ["2026-00", "2026-13", "2026-02-29", "2026-04-31", "2026-99-99"]) {
+    const document = smallImportDocument();
+    document.effectiveDate = effectiveDate;
+    assert.match(parseLensProductPaste(JSON.stringify(document)).errors.join("\n"), /effectiveDate must be a FHIR date/);
+  }
+});
+
 test("validation rejects undeclared units and classifies implausible prices and unknown vocabulary as UNPARSED", () => {
   const barePrice = smallImportDocument();
   barePrice.baseCells[0]!.wholesalePrice = 7798;
@@ -299,6 +327,31 @@ test("matched manual retail survives a changed import and is marked preserved", 
   assert.equal(changed.incoming.singleLensCents, 27_160);
   assert.equal(changed.retailPreserved, true);
   assert.equal(changed.suggestedRetailPerPairCents, suggestedRetailPerPairCents(7898));
+});
+
+test("stable id collision blocks approval without overwriting manual retail", async () => {
+  const document = smallImportDocument();
+  document.baseCells.splice(1, 1);
+  document.declaredBaseCellCount = 1;
+  document.declaredMaterializedRowCount = 1;
+  document.baseCells[0]!.productName = "Alpha-Comfort";
+  document.baseCells[0]!.wholesalePrice = { cents: 9_998, unit: "pair" };
+  const existing = {
+    ...structuredClone(BP_DIGITAL_LENS_PRODUCTS.find((row) => row.id === "bp-alpha-comfort-poly-clear")!),
+    wholesalePerPairCents: 9_998,
+    retailPerPairCents: 54_321,
+  };
+  const saved = [existing];
+  const review = buildLensImportReview(parseLensProductPaste(JSON.stringify(document)), saved);
+  const incoming = review.rows.find((row) => row.classification === "NEW");
+
+  assert.ok(incoming && incoming.classification === "NEW");
+  assert.equal(incoming.incoming.id, existing.id);
+  assert.equal(incoming.incoming.retailPerPairCents, 21_998);
+  assert.match(review.errors.join("\n"), /Stable id bp-alpha-comfort-poly-clear/);
+  assert.equal(review.approvable, false);
+  await assert.rejects(() => approveLensImport(review, memoryAdapter(saved)), /Resolve every import error/);
+  assert.equal(saved[0]?.retailPerPairCents, 54_321);
 });
 
 test("Approve stamps provenance, deactivates absent rows, and identical re-import is idempotent", async () => {

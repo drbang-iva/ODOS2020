@@ -140,7 +140,7 @@ export function suggestedRetailForRule(
   if (rule.strategy === "multiplier" && rule.value === LENS_RETAIL_MARKUP_MULTIPLIER) {
     return suggestedRetailPerPairCents(wholesalePerPairCents);
   }
-  return Math.round(raw / 100) * 100 - 2;
+  return Math.max(0, Math.round(raw / 100) * 100 - 2);
 }
 
 export function buildLensImportReview(
@@ -150,6 +150,7 @@ export function buildLensImportReview(
   const rows: LensImportReviewRow[] = parsed.unparsed.map((row) => ({ classification: "UNPARSED", ...row }));
   const reviewErrors = [...parsed.errors];
   const existingByKey = new Map<string, LensProduct>();
+  const existingById = new Map(existingProducts.map((product) => [product.id, product]));
   for (const product of existingProducts) {
     const key = lensCombinationKey(product);
     if (existingByKey.has(key)) reviewErrors.push(`Existing catalog contains duplicate combination ${key}.`);
@@ -161,6 +162,10 @@ export function buildLensImportReview(
   for (const candidate of parsed.rows) {
     const key = lensCombinationKey(candidate);
     incomingKeys.add(key);
+    const idOwner = existingById.get(candidate.id);
+    if (idOwner && lensCombinationKey(idOwner) !== key) {
+      reviewErrors.push(`Stable id ${candidate.id} collides with existing combination ${lensCombinationKey(idOwner)}.`);
+    }
     const existing = existingByKey.get(key);
     if (!existing) {
       rows.push({
@@ -515,11 +520,20 @@ function parseMaterializedRows(input: string, idFactory: () => string): LensPast
     }
   }
   const first = rows[0];
+  const metadataMatches = first && rows.every((row) =>
+    row.lab === first.lab
+    && row.importBatch === first.importBatch
+    && row.sourceRef === first.sourceRef
+    && row.effectiveDate === first.effectiveDate
+  );
+  if (first && !metadataMatches) {
+    errors.push("Every materialized row must share lab, importBatch, sourceRef, and effectiveDate.");
+  }
   return {
     rows,
     errors,
     unparsed,
-    ...(first ? { metadata: {
+    ...(metadataMatches ? { metadata: {
       lab: first.lab,
       importBatch: first.importBatch,
       sourceRef: first.sourceRef,
@@ -647,7 +661,17 @@ function requiredString(value: unknown, field: string): string {
 
 function requiredFhirDate(value: unknown, field: string): string {
   const date = requiredString(value, field);
-  if (!/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(date)) throw new Error(`${field} must be a FHIR date.`);
+  const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(date);
+  if (!match) throw new Error(`${field} must be a FHIR date.`);
+  const year = Number(match[1]);
+  const month = match[2] === undefined ? undefined : Number(match[2]);
+  const day = match[3] === undefined ? undefined : Number(match[3]);
+  if (month !== undefined && (month < 1 || month > 12)) throw new Error(`${field} must be a FHIR date.`);
+  if (day !== undefined && month !== undefined) {
+    const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]!;
+    if (day < 1 || day > daysInMonth) throw new Error(`${field} must be a FHIR date.`);
+  }
   return date;
 }
 
