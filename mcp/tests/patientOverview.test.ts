@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import { test } from "node:test";
 import type {
   Bundle,
@@ -13,11 +14,14 @@ import type {
   Provenance,
   Resource,
 } from "@medplum/fhirtypes";
+import express from "express";
+import { registerClinicRoutes } from "../src/clinic/clinic-routes.js";
 import {
   loadPatientOverview,
   loadPatientStickyNoteHistory,
   savePatientStickyNote,
 } from "../src/clinic/patient-overview.js";
+import { FhirSearchLimitError } from "../src/fhir-search.js";
 import { clinicalStatusConcept, conditionCategoryConcept, verificationStatusConcept } from "../src/fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 
@@ -53,8 +57,67 @@ test("patient overview projects real snapshot resources and newest-first encount
   assert.deepEqual(overview.visits.map((visit) => visit.status), ["Final", "Preliminary"]);
   const provenanceSearch = fake.searches.find((row) => row.resourceType === "Provenance");
   assert.equal(provenanceSearch?.params.target, undefined);
-  assert.equal(provenanceSearch?.params.patient, undefined);
-  assert.equal(provenanceSearch?.params.recorded, "ge2025-06-01T14:00:00Z");
+  assert.equal(provenanceSearch?.params.patient, "Patient/p1");
+  assert.equal(provenanceSearch?.params.recorded, undefined);
+  assert.equal(provenanceSearch?.params._sort, "recorded");
+});
+
+test("patient overview route stays available with more than 1000 other-patient Provenance rows", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add(encounter("signed-visit", "2026-06-01T14:00:00Z"));
+  fake.add({
+    resourceType: "Provenance",
+    id: "signed-visit-proof",
+    target: [{ reference: "Encounter/signed-visit" }, { reference: "Patient/p1" }],
+    recorded: "2026-06-01T14:00:00Z",
+    agent: [{ who: { display: "Dr. Clinician" } }],
+  } satisfies Provenance);
+  for (let index = 0; index < 1_001; index += 1) {
+    fake.add({
+      resourceType: "Provenance",
+      id: `other-patient-${index}`,
+      target: [{ reference: `Observation/other-${index}` }, { reference: `Patient/other-${index}` }],
+      recorded: "2026-06-01T14:30:00Z",
+      agent: [{ who: { reference: "Practitioner/other" } }],
+    } satisfies Provenance);
+  }
+
+  const app = express();
+  registerClinicRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async (header) => header === "Bearer good"
+      ? { staffReference: "Practitioner/staff-1", actorRole: "clinician", fhir: fake as never }
+      : null,
+  });
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve, reject) => {
+    listener.once("listening", resolve);
+    listener.once("error", reject);
+  });
+  const { port } = listener.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/clinic/patients/p1/overview`, {
+      headers: { Authorization: "Bearer good" },
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as { visits: Array<{ encounterId: string; status: string }> };
+    assert.deepEqual(body.visits, [{
+      encounterId: "signed-visit",
+      date: "2026-06-01T14:00:00Z",
+      provider: "Dr. Clinician",
+      facility: "Practice location",
+      visitType: "Comprehensive exam",
+      status: "Final",
+      diagnoses: [],
+    }]);
+    assert.equal(
+      fake.searches.find((row) => row.resourceType === "Provenance")?.params.patient,
+      "Patient/p1",
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => listener.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test("empty snapshot stays honestly empty and visit filters issue distinct FHIR searches", async () => {
@@ -210,6 +273,14 @@ class FakeFhir {
       rows = rows.filter((resource) => (resource as Encounter).type?.some((concept) =>
         concept.coding?.some((coding) => requestedTypes.includes(`${coding.system}|${coding.code}`)),
       ));
+    }
+    if (resourceType === "Provenance" && params.patient) {
+      rows = rows.filter((resource) => (resource as Provenance).target.some(
+        (target) => target.reference === params.patient,
+      ));
+    }
+    if (resourceType === "Provenance" && !params.patient && rows.length > 1_000) {
+      throw new FhirSearchLimitError("Provenance", 1_000);
     }
     return bundle(rows);
   }

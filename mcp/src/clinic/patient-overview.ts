@@ -155,10 +155,7 @@ export async function loadPatientOverview(
   ));
   const provenances = encounters.length
     ? (await searchAll<Provenance>(fhir, "Provenance", {
-        recorded: `ge${encounters.reduce((earliest, encounter) => {
-          const date = encounter.period?.start ?? encounter.period?.end;
-          return date && date < earliest ? date : earliest;
-        }, new Date().toISOString())}`,
+        patient: patientReference,
         _count: "100",
         _sort: "recorded",
       })).filter((provenance) => provenance.target.some((target) =>

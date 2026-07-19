@@ -207,7 +207,8 @@ export async function loadClinicSummary(
     encounter.id ? [`Encounter/${encounter.id}`] : [],
   ));
   const [provenances, patients] = await Promise.all([
-    encounterReferences.size === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
+    encounterReferences.size === 0 || patientIds.length === 0 ? Promise.resolve([]) : searchOnePage<Provenance>(fhir, "Provenance", {
+      patient: patientIds.map((patientId) => `Patient/${patientId}`).join(","),
       recorded: `ge${date}`,
       _count: "1000",
       _sort: "-recorded",

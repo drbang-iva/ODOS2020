@@ -20,14 +20,14 @@ type SearchSpec = {
 const EXPECTED_DIRECT_SEARCH_CALLS = 79;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
-  "src/clinic/clinic-summary.ts:230": [
+  "src/clinic/clinic-summary.ts:231": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Encounter", "date", "_count", "_sort"),
     spec("Task", "code", "_count", "_sort"),
-    spec("Provenance", "recorded", "_count", "_sort"),
+    spec("Provenance", "patient", "recorded", "_count", "_sort"),
     spec("Patient", "_id", "_count"),
   ],
-  "src/clinic/patient-overview.ts:410": [
+  "src/clinic/patient-overview.ts:407": [
     spec("Coverage", "beneficiary", "status", "_count"),
     spec("Condition", "patient", "category", "_count"),
     spec("Procedure", "patient", "_count", "_sort"),
@@ -36,7 +36,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Observation", "patient", "code", "_count", "_sort"),
     spec("Condition", "patient", "category", "verification-status", "code", "_count"),
     spec("Encounter", "patient", "type", "_id", "_count", "_sort"),
-    spec("Provenance", "recorded", "_count", "_sort"),
+    spec("Provenance", "patient", "_count", "_sort"),
     spec("DocumentReference", "subject", "identifier", "_count"),
   ],
   "src/clinical-graph/iop-history-endpoint.ts:119": [spec("Observation", "subject", "code", "_count")],
@@ -65,9 +65,9 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/index.ts:2627": DYNAMIC_FHIR_SEARCH,
   "src/index.ts:4225": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/index.ts:4247": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/office/office-channel.ts:182": [
+  "src/office/office-channel.ts:184": [
     spec("Communication", "category", "_count", "_sort"),
-    spec("Provenance", "recorded", "_count", "_sort"),
+    spec("Provenance", "_tag", "recorded", "_count", "_sort"),
   ],
   "src/reporting/margin-ledger.ts:526": [
     spec("Invoice", "date", "_count", "_sort"),
