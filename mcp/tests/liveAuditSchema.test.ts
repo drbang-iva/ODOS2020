@@ -31,8 +31,12 @@ const AUDIT_MIGRATION_FILENAMES = [
   "2026-07-17-weno-pharmacy-directory.sql",
   "2026-07-17-weno-drug-database.sql",
   "2026-07-15-era-line-linkage-event.validate.sql",
+  "2026-07-18-commercial-engine-schema.sql",
+  "2026-07-18-commercial-engine-redemption-recovery.sql",
+  "2026-07-18-commercial-engine-credit-bank.sql",
 ] as const;
-const VALIDATE_MIGRATION_FILENAME = AUDIT_MIGRATION_FILENAMES.at(-1)!;
+const VALIDATE_MIGRATION_FILENAME = "2026-07-15-era-line-linkage-event.validate.sql";
+const COMMERCIAL_MIGRATION_FILENAMES = AUDIT_MIGRATION_FILENAMES.slice(-3);
 
 async function installMigrationTrace(probe: Client): Promise<void> {
   const ledgerDdlPath = fileURLToPath(
@@ -129,7 +133,9 @@ test("live audit boot backfills a restored pre-ledger schema without replaying i
     await probe.connect();
     probeConnected = true;
 
-    for (const filename of AUDIT_MIGRATION_FILENAMES.slice(0, -1)) {
+    for (const filename of AUDIT_MIGRATION_FILENAMES.filter(
+      (candidate) => candidate !== VALIDATE_MIGRATION_FILENAME,
+    )) {
       const path = fileURLToPath(new URL(`../../data/migrations/${filename}`, import.meta.url));
       await probe.query(await readFile(path, "utf8"));
     }
@@ -173,14 +179,14 @@ test("live audit boot backfills a restored pre-ledger schema without replaying i
   }
 });
 
-test("live audit boot rejects a restored schema older than the current migration set", async (t) => {
+test("live audit boot backfills a partially populated ledger without replaying legacy migrations", async (t) => {
   const adminUrl = process.env.ODOS_POSTGRES_URL;
   if (!adminUrl) {
     t.skip("ODOS_POSTGRES_URL is required for the live Postgres audit schema fixture.");
     return;
   }
 
-  const databaseName = `odos_audit_stale_restore_${randomUUID().replaceAll("-", "")}`;
+  const databaseName = `odos_audit_partial_ledger_${randomUUID().replaceAll("-", "")}`;
   const testUrl = new URL(adminUrl);
   testUrl.pathname = `/${databaseName}`;
   const admin = new Client({ connectionString: adminUrl });
@@ -194,26 +200,133 @@ test("live audit boot rejects a restored schema older than the current migration
     await probe.connect();
     probeConnected = true;
 
-    for (const filename of AUDIT_MIGRATION_FILENAMES.slice(0, -2)) {
+    for (const filename of AUDIT_MIGRATION_FILENAMES) {
+      const path = fileURLToPath(new URL(`../../data/migrations/${filename}`, import.meta.url));
+      await probe.query(await readFile(path, "utf8"));
+    }
+    await probe.query(`
+      INSERT INTO odos_audit_events (event_type, action_outcome)
+      VALUES ('payment.charge.completed', 'granted')
+    `);
+    await installMigrationTrace(probe);
+    for (const filename of COMMERCIAL_MIGRATION_FILENAMES) {
+      await probe.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+    }
+    await probe.query("TRUNCATE odos_schema_migration_test_trace");
+
+    const constraintBefore = await probe.query<{
+      oid: string;
+      definition: string;
+      convalidated: boolean;
+    }>(`
+      SELECT oid::text, pg_get_constraintdef(oid) AS definition, convalidated
+      FROM pg_constraint
+      WHERE conrelid = 'odos_audit_events'::regclass
+        AND conname = 'odos_audit_events_event_type_check'
+    `);
+
+    const rows = await audit.queryRows({ limit: 1 });
+    assert.equal(rows[0].eventType, "payment.charge.completed");
+
+    const ledger = await probe.query<{ filename: string }>(`
+      SELECT filename
+      FROM odos_schema_migrations
+      ORDER BY filename
+    `);
+    assert.deepEqual(
+      ledger.rows.map((row) => row.filename),
+      [...AUDIT_MIGRATION_FILENAMES].sort(),
+    );
+    const constraintAfter = await probe.query<{
+      oid: string;
+      definition: string;
+      convalidated: boolean;
+    }>(`
+      SELECT oid::text, pg_get_constraintdef(oid) AS definition, convalidated
+      FROM pg_constraint
+      WHERE conrelid = 'odos_audit_events'::regclass
+        AND conname = 'odos_audit_events_event_type_check'
+    `);
+    assert.deepEqual(constraintAfter.rows, constraintBefore.rows);
+    assert.equal(constraintAfter.rows[0].convalidated, true);
+
+    const trace = await probe.query<{ filename: string }>(`
+      SELECT filename
+      FROM odos_schema_migration_test_trace
+      ORDER BY filename
+    `);
+    assert.deepEqual(
+      trace.rows.map((row) => row.filename),
+      AUDIT_MIGRATION_FILENAMES.filter(
+        (filename) => !COMMERCIAL_MIGRATION_FILENAMES.includes(filename),
+      ).sort(),
+    );
+  } finally {
+    if (probeConnected) {
+      await probe.end();
+    }
+    await audit.close();
+    await admin.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`);
+    await admin.end();
+  }
+});
+
+test("live audit boot applies a genuinely absent migration instead of marking it applied", async (t) => {
+  const adminUrl = process.env.ODOS_POSTGRES_URL;
+  if (!adminUrl) {
+    t.skip("ODOS_POSTGRES_URL is required for the live Postgres audit schema fixture.");
+    return;
+  }
+
+  const databaseName = `odos_audit_missing_migration_${randomUUID().replaceAll("-", "")}`;
+  const testUrl = new URL(adminUrl);
+  testUrl.pathname = `/${databaseName}`;
+  const admin = new Client({ connectionString: adminUrl });
+  const probe = new Client({ connectionString: testUrl.toString() });
+  const audit = createLiveOdosAuditRuntime({ postgresUrl: testUrl.toString() });
+  let probeConnected = false;
+
+  await admin.connect();
+  try {
+    await admin.query(`CREATE DATABASE ${databaseName} TEMPLATE template0`);
+    await probe.connect();
+    probeConnected = true;
+
+    const missingMigration = "2026-07-17-weno-drug-database.sql";
+    for (const filename of AUDIT_MIGRATION_FILENAMES.filter(
+      (candidate) => candidate !== missingMigration,
+    )) {
       const path = fileURLToPath(new URL(`../../data/migrations/${filename}`, import.meta.url));
       await probe.query(await readFile(path, "utf8"));
     }
     await installMigrationTrace(probe);
+    for (const filename of COMMERCIAL_MIGRATION_FILENAMES) {
+      await probe.query("INSERT INTO odos_schema_migrations (filename) VALUES ($1)", [filename]);
+    }
+    await probe.query("TRUNCATE odos_schema_migration_test_trace");
 
-    await assert.rejects(
-      audit.queryRows({ limit: 1 }),
-      new Error(
-        "restored database predates this code's migration set; the ledger backfill cannot be trusted — restore a newer backup or apply migrations manually",
-      ),
+    const before = await probe.query<{ exists: boolean }>(
+      "SELECT to_regclass('odos_weno_drug_database') IS NOT NULL AS exists",
     );
-    const ledger = await probe.query<{ count: string }>(
-      "SELECT count(*)::text AS count FROM odos_schema_migrations",
+    assert.equal(before.rows[0].exists, false);
+
+    await audit.queryRows({ limit: 1 });
+
+    const after = await probe.query<{ exists: boolean }>(
+      "SELECT to_regclass('odos_weno_drug_database') IS NOT NULL AS exists",
     );
-    assert.equal(ledger.rows[0].count, "0");
-    const trace = await probe.query<{ count: string }>(
-      "SELECT count(*)::text AS count FROM odos_schema_migration_test_trace",
+    assert.equal(after.rows[0].exists, true);
+    const ledger = await probe.query<{ filename: string }>(
+      "SELECT filename FROM odos_schema_migrations ORDER BY filename",
     );
-    assert.equal(trace.rows[0].count, "0");
+    assert.deepEqual(
+      ledger.rows.map((row) => row.filename),
+      [...AUDIT_MIGRATION_FILENAMES].sort(),
+    );
+    const trace = await probe.query<{ filename: string }>(
+      "SELECT filename FROM odos_schema_migration_test_trace",
+    );
+    assert.equal(trace.rows.some((row) => row.filename === missingMigration), true);
   } finally {
     if (probeConnected) {
       await probe.end();
@@ -289,13 +402,10 @@ test("live audit backfill leaves a NOT VALID migration for the normal loop", asy
     `);
     const validateTrace = trace.rows.find((row) => row.filename === VALIDATE_MIGRATION_FILENAME);
     assert.ok(validateTrace);
-    const backfillTransactionIds = new Set(
-      trace.rows
-        .filter((row) => row.filename !== VALIDATE_MIGRATION_FILENAME)
-        .map((row) => row.transaction_id),
+    assert.equal(
+      new Set(trace.rows.map((row) => row.transaction_id)).size,
+      AUDIT_MIGRATION_FILENAMES.length,
     );
-    assert.equal(backfillTransactionIds.size, 1);
-    assert.notEqual(validateTrace.transaction_id, [...backfillTransactionIds][0]);
   } finally {
     if (probeConnected) {
       await probe.end();
