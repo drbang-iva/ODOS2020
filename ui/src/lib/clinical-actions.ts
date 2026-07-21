@@ -305,26 +305,88 @@ export async function updateConditionStatus(input: {
   return updated;
 }
 
-export async function updateConditionTier(input: {
+export async function makeConditionPrincipal(input: {
   encounter: Encounter;
   condition: Condition;
-  rank: number;
 }): Promise<Encounter> {
-  const index = (input.encounter.diagnosis ?? []).findIndex(
-    (diagnosis) => diagnosis.condition.reference === `Condition/${input.condition.id}`,
+  const diagnosis = input.encounter.diagnosis ?? [];
+  const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
+  const principalIndexes = diagnosis.flatMap((entry, index) => entry.rank === 1 ? [index] : []);
+  if (principalIndexes.length > 1) {
+    throw new Error("This visit has multiple principal diagnoses.");
+  }
+  const principalIndex = principalIndexes[0];
+  if (principalIndex === targetIndex) {
+    throw new Error("This diagnosis is already principal.");
+  }
+  const targetRank = diagnosis[targetIndex]!.rank;
+  if (principalIndex !== undefined && targetRank !== undefined && diagnosis.some(
+    (entry, index) => index !== targetIndex && index !== principalIndex && entry.rank === targetRank,
+  )) {
+    throw new Error("This visit has duplicate diagnosis ranks.");
+  }
+  const operations: JsonPatchOperation[] = [{
+    op: targetRank === undefined ? "add" : "replace",
+    path: `/diagnosis/${targetIndex}/rank`,
+    value: 1,
+  }];
+  if (principalIndex !== undefined) {
+    operations.push(targetRank === undefined
+      ? { op: "remove", path: `/diagnosis/${principalIndex}/rank` }
+      : { op: "replace", path: `/diagnosis/${principalIndex}/rank`, value: targetRank });
+  }
+  return patchEncounterDiagnosisRanks(input.encounter, operations, "make_diagnosis_principal");
+}
+
+export async function swapConditionRanks(input: {
+  encounter: Encounter;
+  condition: Condition;
+  adjacentCondition: Condition;
+}): Promise<Encounter> {
+  const diagnosis = input.encounter.diagnosis ?? [];
+  const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
+  const adjacentIndex = encounterDiagnosisIndex(diagnosis, input.adjacentCondition);
+  const targetRank = diagnosis[targetIndex]!.rank;
+  const adjacentRank = diagnosis[adjacentIndex]!.rank;
+  if (targetRank === 1 || adjacentRank === 1) {
+    throw new Error("Only secondary diagnoses can move up or down.");
+  }
+  if (!Number.isInteger(targetRank) || !Number.isInteger(adjacentRank) || targetRank === adjacentRank) {
+    throw new Error("Secondary diagnoses must have distinct ranks before they can move.");
+  }
+  return patchEncounterDiagnosisRanks(input.encounter, [
+    { op: "replace", path: `/diagnosis/${targetIndex}/rank`, value: adjacentRank },
+    { op: "replace", path: `/diagnosis/${adjacentIndex}/rank`, value: targetRank },
+  ], "reorder_encounter_diagnoses");
+}
+
+async function patchEncounterDiagnosisRanks(
+  encounter: Encounter,
+  operations: JsonPatchOperation[],
+  sourceTag: string,
+): Promise<Encounter> {
+  const updated = await fhir.patch<Encounter>(
+    "Encounter",
+    requiredId(encounter),
+    operations,
+    sourceTag,
+    requiredVersion(encounter),
+  );
+  await createUiProvenance(sourceTag, `Encounter/${updated.id}`, "UPDATE");
+  return updated;
+}
+
+function encounterDiagnosisIndex(
+  diagnosis: NonNullable<Encounter["diagnosis"]>,
+  condition: Condition,
+): number {
+  const index = diagnosis.findIndex(
+    (entry) => entry.condition.reference === `Condition/${requiredId(condition)}`,
   );
   if (index < 0) {
     throw new Error("Encounter diagnosis does not reference this Condition.");
   }
-  const updated = await fhir.patch<Encounter>(
-    "Encounter",
-    requiredId(input.encounter),
-    [{ op: "replace", path: `/diagnosis/${index}/rank`, value: input.rank }],
-    "update_condition_tier",
-    requiredVersion(input.encounter),
-  );
-  await createUiProvenance("update_condition_tier", `Encounter/${updated.id}`, "UPDATE");
-  return updated;
+  return index;
 }
 
 export async function markConditionEnteredInError(condition: Condition): Promise<Condition> {

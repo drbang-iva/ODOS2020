@@ -4,11 +4,12 @@ import { fhir } from "../../lib/fhir";
 import { useRole } from "../../lib/role-context";
 import {
   createEncounterDiagnosis,
+  makeConditionPrincipal,
   markConditionEnteredInError,
+  swapConditionRanks,
   updateConditionBodySite,
   updateConditionCode,
   updateConditionStatus,
-  updateConditionTier,
   type DiagnosisTierChoice,
   type EyeChoice,
 } from "../../lib/clinical-actions";
@@ -144,6 +145,13 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     },
     [conditions, encounter],
   );
+  const sortedSecondaries = useMemo(
+    () => sortedConditions.filter((condition) =>
+      verificationStatus(condition) !== "provisional" &&
+      (encounter ? diagnosisRank(encounter, condition) : undefined) !== 1
+    ),
+    [encounter, sortedConditions],
+  );
 
   async function addDiagnosis() {
     if (!encounter) return;
@@ -196,10 +204,17 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     });
   }
 
-  async function saveTier(condition: Condition, rank: number) {
+  async function savePrincipal(condition: Condition) {
     if (!encounter) return;
     await runEdit("tier", async () => {
-      await updateConditionTier({ encounter, condition, rank });
+      await makeConditionPrincipal({ encounter, condition });
+    });
+  }
+
+  async function saveRankSwap(condition: Condition, adjacentCondition: Condition) {
+    if (!encounter) return;
+    await runEdit("tier", async () => {
+      await swapConditionRanks({ encounter, condition, adjacentCondition });
     });
   }
 
@@ -476,29 +491,37 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               No assessment diagnoses yet.
             </div>
           ) : (
-            sortedConditions.map((condition) => (
-              <DiagnosisCard
-                key={condition.id}
-                condition={condition}
-                rank={encounter ? diagnosisRank(encounter, condition) : undefined}
-                editing={editingId === condition.id}
-                canShowEditing={canShowEditing}
-                busy={busy}
-                provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
-                possible={verificationStatus(condition) === "provisional"}
-                visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
-                visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
-                onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
-                onLaterality={(laterality) => saveLaterality(condition, laterality)}
-                onCode={(code, display) => saveCode(condition, code, display)}
-                onTier={(rank) => saveTier(condition, rank)}
-                onStatus={(status) => saveStatus(condition, status)}
-                onVisitStatus={(status) => saveVisitStatus(condition, status)}
-                onEnteredInError={() => markEnteredInError(condition)}
-                onConfirm={() => decidePossible(condition, "confirm")}
-                onDiscard={() => decidePossible(condition, "discard")}
-              />
-            ))
+            sortedConditions.map((condition) => {
+              const rank = encounter ? diagnosisRank(encounter, condition) : undefined;
+              const secondaryIndex = sortedSecondaries.findIndex((candidate) => candidate.id === condition.id);
+              return (
+                <DiagnosisCard
+                  key={condition.id}
+                  condition={condition}
+                  rank={rank}
+                  editing={editingId === condition.id}
+                  canShowEditing={canShowEditing}
+                  busy={busy}
+                  provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
+                  possible={verificationStatus(condition) === "provisional"}
+                  canMoveUp={secondaryIndex > 0}
+                  canMoveDown={secondaryIndex >= 0 && secondaryIndex < sortedSecondaries.length - 1}
+                  visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
+                  visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
+                  onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
+                  onLaterality={(laterality) => saveLaterality(condition, laterality)}
+                  onCode={(code, display) => saveCode(condition, code, display)}
+                  onMakePrincipal={() => savePrincipal(condition)}
+                  onMoveUp={() => saveRankSwap(condition, sortedSecondaries[secondaryIndex - 1]!)}
+                  onMoveDown={() => saveRankSwap(condition, sortedSecondaries[secondaryIndex + 1]!)}
+                  onStatus={(status) => saveStatus(condition, status)}
+                  onVisitStatus={(status) => saveVisitStatus(condition, status)}
+                  onEnteredInError={() => markEnteredInError(condition)}
+                  onConfirm={() => decidePossible(condition, "confirm")}
+                  onDiscard={() => decidePossible(condition, "discard")}
+                />
+              );
+            })
           )}
         </div>
       </div>
@@ -526,12 +549,16 @@ function DiagnosisCard({
   busy,
   provenanceLine,
   possible,
+  canMoveUp,
+  canMoveDown,
   visitStatus,
   visitStatusDisabled,
   onToggle,
   onLaterality,
   onCode,
-  onTier,
+  onMakePrincipal,
+  onMoveUp,
+  onMoveDown,
   onStatus,
   onVisitStatus,
   onEnteredInError,
@@ -545,12 +572,16 @@ function DiagnosisCard({
   busy: string | null;
   provenanceLine?: string;
   possible: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   visitStatus?: DiagnosisVisitStatus;
   visitStatusDisabled: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
-  onTier: (rank: number) => void;
+  onMakePrincipal: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
   onVisitStatus: (status: DiagnosisVisitStatus) => void;
   onEnteredInError: () => void;
@@ -560,7 +591,6 @@ function DiagnosisCard({
   const [laterality, setLaterality] = useState<EyeChoice>("OU");
   const [code, setCode] = useState(condition.code?.coding?.[0]?.code ?? "");
   const [display, setDisplay] = useState(displayCode(condition.code));
-  const [nextRank, setNextRank] = useState(String(rank ?? 1));
   const [status, setStatus] = useState<"active" | "recurrence" | "resolved">(
     normalizeClinicalStatus(clinicalStatus(condition)),
   );
@@ -625,11 +655,16 @@ function DiagnosisCard({
             <input value={display} onChange={(event) => setDisplay(event.target.value)} className={INPUT_CLASS} />
             <button disabled={busy !== null || !code.trim()} onClick={() => onCode(code, display)} className={BUTTON_CLASS}>Recode</button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_auto]">
-            <input value={nextRank} onChange={(event) => setNextRank(event.target.value)} inputMode="numeric" className={INPUT_CLASS} />
-            <div className="self-center text-sm text-[color:var(--odos-muted)]">Tier rank</div>
-            <button disabled={busy !== null || !Number(nextRank)} onClick={() => onTier(Number(nextRank))} className={BUTTON_CLASS}>Save tier</button>
-          </div>
+          <DiagnosisRankActions
+            possible={possible}
+            principal={rank === 1}
+            busy={busy !== null}
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+            onMakePrincipal={onMakePrincipal}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+          />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr_auto_auto]">
             <select value={status} onChange={(event) => setStatus(event.target.value as "active" | "recurrence" | "resolved")} className={INPUT_CLASS}>
               <option value="active">active</option>
@@ -644,6 +679,35 @@ function DiagnosisCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export function DiagnosisRankActions({
+  possible,
+  principal,
+  busy,
+  canMoveUp,
+  canMoveDown,
+  onMakePrincipal,
+  onMoveUp,
+  onMoveDown,
+}: {
+  possible: boolean;
+  principal: boolean;
+  busy: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMakePrincipal: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  if (possible || principal) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button disabled={busy} onClick={onMakePrincipal} className={BUTTON_CLASS}>Make Principal</button>
+      <button disabled={busy || !canMoveUp} onClick={onMoveUp} className={BUTTON_CLASS}>Move up</button>
+      <button disabled={busy || !canMoveDown} onClick={onMoveDown} className={BUTTON_CLASS}>Move down</button>
     </div>
   );
 }
