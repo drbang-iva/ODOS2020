@@ -61,7 +61,7 @@ export class FhirEncounterComplaintStore {
       visited.add(next);
       bundle = await this.fhir.searchUrl<Basic>(next, "Basic");
     }
-    return resources.flatMap((resource) => {
+    const rows = resources.flatMap((resource) => {
       try {
         return [{ resource, complaint: parseEncounterComplaintResource(resource) }];
       } catch (error) {
@@ -69,6 +69,7 @@ export class FhirEncounterComplaintStore {
         return [];
       }
     });
+    return resolveStoredDuplicates(rows);
   }
 }
 
@@ -130,7 +131,10 @@ export function assertEncounterComplaint(value: unknown): EncounterComplaint {
       throw new Error("Encounter complaint duration is invalid.");
     }
   }
-  for (const field of ["freeTextLabel", "eyeComparisonOtherText", "referringPhysicianName", "additionalHistory"] as const) {
+  if (typeof value.additionalHistory !== "string" || value.additionalHistory.length > 4000) {
+    throw new Error("Encounter complaint additionalHistory is invalid.");
+  }
+  for (const field of ["freeTextLabel", "eyeComparisonOtherText", "referringPhysicianName"] as const) {
     if (value[field] !== undefined && (typeof value[field] !== "string" || String(value[field]).length > 4000)) {
       throw new Error(`Encounter complaint ${field} is invalid.`);
     }
@@ -149,6 +153,19 @@ export function assertEncounterComplaint(value: unknown): EncounterComplaint {
     throw new Error("Encounter complaint provenance is invalid.");
   }
   return value as unknown as EncounterComplaint;
+}
+
+function resolveStoredDuplicates(rows: Array<{ resource: Basic; complaint: EncounterComplaint }>) {
+  const grouped = new Map<string, typeof rows>();
+  for (const row of rows) grouped.set(row.complaint.id, [...(grouped.get(row.complaint.id) ?? []), row]);
+  return [...grouped.values()].map((group) => group.reduce((winner, candidate) =>
+    compareRows(candidate, winner) > 0 ? candidate : winner
+  ));
+}
+
+function compareRows(left: { resource: Basic }, right: { resource: Basic }): number {
+  return (left.resource.meta?.lastUpdated ?? "").localeCompare(right.resource.meta?.lastUpdated ?? "") ||
+    (left.resource.id ?? "").localeCompare(right.resource.id ?? "");
 }
 
 function assertUniqueStrings(value: unknown, field: string): void {

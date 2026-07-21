@@ -15,6 +15,12 @@ import {
 import {
   COMPLAINT_SEED_PROVENANCE_NOTE,
 } from "../src/clinical-graph/complaint-model.js";
+import {
+  FhirEncounterComplaintStore,
+  assertEncounterComplaint,
+  buildEncounterComplaintResource,
+  parseEncounterComplaintResource,
+} from "../src/clinical-graph/encounter-complaint-store.js";
 
 const AUTH = "Bearer good";
 
@@ -211,6 +217,49 @@ test("an active complaint can be edited and removal keeps its persisted audit ro
   const persisted = fhir.basics.find((row) => row.identifier?.some((identifier) => identifier.value === id));
   assert.ok(persisted);
   assert.match(persisted.extension?.[0]?.valueString ?? "", /\"status\":\"removed\"/);
+});
+
+test("encounter complaint reads collapse duplicate Basics by complaint id and keep the newest row", async () => {
+  const { deps, fhir } = fixture();
+  const created = await handleEncounterComplaintMutationRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { action: "create", patientReference: "Patient/p1", complaint: DRY_EYE },
+  });
+  assert.equal(created.status, 200);
+  const original = fhir.basics.find((row) => row.code?.coding?.some((coding) => coding.code === "odos-encounter-complaint"));
+  assert.ok(original);
+  original.meta = { lastUpdated: "2026-07-21T12:00:00.000Z" };
+  const complaint = parseEncounterComplaintResource(original);
+  const duplicate = buildEncounterComplaintResource({ ...complaint, additionalHistory: "newest duplicate row" });
+  duplicate.id = "duplicate-basic";
+  duplicate.meta = { lastUpdated: "2026-07-21T12:01:00.000Z" };
+  fhir.basics.push(duplicate);
+
+  const rows = await new FhirEncounterComplaintStore(fhir).listByEncounter("e1");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.id, complaint.id);
+  assert.equal(rows[0]?.additionalHistory, "newest duplicate row");
+});
+
+test("encounter complaint validation requires additionalHistory to be present", () => {
+  const complaint = {
+    id: "complaint-1",
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal: 1,
+    complaintKey: "dry-eye",
+    conditions: [],
+    eyeLocation: "OU",
+    qualities: [],
+    treatmentsTried: [],
+    narrative: { mode: "automated" },
+    resolvedDx: [],
+    status: "active",
+    provenance: { source: "manual", recordedAt: "2026-07-21T12:00:00.000Z", actorReference: "Practitioner/doc1" },
+    provenanceHistory: [],
+  };
+  assert.throws(() => assertEncounterComplaint(complaint), /additionalHistory/);
 });
 
 test("complaint mutations fail closed on unsourced options, duplicate reorder input, and signed encounters", async () => {

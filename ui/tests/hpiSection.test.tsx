@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   ComplaintIntake,
   DEFAULT_HPI_ROS_OPTIONS,
@@ -16,6 +17,7 @@ import {
   effectiveComplaintOptions,
   renderComplaintNarrative,
   type ComplaintDefinition,
+  type EncounterComplaint,
   type GenericComplaintOptions,
 } from "../src/lib/complaints";
 import { SpineNav } from "../src/components/charting/SpineNav";
@@ -173,6 +175,42 @@ test("history request transmits only reviewed ROS values and bulk-attestation pr
   assert.deepEqual(body.reviewAttestations, ["general"]);
 });
 
+test("remove complaint network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const remove = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Remove");
+    assert.ok(remove);
+    await act(async () => {
+      remove.props.onClick();
+      await flushEffects();
+    });
+  });
+});
+
+test("reorder complaint network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const complaints = renderer.root.findAllByType("article");
+    assert.equal(complaints.length, 2);
+    act(() => complaints[0]!.props.onDragStart());
+    await act(async () => {
+      complaints[1]!.props.onDrop();
+      await flushEffects();
+    });
+  });
+});
+
+test("add medical flag network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const input = renderer.root.findByProps({ "aria-label": "New general-medical review flag" });
+    act(() => input.props.onChange({ target: { value: "Asthma" } }));
+    const add = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Add flag");
+    assert.ok(add);
+    await act(async () => {
+      add.props.onClick();
+      await flushEffects();
+    });
+  });
+});
+
 test("legacy next-field wiring is fully removed from the source", () => {
   const source = readFileSync(new URL("../src/components/charting/HpiSection.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /HPI_ELEMENTS|EMPTY_HPI|chiefComplaint|modifyingFactors|associatedSignsSymptoms/);
@@ -185,3 +223,53 @@ test("History is the first top-level spine group before Pretest", () => {
   const pretestIndex = html.indexOf("PRETEST");
   assert.ok(historyIndex >= 0 && hpiIndex > historyIndex && pretestIndex > hpiIndex);
 });
+
+async function assertRejectedMutationVisible(action: (renderer: ReactTestRenderer) => Promise<void>): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === "POST") throw new Error("Network unavailable");
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) {
+      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
+    }
+    if (url.endsWith("/clinical-graph/complaint-definitions")) {
+      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
+      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1), complaintFixture("complaint-2", 2)] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await flushEffects();
+    });
+    await action(renderer);
+    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Network unavailable/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function complaintFixture(id: string, ordinal: number): EncounterComplaint {
+  return {
+    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
+    id,
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal,
+    status: "active",
+    renderedNarrative: `Complaint ${ordinal}`,
+  };
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+}
+
+async function flushEffects(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}

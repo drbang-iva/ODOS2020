@@ -191,39 +191,42 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
 
   async function mutateComplaints(body: unknown) {
     setError(null);
-    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const result = await response.json() as { complaints?: EncounterComplaint[]; error?: string };
-    if (!response.ok || !result.complaints) {
-      setError(result.error ?? `Complaint update failed: ${response.status}`);
-      return;
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/complaints`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json() as { complaints?: EncounterComplaint[]; error?: string };
+      if (!response.ok || !result.complaints) throw new Error(result.error ?? `Complaint update failed: ${response.status}`);
+      setComplaints(result.complaints);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
     }
-    setComplaints(result.complaints);
   }
 
   async function addMedicalFlag() {
     const display = newMedicalFlag.trim();
     if (!display) return;
+    setError(null);
     const codeBase = `custom-${slug(display) || "medical-flag"}`;
     let code = codeBase;
     let suffix = 2;
     while (rosOptions.some((option) => option.code === code)) code = `${codeBase}-${suffix++}`;
-    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions/hpi_ros`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "add-field-option", fieldKey: "reviewOfSystems", code, display, category: "general" }),
-    });
-    const body = await response.json() as { error?: string };
-    if (!response.ok && response.status !== 403) {
-      setError(body.error ?? `Review flag save failed: ${response.status}`);
-      return;
+    try {
+      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-definitions/hpi_ros`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add-field-option", fieldKey: "reviewOfSystems", code, display, category: "general" }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok && response.status !== 403) throw new Error(body.error ?? `Review flag save failed: ${response.status}`);
+      setRosOptions((current) => [...current, { code, display, category: "general" }]);
+      setNewMedicalFlag("");
+      setCatalogMessage(response.ok ? "Flag added to the practice Review of Systems catalog." : "Flag added for this encounter only; the catalog write grant is required to reuse it.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
     }
-    setRosOptions((current) => [...current, { code, display, category: "general" }]);
-    setNewMedicalFlag("");
-    setCatalogMessage(response.ok ? "Flag added to the practice Review of Systems catalog." : "Flag added for this encounter only; the catalog write grant is required to reuse it.");
   }
 
   function markRemainingNegative(category: RosCategory) {
@@ -263,18 +266,18 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   return (
     <section className="h-full overflow-y-auto p-6">
       <div className="max-w-6xl">
-        <h2 className="text-lg font-semibold text-white">Chief complaint / HPI / ROS</h2>
-        <p className="mt-1 text-sm text-white/45">Capture each presenting concern independently, then review the assembled history before saving.</p>
+        <h2 className="odos-hpi-text text-lg font-semibold">Chief complaint / HPI / ROS</h2>
+        <p className="odos-hpi-muted mt-1 text-sm">Capture each presenting concern independently, then review the assembled history before saving.</p>
 
-        <div className="mt-6 rounded border border-white/10 bg-bg-panel/70 p-5">
+        <div className="odos-hpi-border mt-6 rounded border bg-bg-panel/70 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/55">Presenting Complaints</h3>
-              <p className="mt-1 text-xs text-white/35">The first complaint is primary and leads the History Narrative.</p>
+              <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Presenting Complaints</h3>
+              <p className="odos-hpi-faint mt-1 text-xs">The first complaint is primary and leads the History Narrative.</p>
             </div>
             {!draft && <button type="button" className="sidebar-button" onClick={() => setSearch("")}>Add complaint</button>}
           </div>
-          {complaints.length === 0 && <p className="mt-4 text-sm text-white/45">No presenting complaints recorded.</p>}
+          {complaints.length === 0 && <p className="odos-hpi-muted mt-4 text-sm">No presenting complaints recorded.</p>}
           <div className="mt-4 space-y-3">
             {complaints.map((complaint) => (
               <article
@@ -283,16 +286,16 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
                 onDragStart={() => setDraggedId(complaint.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => void reorderComplaints(complaint.id)}
-                className="rounded border border-white/10 bg-bg-deep/60 p-4"
+                className="odos-hpi-border rounded border bg-bg-deep/60 p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <div className="odos-hpi-text flex items-center gap-2 text-sm font-semibold">
                       <span>{complaint.ordinal}. {complaint.freeTextLabel ?? definitions.find((row) => row.stableKey === complaint.complaintKey)?.display ?? "Complaint"}</span>
                       {complaint.ordinal === 1 && <span className="rounded bg-brand/20 px-2 py-0.5 text-[11px] text-brand-light">Primary</span>}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-white/70">{complaint.renderedNarrative}</p>
-                    <p className="mt-2 text-xs text-white/35">HPI: {hpiElementCount(complaint)} elements · Drag to reorder</p>
+                    <p className="odos-hpi-muted mt-2 text-sm leading-6">{complaint.renderedNarrative}</p>
+                    <p className="odos-hpi-faint mt-2 text-xs">HPI: {hpiElementCount(complaint)} elements · Drag to reorder</p>
                   </div>
                   <div className="flex gap-2">
                     <button type="button" className="sidebar-button" onClick={() => editComplaint(complaint)}>Edit</button>
@@ -320,36 +323,36 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             onSave={(addAnother) => void saveComplaint(addAnother)}
           />
         ) : (
-          <div className="mt-5 rounded border border-white/10 bg-bg-panel/70 p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/55">Top Complaints</h3>
-            <label className="mt-4 block text-sm text-white/65">
+          <div className="odos-hpi-border mt-5 rounded border bg-bg-panel/70 p-5">
+            <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Top Complaints</h3>
+            <label className="odos-hpi-muted mt-4 block text-sm">
               Search complaints
               <input className="sidebar-input mt-2" value={search} onChange={(event) => setSearch(event.target.value)} />
             </label>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {searchedDefinitions.map((definition) => (
-                <button key={definition.stableKey} type="button" className="rounded border border-white/10 p-3 text-left text-sm text-white/70 hover:border-brand/50 hover:bg-brand/10" onClick={() => beginDefinition(definition)}>
+                <button key={definition.stableKey} type="button" className="odos-hpi-border odos-hpi-muted rounded border p-3 text-left text-sm hover:border-brand/50 hover:bg-brand/10" onClick={() => beginDefinition(definition)}>
                   {definition.display}
                 </button>
               ))}
-              <button type="button" className="rounded border border-dashed border-white/20 p-3 text-left text-sm text-white/70 hover:border-brand/50" onClick={() => beginOther()}>Other</button>
+              <button type="button" className="odos-hpi-border-strong odos-hpi-muted rounded border border-dashed p-3 text-left text-sm hover:border-brand/50" onClick={() => beginOther()}>Other</button>
             </div>
           </div>
         )}
 
-        <div className="mt-5 rounded border border-white/10 bg-bg-panel/70 p-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-white/55">Review of Systems</h3>
-          <p className="mt-1 text-xs text-white/35">Leave an item Not reviewed unless it was explicitly assessed.</p>
+        <div className="odos-hpi-border mt-5 rounded border bg-bg-panel/70 p-5">
+          <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Review of Systems</h3>
+          <p className="odos-hpi-faint mt-1 text-xs">Leave an item Not reviewed unless it was explicitly assessed.</p>
           {(["eye", "general"] as const).map((category) => (
             <div key={category} className="mt-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h4 className="text-sm font-semibold text-white/70">{category === "eye" ? "Eye-focused" : "General medical"}</h4>
+                <h4 className="odos-hpi-muted text-sm font-semibold">{category === "eye" ? "Eye-focused" : "General medical"}</h4>
                 <button type="button" className="sidebar-button" onClick={() => markRemainingNegative(category)}>Mark remaining reviewed: negative</button>
               </div>
               <p className="mt-1 text-xs text-amber-100/70">This attests that every remaining item in this group was reviewed.</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {rosOptions.filter((option) => option.category === category).map((option) => (
-                  <div key={option.code} className="text-sm text-white/60">
+                  <div key={option.code} className="odos-hpi-muted text-sm">
                     <label>
                       {option.display}
                       <select
@@ -373,7 +376,7 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
             <input aria-label="New general-medical review flag" className="sidebar-input" maxLength={120} value={newMedicalFlag} onChange={(event) => setNewMedicalFlag(event.target.value)} placeholder="Add another medical flag" />
             <button type="button" className="sidebar-button shrink-0" disabled={!newMedicalFlag.trim()} onClick={() => void addMedicalFlag()}>Add flag</button>
           </div>
-          {catalogMessage && <p className="mt-2 text-xs text-white/45">{catalogMessage}</p>}
+          {catalogMessage && <p className="odos-hpi-muted mt-2 text-xs">{catalogMessage}</p>}
         </div>
 
         {error && <div role="alert" className="mt-4 rounded border border-red-400/40 bg-red-400/10 p-3 text-sm text-red-100">{error}</div>}
@@ -403,9 +406,9 @@ export function ComplaintIntake(props: {
   const symptom = props.definition?.kind !== "evaluation-reason";
   return (
     <div className="mt-5 rounded border border-brand/30 bg-bg-panel/80 p-5">
-      <h3 className="text-base font-semibold text-white">Complaint Intake</h3>
-      <p className="mt-1 text-sm text-white/50">{props.definition?.display ?? "Other presenting complaint"}</p>
-      {!props.draft.complaintKey && <label className="mt-5 block text-sm text-white/65">Presenting concern<input className="sidebar-input mt-2" maxLength={4000} value={props.draft.freeTextLabel ?? ""} onChange={(event) => props.onUpdate({ freeTextLabel: event.target.value })} /></label>}
+      <h3 className="odos-hpi-text text-base font-semibold">Complaint Intake</h3>
+      <p className="odos-hpi-muted mt-1 text-sm">{props.definition?.display ?? "Other presenting complaint"}</p>
+      {!props.draft.complaintKey && <label className="odos-hpi-muted mt-5 block text-sm">Presenting concern<input className="sidebar-input mt-2" maxLength={4000} value={props.draft.freeTextLabel ?? ""} onChange={(event) => props.onUpdate({ freeTextLabel: event.target.value })} /></label>}
 
       {symptom && <IntakeCluster title="Symptoms"><OptionButtons options={props.options.conditions} selected={props.draft.conditions} onToggle={(code) => props.onToggle("conditions", code)} /></IntakeCluster>}
       <IntakeCluster title="Laterality">
@@ -421,7 +424,7 @@ export function ComplaintIntake(props: {
       </IntakeCluster>
       {symptom && <IntakeCluster title="Character">
         <OptionButtons options={props.options.qualities} selected={props.draft.qualities} onToggle={(code) => props.onToggle("qualities", code)} />
-        <label className="mt-3 block max-w-xs text-sm text-white/65">Severity<select className="sidebar-input mt-2" value={props.draft.severity ?? ""} onChange={(event) => props.onUpdate({ severity: (event.target.value || undefined) as ComplaintDraft["severity"] })}><option value="">Not recorded</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></label>
+        <label className="odos-hpi-muted mt-3 block max-w-xs text-sm">Severity<select className="sidebar-input mt-2" value={props.draft.severity ?? ""} onChange={(event) => props.onUpdate({ severity: (event.target.value || undefined) as ComplaintDraft["severity"] })}><option value="">Not recorded</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></label>
       </IntakeCluster>}
       <IntakeCluster title="Duration">
         <div className="flex max-w-md gap-2">
@@ -431,12 +434,12 @@ export function ComplaintIntake(props: {
       </IntakeCluster>
       <IntakeCluster title="Current treatment"><OptionButtons options={props.options.treatments} selected={props.draft.treatmentsTried} onToggle={(code) => props.onToggle("treatmentsTried", code)} /></IntakeCluster>
       <IntakeCluster title="Referral & history">
-        <label className="block text-sm text-white/65">Referring physician<input className="sidebar-input mt-2" maxLength={500} value={props.draft.referringPhysicianName ?? ""} onChange={(event) => props.onUpdate({ referringPhysicianName: event.target.value })} /></label>
-        <label className="mt-3 block text-sm text-white/65">Additional history<textarea className="sidebar-input mt-2 min-h-24 resize-y" maxLength={4000} value={props.draft.additionalHistory} onChange={(event) => props.onUpdate({ additionalHistory: event.target.value })} /></label>
+        <label className="odos-hpi-muted block text-sm">Referring physician<input className="sidebar-input mt-2" maxLength={500} value={props.draft.referringPhysicianName ?? ""} onChange={(event) => props.onUpdate({ referringPhysicianName: event.target.value })} /></label>
+        <label className="odos-hpi-muted mt-3 block text-sm">Additional history<textarea className="sidebar-input mt-2 min-h-24 resize-y" maxLength={4000} value={props.draft.additionalHistory} onChange={(event) => props.onUpdate({ additionalHistory: event.target.value })} /></label>
       </IntakeCluster>
-      <div className="mt-5 rounded border border-white/10 bg-bg-deep/70 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="text-sm font-semibold text-white/70">History Narrative</h4><div className="flex gap-2"><button type="button" className={props.draft.narrative.mode === "automated" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("automated")}>Automated</button><button type="button" className={props.draft.narrative.mode === "override" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("override")}>Override</button></div></div>
-        {props.draft.narrative.mode === "override" ? <textarea aria-label="History Narrative override" className="sidebar-input mt-3 min-h-28 resize-y" value={props.draft.narrative.overrideText ?? ""} onChange={(event) => props.onUpdate({ narrative: { mode: "override", overrideText: event.target.value } }, false)} /> : <p className="mt-3 text-sm leading-6 text-white/75">{props.preview}</p>}
+      <div className="odos-hpi-border mt-5 rounded border bg-bg-deep/70 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="odos-hpi-muted text-sm font-semibold">History Narrative</h4><div className="flex gap-2"><button type="button" className={props.draft.narrative.mode === "automated" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("automated")}>Automated</button><button type="button" className={props.draft.narrative.mode === "override" ? "sidebar-button border-brand" : "sidebar-button"} onClick={() => props.onNarrativeMode("override")}>Override</button></div></div>
+        {props.draft.narrative.mode === "override" ? <textarea aria-label="History Narrative override" className="sidebar-input mt-3 min-h-28 resize-y" value={props.draft.narrative.overrideText ?? ""} onChange={(event) => props.onUpdate({ narrative: { mode: "override", overrideText: event.target.value } }, false)} /> : <p className="odos-hpi-muted mt-3 text-sm leading-6">{props.preview}</p>}
         {props.overrideDirty && <div className="mt-3 text-xs text-amber-100">Narrative is overridden and coded fields changed. <button type="button" className="underline" onClick={props.onRegenerate}>Regenerate from coded fields</button></div>}
       </div>
       <div className="mt-5 flex flex-wrap justify-end gap-2"><button type="button" className="sidebar-button" onClick={props.onCancel}>Cancel</button><button type="button" className="sidebar-button" disabled={props.saving || (!props.draft.complaintKey && !props.draft.freeTextLabel?.trim())} onClick={() => props.onSave(true)}>Save and Add Another</button><button type="button" className="sidebar-button" disabled={props.saving || (!props.draft.complaintKey && !props.draft.freeTextLabel?.trim())} onClick={() => props.onSave(false)}>Save Complaint</button></div>
@@ -445,11 +448,11 @@ export function ComplaintIntake(props: {
 }
 
 function IntakeCluster({ title, children }: { title: string; children: React.ReactNode }) {
-  return <fieldset className="mt-5 rounded border border-white/10 p-4"><legend className="px-2 text-sm font-semibold text-white/70">{title}</legend>{children}</fieldset>;
+  return <fieldset className="odos-hpi-border mt-5 rounded border p-4"><legend className="odos-hpi-muted px-2 text-sm font-semibold">{title}</legend>{children}</fieldset>;
 }
 
 function OptionButtons({ options, selected, onToggle }: { options: ComplaintOption[]; selected: string[]; onToggle: (code: string) => void }) {
-  return <div className="flex flex-wrap gap-2">{options.map((option) => <button key={option.code} type="button" aria-pressed={selected.includes(option.code)} className={selected.includes(option.code) ? "rounded border border-brand bg-brand/20 px-3 py-2 text-sm text-brand-light" : "rounded border border-white/15 px-3 py-2 text-sm text-white/65 hover:border-brand/50"} onClick={() => onToggle(option.code)}>{option.display}</button>)}</div>;
+  return <div className="flex flex-wrap gap-2">{options.map((option) => <button key={option.code} type="button" aria-pressed={selected.includes(option.code)} className={selected.includes(option.code) ? "rounded border border-brand bg-brand/20 px-3 py-2 text-sm text-brand-light" : "odos-hpi-border-strong odos-hpi-muted rounded border px-3 py-2 text-sm hover:border-brand/50"} onClick={() => onToggle(option.code)}>{option.display}</button>)}</div>;
 }
 
 export function buildHpiRequestBody(input: {
