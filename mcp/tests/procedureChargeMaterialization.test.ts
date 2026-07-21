@@ -30,6 +30,7 @@ const NOW = "2026-07-21T15:30:00.000Z";
 class MemoryFhir {
   resources: Resource[] = [];
   createHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
+  updateHeaders: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
   next = 1;
 
   async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
@@ -85,7 +86,9 @@ class MemoryFhir {
     resourceType: T["resourceType"],
     id: string,
     resource: T,
+    headers?: Record<string, string>,
   ): Promise<T> {
+    this.updateHeaders.push({ resourceType, headers });
     const saved = { ...structuredClone(resource), id } as T;
     const index = this.resources.findIndex((row) => row.resourceType === resourceType && row.id === id);
     if (index < 0) throw new Error(`${resourceType}/${id} not found for update`);
@@ -230,6 +233,11 @@ test("fee schedule endpoint seeds empty definitions, saves integer cents, and de
   assert.equal(items.length, PROCEDURE_FEE_SEEDS.length);
   assert.equal(items.every((item) => item.priceCents === undefined), true);
   assert.equal(fhir.resources.filter((row) => row.resourceType === "ChargeItemDefinition").length, 5);
+  const cornealDefinition = fhir.resources.find((row): row is ChargeItemDefinition =>
+    row.resourceType === "ChargeItemDefinition" && row.title === "Corneal pachymetry"
+  );
+  assert.ok(cornealDefinition);
+  cornealDefinition.meta = { ...cornealDefinition.meta, versionId: "7" };
 
   const saved = await handleProcedureFeeScheduleMutationRequest({ authenticate }, {
     authHeader: "Bearer admin",
@@ -239,6 +247,10 @@ test("fee schedule endpoint seeds empty definitions, saves integer cents, and de
   assert.equal(saved.status, 200);
   assert.equal((saved.body as { item: { priceCents?: number; version: string } }).item.priceCents, 8_750);
   assert.equal((saved.body as { item: { priceCents?: number; version: string } }).item.version, "2");
+  assert.deepEqual(fhir.updateHeaders.at(-1)?.headers, {
+    "X-ODOS-Source": "procedure-fee-schedule",
+    "If-Match": 'W/"7"',
+  });
 
   const deactivated = await handleProcedureFeeScheduleMutationRequest({ authenticate }, {
     authHeader: "Bearer admin",
@@ -307,6 +319,79 @@ test("accepted proposals with an invalid patient link fail before any ChargeItem
       },
       now: () => NOW,
     }), /not linked to an active confirmed application/);
+  assert.equal(fhir.resources.some((row) => row.resourceType === "ChargeItem"), false);
+});
+
+test("sign cleanup abandons unrelated open applications before a corrupt accepted proposal fails", async () => {
+  const fhir = new MemoryFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-cleanup-first",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-cleanup" },
+  } satisfies Encounter);
+  const service = new ProtocolService(fhir, {
+    async commitFinding() { return undefined; },
+    async materializeAction() { return undefined; },
+  }, () => NOW);
+  const openApplication: ProtocolApplication = {
+    id: "application-open",
+    encounterId: "enc-cleanup-first",
+    patientId: "patient-cleanup",
+    protocolId: "glaucoma-suspect-initial",
+    protocolVersion: 1,
+    appliedBy: "Practitioner/doc",
+    appliedAt: NOW,
+    stackedWith: [],
+    dispositions: [],
+    dedupResolutions: [],
+    undoState: "active",
+    confirmed: false,
+  };
+  const corruptApplication: ProtocolApplication = {
+    ...openApplication,
+    id: "application-corrupt-confirmed",
+    patientId: "different-patient",
+    confirmed: true,
+  };
+  await service.applications.save(openApplication);
+  await service.applications.save(corruptApplication);
+  await service.charges.save({
+    id: "proposal-corrupt-cleanup",
+    encounterId: "enc-cleanup-first",
+    protocolApplicationId: corruptApplication.id,
+    planActionRef: "charge-gonioscopy",
+    procedureConceptKey: "gonioscopy",
+    units: 1,
+    laterality: "OU",
+    dxPointers: ["Condition/dx-cleanup"],
+    evidenceRefs: [],
+    coverageEvaluations: [],
+    state: "accepted",
+    provenance: {
+      source: "protocol-default",
+      actor: "Practitioner/doc",
+      at: NOW,
+      protocolId: "glaucoma-suspect-initial",
+      protocolVersion: 1,
+    },
+  });
+
+  await assert.rejects(() => handleProtocolSignCleanupRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc",
+      actorRole: "clinician" as const,
+      fhir,
+    }),
+    feeScheduleFhir: fhir,
+    now: () => NOW,
+  }, {
+    authHeader: "Bearer clinician",
+    params: { encounterId: "enc-cleanup-first" },
+  }), /not linked to an active confirmed application/);
+
+  assert.equal((await service.applications.get(openApplication.id))?.undoState, "unapplied");
   assert.equal(fhir.resources.some((row) => row.resourceType === "ChargeItem"), false);
 });
 

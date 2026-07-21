@@ -149,7 +149,7 @@ export async function handleProtocolUnapplyRequest(
 }
 
 export async function handleProtocolSignCleanupRequest(
-  deps: ProtocolEndpointDeps,
+  deps: ProtocolEndpointDeps & { feeScheduleFhir: ProcedureFeeScheduleFhir },
   input: { authHeader: string | undefined; params: unknown },
 ) {
   const staff = await deps.authenticate(input.authHeader);
@@ -158,6 +158,7 @@ export async function handleProtocolSignCleanupRequest(
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
   const service = liveService(staff, deps.now);
+  const abandoned = await service.abandonOpenForSignedEncounter(parsed.data.encounterId);
   const charges = await materializeAcceptedChargeProposals({
     fhir: staff.fhir as unknown as ProcedureChargeFhir,
     feeScheduleFhir: deps.feeScheduleFhir,
@@ -167,7 +168,6 @@ export async function handleProtocolSignCleanupRequest(
     applications: service.applications,
     now: deps.now,
   });
-  const abandoned = await service.abandonOpenForSignedEncounter(parsed.data.encounterId);
   return { status: 200, body: { abandoned, ...charges } };
 }
 

@@ -126,14 +126,17 @@ export async function saveProcedureFeeScheduleItem(
       active: input.active,
       existing,
     }),
-    { "X-ODOS-Source": "procedure-fee-schedule" },
+    {
+      "X-ODOS-Source": "procedure-fee-schedule",
+      ...(existing.meta?.versionId ? { "If-Match": `W/"${existing.meta.versionId}"` } : {}),
+    },
   );
   return procedureFeeScheduleItem(saved);
 }
 
 export async function materializeAcceptedChargeProposals(input: {
   fhir: ProcedureChargeFhir;
-  feeScheduleFhir?: ProcedureFeeScheduleFhir;
+  feeScheduleFhir: ProcedureFeeScheduleFhir;
   encounterId: string;
   actorReference: string;
   charges: RowStore<ChargeProposal>;
@@ -169,7 +172,7 @@ export async function materializeAcceptedChargeProposals(input: {
     }
   }
   const definitions = await ensureProcedureFeeSchedule(
-    input.feeScheduleFhir ?? input.fhir as unknown as ProcedureFeeScheduleFhir,
+    input.feeScheduleFhir,
     proposals.map((proposal) => proposal.procedureConceptKey),
   );
   const definitionsByKey = new Map(definitions.flatMap((definition) => {
