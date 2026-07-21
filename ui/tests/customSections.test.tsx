@@ -9,6 +9,7 @@ import { AestheticsConsentSection } from "../src/components/charting/AestheticsC
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
+import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import {
   OcularHealthSection,
@@ -1006,11 +1007,11 @@ test("CupDiscSection clears every eye field before loading a different encounter
       />);
       await flushEffects();
     });
-    const input = (label: string) => renderer.root.find((node) =>
-      node.type === "input" && node.props["aria-label"] === label
-    );
-    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "0.8");
-    act(() => input("OD horizontal cup disc ratio typed value").props.onChange({ target: { value: "0.7" } }));
+    const picker = (label: string) => renderer.root.findAllByType(PowerDropdown).find((node) =>
+      node.props.ariaLabel === label
+    )!;
+    assert.equal(picker("OD vertical cup disc ratio picker").props.value, "0.8");
+    act(() => picker("OD horizontal cup disc ratio picker").props.onChange("0.7"));
 
     act(() => renderer.update(<CupDiscSection
       patientReference="Patient/patient-1"
@@ -1018,17 +1019,17 @@ test("CupDiscSection clears every eye field before loading a different encounter
       onSaved={() => undefined}
     />));
 
-    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "");
-    assert.equal(input("OD horizontal cup disc ratio typed value").props.value, "");
-    assert.equal(input("OS vertical cup disc ratio typed value").props.value, "");
+    assert.equal(picker("OD vertical cup disc ratio picker").props.value, "");
+    assert.equal(picker("OD horizontal cup disc ratio picker").props.value, "");
+    assert.equal(picker("OS vertical cup disc ratio picker").props.value, "");
 
     await act(async () => {
       encounterB.resolve(jsonResponse({ eyes: { OS: { verticalCupDiscRatio: 0.2 } } }));
       await flushEffects();
     });
-    assert.equal(input("OD vertical cup disc ratio typed value").props.value, "");
-    assert.equal(input("OD horizontal cup disc ratio typed value").props.value, "");
-    assert.equal(input("OS vertical cup disc ratio typed value").props.value, "0.2");
+    assert.equal(picker("OD vertical cup disc ratio picker").props.value, "");
+    assert.equal(picker("OD horizontal cup disc ratio picker").props.value, "");
+    assert.equal(picker("OS vertical cup disc ratio picker").props.value, "0.2");
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

@@ -82,6 +82,7 @@ interface BlockPayload {
 
 const EYES: Eye[] = ["OD", "OS"];
 const OPERATOR = "ODOS UI clinical_graph_refraction";
+const PURPOSE_OPTIONS = ["Distance", "Reading", "Intermediate", "Progressive", "Bifocal", "Safety", "Sunglasses"];
 
 export function RefractionSection({ patientReference, encounterReference, onSaved }: Props) {
   const [definition, setDefinition] = useState<RefractionDefinitionResponse | null>(null);
@@ -272,12 +273,15 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                 </label>
                 <label className="block min-w-[260px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Purpose</span>
-                  <input
+                  <select
                     value={block.purpose}
                     onChange={(event) => updateBlock(block.id, { purpose: event.target.value })}
-                    placeholder={block.type === "FINAL_RX" ? "General wear" : "Optional"}
+                    aria-label={`Refraction ${blockIndex + 1} purpose`}
                     className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-                  />
+                  >
+                    <option value="">Select</option>
+                    {PURPOSE_OPTIONS.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
+                  </select>
                 </label>
                 <label className="block min-w-[260px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>

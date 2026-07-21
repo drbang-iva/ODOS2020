@@ -17,6 +17,8 @@ export interface ContactLensCatalogOption extends ClinicalFindingOption {
   design: "spherical" | "toric" | "multifocal" | "color";
   colorOptions?: ClinicalFindingOption[];
   mfPowerOptions?: ClinicalFindingOption[];
+  baseCurveOptions: ClinicalFindingOption[];
+  diameterOptions: ClinicalFindingOption[];
   frequentlyUsed?: boolean;
 }
 
@@ -87,28 +89,28 @@ const MANUFACTURERS: ClinicalFindingOption[] = [
 ];
 
 const PRODUCTS: ContactLensCatalogOption[] = [
-  product("precision1", "Precision1", "alcon", "spherical"),
-  product("precision1_astigmatism", "Precision1 for Astigmatism", "alcon", "toric"),
-  product("precision7", "Precision7", "alcon", "spherical"),
-  product("precision7_astigmatism", "Precision7 for Astigmatism", "alcon", "toric"),
-  product("total30_astigmatism", "TOTAL30 for Astigmatism", "alcon", "toric"),
-  product("dailies_total1", "Dailies Total1", "alcon", "spherical"),
-  product("dailies_total1_astigmatism", "Dailies Total1 for Astigmatism", "alcon", "toric"),
-  product("air_optix_aqua", "Air Optix Aqua", "alcon", "spherical"),
-  product("air_optix_aqua_multifocal", "Air Optix Aqua Multifocal", "alcon", "multifocal", { mfPowerOptions: MF_POWERS }),
-  product("air_optix_colors", "Air Optix Colors", "alcon", "color", { colorOptions: COLORS }),
-  product("air_optix_astigmatism", "Air Optix for Astigmatism", "alcon", "toric"),
-  product("air_optix_night_day", "Air Optix Night & Day", "alcon", "spherical"),
-  product("acuvue_oasys", "Acuvue Oasys", "vistakon", "spherical"),
-  product("acuvue_moist_multifocal", "1-Day Acuvue Moist Multifocal", "vistakon", "multifocal", { mfPowerOptions: MF_POWERS }),
-  product("biofinity", "Biofinity", "cooper_vision", "spherical"),
-  product("biofinity_multifocal", "Biofinity Multifocal", "cooper_vision", "multifocal", { mfPowerOptions: MF_POWERS }),
-  product("biofinity_toric", "Biofinity Toric", "cooper_vision", "toric"),
-  product("proclear", "Proclear", "cooper_vision", "spherical"),
-  product("proclear_xr", "Proclear XR", "cooper_vision", "spherical"),
-  product("proclear_toric_multifocal", "Proclear Toric Multifocal", "cooper_vision", "multifocal", { mfPowerOptions: MF_POWERS }),
-  product("clariti_1_day", "Clariti 1-Day", "cooper_vision", "spherical"),
-  product("myday", "MyDay", "cooper_vision", "spherical"),
+  product("precision1", "Precision1", "alcon", "spherical", ["8.3"], ["14.2"]),
+  product("precision1_astigmatism", "Precision1 for Astigmatism", "alcon", "toric", ["8.5"], ["14.5"]),
+  product("precision7", "Precision7", "alcon", "spherical", ["8.4"], ["14.2"]),
+  product("precision7_astigmatism", "Precision7 for Astigmatism", "alcon", "toric", ["8.6"], ["14.5"]),
+  product("total30_astigmatism", "TOTAL30 for Astigmatism", "alcon", "toric", ["8.6"], ["14.5"]),
+  product("dailies_total1", "Dailies Total1", "alcon", "spherical", ["8.5"], ["14.1"]),
+  product("dailies_total1_astigmatism", "Dailies Total1 for Astigmatism", "alcon", "toric", ["8.6"], ["14.5"]),
+  product("air_optix_aqua", "Air Optix Aqua", "alcon", "spherical", ["8.6"], ["14.2"]),
+  product("air_optix_aqua_multifocal", "Air Optix Aqua Multifocal", "alcon", "multifocal", ["8.6"], ["14.2"], { mfPowerOptions: MF_POWERS }),
+  product("air_optix_colors", "Air Optix Colors", "alcon", "color", ["8.6"], ["14.2"], { colorOptions: COLORS }),
+  product("air_optix_astigmatism", "Air Optix for Astigmatism", "alcon", "toric", ["8.7"], ["14.5"]),
+  product("air_optix_night_day", "Air Optix Night & Day", "alcon", "spherical", ["8.4", "8.6"], ["13.8"]),
+  product("acuvue_oasys", "Acuvue Oasys", "vistakon", "spherical", ["8.4", "8.8"], ["14.0"]),
+  product("acuvue_moist_multifocal", "1-Day Acuvue Moist Multifocal", "vistakon", "multifocal", ["8.4"], ["14.3"], { mfPowerOptions: MF_POWERS }),
+  product("biofinity", "Biofinity", "cooper_vision", "spherical", ["8.6"], ["14.0"]),
+  product("biofinity_multifocal", "Biofinity Multifocal", "cooper_vision", "multifocal", ["8.6"], ["14.0"], { mfPowerOptions: MF_POWERS }),
+  product("biofinity_toric", "Biofinity Toric", "cooper_vision", "toric", ["8.7"], ["14.5"]),
+  product("proclear", "Proclear", "cooper_vision", "spherical", ["8.2", "8.6"], ["14.2"]),
+  product("proclear_xr", "Proclear XR", "cooper_vision", "spherical", ["8.6"], ["14.2"]),
+  product("proclear_toric_multifocal", "Proclear Toric Multifocal", "cooper_vision", "multifocal", ["8.4", "8.8"], ["14.4"], { mfPowerOptions: MF_POWERS }),
+  product("clariti_1_day", "Clariti 1-Day", "cooper_vision", "spherical", ["8.6"], ["14.1"]),
+  product("myday", "MyDay", "cooper_vision", "spherical", ["8.4"], ["14.2"]),
 ];
 
 export function buildSoftContactLensFindingDefinitionStub(
@@ -129,7 +131,7 @@ export function buildSoftContactLensFindingDefinitionStub(
         binocularPdNear: decimalField("Binocular PD Near", 35, 90, 2, "mm"),
         underlyingCondition: selectField("Underlying Condition", UNDERLYING_CONDITION_OPTIONS),
         manufacturer: selectField("Manufacturer", MANUFACTURERS),
-        product: { ...selectField("Product", PRODUCTS), cascadeFrom: "manufacturer", optionMetadata: ["manufacturerCode", "design", "colorOptions", "mfPowerOptions", "frequentlyUsed"] },
+        product: { ...selectField("Product", PRODUCTS), cascadeFrom: "manufacturer", optionMetadata: ["manufacturerCode", "design", "baseCurveOptions", "diameterOptions", "colorOptions", "mfPowerOptions", "frequentlyUsed"] },
         baseCurve: decimalField("Base Curve", 5, 12, 2, "mm"),
         diameter: decimalField("Diameter", 10, 20, 2, "mm"),
         sphere: powerField("Sphere", -30, 30),
@@ -293,9 +295,24 @@ function product(
   display: string,
   manufacturerCode: string,
   design: ContactLensCatalogOption["design"],
+  baseCurves: string[],
+  diameters: string[],
   metadata: Pick<ContactLensCatalogOption, "colorOptions" | "mfPowerOptions"> = {},
 ): ContactLensCatalogOption {
-  return { code, display, manufacturerCode, design, active: true, ...metadata };
+  return {
+    code,
+    display,
+    manufacturerCode,
+    design,
+    baseCurveOptions: parameterOptions(baseCurves),
+    diameterOptions: parameterOptions(diameters),
+    active: true,
+    ...metadata,
+  };
+}
+
+function parameterOptions(values: string[]): ClinicalFindingOption[] {
+  return values.map((value) => option(value, value));
 }
 
 function specialtyProduct(

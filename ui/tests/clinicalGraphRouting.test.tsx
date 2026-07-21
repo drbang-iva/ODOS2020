@@ -62,7 +62,7 @@ test("soft and specialty contact lens definition and save requests use shared au
   );
 });
 
-test("Auto-Refraction renders directly typeable binocular PD fields and saves them at request top level", () => {
+test("Auto-Refraction renders centered binocular PD spinners and saves them at request top level", () => {
   const html = renderToStaticMarkup(
     <AutoRefractionSection
       patientReference="Patient/p1"
@@ -71,8 +71,9 @@ test("Auto-Refraction renders directly typeable binocular PD fields and saves th
     />,
   );
   assert.match(html, /Binocular PD \(OU\)/);
-  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD distance"/);
-  assert.match(html, /type="number"[^>]*min="35"[^>]*max="90"[^>]*step="0\.01"[^>]*aria-label="Binocular PD near"/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Binocular PD distance"/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Binocular PD near"/);
+  assert.equal((html.match(/data-default="true"[^>]*>63\.00 mm/g) ?? []).length, 2);
 
   const body = buildAutoRefractionRequestBody({
     patientReference: "Patient/p1",

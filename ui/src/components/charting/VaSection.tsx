@@ -6,6 +6,7 @@ import {
   type VisualAcuitySectionSaveEntry,
 } from "../../lib/fhir-ophthalmology/save-section-bundle";
 import type { SectionSaveStatus } from "./types";
+import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
   patientReference: string;
@@ -85,16 +86,15 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
           {(["OD", "OS"] as const).map((laterality) => (
             <div key={laterality} className="grid grid-cols-[72px_1fr_180px_180px] gap-3 border-t border-white/10 p-4">
               <div className="pt-3 text-sm font-semibold text-white">{laterality}</div>
-              <input
+              <VaValueSelect
                 value={rows[laterality].snellen}
-                onChange={(event) =>
+                onChange={(value) =>
                   setRows((current) => ({
                     ...current,
-                    [laterality]: { ...current[laterality], snellen: event.target.value },
+                    [laterality]: { ...current[laterality], snellen: value },
                   }))
                 }
-                placeholder="20/20"
-                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
+                ariaLabel={`${laterality} visual acuity`}
               />
               <select
                 value={rows[laterality].chartType}

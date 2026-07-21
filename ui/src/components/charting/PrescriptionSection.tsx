@@ -16,6 +16,8 @@ import {
   type MedicationTransmissionMethod,
 } from "../../lib/fhir-medication-order";
 import { clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -67,6 +69,9 @@ interface EditorProps {
 }
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
+const REFILL_OPTIONS = numericOptions(undefined, 0, 11, 1);
+const DAYS_SUPPLY_OPTIONS = numericOptions(undefined, 1, 365, 1);
+const ROUTE_OPTIONS = ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"];
 
 export const EMPTY_PRESCRIPTION_DRAFT: PrescriptionDraft = {
   drug: "",
@@ -279,14 +284,16 @@ export function PrescriptionEditor({
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Refills">
-            <input aria-label="Refills" type="number" min="0" className="sidebar-input" value={draft.refills} onChange={(event) => set({ refills: event.target.value })} />
+            <PowerDropdown value={draft.refills} options={REFILL_OPTIONS} defaultValue="0" onChange={(value) => set({ refills: value })} ariaLabel="Refills" />
           </Field>
           <Field label="Days supply">
-            <input aria-label="Days supply" type="number" min="1" className="sidebar-input" value={draft.daysSupply} onChange={(event) => set({ daysSupply: event.target.value })} />
+            <PowerDropdown value={draft.daysSupply} options={DAYS_SUPPLY_OPTIONS} defaultValue="30" onChange={(value) => set({ daysSupply: value })} ariaLabel="Days supply" />
           </Field>
         </div>
         <Field label="Route">
-          <input aria-label="Route" className="sidebar-input" value={draft.route} onChange={(event) => set({ route: event.target.value })} />
+          <select aria-label="Route" className="sidebar-input" value={draft.route} onChange={(event) => set({ route: event.target.value })}>
+            {ROUTE_OPTIONS.map((route) => <option key={route} value={route}>{route}</option>)}
+          </select>
         </Field>
         <Field label="Assessment diagnosis">
           <select aria-label="Assessment diagnosis" className="sidebar-input" value={draft.indicationReference} onChange={(event) => set({ indicationReference: event.target.value })}>

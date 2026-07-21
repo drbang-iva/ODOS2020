@@ -89,11 +89,12 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   }, []);
 
   const refractionFields = definition?.definitions.autoRefraction.fields ?? {};
-  const keratometryFields = definition?.definitions.autoKeratometry.fields ?? {};
   const sourceTypes = useMemo(() => activeOptions(refractionFields.sourceType), [refractionFields.sourceType]);
   const sphereOptions = useMemo(() => numericOptions(undefined, -16, 12, 0.25).reverse(), []);
   const cylinderOptions = useMemo(() => numericOptions(undefined, -8, 0, 0.25).reverse(), []);
   const axisOptions = useMemo(() => numericOptions(refractionFields.axis, 0, 180, 1), [refractionFields.axis]);
+  const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
+  const keratometryOptions = useMemo(() => numericOptions(undefined, 30, 60, 0.25), []);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -218,22 +219,24 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
               <div className="mt-4 grid gap-3">
                 <label>
                   <span className="mb-1 block text-xs text-white/55">Distance (mm)</span>
-                  <NumberInput
+                  <PowerDropdown
                     value={binocularPdDistance}
-                    field={refractionFields.binocularPdDistance}
-                    fallback={{ min: 35, max: 90, step: 0.01 }}
+                    options={binocularPdOptions}
+                    defaultValue="63.00"
                     onChange={setBinocularPdDistance}
                     ariaLabel="Binocular PD distance"
+                    formatOption={(value) => `${value} mm`}
                   />
                 </label>
                 <label>
                   <span className="mb-1 block text-xs text-white/55">Near (mm)</span>
-                  <NumberInput
+                  <PowerDropdown
                     value={binocularPdNear}
-                    field={refractionFields.binocularPdNear}
-                    fallback={{ min: 35, max: 90, step: 0.01 }}
+                    options={binocularPdOptions}
+                    defaultValue="63.00"
                     onChange={setBinocularPdNear}
                     ariaLabel="Binocular PD near"
+                    formatOption={(value) => `${value} mm`}
                   />
                 </label>
               </div>
@@ -252,10 +255,16 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           {EYES.map((eye) => (
             <div key={eye} className="grid grid-cols-[54px_repeat(4,minmax(130px,190px))] items-center gap-2 border-t border-white/10 px-4 py-3">
               <div className="text-sm font-semibold text-white">{eye}</div>
-              <NumberInput value={eyes[eye].flatK} field={keratometryFields.flatK} fallback={{ min: 30, max: 60, step: 0.01 }} onChange={(value) => updateEye(eye, { flatK: value })} ariaLabel={`${eye} flat K`} />
-              <NumberInput value={eyes[eye].flatAxis} field={keratometryFields.flatAxis} fallback={{ min: 0, max: 180, step: 1 }} onChange={(value) => updateEye(eye, { flatAxis: value })} ariaLabel={`${eye} flat axis`} />
-              <NumberInput value={eyes[eye].steepK} field={keratometryFields.steepK} fallback={{ min: 30, max: 60, step: 0.01 }} onChange={(value) => updateEye(eye, { steepK: value })} ariaLabel={`${eye} steep K`} />
-              <NumberInput value={eyes[eye].steepAxis} field={keratometryFields.steepAxis} fallback={{ min: 0, max: 180, step: 1 }} onChange={(value) => updateEye(eye, { steepAxis: value })} ariaLabel={`${eye} steep axis`} />
+              <PowerDropdown value={eyes[eye].flatK} options={keratometryOptions} defaultValue="43.50" onChange={(value) => updateEye(eye, { flatK: value })} ariaLabel={`${eye} flat K`} />
+              <select value={eyes[eye].flatAxis} onChange={(event) => updateEye(eye, { flatAxis: event.target.value })} aria-label={`${eye} flat axis`} className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
+                <option value="">Select</option>
+                {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
+              </select>
+              <PowerDropdown value={eyes[eye].steepK} options={keratometryOptions} defaultValue="43.50" onChange={(value) => updateEye(eye, { steepK: value })} ariaLabel={`${eye} steep K`} />
+              <select value={eyes[eye].steepAxis} onChange={(event) => updateEye(eye, { steepAxis: event.target.value })} aria-label={`${eye} steep axis`} className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
+                <option value="">Select</option>
+                {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
+              </select>
             </div>
           ))}
         </div>
@@ -288,27 +297,6 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
         </div>
       </div>
     </section>
-  );
-}
-
-function NumberInput({ value, onChange, field, fallback, ariaLabel }: {
-  value: string;
-  onChange: (value: string) => void;
-  field: DefinitionField | undefined;
-  fallback: { min: number; max: number; step: number };
-  ariaLabel: string;
-}) {
-  return (
-    <input
-      type="number"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      min={field?.minimum ?? fallback.min}
-      max={field?.maximum ?? fallback.max}
-      step={field?.step ?? (field?.precision ? 10 ** -field.precision : fallback.step)}
-      aria-label={ariaLabel}
-      className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-    />
   );
 }
 

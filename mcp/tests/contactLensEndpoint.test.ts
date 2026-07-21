@@ -74,7 +74,7 @@ test("soft CL definition exposes editable manufacturer, product, usage, status, 
   assert.equal(fields.overRefractionSphere?.step, 0.25);
 });
 
-test("manufacturer filters products and product metadata drives distinct color, MF, and empty cascades", async () => {
+test("manufacturer filters products and product metadata drives distinct parameter cascades", async () => {
   const response = await handleSoftContactLensDefinitionRequest(deps().deps, { authHeader: AUTH });
   const products = productOptions(definitionFields(response.body).product);
 
@@ -95,6 +95,11 @@ test("manufacturer filters products and product metadata drives distinct color, 
     "Amethyst", "Blue", "Brilliant Blue", "Brown", "Gemstone Green", "Gray", "Green",
   ]);
   assert.deepEqual(multifocal?.mfPowerOptions?.map((option) => option.code), ["low", "medium", "high"]);
+  assert.deepEqual(plain?.baseCurveOptions?.map((option) => option.code), ["8.3"]);
+  assert.deepEqual(plain?.diameterOptions?.map((option) => option.code), ["14.2"]);
+  const oasys = products.find((product) => product.code === "acuvue_oasys");
+  assert.deepEqual(oasys?.baseCurveOptions?.map((option) => option.code), ["8.4", "8.8"]);
+  assert.deepEqual(oasys?.diameterOptions?.map((option) => option.code), ["14.0"]);
   assert.equal(plain?.colorOptions, undefined);
   assert.equal(plain?.mfPowerOptions, undefined);
 });
@@ -312,12 +317,16 @@ function productOptions(field: Record<string, unknown> | undefined): Array<{
   manufacturerCode: string;
   colorOptions?: Array<{ code: string; display: string }>;
   mfPowerOptions?: Array<{ code: string; display: string }>;
+  baseCurveOptions?: Array<{ code: string; display: string }>;
+  diameterOptions?: Array<{ code: string; display: string }>;
 }> {
   return (field?.options ?? []) as Array<{
     code: string;
     manufacturerCode: string;
     colorOptions?: Array<{ code: string; display: string }>;
     mfPowerOptions?: Array<{ code: string; display: string }>;
+    baseCurveOptions?: Array<{ code: string; display: string }>;
+    diameterOptions?: Array<{ code: string; display: string }>;
   }>;
 }
 

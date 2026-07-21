@@ -191,6 +191,8 @@ interface ProductOption extends ClinicalFindingOption {
   design?: string;
   colorOptions?: ClinicalFindingOption[];
   mfPowerOptions?: ClinicalFindingOption[];
+  baseCurveOptions?: ClinicalFindingOption[];
+  diameterOptions?: ClinicalFindingOption[];
 }
 
 interface SpecialtyProductOption extends ClinicalFindingOption {
@@ -778,6 +780,8 @@ function productOptions(definition: ClinicalFindingDefinition): ProductOption[] 
       design: typeof row.design === "string" ? row.design : undefined,
       colorOptions: readOptions(row.colorOptions),
       mfPowerOptions: readOptions(row.mfPowerOptions),
+      baseCurveOptions: readOptions(row.baseCurveOptions),
+      diameterOptions: readOptions(row.diameterOptions),
     }];
   });
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import {
   CustomFieldEditor,
@@ -247,6 +248,8 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
   const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -20, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
+  const baseCurveOptions = useMemo(() => numericOptions(fields.baseCurve, 3, 15, 0.05), [fields.baseCurve]);
+  const diameterOptions = useMemo(() => numericOptions(fields.diameter, 5, 30, 0.1), [fields.diameter]);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -508,8 +511,14 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                       )}
                       <SelectField label="Lens Type" value={state.lensType} onChange={(value) => updateEye(eye, { lensType: value })} options={activeOptions(fields.lensType)} />
                       <SelectField label="Material" value={state.material} onChange={(value) => updateEye(eye, { material: value })} options={activeOptions(fields.material)} />
-                      <TextField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} inputMode="decimal" />
-                      <TextField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} inputMode="decimal" />
+                      <label className="block">
+                        <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Base Curve (mm)</span>
+                        <PowerDropdown value={state.baseCurve} options={baseCurveOptions} defaultValue="7.80" onChange={(value) => updateEye(eye, { baseCurve: value })} ariaLabel="Base Curve (mm)" />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Diameter (mm)</span>
+                        <PowerDropdown value={state.diameter} options={diameterOptions} defaultValue="15.00" onChange={(value) => updateEye(eye, { diameter: value })} ariaLabel="Diameter (mm)" />
+                      </label>
                       <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
                       <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
                       <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} />
@@ -537,13 +546,18 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                               options={activeOptions({ options: field.options })}
                             />
                           ) : (
-                            <TextField
-                              key={field.code}
-                              label={`${field.display}${field.unit ? ` (${field.unit})` : ""}`}
-                              value={state.additionalValues[field.code] ?? ""}
-                              onChange={(value) => updateAdditionalValue(eye, field.code, value)}
-                              inputMode="decimal"
-                            />
+                            <label key={field.code} className="block">
+                              <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">
+                                {field.display}{field.unit ? ` (${field.unit})` : ""}
+                              </span>
+                              <PowerDropdown
+                                value={state.additionalValues[field.code] ?? ""}
+                                options={additionalSpinner(field).options}
+                                defaultValue={additionalSpinner(field).defaultValue}
+                                onChange={(value) => updateAdditionalValue(eye, field.code, value)}
+                                ariaLabel={field.display}
+                              />
+                            </label>
                           ))}
                         </div>
                       </div>
@@ -664,6 +678,33 @@ function TextField({ label, value, onChange, inputMode }: {
       <input type="text" inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand" />
     </label>
   );
+}
+
+function additionalSpinner(field: DefinitionOption): { options: string[]; defaultValue: string } {
+  const fallback = additionalSpinnerFallback(field);
+  const options = numericOptions(
+    { minimum: field.min, maximum: field.max, step: field.step },
+    fallback.minimum,
+    fallback.maximum,
+    fallback.step,
+  );
+  return {
+    options,
+    defaultValue: options.includes(fallback.defaultValue)
+      ? fallback.defaultValue
+      : options[Math.floor(options.length / 2)] ?? fallback.defaultValue,
+  };
+}
+
+function additionalSpinnerFallback(field: DefinitionOption) {
+  if (field.code === "hvid") return { minimum: 8, maximum: 15, step: 0.1, defaultValue: "11.80" };
+  if (field.code === "sag") return { minimum: 2000, maximum: 7000, step: 50, defaultValue: "4500" };
+  if (field.code === "center_thickness" || field.code === "edge_thickness") {
+    return { minimum: 0.05, maximum: 1, step: 0.01, defaultValue: "0.15" };
+  }
+  if (field.unit === "[diop]") return { minimum: -20, maximum: 20, step: 0.25, defaultValue: "0.00" };
+  if (field.unit === "deg") return { minimum: 0, maximum: 180, step: 1, defaultValue: "90" };
+  return { minimum: 0, maximum: 30, step: 0.1, defaultValue: "15.00" };
 }
 
 function PowerField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
