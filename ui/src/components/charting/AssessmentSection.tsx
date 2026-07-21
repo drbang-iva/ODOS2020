@@ -19,7 +19,15 @@ import {
   isEncounterDiagnosisCondition,
 } from "../../lib/clinical-view-model";
 import type { SectionSaveStatus } from "./types";
-import { authHeaders, clinicalGraphApiBase, submitDiagnosisPick } from "../../lib/clinical-graph-client";
+import {
+  authHeaders,
+  clinicalGraphApiBase,
+  DIAGNOSIS_VISIT_STATUSES,
+  readDiagnosisVisitStatuses,
+  submitDiagnosisPick,
+  updateDiagnosisVisitStatus,
+  type DiagnosisVisitStatus,
+} from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
@@ -66,6 +74,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [provenanceLines, setProvenanceLines] = useState<Record<string, string>>({});
+  const [diagnosisVisitStatuses, setDiagnosisVisitStatuses] = useState<Record<string, DiagnosisVisitStatus>>({});
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -82,11 +91,15 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
   async function load() {
     setError(null);
     const loadedEncounter = await fhir.read<Encounter>("Encounter", encounterId);
-    const conditionBundle = await fhir.search<Condition>("Condition", {
-      encounter: encounterReference,
-      _count: "40",
-    });
+    const [conditionBundle, visitStatuses] = await Promise.all([
+      fhir.search<Condition>("Condition", {
+        encounter: encounterReference,
+        _count: "40",
+      }),
+      readDiagnosisVisitStatuses(encounterId),
+    ]);
     setEncounter(loadedEncounter);
+    setDiagnosisVisitStatuses(Object.fromEntries(visitStatuses.map((row) => [row.conditionReference, row.status])));
     const loadedConditions = (conditionBundle.entry ?? [])
         .flatMap((entry) => (entry.resource ? [entry.resource] : []))
         .filter(isEncounterDiagnosisCondition)
@@ -196,6 +209,13 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     });
   }
 
+  async function saveVisitStatus(condition: Condition, status: DiagnosisVisitStatus) {
+    if (!condition.id) return;
+    await runEdit("visit-status", async () => {
+      await updateDiagnosisVisitStatus({ encounterId, conditionId: condition.id!, status });
+    });
+  }
+
   async function markEnteredInError(condition: Condition) {
     await runEdit("entered-in-error", async () => {
       await markConditionEnteredInError(condition);
@@ -208,7 +228,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       setError("This possible diagnosis is missing its diagnosis catalog link.");
       return;
     }
-    const [diagnosisKey = "", lateralityBucket] = identifierValue.split("::");
+    const [diagnosisKey = "", lateralityBucket] = identifierValue.split("::").slice(-2);
     await runEdit(action, async () => {
       await submitDiagnosisPick({
         encounterReference,
@@ -466,11 +486,14 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                 busy={busy}
                 provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                 possible={verificationStatus(condition) === "provisional"}
+                visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
+                visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
                 onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                 onLaterality={(laterality) => saveLaterality(condition, laterality)}
                 onCode={(code, display) => saveCode(condition, code, display)}
                 onTier={(rank) => saveTier(condition, rank)}
                 onStatus={(status) => saveStatus(condition, status)}
+                onVisitStatus={(status) => saveVisitStatus(condition, status)}
                 onEnteredInError={() => markEnteredInError(condition)}
                 onConfirm={() => decidePossible(condition, "confirm")}
                 onDiscard={() => decidePossible(condition, "discard")}
@@ -503,11 +526,14 @@ function DiagnosisCard({
   busy,
   provenanceLine,
   possible,
+  visitStatus,
+  visitStatusDisabled,
   onToggle,
   onLaterality,
   onCode,
   onTier,
   onStatus,
+  onVisitStatus,
   onEnteredInError,
   onConfirm,
   onDiscard,
@@ -519,11 +545,14 @@ function DiagnosisCard({
   busy: string | null;
   provenanceLine?: string;
   possible: boolean;
+  visitStatus?: DiagnosisVisitStatus;
+  visitStatusDisabled: boolean;
   onToggle: () => void;
   onLaterality: (laterality: EyeChoice) => void;
   onCode: (code: string, display: string) => void;
   onTier: (rank: number) => void;
   onStatus: (status: "active" | "recurrence" | "resolved") => void;
+  onVisitStatus: (status: DiagnosisVisitStatus) => void;
   onEnteredInError: () => void;
   onConfirm: () => void;
   onDiscard: () => void;
@@ -538,12 +567,12 @@ function DiagnosisCard({
 
   return (
     <div data-testid="diagnosis-card" className={possible ? "rounded-full border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface-2)] px-4 py-3" : "rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4"}>
-      <button
-        type="button"
-        onClick={canShowEditing ? onToggle : undefined}
-        className="w-full text-left"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <button
+          type="button"
+          onClick={canShowEditing ? onToggle : undefined}
+          className="min-w-0 flex-1 text-left"
+        >
           <div>
             <div className="text-base font-semibold text-[color:var(--odos-text)]">{displayCode(condition.code)}</div>
             <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
@@ -551,9 +580,27 @@ function DiagnosisCard({
             </div>
             {provenanceLine && <div className="mt-1 text-xs text-[color:var(--odos-accent)]">← from {provenanceLine}</div>}
           </div>
-          {canShowEditing && !possible && <span className="text-xs text-[color:var(--odos-accent)]">Edit</span>}
-        </div>
-      </button>
+        </button>
+        {!possible && (
+          <div className="flex items-center gap-2">
+            <select
+              aria-label="Diagnosis visit status"
+              value={visitStatus ?? ""}
+              disabled={visitStatusDisabled || busy !== null}
+              onChange={(event) => {
+                if (event.target.value) onVisitStatus(event.target.value as DiagnosisVisitStatus);
+              }}
+              className="h-8 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-2 text-xs text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)] disabled:opacity-60"
+            >
+              <option value=""></option>
+              {DIAGNOSIS_VISIT_STATUSES.map((choice) => (
+                <option key={choice} value={choice}>{visitStatusLabel(choice)}</option>
+              ))}
+            </select>
+            {canShowEditing && <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>}
+          </div>
+        )}
+      </div>
 
       {possible && canShowEditing && (
         <div className="mt-2 flex gap-2">
@@ -604,6 +651,11 @@ function DiagnosisCard({
 function normalizeClinicalStatus(value: string): "active" | "recurrence" | "resolved" {
   if (value === "recurrence" || value === "resolved") return value;
   return "active";
+}
+
+function visitStatusLabel(status: DiagnosisVisitStatus): string {
+  if (status === "resolved-this-visit") return "Resolved this visit";
+  return status[0]!.toUpperCase() + status.slice(1);
 }
 
 function verificationStatus(condition: Condition): string {

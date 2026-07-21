@@ -153,6 +153,11 @@ import { handleDiagnosisCandidatesRequest } from "./clinical-graph/diagnosis-can
 import { handleDiagnosisCompletenessRequest } from "./clinical-graph/diagnosis-completeness-endpoint.js";
 import { handleDiagnosisPickRequest } from "./clinical-graph/diagnosis-pick-endpoint.js";
 import {
+  handleDiagnosisVisitStatusListRequest,
+  handleDiagnosisVisitStatusUpdateRequest,
+} from "./clinical-graph/diagnosis-visit-status-endpoint.js";
+import { PgDiagnosisVisitStatusStore } from "./clinical-graph/diagnosis-visit-status-store.js";
+import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
@@ -474,6 +479,9 @@ const auditRuntime = createLiveOdosAuditRuntime({
 });
 auditRuntime.startProjectionWorker();
 const commercialEngineStore = new PgCommercialEngineStore({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+const diagnosisVisitStatusStore = new PgDiagnosisVisitStatusStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 startPackageExpiryWorker({
@@ -5927,13 +5935,50 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleDiagnosisPickRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              diagnosisVisitStatusStore,
+            },
             { authHeader: req.header("authorization"), params: req.params, body: req.body },
           );
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: encounter diagnosis pick route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "diagnosis pick route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/diagnosis-statuses", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisVisitStatusListRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              store: diagnosisVisitStatusStore,
+            },
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter diagnosis status list route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis status list route failed" });
+        }
+      });
+
+      app.put("/clinical-graph/encounters/:encounterId/diagnoses/:conditionId/status", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDiagnosisVisitStatusUpdateRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              store: diagnosisVisitStatusStore,
+            },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter diagnosis status update route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "diagnosis status update route failed" });
         }
       });
 

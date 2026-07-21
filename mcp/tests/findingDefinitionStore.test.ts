@@ -279,13 +279,13 @@ test("a handler still receives working definitions when one stored row is garbag
 
 test("every definition-backed clinical-graph HTTP closure receives the persistent dependency", () => {
   const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
-  const clinicalRoutes = source.match(/app\.(?:get|post)\("\/clinical-graph\//g) ?? [];
+  const clinicalRoutes = source.match(/app\.(?:get|post|put)\("\/clinical-graph\//g) ?? [];
   const routeDependencies = source.match(/await clinicalGraphRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g) ?? [];
   const procedureRouteDependencies = source.match(
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 49);
+  assert.equal(clinicalRoutes.length, 51);
   assert.equal(routeDependencies.length, 28);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
@@ -293,6 +293,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   assert.match(source, /handleDiagnosisCandidatesRequest/);
   assert.match(source, /handleDiagnosisCompletenessRequest/);
   assert.match(source, /handleDiagnosisPickRequest/);
+  assert.match(source, /handleDiagnosisVisitStatusListRequest/);
+  assert.match(source, /handleDiagnosisVisitStatusUpdateRequest/);
   assert.match(source, /handleProtocolOffersRequest/);
   assert.match(source, /handleProtocolApplyRequest/);
   assert.match(source, /handleProtocolApplicationsRequest/);

@@ -48,6 +48,7 @@ export async function submitDiagnosisPick(input: {
   findingInstanceId?: string;
   laterality?: "OD" | "OS" | "OU";
   source?: "rule" | "mapping" | "catalog-search";
+  status?: DiagnosisVisitStatus;
 }): Promise<void> {
   const encounterId = input.encounterReference.replace(/^Encounter\//, "");
   const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-picks`, {
@@ -59,9 +60,58 @@ export async function submitDiagnosisPick(input: {
       ...(input.findingInstanceId ? { findingInstanceId: input.findingInstanceId } : {}),
       ...(input.laterality ? { laterality: input.laterality } : {}),
       ...(input.source ? { source: input.source } : {}),
+      ...(input.status ? { status: input.status } : {}),
     }),
   });
   const body = await response.json() as { error?: string };
   if (!response.ok) throw new Error(body.error ?? `Diagnosis pick failed: ${response.status}`);
   window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
+}
+
+export const DIAGNOSIS_VISIT_STATUSES = [
+  "new",
+  "stable",
+  "improved",
+  "worsening",
+  "resolved-this-visit",
+] as const;
+
+export type DiagnosisVisitStatus = (typeof DIAGNOSIS_VISIT_STATUSES)[number];
+
+export interface DiagnosisVisitStatusRow {
+  conditionReference: string;
+  encounterId: string;
+  status: DiagnosisVisitStatus;
+  setBy: string;
+  setAt: string;
+  updatedAt: string;
+}
+
+export async function readDiagnosisVisitStatuses(encounterId: string): Promise<DiagnosisVisitStatusRow[]> {
+  const response = await fetch(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/diagnosis-statuses`,
+    { headers: authHeaders() },
+  );
+  const body = await response.json() as { statuses?: DiagnosisVisitStatusRow[]; error?: string };
+  if (!response.ok) throw new Error(body.error ?? `Diagnosis visit statuses failed: ${response.status}`);
+  return body.statuses ?? [];
+}
+
+export async function updateDiagnosisVisitStatus(input: {
+  encounterId: string;
+  conditionId: string;
+  status: DiagnosisVisitStatus;
+}): Promise<DiagnosisVisitStatusRow> {
+  const response = await fetch(
+    `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(input.encounterId)}/diagnoses/${encodeURIComponent(input.conditionId)}/status`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: input.status }),
+    },
+  );
+  const body = await response.json() as { status?: DiagnosisVisitStatusRow; error?: string };
+  if (!response.ok) throw new Error(body.error ?? `Diagnosis visit status update failed: ${response.status}`);
+  if (!body.status) throw new Error("Diagnosis visit status update returned no status.");
+  return body.status;
 }
