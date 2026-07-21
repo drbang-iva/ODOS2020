@@ -457,7 +457,7 @@ test("conditional create makes identical same-eye Possible double-submit idempot
   assert.equal(conditions[0]?.verificationStatus?.coding?.[0]?.code, "provisional");
   assert.equal(fhir.writes.filter((write) => write.resourceType === "Condition" && write.operation === "create").length, 1);
   assert.equal(fhir.writes.find((write) => write.resourceType === "Condition")?.headers?.["If-None-Exist"],
-    "identifier=https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key|glaucoma_suspect_open_angle_low::right");
+    "identifier=https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key|e1::glaucoma_suspect_open_angle_low::right");
 });
 
 test("a failed tally side effect never fails a successful explicit diagnosis pick", async () => {

@@ -164,9 +164,8 @@ function diagnosisIdentity(condition: Condition): { diagnosisKey: string; latera
   const value = condition.identifier?.find((identifier) =>
     identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM
   )?.value;
-  const separator = value?.lastIndexOf("::") ?? -1;
-  if (!value || separator <= 0 || separator === value.length - 2) return undefined;
-  return { diagnosisKey: value.slice(0, separator), laterality: value.slice(separator + 2) };
+  const [diagnosisKey, laterality] = value?.split("::").slice(-2) ?? [];
+  return diagnosisKey && laterality ? { diagnosisKey, laterality } : undefined;
 }
 
 function readEncounterId(value: unknown): string | undefined {

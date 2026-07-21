@@ -13,6 +13,10 @@ import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
 import { findingDefinitionForObservation } from "./finding-observation-match.js";
 import type { DiagnosisCatalogRow } from "./glaucoma-suspect.js";
+import {
+  DIAGNOSIS_VISIT_STATUSES,
+  type DiagnosisVisitStatusStore,
+} from "./diagnosis-visit-status-store.js";
 
 export const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 export const DIAGNOSIS_PICK_WRITE_HEADERS = { "X-ODOS-Source": "diagnosis-pick" } as const;
@@ -33,6 +37,7 @@ const pickSchema = z.object({
   action: z.enum(["possible", "confirm", "discard"]),
   laterality: z.enum(["OD", "OS", "OU", "right", "left", "bilateral"]).optional(),
   source: z.enum(["rule", "mapping", "catalog-search"]).optional(),
+  status: z.enum(DIAGNOSIS_VISIT_STATUSES).optional(),
 }).strict();
 
 export async function handleDiagnosisPickRequest(
@@ -42,6 +47,7 @@ export async function handleDiagnosisPickRequest(
       actorRole: PracticeRoleId;
       fhir: DiagnosisPickFhirClient;
     } | null>;
+    diagnosisVisitStatusStore: DiagnosisVisitStatusStore;
     now?: () => string;
   },
   input: { authHeader: string | undefined; params: unknown; body: unknown },
@@ -53,6 +59,9 @@ export async function handleDiagnosisPickRequest(
   if (!encounterId) return { status: 400, body: { error: "A valid encounter id is required." } };
   const parsed = pickSchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid diagnosis pick." } };
+  if (parsed.data.status && parsed.data.action !== "confirm") {
+    return { status: 400, body: { error: "Diagnosis visit status is only accepted when confirming a diagnosis." } };
+  }
 
   const encounterReference = `Encounter/${encounterId}`;
   const catalog = await new FhirDiagnosisCatalogStore(staff.fhir).list();
@@ -82,8 +91,14 @@ export async function handleDiagnosisPickRequest(
     return { status: 422, body: { error: "This diagnosis requires laterality. Supply laterality explicitly." } };
   }
   const lateralityBucket = diagnosisLateralityBucket(diagnosis, laterality);
-  const compositeIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
-  const existing = await findEncounterDiagnosis(staff.fhir, encounterReference, compositeIdentifierValue);
+  const legacyIdentifierValue = `${diagnosis.stableKey}::${lateralityBucket}`;
+  const compositeIdentifierValue = `${encounterId}::${legacyIdentifierValue}`;
+  const existing = await findEncounterDiagnosis(
+    staff.fhir,
+    encounterReference,
+    compositeIdentifierValue,
+    legacyIdentifierValue,
+  );
   if (parsed.data.action === "discard" && !existing) {
     return { status: 404, body: { error: `No existing Condition for ${diagnosis.stableKey} can be discarded.` } };
   }
@@ -93,6 +108,12 @@ export async function handleDiagnosisPickRequest(
   if (!patientReference) {
     encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
     patientReference = encounter.subject?.reference;
+  }
+  if (parsed.data.status && !encounter) {
+    encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  }
+  if (parsed.data.status && encounter?.status === "finished") {
+    return { status: 409, body: { error: "Diagnosis visit status cannot change after the encounter is signed." } };
   }
   if (!patientReference?.startsWith("Patient/")) {
     return { status: 422, body: { error: "The encounter does not resolve to a Patient reference." } };
@@ -150,6 +171,16 @@ export async function handleDiagnosisPickRequest(
     }],
   }), DIAGNOSIS_PICK_WRITE_HEADERS);
 
+  const diagnosisVisitStatus = parsed.data.status
+    ? await deps.diagnosisVisitStatusStore.upsert({
+        conditionReference,
+        encounterId,
+        status: parsed.data.status,
+        setBy: staff.staffReference,
+        at: recordedAt,
+      })
+    : undefined;
+
   if (parsed.data.action !== "discard" && findingDefinitionStableKey) {
     try {
       await new FhirDiagnosisPickTallyStore(staff.fhir).increment(
@@ -169,6 +200,7 @@ export async function handleDiagnosisPickRequest(
       condition,
       provenanceReference: provenance.id ? `Provenance/${provenance.id}` : undefined,
       action: parsed.data.action,
+      ...(diagnosisVisitStatus ? { diagnosisVisitStatus } : {}),
     },
   };
 }
@@ -177,10 +209,12 @@ async function findEncounterDiagnosis(
   fhir: DiagnosisPickFhirClient,
   encounterReference: string,
   compositeIdentifierValue: string,
+  legacyIdentifierValue: string,
 ): Promise<Condition | undefined> {
   const bundle = await fhir.search<Condition>("Condition", { encounter: encounterReference, _count: "200" });
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []).find((condition) =>
-    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM && identifier.value === compositeIdentifierValue)
+    condition.identifier?.some((identifier) => identifier.system === DIAGNOSIS_KEY_IDENTIFIER_SYSTEM &&
+      (identifier.value === compositeIdentifierValue || identifier.value === legacyIdentifierValue))
   );
 }
 

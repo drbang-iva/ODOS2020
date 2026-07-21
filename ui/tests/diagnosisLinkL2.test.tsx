@@ -37,6 +37,11 @@ test("Assessment renders Possible decisions, hides refuted rows, and shows linke
   assert.match(source, /onDiscard=\{\(\) => decidePossible\(condition, "discard"\)\}/);
   assert.match(source, /← from \{provenanceLine\}/);
   assert.match(source, /stableCode === "cup_disc_ratio"[\s\S]*"Cup\/Disc"/);
+  assert.match(source, /aria-label="Diagnosis visit status"/);
+  assert.match(source, /value=\{visitStatus \?\? ""\}/);
+  assert.match(source, /<option value=""><\/option>/);
+  assert.match(source, /readDiagnosisVisitStatuses\(encounterId\)/);
+  assert.match(source, /updateDiagnosisVisitStatus\(\{ encounterId, conditionId:/);
 });
 
 test("Assessment hydrates protocol state, aborts stale offers, surfaces errors, and traps staging-sheet focus", () => {

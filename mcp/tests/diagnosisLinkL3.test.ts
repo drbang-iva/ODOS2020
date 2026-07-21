@@ -109,7 +109,7 @@ class MemoryFhir {
 
 test("real HTTP L3 routes persist ordered key findings and report only unsatisfied findings for active confirmed diagnoses", async (t) => {
   const fhir = new MemoryFhir();
-  fhir.resources.push(encounter(), diagnosisCondition("confirmed", "glaucoma_suspect_open_angle_low", "right", "confirmed-1"));
+  fhir.resources.push(encounter(), diagnosisCondition("confirmed", "glaucoma_suspect_open_angle_low", "right", "confirmed-1", true));
   fhir.resources.push(diagnosisCondition("provisional", "glaucoma_suspect_open_angle_low", "left", "possible-1"));
   fhir.resources.push(diagnosisCondition("refuted", "glaucoma_suspect_open_angle_low", "bilateral", "refuted-1"));
   fhir.resources.push(diagnosisCondition("confirmed", "myopia", "right", "empty-key-findings"));
@@ -223,6 +223,7 @@ function diagnosisCondition(
   diagnosisKey: string,
   laterality: string,
   id: string,
+  encounterScoped = false,
 ): Condition {
   return {
     resourceType: "Condition",
@@ -231,7 +232,7 @@ function diagnosisCondition(
     encounter: { reference: "Encounter/e1" },
     clinicalStatus: { coding: [{ code: "active" }] },
     verificationStatus: { coding: [{ code: verificationStatus }] },
-    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: `${diagnosisKey}::${laterality}` }],
+    identifier: [{ system: DIAGNOSIS_KEY_IDENTIFIER_SYSTEM, value: `${encounterScoped ? "e1::" : ""}${diagnosisKey}::${laterality}` }],
     code: { text: diagnosisKey },
   };
 }
