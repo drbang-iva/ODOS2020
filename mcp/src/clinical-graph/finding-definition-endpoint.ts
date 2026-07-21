@@ -64,6 +64,13 @@ const mutationSchema = z.discriminatedUnion("action", [
     allowCreate: z.boolean().optional(),
   }).strict(),
   z.object({
+    action: z.literal("add-field-option"),
+    fieldKey: z.string().trim().min(1).max(100),
+    code: z.string().trim().regex(/^[a-z][a-z0-9-]{0,79}$/),
+    display: z.string().trim().min(1).max(120),
+    category: z.enum(["eye", "general"]).optional(),
+  }).strict(),
+  z.object({
     action: z.literal("update-definition"),
     display: z.string().trim().min(1).max(120).optional(),
     active: z.boolean().optional(),
@@ -217,6 +224,39 @@ export async function handleFindingDefinitionMutationRequest(
       const updated = updateCustomField(definition, localCode, fieldInput, provenance);
       const saved = await store.save(updated.definition, provenance);
       return { status: 200, body: { definition: definitionSummary(saved), field: updated.field } };
+    }
+    if (parsed.data.action === "add-field-option") {
+      const { fieldKey, code, display, category: requestedCategory } = parsed.data;
+      const fields = asRecord(definition.valueSchema.fields);
+      const field = asRecord(fields[fieldKey]);
+      if (field.allowCreate !== true || !Array.isArray(field.options)) {
+        return { status: 409, body: { error: `Finding field ${fieldKey} does not allow option creation.` } };
+      }
+      const options = field.options.map((option) => asRecord(option));
+      if (options.some((option) => option.code === code)) {
+        return { status: 409, body: { error: `Finding field option ${code} already exists.` } };
+      }
+      const category = requestedCategory ?? (typeof field.createCategory === "string" ? field.createCategory : undefined);
+      const saved = await store.save({
+        ...definition,
+        valueSchema: {
+          ...definition.valueSchema,
+          fields: {
+            ...fields,
+            [fieldKey]: {
+              ...field,
+              options: [...options, {
+                code,
+                display,
+                active: true,
+                ...(category ? { category } : {}),
+              }],
+            },
+          },
+        },
+        provenance,
+      }, provenance);
+      return { status: 200, body: { definition: definitionSummary(saved) } };
     }
     if (parsed.data.action === "update-definition") {
       if (!isCustomSection(definition)) {

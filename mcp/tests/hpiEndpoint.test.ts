@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import type { PracticeRoleId } from "../src/authz/roles.js";
 import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import { buildEncounterComplaintResource } from "../src/clinical-graph/encounter-complaint-store.js";
 import { buildHpiFindingDefinition } from "../src/clinical-graph/hpi-definition.js";
 import {
   handleHpiCaptureRequest,
   handleHpiDefinitionRequest,
-  stampChiefComplaint,
   type HpiEndpointDeps,
 } from "../src/clinical-graph/hpi-endpoint.js";
 
@@ -18,35 +18,68 @@ const ENCOUNTER: Encounter = {
   status: "in-progress",
   class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
   subject: { reference: "Patient/p1" },
-  reasonCode: [
-    { coding: [{ system: "https://example.test/local", code: "existing" }], text: "Existing coded reason" },
-    { text: "Prior chief complaint" },
-  ],
 };
+
+const PROVENANCE = {
+  source: "manual" as const,
+  recordedAt: "2026-07-21T12:00:00.000Z",
+  actorReference: "Practitioner/doc1",
+};
+
+const COMPLAINTS = [
+  {
+    id: "c1",
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal: 1,
+    complaintKey: "dry-eye",
+    conditions: ["dry-eyes"],
+    eyeLocation: "OU" as const,
+    eyeComparison: "right-worse" as const,
+    qualities: ["constant", "environmentally-sensitive", "brought-on-by-drafts-or-fans"],
+    duration: { value: 3, unit: "months" as const },
+    treatmentsTried: ["artificial-tears", "warm-compresses"],
+    additionalHistory: "worse at end of workday",
+    narrative: { mode: "automated" as const },
+    resolvedDx: [],
+    status: "active" as const,
+    provenance: PROVENANCE,
+    provenanceHistory: [PROVENANCE],
+  },
+  {
+    id: "c2",
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal: 2,
+    freeTextLabel: "Headache",
+    conditions: [],
+    eyeLocation: "not-applicable" as const,
+    qualities: [],
+    treatmentsTried: ["no-treatment"],
+    additionalHistory: "",
+    narrative: { mode: "automated" as const },
+    resolvedDx: [],
+    status: "active" as const,
+    provenance: PROVENANCE,
+    provenanceHistory: [PROVENANCE],
+  },
+];
+
 const BODY = {
   patientReference: "Patient/p1",
   encounterReference: "Encounter/e1",
-  chiefComplaint: "Blurred vision at near",
-  hpi: {
-    location: "Both eyes",
-    quality: "Intermittent blur",
-    severity: "Moderate",
-    duration: "Three months",
-    timing: "Late afternoon",
-    context: "Reading",
-    modifyingFactors: "Improves with breaks",
-    associatedSignsSymptoms: "Eyestrain",
-  },
   reviewOfSystems: [
     { code: "vision-changes", display: "Vision changes", category: "eye", status: "positive" },
-    { code: "diabetes", display: "Diabetes", category: "general", status: "positive" },
-    { code: "migraine", display: "Migraine", category: "general", status: "negative" },
+    { code: "diabetes", display: "Diabetes", category: "general", status: "negative" },
   ],
+  reviewAttestations: ["general"],
 };
 
-function fixture(role: PracticeRoleId = "clinician") {
+function fixture(role: PracticeRoleId = "clinician", withComplaints = true) {
+  const basics = withComplaints
+    ? COMPLAINTS.map((complaint, index) => ({ ...buildEncounterComplaintResource(complaint), id: `basic-${index + 1}` }))
+    : [];
   const created: Array<{ resource: Observation | Provenance; headers?: Record<string, string> }> = [];
-  const updated: Encounter[] = [];
   const definition = buildHpiFindingDefinition({
     source: "manual",
     recordedAt: "1970-01-01T00:00:00.000Z",
@@ -58,100 +91,72 @@ function fixture(role: PracticeRoleId = "clinician") {
       actorRole: role,
       fhir: {
         read: async <T extends Encounter>(): Promise<T> => structuredClone(ENCOUNTER) as T,
-        create: async <T extends Observation | Provenance>(
-          resource: T,
-          headers?: Record<string, string>,
-        ): Promise<T> => {
-          created.push({ resource, headers });
+        search: async <T extends Basic>(_resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
+          const filtered = basics.filter((resource) => {
+            if (!params.code) return true;
+            const [system, code] = params.code.split("|");
+            return resource.code?.coding?.some((coding) => coding.system === system && coding.code === code);
+          });
+          return { resourceType: "Bundle", type: "searchset", entry: filtered.map((resource) => ({ resource: structuredClone(resource) as T })) };
+        },
+        create: async <T extends Basic | Observation | Provenance>(resource: T, headers?: Record<string, string>): Promise<T> => {
+          if (resource.resourceType !== "Basic") created.push({ resource, headers });
           return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}` };
         },
-        update: async <T extends Encounter>(
-          _resourceType: T["resourceType"],
-          _id: string,
-          resource: T,
-          headers?: Record<string, string>,
-        ): Promise<T> => {
-          assert.equal(headers?.["X-ODOS-Source"], "mcp/save_hpi_ros");
-          updated.push(resource);
-          return resource;
-        },
+        update: async <T extends Basic | Encounter>(_resourceType: T["resourceType"], _id: string, resource: T): Promise<T> => resource,
       },
     } : null,
     findingDefinitions: () => [definition],
-    now: () => "2026-07-13T20:00:00.000Z",
+    now: () => "2026-07-21T12:30:00.000Z",
   };
-  return { created, updated, deps };
+  return { created, deps };
 }
 
-test("HPI capture persists ODOS-local finding evidence and stamps a text-only encounter reason", async () => {
-  const { created, updated, deps } = fixture();
+test("history capture persists ordinal complaint narratives and explicitly reviewed ROS in one Observation", async () => {
+  const { created, deps } = fixture();
   const result = await handleHpiCaptureRequest(deps, { authHeader: AUTH, body: BODY });
-
   assert.equal(result.status, 200);
   assert.deepEqual(created.map((entry) => entry.resource.resourceType), ["Observation", "Provenance"]);
   assert.equal(created.every((entry) => entry.headers?.["X-ODOS-Source"] === "mcp/save_hpi_ros"), true);
   const observation = created[0]!.resource as Observation;
   assert.equal(observation.code.coding?.[0]?.system, ODOS_OPHTHALMOLOGY_CODE_SYSTEM);
   assert.equal(observation.code.coding?.[0]?.code, "hpi_ros");
-  assert.equal(observation.subject?.reference, BODY.patientReference);
-  assert.equal(observation.encounter?.reference, BODY.encounterReference);
-  assert.equal(componentValue(observation, "CHIEF_COMPLAINT"), BODY.chiefComplaint);
-  assert.equal(componentValue(observation, "HPI_ASSOCIATED_SIGNS_SYMPTOMS"), "Eyestrain");
+  assert.match(componentValue(observation, "HISTORY_COMPLAINT_1") ?? "", /Patient reports dry eyes/);
+  assert.match(componentValue(observation, "HISTORY_COMPLAINT_2") ?? "", /Patient reports Headache/);
   assert.equal(componentValue(observation, "ROS_VISION_CHANGES"), "positive");
-  assert.equal(componentValue(observation, "ROS_MIGRAINE"), "negative");
-
-  assert.equal(updated.length, 1);
-  assert.deepEqual(updated[0]!.reasonCode, [
-    ENCOUNTER.reasonCode![0],
-    { text: BODY.chiefComplaint },
-  ]);
   const provenance = created[1]!.resource as Provenance;
-  assert.deepEqual(provenance.target.map((target) => target.reference), [
-    "Observation/observation-1",
-    BODY.encounterReference,
-    BODY.patientReference,
-  ]);
-  assert.match(provenance.activity?.text ?? "", /chief complaint, HPI, and review of systems/i);
+  assert.match(provenance.activity?.text ?? "", /presenting complaints, history narrative/i);
+  assert.match(provenance.activity?.text ?? "", /general remaining items reviewed negative/);
+  assert.deepEqual((result.body as { narratives: string[] }).narratives.length, 2);
 });
 
-test("HPI definition exposes eight elements, default ROS flags, extensibility, and the Mandate-14 boundary", async () => {
+test("HPI definition retires the eight-textarea fields and retains extensible Review of Systems", async () => {
   const { deps } = fixture();
   const result = await handleHpiDefinitionRequest(deps, { authHeader: AUTH });
   assert.equal(result.status, 200);
-  const definition = (result.body as {
-    definition: {
-      fields: Record<string, { allowCreate?: boolean; options?: Array<{ code: string }> }>;
-      terminologyStatus: { status: string; note: string };
-    };
-  }).definition;
-  assert.deepEqual(
-    ["location", "quality", "severity", "duration", "timing", "context", "modifyingFactors", "associatedSignsSymptoms"]
-      .filter((key) => key in definition.fields),
-    ["location", "quality", "severity", "duration", "timing", "context", "modifyingFactors", "associatedSignsSymptoms"],
-  );
-  assert.equal(definition.fields.reviewOfSystems?.allowCreate, true);
-  assert.deepEqual(definition.fields.reviewOfSystems?.options?.slice(-2).map((option) => option.code), ["diabetes", "hypertension"]);
+  const definition = (result.body as { definition: { fields: Record<string, unknown>; terminologyStatus: { status: string } } }).definition;
+  assert.deepEqual(Object.keys(definition.fields), ["reviewOfSystems"]);
+  assert.equal((definition.fields.reviewOfSystems as { allowCreate?: boolean }).allowCreate, true);
   assert.equal(definition.terminologyStatus.status, "MANDATE-14-DEFERRED");
-  assert.match(definition.terminologyStatus.note, /ODOS-local coding only/);
 });
 
-test("HPI capture enforces authority and permits only general-medical custom flags", async () => {
+test("history capture enforces authority, option validation, encounter scope, and an active complaint", async () => {
   assert.equal((await handleHpiCaptureRequest(fixture().deps, { authHeader: undefined, body: BODY })).status, 401);
   assert.equal((await handleHpiCaptureRequest(fixture("front-desk").deps, { authHeader: AUTH, body: BODY })).status, 403);
-  const customEye = await handleHpiCaptureRequest(fixture().deps, {
+  const unknown = await handleHpiCaptureRequest(fixture().deps, {
     authHeader: AUTH,
-    body: {
-      ...BODY,
-      reviewOfSystems: [{ code: "photophobia", display: "Photophobia", category: "eye", status: "positive" }],
-    },
+    body: { ...BODY, reviewOfSystems: [{ code: "invented", display: "Invented", category: "general", status: "positive" }] },
   });
-  assert.equal(customEye.status, 400);
-  assert.match((customEye.body as { error: string }).error, /general-medical/);
-});
-
-test("chief-complaint stamping appends a text-only reason when the encounter has only coded reasons", () => {
-  const stamped = stampChiefComplaint({ ...ENCOUNTER, reasonCode: [ENCOUNTER.reasonCode![0]!] }, "Annual diabetic eye exam");
-  assert.deepEqual(stamped.reasonCode, [ENCOUNTER.reasonCode![0], { text: "Annual diabetic eye exam" }]);
+  assert.equal(unknown.status, 400);
+  assert.match((unknown.body as { error: string }).error, /unknown or inactive/);
+  const encounterOnlyCustom = await handleHpiCaptureRequest(fixture().deps, {
+    authHeader: AUTH,
+    body: { ...BODY, reviewOfSystems: [{ code: "custom-migraine", display: "Migraine", category: "general", status: "positive" }] },
+  });
+  assert.equal(encounterOnlyCustom.status, 200);
+  const noComplaint = await handleHpiCaptureRequest(fixture("clinician", false).deps, { authHeader: AUTH, body: BODY });
+  assert.equal(noComplaint.status, 400);
+  assert.match((noComplaint.body as { error: string }).error, /presenting complaint/);
 });
 
 function componentValue(observation: Observation, code: string): string | undefined {

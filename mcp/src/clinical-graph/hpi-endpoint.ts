@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { Encounter, Observation, Provenance } from "@medplum/fhirtypes";
+import type { Basic, Encounter, Observation, Provenance } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { odosConcept, reference } from "../fhir/ophthalmology/extensions.js";
-import { buildHpiFindingDefinition, HPI_ROS_OPTIONS, HPI_STABLE_KEY } from "./hpi-definition.js";
+import { FhirComplaintDefinitionStore } from "./complaint-definition-store.js";
+import { renderComplaintNarrative } from "./complaint-model.js";
+import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
+import { buildHpiFindingDefinition, HPI_STABLE_KEY } from "./hpi-definition.js";
 import {
   captureGlaucomaFinding,
   type ClinicalFindingDefinition,
@@ -13,16 +16,10 @@ import {
 
 export interface HpiFhirClient {
   read<T extends Encounter>(resourceType: T["resourceType"], id: string): Promise<T>;
-  create<T extends Observation | Provenance>(
-    resource: T,
-    extraHeaders?: Record<string, string>,
-  ): Promise<T>;
-  update<T extends Encounter>(
-    resourceType: T["resourceType"],
-    id: string,
-    resource: T,
-    extraHeaders?: Record<string, string>,
-  ): Promise<T>;
+  search<T extends Basic>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<import("@medplum/fhirtypes").Bundle<T>>;
+  searchUrl?<T extends Basic>(url: string, resourceType: T["resourceType"]): Promise<import("@medplum/fhirtypes").Bundle<T>>;
+  create<T extends Basic | Observation | Provenance>(resource: T, extraHeaders?: Record<string, string>): Promise<T>;
+  update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, extraHeaders?: Record<string, string>): Promise<T>;
 }
 
 export interface HpiEndpointDeps {
@@ -36,18 +33,6 @@ export interface HpiEndpointDeps {
 }
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/save_hpi_ros" } as const;
-const HPI_FIELD_DISPLAYS = {
-  location: "Location",
-  quality: "Quality",
-  severity: "Severity",
-  duration: "Duration",
-  timing: "Timing",
-  context: "Context",
-  modifyingFactors: "Modifying factors",
-  associatedSignsSymptoms: "Associated signs / symptoms",
-} as const;
-
-const hpiElementSchema = z.string().trim().max(2000).optional();
 const rosFlagSchema = z.object({
   code: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/),
   display: z.string().trim().min(1).max(120),
@@ -55,34 +40,18 @@ const rosFlagSchema = z.object({
   status: z.enum(["positive", "negative"]),
 }).strict();
 const hpiRequestSchema = z.object({
-  patientReference: z.string().regex(/^Patient\/[^/]+$/),
-  encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
-  chiefComplaint: z.string().trim().min(1).max(2000),
-  hpi: z.object({
-    location: hpiElementSchema,
-    quality: hpiElementSchema,
-    severity: hpiElementSchema,
-    duration: hpiElementSchema,
-    timing: hpiElementSchema,
-    context: hpiElementSchema,
-    modifyingFactors: hpiElementSchema,
-    associatedSignsSymptoms: hpiElementSchema,
-  }).strict(),
-  reviewOfSystems: z.array(rosFlagSchema).max(64),
+  patientReference: z.string().regex(/^Patient\/[A-Za-z0-9.-]+$/),
+  encounterReference: z.string().regex(/^Encounter\/[A-Za-z0-9.-]+$/),
+  reviewOfSystems: z.array(rosFlagSchema).max(128),
+  reviewAttestations: z.array(z.enum(["eye", "general"])).max(2).default([]),
 }).strict().superRefine((value, context) => {
   const seen = new Set<string>();
   for (const flag of value.reviewOfSystems) {
-    if (seen.has(flag.code)) {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: `Review-of-systems flag ${flag.code} is duplicated.` });
-    }
+    if (seen.has(flag.code)) context.addIssue({ code: z.ZodIssueCode.custom, message: `Review-of-systems flag ${flag.code} is duplicated.` });
     seen.add(flag.code);
-    const seeded = HPI_ROS_OPTIONS.find((option) => option.code === flag.code);
-    if (seeded && seeded.category !== flag.category) {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: `Review-of-systems flag ${flag.code} has the wrong category.` });
-    }
-    if (!seeded && flag.category !== "general") {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: "Custom review-of-systems flags must be general-medical flags." });
-    }
+  }
+  if (new Set(value.reviewAttestations).size !== value.reviewAttestations.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Review attestations cannot contain duplicates." });
   }
 });
 
@@ -92,21 +61,17 @@ export async function handleHpiDefinitionRequest(
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
   if (!staff) return { status: 401, body: { error: "Authentication required to read HPI definition." } };
-  if (!staffMay(staff.actorRole, "chart.read")) {
-    return { status: 403, body: { error: "chart.read role required" } };
-  }
+  if (!staffMay(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const definition = resolveHpiDefinition(deps.findingDefinitions?.());
   return {
     status: 200,
-    body: {
-      definition: {
-        id: definition.id,
-        stableKey: definition.stableKey,
-        display: definition.display,
-        fields: definition.valueSchema.fields,
-        terminologyStatus: definition.valueSchema.terminologyStatus,
-      },
-    },
+    body: { definition: {
+      id: definition.id,
+      stableKey: definition.stableKey,
+      display: definition.display,
+      fields: definition.valueSchema.fields,
+      terminologyStatus: definition.valueSchema.terminologyStatus,
+    } },
   };
 }
 
@@ -115,22 +80,38 @@ export async function handleHpiCaptureRequest(
   input: { authHeader: string | undefined; body: unknown },
 ): Promise<{ status: number; body: unknown }> {
   const staff = await deps.authenticate(input.authHeader);
-  if (!staff) return { status: 401, body: { error: "Authentication required to save HPI findings." } };
-  if (!staffMay(staff.actorRole, "chart.write")) {
-    return { status: 403, body: { error: "chart.write role required" } };
-  }
+  if (!staff) return { status: 401, body: { error: "Authentication required to save history." } };
+  if (!staffMay(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = hpiRequestSchema.safeParse(input.body);
-  if (!parsed.success) {
-    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid HPI request." } };
-  }
+  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid history request." } };
 
+  const encounterId = parsed.data.encounterReference.slice("Encounter/".length);
+  const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
+  if (encounter.subject?.reference !== parsed.data.patientReference) {
+    return { status: 400, body: { error: "History patient does not match the encounter subject." } };
+  }
+  if (encounter.status === "finished" || encounter.status === "cancelled" || encounter.status === "entered-in-error") {
+    return { status: 409, body: { error: "Signed or closed encounters cannot be edited." } };
+  }
   const definition = resolveHpiDefinition(deps.findingDefinitions?.());
+  const rosError = validateRos(parsed.data.reviewOfSystems, definition);
+  if (rosError) return { status: 400, body: { error: rosError } };
+
+  const definitions = await new FhirComplaintDefinitionStore(staff.fhir).list();
+  const complaints = (await new FhirEncounterComplaintStore(staff.fhir).listByEncounter(encounterId))
+    .filter((complaint) => complaint.status === "active")
+    .sort((left, right) => left.ordinal - right.ordinal);
+  if (!complaints.length) return { status: 400, body: { error: "At least one presenting complaint is required before saving history." } };
+
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const provenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt,
     actorReference: staff.staffReference,
-    note: "MANDATE-14-DEFERRED: HPI and ROS remain ODOS-local; no external terminology code is asserted.",
+    note: [
+      "MANDATE-14-DEFERRED: complaint, HPI, and ROS concepts remain ODOS-local; no external terminology code is asserted.",
+      ...parsed.data.reviewAttestations.map((group) => `${group} review-of-systems remaining items attested negative.`),
+    ].join(" "),
   };
   const findingId = `finding-${HPI_STABLE_KEY}-${randomUUID()}`;
   const captured = captureGlaucomaFinding({
@@ -138,7 +119,7 @@ export async function handleHpiCaptureRequest(
     patientReference: parsed.data.patientReference,
     encounterReference: parsed.data.encounterReference,
     laterality: "UNKNOWN",
-    value: hpiFindingValue(parsed.data),
+    value: historyFindingValue(complaints, definitions, parsed.data.reviewOfSystems),
     sourceType: "manual",
     performerReferences: [staff.staffReference],
     recordedAt,
@@ -147,20 +128,13 @@ export async function handleHpiCaptureRequest(
     observationId: findingId,
   });
   const observation = await staff.fhir.create<Observation>(captured.observation, WRITE_HEADERS);
-  const observationReference = resourceReference("Observation", observation.id, captured.observation.id);
-
-  const encounterId = parsed.data.encounterReference.slice("Encounter/".length);
-  const encounter = await staff.fhir.read<Encounter>("Encounter", encounterId);
-  await staff.fhir.update(
-    "Encounter",
-    encounterId,
-    stampChiefComplaint(encounter, parsed.data.chiefComplaint),
-    WRITE_HEADERS,
-  );
-
+  const observationReference = resourceReference(observation.id, captured.observation.id);
   const createdProvenance = await staff.fhir.create<Provenance>({
     ...captured.provenance,
-    activity: odosConcept("CREATE", "Capture chief complaint, HPI, and review of systems"),
+    activity: odosConcept("CREATE", [
+      "Capture presenting complaints, history narrative, and review of systems",
+      ...parsed.data.reviewAttestations.map((group) => `${group} remaining items reviewed negative`),
+    ].join("; ")),
     target: [
       reference(observationReference),
       reference(parsed.data.encounterReference),
@@ -172,27 +146,52 @@ export async function handleHpiCaptureRequest(
     body: {
       observationReference,
       encounterReference: parsed.data.encounterReference,
+      narratives: complaints.map((complaint) => renderComplaintNarrative(
+        complaint,
+        definitions.find((candidate) => candidate.stableKey === complaint.complaintKey),
+      )),
       ...(createdProvenance.id ? { provenanceReference: `Provenance/${createdProvenance.id}` } : {}),
     },
   };
 }
 
-export function stampChiefComplaint(encounter: Encounter, chiefComplaint: string): Encounter {
-  let replaced = false;
-  const reasonCode = (encounter.reasonCode ?? []).map((reason) => {
-    if (!replaced && !(reason.coding?.length)) {
-      replaced = true;
-      return { text: chiefComplaint };
-    }
-    return reason;
-  });
-  if (!replaced) reasonCode.push({ text: chiefComplaint });
-  return { ...encounter, reasonCode };
+function historyFindingValue(
+  complaints: Awaited<ReturnType<FhirEncounterComplaintStore["listByEncounter"]>>,
+  definitions: Awaited<ReturnType<FhirComplaintDefinitionStore["list"]>>,
+  reviewOfSystems: z.infer<typeof rosFlagSchema>[],
+): Extract<FindingValue, { type: "components" }> {
+  const components: Extract<FindingValue, { type: "components" }>["components"] = complaints.map((complaint) => ({
+    code: `HISTORY_COMPLAINT_${complaint.ordinal}`,
+    display: complaint.ordinal === 1 ? "Primary complaint history" : `Complaint ${complaint.ordinal} history`,
+    value: renderComplaintNarrative(complaint, definitions.find((candidate) => candidate.stableKey === complaint.complaintKey)),
+  }));
+  for (const flag of reviewOfSystems) {
+    components.push({ code: `ROS_${snakeCase(flag.code)}`, display: flag.display, value: flag.status });
+  }
+  return { type: "components", components };
 }
 
-function resolveHpiDefinition(
-  suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
-): ClinicalFindingDefinition {
+function validateRos(flags: z.infer<typeof rosFlagSchema>[], definition: ClinicalFindingDefinition): string | undefined {
+  const field = asRecord(asRecord(definition.valueSchema.fields).reviewOfSystems);
+  const options = Array.isArray(field.options) ? field.options.map(asRecord) : [];
+  const byCode = new Map(options.flatMap((option) =>
+    typeof option.code === "string" && typeof option.category === "string"
+      ? [[option.code, option] as const]
+      : []
+  ));
+  for (const flag of flags) {
+    const option = byCode.get(flag.code);
+    if (!option) {
+      if (flag.code.startsWith("custom-") && flag.category === "general") continue;
+      return `Review-of-systems flag ${flag.code} is unknown or inactive.`;
+    }
+    if (option.active === false) return `Review-of-systems flag ${flag.code} is unknown or inactive.`;
+    if (option.category !== flag.category) return `Review-of-systems flag ${flag.code} has the wrong category.`;
+  }
+  return undefined;
+}
+
+function resolveHpiDefinition(suppliedDefinitions: ClinicalFindingDefinition[] | undefined): ClinicalFindingDefinition {
   const definitions = suppliedDefinitions ?? [buildHpiFindingDefinition({
     source: "manual",
     recordedAt: new Date(0).toISOString(),
@@ -201,30 +200,6 @@ function resolveHpiDefinition(
   const definition = definitions.find((candidate) => candidate.stableKey === HPI_STABLE_KEY);
   if (!definition) throw new Error("HPI finding definition seed is missing.");
   return definition;
-}
-
-function hpiFindingValue(
-  input: z.infer<typeof hpiRequestSchema>,
-): Extract<FindingValue, { type: "components" }> {
-  const components: Extract<FindingValue, { type: "components" }>["components"] = [
-    { code: "CHIEF_COMPLAINT", display: "Chief complaint", value: input.chiefComplaint },
-  ];
-  for (const [key, display] of Object.entries(HPI_FIELD_DISPLAYS)) {
-    const value = input.hpi[key as keyof typeof HPI_FIELD_DISPLAYS];
-    if (value) components.push({ code: `HPI_${snakeCase(key)}`, display, value });
-  }
-  const defaults = new Map<string, { display: string }>(
-    HPI_ROS_OPTIONS.map((option) => [option.code, option]),
-  );
-  for (const flag of input.reviewOfSystems) {
-    const option = defaults.get(flag.code);
-    components.push({
-      code: `ROS_${snakeCase(flag.code)}`,
-      display: option?.display ?? flag.display,
-      value: flag.status,
-    });
-  }
-  return { type: "components", components };
 }
 
 function snakeCase(value: string): string {
@@ -240,8 +215,12 @@ function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): b
   }
 }
 
-function resourceReference(resourceType: "Observation", id: string | undefined, fallbackId: string | undefined): string {
+function resourceReference(id: string | undefined, fallbackId: string | undefined): string {
   const resolvedId = id ?? fallbackId;
-  if (!resolvedId) throw new Error(`${resourceType} create response did not include an id.`);
-  return `${resourceType}/${resolvedId}`;
+  if (!resolvedId) throw new Error("Observation create response did not include an id.");
+  return `Observation/${resolvedId}`;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }

@@ -102,6 +102,12 @@ import {
   handleHpiDefinitionRequest,
 } from "./clinical-graph/hpi-endpoint.js";
 import {
+  handleComplaintDefinitionCatalogRequest,
+  handleComplaintDefinitionMutationRequest,
+  handleEncounterComplaintListRequest,
+  handleEncounterComplaintMutationRequest,
+} from "./clinical-graph/complaint-endpoint.js";
+import {
   handleIopCaptureRequest,
   handleIopDefinitionRequest,
 } from "./clinical-graph/iop-endpoint.js";
@@ -6037,6 +6043,62 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/hpi/definition failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "HPI definition route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/complaint-definitions", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleComplaintDefinitionCatalogRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/complaint-definitions failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "complaint-definition catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/complaint-definitions/:stableKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleComplaintDefinitionMutationRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "finding-definitions.write"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: complaint-definition mutation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "complaint-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/encounters/:encounterId/complaints", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterComplaintListRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), params: req.params },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter complaint list failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter complaint list route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/complaints", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterComplaintMutationRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter complaint mutation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter complaint mutation route failed" });
         }
       });
 
