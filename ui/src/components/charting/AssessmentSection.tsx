@@ -4,6 +4,7 @@ import { fhir } from "../../lib/fhir";
 import { useRole } from "../../lib/role-context";
 import {
   createEncounterDiagnosis,
+  hasValidDiagnosisRanks,
   makeConditionPrincipal,
   markConditionEnteredInError,
   swapConditionRanks,
@@ -145,14 +146,6 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     },
     [conditions, encounter],
   );
-  const sortedSecondaries = useMemo(
-    () => sortedConditions.filter((condition) =>
-      verificationStatus(condition) !== "provisional" &&
-      (encounter ? diagnosisRank(encounter, condition) : undefined) !== 1
-    ),
-    [encounter, sortedConditions],
-  );
-
   async function addDiagnosis() {
     if (!encounter) return;
     setBusy("add");
@@ -493,7 +486,9 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           ) : (
             sortedConditions.map((condition) => {
               const rank = encounter ? diagnosisRank(encounter, condition) : undefined;
-              const secondaryIndex = sortedSecondaries.findIndex((candidate) => candidate.id === condition.id);
+              const rankMoves = encounter
+                ? diagnosisRankMoveNeighbors(encounter, sortedConditions, condition)
+                : {};
               return (
                 <DiagnosisCard
                   key={condition.id}
@@ -504,16 +499,16 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                   busy={busy}
                   provenanceLine={condition.id ? provenanceLines[condition.id] : undefined}
                   possible={verificationStatus(condition) === "provisional"}
-                  canMoveUp={secondaryIndex > 0}
-                  canMoveDown={secondaryIndex >= 0 && secondaryIndex < sortedSecondaries.length - 1}
+                  canMoveUp={rankMoves.up !== undefined}
+                  canMoveDown={rankMoves.down !== undefined}
                   visitStatus={condition.id ? diagnosisVisitStatuses[`Condition/${condition.id}`] : undefined}
                   visitStatusDisabled={!canShowEditing || encounter?.status === "finished"}
                   onToggle={() => setEditingId((current) => (current === condition.id ? null : condition.id ?? null))}
                   onLaterality={(laterality) => saveLaterality(condition, laterality)}
                   onCode={(code, display) => saveCode(condition, code, display)}
                   onMakePrincipal={() => savePrincipal(condition)}
-                  onMoveUp={() => saveRankSwap(condition, sortedSecondaries[secondaryIndex - 1]!)}
-                  onMoveDown={() => saveRankSwap(condition, sortedSecondaries[secondaryIndex + 1]!)}
+                  onMoveUp={() => saveRankSwap(condition, rankMoves.up!)}
+                  onMoveDown={() => saveRankSwap(condition, rankMoves.down!)}
                   onStatus={(status) => saveStatus(condition, status)}
                   onVisitStatus={(status) => saveVisitStatus(condition, status)}
                   onEnteredInError={() => markEnteredInError(condition)}
@@ -539,6 +534,27 @@ function protocolItemLabel(item: ProtocolOffer["items"][number]): string {
     item.payload.findingDefKey ??
     item.itemKey
   );
+}
+
+export function diagnosisRankMoveNeighbors(
+  encounter: Encounter,
+  sortedConditions: Condition[],
+  condition: Condition,
+): { up?: Condition; down?: Condition } {
+  if (!hasValidDiagnosisRanks(encounter)) return {};
+  const movableSecondaries = sortedConditions.filter((candidate) => {
+    const rank = diagnosisRank(encounter, candidate);
+    return verificationStatus(candidate) !== "provisional" &&
+      rank !== undefined &&
+      Number.isInteger(rank) &&
+      rank > 1;
+  });
+  const index = movableSecondaries.findIndex((candidate) => candidate.id === condition.id);
+  if (index < 0) return {};
+  return {
+    up: movableSecondaries[index - 1],
+    down: movableSecondaries[index + 1],
+  };
 }
 
 function DiagnosisCard({

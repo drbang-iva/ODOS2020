@@ -309,6 +309,7 @@ export async function makeConditionPrincipal(input: {
   encounter: Encounter;
   condition: Condition;
 }): Promise<Encounter> {
+  assertValidDiagnosisRanks(input.encounter);
   const diagnosis = input.encounter.diagnosis ?? [];
   const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
   const principalIndexes = diagnosis.flatMap((entry, index) => entry.rank === 1 ? [index] : []);
@@ -320,11 +321,6 @@ export async function makeConditionPrincipal(input: {
     throw new Error("This diagnosis is already principal.");
   }
   const targetRank = diagnosis[targetIndex]!.rank;
-  if (principalIndex !== undefined && targetRank !== undefined && diagnosis.some(
-    (entry, index) => index !== targetIndex && index !== principalIndex && entry.rank === targetRank,
-  )) {
-    throw new Error("This visit has duplicate diagnosis ranks.");
-  }
   const operations: JsonPatchOperation[] = [{
     op: targetRank === undefined ? "add" : "replace",
     path: `/diagnosis/${targetIndex}/rank`,
@@ -343,6 +339,7 @@ export async function swapConditionRanks(input: {
   condition: Condition;
   adjacentCondition: Condition;
 }): Promise<Encounter> {
+  assertValidDiagnosisRanks(input.encounter);
   const diagnosis = input.encounter.diagnosis ?? [];
   const targetIndex = encounterDiagnosisIndex(diagnosis, input.condition);
   const adjacentIndex = encounterDiagnosisIndex(diagnosis, input.adjacentCondition);
@@ -358,6 +355,25 @@ export async function swapConditionRanks(input: {
     { op: "replace", path: `/diagnosis/${targetIndex}/rank`, value: adjacentRank },
     { op: "replace", path: `/diagnosis/${adjacentIndex}/rank`, value: targetRank },
   ], "reorder_encounter_diagnoses");
+}
+
+function assertValidDiagnosisRanks(encounter: Encounter): void {
+  const ranks = (encounter.diagnosis ?? [])
+    .map((diagnosis) => diagnosis.rank)
+    .filter((rank): rank is number => rank !== undefined);
+  if (ranks.filter((rank) => rank === 1).length > 1) {
+    throw new Error("This visit has multiple principal diagnoses.");
+  }
+  if (!hasValidDiagnosisRanks(encounter)) {
+    throw new Error("This visit has invalid or duplicate diagnosis ranks and must be corrected before reordering.");
+  }
+}
+
+export function hasValidDiagnosisRanks(encounter: Encounter): boolean {
+  const ranks = (encounter.diagnosis ?? [])
+    .map((diagnosis) => diagnosis.rank)
+    .filter((rank): rank is number => rank !== undefined);
+  return ranks.every((rank) => Number.isInteger(rank) && rank >= 1) && new Set(ranks).size === ranks.length;
 }
 
 async function patchEncounterDiagnosisRanks(
