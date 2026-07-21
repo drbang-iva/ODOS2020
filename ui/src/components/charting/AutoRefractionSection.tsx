@@ -218,7 +218,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
               <p className="mt-1 text-xs text-white/35">Single distance and near measurements in millimeters.</p>
               <div className="mt-4 grid gap-3">
                 <label>
-                  <span className="mb-1 block text-xs text-white/55">Distance (mm)</span>
+                  <span className="mb-1 block text-xs text-[color:var(--odos-muted)]">Distance (mm)</span>
                   <PowerDropdown
                     value={binocularPdDistance}
                     options={binocularPdOptions}
@@ -229,7 +229,7 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                   />
                 </label>
                 <label>
-                  <span className="mb-1 block text-xs text-white/55">Near (mm)</span>
+                  <span className="mb-1 block text-xs text-[color:var(--odos-muted)]">Near (mm)</span>
                   <PowerDropdown
                     value={binocularPdNear}
                     options={binocularPdOptions}

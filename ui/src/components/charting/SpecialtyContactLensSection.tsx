@@ -512,11 +512,11 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                       <SelectField label="Lens Type" value={state.lensType} onChange={(value) => updateEye(eye, { lensType: value })} options={activeOptions(fields.lensType)} />
                       <SelectField label="Material" value={state.material} onChange={(value) => updateEye(eye, { material: value })} options={activeOptions(fields.material)} />
                       <label className="block">
-                        <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Base Curve (mm)</span>
+                        <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Base Curve (mm)</span>
                         <PowerDropdown value={state.baseCurve} options={baseCurveOptions} defaultValue="7.80" onChange={(value) => updateEye(eye, { baseCurve: value })} ariaLabel="Base Curve (mm)" />
                       </label>
                       <label className="block">
-                        <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Diameter (mm)</span>
+                        <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Diameter (mm)</span>
                         <PowerDropdown value={state.diameter} options={diameterOptions} defaultValue="15.00" onChange={(value) => updateEye(eye, { diameter: value })} ariaLabel="Diameter (mm)" />
                       </label>
                       <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
@@ -547,7 +547,7 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                             />
                           ) : (
                             <label key={field.code} className="block">
-                              <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">
+                              <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">
                                 {field.display}{field.unit ? ` (${field.unit})` : ""}
                               </span>
                               <PowerDropdown

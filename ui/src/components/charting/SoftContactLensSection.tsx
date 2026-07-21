@@ -266,11 +266,11 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
               <SelectField label="Usage" value={usage} onChange={setUsage} options={activeOptions(fields.usage)} />
               <SelectField label="Status" value={status} onChange={setStatus} options={activeOptions(fields.status)} />
               <label className="block">
-                <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Binocular PD Dist (mm)</span>
+                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Dist (mm)</span>
                 <PowerDropdown value={binocularPdDistance} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdDistance} ariaLabel="Binocular PD Dist (mm)" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Binocular PD Near (mm)</span>
+                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Near (mm)</span>
                 <PowerDropdown value={binocularPdNear} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdNear} ariaLabel="Binocular PD Near (mm)" />
               </label>
             </div>
