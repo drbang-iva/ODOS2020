@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { AutoRefractionSection } from "../src/components/charting/AutoRefractionSection";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
 import { IopSection } from "../src/components/charting/IopSection";
 import { OrthoKSection } from "../src/components/charting/OrthoKSection";
+import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
 import { softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
 import { VaSection } from "../src/components/charting/VaSection";
@@ -88,19 +90,97 @@ test("specialty-lens numeric geometry uses centered spinner fields", () => {
   assert.match(specialty, /field\.code === "hvid"[\s\S]*defaultValue: "11\.80"/);
   assert.match(specialty, /field\.code === "sag"[\s\S]*defaultValue: "4500"/);
   assert.match(specialty, /field\.code === "center_thickness" \|\| field\.code === "edge_thickness"/);
+  assert.match(specialty, /manufacturer, product: "", baseCurve: "", diameter: ""/);
+  assert.match(specialty, /product: productCode,[\s\S]*baseCurve: "",[\s\S]*diameter: ""/);
   assert.doesNotMatch(specialty, /<TextField label="Base Curve \(mm\)"/);
   assert.doesNotMatch(specialty, /<TextField label="Diameter \(mm\)"/);
 });
 
-test("IOP and corneal hysteresis use their definition ranges with centered spinners", () => {
-  const html = renderToStaticMarkup(<IopSection {...PROPS} />);
-  for (const eye of ["OD", "OS"]) {
-    assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${eye} IOP value"`));
-    assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${eye} corneal hysteresis"`));
+test("IOP and corneal hysteresis use definition-derived ranges with centered spinners", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = input.toString();
+    if (url.includes("/clinical-graph/iop/history")) {
+      return jsonResponse({
+        readings: [],
+        cornealHysteresis: [],
+        perEye: {
+          OD: { average: null, tMax: null, count: 0, target: null },
+          OS: { average: null, tMax: null, count: 0, target: null },
+        },
+        threshold: 22,
+      });
+    }
+    return jsonResponse({
+      definitions: {
+        intraocularPressure: {
+          fields: {
+            value: { minimum: 11, maximum: 19, step: 2 },
+            method: { options: [{ code: "GAT", display: "Goldmann", active: true }] },
+          },
+        },
+        cornealHysteresis: {
+          fields: { value: { minimum: 7, maximum: 11, step: 0.5 } },
+        },
+      },
+    });
+  };
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<IopSection {...PROPS} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const dropdowns = renderer!.root.findAllByType(PowerDropdown);
+    for (const eye of ["OD", "OS"]) {
+      const iop = dropdowns.find((item) => item.props.ariaLabel === `${eye} IOP value`);
+      const hysteresis = dropdowns.find((item) => item.props.ariaLabel === `${eye} corneal hysteresis`);
+      assert.deepEqual(iop?.props.options, ["11", "13", "15", "17", "19"]);
+      assert.equal(iop?.props.defaultValue, "15");
+      assert.deepEqual(hysteresis?.props.options, ["7.00", "7.50", "8.00", "8.50", "9.00", "9.50", "10.00", "10.50", "11.00"]);
+      assert.equal(hysteresis?.props.defaultValue, "9.00");
+    }
+    assert.doesNotMatch(source("IopSection.tsx"), /type="number"/);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.fetch = originalFetch;
   }
-  assert.equal((html.match(/data-default="true"[^>]*>15/g) ?? []).length, 2);
-  assert.equal((html.match(/data-default="true"[^>]*>9\.00/g) ?? []).length, 2);
-  assert.doesNotMatch(source("IopSection.tsx"), /type="number"/);
+});
+
+test("PowerDropdown closes and disables its open options when the field becomes disabled", () => {
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const originalDocument = globalThis.document;
+  globalThis.requestAnimationFrame = (callback) => { callback(0); return 1; };
+  globalThis.cancelAnimationFrame = () => undefined;
+  Object.defineProperty(globalThis, "document", {
+    value: { addEventListener: () => undefined, removeEventListener: () => undefined },
+    configurable: true,
+  });
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    act(() => {
+      renderer = create(<PowerDropdown value="" options={["14", "15", "16"]} defaultValue="15" onChange={() => undefined} ariaLabel="IOP value" />);
+    });
+    const trigger = renderer!.root.findAllByProps({ "aria-label": "IOP value options" })
+      .find((item) => item.type === "button");
+    act(() => trigger!.props.onClick());
+    assert.equal(renderer!.root.findByProps({ role: "listbox" }).props.hidden, false);
+
+    act(() => {
+      renderer!.update(<PowerDropdown value="" options={["14", "15", "16"]} defaultValue="15" onChange={() => undefined} ariaLabel="IOP value" disabled />);
+    });
+    assert.equal(renderer!.root.findByProps({ role: "listbox" }).props.hidden, true);
+    for (const option of renderer!.root.findAllByProps({ role: "option" })) assert.equal(option.props.disabled, true);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    Object.defineProperty(globalThis, "document", { value: originalDocument, configurable: true });
+  }
 });
 
 test("all six Ortho-K lens parameters use their stated centered spinners", () => {
@@ -131,4 +211,11 @@ test("the two deferred clinical-vocabulary fields remain free text", () => {
 
 function source(file: string): string {
   return readFileSync(new URL(`../src/components/charting/${file}`, import.meta.url), "utf8");
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }

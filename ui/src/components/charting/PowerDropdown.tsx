@@ -44,6 +44,10 @@ export function PowerDropdown({
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
 
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   function openAtDefault() {
     setActiveIndex(defaultIndex(options, defaultValue));
     setOpen(true);
@@ -128,6 +132,7 @@ export function PowerDropdown({
             id={`${listboxId}-option-${index}`}
             type="button"
             role="option"
+            disabled={disabled}
             aria-selected={value === option}
             data-default={option === defaultValue ? "true" : undefined}
             onMouseEnter={() => setActiveIndex(index)}

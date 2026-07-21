@@ -273,12 +273,17 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
   }
 
   function selectManufacturer(eye: Eye, manufacturer: string) {
-    updateEye(eye, { manufacturer, product: "" });
+    updateEye(eye, { manufacturer, product: "", baseCurve: "", diameter: "" });
   }
 
   function selectProduct(eye: Eye, productCode: string) {
     const product = products.find((candidate) => candidate.code === productCode);
-    updateEye(eye, { product: productCode, ...(product?.lensTypeCode ? { lensType: product.lensTypeCode } : {}) });
+    updateEye(eye, {
+      product: productCode,
+      baseCurve: "",
+      diameter: "",
+      ...(product?.lensTypeCode ? { lensType: product.lensTypeCode } : {}),
+    });
   }
 
   function addAdditionalField(code: string) {
