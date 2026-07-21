@@ -11,7 +11,6 @@
   "ui/src/components/charting/DiagnosisPicker.tsx": 8,
   "ui/src/components/charting/DryEyeSection.tsx": 30,
   "ui/src/components/charting/EncounterHeader.tsx": 20,
-  "ui/src/components/charting/HpiSection.tsx": 13,
   "ui/src/components/charting/ImagingSection.tsx": 9,
   "ui/src/components/charting/IopSection.tsx": 20,
   "ui/src/components/charting/IopTimeline.tsx": 54,

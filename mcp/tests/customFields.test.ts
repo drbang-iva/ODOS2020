@@ -122,6 +122,37 @@ test("practice admin grants creation through stored data and clinicians cannot m
   assert.deepEqual(fhir.writeHeaders, [FINDING_DEFINITION_WRITE_HEADERS, FINDING_DEFINITION_WRITE_HEADERS]);
 });
 
+test("Review of Systems Add flag persists through the finding-definition mutation path across a store restart", async () => {
+  const fhir = new MemoryDefinitionFhir();
+  const seeds = buildFindingDefinitionSeeds();
+  const result = await handleFindingDefinitionMutationRequest(
+    endpointDeps("practice-admin", fhir, () => seeds),
+    {
+      authHeader: AUTH,
+      params: { stableKey: "hpi_ros" },
+      body: {
+        action: "add-field-option",
+        fieldKey: "reviewOfSystems",
+        code: "migraine",
+        display: "Migraine",
+        category: "general",
+      },
+    },
+  );
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+
+  const restarted = await new FhirFindingDefinitionStore(fhir, seeds).list();
+  const hpi = restarted.find((definition) => definition.stableKey === "hpi_ros");
+  const options = ((hpi?.valueSchema.fields as Record<string, { options?: Array<{ code: string; display: string; category: string }> }>).reviewOfSystems?.options ?? []);
+  assert.deepEqual(options.find((option) => option.code === "migraine"), {
+    code: "migraine",
+    display: "Migraine",
+    active: true,
+    category: "general",
+  });
+  assert.deepEqual(fhir.writeHeaders, [FINDING_DEFINITION_WRITE_HEADERS]);
+});
+
 test("specialty numeric and dropdown fields capture, rename, deactivate, and remain readable with C2 extras", async () => {
   let definition = specialtyDefinition();
   const number = createCustomField(definition, {

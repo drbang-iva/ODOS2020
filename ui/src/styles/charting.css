@@ -4,6 +4,26 @@
   overflow: hidden;
 }
 
+.odos-hpi-text {
+  color: var(--odos-text);
+}
+
+.odos-hpi-muted {
+  color: var(--odos-muted);
+}
+
+.odos-hpi-faint {
+  color: var(--odos-faint);
+}
+
+.odos-hpi-border {
+  border-color: var(--odos-line);
+}
+
+.odos-hpi-border-strong {
+  border-color: var(--odos-line-2);
+}
+
 .odos-charting-body {
   position: relative;
   min-height: 0;

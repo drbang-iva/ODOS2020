@@ -1,70 +1,219 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
+  ComplaintIntake,
   DEFAULT_HPI_ROS_OPTIONS,
-  HPI_ELEMENTS,
   HpiSection,
   buildHpiRequestBody,
+  complaintDefinitionForRos,
+  markRemainingReviewedNegative,
 } from "../src/components/charting/HpiSection";
+import {
+  blankComplaintDraft,
+  effectiveComplaintOptions,
+  renderComplaintNarrative,
+  type ComplaintDefinition,
+  type EncounterComplaint,
+  type GenericComplaintOptions,
+} from "../src/lib/complaints";
 import { SpineNav } from "../src/components/charting/SpineNav";
 
-test("HPI section statically renders chief complaint, all eight HPI elements, and extensible ROS controls", () => {
-  const html = renderToStaticMarkup(
-    <HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />,
-  );
+const GENERIC: GenericComplaintOptions = {
+  conditions: [{ code: "dry-eyes", display: "Dry Eyes", active: true }],
+  qualities: [{ code: "constant", display: "constant", active: true }],
+  treatments: [{ code: "no-treatment", display: "no treatment", active: true }],
+};
 
+const DRY_EYE: ComplaintDefinition = {
+  id: "complaint-definition-dry-eye",
+  stableKey: "dry-eye",
+  display: "Patient (Dry Eye)",
+  kind: "patient-symptom",
+  conditionOptions: [],
+  qualityOptions: [
+    { code: "environmentally-sensitive", display: "environmentally sensitive", active: true },
+    { code: "brought-on-by-drafts-or-fans", display: "brought on by drafts or fans", active: true },
+  ],
+  treatmentOptions: [
+    { code: "artificial-tears", display: "artificial tears", active: true },
+    { code: "warm-compresses", display: "warm compresses", active: true },
+  ],
+  seedRank: 10,
+  status: "active",
+};
+
+const ROUTINE: ComplaintDefinition = {
+  ...DRY_EYE,
+  id: "complaint-definition-routine-eye-exam",
+  stableKey: "routine-eye-exam",
+  display: "Routine Eye Exam",
+  kind: "evaluation-reason",
+  qualityOptions: [],
+  treatmentOptions: [],
+  seedRank: 3,
+};
+
+test("HPI section renders Presenting Complaints, Top Complaints, persistent ROS controls, and no legacy free-text grid", () => {
+  const html = renderToStaticMarkup(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, /Chief complaint \/ HPI \/ ROS/);
-  assert.match(html, /aria-label="Chief complaint"/);
-  for (const [, display] of HPI_ELEMENTS) assert.match(html, new RegExp(display.replace("/", "\\/")));
-  for (const option of DEFAULT_HPI_ROS_OPTIONS) assert.match(html, new RegExp(option.display.replace("/", "\\/")));
+  assert.match(html, /Presenting Complaints/);
+  assert.match(html, /Top Complaints/);
+  assert.match(html, /Search complaints/);
+  assert.match(html, /Other/);
   assert.match(html, /Eye-focused/);
   assert.match(html, /General medical/);
-  assert.match(html, /Not reviewed/);
-  assert.match(html, /Negative/);
-  assert.match(html, /Positive/);
+  assert.match(html, /Mark remaining reviewed: negative/);
   assert.match(html, /Add another medical flag/);
   assert.match(html, /Add flag/);
-  assert.match(html, /Save history/);
-  assert.match(html, /disabled=""/);
+  assert.doesNotMatch(html, /aria-label="Chief complaint"/);
+  for (const legacy of ["Modifying factors", "Associated signs / symptoms", "History of present illness"]) assert.doesNotMatch(html, new RegExp(legacy));
 });
 
-test("HPI request builder trims text, omits blank elements, and carries custom general-medical flags", () => {
-  const rosOptions = [
-    ...DEFAULT_HPI_ROS_OPTIONS,
-    { code: "migraine", display: "Migraine", category: "general" as const },
-  ];
+test("Complaint Intake renders all six clusters and the automated narrative controls", () => {
+  const draft = blankComplaintDraft({ complaintKey: "dry-eye" });
+  const html = renderToStaticMarkup(<ComplaintIntake
+    draft={draft}
+    definition={DRY_EYE}
+    options={effectiveComplaintOptions(GENERIC, DRY_EYE)}
+    preview="Patient reports dry eye. Current treatment: none."
+    overrideDirty={false}
+    saving={false}
+    onUpdate={() => undefined}
+    onToggle={() => undefined}
+    onNarrativeMode={() => undefined}
+    onRegenerate={() => undefined}
+    onCancel={() => undefined}
+    onSave={() => undefined}
+  />);
+  for (const label of ["Symptoms", "Laterality", "Character", "Duration", "Current treatment", "Referral &amp; history", "History Narrative"]) assert.match(html, new RegExp(label));
+  assert.match(html, /environmentally sensitive/);
+  assert.match(html, /artificial tears/);
+  assert.match(html, /Automated/);
+  assert.match(html, /Override/);
+  assert.match(html, /Save and Add Another/);
+  assert.match(html, /Save Complaint/);
+});
+
+test("dry eye layers its sourced vocabulary while every other seed remains generic-only", () => {
+  const dry = effectiveComplaintOptions(GENERIC, DRY_EYE);
+  const routine = effectiveComplaintOptions(GENERIC, ROUTINE);
+  assert.deepEqual(dry.qualities.map((option) => option.code), ["constant", "environmentally-sensitive", "brought-on-by-drafts-or-fans"]);
+  assert.deepEqual(dry.treatments.map((option) => option.code), ["no-treatment", "artificial-tears", "warm-compresses"]);
+  assert.deepEqual(routine, GENERIC);
+});
+
+test("History Narrative matches the worked dry-eye example and override text stays frozen", () => {
+  const draft = {
+    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
+    conditions: ["dry-eyes"],
+    eyeLocation: "OU" as const,
+    eyeComparison: "right-worse" as const,
+    qualities: ["constant", "environmentally-sensitive", "brought-on-by-drafts-or-fans"],
+    duration: { value: 3, unit: "months" as const },
+    treatmentsTried: ["artificial-tears", "warm-compresses"],
+    additionalHistory: "worse at end of workday",
+  };
+  const narrative = renderComplaintNarrative(draft, DRY_EYE, GENERIC);
+  assert.equal(narrative, "Patient reports dry eyes, both eyes, right worse than left, ongoing for 3 months. Described as constant, environmentally sensitive, brought on by drafts or fans. Current treatment: artificial tears, warm compresses. Additional history: worse at end of workday.");
+  assert.equal(renderComplaintNarrative({
+    ...draft,
+    conditions: [],
+    narrative: { mode: "override", overrideText: "Clinician-authored paragraph." },
+  }, DRY_EYE, GENERIC), "Clinician-authored paragraph.");
+  assert.match(renderComplaintNarrative({
+    ...draft,
+    duration: { value: 1, unit: "weeks" },
+  }, DRY_EYE, GENERIC), /ongoing for 1 week\./);
+  const dirtyHtml = renderToStaticMarkup(<ComplaintIntake
+    draft={{ ...draft, narrative: { mode: "override", overrideText: narrative } }}
+    definition={DRY_EYE}
+    options={effectiveComplaintOptions(GENERIC, DRY_EYE)}
+    preview={narrative}
+    overrideDirty={true}
+    saving={false}
+    onUpdate={() => undefined}
+    onToggle={() => undefined}
+    onNarrativeMode={() => undefined}
+    onRegenerate={() => undefined}
+    onCancel={() => undefined}
+    onSave={() => undefined}
+  />);
+  assert.match(dirtyHtml, /Narrative is overridden and coded fields changed/);
+  assert.match(dirtyHtml, /Regenerate from coded fields/);
+});
+
+test("ROS bulk-negative changes only Not reviewed items and positive rows map to pre-seeded complaints", () => {
+  const statuses = markRemainingReviewedNegative(
+    { "vision-changes": "positive", "eye-pain": "negative", diabetes: "" },
+    DEFAULT_HPI_ROS_OPTIONS,
+    "eye",
+  );
+  assert.equal(statuses["vision-changes"], "positive");
+  assert.equal(statuses["eye-pain"], "negative");
+  assert.equal(statuses["floaters-flashes"], "negative");
+  assert.equal(statuses.diabetes, "");
+  assert.equal(complaintDefinitionForRos(DEFAULT_HPI_ROS_OPTIONS.find((option) => option.code === "eye-pain")!, [DRY_EYE, ROUTINE, { ...DRY_EYE, stableKey: "patient-eye-pain" }])?.stableKey, "patient-eye-pain");
+  assert.equal(complaintDefinitionForRos(DEFAULT_HPI_ROS_OPTIONS.find((option) => option.code === "diabetes")!, [DRY_EYE, ROUTINE]), undefined);
+});
+
+test("history request transmits only reviewed ROS values and bulk-attestation provenance inputs", () => {
   const body = buildHpiRequestBody({
     patientReference: "Patient/p1",
     encounterReference: "Encounter/e1",
-    chiefComplaint: "  blurred vision  ",
-    hpi: {
-      location: "  both eyes ",
-      quality: "",
-      severity: " moderate ",
-      duration: "",
-      timing: "",
-      context: " reading ",
-      modifyingFactors: "",
-      associatedSignsSymptoms: " eyestrain ",
-    },
-    rosStatuses: { "vision-changes": "positive", diabetes: "negative", migraine: "positive" },
-    rosOptions,
-  });
-
-  assert.equal(body.chiefComplaint, "blurred vision");
-  assert.deepEqual(body.hpi, {
-    location: "both eyes",
-    severity: "moderate",
-    context: "reading",
-    associatedSignsSymptoms: "eyestrain",
+    rosStatuses: { "vision-changes": "positive", diabetes: "negative" },
+    rosOptions: DEFAULT_HPI_ROS_OPTIONS,
+    reviewAttestations: ["general"],
   });
   assert.deepEqual(body.reviewOfSystems, [
     { code: "vision-changes", display: "Vision changes", category: "eye", status: "positive" },
     { code: "diabetes", display: "Diabetes", category: "general", status: "negative" },
-    { code: "migraine", display: "Migraine", category: "general", status: "positive" },
   ]);
+  assert.deepEqual(body.reviewAttestations, ["general"]);
+});
+
+test("remove complaint network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const remove = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Remove");
+    assert.ok(remove);
+    await act(async () => {
+      remove.props.onClick();
+      await flushEffects();
+    });
+  });
+});
+
+test("reorder complaint network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const complaints = renderer.root.findAllByType("article");
+    assert.equal(complaints.length, 2);
+    act(() => complaints[0]!.props.onDragStart());
+    await act(async () => {
+      complaints[1]!.props.onDrop();
+      await flushEffects();
+    });
+  });
+});
+
+test("add medical flag network failures surface a visible error", async () => {
+  await assertRejectedMutationVisible(async (renderer) => {
+    const input = renderer.root.findByProps({ "aria-label": "New general-medical review flag" });
+    act(() => input.props.onChange({ target: { value: "Asthma" } }));
+    const add = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Add flag");
+    assert.ok(add);
+    await act(async () => {
+      add.props.onClick();
+      await flushEffects();
+    });
+  });
+});
+
+test("legacy next-field wiring is fully removed from the source", () => {
+  const source = readFileSync(new URL("../src/components/charting/HpiSection.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /HPI_ELEMENTS|EMPTY_HPI|chiefComplaint|modifyingFactors|associatedSignsSymptoms/);
 });
 
 test("History is the first top-level spine group before Pretest", () => {
@@ -72,10 +221,55 @@ test("History is the first top-level spine group before Pretest", () => {
   const historyIndex = html.indexOf("HISTORY");
   const hpiIndex = html.indexOf("Chief Complaint / HPI / ROS");
   const pretestIndex = html.indexOf("PRETEST");
-
-  assert.ok(historyIndex >= 0);
-  assert.ok(hpiIndex >= 0);
-  assert.ok(pretestIndex >= 0);
-  assert.ok(historyIndex < hpiIndex);
-  assert.ok(hpiIndex < pretestIndex);
+  assert.ok(historyIndex >= 0 && hpiIndex > historyIndex && pretestIndex > hpiIndex);
 });
+
+async function assertRejectedMutationVisible(action: (renderer: ReactTestRenderer) => Promise<void>): Promise<void> {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === "POST") throw new Error("Network unavailable");
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) {
+      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
+    }
+    if (url.endsWith("/clinical-graph/complaint-definitions")) {
+      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
+      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1), complaintFixture("complaint-2", 2)] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await flushEffects();
+    });
+    await action(renderer);
+    assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Network unavailable/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+}
+
+function complaintFixture(id: string, ordinal: number): EncounterComplaint {
+  return {
+    ...blankComplaintDraft({ complaintKey: "dry-eye" }),
+    id,
+    encounterId: "e1",
+    patientId: "p1",
+    ordinal,
+    status: "active",
+    renderedNarrative: `Complaint ${ordinal}`,
+  };
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+}
+
+async function flushEffects(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+}

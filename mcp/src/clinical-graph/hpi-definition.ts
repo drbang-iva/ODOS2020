@@ -17,23 +17,12 @@ export const HPI_ROS_OPTIONS = [
   { code: "hypertension", display: "Hypertension", category: "general" },
 ] as const;
 
-export const HPI_FIELDS = [
-  ["location", "Location"],
-  ["quality", "Quality"],
-  ["severity", "Severity"],
-  ["duration", "Duration"],
-  ["timing", "Timing"],
-  ["context", "Context"],
-  ["modifyingFactors", "Modifying factors"],
-  ["associatedSignsSymptoms", "Associated signs / symptoms"],
-] as const;
-
 export function buildHpiFindingDefinition(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition {
   return buildClinicalFindingDefinition({
     stableKey: HPI_STABLE_KEY,
-    display: "Chief complaint, HPI, and review of systems",
+    display: "History narrative and review of systems",
     sectionKey: "hpi",
     anatomyTarget: "other",
     valueSchema: {
@@ -44,11 +33,6 @@ export function buildHpiFindingDefinition(
         note: "Chief complaint, HPI, and ROS use ODOS-local coding only. External terminology alignment requires current two-primary-source verification before external codes are introduced.",
       },
       fields: {
-        chiefComplaint: { display: "Chief complaint", type: "text", maximumLength: 2000 },
-        ...Object.fromEntries(HPI_FIELDS.map(([key, display]) => [
-          key,
-          { display, type: "text", maximumLength: 2000 },
-        ])),
         reviewOfSystems: {
           display: "Review of systems",
           type: "tri-state-list",
@@ -59,7 +43,7 @@ export function buildHpiFindingDefinition(
       },
     },
     sourceStatus: "verified-seed",
-    fhirObservationCode: odosConcept(HPI_STABLE_KEY, "Chief complaint, HPI, and review of systems"),
+    fhirObservationCode: odosConcept(HPI_STABLE_KEY, "History narrative and review of systems"),
     allowDiagnosisMapping: false,
     notBillReady: true,
     provenance,
