@@ -2,7 +2,7 @@ import type { Basic, CarePlan, Condition, Observation, ServiceRequest } from "@m
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { GLAUCOMA_SUSPECT_PROTOCOL } from "./protocol-fixtures.js";
-import { matchesCode, ProtocolService } from "./protocol-service.js";
+import { AcceptedChargeUnapplyError, matchesCode, ProtocolService } from "./protocol-service.js";
 import type { ProtocolFhirClient } from "./protocol-store.js";
 import { protocolFindingToGonioObservation } from "./gonioscopy.js";
 import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-types.js";
@@ -145,7 +145,14 @@ export async function handleProtocolUnapplyRequest(
   if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = z.object({ applicationId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "applicationId is required." } };
-  return { status: 200, body: await liveService(staff, deps.now).unapply(parsed.data.applicationId) };
+  try {
+    return { status: 200, body: await liveService(staff, deps.now).unapply(parsed.data.applicationId) };
+  } catch (error) {
+    if (error instanceof AcceptedChargeUnapplyError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    throw error;
+  }
 }
 
 export async function handleProtocolSignCleanupRequest(
