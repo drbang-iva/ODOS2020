@@ -91,6 +91,10 @@ import {
   handleProtocolSignCleanupRequest,
 } from "./clinical-graph/protocol-endpoint.js";
 import {
+  handleProcedureFeeScheduleMutationRequest,
+  handleProcedureFeeScheduleRequest,
+} from "./clinical-graph/procedure-fee-schedule-endpoint.js";
+import {
   handleImagingCaptureRequest,
   handleLongitudinalImagingCaptureRequest,
   handleLongitudinalImagingListRequest,
@@ -6160,6 +6164,34 @@ async function main(): Promise<void> {
         }
       });
 
+      app.get("/clinical-graph/fee-schedule", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureFeeScheduleRequest(
+            { authenticate: authenticateStaffRouteForAction("identity.manage") },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: fee schedule route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "fee schedule route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/fee-schedule/:procedureConceptKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProcedureFeeScheduleMutationRequest(
+            { authenticate: authenticateStaffRouteForAction("identity.manage") },
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: fee schedule mutation route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "fee schedule mutation route failed" });
+        }
+      });
+
       app.post("/clinical-graph/protocols/offers", async (req, res) => {
         try {
           await authenticateWithMedplum();
@@ -6220,7 +6252,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleProtocolSignCleanupRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authenticate: authenticateStaffRouteForAction("chart.write"), feeScheduleFhir: fhir },
             { authHeader: req.header("authorization"), params: req.params },
           );
           res.status(result.status).json(result.body);

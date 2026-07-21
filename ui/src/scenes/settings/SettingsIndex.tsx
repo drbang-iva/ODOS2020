@@ -95,6 +95,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         synonyms: ["prices", "retail", "wholesale", "contact lens", "frames", "cost"],
       },
       {
+        href: "/settings/fee-schedule",
+        title: "Fee Schedule",
+        description: "Set practice fees for billable clinical procedures.",
+        synonyms: ["fees", "charges", "procedures", "pricing", "billable"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/lens-catalog",
         title: "Lens Catalog",
         description: "Manage per-lab lens products, coatings, modifiers, and shared vocabularies.",

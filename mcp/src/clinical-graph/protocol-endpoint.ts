@@ -6,6 +6,11 @@ import { matchesCode, ProtocolService } from "./protocol-service.js";
 import type { ProtocolFhirClient } from "./protocol-store.js";
 import { protocolFindingToGonioObservation } from "./gonioscopy.js";
 import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-types.js";
+import {
+  materializeAcceptedChargeProposals,
+  type ProcedureChargeFhir,
+  type ProcedureFeeScheduleFhir,
+} from "./procedure-fee-schedule.js";
 
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
 
@@ -16,6 +21,7 @@ interface LiveFhir extends ProtocolFhirClient {
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
 export interface ProtocolEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<Staff | null>;
+  feeScheduleFhir?: ProcedureFeeScheduleFhir;
   now?: () => string;
 }
 
@@ -151,7 +157,18 @@ export async function handleProtocolSignCleanupRequest(
   if (!may(staff.actorRole, "chart.write")) return { status: 403, body: { error: "chart.write role required" } };
   const parsed = z.object({ encounterId: z.string().min(1) }).safeParse(input.params);
   if (!parsed.success) return { status: 400, body: { error: "encounterId is required." } };
-  return { status: 200, body: { abandoned: await liveService(staff, deps.now).abandonOpenForSignedEncounter(parsed.data.encounterId) } };
+  const service = liveService(staff, deps.now);
+  const charges = await materializeAcceptedChargeProposals({
+    fhir: staff.fhir as unknown as ProcedureChargeFhir,
+    feeScheduleFhir: deps.feeScheduleFhir,
+    encounterId: parsed.data.encounterId,
+    actorReference: staff.staffReference,
+    charges: service.charges,
+    applications: service.applications,
+    now: deps.now,
+  });
+  const abandoned = await service.abandonOpenForSignedEncounter(parsed.data.encounterId);
+  return { status: 200, body: { abandoned, ...charges } };
 }
 
 function liveService(staff: Staff, now?: () => string): ProtocolService {

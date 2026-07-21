@@ -33,6 +33,7 @@ import { VisionPlanTemplatesSettings } from "./scenes/settings/VisionPlanTemplat
 import { VisitTypeSettings } from "./scenes/settings/VisitTypeSettings";
 import { DiagnosisSettings } from "./scenes/settings/DiagnosisSettings";
 import { OpticalPricingSettings } from "./scenes/settings/OpticalPricingSettings";
+import { FeeScheduleSettings } from "./scenes/settings/FeeScheduleSettings";
 import { LensCatalogSettings } from "./scenes/settings/LensCatalogSettings";
 import { PlanProfilesSettings } from "./scenes/settings/PlanProfilesSettings";
 import { StaffSettings } from "./scenes/settings/StaffSettings";
@@ -351,6 +352,8 @@ export function RouteSwitch({
       return <DiagnosisSettings />;
     case "/settings/optical-pricing":
       return <OpticalPricingSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/fee-schedule":
+      return <FeeScheduleSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/lens-catalog":
       return <LensCatalogSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/plan-profiles":

@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-unpriced-charge",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-unpriced-charge",
+  "version": "money-middle-m1a-1",
+  "name": "ODOSUnpricedCharge",
+  "title": "ODOS Unpriced Charge",
+  "status": "active",
+  "date": "2026-07-21",
+  "publisher": "ODOS",
+  "description": "Marks a billable ChargeItem that was conservatively materialized at zero dollars because no active practice fee was available.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "ChargeItem"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Charge was materialized without an active practice fee",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-unpriced-charge"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

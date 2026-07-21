@@ -1,0 +1,367 @@
+import type {
+  Bundle,
+  ChargeItem,
+  ChargeItemDefinition,
+  Encounter,
+  Resource,
+} from "@medplum/fhirtypes";
+import { searchAll } from "../fhir-search.js";
+import type { ChargeProposal, ProtocolApplication } from "./protocol-types.js";
+
+const BASE = "https://odos2020.com/fhir";
+const PRACTICE_ID = "odos-practice";
+const PROCEDURE_CONCEPT_SYSTEM = `${BASE}/CodeSystem/procedure-concept`;
+const FEE_DEFINITION_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/procedure-fee-definition`;
+const CHARGE_PROPOSAL_IDENTIFIER_SYSTEM = `${BASE}/NamingSystem/charge-proposal-charge-item`;
+const ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
+
+export const ODOS_UNPRICED_CHARGE_EXTENSION_URL =
+  `${BASE}/StructureDefinition/odos-unpriced-charge`;
+
+export const PROCEDURE_FEE_SEEDS = [
+  { procedureConceptKey: "gonioscopy", display: "Gonioscopy" },
+  { procedureConceptKey: "corneal-pachymetry", display: "Corneal pachymetry" },
+  { procedureConceptKey: "scodi-optic-nerve", display: "SCODI optic nerve" },
+  { procedureConceptKey: "visual-field-threshold", display: "Threshold visual field" },
+  { procedureConceptKey: "fundus-photography", display: "Fundus photography" },
+] as const;
+
+export interface ProcedureFeeScheduleFhir {
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
+  create<T extends Resource>(resource: T, headers?: Record<string, string>): Promise<T>;
+  update<T extends Resource>(
+    resourceType: T["resourceType"],
+    id: string,
+    resource: T,
+    headers?: Record<string, string>,
+  ): Promise<T>;
+}
+
+export interface ProcedureChargeFhir {
+  read(resourceType: "Encounter", id: string): Promise<Encounter>;
+  create(resource: ChargeItem, headers?: Record<string, string>): Promise<ChargeItem>;
+}
+
+export interface ProcedureFeeScheduleItem {
+  id: string;
+  procedureConceptKey: string;
+  display: string;
+  active: boolean;
+  priceCents?: number;
+  version: string;
+}
+
+type RowStore<T extends { id: string }> = {
+  list(): Promise<T[]>;
+  save(value: T): Promise<T>;
+};
+
+export async function ensureProcedureFeeSchedule(
+  fhir: ProcedureFeeScheduleFhir,
+  additionalConceptKeys: readonly string[] = [],
+): Promise<ChargeItemDefinition[]> {
+  const existing = await listProcedureFeeDefinitions(fhir);
+  const byKey = new Map<string, ChargeItemDefinition>();
+  for (const definition of existing) {
+    const key = procedureConceptKey(definition);
+    if (!key) continue;
+    if (byKey.has(key)) throw new Error(`Duplicate procedure fee definitions found for ${key}.`);
+    byKey.set(key, definition);
+  }
+  const concepts = new Map<string, string>(
+    PROCEDURE_FEE_SEEDS.map((seed) => [seed.procedureConceptKey, seed.display]),
+  );
+  for (const key of additionalConceptKeys) {
+    if (key.trim() && !concepts.has(key)) concepts.set(key, displayFromKey(key));
+  }
+  for (const [key, display] of concepts) {
+    if (byKey.has(key)) continue;
+    const created = await fhir.create(
+      buildProcedureFeeDefinition({ procedureConceptKey: key, display }),
+      {
+        "X-ODOS-Source": "procedure-fee-schedule",
+        "If-None-Exist": `identifier=${FEE_DEFINITION_IDENTIFIER_SYSTEM}|${key}`,
+      },
+    );
+    byKey.set(key, created);
+  }
+  return [...byKey.values()];
+}
+
+export async function listProcedureFeeSchedule(
+  fhir: ProcedureFeeScheduleFhir,
+): Promise<ProcedureFeeScheduleItem[]> {
+  const definitions = await ensureProcedureFeeSchedule(fhir);
+  return definitions
+    .map(procedureFeeScheduleItem)
+    .sort((left, right) => left.display.localeCompare(right.display));
+}
+
+export async function saveProcedureFeeScheduleItem(
+  fhir: ProcedureFeeScheduleFhir,
+  input: {
+    procedureConceptKey: string;
+    priceCents?: number | null;
+    active: boolean;
+  },
+): Promise<ProcedureFeeScheduleItem> {
+  assertCents(input.priceCents);
+  const definitions = await ensureProcedureFeeSchedule(fhir, [input.procedureConceptKey]);
+  const existing = definitions.find((definition) =>
+    procedureConceptKey(definition) === input.procedureConceptKey
+  );
+  if (!existing?.id) throw new Error("Procedure fee definition could not be resolved for update.");
+  const priceCents = input.priceCents === undefined
+    ? definitionPriceCents(existing)
+    : input.priceCents ?? undefined;
+  const saved = await fhir.update(
+    "ChargeItemDefinition",
+    existing.id,
+    buildProcedureFeeDefinition({
+      procedureConceptKey: input.procedureConceptKey,
+      display: existing.title ?? displayFromKey(input.procedureConceptKey),
+      priceCents,
+      active: input.active,
+      existing,
+    }),
+    { "X-ODOS-Source": "procedure-fee-schedule" },
+  );
+  return procedureFeeScheduleItem(saved);
+}
+
+export async function materializeAcceptedChargeProposals(input: {
+  fhir: ProcedureChargeFhir;
+  feeScheduleFhir?: ProcedureFeeScheduleFhir;
+  encounterId: string;
+  actorReference: string;
+  charges: RowStore<ChargeProposal>;
+  applications: RowStore<ProtocolApplication>;
+  now?: () => string;
+}): Promise<{ materialized: number; finalized: number }> {
+  const proposals = (await input.charges.list()).filter((proposal) =>
+    proposal.encounterId === input.encounterId && proposal.state === "accepted"
+  );
+  if (!proposals.length) return { materialized: 0, finalized: 0 };
+
+  const encounter = await input.fhir.read("Encounter", input.encounterId);
+  const patientReference = encounter.subject?.reference;
+  if (!patientReference?.match(/^Patient\/[A-Za-z0-9.-]+$/)) {
+    throw new Error("Encounter must have a local Patient subject before charges can be materialized.");
+  }
+  const patientId = patientReference.slice("Patient/".length);
+  const applications = await input.applications.list();
+  for (const proposal of proposals) {
+    const application = applications.find((row) => row.id === proposal.protocolApplicationId);
+    if (!application || application.encounterId !== input.encounterId || application.patientId !== patientId ||
+      !application.confirmed || application.undoState !== "active") {
+      throw new Error(`Charge proposal ${proposal.id} is not linked to an active confirmed application for this encounter and patient.`);
+    }
+    if (!Number.isSafeInteger(proposal.units) || proposal.units < 1) {
+      throw new Error(`Charge proposal ${proposal.id} has invalid units.`);
+    }
+    if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(proposal.procedureConceptKey)) {
+      throw new Error(`Charge proposal ${proposal.id} has an invalid procedure concept key.`);
+    }
+    if (proposal.dxPointers.some((reference) => !/^Condition\/[A-Za-z0-9.-]+$/.test(reference))) {
+      throw new Error(`Charge proposal ${proposal.id} has an invalid diagnosis pointer.`);
+    }
+  }
+  const definitions = await ensureProcedureFeeSchedule(
+    input.feeScheduleFhir ?? input.fhir as unknown as ProcedureFeeScheduleFhir,
+    proposals.map((proposal) => proposal.procedureConceptKey),
+  );
+  const definitionsByKey = new Map(definitions.flatMap((definition) => {
+    const key = procedureConceptKey(definition);
+    return key ? [[key, definition] as const] : [];
+  }));
+  const enteredDate = input.now?.() ?? new Date().toISOString();
+  let materialized = 0;
+  let finalized = 0;
+
+  for (const proposal of proposals) {
+    if (proposal.chargeItemRef) {
+      await input.charges.save({ ...proposal, state: "finalized" });
+      finalized += 1;
+      continue;
+    }
+    const definition = definitionsByKey.get(proposal.procedureConceptKey);
+    const unitPriceCents = definition?.status === "active"
+      ? definitionPriceCents(definition)
+      : undefined;
+    const totalCents = unitPriceCents === undefined ? 0 : unitPriceCents * proposal.units;
+    if (!Number.isSafeInteger(totalCents)) {
+      throw new Error(`Charge proposal ${proposal.id} total is outside the safe integer range.`);
+    }
+    const chargeItem = buildChargeItem({
+      proposal,
+      definition,
+      patientReference,
+      actorReference: input.actorReference,
+      occurrenceDateTime: encounter.period?.start ?? enteredDate,
+      enteredDate,
+      totalCents,
+      unpriced: unitPriceCents === undefined,
+    });
+    const saved = await input.fhir.create(chargeItem, {
+      "X-ODOS-Source": "protocol-charge-materializer",
+      "If-None-Exist": `identifier=${CHARGE_PROPOSAL_IDENTIFIER_SYSTEM}|${proposal.id}`,
+    });
+    if (!saved.id) throw new Error(`ChargeItem for proposal ${proposal.id} was saved without an id.`);
+    await input.charges.save({
+      ...proposal,
+      state: "finalized",
+      chargeItemRef: `ChargeItem/${saved.id}`,
+    });
+    materialized += 1;
+    finalized += 1;
+  }
+  return { materialized, finalized };
+}
+
+export function buildProcedureFeeDefinition(input: {
+  procedureConceptKey: string;
+  display: string;
+  priceCents?: number;
+  active?: boolean;
+  existing?: ChargeItemDefinition;
+}): ChargeItemDefinition {
+  if (!/^[a-z0-9][a-z0-9-]{0,99}$/.test(input.procedureConceptKey)) {
+    throw new Error("Procedure concept key must use lowercase letters, numbers, and hyphens.");
+  }
+  assertCents(input.priceCents);
+  const version = input.existing ? nextVersion(input.existing.version) : "1";
+  return {
+    resourceType: "ChargeItemDefinition",
+    ...(input.existing?.id ? { id: input.existing.id } : {}),
+    ...(input.existing?.meta ? { meta: input.existing.meta } : {}),
+    url: procedureFeeCanonical(input.procedureConceptKey),
+    identifier: [{ system: FEE_DEFINITION_IDENTIFIER_SYSTEM, value: input.procedureConceptKey }],
+    version,
+    status: input.active === false ? "retired" : "active",
+    title: input.display,
+    code: {
+      coding: [{
+        system: PROCEDURE_CONCEPT_SYSTEM,
+        code: input.procedureConceptKey,
+        display: input.display,
+      }],
+      text: input.display,
+    },
+    ...(input.priceCents === undefined ? {} : {
+      propertyGroup: [{
+        priceComponent: [{
+          type: "base",
+          code: { coding: [{ system: ACT_CODE_SYSTEM, code: "CHRG" }] },
+          amount: { value: input.priceCents / 100, currency: "USD" },
+        }],
+      }],
+    }),
+  };
+}
+
+function buildChargeItem(input: {
+  proposal: ChargeProposal;
+  definition?: ChargeItemDefinition;
+  patientReference: string;
+  actorReference: string;
+  occurrenceDateTime: string;
+  enteredDate: string;
+  totalCents: number;
+  unpriced: boolean;
+}): ChargeItem {
+  const display = input.definition?.title ?? displayFromKey(input.proposal.procedureConceptKey);
+  const canonical = input.definition?.url ?? procedureFeeCanonical(input.proposal.procedureConceptKey);
+  const version = input.definition?.version;
+  return {
+    resourceType: "ChargeItem",
+    identifier: [{ system: CHARGE_PROPOSAL_IDENTIFIER_SYSTEM, value: input.proposal.id }],
+    definitionCanonical: [`${canonical}${version ? `|${version}` : ""}`],
+    status: "billable",
+    code: input.definition?.code ?? {
+      coding: [{
+        system: PROCEDURE_CONCEPT_SYSTEM,
+        code: input.proposal.procedureConceptKey,
+        display,
+      }],
+      text: display,
+    },
+    subject: { reference: input.patientReference },
+    context: { reference: `Encounter/${input.proposal.encounterId}` },
+    occurrenceDateTime: input.occurrenceDateTime,
+    quantity: { value: input.proposal.units },
+    priceOverride: { value: input.totalCents / 100, currency: "USD" },
+    enterer: { reference: input.actorReference },
+    enteredDate: input.enteredDate,
+    supportingInformation: [...new Set(input.proposal.dxPointers)].map((reference) => ({ reference })),
+    ...(input.unpriced ? {
+      extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
+    } : {}),
+  };
+}
+
+async function listProcedureFeeDefinitions(
+  fhir: ProcedureFeeScheduleFhir,
+): Promise<ChargeItemDefinition[]> {
+  return (await searchAll<ChargeItemDefinition>(fhir, "ChargeItemDefinition", { _count: "100" }))
+    .filter((definition) => Boolean(procedureConceptKey(definition)));
+}
+
+function procedureFeeScheduleItem(definition: ChargeItemDefinition): ProcedureFeeScheduleItem {
+  const key = procedureConceptKey(definition);
+  if (!key) throw new Error("ChargeItemDefinition is not an ODOS procedure fee definition.");
+  return {
+    id: key,
+    procedureConceptKey: key,
+    display: definition.title ?? displayFromKey(key),
+    active: definition.status === "active",
+    priceCents: definitionPriceCents(definition),
+    version: definition.version ?? "1",
+  };
+}
+
+function procedureConceptKey(definition: ChargeItemDefinition): string | undefined {
+  return definition.code?.coding?.find((coding) => coding.system === PROCEDURE_CONCEPT_SYSTEM)?.code;
+}
+
+function definitionPriceCents(definition: ChargeItemDefinition): number | undefined {
+  const basePrices = definition.propertyGroup
+    ?.flatMap((group) => group.priceComponent ?? [])
+    .filter((component) => component.type === "base") ?? [];
+  if (basePrices.length > 1) {
+    throw new Error(`Procedure fee definition ${procedureConceptKey(definition) ?? definition.id ?? "unknown"} has multiple base prices.`);
+  }
+  const value = basePrices[0]?.amount?.value;
+  if (value === undefined) return undefined;
+  const scaled = value * 100;
+  const cents = Math.round(scaled);
+  if (!Number.isSafeInteger(cents) || value < 0 || Math.abs(scaled - cents) > 0.000001) {
+    throw new Error(`Procedure fee definition ${procedureConceptKey(definition) ?? definition.id ?? "unknown"} has an invalid base price.`);
+  }
+  return cents;
+}
+
+function procedureFeeCanonical(procedureConceptKey: string): string {
+  return `https://odos2020.com/practice/${PRACTICE_ID}/charge-rules/procedures/${encodeURIComponent(procedureConceptKey)}`;
+}
+
+function nextVersion(version: string | undefined): string {
+  const current = Number(version ?? "0");
+  if (!Number.isSafeInteger(current) || current < 0) {
+    throw new Error("Procedure fee definition version must be a nonnegative integer.");
+  }
+  return String(current + 1);
+}
+
+function assertCents(value: number | null | undefined): void {
+  if (value !== undefined && value !== null && (!Number.isSafeInteger(value) || value < 0)) {
+    throw new Error("Procedure fee must be a nonnegative integer number of cents.");
+  }
+}
+
+function displayFromKey(key: string): string {
+  return key.split("-").filter(Boolean).map((part) =>
+    `${part[0]?.toLocaleUpperCase() ?? ""}${part.slice(1)}`
+  ).join(" ");
+}
