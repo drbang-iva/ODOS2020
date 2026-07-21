@@ -92,6 +92,7 @@ test("specialty-lens numeric geometry uses centered spinner fields", () => {
   assert.match(specialty, /field\.code === "center_thickness" \|\| field\.code === "edge_thickness"/);
   assert.match(specialty, /manufacturer, product: "", baseCurve: "", diameter: ""/);
   assert.match(specialty, /product: productCode,[\s\S]*baseCurve: "",[\s\S]*diameter: ""/);
+  assert.match(specialty, /lensType: product\?\.lensTypeCode \?\? ""/);
   assert.doesNotMatch(specialty, /<TextField label="Base Curve \(mm\)"/);
   assert.doesNotMatch(specialty, /<TextField label="Diameter \(mm\)"/);
 });

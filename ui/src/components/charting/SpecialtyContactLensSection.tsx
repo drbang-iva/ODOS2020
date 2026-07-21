@@ -282,7 +282,7 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
       product: productCode,
       baseCurve: "",
       diameter: "",
-      ...(product?.lensTypeCode ? { lensType: product.lensTypeCode } : {}),
+      lensType: product?.lensTypeCode ?? "",
     });
   }
 
