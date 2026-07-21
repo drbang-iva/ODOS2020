@@ -79,7 +79,6 @@ export class PgDiagnosisVisitStatusStore implements DiagnosisVisitStatusStore {
       ON CONFLICT (condition_reference) DO UPDATE SET
         encounter_id = EXCLUDED.encounter_id,
         status = EXCLUDED.status,
-        set_by = EXCLUDED.set_by,
         updated_at = EXCLUDED.updated_at
       RETURNING condition_reference, encounter_id, status, set_by, set_at, updated_at
     `, [input.conditionReference, input.encounterId, input.status, input.setBy, input.at]);

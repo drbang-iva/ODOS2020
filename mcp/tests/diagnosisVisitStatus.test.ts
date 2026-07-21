@@ -33,7 +33,7 @@ class MemoryStatusStore implements DiagnosisVisitStatusStore {
       conditionReference: input.conditionReference,
       encounterId: input.encounterId,
       status: input.status,
-      setBy: input.setBy,
+      setBy: existing?.setBy ?? input.setBy,
       setAt: existing?.setAt ?? input.at,
       updatedAt: input.at,
     };
@@ -95,21 +95,28 @@ class MemoryFhir {
   }
 }
 
-test("confirm persists worsening and a pre-sign update changes the same sidecar row", async () => {
+test("confirm freezes the original setter and timestamp when a different clinician changes status", async () => {
   const fhir = encounterFhir();
   const store = new MemoryStatusStore();
-  const authenticate = async () => ({
-    staffReference: "Practitioner/doctor-1",
-    actorRole: "clinician" as PracticeRoleId,
-    fhir,
-  });
+  const authenticate = async (authHeader: string | undefined) => {
+    const staffReference = authHeader === "Bearer clinician-a"
+      ? "Practitioner/clinician-a"
+      : authHeader === "Bearer clinician-b"
+        ? "Practitioner/clinician-b"
+        : undefined;
+    return staffReference ? {
+      staffReference,
+      actorRole: "clinician" as PracticeRoleId,
+      fhir,
+    } : null;
+  };
 
   const confirmed = await handleDiagnosisPickRequest({
     authenticate,
     diagnosisVisitStatusStore: store,
     now: () => "2026-07-21T14:00:00.000Z",
   }, {
-    authHeader: "Bearer doctor-1",
+    authHeader: "Bearer clinician-a",
     params: { encounterId: "encounter-1" },
     body: { diagnosisKey: "myopia", laterality: "OD", action: "confirm", status: "worsening" },
   });
@@ -123,7 +130,7 @@ test("confirm persists worsening and a pre-sign update changes the same sidecar 
     store,
     now: () => "2026-07-21T14:05:00.000Z",
   }, {
-    authHeader: "Bearer doctor-1",
+    authHeader: "Bearer clinician-b",
     params: { encounterId: "encounter-1", conditionId: condition.id },
     body: { status: "improved" },
   });
@@ -133,7 +140,7 @@ test("confirm persists worsening and a pre-sign update changes the same sidecar 
     conditionReference,
     encounterId: "encounter-1",
     status: "improved",
-    setBy: "Practitioner/doctor-1",
+    setBy: "Practitioner/clinician-a",
     setAt: "2026-07-21T14:00:00.000Z",
     updatedAt: "2026-07-21T14:05:00.000Z",
   });
