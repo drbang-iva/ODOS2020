@@ -32,7 +32,9 @@ test("billing identity round-trips one coded Basic while preserving identity", (
 });
 
 test("billing identity validates required clearinghouse defaults before persistence", () => {
+  assert.doesNotThrow(() => validateBillingIdentityConfig(config));
   assert.throws(() => validateBillingIdentityConfig({ ...config, npi: "123" }), /NPI must be exactly 10 digits/);
+  assert.throws(() => validateBillingIdentityConfig({ ...config, npi: "1111111111" }), /NPI check digit is invalid/);
   assert.throws(() => validateBillingIdentityConfig({ ...config, taxId: "" }), /Tax ID must be exactly 9 digits/);
   assert.throws(() => validateBillingIdentityConfig({ ...config, taxonomy: "" }), /Taxonomy is required/);
   assert.throws(() => validateBillingIdentityConfig({ ...config, state: "New York" }), /2-letter abbreviation/);

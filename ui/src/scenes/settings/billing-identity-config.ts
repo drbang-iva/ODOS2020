@@ -44,12 +44,30 @@ export function validateBillingIdentityConfig(config: BillingIdentityConfig): vo
   ] as const) {
     if (typeof value !== "string" || !value.trim()) throw new Error(`${label} is required.`);
   }
-  if (typeof config.npi !== "string" || !/^\d{10}$/.test(config.npi.trim())) throw new Error("NPI must be exactly 10 digits.");
+  const npi = typeof config.npi === "string" ? config.npi.trim() : "";
+  if (!/^\d{10}$/.test(npi)) throw new Error("NPI must be exactly 10 digits.");
+  if (!hasValidNpiCheckDigit(npi)) throw new Error("NPI check digit is invalid.");
   if (typeof config.taxId !== "string" || !/^\d{9}$/.test(config.taxId.trim())) throw new Error("Tax ID must be exactly 9 digits.");
   if (config.taxIdType !== "E" && config.taxIdType !== "S") throw new Error("Tax ID type must be EIN or SSN.");
   if (typeof config.state !== "string" || !/^[A-Za-z]{2}$/.test(config.state.trim())) throw new Error("State must be a 2-letter abbreviation.");
   if (typeof config.zip !== "string" || !/^\d{5}(?:-?\d{4})?$/.test(config.zip.trim())) throw new Error("ZIP must be 5 or 9 digits.");
   if (config.phone !== undefined && typeof config.phone !== "string") throw new Error("Phone must be text.");
+}
+
+function hasValidNpiCheckDigit(npi: string): boolean {
+  const value = `80840${npi}`;
+  let sum = 0;
+  let doubleDigit = false;
+  for (let index = value.length - 1; index >= 0; index -= 1) {
+    let digit = Number(value[index]);
+    if (doubleDigit) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    doubleDigit = !doubleDigit;
+  }
+  return sum % 10 === 0;
 }
 
 export function buildBillingIdentityResource(config: BillingIdentityConfig, existing?: Basic): Basic {

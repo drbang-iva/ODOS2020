@@ -76,14 +76,20 @@ export async function buildClaimDraft(
   if (new Set(diagnosisEntries.map((entry) => entry.rank)).size !== diagnosisEntries.length) {
     throw new ClaimDraftAssemblyError("The encounter has duplicate diagnosis ranks and cannot produce a claim draft.");
   }
-  diagnosisEntries.sort((left, right) => left.rank! - right.rank!);
-  const resolvedConditions = await Promise.all(diagnosisEntries.map(async (entry) => {
+  const normalizedDiagnosisEntries = diagnosisEntries.map((entry) => {
     const reference = entry.condition.reference;
     if (!reference) throw new ClaimDraftAssemblyError("An encounter diagnosis is missing its Condition reference.");
     const id = referenceId(reference, "Condition");
     if (!id) throw new ClaimDraftAssemblyError(`Encounter diagnosis reference ${reference} is invalid.`);
-    return fhir.read<Condition>("Condition", id);
-  }));
+    return { entry, conditionId: id, conditionKey: `Condition/${id}` };
+  });
+  if (new Set(normalizedDiagnosisEntries.map(({ conditionKey }) => conditionKey)).size !== normalizedDiagnosisEntries.length) {
+    throw new ClaimDraftAssemblyError("The encounter has duplicate diagnosis Condition references and cannot produce a claim draft.");
+  }
+  normalizedDiagnosisEntries.sort((left, right) => left.entry.rank! - right.entry.rank!);
+  const resolvedConditions = await Promise.all(normalizedDiagnosisEntries.map(({ conditionId }) =>
+    fhir.read<Condition>("Condition", conditionId)
+  ));
   const confirmedConditions = resolvedConditions.filter((condition) =>
     isConfirmedEncounterDiagnosis(condition) && condition.encounter?.reference === encounterReference
   );

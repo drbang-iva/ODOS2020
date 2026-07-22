@@ -105,6 +105,13 @@ test("buildClaimDraft refuses unsigned encounters and unsafe diagnosis ranks", a
     /duplicate diagnosis ranks/,
   );
 
+  const duplicateCondition = structuredClone(encounter);
+  duplicateCondition.diagnosis![1]!.condition.reference = duplicateCondition.diagnosis![0]!.condition.reference;
+  await assert.rejects(
+    buildClaimDraft(client([], duplicateCondition), "enc-1"),
+    /duplicate diagnosis Condition references/,
+  );
+
   const unranked = structuredClone(encounter);
   delete unranked.diagnosis![0]!.rank;
   await assert.rejects(
