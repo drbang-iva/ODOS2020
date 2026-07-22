@@ -25,11 +25,11 @@ export function EomSection({ definition: _definition, patientReference, encounte
   const [nystagmus, setNystagmus] = useState(false);
   const [nystagmusNote, setNystagmusNote] = useState("");
   const [diplopia, setDiplopia] = useState(false);
-  const [diplopiaType, setDiplopiaType] = useState<"monocular" | "binocular">("binocular");
-  const [direction, setDirection] = useState("horizontal");
-  const [comitancy, setComitancy] = useState<"comitant" | "incomitant">("comitant");
-  const [worstGaze, setWorstGaze] = useState<Position>("primary");
-  const [frequency, setFrequency] = useState("intermittent");
+  const [diplopiaType, setDiplopiaType] = useState<"" | "monocular" | "binocular">("");
+  const [direction, setDirection] = useState("");
+  const [comitancy, setComitancy] = useState<"" | "comitant" | "incomitant">("");
+  const [worstGaze, setWorstGaze] = useState<"" | Position>("");
+  const [frequency, setFrequency] = useState("");
   const [onset, setOnset] = useState("");
   const [note, setNote] = useState("");
   const [history, setHistory] = useState<HistoryRow[]>([]);
@@ -54,6 +54,10 @@ export function EomSection({ definition: _definition, patientReference, encounte
 
   async function save() {
     if (!state) { setError("Choose Normal, Abnormal, or Deferred."); return; }
+    if (diplopia && !diplopiaSelectionsComplete(diplopiaType, direction, comitancy, worstGaze, frequency)) {
+      setError("Choose Type, Direction, Comitancy, Worst gaze, and Frequency before saving diplopia.");
+      return;
+    }
     setSaving(true); setError(undefined);
     try {
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/eom`, {
@@ -79,6 +83,9 @@ export function EomSection({ definition: _definition, patientReference, encounte
 }
 
 function Select({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange(value: string): void }) {
-  return <label className="text-xs text-[color:var(--odos-muted)]">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-[color:var(--odos-text)]">{values.map((option) => <option key={option}>{option}</option>)}</select></label>;
+  return <label className="text-xs text-[color:var(--odos-muted)]">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-[color:var(--odos-text)]"><option value="">Select</option>{values.map((option) => <option key={option}>{option}</option>)}</select></label>;
+}
+export function diplopiaSelectionsComplete(...values: string[]): boolean {
+  return values.every((value) => value.length > 0);
 }
 function History({ rows }: { rows: HistoryRow[] }) { return <div className="mt-8 overflow-hidden rounded border border-[color:var(--odos-line)]"><div className="border-b border-[color:var(--odos-line)] px-4 py-3 font-semibold">History</div>{rows.length ? rows.map((row, index) => <div key={`${row.recordedAt}-${index}`} className="border-b border-[color:var(--odos-line)] px-4 py-3 text-sm text-[color:var(--odos-muted)]"><span className="mr-3 capitalize">{row.state}</span>{row.summary}</div>) : <div className="p-5 text-sm text-[color:var(--odos-muted)]">No prior entries</div>}</div>; }

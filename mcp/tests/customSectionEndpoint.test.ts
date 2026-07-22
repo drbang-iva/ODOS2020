@@ -721,7 +721,7 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   });
   assert.equal(normal.status, 200, JSON.stringify(normal.body));
   assert.equal(component(fhir.observations[0], "entrance.pupils")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
-  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "PERRLA; no APD OU");
+  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "PERRLA; no APD or RAPD OU");
 
   const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
@@ -756,7 +756,39 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   assert.equal(rows.some((row) => row.state === "abnormal" && row.other === "Trace anisocoria." && row.values.some((value) => value.code === "CUSTOM_PUPIL_SIZE_BRIGHT" && value.value === 4)), true);
 });
 
-test("E2 CVF reuses the entrance state endpoint for normal template and quadrant history", async () => {
+test("screenshot refinement stores binocular stereopsis once with top-level state", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const stereo = definitions.find((definition) => definition.stableKey === "entrance:stereo");
+  assert.ok(stereo);
+  assert.equal(stereo.valueSchema.perEye, false);
+  const result = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: stereo.stableKey },
+    body: {
+      patientReference: "Patient/stereo",
+      encounterReference: "Encounter/stereo",
+      state: "abnormal",
+      customFields: [
+        { code: "CUSTOM_STEREO_TEST", value: "randot" },
+        { code: "CUSTOM_STEREO_UNABLE", value: "yes" },
+      ],
+      other: "Binocular response recorded once.",
+    },
+  });
+  assert.equal(result.status, 200, JSON.stringify(result.body));
+  assert.equal(fhir.observations.length, 1);
+  assert.equal(component(fhir.observations[0], "EXAM_STATE")?.valueString, "abnormal");
+  assert.equal(component(fhir.observations[0], "CUSTOM_STEREO_TEST")?.valueCodeableConcept?.coding?.[0]?.code, "randot");
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: stereo.stableKey },
+    query: { patient: "Patient/stereo", encounter: "Encounter/stereo" },
+  });
+  assert.deepEqual((history.body as { rows: Array<{ eye?: string; state?: string }> }).rows.map((row) => [row.eye, row.state]), [[undefined, "abnormal"]]);
+});
+
+test("CVF persists five-zone schematic values through the generic entrance endpoint", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);
   const cvf = definitions.find((definition) => definition.stableKey === "entrance:cvf");
@@ -772,11 +804,11 @@ test("E2 CVF reuses the entrance state endpoint for normal template and quadrant
   const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
     authHeader: AUTH,
     params: { stableKey: cvf.stableKey },
-    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_SUPERIOR_NASAL", value: "restricted" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
+    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_UPPER_LEFT", value: "restricted" }, { code: "CUSTOM_CVF_CENTER", value: "full" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
   });
   assert.equal(abnormal.status, 200, JSON.stringify(abnormal.body));
   const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), { authHeader: AUTH, params: { stableKey: cvf.stableKey }, query: { patient: "Patient/cvf", encounter: "Encounter/cvf" } });
-  assert.equal((history.body as { rows: Array<{ values: Array<{ code: string; value: unknown }> }> }).rows.some((row) => row.values.some((value) => value.code === "CUSTOM_CVF_SUPERIOR_NASAL" && value.value === "restricted")), true);
+  assert.equal((history.body as { rows: Array<{ values: Array<{ code: string; value: unknown }> }> }).rows.some((row) => row.values.some((value) => value.code === "CUSTOM_CVF_UPPER_LEFT" && value.value === "restricted")), true);
 });
 
 test("E1 Pachymetry and Manual K use measurement capture without exam state", async () => {

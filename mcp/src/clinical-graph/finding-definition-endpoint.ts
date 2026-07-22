@@ -306,6 +306,9 @@ function definitionSummary(definition: ClinicalFindingDefinition) {
     normalTemplate: typeof definition.normalSemantics?.template === "string"
       ? definition.normalSemantics.template
       : undefined,
+    setupMessage: typeof definition.normalSemantics?.setupMessage === "string"
+      ? definition.normalSemantics.setupMessage
+      : undefined,
     allowDeferred: definition.normalSemantics?.allowDeferred === true,
     allowDiagnosisMapping: definition.allowDiagnosisMapping !== false,
     diagnosisCandidates: definition.diagnosisCandidates ?? [],
