@@ -183,7 +183,7 @@ import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
 import { createStediAdapter, stediConfigFromEnv } from "./claims/stedi-adapter.js";
 import {
   eraUnderpaymentThresholdCentsFromEnv,
-  handleClaimEraWorklistTaskRequest,
+  handleClaimDraftRequest, handleClaimEraWorklistTaskRequest,
   handleClaimSearchRequest,
   handleClaimStatusRequest,
   handleCloseManualEobRequest,
@@ -6895,6 +6895,30 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "claim search route failed" });
           }
+        }
+      });
+
+      app.get("/claims/draft", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleClaimDraftRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            {
+              authHeader: req.header("authorization"),
+              encounterId: typeof req.query.encounterId === "string" ? req.query.encounterId : undefined,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /claims/draft failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "claim draft route failed" });
         }
       });
 

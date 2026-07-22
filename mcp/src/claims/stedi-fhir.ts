@@ -1,5 +1,6 @@
 import type { Claim, ClaimResponse, CoverageEligibilityResponse, Money } from "@medplum/fhirtypes";
 import {
+  claimDiagnosisSequence,
   claimResponseChargeItemExtension,
   HL7_CLAIM_TYPE_SYSTEM,
   type ProfessionalClaimInput,
@@ -209,7 +210,11 @@ export function buildStediProfessionalClaimJson(
             lineItemChargeAmount: decimal(item.priceOverride?.value ?? 0),
             measurementUnit: "UN",
             serviceUnitCount: String(item.quantity?.value ?? 1),
-            compositeDiagnosisCodePointers: { diagnosisCodePointers: input.diagnoses.slice(0, 4).map((_, diagnosisIndex) => String(diagnosisIndex + 1)) },
+            compositeDiagnosisCodePointers: {
+              diagnosisCodePointers: claimDiagnosisSequence(item, input.diagnoses.length)
+                .slice(0, 4)
+                .map(String),
+            },
             ...(modifiers?.length ? { procedureModifiers: modifiers } : {}),
           },
           renderingProvider: compact({

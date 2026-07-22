@@ -316,6 +316,31 @@ test("client-supplied ChargeItem is re-read and must belong to the Claim patient
   assert.equal(missing.created.Claim.length, 0);
 });
 
+test("submit reuses a stored ChargeItem without dropping its draft diagnosis pointers", async () => {
+  const fixture = deps();
+  const input = structuredClone(professionalClaim);
+  input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
+  input.chargeItems[0]!.diagnosisSequence = [2];
+  input.chargeItems[0]!.laterality = "OS";
+  let submittedPayload: any;
+  fixture.deps.adapter!.submitProfessionalClaim = async (request) => {
+    submittedPayload = request.payload;
+    return { claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }], raw: {} };
+  };
+
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(fixture.created.Claim[0].item?.[0]?.diagnosisSequence, [2]);
+  assert.equal(fixture.created.Claim[0].item?.[0]?.bodySite?.text, "OS");
+  assert.equal(submittedPayload.claim[0].charge[0].diag_ref, "B");
+  assert.equal("diagnosisSequence" in fixture.created.ChargeItem[0], false);
+  assert.equal("laterality" in fixture.created.ChargeItem[0], false);
+});
+
 test("submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape", async () => {
   const { created, deps: d } = deps();
   const input = structuredClone(professionalClaim);

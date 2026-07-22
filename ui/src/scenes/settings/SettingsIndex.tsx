@@ -123,6 +123,13 @@ const SETTINGS_GROUPS: readonly SettingsGroup[] = [
         practiceAdminOnly: true,
       },
       {
+        href: "/settings/billing-identity",
+        title: "Billing identity",
+        description: "Set practice-wide billing provider defaults for professional claims.",
+        synonyms: ["npi", "taxonomy", "tax id", "claims", "billing provider"],
+        practiceAdminOnly: true,
+      },
+      {
         href: "/settings/statement-messages",
         title: "Statement and receipt messages",
         description: "Set the practice-wide footer notes printed on statements and receipts.",

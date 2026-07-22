@@ -58,6 +58,15 @@ test("AppShell registers the statement-message settings breadcrumb", () => {
   );
 });
 
+test("AppShell registers the billing identity settings breadcrumb", () => {
+  const html = renderToStaticMarkup(
+    <AppShell path="/settings/billing-identity" roles={["practice-admin"]} homePath="/desk" side="desk" email="admin@example.test">
+      <main />
+    </AppShell>,
+  );
+  assert.match(html, /aria-label="Breadcrumb"[\s\S]*href="\/settings"[\s\S]*Billing identity/);
+});
+
 test("AppShell registers the Appearance settings breadcrumb", () => {
   const html = renderToStaticMarkup(
     <AppShell

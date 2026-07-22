@@ -75,8 +75,10 @@ import {
   type ClaimMdEraClaim,
   type ClaimMdEraData,
   type ManualClaimResponseLineInput,
+  type ProfessionalClaimChargeItemInput,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
+import { buildClaimDraft, ClaimDraftAssemblyError } from "./claim-draft.js";
 import { StediRequestError, type StediAdapter } from "./stedi-adapter.js";
 import {
   analyzeStediEraClaim,
@@ -207,6 +209,25 @@ export async function handleSubmitClaimRequest(
       // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
     }
     return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
+  }
+}
+
+export async function handleClaimDraftRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; encounterId?: string },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  try {
+    return { status: 200, body: await buildClaimDraft(auth.fhir, input.encounterId ?? "") };
+  } catch (error) {
+    if (error instanceof ClaimDraftAssemblyError) {
+      return { status: 400, body: { error: error.message } };
+    }
+    if (error instanceof FhirSearchLimitError) {
+      return { status: 409, body: { error: error.message } };
+    }
+    return { status: 502, body: { error: "Unable to assemble the encounter claim draft." } };
   }
 }
 
@@ -1491,11 +1512,16 @@ function withAuthoritativePatientResponsibility(response: ClaimResponse, targetC
 
 async function persistClaimChargeItems(
   auth: AuthenticatedClaimsStaff,
-  chargeItems: ChargeItem[],
+  chargeItems: ProfessionalClaimChargeItemInput[],
   patientReference: string,
   submissionKey: string,
-): Promise<ChargeItem[]> {
-  const validated: Array<ChargeItem | { candidate: ChargeItem; identifierValue: string }> = [];
+): Promise<ProfessionalClaimChargeItemInput[]> {
+  const validated: Array<ProfessionalClaimChargeItemInput | {
+    candidate: ChargeItem;
+    identifierValue: string;
+    diagnosisSequence?: number[];
+    laterality?: string;
+  }> = [];
   for (const [index, chargeItem] of chargeItems.entries()) {
     if (chargeItem.id) {
       if (!/^[A-Za-z0-9.-]+$/.test(chargeItem.id)) {
@@ -1508,35 +1534,46 @@ async function persistClaimChargeItems(
         throw new ClaimSubmissionValidationError(`ChargeItem/${chargeItem.id} could not be loaded for this Claim.`);
       }
       assertChargeItemPatient(stored, patientReference);
-      validated.push(stored);
+      validated.push({
+        ...stored,
+        ...(chargeItem.diagnosisSequence ? { diagnosisSequence: chargeItem.diagnosisSequence } : {}),
+        ...(chargeItem.laterality ? { laterality: chargeItem.laterality } : {}),
+      });
       continue;
     }
     assertChargeItemPatient(chargeItem, patientReference);
     const identifierValue = `${submissionKey}:${index + 1}`;
+    const { diagnosisSequence, laterality, ...fhirChargeItem } = chargeItem;
     validated.push({
       identifierValue,
       candidate: {
-        ...chargeItem,
+        ...fhirChargeItem,
         identifier: [
           ...(chargeItem.identifier ?? []).filter((identifier) => identifier.system !== CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM),
           { system: CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM, value: identifierValue },
         ],
       },
+      ...(diagnosisSequence ? { diagnosisSequence } : {}),
+      ...(laterality ? { laterality } : {}),
     });
   }
 
-  const persisted: ChargeItem[] = [];
+  const persisted: ProfessionalClaimChargeItemInput[] = [];
   for (const item of validated) {
     if ("resourceType" in item) {
       persisted.push(item);
       continue;
     }
-    const { candidate, identifierValue } = item;
+    const { candidate, identifierValue, diagnosisSequence, laterality } = item;
     const stored = await auth.fhir.create(candidate, {
       "If-None-Exist": `identifier=${CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM}|${identifierValue}`,
     });
     assertChargeItemPatient(stored, patientReference);
-    persisted.push(stored);
+    persisted.push({
+      ...stored,
+      ...(diagnosisSequence ? { diagnosisSequence } : {}),
+      ...(laterality ? { laterality } : {}),
+    });
   }
   return persisted;
 }

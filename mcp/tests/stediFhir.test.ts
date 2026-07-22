@@ -114,6 +114,17 @@ test("Stedi claim mapper classifies incomplete billing and subscriber addresses 
   }
 });
 
+test("Stedi claim mapper uses each ChargeItem's diagnosis pointers", () => {
+  const input = structuredClone(claimInput);
+  input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
+  input.chargeItems[0]!.diagnosisSequence = [2];
+  const payload = buildStediProfessionalClaimJson(input, buildProfessionalClaim(input), "test");
+  assert.deepEqual(
+    payload.claimInformation.serviceLines[0].professionalService.compositeDiagnosisCodePointers.diagnosisCodePointers,
+    ["2"],
+  );
+});
+
 test("Stedi eligibility mapper and 271 response target the shared FHIR eligibility shape", () => {
   const request = buildStediEligibilityJson(claimInput, ["30"]);
   assert.equal(request.provider.npi, "1999999984");

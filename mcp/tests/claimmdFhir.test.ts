@@ -112,6 +112,30 @@ test("buildProfessionalClaim composes the existing ChargeItem lines into a profe
   );
 });
 
+test("buildProfessionalClaim and Claim.MD preserve real per-line diagnosis pointers", () => {
+  const input = structuredClone(professionalClaimInput);
+  input.diagnoses.push({ system: DIAGNOSIS_SYSTEM, code: "DX-B" });
+  input.chargeItems[0]!.diagnosisSequence = [2];
+  input.chargeItems[0]!.laterality = "OS";
+  input.chargeItems[1]!.diagnosisSequence = [1, 2];
+
+  const claim = buildProfessionalClaim(input);
+  assert.deepEqual(claim.item?.[0]?.diagnosisSequence, [2]);
+  assert.equal(claim.item?.[0]?.bodySite?.text, "OS");
+  assert.deepEqual(claim.item?.[1]?.diagnosisSequence, [1, 2]);
+  const payload = buildClaimMdProfessionalClaimJson(input, claim);
+  assert.equal(payload.claim[0].charge[0].diag_ref, "B");
+  assert.equal(payload.claim[0].charge[1].diag_ref, "AB");
+});
+
+test("manual claim lines without diagnosis pointers keep the diagnosis-one default", () => {
+  const input = structuredClone(professionalClaimInput);
+  input.diagnoses.push({ system: DIAGNOSIS_SYSTEM, code: "DX-B" });
+  const claim = buildProfessionalClaim(input);
+  assert.deepEqual(claim.item?.[0]?.diagnosisSequence, [1]);
+  assert.equal(buildClaimMdProfessionalClaimJson(input, claim).claim[0].charge[0].diag_ref, "A");
+});
+
 test("buildProfessionalClaim refuses an unpersisted ChargeItem instead of writing a fake provenance reference", () => {
   const input = structuredClone(professionalClaimInput);
   delete input.chargeItems[0].id;

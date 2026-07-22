@@ -4,8 +4,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   ActivityDefinition,
-  ChargeItem,
-  Claim,
   ClinicalImpression,
   CodeableConcept,
   Condition,
@@ -1360,72 +1358,6 @@ export function buildCoverageWarningDetectedIssue(input: {
     identifiedDateTime: input.identifiedDateTime,
     implicated: input.implicatedReferences.map((r) => reference<Resource>(r)),
     detail: input.detail,
-  };
-}
-
-/**
- * Projects a selected charge proposal to a planned ChargeItem for downstream review.
- */
-export function projectChargeProposalToChargeItem(input: {
-  proposal: ChargeProposal;
-  patientReference: string;
-  encounterReference: string;
-  occurrenceDateTime: string;
-}): ChargeItem {
-  return {
-    resourceType: "ChargeItem",
-    status: "planned",
-    code: codeableConcept(input.proposal.procedureSystem, input.proposal.procedureCode),
-    subject: reference(input.patientReference),
-    context: reference(input.encounterReference),
-    occurrenceDateTime: input.occurrenceDateTime,
-    supportingInformation: [
-      ...input.proposal.linkedEncounterDiagnosisIds.map((id) =>
-        reference<Resource>(`Condition/${id}`),
-      ),
-      ...input.proposal.evidenceFindingInstanceIds.map((id) =>
-        reference<Resource>(`Observation/${id}`),
-      ),
-    ],
-    note: input.proposal.coverageWarnings.map((text) => ({ text })),
-  };
-}
-
-/**
- * Builds a FHIR Claim with diagnosis pointers after confirmed Conditions and charge items exist.
- */
-export function buildClaimWithDiagnosisPointers(input: {
-  patientReference: string;
-  providerReference: string;
-  created: string;
-  diagnosisConditionReferences: string[];
-  chargeItems: Array<{ sequence: number; procedureSystem: string; procedureCode: string; diagnosisSequence: number[] }>;
-}): Claim {
-  return {
-    resourceType: "Claim",
-    status: "active",
-    type: odosConcept("professional", "Professional"),
-    use: "claim",
-    patient: reference(input.patientReference),
-    created: input.created,
-    provider: reference(input.providerReference),
-    priority: odosConcept("normal", "Normal"),
-    insurance: [
-      {
-        sequence: 1,
-        focal: true,
-        coverage: { display: "Phase 1 placeholder coverage; payer workflow not implemented." },
-      },
-    ],
-    diagnosis: input.diagnosisConditionReferences.map((conditionReference, index) => ({
-      sequence: index + 1,
-      diagnosisReference: reference<Condition>(conditionReference),
-    })),
-    item: input.chargeItems.map((item) => ({
-      sequence: item.sequence,
-      productOrService: codeableConcept(item.procedureSystem, item.procedureCode),
-      diagnosisSequence: item.diagnosisSequence,
-    })),
   };
 }
 

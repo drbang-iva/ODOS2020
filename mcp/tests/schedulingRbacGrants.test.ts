@@ -108,6 +108,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   ];
   const readTierCriteria = [
     "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
   ];

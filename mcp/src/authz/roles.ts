@@ -154,6 +154,14 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "CoverageEligibilityResponse", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
   {
     resourceType: "Basic",
+    interactions: READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
+    },
+  },
+  {
+    resourceType: "Basic",
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
