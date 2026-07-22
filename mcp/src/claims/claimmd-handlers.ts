@@ -77,7 +77,7 @@ import {
   type ManualClaimResponseLineInput,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
-import type { StediAdapter } from "./stedi-adapter.js";
+import { StediRequestError, type StediAdapter } from "./stedi-adapter.js";
 import {
   buildClaimResponseFromStediEra,
   buildClaimResponseFromStediStatus,
@@ -1632,7 +1632,18 @@ function claimMdFailureAuditReason(operation: string, error: unknown): string {
 function clearinghouseFailureAuditReason(id: ClearinghouseId, operation: string, error: unknown): string {
   if (id === "claimmd") return claimMdFailureAuditReason(operation, error);
   const status = claimMdHttpStatus(error);
-  return status ? `Stedi ${operation} failed with HTTP ${status}` : `Stedi ${operation} failed`;
+  const base = status ? `Stedi ${operation} failed with HTTP ${status}` : `Stedi ${operation} failed`;
+  if (!(error instanceof StediRequestError)) return base;
+  const allCodes = (error.errors ?? []).flatMap((detail) =>
+    typeof detail.code === "string" && detail.code.trim() ? [detail.code.trim()] : []);
+  const codes = allCodes.slice(0, 3);
+  const omittedCount = allCodes.length - codes.length;
+  const codeDetail = codes.length
+    ? `[${codes.join(", ")}${omittedCount ? `, +${omittedCount} more` : ""}]`
+    : undefined;
+  return [base, codeDetail, error.correlationId ? `[correlationId: ${error.correlationId}]` : undefined]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function clearinghouseSelection(

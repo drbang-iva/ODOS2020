@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   STEDI_DEFAULT_BASE_URL,
   STEDI_DEFAULT_CORE_BASE_URL,
+  StediRequestError,
   createStediAdapter,
   stediConfigFromEnv,
 } from "../src/claims/stedi-adapter.js";
@@ -64,7 +65,12 @@ test("Stedi configuration is opt-in and production requires an exact mode value"
 
 test("Stedi errors expose response details without echoing the PHI-bearing response body", async () => {
   const responseBody = {
-    errors: [{ code: "INVALID_VALUE", description: "procedureCode is invalid", followupAction: "Correct the claim and resubmit." }],
+    errors: [
+      { code: "INVALID_VALUE", description: "procedureCode is invalid", followupAction: "Correct the claim and resubmit." },
+      { code: "MISSING_FIELD", description: "subscriber gender is missing" },
+      { description: "payer edit rejected claim", followupAction: "Contact the payer." },
+      { code: "CAPPED_ERROR", description: "this fourth error must not reach the message" },
+    ],
     claimReference: { correlationId: "corr-claim-900", patientControlNumber: "ODOSCLAIM900" },
     x12: "SYNTHETIC-X12-CONTENT",
   };
@@ -86,7 +92,14 @@ test("Stedi errors expose response details without echoing the PHI-bearing respo
       assert.deepEqual(stediError.responseBody, responseBody);
       assert.deepEqual(stediError.errors, responseBody.errors);
       assert.equal(stediError.correlationId, "corr-claim-900");
-      assert.doesNotMatch(String(error), /SYNTHETIC-X12-CONTENT/);
+      assert.ok(error instanceof StediRequestError);
+      assert.match(error.message, /INVALID_VALUE: procedureCode is invalid \(Correct the claim and resubmit\.\)/);
+      assert.match(error.message, /MISSING_FIELD: subscriber gender is missing/);
+      assert.match(error.message, /payer edit rejected claim \(Contact the payer\.\)/);
+      assert.match(error.message, /1 more Stedi error omitted/);
+      assert.match(error.message, /\[correlationId: corr-claim-900\]/);
+      assert.doesNotMatch(error.message, /this fourth error must not reach the message/);
+      assert.doesNotMatch(error.message, /SYNTHETIC-X12-CONTENT/);
       return true;
     },
   );
@@ -104,6 +117,7 @@ test("Stedi errors preserve the HTTP failure when the response body is not JSON"
     (error: unknown) => {
       assert.equal((error as { status?: number }).status, 502);
       assert.equal((error as { responseBody?: unknown }).responseBody, undefined);
+      assert.equal((error as Error).message, "Stedi request failed with HTTP 502.");
       return true;
     },
   );
