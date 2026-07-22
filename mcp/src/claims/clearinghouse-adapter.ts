@@ -8,6 +8,8 @@ export interface ClearinghouseAdapter {
   checkClaimStatus(input: any): Promise<unknown>;
   listEras(input?: any): Promise<unknown>;
   retrieveEraData(eraId: string): Promise<unknown>;
+  list277s?(input?: any): Promise<unknown>;
+  retrieve277Data?(transactionId: string): Promise<unknown>;
 }
 
 export type ClearinghouseAdapters = Partial<Record<ClearinghouseId, ClearinghouseAdapter>>;

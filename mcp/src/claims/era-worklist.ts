@@ -308,9 +308,11 @@ export function buildClaimRejectedWorklistTask(input: {
   patientReference?: string;
   claimMdMessage: string;
   authoredOn: string;
+  identifier?: { system: string; value: string };
 }): Task {
   return {
     resourceType: "Task",
+    ...(input.identifier ? { identifier: [input.identifier] } : {}),
     status: "ready",
     intent: "order",
     priority: "urgent",

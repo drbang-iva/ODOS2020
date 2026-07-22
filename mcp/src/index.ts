@@ -195,6 +195,7 @@ import {
   handleManualEobListRequest,
   handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
+  handleStedi277ImportRequest,
   handleSubmitClaimRequest,
 } from "./claims/claimmd-handlers.js";
 import {
@@ -7055,6 +7056,30 @@ async function main(): Promise<void> {
           console.error("odos-mcp: /claims/era/import failed:", error);
           if (!res.headersSent) {
             res.status(500).json({ error: "ERA import route failed" });
+          }
+        }
+      });
+
+      app.post("/claims/277ca/import", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleStedi277ImportRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /claims/277ca/import failed:", error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "277CA import route failed" });
           }
         }
       });

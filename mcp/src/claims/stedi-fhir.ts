@@ -118,6 +118,44 @@ export interface StediEraEnvelope {
   claims: StediEraClaim[];
 }
 
+export type Stedi277Outcome = "accepted-for-processing" | "rejected" | "informational" | "review";
+
+export interface Stedi277Status {
+  categoryCode: string;
+  categoryDescription?: string;
+  statusCode?: string;
+  statusDescription?: string;
+  message?: string;
+  entityType?: string;
+}
+
+export interface Stedi277Claim {
+  patientControlNumber: string;
+  outcome: Stedi277Outcome;
+  statuses: Stedi277Status[];
+  reasons: string[];
+  sender: {
+    organizationName?: string;
+    entityType: "Payer" | "Clearinghouse" | "Unknown";
+    identifier?: string;
+  };
+  traceIdentifiers: {
+    transactionId: string;
+    controlNumber?: string;
+    referenceIdentification?: string;
+    claimTransactionBatchNumber?: string;
+    clearinghouseTraceNumber?: string;
+    tradingPartnerClaimNumber?: string;
+    metaTraceId?: string;
+  };
+}
+
+export interface Stedi277Envelope {
+  transactionId: string;
+  claims: Stedi277Claim[];
+  issues: string[];
+}
+
 export function readStediEra(raw: any, fallbackTransactionId: string): StediEraEnvelope {
   const transaction = raw?.transactions?.[0] ?? {};
   const claims = (transaction.detailInfo ?? []).flatMap((detail: any) => detail.paymentInfo ?? []) as StediEraClaim[];
@@ -132,6 +170,194 @@ export function readStediEra(raw: any, fallbackTransactionId: string): StediEraE
       : undefined,
     claims,
   };
+}
+
+export function readStedi277(raw: unknown, fallbackTransactionId: string): Stedi277Envelope {
+  const root = recordOf(raw);
+  if (!root || !Array.isArray(root.transactions)) {
+    throw new Error("Stedi 277CA is malformed: transactions must be an array.");
+  }
+  const meta = recordOf(root.meta);
+  const transactionId = textOf(meta?.transactionId) ?? fallbackTransactionId;
+  const metaTraceId = textOf(meta?.traceId);
+  const claims: Stedi277Claim[] = [];
+  const issues: string[] = [];
+
+  root.transactions.forEach((transactionValue, transactionIndex) => {
+    const transaction = recordOf(transactionValue);
+    if (!transaction) {
+      issues.push(`Transaction ${transactionIndex + 1} is not an object.`);
+      return;
+    }
+    const payers = arrayOfRecords(transaction.payers);
+    if (payers.length === 0) {
+      issues.push(`Transaction ${transactionIndex + 1} has no payer or clearinghouse sender.`);
+      return;
+    }
+    payers.forEach((payer, payerIndex) => {
+      const sender = stedi277Sender(payer);
+      const statusTransactions = arrayOfRecords(payer.claimStatusTransactions);
+      if (statusTransactions.length === 0) {
+        issues.push(`Transaction ${transactionIndex + 1} sender ${payerIndex + 1} has no claim status transactions.`);
+        return;
+      }
+      statusTransactions.forEach((statusTransaction, statusTransactionIndex) => {
+        const claimDetails = arrayOfRecords(statusTransaction.claimStatusDetails);
+        if (claimDetails.length === 0) {
+          issues.push(`Transaction ${transactionIndex + 1} sender ${payerIndex + 1} status transaction ${statusTransactionIndex + 1} has no claim status details.`);
+          return;
+        }
+        claimDetails.forEach((claimDetail, claimDetailIndex) => {
+          const patientDetails = arrayOfRecords(claimDetail.patientClaimStatusDetails);
+          if (patientDetails.length === 0) {
+            issues.push(`Transaction ${transactionIndex + 1} sender ${payerIndex + 1} claim detail ${claimDetailIndex + 1} has no patient claim status details.`);
+            return;
+          }
+          patientDetails.forEach((patientDetail, patientDetailIndex) => {
+            const claimRows = arrayOfRecords(patientDetail.claims);
+            if (claimRows.length === 0) {
+              issues.push(`Transaction ${transactionIndex + 1} sender ${payerIndex + 1} patient detail ${patientDetailIndex + 1} has no claims.`);
+              return;
+            }
+            claimRows.forEach((claimRow, claimIndex) => {
+              const claimStatus = recordOf(claimRow.claimStatus);
+              const patientControlNumber = textOf(claimStatus?.referencedTransactionTraceNumber)
+                ?? textOf(claimStatus?.patientAccountNumber);
+              const location = [
+                transactionIndex + 1,
+                payerIndex + 1,
+                statusTransactionIndex + 1,
+                claimDetailIndex + 1,
+                patientDetailIndex + 1,
+                claimIndex + 1,
+              ].join(".");
+              if (!claimStatus || !patientControlNumber) {
+                issues.push(`Claim ${location} is missing its patient control number or claimStatus object.`);
+                return;
+              }
+              const statuses = stedi277Statuses(claimStatus);
+              const outcome = interpretStedi277Statuses(statuses);
+              const reasons = uniqueStrings(statuses.flatMap((status) => [
+                status.message,
+                status.statusDescription,
+                outcome === "review" ? status.categoryDescription : undefined,
+              ]));
+              claims.push({
+                patientControlNumber,
+                outcome,
+                statuses,
+                reasons,
+                sender: sender.entityType === "Unknown"
+                  ? { ...sender, entityType: statusSenderType(statuses) }
+                  : sender,
+                traceIdentifiers: compactObject({
+                  transactionId,
+                  controlNumber: textOf(transaction.controlNumber),
+                  referenceIdentification: textOf(transaction.referenceIdentification),
+                  claimTransactionBatchNumber: textOf(statusTransaction.claimTransactionBatchNumber),
+                  clearinghouseTraceNumber: textOf(claimStatus.clearinghouseTraceNumber),
+                  tradingPartnerClaimNumber: textOf(claimStatus.tradingPartnerClaimNumber),
+                  metaTraceId,
+                }) as Stedi277Claim["traceIdentifiers"],
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  if (claims.length === 0 && issues.length === 0) {
+    issues.push("The 277CA contains no claim acknowledgments.");
+  }
+  return { transactionId, claims, issues };
+}
+
+export function interpretStedi277CategoryCode(categoryCode: string): Stedi277Outcome {
+  if (["A2", "A5"].includes(categoryCode)) return "accepted-for-processing";
+  if (["A3", "A6", "A7", "A8"].includes(categoryCode)) return "rejected";
+  if (["A0", "A1"].includes(categoryCode)) return "informational";
+  return "review";
+}
+
+function interpretStedi277Statuses(statuses: Stedi277Status[]): Stedi277Outcome {
+  const outcomes = statuses.map((status) => interpretStedi277CategoryCode(status.categoryCode));
+  if (outcomes.includes("rejected")) return "rejected";
+  if (outcomes.includes("review") || outcomes.length === 0) return "review";
+  if (outcomes.includes("accepted-for-processing")) return "accepted-for-processing";
+  return "informational";
+}
+
+function stedi277Statuses(claimStatus: Record<string, unknown>): Stedi277Status[] {
+  const claimStatuses = arrayOfRecords(claimStatus.informationClaimStatuses).flatMap((group) => {
+    const message = textOf(group.statusMessage);
+    return arrayOfRecords(group.informationStatuses).map((status) => stedi277Status(status, message));
+  });
+  const serviceStatuses = arrayOfRecords(claimStatus.serviceLines).flatMap((serviceLine) =>
+    arrayOfRecords(serviceLine.serviceClaimStatuses).flatMap((group) =>
+      arrayOfRecords(group.serviceStatuses).map((status) => stedi277Status(status, undefined))));
+  return [...claimStatuses, ...serviceStatuses];
+}
+
+function stedi277Status(status: Record<string, unknown>, message: string | undefined): Stedi277Status {
+  const categoryDescription = textOf(status.healthCareClaimStatusCategoryCodeValue);
+  const statusCode = textOf(status.statusCode);
+  const statusDescription = textOf(status.statusCodeValue);
+  const entityType = textOf(status.entityIdentifierCodeValue);
+  return {
+    categoryCode: textOf(status.healthCareClaimStatusCategoryCode) ?? "",
+    ...(categoryDescription ? { categoryDescription } : {}),
+    ...(statusCode ? { statusCode } : {}),
+    ...(statusDescription ? { statusDescription } : {}),
+    ...(message ? { message } : {}),
+    ...(entityType ? { entityType } : {}),
+  };
+}
+
+function stedi277Sender(payer: Record<string, unknown>): Stedi277Claim["sender"] {
+  const rawType = textOf(payer.entityIdentifierCodeValue) ?? textOf(payer.entityIdentifierCode);
+  return compactObject({
+    organizationName: textOf(payer.organizationName),
+    entityType: normalizeSenderType(rawType),
+    identifier: textOf(payer.payerIdentification) ?? textOf(payer.etin),
+  }) as Stedi277Claim["sender"];
+}
+
+function statusSenderType(statuses: Stedi277Status[]): Stedi277Claim["sender"]["entityType"] {
+  for (const status of statuses) {
+    const normalized = normalizeSenderType(status.entityType);
+    if (normalized !== "Unknown") return normalized;
+  }
+  return "Unknown";
+}
+
+function normalizeSenderType(value: string | undefined): Stedi277Claim["sender"]["entityType"] {
+  if (value === "Payer" || value === "PR") return "Payer";
+  if (value === "Clearinghouse" || value === "AY") return "Clearinghouse";
+  return "Unknown";
+}
+
+function recordOf(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
+
+function arrayOfRecords(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(recordOf).filter((entry): entry is Record<string, unknown> => Boolean(entry));
+}
+
+function textOf(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function uniqueStrings(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function compactObject(input: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
 }
 
 export function buildStediProfessionalClaimJson(

@@ -32,6 +32,8 @@ test("Stedi adapter uses the documented JSON endpoints and API-key headers", asy
   await adapter.checkClaimStatus({ tradingPartnerServiceId: "STEDITEST" });
   await adapter.retrieveEraData("7647d644-9348-4596-a3b4-6830b8b48cc8");
   await adapter.listEras({ startDateTime: "2026-07-10T00:00:00.000Z" });
+  await adapter.retrieve277Data("833112dc-3073-4a4c-a555-64fded7db935");
+  await adapter.list277s({ startDateTime: "2026-07-10T00:00:00.000Z" });
 
   assert.deepEqual(calls.map((call) => call.url), [
     `${STEDI_DEFAULT_BASE_URL}/eligibility/v3`,
@@ -39,13 +41,40 @@ test("Stedi adapter uses the documented JSON endpoints and API-key headers", asy
     `${STEDI_DEFAULT_BASE_URL}/claimstatus/v2`,
     `${STEDI_DEFAULT_BASE_URL}/reports/v2/7647d644-9348-4596-a3b4-6830b8b48cc8/835`,
     `${STEDI_DEFAULT_CORE_BASE_URL}/polling/transactions?startDateTime=2026-07-10T00%3A00%3A00.000Z`,
+    `${STEDI_DEFAULT_BASE_URL}/reports/v2/833112dc-3073-4a4c-a555-64fded7db935/277`,
+    `${STEDI_DEFAULT_CORE_BASE_URL}/polling/transactions?startDateTime=2026-07-10T00%3A00%3A00.000Z`,
   ]);
   for (const call of calls) {
     assert.equal((call.init.headers as Record<string, string>).Authorization, "test-key");
   }
   assert.equal((calls[1].init.headers as Record<string, string>)["Idempotency-Key"], "ODOSCLAIM900");
   assert.equal(calls[3].init.method, "GET");
+  assert.equal(calls[5].init.method, "GET");
   assert.equal("enrollEra" in adapter, false);
+});
+
+test("Stedi reuses one polling transport, preserves ERA discovery output, and filters 277 discovery", async () => {
+  const { calls, fetchImpl } = jsonTransport({
+    items: [
+      { transactionId: "era-1", direction: "INBOUND", x12: { metadata: { transaction: { transactionSetIdentifier: "835" } } } },
+      { transactionId: "ack-1", direction: "INBOUND", x12: { metadata: { transaction: { transactionSetIdentifier: "277" } } } },
+      { transactionId: "outbound-ack", direction: "OUTBOUND", x12: { metadata: { transaction: { transactionSetIdentifier: "277" } } } },
+    ],
+    nextPageToken: "next-1",
+  });
+  const adapter = createStediAdapter({
+    config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
+    fetchImpl,
+  });
+
+  assert.deepEqual((await adapter.listEras({ pageToken: "page-1" }) as any).items.map((item: any) => item.transactionId), [
+    "era-1",
+    "ack-1",
+    "outbound-ack",
+  ]);
+  assert.deepEqual((await adapter.list277s({ pageToken: "page-1" }) as any).items.map((item: any) => item.transactionId), ["ack-1"]);
+  assert.equal((await adapter.list277s({ pageToken: "page-1" }) as any).nextPageToken, "next-1");
+  assert.equal(calls.every((call) => call.url === `${STEDI_DEFAULT_CORE_BASE_URL}/polling/transactions?pageToken=page-1`), true);
 });
 
 test("Stedi configuration is opt-in and production requires an exact mode value", () => {

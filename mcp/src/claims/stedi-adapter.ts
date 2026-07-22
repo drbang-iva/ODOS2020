@@ -26,6 +26,8 @@ export interface StediAdapter extends ClearinghouseAdapter {
   readonly mode: "test" | "production";
   readonly submitterId: string;
   submitProfessionalClaim(input: { payload: StediProfessionalClaimPayload; idempotencyKey: string }): Promise<StediSubmitResult>;
+  list277s(input?: { pageToken?: string; startDateTime?: string }): Promise<unknown>;
+  retrieve277Data(transactionId: string): Promise<unknown>;
 }
 
 export interface StediErrorDetail {
@@ -73,6 +75,20 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
     Accept: "application/json",
     "Content-Type": "application/json",
   });
+  const pollTransactions = async (
+    input: { pageToken?: string; startDateTime?: string } = {},
+  ): Promise<unknown> => {
+    const startDateTime = input.startDateTime
+      ?? new Date((opts.now?.() ?? new Date()).getTime() - 86_400_000).toISOString();
+    const query = input.pageToken
+      ? `pageToken=${encodeURIComponent(input.pageToken)}`
+      : `startDateTime=${encodeURIComponent(startDateTime)}`;
+    return requestJson(
+      fetchImpl,
+      `${coreBaseUrl}/polling/transactions?${query}`,
+      { method: "GET", headers: jsonHeaders() },
+    );
+  };
 
   return {
     id: "stedi",
@@ -95,17 +111,16 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
       headers: jsonHeaders(),
       body: JSON.stringify(payload),
     }),
-    listEras: (input: { pageToken?: string; startDateTime?: string } = {}) => {
-      const startDateTime = input.startDateTime
-        ?? new Date((opts.now?.() ?? new Date()).getTime() - 86_400_000).toISOString();
-      const query = input.pageToken
-        ? `pageToken=${encodeURIComponent(input.pageToken)}`
-        : `startDateTime=${encodeURIComponent(startDateTime)}`;
-      return requestJson(fetchImpl, `${coreBaseUrl}/polling/transactions?${query}`, { method: "GET", headers: jsonHeaders() });
-    },
+    listEras: (input) => pollTransactions(input),
     retrieveEraData: (transactionId) => requestJson(
       fetchImpl,
       `${baseUrl}/reports/v2/${encodeURIComponent(transactionId)}/835`,
+      { method: "GET", headers: jsonHeaders() },
+    ),
+    list277s: async (input) => filterTransactions(await pollTransactions(input), "277"),
+    retrieve277Data: (transactionId) => requestJson(
+      fetchImpl,
+      `${baseUrl}/reports/v2/${encodeURIComponent(transactionId)}/277`,
       { method: "GET", headers: jsonHeaders() },
     ),
   };
@@ -131,6 +146,23 @@ async function requestJson(fetchImpl: typeof fetch, url: string, init: RequestIn
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function transactionSetIdentifierOf(item: Record<string, unknown>): unknown {
+  const x12 = isRecord(item.x12) ? item.x12 : undefined;
+  const metadata = x12 && isRecord(x12.metadata) ? x12.metadata : undefined;
+  const transaction = metadata && isRecord(metadata.transaction) ? metadata.transaction : undefined;
+  return transaction?.transactionSetIdentifier;
+}
+
+function filterTransactions(result: unknown, transactionSetIdentifier: "277"): unknown {
+  if (!isRecord(result) || !Array.isArray(result.items)) return result;
+  return {
+    ...result,
+    items: result.items.filter((item) => isRecord(item)
+      && item.direction === "INBOUND"
+      && transactionSetIdentifierOf(item) === transactionSetIdentifier),
+  };
 }
 
 function stediErrors(responseBody: unknown): StediErrorDetail[] | undefined {
