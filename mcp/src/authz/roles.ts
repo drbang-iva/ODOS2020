@@ -157,14 +157,6 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
     interactions: UPDATE_INTERACTIONS,
     scope: {
       kind: "practice-search",
-      criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
-    },
-  },
-  {
-    resourceType: "Basic",
-    interactions: UPDATE_INTERACTIONS,
-    scope: {
-      kind: "practice-search",
       criteria: "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
     },
   },
@@ -177,6 +169,16 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
     },
   },
 ];
+
+const BILLING_IDENTITY_CONFIG_READ_RULE: OdosResourceRule = {
+  resourceType: "Basic",
+  interactions: READ_INTERACTIONS,
+  scope: {
+    kind: "practice-search",
+    criteria:
+      "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
+  },
+};
 
 const OFFICE_CHANNEL_RESOURCE_RULES: OdosResourceRule[] = [
   { resourceType: "Practitioner", interactions: READ_INTERACTIONS, scope: { kind: "practice" } },
@@ -391,6 +393,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       APPEARANCE_CONFIG_READ_RULE,
       ...DISPENSARY_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
+      BILLING_IDENTITY_CONFIG_READ_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],
   },
