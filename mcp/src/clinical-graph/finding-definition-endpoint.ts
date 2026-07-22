@@ -309,6 +309,7 @@ function definitionSummary(definition: ClinicalFindingDefinition) {
     allowDeferred: definition.normalSemantics?.allowDeferred === true,
     allowDiagnosisMapping: definition.allowDiagnosisMapping !== false,
     diagnosisCandidates: definition.diagnosisCandidates ?? [],
+    documentationElements: definition.documentationElements ?? [],
   };
 }
 

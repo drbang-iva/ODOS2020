@@ -704,6 +704,113 @@ test("anterior optional grades seed, validate, remain editable, and round-trip p
   });
 });
 
+test("E1 entrance state sections emit coded attributes and round-trip normal and abnormal fields", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const pupils = definitions.find((definition) => definition.stableKey === "entrance:pupils");
+  assert.ok(pupils);
+  const fields = pupils.valueSchema.fields as Record<string, { localCode: string }>;
+  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: pupils.stableKey },
+    body: {
+      patientReference: "Patient/entrance-pupils",
+      encounterReference: "Encounter/entrance-pupils",
+      eyes: { OD: { state: "normal", customFields: [] }, OS: { state: "normal", customFields: [] } },
+    },
+  });
+  assert.equal(normal.status, 200, JSON.stringify(normal.body));
+  assert.equal(component(fhir.observations[0], "entrance.pupils")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
+  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "PERRLA; no APD OU");
+
+  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: pupils.stableKey },
+    body: {
+      patientReference: "Patient/entrance-pupils",
+      encounterReference: "Encounter/entrance-pupils",
+      eyes: {
+        OD: {
+          state: "abnormal",
+          customFields: [
+            { code: fields.CUSTOM_PUPIL_SIZE_BRIGHT!.localCode, value: 4 },
+            { code: fields.CUSTOM_PUPIL_SHAPE!.localCode, value: "irregular" },
+          ],
+          other: "Trace anisocoria.",
+        },
+      },
+    },
+  });
+  assert.equal(abnormal.status, 200, JSON.stringify(abnormal.body));
+  const last = fhir.observations.at(-1);
+  assert.equal(component(last, "entrance.pupils")?.valueCodeableConcept?.coding?.[0]?.code, "abnormal");
+  assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_SIZE_BRIGHT!.localCode}`)?.valueQuantity?.value, 4);
+  assert.equal(component(last, `OD_${fields.CUSTOM_PUPIL_SHAPE!.localCode}`)?.valueCodeableConcept?.coding?.[0]?.code, "irregular");
+
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: pupils.stableKey },
+    query: { patient: "Patient/entrance-pupils", encounter: "Encounter/entrance-pupils" },
+  });
+  const rows = (history.body as { rows: Array<{ state: string; other?: string; values: Array<{ code: string; value: unknown }> }> }).rows;
+  assert.equal(rows.some((row) => row.state === "abnormal" && row.other === "Trace anisocoria." && row.values.some((value) => value.code === "CUSTOM_PUPIL_SIZE_BRIGHT" && value.value === 4)), true);
+});
+
+test("E1 Pachymetry and Manual K use measurement capture without exam state", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const pachymetry = definitions.find((definition) => definition.stableKey === "pachymetry_um");
+  const manualK = definitions.find((definition) => definition.stableKey === "manual_keratometry");
+  assert.ok(pachymetry && manualK);
+  const pachy = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: pachymetry.stableKey },
+    body: {
+      patientReference: "Patient/entrance-measurements",
+      encounterReference: "Encounter/entrance-measurements",
+      eyes: { OD: { customFields: [
+        { code: "CUSTOM_CCT", value: 542 },
+        { code: "CUSTOM_PACHYMETRY_METHOD", value: "optical" },
+        { code: "CUSTOM_PACHYMETRY_TIME", value: "10:42" },
+      ] } },
+    },
+  });
+  assert.equal(pachy.status, 200, JSON.stringify(pachy.body));
+  assert.equal(component(fhir.observations.at(-1), "entrance.pachymetry")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
+  assert.equal(component(fhir.observations.at(-1), "OD_CUSTOM_CCT")?.valueQuantity?.value, 542);
+  assert.equal(component(fhir.observations.at(-1), "OD_CUSTOM_PACHYMETRY_TIME")?.valueString, "10:42");
+
+  const partial = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: manualK.stableKey },
+    body: {
+      patientReference: "Patient/entrance-measurements",
+      encounterReference: "Encounter/entrance-measurements",
+      eyes: { OD: { customFields: [{ code: "CUSTOM_FLAT_K", value: 43.25 }] } },
+    },
+  });
+  assert.equal(partial.status, 400);
+  assert.match(String((partial.body as { error: string }).error), /requires flat K/);
+  const complete = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: manualK.stableKey },
+    body: {
+      patientReference: "Patient/entrance-measurements",
+      encounterReference: "Encounter/entrance-measurements",
+      eyes: { OS: { customFields: [
+        { code: "CUSTOM_FLAT_K", value: 43.25 },
+        { code: "CUSTOM_FLAT_AXIS", value: 180 },
+        { code: "CUSTOM_STEEP_K", value: 44 },
+        { code: "CUSTOM_STEEP_AXIS", value: 90 },
+        { code: "CUSTOM_MIRES_QUALITY", value: "clear" },
+      ] } },
+    },
+  });
+  assert.equal(complete.status, 200, JSON.stringify(complete.body));
+  assert.equal(component(fhir.observations.at(-1), "OS_CUSTOM_FLAT_K")?.valueQuantity?.value, 43.25);
+  assert.equal(component(fhir.observations.at(-1), "entrance.manual-keratometry"), undefined);
+});
+
 class MemoryFhir {
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];

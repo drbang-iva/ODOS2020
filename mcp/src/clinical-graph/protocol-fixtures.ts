@@ -63,7 +63,7 @@ export const GLAUCOMA_SUSPECT_PROTOCOL: ProtocolDefinition = {
       },
     },
     { ...OU, itemKey: "iop", itemType: "finding-seed", payload: { findingDefKey: "iop", mode: "promptOnly" } },
-    { ...OU, itemKey: "cct", itemType: "finding-seed", payload: { findingDefKey: "pachymetry-cct", mode: "promptOnly" } },
+    { ...OU, itemKey: "cct", itemType: "finding-seed", payload: { findingDefKey: "pachymetry_um", mode: "promptOnly" } },
     ...PROCEDURES.map((procedure) => ({
       ...OU, itemKey: `order-${procedure.key}`, itemType: "order" as const, mergeKey: `order:${procedure.key}`,
       payload: { orderableKey: procedure.key, performContext: procedure.context, chargeSeedRef: `charge-${procedure.key}` },

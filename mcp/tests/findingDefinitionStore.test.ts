@@ -90,6 +90,40 @@ test("finding definitions persist as one coded Basic carrying the interface JSON
   assert.deepEqual(parseFindingDefinitionResource(resource), local);
 });
 
+test("E1 seeds six entrance definitions with canonical Pachymetry and declarative documentation elements", () => {
+  const seeds = buildFindingDefinitionSeeds();
+  const entrance = seeds.filter((definition) => definition.sectionKey?.startsWith("entrance:"));
+  assert.deepEqual(entrance.map((definition) => definition.stableKey), [
+    "entrance:pupils",
+    "entrance:stereo",
+    "entrance:color",
+    "pachymetry_um",
+    "manual_keratometry",
+    "entrance:dilation",
+  ]);
+  assert.equal(seeds.filter((definition) => definition.stableKey === "pachymetry_um").length, 1);
+  assert.equal(seeds.some((definition) => definition.stableKey === "pachymetry-cct"), false);
+  assert.deepEqual(entrance.map((definition) => definition.documentationElements?.map((entry) => entry.code)), [
+    ["entrance.pupils"],
+    ["entrance.stereo"],
+    ["entrance.color"],
+    ["entrance.pachymetry"],
+    [],
+    ["entrance.dilation.dfe"],
+  ]);
+  const manualK = entrance.find((definition) => definition.stableKey === "manual_keratometry");
+  assert.ok(manualK);
+  const fields = manualK.valueSchema.fields as Record<string, Record<string, unknown>>;
+  assert.deepEqual(
+    ["CUSTOM_FLAT_K", "CUSTOM_STEEP_K"].map((code) => [fields[code]?.type, fields[code]?.minimum, fields[code]?.maximum, fields[code]?.precision]),
+    [["decimal-input", 30, 60, 2], ["decimal-input", 30, 60, 2]],
+  );
+  assert.deepEqual(
+    ["CUSTOM_FLAT_AXIS", "CUSTOM_STEEP_AXIS"].map((code) => [fields[code]?.type, fields[code]?.minimum, fields[code]?.maximum]),
+    [["integer-select", 0, 180], ["integer-select", 0, 180]],
+  );
+});
+
 test("stored rows override compiled seeds by stableKey and survive a store restart", async () => {
   const fhir = new MemoryFindingDefinitionFhir();
   const seeds = buildFindingDefinitionSeeds();
@@ -285,8 +319,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 57);
-  assert.equal(routeDependencies.length, 32);
+  assert.equal(clinicalRoutes.length, 59);
+  assert.equal(routeDependencies.length, 34);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
   assert.match(source, /handleDiagnosisCatalogListRequest/);

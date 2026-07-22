@@ -7,7 +7,7 @@ type Eye = "OD" | "OS";
 export interface CustomFindingField {
   localCode: string;
   display: string;
-  valueType: "number" | "select" | "multi-select";
+  valueType: "number" | "select" | "multi-select" | "string";
   unit?: string;
   min?: number;
   max?: number;
@@ -25,6 +25,15 @@ export interface CustomFindingDefinition {
   active: boolean;
   perEye: boolean;
   customFields: CustomFindingField[];
+  fields?: Record<string, {
+    display?: string;
+    type?: string;
+    minimum?: number;
+    maximum?: number;
+    precision?: number;
+    defaultValue?: number;
+    options?: Array<{ code: string; display: string; active?: boolean }>;
+  }>;
   normalTemplate?: string;
   allowDeferred?: boolean;
 }
@@ -220,6 +229,8 @@ function CustomFieldControl({ field, value, onChange }: {
           <option value="">Select</option>
           {(field.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
         </select>
+      ) : field.valueType === "string" ? (
+        <input type="text" value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)] outline-none focus:border-brand" />
       ) : (
         <div className="space-y-2 rounded border border-white/10 p-3">
           {(field.options ?? []).filter((option) => option.active && !option.parentCode).map((option) => {

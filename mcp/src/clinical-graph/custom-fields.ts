@@ -13,7 +13,7 @@ import type {
   FindingValue,
 } from "./glaucoma-suspect.js";
 
-export const CUSTOM_FIELD_VALUE_TYPES = ["number", "select", "multi-select"] as const;
+export const CUSTOM_FIELD_VALUE_TYPES = ["number", "select", "multi-select", "string"] as const;
 export type CustomFieldValueType = typeof CUSTOM_FIELD_VALUE_TYPES[number];
 
 export interface CustomFieldEntry {
@@ -298,7 +298,7 @@ export function validateCustomFieldValues(
       if (!option || !option.active) {
         return `${label} custom field ${item.code} contains an unknown or inactive option: ${item.value}.`;
       }
-    } else {
+    } else if (field.valueType === "multi-select") {
       if (!Array.isArray(item.value)) return `${label} custom field ${item.code} requires an array of option codes.`;
       const selected = item.value;
       if (new Set(selected).size !== selected.length) {
@@ -318,6 +318,8 @@ export function validateCustomFieldValues(
       if (orphan) {
         return `${label} custom field ${item.code} sub-option requires its parent selection: ${orphan}.`;
       }
+    } else if (typeof item.value !== "string") {
+      return `${label} custom field ${item.code} requires text.`;
     }
   }
   return undefined;
@@ -368,7 +370,7 @@ export function codeCustomFieldComponents(
       const code = component.code.coding?.find((coding) => coding.code)?.code;
       const localCode = code?.startsWith(codePrefix) ? code.slice(codePrefix.length) : undefined;
       const field = localCode ? fields.get(localCode) : undefined;
-      if (!field || field.valueType !== "select" || typeof component.valueString !== "string") return component;
+    if (!field || field.valueType !== "select" || typeof component.valueString !== "string") return component;
       const option = field.options?.find((candidate) => candidate.code === component.valueString);
       if (!option) return component;
       const { valueString: _valueString, ...rest } = component;
@@ -423,6 +425,7 @@ export function observationCustomValue(
     const value = matched.valueQuantity?.value;
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
   }
+  if (field.valueType === "string") return matched.valueString?.trim() || undefined;
   const coding = matched.valueCodeableConcept?.coding?.find((candidate) => candidate.code);
   const code = coding?.code ?? matched.valueString;
   if (!code) return undefined;

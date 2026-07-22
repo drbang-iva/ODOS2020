@@ -5,6 +5,9 @@ import { ReferralCompose } from "../components/referral/ReferralCompose";
 import { AestheticsConsentSection } from "../components/charting/AestheticsConsentSection";
 import { AssessmentSection } from "../components/charting/AssessmentSection";
 import { AutoRefractionSection } from "../components/charting/AutoRefractionSection";
+import { EntranceStateSection } from "../components/charting/EntranceStateSection";
+import { EntranceMeasurementSection } from "../components/charting/EntranceMeasurementSection";
+import { DilationSection } from "../components/charting/DilationSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
 import { GonioscopySection } from "../components/charting/GonioscopySection";
 import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
@@ -169,6 +172,15 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const customDefinitions = catalog.definitions.filter((definition) =>
     definition.sectionKey?.startsWith("custom:") && definition.active
   );
+  const entranceDefinitions = catalog.definitions.filter((definition) =>
+    definition.sectionKey?.startsWith("entrance:") && definition.active
+  );
+  const pupilsDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:pupils");
+  const stereopsisDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:stereo");
+  const colorDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:color");
+  const pachymetryDefinition = entranceDefinitions.find((definition) => definition.stableKey === "pachymetry_um");
+  const manualKDefinition = entranceDefinitions.find((definition) => definition.stableKey === "manual_keratometry");
+  const dilationDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:dilation");
   const ocularHealthDefinitions = catalog.definitions.filter((definition) =>
     definition.sectionKey?.startsWith("ocular-health:") && definition.active
   );
@@ -235,6 +247,22 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("auto-refraction", status)}
             />
           )}
+          {activeSection === "manual-keratometry" && manualKDefinition && (
+            <EntranceMeasurementSection
+              definition={manualKDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("manual-keratometry", status)}
+            />
+          )}
+          {activeSection === "pachymetry" && pachymetryDefinition && (
+            <EntranceMeasurementSection
+              definition={pachymetryDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("pachymetry", status)}
+            />
+          )}
           {activeSection === "va" && (
             <VaSection
               patientReference={patientReference}
@@ -242,11 +270,43 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("va", status)}
             />
           )}
+          {activeSection === "pupils" && pupilsDefinition && (
+            <EntranceStateSection
+              definition={pupilsDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("pupils", status)}
+            />
+          )}
+          {activeSection === "stereopsis" && stereopsisDefinition && (
+            <EntranceStateSection
+              definition={stereopsisDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("stereopsis", status)}
+            />
+          )}
+          {activeSection === "color-vision" && colorDefinition && (
+            <EntranceStateSection
+              definition={colorDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("color-vision", status)}
+            />
+          )}
           {activeSection === "iop" && (
             <IopSection
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("iop", status)}
+            />
+          )}
+          {activeSection === "dilation" && dilationDefinition && (
+            <DilationSection
+              definition={dilationDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("dilation", status)}
             />
           )}
           {activeSection === "refraction" && (

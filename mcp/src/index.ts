@@ -171,6 +171,10 @@ import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "./clinical-graph/custom-section-endpoint.js";
+import {
+  handleDilationCaptureRequest,
+  handleDilationHistoryRequest,
+} from "./clinical-graph/dilation-endpoint.js";
 import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
@@ -6523,6 +6527,34 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "Auto-refraction clinical-graph route failed" });
           }
+        }
+      });
+
+      app.post("/clinical-graph/dilation", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDilationCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/dilation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Dilation clinical-graph route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/dilation/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDilationHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/dilation/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Dilation history route failed" });
         }
       });
 
