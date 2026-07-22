@@ -51,6 +51,7 @@ test("Refraction Purpose is the exact seven-option dropdown", () => {
 
 test("standalone Visual Acuity uses the curated VA selector for both eyes", () => {
   const html = renderToStaticMarkup(<VaSection {...PROPS} />);
+  assert.match(html, />Value<\/div><div>Chart<\/div>/);
   for (const eye of ["OD", "OS"]) {
     assert.match(html, new RegExp(`<select[^>]*aria-label="${eye} visual acuity"`));
     assert.match(html, new RegExp(`<select[^>]*aria-label="${eye} visual acuity modifier"`));

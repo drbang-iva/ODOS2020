@@ -79,7 +79,7 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
         <div className="mt-5 overflow-hidden rounded border border-white/10">
           <div className="grid grid-cols-[72px_1fr_180px_180px] gap-0 bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/35">
             <div>Eye</div>
-            <div>Snellen</div>
+            <div>Value</div>
             <div>Chart</div>
             <div>Correction</div>
           </div>
