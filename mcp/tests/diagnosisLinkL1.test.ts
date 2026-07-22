@@ -138,6 +138,8 @@ test("diagnosis catalog seeds are ledger-backed durable families and survive a s
     "t2_dr_pdr_combined_trd_rrd",
     "t2_dr_stable_pdr",
     "t2_dr_pdr_without_dme",
+    "diplopia",
+    "paralytic_strabismus",
   ]);
   assert.deepEqual((seeds.find((row) => row.stableKey === "myopia")?.icd10 as { pattern: object }).pattern, {
     unspecifiedEye: "H52.10",

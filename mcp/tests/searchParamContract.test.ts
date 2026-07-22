@@ -17,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 82;
+const EXPECTED_DIRECT_SEARCH_CALLS = 84;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:233": [
@@ -59,12 +59,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2592": [spec("Patient", "name", "_count")],
-  "src/index.ts:2633": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2641": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2649": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4247": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4269": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2594": [spec("Patient", "name", "_count")],
+  "src/index.ts:2635": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2643": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2651": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4249": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4271": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
@@ -113,7 +113,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 82 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 84 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();

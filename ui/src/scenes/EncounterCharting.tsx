@@ -8,6 +8,8 @@ import { AutoRefractionSection } from "../components/charting/AutoRefractionSect
 import { EntranceStateSection } from "../components/charting/EntranceStateSection";
 import { EntranceMeasurementSection } from "../components/charting/EntranceMeasurementSection";
 import { DilationSection } from "../components/charting/DilationSection";
+import { EomSection } from "../components/charting/EomSection";
+import { CoverTestSection } from "../components/charting/CoverTestSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
 import { GonioscopySection } from "../components/charting/GonioscopySection";
 import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
@@ -178,6 +180,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const pupilsDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:pupils");
   const stereopsisDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:stereo");
   const colorDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:color");
+  const eomDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:eom");
+  const cvfDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:cvf");
   const pachymetryDefinition = entranceDefinitions.find((definition) => definition.stableKey === "pachymetry_um");
   const manualKDefinition = entranceDefinitions.find((definition) => definition.stableKey === "manual_keratometry");
   const dilationDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:dilation");
@@ -292,6 +296,29 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               patientReference={patientReference}
               encounterReference={encounterReference}
               onSaved={(status) => markSaved("color-vision", status)}
+            />
+          )}
+          {activeSection === "eom" && eomDefinition && (
+            <EomSection
+              definition={eomDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("eom", status)}
+            />
+          )}
+          {activeSection === "cvf" && cvfDefinition && (
+            <EntranceStateSection
+              definition={cvfDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("cvf", status)}
+            />
+          )}
+          {activeSection === "cover-test" && (
+            <CoverTestSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved("cover-test", status)}
             />
           )}
           {activeSection === "iop" && (

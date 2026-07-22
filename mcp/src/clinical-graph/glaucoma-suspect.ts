@@ -190,7 +190,8 @@ export type MappingTrigger =
   | { kind: "always" }
   | { kind: "abnormal" }
   | { kind: "numeric"; field: string; op: ">=" | "<=" | ">" | "<" | "=="; value: number }
-  | { kind: "option"; field: string; anyOf: string[] };
+  | { kind: "option"; field: string; anyOf: string[] }
+  | { kind: "allOf"; triggers: MappingTrigger[] };
 
 export interface DiagnosisCandidateEntry {
   id: string;

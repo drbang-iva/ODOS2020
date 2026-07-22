@@ -3,12 +3,14 @@ import { test } from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DilationSection } from "../src/components/charting/DilationSection";
+import { EomSection } from "../src/components/charting/EomSection";
+import { CoverTestSection } from "../src/components/charting/CoverTestSection";
 import { EntranceMeasurementSection } from "../src/components/charting/EntranceMeasurementSection";
 import { EntranceStateSection } from "../src/components/charting/EntranceStateSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
 import type { CustomFindingDefinition } from "../src/components/charting/CustomFindingSection";
 
-test("E1 adds six independent static rows to the PRETEST spine in clinical order", () => {
+test("E2 adds nine independent static rows to the PRETEST spine in clinical order", () => {
   const html = renderToStaticMarkup(<SpineNav active="pupils" statuses={{}} onSelect={() => undefined} />);
   const labels = [
     "Auto-Refraction / Auto-K",
@@ -18,6 +20,9 @@ test("E1 adds six independent static rows to the PRETEST spine in clinical order
     "Pupils",
     "Stereopsis",
     "Color Vision",
+    "EOM / Diplopia",
+    "Confrontation Visual Fields",
+    "Cover Test",
     "IOP",
     "Dilation",
   ];
@@ -28,6 +33,25 @@ test("E1 adds six independent static rows to the PRETEST spine in clinical order
     previous = index;
   }
   assert.equal((html.match(/data-spine-group="PRETEST"/g) ?? []).length, 1);
+});
+
+test("E2 renders CVF through the unchanged generic state section", () => {
+  const html = renderToStaticMarkup(<EntranceStateSection
+    definition={{ stableKey: "entrance:cvf", sectionKey: "entrance:cvf", display: "Confrontation visual fields", active: true, perEye: true, normalTemplate: "Full to finger counting OU", allowDeferred: true, customFields: [
+      { localCode: "CUSTOM_CVF_SUPERIOR_NASAL", display: "Superior nasal", valueType: "select", options: [{ code: "restricted", display: "restricted", active: true }, { code: "full", display: "full", active: true }], order: 0, active: true },
+    ] }}
+    patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined}
+  />);
+  assert.match(html, /Full to finger counting OU/);
+});
+
+test("E2 bespoke sections expose nine-position diplopia and four cover-test rows", () => {
+  const eom = renderToStaticMarkup(<EomSection definition={{ stableKey: "entrance:eom", display: "EOM / diplopia", active: true, perEye: true, customFields: [] }} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+  assert.match(eom, /Full OU — SAFE/);
+  assert.match(eom, /Nine-position motility, nystagmus, and structured diplopia findings/);
+  const cover = renderToStaticMarkup(<CoverTestSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+  for (const label of ["Distance cc", "Distance sc", "Near cc", "Near sc"]) assert.match(cover, new RegExp(label));
+  assert.match(cover, /Free-text note/);
 });
 
 test("entrance state sections expose Normal OU, explicit per-eye states, fields, and History", () => {

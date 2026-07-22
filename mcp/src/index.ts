@@ -175,6 +175,8 @@ import {
   handleDilationCaptureRequest,
   handleDilationHistoryRequest,
 } from "./clinical-graph/dilation-endpoint.js";
+import { handleEomCaptureRequest, handleEomHistoryRequest } from "./clinical-graph/eom-endpoint.js";
+import { handleCoverTestCaptureRequest, handleCoverTestHistoryRequest } from "./clinical-graph/cover-test-endpoint.js";
 import { handleProviderAssignmentRequest } from "./clinical-graph/provider-assignment-endpoint.js";
 import { createClaimMdAdapter, claimMdConfigFromEnv } from "./claims/claimmd-adapter.js";
 import { clearinghouseRoutingFromEnv } from "./claims/clearinghouse-adapter.js";
@@ -6555,6 +6557,62 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/dilation/history failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "Dilation history route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/eom", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEomCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/eom failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "EOM clinical-graph route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/eom/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEomHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/eom/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "EOM history route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/cover-test", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCoverTestCaptureRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.write"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/cover-test failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Cover-test clinical-graph route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/cover-test/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleCoverTestHistoryRequest(
+            await clinicalGraphRouteDeps(req.header("authorization"), "chart.read"),
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/cover-test/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Cover-test history route failed" });
         }
       });
 

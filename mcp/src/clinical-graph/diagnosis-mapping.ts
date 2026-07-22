@@ -10,21 +10,27 @@ import type {
 } from "./glaucoma-suspect.js";
 
 const fieldSchema = z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
-export const mappingTriggerSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("always") }).strict(),
-  z.object({ kind: z.literal("abnormal") }).strict(),
-  z.object({
-    kind: z.literal("numeric"),
-    field: fieldSchema,
-    op: z.enum([">=", "<=", ">", "<", "=="]),
-    value: z.number().finite(),
-  }).strict(),
-  z.object({
-    kind: z.literal("option"),
-    field: fieldSchema,
-    anyOf: z.array(z.string().trim().min(1).max(200)).min(1).max(100),
-  }).strict(),
-]);
+export const mappingTriggerSchema: z.ZodType<MappingTrigger> = z.lazy(() =>
+  z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("always") }).strict(),
+    z.object({ kind: z.literal("abnormal") }).strict(),
+    z.object({
+      kind: z.literal("numeric"),
+      field: fieldSchema,
+      op: z.enum([">=", "<=", ">", "<", "=="]),
+      value: z.number().finite(),
+    }).strict(),
+    z.object({
+      kind: z.literal("option"),
+      field: fieldSchema,
+      anyOf: z.array(z.string().trim().min(1).max(200)).min(1).max(100),
+    }).strict(),
+    z.object({
+      kind: z.literal("allOf"),
+      triggers: z.array(mappingTriggerSchema).min(1).max(20),
+    }).strict(),
+  ])
+);
 
 export const createDiagnosisCandidateSchema = z.object({
   diagnosisKey: z.string().trim().min(1).max(160),
@@ -96,6 +102,9 @@ export function updateDiagnosisCandidate(
 export function evaluateMappingTrigger(trigger: unknown, finding: FindingInstance): boolean {
   const parsed = mappingTriggerSchema.safeParse(trigger);
   if (!parsed.success) return false;
+  if (parsed.data.kind === "allOf") {
+    return parsed.data.triggers.every((nested) => evaluateMappingTrigger(nested, finding));
+  }
   if (parsed.data.kind === "always") return true;
   if (parsed.data.kind === "abnormal") {
     return finding.interpretation === "abnormal" || finding.interpretation === "borderline";
