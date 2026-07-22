@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { IopTimeline } from "./IopTimeline";
+import { numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -127,6 +129,8 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
   const dateField = iopFields.date ?? {};
   const timeField = iopFields.timeOfDay ?? {};
   const chValueField = chFields.value ?? {};
+  const iopOptions = useMemo(() => numericOptions(valueField, 3, 80, 1), [valueField]);
+  const cornealHysteresisOptions = useMemo(() => numericOptions(chValueField, 0, 15, 0.1), [chValueField]);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setRows((current) => ({
@@ -219,17 +223,13 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <Field label={valueField.display ?? "IOP"}>
-                    <input
+                    <PowerDropdown
                       value={row.value}
-                      onChange={(event) => updateEye(eye, { value: event.target.value })}
-                      inputMode="decimal"
-                      type="number"
-                      min={valueField.minimum ?? 3}
-                      max={valueField.maximum ?? 80}
-                      step={valueField.step ?? 1}
+                      options={iopOptions}
+                      defaultValue="15"
+                      onChange={(value) => updateEye(eye, { value })}
+                      ariaLabel={`${eye} IOP value`}
                       disabled={disabled}
-                      placeholder="14"
-                      className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
                     />
                   </Field>
 
@@ -268,17 +268,13 @@ export function IopSection({ patientReference, encounterReference, onSaved }: Pr
                   </Field>
 
                   <Field label={chValueField.display ?? "CH"}>
-                    <input
+                    <PowerDropdown
                       value={row.cornealHysteresis}
-                      onChange={(event) => updateEye(eye, { cornealHysteresis: event.target.value })}
-                      inputMode="decimal"
-                      type="number"
-                      min={chValueField.minimum ?? 0}
-                      max={chValueField.maximum ?? 15}
-                      step={chValueField.step ?? 0.1}
+                      options={cornealHysteresisOptions}
+                      defaultValue="9.00"
+                      onChange={(value) => updateEye(eye, { cornealHysteresis: value })}
+                      ariaLabel={`${eye} corneal hysteresis`}
                       disabled={disabled}
-                      placeholder="9.8"
-                      className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
                     />
                   </Field>
                 </div>

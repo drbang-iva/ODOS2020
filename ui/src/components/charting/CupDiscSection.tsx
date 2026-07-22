@@ -267,19 +267,7 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <Field label={verticalField.display ?? "Vertical C/D ratio"}>
-                    <fieldset disabled={disabled} className="grid grid-cols-2 gap-2">
-                      <input
-                        value={row.verticalCupDiscRatio}
-                        onChange={(event) => updateEye(eye, { verticalCupDiscRatio: event.target.value })}
-                        inputMode="decimal"
-                        type="number"
-                        min={verticalField.minimum ?? 0}
-                        max={verticalField.maximum ?? 1}
-                        step={verticalField.step ?? 0.05}
-                        placeholder="0.30"
-                        aria-label={`${eye} vertical cup disc ratio typed value`}
-                        className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
-                      />
+                    <fieldset disabled={disabled}>
                       <PowerDropdown
                         value={row.verticalCupDiscRatio}
                         options={verticalOptions}
@@ -291,19 +279,7 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
                   </Field>
 
                   <Field label={horizontalField.display ?? "Horizontal C/D ratio"}>
-                    <fieldset disabled={disabled} className="grid grid-cols-2 gap-2">
-                      <input
-                        value={row.horizontalCupDiscRatio}
-                        onChange={(event) => updateEye(eye, { horizontalCupDiscRatio: event.target.value })}
-                        inputMode="decimal"
-                        type="number"
-                        min={horizontalField.minimum ?? 0}
-                        max={horizontalField.maximum ?? 1}
-                        step={horizontalField.step ?? 0.05}
-                        placeholder="0.30"
-                        aria-label={`${eye} horizontal cup disc ratio typed value`}
-                        className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand disabled:opacity-45"
-                      />
+                    <fieldset disabled={disabled}>
                       <PowerDropdown
                         value={row.horizontalCupDiscRatio}
                         options={horizontalOptions}

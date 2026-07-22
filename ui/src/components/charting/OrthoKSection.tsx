@@ -10,6 +10,8 @@ import {
   type OrthoKFitFindingCode,
 } from "../../lib/fhir-v04c/orthoK";
 import type { SectionSaveStatus } from "./types";
+import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 
 interface Props {
   patientReference: string;
@@ -25,6 +27,15 @@ const FIT_FINDINGS: OrthoKFitFindingCode[] = [
   "edge-clearance",
   "comfort",
 ];
+
+const PARAMETER_CONTROLS = [
+  { key: "baseCurveMm", label: "BC mm", options: numericOptions(undefined, 6, 10, 0.05), defaultValue: "7.80" },
+  { key: "reverseCurveDepthUm", label: "RCD um", options: numericOptions(undefined, 300, 800, 10), defaultValue: "550" },
+  { key: "alignmentCurveMm", label: "AC mm", options: numericOptions(undefined, 7, 10, 0.05), defaultValue: "8.30" },
+  { key: "ozdMm", label: "OZD mm", options: numericOptions(undefined, 4, 8, 0.05), defaultValue: "6.20" },
+  { key: "diameterMm", label: "Diameter mm", options: numericOptions(undefined, 9, 12, 0.05), defaultValue: "10.60" },
+  { key: "spherePower", label: "Rx D", options: numericOptions(undefined, -5, 5, 0.25), defaultValue: "0.00", formatOption: (value: string) => formatPowerOption(Number(value)) },
+] as const;
 
 export function OrthoKSection({ patientReference, encounterReference, onSaved }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -42,7 +53,7 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
     alignmentCurveMm: "8.30",
     ozdMm: "6.20",
     diameterMm: "10.60",
-    spherePower: "-2.00",
+    spherePower: "0.00",
   });
 
   async function ensureLens(): Promise<Device> {
@@ -255,21 +266,19 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
               </button>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                ["baseCurveMm", "BC mm"],
-                ["reverseCurveDepthUm", "RCD um"],
-                ["alignmentCurveMm", "AC mm"],
-                ["ozdMm", "OZD mm"],
-                ["diameterMm", "Diameter mm"],
-                ["spherePower", "Rx D"],
-              ].map(([key, label]) => (
-                <label key={key} className="text-sm text-white/70">
-                  {label}
-                  <input
-                    value={parameters[key as keyof typeof parameters]}
-                    onChange={(event) => updateParameter(key as keyof typeof parameters, event.target.value)}
-                    className="mt-1 h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
-                  />
+              {PARAMETER_CONTROLS.map((control) => (
+                <label key={control.key} className="text-sm text-white/70">
+                  {control.label}
+                  <div className="mt-1">
+                    <PowerDropdown
+                      value={parameters[control.key]}
+                      options={control.options}
+                      defaultValue={control.defaultValue}
+                      onChange={(value) => updateParameter(control.key, value)}
+                      ariaLabel={`Ortho-K ${control.label}`}
+                      formatOption={"formatOption" in control ? control.formatOption : undefined}
+                    />
+                  </div>
                 </label>
               ))}
             </div>

@@ -7,6 +7,7 @@ interface PowerDropdownProps {
   onChange: (value: string) => void;
   ariaLabel: string;
   formatOption?: (value: string) => string;
+  disabled?: boolean;
 }
 
 export function PowerDropdown({
@@ -16,6 +17,7 @@ export function PowerDropdown({
   onChange,
   ariaLabel,
   formatOption = (option) => option,
+  disabled = false,
 }: PowerDropdownProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(() => defaultIndex(options, defaultValue));
@@ -41,6 +43,10 @@ export function PowerDropdown({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   function openAtDefault() {
     setActiveIndex(defaultIndex(options, defaultValue));
@@ -72,6 +78,7 @@ export function PowerDropdown({
           aria-expanded={open}
           aria-controls={listboxId}
           aria-activedescendant={open ? `${listboxId}-option-${activeIndex}` : undefined}
+          disabled={disabled}
           value={value}
           onChange={(event) => {
             onChange(event.target.value);
@@ -97,15 +104,16 @@ export function PowerDropdown({
               setActiveIndex(options.length - 1);
             }
           }}
-          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none"
+          className="min-w-0 flex-1 bg-transparent px-2 text-sm text-white outline-none disabled:opacity-45"
         />
         <button
           type="button"
           aria-label={`${ariaLabel} options`}
           aria-expanded={open}
           aria-controls={listboxId}
+          disabled={disabled}
           onClick={() => open ? setOpen(false) : openAtDefault()}
-          className="w-8 border-l border-white/10 text-xs text-white/55 hover:bg-white/[0.06] hover:text-white"
+          className="w-8 border-l border-white/10 text-xs text-white/55 hover:bg-white/[0.06] hover:text-white disabled:opacity-45"
         >
           ▾
         </button>
@@ -124,6 +132,7 @@ export function PowerDropdown({
             id={`${listboxId}-option-${index}`}
             type="button"
             role="option"
+            disabled={disabled}
             aria-selected={value === option}
             data-default={option === defaultValue ? "true" : undefined}
             onMouseEnter={() => setActiveIndex(index)}

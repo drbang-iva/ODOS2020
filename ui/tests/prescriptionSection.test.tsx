@@ -20,7 +20,7 @@ import {
 
 const NOOP = () => undefined;
 
-test("PrescriptionEditor exposes every prescription field as a directly typeable control", () => {
+test("PrescriptionEditor exposes every prescription field with the specified control shape", () => {
   const html = renderToStaticMarkup(
     <PrescriptionEditor
       draft={EMPTY_PRESCRIPTION_DRAFT}
@@ -45,8 +45,12 @@ test("PrescriptionEditor exposes every prescription field as a directly typeable
   ]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
   }
-  assert.match(html, /type="number" min="0"[^>]*aria-label="Refills"|aria-label="Refills"[^>]*type="number"/);
-  assert.match(html, /type="number" min="1"[^>]*aria-label="Days supply"|aria-label="Days supply"[^>]*type="number"/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Refills"/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Days supply"/);
+  assert.match(html, /data-default="true"[^>]*>30</);
+  for (const route of ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"]) {
+    assert.match(html, new RegExp(`<option value="${route}"`));
+  }
   assert.match(html, /value="printed"/);
   assert.match(html, /value="phoned-in"/);
   assert.doesNotMatch(html, /Send electronically|electronically-sent/);
@@ -139,7 +143,14 @@ test("selecting a Formulary result stores coded fields and later text edits clea
   const result = formularyResult();
   let latestDraft = EMPTY_PRESCRIPTION_DRAFT;
   let renderer: ReactTestRenderer;
-  const searchApi = searchApiStub({ formulary: async () => [result] });
+  let searchStarted!: () => void;
+  const searchStartedPromise = new Promise<void>((resolve) => { searchStarted = resolve; });
+  const searchApi = searchApiStub({
+    formulary: async () => {
+      searchStarted();
+      return [result];
+    },
+  });
 
   function Harness() {
     const [draft, setDraft] = useState(EMPTY_PRESCRIPTION_DRAFT);
@@ -158,7 +169,8 @@ test("selecting a Formulary result stores coded fields and later text edits clea
   await act(async () => { renderer = create(<Harness />); });
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": "Formulary" }).props.onChange({ target: { value: "lata" } });
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await searchStartedPromise;
+    await Promise.resolve();
   });
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": `Choose ${result.psnDescription} from the Formulary` }).props.onClick();

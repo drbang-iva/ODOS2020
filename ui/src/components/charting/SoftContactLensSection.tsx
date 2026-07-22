@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
+import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
@@ -24,6 +25,8 @@ interface ProductOption extends DefinitionOption {
   design?: string;
   colorOptions?: DefinitionOption[];
   mfPowerOptions?: DefinitionOption[];
+  baseCurveOptions?: DefinitionOption[];
+  diameterOptions?: DefinitionOption[];
   frequentlyUsed?: boolean;
 }
 
@@ -154,6 +157,7 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
   const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -20, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
+  const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
 
   function updateEye(eye: Eye, next: Partial<EyeState>) {
     setEyes((current) => ({ ...current, [eye]: { ...current[eye], ...next } }));
@@ -170,11 +174,11 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   }
 
   function selectManufacturer(eye: Eye, manufacturer: string) {
-    updateEye(eye, { manufacturer, product: "", colorMfPower: "" });
+    updateEye(eye, { manufacturer, product: "", baseCurve: "", diameter: "", colorMfPower: "" });
   }
 
   function selectProduct(eye: Eye, product: string) {
-    updateEye(eye, { product, colorMfPower: "" });
+    updateEye(eye, { product, baseCurve: "", diameter: "", colorMfPower: "" });
   }
 
   async function save() {
@@ -261,8 +265,14 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
             <div className="grid gap-4 rounded border border-white/10 bg-bg-panel/80 p-4 md:grid-cols-4">
               <SelectField label="Usage" value={usage} onChange={setUsage} options={activeOptions(fields.usage)} />
               <SelectField label="Status" value={status} onChange={setStatus} options={activeOptions(fields.status)} />
-              <TextField label="Binocular PD Dist (mm)" value={binocularPdDistance} onChange={setBinocularPdDistance} inputMode="decimal" />
-              <TextField label="Binocular PD Near (mm)" value={binocularPdNear} onChange={setBinocularPdNear} inputMode="decimal" />
+              <label className="block">
+                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Dist (mm)</span>
+                <PowerDropdown value={binocularPdDistance} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdDistance} ariaLabel="Binocular PD Dist (mm)" />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Binocular PD Near (mm)</span>
+                <PowerDropdown value={binocularPdNear} options={binocularPdOptions} defaultValue="63.00" onChange={setBinocularPdNear} ariaLabel="Binocular PD Near (mm)" />
+              </label>
             </div>
 
             {EYES.map((eye) => {
@@ -270,6 +280,8 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
               const filteredProducts = products.filter((product) => product.manufacturerCode === state.manufacturer);
               const selectedProduct = products.find((product) => product.code === state.product);
               const cascadeOptions = activeNestedOptions(selectedProduct?.colorOptions ?? selectedProduct?.mfPowerOptions);
+              const baseCurveOptions = softLensProductParameterOptions(selectedProduct, "baseCurveOptions");
+              const diameterOptions = softLensProductParameterOptions(selectedProduct, "diameterOptions");
               return (
                 <div key={eye} className="rounded border border-white/10 bg-bg-panel/75 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -303,8 +315,16 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                         <SelectField label="Product" value={state.product} onChange={(value) => selectProduct(eye, value)} options={filteredProducts} disabled={!state.manufacturer} />
                       </>
                     )}
-                    <TextField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} inputMode="decimal" />
-                    <TextField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} inputMode="decimal" />
+                    {state.manualEntry ? (
+                      <TextField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} inputMode="decimal" />
+                    ) : (
+                      <SelectField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} options={baseCurveOptions} disabled={!state.product} />
+                    )}
+                    {state.manualEntry ? (
+                      <TextField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} inputMode="decimal" />
+                    ) : (
+                      <SelectField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} />
+                    )}
                     <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
                     <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} />
@@ -568,6 +588,13 @@ function activeProductOptions(field: DefinitionField | undefined): ProductOption
 
 function activeNestedOptions(options: DefinitionOption[] | undefined): DefinitionOption[] {
   return (options ?? []).filter((option) => option.active !== false);
+}
+
+export function softLensProductParameterOptions(
+  product: { baseCurveOptions?: DefinitionOption[]; diameterOptions?: DefinitionOption[] } | undefined,
+  parameter: "baseCurveOptions" | "diameterOptions",
+): DefinitionOption[] {
+  return activeNestedOptions(product?.[parameter]);
 }
 
 function compact<T extends Record<string, unknown>>(value: T): T {

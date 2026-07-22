@@ -6,6 +6,7 @@ import {
   type VisualAcuitySectionSaveEntry,
 } from "../../lib/fhir-ophthalmology/save-section-bundle";
 import type { SectionSaveStatus } from "./types";
+import { VaValueSelect } from "./VaValueSelect";
 
 interface Props {
   patientReference: string;
@@ -78,24 +79,37 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
         <div className="mt-5 overflow-hidden rounded border border-white/10">
           <div className="grid grid-cols-[72px_1fr_180px_180px] gap-0 bg-white/5 px-4 py-2 text-xs uppercase tracking-widest text-white/35">
             <div>Eye</div>
-            <div>Snellen</div>
+            <div>Value</div>
             <div>Chart</div>
             <div>Correction</div>
           </div>
           {(["OD", "OS"] as const).map((laterality) => (
             <div key={laterality} className="grid grid-cols-[72px_1fr_180px_180px] gap-3 border-t border-white/10 p-4">
               <div className="pt-3 text-sm font-semibold text-white">{laterality}</div>
-              <input
-                value={rows[laterality].snellen}
-                onChange={(event) =>
-                  setRows((current) => ({
-                    ...current,
-                    [laterality]: { ...current[laterality], snellen: event.target.value },
-                  }))
-                }
-                placeholder="20/20"
-                className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
-              />
+              {rows[laterality].chartType === "SNELLEN" ? (
+                <VaValueSelect
+                  value={rows[laterality].snellen}
+                  onChange={(value) =>
+                    setRows((current) => ({
+                      ...current,
+                      [laterality]: { ...current[laterality], snellen: value },
+                    }))
+                  }
+                  ariaLabel={`${laterality} visual acuity`}
+                />
+              ) : (
+                <input
+                  value={rows[laterality].snellen}
+                  onChange={(event) =>
+                    setRows((current) => ({
+                      ...current,
+                      [laterality]: { ...current[laterality], snellen: event.target.value },
+                    }))
+                  }
+                  aria-label={`${laterality} visual acuity`}
+                  className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
+                />
+              )}
               <select
                 value={rows[laterality].chartType}
                 onChange={(event) =>
@@ -104,9 +118,11 @@ export function VaSection({ patientReference, encounterReference, onSaved }: Pro
                     [laterality]: {
                       ...current[laterality],
                       chartType: event.target.value as VaRowState["chartType"],
+                      snellen: "",
                     },
                   }))
                 }
+                aria-label={`${laterality} visual acuity chart`}
                 className="h-11 rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand"
               >
                 {["SNELLEN", "ETDRS", "LOGMAR", "JAEGER", "OTHER", "UNKNOWN"].map((value) => (
