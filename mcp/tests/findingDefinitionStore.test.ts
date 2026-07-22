@@ -90,13 +90,16 @@ test("finding definitions persist as one coded Basic carrying the interface JSON
   assert.deepEqual(parseFindingDefinitionResource(resource), local);
 });
 
-test("E1 seeds six entrance definitions with canonical Pachymetry and declarative documentation elements", () => {
+test("E2 seeds nine entrance definitions with canonical Pachymetry and declarative documentation elements", () => {
   const seeds = buildFindingDefinitionSeeds();
   const entrance = seeds.filter((definition) => definition.sectionKey?.startsWith("entrance:"));
   assert.deepEqual(entrance.map((definition) => definition.stableKey), [
     "entrance:pupils",
     "entrance:stereo",
     "entrance:color",
+    "entrance:eom",
+    "entrance:cvf",
+    "entrance:cover",
     "pachymetry_um",
     "manual_keratometry",
     "entrance:dilation",
@@ -107,6 +110,9 @@ test("E1 seeds six entrance definitions with canonical Pachymetry and declarativ
     ["entrance.pupils"],
     ["entrance.stereo"],
     ["entrance.color"],
+    ["entrance.eom"],
+    ["entrance.cvf"],
+    ["entrance.cover"],
     ["entrance.pachymetry"],
     [],
     ["entrance.dilation.dfe"],
@@ -319,8 +325,8 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 59);
-  assert.equal(routeDependencies.length, 34);
+  assert.equal(clinicalRoutes.length, 63);
+  assert.equal(routeDependencies.length, 38);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
   assert.match(source, /handleDiagnosisCatalogListRequest/);

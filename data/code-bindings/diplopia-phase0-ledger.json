@@ -1,0 +1,26 @@
+{
+  "scope": "E2 entrance-battery diagnosis suggestions",
+  "verifiedOn": "2026-07-22",
+  "diagnosisCodes": [
+    {
+      "code": "H53.2",
+      "display": "Diplopia",
+      "family": "diplopia",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "https://www.cms.gov/icd10m/FY2026-fr-v43-fullcode-cms/fullcode_cms/P0454.html",
+        "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleid=56799&ver=23"
+      ]
+    },
+    {
+      "code": "H49.9",
+      "display": "Unspecified paralytic strabismus",
+      "family": "paralytic-strabismus",
+      "laterality": "UNKNOWN",
+      "sourceRefs": [
+        "https://www.cms.gov/icd10m/FY2026-fr-v43-fullcode-cms/fullcode_cms/P0453.html",
+        "https://www.cms.gov/medicare-coverage-database/view/article.aspx?articleid=56799&ver=23"
+      ]
+    }
+  ]
+}

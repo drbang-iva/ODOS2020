@@ -31,7 +31,7 @@ test("SpineNav preserves its section inventory for an empty custom registry and 
   const before = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
   const emptyRegistry = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} customSections={[]} />);
   assert.equal(emptyRegistry, before);
-  assert.equal((before.match(/data-status=/g) ?? []).length, 23);
+  assert.equal((before.match(/data-status=/g) ?? []).length, 26);
   assert.match(before, /ASSESSMENT &amp; PLAN/);
   assert.ok(before.indexOf("Assessment") < before.indexOf("Plan · Prescriptions"));
 
@@ -46,7 +46,7 @@ test("SpineNav preserves its section inventory for an empty custom registry and 
   );
   assert.match(custom, /Skin Carotenoid Score/);
   assert.match(custom, /\+ Add section/);
-  assert.equal((custom.match(/data-status=/g) ?? []).length, 24);
+  assert.equal((custom.match(/data-status=/g) ?? []).length, 27);
   assert.deepEqual(sectionStatus({}, "custom:missing"), { completed: false });
 });
 
@@ -829,9 +829,9 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps the 24 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
+test("EncounterCharting keeps the 27 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 24);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 27);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);

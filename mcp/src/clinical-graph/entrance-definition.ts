@@ -8,6 +8,9 @@ import {
 const PUPILS_KEY = "entrance:pupils";
 const STEREO_KEY = "entrance:stereo";
 const COLOR_KEY = "entrance:color";
+export const EOM_KEY = "entrance:eom";
+export const CVF_KEY = "entrance:cvf";
+export const COVER_TEST_KEY = "entrance:cover";
 export const PACHYMETRY_KEY = "pachymetry_um";
 export const MANUAL_K_KEY = "manual_keratometry";
 export const DILATION_KEY = "entrance:dilation";
@@ -34,6 +37,62 @@ export function buildEntranceFindingDefinitions(
       numberField("CUSTOM_COLOR_PLATES_TOTAL", "Plates total", 0, 100, 1, undefined, 2),
       selectField("CUSTOM_COLOR_UNABLE", "Unable to test", ["no", "yes"], 3),
     ], "entrance.color", provenance),
+    buildClinicalFindingDefinition({
+      id: "finding-def-entrance-eom",
+      stableKey: EOM_KEY,
+      display: "EOM / diplopia",
+      sectionKey: EOM_KEY,
+      anatomyTarget: "eye",
+      valueSchema: {
+        type: "eom-section",
+        perEye: true,
+        fields: Object.fromEntries(eomPositionFields().map((field) => [field.localCode, field])),
+      },
+      normalSemantics: { template: "Full OU — SAFE", allowDeferred: true },
+      sourceStatus: "verified-seed",
+      allowDiagnosisMapping: true,
+      diagnosisCandidates: ["diplopia", "paralytic_strabismus"].map((diagnosisKey, index) => ({
+        id: `SEED_EOM_DIPLOPIA_${index + 1}`,
+        diagnosisKey,
+        trigger: {
+          kind: "allOf" as const,
+          triggers: [
+            { kind: "option" as const, field: "binocular", anyOf: ["yes"] },
+            { kind: "option" as const, field: "incomitant", anyOf: ["yes"] },
+          ],
+        },
+        priority: true,
+        origin: "seed" as const,
+        active: true,
+      })),
+      documentationElements: [{ code: "entrance.eom", origin: "seed", active: true }],
+      notBillReady: true,
+      active: true,
+      provenance,
+    }),
+    stateDefinition(CVF_KEY, "Confrontation visual fields", "Full to finger counting OU", [
+      selectField("CUSTOM_CVF_SUPERIOR_NASAL", "Superior nasal", ["restricted", "full"], 0),
+      selectField("CUSTOM_CVF_SUPERIOR_TEMPORAL", "Superior temporal", ["restricted", "full"], 1),
+      selectField("CUSTOM_CVF_INFERIOR_NASAL", "Inferior nasal", ["restricted", "full"], 2),
+      selectField("CUSTOM_CVF_INFERIOR_TEMPORAL", "Inferior temporal", ["restricted", "full"], 3),
+      selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 4),
+      selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 5),
+    ], "entrance.cvf", provenance),
+    buildClinicalFindingDefinition({
+      id: "finding-def-entrance-cover",
+      stableKey: COVER_TEST_KEY,
+      display: "Cover test",
+      sectionKey: COVER_TEST_KEY,
+      anatomyTarget: "eye",
+      valueSchema: { type: "cover-test-section", perEye: false, fields: {} },
+      normalSemantics: { diagnosisSuggestions: false },
+      sourceStatus: "verified-seed",
+      allowDiagnosisMapping: false,
+      documentationElements: [{ code: "entrance.cover", origin: "seed", active: true }],
+      notBillReady: true,
+      active: true,
+      provenance,
+    }),
     measurementDefinition({
       stableKey: PACHYMETRY_KEY,
       sectionKey: "entrance:pachymetry",
@@ -106,6 +165,19 @@ export function buildEntranceFindingDefinitions(
       provenance,
     }),
   ];
+}
+
+function eomPositionFields(): CustomFieldEntry[] {
+  return [
+    ["UP_LEFT", "Up left"], ["UP", "Up"], ["UP_RIGHT", "Up right"],
+    ["LEFT", "Left"], ["PRIMARY", "Primary"], ["RIGHT", "Right"],
+    ["DOWN_LEFT", "Down left"], ["DOWN", "Down"], ["DOWN_RIGHT", "Down right"],
+  ].map(([code, display], order) => selectField(
+    `CUSTOM_EOM_POS_${code}`,
+    display!,
+    ["-4", "-3", "-2", "-1", "0", "+1", "+2", "+3", "+4"],
+    order,
+  ));
 }
 
 function stateDefinition(

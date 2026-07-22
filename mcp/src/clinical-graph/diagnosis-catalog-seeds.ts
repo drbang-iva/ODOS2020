@@ -12,6 +12,7 @@ const GLAUCOMA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/glaucoma-sus
 const REFRACTIVE_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/refractive-error-phase0-ledger.json");
 const OCULAR_HEALTH_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/ocular-health-phase0-ledger.json");
 const DIABETIC_RETINOPATHY_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diabetic-retinopathy-phase0-ledger.json");
+const DIPLOPIA_LEDGER_PATH = resolve(REPO_ROOT, "data/code-bindings/diplopia-phase0-ledger.json");
 
 interface LedgerRow {
   code: string;
@@ -38,6 +39,7 @@ function buildSeeds(): DiagnosisCatalogRow[] {
   const refractive = loadLedger(REFRACTIVE_LEDGER_PATH);
   const ocularHealth = loadLedger(OCULAR_HEALTH_LEDGER_PATH);
   const diabeticRetinopathy = loadLedger(DIABETIC_RETINOPATHY_LEDGER_PATH);
+  const diplopia = loadLedger(DIPLOPIA_LEDGER_PATH);
   return [
     familySeed("glaucoma_suspect_open_angle_low", "Open angle with borderline findings, low risk", "glaucoma-suspect", "H40.01-", glaucoma, provenance),
     familySeed("glaucoma_suspect_open_angle_high", "Open angle with borderline findings, high risk", "glaucoma-suspect", "H40.02-", glaucoma, provenance),
@@ -78,6 +80,8 @@ function buildSeeds(): DiagnosisCatalogRow[] {
     familySeed("t2_dr_pdr_combined_trd_rrd", "Type 2 diabetes with proliferative diabetic retinopathy with combined traction and rhegmatogenous retinal detachment", "diabetic-retinopathy", "E11.354-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_stable_pdr", "Type 2 diabetes with stable proliferative diabetic retinopathy", "diabetic-retinopathy", "E11.355-", diabeticRetinopathy, provenance),
     familySeed("t2_dr_pdr_without_dme", "Type 2 diabetes with proliferative diabetic retinopathy without macular edema", "diabetic-retinopathy", "E11.359-", diabeticRetinopathy, provenance),
+    fixedSeed("diplopia", "Diplopia", "diplopia", "H53.2", diplopia, provenance),
+    fixedSeed("paralytic_strabismus", "Unspecified paralytic strabismus", "paralytic-strabismus", "H49.9", diplopia, provenance),
   ];
 }
 

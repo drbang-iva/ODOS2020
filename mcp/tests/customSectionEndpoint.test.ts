@@ -756,6 +756,29 @@ test("E1 entrance state sections emit coded attributes and round-trip normal and
   assert.equal(rows.some((row) => row.state === "abnormal" && row.other === "Trace anisocoria." && row.values.some((value) => value.code === "CUSTOM_PUPIL_SIZE_BRIGHT" && value.value === 4)), true);
 });
 
+test("E2 CVF reuses the entrance state endpoint for normal template and quadrant history", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const cvf = definitions.find((definition) => definition.stableKey === "entrance:cvf");
+  assert.ok(cvf);
+  const normal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cvf.stableKey },
+    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "normal", customFields: [] }, OS: { state: "normal", customFields: [] } } },
+  });
+  assert.equal(normal.status, 200, JSON.stringify(normal.body));
+  assert.equal(component(fhir.observations[0], "entrance.cvf")?.valueCodeableConcept?.coding?.[0]?.code, "normal");
+  assert.equal(component(fhir.observations[0], "NORMAL_TEMPLATE")?.valueString, "Full to finger counting OU");
+  const abnormal = await handleCustomSectionCaptureRequest(clinicalDeps("clinician", fhir, definitions), {
+    authHeader: AUTH,
+    params: { stableKey: cvf.stableKey },
+    body: { patientReference: "Patient/cvf", encounterReference: "Encounter/cvf", eyes: { OD: { state: "abnormal", customFields: [{ code: "CUSTOM_CVF_SUPERIOR_NASAL", value: "restricted" }, { code: "CUSTOM_CVF_METHOD", value: "finger-count" }] } } },
+  });
+  assert.equal(abnormal.status, 200, JSON.stringify(abnormal.body));
+  const history = await handleCustomSectionHistoryRequest(clinicalDeps("clinician", fhir, definitions), { authHeader: AUTH, params: { stableKey: cvf.stableKey }, query: { patient: "Patient/cvf", encounter: "Encounter/cvf" } });
+  assert.equal((history.body as { rows: Array<{ values: Array<{ code: string; value: unknown }> }> }).rows.some((row) => row.values.some((value) => value.code === "CUSTOM_CVF_SUPERIOR_NASAL" && value.value === "restricted")), true);
+});
+
 test("E1 Pachymetry and Manual K use measurement capture without exam state", async () => {
   const fhir = new MemoryFhir();
   const definitions = await catalog(fhir);

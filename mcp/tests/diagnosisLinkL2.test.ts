@@ -19,6 +19,44 @@ import {
   FhirDiagnosisPickTallyStore,
 } from "../src/clinical-graph/diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "../src/clinical-graph/finding-definition-store.js";
+import { evaluateMappingTrigger } from "../src/clinical-graph/diagnosis-mapping.js";
+import type { FindingInstance } from "../src/clinical-graph/glaucoma-suspect.js";
+import { handleEomCaptureRequest } from "../src/clinical-graph/eom-endpoint.js";
+
+test("allOf mapping triggers require every nested option trigger", () => {
+  const trigger = { kind: "allOf" as const, triggers: [
+    { kind: "option" as const, field: "binocular", anyOf: ["yes"] },
+    { kind: "option" as const, field: "incomitant", anyOf: ["yes"] },
+  ] };
+  const finding = (components: Array<{ code: string; display: string; value: number | string | boolean }>): FindingInstance => ({
+    id: "eom-finding", state: "committed", findingDefinitionId: "finding-def-entrance-eom",
+    patientReference: "Patient/p1", encounterReference: "Encounter/e1", laterality: "OU",
+    value: { type: "components", components }, sourceType: "manual", recordedAt: "2026-07-22T12:00:00.000Z",
+    provenance: { source: "manual", recordedAt: "2026-07-22T12:00:00.000Z" },
+  });
+  assert.equal(evaluateMappingTrigger(trigger, finding([
+    { code: "binocular::yes", display: "binocular", value: true },
+    { code: "incomitant::yes", display: "incomitant", value: true },
+  ])), true);
+  assert.equal(evaluateMappingTrigger(trigger, finding([{ code: "binocular::yes", display: "binocular", value: true }])), false);
+  assert.equal(evaluateMappingTrigger(trigger, finding([{ code: "incomitant::yes", display: "incomitant", value: true }])), false);
+});
+
+test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus without auto-confirming", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await new FhirFindingDefinitionStore(fhir).list();
+  const authenticate = async () => ({ staffReference: "Practitioner/doc", actorRole: "clinician" as PracticeRoleId, fhir });
+  const base = { patientReference: "Patient/p1", encounterReference: "Encounter/eom", state: "abnormal" as const, eyes: { OD: { primary: "-1" as const } }, nystagmus: { present: false } };
+  const firing = await handleEomCaptureRequest({ authenticate, findingDefinitions: () => definitions, now: () => "2026-07-22T12:00:00.000Z" }, { authHeader: "Bearer eom", body: { ...base, diplopia: { present: true, type: "binocular", direction: "horizontal", comitancy: "incomitant", worstGaze: "right", frequency: "intermittent" } } });
+  assert.equal(firing.status, 200, JSON.stringify(firing.body));
+  const nonFiring = await handleEomCaptureRequest({ authenticate, findingDefinitions: () => definitions, now: () => "2026-07-22T12:01:00.000Z" }, { authHeader: "Bearer eom", body: { ...base, diplopia: { present: true, type: "binocular", direction: "horizontal", comitancy: "comitant", worstGaze: "right", frequency: "intermittent" } } });
+  assert.equal(nonFiring.status, 200, JSON.stringify(nonFiring.body));
+  const candidates = await handleDiagnosisCandidatesRequest({ authenticate, now: () => "2026-07-22T12:02:00.000Z" }, { authHeader: "Bearer eom", params: { encounterId: "eom" } });
+  const findings = (candidates.body as { findings: Array<{ candidates: Array<{ diagnosisKey: string }> }> }).findings;
+  assert.deepEqual(findings[0]?.candidates.map((row) => row.diagnosisKey), ["diplopia", "paralytic_strabismus"]);
+  assert.deepEqual(findings[1]?.candidates, []);
+  assert.equal(fhir.resources.some((row) => row.resourceType === "Condition"), false);
+});
 
 class MemoryFhir {
   readonly resources: Resource[] = [];
