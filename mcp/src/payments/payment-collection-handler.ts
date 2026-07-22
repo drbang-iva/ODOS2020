@@ -14,6 +14,7 @@ import { buildPaymentAuditRecord } from "./payment-audit.js";
 import { StaffRoleServiceUnavailableError } from "./payment-endpoint.js";
 import type { ChargeHandlerResult } from "./payment-charge-handler.js";
 import { assertDayNotSealed, DayAlreadySealedError } from "../desk/day-seal.js";
+import { ODOS_UNPRICED_CHARGE_EXTENSION_URL } from "../clinical-graph/procedure-fee-schedule.js";
 
 export type CollectionFhirClient = Pick<MedplumClient, "read" | "search" | "executeTransaction">;
 
@@ -37,6 +38,7 @@ export interface OpenChargeLine {
   description: string;
   date: string;
   source: "optical" | "other";
+  unpriced: boolean;
   code?: string;
   quantity?: number;
   feeCents?: number;
@@ -193,6 +195,11 @@ async function createCollection(
     if (chargeItem.status !== "billable") {
       throw new CollectionInputError(`ChargeItem/${chargeItem.id} is not billable.`);
     }
+    if (isUnpricedCharge(chargeItem)) {
+      throw new CollectionInputError(
+        `ChargeItem/${chargeItem.id} (${chargeDescription(chargeItem)}) requires a fee schedule entry before it can be collected.`,
+      );
+    }
     return { chargeItemReference: `ChargeItem/${chargeItem.id}`, amountCents: chargeAmountCents(chargeItem) };
   });
   const totalCents = lines.reduce((total, line) => total + line.amountCents, 0);
@@ -233,11 +240,18 @@ function openChargeLine(chargeItem: ChargeItem): OpenChargeLine[] {
     source: chargeItem.supportingInformation?.some((reference) =>
       reference.reference?.startsWith("DeviceRequest/"),
     ) ? "optical" : "other",
+    unpriced: isUnpricedCharge(chargeItem),
     ...(coding?.code ? { code: coding.code } : {}),
     ...(chargeItem.quantity?.value ? { quantity: chargeItem.quantity.value } : {}),
     ...(procedureReference(chargeItem) ? { procedureReference: procedureReference(chargeItem) } : {}),
     feeCents: amountCents,
   }];
+}
+
+function isUnpricedCharge(chargeItem: ChargeItem): boolean {
+  return chargeItem.extension?.some((extension) =>
+    extension.url === ODOS_UNPRICED_CHARGE_EXTENSION_URL && extension.valueBoolean === true,
+  ) ?? false;
 }
 
 function procedureReference(chargeItem: ChargeItem): string | undefined {

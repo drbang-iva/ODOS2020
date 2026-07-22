@@ -183,6 +183,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
         ? { staffReference: "Practitioner/staff-1", actorRole: role, fhir }
         : null,
     adapter: {
+      id: "claimmd",
       submitProfessionalClaim: async () => ({
         claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }],
         raw: {},

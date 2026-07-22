@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   clearinghouseRoutingFromEnv,
@@ -42,4 +43,42 @@ test("clearinghouse selection fails closed when the selected adapter is not conf
     () => selectClearinghouseAdapter({ claimmd: adapter("claimmd") }, "stedi", "transaction"),
     /Stedi clearinghouse adapter is not configured/,
   );
+});
+
+test("Stedi environment routing reaches every claims route dependency closure", () => {
+  const source = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+  const defaults = clearinghouseRoutingFromEnv({ ODOS_CLEARINGHOUSE_DEFAULT: "stedi" });
+  assert.equal(defaults.transaction, "stedi");
+
+  const dependencyAnchors = [
+    "registerReportingRoutes(app, {",
+    "handleClaimSearchRequest(",
+    "handleManualEobListRequest(",
+    "handleCreateManualEobRequest(",
+    "handlePostManualEobClaimRequest(",
+    "handleCloseManualEobRequest(",
+    "handleEraWorklistRequest(",
+    "handleClaimEraWorklistTaskRequest(",
+    "handleResolveEraWorklistTaskRequest(",
+  ];
+  for (const anchor of dependencyAnchors) {
+    const start = source.indexOf(anchor);
+    assert.notEqual(start, -1, `${anchor} must remain registered`);
+    const recordAudit = source.indexOf("recordAudit:", start);
+    assert.notEqual(recordAudit, -1, `${anchor} must retain its audit dependency`);
+    assert.match(
+      source.slice(start, recordAudit),
+      /routingDefaults: clearinghouseRouting/,
+      `${anchor} must receive the configured clearinghouse routing defaults`,
+    );
+  }
+});
+
+test("claims handlers use the selected adapter id as the resolved clearinghouse identity", () => {
+  const source = readFileSync(new URL("../src/claims/claimmd-handlers.ts", import.meta.url), "utf8");
+  assert.match(
+    source,
+    /const adapter = selectClearinghouseAdapter\([\s\S]*?return \{ id: adapter\.id, adapter:/,
+  );
+  assert.doesNotMatch(source, /const id = requested \?\? deps\.routingDefaults\?\.\[operation\] \?\? "claimmd"/);
 });

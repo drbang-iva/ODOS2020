@@ -1651,8 +1651,7 @@ function clearinghouseSelection(
   };
   try {
     const adapter = selectClearinghouseAdapter(adapters, requested, operation, deps.routingDefaults);
-    const id = requested ?? deps.routingDefaults?.[operation] ?? "claimmd";
-    return { id, adapter: adapter as ClaimMdAdapter | StediAdapter };
+    return { id: adapter.id, adapter: adapter as ClaimMdAdapter | StediAdapter };
   } catch (error) {
     return { status: 503, body: { error: messageOf(error) } };
   }
