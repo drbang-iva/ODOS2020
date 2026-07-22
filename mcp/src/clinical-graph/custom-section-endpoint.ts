@@ -17,6 +17,7 @@ import {
   type ClinicalGraphProvenance,
   type CapturedGlaucomaFinding,
 } from "./glaucoma-suspect.js";
+import { withDocumentationElements } from "./documentation-elements.js";
 
 type Eye = "OD" | "OS";
 
@@ -83,6 +84,7 @@ export async function handleCustomSectionCaptureRequest(
   }
   const perEye = definition.valueSchema.perEye === true;
   const ocularHealth = definition.valueSchema.type === "ocular-health-structure";
+  const stateSection = ocularHealth || definition.valueSchema.type === "entrance-state-section";
   if (perEye !== Boolean(parsed.data.eyes) || perEye === Boolean(parsed.data.customFields)) {
     return { status: 400, body: { error: perEye ? "This section requires eyes payloads." : "This section requires a per-record customFields payload." } };
   }
@@ -100,22 +102,22 @@ export async function handleCustomSectionCaptureRequest(
   const rows = perEye
     ? eyeRows
     : [{ eye: "UNKNOWN" as const, values: parsed.data.customFields ?? [], state: undefined, other: undefined }];
-  if (ocularHealth && rows.some((row) => row.other && !row.state)) {
+  if (stateSection && rows.some((row) => row.other && !row.state)) {
     return { status: 400, body: { error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text." } };
   }
-  if (ocularHealth && rows.some((row) => !row.state)) {
+  if (stateSection && rows.some((row) => !row.state)) {
     return { status: 400, body: { error: "Ocular-health eye payloads require an explicit normal, abnormal, or deferred state." } };
   }
-  if (ocularHealth && rows.some((row) => row.state === "deferred") && definition.normalSemantics?.allowDeferred !== true) {
+  if (stateSection && rows.some((row) => row.state === "deferred") && definition.normalSemantics?.allowDeferred !== true) {
     return { status: 400, body: { error: "Deferred is not enabled for this ocular-health structure." } };
   }
   const ocularFields = new Map(customFieldEntries(definition).map((field) => [field.localCode, field]));
-  if (ocularHealth && rows.some((row) => row.state !== "abnormal" && row.values.some((value) =>
+  if (stateSection && rows.some((row) => row.state !== "abnormal" && row.values.some((value) =>
     ocularFields.get(value.code)?.valueType === "multi-select"
   ))) {
     return { status: 400, body: { error: "Only an abnormal ocular-health state may carry abnormal findings." } };
   }
-  if (!ocularHealth && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
+  if (!stateSection && rows.some((row) => row.state !== undefined || row.other !== undefined)) {
     return { status: 400, body: { error: "Exam state and other text are only supported for ocular-health structures." } };
   }
   if (rows.every((row) => row.values.length === 0 && !row.state && !row.other) && !parsed.data.remarks) {
@@ -124,6 +126,15 @@ export async function handleCustomSectionCaptureRequest(
   for (const row of rows) {
     const validationError = validateCustomFieldValues(row.values, definition, row.eye);
     if (validationError) return { status: 400, body: { error: validationError } };
+    if (definition.stableKey === "manual_keratometry") {
+      const required = ["CUSTOM_FLAT_K", "CUSTOM_FLAT_AXIS", "CUSTOM_STEEP_K", "CUSTOM_STEEP_AXIS"];
+      const supplied = new Set(row.values.map((value) => value.code));
+      const anyK = required.some((code) => supplied.has(code));
+      const allK = required.every((code) => supplied.has(code));
+      if (anyK && !allK) {
+        return { status: 400, body: { error: `${row.eye} Manual K requires flat K, flat axis, steep K, and steep axis together.` } };
+      }
+    }
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
@@ -146,13 +157,13 @@ export async function handleCustomSectionCaptureRequest(
           ...(parsed.data.remarks
             ? [{ code: "REMARKS", display: "Remarks", value: parsed.data.remarks }]
             : []),
-          ...(ocularHealth && row.state
+          ...(stateSection && row.state
             ? [{ code: "EXAM_STATE", display: "Exam state", value: row.state }]
             : []),
-          ...(ocularHealth && row.state === "normal" && typeof definition.normalSemantics?.template === "string"
+          ...(stateSection && row.state === "normal" && typeof definition.normalSemantics?.template === "string"
             ? [{ code: "NORMAL_TEMPLATE", display: "Normal template", value: definition.normalSemantics.template }]
             : []),
-          ...(ocularHealth && row.other
+          ...(stateSection && row.other
             ? [{ code: "OTHER", display: "Other", value: row.other }]
             : []),
         ],
@@ -164,11 +175,15 @@ export async function handleCustomSectionCaptureRequest(
     });
     const coded = {
       ...captured,
-      observation: appendCustomFieldComponentsToObservation(
-        captured.observation,
-        row.values,
+      observation: withDocumentationElements(
+        appendCustomFieldComponentsToObservation(
+          captured.observation,
+          row.values,
+          definition,
+          perEye ? `${row.eye}_` : "",
+        ),
         definition,
-        perEye ? `${row.eye}_` : "",
+        row.state ?? "normal",
       ),
     };
     results.push(await persistCapture(
@@ -237,10 +252,16 @@ function resolveCustomDefinition(
   requireActive: boolean,
 ): ClinicalFindingDefinition | undefined {
   const stableKey = readStableKey(params);
-  if (!stableKey?.startsWith("custom:") && !stableKey?.startsWith("ocular-health:")) return undefined;
+  if (
+    !stableKey?.startsWith("custom:") &&
+    !stableKey?.startsWith("ocular-health:") &&
+    !stableKey?.startsWith("entrance:") &&
+    stableKey !== "pachymetry_um" &&
+    stableKey !== "manual_keratometry"
+  ) return undefined;
   return definitions?.find((definition) =>
     definition.stableKey === stableKey &&
-    definition.sectionKey === stableKey &&
+    (definition.sectionKey === stableKey || definition.sectionKey?.startsWith("entrance:")) &&
     (!requireActive || definition.active)
   );
 }

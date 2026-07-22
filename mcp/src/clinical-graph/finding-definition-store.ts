@@ -16,6 +16,7 @@ import {
   buildPosteriorOcularHealthDefinitions,
 } from "./ocular-health-definition.js";
 import { buildHpiFindingDefinition } from "./hpi-definition.js";
+import { buildEntranceFindingDefinitions, PACHYMETRY_KEY } from "./entrance-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/odos-finding-definition";
@@ -127,12 +128,13 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
   };
   return [
     buildHpiFindingDefinition(provenance),
-    ...buildGlaucomaFindingDefinitionStubs({ provenance }),
+    ...buildGlaucomaFindingDefinitionStubs({ provenance }).filter((definition) => definition.stableKey !== PACHYMETRY_KEY),
     ...buildGonioscopyFindingDefinitions(provenance),
     buildRefractionFindingDefinitionStub(provenance),
     buildSoftContactLensFindingDefinitionStub(provenance),
     buildSpecialtyContactLensFindingDefinitionStub(provenance),
     ...buildPretestFindingDefinitionStubs(provenance),
+    ...buildEntranceFindingDefinitions(provenance),
     ...buildAnteriorOcularHealthDefinitions(provenance),
     ...buildPosteriorOcularHealthDefinitions(provenance),
   ];
@@ -240,6 +242,23 @@ function assertClinicalFindingDefinition(value: unknown): ClinicalFindingDefinit
       }
       if (ids.has(candidate.id)) throw new Error(`Duplicate diagnosis mapping id ${candidate.id}.`);
       ids.add(candidate.id);
+    }
+  }
+  if (value.documentationElements !== undefined) {
+    if (!Array.isArray(value.documentationElements)) {
+      throw new Error("Finding definition documentationElements must be an array.");
+    }
+    const codes = new Set<string>();
+    for (const element of value.documentationElements) {
+      if (!isRecord(element)) throw new Error("Documentation element entries must be objects.");
+      requiredString(element.code, "documentationElements.code");
+      const code = element.code;
+      if (!code.startsWith("entrance.")) throw new Error("Documentation element codes must use the entrance. prefix.");
+      if (!['seed', 'practice'].includes(String(element.origin)) || typeof element.active !== "boolean") {
+        throw new Error("Documentation element origin or active state is invalid.");
+      }
+      if (codes.has(code)) throw new Error(`Duplicate documentation element code ${code}.`);
+      codes.add(code);
     }
   }
   if (typeof value.notBillReady !== "boolean") {

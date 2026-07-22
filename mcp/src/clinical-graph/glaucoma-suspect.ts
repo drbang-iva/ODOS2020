@@ -171,10 +171,19 @@ export interface ClinicalFindingDefinition {
   sourceStatus: "verified-seed" | "unseeded-needs-operator-input" | "local-practice";
   fhirObservationCode?: CodeableConcept;
   diagnosisCandidates?: DiagnosisCandidateEntry[];
+  documentationElements?: DocumentationElementEntry[];
   allowDiagnosisMapping?: boolean;
   notBillReady: boolean;
   active: boolean;
   provenance: ClinicalGraphProvenance;
+}
+
+export type DocumentationElementValue = "normal" | "abnormal" | "deferred" | "absent";
+
+export interface DocumentationElementEntry {
+  code: string;
+  origin: "seed" | "practice";
+  active: boolean;
 }
 
 export type MappingTrigger =

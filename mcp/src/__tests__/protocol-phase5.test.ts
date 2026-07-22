@@ -158,7 +158,7 @@ test("H40.02x offer is deliberate; open remains inert; commit creates the exact 
   );
   assert.equal(committedGonio.length, 8);
   const promptOnly = (await service.findings.list()).filter((row) =>
-    ["iop", "pachymetry-cct", "gonio_tm_pigmentation"].includes(row.findingDefKey)
+    ["iop", "pachymetry_um", "gonio_tm_pigmentation"].includes(row.findingDefKey)
   );
   assert.equal(promptOnly.length, 4);
   assert.equal(promptOnly.every((row) => row.observationReference === undefined), true);
@@ -419,7 +419,7 @@ test("apply verifies the persisted Condition and creates no prompt-only Observat
   const observations = fhir.resources.filter((resource): resource is Observation => resource.resourceType === "Observation");
   assert.equal(observations.length, 10);
   assert.equal(observations.some((observation) =>
-    ["iop", "pachymetry-cct", "gonio_tm_pigmentation"].includes(observation.code.coding?.[0]?.code ?? "")
+    ["iop", "pachymetry_um", "gonio_tm_pigmentation"].includes(observation.code.coding?.[0]?.code ?? "")
   ), false);
 });
 
