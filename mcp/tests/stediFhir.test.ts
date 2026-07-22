@@ -172,3 +172,165 @@ test("Stedi 277 and 835 responses map to the shared FHIR ClaimResponse shape", (
   assert.equal(era.item?.[0].adjudication.find((entry) => entry.category.text === "allowed")?.amount?.value, 100);
   assert.equal(era.payment?.identifier?.value, "TRACE900");
 });
+
+test("Stedi ERA preserves all populated service and claim adjustment slots, including zero and negative amounts", () => {
+  const era = buildClaimResponseFromStediEra({
+    claimReference: "Claim/claim-1",
+    patientReference: "Patient/pat-900",
+    insurerReference: "Organization/payer-1",
+    created: "2026-07-11",
+    transactionId: "era-adjustments-900",
+    paymentDate: "20260711",
+    claim: {
+      claimPaymentInfo: {
+        patientControlNumber: "ODOSCLAIM900",
+        totalClaimChargeAmount: "125",
+        claimPaymentAmount: "80",
+        patientResponsibilityAmount: "25",
+        claimStatusCode: "1",
+      },
+      claimAdjustments: [{
+        claimAdjustmentGroupCode: "CO",
+        adjustmentReasonCode1: "45",
+        adjustmentAmount1: "10",
+        adjustmentReasonCode2: "94",
+        adjustmentAmount2: "0",
+        adjustmentReasonCode3: "253",
+        adjustmentAmount3: "-5",
+        adjustmentReasonCode4: "97",
+        adjustmentAmount4: "2",
+        adjustmentReasonCode5: "131",
+        adjustmentAmount5: "-1",
+        adjustmentReasonCode6: "234",
+        adjustmentAmount6: "3",
+      }],
+      serviceLines: [{
+        lineItemControlNumber: "line-1",
+        servicePaymentInformation: {
+          lineItemChargeAmount: "125",
+          lineItemProviderPaymentAmount: "0",
+          adjudicatedProcedureCode: "92004",
+        },
+        serviceSupplementalAmounts: { allowedActual: "100" },
+        serviceAdjustments: [{
+          claimAdjustmentGroupCode: "PR",
+          adjustmentReasonCode1: "1",
+          adjustmentAmount1: "10",
+          adjustmentReasonCode2: "2",
+          adjustmentAmount2: "0",
+          adjustmentReasonCode3: "3",
+          adjustmentAmount3: "15",
+          adjustmentReasonCode4: "4",
+          adjustmentAmount4: "-2",
+          adjustmentReasonCode5: "5",
+          adjustmentAmount5: "1",
+          adjustmentReasonCode6: "6",
+          adjustmentAmount6: "1",
+        }],
+      }],
+    } as any,
+  });
+
+  assert.deepEqual(
+    era.item?.[0].adjudication.map((entry) => [entry.category.text, entry.amount?.value]),
+    [
+      ["submitted", 125],
+      ["allowed", 100],
+      ["paid", 0],
+      ["adjustment PR 1", 10],
+      ["adjustment PR 2", 0],
+      ["adjustment PR 3", 15],
+      ["adjustment PR 4", -2],
+      ["adjustment PR 5", 1],
+      ["adjustment PR 6", 1],
+    ],
+  );
+  assert.deepEqual(
+    era.total?.filter((entry) => entry.category.text?.startsWith("claim adjustment"))
+      .map((entry) => [entry.category.text, entry.amount.value]),
+    [
+      ["claim adjustment CO 45", 10],
+      ["claim adjustment CO 94", 0],
+      ["claim adjustment CO 253", -5],
+      ["claim adjustment CO 97", 2],
+      ["claim adjustment CO 131", -1],
+      ["claim adjustment CO 234", 3],
+    ],
+  );
+});
+
+test("Stedi ERA maps every documented claim status without treating forwarded or pricing-only claims as ordinary payments", () => {
+  const cases = [
+    ["1", "complete", "Processed as Primary"],
+    ["2", "complete", "Processed as Secondary"],
+    ["3", "complete", "Processed as Tertiary"],
+    ["4", "error", "Denied"],
+    ["19", "partial", "Processed as Primary, Forwarded to Additional Payer(s)"],
+    ["20", "partial", "Processed as Secondary, Forwarded to Additional Payer(s)"],
+    ["21", "partial", "Processed as Tertiary, Forwarded to Additional Payer(s)"],
+    ["22", "complete", "Reversal of Previous Payment"],
+    ["23", "partial", "Not Our Claim, Forwarded to Additional Payer(s)"],
+    ["25", "complete", "Predetermination Pricing Only, No Payment"],
+  ] as const;
+
+  for (const [claimStatusCode, outcome, statusText] of cases) {
+    const era = buildClaimResponseFromStediEra({
+      claimReference: "Claim/claim-1",
+      patientReference: "Patient/pat-900",
+      insurerReference: "Organization/payer-1",
+      created: "2026-07-11",
+      transactionId: `era-status-${claimStatusCode}`,
+      paymentDate: "20260711",
+      claim: {
+        claimPaymentInfo: {
+          patientControlNumber: "ODOSCLAIM900",
+          claimPaymentAmount: claimStatusCode === "22" ? "-80" : "80",
+          claimStatusCode,
+        },
+      },
+    });
+    assert.equal(era.outcome, outcome, claimStatusCode);
+    assert.match(era.disposition ?? "", new RegExp(statusText.replace(/[()]/g, "\\$&")), claimStatusCode);
+    if (claimStatusCode === "22") assert.equal(era.payment?.amount.value, -80);
+    if (claimStatusCode === "25" || claimStatusCode === "23") assert.equal(era.payment, undefined);
+  }
+});
+
+test("Stedi ERA surfaces authoritative patient responsibility, discrepancy evidence, and crossover carrier", () => {
+  const era = buildClaimResponseFromStediEra({
+    claimReference: "Claim/claim-1",
+    patientReference: "Patient/pat-900",
+    insurerReference: "Organization/payer-1",
+    created: "2026-07-11",
+    transactionId: "era-crossover-900",
+    paymentDate: "20260711",
+    claim: {
+      claimPaymentInfo: {
+        patientControlNumber: "ODOSCLAIM900",
+        claimPaymentAmount: "80",
+        patientResponsibilityAmount: "30",
+        claimStatusCode: "19",
+      },
+      crossoverCarrier: {
+        organizationName: "SYNTHETIC SECONDARY",
+        payorId: "SECONDARY900",
+      },
+      serviceLines: [{
+        servicePaymentInformation: { lineItemChargeAmount: "100", lineItemProviderPaymentAmount: "80" },
+        serviceAdjustments: [{
+          claimAdjustmentGroupCode: "PR",
+          adjustmentReasonCode3: "1",
+          adjustmentAmount3: "20",
+        }],
+      }],
+    } as any,
+  });
+
+  assert.equal(
+    era.total?.find((entry) => entry.category.text === "patient responsibility")?.amount.value,
+    30,
+  );
+  assert.match(era.processNote?.map((note) => note.text).join(" ") ?? "", /differs from summed service-line PR adjustments.*20\.00/i);
+  assert.match(era.disposition ?? "", /SYNTHETIC SECONDARY.*SECONDARY900/);
+  assert.match(era.processNote?.map((note) => note.text).join(" ") ?? "", /crossover carrier/i);
+});

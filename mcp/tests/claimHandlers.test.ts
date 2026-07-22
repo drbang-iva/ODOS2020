@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
@@ -44,16 +45,21 @@ import {
   ERA_WORKLIST_INPUT_SYSTEM,
   ERA_WORKLIST_OUTPUT_SYSTEM,
   eraSnapshotFromTask,
+  eraWorklistEvidence,
   parseEraImportRecord,
 } from "../src/claims/era-worklist.js";
 import {
+  buildClaimResponseFromClaimMdEra,
   buildProfessionalClaim,
   ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ClaimMdEraData,
   type ProfessionalClaimInput,
 } from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
-import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import {
+  buildPatientResponsibilityInvoice,
+  ODOS_SOURCE_CLAIM_EXTENSION_URL,
+} from "../src/claims/patient-responsibility-invoice.js";
 import { StediRequestError } from "../src/claims/stedi-adapter.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
@@ -911,7 +917,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
               lineItemControlNumber,
               servicePaymentInformation: { lineItemChargeAmount: "125", lineItemProviderPaymentAmount: "80", adjudicatedProcedureCode: "PROC-A" },
               serviceSupplementalAmounts: { allowedActual: "100" },
-              serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode1: "1", adjustmentAmount1: "20" }],
+              serviceAdjustments: [{ claimAdjustmentGroupCode: "PR", adjustmentReasonCode3: "1", adjustmentAmount3: "20" }],
             }],
           }] }],
         }],
@@ -923,7 +929,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
     body: { ...eraImportBody(), clearinghouse: "stedi" },
   });
   assert.equal(result.status, 200);
-  assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER");
+  assert.equal(created.ClaimResponse[0].disposition, "Stedi ERA from SYNTHETIC PAYER — 1: Processed as Primary");
   assert.equal(created.PaymentReconciliation[0].detail?.[0].request?.reference, "Claim/claim-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[1]?.request?.reference, "ChargeItem/charge-1");
   assert.equal(created.PaymentReconciliation[0].detail?.[1]?.amount?.value, 80);
@@ -965,6 +971,168 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
   });
   assert.equal(unmatched.status, 200);
   assert.equal(created.Task[1].groupIdentifier?.system, STEDI_ERA_PAYMENT_SYSTEM);
+});
+
+test("Stedi ERA uses payer-stated patient responsibility for the Invoice and flags a line-total disagreement", async () => {
+  const { created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  d.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-pr-discrepancy",
+    patientResponsibilityAmount: "35",
+    serviceAdjustments: [{
+      claimAdjustmentGroupCode: "PR",
+      adjustmentReasonCode3: "1",
+      adjustmentAmount3: "20",
+    }],
+  })) };
+
+  const result = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-pr-discrepancy", clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.Invoice[0].totalNet?.value, 35);
+  assert.equal(created.Task.length, 1);
+  assert.equal(created.Task[0].description, "Stedi ERA integrity requires review");
+  assert.match(taskInput(created.Task[0], "stedi-era-review-reason")?.valueString ?? "", /patient responsibility.*35\.00.*20\.00/i);
+  assert.deepEqual(pickCounts(result.body), {
+    posted: 1,
+    denied: 0,
+    underpaid: 0,
+    flagged: 1,
+    taskIds: ["task-1"],
+  });
+});
+
+test("Stedi reversal preserves the signed payment without fabricating a reconciliation and opens review", async () => {
+  const { created, deps: d } = deps();
+  created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  d.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-reversal",
+    claimStatusCode: "22",
+    totalClaimChargeAmount: "-125",
+    claimPaymentAmount: "-80",
+    lineItemChargeAmount: "-125",
+    lineItemProviderPaymentAmount: "-80",
+    allowedActual: "-80",
+  })) };
+
+  const result = await handleEraImportRequest(d, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-reversal", clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(created.ClaimResponse[0].outcome, "complete");
+  assert.match(created.ClaimResponse[0].disposition ?? "", /Reversal of Previous Payment/);
+  assert.equal(created.ClaimResponse[0].payment?.amount.value, -80);
+  assert.equal(created.PaymentReconciliation.length, 0);
+  assert.equal(created.Task.length, 1);
+  assert.match(taskInput(created.Task[0], "stedi-era-review-reason")?.valueString ?? "", /reversal.*manual posting/i);
+  assert.deepEqual(pickCounts(result.body), {
+    posted: 0,
+    denied: 0,
+    underpaid: 0,
+    flagged: 1,
+    taskIds: ["task-1"],
+  });
+});
+
+test("Stedi predetermination cannot post money and an accepted zero-paid line is not mislabeled as denied", async () => {
+  const predetermination = deps();
+  predetermination.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  predetermination.deps.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-pricing-only",
+    claimStatusCode: "25",
+    claimPaymentAmount: "80",
+    patientResponsibilityAmount: "20",
+    serviceAdjustments: [{
+      claimAdjustmentGroupCode: "PR",
+      adjustmentReasonCode1: "1",
+      adjustmentAmount1: "20",
+    }],
+  })) };
+  const pricingResult = await handleEraImportRequest(predetermination.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-pricing-only", clearinghouse: "stedi" },
+  });
+  assert.equal(pricingResult.status, 200);
+  assert.equal(predetermination.created.PaymentReconciliation.length, 0);
+  assert.equal(predetermination.created.Invoice.length, 0);
+  assert.equal(predetermination.created.Task.length, 1);
+  assert.match(taskInput(predetermination.created.Task[0], "stedi-era-review-reason")?.valueString ?? "", /predetermination.*no payment/i);
+
+  const zeroPaid = deps();
+  zeroPaid.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  zeroPaid.deps.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-zero-paid",
+    claimStatusCode: "1",
+    totalClaimChargeAmount: "0",
+    claimPaymentAmount: "0",
+    lineItemChargeAmount: "0",
+    lineItemProviderPaymentAmount: "0",
+    allowedActual: "0",
+  })) };
+  const zeroResult = await handleEraImportRequest(zeroPaid.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-zero-paid", clearinghouse: "stedi" },
+  });
+  assert.equal(zeroResult.status, 200);
+  assert.equal(
+    zeroPaid.created.ClaimResponse[0].item?.[0].adjudication.find((entry) => entry.category.text === "paid")?.amount?.value,
+    0,
+  );
+  assert.deepEqual(pickCounts(zeroResult.body), {
+    posted: 0,
+    denied: 0,
+    underpaid: 0,
+    flagged: 0,
+    taskIds: [],
+  });
+});
+
+test("Claim.MD ERA response, worklist evidence, and patient-responsibility Invoice remain byte-for-byte stable", () => {
+  const era = {
+    eraid: "era-regression",
+    paid_date: "2026-07-09",
+    payer_name: "SYNTHETIC PAYER",
+    payment_method: "ACH",
+    claim: {
+      pcn: "ODOS-CLAIM-900",
+      payer_icn: "ICN-900",
+      total_charge: "125.00",
+      total_paid: "80.00",
+      status_code: "1",
+      charge: [{
+        remote_chgid: "charge-1",
+        proc_code: "PROC-A",
+        charge: "125.00",
+        allowed: "100.00",
+        paid: "80.00",
+        adjustment: [
+          { group: "CO", code: "45", amount: "5.00" },
+          { group: "PR", code: "1", amount: "20.00" },
+        ],
+      }],
+    },
+  } satisfies ClaimMdEraData & { claim: NonNullable<ClaimMdEraData["claim"]> };
+  const response = buildClaimResponseFromClaimMdEra({
+    claimReference: "Claim/claim-1",
+    patientReference: "Patient/pat-900",
+    insurerReference: "Organization/payer-1",
+    providerReference: "Practitioner/prov-1",
+    created: "2026-07-11",
+    era,
+  });
+  const claim = { ...buildProfessionalClaim(professionalClaim), id: "claim-1" };
+  const evidence = eraWorklistEvidence(era.claim, era.eraid);
+  const invoice = buildPatientResponsibilityInvoice(claim, response);
+  const digest = (value: unknown): string => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+  assert.equal(digest(response), "bfc61df66a12c12bd8dd9a89a3a9dd9bb22334219e433acf6e25cf2fb44640bb");
+  assert.equal(digest(evidence), "ca795fd6f2f81789d41ef24340d205635f0484e51e4328ea7cc5d17ef3489793");
+  assert.equal(digest(invoice), "1ffa22898cd8beb8ab7af87e26a710edc6ac47c4f9236a62aff69a66ef67b8d3");
 });
 
 test("re-import updates the same ERA Basic record instead of creating a duplicate", async () => {
@@ -1706,6 +1874,60 @@ function eraImportBody(): Record<string, unknown> {
     insurerReference: "Organization/payer-1",
     providerReference: "Practitioner/prov-1",
     practiceOrgReference: "Organization/practice-1",
+  };
+}
+
+function stediEraAdapter(raw: unknown): any {
+  return {
+    id: "stedi",
+    submitProfessionalClaim: async () => ({}),
+    checkEligibility: async () => ({}),
+    checkClaimStatus: async () => ({}),
+    listEras: async () => ({}),
+    retrieveEraData: async () => raw,
+  };
+}
+
+function stediEraReport(input: {
+  transactionId: string;
+  claimStatusCode?: string;
+  totalClaimChargeAmount?: string;
+  claimPaymentAmount?: string;
+  patientResponsibilityAmount?: string;
+  lineItemChargeAmount?: string;
+  lineItemProviderPaymentAmount?: string;
+  allowedActual?: string;
+  serviceAdjustments?: Array<Record<string, string>>;
+}): Record<string, unknown> {
+  return {
+    meta: { transactionId: input.transactionId },
+    transactions: [{
+      payer: { name: "SYNTHETIC PAYER" },
+      financialInformation: { checkIssueOrEFTEffectiveDate: "20260709" },
+      paymentAndRemitReassociationDetails: { checkOrEFTTraceNumber: `TRACE-${input.transactionId}` },
+      detailInfo: [{ paymentInfo: [{
+        claimPaymentInfo: {
+          patientControlNumber: "ODOS-CLAIM-900",
+          totalClaimChargeAmount: input.totalClaimChargeAmount ?? "125",
+          claimPaymentAmount: input.claimPaymentAmount ?? "80",
+          ...(input.patientResponsibilityAmount !== undefined
+            ? { patientResponsibilityAmount: input.patientResponsibilityAmount }
+            : {}),
+          payerClaimControlNumber: "PAYER900",
+          claimStatusCode: input.claimStatusCode ?? "1",
+        },
+        serviceLines: [{
+          lineItemControlNumber: "charge-1",
+          servicePaymentInformation: {
+            lineItemChargeAmount: input.lineItemChargeAmount ?? "125",
+            lineItemProviderPaymentAmount: input.lineItemProviderPaymentAmount ?? "80",
+            adjudicatedProcedureCode: "PROC-A",
+          },
+          serviceSupplementalAmounts: { allowedActual: input.allowedActual ?? "100" },
+          ...(input.serviceAdjustments ? { serviceAdjustments: input.serviceAdjustments } : {}),
+        }],
+      }] }],
+    }],
   };
 }
 

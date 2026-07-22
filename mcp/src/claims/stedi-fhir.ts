@@ -51,6 +51,8 @@ export interface StediEraClaim {
     payerClaimControlNumber?: string;
     claimStatusCode?: string;
   };
+  claimAdjustments?: StediEraAdjustment[];
+  crossoverCarrier?: StediEraCrossoverCarrier;
   serviceLines?: Array<{
     lineItemControlNumber?: string;
     servicePaymentInformation?: {
@@ -59,12 +61,52 @@ export interface StediEraClaim {
       adjudicatedProcedureCode?: string;
     };
     serviceSupplementalAmounts?: { allowedActual?: string };
-    serviceAdjustments?: Array<{
-      claimAdjustmentGroupCode?: string;
-      adjustmentReasonCode1?: string;
-      adjustmentAmount1?: string;
-    }>;
+    serviceAdjustments?: StediEraAdjustment[];
   }>;
+}
+
+interface StediEraAdjustment {
+  claimAdjustmentGroupCode?: string;
+  adjustmentReasonCode1?: string;
+  adjustmentReasonCode2?: string;
+  adjustmentReasonCode3?: string;
+  adjustmentReasonCode4?: string;
+  adjustmentReasonCode5?: string;
+  adjustmentReasonCode6?: string;
+  adjustmentReason1?: string;
+  adjustmentReason2?: string;
+  adjustmentReason3?: string;
+  adjustmentReason4?: string;
+  adjustmentReason5?: string;
+  adjustmentReason6?: string;
+  adjustmentAmount1?: string;
+  adjustmentAmount2?: string;
+  adjustmentAmount3?: string;
+  adjustmentAmount4?: string;
+  adjustmentAmount5?: string;
+  adjustmentAmount6?: string;
+}
+
+interface StediEraCrossoverCarrier {
+  organizationName?: string;
+  payorId?: string;
+  blueCrossBlueShieldAssociationPlanCode?: string;
+  centersForMedicareAndMedicaidServicesPlanId?: string;
+  nationalAssociationOfInsuranceCommissionersIdentification?: string;
+  pharmacyProcessorNumber?: string;
+  taxId?: string;
+}
+
+export interface StediEraClaimAnalysis {
+  claimStatusCode: string;
+  outcome: NonNullable<ClaimResponse["outcome"]>;
+  statusText: string;
+  allowsReconciliation: boolean;
+  allowsPatientResponsibilityInvoice: boolean;
+  isDenial: boolean;
+  authoritativePatientResponsibilityCents?: number;
+  derivedPatientResponsibilityCents: number;
+  reviewReasons: string[];
 }
 
 export interface StediEraEnvelope {
@@ -265,10 +307,30 @@ export function buildClaimResponseFromStediEra(input: {
   traceNumber?: string;
   claim: StediEraClaim;
 }): ClaimResponse {
-  const paid = decimalCents(input.claim.claimPaymentInfo.claimPaymentAmount);
+  const analysis = analyzeStediEraClaim(input.claim);
+  const paid = optionalDecimalCents(input.claim.claimPaymentInfo.claimPaymentAmount);
+  const crossoverCarrier = crossoverCarrierText(input.claim.crossoverCarrier);
+  const disposition = [
+    input.payerName ? `Stedi ERA from ${input.payerName}` : "Stedi ERA",
+    `${analysis.claimStatusCode}: ${analysis.statusText}`,
+    ...(crossoverCarrier ? [`crossover carrier ${crossoverCarrier}`] : []),
+  ].join(" — ");
+  const processNotes = [
+    ...analysis.reviewReasons,
+    ...(crossoverCarrier ? [`Crossover carrier: ${crossoverCarrier}.`] : []),
+  ];
+  const totals = [
+    claimTotal("submitted", optionalDecimalCents(input.claim.claimPaymentInfo.totalClaimChargeAmount)),
+    claimTotal("patient responsibility", analysis.authoritativePatientResponsibilityCents),
+    ...adjustmentAdjudications(input.claim.claimAdjustments, "claim adjustment").map((entry) => ({
+      category: entry.category,
+      amount: entry.amount!,
+    })),
+  ].filter((entry): entry is NonNullable<ClaimResponse["total"]>[number] => entry !== undefined);
   return claimResponseBase(input, {
-    outcome: input.claim.claimPaymentInfo.claimStatusCode === "4" ? "error" : "complete",
-    disposition: input.payerName ? `Stedi ERA from ${input.payerName}` : "Stedi ERA",
+    outcome: analysis.outcome,
+    disposition,
+    ...(processNotes.length ? { processNote: processNotes.map((text, index) => ({ number: index + 1, type: "display", text })) } : {}),
     ...(input.claim.claimPaymentInfo.payerClaimControlNumber ? { preAuthRef: input.claim.claimPaymentInfo.payerClaimControlNumber } : {}),
     item: (input.claim.serviceLines ?? []).map((line, index) => {
       const chargeItemExtension = claimResponseChargeItemExtension(line.lineItemControlNumber);
@@ -276,17 +338,15 @@ export function buildClaimResponseFromStediEra(input: {
         itemSequence: index + 1,
         ...(chargeItemExtension ? { extension: [chargeItemExtension] } : {}),
         adjudication: [
-          adjudication("submitted", decimalCents(line.servicePaymentInformation?.lineItemChargeAmount)),
-          adjudication("allowed", decimalCents(line.serviceSupplementalAmounts?.allowedActual)),
-          adjudication("paid", decimalCents(line.servicePaymentInformation?.lineItemProviderPaymentAmount)),
-          ...((line.serviceAdjustments ?? []).map((adjustment) => adjudication(
-            ["adjustment", adjustment.claimAdjustmentGroupCode, adjustment.adjustmentReasonCode1].filter(Boolean).join(" "),
-            decimalCents(adjustment.adjustmentAmount1),
-          ))),
-        ].filter((entry) => (entry.amount?.value ?? 0) > 0),
+          optionalAdjudication("submitted", line.servicePaymentInformation?.lineItemChargeAmount),
+          optionalAdjudication("allowed", line.serviceSupplementalAmounts?.allowedActual),
+          optionalAdjudication("paid", line.servicePaymentInformation?.lineItemProviderPaymentAmount),
+          ...adjustmentAdjudications(line.serviceAdjustments, "adjustment"),
+        ].filter((entry): entry is NonNullable<ClaimResponse["item"]>[number]["adjudication"][number] => entry !== undefined),
       };
     }),
-    payment: {
+    ...(totals.length ? { total: totals } : {}),
+    ...(paid !== undefined && !["23", "25"].includes(analysis.claimStatusCode) ? { payment: {
       type: { text: "Stedi ERA" },
       date: isoDate(input.paymentDate) ?? input.created,
       amount: money(paid),
@@ -294,8 +354,49 @@ export function buildClaimResponseFromStediEra(input: {
         system: "https://odos2020.com/fhir/NamingSystem/stedi-era",
         value: input.traceNumber ?? input.transactionId,
       },
-    },
+    } } : {}),
   });
+}
+
+export function analyzeStediEraClaim(claim: StediEraClaim): StediEraClaimAnalysis {
+  const claimStatusCode = String(claim.claimPaymentInfo.claimStatusCode ?? "");
+  const status = STEDI_ERA_CLAIM_STATUSES[claimStatusCode] ?? {
+    outcome: "queued" as const,
+    text: claimStatusCode ? `Unrecognized Stedi ERA claim status ${claimStatusCode}` : "Missing Stedi ERA claim status",
+    allowsReconciliation: false,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: claimStatusCode
+      ? `Stedi ERA claim status ${claimStatusCode} is not recognized and requires manual review.`
+      : "Stedi ERA claim status is missing and requires manual review.",
+  };
+  const authoritativePatientResponsibilityCents = optionalDecimalCents(
+    claim.claimPaymentInfo.patientResponsibilityAmount,
+  );
+  const derivedPatientResponsibilityCents = (claim.serviceLines ?? []).reduce(
+    (lineTotal, line) => lineTotal + (line.serviceAdjustments ?? [])
+      .filter((adjustment) => adjustment.claimAdjustmentGroupCode === "PR")
+      .reduce((adjustmentTotal, adjustment) => adjustmentTotal + adjustmentAmounts(adjustment)
+        .reduce((sum, entry) => sum + entry.cents, 0), 0),
+    0,
+  );
+  const responsibilityMismatch = authoritativePatientResponsibilityCents !== undefined
+    && authoritativePatientResponsibilityCents !== derivedPatientResponsibilityCents;
+  return {
+    claimStatusCode,
+    outcome: status.outcome,
+    statusText: status.text,
+    allowsReconciliation: status.allowsReconciliation,
+    allowsPatientResponsibilityInvoice: status.allowsPatientResponsibilityInvoice,
+    isDenial: claimStatusCode === "4",
+    ...(authoritativePatientResponsibilityCents !== undefined ? { authoritativePatientResponsibilityCents } : {}),
+    derivedPatientResponsibilityCents,
+    reviewReasons: [
+      ...(status.reviewReason ? [status.reviewReason] : []),
+      ...(responsibilityMismatch ? [
+        `Payer-stated patient responsibility ${formatCents(authoritativePatientResponsibilityCents)} differs from summed service-line PR adjustments ${formatCents(derivedPatientResponsibilityCents)}.`,
+      ] : []),
+    ],
+  };
 }
 
 function claimResponseBase(input: any, fields: Partial<ClaimResponse>): ClaimResponse {
@@ -312,6 +413,118 @@ function claimResponseBase(input: any, fields: Partial<ClaimResponse>): ClaimRes
     outcome: "queued",
     ...fields,
   };
+}
+
+const STEDI_ERA_CLAIM_STATUSES: Record<string, {
+  outcome: NonNullable<ClaimResponse["outcome"]>;
+  text: string;
+  allowsReconciliation: boolean;
+  allowsPatientResponsibilityInvoice: boolean;
+  reviewReason?: string;
+}> = {
+  "1": { outcome: "complete", text: "Processed as Primary", allowsReconciliation: true, allowsPatientResponsibilityInvoice: true },
+  "2": { outcome: "complete", text: "Processed as Secondary", allowsReconciliation: true, allowsPatientResponsibilityInvoice: true },
+  "3": { outcome: "complete", text: "Processed as Tertiary", allowsReconciliation: true, allowsPatientResponsibilityInvoice: true },
+  "4": { outcome: "error", text: "Denied", allowsReconciliation: false, allowsPatientResponsibilityInvoice: false },
+  "19": {
+    outcome: "partial",
+    text: "Processed as Primary, Forwarded to Additional Payer(s)",
+    allowsReconciliation: true,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA was processed as primary and forwarded to an additional payer; secondary-payer follow-up requires review.",
+  },
+  "20": {
+    outcome: "partial",
+    text: "Processed as Secondary, Forwarded to Additional Payer(s)",
+    allowsReconciliation: true,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA was processed as secondary and forwarded to an additional payer; downstream-payer follow-up requires review.",
+  },
+  "21": {
+    outcome: "partial",
+    text: "Processed as Tertiary, Forwarded to Additional Payer(s)",
+    allowsReconciliation: true,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA was processed as tertiary and forwarded to an additional payer; downstream-payer follow-up requires review.",
+  },
+  "22": {
+    outcome: "complete",
+    text: "Reversal of Previous Payment",
+    allowsReconciliation: false,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA reversal requires manual posting because negative PaymentReconciliation handling is not automated.",
+  },
+  "23": {
+    outcome: "partial",
+    text: "Not Our Claim, Forwarded to Additional Payer(s)",
+    allowsReconciliation: false,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA says this is not the payer's claim and was forwarded; payer follow-up requires review.",
+  },
+  "25": {
+    outcome: "complete",
+    text: "Predetermination Pricing Only, No Payment",
+    allowsReconciliation: false,
+    allowsPatientResponsibilityInvoice: false,
+    reviewReason: "Stedi ERA predetermination pricing only, no payment; review is required before any posting.",
+  },
+};
+
+function adjustmentAmounts(adjustment: StediEraAdjustment): Array<{ reasonCode?: string; cents: number }> {
+  const entries: Array<{ reasonCode?: string; cents: number }> = [];
+  for (let slot = 1; slot <= 6; slot += 1) {
+    const amount = optionalDecimalCents(adjustment[`adjustmentAmount${slot}` as keyof StediEraAdjustment]);
+    if (amount === undefined) continue;
+    const reasonCode = adjustment[`adjustmentReasonCode${slot}` as keyof StediEraAdjustment];
+    entries.push({ ...(reasonCode ? { reasonCode } : {}), cents: amount });
+  }
+  return entries;
+}
+
+function adjustmentAdjudications(
+  adjustments: StediEraAdjustment[] | undefined,
+  prefix: "adjustment" | "claim adjustment",
+): Array<NonNullable<ClaimResponse["item"]>[number]["adjudication"][number]> {
+  return (adjustments ?? []).flatMap((adjustment) => adjustmentAmounts(adjustment).map(({ reasonCode, cents }) =>
+    adjudication(
+      [prefix, adjustment.claimAdjustmentGroupCode, reasonCode].filter(Boolean).join(" "),
+      cents,
+    )));
+}
+
+function optionalAdjudication(
+  category: string,
+  value: unknown,
+): NonNullable<ClaimResponse["item"]>[number]["adjudication"][number] | undefined {
+  const cents = optionalDecimalCents(value);
+  return cents === undefined ? undefined : adjudication(category, cents);
+}
+
+function claimTotal(
+  category: string,
+  cents: number | undefined,
+): NonNullable<ClaimResponse["total"]>[number] | undefined {
+  return cents === undefined ? undefined : { category: { text: category }, amount: money(cents) };
+}
+
+function crossoverCarrierText(carrier: StediEraCrossoverCarrier | undefined): string | undefined {
+  if (!carrier) return undefined;
+  const values = [
+    carrier.organizationName,
+    carrier.payorId ? `payer ID ${carrier.payorId}` : undefined,
+    carrier.blueCrossBlueShieldAssociationPlanCode ? `BCBS plan ${carrier.blueCrossBlueShieldAssociationPlanCode}` : undefined,
+    carrier.centersForMedicareAndMedicaidServicesPlanId ? `CMS plan ${carrier.centersForMedicareAndMedicaidServicesPlanId}` : undefined,
+    carrier.nationalAssociationOfInsuranceCommissionersIdentification
+      ? `NAIC ${carrier.nationalAssociationOfInsuranceCommissionersIdentification}`
+      : undefined,
+    carrier.pharmacyProcessorNumber ? `pharmacy processor ${carrier.pharmacyProcessorNumber}` : undefined,
+    carrier.taxId ? `tax ID ${carrier.taxId}` : undefined,
+  ].filter((value): value is string => Boolean(value));
+  return values.length ? values.join(", ") : undefined;
+}
+
+function formatCents(cents: number): string {
+  return (cents / 100).toFixed(2);
 }
 
 function address(input: { address1?: string; city?: string; state?: string; zip?: string }): Record<string, string> | undefined {
@@ -347,6 +560,13 @@ function decimal(value: number): string {
 function decimalCents(value: unknown): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+}
+
+function optionalDecimalCents(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new Error("Stedi ERA amount must be a finite decimal value.");
+  return Math.round(parsed * 100);
 }
 
 function money(cents: number): Money {
