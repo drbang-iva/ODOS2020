@@ -14,6 +14,8 @@ import {
   coverageMemberId,
   dollarsToCents,
   initialClaimDraft,
+  loadEncounterClaimDraft,
+  mergeProviderDefaults,
   removeChargeLine,
   removeDiagnosisLine,
   resolveSubscriberFromCoverage,
@@ -22,7 +24,7 @@ import {
   validateClaimDraft,
   type ClaimDraft,
 } from "../src/lib/submit-claims";
-import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert } from "../src/scenes/claims/SubmitClaims";
+import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert, SubmitClaims } from "../src/scenes/claims/SubmitClaims";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -64,6 +66,104 @@ test("assembled request matches ProfessionalClaimInput and ChargeItem payload fi
   assert.equal(claim.chargeItems[0].status, "billable");
   assert.equal(claim.chargeItems[0].subject.reference, "Patient/pat-1");
   assert.equal(claim.chargeItems[0].quantity?.value, 1);
+});
+
+test("encounter-prefilled lines preserve persisted ids, coding systems, diagnosis pointers, and laterality", () => {
+  const draft = validDraft();
+  draft.diagnoses = [
+    { system: "http://hl7.org/fhir/sid/icd-10-cm", code: "DX-A", description: "First" },
+    { system: "http://hl7.org/fhir/sid/icd-10-cm", code: "DX-B", description: "Second" },
+  ];
+  draft.charges = [{
+    id: "charge-1",
+    codeType: "HCPCS",
+    codeSystem: "https://odos.test/fhir/CodeSystem/synthetic-procedure",
+    code: "PROC-A",
+    description: "Synthetic procedure",
+    feeDollars: "125.50",
+    quantity: "1",
+    diagnosisSequence: [2],
+    laterality: "OS",
+  }];
+  const claim = buildProfessionalClaimInput(draft);
+  assert.equal(claim.chargeItems[0].id, "charge-1");
+  assert.equal(claim.chargeItems[0].code.coding?.[0]?.system, "https://odos.test/fhir/CodeSystem/synthetic-procedure");
+  assert.deepEqual(claim.chargeItems[0].diagnosisSequence, [2]);
+  assert.equal(claim.chargeItems[0].laterality, "OS");
+});
+
+test("claim draft client loads one encounter without submitting it", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const draft = await loadEncounterClaimDraft("enc-1", {
+    authorization: "Bearer test",
+    fetchImpl: async (input, init) => {
+      calls.push({ url: String(input), init });
+      return jsonResponse({
+        encounterReference: "Encounter/enc-1",
+        patientReference: "Patient/pat-1",
+        serviceDate: "2026-07-21",
+        diagnoses: [],
+        charges: [],
+      });
+    },
+  });
+  assert.equal(draft.encounterReference, "Encounter/enc-1");
+  assert.equal(calls[0].url, "/claims/draft?encounterId=enc-1");
+  assert.equal(calls[0].init?.method, undefined);
+  assert.equal((calls[0].init?.headers as Record<string, string>).Authorization, "Bearer test");
+});
+
+test("claim draft client converts a non-JSON failure into the HTTP status error", async () => {
+  await assert.rejects(
+    loadEncounterClaimDraft("enc-1", {
+      fetchImpl: async () => new Response("upstream failure", { status: 500 }),
+    }),
+    /Claim draft load failed with HTTP 500/,
+  );
+});
+
+test("claim validation names empty, over-length, and out-of-slot diagnosis pointer failures", () => {
+  const empty = validDraft();
+  empty.charges[0]!.diagnosisSequence = [];
+  assert.match(validateClaimDraft(empty).join(" "), /at least one diagnosis pointer/);
+
+  const overLength = validDraft();
+  overLength.diagnoses = Array.from({ length: 5 }, (_, index) => ({
+    code: `DX-${index + 1}`,
+    description: "Synthetic diagnosis",
+  }));
+  overLength.charges[0]!.diagnosisSequence = [1, 2, 3, 4, 5];
+  assert.match(validateClaimDraft(overLength).join(" "), /no more than four diagnosis pointers/);
+
+  const outOfSlot = validDraft();
+  outOfSlot.diagnoses = Array.from({ length: 15 }, (_, index) => ({
+    code: `DX-${index + 1}`,
+    description: "Synthetic diagnosis",
+  }));
+  outOfSlot.charges[0]!.diagnosisSequence = [13];
+  assert.match(validateClaimDraft(outOfSlot).join(" "), /positions 1 through 12/);
+});
+
+test("claim submission converts a non-JSON failure into the HTTP status error", async () => {
+  await assert.rejects(
+    submitProfessionalClaim(buildProfessionalClaimInput(validDraft()), {
+      fetchImpl: async () => new Response("<html>Bad gateway</html>", { status: 502 }),
+    }),
+    /Claim submission failed with HTTP 502/,
+  );
+});
+
+test("Submit Claims surfaces encounter prefill and billing identity defaults fill only blank fields", () => {
+  const html = renderToStaticMarkup(<SubmitClaims initialEncounterId="enc-1" />);
+  assert.match(html, /Load from encounter/);
+  assert.match(html, /value="enc-1"/);
+  assert.deepEqual(
+    mergeProviderDefaults(
+      { npi: "", name: "Per-claim override" },
+      { npi: "1111111112", name: "Practice default", taxonomy: "152W00000X" },
+    ),
+    { npi: "1111111112", name: "Per-claim override", taxonomy: "152W00000X" },
+  );
 });
 
 test("Coverage creation stamps member ID twice and preserves group, relationship, payor, and period", () => {

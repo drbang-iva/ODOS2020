@@ -573,6 +573,12 @@
       "sliceConsumer": "statement-receipt-messages"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-billing-identity-config",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "claim-draft-m2"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-appearance-config",
       "namespace": "appearance",
       "status": "active",

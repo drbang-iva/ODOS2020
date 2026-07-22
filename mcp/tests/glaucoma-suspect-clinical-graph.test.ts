@@ -48,6 +48,15 @@ function iopDefinition() {
   return definition;
 }
 
+test("dead placeholder claim builders stay removed from the clinical graph module", () => {
+  const source = readFileSync(
+    resolve(REPO_ROOT, "mcp/src/clinical-graph/glaucoma-suspect.ts"),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /buildClaimWithDiagnosisPointers|projectChargeProposalToChargeItem/);
+  assert.doesNotMatch(source, /Phase 1 placeholder coverage; payer workflow not implemented/);
+});
+
 test("Phase 0 ledger carries verified glaucoma seeds and explicit not-bill-ready stubs", () => {
   const ledger = JSON.parse(
     readFileSync(

@@ -23,6 +23,18 @@ function rulesFor(roleId: PracticeRoleId, resourceType: string): AccessPolicyRes
   return (policy.resource ?? []).filter((rule) => rule.resourceType === resourceType);
 }
 
+const BILLING_IDENTITY_CRITERIA =
+  "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config";
+
+function billingIdentityRulesFor(roleId: PracticeRoleId): AccessPolicyResource[] {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+  return (policy.resource ?? []).filter((rule) =>
+    rule.resourceType === "*" ||
+    (rule.resourceType === "Basic" &&
+      (rule.criteria === undefined || rule.criteria === BILLING_IDENTITY_CRITERIA))
+  );
+}
+
 test("front-desk reads the visit-type catalog (HealthcareService) at practice scope", () => {
   const rules = rulesFor("front-desk", "HealthcareService");
   assert.equal(rules.length, 1);
@@ -98,6 +110,7 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
 
 test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
+  const billingIdentityCriteria = BILLING_IDENTITY_CRITERIA;
   const writeTierCriteria = [
     "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
@@ -107,6 +120,7 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
   ];
   const readTierCriteria = [
+    billingIdentityCriteria,
     "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
@@ -183,4 +197,38 @@ test("every non-admin app role can read but never write the appearance singleton
     assert.ok(rule, role);
     assert.deepEqual(rule.interaction, ["read", "search", "history", "vread"]);
   }
+});
+
+test("no non-admin role can create or update the billing identity singleton", () => {
+  for (const role of ["front-desk", "clinician", "auditor", "aesthetics-provider"] as const) {
+    const rules = billingIdentityRulesFor(role);
+    for (const interaction of ["create", "update"] as const) {
+      assert.equal(
+        rules.some((rule) => rule.interaction?.includes(interaction)),
+        false,
+        `${role} must not receive ${interaction} access to billing identity`,
+      );
+    }
+  }
+});
+
+test("front-desk can read billing identity while practice-admin can write it through the wildcard", () => {
+  const frontDeskRules = billingIdentityRulesFor("front-desk");
+  assert.equal(frontDeskRules.length, 1);
+  assert.equal(frontDeskRules[0]?.criteria, BILLING_IDENTITY_CRITERIA);
+  assert.deepEqual(frontDeskRules[0]?.interaction, ["read", "search", "history", "vread"]);
+
+  const adminRules = billingIdentityRulesFor("practice-admin");
+  assert.equal(adminRules.length, 1);
+  assert.equal(adminRules[0]?.resourceType, "*");
+  assert.equal(adminRules[0]?.criteria, undefined);
+  assert.deepEqual(adminRules[0]?.interaction, [
+    "create",
+    "read",
+    "update",
+    "delete",
+    "search",
+    "history",
+    "vread",
+  ]);
 });

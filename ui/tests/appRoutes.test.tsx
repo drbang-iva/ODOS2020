@@ -169,6 +169,13 @@ test("the statement-message route reaches the practice-admin editor", () => {
   assert.match(html, /Loading statement and receipt messages/);
 });
 
+test("the billing identity route reaches the practice-admin singleton form", () => {
+  const html = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/billing-identity" roles={["practice-admin"]} />,
+  );
+  assert.match(html, /Loading billing identity/);
+});
+
 test("the Appearance route reaches the practice-level scheme picker", () => {
   const html = renderToStaticMarkup(
     <RouteSwitch

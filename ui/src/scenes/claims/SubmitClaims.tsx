@@ -10,8 +10,11 @@ import {
   claimPersonFromPatient,
   coverageIsSelf,
   coverageLabel,
+  coveragePayerId,
   emptyPerson,
   initialClaimDraft,
+  loadEncounterClaimDraft,
+  mergeProviderDefaults,
   removeChargeLine,
   removeDiagnosisLine,
   resolveSubscriberFromCoverage,
@@ -28,10 +31,12 @@ import {
   type SubmitClaimResult,
 } from "../../lib/submit-claims";
 import { PatientSearch } from "../PatientPicker";
+import { loadBillingIdentityConfigSingleton } from "../settings/BillingIdentitySettings";
+import type { BillingIdentityConfig } from "../settings/billing-identity-config";
 
 type Step = "compose" | "review" | "success";
 
-export function SubmitClaims() {
+export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?: string }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [draft, setDraft] = useState<ClaimDraft>(() => initialClaimDraft(today));
   const [patient, setPatient] = useState<Patient>();
@@ -50,6 +55,30 @@ export function SubmitClaims() {
   const [submissionError, setSubmissionError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitClaimResult>();
+  const [encounterId, setEncounterId] = useState(initialEncounterId);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftLoadStatus, setDraftLoadStatus] = useState<string>();
+  const [billingIdentity, setBillingIdentity] = useState<BillingIdentityConfig>();
+  const [billingIdentityError, setBillingIdentityError] = useState<string>();
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBillingIdentityConfigSingleton(fhir)
+      .then(({ config }) => {
+        if (cancelled || !config) return;
+        setBillingIdentity(config);
+        setDraft((current) => ({
+          ...current,
+          billingProvider: mergeProviderDefaults(current.billingProvider, config),
+        }));
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) setBillingIdentityError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const patientId = patient?.id;
@@ -146,6 +175,61 @@ export function SubmitClaims() {
     }
   };
 
+  const loadFromEncounter = async () => {
+    setDraftLoading(true);
+    setDraftLoadStatus(undefined);
+    try {
+      const assembled = await loadEncounterClaimDraft(encounterId.trim(), {
+        authorization: fhir.authHeader(),
+        baseUrl: claimApiBaseUrl(),
+      });
+      if (!assembled.charges.length) {
+        throw new Error(
+          assembled.warnings?.join(" ") ?? "No billable ChargeItems are available for this encounter.",
+        );
+      }
+      if (!assembled.diagnoses.length) throw new Error("No ranked confirmed diagnoses are available for this encounter.");
+      const loadedPatient = await fhir.read<Patient>("Patient", assembled.patientReference.split("/")[1]!);
+      let primaryCoverage: Coverage | undefined;
+      let subscriber = emptyPerson();
+      let subscriberResolutionError: string | undefined;
+      if (assembled.coverageReference) {
+        primaryCoverage = await fhir.read<Coverage>("Coverage", assembled.coverageReference.split("/")[1]!);
+        const resolution = await resolveSubscriberFromCoverage(
+          primaryCoverage,
+          loadedPatient,
+          (id) => fhir.read<RelatedPerson>("RelatedPerson", id),
+        );
+        subscriber = resolution.subscriber;
+        subscriberResolutionError = resolution.error;
+      }
+      setPatient(loadedPatient);
+      setChoosingPatient(false);
+      setCoverages(primaryCoverage ? [primaryCoverage] : []);
+      setSubscriberError(subscriberResolutionError);
+      setDraft((current) => ({
+        ...current,
+        patientReference: assembled.patientReference,
+        patient: claimPersonFromPatient(loadedPatient),
+        serviceDate: assembled.serviceDate || current.serviceDate,
+        diagnoses: assembled.diagnoses,
+        charges: assembled.charges,
+        coverageReference: assembled.coverageReference ?? "",
+        insurerReference: assembled.insurerReference ?? primaryCoverage?.payor[0]?.reference ?? "",
+        payerId: assembled.payerId ?? (primaryCoverage ? coveragePayerId(primaryCoverage) : ""),
+        subscriber,
+      }));
+      setDraftLoadStatus([
+        `Loaded ${assembled.diagnoses.length} diagnoses and ${assembled.charges.length} charges from ${assembled.encounterReference}.`,
+        ...(assembled.warnings ?? []),
+      ].join(" "));
+    } catch (cause) {
+      setDraftLoadStatus(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
   const openReview = () => {
     const nextErrors = validateClaimDraft(draft);
     setErrors(nextErrors);
@@ -175,7 +259,8 @@ export function SubmitClaims() {
   };
 
   const startAnother = () => {
-    setDraft(initialClaimDraft(today));
+    const next = initialClaimDraft(today);
+    setDraft(billingIdentity ? { ...next, billingProvider: mergeProviderDefaults(next.billingProvider, billingIdentity) } : next);
     setPatient(undefined);
     setChoosingPatient(true);
     setCoverages([]);
@@ -187,6 +272,8 @@ export function SubmitClaims() {
     setErrors([]);
     setSubmissionError(undefined);
     setResult(undefined);
+    setEncounterId("");
+    setDraftLoadStatus(undefined);
     setStep("compose");
   };
 
@@ -208,6 +295,13 @@ export function SubmitClaims() {
 
         {step === "compose" && (
           <div className="space-y-5">
+            <Section title="Encounter prefill" description="Load ranked diagnoses, billable charges, and primary Coverage from a signed encounter. Review and edit before submitting.">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[18rem] flex-1"><Field label="Encounter ID" value={encounterId} placeholder="Encounter resource id" onChange={setEncounterId} /></div>
+                <button type="button" onClick={() => void loadFromEncounter()} disabled={draftLoading || !encounterId.trim()} className="rounded bg-brand px-4 py-2 text-sm font-semibold disabled:opacity-50">{draftLoading ? "Loading…" : "Load from encounter"}</button>
+              </div>
+              {draftLoadStatus && <p role="status" className="mt-3 text-sm text-[color:var(--odos-muted)]">{draftLoadStatus}</p>}
+            </Section>
             <Section title="Patient" description="Select the patient whose demographics should prefill this claim.">
               {patient && !choosingPatient ? (
                 <div className="flex items-center justify-between rounded-md border border-blue-400/30 bg-blue-950/20 p-4">
@@ -265,7 +359,8 @@ export function SubmitClaims() {
                   </div>
                 </Section>
 
-                <Section title="Billing provider" description="Typed per claim until the practice billing-identity singleton exists.">
+                <Section title="Billing provider" description="Prefilled from the practice billing identity when configured; editable for this claim.">
+                  {billingIdentityError && <div className="mb-3"><SubmissionAlert message={`Billing identity defaults unavailable: ${billingIdentityError}`} /></div>}
                   <ProviderFields provider={draft.billingProvider} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
                 </Section>
 
@@ -510,13 +605,16 @@ function ChargeLines({ lines, onChange }: { lines: ChargeLine[]; onChange: (line
   return (
     <div className="space-y-3">
       {lines.map((line, index) => (
-        <div key={index} className="grid gap-2 md:grid-cols-[8rem_1fr_2fr_8rem_6rem_auto] md:items-end">
-          <SelectField label="Code set" value={line.codeType} options={[{ value: "CPT", label: "CPT" }, { value: "HCPCS", label: "HCPCS" }]} onChange={(codeType) => update(index, { ...line, codeType: codeType as "CPT" | "HCPCS" })} />
-          <Field label="Code" value={line.code} onChange={(code) => update(index, { ...line, code })} />
-          <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
-          <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
-          <Field label="Quantity" type="number" value={line.quantity} onChange={(quantity) => update(index, { ...line, quantity })} />
-          <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeChargeLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
+        <div key={line.id ?? index}>
+          <div className="grid gap-2 md:grid-cols-[8rem_1fr_2fr_8rem_6rem_auto] md:items-end">
+            <SelectField label="Code set" value={line.codeType} options={[{ value: "CPT", label: "CPT" }, { value: "HCPCS", label: "HCPCS" }]} onChange={(codeType) => update(index, { ...line, codeType: codeType as "CPT" | "HCPCS" })} />
+            <Field label="Code" value={line.code} onChange={(code) => update(index, { ...line, code })} />
+            <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
+            <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
+            <Field label="Quantity" type="number" value={line.quantity} onChange={(quantity) => update(index, { ...line, quantity })} />
+            <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeChargeLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
+          </div>
+          {line.id && <div className="mt-1 text-xs text-[color:var(--odos-muted)]">ChargeItem/{line.id} · diagnoses {line.diagnosisSequence?.join(", ") || "none"}{line.laterality ? ` · ${line.laterality}` : ""}</div>}
         </div>
       ))}
       <button type="button" onClick={() => onChange(addChargeLine(lines))} className="rounded border border-blue-400/30 px-3 py-2 text-sm text-blue-200">Add charge</button>

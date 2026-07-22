@@ -9,8 +9,10 @@ import type {
   ChargeItem,
   Claim,
   ClaimResponse,
+  Coverage,
   CoverageEligibilityRequest,
   CoverageEligibilityResponse,
+  Encounter,
   Invoice,
   Patient,
   PaymentReconciliation,
@@ -37,6 +39,7 @@ import {
   handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
+  handleClaimDraftRequest,
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
 import {
@@ -118,8 +121,24 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     ChargeItem: [structuredClone(professionalClaim.chargeItems[0])] as ChargeItem[],
     Claim: [] as Claim[],
     ClaimResponse: [] as ClaimResponse[],
+    Coverage: [{
+      resourceType: "Coverage",
+      id: "cov-1",
+      status: "active",
+      beneficiary: { reference: "Patient/pat-900" },
+      order: 1,
+      payor: [{ reference: "Organization/payer-1", identifier: { value: "PAYERTEST" } }],
+    }] as Coverage[],
     CoverageEligibilityRequest: [] as CoverageEligibilityRequest[],
     CoverageEligibilityResponse: [] as CoverageEligibilityResponse[],
+    Encounter: [{
+      resourceType: "Encounter",
+      id: "enc-1",
+      status: "finished",
+      class: {},
+      subject: { reference: "Patient/pat-900" },
+      period: { start: "2026-07-09T09:00:00.000Z" },
+    }] as Encounter[],
     Invoice: [] as Invoice[],
     Patient: [] as Patient[],
     PaymentReconciliation: [] as PaymentReconciliation[],
@@ -316,10 +335,38 @@ test("client-supplied ChargeItem is re-read and must belong to the Claim patient
   assert.equal(missing.created.Claim.length, 0);
 });
 
+test("submit reuses a stored ChargeItem without dropping its draft diagnosis pointers", async () => {
+  const fixture = deps();
+  const input = structuredClone(professionalClaim);
+  input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
+  input.chargeItems[0]!.diagnosisSequence = [2];
+  input.chargeItems[0]!.laterality = "OS";
+  let submittedPayload: any;
+  fixture.deps.adapter!.submitProfessionalClaim = async (request) => {
+    submittedPayload = request.payload;
+    return { claims: [{ claimMdClaimId: "claimmd-1", claimMdId: "tracking-1", status: "A" }], raw: {} };
+  };
+
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: input },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(fixture.created.Claim[0].item?.[0]?.diagnosisSequence, [2]);
+  assert.equal(fixture.created.Claim[0].item?.[0]?.bodySite?.text, "OS");
+  assert.equal(submittedPayload.claim[0].charge[0].diag_ref, "B");
+  assert.equal("diagnosisSequence" in fixture.created.ChargeItem[0], false);
+  assert.equal("laterality" in fixture.created.ChargeItem[0], false);
+});
+
 test("submit persists idless ChargeItems once while keeping the Claim.MD payload on the original input shape", async () => {
   const { created, deps: d } = deps();
   const input = structuredClone(professionalClaim);
+  input.diagnoses.push({ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-B" });
   delete input.chargeItems[0].id;
+  input.chargeItems[0].diagnosisSequence = [2];
+  input.chargeItems[0].laterality = "OS";
   let submittedPayload: any;
   d.adapter!.submitProfessionalClaim = async (request) => {
     submittedPayload = request.payload;
@@ -335,9 +382,14 @@ test("submit persists idless ChargeItems once while keeping the Claim.MD payload
   assert.equal(created.ChargeItem.length, 2);
   assert.equal(created.Claim[0].item?.[0]?.extension?.[0]?.valueReference?.reference, "ChargeItem/chargeitem-2");
   assert.equal(created.ChargeItem[1].subject.reference, "Patient/pat-900");
+  assert.equal("diagnosisSequence" in created.ChargeItem[1], false);
+  assert.equal("laterality" in created.ChargeItem[1], false);
   assert.equal(created.Claim[0].item?.[0]?.servicedDate, input.serviceDate);
+  assert.deepEqual(created.Claim[0].item?.[0]?.diagnosisSequence, [2]);
+  assert.equal(created.Claim[0].item?.[0]?.bodySite?.text, "OS");
   assert.equal(submittedPayload.claim[0].charge[0].remote_chgid, undefined);
   assert.equal(submittedPayload.claim[0].charge[0].from_date, "20260709");
+  assert.equal(submittedPayload.claim[0].charge[0].diag_ref, "B");
 });
 
 test("submit validates the full ChargeItem batch before persisting an idless item", async () => {
@@ -358,6 +410,64 @@ test("submit validates the full ChargeItem batch before persisting an idless ite
   assert.equal(fixture.created.ChargeItem.length, 1);
   assert.equal(fixture.createHeaders.filter((write) => write.resourceType === "ChargeItem").length, 0);
   assert.equal(fixture.created.Claim.length, 0);
+});
+
+test("submit rejects invalid diagnosis pointers before persisting an idless ChargeItem", async () => {
+  const cases = [
+    { sequence: [] as number[], diagnosisCount: 1 },
+    { sequence: [2], diagnosisCount: 1 },
+    { sequence: [1, 2, 3, 4, 5], diagnosisCount: 5 },
+  ];
+
+  for (const testCase of cases) {
+    const fixture = deps();
+    fixture.created.ChargeItem.length = 0;
+    const input = structuredClone(professionalClaim);
+    input.diagnoses = Array.from({ length: testCase.diagnosisCount }, (_, index) => ({
+      system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis",
+      code: `DX-${index + 1}`,
+    }));
+    delete input.chargeItems[0].id;
+    input.chargeItems[0].diagnosisSequence = testCase.sequence;
+
+    const result = await handleSubmitClaimRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: { claim: input },
+    });
+
+    assert.equal(result.status, 400);
+    assert.match((result.body as { error: string }).error, /diagnosis(?:Sequence| pointer| pointers)/);
+    assert.equal(fixture.created.ChargeItem.length, 0);
+    assert.equal(fixture.created.Claim.length, 0);
+  }
+});
+
+test("claim draft reads audit the authenticated staff member and Encounter", async () => {
+  const fixture = deps();
+  const result = await handleClaimDraftRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    encounterId: "enc-1",
+  });
+
+  assert.equal(result.status, 200);
+  const audit = fixture.audits.at(-1);
+  assert.equal(audit?.eventType, "read");
+  assert.equal(audit?.actorId, "staff-1");
+  assert.equal(audit?.patientId, "pat-900");
+  assert.equal(audit?.resourceType, "Encounter");
+  assert.equal(audit?.resourceId, "enc-1");
+  assert.equal(audit?.actionReason, "CLAIM_DRAFT");
+});
+
+test("claim draft maps a missing Encounter read to a client error", async () => {
+  const fixture = deps();
+  const result = await handleClaimDraftRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    encounterId: "missing",
+  });
+
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /Encounter\/missing could not be loaded/);
 });
 
 test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {

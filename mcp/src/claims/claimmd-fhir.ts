@@ -58,6 +58,11 @@ export interface ProfessionalClaimDiagnosisInput {
   display?: string;
 }
 
+export type ProfessionalClaimChargeItemInput = ChargeItem & {
+  diagnosisSequence?: number[];
+  laterality?: string;
+};
+
 export interface ProfessionalClaimInput {
   created: string;
   serviceDate: string;
@@ -72,7 +77,7 @@ export interface ProfessionalClaimInput {
   subscriber: ClaimMdPersonInput;
   patient: ClaimMdPersonInput;
   diagnoses: ProfessionalClaimDiagnosisInput[];
-  chargeItems: ChargeItem[];
+  chargeItems: ProfessionalClaimChargeItemInput[];
   facilityReference?: string;
 }
 
@@ -181,6 +186,7 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
     const coding = firstCoding(chargeItem);
     const quantity = chargeItem.quantity?.value ?? 1;
     const unitCents = moneyToCents(chargeItem.priceOverride);
+    const diagnosisSequence = claimDiagnosisSequence(chargeItem, input.diagnoses.length);
     return {
       sequence: index + 1,
       extension: [{
@@ -197,7 +203,8 @@ export function buildProfessionalClaim(input: ProfessionalClaimInput): Claim {
         ],
       },
       servicedDate: input.serviceDate,
-      diagnosisSequence: [1],
+      ...(diagnosisSequence.length ? { diagnosisSequence } : {}),
+      ...(chargeItem.laterality ? { bodySite: { text: chargeItem.laterality } } : {}),
       quantity: { value: quantity },
       unitPrice: money(unitCents),
       net: money(unitCents * quantity),
@@ -258,7 +265,7 @@ export function buildClaimMdProfessionalClaimJson(
       units: String(chargeItem.quantity?.value ?? 1),
       from_date: serviceDate,
       thru_date: serviceDate,
-      diag_ref: diagnosisRef(input.diagnoses.length),
+      diag_ref: diagnosisRef(claimDiagnosisSequence(chargeItem, input.diagnoses.length)),
       ...(chargeItem.id ? { remote_chgid: chargeItem.id } : {}),
       ...Object.fromEntries(modifierCodes.map((code, index) => [`mod${index + 1}`, code])),
     };
@@ -565,8 +572,31 @@ function isoDateFromClaimMd(date: string | undefined): string | undefined {
   return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
 }
 
-function diagnosisRef(count: number): string {
-  return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".slice(0, Math.min(count, 4));
+export function claimDiagnosisSequence(
+  chargeItem: ProfessionalClaimChargeItemInput,
+  diagnosisCount: number,
+): number[] {
+  const sequence = chargeItem.diagnosisSequence ?? [1];
+  if (sequence.length < 1) {
+    throw new Error("ChargeItem diagnosisSequence must contain at least one diagnosis position.");
+  }
+  if (sequence.length > 4) {
+    throw new Error("ChargeItem diagnosisSequence cannot contain more than 4 diagnosis positions.");
+  }
+  const maximumPosition = Math.min(diagnosisCount, 12);
+  if (sequence.some((value) =>
+    !Number.isInteger(value) || value < 1 || value > maximumPosition
+  )) {
+    throw new Error(`ChargeItem diagnosisSequence positions must be integers from 1 through ${maximumPosition}.`);
+  }
+  if (new Set(sequence).size !== sequence.length) {
+    throw new Error("ChargeItem diagnosisSequence positions must be unique.");
+  }
+  return [...sequence];
+}
+
+function diagnosisRef(sequence: number[]): string {
+  return sequence.map((value) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[value - 1]).join("");
 }
 
 function claimMdDiagnosisFields(diagnoses: ProfessionalClaimDiagnosisInput[]): Record<string, string> {

@@ -40,6 +40,7 @@ import { StaffSettings } from "./scenes/settings/StaffSettings";
 import { PackageDefinitionsSettings } from "./components/commercial/PackageDefinitionsSettings";
 import { ProtocolDefinitionsSettings } from "./components/series-tracker/ProtocolDefinitionsSettings";
 import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
+import { BillingIdentitySettings } from "./scenes/settings/BillingIdentitySettings";
 import { AppearanceSettings } from "./scenes/settings/AppearanceSettings";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
@@ -316,7 +317,7 @@ export function RouteSwitch({
     case "/billing/claims/remittances":
       return <RemittanceQueue />;
     case "/billing/claims/submit":
-      return <SubmitClaims />;
+      return <SubmitClaims initialEncounterId={new URLSearchParams(search).get("encounterId") ?? undefined} />;
     case "/billing/claims/carrier-payments":
       return <CarrierPayments />;
     case "/billing/claims/patient-payments":
@@ -366,6 +367,8 @@ export function RouteSwitch({
       return <ProcedureDefinitionsSettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/statement-messages":
       return <StatementMessagesSettings canWrite={roles.includes("practice-admin")} />;
+    case "/settings/billing-identity":
+      return <BillingIdentitySettings canWrite={roles.includes("practice-admin")} />;
     case "/settings/appearance":
       return <AppearanceSettings canWrite={roles.includes("practice-admin")} />;
     default:

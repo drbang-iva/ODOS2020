@@ -13,6 +13,7 @@ import {
   makeConditionPrincipal,
   swapConditionRanks,
 } from "../src/lib/clinical-actions";
+import { buildProfessionalClaimInput, initialClaimDraft } from "../src/lib/submit-claims";
 
 const CONDITIONS = ["principal", "secondary-a", "secondary-b"].map((id) => ({
   resourceType: "Condition" as const,
@@ -164,6 +165,38 @@ test("unranked, invalid, and duplicate-rank secondaries have no enabled Move act
   assert.match(html, /Make Principal/);
   assert.match(html, /<button disabled=""[^>]*>Move up<\/button>/);
   assert.match(html, /<button disabled=""[^>]*>Move down<\/button>/);
+});
+
+test("claim prefill keeps diagnosis order as the source of per-line pointer positions", () => {
+  const draft = initialClaimDraft("2026-07-21");
+  Object.assign(draft, {
+    patientReference: "Patient/pat-1",
+    providerReference: "Practitioner/prov-1",
+    insurerReference: "Organization/payer-1",
+    coverageReference: "Coverage/cov-1",
+    patientAccountNumber: "PCN-1",
+    payerId: "PAYER-1",
+    billingProvider: { npi: "1111111112" },
+    renderingProvider: { npi: "2222222223" },
+    patient: { firstName: "Jane", lastName: "Test", dateOfBirth: "1980-01-01", sex: "F" },
+    subscriber: { firstName: "Jane", lastName: "Test", dateOfBirth: "1980-01-01", sex: "F", relationshipCode: "18" },
+    diagnoses: [
+      { code: "PRINCIPAL", description: "Principal" },
+      { code: "SECONDARY", description: "Secondary" },
+    ],
+    charges: [{
+      id: "charge-1",
+      codeType: "CPT",
+      code: "PROC-A",
+      description: "Procedure A",
+      feeDollars: "100.00",
+      quantity: "1",
+      diagnosisSequence: [2],
+    }],
+  });
+  const claim = buildProfessionalClaimInput(draft);
+  assert.deepEqual(claim.diagnoses.map(({ code }) => code), ["PRINCIPAL", "SECONDARY"]);
+  assert.deepEqual(claim.chargeItems[0].diagnosisSequence, [2]);
 });
 
 function rankedEncounter(ranks: number[]): Encounter {

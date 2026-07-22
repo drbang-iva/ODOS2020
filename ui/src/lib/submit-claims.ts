@@ -40,6 +40,11 @@ export interface ProfessionalClaimDiagnosisInput {
   display?: string;
 }
 
+export type ProfessionalClaimChargeItemInput = ChargeItem & {
+  diagnosisSequence?: number[];
+  laterality?: string;
+};
+
 export interface ProfessionalClaimInput {
   created: string;
   serviceDate: string;
@@ -54,21 +59,38 @@ export interface ProfessionalClaimInput {
   subscriber: ClaimMdPersonInput;
   patient: ClaimMdPersonInput;
   diagnoses: ProfessionalClaimDiagnosisInput[];
-  chargeItems: ChargeItem[];
+  chargeItems: ProfessionalClaimChargeItemInput[];
   facilityReference?: string;
 }
 
 export interface DiagnosisLine {
+  system?: string;
   code: string;
   description: string;
 }
 
 export interface ChargeLine {
+  id?: string;
   codeType: "CPT" | "HCPCS";
+  codeSystem?: string;
   code: string;
   description: string;
   feeDollars: string;
   quantity: string;
+  diagnosisSequence?: number[];
+  laterality?: string;
+}
+
+export interface EncounterClaimDraft {
+  encounterReference: string;
+  patientReference: string;
+  serviceDate: string;
+  diagnoses: DiagnosisLine[];
+  charges: ChargeLine[];
+  coverageReference?: string;
+  insurerReference?: string;
+  payerId?: string;
+  warnings?: string[];
 }
 
 export interface ClaimDraft {
@@ -134,6 +156,20 @@ export function emptyProvider(): ClaimMdProviderInput {
 
 export function emptyPerson(): ClaimMdPersonInput {
   return { firstName: "", lastName: "", dateOfBirth: "", sex: "U" };
+}
+
+export function mergeProviderDefaults(
+  current: ClaimMdProviderInput,
+  defaults: ClaimMdProviderInput,
+): ClaimMdProviderInput {
+  return Object.fromEntries(
+    Object.entries({ ...defaults, ...current }).map(([key, value]) => [
+      key,
+      typeof value === "string" && !value.trim()
+        ? defaults[key as keyof ClaimMdProviderInput]
+        : value,
+    ]),
+  ) as unknown as ClaimMdProviderInput;
 }
 
 export function initialClaimDraft(today: string): ClaimDraft {
@@ -424,6 +460,18 @@ export function validateClaimDraft(draft: ClaimDraft): string[] {
     }
     const quantity = Number(charge.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) errors.push(`Charge ${index + 1} quantity must be a positive whole number.`);
+    const sequence = charge.diagnosisSequence;
+    if (sequence?.length === 0) {
+      errors.push(`Charge ${index + 1} must include at least one diagnosis pointer.`);
+    } else if (sequence && sequence.length > 4) {
+      errors.push(`Charge ${index + 1} may include no more than four diagnosis pointers.`);
+    } else if (sequence?.some((value) =>
+      !Number.isInteger(value) || value < 1 || value > Math.min(draft.diagnoses.length, 12)
+    )) {
+      errors.push(`Charge ${index + 1} diagnosis pointers must use positions 1 through ${Math.min(draft.diagnoses.length, 12)}.`);
+    } else if (sequence && new Set(sequence).size !== sequence.length) {
+      errors.push(`Charge ${index + 1} diagnosis pointers must reference unique diagnoses on this claim.`);
+    }
   });
   return errors;
 }
@@ -445,18 +493,19 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
     subscriber: cleanPerson(draft.subscriber),
     patient: cleanPerson(draft.patient),
     diagnoses: draft.diagnoses.map((diagnosis) => ({
-      system: ICD10_CM_SYSTEM,
+      system: diagnosis.system ?? ICD10_CM_SYSTEM,
       code: diagnosis.code.trim(),
       ...(diagnosis.description.trim() ? { display: diagnosis.description.trim() } : {}),
     })),
-    chargeItems: draft.charges.map((charge): ChargeItem => {
+    chargeItems: draft.charges.map((charge): ProfessionalClaimChargeItemInput => {
       const feeCents = dollarsToCents(charge.feeDollars);
       return {
         resourceType: "ChargeItem",
+        ...(charge.id ? { id: charge.id } : {}),
         status: "billable",
         code: {
           coding: [{
-            system: charge.codeType === "CPT" ? CPT_SYSTEM : HCPCS_SYSTEM,
+            system: charge.codeSystem ?? (charge.codeType === "CPT" ? CPT_SYSTEM : HCPCS_SYSTEM),
             code: charge.code.trim(),
             ...(charge.description.trim() ? { display: charge.description.trim() } : {}),
           }],
@@ -464,9 +513,34 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
         subject: { reference: draft.patientReference },
         quantity: { value: Number(charge.quantity) },
         priceOverride: { value: feeCents / 100, currency: "USD" },
+        ...(charge.diagnosisSequence ? { diagnosisSequence: charge.diagnosisSequence } : {}),
+        ...(charge.laterality ? { laterality: charge.laterality } : {}),
       };
     }),
   };
+}
+
+export async function loadEncounterClaimDraft(
+  encounterId: string,
+  options: ClaimsApiOptions = {},
+): Promise<EncounterClaimDraft> {
+  const query = new URLSearchParams({ encounterId });
+  const response = await (options.fetchImpl ?? fetch)(
+    `${(options.baseUrl ?? "").replace(/\/$/, "")}/claims/draft?${query}`,
+    {
+      headers: {
+        Accept: "application/json",
+        ...(options.authorization ? { Authorization: options.authorization } : {}),
+      },
+    },
+  );
+  const text = await response.text();
+  const body = parseJsonBody<EncounterClaimDraft & { error?: string }>(text);
+  if (!response.ok) {
+    throw new Error(body?.error ?? `Claim draft load failed with HTTP ${response.status}.`);
+  }
+  if (!body) throw new Error("Claim draft response was not valid JSON.");
+  return body;
 }
 
 export async function submitProfessionalClaim(
@@ -483,11 +557,21 @@ export async function submitProfessionalClaim(
     body: JSON.stringify({ claim, ...(options.clearinghouse ? { clearinghouse: options.clearinghouse } : {}) }),
   });
   const text = await response.text();
-  const body = text ? JSON.parse(text) as SubmitClaimResult & { error?: string } : {};
+  const body = parseJsonBody<SubmitClaimResult & { error?: string }>(text);
   if (!response.ok) {
-    throw new Error(body.error ?? `Claim submission failed with HTTP ${response.status}.`);
+    throw new Error(body?.error ?? `Claim submission failed with HTTP ${response.status}.`);
   }
+  if (!body) throw new Error("Claim submission response was not valid JSON.");
   return body;
+}
+
+function parseJsonBody<T>(text: string): T | undefined {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 function requirePerson(person: ClaimMdPersonInput, label: string, errors: string[]): void {
