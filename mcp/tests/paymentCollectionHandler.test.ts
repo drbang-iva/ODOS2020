@@ -250,7 +250,7 @@ test("recorded-tender collection blocks a named unpriced charge before creating 
     body: {
       patientReference: "Patient/patient-1",
       selectedOpenChargeLineIds: ["charge-unpriced"],
-      amountCents: 1,
+      amountCents: 0,
       tender: "CASH",
     },
   });
@@ -261,6 +261,31 @@ test("recorded-tender collection blocks a named unpriced charge before creating 
     /ChargeItem\/charge-unpriced \(Frames\) requires a fee schedule entry before it can be collected\./,
   );
   assert.equal(reads(), 1);
+  assert.equal(transactions.length, 0);
+  assert.equal(audits.length, 0);
+});
+
+test("recorded-tender collection still rejects an unmarked zero-dollar charge", async () => {
+  const zero = {
+    ...charge("charge-zero"),
+    priceOverride: { value: 0, currency: "USD" },
+  };
+  const { audits, deps, transactions } = fixture([zero]);
+
+  const result = await handleRecordedTenderCollectionRequest(deps, {
+    authHeader: "Bearer good",
+    body: {
+      patientReference: "Patient/patient-1",
+      selectedOpenChargeLineIds: ["charge-zero"],
+      amountCents: 0,
+      tender: "CASH",
+    },
+  });
+
+  assert.deepEqual(result, {
+    status: 400,
+    body: { error: "amountCents must be a positive integer number of cents." },
+  });
   assert.equal(transactions.length, 0);
   assert.equal(audits.length, 0);
 });

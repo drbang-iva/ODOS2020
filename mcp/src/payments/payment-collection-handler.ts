@@ -165,6 +165,7 @@ async function createCollection(
 ): Promise<CreatedOpticalCashOrderIds> {
   await assertDayNotSealed(fhir, collectedAt, timeZone);
   if (body.opticalOrder) {
+    assertPositiveCollectionAmount(body.amountCents);
     if (body.opticalOrder.patientReference !== body.patientReference) {
       throw new CollectionInputError("The optical order patient must match patientReference.");
     }
@@ -202,6 +203,7 @@ async function createCollection(
     }
     return { chargeItemReference: `ChargeItem/${chargeItem.id}`, amountCents: chargeAmountCents(chargeItem) };
   });
+  assertPositiveCollectionAmount(body.amountCents);
   const totalCents = lines.reduce((total, line) => total + line.amountCents, 0);
   assertCollectionAmount(body.amountCents, totalCents);
   const invoice = buildOpticalInvoice({
@@ -299,6 +301,12 @@ function assertCollectionAmount(actual: number, expected: number): void {
   }
 }
 
+function assertPositiveCollectionAmount(amountCents: number): void {
+  if (amountCents <= 0) {
+    throw new CollectionInputError("amountCents must be a positive integer number of cents.");
+  }
+}
+
 function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: string } {
   if (typeof raw !== "object" || raw === null) return { error: "Request body must be a JSON object." };
   const body = raw as Record<string, unknown>;
@@ -309,7 +317,7 @@ function parseCollectionBody(raw: unknown): { body: CollectionBody } | { error: 
       new Set(body.selectedOpenChargeLineIds).size !== body.selectedOpenChargeLineIds.length) {
     return { error: "selectedOpenChargeLineIds must contain unique local charge-line ids." };
   }
-  if (typeof body.amountCents !== "number" || !Number.isInteger(body.amountCents) || body.amountCents <= 0) {
+  if (typeof body.amountCents !== "number" || !Number.isInteger(body.amountCents) || body.amountCents < 0) {
     return { error: "amountCents must be a positive integer number of cents." };
   }
   if (body.tender !== "CASH" && body.tender !== "CHECK" && body.tender !== "CARD_MANUAL") {
