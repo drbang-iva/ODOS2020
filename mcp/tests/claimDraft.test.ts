@@ -87,23 +87,52 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   assert.equal(draft.insurerReference, "Organization/payer-primary");
   assert.equal(draft.payerId, "PAYER-primary");
   assert.equal(draft.serviceDate, "2026-07-21");
+  assert.deepEqual(draft.warnings, [
+    "ChargeItem/charge-both omitted laterality because its linked confirmed diagnoses have conflicting body-site text.",
+  ]);
   assert.deepEqual(searches, [
     { resourceType: "ChargeItem", params: { context: "Encounter/enc-1", _count: "100" } },
     { resourceType: "Coverage", params: { beneficiary: "Patient/pat-1", _count: "100" } },
   ]);
 });
 
-test("buildClaimDraft falls through to the next active Coverage when order one is inactive", async () => {
+test("claim assembly never promotes an order-two Coverage while another Coverage record remains", async () => {
   const inactivePrimary = { ...coverage("inactive-primary", 1), status: "cancelled" as const };
   const activeSecondary = coverage("active-secondary", 2);
+  await assert.rejects(
+    buildClaimDraft(
+      client([], encounter, [inactivePrimary, activeSecondary]),
+      "enc-1",
+    ),
+    /only active Coverage is not recorded as primary \(order 1\)/,
+  );
+});
+
+test("claim assembly uses the active order-one Coverage when other payers are present", async () => {
   const draft = await buildClaimDraft(
-    client([], encounter, [inactivePrimary, activeSecondary]),
+    client([], encounter, [coverage("secondary", 2), coverage("primary", 1), coverage("tertiary", 3)]),
     "enc-1",
   );
 
-  assert.equal(draft.coverageReference, "Coverage/active-secondary");
-  assert.equal(draft.insurerReference, "Organization/payer-active-secondary");
-  assert.equal(draft.payerId, "PAYER-active-secondary");
+  assert.equal(draft.coverageReference, "Coverage/primary");
+});
+
+test("claim assembly accepts one lone active Coverage when its order is omitted", async () => {
+  const unorderedCoverage = coverage("only-payer", 1);
+  delete unorderedCoverage.order;
+  const draft = await buildClaimDraft(client([], encounter, [unorderedCoverage]), "enc-1");
+
+  assert.equal(draft.coverageReference, "Coverage/only-payer");
+});
+
+test("claim assembly rejects multiple active Coverages when none is recorded as primary", async () => {
+  await assert.rejects(
+    buildClaimDraft(
+      client([], encounter, [coverage("secondary", 2), coverage("tertiary", 3)]),
+      "enc-1",
+    ),
+    /multiple active Coverages but none recorded as primary \(order 1\)/,
+  );
 });
 
 test("buildClaimDraft rejects a payerless draft when no active Coverage exists", async () => {
@@ -141,6 +170,17 @@ test("buildClaimDraft converts missing Encounter and Condition reads into assemb
   await assert.rejects(
     buildClaimDraft(client([], missingCondition), "enc-1"),
     ClaimDraftAssemblyError,
+  );
+
+  const upstreamFailure = Object.assign(new Error("upstream route not found"), { status: 502 });
+  await assert.rejects(
+    buildClaimDraft({
+      ...client([]),
+      async read<T extends Resource>(): Promise<T> {
+        throw upstreamFailure;
+      },
+    }, "enc-1"),
+    (error: unknown) => error === upstreamFailure,
   );
 });
 
@@ -191,7 +231,7 @@ function client(
   return {
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
       const resource = resources.get(`${resourceType}/${id}`);
-      if (!resource) throw new Error(`${resourceType}/${id} not found`);
+      if (!resource) throw Object.assign(new Error(`${resourceType}/${id} not found`), { status: 404 });
       return resource as T;
     },
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {

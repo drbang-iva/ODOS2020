@@ -171,7 +171,7 @@ function deps(role: "front-desk" | "clinician" = "front-desk") {
     read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
       const resources = created[resourceType as keyof typeof created] as Resource[] | undefined;
       const found = resources?.find((resource) => resource.id === id);
-      if (!found) throw new Error(`${resourceType}/${id} not found`);
+      if (!found) throw Object.assign(new Error(`${resourceType}/${id} not found`), { status: 404 });
       return found as T;
     },
     search: async <T extends Resource>(
