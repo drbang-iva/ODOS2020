@@ -98,7 +98,10 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
 
 test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
+  const billingIdentityCriteria =
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config";
   const writeTierCriteria = [
+    billingIdentityCriteria,
     "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
@@ -108,7 +111,6 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   ];
   const readTierCriteria = [
     "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
-    "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/visit-type-config|odos-visit-type-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config",
   ];
@@ -128,6 +130,9 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     }
     assert.ok(!rule.interaction?.includes("delete"));
   }
+
+  const billingIdentityRule = rules.find((candidate) => candidate.criteria === billingIdentityCriteria);
+  assert.deepEqual(billingIdentityRule?.interaction, ["create", "read", "update", "search", "history", "vread"]);
 
   for (const criteria of readTierCriteria) {
     const rule = rules.find((candidate) => candidate.criteria === criteria);
