@@ -974,7 +974,7 @@ test("Stedi ERA fixture creates the same insurance PaymentReconciliation shape w
 });
 
 test("Stedi ERA uses payer-stated patient responsibility for the Invoice and flags a line-total disagreement", async () => {
-  const { created, deps: d } = deps();
+  const { audits, created, deps: d } = deps();
   created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
   d.adapters = { stedi: stediEraAdapter(stediEraReport({
     transactionId: "era-pr-discrepancy",
@@ -994,8 +994,10 @@ test("Stedi ERA uses payer-stated patient responsibility for the Invoice and fla
   assert.equal(result.status, 200);
   assert.equal(created.Invoice[0].totalNet?.value, 35);
   assert.equal(created.Task.length, 1);
+  assert.equal(worklistCode(created.Task[0]), "era-integrity");
   assert.equal(created.Task[0].description, "Stedi ERA integrity requires review");
   assert.match(taskInput(created.Task[0], "stedi-era-review-reason")?.valueString ?? "", /patient responsibility.*35\.00.*20\.00/i);
+  assert.equal(audits.some((row) => row.eventType === "era.integrity.flagged"), true);
   assert.deepEqual(pickCounts(result.body), {
     posted: 1,
     denied: 0,
@@ -1003,6 +1005,152 @@ test("Stedi ERA uses payer-stated patient responsibility for the Invoice and fla
     flagged: 1,
     taskIds: ["task-1"],
   });
+});
+
+test("a malformed amount on the third Stedi claim is reviewed without aborting the batch", async () => {
+  const fixture = deps();
+  fixture.created.ChargeItem.length = 0;
+  const reports = [1, 2, 3].map((index) => {
+    const chargeItem = {
+      ...structuredClone(professionalClaim.chargeItems[0]),
+      id: `charge-${index}`,
+      subject: { reference: `Patient/pat-90${index}` },
+    };
+    fixture.created.ChargeItem.push(chargeItem);
+    fixture.created.Claim.push({
+      ...buildProfessionalClaim({
+        ...professionalClaim,
+        patientReference: `Patient/pat-90${index}`,
+        patientAccountNumber: `ODOS-CLAIM-90${index}`,
+        chargeItems: [chargeItem],
+      }),
+      id: `claim-${index}`,
+    });
+    const report = stediEraReport({
+      transactionId: "era-malformed-third",
+      patientResponsibilityAmount: "20",
+      serviceAdjustments: [{
+        claimAdjustmentGroupCode: "PR",
+        adjustmentReasonCode1: "1",
+        adjustmentAmount1: "20",
+      }],
+    }) as any;
+    const claim = report.transactions[0].detailInfo[0].paymentInfo[0];
+    claim.claimPaymentInfo.patientControlNumber = `ODOS-CLAIM-90${index}`;
+    claim.claimPaymentInfo.payerClaimControlNumber = `PAYER90${index}`;
+    claim.serviceLines[0].lineItemControlNumber = `charge-${index}`;
+    return claim;
+  });
+  reports[2].claimPaymentInfo.claimPaymentAmount = "not-a-decimal";
+  const raw = stediEraReport({ transactionId: "era-malformed-third" }) as any;
+  raw.transactions[0].detailInfo[0].paymentInfo = reports;
+  fixture.deps.adapters = { stedi: stediEraAdapter(raw) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-malformed-third",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: {
+        "ODOS-CLAIM-901": "Claim/claim-1",
+        "ODOS-CLAIM-902": "Claim/claim-2",
+        "ODOS-CLAIM-903": "Claim/claim-3",
+      },
+      patientReferenceByPcn: {
+        "ODOS-CLAIM-901": "Patient/pat-901",
+        "ODOS-CLAIM-902": "Patient/pat-902",
+        "ODOS-CLAIM-903": "Patient/pat-903",
+      },
+    },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.ClaimResponse.length, 3);
+  assert.deepEqual(
+    fixture.created.Invoice.map((invoice) => invoice.extension?.find(
+      (extension) => extension.url === ODOS_SOURCE_CLAIM_EXTENSION_URL,
+    )?.valueReference?.reference),
+    ["Claim/claim-1", "Claim/claim-2", "Claim/claim-3"],
+  );
+  assert.equal(fixture.created.PaymentReconciliation.length, 2);
+  const review = fixture.created.Task.find((task) => worklistCode(task) === "era-integrity");
+  assert.equal(review?.focus?.reference, "ClaimResponse/claimresponse-3");
+  assert.match(taskInput(review!, "stedi-era-review-reason")?.valueString ?? "", /claimPaymentInfo\.claimPaymentAmount/);
+});
+
+test("repeating the same Stedi ERA import creates one PaymentReconciliation per claim", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({ transactionId: "era-retry" })) };
+
+  const first = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-retry", clearinghouse: "stedi" },
+  });
+  const second = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-retry", clearinghouse: "stedi" },
+  });
+
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  assert.equal(fixture.created.PaymentReconciliation.length, 1);
+  assert.equal(fixture.created.PaymentReconciliation[0].paymentIdentifier?.value, "TRACE-era-retry");
+  assert.deepEqual(fixture.created.PaymentReconciliation[0].identifier, [{
+    system: STEDI_ERA_PAYMENT_SYSTEM,
+    value: "era-retry:Claim/claim-1",
+  }]);
+  assert.equal(
+    fixture.createHeaders.find((write) => write.resourceType === "PaymentReconciliation")?.headers?.["If-None-Exist"],
+    `identifier=${STEDI_ERA_PAYMENT_SYSTEM}|era-retry:Claim/claim-1`,
+  );
+});
+
+test("a claim-level-only Stedi responsibility remains visible and opens integrity review", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  const raw = stediEraReport({ transactionId: "era-claim-level-only", patientResponsibilityAmount: "35" }) as any;
+  raw.transactions[0].detailInfo[0].paymentInfo[0].serviceLines = [];
+  fixture.deps.adapters = { stedi: stediEraAdapter(raw) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { ...eraImportBody(), eraId: "era-claim-level-only", clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(fixture.created.Invoice.length, 0);
+  assert.equal(fixture.created.ClaimResponse[0].total?.find(
+    (total) => total.category.text === "patient responsibility",
+  )?.amount.value, 35);
+  assert.equal(worklistCode(fixture.created.Task[0]), "era-integrity");
+  assert.match(
+    taskInput(fixture.created.Task[0], "stedi-era-review-reason")?.valueString ?? "",
+    /payer-stated patient responsibility 35\.00.*no service lines/i,
+  );
+});
+
+test("an in-loop Stedi import failure is not audited as an ERA retrieval failure", async () => {
+  const fixture = deps();
+  fixture.deps.adapters = { stedi: stediEraAdapter(stediEraReport({
+    transactionId: "era-import-failure",
+    patientResponsibilityAmount: "20",
+  })) };
+
+  const result = await handleEraImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      ...eraImportBody(),
+      eraId: "era-import-failure",
+      clearinghouse: "stedi",
+      claimReferenceByPcn: { "ODOS-CLAIM-900": "not-a-claim-reference" },
+    },
+  });
+
+  assert.equal(result.status, 502);
+  assert.match(fixture.audits.at(-1)?.actionReason ?? "", /Stedi importEraData failed/);
+  assert.doesNotMatch(fixture.audits.at(-1)?.actionReason ?? "", /retrieveEraData/);
 });
 
 test("Stedi reversal preserves the signed payment without fabricating a reconciliation and opens review", async () => {

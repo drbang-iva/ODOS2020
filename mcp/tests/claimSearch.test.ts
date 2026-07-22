@@ -7,6 +7,7 @@ import {
   buildEraWorklistTask,
   claimEraWorklistTask,
   resolveEraWorklistTask,
+  type EraWorklistCode,
 } from "../src/claims/era-worklist.js";
 import {
   buildClaimResponseFromClaimMdEra,
@@ -27,6 +28,7 @@ test("claim search derives submitted, rejected, denied, underpaid, and paid with
   const tasks = [
     worklistTask("era-denial", denied),
     worklistTask("era-underpayment", underpaid),
+    worklistTask("era-integrity", paid),
   ];
 
   const rows = projectClaimSearchResults({
@@ -177,7 +179,7 @@ function eraResponse(
   };
 }
 
-function worklistTask(code: "era-denial" | "era-underpayment", response: ClaimResponse): Task {
+function worklistTask(code: EraWorklistCode, response: ClaimResponse): Task {
   const claimReference = response.request?.reference ?? "";
   const eraClaim: ClaimMdEraClaim = {
     pcn: claimReference,

@@ -34,9 +34,11 @@ const AUDIT_MIGRATION_FILENAMES = [
   "2026-07-18-commercial-engine-schema.sql",
   "2026-07-18-commercial-engine-redemption-recovery.sql",
   "2026-07-18-commercial-engine-credit-bank.sql",
+  "2026-07-22-era-integrity-event.sql",
+  "2026-07-22-era-integrity-event.validate.sql",
 ] as const;
-const VALIDATE_MIGRATION_FILENAME = "2026-07-15-era-line-linkage-event.validate.sql";
-const COMMERCIAL_MIGRATION_FILENAMES = AUDIT_MIGRATION_FILENAMES.slice(-3);
+const VALIDATE_MIGRATION_FILENAME = "2026-07-22-era-integrity-event.validate.sql";
+const COMMERCIAL_MIGRATION_FILENAMES = AUDIT_MIGRATION_FILENAMES.slice(-5, -2);
 
 async function installMigrationTrace(probe: Client): Promise<void> {
   const ledgerDdlPath = fileURLToPath(

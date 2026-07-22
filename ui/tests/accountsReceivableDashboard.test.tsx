@@ -71,6 +71,7 @@ function dashboard(): AccountsReceivableDashboardData {
     ],
     openWorklistCounts: {
       "era-denial": 2,
+      "era-integrity": 0,
       "era-line-linkage": 0,
       "era-underpayment": 0,
       "era-unmatched": 0,

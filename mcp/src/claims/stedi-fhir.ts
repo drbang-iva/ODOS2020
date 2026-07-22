@@ -381,6 +381,9 @@ export function analyzeStediEraClaim(claim: StediEraClaim): StediEraClaimAnalysi
   );
   const responsibilityMismatch = authoritativePatientResponsibilityCents !== undefined
     && authoritativePatientResponsibilityCents !== derivedPatientResponsibilityCents;
+  const claimLevelOnlyResponsibility = authoritativePatientResponsibilityCents !== undefined
+    && authoritativePatientResponsibilityCents > 0
+    && (claim.serviceLines ?? []).length === 0;
   return {
     claimStatusCode,
     outcome: status.outcome,
@@ -391,7 +394,11 @@ export function analyzeStediEraClaim(claim: StediEraClaim): StediEraClaimAnalysi
     ...(authoritativePatientResponsibilityCents !== undefined ? { authoritativePatientResponsibilityCents } : {}),
     derivedPatientResponsibilityCents,
     reviewReasons: [
+      ...invalidAmountReviewReasons(claim),
       ...(status.reviewReason ? [status.reviewReason] : []),
+      ...(claimLevelOnlyResponsibility ? [
+        `Payer-stated patient responsibility ${formatCents(authoritativePatientResponsibilityCents)} cannot be invoiced automatically because the ERA has no service lines.`,
+      ] : []),
       ...(responsibilityMismatch ? [
         `Payer-stated patient responsibility ${formatCents(authoritativePatientResponsibilityCents)} differs from summed service-line PR adjustments ${formatCents(derivedPatientResponsibilityCents)}.`,
       ] : []),
@@ -565,8 +572,51 @@ function decimalCents(value: unknown): number {
 function optionalDecimalCents(value: unknown): number | undefined {
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error("Stedi ERA amount must be a finite decimal value.");
-  return Math.round(parsed * 100);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : undefined;
+}
+
+function invalidAmountReviewReasons(claim: StediEraClaim): string[] {
+  const invalidFields: string[] = [];
+  const inspect = (field: string, value: unknown): void => {
+    if (value !== undefined && value !== null && value !== "" && !Number.isFinite(Number(value))) {
+      invalidFields.push(field);
+    }
+  };
+  inspect("claimPaymentInfo.totalClaimChargeAmount", claim.claimPaymentInfo.totalClaimChargeAmount);
+  inspect("claimPaymentInfo.claimPaymentAmount", claim.claimPaymentInfo.claimPaymentAmount);
+  inspect("claimPaymentInfo.patientResponsibilityAmount", claim.claimPaymentInfo.patientResponsibilityAmount);
+  for (const [adjustmentIndex, adjustment] of (claim.claimAdjustments ?? []).entries()) {
+    for (let slot = 1; slot <= 6; slot += 1) {
+      inspect(
+        `claimAdjustments[${adjustmentIndex}].adjustmentAmount${slot}`,
+        adjustment[`adjustmentAmount${slot}` as keyof StediEraAdjustment],
+      );
+    }
+  }
+  for (const [lineIndex, line] of (claim.serviceLines ?? []).entries()) {
+    inspect(
+      `serviceLines[${lineIndex}].servicePaymentInformation.lineItemChargeAmount`,
+      line.servicePaymentInformation?.lineItemChargeAmount,
+    );
+    inspect(
+      `serviceLines[${lineIndex}].servicePaymentInformation.lineItemProviderPaymentAmount`,
+      line.servicePaymentInformation?.lineItemProviderPaymentAmount,
+    );
+    inspect(
+      `serviceLines[${lineIndex}].serviceSupplementalAmounts.allowedActual`,
+      line.serviceSupplementalAmounts?.allowedActual,
+    );
+    for (const [adjustmentIndex, adjustment] of (line.serviceAdjustments ?? []).entries()) {
+      for (let slot = 1; slot <= 6; slot += 1) {
+        inspect(
+          `serviceLines[${lineIndex}].serviceAdjustments[${adjustmentIndex}].adjustmentAmount${slot}`,
+          adjustment[`adjustmentAmount${slot}` as keyof StediEraAdjustment],
+        );
+      }
+    }
+  }
+  return invalidFields.map((field) =>
+    `Stedi ERA amount ${field} is not a finite decimal value and requires manual review.`);
 }
 
 function money(cents: number): Money {

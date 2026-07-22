@@ -24,6 +24,7 @@ test("AR dashboard hand-computes average age, aging buckets, and open-worklist c
   const worklist = [
     worklistItem("era-denial", "task-1"),
     worklistItem("era-denial", "task-2"),
+    worklistItem("era-integrity", "task-integrity"),
     worklistItem("era-line-linkage", "task-3"),
     worklistItem("claim-rejected", "task-4"),
   ];
@@ -33,9 +34,11 @@ test("AR dashboard hand-computes average age, aging buckets, and open-worklist c
   assert.equal(dashboard.outstandingClaimCount, 4);
   assert.equal(dashboard.averageDaysOutstanding, 62.5);
   assert.deepEqual(dashboard.agingBuckets.map((bucket) => bucket.claimCount), [1, 1, 1, 1]);
-  assert.equal(dashboard.openWorklistTotal, 4);
+  assert.equal(dashboard.openWorklistTotal, 5);
   assert.equal(dashboard.openWorklistCounts["era-denial"], 2);
+  assert.equal(dashboard.openWorklistCounts["era-integrity"], 1);
   assert.equal(dashboard.openWorklistCounts["era-line-linkage"], 1);
+  assert.equal(dashboard.openWorklistCounts["era-underpayment"], 0);
   assert.equal(dashboard.openWorklistCounts["claim-rejected"], 1);
   assert.equal(dashboard.totalOutstanding.status, "unavailable");
   assert.match(dashboard.totalOutstanding.reason, /No shipped Claim-to-Invoice balance link/);

@@ -485,8 +485,11 @@ async function importStediEra(
   let underpaid = 0;
   let flagged = 0;
   let paidTotalCents = 0;
+  let failureOperation = "retrieveEraData";
   try {
-    const era = readStediEra(await adapter.retrieveEraData(body.eraId), body.eraId);
+    const rawEra = await adapter.retrieveEraData(body.eraId);
+    failureOperation = "importEraData";
+    const era = readStediEra(rawEra, body.eraId);
     for (const stediClaim of era.claims) {
       const eraClaim = claimMdLikeStediEraClaim(stediClaim);
       const stediAnalysis = analyzeStediEraClaim(stediClaim);
@@ -542,7 +545,8 @@ async function importStediEra(
         )
         : "none";
       if (paidCents > 0 && stediAnalysis.allowsReconciliation) {
-        const reconciliation = await auth.fhir.create(buildInsurancePaymentReconciliation({
+        const reconciliationIdentifierValue = `${era.transactionId}:${claimReference}`;
+        const reconciliationCandidate = buildInsurancePaymentReconciliation({
           createdIso: now(deps),
           paymentDate: response.payment?.date ?? today(deps),
           amountCents: paidCents,
@@ -554,7 +558,14 @@ async function importStediEra(
           processorTransactionSystem: STEDI_ERA_PAYMENT_SYSTEM,
           description: `Stedi ERA ${era.transactionId}`,
           lineAllocations: claimResponseLinePaymentAllocations(response),
-        }));
+        });
+        reconciliationCandidate.identifier = [{
+          system: STEDI_ERA_PAYMENT_SYSTEM,
+          value: reconciliationIdentifierValue,
+        }];
+        const reconciliation = await auth.fhir.create(reconciliationCandidate, {
+          "If-None-Exist": `identifier=${STEDI_ERA_PAYMENT_SYSTEM}|${reconciliationIdentifierValue}`,
+        });
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
       }
@@ -629,7 +640,7 @@ async function importStediEra(
       "failure",
       `Stedi/ERA/${body.eraId}`,
       undefined,
-      clearinghouseFailureAuditReason("stedi", "retrieveEraData", error),
+      clearinghouseFailureAuditReason("stedi", failureOperation, error),
       "stedi",
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
@@ -1263,7 +1274,7 @@ async function createStediEraIntegrityReviewTask(
 ): Promise<Task> {
   const identifierValue = `${input.era.eraid ?? "unknown-era"}:${input.claimReference}:stedi-integrity`;
   const candidate = buildEraWorklistTask({
-    code: "era-underpayment",
+    code: "era-integrity",
     era: input.era,
     eraClaim: input.eraClaim,
     claimResponseReference: input.claimResponseReference,
@@ -1287,7 +1298,7 @@ async function createStediEraIntegrityReviewTask(
   const task = await auth.fhir.create(candidate, {
     "If-None-Exist": `identifier=${ERA_DISCREPANCY_IDENTIFIER_SYSTEM}|${identifierValue}`,
   });
-  await audit(deps, auth, "era.underpayment.flagged", "success", ref(task), input.patientReference, undefined, "stedi");
+  await audit(deps, auth, "era.integrity.flagged", "success", ref(task), input.patientReference, undefined, "stedi");
   return task;
 }
 
