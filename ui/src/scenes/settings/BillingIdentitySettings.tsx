@@ -46,10 +46,11 @@ export async function loadBillingIdentityConfigSingleton(
   client: Pick<typeof fhir, "search" | "searchUrl">,
 ): Promise<LoadedBillingIdentity> {
   const resources = await searchAll<Basic>(client, "Basic", {
+    _id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "10",
+    _count: "1",
   });
-  const resource = [...resources].sort((a, b) => lastUpdatedMs(b) - lastUpdatedMs(a))[0];
+  const resource = resources.find((candidate) => candidate.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
   return {
     ...(resource ? { resource, config: parseBillingIdentityConfig(resource) } : {}),
   };
@@ -138,10 +139,6 @@ function ConfigField({ label, value, disabled, onChange }: {
 
 function SettingsState({ message, alert = false }: { message: string; alert?: boolean }) {
   return <main className="min-h-screen bg-bg-deep p-6 text-[color:var(--odos-text)]"><div role={alert ? "alert" : "status"} className="mx-auto max-w-4xl rounded border border-[color:var(--odos-line)] bg-bg-panel/70 p-5 text-sm">{message}</div></main>;
-}
-
-function lastUpdatedMs(resource: Basic): number {
-  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
 }
 
 function errorMessage(cause: unknown): string {

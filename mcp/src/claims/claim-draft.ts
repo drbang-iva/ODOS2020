@@ -147,7 +147,7 @@ export async function buildClaimDraft(
     };
   });
 
-  const primaryCoverage = coverages.find((coverage) => coverage.order === 1);
+  const primaryCoverage = coverages.find((coverage) => coverage.status === "active" && coverage.order === 1);
   return {
     encounterReference,
     patientReference: patientReference!,

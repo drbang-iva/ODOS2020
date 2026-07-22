@@ -6,9 +6,11 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { Basic } from "@medplum/fhirtypes";
 import {
   BillingIdentitySettingsReady,
+  loadBillingIdentityConfigSingleton,
   type BillingIdentitySettingsClient,
 } from "../src/scenes/settings/BillingIdentitySettings";
 import {
+  ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
   buildBillingIdentityResource,
   parseBillingIdentityConfig,
   type BillingIdentityConfig,
@@ -78,4 +80,27 @@ test("billing identity is read-only outside practice-admin", () => {
   assert.match(html, /Practice-admin access is required/);
   assert.doesNotMatch(html, /Save billing identity/);
   assert.ok((html.match(/disabled=""/g) ?? []).length >= 10);
+});
+
+test("billing identity lookup selects only the deterministic singleton id", async () => {
+  const canonical = {
+    ...buildBillingIdentityResource(config),
+    id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
+  };
+  const duplicate = { ...buildBillingIdentityResource(config), id: "newer-duplicate" };
+  let searchParams: URLSearchParams | undefined;
+  const loaded = await loadBillingIdentityConfigSingleton({
+    async search(_resourceType, params) {
+      searchParams = new URLSearchParams(params);
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: duplicate }, { resource: canonical }],
+      };
+    },
+  });
+
+  assert.equal(searchParams?.get("_id"), ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  assert.equal(searchParams?.get("_count"), "1");
+  assert.equal(loaded.resource?.id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
 });

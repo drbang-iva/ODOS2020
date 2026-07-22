@@ -113,6 +113,15 @@ test("claim draft client loads one encounter without submitting it", async () =>
   assert.equal((calls[0].init?.headers as Record<string, string>).Authorization, "Bearer test");
 });
 
+test("claim draft client converts a non-JSON failure into the HTTP status error", async () => {
+  await assert.rejects(
+    loadEncounterClaimDraft("enc-1", {
+      fetchImpl: async () => new Response("upstream failure", { status: 500 }),
+    }),
+    /Claim draft load failed with HTTP 500/,
+  );
+});
+
 test("Submit Claims surfaces encounter prefill and billing identity defaults fill only blank fields", () => {
   const html = renderToStaticMarkup(<SubmitClaims initialEncounterId="enc-1" />);
   assert.match(html, /Load from encounter/);

@@ -527,11 +527,16 @@ export async function loadEncounterClaimDraft(
     },
   );
   const text = await response.text();
-  const body = (text ? JSON.parse(text) : {}) as EncounterClaimDraft & { error?: string };
   if (!response.ok) {
-    throw new Error(body.error ?? `Claim draft load failed with HTTP ${response.status}.`);
+    let error: string | undefined;
+    try {
+      error = text ? (JSON.parse(text) as { error?: string }).error : undefined;
+    } catch {
+      error = undefined;
+    }
+    throw new Error(error ?? `Claim draft load failed with HTTP ${response.status}.`);
   }
-  return body;
+  return (text ? JSON.parse(text) : {}) as EncounterClaimDraft;
 }
 
 export async function submitProfessionalClaim(

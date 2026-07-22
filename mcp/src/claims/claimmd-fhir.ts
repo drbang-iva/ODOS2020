@@ -577,10 +577,10 @@ export function claimDiagnosisSequence(
   diagnosisCount: number,
 ): number[] {
   const sequence = chargeItem.diagnosisSequence ?? [1];
-  if (sequence.some((value) =>
+  if (sequence.length < 1 || sequence.length > 4 || sequence.some((value) =>
     !Number.isInteger(value) || value < 1 || value > diagnosisCount
   ) || new Set(sequence).size !== sequence.length) {
-    throw new Error("ChargeItem diagnosisSequence must contain unique diagnosis positions present on the Claim.");
+    throw new Error("ChargeItem diagnosisSequence must contain between 1 and 4 unique diagnosis positions present on the Claim.");
   }
   return [...sequence];
 }

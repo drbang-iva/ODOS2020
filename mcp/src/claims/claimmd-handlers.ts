@@ -70,6 +70,7 @@ import {
   buildCoverageEligibilityRequest,
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
+  claimDiagnosisSequence,
   medicalEligibilitySummary,
   ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
   type ClaimMdEraClaim,
@@ -143,6 +144,13 @@ export async function handleSubmitClaimRequest(
 
   let createdClaim: Claim | undefined;
   try {
+    for (const [index, chargeItem] of body.claim.chargeItems.entries()) {
+      try {
+        claimDiagnosisSequence(chargeItem, body.claim.diagnoses.length);
+      } catch (error) {
+        throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
+      }
+    }
     const persistedChargeItems = await persistClaimChargeItems(
       auth,
       body.claim.chargeItems,
@@ -219,7 +227,18 @@ export async function handleClaimDraftRequest(
   const auth = await authenticateClaimsManager(deps, input.authHeader);
   if ("status" in auth) return auth;
   try {
-    return { status: 200, body: await buildClaimDraft(auth.fhir, input.encounterId ?? "") };
+    const draft = await buildClaimDraft(auth.fhir, input.encounterId ?? "");
+    await deps.recordAudit(buildOdosAuditEventRow({
+      eventType: "read",
+      actorReference: auth.staffReference,
+      actorRole: auth.actorRole,
+      patientReference: draft.patientReference,
+      targetReference: draft.encounterReference,
+      actionOutcome: "granted",
+      actionReason: "CLAIM_DRAFT",
+      eventTime: now(deps),
+    }));
+    return { status: 200, body: draft };
   } catch (error) {
     if (error instanceof ClaimDraftAssemblyError) {
       return { status: 400, body: { error: error.message } };

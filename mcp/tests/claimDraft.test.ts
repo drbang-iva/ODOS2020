@@ -93,6 +93,19 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   ]);
 });
 
+test("buildClaimDraft does not promote an active secondary when the order-one Coverage is inactive", async () => {
+  const inactivePrimary = { ...coverage("inactive-primary", 1), status: "cancelled" as const };
+  const activeSecondary = coverage("active-secondary", 2);
+  const draft = await buildClaimDraft(
+    client([], encounter, [inactivePrimary, activeSecondary]),
+    "enc-1",
+  );
+
+  assert.equal(draft.coverageReference, undefined);
+  assert.equal(draft.insurerReference, undefined);
+  assert.equal(draft.payerId, undefined);
+});
+
 test("buildClaimDraft refuses unsigned encounters and unsafe diagnosis ranks", async () => {
   const unsigned = structuredClone(encounter);
   unsigned.status = "in-progress";
@@ -127,7 +140,11 @@ test("buildClaimDraft refuses unsigned encounters and unsafe diagnosis ranks", a
   );
 });
 
-function client(searches: Array<{ resourceType: string; params: Record<string, string> }>, encounterResource = encounter) {
+function client(
+  searches: Array<{ resourceType: string; params: Record<string, string> }>,
+  encounterResource = encounter,
+  coverageResources = coverages,
+) {
   const resources = new Map<string, Resource>([
     ["Encounter/enc-1", encounterResource],
     ...conditions.map((condition) => [`Condition/${condition.id}`, condition] as const),
@@ -140,7 +157,7 @@ function client(searches: Array<{ resourceType: string; params: Record<string, s
     },
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
       searches.push({ resourceType, params });
-      const matching = resourceType === "ChargeItem" ? charges : resourceType === "Coverage" ? coverages : [];
+      const matching = resourceType === "ChargeItem" ? charges : resourceType === "Coverage" ? coverageResources : [];
       return {
         resourceType: "Bundle",
         type: "searchset",
