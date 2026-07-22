@@ -122,6 +122,37 @@ test("claim draft client converts a non-JSON failure into the HTTP status error"
   );
 });
 
+test("claim validation names empty, over-length, and out-of-slot diagnosis pointer failures", () => {
+  const empty = validDraft();
+  empty.charges[0]!.diagnosisSequence = [];
+  assert.match(validateClaimDraft(empty).join(" "), /at least one diagnosis pointer/);
+
+  const overLength = validDraft();
+  overLength.diagnoses = Array.from({ length: 5 }, (_, index) => ({
+    code: `DX-${index + 1}`,
+    description: "Synthetic diagnosis",
+  }));
+  overLength.charges[0]!.diagnosisSequence = [1, 2, 3, 4, 5];
+  assert.match(validateClaimDraft(overLength).join(" "), /no more than four diagnosis pointers/);
+
+  const outOfSlot = validDraft();
+  outOfSlot.diagnoses = Array.from({ length: 15 }, (_, index) => ({
+    code: `DX-${index + 1}`,
+    description: "Synthetic diagnosis",
+  }));
+  outOfSlot.charges[0]!.diagnosisSequence = [13];
+  assert.match(validateClaimDraft(outOfSlot).join(" "), /positions 1 through 12/);
+});
+
+test("claim submission converts a non-JSON failure into the HTTP status error", async () => {
+  await assert.rejects(
+    submitProfessionalClaim(buildProfessionalClaimInput(validDraft()), {
+      fetchImpl: async () => new Response("<html>Bad gateway</html>", { status: 502 }),
+    }),
+    /Claim submission failed with HTTP 502/,
+  );
+});
+
 test("Submit Claims surfaces encounter prefill and billing identity defaults fill only blank fields", () => {
   const html = renderToStaticMarkup(<SubmitClaims initialEncounterId="enc-1" />);
   assert.match(html, /Load from encounter/);

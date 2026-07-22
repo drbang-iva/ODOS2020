@@ -93,7 +93,7 @@ test("buildClaimDraft reads ranked confirmed diagnoses and real per-charge point
   ]);
 });
 
-test("buildClaimDraft does not promote an active secondary when the order-one Coverage is inactive", async () => {
+test("buildClaimDraft falls through to the next active Coverage when order one is inactive", async () => {
   const inactivePrimary = { ...coverage("inactive-primary", 1), status: "cancelled" as const };
   const activeSecondary = coverage("active-secondary", 2);
   const draft = await buildClaimDraft(
@@ -101,9 +101,47 @@ test("buildClaimDraft does not promote an active secondary when the order-one Co
     "enc-1",
   );
 
-  assert.equal(draft.coverageReference, undefined);
-  assert.equal(draft.insurerReference, undefined);
-  assert.equal(draft.payerId, undefined);
+  assert.equal(draft.coverageReference, "Coverage/active-secondary");
+  assert.equal(draft.insurerReference, "Organization/payer-active-secondary");
+  assert.equal(draft.payerId, "PAYER-active-secondary");
+});
+
+test("buildClaimDraft rejects a payerless draft when no active Coverage exists", async () => {
+  await assert.rejects(
+    buildClaimDraft(
+      client([], encounter, [{ ...coverage("inactive-primary", 1), status: "cancelled" }]),
+      "enc-1",
+    ),
+    /no active Coverage/,
+  );
+});
+
+test("buildClaimDraft excludes a billable charge without a confirmed diagnosis and surfaces a warning", async () => {
+  const unlinkedCharge = {
+    ...charges[1]!,
+    id: "charge-unlinked",
+    supportingInformation: [{ reference: "Condition/dx-possible" }],
+  };
+  const draft = await buildClaimDraft(client([], encounter, coverages, [unlinkedCharge]), "enc-1");
+
+  assert.equal(draft.charges.length, 0);
+  assert.deepEqual(draft.warnings, [
+    "ChargeItem/charge-unlinked was excluded because it has no linked confirmed encounter diagnosis.",
+  ]);
+});
+
+test("buildClaimDraft converts missing Encounter and Condition reads into assembly errors", async () => {
+  await assert.rejects(
+    buildClaimDraft(client([]), "missing"),
+    ClaimDraftAssemblyError,
+  );
+
+  const missingCondition = structuredClone(encounter);
+  missingCondition.diagnosis![0]!.condition.reference = "Condition/missing";
+  await assert.rejects(
+    buildClaimDraft(client([], missingCondition), "enc-1"),
+    ClaimDraftAssemblyError,
+  );
 });
 
 test("buildClaimDraft refuses unsigned encounters and unsafe diagnosis ranks", async () => {
@@ -144,6 +182,7 @@ function client(
   searches: Array<{ resourceType: string; params: Record<string, string> }>,
   encounterResource = encounter,
   coverageResources = coverages,
+  chargeResources = charges,
 ) {
   const resources = new Map<string, Resource>([
     ["Encounter/enc-1", encounterResource],
@@ -157,7 +196,7 @@ function client(
     },
     search: async <T extends Resource>(resourceType: T["resourceType"], params: Record<string, string> = {}): Promise<Bundle<T>> => {
       searches.push({ resourceType, params });
-      const matching = resourceType === "ChargeItem" ? charges : resourceType === "Coverage" ? coverageResources : [];
+      const matching = resourceType === "ChargeItem" ? chargeResources : resourceType === "Coverage" ? coverageResources : [];
       return {
         resourceType: "Bundle",
         type: "searchset",

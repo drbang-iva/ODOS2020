@@ -90,6 +90,7 @@ export interface EncounterClaimDraft {
   coverageReference?: string;
   insurerReference?: string;
   payerId?: string;
+  warnings?: string[];
 }
 
 export interface ClaimDraft {
@@ -459,9 +460,16 @@ export function validateClaimDraft(draft: ClaimDraft): string[] {
     }
     const quantity = Number(charge.quantity);
     if (!Number.isInteger(quantity) || quantity < 1) errors.push(`Charge ${index + 1} quantity must be a positive whole number.`);
-    if (charge.diagnosisSequence?.some((value) =>
-      !Number.isInteger(value) || value < 1 || value > draft.diagnoses.length
-    ) || (charge.diagnosisSequence && new Set(charge.diagnosisSequence).size !== charge.diagnosisSequence.length)) {
+    const sequence = charge.diagnosisSequence;
+    if (sequence?.length === 0) {
+      errors.push(`Charge ${index + 1} must include at least one diagnosis pointer.`);
+    } else if (sequence && sequence.length > 4) {
+      errors.push(`Charge ${index + 1} may include no more than four diagnosis pointers.`);
+    } else if (sequence?.some((value) =>
+      !Number.isInteger(value) || value < 1 || value > Math.min(draft.diagnoses.length, 12)
+    )) {
+      errors.push(`Charge ${index + 1} diagnosis pointers must use positions 1 through ${Math.min(draft.diagnoses.length, 12)}.`);
+    } else if (sequence && new Set(sequence).size !== sequence.length) {
       errors.push(`Charge ${index + 1} diagnosis pointers must reference unique diagnoses on this claim.`);
     }
   });
@@ -527,16 +535,12 @@ export async function loadEncounterClaimDraft(
     },
   );
   const text = await response.text();
+  const body = parseJsonBody<EncounterClaimDraft & { error?: string }>(text);
   if (!response.ok) {
-    let error: string | undefined;
-    try {
-      error = text ? (JSON.parse(text) as { error?: string }).error : undefined;
-    } catch {
-      error = undefined;
-    }
-    throw new Error(error ?? `Claim draft load failed with HTTP ${response.status}.`);
+    throw new Error(body?.error ?? `Claim draft load failed with HTTP ${response.status}.`);
   }
-  return (text ? JSON.parse(text) : {}) as EncounterClaimDraft;
+  if (!body) throw new Error("Claim draft response was not valid JSON.");
+  return body;
 }
 
 export async function submitProfessionalClaim(
@@ -553,11 +557,21 @@ export async function submitProfessionalClaim(
     body: JSON.stringify({ claim, ...(options.clearinghouse ? { clearinghouse: options.clearinghouse } : {}) }),
   });
   const text = await response.text();
-  const body = text ? JSON.parse(text) as SubmitClaimResult & { error?: string } : {};
+  const body = parseJsonBody<SubmitClaimResult & { error?: string }>(text);
   if (!response.ok) {
-    throw new Error(body.error ?? `Claim submission failed with HTTP ${response.status}.`);
+    throw new Error(body?.error ?? `Claim submission failed with HTTP ${response.status}.`);
   }
+  if (!body) throw new Error("Claim submission response was not valid JSON.");
   return body;
+}
+
+function parseJsonBody<T>(text: string): T | undefined {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return undefined;
+  }
 }
 
 function requirePerson(person: ClaimMdPersonInput, label: string, errors: string[]): void {

@@ -15,9 +15,13 @@ import {
 export type LoadedBillingIdentity = {
   config?: BillingIdentityConfig;
   resource?: Basic;
+  warning?: string;
 };
 
-export type BillingIdentitySettingsClient = Pick<typeof fhir, "search" | "searchUrl" | "update">;
+export type BillingIdentitySettingsClient = Pick<typeof fhir, "update">;
+
+type BillingIdentityLoaderClient = Pick<typeof fhir, "read" | "search"> &
+  Partial<Pick<typeof fhir, "searchUrl">>;
 
 export function BillingIdentitySettings({ canWrite }: { canWrite: boolean }) {
   const [loaded, setLoaded] = useState<LoadedBillingIdentity | null>(null);
@@ -43,22 +47,34 @@ export function BillingIdentitySettings({ canWrite }: { canWrite: boolean }) {
 }
 
 export async function loadBillingIdentityConfigSingleton(
-  client: Pick<typeof fhir, "search" | "searchUrl">,
+  client: BillingIdentityLoaderClient,
 ): Promise<LoadedBillingIdentity> {
+  try {
+    const resource = await client.read<Basic>("Basic", ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+    return { resource, config: parseBillingIdentityConfig(resource) };
+  } catch (cause) {
+    if (!isFhirNotFound(cause)) throw cause;
+  }
+
   const resources = await searchAll<Basic>(client, "Basic", {
-    _id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "1",
+    _count: "10",
   });
-  const resource = resources.find((candidate) => candidate.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  const resource = [...resources].sort((left, right) => lastUpdatedMs(right) - lastUpdatedMs(left))[0];
+  if (!resource) return {};
+  if (resource.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID) {
+    return { resource, config: parseBillingIdentityConfig(resource) };
+  }
   return {
-    ...(resource ? { resource, config: parseBillingIdentityConfig(resource) } : {}),
+    config: parseBillingIdentityConfig(resource),
+    warning: `Loaded legacy billing identity Basic/${resource.id ?? "unknown"}; saving will create the deterministic Basic/${ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID} singleton.`,
   };
 }
 
 export function BillingIdentitySettingsReady({
   config,
   resource,
+  warning,
   canWrite,
   client,
 }: LoadedBillingIdentity & {
@@ -78,7 +94,7 @@ export function BillingIdentitySettingsReady({
     try {
       const built = buildBillingIdentityResource(draft, currentResource);
       const saved = await client.update(
-        currentResource?.id ? built : { ...built, id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID },
+        { ...built, id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID },
         "billing-identity-config",
       );
       setCurrentResource(saved);
@@ -102,6 +118,7 @@ export function BillingIdentitySettingsReady({
         <p className="mt-2 text-sm text-[color:var(--odos-muted)]">
           Set the practice-wide billing provider defaults used when composing professional claims.
         </p>
+        {warning && <p role="alert" className="mt-3 text-sm text-amber-100">{warning}</p>}
         <form className="mt-7 space-y-5" onSubmit={(event) => void save(event)}>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <ConfigField label="Practice name" value={draft.name} disabled={!canWrite || saving} onChange={(value) => set("name", value)} />
@@ -139,6 +156,15 @@ function ConfigField({ label, value, disabled, onChange }: {
 
 function SettingsState({ message, alert = false }: { message: string; alert?: boolean }) {
   return <main className="min-h-screen bg-bg-deep p-6 text-[color:var(--odos-text)]"><div role={alert ? "alert" : "status"} className="mx-auto max-w-4xl rounded border border-[color:var(--odos-line)] bg-bg-panel/70 p-5 text-sm">{message}</div></main>;
+}
+
+function lastUpdatedMs(resource: Basic): number {
+  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
+}
+
+function isFhirNotFound(cause: unknown): boolean {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  return /^FHIR 404\b/i.test(message);
 }
 
 function errorMessage(cause: unknown): string {

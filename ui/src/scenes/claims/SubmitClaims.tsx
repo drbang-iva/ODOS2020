@@ -183,7 +183,11 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
         authorization: fhir.authHeader(),
         baseUrl: claimApiBaseUrl(),
       });
-      if (!assembled.charges.length) throw new Error("No billable ChargeItems are available for this encounter.");
+      if (!assembled.charges.length) {
+        throw new Error(
+          assembled.warnings?.join(" ") ?? "No billable ChargeItems are available for this encounter.",
+        );
+      }
       if (!assembled.diagnoses.length) throw new Error("No ranked confirmed diagnoses are available for this encounter.");
       const loadedPatient = await fhir.read<Patient>("Patient", assembled.patientReference.split("/")[1]!);
       let primaryCoverage: Coverage | undefined;
@@ -215,7 +219,10 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
         payerId: assembled.payerId ?? (primaryCoverage ? coveragePayerId(primaryCoverage) : ""),
         subscriber,
       }));
-      setDraftLoadStatus(`Loaded ${assembled.diagnoses.length} diagnoses and ${assembled.charges.length} charges from ${assembled.encounterReference}.`);
+      setDraftLoadStatus([
+        `Loaded ${assembled.diagnoses.length} diagnoses and ${assembled.charges.length} charges from ${assembled.encounterReference}.`,
+        ...(assembled.warnings ?? []),
+      ].join(" "));
     } catch (cause) {
       setDraftLoadStatus(cause instanceof Error ? cause.message : String(cause));
     } finally {

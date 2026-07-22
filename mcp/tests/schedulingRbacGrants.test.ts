@@ -110,8 +110,7 @@ test("clinician gains no scheduling grants from this slice (regression guard)", 
 
 test("front-desk Basic grants stay criteria-scoped to approved inventory, config, and billing records", () => {
   const rules = rulesFor("front-desk", "Basic");
-  const billingIdentityCriteria =
-    "Basic?code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config";
+  const billingIdentityCriteria = BILLING_IDENTITY_CRITERIA;
   const writeTierCriteria = [
     "Basic?code=https://odos2020.com/fhir/CodeSystem/floor-config|odos-floor-config",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/insurance-config|odos-insurance-config",
@@ -223,6 +222,13 @@ test("front-desk can read billing identity while practice-admin can write it thr
   assert.equal(adminRules.length, 1);
   assert.equal(adminRules[0]?.resourceType, "*");
   assert.equal(adminRules[0]?.criteria, undefined);
-  assert.ok(adminRules[0]?.interaction?.includes("create"));
-  assert.ok(adminRules[0]?.interaction?.includes("update"));
+  assert.deepEqual(adminRules[0]?.interaction, [
+    "create",
+    "read",
+    "update",
+    "delete",
+    "search",
+    "history",
+    "vread",
+  ]);
 });

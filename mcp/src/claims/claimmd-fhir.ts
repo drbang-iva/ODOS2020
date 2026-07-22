@@ -577,16 +577,26 @@ export function claimDiagnosisSequence(
   diagnosisCount: number,
 ): number[] {
   const sequence = chargeItem.diagnosisSequence ?? [1];
-  if (sequence.length < 1 || sequence.length > 4 || sequence.some((value) =>
-    !Number.isInteger(value) || value < 1 || value > diagnosisCount
-  ) || new Set(sequence).size !== sequence.length) {
-    throw new Error("ChargeItem diagnosisSequence must contain between 1 and 4 unique diagnosis positions present on the Claim.");
+  if (sequence.length < 1) {
+    throw new Error("ChargeItem diagnosisSequence must contain at least one diagnosis position.");
+  }
+  if (sequence.length > 4) {
+    throw new Error("ChargeItem diagnosisSequence cannot contain more than 4 diagnosis positions.");
+  }
+  const maximumPosition = Math.min(diagnosisCount, 12);
+  if (sequence.some((value) =>
+    !Number.isInteger(value) || value < 1 || value > maximumPosition
+  )) {
+    throw new Error(`ChargeItem diagnosisSequence positions must be integers from 1 through ${maximumPosition}.`);
+  }
+  if (new Set(sequence).size !== sequence.length) {
+    throw new Error("ChargeItem diagnosisSequence positions must be unique.");
   }
   return [...sequence];
 }
 
 function diagnosisRef(sequence: number[]): string {
-  return sequence.slice(0, 4).map((value) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[value - 1]).join("");
+  return sequence.map((value) => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[value - 1]).join("");
 }
 
 function claimMdDiagnosisFields(diagnoses: ProfessionalClaimDiagnosisInput[]): Record<string, string> {

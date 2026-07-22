@@ -55,7 +55,7 @@ test("billing identity is one plain practice form rather than a catalog", () => 
 
 test("practice-admin saves the deterministic billing identity Basic", async () => {
   const fixture = clientFixture();
-  const resource = { ...buildBillingIdentityResource(config), id: "billing-identity-1", meta: { versionId: "4" } };
+  const resource = { ...buildBillingIdentityResource(config), id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID, meta: { versionId: "4" } };
   let renderer!: ReactTestRenderer;
   await act(async () => {
     renderer = create(
@@ -67,7 +67,7 @@ test("practice-admin saves the deterministic billing identity Basic", async () =
   });
   assert.equal(fixture.writes.length, 1);
   assert.equal(fixture.writes[0]?.sourceTag, "billing-identity-config");
-  assert.equal(fixture.writes[0]?.resource.id, "billing-identity-1");
+  assert.equal(fixture.writes[0]?.resource.id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
   assert.deepEqual(parseBillingIdentityConfig(fixture.writes[0]!.resource), config);
   act(() => renderer.unmount());
 });
@@ -82,25 +82,58 @@ test("billing identity is read-only outside practice-admin", () => {
   assert.ok((html.match(/disabled=""/g) ?? []).length >= 10);
 });
 
-test("billing identity lookup selects only the deterministic singleton id", async () => {
+test("billing identity reads the deterministic singleton without allowing another id to shadow it", async () => {
   const canonical = {
     ...buildBillingIdentityResource(config),
     id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
   };
-  const duplicate = { ...buildBillingIdentityResource(config), id: "newer-duplicate" };
-  let searchParams: URLSearchParams | undefined;
+  let searched = false;
   const loaded = await loadBillingIdentityConfigSingleton({
-    async search(_resourceType, params) {
-      searchParams = new URLSearchParams(params);
+    async read(resourceType, id) {
+      assert.equal(resourceType, "Basic");
+      assert.equal(id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+      return canonical;
+    },
+    async search() {
+      searched = true;
+      throw new Error("fallback search must not run when the deterministic singleton exists");
+    },
+  });
+
+  assert.equal(searched, false);
+  assert.equal(loaded.resource?.id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+});
+
+test("billing identity 404 fallback surfaces a legacy id and prepares a deterministic save", async () => {
+  const legacy = { ...buildBillingIdentityResource(config), id: "legacy-billing-identity" };
+  const fixture = clientFixture();
+  const loaded = await loadBillingIdentityConfigSingleton({
+    async read() {
+      throw new Error("FHIR 404 Not Found: Basic/billing-identity-config");
+    },
+    async search() {
       return {
         resourceType: "Bundle",
         type: "searchset",
-        entry: [{ resource: duplicate }, { resource: canonical }],
+        entry: [{ resource: legacy }],
       };
     },
   });
 
-  assert.equal(searchParams?.get("_id"), ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
-  assert.equal(searchParams?.get("_count"), "1");
-  assert.equal(loaded.resource?.id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  assert.deepEqual(loaded.config, config);
+  assert.equal(loaded.resource, undefined);
+  assert.match(loaded.warning ?? "", /Basic\/legacy-billing-identity/);
+  assert.match(loaded.warning ?? "", /Basic\/billing-identity-config/);
+
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <BillingIdentitySettingsReady {...loaded} canWrite client={fixture.client} />,
+    );
+  });
+  await act(async () => {
+    await renderer.root.findByType("form").props.onSubmit({ preventDefault() {} });
+  });
+  assert.equal(fixture.writes[0]?.resource.id, ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  act(() => renderer.unmount());
 });

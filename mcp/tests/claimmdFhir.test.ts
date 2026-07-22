@@ -8,6 +8,7 @@ import {
   buildCoverageEligibilityRequest,
   buildCoverageEligibilityResponseFromClaimMd,
   buildProfessionalClaim,
+  claimDiagnosisSequence,
   claimResponseChargeItemExtension,
   medicalEligibilitySummary,
   ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL,
@@ -134,6 +135,25 @@ test("manual claim lines without diagnosis pointers keep the diagnosis-one defau
   const claim = buildProfessionalClaim(input);
   assert.deepEqual(claim.item?.[0]?.diagnosisSequence, [1]);
   assert.equal(buildClaimMdProfessionalClaimJson(input, claim).claim[0].charge[0].diag_ref, "A");
+});
+
+test("diagnosis pointers enforce one to four positions within the twelve emitted diagnosis slots", () => {
+  assert.throws(
+    () => claimDiagnosisSequence({ ...chargeItems[0]!, diagnosisSequence: [] }, 1),
+    /at least one diagnosis position/,
+  );
+  assert.throws(
+    () => claimDiagnosisSequence({ ...chargeItems[0]!, diagnosisSequence: [1, 2, 3, 4, 5] }, 5),
+    /more than 4 diagnosis positions/,
+  );
+  assert.throws(
+    () => claimDiagnosisSequence({ ...chargeItems[0]!, diagnosisSequence: [13] }, 15),
+    /1 through 12/,
+  );
+  assert.deepEqual(
+    claimDiagnosisSequence({ ...chargeItems[0]!, diagnosisSequence: [1, 4, 12] }, 15),
+    [1, 4, 12],
+  );
 });
 
 test("buildProfessionalClaim refuses an unpersisted ChargeItem instead of writing a fake provenance reference", () => {

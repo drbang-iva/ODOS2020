@@ -212,7 +212,6 @@ export function buildStediProfessionalClaimJson(
             serviceUnitCount: String(item.quantity?.value ?? 1),
             compositeDiagnosisCodePointers: {
               diagnosisCodePointers: claimDiagnosisSequence(item, input.diagnoses.length)
-                .slice(0, 4)
                 .map(String),
             },
             ...(modifiers?.length ? { procedureModifiers: modifiers } : {}),

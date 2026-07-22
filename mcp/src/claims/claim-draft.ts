@@ -48,9 +48,15 @@ export interface EncounterClaimDraft {
   coverageReference?: string;
   insurerReference?: string;
   payerId?: string;
+  warnings?: string[];
 }
 
-export class ClaimDraftAssemblyError extends Error {}
+export class ClaimDraftAssemblyError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "ClaimDraftAssemblyError";
+  }
+}
 
 export async function buildClaimDraft(
   fhir: ClaimDraftFhirClient,
@@ -60,7 +66,7 @@ export async function buildClaimDraft(
     throw new ClaimDraftAssemblyError("A valid encounter id is required.");
   }
   const encounterReference = `Encounter/${encounterId}`;
-  const encounter = await fhir.read<Encounter>("Encounter", encounterId);
+  const encounter = await readClaimDraftResource<Encounter>(fhir, "Encounter", encounterId);
   if (encounter.status !== "finished") {
     throw new ClaimDraftAssemblyError("The encounter must be signed before a claim draft can be assembled.");
   }
@@ -88,7 +94,7 @@ export async function buildClaimDraft(
   }
   normalizedDiagnosisEntries.sort((left, right) => left.entry.rank! - right.entry.rank!);
   const resolvedConditions = await Promise.all(normalizedDiagnosisEntries.map(({ conditionId }) =>
-    fhir.read<Condition>("Condition", conditionId)
+    readClaimDraftResource<Condition>(fhir, "Condition", conditionId)
   ));
   const confirmedConditions = resolvedConditions.filter((condition) =>
     isConfirmedEncounterDiagnosis(condition) && condition.encounter?.reference === encounterReference
@@ -118,7 +124,8 @@ export async function buildClaimDraft(
       _count: "100",
     }),
   ]);
-  const charges = chargeItems.filter((chargeItem) => chargeItem.status === "billable").map((chargeItem): EncounterClaimDraftCharge => {
+  const warnings: string[] = [];
+  const charges = chargeItems.filter((chargeItem) => chargeItem.status === "billable").flatMap((chargeItem): EncounterClaimDraftCharge[] => {
     if (!chargeItem.id) throw new ClaimDraftAssemblyError("A billable ChargeItem is missing its persisted id.");
     const coding = chargeItem.code.coding?.find((candidate) => candidate.system && candidate.code);
     if (!coding?.system || !coding.code) {
@@ -129,10 +136,16 @@ export async function buildClaimDraft(
       return sequence ? [{ sequence, condition: confirmedConditions[sequence - 1]! }] : [];
     });
     const diagnosisSequence = [...new Set(linkedConditions.map((entry) => entry.sequence))].sort((a, b) => a - b);
+    if (diagnosisSequence.length === 0) {
+      warnings.push(
+        `ChargeItem/${chargeItem.id} was excluded because it has no linked confirmed encounter diagnosis.`,
+      );
+      return [];
+    }
     const lateralities = [...new Set(linkedConditions
       .map((entry) => entry.condition.bodySite?.[0]?.text?.trim())
       .filter((value): value is string => Boolean(value)))];
-    return {
+    return [{
       id: chargeItem.id,
       codeType: coding.system.toLowerCase().includes("hcpcs") ? "HCPCS" : "CPT",
       codeSystem: coding.system,
@@ -144,10 +157,16 @@ export async function buildClaimDraft(
       quantity: String(chargeItem.quantity?.value ?? 1),
       diagnosisSequence,
       ...(lateralities.length === 1 ? { laterality: lateralities[0] } : {}),
-    };
+    }];
   });
 
-  const primaryCoverage = coverages.find((coverage) => coverage.status === "active" && coverage.order === 1);
+  const activeCoverages = coverages
+    .filter((coverage) => coverage.status === "active")
+    .sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER));
+  const primaryCoverage = activeCoverages.find((coverage) => coverage.order === 1) ?? activeCoverages[0];
+  if (!primaryCoverage) {
+    throw new ClaimDraftAssemblyError("The patient has no active Coverage available for claim assembly.");
+  }
   return {
     encounterReference,
     patientReference: patientReference!,
@@ -157,5 +176,25 @@ export async function buildClaimDraft(
     ...(primaryCoverage?.id ? { coverageReference: `Coverage/${primaryCoverage.id}` } : {}),
     ...(primaryCoverage?.payor[0]?.reference ? { insurerReference: primaryCoverage.payor[0].reference } : {}),
     ...(primaryCoverage?.payor[0]?.identifier?.value ? { payerId: primaryCoverage.payor[0].identifier.value } : {}),
+    ...(warnings.length ? { warnings } : {}),
   };
+}
+
+async function readClaimDraftResource<T extends Resource>(
+  fhir: ClaimDraftFhirClient,
+  resourceType: T["resourceType"],
+  id: string,
+): Promise<T> {
+  try {
+    return await fhir.read<T>(resourceType, id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/\b404\b|\bnot found\b/i.test(message)) {
+      throw new ClaimDraftAssemblyError(
+        `${resourceType}/${id} could not be loaded for claim assembly.`,
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }
