@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { Basic, Bundle, ChargeItem, Resource } from "@medplum/fhirtypes";
 import type { OdosAuditEventRecord } from "../src/authz/odosAudit.js";
 import type { FhirSearchParams } from "../src/fhir-client.js";
+import { ODOS_UNPRICED_CHARGE_EXTENSION_URL } from "../src/clinical-graph/procedure-fee-schedule.js";
 import {
   handleRecordedTenderCollectionRequest,
   handleOpenChargesRequest,
@@ -22,7 +23,7 @@ function fixture(
   const fhir = {
     read: async <T extends Resource>(_type: T["resourceType"], id: string): Promise<T> => {
       reads += 1;
-      return charge(id) as T;
+      return (searchEntries.find((resource) => resource.id === id) ?? charge(id)) as T;
     },
     search: async <T extends Resource>(resourceType: T["resourceType"], params: FhirSearchParams): Promise<Bundle<T>> => {
       searches.push({ resourceType: String(resourceType), params: new URLSearchParams(params) });
@@ -86,9 +87,36 @@ test("open charges returns integer cents and derives optical source from DeviceR
       description: "Frames",
       date: "2026-07-15",
       source: "optical",
+      unpriced: false,
       code: "V2020",
       feeCents: 12_345,
     }],
+  });
+});
+
+test("open charges flags a materialized zero-dollar charge whose fee schedule entry is missing", async () => {
+  const unpriced = {
+    ...charge("charge-unpriced"),
+    priceOverride: { value: 0, currency: "USD" },
+    extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
+  };
+  const { deps } = fixture([unpriced]);
+
+  const result = await handleOpenChargesRequest(deps, {
+    authHeader: "Bearer good",
+    patientReference: "Patient/patient-1",
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as Array<{ id: string; amountCents: number; unpriced: boolean }>)[0], {
+    id: "charge-unpriced",
+    amountCents: 0,
+    description: "Frames",
+    date: "2026-07-15",
+    source: "optical",
+    unpriced: true,
+    code: "V2020",
+    feeCents: 0,
   });
 });
 
@@ -205,6 +233,59 @@ test("recorded-tender collection returns 400 when amount does not equal the sele
   });
   assert.equal(result.status, 400);
   assert.match((result.body as { error: string }).error, /selected open-charge total/);
+  assert.equal(transactions.length, 0);
+  assert.equal(audits.length, 0);
+});
+
+test("recorded-tender collection blocks a named unpriced charge before creating an Invoice", async () => {
+  const unpriced = {
+    ...charge("charge-unpriced"),
+    priceOverride: { value: 0, currency: "USD" },
+    extension: [{ url: ODOS_UNPRICED_CHARGE_EXTENSION_URL, valueBoolean: true }],
+  };
+  const { audits, deps, reads, transactions } = fixture([unpriced]);
+
+  const result = await handleRecordedTenderCollectionRequest(deps, {
+    authHeader: "Bearer good",
+    body: {
+      patientReference: "Patient/patient-1",
+      selectedOpenChargeLineIds: ["charge-unpriced"],
+      amountCents: 0,
+      tender: "CASH",
+    },
+  });
+
+  assert.equal(result.status, 400);
+  assert.match(
+    (result.body as { error: string }).error,
+    /ChargeItem\/charge-unpriced \(Frames\) requires a fee schedule entry before it can be collected\./,
+  );
+  assert.equal(reads(), 1);
+  assert.equal(transactions.length, 0);
+  assert.equal(audits.length, 0);
+});
+
+test("recorded-tender collection still rejects an unmarked zero-dollar charge", async () => {
+  const zero = {
+    ...charge("charge-zero"),
+    priceOverride: { value: 0, currency: "USD" },
+  };
+  const { audits, deps, transactions } = fixture([zero]);
+
+  const result = await handleRecordedTenderCollectionRequest(deps, {
+    authHeader: "Bearer good",
+    body: {
+      patientReference: "Patient/patient-1",
+      selectedOpenChargeLineIds: ["charge-zero"],
+      amountCents: 0,
+      tender: "CASH",
+    },
+  });
+
+  assert.deepEqual(result, {
+    status: 400,
+    body: { error: "amountCents must be a positive integer number of cents." },
+  });
   assert.equal(transactions.length, 0);
   assert.equal(audits.length, 0);
 });

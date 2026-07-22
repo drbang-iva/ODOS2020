@@ -6629,6 +6629,7 @@ async function main(): Promise<void> {
         claims: {
           authenticate: authenticateClaimsRoute,
           adapter: claimMdAdapter,
+          routingDefaults: clearinghouseRouting,
           recordAudit: async (row) => {
             await auditRuntime.record(row, () => undefined);
           },
@@ -6791,6 +6792,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6813,6 +6815,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6833,6 +6836,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6853,6 +6857,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6873,6 +6878,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6970,6 +6976,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -6992,6 +6999,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
               },
@@ -7014,6 +7022,7 @@ async function main(): Promise<void> {
             {
               authenticate: authenticateClaimsRoute,
               adapter: claimMdAdapter,
+              routingDefaults: clearinghouseRouting,
               eraUnderpaymentThresholdCents,
               recordAudit: async (row) => {
                 await auditRuntime.record(row, () => undefined);
