@@ -6,11 +6,18 @@ import {
   handleProtocolApplicationsRequest,
   handleProtocolApplyRequest,
   handleProtocolOffersRequest,
+  handleProtocolUnapplyRequest,
   protocolFindingObservation,
 } from "../clinical-graph/protocol-endpoint.js";
 import { buildProtocolBasic, PROTOCOL_BASIC_CODES, ProtocolBasicStore, type ProtocolFhirClient } from "../clinical-graph/protocol-store.js";
 import { committedFindingEvidence, ProtocolService } from "../clinical-graph/protocol-service.js";
-import type { PlanActionInstance, ProcedureChargeRule, ProtocolDefinition } from "../clinical-graph/protocol-types.js";
+import type {
+  ChargeProposal,
+  PlanActionInstance,
+  ProcedureChargeRule,
+  ProtocolApplication,
+  ProtocolDefinition,
+} from "../clinical-graph/protocol-types.js";
 
 test("protocol-phase5.test.ts is included in full MCP discovery", () => {
   assert.ok(true);
@@ -242,6 +249,59 @@ test("unapply removes only charges staged by its protocol application", async ()
   assert.equal(chargesAfter.filter((row) => row.protocolApplicationId === openedB.application.id).length, 5);
 });
 
+test("unapply returns 409 before any mutation when an accepted charge is unresolved", async () => {
+  const fhir = new EndpointFhir();
+  const service = endpointProtocolService(fhir);
+  const application = protocolApplication("application-accepted");
+  const acceptedCharge = protocolCharge(application, "charge-accepted", "accepted");
+  const stagedCharge = protocolCharge(application, "charge-staged", "staged");
+  await service.applications.save(application);
+  await service.charges.save(acceptedCharge);
+  await service.charges.save(stagedCharge);
+  const before = structuredClone(fhir.resources);
+  fhir.writes = [];
+
+  const result = await handleProtocolUnapplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    params: { applicationId: application.id },
+  });
+
+  assert.deepEqual(result, {
+    status: 409,
+    body: { error: "Cannot un-apply: 1 accepted charge must be resolved first." },
+  });
+  assert.deepEqual(fhir.resources, before);
+  assert.equal(fhir.writes.length, 0);
+  assert.equal((await service.applications.get(application.id))?.undoState, "active");
+  assert.equal((await service.charges.get(acceptedCharge.id))?.state, "accepted");
+  assert.equal((await service.charges.get(stagedCharge.id))?.state, "staged");
+});
+
+test("unapply succeeds with finalized charges and preserves their billed state", async () => {
+  const fhir = new EndpointFhir();
+  const service = endpointProtocolService(fhir);
+  const application = protocolApplication("application-finalized");
+  const finalizedCharge = {
+    ...protocolCharge(application, "charge-finalized", "finalized"),
+    chargeItemRef: "ChargeItem/billed-charge",
+  };
+  await service.applications.save(application);
+  await service.charges.save(finalizedCharge);
+
+  const result = await handleProtocolUnapplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    params: { applicationId: application.id },
+  });
+
+  assert.deepEqual(result, {
+    status: 200,
+    body: { removed: [], preserved: [finalizedCharge.id] },
+  });
+  assert.equal((await service.applications.get(application.id))?.undoState, "unapplied");
+  assert.equal((await service.charges.get(finalizedCharge.id))?.state, "finalized");
+  assert.equal((await service.charges.get(finalizedCharge.id))?.chargeItemRef, "ChargeItem/billed-charge");
+});
+
 test("commit retry after a late partial failure skips all completed writes, then confirms once", async () => {
   const { service, projectedFindings, materialized, projectionControl } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
@@ -448,6 +508,57 @@ function endpointDeps(fhir: EndpointFhir, actorRole: "clinician" | "auditor" = "
   return {
     authenticate: async () => ({ staffReference: "Practitioner/test", actorRole, fhir }),
     now: () => "2026-07-18T12:00:00.000Z",
+  };
+}
+
+function endpointProtocolService(fhir: EndpointFhir): ProtocolService {
+  return new ProtocolService(fhir, {
+    async commitFinding() { return undefined; },
+    async materializeAction() { return undefined; },
+  }, () => "2026-07-18T12:00:00.000Z");
+}
+
+function protocolApplication(id: string): ProtocolApplication {
+  return {
+    id,
+    encounterId: "enc-unapply",
+    patientId: "patient-unapply",
+    protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id,
+    protocolVersion: 1,
+    appliedBy: "Practitioner/test",
+    appliedAt: "2026-07-18T12:00:00.000Z",
+    stackedWith: [],
+    dispositions: [],
+    dedupResolutions: [],
+    undoState: "active",
+    confirmed: true,
+  };
+}
+
+function protocolCharge(
+  application: ProtocolApplication,
+  id: string,
+  state: ChargeProposal["state"],
+): ChargeProposal {
+  return {
+    id,
+    encounterId: application.encounterId,
+    protocolApplicationId: application.id,
+    planActionRef: id,
+    procedureConceptKey: "gonioscopy",
+    units: 1,
+    laterality: "OU",
+    dxPointers: ["Condition/dx-unapply"],
+    evidenceRefs: [],
+    coverageEvaluations: [],
+    state,
+    provenance: {
+      source: "protocol-default",
+      actor: "Practitioner/test",
+      at: "2026-07-18T12:00:00.000Z",
+      protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id,
+      protocolVersion: 1,
+    },
   };
 }
 

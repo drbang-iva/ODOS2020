@@ -32,6 +32,8 @@ export interface CommitSelection {
   payload?: Record<string, unknown>;
 }
 
+export class AcceptedChargeUnapplyError extends Error {}
+
 export class ProtocolService {
   readonly definitions: ProtocolBasicStore<ProtocolDefinition>;
   readonly applications: ProtocolBasicStore<ProtocolApplication>;
@@ -218,6 +220,15 @@ export class ProtocolService {
 
   async unapply(applicationId: string): Promise<{ removed: string[]; preserved: string[] }> {
     const application = await this.requireApplication(applicationId);
+    const linkedCharges = (await this.charges.list()).filter((row) =>
+      row.protocolApplicationId === application.id
+    );
+    const acceptedChargeCount = linkedCharges.filter((charge) => charge.state === "accepted").length;
+    if (acceptedChargeCount) {
+      throw new AcceptedChargeUnapplyError(
+        `Cannot un-apply: ${acceptedChargeCount} accepted charge${acceptedChargeCount === 1 ? "" : "s"} must be resolved first.`,
+      );
+    }
     const removed: string[] = [];
     const preserved: string[] = [];
     for (const action of (await this.actions.list()).filter((row) => row.protocolApplicationId === applicationId)) {
@@ -234,7 +245,7 @@ export class ProtocolService {
         removed.push(finding.id);
       } else if (finding.state !== "removed") preserved.push(finding.id);
     }
-    for (const charge of (await this.charges.list()).filter((row) => row.protocolApplicationId === application.id)) {
+    for (const charge of linkedCharges) {
       if (charge.state === "staged") {
         await this.charges.save({ ...charge, state: "removed" });
         removed.push(charge.id);

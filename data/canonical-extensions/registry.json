@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-18",
+  "generatedAt": "2026-07-21",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/finding-source",
@@ -427,6 +427,12 @@
       "namespace": "payments",
       "status": "active",
       "sliceConsumer": "day-close"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-unpriced-charge",
+      "namespace": "payments",
+      "status": "active",
+      "sliceConsumer": "money-middle-m1a"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-charge-item",

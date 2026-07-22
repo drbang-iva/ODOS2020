@@ -56,6 +56,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/settings/suggested-diagnoses": [{ label: "Settings", href: "/settings" }, { label: "Suggested diagnoses" }],
   "/settings/lens-catalog": [{ label: "Settings", href: "/settings" }, { label: "Lens Catalog" }],
   "/settings/optical-pricing": [{ label: "Settings", href: "/settings" }, { label: "Optical pricing" }],
+  "/settings/fee-schedule": [{ label: "Settings", href: "/settings" }, { label: "Fee Schedule" }],
   "/settings/chart-fields-sections": [{ label: "Settings", href: "/settings" }, { label: "Chart fields & sections" }],
   "/admin/practice/settings/chart-fields": [{ label: "Settings", href: "/settings" }, { label: "Chart fields & sections" }],
 };

@@ -53,6 +53,18 @@ test("the optical-pricing route keeps frame and contact-lens pricing separate fr
   assert.match(desk, /Read only. Practice-admin access is required/);
 });
 
+test("the Fee Schedule route is practice-admin writable and names the unpriced clinical fee catalog", () => {
+  const admin = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["practice-admin"]} />,
+  );
+  const desk = renderToStaticMarkup(
+    <RouteSwitch view={{ kind: "picker" }} path="/settings/fee-schedule" roles={["front-desk"]} />,
+  );
+  assert.match(admin, /Fee Schedule/);
+  assert.doesNotMatch(admin, /Read only. Practice-admin access is required/);
+  assert.match(desk, /Read only. Practice-admin access is required/);
+});
+
 test("the four round-two settings routes render write controls only for authorized App roles", async () => {
   const cases: Array<{
     path: string;
