@@ -7,6 +7,7 @@ export const ODOS_BILLING_IDENTITY_CONFIG_SYSTEM =
 export const ODOS_BILLING_IDENTITY_CONFIG_CODE = "odos-billing-identity-config";
 export const ODOS_BILLING_IDENTITY_CONFIG_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-billing-identity-config";
+export const ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID = "billing-identity-config";
 
 export interface BillingIdentityConfig {
   name: string;
@@ -121,10 +122,11 @@ export async function loadBillingIdentityConfig(
   client: Pick<MedplumClient, "search" | "searchUrl">,
 ): Promise<BillingIdentityConfig | undefined> {
   const resources = await searchAll<Basic>(client, "Basic", {
+    _id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "10",
+    _count: "1",
   });
-  const resource = [...resources].sort((a, b) => lastUpdatedMs(b) - lastUpdatedMs(a))[0];
+  const resource = resources.find((candidate) => candidate.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
   return resource ? parseBillingIdentityConfig(resource) : undefined;
 }
 
@@ -141,8 +143,4 @@ function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityCon
     zip: config.zip.trim(),
     ...(config.phone?.trim() ? { phone: config.phone.trim() } : {}),
   };
-}
-
-function lastUpdatedMs(resource: Basic): number {
-  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
 }

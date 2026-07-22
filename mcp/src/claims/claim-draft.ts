@@ -145,6 +145,11 @@ export async function buildClaimDraft(
     const lateralities = [...new Set(linkedConditions
       .map((entry) => entry.condition.bodySite?.[0]?.text?.trim())
       .filter((value): value is string => Boolean(value)))];
+    if (lateralities.length > 1) {
+      warnings.push(
+        `ChargeItem/${chargeItem.id} omitted laterality because its linked confirmed diagnoses have conflicting body-site text.`,
+      );
+    }
     return [{
       id: chargeItem.id,
       codeType: coding.system.toLowerCase().includes("hcpcs") ? "HCPCS" : "CPT",
@@ -160,12 +165,20 @@ export async function buildClaimDraft(
     }];
   });
 
-  const activeCoverages = coverages
-    .filter((coverage) => coverage.status === "active")
-    .sort((left, right) => (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER));
-  const primaryCoverage = activeCoverages.find((coverage) => coverage.order === 1) ?? activeCoverages[0];
-  if (!primaryCoverage) {
+  const activeCoverages = coverages.filter((coverage) => coverage.status === "active");
+  let primaryCoverage = activeCoverages.find((coverage) => coverage.order === 1);
+  if (!primaryCoverage && activeCoverages.length === 1 && coverages.length === 1) {
+    primaryCoverage = activeCoverages[0];
+  }
+  if (activeCoverages.length === 0) {
     throw new ClaimDraftAssemblyError("The patient has no active Coverage available for claim assembly.");
+  }
+  if (!primaryCoverage) {
+    throw new ClaimDraftAssemblyError(
+      activeCoverages.length > 1
+        ? "The patient has multiple active Coverages but none recorded as primary (order 1); set the primary Coverage before assembling a claim."
+        : "The patient has another Coverage record and the only active Coverage is not recorded as primary (order 1); update the Coverage priority before assembling a claim.",
+    );
   }
   return {
     encounterReference,
@@ -188,8 +201,7 @@ async function readClaimDraftResource<T extends Resource>(
   try {
     return await fhir.read<T>(resourceType, id);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/\b404\b|\bnot found\b/i.test(message)) {
+    if (errorStatus(error) === 404) {
       throw new ClaimDraftAssemblyError(
         `${resourceType}/${id} could not be loaded for claim assembly.`,
         { cause: error },
@@ -197,4 +209,10 @@ async function readClaimDraftResource<T extends Resource>(
     }
     throw error;
   }
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (!(error instanceof Error) || !("status" in error)) return undefined;
+  const status = (error as Error & { status?: unknown }).status;
+  return typeof status === "number" ? status : undefined;
 }
