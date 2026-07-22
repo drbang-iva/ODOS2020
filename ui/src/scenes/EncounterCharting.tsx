@@ -10,6 +10,7 @@ import { EntranceMeasurementSection } from "../components/charting/EntranceMeasu
 import { DilationSection } from "../components/charting/DilationSection";
 import { EomSection } from "../components/charting/EomSection";
 import { CoverTestSection } from "../components/charting/CoverTestSection";
+import { CvfSection } from "../components/charting/CvfSection";
 import { CupDiscSection } from "../components/charting/CupDiscSection";
 import { GonioscopySection } from "../components/charting/GonioscopySection";
 import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
@@ -251,22 +252,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("auto-refraction", status)}
             />
           )}
-          {activeSection === "manual-keratometry" && manualKDefinition && (
-            <EntranceMeasurementSection
-              definition={manualKDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("manual-keratometry", status)}
-            />
-          )}
-          {activeSection === "pachymetry" && pachymetryDefinition && (
-            <EntranceMeasurementSection
-              definition={pachymetryDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("pachymetry", status)}
-            />
-          )}
+          {activeSection === "manual-keratometry" && (manualKDefinition ? (
+            <EntranceMeasurementSection definition={manualKDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("manual-keratometry", status)} />
+          ) : <MissingDefinitionState section="Manual keratometry" />)}
+          {activeSection === "pachymetry" && (pachymetryDefinition ? (
+            <EntranceMeasurementSection definition={pachymetryDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("pachymetry", status)} />
+          ) : <MissingDefinitionState section="Pachymetry" />)}
           {activeSection === "va" && (
             <VaSection
               patientReference={patientReference}
@@ -274,46 +265,21 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("va", status)}
             />
           )}
-          {activeSection === "pupils" && pupilsDefinition && (
-            <EntranceStateSection
-              definition={pupilsDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("pupils", status)}
-            />
-          )}
-          {activeSection === "stereopsis" && stereopsisDefinition && (
-            <EntranceStateSection
-              definition={stereopsisDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("stereopsis", status)}
-            />
-          )}
-          {activeSection === "color-vision" && colorDefinition && (
-            <EntranceStateSection
-              definition={colorDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("color-vision", status)}
-            />
-          )}
-          {activeSection === "eom" && eomDefinition && (
-            <EomSection
-              definition={eomDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("eom", status)}
-            />
-          )}
-          {activeSection === "cvf" && cvfDefinition && (
-            <EntranceStateSection
-              definition={cvfDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("cvf", status)}
-            />
-          )}
+          {activeSection === "pupils" && (pupilsDefinition ? (
+            <EntranceStateSection definition={pupilsDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("pupils", status)} />
+          ) : <MissingDefinitionState section="Pupils" />)}
+          {activeSection === "stereopsis" && (stereopsisDefinition ? (
+            <EntranceStateSection definition={stereopsisDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("stereopsis", status)} />
+          ) : <MissingDefinitionState section="Stereopsis" />)}
+          {activeSection === "color-vision" && (colorDefinition ? (
+            <EntranceStateSection definition={colorDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("color-vision", status)} />
+          ) : <MissingDefinitionState section="Color vision" />)}
+          {activeSection === "eom" && (eomDefinition ? (
+            <EomSection definition={eomDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("eom", status)} />
+          ) : <MissingDefinitionState section="EOM / diplopia" />)}
+          {activeSection === "cvf" && (cvfDefinition ? (
+            <CvfSection definition={cvfDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("cvf", status)} />
+          ) : <MissingDefinitionState section="Confrontation visual fields" />)}
           {activeSection === "cover-test" && (
             <CoverTestSection
               patientReference={patientReference}
@@ -328,14 +294,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status) => markSaved("iop", status)}
             />
           )}
-          {activeSection === "dilation" && dilationDefinition && (
-            <DilationSection
-              definition={dilationDefinition}
-              patientReference={patientReference}
-              encounterReference={encounterReference}
-              onSaved={(status) => markSaved("dilation", status)}
-            />
-          )}
+          {activeSection === "dilation" && (dilationDefinition ? (
+            <DilationSection definition={dilationDefinition} patientReference={patientReference} encounterReference={encounterReference} onSaved={(status) => markSaved("dilation", status)} />
+          ) : <MissingDefinitionState section="Dilation" />)}
           {activeSection === "refraction" && (
             <RefractionSection
               patientReference={patientReference}
@@ -490,5 +451,17 @@ export function EncounterCharting({ patient, encounterId }: Props) {
         />
       )}
     </div>
+  );
+}
+
+function MissingDefinitionState({ section }: { section: string }) {
+  return (
+    <section className="flex h-full items-center justify-center p-6">
+      <div className="max-w-lg rounded border border-amber-300/25 bg-amber-300/[0.07] p-6 text-center">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Practice setup needed</div>
+        <h2 className="mt-2 text-xl font-semibold">{section} is unavailable</h2>
+        <p className="mt-2 text-sm text-[color:var(--odos-muted)]">Its finding definition is missing or inactive. Restore or activate the definition before documenting this section.</p>
+      </div>
+    </section>
   );
 }

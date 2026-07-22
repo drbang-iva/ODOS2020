@@ -521,7 +521,8 @@ function readSeedPickerOptions(definition: ClinicalFindingDefinition, includeIna
 }
 
 function readCustomOptions(value: unknown): CustomFieldEntry["options"] | undefined {
-  if (!Array.isArray(value) || value.length === 0) return undefined;
+  if (!Array.isArray(value)) return undefined;
+  if (value.length === 0) return [];
   const options = value.flatMap((raw) => {
     const row = asRecord(raw);
     return typeof row.code === "string" && typeof row.display === "string" && typeof row.active === "boolean"

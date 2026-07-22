@@ -51,10 +51,13 @@ test("EOM binocular plus incomitant proposes diplopia and paralytic strabismus w
   assert.equal(firing.status, 200, JSON.stringify(firing.body));
   const nonFiring = await handleEomCaptureRequest({ authenticate, findingDefinitions: () => definitions, now: () => "2026-07-22T12:01:00.000Z" }, { authHeader: "Bearer eom", body: { ...base, diplopia: { present: true, type: "binocular", direction: "horizontal", comitancy: "comitant", worstGaze: "right", frequency: "intermittent" } } });
   assert.equal(nonFiring.status, 200, JSON.stringify(nonFiring.body));
+  const untouchedDiplopia = await handleEomCaptureRequest({ authenticate, findingDefinitions: () => definitions, now: () => "2026-07-22T12:01:30.000Z" }, { authHeader: "Bearer eom", body: { ...base, diplopia: { present: false } } });
+  assert.equal(untouchedDiplopia.status, 200, JSON.stringify(untouchedDiplopia.body));
   const candidates = await handleDiagnosisCandidatesRequest({ authenticate, now: () => "2026-07-22T12:02:00.000Z" }, { authHeader: "Bearer eom", params: { encounterId: "eom" } });
   const findings = (candidates.body as { findings: Array<{ candidates: Array<{ diagnosisKey: string }> }> }).findings;
   assert.deepEqual(findings[0]?.candidates.map((row) => row.diagnosisKey), ["diplopia", "paralytic_strabismus"]);
   assert.deepEqual(findings[1]?.candidates, []);
+  assert.deepEqual(findings[2]?.candidates, []);
   assert.equal(fhir.resources.some((row) => row.resourceType === "Condition"), false);
 });
 

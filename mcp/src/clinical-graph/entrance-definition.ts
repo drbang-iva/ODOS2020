@@ -19,24 +19,36 @@ export function buildEntranceFindingDefinitions(
   provenance: ClinicalGraphProvenance,
 ): ClinicalFindingDefinition[] {
   return [
-    stateDefinition(PUPILS_KEY, "Pupils", "PERRLA; no APD OU", [
-      numberField("CUSTOM_PUPIL_SIZE_BRIGHT", "Size — bright", 0, 15, 0.5, "mm", 0),
-      numberField("CUSTOM_PUPIL_SIZE_DIM", "Size — dim", 0, 15, 0.5, "mm", 1),
-      selectField("CUSTOM_PUPIL_SHAPE", "Shape", ["round", "irregular"], 2),
-      selectField("CUSTOM_PUPIL_REACTIVITY", "Reactivity", ["brisk", "moderate", "sluggish", "nonreactive"], 3),
-      selectField("CUSTOM_PUPIL_APD", "APD / RAPD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 4),
-    ], "entrance.pupils", provenance),
+    stateDefinition(PUPILS_KEY, "Pupils", "PERRLA; no APD or RAPD OU", [
+      numberField("CUSTOM_PUPIL_SIZE_BRIGHT", "Size — bright", 1, 9, 0.5, "mm", 0),
+      numberField("CUSTOM_PUPIL_SIZE_DIM", "Size — dim", 1, 9, 0.5, "mm", 1),
+      numberField("CUSTOM_PUPIL_SIZE_NEAR", "Size — near", 1, 9, 0.5, "mm", 2),
+      selectField("CUSTOM_PUPIL_SHAPE", "Shape", ["round", "irregular"], 3),
+      selectField("CUSTOM_PUPIL_REACTIVITY", "Reactivity", ["brisk", "moderate", "sluggish", "nonreactive"], 4),
+      selectField("CUSTOM_PUPIL_APD", "APD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 5),
+      selectField("CUSTOM_PUPIL_RAPD", "RAPD", ["none", "trace", "1+", "2+", "3+", "4+", "reverse"], 6),
+    ], "entrance.pupils", provenance, {
+      sourceStatus: "unseeded-needs-operator-input",
+      setupMessage: "The additional pupil descriptor fields need practice setup before they can be added.",
+    }),
     stateDefinition(STEREO_KEY, "Stereopsis", "Stereo present", [
-      selectField("CUSTOM_STEREO_TEST", "Test", ["Titmus", "Randot"], 0),
-      numberField("CUSTOM_STEREO_ARC_SECONDS", "Seconds of arc", 0, 4000, 1, undefined, 1),
+      selectField("CUSTOM_STEREO_TEST", "Test", ["Stereo Fly", "Random Dot", "Randot", "Reindeer", "Titmus Stereo Test"], 0),
+      selectField("CUSTOM_STEREO_ARC_SECONDS", "Seconds of arc", [], 1),
       selectField("CUSTOM_STEREO_UNABLE", "Unable to test", ["no", "yes"], 2),
-    ], "entrance.stereo", provenance),
+    ], "entrance.stereo", provenance, {
+      perEye: false,
+      sourceStatus: "unseeded-needs-operator-input",
+      setupMessage: "Seconds-of-arc choices need practice setup; no clinical values were guessed.",
+    }),
     stateDefinition(COLOR_KEY, "Color vision", "Color normal per test OU", [
       selectField("CUSTOM_COLOR_TEST", "Test", ["Ishihara", "HRR"], 0),
-      numberField("CUSTOM_COLOR_PLATES_CORRECT", "Plates correct", 0, 100, 1, undefined, 1),
+      selectField("CUSTOM_COLOR_PLATES_CORRECT", "Plates correct", ["1", "2", "3", "4", "5", "6", "7"], 1),
       numberField("CUSTOM_COLOR_PLATES_TOTAL", "Plates total", 0, 100, 1, undefined, 2),
       selectField("CUSTOM_COLOR_UNABLE", "Unable to test", ["no", "yes"], 3),
-    ], "entrance.color", provenance),
+    ], "entrance.color", provenance, {
+      sourceStatus: "unseeded-needs-operator-input",
+      setupMessage: "Ishihara derives 7 total plates. HRR plate total still needs practice setup.",
+    }),
     buildClinicalFindingDefinition({
       id: "finding-def-entrance-eom",
       stableKey: EOM_KEY,
@@ -71,12 +83,13 @@ export function buildEntranceFindingDefinitions(
       provenance,
     }),
     stateDefinition(CVF_KEY, "Confrontation visual fields", "Full to finger counting OU", [
-      selectField("CUSTOM_CVF_SUPERIOR_NASAL", "Superior nasal", ["restricted", "full"], 0),
-      selectField("CUSTOM_CVF_SUPERIOR_TEMPORAL", "Superior temporal", ["restricted", "full"], 1),
-      selectField("CUSTOM_CVF_INFERIOR_NASAL", "Inferior nasal", ["restricted", "full"], 2),
-      selectField("CUSTOM_CVF_INFERIOR_TEMPORAL", "Inferior temporal", ["restricted", "full"], 3),
-      selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 4),
-      selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 5),
+      selectField("CUSTOM_CVF_UPPER_LEFT", "Upper left", ["restricted", "full"], 0),
+      selectField("CUSTOM_CVF_UPPER_RIGHT", "Upper right", ["restricted", "full"], 1),
+      selectField("CUSTOM_CVF_CENTER", "Center", ["restricted", "full"], 2),
+      selectField("CUSTOM_CVF_LOWER_LEFT", "Lower left", ["restricted", "full"], 3),
+      selectField("CUSTOM_CVF_LOWER_RIGHT", "Lower right", ["restricted", "full"], 4),
+      selectField("CUSTOM_CVF_UNABLE", "Unable", ["no", "yes"], 5),
+      selectField("CUSTOM_CVF_METHOD", "Method", ["finger count", "hand motion"], 6),
     ], "entrance.cvf", provenance),
     buildClinicalFindingDefinition({
       id: "finding-def-entrance-cover",
@@ -187,6 +200,11 @@ function stateDefinition(
   fields: CustomFieldEntry[],
   documentationCode: string,
   provenance: ClinicalGraphProvenance,
+  config: {
+    perEye?: boolean;
+    sourceStatus?: ClinicalFindingDefinition["sourceStatus"];
+    setupMessage?: string;
+  } = {},
 ): ClinicalFindingDefinition {
   return buildClinicalFindingDefinition({
     id: `finding-def-${stableKey.replaceAll(":", "-")}`,
@@ -196,11 +214,15 @@ function stateDefinition(
     anatomyTarget: "eye",
     valueSchema: {
       type: "entrance-state-section",
-      perEye: true,
+      perEye: config.perEye ?? true,
       fields: Object.fromEntries(fields.map((field) => [field.localCode, field])),
     },
-    normalSemantics: { template, allowDeferred: true },
-    sourceStatus: "verified-seed",
+    normalSemantics: {
+      template,
+      allowDeferred: true,
+      ...(config.setupMessage ? { setupMessage: config.setupMessage } : {}),
+    },
+    sourceStatus: config.sourceStatus ?? "verified-seed",
     allowDiagnosisMapping: false,
     documentationElements: [{ code: documentationCode, origin: "seed", active: true }],
     notBillReady: true,

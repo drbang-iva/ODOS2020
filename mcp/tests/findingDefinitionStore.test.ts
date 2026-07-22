@@ -128,6 +128,34 @@ test("E2 seeds nine entrance definitions with canonical Pachymetry and declarati
     ["CUSTOM_FLAT_AXIS", "CUSTOM_STEEP_AXIS"].map((code) => [fields[code]?.type, fields[code]?.minimum, fields[code]?.maximum]),
     [["integer-select", 0, 180], ["integer-select", 0, 180]],
   );
+  const pupils = entrance.find((definition) => definition.stableKey === "entrance:pupils");
+  const stereo = entrance.find((definition) => definition.stableKey === "entrance:stereo");
+  const color = entrance.find((definition) => definition.stableKey === "entrance:color");
+  const cvf = entrance.find((definition) => definition.stableKey === "entrance:cvf");
+  assert.ok(pupils && stereo && color && cvf);
+  const pupilFields = pupils.valueSchema.fields as Record<string, Record<string, unknown>>;
+  assert.deepEqual(
+    ["CUSTOM_PUPIL_SIZE_BRIGHT", "CUSTOM_PUPIL_SIZE_DIM", "CUSTOM_PUPIL_SIZE_NEAR"].map((code) => [pupilFields[code]?.min, pupilFields[code]?.max, pupilFields[code]?.step]),
+    [[1, 9, 0.5], [1, 9, 0.5], [1, 9, 0.5]],
+  );
+  assert.ok(pupilFields.CUSTOM_PUPIL_APD && pupilFields.CUSTOM_PUPIL_RAPD);
+  assert.equal(pupils.sourceStatus, "unseeded-needs-operator-input");
+  assert.equal(stereo.valueSchema.perEye, false);
+  assert.equal(stereo.sourceStatus, "unseeded-needs-operator-input");
+  assert.deepEqual(
+    ((stereo.valueSchema.fields as Record<string, { options?: Array<{ display: string }> }>).CUSTOM_STEREO_TEST?.options ?? []).map((option) => option.display),
+    ["Stereo Fly", "Random Dot", "Randot", "Reindeer", "Titmus Stereo Test"],
+  );
+  assert.deepEqual((stereo.valueSchema.fields as Record<string, { options?: unknown[] }>).CUSTOM_STEREO_ARC_SECONDS?.options, []);
+  assert.equal(color.sourceStatus, "unseeded-needs-operator-input");
+  assert.deepEqual(
+    ((color.valueSchema.fields as Record<string, { options?: Array<{ code: string }> }>).CUSTOM_COLOR_PLATES_CORRECT?.options ?? []).map((option) => option.code),
+    ["1", "2", "3", "4", "5", "6", "7"],
+  );
+  assert.deepEqual(
+    Object.keys(cvf.valueSchema.fields as Record<string, unknown>).filter((code) => code.startsWith("CUSTOM_CVF_") && !code.endsWith("METHOD") && !code.endsWith("UNABLE")),
+    ["CUSTOM_CVF_UPPER_LEFT", "CUSTOM_CVF_UPPER_RIGHT", "CUSTOM_CVF_CENTER", "CUSTOM_CVF_LOWER_LEFT", "CUSTOM_CVF_LOWER_RIGHT"],
+  );
 });
 
 test("stored rows override compiled seeds by stableKey and survive a store restart", async () => {

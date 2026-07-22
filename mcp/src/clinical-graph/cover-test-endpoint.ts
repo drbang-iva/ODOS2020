@@ -25,7 +25,7 @@ const rowSchema = z.discriminatedUnion("state", [
     state: z.literal("deviation"),
     deviationType: z.enum(["phoria", "tropia"]),
     direction: z.enum(["eso", "exo", "hyper", "hypo"]),
-    magnitude: z.number().positive().max(200),
+    magnitude: z.number().min(0).max(60),
     laterality: z.enum(["OD", "OS", "OU", "alternating"]),
     comitancy: z.enum(["comitant", "incomitant"]),
     note: z.string().trim().max(2000).optional(),

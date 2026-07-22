@@ -36,6 +36,8 @@ export interface CustomFindingDefinition {
   }>;
   normalTemplate?: string;
   allowDeferred?: boolean;
+  sourceStatus?: "verified-seed" | "unseeded-needs-operator-input" | "local-practice";
+  setupMessage?: string;
 }
 
 interface Props {

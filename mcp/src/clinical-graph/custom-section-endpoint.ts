@@ -55,6 +55,8 @@ const captureSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
   encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
   customFields: z.array(customFieldValueSchema).max(64).optional(),
+  state: z.enum(["normal", "abnormal", "deferred"]).optional(),
+  other: z.string().trim().max(2000).optional(),
   eyes: z.object({
     OD: eyePayloadSchema.optional(),
     OS: eyePayloadSchema.optional(),
@@ -88,6 +90,9 @@ export async function handleCustomSectionCaptureRequest(
   if (perEye !== Boolean(parsed.data.eyes) || perEye === Boolean(parsed.data.customFields)) {
     return { status: 400, body: { error: perEye ? "This section requires eyes payloads." : "This section requires a per-record customFields payload." } };
   }
+  if (perEye && (parsed.data.state !== undefined || parsed.data.other !== undefined)) {
+    return { status: 400, body: { error: "Per-eye sections require state and note inside each eye payload." } };
+  }
   const eyeRows = EYES.flatMap((eye) => parsed.data.eyes?.[eye]
     ? [{
         eye,
@@ -101,7 +106,12 @@ export async function handleCustomSectionCaptureRequest(
   }
   const rows = perEye
     ? eyeRows
-    : [{ eye: "UNKNOWN" as const, values: parsed.data.customFields ?? [], state: undefined, other: undefined }];
+    : [{
+        eye: "UNKNOWN" as const,
+        values: parsed.data.customFields ?? [],
+        state: parsed.data.state,
+        other: parsed.data.other,
+      }];
   if (stateSection && rows.some((row) => row.other && !row.state)) {
     return { status: 400, body: { error: "Ocular-health Other text requires choosing Normal, Abnormal, or Deferred for that eye, or clearing the text." } };
   }
