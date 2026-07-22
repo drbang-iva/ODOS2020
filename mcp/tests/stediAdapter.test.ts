@@ -62,8 +62,13 @@ test("Stedi configuration is opt-in and production requires an exact mode value"
   assert.equal(stediConfigFromEnv({ STEDI_API_KEY: "key", STEDI_SUBMITTER_ID: "SUBMITTER900", STEDI_MODE: "prod" })?.mode, "test");
 });
 
-test("Stedi errors expose status without echoing the PHI-bearing response body", async () => {
-  const { fetchImpl } = jsonTransport({ message: "MEMBER=JANE DOE" }, 502);
+test("Stedi errors expose response details without echoing the PHI-bearing response body", async () => {
+  const responseBody = {
+    errors: [{ code: "INVALID_VALUE", description: "procedureCode is invalid", followupAction: "Correct the claim and resubmit." }],
+    claimReference: { correlationId: "corr-claim-900", patientControlNumber: "ODOSCLAIM900" },
+    x12: "SYNTHETIC-X12-CONTENT",
+  };
+  const { fetchImpl } = jsonTransport(responseBody, 422);
   const adapter = createStediAdapter({
     config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
     fetchImpl,
@@ -71,8 +76,34 @@ test("Stedi errors expose status without echoing the PHI-bearing response body",
   await assert.rejects(
     adapter.checkEligibility({ tradingPartnerServiceId: "STEDITEST" }),
     (error: unknown) => {
+      const stediError = error as {
+        status?: number;
+        responseBody?: unknown;
+        errors?: unknown;
+        correlationId?: string;
+      };
+      assert.equal(stediError.status, 422);
+      assert.deepEqual(stediError.responseBody, responseBody);
+      assert.deepEqual(stediError.errors, responseBody.errors);
+      assert.equal(stediError.correlationId, "corr-claim-900");
+      assert.doesNotMatch(String(error), /SYNTHETIC-X12-CONTENT/);
+      return true;
+    },
+  );
+});
+
+test("Stedi errors preserve the HTTP failure when the response body is not JSON", async () => {
+  const fetchImpl = (async () => new Response("upstream unavailable", { status: 502 })) as typeof fetch;
+  const adapter = createStediAdapter({
+    config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
+    fetchImpl,
+  });
+
+  await assert.rejects(
+    adapter.checkEligibility({ tradingPartnerServiceId: "STEDITEST" }),
+    (error: unknown) => {
       assert.equal((error as { status?: number }).status, 502);
-      assert.doesNotMatch(String(error), /JANE DOE/);
+      assert.equal((error as { responseBody?: unknown }).responseBody, undefined);
       return true;
     },
   );

@@ -4,6 +4,7 @@ import {
   HL7_CLAIM_TYPE_SYSTEM,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
+import { ClaimSubmissionValidationError } from "./claim-errors.js";
 
 export interface StediProfessionalClaimPayload {
   usageIndicator: "T" | "P";
@@ -103,7 +104,10 @@ export function buildStediProfessionalClaimJson(
     throw new Error("Stedi patient account number must be 1-17 basic X12 characters without reserved delimiters.");
   }
   if (!billing.name || !billing.taxId || !billing.address1 || !billing.city || !billing.state || !billing.zip) {
-    throw new Error("Stedi professional claims require billing name, tax ID, and complete physical address.");
+    throw new ClaimSubmissionValidationError("Stedi professional claims require billing name, tax ID, and complete physical address.");
+  }
+  if (!input.subscriber.address1 || !input.subscriber.city || !input.subscriber.state || !input.subscriber.zip) {
+    throw new ClaimSubmissionValidationError("Stedi professional claims require subscriber address and complete physical address.");
   }
   return {
     usageIndicator: mode === "production" ? "P" : "T",

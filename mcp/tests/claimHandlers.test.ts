@@ -83,6 +83,10 @@ const professionalClaim: ProfessionalClaimInput = {
     dateOfBirth: "1980-01-01",
     sex: "F",
     relationshipCode: "18",
+    address1: "901 TEST AVE",
+    city: "TESTVILLE",
+    state: "NY",
+    zip: "100010001",
   },
   patient: { firstName: "JAMIE", lastName: "SYNTHETIC", dateOfBirth: "1980-01-01", sex: "F" },
   diagnoses: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
@@ -376,6 +380,39 @@ test("Stedi selector submits through the parallel adapter and attributes the exi
   assert.equal((result.body as any).stediCorrelationId, "stedi-1");
   assert.equal((submitted as any).payload.usageIndicator, "T");
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
+test("Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit", async () => {
+  const { audits, created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.subscriber.address1;
+  let submitted = false;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async () => {
+        submitted = true;
+        return { claimReference: { correlationId: "should-not-run" } };
+      },
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    } as any,
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: input },
+  });
+
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /subscriber address and complete physical address/);
+  assert.equal(submitted, false);
+  assert.equal(created.Task.length, 0);
+  assert.equal(audits.some((entry) => entry.eventType === "claim.submit.failed"), false);
 });
 
 test("Stedi payload also remains on the original idless charge input after provenance persistence", async () => {

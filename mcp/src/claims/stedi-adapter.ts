@@ -28,10 +28,29 @@ export interface StediAdapter extends ClearinghouseAdapter {
   submitProfessionalClaim(input: { payload: StediProfessionalClaimPayload; idempotencyKey: string }): Promise<StediSubmitResult>;
 }
 
+export interface StediErrorDetail {
+  code?: string;
+  description?: string;
+  followupAction?: string;
+  [key: string]: unknown;
+}
+
 export class StediRequestError extends Error {
-  constructor(readonly status: number) {
+  readonly errors?: StediErrorDetail[];
+  readonly correlationId?: string;
+
+  constructor(readonly status: number, readonly responseBody?: unknown) {
     super(`Stedi request failed with HTTP ${status}.`);
     this.name = "StediRequestError";
+    if (isRecord(responseBody)) {
+      if (Array.isArray(responseBody.errors)) {
+        this.errors = responseBody.errors.filter((error): error is StediErrorDetail => isRecord(error));
+      }
+      const claimReference = responseBody.claimReference;
+      if (isRecord(claimReference) && typeof claimReference.correlationId === "string") {
+        this.correlationId = claimReference.correlationId;
+      }
+    }
   }
 }
 
@@ -99,10 +118,22 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
 
 async function requestJson(fetchImpl: typeof fetch, url: string, init: RequestInit): Promise<unknown> {
   const response = await fetchImpl(url, init);
-  if (!response.ok) throw new StediRequestError(response.status);
+  if (!response.ok) {
+    let responseBody: unknown;
+    try {
+      responseBody = await response.json();
+    } catch {
+      responseBody = undefined;
+    }
+    throw new StediRequestError(response.status, responseBody);
+  }
   try {
     return await response.json();
   } catch {
     throw new Error("Stedi returned a non-JSON response.");
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

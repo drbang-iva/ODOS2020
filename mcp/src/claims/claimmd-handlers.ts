@@ -23,6 +23,7 @@ import {
 } from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
+import { ClaimSubmissionValidationError } from "./claim-errors.js";
 import {
   isClaimSearchStatus,
   isRelatedClaimResource,
@@ -181,6 +182,9 @@ export async function handleSubmitClaimRequest(
       },
     };
   } catch (error) {
+    if (error instanceof ClaimSubmissionValidationError) {
+      return { status: 400, body: { error: error.message } };
+    }
     await audit(
       deps,
       auth,
@@ -191,21 +195,17 @@ export async function handleSubmitClaimRequest(
       clearinghouseFailureAuditReason(selection.id, "submitProfessionalClaim", error),
       selection.id,
     );
-    if (!(error instanceof ClaimSubmissionValidationError)) {
-      try {
-        await createAndAuditClaimRejectedTask(deps, auth, {
-          claimReference: createdClaim ? ref(createdClaim) : undefined,
-          patientReference: body.claim.patientReference,
-          claimMdMessage: messageOf(error),
-          adapterName: selection.id,
-        });
-      } catch {
-        // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
-      }
+    try {
+      await createAndAuditClaimRejectedTask(deps, auth, {
+        claimReference: createdClaim ? ref(createdClaim) : undefined,
+        patientReference: body.claim.patientReference,
+        claimMdMessage: messageOf(error),
+        adapterName: selection.id,
+      });
+    } catch {
+      // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
     }
-    return error instanceof ClaimSubmissionValidationError
-      ? { status: 400, body: { error: error.message } }
-      : { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
+    return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
   }
 }
 
@@ -1420,8 +1420,6 @@ async function persistClaimChargeItems(
   }
   return persisted;
 }
-
-class ClaimSubmissionValidationError extends Error {}
 
 function assertChargeItemPatient(chargeItem: ChargeItem, patientReference: string): void {
   const reference = chargeItem.id ? `ChargeItem/${chargeItem.id}` : "Unpersisted ChargeItem";
