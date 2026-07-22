@@ -23,6 +23,7 @@ import {
 } from "../payments/payment-reconciliation.js";
 import { StaffRoleServiceUnavailableError } from "../payments/payment-endpoint.js";
 import { buildClaimAuditRecord, type ClaimAuditEventType } from "./claim-audit.js";
+import { ClaimSubmissionValidationError } from "./claim-errors.js";
 import {
   isClaimSearchStatus,
   isRelatedClaimResource,
@@ -76,7 +77,7 @@ import {
   type ManualClaimResponseLineInput,
   type ProfessionalClaimInput,
 } from "./claimmd-fhir.js";
-import type { StediAdapter } from "./stedi-adapter.js";
+import { StediRequestError, type StediAdapter } from "./stedi-adapter.js";
 import {
   buildClaimResponseFromStediEra,
   buildClaimResponseFromStediStatus,
@@ -181,6 +182,9 @@ export async function handleSubmitClaimRequest(
       },
     };
   } catch (error) {
+    if (error instanceof ClaimSubmissionValidationError) {
+      return { status: 400, body: { error: error.message } };
+    }
     await audit(
       deps,
       auth,
@@ -191,21 +195,17 @@ export async function handleSubmitClaimRequest(
       clearinghouseFailureAuditReason(selection.id, "submitProfessionalClaim", error),
       selection.id,
     );
-    if (!(error instanceof ClaimSubmissionValidationError)) {
-      try {
-        await createAndAuditClaimRejectedTask(deps, auth, {
-          claimReference: createdClaim ? ref(createdClaim) : undefined,
-          patientReference: body.claim.patientReference,
-          claimMdMessage: messageOf(error),
-          adapterName: selection.id,
-        });
-      } catch {
-        // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
-      }
+    try {
+      await createAndAuditClaimRejectedTask(deps, auth, {
+        claimReference: createdClaim ? ref(createdClaim) : undefined,
+        patientReference: body.claim.patientReference,
+        claimMdMessage: messageOf(error),
+        adapterName: selection.id,
+      });
+    } catch {
+      // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
     }
-    return error instanceof ClaimSubmissionValidationError
-      ? { status: 400, body: { error: error.message } }
-      : { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
+    return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
   }
 }
 
@@ -1421,8 +1421,6 @@ async function persistClaimChargeItems(
   return persisted;
 }
 
-class ClaimSubmissionValidationError extends Error {}
-
 function assertChargeItemPatient(chargeItem: ChargeItem, patientReference: string): void {
   const reference = chargeItem.id ? `ChargeItem/${chargeItem.id}` : "Unpersisted ChargeItem";
   if (chargeItem.subject.reference !== patientReference) {
@@ -1634,7 +1632,18 @@ function claimMdFailureAuditReason(operation: string, error: unknown): string {
 function clearinghouseFailureAuditReason(id: ClearinghouseId, operation: string, error: unknown): string {
   if (id === "claimmd") return claimMdFailureAuditReason(operation, error);
   const status = claimMdHttpStatus(error);
-  return status ? `Stedi ${operation} failed with HTTP ${status}` : `Stedi ${operation} failed`;
+  const base = status ? `Stedi ${operation} failed with HTTP ${status}` : `Stedi ${operation} failed`;
+  if (!(error instanceof StediRequestError)) return base;
+  const allCodes = (error.errors ?? []).flatMap((detail) =>
+    typeof detail.code === "string" && detail.code.trim() ? [detail.code.trim()] : []);
+  const codes = allCodes.slice(0, 3);
+  const omittedCount = allCodes.length - codes.length;
+  const codeDetail = codes.length
+    ? `[${codes.join(", ")}${omittedCount ? `, +${omittedCount} more` : ""}]`
+    : undefined;
+  return [base, codeDetail, error.correlationId ? `[correlationId: ${error.correlationId}]` : undefined]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function clearinghouseSelection(

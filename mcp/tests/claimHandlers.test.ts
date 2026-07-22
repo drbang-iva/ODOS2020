@@ -54,6 +54,7 @@ import {
 } from "../src/claims/claimmd-fhir.js";
 import { parseManualEobHeader } from "../src/claims/manual-eob.js";
 import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../src/claims/patient-responsibility-invoice.js";
+import { StediRequestError } from "../src/claims/stedi-adapter.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
 const professionalClaim: ProfessionalClaimInput = {
@@ -83,6 +84,10 @@ const professionalClaim: ProfessionalClaimInput = {
     dateOfBirth: "1980-01-01",
     sex: "F",
     relationshipCode: "18",
+    address1: "901 TEST AVE",
+    city: "TESTVILLE",
+    state: "NY",
+    zip: "100010001",
   },
   patient: { firstName: "JAMIE", lastName: "SYNTHETIC", dateOfBirth: "1980-01-01", sex: "F" },
   diagnoses: [{ system: "https://odos.test/fhir/CodeSystem/synthetic-diagnosis", code: "DX-A" }],
@@ -376,6 +381,86 @@ test("Stedi selector submits through the parallel adapter and attributes the exi
   assert.equal((result.body as any).stediCorrelationId, "stedi-1");
   assert.equal((submitted as any).payload.usageIndicator, "T");
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+});
+
+test("Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit", async () => {
+  const { audits, created, deps: d } = deps();
+  const input = structuredClone(professionalClaim);
+  delete input.subscriber.address1;
+  let submitted = false;
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async () => {
+        submitted = true;
+        return { claimReference: { correlationId: "should-not-run" } };
+      },
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    } as any,
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: input },
+  });
+
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /subscriber address and complete physical address/);
+  assert.equal(submitted, false);
+  assert.equal(created.Task.length, 0);
+  assert.equal(audits.some((entry) => entry.eventType === "claim.submit.failed"), false);
+});
+
+test("Stedi transport errors return human-usable reasons while audits retain only safe trace fields", async () => {
+  const { audits, deps: d } = deps();
+  const x12 = "SYNTHETIC-X12-CONTENT-MUST-NOT-LEAK";
+  const responseBody = {
+    errors: [
+      { code: "INVALID_VALUE", description: "Procedure code is invalid.", followupAction: "Correct and resubmit." },
+      { code: "MISSING_FIELD", description: "Subscriber gender is required.", followupAction: "Add the missing field." },
+    ],
+    claimReference: { correlationId: "corr-handler-900" },
+    x12,
+  };
+  d.adapters = {
+    stedi: {
+      id: "stedi",
+      mode: "test",
+      submitterId: "SUBMITTER900",
+      submitProfessionalClaim: async () => {
+        throw new StediRequestError(400, responseBody);
+      },
+      checkEligibility: async () => ({}),
+      checkClaimStatus: async () => ({}),
+      listEras: async () => ({}),
+      retrieveEraData: async () => ({}),
+    } as any,
+  };
+
+  const result = await handleSubmitClaimRequest(d, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", claim: professionalClaim },
+  });
+
+  assert.equal(result.status, 502);
+  const returnedError = (result.body as { error: string }).error;
+  assert.match(returnedError, /Procedure code is invalid\./);
+  assert.match(returnedError, /Subscriber gender is required\./);
+  assert.match(returnedError, /corr-handler-900/);
+  assert.doesNotMatch(returnedError, new RegExp(x12));
+
+  const failureAudit = audits.find((entry) => entry.eventType === "claim.submit.failed");
+  assert.match(failureAudit?.actionReason ?? "", /INVALID_VALUE/);
+  assert.match(failureAudit?.actionReason ?? "", /MISSING_FIELD/);
+  assert.match(failureAudit?.actionReason ?? "", /corr-handler-900/);
+  assert.doesNotMatch(failureAudit?.actionReason ?? "", /Procedure code is invalid\./);
+  assert.doesNotMatch(failureAudit?.actionReason ?? "", /Subscriber gender is required\./);
+  assert.doesNotMatch(failureAudit?.actionReason ?? "", new RegExp(x12));
 });
 
 test("Stedi payload also remains on the original idless charge input after provenance persistence", async () => {

@@ -28,10 +28,24 @@ export interface StediAdapter extends ClearinghouseAdapter {
   submitProfessionalClaim(input: { payload: StediProfessionalClaimPayload; idempotencyKey: string }): Promise<StediSubmitResult>;
 }
 
+export interface StediErrorDetail {
+  code?: string;
+  description?: string;
+  followupAction?: string;
+  [key: string]: unknown;
+}
+
 export class StediRequestError extends Error {
-  constructor(readonly status: number) {
-    super(`Stedi request failed with HTTP ${status}.`);
+  readonly errors?: StediErrorDetail[];
+  readonly correlationId?: string;
+
+  constructor(readonly status: number, readonly responseBody?: unknown) {
+    const errors = stediErrors(responseBody);
+    const correlationId = stediCorrelationId(responseBody);
+    super(stediRequestErrorMessage(status, errors, correlationId));
     this.name = "StediRequestError";
+    this.errors = errors;
+    this.correlationId = correlationId;
   }
 }
 
@@ -99,10 +113,58 @@ export function createStediAdapter(opts: { config: StediConfig; fetchImpl?: type
 
 async function requestJson(fetchImpl: typeof fetch, url: string, init: RequestInit): Promise<unknown> {
   const response = await fetchImpl(url, init);
-  if (!response.ok) throw new StediRequestError(response.status);
+  if (!response.ok) {
+    let responseBody: unknown;
+    try {
+      responseBody = await response.json();
+    } catch {
+      responseBody = undefined;
+    }
+    throw new StediRequestError(response.status, responseBody);
+  }
   try {
     return await response.json();
   } catch {
     throw new Error("Stedi returned a non-JSON response.");
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stediErrors(responseBody: unknown): StediErrorDetail[] | undefined {
+  if (!isRecord(responseBody) || !Array.isArray(responseBody.errors)) return undefined;
+  return responseBody.errors.filter((error): error is StediErrorDetail => isRecord(error));
+}
+
+function stediCorrelationId(responseBody: unknown): string | undefined {
+  if (!isRecord(responseBody) || !isRecord(responseBody.claimReference)) return undefined;
+  return typeof responseBody.claimReference.correlationId === "string"
+    ? responseBody.claimReference.correlationId
+    : undefined;
+}
+
+function stediRequestErrorMessage(
+  status: number,
+  errors: StediErrorDetail[] | undefined,
+  correlationId: string | undefined,
+): string {
+  const base = `Stedi request failed with HTTP ${status}.`;
+  const formattedErrors = (errors ?? []).map(formatStediErrorDetail).filter(Boolean);
+  const visibleErrors = formattedErrors.slice(0, 3);
+  const omittedCount = formattedErrors.length - visibleErrors.length;
+  const detail = [
+    ...visibleErrors,
+    ...(omittedCount ? [`${omittedCount} more Stedi error${omittedCount === 1 ? "" : "s"} omitted.`] : []),
+  ].join("; ");
+  return `${base}${detail ? ` ${detail}` : ""}${correlationId ? ` [correlationId: ${correlationId}]` : ""}`;
+}
+
+function formatStediErrorDetail(error: StediErrorDetail): string {
+  const code = typeof error.code === "string" ? error.code.trim() : "";
+  const description = typeof error.description === "string" ? error.description.trim() : "";
+  const followupAction = typeof error.followupAction === "string" ? error.followupAction.trim() : "";
+  const reason = code && description ? `${code}: ${description}` : code || description;
+  return followupAction ? `${reason ? `${reason} ` : ""}(${followupAction})` : reason;
 }
