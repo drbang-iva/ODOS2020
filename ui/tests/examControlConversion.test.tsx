@@ -12,6 +12,7 @@ import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { RefractionSection } from "../src/components/charting/RefractionSection";
 import { softLensProductParameterOptions } from "../src/components/charting/SoftContactLensSection";
 import { VaSection } from "../src/components/charting/VaSection";
+import { VaValueSelect } from "../src/components/charting/VaValueSelect";
 
 const PROPS = {
   patientReference: "Patient/p1",
@@ -55,6 +56,24 @@ test("standalone Visual Acuity uses the curated VA selector for both eyes", () =
     assert.match(html, new RegExp(`<select[^>]*aria-label="${eye} visual acuity modifier"`));
   }
   assert.doesNotMatch(source("VaSection.tsx"), /placeholder="20\/20"/);
+});
+
+test("standalone Visual Acuity keeps non-Snellen chart entry available", () => {
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    act(() => {
+      renderer = create(<VaSection {...PROPS} />);
+    });
+    const odChart = renderer!.root.findByProps({ "aria-label": "OD visual acuity chart" });
+    act(() => odChart.props.onChange({ target: { value: "LOGMAR" } }));
+
+    assert.equal(renderer!.root.findAllByType(VaValueSelect).length, 1);
+    const odValue = renderer!.root.findByProps({ "aria-label": "OD visual acuity" });
+    assert.equal(odValue.type, "input");
+    assert.equal(odValue.props.value, "");
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+  }
 });
 
 test("soft-lens BC and DIA options change with the selected catalog product", () => {
