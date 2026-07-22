@@ -64,6 +64,15 @@ const AUDIT_DDL_FILES = [
       constraint: "odos_audit_events_event_type_check",
     },
   },
+  { path: migrationPath("2026-07-22-era-integrity-event.sql"), sentinel: { kind: "event-type", eventType: "era.integrity.flagged" } },
+  {
+    path: migrationPath("2026-07-22-era-integrity-event.validate.sql"),
+    sentinel: {
+      kind: "constraint-validated",
+      table: "odos_audit_events",
+      constraint: "odos_audit_events_event_type_check",
+    },
+  },
   { path: migrationPath("2026-07-18-commercial-engine-schema.sql"), sentinel: { kind: "table", table: "odos_package_redemptions" } },
   {
     path: migrationPath("2026-07-18-commercial-engine-redemption-recovery.sql"),

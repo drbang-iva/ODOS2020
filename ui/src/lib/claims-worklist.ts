@@ -1,4 +1,4 @@
-export const WORKLIST_CODES = ["era-denial", "era-line-linkage", "era-underpayment", "era-unmatched", "claim-rejected"] as const;
+export const WORKLIST_CODES = ["era-denial", "era-integrity", "era-line-linkage", "era-underpayment", "era-unmatched", "claim-rejected"] as const;
 export const WORKLIST_STATUSES = ["new", "in-review", "resolved"] as const;
 export const WORKLIST_DISPOSITIONS = ["rebilled", "appealed", "written-off", "matched", "posted-ok"] as const;
 
@@ -71,6 +71,7 @@ export interface ResolveWorklistInput {
 
 export const WORKLIST_LANES: ReadonlyArray<{ code: WorklistCode; label: string }> = [
   { code: "era-denial", label: "ERA denials" },
+  { code: "era-integrity", label: "ERA integrity" },
   { code: "era-line-linkage", label: "Line linkage" },
   { code: "era-underpayment", label: "Underpayments" },
   { code: "era-unmatched", label: "Unmatched ERAs" },
@@ -86,6 +87,7 @@ export const ERA_BATCH_LANES: ReadonlyArray<{ code: EraBatchLane; label: string 
 export function groupWorklistItems(items: readonly ClaimsWorklistItem[]): Record<WorklistCode, ClaimsWorklistItem[]> {
   const grouped: Record<WorklistCode, ClaimsWorklistItem[]> = {
     "era-denial": [],
+    "era-integrity": [],
     "era-line-linkage": [],
     "era-underpayment": [],
     "era-unmatched": [],

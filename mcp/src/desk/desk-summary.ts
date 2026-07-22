@@ -266,7 +266,7 @@ export function projectDeskSummary(input: DeskSummaryInput): DeskSummary {
     terminalMode: stat(input.terminalMode, terminalTone),
   };
 
-  const openEraTasks = input.tasks.filter((task) => isOpenWorklistTask(task) && ["era-denial", "era-underpayment", "era-unmatched"].includes(worklistCode(task) ?? ""));
+  const openEraTasks = input.tasks.filter((task) => isOpenWorklistTask(task) && ["era-denial", "era-integrity", "era-underpayment", "era-unmatched"].includes(worklistCode(task) ?? ""));
   const unpostedCents = openEraTasks.reduce((total, task) => total + taskInputInteger(task, "shortfall-cents"), 0);
   const eraTasksAvailable = input.taskAvailability?.era !== false;
   const remits = {

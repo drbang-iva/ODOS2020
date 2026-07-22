@@ -13,6 +13,7 @@ export const CLAIM_AUDIT_EVENT_TYPES = [
   "era.import.completed",
   "era.import.failed",
   "era.denial.flagged",
+  "era.integrity.flagged",
   "era.line-linkage.flagged",
   "era.underpayment.flagged",
   "era.unmatched.flagged",

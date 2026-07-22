@@ -78,7 +78,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("ChargeItemDefinition", "_count"),
     spec("ChargeItem", "_id", "_count"),
   ],
-  "src/reporting/reporting.ts:444": [
+  "src/reporting/reporting.ts:445": [
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],

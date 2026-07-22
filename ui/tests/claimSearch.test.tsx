@@ -40,6 +40,7 @@ test("failed-claims badge counts only open claim-rejected and era-denial worklis
     worklistItem("claim-rejected", "new"),
     worklistItem("era-denial", "in-review"),
     worklistItem("era-denial", "resolved"),
+    worklistItem("era-integrity", "new"),
     worklistItem("era-underpayment", "new"),
   ]), 2);
 });

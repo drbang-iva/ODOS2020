@@ -79,6 +79,7 @@ import {
 } from "./claimmd-fhir.js";
 import { StediRequestError, type StediAdapter } from "./stedi-adapter.js";
 import {
+  analyzeStediEraClaim,
   buildClaimResponseFromStediEra,
   buildClaimResponseFromStediStatus,
   buildCoverageEligibilityResponseFromStedi,
@@ -484,10 +485,14 @@ async function importStediEra(
   let underpaid = 0;
   let flagged = 0;
   let paidTotalCents = 0;
+  let failureOperation = "retrieveEraData";
   try {
-    const era = readStediEra(await adapter.retrieveEraData(body.eraId), body.eraId);
+    const rawEra = await adapter.retrieveEraData(body.eraId);
+    failureOperation = "importEraData";
+    const era = readStediEra(rawEra, body.eraId);
     for (const stediClaim of era.claims) {
       const eraClaim = claimMdLikeStediEraClaim(stediClaim);
+      const stediAnalysis = analyzeStediEraClaim(stediClaim);
       const pcn = eraClaim.pcn ?? "";
       const claimReference = body.claimReferenceByPcn[pcn];
       const patientReference = body.patientReferenceByPcn[pcn];
@@ -531,9 +536,17 @@ async function importStediEra(
       const paidCents = Math.round((response.payment?.amount.value ?? 0) * 100);
       paidTotalCents += paidCents;
       const evidence = eraWorklistEvidence(eraClaim, era.transactionId);
-      const invoiceResult = await ensurePatientResponsibilityInvoice(auth, claimReference, response);
-      if (paidCents > 0) {
-        const reconciliation = await auth.fhir.create(buildInsurancePaymentReconciliation({
+      const invoiceResult: PatientResponsibilityInvoiceResult = stediAnalysis.allowsPatientResponsibilityInvoice
+        ? await ensurePatientResponsibilityInvoice(
+          auth,
+          claimReference,
+          response,
+          stediAnalysis.authoritativePatientResponsibilityCents,
+        )
+        : "none";
+      if (paidCents > 0 && stediAnalysis.allowsReconciliation) {
+        const reconciliationIdentifierValue = `${era.transactionId}:${claimReference}`;
+        const reconciliationCandidate = buildInsurancePaymentReconciliation({
           createdIso: now(deps),
           paymentDate: response.payment?.date ?? today(deps),
           amountCents: paidCents,
@@ -545,7 +558,14 @@ async function importStediEra(
           processorTransactionSystem: STEDI_ERA_PAYMENT_SYSTEM,
           description: `Stedi ERA ${era.transactionId}`,
           lineAllocations: claimResponseLinePaymentAllocations(response),
-        }));
+        });
+        reconciliationCandidate.identifier = [{
+          system: STEDI_ERA_PAYMENT_SYSTEM,
+          value: reconciliationIdentifierValue,
+        }];
+        const reconciliation = await auth.fhir.create(reconciliationCandidate, {
+          "If-None-Exist": `identifier=${STEDI_ERA_PAYMENT_SYSTEM}|${reconciliationIdentifierValue}`,
+        });
         paymentReconciliationIds.push(requiredId(reconciliation));
         posted += 1;
       }
@@ -562,13 +582,28 @@ async function importStediEra(
         taskIds.push(requiredId(task));
         flagged += 1;
       }
+      if (stediAnalysis.reviewReasons.length > 0) {
+        const task = await createStediEraIntegrityReviewTask(deps, auth, {
+          era: taskEra,
+          eraClaim,
+          claimReference,
+          claimResponseReference: ref(response),
+          patientReference: verifiedPatientReference,
+          reasons: stediAnalysis.reviewReasons,
+          appealDeadline: body.appealDeadlineByPcn?.[pcn],
+        });
+        taskIds.push(requiredId(task));
+        flagged += 1;
+      }
       if (
-        paidCents === 0
-        || invoiceResult === "different"
-        || invoiceResult === "unavailable"
-        || (evidence.shortfallCents > 0 && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))
+        stediAnalysis.isDenial
+        || (stediAnalysis.allowsReconciliation && (
+          invoiceResult === "different"
+          || invoiceResult === "unavailable"
+          || (evidence.shortfallCents > 0 && evidence.shortfallCents >= (deps.eraUnderpaymentThresholdCents ?? 1))
+        ))
       ) {
-        const code = paidCents === 0 ? "era-denial" : "era-underpayment";
+        const code = stediAnalysis.isDenial ? "era-denial" : "era-underpayment";
         const task = await createAndAuditEraWorklistTask(
           deps,
           auth,
@@ -605,7 +640,7 @@ async function importStediEra(
       "failure",
       `Stedi/ERA/${body.eraId}`,
       undefined,
-      clearinghouseFailureAuditReason("stedi", "retrieveEraData", error),
+      clearinghouseFailureAuditReason("stedi", failureOperation, error),
       "stedi",
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
@@ -1224,6 +1259,49 @@ async function createEraLineLinkageReviewTask(
   return task;
 }
 
+async function createStediEraIntegrityReviewTask(
+  deps: ClaimsHandlerDeps,
+  auth: AuthenticatedClaimsStaff,
+  input: {
+    era: ClaimMdEraData;
+    eraClaim: ClaimMdEraClaim;
+    claimReference: string;
+    claimResponseReference: string;
+    patientReference: string;
+    reasons: string[];
+    appealDeadline?: string;
+  },
+): Promise<Task> {
+  const identifierValue = `${input.era.eraid ?? "unknown-era"}:${input.claimReference}:stedi-integrity`;
+  const candidate = buildEraWorklistTask({
+    code: "era-integrity",
+    era: input.era,
+    eraClaim: input.eraClaim,
+    claimResponseReference: input.claimResponseReference,
+    patientReference: input.patientReference,
+    authoredOn: now(deps),
+    appealDeadline: input.appealDeadline,
+    identifierSystem: STEDI_ERA_PAYMENT_SYSTEM,
+  });
+  candidate.identifier = [{ system: ERA_DISCREPANCY_IDENTIFIER_SYSTEM, value: identifierValue }];
+  candidate.description = "Stedi ERA integrity requires review";
+  candidate.input = [
+    ...(candidate.input ?? []),
+    {
+      type: {
+        coding: [{ system: ERA_WORKLIST_INPUT_SYSTEM, code: "stedi-era-review-reason" }],
+        text: "Stedi ERA review reason",
+      },
+      valueString: input.reasons.join(" "),
+    },
+  ];
+  const task = await auth.fhir.create(candidate, {
+    "If-None-Exist": `identifier=${ERA_DISCREPANCY_IDENTIFIER_SYSTEM}|${identifierValue}`,
+  });
+  await audit(deps, auth, "era.integrity.flagged", "success", ref(task), input.patientReference, undefined, "stedi");
+  return task;
+}
+
 async function persistMatchedEraClaim(
   deps: ClaimsHandlerDeps,
   auth: AuthenticatedClaimsStaff,
@@ -1336,8 +1414,12 @@ async function ensurePatientResponsibilityInvoice(
   auth: AuthenticatedClaimsStaff,
   claimReference: string,
   response: ClaimResponse,
+  authoritativePatientResponsibilityCents?: number,
 ): Promise<PatientResponsibilityInvoiceResult> {
-  if (!(response.item ?? []).some((item) => item.adjudication.some((adjudication) =>
+  const invoiceResponse = authoritativePatientResponsibilityCents === undefined
+    ? response
+    : withAuthoritativePatientResponsibility(response, authoritativePatientResponsibilityCents);
+  if (!(invoiceResponse.item ?? []).some((item) => item.adjudication.some((adjudication) =>
     /^adjustment\s+PR(?:\s|$)/i.test(adjudication.category.text ?? "")
     && (adjudication.amount?.value ?? 0) > 0,
   ))) return "none";
@@ -1346,7 +1428,7 @@ async function ensurePatientResponsibilityInvoice(
   const claim = await auth.fhir.read<Claim>("Claim", claimId);
   let candidate: Invoice | undefined;
   try {
-    candidate = buildPatientResponsibilityInvoice(claim, response);
+    candidate = buildPatientResponsibilityInvoice(claim, invoiceResponse);
   } catch (error) {
     if (error instanceof PatientResponsibilityInvoiceUnavailableError) return "unavailable";
     throw error;
@@ -1367,6 +1449,44 @@ async function ensurePatientResponsibilityInvoice(
     return patientResponsibilityInvoiceMatches(created, candidate) ? "created" : "different";
   }
   return patientResponsibilityInvoiceMatches(existing, candidate) ? "unchanged" : "different";
+}
+
+function withAuthoritativePatientResponsibility(response: ClaimResponse, targetCents: number): ClaimResponse {
+  if (targetCents < 0) throw new Error("Stedi patient responsibility cannot be negative.");
+  const entries = (response.item ?? []).flatMap((item, itemIndex) => item.adjudication.flatMap((entry, entryIndex) =>
+    /^adjustment\s+PR(?:\s|$)/i.test(entry.category.text ?? "") && (entry.amount?.value ?? 0) > 0
+      ? [{ itemIndex, entryIndex, cents: Math.round((entry.amount?.value ?? 0) * 100) }]
+      : [],
+  ));
+  const sourceTotal = entries.reduce((sum, entry) => sum + entry.cents, 0);
+  let remainingTarget = targetCents;
+  let remainingSource = sourceTotal;
+  const allocations = entries.map((entry, index) => {
+    const allocation = index === entries.length - 1
+      ? remainingTarget
+      : Math.min(remainingTarget, Math.round(remainingTarget * entry.cents / remainingSource));
+    remainingTarget -= allocation;
+    remainingSource -= entry.cents;
+    return allocation;
+  });
+  const items = (response.item ?? []).map((item, itemIndex) => ({
+    ...item,
+    adjudication: item.adjudication.map((entry, entryIndex) => {
+      const allocationIndex = entries.findIndex((candidate) =>
+        candidate.itemIndex === itemIndex && candidate.entryIndex === entryIndex,
+      );
+      return allocationIndex === -1
+        ? entry
+        : { ...entry, amount: { value: allocations[allocationIndex] / 100, currency: "USD" as const } };
+    }),
+  }));
+  if (sourceTotal === 0 && targetCents > 0 && items[0]) {
+    items[0].adjudication = [
+      ...items[0].adjudication,
+      { category: { text: "adjustment PR claim-level" }, amount: { value: targetCents / 100, currency: "USD" as const } },
+    ];
+  }
+  return { ...response, item: items };
 }
 
 async function persistClaimChargeItems(
@@ -1605,11 +1725,16 @@ function claimMdLikeStediEraClaim(claim: StediEraClaim): ClaimMdEraClaim {
       charge: line.servicePaymentInformation?.lineItemChargeAmount,
       allowed: line.serviceSupplementalAmounts?.allowedActual,
       paid: line.servicePaymentInformation?.lineItemProviderPaymentAmount,
-      adjustment: (line.serviceAdjustments ?? []).map((adjustment) => ({
-        group: adjustment.claimAdjustmentGroupCode,
-        code: adjustment.adjustmentReasonCode1,
-        amount: adjustment.adjustmentAmount1,
-      })),
+      adjustment: (line.serviceAdjustments ?? []).flatMap((adjustment) => {
+        const fields = adjustment as Record<string, string | undefined>;
+        return [1, 2, 3, 4, 5, 6].flatMap((slot) => fields[`adjustmentAmount${slot}`] === undefined
+          ? []
+          : [{
+            group: adjustment.claimAdjustmentGroupCode,
+            code: fields[`adjustmentReasonCode${slot}`],
+            amount: fields[`adjustmentAmount${slot}`],
+          }]);
+      }),
     })),
   };
 }

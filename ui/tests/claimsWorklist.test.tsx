@@ -6,29 +6,34 @@ import {
   claimWorklistItem,
   dispositionsForLane,
   fetchClaimsWorklist,
+  groupWorklistItems,
   type ClaimsWorklistItem,
   type WorklistCode,
 } from "../src/lib/claims-worklist";
 import { ClaimsWorklistBoard, ClaimsWorklistPanel } from "../src/scenes/claims/ClaimsWorklist";
 
-test("worklist board renders all five lanes from attention-item fixtures", () => {
+test("worklist board renders integrity separately from underpayments across all six lanes", () => {
+  const items = [
+    fixture("era-denial"),
+    fixture("era-integrity"),
+    fixture("era-line-linkage"),
+    fixture("era-underpayment"),
+    fixture("era-unmatched"),
+    fixture("claim-rejected"),
+  ];
   const html = renderToStaticMarkup(
     <ClaimsWorklistBoard
-      items={[
-        fixture("era-denial"),
-        fixture("era-line-linkage"),
-        fixture("era-underpayment"),
-        fixture("era-unmatched"),
-        fixture("claim-rejected"),
-      ]}
+      items={items}
       onSelect={() => undefined}
     />,
   );
 
-  for (const label of ["ERA denials", "Line linkage", "Underpayments", "Unmatched ERAs", "Rejected claims"]) {
+  for (const label of ["ERA denials", "ERA integrity", "Line linkage", "Underpayments", "Unmatched ERAs", "Rejected claims"]) {
     assert.match(html, new RegExp(label));
   }
   assert.equal((html.match(/No items in this lane/g) ?? []).length, 0);
+  assert.deepEqual(groupWorklistItems(items)["era-underpayment"].map((item) => item.code), ["era-underpayment"]);
+  assert.deepEqual(groupWorklistItems(items)["era-integrity"].map((item) => item.code), ["era-integrity"]);
 });
 
 test("claim action posts to the shared worklist claim endpoint", async () => {
@@ -71,6 +76,7 @@ test("claim action refresh projects the resulting in-review status", async () =>
 test("matched disposition is offered only for era-unmatched", () => {
   assert.equal(dispositionsForLane("era-unmatched").includes("matched"), true);
   assert.equal(dispositionsForLane("era-denial").includes("matched"), false);
+  assert.equal(dispositionsForLane("era-integrity").includes("matched"), false);
   assert.equal(dispositionsForLane("era-line-linkage").includes("matched"), false);
   assert.equal(dispositionsForLane("era-underpayment").includes("matched"), false);
   assert.equal(dispositionsForLane("claim-rejected").includes("matched"), false);
