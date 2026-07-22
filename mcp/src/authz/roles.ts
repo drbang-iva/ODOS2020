@@ -209,6 +209,7 @@ const PATIENT_COMPARTMENT_CLINICAL_RESOURCES = [
   "Media",
   "Device",
   "DeviceRequest",
+  "MedicationAdministration",
   "MedicationStatement",
   "EpisodeOfCare",
   "CarePlan",

@@ -60,6 +60,18 @@ test("AccessPolicy generator emits Medplum interactions, criteria, and writeCons
   assert.equal(observationRule?.criteria, "Observation?_compartment=%patient_compartment");
   assert.equal(observationRule?.writeConstraint?.[0]?.language, "text/fhirpath");
   assert.match(observationRule?.writeConstraint?.[0]?.expression ?? "", /%before\.status != 'final'/);
+
+  const medicationAdministrationRule = policy.resource?.find(
+    (rule) => rule.resourceType === "MedicationAdministration",
+  );
+  assert.deepEqual(
+    medicationAdministrationRule?.interaction,
+    ["create", "read", "update", "search", "history", "vread"],
+  );
+  assert.equal(
+    medicationAdministrationRule?.criteria,
+    "MedicationAdministration?_compartment=%patient_compartment",
+  );
 });
 
 // --- v0.6c payments authorization model: front-desk dispensary grants (decision 2026-07-05 §2) ---
