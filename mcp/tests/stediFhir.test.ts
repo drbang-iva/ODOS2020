@@ -6,6 +6,7 @@ import {
   buildCoverageEligibilityResponseFromStedi,
   buildStediEligibilityJson,
   buildStediProfessionalClaimJson,
+  determineStediClaimResubmission,
   readStedi277,
 } from "../src/claims/stedi-fhir.js";
 import { buildProfessionalClaim, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
@@ -67,6 +68,75 @@ test("Stedi claim mapper emits the documented 837P JSON shape", () => {
   assert.equal(payload.claimInformation.serviceLines[0].providerControlNumber, "line-1");
   assert.equal(payload.claimInformation.serviceLines[0].professionalService.procedureCode, "PROC-A");
   assert.equal(payload.billing.employerId, "900000001");
+});
+
+test("pre-adjudication correction stays CFC 1 without a payer claim control number", () => {
+  assert.deepEqual(determineStediClaimResubmission({ intent: "correct" }), {
+    status: "ready",
+    claimFrequencyCode: "1",
+  });
+});
+
+test("pre-adjudication void stays manual because there is no payer claim to cancel", () => {
+  const result = determineStediClaimResubmission({ intent: "void" });
+  assert.equal(result.status, "manual");
+  assert.match(result.status === "manual" ? result.reason : "", /no payer claim control number|nothing to cancel/i);
+});
+
+test("adjudicated non-Medicare correction and void use CFC 7/8 with the PCCN", () => {
+  assert.deepEqual(determineStediClaimResubmission({
+    intent: "correct",
+    payerClaimControlNumber: "PCCN-900",
+    payerClassification: "confirmed-non-medicare",
+  }), {
+    status: "ready",
+    claimFrequencyCode: "7",
+    claimControlNumber: "PCCN-900",
+  });
+  assert.deepEqual(determineStediClaimResubmission({
+    intent: "void",
+    payerClaimControlNumber: "PCCN-900",
+    payerClassification: "confirmed-non-medicare",
+  }), {
+    status: "ready",
+    claimFrequencyCode: "8",
+    claimControlNumber: "PCCN-900",
+  });
+});
+
+test("adjudicated Medicare or unknown payer classification stays manual", () => {
+  for (const payerClassification of ["original-medicare", undefined] as const) {
+    const result = determineStediClaimResubmission({
+      intent: "correct",
+      payerClaimControlNumber: "PCCN-900",
+      payerClassification,
+    });
+    assert.equal(result.status, "manual");
+  }
+});
+
+test("default Stedi claim remains CFC 1 without supplemental claim information", () => {
+  const payload = buildStediProfessionalClaimJson(claimInput, buildProfessionalClaim(claimInput), "test");
+  assert.equal(payload.claimInformation.claimFrequencyCode, "1");
+  assert.equal("claimSupplementalInformation" in payload.claimInformation, false);
+});
+
+test("invalid Stedi claim frequency code fails before transport", async () => {
+  let fetchCalls = 0;
+  const adapter = createStediAdapter({
+    config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
+    fetchImpl: (async () => {
+      fetchCalls += 1;
+      return new Response("{}", { status: 200 });
+    }) as typeof fetch,
+  });
+  const invalid = { ...claimInput, claimFrequencyCode: "9" } as ProfessionalClaimInput;
+
+  await assert.rejects(async () => {
+    const payload = buildStediProfessionalClaimJson(invalid, buildProfessionalClaim(invalid), "test");
+    await adapter.submitProfessionalClaim({ payload, idempotencyKey: "INVALID-CFC" });
+  }, /claim frequency code must be 1, 7, or 8/);
+  assert.equal(fetchCalls, 0);
 });
 
 test("Stedi claim submission rejects an incomplete subscriber address before transport", async () => {

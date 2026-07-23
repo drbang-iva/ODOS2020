@@ -196,6 +196,8 @@ import {
   handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
   handleStedi277ImportRequest,
+  handleStediClaimResubmissionPreviewRequest,
+  handleStediClaimResubmissionRequest,
   handleSubmitClaimRequest,
 } from "./claims/claimmd-handlers.js";
 import {
@@ -6849,6 +6851,50 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "claim submission route failed" });
           }
+        }
+      });
+
+      app.post("/claims/resubmission/preview", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleStediClaimResubmissionPreviewRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /claims/resubmission/preview failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "claim resubmission preview route failed" });
+        }
+      });
+
+      app.post("/claims/resubmission", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleStediClaimResubmissionRequest(
+            {
+              authenticate: authenticateClaimsRoute,
+              adapter: claimMdAdapter,
+              adapters: clearinghouseAdapters,
+              routingDefaults: clearinghouseRouting,
+              recordAudit: async (row) => {
+                await auditRuntime.record(row, () => undefined);
+              },
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /claims/resubmission failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "claim resubmission route failed" });
         }
       });
 

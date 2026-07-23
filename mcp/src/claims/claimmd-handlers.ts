@@ -87,8 +87,13 @@ import {
   buildClaimResponseFromStediStatus,
   buildCoverageEligibilityResponseFromStedi,
   buildStediProfessionalClaimJson,
+  determineStediClaimResubmission,
   readStediEra,
   readStedi277,
+  stediClaimInputSnapshot,
+  withStediClaimInputSnapshot,
+  type StediClaimResubmissionIntent,
+  type StediPayerClassification,
   type Stedi277Claim,
   type StediEraClaim,
 } from "./stedi-fhir.js";
@@ -143,6 +148,9 @@ export async function handleSubmitClaimRequest(
   if ("status" in auth) return auth;
   const body = input.body as { claim?: ProfessionalClaimInput; clearinghouse?: unknown };
   if (!body.claim) return { status: 400, body: { error: "claim is required." } };
+  if (body.claim.claimFrequencyCode !== undefined || body.claim.claimControlNumber !== undefined) {
+    return { status: 400, body: { error: "Corrected and voided claims must use the Stedi resubmission endpoint." } };
+  }
   const selection = clearinghouseSelection(deps, body.clearinghouse, "transaction");
   if ("status" in selection) return selection;
 
@@ -161,8 +169,12 @@ export async function handleSubmitClaimRequest(
       body.claim.patientReference,
       body.claim.patientAccountNumber,
     );
-    const claim = buildProfessionalClaim({ ...body.claim, chargeItems: persistedChargeItems });
-    createdClaim = await auth.fhir.create(claim);
+    const claimInput = { ...body.claim, chargeItems: persistedChargeItems };
+    const claim = buildProfessionalClaim(claimInput);
+    const claimToCreate = selection.id === "stedi"
+      ? withStediClaimInputSnapshot(claim, body.claim)
+      : claim;
+    createdClaim = await auth.fhir.create(claimToCreate);
     const result = selection.id === "claimmd"
       ? await (selection.adapter as ClaimMdAdapter).submitProfessionalClaim({
         fileName: `${body.claim.patientAccountNumber}.json`,
@@ -221,6 +233,194 @@ export async function handleSubmitClaimRequest(
       // The failed Claim create may reflect a broader FHIR write outage; the failure response must still return.
     }
     return { status: 502, body: { error: `Claim submission failed: ${messageOf(error)}` } };
+  }
+}
+
+export async function handleStediClaimResubmissionPreviewRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const body = input.body as {
+    originalClaimReference?: unknown;
+    intent?: unknown;
+    payerClassification?: unknown;
+  };
+  const parsed = parseStediResubmissionRequest(body);
+  if ("status" in parsed) return parsed;
+  try {
+    const context = await stediResubmissionContext(auth, parsed);
+    await deps.recordAudit(buildOdosAuditEventRow({
+      eventType: "read",
+      actorReference: auth.staffReference,
+      actorRole: auth.actorRole,
+      patientReference: context.claim.patient.reference,
+      targetReference: parsed.originalClaimReference,
+      actionOutcome: "granted",
+      actionReason: "CLAIM_RESUBMISSION_PREVIEW",
+      eventTime: now(deps),
+    }));
+    return {
+      status: 200,
+      body: context.snapshot
+        ? { determination: context.determination, originalClaim: context.snapshot }
+        : {
+            determination: {
+              status: "manual",
+              reason: "This claim predates the ODOS Stedi submission snapshot and cannot be rebuilt safely. Handle it manually.",
+            },
+          },
+    };
+  } catch (error) {
+    return claimReadFailure(parsed.originalClaimReference, error);
+  }
+}
+
+export async function handleStediClaimResubmissionRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const body = input.body as {
+    originalClaimReference?: unknown;
+    intent?: unknown;
+    payerClassification?: unknown;
+    patientControlNumber?: unknown;
+    revisedClaim?: ProfessionalClaimInput;
+  };
+  const parsed = parseStediResubmissionRequest(body);
+  if ("status" in parsed) return parsed;
+  const patientControlNumber = trimmedValue(body.patientControlNumber);
+  if (!patientControlNumber) {
+    return { status: 400, body: { error: "patientControlNumber is required for the new claim." } };
+  }
+
+  const selection = clearinghouseSelection(deps, "stedi", "transaction");
+  if ("status" in selection) return selection;
+  let context: Awaited<ReturnType<typeof stediResubmissionContext>>;
+  try {
+    context = await stediResubmissionContext(auth, parsed);
+  } catch (error) {
+    return claimReadFailure(parsed.originalClaimReference, error);
+  }
+  let createdClaim: Claim | undefined;
+  let patientReference: string | undefined;
+  try {
+    if (!context.snapshot) {
+      return {
+        status: 409,
+        body: { error: "This claim predates the ODOS Stedi submission snapshot and must be handled manually." },
+      };
+    }
+    if (context.determination.status === "manual") {
+      return { status: 409, body: { error: context.determination.reason, determination: context.determination } };
+    }
+    if (patientControlNumber === context.snapshot.patientAccountNumber) {
+      return { status: 400, body: { error: "A resubmission requires a new patientControlNumber." } };
+    }
+    if (parsed.intent === "correct" && !body.revisedClaim) {
+      return { status: 400, body: { error: "revisedClaim is required for a correction." } };
+    }
+    const source = parsed.intent === "correct" ? body.revisedClaim! : context.snapshot;
+    patientReference = source.patientReference;
+    if (
+      source.patientReference !== context.claim.patient.reference
+      || source.coverageReference !== context.snapshot.coverageReference
+    ) {
+      return { status: 400, body: { error: "The revised claim must retain the original patient and Coverage." } };
+    }
+    const resubmissionInput: ProfessionalClaimInput = {
+      ...source,
+      created: today(deps),
+      patientAccountNumber: patientControlNumber,
+      claimFrequencyCode: context.determination.claimFrequencyCode,
+      ...(context.determination.claimControlNumber
+        ? { claimControlNumber: context.determination.claimControlNumber }
+        : { claimControlNumber: undefined }),
+    };
+    for (const [index, chargeItem] of resubmissionInput.chargeItems.entries()) {
+      try {
+        claimDiagnosisSequence(chargeItem, resubmissionInput.diagnoses.length);
+      } catch (error) {
+        throw new ClaimSubmissionValidationError(`ChargeItem ${index + 1}: ${messageOf(error)}`);
+      }
+    }
+    const persistedChargeItems = await persistClaimChargeItems(
+      auth,
+      resubmissionInput.chargeItems,
+      resubmissionInput.patientReference,
+      patientControlNumber,
+    );
+    const claim = buildProfessionalClaim({ ...resubmissionInput, chargeItems: persistedChargeItems });
+    claim.related = [{
+      claim: { reference: parsed.originalClaimReference },
+      relationship: { text: parsed.intent === "correct" ? "replacement" : "void" },
+    }];
+    const payload = buildStediProfessionalClaimJson(
+      resubmissionInput,
+      claim,
+      (selection.adapter as StediAdapter).mode,
+      (selection.adapter as StediAdapter).submitterId,
+    );
+    createdClaim = await auth.fhir.create(withStediClaimInputSnapshot(claim, resubmissionInput));
+    const result = await (selection.adapter as StediAdapter).submitProfessionalClaim({
+      idempotencyKey: patientControlNumber,
+      payload,
+    });
+    await audit(
+      deps,
+      auth,
+      "claim.submit.completed",
+      "success",
+      ref(createdClaim),
+      patientReference,
+      `resubmission intent=${parsed.intent} cfc=${context.determination.claimFrequencyCode} payerClassification=${parsed.payerClassification ?? "not-required"}`,
+      "stedi",
+    );
+    return {
+      status: 200,
+      body: {
+        claimId: createdClaim.id,
+        claimReference: ref(createdClaim),
+        originalClaimReference: parsed.originalClaimReference,
+        intent: parsed.intent,
+        claimFrequencyCode: context.determination.claimFrequencyCode,
+        ...(context.determination.claimControlNumber
+          ? { claimControlNumber: context.determination.claimControlNumber }
+          : {}),
+        clearinghouse: "stedi",
+        stediCorrelationId: result.claimReference?.correlationId,
+        stediTrackingNumber: result.claimReference?.customerClaimNumber,
+        status: "submitted",
+      },
+    };
+  } catch (error) {
+    if (error instanceof ClaimSubmissionValidationError) {
+      return { status: 400, body: { error: error.message } };
+    }
+    await audit(
+      deps,
+      auth,
+      "claim.submit.failed",
+      "failure",
+      createdClaim ? ref(createdClaim) : parsed.originalClaimReference,
+      patientReference,
+      clearinghouseFailureAuditReason("stedi", "submitProfessionalClaim", error),
+      "stedi",
+    );
+    try {
+      await createAndAuditClaimRejectedTask(deps, auth, {
+        claimReference: createdClaim ? ref(createdClaim) : parsed.originalClaimReference,
+        patientReference,
+        claimMdMessage: messageOf(error),
+        adapterName: "stedi",
+      });
+    } catch {
+      // The submission failure response must still return if the worklist write is unavailable.
+    }
+    return { status: 502, body: { error: `Claim resubmission failed: ${messageOf(error)}` } };
   }
 }
 
@@ -1876,6 +2076,77 @@ async function auditTaskWrite(
     actionReason,
     eventTime: now(deps),
   }));
+}
+
+function parseStediResubmissionRequest(body: {
+  originalClaimReference?: unknown;
+  intent?: unknown;
+  payerClassification?: unknown;
+}): {
+  originalClaimReference: string;
+  intent: StediClaimResubmissionIntent;
+  payerClassification?: StediPayerClassification;
+} | ClaimsHandlerResult {
+  const originalClaimReference = trimmedValue(body.originalClaimReference);
+  if (!originalClaimReference?.match(/^Claim\/[A-Za-z0-9.-]+$/)) {
+    return { status: 400, body: { error: "originalClaimReference must be Claim/<id>." } };
+  }
+  if (body.intent !== "correct" && body.intent !== "void") {
+    return { status: 400, body: { error: "intent must be correct or void." } };
+  }
+  if (
+    body.payerClassification !== undefined
+    && body.payerClassification !== "confirmed-non-medicare"
+    && body.payerClassification !== "original-medicare"
+  ) {
+    return {
+      status: 400,
+      body: { error: "payerClassification must be confirmed-non-medicare or original-medicare." },
+    };
+  }
+  return {
+    originalClaimReference,
+    intent: body.intent,
+    ...(body.payerClassification ? { payerClassification: body.payerClassification } : {}),
+  };
+}
+
+async function stediResubmissionContext(
+  auth: AuthenticatedClaimsStaff,
+  input: {
+    originalClaimReference: string;
+    intent: StediClaimResubmissionIntent;
+    payerClassification?: StediPayerClassification;
+  },
+): Promise<{
+  claim: Claim;
+  snapshot?: ProfessionalClaimInput;
+  determination: ReturnType<typeof determineStediClaimResubmission>;
+}> {
+  const claimId = input.originalClaimReference.slice("Claim/".length);
+  const claim = await auth.fhir.read<Claim>("Claim", claimId);
+  const responses = await searchAll<ClaimResponse>(auth.fhir, "ClaimResponse", {
+    request: input.originalClaimReference,
+    _count: "200",
+    _sort: "-created",
+  });
+  const payerClaimControlNumber = responses.find((response) =>
+    response.request?.reference === input.originalClaimReference && response.preAuthRef?.trim())?.preAuthRef?.trim();
+  return {
+    claim,
+    snapshot: stediClaimInputSnapshot(claim),
+    determination: determineStediClaimResubmission({
+      intent: input.intent,
+      payerClaimControlNumber,
+      payerClassification: input.payerClassification,
+    }),
+  };
+}
+
+function claimReadFailure(claimReference: string, error: unknown): ClaimsHandlerResult {
+  return claimMdHttpStatus(error) === "404"
+    ? { status: 404, body: { error: `${claimReference} was not found.` } }
+    : { status: 502, body: { error: `Claim resubmission preview failed: ${messageOf(error)}` } };
 }
 
 async function authenticateClaimsManager(

@@ -317,7 +317,7 @@ export function RouteSwitch({
     case "/billing/claims/remittances":
       return <RemittanceQueue />;
     case "/billing/claims/submit":
-      return <SubmitClaims initialEncounterId={new URLSearchParams(search).get("encounterId") ?? undefined} />;
+      return <SubmitClaims initialEncounterId={new URLSearchParams(search).get("encounterId") ?? undefined} initialSearch={search} />;
     case "/billing/claims/carrier-payments":
       return <CarrierPayments />;
     case "/billing/claims/patient-payments":

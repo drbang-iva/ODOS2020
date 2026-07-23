@@ -7,6 +7,7 @@ import {
   addDiagnosisLine,
   buildCoverageResource,
   buildProfessionalClaimInput,
+  claimDraftFromProfessionalClaimInput,
   claimPersonFromPatient,
   coverageIsSelf,
   coverageLabel,
@@ -15,10 +16,12 @@ import {
   initialClaimDraft,
   loadEncounterClaimDraft,
   mergeProviderDefaults,
+  previewStediClaimResubmission,
   removeChargeLine,
   removeDiagnosisLine,
   resolveSubscriberFromCoverage,
   submitProfessionalClaim,
+  submitStediClaimResubmission,
   subscriberFromCoverage,
   validateClaimDraft,
   type ChargeLine,
@@ -29,15 +32,25 @@ import {
   type DiagnosisLine,
   type ProfessionalClaimInput,
   type SubmitClaimResult,
+  type StediClaimResubmissionPreview,
+  type StediPayerClassification,
 } from "../../lib/submit-claims";
+import { resolveWorklistItem } from "../../lib/claims-worklist";
 import { PatientSearch } from "../PatientPicker";
 import { loadBillingIdentityConfigSingleton } from "../settings/BillingIdentitySettings";
 import type { BillingIdentityConfig } from "../settings/billing-identity-config";
 
 type Step = "compose" | "review" | "success";
 
-export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?: string }) {
+export function SubmitClaims({
+  initialEncounterId = "",
+  initialSearch = "",
+}: {
+  initialEncounterId?: string;
+  initialSearch?: string;
+}) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const resubmissionRoute = useMemo(() => parseResubmissionRoute(initialSearch), [initialSearch]);
   const [draft, setDraft] = useState<ClaimDraft>(() => initialClaimDraft(today));
   const [patient, setPatient] = useState<Patient>();
   const [choosingPatient, setChoosingPatient] = useState(true);
@@ -60,6 +73,11 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
   const [draftLoadStatus, setDraftLoadStatus] = useState<string>();
   const [billingIdentity, setBillingIdentity] = useState<BillingIdentityConfig>();
   const [billingIdentityError, setBillingIdentityError] = useState<string>();
+  const [resubmissionPreview, setResubmissionPreview] = useState<StediClaimResubmissionPreview>();
+  const [payerClassification, setPayerClassification] = useState<"" | StediPayerClassification>(
+    resubmissionRoute?.payerClassification ?? "",
+  );
+  const [successWarning, setSuccessWarning] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +97,46 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!resubmissionRoute) return;
+    let cancelled = false;
+    const api = claimApiOptions();
+    previewStediClaimResubmission({
+      originalClaimReference: resubmissionRoute.originalClaimReference,
+      intent: "correct",
+      ...(resubmissionRoute.payerClassification
+        ? { payerClassification: resubmissionRoute.payerClassification }
+        : {}),
+    }, api)
+      .then(async (preview) => {
+        if (cancelled) return;
+        setResubmissionPreview(preview);
+        if (!preview.originalClaim) return;
+        const nextDraft = claimDraftFromProfessionalClaimInput(preview.originalClaim, today);
+        nextDraft.patientAccountNumber = resubmissionRoute.patientControlNumber;
+        setDraft(nextDraft);
+        const patientId = preview.originalClaim.patientReference.match(/^Patient\/([^/]+)$/)?.[1];
+        const coverageId = preview.originalClaim.coverageReference.match(/^Coverage\/([^/]+)$/)?.[1];
+        if (patientId) {
+          const loadedPatient = await fhir.read<Patient>("Patient", patientId);
+          if (!cancelled) {
+            setPatient(loadedPatient);
+            setChoosingPatient(false);
+          }
+        }
+        if (coverageId) {
+          const loadedCoverage = await fhir.read<Coverage>("Coverage", coverageId);
+          if (!cancelled) setCoverages([loadedCoverage]);
+        }
+      })
+      .catch((cause) => {
+        if (!cancelled) setSubmissionError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resubmissionRoute?.originalClaimReference]);
 
   useEffect(() => {
     const patientId = patient?.id;
@@ -232,6 +290,9 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
 
   const openReview = () => {
     const nextErrors = validateClaimDraft(draft);
+    if (resubmissionRoute && resubmissionPreview?.determination.status !== "ready") {
+      nextErrors.unshift(resubmissionPreview?.determination.reason ?? "The Stedi correction path is not ready.");
+    }
     setErrors(nextErrors);
     if (nextErrors.length) return;
     setReviewClaim(buildProfessionalClaimInput(draft));
@@ -245,12 +306,28 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
     setSubmitting(true);
     setSubmissionError(undefined);
     try {
-      const submitted = await submitProfessionalClaim(reviewClaim, {
-        authorization: fhir.authHeader(),
-        baseUrl: claimApiBaseUrl(),
-      });
+      const api = claimApiOptions();
+      const submitted = resubmissionRoute
+        ? await submitStediClaimResubmission({
+            originalClaimReference: resubmissionRoute.originalClaimReference,
+            intent: "correct",
+            patientControlNumber: reviewClaim.patientAccountNumber,
+            revisedClaim: reviewClaim,
+            ...(payerClassification ? { payerClassification } : {}),
+          }, api)
+        : await submitProfessionalClaim(reviewClaim, api);
       setResult(submitted);
       setStep("success");
+      if (resubmissionRoute?.taskId && submitted.claimReference) {
+        try {
+          await resolveWorklistItem(resubmissionRoute.taskId, {
+            disposition: "rebilled",
+            claimReference: submitted.claimReference,
+          }, api);
+        } catch (cause) {
+          setSuccessWarning(`The correction was submitted, but the worklist item still needs resolution: ${cause instanceof Error ? cause.message : String(cause)}`);
+        }
+      }
     } catch (cause) {
       setSubmissionError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -283,7 +360,7 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
         <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">Claims management</p>
-            <h1 className="text-2xl font-semibold">Compose and submit claim</h1>
+            <h1 className="text-2xl font-semibold">{resubmissionRoute ? "Correct Stedi claim" : "Compose and submit claim"}</h1>
             <p className="mt-1 text-sm text-white/50">Single professional claim · configured clearinghouse</p>
           </div>
           <ol className="flex gap-2 text-xs font-bold uppercase tracking-wide text-white/40">
@@ -295,6 +372,25 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
 
         {step === "compose" && (
           <div className="space-y-5">
+            {resubmissionRoute && (
+              <StediCorrectionBanner
+                preview={resubmissionPreview}
+                payerClassification={payerClassification}
+                onPayerClassification={async (value) => {
+                  setPayerClassification(value);
+                  try {
+                    setResubmissionPreview(await previewStediClaimResubmission({
+                      originalClaimReference: resubmissionRoute.originalClaimReference,
+                      intent: "correct",
+                      ...(value ? { payerClassification: value } : {}),
+                    }, claimApiOptions()));
+                  } catch (cause) {
+                    setSubmissionError(cause instanceof Error ? cause.message : String(cause));
+                  }
+                }}
+              />
+            )}
+            {submissionError && <SubmissionAlert message={submissionError} />}
             <Section title="Encounter prefill" description="Load ranked diagnoses, billable charges, and primary Coverage from a signed encounter. Review and edit before submitting.">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="min-w-[18rem] flex-1"><Field label="Encounter ID" value={encounterId} placeholder="Encounter resource id" onChange={setEncounterId} /></div>
@@ -400,17 +496,23 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
         )}
 
         {step === "review" && reviewClaim && (
-          <ClaimReview
-            claim={reviewClaim}
-            error={submissionError}
-            submitting={submitting}
-            onEdit={() => setStep("compose")}
-            onSubmit={() => void submit()}
-          />
+          <div className="space-y-4">
+            {resubmissionRoute && <StediCorrectionBanner preview={resubmissionPreview} payerClassification={payerClassification} />}
+            <ClaimReview
+              claim={reviewClaim}
+              error={submissionError}
+              submitting={submitting}
+              onEdit={() => setStep("compose")}
+              onSubmit={() => void submit()}
+            />
+          </div>
         )}
 
         {step === "success" && result && (
-          <ClaimSubmissionResult result={result} onAnother={startAnother} />
+          <div className="space-y-4">
+            {successWarning && <SubmissionAlert message={successWarning} />}
+            <ClaimSubmissionResult result={result} onAnother={startAnother} />
+          </div>
         )}
       </div>
     </main>
@@ -419,6 +521,42 @@ export function SubmitClaims({ initialEncounterId = "" }: { initialEncounterId?:
 
 export function SubmissionAlert({ message }: { message: string }) {
   return <div role="alert" className="rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{message}</div>;
+}
+
+function StediCorrectionBanner({
+  preview,
+  payerClassification,
+  onPayerClassification,
+}: {
+  preview?: StediClaimResubmissionPreview;
+  payerClassification: "" | StediPayerClassification;
+  onPayerClassification?: (value: "" | StediPayerClassification) => void | Promise<void>;
+}) {
+  const determination = preview?.determination;
+  return (
+    <section className="rounded-lg border border-blue-400/30 bg-blue-950/20 p-4">
+      <h2 className="font-semibold text-blue-100">Stedi corrected claim</h2>
+      <p className="mt-1 text-xs text-[color:var(--odos-muted)]">ODOS uses a payer ClaimResponse PCCN to distinguish pre-adjudication from adjudication. Payer names are never used to infer Medicare.</p>
+      {onPayerClassification && (
+        <label className="mt-3 block max-w-md text-xs font-semibold text-[color:var(--odos-text)]">
+          Payer classification
+          <select value={payerClassification} onChange={(event) => void onPayerClassification(event.target.value as "" | StediPayerClassification)} className="mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-3 py-2 text-sm text-[color:var(--odos-text)]">
+            <option value="">Not confirmed</option>
+            <option value="confirmed-non-medicare">Confirmed not Original Medicare</option>
+            <option value="original-medicare">Original Medicare Part A/B</option>
+          </select>
+        </label>
+      )}
+      {!determination && <p className="mt-3 text-sm text-[color:var(--odos-muted)]">Checking CFC and PCCN…</p>}
+      {determination?.status === "manual" && <p className="mt-3 text-sm text-amber-300">Manual handling required: {determination.reason}</p>}
+      {determination?.status === "ready" && (
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+          <Detail label="Claim frequency code" value={determination.claimFrequencyCode} />
+          <Detail label="Payer claim control number" value={determination.claimControlNumber ?? "Not included"} />
+        </dl>
+      )}
+    </section>
+  );
 }
 
 export function CoverageChoices({
@@ -643,4 +781,28 @@ function validateCoverageEntry(entry: CoverageEntryInput): string[] {
 function claimApiBaseUrl(): string {
   const meta = import.meta as ImportMeta & { env?: { VITE_ODOS_MCP_BASE_URL?: string } };
   return meta.env?.VITE_ODOS_MCP_BASE_URL?.replace(/\/$/, "") ?? "";
+}
+
+function claimApiOptions() {
+  return { authorization: fhir.authHeader(), baseUrl: claimApiBaseUrl() };
+}
+
+function parseResubmissionRoute(search: string): {
+  originalClaimReference: string;
+  patientControlNumber: string;
+  taskId?: string;
+  payerClassification?: StediPayerClassification;
+} | undefined {
+  const params = new URLSearchParams(search);
+  const originalClaimReference = params.get("originalClaim") ?? "";
+  if (params.get("intent") !== "correct" || !/^Claim\/[A-Za-z0-9.-]+$/.test(originalClaimReference)) return undefined;
+  const payerClassification = params.get("payerClassification");
+  return {
+    originalClaimReference,
+    patientControlNumber: params.get("patientControlNumber") ?? "",
+    ...(params.get("task") ? { taskId: params.get("task")! } : {}),
+    ...(payerClassification === "confirmed-non-medicare" || payerClassification === "original-medicare"
+      ? { payerClassification }
+      : {}),
+  };
 }

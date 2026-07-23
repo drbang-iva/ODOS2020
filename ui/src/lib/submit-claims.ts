@@ -61,6 +61,8 @@ export interface ProfessionalClaimInput {
   diagnoses: ProfessionalClaimDiagnosisInput[];
   chargeItems: ProfessionalClaimChargeItemInput[];
   facilityReference?: string;
+  claimFrequencyCode?: "1" | "7" | "8";
+  claimControlNumber?: string;
 }
 
 export interface DiagnosisLine {
@@ -79,6 +81,7 @@ export interface ChargeLine {
   quantity: string;
   diagnosisSequence?: number[];
   laterality?: string;
+  modifierExtension?: ChargeItem["modifierExtension"];
 }
 
 export interface EncounterClaimDraft {
@@ -142,12 +145,33 @@ export interface ClaimsApiOptions {
 
 export interface SubmitClaimResult {
   claimId?: string;
+  claimReference?: string;
   clearinghouse?: "claimmd" | "stedi";
   claimMdClaimId?: string;
   claimMdTrackingNumber?: string;
   stediCorrelationId?: string;
   stediTrackingNumber?: string;
   status?: string;
+}
+
+export type StediClaimResubmissionIntent = "correct" | "void";
+export type StediPayerClassification = "confirmed-non-medicare" | "original-medicare";
+
+export type StediClaimResubmissionDetermination =
+  | { status: "ready"; claimFrequencyCode: "1" | "7" | "8"; claimControlNumber?: string }
+  | { status: "manual"; reason: string; payerClaimControlNumber?: string };
+
+export interface StediClaimResubmissionPreview {
+  determination: StediClaimResubmissionDetermination;
+  originalClaim?: ProfessionalClaimInput;
+}
+
+export interface StediClaimResubmissionInput {
+  originalClaimReference: string;
+  intent: StediClaimResubmissionIntent;
+  payerClassification?: StediPayerClassification;
+  patientControlNumber: string;
+  revisedClaim?: ProfessionalClaimInput;
 }
 
 export function emptyProvider(): ClaimMdProviderInput {
@@ -515,6 +539,46 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
         priceOverride: { value: feeCents / 100, currency: "USD" },
         ...(charge.diagnosisSequence ? { diagnosisSequence: charge.diagnosisSequence } : {}),
         ...(charge.laterality ? { laterality: charge.laterality } : {}),
+        ...(charge.modifierExtension ? { modifierExtension: charge.modifierExtension } : {}),
+      };
+    }),
+  };
+}
+
+export function claimDraftFromProfessionalClaimInput(
+  input: ProfessionalClaimInput,
+  created: string,
+): ClaimDraft {
+  return {
+    created,
+    serviceDate: input.serviceDate,
+    patientReference: input.patientReference,
+    providerReference: input.providerReference,
+    insurerReference: input.insurerReference,
+    coverageReference: input.coverageReference,
+    patientAccountNumber: "",
+    payerId: input.payerId,
+    billingProvider: structuredClone(input.billingProvider),
+    renderingProvider: structuredClone(input.renderingProvider),
+    subscriber: structuredClone(input.subscriber),
+    patient: structuredClone(input.patient),
+    diagnoses: input.diagnoses.map((diagnosis) => ({
+      system: diagnosis.system,
+      code: diagnosis.code,
+      description: diagnosis.display ?? "",
+    })),
+    charges: input.chargeItems.map((chargeItem) => {
+      const coding = chargeItem.code.coding?.[0];
+      return {
+        codeType: coding?.system === CPT_SYSTEM ? "CPT" : "HCPCS",
+        ...(coding?.system ? { codeSystem: coding.system } : {}),
+        code: coding?.code ?? "",
+        description: coding?.display ?? chargeItem.code.text ?? "",
+        feeDollars: Number(chargeItem.priceOverride?.value ?? 0).toFixed(2),
+        quantity: String(chargeItem.quantity?.value ?? 1),
+        ...(chargeItem.diagnosisSequence ? { diagnosisSequence: [...chargeItem.diagnosisSequence] } : {}),
+        ...(chargeItem.laterality ? { laterality: chargeItem.laterality } : {}),
+        ...(chargeItem.modifierExtension ? { modifierExtension: structuredClone(chargeItem.modifierExtension) } : {}),
       };
     }),
   };
@@ -562,6 +626,42 @@ export async function submitProfessionalClaim(
     throw new Error(body?.error ?? `Claim submission failed with HTTP ${response.status}.`);
   }
   if (!body) throw new Error("Claim submission response was not valid JSON.");
+  return body;
+}
+
+export async function previewStediClaimResubmission(
+  input: Omit<StediClaimResubmissionInput, "patientControlNumber" | "revisedClaim">,
+  options: ClaimsApiOptions = {},
+): Promise<StediClaimResubmissionPreview> {
+  return postClaimJson<StediClaimResubmissionPreview>("/claims/resubmission/preview", input, options);
+}
+
+export async function submitStediClaimResubmission(
+  input: StediClaimResubmissionInput,
+  options: ClaimsApiOptions = {},
+): Promise<SubmitClaimResult & {
+  originalClaimReference?: string;
+  intent?: StediClaimResubmissionIntent;
+  claimFrequencyCode?: "1" | "7" | "8";
+  claimControlNumber?: string;
+}> {
+  return postClaimJson("/claims/resubmission", input, options);
+}
+
+async function postClaimJson<T>(path: string, bodyValue: unknown, options: ClaimsApiOptions): Promise<T> {
+  const response = await (options.fetchImpl ?? fetch)(`${(options.baseUrl ?? "").replace(/\/$/, "")}${path}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(options.authorization ? { Authorization: options.authorization } : {}),
+    },
+    body: JSON.stringify(bodyValue),
+  });
+  const text = await response.text();
+  const body = parseJsonBody<T & { error?: string }>(text);
+  if (!response.ok) throw new Error(body?.error ?? `Claim resubmission failed with HTTP ${response.status}.`);
+  if (!body) throw new Error("Claim resubmission response was not valid JSON.");
   return body;
 }
 

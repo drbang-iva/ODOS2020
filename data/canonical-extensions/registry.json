@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-21",
+  "generatedAt": "2026-07-22",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/finding-source",
@@ -439,6 +439,12 @@
       "namespace": "claims",
       "status": "active",
       "sliceConsumer": "claim-invoice-seam-phase-a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-stedi-claim-input",
+      "namespace": "claims",
+      "status": "active",
+      "sliceConsumer": "stedi-correct-void"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-source-claim",

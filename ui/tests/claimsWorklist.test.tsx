@@ -82,17 +82,21 @@ test("matched disposition is offered only for era-unmatched", () => {
   assert.equal(dispositionsForLane("claim-rejected").includes("matched"), false);
 });
 
-test("rebilled resolution tells the biller to submit the correction before supplying its Claim reference", () => {
+test("rebilled resolution offers real corrected and voided Stedi claim actions", () => {
   const html = renderToStaticMarkup(
     <ClaimsWorklistPanel
       item={{ ...fixture("claim-rejected"), status: "in-review", action: "resolve", focusReference: "Claim/claim-1" }}
       onClose={() => undefined}
       onClaim={async () => undefined}
       onResolve={async () => undefined}
+      onVoid={async () => undefined}
     />,
   );
 
-  assert.match(html, /Submit the corrected claim first, then paste its reference\./);
+  assert.doesNotMatch(html, /Submit the corrected claim first/);
+  assert.match(html, /Correct claim/);
+  assert.match(html, /Void claim/);
+  assert.match(html, /Original Medicare/);
   assert.match(html, /Claim\/claim-1/);
 });
 

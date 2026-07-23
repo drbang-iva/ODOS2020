@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-stedi-claim-input",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-stedi-claim-input",
+  "version": "stedi-correct-void",
+  "name": "ODOSStediClaimInput",
+  "title": "ODOS Stedi Claim Input Snapshot",
+  "status": "active",
+  "date": "2026-07-22",
+  "publisher": "ODOS",
+  "description": "Recoverable local snapshot of the ProfessionalClaimInput used to build a Stedi professional Claim.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Claim"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Stedi professional claim input snapshot",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-stedi-claim-input"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      }
+    ]
+  }
+}

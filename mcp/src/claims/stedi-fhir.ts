@@ -25,6 +25,7 @@ export interface StediProfessionalClaimPayload {
     benefitsAssignmentCertificationIndicator: string;
     releaseInformationCode: string;
     signatureIndicator: string;
+    claimSupplementalInformation?: { claimControlNumber: string };
     healthCareCodeInformation: Array<{ diagnosisTypeCode: string; diagnosisCode: string }>;
     serviceLines: Array<{
       providerControlNumber: string;
@@ -42,6 +43,9 @@ export interface StediProfessionalClaimPayload {
     }>;
   };
 }
+
+export const ODOS_STEDI_CLAIM_INPUT_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-stedi-claim-input";
 
 export interface StediEraClaim {
   claimPaymentInfo: {
@@ -108,6 +112,73 @@ export interface StediEraClaimAnalysis {
   authoritativePatientResponsibilityCents?: number;
   derivedPatientResponsibilityCents: number;
   reviewReasons: string[];
+}
+
+export type StediClaimResubmissionIntent = "correct" | "void";
+export type StediPayerClassification = "confirmed-non-medicare" | "original-medicare";
+export type StediClaimResubmissionDetermination =
+  | {
+      status: "ready";
+      claimFrequencyCode: "1" | "7" | "8";
+      claimControlNumber?: string;
+    }
+  | {
+      status: "manual";
+      reason: string;
+      payerClaimControlNumber?: string;
+    };
+
+export function determineStediClaimResubmission(input: {
+  intent: StediClaimResubmissionIntent;
+  payerClaimControlNumber?: string;
+  payerClassification?: StediPayerClassification;
+}): StediClaimResubmissionDetermination {
+  const payerClaimControlNumber = input.payerClaimControlNumber?.trim();
+  if (!payerClaimControlNumber) {
+    if (input.intent === "void") {
+      return {
+        status: "manual",
+        reason: "A claim with no payer claim control number was never accepted into adjudication and cannot be voided through an 837P; there is nothing to cancel.",
+      };
+    }
+    return { status: "ready", claimFrequencyCode: "1" };
+  }
+  if (input.payerClassification !== "confirmed-non-medicare") {
+    return {
+      status: "manual",
+      reason: input.payerClassification === "original-medicare"
+        ? "Original Medicare adjudicated claims require payer-specific manual correction or reopening handling."
+        : "Confirm that the adjudicated payer is not Original Medicare before ODOS can build a replacement or void claim.",
+      payerClaimControlNumber,
+    };
+  }
+  return {
+    status: "ready",
+    claimFrequencyCode: input.intent === "correct" ? "7" : "8",
+    claimControlNumber: payerClaimControlNumber,
+  };
+}
+
+export function withStediClaimInputSnapshot(claim: Claim, input: ProfessionalClaimInput): Claim {
+  return {
+    ...claim,
+    extension: [
+      ...(claim.extension ?? []).filter((extension) => extension.url !== ODOS_STEDI_CLAIM_INPUT_EXTENSION_URL),
+      { url: ODOS_STEDI_CLAIM_INPUT_EXTENSION_URL, valueString: JSON.stringify(input) },
+    ],
+  };
+}
+
+export function stediClaimInputSnapshot(claim: Claim): ProfessionalClaimInput | undefined {
+  const snapshot = claim.extension?.find((extension) =>
+    extension.url === ODOS_STEDI_CLAIM_INPUT_EXTENSION_URL)?.valueString;
+  if (!snapshot) return undefined;
+  try {
+    const parsed = JSON.parse(snapshot) as ProfessionalClaimInput;
+    return parsed?.patientReference && Array.isArray(parsed.chargeItems) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export interface StediEraEnvelope {
@@ -372,6 +443,17 @@ export function buildStediProfessionalClaimJson(
   const billing = input.billingProvider;
   const rendering = input.renderingProvider;
   const total = decimal(claim.total?.value ?? 0);
+  const claimFrequencyCode = input.claimFrequencyCode ?? "1";
+  const claimControlNumber = input.claimControlNumber?.trim();
+  if (claimFrequencyCode !== "1" && claimFrequencyCode !== "7" && claimFrequencyCode !== "8") {
+    throw new ClaimSubmissionValidationError("Stedi claim frequency code must be 1, 7, or 8.");
+  }
+  if ((claimFrequencyCode === "7" || claimFrequencyCode === "8") && !claimControlNumber) {
+    throw new ClaimSubmissionValidationError("Stedi replacement and void claims require a payer claim control number.");
+  }
+  if (claimFrequencyCode === "1" && claimControlNumber) {
+    throw new ClaimSubmissionValidationError("Stedi original claims cannot include a payer claim control number.");
+  }
   if (!/^[A-Z0-9 .-]{1,17}$/i.test(input.patientAccountNumber) || /[~*:^]/.test(input.patientAccountNumber)) {
     throw new Error("Stedi patient account number must be 1-17 basic X12 characters without reserved delimiters.");
   }
@@ -414,12 +496,15 @@ export function buildStediProfessionalClaimJson(
       patientControlNumber: input.patientAccountNumber,
       claimChargeAmount: total,
       claimFilingCode: "CI",
-      claimFrequencyCode: "1",
+      claimFrequencyCode,
       placeOfServiceCode: "11",
       planParticipationCode: "A",
       benefitsAssignmentCertificationIndicator: "Y",
       releaseInformationCode: "Y",
       signatureIndicator: "Y",
+      ...(claimControlNumber ? {
+        claimSupplementalInformation: { claimControlNumber },
+      } : {}),
       healthCareCodeInformation: input.diagnoses.map((diagnosis, index) => ({
         diagnosisTypeCode: index === 0 ? "ABK" : "ABF",
         diagnosisCode: diagnosis.code.replace(".", ""),

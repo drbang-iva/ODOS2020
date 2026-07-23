@@ -15,6 +15,12 @@ import {
   type WorklistFilterStatus,
   type WorklistDisposition,
 } from "../../lib/claims-worklist";
+import {
+  previewStediClaimResubmission,
+  submitStediClaimResubmission,
+  type StediClaimResubmissionPreview,
+  type StediPayerClassification,
+} from "../../lib/submit-claims";
 
 const LANE_COLOR = {
   "era-denial": "#f87171",
@@ -117,6 +123,18 @@ export function ClaimsWorklist() {
           onClose={() => setSelectedId(undefined)}
           onClaim={() => runAction(() => claimWorklistItem(selected.id, api))}
           onResolve={(input) => runAction(() => resolveWorklistItem(selected.id, input, api))}
+          onVoid={(voidInput) => runAction(async () => {
+            if (!selected.focusReference?.startsWith("Claim/")) throw new Error("The work item is not linked to an original Claim.");
+            const submitted = await submitStediClaimResubmission({
+              originalClaimReference: selected.focusReference,
+              intent: "void",
+              patientControlNumber: voidInput.patientControlNumber,
+              ...(voidInput.payerClassification ? { payerClassification: voidInput.payerClassification } : {}),
+            }, api);
+            if (!submitted.claimReference) throw new Error("The void submission did not return its new Claim reference.");
+            await resolveWorklistItem(selected.id, { disposition: "rebilled", claimReference: submitted.claimReference }, api);
+          })}
+          resubmissionApi={api}
         />
       )}
     </main>
@@ -186,17 +204,50 @@ export function ClaimsWorklistPanel({
   onClose,
   onClaim,
   onResolve,
+  onVoid,
+  resubmissionApi = {},
 }: {
   item: ClaimsWorklistItem;
   onClose: () => void;
   onClaim: () => Promise<void>;
   onResolve: (input: ResolveWorklistInput) => Promise<void>;
+  onVoid: (input: { patientControlNumber: string; payerClassification?: StediPayerClassification }) => Promise<void>;
+  resubmissionApi?: ClaimsApiOptions;
 }) {
   const [disposition, setDisposition] = useState<WorklistDisposition>(dispositionsForLane(item.code)[0]);
   const [claimReference, setClaimReference] = useState(item.focusReference?.startsWith("Claim/") ? item.focusReference : "");
   const [patientReference, setPatientReference] = useState(item.patientReference ?? "");
   const [insurerReference, setInsurerReference] = useState("");
   const [busy, setBusy] = useState(false);
+  const [payerClassification, setPayerClassification] = useState<"" | StediPayerClassification>("");
+  const [newPatientControlNumber, setNewPatientControlNumber] = useState("");
+  const [correctionPreview, setCorrectionPreview] = useState<StediClaimResubmissionPreview>();
+  const [voidPreview, setVoidPreview] = useState<StediClaimResubmissionPreview>();
+  const [resubmissionError, setResubmissionError] = useState<string>();
+
+  useEffect(() => {
+    if (disposition !== "rebilled" || !item.focusReference?.startsWith("Claim/")) return;
+    let cancelled = false;
+    setResubmissionError(undefined);
+    const request = (intent: "correct" | "void") => previewStediClaimResubmission({
+      originalClaimReference: item.focusReference!,
+      intent,
+      ...(payerClassification ? { payerClassification } : {}),
+    }, resubmissionApi);
+    Promise.all([request("correct"), request("void")])
+      .then(([correction, voided]) => {
+        if (!cancelled) {
+          setCorrectionPreview(correction);
+          setVoidPreview(voided);
+        }
+      })
+      .catch((cause) => {
+        if (!cancelled) setResubmissionError(cause instanceof Error ? cause.message : String(cause));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [disposition, item.focusReference, payerClassification, resubmissionApi.authorization, resubmissionApi.baseUrl]);
 
   const act = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -245,11 +296,25 @@ export function ClaimsWorklistPanel({
                 {dispositionsForLane(item.code).map((value) => <option key={value} value={value}>{dispositionLabel(value)}</option>)}
               </select>
             </label>
-            {(disposition === "rebilled" || disposition === "matched") && (
+            {disposition === "matched" && (
               <ReferenceInput label="Claim reference" value={claimReference} onChange={setClaimReference} placeholder="Claim/123" />
             )}
             {disposition === "rebilled" && (
-              <p className="text-xs leading-relaxed text-white/45">Submit the corrected claim first, then paste its reference.</p>
+              <StediResubmissionActions
+                item={item}
+                payerClassification={payerClassification}
+                onPayerClassification={setPayerClassification}
+                patientControlNumber={newPatientControlNumber}
+                onPatientControlNumber={setNewPatientControlNumber}
+                correctionPreview={correctionPreview}
+                voidPreview={voidPreview}
+                error={resubmissionError}
+                busy={busy}
+                onVoid={() => act(() => onVoid({
+                  patientControlNumber: newPatientControlNumber.trim(),
+                  ...(payerClassification ? { payerClassification } : {}),
+                }))}
+              />
             )}
             {disposition === "matched" && (
               <>
@@ -257,13 +322,90 @@ export function ClaimsWorklistPanel({
                 <ReferenceInput label="Insurer reference" value={insurerReference} onChange={setInsurerReference} placeholder="Organization/123" />
               </>
             )}
-            <button type="button" disabled={busy} onClick={() => void resolve()} className="w-full rounded bg-emerald-700 px-3 py-2 font-bold text-white disabled:opacity-50">
-              Resolve item
-            </button>
+            {disposition !== "rebilled" && (
+              <button type="button" disabled={busy} onClick={() => void resolve()} className="w-full rounded bg-emerald-700 px-3 py-2 font-bold text-[color:var(--odos-text)] disabled:opacity-50">
+                Resolve item
+              </button>
+            )}
           </div>
         )}
       </div>
     </aside>
+  );
+}
+
+function StediResubmissionActions({
+  item,
+  payerClassification,
+  onPayerClassification,
+  patientControlNumber,
+  onPatientControlNumber,
+  correctionPreview,
+  voidPreview,
+  error,
+  busy,
+  onVoid,
+}: {
+  item: ClaimsWorklistItem;
+  payerClassification: "" | StediPayerClassification;
+  onPayerClassification: (value: "" | StediPayerClassification) => void;
+  patientControlNumber: string;
+  onPatientControlNumber: (value: string) => void;
+  correctionPreview?: StediClaimResubmissionPreview;
+  voidPreview?: StediClaimResubmissionPreview;
+  error?: string;
+  busy: boolean;
+  onVoid: () => void;
+}) {
+  const originalClaimReference = item.focusReference?.startsWith("Claim/") ? item.focusReference : undefined;
+  const correctionReady = correctionPreview?.determination.status === "ready";
+  const voidReady = voidPreview?.determination.status === "ready";
+  const query = originalClaimReference ? new URLSearchParams({
+    originalClaim: originalClaimReference,
+    intent: "correct",
+    task: item.id,
+    ...(payerClassification ? { payerClassification } : {}),
+  }).toString() : "";
+  return (
+    <div className="space-y-3 rounded border border-blue-400/20 bg-blue-950/15 p-3">
+      <div>
+        <h3 className="text-xs font-bold uppercase tracking-wide text-blue-200">Stedi correction or void</h3>
+        <p className="mt-1 text-xs leading-relaxed text-[color:var(--odos-muted)]">The payer classification must be explicit. ODOS never infers Medicare from a payer name.</p>
+      </div>
+      <DetailRow label="Original Claim" value={originalClaimReference ?? "Not linked"} />
+      <label className="block text-xs font-bold text-[color:var(--odos-text)]">
+        Payer classification
+        <select value={payerClassification} onChange={(event) => onPayerClassification(event.target.value as "" | StediPayerClassification)} className="mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-2 py-2 text-sm text-[color:var(--odos-text)]">
+          <option value="">Not confirmed</option>
+          <option value="confirmed-non-medicare">Confirmed not Original Medicare</option>
+          <option value="original-medicare">Original Medicare Part A/B</option>
+        </select>
+      </label>
+      <ReferenceInput label="New patient control number" value={patientControlNumber} onChange={onPatientControlNumber} placeholder="New unique PCN" />
+      {error && <p role="alert" className="text-xs text-red-300">{error}</p>}
+      <ResubmissionDetermination label="Correction" preview={correctionPreview} />
+      {correctionReady && originalClaimReference && patientControlNumber.trim() ? (
+        <a href={`/billing/claims/submit?${query}&patientControlNumber=${encodeURIComponent(patientControlNumber.trim())}`} className="block w-full rounded bg-blue-700 px-3 py-2 text-center font-bold text-[color:var(--odos-text)]">Correct claim</a>
+      ) : (
+        <button type="button" disabled className="w-full rounded bg-blue-700 px-3 py-2 font-bold text-[color:var(--odos-text)] opacity-50">Correct claim</button>
+      )}
+      <ResubmissionDetermination label="Void" preview={voidPreview} />
+      <button type="button" disabled={busy || !voidReady || !patientControlNumber.trim()} onClick={onVoid} className="w-full rounded bg-red-800 px-3 py-2 font-bold text-[color:var(--odos-text)] disabled:opacity-50">Void claim</button>
+    </div>
+  );
+}
+
+function ResubmissionDetermination({ label, preview }: { label: string; preview?: StediClaimResubmissionPreview }) {
+  const determination = preview?.determination;
+  if (!determination) return <p className="text-xs text-[color:var(--odos-muted)]">{label}: checking CFC and PCCN…</p>;
+  if (determination.status === "manual") {
+    return <p className="text-xs leading-relaxed text-amber-300">{label}: manual handling — {determination.reason}</p>;
+  }
+  return (
+    <div className="space-y-1">
+      <DetailRow label={`${label} CFC`} value={determination.claimFrequencyCode} />
+      <DetailRow label="PCCN" value={determination.claimControlNumber ?? "Not included"} />
+    </div>
   );
 }
 

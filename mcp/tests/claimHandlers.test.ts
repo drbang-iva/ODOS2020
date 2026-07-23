@@ -38,6 +38,8 @@ import {
   handleManualEobListRequest,
   handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
+  handleStediClaimResubmissionPreviewRequest,
+  handleStediClaimResubmissionRequest,
   handleSubmitClaimRequest,
   handleStedi277ImportRequest,
   handleClaimDraftRequest,
@@ -65,6 +67,7 @@ import {
   ODOS_SOURCE_CLAIM_EXTENSION_URL,
 } from "../src/claims/patient-responsibility-invoice.js";
 import { StediRequestError } from "../src/claims/stedi-adapter.js";
+import { withStediClaimInputSnapshot } from "../src/claims/stedi-fhir.js";
 import { handleGeneratePatientStatementRequest, type StatementRunResult } from "../src/statements/statements.js";
 
 const professionalClaim: ProfessionalClaimInput = {
@@ -303,6 +306,17 @@ test("submit claim creates the Claim, calls Claim.MD, and audits claim.submit.co
   assert.equal(audits[0].resourceType, "Claim");
 });
 
+test("ordinary claim submission cannot bypass the Stedi resubmission determination", async () => {
+  const fixture = deps();
+  const result = await handleSubmitClaimRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { claim: { ...professionalClaim, claimFrequencyCode: "7", claimControlNumber: "PCCN-900" } },
+  });
+  assert.equal(result.status, 400);
+  assert.match((result.body as { error: string }).error, /resubmission endpoint/);
+  assert.equal(fixture.created.Claim.length, 0);
+});
+
 test("client-supplied ChargeItem is re-read and must belong to the Claim patient", async () => {
   const matching = deps();
   const callerInput = structuredClone(professionalClaim);
@@ -472,7 +486,7 @@ test("claim draft maps a missing Encounter read to a client error", async () => 
 });
 
 test("Stedi selector submits through the parallel adapter and attributes the existing audit event", async () => {
-  const { audits, deps: d } = deps();
+  const { audits, created, deps: d } = deps();
   let submitted: unknown;
   d.adapters = {
     stedi: {
@@ -498,6 +512,181 @@ test("Stedi selector submits through the parallel adapter and attributes the exi
   assert.equal((result.body as any).stediCorrelationId, "stedi-1");
   assert.equal((submitted as any).payload.usageIndicator, "T");
   assert.match(audits[0].actionReason ?? "", /adapter=stedi/);
+  assert.ok(created.Claim[0].extension?.some((extension) =>
+    extension.url.endsWith("/odos-stedi-claim-input") && extension.valueString?.includes("ODOS-CLAIM-900")));
+});
+
+test("pre-adjudication correction previews and submits CFC 1 without a PCCN", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  let submitted: any;
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter((request) => { submitted = request; }) };
+
+  const preview = await handleStediClaimResubmissionPreviewRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { originalClaimReference: "Claim/claim-original", intent: "correct" },
+  });
+  const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/claim-original",
+      intent: "correct",
+      patientControlNumber: "ODOS-CORRECT-901",
+      revisedClaim: professionalClaim,
+    },
+  });
+
+  assert.equal(preview.status, 200);
+  assert.deepEqual((preview.body as any).determination, { status: "ready", claimFrequencyCode: "1" });
+  assert.equal(result.status, 200);
+  assert.equal(submitted.payload.claimInformation.claimFrequencyCode, "1");
+  assert.equal("claimSupplementalInformation" in submitted.payload.claimInformation, false);
+  assert.equal(submitted.payload.claimInformation.patientControlNumber, "ODOS-CORRECT-901");
+  assert.equal(fixture.created.Claim.at(-1)?.related?.[0]?.claim.reference, "Claim/claim-original");
+});
+
+test("pre-adjudication void returns manual handling without building or submitting a claim", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  let transportCalls = 0;
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => { transportCalls += 1; }) };
+
+  const preview = await handleStediClaimResubmissionPreviewRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { originalClaimReference: "Claim/claim-original", intent: "void" },
+  });
+  const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/claim-original",
+      intent: "void",
+      patientControlNumber: "ODOS-VOID-901",
+    },
+  });
+
+  assert.equal((preview.body as any).determination.status, "manual");
+  assert.equal(result.status, 409);
+  assert.match((result.body as { error: string }).error, /nothing to cancel/i);
+  assert.equal(fixture.created.Claim.length, 1);
+  assert.equal(transportCalls, 0);
+});
+
+test("adjudicated non-Medicare correction and void submit CFC 7/8 with the PCCN", async () => {
+  for (const intent of ["correct", "void"] as const) {
+    const fixture = deps();
+    fixture.created.Claim.push({
+      ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+      id: "claim-original",
+    });
+    fixture.created.ClaimResponse.push({
+      resourceType: "ClaimResponse",
+      id: "response-1",
+      status: "active",
+      type: {},
+      use: "claim",
+      patient: { reference: professionalClaim.patientReference },
+      created: "2026-07-09",
+      insurer: { reference: professionalClaim.insurerReference },
+      outcome: "complete",
+      request: { reference: "Claim/claim-original" },
+      preAuthRef: "PCCN-900",
+    });
+    let submitted: any;
+    fixture.deps.adapters = { stedi: stediSubmissionAdapter((request) => { submitted = request; }) };
+
+    const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: {
+        originalClaimReference: "Claim/claim-original",
+        intent,
+        payerClassification: "confirmed-non-medicare",
+        patientControlNumber: intent === "correct" ? "ODOS-CORRECT-902" : "ODOS-VOID-902",
+        ...(intent === "correct" ? { revisedClaim: professionalClaim } : {}),
+      },
+    });
+
+    assert.equal(result.status, 200);
+    assert.equal(submitted.payload.claimInformation.claimFrequencyCode, intent === "correct" ? "7" : "8");
+    assert.equal(submitted.payload.claimInformation.claimSupplementalInformation.claimControlNumber, "PCCN-900");
+    assert.match(fixture.audits.at(-1)?.actionReason ?? "", /payerClassification=confirmed-non-medicare/);
+  }
+});
+
+test("adjudicated Medicare or unknown classification returns manual handling without building a claim", async () => {
+  for (const payerClassification of ["original-medicare", undefined] as const) {
+    const fixture = deps();
+    fixture.created.Claim.push({
+      ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+      id: "claim-original",
+    });
+    fixture.created.ClaimResponse.push({
+      resourceType: "ClaimResponse",
+      id: "response-1",
+      status: "active",
+      type: {},
+      use: "claim",
+      patient: { reference: professionalClaim.patientReference },
+      created: "2026-07-09",
+      insurer: { reference: professionalClaim.insurerReference },
+      outcome: "complete",
+      request: { reference: "Claim/claim-original" },
+      preAuthRef: "PCCN-900",
+    });
+    let transportCalls = 0;
+    fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => { transportCalls += 1; }) };
+
+    const preview = await handleStediClaimResubmissionPreviewRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: {
+        originalClaimReference: "Claim/claim-original",
+        intent: "correct",
+        ...(payerClassification ? { payerClassification } : {}),
+      },
+    });
+    const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: {
+        originalClaimReference: "Claim/claim-original",
+        intent: "correct",
+        ...(payerClassification ? { payerClassification } : {}),
+        patientControlNumber: "ODOS-CORRECT-903",
+        revisedClaim: professionalClaim,
+      },
+    });
+
+    assert.equal((preview.body as any).determination.status, "manual");
+    assert.equal(result.status, 409);
+    assert.equal(fixture.created.Claim.length, 1);
+    assert.equal(transportCalls, 0);
+  }
+});
+
+test("missing original claim returns 404 without a rejected Task or submit-failed audit", async () => {
+  const fixture = deps();
+  let transportCalls = 0;
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => { transportCalls += 1; }) };
+
+  const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/missing-original",
+      intent: "correct",
+      patientControlNumber: "ODOS-CORRECT-904",
+      revisedClaim: professionalClaim,
+    },
+  });
+
+  assert.equal(result.status, 404);
+  assert.equal(fixture.created.Claim.length, 0);
+  assert.equal(fixture.created.Task.length, 0);
+  assert.equal(fixture.audits.some((entry) => entry.eventType === "claim.submit.failed"), false);
+  assert.equal(transportCalls, 0);
 });
 
 test("Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit", async () => {
@@ -2312,6 +2501,22 @@ function stediEraAdapter(raw: unknown): any {
     checkClaimStatus: async () => ({}),
     listEras: async () => ({}),
     retrieveEraData: async () => raw,
+  };
+}
+
+function stediSubmissionAdapter(onSubmit: (request: any) => void): any {
+  return {
+    id: "stedi",
+    mode: "test",
+    submitterId: "SUBMITTER900",
+    submitProfessionalClaim: async (request: any) => {
+      onSubmit(request);
+      return { claimReference: { correlationId: "stedi-resubmission", customerClaimNumber: "tracking-resubmission" } };
+    },
+    checkEligibility: async () => ({}),
+    checkClaimStatus: async () => ({}),
+    listEras: async () => ({}),
+    retrieveEraData: async () => ({}),
   };
 }
 
