@@ -88,6 +88,8 @@ import {
   buildCoverageEligibilityResponseFromStedi,
   buildStediProfessionalClaimJson,
   readStediEra,
+  readStedi277,
+  type Stedi277Claim,
   type StediEraClaim,
 } from "./stedi-fhir.js";
 import {
@@ -109,6 +111,8 @@ import {
 
 const CLAIM_CHARGE_ITEM_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/claim-charge-item";
 const ERA_DISCREPANCY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/era-worklist-discrepancy";
+const CLAIM_PCN_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-claim-pcn";
+export const STEDI_277CA_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/stedi-277ca";
 
 export interface AuthenticatedClaimsStaff {
   staffReference: string;
@@ -500,6 +504,128 @@ export async function handleEraImportRequest(
       "claimmd",
     );
     return { status: 502, body: { error: `ERA import failed: ${messageOf(error)}` } };
+  }
+}
+
+export async function handleStedi277ImportRequest(
+  deps: ClaimsHandlerDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<ClaimsHandlerResult> {
+  const auth = await authenticateClaimsManager(deps, input.authHeader);
+  if ("status" in auth) return auth;
+  const body = input.body as { clearinghouse?: unknown; pageToken?: unknown; startDateTime?: unknown };
+  const selection = clearinghouseSelection(deps, body.clearinghouse, "transaction");
+  if ("status" in selection) return selection;
+  if (!selection.adapter.list277s || !selection.adapter.retrieve277Data) {
+    return {
+      status: 501,
+      body: { error: `${selection.id === "claimmd" ? "Claim.MD" : "The selected clearinghouse"} does not support 277CA retrieval.` },
+    };
+  }
+
+  try {
+    const rawList = await selection.adapter.list277s({
+      ...(stringValue(body.pageToken) ? { pageToken: stringValue(body.pageToken) } : {}),
+      ...(stringValue(body.startDateTime) ? { startDateTime: stringValue(body.startDateTime) } : {}),
+    });
+    const transactionIds = stedi277TransactionIds(rawList);
+    const nextPageToken = stedi277NextPageToken(rawList);
+    const claimsByPcn = new Map<string, Claim[]>();
+    const acknowledgments: Array<{
+      transactionId: string;
+      status: "processed" | "review";
+      claims: Array<{
+        patientControlNumber: string;
+        outcome: Stedi277Claim["outcome"];
+        claimReference?: string;
+        taskId?: string;
+        reasons: string[];
+      }>;
+      issues?: string[];
+    }> = [];
+
+    for (const transactionId of transactionIds) {
+      try {
+        const report = readStedi277(await selection.adapter.retrieve277Data(transactionId), transactionId);
+        const claimResults: (typeof acknowledgments)[number]["claims"] = [];
+        let requiresReview = report.issues.length > 0;
+        if (report.issues.length > 0) {
+          await createAndAuditClaimRejectedTask(deps, auth, {
+            claimMdMessage: `Stedi 277CA ${report.transactionId} requires review: ${report.issues.join(" ")}`,
+            adapterName: "stedi",
+            identifier: stedi277TaskIdentifier(report.transactionId, "report"),
+          });
+        }
+        for (const claimAcknowledgment of report.claims) {
+          const claimKey = claimAcknowledgment.patientControlNumber.toLowerCase();
+          let matchingClaims = claimsByPcn.get(claimKey);
+          if (!matchingClaims) {
+            matchingClaims = await localClaimsForPcn(auth, claimAcknowledgment.patientControlNumber);
+            claimsByPcn.set(claimKey, matchingClaims);
+          }
+          const localClaim = matchingClaims.length === 1 ? matchingClaims[0] : undefined;
+          const claimReference = localClaim?.id ? `Claim/${localClaim.id}` : undefined;
+          const correlationIssue = matchingClaims.length > 1
+            ? `Multiple local Claims match patient control number ${claimAcknowledgment.patientControlNumber}.`
+            : matchingClaims.length === 0
+              ? `No local Claim matches patient control number ${claimAcknowledgment.patientControlNumber}.`
+              : undefined;
+          const shouldCreateTask = claimAcknowledgment.outcome === "rejected"
+            || claimAcknowledgment.outcome === "review"
+            || Boolean(correlationIssue);
+          requiresReview ||= claimAcknowledgment.outcome === "review" || Boolean(correlationIssue);
+          let taskId: string | undefined;
+          if (shouldCreateTask) {
+            const task = await createAndAuditClaimRejectedTask(deps, auth, {
+              claimReference,
+              patientReference: localClaim?.patient.reference,
+              claimMdMessage: stedi277TaskMessage(claimAcknowledgment, correlationIssue),
+              adapterName: "stedi",
+              identifier: stedi277TaskIdentifier(
+                report.transactionId,
+                claimAcknowledgment.patientControlNumber.toLowerCase(),
+              ),
+            });
+            taskId = requiredId(task);
+          }
+          claimResults.push({
+            patientControlNumber: claimAcknowledgment.patientControlNumber,
+            outcome: claimAcknowledgment.outcome,
+            ...(claimReference ? { claimReference } : {}),
+            ...(taskId ? { taskId } : {}),
+            reasons: claimAcknowledgment.reasons,
+          });
+        }
+        acknowledgments.push({
+          transactionId: report.transactionId,
+          status: requiresReview ? "review" : "processed",
+          claims: claimResults,
+          ...(report.issues.length ? { issues: report.issues } : {}),
+        });
+      } catch (error) {
+        try {
+          await createAndAuditClaimRejectedTask(deps, auth, {
+            claimMdMessage: `Stedi 277CA ${transactionId} is malformed or could not be retrieved and requires review: ${messageOf(error)}`,
+            adapterName: "stedi",
+            identifier: stedi277TaskIdentifier(transactionId, "report"),
+          });
+        } catch (taskError) {
+          console.error(`odos-mcp: Stedi 277CA ${transactionId} failure-path worklist/audit write failed:`, taskError);
+        }
+        acknowledgments.push({
+          transactionId,
+          status: "review",
+          claims: [],
+          issues: [messageOf(error)],
+        });
+      }
+    }
+    return {
+      status: 200,
+      body: { acknowledgments, ...(nextPageToken ? { nextPageToken } : {}) },
+    };
+  } catch (error) {
+    return { status: 502, body: { error: `277CA polling failed: ${messageOf(error)}` } };
   }
 }
 
@@ -1048,9 +1174,17 @@ async function createAndAuditClaimRejectedTask(
     patientReference?: string;
     claimMdMessage: string;
     adapterName?: "claimmd" | "stedi";
+    identifier?: { system: string; value: string };
   },
 ): Promise<Task> {
-  if (input.claimReference) {
+  if (input.identifier) {
+    const existing = await auth.fhir.search<Task>("Task", {
+      identifier: `${input.identifier.system}|${input.identifier.value}`,
+      _count: "1",
+    });
+    const found = (existing.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])[0];
+    if (found) return found;
+  } else if (input.claimReference) {
     const existing = await auth.fhir.search<Task>("Task", {
       code: `${CLAIM_REJECTED_CODE_SYSTEM}|claim-rejected`,
       focus: input.claimReference,
@@ -1065,12 +1199,63 @@ async function createAndAuditClaimRejectedTask(
       );
     if (open) return open;
   }
-  const task = await auth.fhir.create(buildClaimRejectedWorklistTask({
-    ...input,
-    authoredOn: now(deps),
-  }));
+  const task = await auth.fhir.create(
+    buildClaimRejectedWorklistTask({ ...input, authoredOn: now(deps) }),
+    input.identifier
+      ? { "If-None-Exist": `identifier=${input.identifier.system}|${input.identifier.value}` }
+      : undefined,
+  );
   await audit(deps, auth, "claim.rejected.flagged", "success", ref(task), input.patientReference, undefined, input.adapterName ?? "claimmd");
   return task;
+}
+
+function stedi277TransactionIds(raw: unknown): string[] {
+  if (typeof raw !== "object" || raw === null || !Array.isArray((raw as { items?: unknown }).items)) {
+    throw new Error("Stedi 277CA polling response is malformed.");
+  }
+  return (raw as { items: unknown[] }).items.flatMap((item) => {
+    if (typeof item !== "object" || item === null) return [];
+    const row = item as { transactionId?: unknown; direction?: unknown; x12?: any };
+    return row.direction === "INBOUND"
+      && row.x12?.metadata?.transaction?.transactionSetIdentifier === "277"
+      && typeof row.transactionId === "string"
+      ? [row.transactionId]
+      : [];
+  });
+}
+
+function stedi277NextPageToken(raw: unknown): string | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  return stringValue((raw as { nextPageToken?: unknown }).nextPageToken);
+}
+
+async function localClaimsForPcn(
+  auth: AuthenticatedClaimsStaff,
+  patientControlNumber: string,
+): Promise<Claim[]> {
+  return searchAll<Claim>(auth.fhir, "Claim", {
+    identifier: `${CLAIM_PCN_IDENTIFIER_SYSTEM}|${patientControlNumber}`,
+    _count: "2",
+  }, { maxRows: 100 });
+}
+
+function stedi277TaskIdentifier(transactionId: string, claimKey: string): { system: string; value: string } {
+  return { system: STEDI_277CA_IDENTIFIER_SYSTEM, value: `${transactionId}:${claimKey}` };
+}
+
+function stedi277TaskMessage(claim: Stedi277Claim, correlationIssue?: string): string {
+  const statusCodes = claim.statuses.map((status) =>
+    [status.categoryCode, status.statusCode].filter(Boolean).join("/")).filter(Boolean).join(", ");
+  const sender = [claim.sender.organizationName, claim.sender.entityType].filter(Boolean).join(" — ");
+  const outcome = claim.outcome === "review"
+    ? `status ${statusCodes || "missing"} requires review`
+    : `${claim.outcome}${statusCodes ? ` (${statusCodes})` : ""}`;
+  const reasons = claim.reasons.length ? claim.reasons.join("; ") : "No rejection reason message was supplied.";
+  return [
+    `Stedi 277CA from ${sender || "unknown sender"}: ${outcome}.`,
+    reasons,
+    correlationIssue,
+  ].filter(Boolean).join(" ");
 }
 
 export async function handleClaimEraWorklistTaskRequest(

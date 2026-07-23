@@ -39,6 +39,7 @@ import {
   handlePostManualEobClaimRequest,
   handleResolveEraWorklistTaskRequest,
   handleSubmitClaimRequest,
+  handleStedi277ImportRequest,
   handleClaimDraftRequest,
   type ClaimsHandlerDeps,
 } from "../src/claims/claimmd-handlers.js";
@@ -1453,6 +1454,174 @@ test("Stedi ERA routing projects inbound 835 polling rows into the shared remitt
   });
 });
 
+test("a rejecting 277CA creates a visible worklist Task naming the rejection reason", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-rejected": stedi277HandlerReport("ack-rejected", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "A7", "Invalid procedure code BADCODE."),
+    ]),
+  }) };
+
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi", startDateTime: "2026-07-22T00:00:00.000Z" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as { nextPageToken?: string }).nextPageToken, "stedi-next-page");
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(fixture.created.Task[0].focus?.reference, "Claim/claim-1");
+  assert.match(taskInput(fixture.created.Task[0], "claimmd-message")?.valueString ?? "", /BADCODE/);
+  assert.equal(fixture.created.ClaimResponse.length, 0);
+});
+
+test("one 277CA referencing three claims produces accepted, rejected, and informational outcomes", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push(
+    { ...buildProfessionalClaim({ ...professionalClaim, patientAccountNumber: "PCN-A" }), id: "claim-a" },
+    { ...buildProfessionalClaim({ ...professionalClaim, patientAccountNumber: "PCN-B" }), id: "claim-b" },
+    { ...buildProfessionalClaim({ ...professionalClaim, patientAccountNumber: "PCN-C" }), id: "claim-c" },
+  );
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-three": stedi277HandlerReport("ack-three", [
+      stedi277HandlerClaim("PCN-A", "A2", "Accepted for processing."),
+      stedi277HandlerClaim("PCN-B", "A3", "Returned as unprocessable."),
+      stedi277HandlerClaim("PCN-C", "A1", "Received and forwarded."),
+    ]),
+  }) };
+
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi" },
+  });
+
+  assert.deepEqual((result.body as any).acknowledgments[0].claims.map((claim: any) => claim.outcome), [
+    "accepted-for-processing", "rejected", "informational",
+  ]);
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(fixture.created.Task[0].focus?.reference, "Claim/claim-b");
+});
+
+test("reprocessing the same 277CA creates no duplicate Task or ClaimResponse", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-retry": stedi277HandlerReport("ack-retry", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "A6", "Missing subscriber information."),
+    ]),
+  }) };
+
+  await handleStedi277ImportRequest(fixture.deps, { authHeader: "Bearer good", body: { clearinghouse: "stedi" } });
+  await handleStedi277ImportRequest(fixture.deps, { authHeader: "Bearer good", body: { clearinghouse: "stedi" } });
+
+  assert.equal(fixture.created.Task.length, 1);
+  assert.equal(fixture.created.ClaimResponse.length, 0);
+  assert.equal(
+    fixture.createHeaders.filter((write) => write.resourceType === "Task").every((write) =>
+      write.headers?.["If-None-Exist"]?.includes("stedi-277ca")),
+    true,
+  );
+});
+
+test("an unmappable 277CA category is surfaced for review and never accepted", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-unknown": stedi277HandlerReport("ack-unknown", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "ZZ", "Non-compliant category."),
+    ]),
+  }) };
+
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi" },
+  });
+
+  assert.equal((result.body as any).acknowledgments[0].status, "review");
+  assert.equal((result.body as any).acknowledgments[0].claims[0].outcome, "review");
+  assert.equal(fixture.created.Task.length, 1);
+  assert.match(taskInput(fixture.created.Task[0], "claimmd-message")?.valueString ?? "", /ZZ.*requires review/i);
+});
+
+test("one malformed 277CA is flagged without preventing the rest of the batch", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-malformed": { meta: { transactionId: "ack-malformed" }, transactions: "not-an-array" },
+    "ack-good": stedi277HandlerReport("ack-good", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "A7", "Invalid procedure code BADCODE."),
+    ]),
+  }) };
+
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual((result.body as any).acknowledgments.map((ack: any) => ack.status), ["review", "processed"]);
+  assert.equal(fixture.created.Task.length, 2);
+  assert.match(taskInput(fixture.created.Task[0], "claimmd-message")?.valueString ?? "", /malformed/i);
+  assert.match(taskInput(fixture.created.Task[1], "claimmd-message")?.valueString ?? "", /BADCODE/);
+});
+
+test("a failure-path audit error is logged without aborting the 277CA batch", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.recordAudit = async () => {
+    throw new Error("synthetic audit outage");
+  };
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-malformed-audit": { meta: { transactionId: "ack-malformed-audit" }, transactions: "not-an-array" },
+    "ack-good-after-audit": stedi277HandlerReport("ack-good-after-audit", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "A2", "Accepted for processing."),
+    ]),
+  }) };
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    logged.push(args);
+  };
+
+  try {
+    const result = await handleStedi277ImportRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: { clearinghouse: "stedi" },
+    });
+
+    assert.equal(result.status, 200);
+    assert.deepEqual((result.body as any).acknowledgments.map((ack: any) => ack.status), ["review", "processed"]);
+    assert.match(logged.flat().join(" "), /ack-malformed-audit.*audit outage/i);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test("277CA import returns a clear unsupported response for Claim.MD", async () => {
+  const fixture = deps();
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "claimmd" },
+  });
+  assert.equal(result.status, 501);
+  assert.match((result.body as { error: string }).error, /not support 277CA/i);
+});
+
+test("an empty 277CA poll advances the cursor without scanning the local Claim population", async () => {
+  const fixture = deps();
+  fixture.deps.adapters = { stedi: stedi277Adapter({}) };
+
+  const result = await handleStedi277ImportRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { clearinghouse: "stedi" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal((result.body as { nextPageToken?: string }).nextPageToken, "stedi-next-page");
+  assert.equal(fixture.searchCalls(), 0);
+});
+
 test("ERA matched zero-pay claim creates a denial Task with verbatim adjustment pairs and audit", async () => {
   const { audits, created, deps: d } = deps();
   created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
@@ -2146,6 +2315,62 @@ function stediEraAdapter(raw: unknown): any {
   };
 }
 
+function stedi277Adapter(reports: Record<string, unknown>): any {
+  return {
+    id: "stedi",
+    submitProfessionalClaim: async () => ({}),
+    checkEligibility: async () => ({}),
+    checkClaimStatus: async () => ({}),
+    listEras: async () => ({}),
+    retrieveEraData: async () => ({}),
+    list277s: async () => ({
+      items: Object.keys(reports).map((transactionId) => ({
+        transactionId,
+        direction: "INBOUND",
+        x12: { metadata: { transaction: { transactionSetIdentifier: "277" } } },
+      })),
+      nextPageToken: "stedi-next-page",
+    }),
+    retrieve277Data: async (transactionId: string) => reports[transactionId],
+  };
+}
+
+function stedi277HandlerReport(transactionId: string, claims: unknown[]): Record<string, unknown> {
+  return {
+    meta: { transactionId, traceId: `TRACE-${transactionId}` },
+    transactions: [{
+      controlNumber: `CONTROL-${transactionId}`,
+      payers: [{
+        organizationName: "SYNTHETIC PAYER",
+        entityIdentifierCodeValue: "Payer",
+        payerIdentification: "PAYER900",
+        claimStatusTransactions: [{
+          claimTransactionBatchNumber: `BATCH-${transactionId}`,
+          claimStatusDetails: [{ patientClaimStatusDetails: [{ claims }] }],
+        }],
+      }],
+    }],
+  };
+}
+
+function stedi277HandlerClaim(patientControlNumber: string, categoryCode: string, reason: string): Record<string, unknown> {
+  return {
+    claimStatus: {
+      referencedTransactionTraceNumber: patientControlNumber,
+      informationClaimStatuses: [{
+        statusMessage: reason,
+        informationStatuses: [{
+          healthCareClaimStatusCategoryCode: categoryCode,
+          healthCareClaimStatusCategoryCodeValue: `Category ${categoryCode}`,
+          statusCode: "21",
+          statusCodeValue: reason,
+          entityIdentifierCodeValue: "Payer",
+        }],
+      }],
+    },
+  };
+}
+
 function stediEraReport(input: {
   transactionId: string;
   claimStatusCode?: string;
@@ -2278,6 +2503,10 @@ function matchesSearch(resource: Resource, params: Record<string, string>): bool
     if (params.identifier && !matchesIdentifierToken(invoice.identifier, params.identifier)) return false;
     if (params.status && invoice.status !== params.status) return false;
     if (params.subject && invoice.subject?.reference !== params.subject) return false;
+  }
+  if (resource.resourceType === "Claim") {
+    const claim = resource as Claim;
+    if (params.identifier && !matchesIdentifierToken(claim.identifier, params.identifier)) return false;
   }
   if (resource.resourceType === "Patient") {
     const patient = resource as Patient;

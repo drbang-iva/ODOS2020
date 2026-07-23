@@ -6,6 +6,7 @@ import {
   buildCoverageEligibilityResponseFromStedi,
   buildStediEligibilityJson,
   buildStediProfessionalClaimJson,
+  readStedi277,
 } from "../src/claims/stedi-fhir.js";
 import { buildProfessionalClaim, type ProfessionalClaimInput } from "../src/claims/claimmd-fhir.js";
 import { createStediAdapter, STEDI_DEFAULT_BASE_URL, STEDI_DEFAULT_CORE_BASE_URL } from "../src/claims/stedi-adapter.js";
@@ -345,3 +346,148 @@ test("Stedi ERA surfaces authoritative patient responsibility, discrepancy evide
   assert.match(era.disposition ?? "", /SYNTHETIC SECONDARY.*SECONDARY900/);
   assert.match(era.processNote?.map((note) => note.text).join(" ") ?? "", /crossover carrier/i);
 });
+
+test("readStedi277 extracts three claim outcomes, rejection reasons, sender type, and correlation identifiers", () => {
+  const report = readStedi277(stedi277Report([
+    stedi277Claim("PCN-ACCEPTED", "A2", "20", "Accepted for processing."),
+    stedi277Claim("PCN-REJECTED", "A7", "21", "Invalid procedure code BADCODE.", "Claim issue: invalid procedure code."),
+    stedi277Claim("PCN-RECEIVED", "A1", "16", "Claim forwarded to payer."),
+  ]), "ack-three");
+
+  assert.deepEqual(report.claims.map((claim) => [claim.patientControlNumber, claim.outcome]), [
+    ["PCN-ACCEPTED", "accepted-for-processing"],
+    ["PCN-REJECTED", "rejected"],
+    ["PCN-RECEIVED", "informational"],
+  ]);
+  assert.deepEqual(report.claims[1].sender, {
+    organizationName: "SYNTHETIC PAYER",
+    entityType: "Payer",
+    identifier: "PAYER900",
+  });
+  assert.deepEqual(report.claims[1].traceIdentifiers, {
+    transactionId: "ack-three",
+    controlNumber: "CONTROL-900",
+    referenceIdentification: "REFERENCE-900",
+    claimTransactionBatchNumber: "BATCH-900",
+    clearinghouseTraceNumber: "CLEARINGHOUSE-PCN-REJECTED",
+    tradingPartnerClaimNumber: "PAYER-PCN-REJECTED",
+    metaTraceId: "META-TRACE-900",
+  });
+  assert.match(report.claims[1].reasons.join(" "), /BADCODE/);
+  assert.match(report.claims[1].reasons.join(" "), /Claim issue/);
+});
+
+test("readStedi277 surfaces a service-line rejection from the claim row with its reason", () => {
+  const claim = stedi277Claim("PCN-LINE-REJECTED", "A1", "16", "Claim received.") as any;
+  claim.claimStatus.informationClaimStatuses = [];
+  claim.serviceLines = [{
+    lineItemControlNumber: "line-1",
+    serviceClaimStatuses: [{
+      serviceStatuses: [{
+        healthCareClaimStatusCategoryCode: "A7",
+        healthCareClaimStatusCategoryCodeValue: "Rejected for invalid information.",
+        statusCode: "21",
+        statusCodeValue: "Invalid service-line procedure BADCODE.",
+      }],
+    }],
+  }];
+
+  const report = readStedi277(stedi277Report([claim]), "ack-service-line");
+
+  assert.equal(report.claims[0].outcome, "rejected");
+  assert.match(report.claims[0].reasons.join(" "), /service-line procedure BADCODE/i);
+});
+
+test("readStedi277 merges claim-level and service-line statuses", () => {
+  const claim = stedi277Claim("PCN-MERGED", "A1", "16", "Claim received.") as any;
+  claim.serviceLines = [{
+    lineItemControlNumber: "line-1",
+    serviceClaimStatuses: [{
+      serviceStatuses: [{
+        healthCareClaimStatusCategoryCode: "A7",
+        healthCareClaimStatusCategoryCodeValue: "Rejected for invalid information.",
+        statusCode: "21",
+        statusCodeValue: "Service line rejected.",
+      }],
+    }],
+  }];
+
+  const report = readStedi277(stedi277Report([claim]), "ack-merged");
+
+  assert.deepEqual(report.claims[0].statuses.map((status) => status.categoryCode), ["A1", "A7"]);
+  assert.equal(report.claims[0].outcome, "rejected");
+});
+
+test("readStedi277 retains multiple acknowledgments for the same claim and surfaces unknown categories for review", () => {
+  const raw = stedi277Report([stedi277Claim("PCN-SAME", "A1", "16", "Forwarded")]) as any;
+  raw.transactions.push(...(stedi277Report([
+    stedi277Claim("PCN-SAME", "ZZ", "999", "Non-compliant status"),
+  ]) as any).transactions);
+
+  const report = readStedi277(raw, "ack-multi");
+  assert.equal(report.claims.length, 2);
+  assert.equal(report.claims[0].outcome, "informational");
+  assert.equal(report.claims[1].outcome, "review");
+  assert.deepEqual(report.claims[1].statuses.map((status) => status.categoryCode), ["ZZ"]);
+});
+
+test("readStedi277 preserves valid claims while flagging an empty nested acknowledgment branch", () => {
+  const raw = stedi277Report([stedi277Claim("PCN-GOOD", "A2", "20", "Accepted")]) as any;
+  raw.transactions.push({
+    controlNumber: "CONTROL-BAD",
+    payers: [{
+      organizationName: "SYNTHETIC PAYER",
+      claimStatusTransactions: [{ claimStatusDetails: [] }],
+    }],
+  });
+
+  const report = readStedi277(raw, "ack-partial");
+  assert.deepEqual(report.claims.map((claim) => claim.patientControlNumber), ["PCN-GOOD"]);
+  assert.match(report.issues.join(" "), /no claim status details/i);
+});
+
+function stedi277Report(claims: unknown[]): Record<string, unknown> {
+  return {
+    meta: { transactionId: "ack-three", traceId: "META-TRACE-900" },
+    transactions: [{
+      controlNumber: "CONTROL-900",
+      referenceIdentification: "REFERENCE-900",
+      payers: [{
+        organizationName: "SYNTHETIC PAYER",
+        entityIdentifierCodeValue: "Payer",
+        payerIdentification: "PAYER900",
+        claimStatusTransactions: [{
+          claimTransactionBatchNumber: "BATCH-900",
+          claimStatusDetails: [{ patientClaimStatusDetails: [{ claims }] }],
+        }],
+      }],
+    }],
+  };
+}
+
+function stedi277Claim(
+  patientControlNumber: string,
+  categoryCode: string,
+  statusCode: string,
+  statusCodeValue: string,
+  statusMessage?: string,
+): Record<string, unknown> {
+  return {
+    claimStatus: {
+      referencedTransactionTraceNumber: patientControlNumber,
+      patientAccountNumber: patientControlNumber,
+      clearinghouseTraceNumber: `CLEARINGHOUSE-${patientControlNumber}`,
+      tradingPartnerClaimNumber: `PAYER-${patientControlNumber}`,
+      informationClaimStatuses: [{
+        ...(statusMessage ? { statusMessage } : {}),
+        informationStatuses: [{
+          healthCareClaimStatusCategoryCode: categoryCode,
+          healthCareClaimStatusCategoryCodeValue: `Category ${categoryCode}`,
+          statusCode,
+          statusCodeValue,
+          entityIdentifierCodeValue: "Payer",
+        }],
+      }],
+    },
+  };
+}
