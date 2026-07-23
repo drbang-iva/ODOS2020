@@ -442,6 +442,12 @@ export function buildStediProfessionalClaimJson(
 ): StediProfessionalClaimPayload {
   const billing = input.billingProvider;
   const rendering = input.renderingProvider;
+  const billingContact = compact({
+    name: billing.name,
+    phoneNumber: digits(billing.phone),
+    email: billing.email,
+    faxNumber: digits(billing.fax),
+  });
   const total = decimal(claim.total?.value ?? 0);
   const claimFrequencyCode = input.claimFrequencyCode ?? "1";
   const claimControlNumber = input.claimControlNumber?.trim();
@@ -460,6 +466,12 @@ export function buildStediProfessionalClaimJson(
   if (!billing.name || !billing.taxId || !billing.address1 || !billing.city || !billing.state || !billing.zip) {
     throw new ClaimSubmissionValidationError("Stedi professional claims require billing name, tax ID, and complete physical address.");
   }
+  if (![billing.phone, billing.email, billing.fax].some((value) => value?.trim())) {
+    throw new ClaimSubmissionValidationError("Stedi professional claims require billing provider phone, email, or fax.");
+  }
+  if (!rendering.lastName?.trim() && !rendering.name?.trim()) {
+    throw new ClaimSubmissionValidationError("Stedi professional claims require rendering provider last name or organization name.");
+  }
   if (!input.subscriber.address1 || !input.subscriber.city || !input.subscriber.state || !input.subscriber.zip) {
     throw new ClaimSubmissionValidationError("Stedi professional claims require subscriber address and complete physical address.");
   }
@@ -469,7 +481,7 @@ export function buildStediProfessionalClaimJson(
     submitter: {
       organizationName: billing.name,
       submitterIdentification: submitterId,
-      contactInformation: compact({ name: billing.name, phoneNumber: digits(billing.phone) }),
+      contactInformation: billingContact,
     },
     receiver: { organizationName: input.payerId },
     billing: compact({
@@ -480,7 +492,7 @@ export function buildStediProfessionalClaimJson(
       taxonomyCode: billing.taxonomy,
       providerType: "BillingProvider",
       address: address(billing),
-      contactInformation: compact({ name: billing.name, phoneNumber: digits(billing.phone) }),
+      contactInformation: billingContact,
     }),
     subscriber: compact({
       firstName: input.subscriber.firstName,
@@ -532,7 +544,8 @@ export function buildStediProfessionalClaimJson(
           },
           renderingProvider: compact({
             firstName: rendering.firstName,
-            lastName: rendering.lastName ?? rendering.name,
+            lastName: rendering.lastName,
+            organizationName: rendering.name,
             npi: rendering.npi,
             taxonomyCode: rendering.taxonomy,
             providerType: "RenderingProvider",

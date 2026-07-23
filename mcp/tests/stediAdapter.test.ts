@@ -151,3 +151,30 @@ test("Stedi errors preserve the HTTP failure when the response body is not JSON"
     },
   );
 });
+
+test("Stedi INVALID_REQUEST_BODY errors surface field paths when errors[] is absent", async () => {
+  const responseBody = {
+    code: "INVALID_REQUEST_BODY",
+    message: JSON.stringify({
+      "claimInformation.serviceLines.items.0.renderingProvider": ["lastName or organizationName are required"],
+      "billing.contactInformation": ["phoneNumber, email, or faxNumber required"],
+    }),
+  };
+  const adapter = createStediAdapter({
+    config: { baseUrl: STEDI_DEFAULT_BASE_URL, coreBaseUrl: STEDI_DEFAULT_CORE_BASE_URL, apiKey: "test-key", submitterId: "SUBMITTER900", mode: "test" },
+    fetchImpl: (async () => new Response(JSON.stringify(responseBody), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })) as typeof fetch,
+  });
+
+  await assert.rejects(
+    adapter.checkEligibility({ tradingPartnerServiceId: "STEDITEST" }),
+    (error: unknown) => {
+      assert.ok(error instanceof StediRequestError);
+      assert.match(error.message, /claimInformation\.serviceLines\.items\.0\.renderingProvider: lastName or organizationName are required/);
+      assert.match(error.message, /billing\.contactInformation: phoneNumber, email, or faxNumber required/);
+      return true;
+    },
+  );
+});

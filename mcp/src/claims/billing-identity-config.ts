@@ -1,6 +1,5 @@
 import type { Basic } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { searchAll } from "../fhir-search.js";
 
 export const ODOS_BILLING_IDENTITY_CONFIG_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/billing-identity-config";
@@ -20,6 +19,8 @@ export interface BillingIdentityConfig {
   state: string;
   zip: string;
   phone?: string;
+  email?: string;
+  fax?: string;
 }
 
 export function validateBillingIdentityConfig(config: BillingIdentityConfig): void {
@@ -50,6 +51,12 @@ export function validateBillingIdentityConfig(config: BillingIdentityConfig): vo
   }
   if (config.phone !== undefined && typeof config.phone !== "string") {
     throw new Error("Phone must be text.");
+  }
+  if (config.email !== undefined && typeof config.email !== "string") {
+    throw new Error("Email must be text.");
+  }
+  if (config.fax !== undefined && typeof config.fax !== "string") {
+    throw new Error("Fax must be text.");
   }
 }
 
@@ -119,14 +126,14 @@ export function parseBillingIdentityConfig(basic: Basic): BillingIdentityConfig 
 }
 
 export async function loadBillingIdentityConfig(
-  client: Pick<MedplumClient, "search" | "searchUrl">,
+  client: Pick<MedplumClient, "search">,
 ): Promise<BillingIdentityConfig | undefined> {
-  const resources = await searchAll<Basic>(client, "Basic", {
-    _id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
+  const bundle = await client.search<Basic>("Basic", {
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
+    _sort: "-_lastUpdated",
     _count: "1",
   });
-  const resource = resources.find((candidate) => candidate.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  const resource = bundle.entry?.[0]?.resource;
   return resource ? parseBillingIdentityConfig(resource) : undefined;
 }
 
@@ -142,5 +149,7 @@ function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityCon
     state: config.state.trim().toUpperCase(),
     zip: config.zip.trim(),
     ...(config.phone?.trim() ? { phone: config.phone.trim() } : {}),
+    ...(config.email?.trim() ? { email: config.email.trim() } : {}),
+    ...(config.fax?.trim() ? { fax: config.fax.trim() } : {}),
   };
 }

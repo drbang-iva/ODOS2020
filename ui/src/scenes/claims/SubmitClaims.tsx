@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
+import type { Coverage, Encounter, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
+import { searchAll } from "../../lib/fhir-search";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
   addChargeLine,
@@ -8,12 +9,14 @@ import {
   buildCoverageResource,
   buildProfessionalClaimInput,
   claimDraftFromProfessionalClaimInput,
+  claimProviderFromPractitioner,
   claimPersonFromPatient,
   coverageIsSelf,
   coverageLabel,
   coveragePayerId,
   emptyPerson,
   initialClaimDraft,
+  latestFinishedEncounter,
   loadEncounterClaimDraft,
   mergeProviderDefaults,
   previewStediClaimResubmission,
@@ -22,6 +25,7 @@ import {
   resolveSubscriberFromCoverage,
   submitProfessionalClaim,
   submitStediClaimResubmission,
+  subscriberForClaim,
   subscriberFromCoverage,
   validateClaimDraft,
   type ChargeLine,
@@ -168,8 +172,6 @@ export function SubmitClaims({
     };
   }, [patient?.id]);
 
-  const selectedCoverage = coverages.find((coverage) => `Coverage/${coverage.id}` === draft.coverageReference);
-
   const selectPatient = (selected: Patient) => {
     if (!selected.id) return;
     setPatient(selected);
@@ -185,9 +187,11 @@ export function SubmitClaims({
       patientReference: `Patient/${selected.id}`,
       patient: claimPersonFromPatient(selected),
       subscriber: emptyPerson(),
+      subscriberIsPatient: false,
       coverageReference: "",
       insurerReference: "",
     }));
+    void loadLatestEncounterForPatient(selected);
   };
 
   const selectCoverage = async (coverage: Coverage) => {
@@ -202,6 +206,7 @@ export function SubmitClaims({
       coverageReference,
       insurerReference: coverage.payor[0]?.reference ?? "",
       subscriber: subscriberFromCoverage(coverage, patient),
+      subscriberIsPatient: coverageIsSelf(coverage),
     }));
     const resolution = await resolveSubscriberFromCoverage(
       coverage,
@@ -233,11 +238,12 @@ export function SubmitClaims({
     }
   };
 
-  const loadFromEncounter = async () => {
+  const loadFromEncounter = async (requestedEncounterId = encounterId.trim()) => {
     setDraftLoading(true);
     setDraftLoadStatus(undefined);
     try {
-      const assembled = await loadEncounterClaimDraft(encounterId.trim(), {
+      setEncounterId(requestedEncounterId);
+      const assembled = await loadEncounterClaimDraft(requestedEncounterId, {
         authorization: fhir.authHeader(),
         baseUrl: claimApiBaseUrl(),
       });
@@ -251,6 +257,8 @@ export function SubmitClaims({
       let primaryCoverage: Coverage | undefined;
       let subscriber = emptyPerson();
       let subscriberResolutionError: string | undefined;
+      let renderingDefaults: Awaited<ReturnType<typeof loadRenderingProviderDefaults>> = undefined;
+      let renderingWarning: string | undefined;
       if (assembled.coverageReference) {
         primaryCoverage = await fhir.read<Coverage>("Coverage", assembled.coverageReference.split("/")[1]!);
         const resolution = await resolveSubscriberFromCoverage(
@@ -260,6 +268,11 @@ export function SubmitClaims({
         );
         subscriber = resolution.subscriber;
         subscriberResolutionError = resolution.error;
+      }
+      try {
+        renderingDefaults = await loadRenderingProviderDefaults(assembled.encounterReference);
+      } catch (cause) {
+        renderingWarning = `Rendering provider could not be prefilled: ${cause instanceof Error ? cause.message : String(cause)}`;
       }
       setPatient(loadedPatient);
       setChoosingPatient(false);
@@ -276,16 +289,77 @@ export function SubmitClaims({
         insurerReference: assembled.insurerReference ?? primaryCoverage?.payor[0]?.reference ?? "",
         payerId: assembled.payerId ?? (primaryCoverage ? coveragePayerId(primaryCoverage) : ""),
         subscriber,
+        subscriberIsPatient: primaryCoverage ? coverageIsSelf(primaryCoverage) : false,
+        ...(renderingDefaults ? {
+          providerReference: renderingDefaults.providerReference,
+          renderingProvider: renderingDefaults.provider,
+        } : {}),
       }));
       setDraftLoadStatus([
         `Loaded ${assembled.diagnoses.length} diagnoses and ${assembled.charges.length} charges from ${assembled.encounterReference}.`,
         ...(assembled.warnings ?? []),
+        ...(renderingWarning ? [renderingWarning] : []),
       ].join(" "));
     } catch (cause) {
       setDraftLoadStatus(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setDraftLoading(false);
     }
+  };
+
+  const loadLatestEncounterForPatient = async (selected: Patient) => {
+    if (!selected.id) return;
+    setDraftLoading(true);
+    setDraftLoadStatus(undefined);
+    try {
+      const encounters = await searchAll<Encounter>(fhir, "Encounter", {
+        subject: `Patient/${selected.id}`,
+        status: "finished",
+        _count: "100",
+      });
+      const latest = latestFinishedEncounter(encounters);
+      if (latest?.id) {
+        await loadFromEncounter(latest.id);
+        return;
+      }
+      const renderingDefaults = await loadRenderingProviderDefaults();
+      if (renderingDefaults) {
+        setDraft((current) => ({
+          ...current,
+          providerReference: renderingDefaults.providerReference,
+          renderingProvider: renderingDefaults.provider,
+        }));
+      }
+      setDraftLoadStatus("No signed encounter was found for this patient. Enter claim lines manually.");
+    } catch (cause) {
+      setDraftLoadStatus(`Automatic encounter prefill was unavailable: ${cause instanceof Error ? cause.message : String(cause)}`);
+    } finally {
+      setDraftLoading(false);
+    }
+  };
+
+  const loadRenderingProviderDefaults = async (encounterReference?: string) => {
+    let practitionerReference: string | undefined;
+    if (encounterReference) {
+      const encounter = await fhir.read<Encounter>("Encounter", encounterReference.replace(/^Encounter\//, ""));
+      const participantReference = encounter.participant
+        ?.flatMap((participant) => participant.individual?.reference ? [participant.individual.reference] : [])
+        .find((reference) => reference.startsWith("Practitioner/") || reference.startsWith("PractitionerRole/"));
+      if (participantReference?.startsWith("Practitioner/")) {
+        practitionerReference = participantReference;
+      } else if (participantReference?.startsWith("PractitionerRole/")) {
+        const role = await fhir.read<PractitionerRole>("PractitionerRole", participantReference.slice("PractitionerRole/".length));
+        practitionerReference = role.practitioner?.reference;
+      }
+    }
+    practitionerReference ??= fhir.practitionerId() ? `Practitioner/${fhir.practitionerId()}` : undefined;
+    const match = practitionerReference?.match(/^Practitioner\/([^/]+)$/);
+    if (!match) return undefined;
+    const practitioner = await fhir.read<Practitioner>("Practitioner", match[1]);
+    return {
+      providerReference: practitionerReference!,
+      provider: claimProviderFromPractitioner(practitioner),
+    };
   };
 
   const openReview = () => {
@@ -300,6 +374,8 @@ export function SubmitClaims({
     setStep("review");
     window.scrollTo({ top: 0 });
   };
+
+  const claimSubscriber = subscriberForClaim(draft);
 
   const submit = async () => {
     if (!reviewClaim) return;
@@ -436,7 +512,7 @@ export function SubmitClaims({
                       <Field label="Payor Organization reference" value={coverageEntry.payorReference} placeholder="Organization/123" onChange={(value) => setCoverageEntry((current) => ({ ...current, payorReference: value }))} />
                       <Field label="Payor display name" value={coverageEntry.payorDisplay ?? ""} onChange={(value) => setCoverageEntry((current) => ({ ...current, payorDisplay: value }))} />
                       <Field label="Member ID" value={coverageEntry.memberId} onChange={(value) => setCoverageEntry((current) => ({ ...current, memberId: value }))} />
-                      <Field label="Group number" value={coverageEntry.groupNumber} onChange={(value) => setCoverageEntry((current) => ({ ...current, groupNumber: value }))} />
+                      <Field label="Group number (optional)" value={coverageEntry.groupNumber} onChange={(value) => setCoverageEntry((current) => ({ ...current, groupNumber: value }))} />
                       <SelectField label="Relationship" value={coverageEntry.relationship} options={[{ value: "self", label: "Subscriber is patient" }, { value: "other", label: "Other subscriber" }]} onChange={(value) => setCoverageEntry((current) => ({ ...current, relationship: value as "self" | "other" }))} />
                       <Field label="Effective date" type="date" value={coverageEntry.effectiveDate} onChange={(value) => setCoverageEntry((current) => ({ ...current, effectiveDate: value }))} />
                       <button type="button" onClick={() => void createCoverage()} className="rounded bg-emerald-700 px-3 py-2 text-sm font-semibold md:col-span-2">Create and select Coverage</button>
@@ -460,7 +536,7 @@ export function SubmitClaims({
                   <ProviderFields provider={draft.billingProvider} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
                 </Section>
 
-                <Section title="Rendering provider" description="NPI is required; remaining clearinghouse fields are optional.">
+                <Section title="Rendering provider" description="NPI and either last name or organization name are required.">
                   <ProviderFields provider={draft.renderingProvider} onChange={(renderingProvider) => setDraft((current) => ({ ...current, renderingProvider }))} />
                 </Section>
 
@@ -468,21 +544,21 @@ export function SubmitClaims({
                   <PersonFields person={draft.patient} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
                 </Section>
 
-                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
+                <Section title="Subscriber demographics" description={draft.subscriberIsPatient ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
                   {subscriberError && <div className="mb-3"><SubmissionAlert message={subscriberError} /></div>}
                   {subscriberLoading && <p className="mb-3 text-sm text-white/45">Loading subscriber record…</p>}
-                  {selectedCoverage && coverageIsSelf(selectedCoverage) ? (
-                    <PersonSummary person={draft.subscriber} />
+                  {draft.subscriberIsPatient ? (
+                    <PersonSummary person={claimSubscriber} />
                   ) : (
                     <PersonFields person={draft.subscriber} includePolicy onChange={(next) => setDraft((current) => ({ ...current, subscriber: next }))} />
                   )}
                 </Section>
 
-                <Section title="Diagnoses" description="Staff-entered ICD-10-CM. This phase does not validate code validity or provide a catalog.">
+                <Section title="Diagnoses" description="Prefilled from the signed encounter when available; confirm, reorder, or enter manually when needed.">
                   <DiagnosisLines lines={draft.diagnoses} onChange={(diagnoses) => setDraft((current) => ({ ...current, diagnoses }))} />
                 </Section>
 
-                <Section title="Charges" description="Staff-entered CPT/HCPCS. Fees are entered in dollars and sent as FHIR USD Money.">
+                <Section title="Charges" description="Prefilled from billable encounter ChargeItems when available; manual entry remains available for no-encounter claims.">
                   <ChargeLines lines={draft.charges} onChange={(charges) => setDraft((current) => ({ ...current, charges }))} />
                 </Section>
 
@@ -687,6 +763,8 @@ function ProviderFields({ provider, onChange }: { provider: ClaimMdProviderInput
       <Field label="State" value={provider.state ?? ""} onChange={(value) => set("state", value)} />
       <Field label="ZIP" value={provider.zip ?? ""} onChange={(value) => set("zip", value)} />
       <Field label="Phone" value={provider.phone ?? ""} onChange={(value) => set("phone", value)} />
+      <Field label="Email" value={provider.email ?? ""} onChange={(value) => set("email", value)} />
+      <Field label="Fax" value={provider.fax ?? ""} onChange={(value) => set("fax", value)} />
     </div>
   );
 }
@@ -768,12 +846,11 @@ function emptyCoverageEntry(today: string, patientReference = ""): CoverageEntry
   return { patientReference, payorReference: "", payorDisplay: "", memberId: "", groupNumber: "", relationship: "self", effectiveDate: today };
 }
 
-function validateCoverageEntry(entry: CoverageEntryInput): string[] {
+export function validateCoverageEntry(entry: CoverageEntryInput): string[] {
   const errors: string[] = [];
   if (!entry.patientReference) errors.push("Select a patient before creating Coverage.");
   if (!/^Organization\/[^/]+$/.test(entry.payorReference.trim())) errors.push("Payor must be an Organization reference such as Organization/123.");
   if (!entry.memberId.trim()) errors.push("Member ID is required.");
-  if (!entry.groupNumber.trim()) errors.push("Group number is required.");
   if (!entry.effectiveDate) errors.push("Effective date is required.");
   return errors;
 }

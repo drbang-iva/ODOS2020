@@ -18,6 +18,8 @@ export interface BillingIdentityConfig {
   state: string;
   zip: string;
   phone?: string;
+  email?: string;
+  fax?: string;
 }
 
 export function emptyBillingIdentityConfig(): BillingIdentityConfig {
@@ -32,6 +34,8 @@ export function emptyBillingIdentityConfig(): BillingIdentityConfig {
     state: "",
     zip: "",
     phone: "",
+    email: "",
+    fax: "",
   };
 }
 
@@ -52,6 +56,8 @@ export function validateBillingIdentityConfig(config: BillingIdentityConfig): vo
   if (typeof config.state !== "string" || !/^[A-Za-z]{2}$/.test(config.state.trim())) throw new Error("State must be a 2-letter abbreviation.");
   if (typeof config.zip !== "string" || !/^\d{5}(?:-?\d{4})?$/.test(config.zip.trim())) throw new Error("ZIP must be 5 or 9 digits.");
   if (config.phone !== undefined && typeof config.phone !== "string") throw new Error("Phone must be text.");
+  if (config.email !== undefined && typeof config.email !== "string") throw new Error("Email must be text.");
+  if (config.fax !== undefined && typeof config.fax !== "string") throw new Error("Fax must be text.");
 }
 
 function hasValidNpiCheckDigit(npi: string): boolean {
@@ -121,5 +127,7 @@ function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityCon
     state: config.state.trim().toUpperCase(),
     zip: config.zip.trim(),
     ...(config.phone?.trim() ? { phone: config.phone.trim() } : {}),
+    ...(config.email?.trim() ? { email: config.email.trim() } : {}),
+    ...(config.fax?.trim() ? { fax: config.fax.trim() } : {}),
   };
 }

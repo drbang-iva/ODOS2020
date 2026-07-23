@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
+import type { Coverage, Encounter, Patient, Practitioner, RelatedPerson } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -9,12 +9,14 @@ import {
   buildCoverageResource,
   buildProfessionalClaimInput,
   claimDraftFromProfessionalClaimInput,
+  claimProviderFromPractitioner,
   coverageRelationshipCode,
   coverageGroupNumber,
   coverageIsSelf,
   coverageMemberId,
   dollarsToCents,
   initialClaimDraft,
+  latestFinishedEncounter,
   loadEncounterClaimDraft,
   mergeProviderDefaults,
   removeChargeLine,
@@ -23,11 +25,12 @@ import {
   previewStediClaimResubmission,
   submitStediClaimResubmission,
   submitProfessionalClaim,
+  subscriberForClaim,
   subscriberFromCoverage,
   validateClaimDraft,
   type ClaimDraft,
 } from "../src/lib/submit-claims";
-import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert, SubmitClaims } from "../src/scenes/claims/SubmitClaims";
+import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert, SubmitClaims, validateCoverageEntry } from "../src/scenes/claims/SubmitClaims";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -190,6 +193,7 @@ test("stored Stedi input converts back to an editable correction draft with a bl
   const draft = claimDraftFromProfessionalClaimInput(original, "2026-07-22");
   assert.equal(draft.patientAccountNumber, "");
   assert.equal(draft.created, "2026-07-22");
+  assert.equal(draft.subscriberIsPatient, true);
   assert.equal(draft.diagnoses[0].code, "TEST-DX");
   assert.equal(draft.charges[0].code, "TEST-PROC");
   assert.equal(draft.charges[0].feeDollars, "125.50");
@@ -263,6 +267,98 @@ test("subscriber prefill uses patient demographics for self and stays editable f
   const html = renderToStaticMarkup(<PersonFields person={otherSubscriber} includePolicy onChange={() => undefined} />);
   assert.match(html, /value="Alex"/);
   assert.doesNotMatch(html, /readonly/);
+});
+
+test("self subscriber is derived from live patient edits and missing-address errors point to Patient", () => {
+  const draft = validDraft();
+  draft.patient = {
+    firstName: "Jane",
+    lastName: "Doe",
+    dateOfBirth: "1980-01-02",
+    sex: "F",
+  };
+  draft.subscriber = {
+    firstName: "Stale",
+    lastName: "Snapshot",
+    dateOfBirth: "1900-01-01",
+    sex: "U",
+    memberId: "MEM-123",
+    relationshipCode: "18",
+  };
+
+  const missing = validateClaimDraft(draft).join(" ");
+  assert.match(missing, /Patient address is required/);
+  assert.doesNotMatch(missing, /Subscriber address is required/);
+
+  draft.patient = {
+    ...draft.patient,
+    address1: "77 Live Form Lane",
+    city: "Greenville",
+    state: "SC",
+    zip: "29601",
+  };
+  const subscriber = subscriberForClaim(draft);
+  assert.equal(subscriber.firstName, "Jane");
+  assert.equal(subscriber.address1, "77 Live Form Lane");
+  assert.equal(subscriber.memberId, "MEM-123");
+  assert.equal(buildProfessionalClaimInput(draft).subscriber.address1, "77 Live Form Lane");
+});
+
+test("group number is optional when creating Coverage", () => {
+  const entry = {
+    patientReference: "Patient/pat-1",
+    payorReference: "Organization/payer-1",
+    memberId: "MEM-123",
+    groupNumber: "",
+    relationship: "self" as const,
+    effectiveDate: "2026-07-01",
+  };
+  assert.deepEqual(validateCoverageEntry(entry), []);
+  assert.deepEqual(buildCoverageResource(entry).class, []);
+});
+
+test("rendering Practitioner carry-over includes name, NPI, and available contact methods", () => {
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "pract-1",
+    identifier: [{ system: "http://hl7.org/fhir/sid/us-npi", value: "1234567893" }],
+    name: [{ use: "official", given: ["Eric"], family: "Bang" }],
+    telecom: [
+      { system: "phone", value: "864-555-0100" },
+      { system: "email", value: "provider@example.test" },
+      { system: "fax", value: "864-555-0101" },
+    ],
+  };
+  assert.deepEqual(claimProviderFromPractitioner(practitioner), {
+    npi: "1234567893",
+    firstName: "Eric",
+    lastName: "Bang",
+    phone: "864-555-0100",
+    email: "provider@example.test",
+    fax: "864-555-0101",
+  });
+});
+
+test("latest signed encounter selection is encounter-scoped and chronological", () => {
+  const encounters: Encounter[] = [
+    { resourceType: "Encounter", id: "older", status: "finished", class: {}, period: { start: "2026-07-20T10:00:00Z" } },
+    { resourceType: "Encounter", id: "unsigned", status: "in-progress", class: {}, period: { start: "2026-07-22T10:00:00Z" } },
+    { resourceType: "Encounter", id: "latest", status: "finished", class: {}, period: { start: "2026-07-21T10:00:00Z" } },
+  ];
+  assert.equal(latestFinishedEncounter(encounters)?.id, "latest");
+});
+
+test("provider validation requires rendering name and one billing contact method", () => {
+  const draft = validDraft();
+  draft.renderingProvider = { npi: "2222222222" };
+  draft.billingProvider = { ...draft.billingProvider, phone: "" };
+  const errors = validateClaimDraft(draft).join(" ");
+  assert.match(errors, /Rendering provider last name or organization name is required/);
+  assert.match(errors, /Billing provider phone, email, or fax is required/);
+
+  draft.renderingProvider.name = "Rendering Organization";
+  draft.billingProvider.email = "billing@example.test";
+  assert.doesNotMatch(validateClaimDraft(draft).join(" "), /provider (?:last name|phone)/i);
 });
 
 test("all FHIR subscriber relationships map to verified Claim.MD 837P relationship codes", () => {
@@ -412,7 +508,7 @@ function validDraft(): ClaimDraft {
     coverageReference: "Coverage/cov-1",
     patientAccountNumber: "PCN-1",
     payerId: "PAYER-1",
-    billingProvider: { npi: "1111111111", name: "Test Practice" },
+    billingProvider: { npi: "1111111111", name: "Test Practice", phone: "8645550100" },
     renderingProvider: { npi: "2222222222", firstName: "Eric", lastName: "Bang" },
     patient: {
       firstName: "Jane",
@@ -433,6 +529,7 @@ function validDraft(): ClaimDraft {
       groupNumber: "GRP-9",
       relationshipCode: "18",
     },
+    subscriberIsPatient: true,
     diagnoses: [{ code: "TEST-DX", description: "Synthetic diagnosis" }],
     charges: [{ codeType: "CPT", code: "TEST-PROC", description: "Synthetic procedure", feeDollars: "125.50", quantity: "1" }],
   };
