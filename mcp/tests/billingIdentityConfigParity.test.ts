@@ -53,14 +53,15 @@ test("MCP billing identity loader searches by code and uses the latest server-as
       return {
         resourceType: "Bundle",
         type: "searchset",
-        entry: [{ resource: older }, { resource: latest }],
+        entry: [{ resource: latest }, { resource: older }],
       };
     },
   });
 
   assert.deepEqual(searchParams, {
     code: `${mcpSystem}|${mcpCode}`,
-    _count: "10",
+    _sort: "-_lastUpdated",
+    _count: "1",
   });
   assert.deepEqual(loaded, latestConfig);
 });
@@ -85,10 +86,11 @@ test("real Medplum assigns ids and reloads coded Basic singletons", { timeout: 9
   const runId = randomUUID();
   const createdIds: string[] = [];
   try {
+    const probeId = `billing-identity-config-probe-${runId}`;
     await assert.rejects(
-      fhir.update<Basic>("Basic", "billing-identity-config-probe", {
+      fhir.update<Basic>("Basic", probeId, {
         resourceType: "Basic",
-        id: "billing-identity-config-probe",
+        id: probeId,
         code: { coding: [{
           system: "https://odos2020.com/fhir/CodeSystem/integration-test-singleton",
           code: `hardcoded-id-${runId}`,
@@ -99,22 +101,29 @@ test("real Medplum assigns ids and reloads coded Basic singletons", { timeout: 9
     for (const setting of ["billing-identity", "statement-messages", "appearance"]) {
       const system = "https://odos2020.com/fhir/CodeSystem/integration-test-singleton";
       const code = `${setting}-${runId}`;
-      const created = await fhir.create<Basic>({
+      const candidate: Basic = {
         resourceType: "Basic",
         code: { coding: [{ system, code }] },
-      });
-      assert.ok(created.id);
-      assert.notEqual(created.id, setting);
-      createdIds.push(created.id);
+      };
+      const conditionalHeaders = { "If-None-Exist": `code=${system}|${code}` };
+      const [first, second] = await Promise.all([
+        fhir.create<Basic>(candidate, conditionalHeaders),
+        fhir.create<Basic>(candidate, conditionalHeaders),
+      ]);
+      assert.ok(first.id);
+      assert.equal(second.id, first.id);
+      assert.notEqual(first.id, setting);
+      createdIds.push(first.id);
 
       const reloaded = await fhir.search<Basic>("Basic", { code: `${system}|${code}`, _count: "10" });
-      assert.ok((reloaded.entry ?? []).some((entry) => entry.resource?.id === created.id));
+      assert.equal(reloaded.entry?.length, 1);
+      assert.equal(reloaded.entry[0]?.resource?.id, first.id);
 
-      const updated = await fhir.update<Basic>("Basic", created.id, {
-        ...created,
+      const updated = await fhir.update<Basic>("Basic", first.id, {
+        ...first,
         extension: [{ url: "https://odos2020.com/fhir/StructureDefinition/integration-test-singleton", valueString: "updated" }],
       });
-      assert.equal(updated.id, created.id);
+      assert.equal(updated.id, first.id);
     }
   } finally {
     for (const id of createdIds.reverse()) {

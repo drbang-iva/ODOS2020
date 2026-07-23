@@ -1,7 +1,6 @@
 import type { Basic } from "@medplum/fhirtypes";
 import { useEffect, useState, type FormEvent } from "react";
 import { fhir } from "../../lib/fhir";
-import { searchAll } from "../../lib/fhir-search";
 import {
   ODOS_BILLING_IDENTITY_CONFIG_CODE,
   ODOS_BILLING_IDENTITY_CONFIG_SYSTEM,
@@ -18,8 +17,7 @@ export type LoadedBillingIdentity = {
 
 export type BillingIdentitySettingsClient = Pick<typeof fhir, "create" | "update">;
 
-type BillingIdentityLoaderClient = Pick<typeof fhir, "search"> &
-  Partial<Pick<typeof fhir, "searchUrl">>;
+type BillingIdentityLoaderClient = Pick<typeof fhir, "search">;
 
 export function BillingIdentitySettings({ canWrite }: { canWrite: boolean }) {
   const [loaded, setLoaded] = useState<LoadedBillingIdentity | null>(null);
@@ -47,11 +45,12 @@ export function BillingIdentitySettings({ canWrite }: { canWrite: boolean }) {
 export async function loadBillingIdentityConfigSingleton(
   client: BillingIdentityLoaderClient,
 ): Promise<LoadedBillingIdentity> {
-  const resources = await searchAll<Basic>(client, "Basic", {
+  const bundle = await client.search<Basic>("Basic", {
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "10",
+    _sort: "-_lastUpdated",
+    _count: "1",
   });
-  const resource = [...resources].sort((left, right) => lastUpdatedMs(right) - lastUpdatedMs(left))[0];
+  const resource = bundle.entry?.[0]?.resource;
   return resource ? { resource, config: parseBillingIdentityConfig(resource) } : {};
 }
 
@@ -78,7 +77,9 @@ export function BillingIdentitySettingsReady({
       const built = buildBillingIdentityResource(draft, currentResource);
       const saved = currentResource?.id
         ? await client.update(built, "billing-identity-config")
-        : await client.create(built, "billing-identity-config");
+        : await client.create(built, "billing-identity-config", {
+          "If-None-Exist": `code=${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
+        });
       setCurrentResource(saved);
       setDraft(parseBillingIdentityConfig(saved));
       setStatus("Billing identity saved.");
@@ -139,10 +140,6 @@ function ConfigField({ label, value, disabled, onChange }: {
 
 function SettingsState({ message, alert = false }: { message: string; alert?: boolean }) {
   return <main className="min-h-screen bg-bg-deep p-6 text-[color:var(--odos-text)]"><div role={alert ? "alert" : "status"} className="mx-auto max-w-4xl rounded border border-[color:var(--odos-line)] bg-bg-panel/70 p-5 text-sm">{message}</div></main>;
-}
-
-function lastUpdatedMs(resource: Basic): number {
-  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
 }
 
 function errorMessage(cause: unknown): string {

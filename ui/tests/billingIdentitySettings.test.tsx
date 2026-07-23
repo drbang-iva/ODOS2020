@@ -29,12 +29,12 @@ const config: BillingIdentityConfig = {
 };
 
 function clientFixture() {
-  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string }> = [];
+  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string; headers?: Record<string, string> }> = [];
   const client = {
     async search() { return { resourceType: "Bundle" as const, type: "searchset" as const }; },
     async searchUrl() { return { resourceType: "Bundle" as const, type: "searchset" as const }; },
-    async create<T extends Basic>(resource: T, sourceTag: string) {
-      writes.push({ method: "create", resource, sourceTag });
+    async create<T extends Basic>(resource: T, sourceTag: string, headers?: Record<string, string>) {
+      writes.push({ method: "create", resource, sourceTag, headers });
       return { ...resource, id: "server-assigned-billing-id" } as T;
     },
     async update<T extends Basic>(resource: T, sourceTag: string) {
@@ -103,9 +103,10 @@ test("billing identity loads the latest coded singleton without an id-bound read
       assert.equal(resourceType, "Basic");
       assert.deepEqual(Object.fromEntries(new URLSearchParams(params)), {
         code: "https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
-        _count: "10",
+        _sort: "-_lastUpdated",
+        _count: "1",
       });
-      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: older }, { resource: newer }] };
+      return { resourceType: "Bundle", type: "searchset", entry: [{ resource: newer }, { resource: older }] };
     },
   });
 
@@ -126,6 +127,9 @@ test("billing identity first save posts without a client id and keeps the server
   });
   assert.equal(fixture.writes[0]?.method, "create");
   assert.equal(fixture.writes[0]?.resource.id, undefined);
+  assert.deepEqual(fixture.writes[0]?.headers, {
+    "If-None-Exist": "code=https://odos2020.com/fhir/CodeSystem/billing-identity-config|odos-billing-identity-config",
+  });
   assert.match(renderer.root.findByProps({ role: "status" }).children.join(""), /saved/i);
   act(() => renderer.unmount());
 });

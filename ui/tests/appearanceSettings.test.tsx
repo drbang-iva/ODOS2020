@@ -23,7 +23,7 @@ import { AppearanceSettingsReady } from "../src/scenes/settings/AppearanceSettin
 
 function clientFixture(initial?: Basic) {
   let stored = initial;
-  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string }> = [];
+  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string; headers?: Record<string, string> }> = [];
   const client = {
     async search<T extends Basic>(): Promise<Bundle<T>> {
       return {
@@ -35,10 +35,10 @@ function clientFixture(initial?: Basic) {
     async searchUrl<T extends Basic>(): Promise<Bundle<T>> {
       return { resourceType: "Bundle", type: "searchset", entry: [] };
     },
-    async create<T extends Basic>(resource: T, sourceTag: string): Promise<T> {
+    async create<T extends Basic>(resource: T, sourceTag: string, headers?: Record<string, string>): Promise<T> {
       const saved = { ...resource, id: "server-appearance-id" } as T;
       stored = saved;
-      writes.push({ method: "create", resource, sourceTag });
+      writes.push({ method: "create", resource, sourceTag, headers });
       return saved;
     },
     async update<T extends Basic>(resource: T, sourceTag: string): Promise<T> {
@@ -175,6 +175,9 @@ test("saving Appearance persists the singleton and a reload restores and applies
     assert.equal(fixture.writes[0]?.method, "create");
     assert.equal(fixture.writes[0]?.resource.id, undefined);
     assert.equal(fixture.writes[0]?.sourceTag, "appearance-config");
+    assert.deepEqual(fixture.writes[0]?.headers, {
+      "If-None-Exist": "code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+    });
     assert.deepEqual(parseAppearanceConfig(fixture.writes[0]!.resource), {
       surface: "space-black",
       accent: "amethyst",

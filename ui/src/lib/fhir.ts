@@ -275,10 +275,14 @@ export const fhir = {
     return (await res.json()) as T;
   },
 
-  async create<T extends Resource>(resource: T, sourceTag: string): Promise<T> {
+  async create<T extends Resource>(
+    resource: T,
+    sourceTag: string,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<T> {
     const res = await fetch(`${BASE}/${resource.resourceType}`, {
       method: "POST",
-      headers: sourceHeaders(sourceTag),
+      headers: { ...sourceHeaders(sourceTag), ...extraHeaders },
       body: JSON.stringify(resource),
     });
     if (!res.ok) throw await toError(res);

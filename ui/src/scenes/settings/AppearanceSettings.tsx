@@ -2,6 +2,8 @@ import type { Basic } from "@medplum/fhirtypes";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   APPEARANCE_ACCENTS,
+  APPEARANCE_CONFIG_CODE,
+  APPEARANCE_CONFIG_SYSTEM,
   SELECTABLE_APPEARANCE_SURFACES,
   applyAppearance,
   buildAppearanceConfigResource,
@@ -78,7 +80,9 @@ export function AppearanceSettingsReady({
       const built = buildAppearanceConfigResource(draft, currentResource);
       const saved = currentResource?.id
         ? await client.update(built, "appearance-config")
-        : await client.create(built, "appearance-config");
+        : await client.create(built, "appearance-config", {
+          "If-None-Exist": `code=${APPEARANCE_CONFIG_SYSTEM}|${APPEARANCE_CONFIG_CODE}`,
+        });
       const persisted = parseAppearanceConfig(saved);
       setCurrentResource(saved);
       setDraft(persisted);

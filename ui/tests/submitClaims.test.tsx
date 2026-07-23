@@ -193,6 +193,7 @@ test("stored Stedi input converts back to an editable correction draft with a bl
   const draft = claimDraftFromProfessionalClaimInput(original, "2026-07-22");
   assert.equal(draft.patientAccountNumber, "");
   assert.equal(draft.created, "2026-07-22");
+  assert.equal(draft.subscriberIsPatient, true);
   assert.equal(draft.diagnoses[0].code, "TEST-DX");
   assert.equal(draft.charges[0].code, "TEST-PROC");
   assert.equal(draft.charges[0].feeDollars, "125.50");

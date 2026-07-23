@@ -601,6 +601,7 @@ export function claimDraftFromProfessionalClaimInput(
     billingProvider: structuredClone(input.billingProvider),
     renderingProvider: structuredClone(input.renderingProvider),
     subscriber: structuredClone(input.subscriber),
+    subscriberIsPatient: input.subscriber.relationshipCode === "18",
     patient: structuredClone(input.patient),
     diagnoses: input.diagnoses.map((diagnosis) => ({
       system: diagnosis.system,

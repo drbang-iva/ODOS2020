@@ -100,7 +100,9 @@ export function StatementMessagesSettingsReady({
       const built = buildStatementMessageConfigResource(draft, currentResource);
       const saved = currentResource?.id
         ? await client.update(built, "statement-message-config")
-        : await client.create(built, "statement-message-config");
+        : await client.create(built, "statement-message-config", {
+          "If-None-Exist": `code=${ODOS_STATEMENT_MESSAGE_CONFIG_SYSTEM}|${ODOS_STATEMENT_MESSAGE_CONFIG_CODE}`,
+        });
       setCurrentResource(saved);
       setDraft(parseStatementMessageConfig(saved));
       setStatus("Statement and receipt messages saved.");

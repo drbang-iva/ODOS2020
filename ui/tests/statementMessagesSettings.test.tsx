@@ -14,7 +14,9 @@ import {
 } from "../src/scenes/settings/statement-message-config";
 
 function clientFixture() {
-  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string }> = [];
+  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string; headers?: Record<string, string> }> = [];
+  const created: Basic[] = [];
+  let stored: Basic | undefined;
   const client = {
     async search() {
       return { resourceType: "Bundle" as const, type: "searchset" as const };
@@ -22,16 +24,19 @@ function clientFixture() {
     async searchUrl() {
       return { resourceType: "Bundle" as const, type: "searchset" as const };
     },
-    async create<T extends Basic>(resource: T, sourceTag: string) {
-      writes.push({ method: "create", resource, sourceTag });
-      return { ...resource, id: `server-statement-${writes.length}` } as T;
+    async create<T extends Basic>(resource: T, sourceTag: string, headers?: Record<string, string>) {
+      writes.push({ method: "create", resource, sourceTag, headers });
+      if (stored) return stored as T;
+      stored = { ...resource, id: "server-statement-1" };
+      created.push(stored);
+      return stored as T;
     },
     async update<T extends Basic>(resource: T, sourceTag: string) {
       writes.push({ method: "update", resource, sourceTag });
       return resource;
     },
   };
-  return { client: client as StatementMessagesSettingsClient, writes };
+  return { client: client as StatementMessagesSettingsClient, writes, created };
 }
 
 test("statement-message settings show two text areas, exact safety copy, and 320-character counters", () => {
@@ -106,7 +111,7 @@ test("statement-message settings are read-only without practice-admin access", (
   assert.match(html, /Practice-admin access is required/);
 });
 
-test("initial saves post resources without client-chosen ids", async () => {
+test("concurrent initial saves conditionally create one statement-message singleton", async () => {
   const fixture = clientFixture();
   const renderers: ReactTestRenderer[] = [];
   await act(async () => {
@@ -122,5 +127,9 @@ test("initial saves post resources without client-chosen ids", async () => {
   });
   assert.equal(fixture.writes.length, 2);
   assert.ok(fixture.writes.every(({ method, resource }) => method === "create" && resource.id === undefined));
+  assert.ok(fixture.writes.every(({ headers }) =>
+    headers?.["If-None-Exist"]
+      === "code=https://odos2020.com/fhir/CodeSystem/statement-message-config|odos-statement-message-config"));
+  assert.equal(fixture.created.length, 1);
   for (const renderer of renderers) act(() => renderer.unmount());
 });

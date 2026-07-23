@@ -172,8 +172,6 @@ export function SubmitClaims({
     };
   }, [patient?.id]);
 
-  const selectedCoverage = coverages.find((coverage) => `Coverage/${coverage.id}` === draft.coverageReference);
-
   const selectPatient = (selected: Patient) => {
     if (!selected.id) return;
     setPatient(selected);
@@ -259,7 +257,7 @@ export function SubmitClaims({
       let primaryCoverage: Coverage | undefined;
       let subscriber = emptyPerson();
       let subscriberResolutionError: string | undefined;
-      let renderingDefaults: Awaited<ReturnType<typeof loadRenderingProviderDefaults>>;
+      let renderingDefaults: Awaited<ReturnType<typeof loadRenderingProviderDefaults>> = undefined;
       let renderingWarning: string | undefined;
       if (assembled.coverageReference) {
         primaryCoverage = await fhir.read<Coverage>("Coverage", assembled.coverageReference.split("/")[1]!);
@@ -546,10 +544,10 @@ export function SubmitClaims({
                   <PersonFields person={draft.patient} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
                 </Section>
 
-                <Section title="Subscriber demographics" description={selectedCoverage && coverageIsSelf(selectedCoverage) ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
+                <Section title="Subscriber demographics" description={draft.subscriberIsPatient ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
                   {subscriberError && <div className="mb-3"><SubmissionAlert message={subscriberError} /></div>}
                   {subscriberLoading && <p className="mb-3 text-sm text-white/45">Loading subscriber record…</p>}
-                  {selectedCoverage && coverageIsSelf(selectedCoverage) ? (
+                  {draft.subscriberIsPatient ? (
                     <PersonSummary person={claimSubscriber} />
                   ) : (
                     <PersonFields person={draft.subscriber} includePolicy onChange={(next) => setDraft((current) => ({ ...current, subscriber: next }))} />

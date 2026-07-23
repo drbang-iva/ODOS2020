@@ -1,6 +1,5 @@
 import type { Basic } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
-import { searchAll } from "../fhir-search.js";
 
 export const ODOS_BILLING_IDENTITY_CONFIG_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/billing-identity-config";
@@ -127,18 +126,15 @@ export function parseBillingIdentityConfig(basic: Basic): BillingIdentityConfig 
 }
 
 export async function loadBillingIdentityConfig(
-  client: Pick<MedplumClient, "search" | "searchUrl">,
+  client: Pick<MedplumClient, "search">,
 ): Promise<BillingIdentityConfig | undefined> {
-  const resources = await searchAll<Basic>(client, "Basic", {
+  const bundle = await client.search<Basic>("Basic", {
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "10",
+    _sort: "-_lastUpdated",
+    _count: "1",
   });
-  const resource = [...resources].sort((left, right) => lastUpdatedMs(right) - lastUpdatedMs(left))[0];
+  const resource = bundle.entry?.[0]?.resource;
   return resource ? parseBillingIdentityConfig(resource) : undefined;
-}
-
-function lastUpdatedMs(resource: Basic): number {
-  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
 }
 
 function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityConfig {
