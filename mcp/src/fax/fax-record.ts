@@ -6,6 +6,8 @@ export const FAX_DESTINATION_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-fax-destination";
 export const FAX_ERROR_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-fax-error";
+export const FAX_CALLBACK_TOKEN_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token";
 export const WESTFAX_JOB_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/westfax-job-id";
 
@@ -33,6 +35,7 @@ export function buildFaxSendRecord(input: {
   filename: string;
   size: number;
   recordedAt: string;
+  callbackToken: string;
 }): DocumentReference {
   const related: Reference[] = [{ reference: serviceRequestReference(input.serviceRequest) }];
   if (input.serviceRequest.encounter?.reference) related.push(input.serviceRequest.encounter);
@@ -64,6 +67,7 @@ export function buildFaxSendRecord(input: {
     extension: [
       { url: FAX_STATUS_EXTENSION_URL, valueString: "Pending" },
       { url: FAX_DESTINATION_EXTENSION_URL, valueString: input.destinationNumber },
+      { url: FAX_CALLBACK_TOKEN_EXTENSION_URL, valueString: input.callbackToken },
     ],
   };
 }
@@ -104,6 +108,12 @@ export function faxStatus(record: DocumentReference): FaxTransmissionStatus {
     return value as FaxTransmissionStatus;
   }
   return "Unknown";
+}
+
+export function faxCallbackToken(record: DocumentReference): string | undefined {
+  return record.extension?.find(
+    (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
+  )?.valueString;
 }
 
 export function westFaxResult(value: unknown): WestFaxResult {

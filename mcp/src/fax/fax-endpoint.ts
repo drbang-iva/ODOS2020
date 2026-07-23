@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import type {
   Bundle,
   DocumentReference,
@@ -26,6 +27,7 @@ import {
   buildFaxSendRecord,
   FAX_ERROR_EXTENSION_URL,
   FAX_STATUS_EXTENSION_URL,
+  faxCallbackToken,
   faxStatus,
   withFaxSendResult,
   westFaxResult,
@@ -50,6 +52,7 @@ export interface FaxEndpointResult {
 }
 
 const fhirIdSchema = z.string().regex(/^[A-Za-z0-9.-]{1,64}$/);
+const callbackTokenSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const destinationSchema = z.string().trim().min(3).max(64);
 const filenameSchema = z.string().trim().min(1).max(180).regex(/\.pdf$/i);
 const MAX_FAX_PDF_BYTES = 25 * 1024 * 1024;
@@ -94,12 +97,14 @@ export async function handleReferralFaxRequest(
     };
   }
 
-  const destinationNumber = parsedDestination.data;
   const allowedFaxNumbers = await referralTargetFaxNumbers(
     deps.serviceFhir,
     context.serviceRequest,
   );
-  if (!allowedFaxNumbers.some((fax) => normalizedFax(fax) === normalizedFax(destinationNumber))) {
+  const destinationNumber = allowedFaxNumbers.find(
+    (fax) => normalizedFax(fax) === normalizedFax(parsedDestination.data),
+  );
+  if (!destinationNumber) {
     return {
       status: 409,
       body: { error: "The destination fax number no longer matches the referral consultant." },
@@ -107,6 +112,7 @@ export async function handleReferralFaxRequest(
   }
 
   const now = deps.now ?? (() => new Date().toISOString());
+  const callbackToken = randomBytes(32).toString("hex");
   const record = await deps.serviceFhir.create<DocumentReference>(
     buildFaxSendRecord({
       serviceRequest: context.serviceRequest,
@@ -115,12 +121,15 @@ export async function handleReferralFaxRequest(
       filename: parsedFilename.data,
       size: document.length,
       recordedAt: now(),
+      callbackToken,
     }),
     { "X-ODOS-Source": "mcp/fax-send" },
   );
   if (!record.id) throw new Error("Fax DocumentReference create response did not include an id.");
 
-  const callbackUrl = `${deps.callbackBaseUrl.replace(/\/$/, "")}/fax/callback/${encodeURIComponent(record.id)}`;
+  const callbackUrl =
+    `${deps.callbackBaseUrl.replace(/\/$/, "")}/fax/callback/${encodeURIComponent(record.id)}`
+    + `?token=${encodeURIComponent(callbackToken)}`;
   let result;
   try {
     result = await deps.adapter.sendFax({
@@ -195,19 +204,28 @@ export async function handleReferralFaxRequest(
 
 export async function handleFaxCallbackRequest(
   deps: Pick<FaxEndpointDeps, "serviceFhir" | "now">,
-  input: { recordId: unknown; body: unknown },
+  input: { recordId: unknown; callbackToken: unknown; body: unknown },
 ): Promise<FaxEndpointResult> {
   const parsedId = fhirIdSchema.safeParse(input.recordId);
   if (!parsedId.success) {
     return { status: 400, body: { error: "A valid fax record id is required." } };
+  }
+  const parsedToken = callbackTokenSchema.safeParse(input.callbackToken);
+  if (!parsedToken.success) {
+    return { status: 401, body: { error: "Fax callback authentication failed." } };
   }
   const body = isRecord(input.body) ? input.body : {};
   const existing = await deps.serviceFhir.read<DocumentReference>(
     "DocumentReference",
     parsedId.data,
   );
-  if (!existing.extension?.some((extension) => extension.url === FAX_STATUS_EXTENSION_URL)) {
-    return { status: 404, body: { error: "Fax record not found." } };
+  const expectedToken = faxCallbackToken(existing);
+  if (
+    !existing.extension?.some((extension) => extension.url === FAX_STATUS_EXTENSION_URL)
+    || !expectedToken
+    || !callbackTokenMatches(parsedToken.data, expectedToken)
+  ) {
+    return { status: 401, body: { error: "Fax callback authentication failed." } };
   }
   const rawStatus = body.Result ?? body.result ?? body.Status ?? body.status;
   const status = westFaxResult(rawStatus);
@@ -405,6 +423,12 @@ function resources<T extends Resource>(bundle: Bundle<T>): T[] {
 
 function normalizedFax(value: string): string {
   return value.replace(/\D/g, "");
+}
+
+function callbackTokenMatches(token: string, expectedToken: string): boolean {
+  const actual = Buffer.from(token);
+  const expected = Buffer.from(expectedToken);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 function isPdf(value: Buffer): boolean {

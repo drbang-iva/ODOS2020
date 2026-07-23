@@ -3,6 +3,12 @@
   "generatedAt": "2026-07-22",
   "extensions": [
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
+      "namespace": "fax",
+      "status": "active",
+      "sliceConsumer": "westfax-referrals"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-transmission-status",
       "namespace": "fax",
       "status": "active",

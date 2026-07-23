@@ -41,6 +41,7 @@ export function registerFaxRoutes(
     route("/fax/callback/:recordId", deps, res, () =>
       handleFaxCallbackRequest(deps, {
         recordId: routeParam(req.params.recordId),
+        callbackToken: queryParam(req.query.token),
         body: req.body,
       })));
 }
@@ -63,4 +64,8 @@ async function route(
 
 function routeParam(value: string | string[]): string {
   return Array.isArray(value) ? value[0] ?? "" : value;
+}
+
+function queryParam(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }

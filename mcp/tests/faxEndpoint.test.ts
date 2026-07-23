@@ -14,8 +14,13 @@ import { assertBusinessActionAllowed } from "../src/authz/roles.js";
 import {
   handleFaxCallbackRequest,
   handleReferralFaxRequest,
+  handleReferralFaxStatusRequest,
 } from "../src/fax/fax-endpoint.js";
-import { faxStatus } from "../src/fax/fax-record.js";
+import {
+  FAX_CALLBACK_TOKEN_EXTENSION_URL,
+  FAX_DESTINATION_EXTENSION_URL,
+  faxStatus,
+} from "../src/fax/fax-record.js";
 import type { FaxSendInput } from "../src/fax/westfax-adapter.js";
 import {
   buildReferralServiceRequest,
@@ -36,60 +41,41 @@ test("document.fax-send is granted to referral-capable clinical and front-desk r
 
 test("referral fax send persists a pending DocumentReference and callback advances it to Sent", async () => {
   const fhir = new MemoryFaxFhir();
-  fhir.put({
-    ...buildReferralServiceRequest({
-      subjectReference: "Patient/p1",
-      subjectDisplay: "Alex Patient",
-      requesterReference: "Practitioner/clinician-1",
-      targetReference: "Organization/retina-1",
-      targetDisplay: "Retina Associates",
-      encounterReference: "Encounter/e1",
-      includeList: {
-        letter: true,
-        demographics: true,
-        history: false,
-        clinical_summary: false,
-        images: false,
-        hipaa_cover_sheet: true,
-        history_count: 2,
-      },
-      letterBody: "Please evaluate this patient.",
-      authoredOn: NOW,
-    }),
-    id: "referral-1",
-  } satisfies ServiceRequest);
-  fhir.put({
-    resourceType: "Organization",
-    id: "retina-1",
-    name: "Retina Associates",
-    telecom: [{ system: "fax", value: "(864) 555-0100" }],
-  } satisfies Organization);
-
+  seedReferralTarget(fhir, "8642231627");
   const adapterCalls: FaxSendInput[] = [];
   const deps = faxDeps(fhir, adapterCalls);
-  const sent = await handleReferralFaxRequest(deps, {
-    authHeader: "Bearer clinician",
-    patientId: "p1",
-    referralId: "referral-1",
-    destinationNumber: "864-555-0100",
-    billingCode: "referral-1",
-    filename: "referral-referral-1.pdf",
-    document: Buffer.from("%PDF-synthetic referral packet"),
-  });
+  const sent = await sendReferralFax(deps, "864-223-1627");
 
   assert.equal(sent.status, 202);
   assert.equal(adapterCalls.length, 1);
   assert.equal(adapterCalls[0]?.billingCode, "referral-1");
-  assert.equal(adapterCalls[0]?.destinationNumbers[0], "864-555-0100");
-  assert.match(adapterCalls[0]?.callbackUrl ?? "", /\/fax\/callback\/documentreference-1$/);
+  assert.equal(adapterCalls[0]?.destinationNumbers[0], "8642231627");
   const created = fhir.resources("DocumentReference")[0] as DocumentReference;
   assert.equal(created.context?.related?.[0]?.reference, "ServiceRequest/referral-1");
   assert.equal(created.context?.related?.[1]?.reference, "Encounter/e1");
   assert.equal(created.content[0]?.attachment.contentType, "application/pdf");
+  assert.equal(
+    created.extension?.find(
+      (extension) => extension.url === FAX_DESTINATION_EXTENSION_URL,
+    )?.valueString,
+    "8642231627",
+  );
   assert.equal(faxStatus(created), "Pending");
+
+  const callbackUrl = adapterCalls[0]?.callbackUrl;
+  assert.ok(callbackUrl);
+  const callbackToken = new URL(callbackUrl).searchParams.get("token");
+  assert.match(callbackToken ?? "", /^[a-f0-9]{64}$/);
+  assert.equal(
+    created.extension?.find(
+      (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
+    )?.valueString,
+    callbackToken,
+  );
 
   const callback = await handleFaxCallbackRequest(deps, {
     recordId: created.id,
+    callbackToken,
     body: { Success: true, Result: "Sent" },
   });
   assert.equal(callback.status, 200);
@@ -99,6 +85,76 @@ test("referral fax send persists a pending DocumentReference and callback advanc
     updated.identifier?.find((identifier) => identifier.system?.includes("westfax-job-id"))?.value,
     "westfax-job-1",
   );
+});
+
+test("fax callback rejects a missing or wrong token without mutating the record", async () => {
+  const fhir = new MemoryFaxFhir();
+  seedReferralTarget(fhir, "8642231627");
+  const adapterCalls: FaxSendInput[] = [];
+  const deps = faxDeps(fhir, adapterCalls);
+  await sendReferralFax(deps, "8642231627");
+  const created = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const callbackUrl = adapterCalls[0]?.callbackUrl;
+  assert.ok(callbackUrl);
+  const callbackToken = new URL(callbackUrl).searchParams.get("token");
+  assert.ok(callbackToken);
+  const versionBeforeRejectedCallbacks = created.meta?.versionId;
+
+  const missingToken = await handleFaxCallbackRequest(deps, {
+    recordId: created.id,
+    callbackToken: undefined,
+    body: { Success: true, Result: "Sent" },
+  });
+  assert.equal(missingToken.status, 401);
+
+  const wrongToken = `${callbackToken[0] === "0" ? "1" : "0"}${callbackToken.slice(1)}`;
+  const invalidToken = await handleFaxCallbackRequest(deps, {
+    recordId: created.id,
+    callbackToken: wrongToken,
+    body: { Success: true, Result: "Sent" },
+  });
+  assert.equal(invalidToken.status, 401);
+  const unchanged = await fhir.read<DocumentReference>("DocumentReference", created.id!);
+  assert.equal(faxStatus(unchanged), "Pending");
+  assert.equal(unchanged.meta?.versionId, versionBeforeRejectedCallbacks);
+});
+
+test("fax response projections never expose the callback token", async () => {
+  const fhir = new MemoryFaxFhir();
+  seedReferralTarget(fhir, "8642231627");
+  const adapterCalls: FaxSendInput[] = [];
+  const deps = faxDeps(fhir, adapterCalls);
+  const sent = await sendReferralFax(deps, "8642231627");
+  const created = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const callbackUrl = adapterCalls[0]?.callbackUrl;
+  assert.ok(callbackUrl);
+  const callbackToken = new URL(callbackUrl).searchParams.get("token");
+  assert.ok(callbackToken);
+  assert.equal(JSON.stringify(sent.body).includes(callbackToken), false);
+
+  const pendingStatus = await handleReferralFaxStatusRequest(deps, {
+    authHeader: "Bearer clinician",
+    patientId: "p1",
+    referralId: "referral-1",
+  });
+  assert.equal(pendingStatus.status, 200);
+  assert.equal(JSON.stringify(pendingStatus.body).includes(callbackToken), false);
+
+  const callback = await handleFaxCallbackRequest(deps, {
+    recordId: created.id,
+    callbackToken,
+    body: { Success: true, Result: "Sent" },
+  });
+  assert.equal(callback.status, 200);
+  assert.equal(JSON.stringify(callback.body).includes(callbackToken), false);
+
+  const status = await handleReferralFaxStatusRequest(deps, {
+    authHeader: "Bearer clinician",
+    patientId: "p1",
+    referralId: "referral-1",
+  });
+  assert.equal(status.status, 200);
+  assert.equal(JSON.stringify(status.body).includes(callbackToken), false);
 });
 
 test("fax send rejects a destination that is not the consultant's Directory fax", async () => {
@@ -146,6 +202,31 @@ function faxDeps(fhir: MemoryFaxFhir, adapterCalls: FaxSendInput[]) {
     callbackBaseUrl: "https://odos.practice.test",
     now: () => NOW,
   };
+}
+
+function seedReferralTarget(fhir: MemoryFaxFhir, faxNumber: string): void {
+  fhir.put(referral());
+  fhir.put({
+    resourceType: "Organization",
+    id: "retina-1",
+    name: "Retina Associates",
+    telecom: [{ system: "fax", value: faxNumber }],
+  } satisfies Organization);
+}
+
+async function sendReferralFax(
+  deps: ReturnType<typeof faxDeps>,
+  destinationNumber: string,
+) {
+  return handleReferralFaxRequest(deps, {
+    authHeader: "Bearer clinician",
+    patientId: "p1",
+    referralId: "referral-1",
+    destinationNumber,
+    billingCode: "referral-1",
+    filename: "referral-referral-1.pdf",
+    document: Buffer.from("%PDF-synthetic referral packet"),
+  });
 }
 
 function referral(): ServiceRequest {
