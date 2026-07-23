@@ -377,6 +377,47 @@ test("readStedi277 extracts three claim outcomes, rejection reasons, sender type
   assert.match(report.claims[1].reasons.join(" "), /Claim issue/);
 });
 
+test("readStedi277 surfaces a service-line rejection from the claim row with its reason", () => {
+  const claim = stedi277Claim("PCN-LINE-REJECTED", "A1", "16", "Claim received.") as any;
+  claim.claimStatus.informationClaimStatuses = [];
+  claim.serviceLines = [{
+    lineItemControlNumber: "line-1",
+    serviceClaimStatuses: [{
+      serviceStatuses: [{
+        healthCareClaimStatusCategoryCode: "A7",
+        healthCareClaimStatusCategoryCodeValue: "Rejected for invalid information.",
+        statusCode: "21",
+        statusCodeValue: "Invalid service-line procedure BADCODE.",
+      }],
+    }],
+  }];
+
+  const report = readStedi277(stedi277Report([claim]), "ack-service-line");
+
+  assert.equal(report.claims[0].outcome, "rejected");
+  assert.match(report.claims[0].reasons.join(" "), /service-line procedure BADCODE/i);
+});
+
+test("readStedi277 merges claim-level and service-line statuses", () => {
+  const claim = stedi277Claim("PCN-MERGED", "A1", "16", "Claim received.") as any;
+  claim.serviceLines = [{
+    lineItemControlNumber: "line-1",
+    serviceClaimStatuses: [{
+      serviceStatuses: [{
+        healthCareClaimStatusCategoryCode: "A7",
+        healthCareClaimStatusCategoryCodeValue: "Rejected for invalid information.",
+        statusCode: "21",
+        statusCodeValue: "Service line rejected.",
+      }],
+    }],
+  }];
+
+  const report = readStedi277(stedi277Report([claim]), "ack-merged");
+
+  assert.deepEqual(report.claims[0].statuses.map((status) => status.categoryCode), ["A1", "A7"]);
+  assert.equal(report.claims[0].outcome, "rejected");
+});
+
 test("readStedi277 retains multiple acknowledgments for the same claim and surfaces unknown categories for review", () => {
   const raw = stedi277Report([stedi277Claim("PCN-SAME", "A1", "16", "Forwarded")]) as any;
   raw.transactions.push(...(stedi277Report([

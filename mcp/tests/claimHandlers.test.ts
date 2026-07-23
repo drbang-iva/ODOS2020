@@ -1566,6 +1566,38 @@ test("one malformed 277CA is flagged without preventing the rest of the batch", 
   assert.match(taskInput(fixture.created.Task[1], "claimmd-message")?.valueString ?? "", /BADCODE/);
 });
 
+test("a failure-path audit error is logged without aborting the 277CA batch", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({ ...buildProfessionalClaim(professionalClaim), id: "claim-1" });
+  fixture.deps.recordAudit = async () => {
+    throw new Error("synthetic audit outage");
+  };
+  fixture.deps.adapters = { stedi: stedi277Adapter({
+    "ack-malformed-audit": { meta: { transactionId: "ack-malformed-audit" }, transactions: "not-an-array" },
+    "ack-good-after-audit": stedi277HandlerReport("ack-good-after-audit", [
+      stedi277HandlerClaim("ODOS-CLAIM-900", "A2", "Accepted for processing."),
+    ]),
+  }) };
+  const logged: unknown[][] = [];
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    logged.push(args);
+  };
+
+  try {
+    const result = await handleStedi277ImportRequest(fixture.deps, {
+      authHeader: "Bearer good",
+      body: { clearinghouse: "stedi" },
+    });
+
+    assert.equal(result.status, 200);
+    assert.deepEqual((result.body as any).acknowledgments.map((ack: any) => ack.status), ["review", "processed"]);
+    assert.match(logged.flat().join(" "), /ack-malformed-audit.*audit outage/i);
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
 test("277CA import returns a clear unsupported response for Claim.MD", async () => {
   const fixture = deps();
   const result = await handleStedi277ImportRequest(fixture.deps, {

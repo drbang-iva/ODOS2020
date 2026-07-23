@@ -235,7 +235,7 @@ export function readStedi277(raw: unknown, fallbackTransactionId: string): Stedi
                 issues.push(`Claim ${location} is missing its patient control number or claimStatus object.`);
                 return;
               }
-              const statuses = stedi277Statuses(claimStatus);
+              const statuses = [...stedi277Statuses(claimStatus), ...stedi277ServiceStatuses(claimRow)];
               const outcome = interpretStedi277Statuses(statuses);
               const reasons = uniqueStrings(statuses.flatMap((status) => [
                 status.message,
@@ -293,10 +293,13 @@ function stedi277Statuses(claimStatus: Record<string, unknown>): Stedi277Status[
     const message = textOf(group.statusMessage);
     return arrayOfRecords(group.informationStatuses).map((status) => stedi277Status(status, message));
   });
-  const serviceStatuses = arrayOfRecords(claimStatus.serviceLines).flatMap((serviceLine) =>
+  return claimStatuses;
+}
+
+function stedi277ServiceStatuses(claimRow: Record<string, unknown>): Stedi277Status[] {
+  return arrayOfRecords(claimRow.serviceLines).flatMap((serviceLine) =>
     arrayOfRecords(serviceLine.serviceClaimStatuses).flatMap((group) =>
       arrayOfRecords(group.serviceStatuses).map((status) => stedi277Status(status, undefined))));
-  return [...claimStatuses, ...serviceStatuses];
 }
 
 function stedi277Status(status: Record<string, unknown>, message: string | undefined): Stedi277Status {

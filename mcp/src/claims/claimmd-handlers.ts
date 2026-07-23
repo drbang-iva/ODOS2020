@@ -603,11 +603,15 @@ export async function handleStedi277ImportRequest(
           ...(report.issues.length ? { issues: report.issues } : {}),
         });
       } catch (error) {
-        await createAndAuditClaimRejectedTask(deps, auth, {
-          claimMdMessage: `Stedi 277CA ${transactionId} is malformed or could not be retrieved and requires review: ${messageOf(error)}`,
-          adapterName: "stedi",
-          identifier: stedi277TaskIdentifier(transactionId, "report"),
-        });
+        try {
+          await createAndAuditClaimRejectedTask(deps, auth, {
+            claimMdMessage: `Stedi 277CA ${transactionId} is malformed or could not be retrieved and requires review: ${messageOf(error)}`,
+            adapterName: "stedi",
+            identifier: stedi277TaskIdentifier(transactionId, "report"),
+          });
+        } catch (taskError) {
+          console.error(`odos-mcp: Stedi 277CA ${transactionId} failure-path worklist/audit write failed:`, taskError);
+        }
         acknowledgments.push({
           transactionId,
           status: "review",
