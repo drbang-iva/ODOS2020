@@ -299,10 +299,15 @@ export async function handleStediClaimResubmissionRequest(
 
   const selection = clearinghouseSelection(deps, "stedi", "transaction");
   if ("status" in selection) return selection;
+  let context: Awaited<ReturnType<typeof stediResubmissionContext>>;
+  try {
+    context = await stediResubmissionContext(auth, parsed);
+  } catch (error) {
+    return claimReadFailure(parsed.originalClaimReference, error);
+  }
   let createdClaim: Claim | undefined;
   let patientReference: string | undefined;
   try {
-    const context = await stediResubmissionContext(auth, parsed);
     if (!context.snapshot) {
       return {
         status: 409,

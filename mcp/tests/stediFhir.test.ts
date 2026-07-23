@@ -77,6 +77,12 @@ test("pre-adjudication correction stays CFC 1 without a payer claim control numb
   });
 });
 
+test("pre-adjudication void stays manual because there is no payer claim to cancel", () => {
+  const result = determineStediClaimResubmission({ intent: "void" });
+  assert.equal(result.status, "manual");
+  assert.match(result.status === "manual" ? result.reason : "", /no payer claim control number|nothing to cancel/i);
+});
+
 test("adjudicated non-Medicare correction and void use CFC 7/8 with the PCCN", () => {
   assert.deepEqual(determineStediClaimResubmission({
     intent: "correct",

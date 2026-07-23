@@ -548,6 +548,35 @@ test("pre-adjudication correction previews and submits CFC 1 without a PCCN", as
   assert.equal(fixture.created.Claim.at(-1)?.related?.[0]?.claim.reference, "Claim/claim-original");
 });
 
+test("pre-adjudication void returns manual handling without building or submitting a claim", async () => {
+  const fixture = deps();
+  fixture.created.Claim.push({
+    ...withStediClaimInputSnapshot(buildProfessionalClaim(professionalClaim), professionalClaim),
+    id: "claim-original",
+  });
+  let transportCalls = 0;
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => { transportCalls += 1; }) };
+
+  const preview = await handleStediClaimResubmissionPreviewRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: { originalClaimReference: "Claim/claim-original", intent: "void" },
+  });
+  const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/claim-original",
+      intent: "void",
+      patientControlNumber: "ODOS-VOID-901",
+    },
+  });
+
+  assert.equal((preview.body as any).determination.status, "manual");
+  assert.equal(result.status, 409);
+  assert.match((result.body as { error: string }).error, /nothing to cancel/i);
+  assert.equal(fixture.created.Claim.length, 1);
+  assert.equal(transportCalls, 0);
+});
+
 test("adjudicated non-Medicare correction and void submit CFC 7/8 with the PCCN", async () => {
   for (const intent of ["correct", "void"] as const) {
     const fixture = deps();
@@ -636,6 +665,28 @@ test("adjudicated Medicare or unknown classification returns manual handling wit
     assert.equal(fixture.created.Claim.length, 1);
     assert.equal(transportCalls, 0);
   }
+});
+
+test("missing original claim returns 404 without a rejected Task or submit-failed audit", async () => {
+  const fixture = deps();
+  let transportCalls = 0;
+  fixture.deps.adapters = { stedi: stediSubmissionAdapter(() => { transportCalls += 1; }) };
+
+  const result = await handleStediClaimResubmissionRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      originalClaimReference: "Claim/missing-original",
+      intent: "correct",
+      patientControlNumber: "ODOS-CORRECT-904",
+      revisedClaim: professionalClaim,
+    },
+  });
+
+  assert.equal(result.status, 404);
+  assert.equal(fixture.created.Claim.length, 0);
+  assert.equal(fixture.created.Task.length, 0);
+  assert.equal(fixture.audits.some((entry) => entry.eventType === "claim.submit.failed"), false);
+  assert.equal(transportCalls, 0);
 });
 
 test("Stedi subscriber address validation returns 400 before transport without a rejected Task or clearinghouse-failure audit", async () => {

@@ -125,7 +125,7 @@ export type StediClaimResubmissionDetermination =
   | {
       status: "manual";
       reason: string;
-      payerClaimControlNumber: string;
+      payerClaimControlNumber?: string;
     };
 
 export function determineStediClaimResubmission(input: {
@@ -135,6 +135,12 @@ export function determineStediClaimResubmission(input: {
 }): StediClaimResubmissionDetermination {
   const payerClaimControlNumber = input.payerClaimControlNumber?.trim();
   if (!payerClaimControlNumber) {
+    if (input.intent === "void") {
+      return {
+        status: "manual",
+        reason: "A claim with no payer claim control number was never accepted into adjudication and cannot be voided through an 837P; there is nothing to cancel.",
+      };
+    }
     return { status: "ready", claimFrequencyCode: "1" };
   }
   if (input.payerClassification !== "confirmed-non-medicare") {
