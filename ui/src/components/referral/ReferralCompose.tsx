@@ -12,12 +12,14 @@ import {
   ReferralConflictError,
   readReferralLetterBody,
   referralApi,
+  type FaxStatus,
   type ReferralApi,
   type ReferralConsultant,
   type ReferralDraftUpdate,
   type ReferralIncludeList,
   type ReferralPriority,
 } from "./referral-api";
+import { buildReferralPdfBase64 } from "./referral-pdf";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
   letter: true,
@@ -53,6 +55,7 @@ interface Props {
   onClose: () => void;
   api?: ReferralApi;
   loadContext?: (encounterReference: string) => Promise<ComposeContext>;
+  createPdf?: (artifactHtml: string) => Promise<string>;
 }
 
 export function ReferralCompose({
@@ -61,6 +64,7 @@ export function ReferralCompose({
   onClose,
   api = referralApi,
   loadContext = loadComposeContext,
+  createPdf = buildReferralPdfBase64,
 }: Props) {
   const patientId = patientReference.replace(/^Patient\//, "");
   const [includeList, setIncludeList] = useState<ReferralIncludeList>(SYSTEM_DEFAULTS);
@@ -80,7 +84,13 @@ export function ReferralCompose({
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
   const [conflict, setConflict] = useState(false);
-  const [sent, setSent] = useState<{ provenanceReference?: string; sentAt: string }>();
+  const [sent, setSent] = useState<{
+    provenanceReference?: string;
+    sentAt: string;
+    fax?: FaxStatus;
+    warning?: string;
+  }>();
+  const [faxSelected, setFaxSelected] = useState(false);
   const [context, setContext] = useState<ComposeContext>({
     doctorDisplay: "clinician",
     findingCount: 0,
@@ -96,6 +106,18 @@ export function ReferralCompose({
   const previewSequence = useRef(0);
   const isSending = busy === "send";
   const composerLocked = Boolean(sent) || isSending;
+
+  useEffect(() => {
+    if (!sent?.fax || !referral?.id || isFinalFaxStatus(sent.fax.status)) return;
+    const timer = window.setTimeout(() => {
+      api.loadFaxStatus(patientId, referral.id!)
+        .then((fax) => {
+          if (fax) setSent((current) => current ? { ...current, fax } : current);
+        })
+        .catch((caught) => setError(errorMessage(caught)));
+    }, 2_000);
+    return () => window.clearTimeout(timer);
+  }, [api, patientId, referral?.id, sent?.fax, sent?.fax?.status]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -316,12 +338,39 @@ export function ReferralCompose({
       }
       const finalLetterBody = letterBodyRef.current;
       if (!finalLetterBody) throw new Error("A referral letter is required before sending.");
-      const response = await api.sendReferral(patientId, finalReferral.id!, finalLetterBody);
-      setArtifact(response.artifact);
-      setSent({
-        provenanceReference: response.provenanceReference,
-        sentAt: new Date().toLocaleString(),
-      });
+      if (faxSelected) {
+        const destinationNumber = selectedConsultant?.faxNumber;
+        if (!destinationNumber) {
+          throw new Error("The selected consultant does not have a fax number in the Directory.");
+        }
+        if (readReferralLetterBody(finalReferral) !== finalLetterBody) {
+          finalReferral = await patchDraft({ letterBody: finalLetterBody });
+        }
+        const preview = await api.previewReferral(patientId, finalReferral.id!, finalLetterBody);
+        setArtifact(preview.artifact);
+        const filename = `referral-${finalReferral.id}.pdf`;
+        const response = await api.faxReferral({
+          patientId,
+          referralId: finalReferral.id!,
+          destinationNumber,
+          documentBase64: await createPdf(preview.artifact),
+          filename,
+          billingCode: finalReferral.id!,
+        });
+        setSent({
+          provenanceReference: response.provenanceReference,
+          sentAt: new Date().toLocaleString(),
+          fax: response.fax,
+          warning: response.warning,
+        });
+      } else {
+        const response = await api.sendReferral(patientId, finalReferral.id!, finalLetterBody);
+        setArtifact(response.artifact);
+        setSent({
+          provenanceReference: response.provenanceReference,
+          sentAt: new Date().toLocaleString(),
+        });
+      }
     } catch (caught) {
       handleFailure(caught);
     } finally {
@@ -391,6 +440,7 @@ export function ReferralCompose({
                       <span>
                         <span className="block text-sm font-semibold">{consultant.display}</span>
                         <span className="block text-xs text-[color:var(--odos-faint)]">{consultant.reference}</span>
+                        {consultant.faxNumber && <span className="block text-xs text-[color:var(--odos-muted)]">Fax {consultant.faxNumber}</span>}
                       </span>
                       {query.trim().length < 2 && <span className="rounded-full border border-brand/35 bg-brand/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand">Recent</span>}
                     </button>
@@ -486,21 +536,35 @@ export function ReferralCompose({
 
             <Tile title="Send" index="05">
               {sent ? (
-                <div className="rounded border border-emerald-300/35 bg-emerald-300/10 p-4">
-                  <div className="text-lg font-semibold text-emerald-100">✓ Packet sent</div>
-                  <div className="mt-2 text-xs leading-relaxed text-emerald-50/70">
+                <div className={`rounded border p-4 ${faxTone(sent.fax?.status)}`}>
+                  <div className="text-lg font-semibold">{sent.fax ? faxStatusLabel(sent.fax.status) : "✓ Packet sent"}</div>
+                  <div className="mt-2 text-xs leading-relaxed opacity-75">
+                    {sent.fax?.reference ? `${sent.fax.reference} · ` : ""}
                     Disclosure recorded{sent.provenanceReference ? ` · ${sent.provenanceReference}` : ""} · {context.doctorDisplay} · {sent.sentAt}
                   </div>
+                  {sent.fax?.error && <div className="mt-2 text-sm">{sent.fax.error}</div>}
+                  {sent.warning && <div role="alert" className="mt-2 text-sm">{sent.warning}</div>}
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-3 overflow-hidden rounded border border-[color:var(--odos-line)]">
-                    <button type="button" disabled={!artifact || isSending} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => iframeRef.current?.contentWindow?.print()}>Print</button>
-                    <button type="button" disabled={!artifact || isSending} className="border-x border-[color:var(--odos-line)] px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={downloadPacket}>Download</button>
-                    <button type="button" disabled className="px-2 py-2 text-xs text-[color:var(--odos-faint)]">Fax · soon</button>
+                    <button type="button" disabled={!artifact || isSending} className="px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => { setFaxSelected(false); iframeRef.current?.contentWindow?.print(); }}>Print</button>
+                    <button type="button" disabled={!artifact || isSending} className="border-x border-[color:var(--odos-line)] px-2 py-2 text-xs font-semibold disabled:opacity-35" onClick={() => { setFaxSelected(false); downloadPacket(); }}>Download</button>
+                    <button
+                      type="button"
+                      disabled={!artifact || isSending || !selectedConsultant?.faxNumber}
+                      aria-pressed={faxSelected}
+                      className={`px-2 py-2 text-xs font-semibold disabled:opacity-35 ${faxSelected ? "bg-brand text-black" : ""}`}
+                      onClick={() => setFaxSelected(true)}
+                    >Fax</button>
                   </div>
-                  <button type="button" disabled={!referral || !letterBody || Boolean(busy) || conflict} className="mt-3 w-full rounded bg-brand px-4 py-3 text-sm font-bold text-black disabled:opacity-35" onClick={() => void sendPacket()}>
-                    {busy === "send" ? "Sending…" : "Send packet"}
+                  {faxSelected && selectedConsultant?.faxNumber && (
+                    <p className="mt-2 text-xs text-[color:var(--odos-muted)]">
+                      Fax to {selectedConsultant.display} · {selectedConsultant.faxNumber}
+                    </p>
+                  )}
+                  <button type="button" disabled={!referral || !letterBody || Boolean(busy) || conflict || (faxSelected && !selectedConsultant?.faxNumber)} className="mt-3 w-full rounded bg-brand px-4 py-3 text-sm font-bold text-black disabled:opacity-35" onClick={() => void sendPacket()}>
+                    {busy === "send" ? "Sending…" : faxSelected ? "Fax packet" : "Send packet"}
                   </button>
                   <p className="mt-2 text-xs leading-relaxed text-[color:var(--odos-faint)]">Sending records a disclosure — who sent what, to whom, and when.</p>
                 </>
@@ -534,7 +598,9 @@ export function ReferralCompose({
                 </div>
               )}
               {sent && (
-                <div className="pointer-events-none absolute right-8 top-24 rotate-[-8deg] border-4 border-emerald-600 px-4 py-1 text-2xl font-black tracking-[0.18em] text-emerald-700/80">SENT</div>
+                <div className="pointer-events-none absolute right-8 top-24 rotate-[-8deg] border-4 border-emerald-600 px-4 py-1 text-2xl font-black tracking-[0.18em] text-emerald-700/80">
+                  {sent.fax?.status === "Sent" ? "FAX SENT" : "SENT"}
+                </div>
               )}
               {previewBusy && <div className="absolute bottom-4 right-4 rounded bg-slate-900/80 px-3 py-1 text-xs text-[color:var(--odos-text)]">Updating packet…</div>}
             </div>
@@ -551,6 +617,23 @@ export function consultantChangeAction(letterTouched: boolean): "regenerate" | "
 
 function referralReasonText(referral: ServiceRequest): string | null {
   return referral.reasonCode?.[0]?.text?.trim() || null;
+}
+
+function isFinalFaxStatus(status: string): boolean {
+  return !["Pending", "Dialing"].includes(status);
+}
+
+function faxStatusLabel(status: string): string {
+  if (status === "Sent") return "✓ Fax sent";
+  if (status === "Pending") return "Fax pending";
+  if (status === "Dialing") return "Fax dialing";
+  return `Fax failed · ${status}`;
+}
+
+function faxTone(status: string | undefined): string {
+  if (!status || status === "Sent") return "border-emerald-300/35 bg-emerald-300/10 text-emerald-100";
+  if (!isFinalFaxStatus(status)) return "border-amber-300/35 bg-amber-300/10 text-amber-100";
+  return "border-red-400/40 bg-red-400/10 text-red-100";
 }
 
 function Tile({ title, index, children }: { title: string; index: string; children: React.ReactNode }) {

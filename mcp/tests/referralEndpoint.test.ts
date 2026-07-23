@@ -250,6 +250,7 @@ test("draft update persists each supported field and rejects active or stale mut
     { includeList: nextIncludeList },
     { priority: "stat" },
     { reasonText: "Acute metamorphopsia" },
+    { letterBody: "Please evaluate the acute metamorphopsia." },
   ]) {
     const result = await handleUpdateReferralDraftRequest(deps(fhir), { ...common, body });
     assert.equal(result.status, 200);
@@ -259,6 +260,7 @@ test("draft update persists each supported field and rejects active or stale mut
   assert.deepEqual(readReferralIncludeList(updated), nextIncludeList);
   assert.equal(updated.priority, "stat");
   assert.deepEqual(updated.reasonCode, [{ text: "Acute metamorphopsia" }]);
+  assert.equal(referralLetterBody(updated), "Please evaluate the acute metamorphopsia.");
 
   const cleared = await handleUpdateReferralDraftRequest(deps(fhir), {
     ...common,

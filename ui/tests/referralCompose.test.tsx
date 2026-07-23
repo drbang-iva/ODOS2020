@@ -53,10 +53,8 @@ test("the compose surface presents the locked clinical rail and honest transport
   assert.match(html, /Routine|routine/);
   assert.match(html, /Urgent|urgent/);
   assert.match(html, /Stat|stat/);
-  assert.match(html, /Fax · soon/);
-  const disabledFaxButton = /<button[^>]*disabled=""[^>]*>Fax · soon<\/button>/;
-  assert.match(html, disabledFaxButton);
-  assert.doesNotMatch("<button>Fax · soon</button>", disabledFaxButton);
+  assert.match(html, />Fax<\/button>/);
+  assert.doesNotMatch(html, /Fax · soon/);
   assert.match(html, /Sending records a disclosure/);
   assert.match(html, /Return to chart/);
 });
@@ -92,8 +90,13 @@ test("the assessment disposition exposes the referral compose screen from the li
   assert.match(encounter, /onRefer=\{\(\) => setReferralComposeOpen\(true\)\}/);
 });
 
-test("the referral API uses the directory, PATCH mutation, regenerate, preview, send, and defaults contracts", async () => {
-  const calls: Array<{ url: string; method: string; body?: unknown }> = [];
+test("Vite proxies the server-owned fax boundary to MCP", () => {
+  const viteConfig = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
+  assert.ok(viteConfig.includes('"/fax": { target: mcpTarget, changeOrigin: true }'));
+});
+
+test("the referral API uses the directory, mutation, artifact, and fax contracts", async () => {
+  const calls: Array<{ url: string; method: string; body?: unknown; headers?: HeadersInit }> = [];
   const serviceRequest = referral();
   const api = createReferralApi(async (input, init) => {
     const url = String(input);
@@ -101,8 +104,13 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
       url,
       method: init?.method ?? "GET",
       ...(typeof init?.body === "string" ? { body: JSON.parse(init.body) } : {}),
+      ...(init?.headers ? { headers: init.headers } : {}),
     });
-    const body = url.endsWith("/defaults")
+    const body = url.endsWith("/status")
+      ? { fax: { reference: "DocumentReference/f1", status: "Sent" } }
+      : url.startsWith("/fax/referrals/")
+        ? { fax: { reference: "DocumentReference/f1", status: "Pending" } }
+        : url.endsWith("/defaults")
       ? { includeList: INCLUDE_LIST }
       : url.includes("/consultants")
         ? { consultants: [{ reference: "Organization/o1", display: "Retina Group" }] }
@@ -129,6 +137,15 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
   await api.regenerateReferral("p1", "r1");
   await api.previewReferral("p1", "r1", "Edited preview");
   await api.sendReferral("p1", "r1", "Edited send");
+  await api.faxReferral({
+    patientId: "p1",
+    referralId: "r1",
+    destinationNumber: "8645550100",
+    documentBase64: Buffer.from("%PDF-synthetic").toString("base64"),
+    filename: "referral-r1.pdf",
+    billingCode: "r1",
+  });
+  await api.loadFaxStatus("p1", "r1");
 
   assert.deepEqual(calls.map((call) => [call.method, call.url]), [
     ["GET", "/referrals/defaults"],
@@ -141,6 +158,8 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
     ["POST", "/referrals/patients/p1/r1/regenerate"],
     ["POST", "/referrals/patients/p1/r1/preview"],
     ["POST", "/referrals/patients/p1/r1/send"],
+    ["POST", "/fax/referrals/p1/r1"],
+    ["GET", "/fax/referrals/p1/r1/status"],
   ]);
   assert.deepEqual(calls[4]?.body, {
     targetReference: "Organization/o1",
@@ -153,6 +172,9 @@ test("the referral API uses the directory, PATCH mutation, regenerate, preview, 
   assert.deepEqual(calls[6]?.body, { reasonText: null });
   assert.deepEqual(calls[8]?.body, { editedLetterBody: "Edited preview" });
   assert.deepEqual(calls[9]?.body, { editedLetterBody: "Edited send" });
+  assert.equal((calls[10]?.headers as Record<string, string>)["X-ODOS-Fax-Destination"], "8645550100");
+  assert.equal((calls[10]?.headers as Record<string, string>)["X-ODOS-Billing-Code"], "r1");
+  assert.equal((calls[10]?.headers as Record<string, string>)["Content-Type"], "application/pdf");
 });
 
 test("the referral API turns documented 409 responses into a reopen-required conflict", async () => {
@@ -271,6 +293,126 @@ test("sending freezes composition and ignores previews that finish after the sen
   }
 });
 
+test("Fax sends the combined PDF to the consultant number and renders callback completion", async () => {
+  const originalWindow = globalThis.window;
+  const faxCalls: Array<{
+    destinationNumber: string;
+    documentBase64: string;
+    billingCode: string;
+  }> = [];
+  const api: ReferralApi = {
+    ...apiStub(),
+    loadRecentConsultants: async () => [{
+      reference: "Organization/o1",
+      display: "Retina Group",
+      faxNumber: "8645550100",
+    }],
+    createReferral: async () => referral(),
+    previewReferral: async () => ({
+      serviceRequestReference: "ServiceRequest/r1",
+      artifact: "<html><body>combined packet</body></html>",
+    }),
+    faxReferral: async (input) => {
+      faxCalls.push(input);
+      return { fax: { reference: "DocumentReference/f1", status: "Pending" } };
+    },
+    loadFaxStatus: async () => ({ reference: "DocumentReference/f1", status: "Sent" }),
+  };
+  let renderer!: ReactTestRenderer;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+  try {
+    await act(async () => {
+      renderer = create(
+        <ReferralCompose
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onClose={() => undefined}
+          api={api}
+          createPdf={async () => "JVBERi1zeW50aGV0aWM="}
+          loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      consultantButton(renderer.root).props.onClick();
+      await flushMicrotasks();
+    });
+    const faxButton = buttonNamed(renderer.root, "Fax");
+    assert.equal(faxButton.props.disabled, false);
+    await act(async () => {
+      faxButton.props.onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      buttonNamed(renderer.root, "Fax packet").props.onClick();
+      await flushMicrotasks();
+      await flushMicrotasks();
+    });
+
+    assert.equal(faxCalls.length, 1);
+    assert.equal(faxCalls[0]?.destinationNumber, "8645550100");
+    assert.equal(faxCalls[0]?.documentBase64, "JVBERi1zeW50aGV0aWM=");
+    assert.equal(faxCalls[0]?.billingCode, "r1");
+    assert.ok(renderer.root.findAll((node) => node.children.join("") === "✓ Fax sent").length > 0);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("Fax failure surfaces an inline error instead of a false sent state", async () => {
+  const originalWindow = globalThis.window;
+  const api: ReferralApi = {
+    ...apiStub(),
+    loadRecentConsultants: async () => [{
+      reference: "Organization/o1",
+      display: "Retina Group",
+      faxNumber: "8645550100",
+    }],
+    createReferral: async () => referral(),
+    previewReferral: async () => ({
+      serviceRequestReference: "ServiceRequest/r1",
+      artifact: "<html><body>combined packet</body></html>",
+    }),
+    faxReferral: async () => {
+      throw new Error("WestFax rejected the destination number.");
+    },
+  };
+  let renderer!: ReactTestRenderer;
+  Object.defineProperty(globalThis, "window", { configurable: true, value: immediateTimerWindow() });
+  try {
+    await act(async () => {
+      renderer = create(
+        <ReferralCompose
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onClose={() => undefined}
+          api={api}
+          createPdf={async () => "JVBERi1zeW50aGV0aWM="}
+          loadContext={async () => ({ doctorDisplay: "Dr. Rivera", findingCount: 3, hasPlan: true })}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      consultantButton(renderer.root).props.onClick();
+      await flushMicrotasks();
+      buttonNamed(renderer.root, "Fax").props.onClick();
+      await flushMicrotasks();
+      buttonNamed(renderer.root, "Fax packet").props.onClick();
+      await flushMicrotasks();
+    });
+
+    const alert = renderer.root.findByProps({ role: "alert" });
+    assert.match(alert.children.join(""), /WestFax rejected the destination number/);
+    assert.equal(renderer.root.findAll((node) => node.children.join("") === "✓ Fax sent").length, 0);
+  } finally {
+    if (renderer) await act(async () => renderer.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("the created ServiceRequest supplies the editable generated letter without another fetch", () => {
   assert.equal(readReferralLetterBody(referral()), "Dear Retina Group,\n\nPlease evaluate this patient.");
 });
@@ -305,6 +447,8 @@ function apiStub(): ReferralApi {
     regenerateReferral: async () => referral(),
     previewReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
     sendReferral: async () => ({ serviceRequestReference: "ServiceRequest/r1", artifact: "" }),
+    faxReferral: async () => ({ fax: { reference: "DocumentReference/f1", status: "Pending" } }),
+    loadFaxStatus: async () => null,
   };
 }
 
@@ -327,6 +471,12 @@ function withDraftUpdate(serviceRequest: ServiceRequest, input: ReferralDraftUpd
   if (input.reasonText !== undefined) {
     if (input.reasonText) updated.reasonCode = [{ text: input.reasonText }];
     else delete updated.reasonCode;
+  }
+  if (input.letterBody !== undefined) {
+    updated.extension = [{
+      url: REFERRAL_LETTER_BODY_EXTENSION_URL,
+      valueString: input.letterBody,
+    }];
   }
   return updated;
 }

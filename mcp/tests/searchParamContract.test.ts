@@ -59,12 +59,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2597": [spec("Patient", "name", "_count")],
-  "src/index.ts:2638": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2646": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2654": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4252": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4274": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2602": [spec("Patient", "name", "_count")],
+  "src/index.ts:2643": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2651": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2659": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4257": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4279": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
@@ -82,7 +82,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Invoice", "date", "_count"),
     spec("PaymentReconciliation", "created", "status", "_count"),
   ],
-  "src/referral/referral-service.ts:448": [
+  "src/referral/referral-service.ts:463": [
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
@@ -151,14 +151,14 @@ test("static audit finds zero invalid search parameters", () => {
 
 test("static audit rejects a mistyped dynamic override key", () => {
   const overrides = { ...DYNAMIC_SEARCH_SPECS };
-  delete overrides["src/referral/referral-service.ts:448"];
-  overrides["src/referral/referral-service.ts:449"] = [
+  delete overrides["src/referral/referral-service.ts:463"];
+  overrides["src/referral/referral-service.ts:464"] = [
     spec("Observation", "patient", "encounter", "_count"),
   ];
 
   assert.throws(
     () => collectSearchSpecs(overrides),
-    /src\/referral\/referral-service\.ts:448 has unresolved search parameters and no contract override/,
+    /src\/referral\/referral-service\.ts:463 has unresolved search parameters and no contract override/,
   );
 });
 

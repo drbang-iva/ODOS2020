@@ -15,6 +15,11 @@
  * Zero Medplum SDK — plain fetch against the FHIR REST API.
  */
 import { registerReferralRoutes } from "./referral/referral-routes.js";
+import { registerFaxRoutes } from "./fax/fax-routes.js";
+import {
+  createWestFaxAdapter,
+  westFaxConfigFromEnv,
+} from "./fax/westfax-adapter.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -5571,6 +5576,7 @@ async function main(): Promise<void> {
         "/clinical-graph/longitudinal-imaging",
         express.json({ type: LONGITUDINAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
       );
+      app.use(express.urlencoded({ extended: false, limit: "64kb" }));
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
@@ -5668,6 +5674,8 @@ async function main(): Promise<void> {
       const claimMdAdapter = claimMdConfig ? createClaimMdAdapter({ config: claimMdConfig }) : null;
       const stediConfig = stediConfigFromEnv(process.env);
       const stediAdapter = stediConfig ? createStediAdapter({ config: stediConfig }) : null;
+      const westFaxConfig = westFaxConfigFromEnv(process.env);
+      const westFaxAdapter = westFaxConfig ? createWestFaxAdapter(westFaxConfig) : null;
       const clearinghouseAdapters = {
         ...(claimMdAdapter ? { claimmd: claimMdAdapter } : {}),
         ...(stediAdapter ? { stedi: stediAdapter } : {}),
@@ -6828,6 +6836,13 @@ async function main(): Promise<void> {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRouteForAction("chart.write"),
         serviceFhir: fhir,
+      });
+      registerFaxRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
+        adapter: westFaxAdapter,
+        callbackBaseUrl: westFaxConfig?.callbackBaseUrl,
       });
 
       app.post("/claims/submit", async (req, res) => {
