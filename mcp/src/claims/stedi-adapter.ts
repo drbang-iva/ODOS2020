@@ -166,8 +166,27 @@ function filterTransactions(result: unknown, transactionSetIdentifier: "277"): u
 }
 
 function stediErrors(responseBody: unknown): StediErrorDetail[] | undefined {
-  if (!isRecord(responseBody) || !Array.isArray(responseBody.errors)) return undefined;
-  return responseBody.errors.filter((error): error is StediErrorDetail => isRecord(error));
+  if (!isRecord(responseBody)) return undefined;
+  if (Array.isArray(responseBody.errors)) {
+    return responseBody.errors.filter((error): error is StediErrorDetail => isRecord(error));
+  }
+  if (responseBody.code !== "INVALID_REQUEST_BODY" || typeof responseBody.message !== "string") {
+    return undefined;
+  }
+  try {
+    const fields = JSON.parse(responseBody.message) as unknown;
+    if (!isRecord(fields)) throw new Error("invalid field detail");
+    const details = Object.entries(fields).flatMap(([path, messages]) =>
+      Array.isArray(messages)
+        ? messages.flatMap((message) => typeof message === "string"
+          ? [{ code: "INVALID_REQUEST_BODY", description: `${path}: ${message}` }]
+          : [])
+        : []
+    );
+    return details.length ? details : [{ code: "INVALID_REQUEST_BODY", description: responseBody.message }];
+  } catch {
+    return [{ code: "INVALID_REQUEST_BODY", description: responseBody.message }];
+  }
 }
 
 function stediCorrelationId(responseBody: unknown): string | undefined {

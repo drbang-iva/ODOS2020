@@ -14,7 +14,7 @@ import {
 } from "../src/scenes/settings/statement-message-config";
 
 function clientFixture() {
-  const writes: Array<{ resource: Basic; sourceTag: string }> = [];
+  const writes: Array<{ method: "create" | "update"; resource: Basic; sourceTag: string }> = [];
   const client = {
     async search() {
       return { resourceType: "Bundle" as const, type: "searchset" as const };
@@ -22,8 +22,12 @@ function clientFixture() {
     async searchUrl() {
       return { resourceType: "Bundle" as const, type: "searchset" as const };
     },
+    async create<T extends Basic>(resource: T, sourceTag: string) {
+      writes.push({ method: "create", resource, sourceTag });
+      return { ...resource, id: `server-statement-${writes.length}` } as T;
+    },
     async update<T extends Basic>(resource: T, sourceTag: string) {
-      writes.push({ resource, sourceTag });
+      writes.push({ method: "update", resource, sourceTag });
       return resource;
     },
   };
@@ -80,6 +84,7 @@ test("statement-message settings update the live counter and save both fields th
     await renderer.root.findByType("form").props.onSubmit({ preventDefault() {} });
   });
   assert.equal(fixture.writes.length, 1);
+  assert.equal(fixture.writes[0]?.method, "update");
   assert.equal(fixture.writes[0]?.sourceTag, "statement-message-config");
   assert.equal(fixture.writes[0]?.resource.id, "statement-message-config-1");
   assert.deepEqual(fixture.writes[0]?.resource.meta, { versionId: "7" });
@@ -101,7 +106,7 @@ test("statement-message settings are read-only without practice-admin access", (
   assert.match(html, /Practice-admin access is required/);
 });
 
-test("concurrent initial saves target one deterministic singleton resource", async () => {
+test("initial saves post resources without client-chosen ids", async () => {
   const fixture = clientFixture();
   const renderers: ReactTestRenderer[] = [];
   await act(async () => {
@@ -116,6 +121,6 @@ test("concurrent initial saves target one deterministic singleton resource", asy
     ));
   });
   assert.equal(fixture.writes.length, 2);
-  assert.deepEqual(new Set(fixture.writes.map(({ resource }) => resource.id)), new Set(["statement-message-config"]));
+  assert.ok(fixture.writes.every(({ method, resource }) => method === "create" && resource.id === undefined));
   for (const renderer of renderers) act(() => renderer.unmount());
 });

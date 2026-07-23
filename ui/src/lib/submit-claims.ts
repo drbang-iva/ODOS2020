@@ -1,4 +1,4 @@
-import type { ChargeItem, Coverage, Patient, RelatedPerson } from "@medplum/fhirtypes";
+import type { ChargeItem, Coverage, Encounter, Patient, Practitioner, RelatedPerson } from "@medplum/fhirtypes";
 
 export const ICD10_CM_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm";
 export const CPT_SYSTEM = "urn:ama:cpt";
@@ -17,6 +17,8 @@ export interface ClaimMdProviderInput {
   state?: string;
   zip?: string;
   phone?: string;
+  email?: string;
+  fax?: string;
 }
 
 export interface ClaimMdPersonInput {
@@ -108,6 +110,7 @@ export interface ClaimDraft {
   billingProvider: ClaimMdProviderInput;
   renderingProvider: ClaimMdProviderInput;
   subscriber: ClaimMdPersonInput;
+  subscriberIsPatient: boolean;
   patient: ClaimMdPersonInput;
   diagnoses: DiagnosisLine[];
   charges: ChargeLine[];
@@ -209,6 +212,7 @@ export function initialClaimDraft(today: string): ClaimDraft {
     billingProvider: emptyProvider(),
     renderingProvider: emptyProvider(),
     subscriber: emptyPerson(),
+    subscriberIsPatient: false,
     patient: emptyPerson(),
     diagnoses: [emptyDiagnosisLine()],
     charges: [emptyChargeLine()],
@@ -255,6 +259,29 @@ export function claimPersonFromPatient(patient: Patient): ClaimMdPersonInput {
     state: address?.state,
     zip: address?.postalCode,
   });
+}
+
+export function claimProviderFromPractitioner(practitioner: Practitioner): ClaimMdProviderInput {
+  const name = practitioner.name?.find((candidate) => candidate.use === "official") ?? practitioner.name?.[0];
+  const telecom = (system: "phone" | "email" | "fax") => practitioner.telecom
+    ?.find((candidate) => candidate.system === system && candidate.value?.trim())
+    ?.value?.trim();
+  return cleanProvider({
+    npi: practitioner.identifier
+      ?.find((identifier) => identifier.system === "http://hl7.org/fhir/sid/us-npi")
+      ?.value ?? "",
+    firstName: name?.given?.[0],
+    lastName: name?.family,
+    phone: telecom("phone"),
+    email: telecom("email"),
+    fax: telecom("fax"),
+  });
+}
+
+export function latestFinishedEncounter(encounters: readonly Encounter[]): Encounter | undefined {
+  return encounters
+    .filter((encounter) => encounter.status === "finished" && encounter.id)
+    .sort((left, right) => (right.period?.start ?? "").localeCompare(left.period?.start ?? ""))[0];
 }
 
 export function claimPersonFromRelatedPerson(person: RelatedPerson): ClaimMdPersonInput {
@@ -466,10 +493,23 @@ export function validateClaimDraft(draft: ClaimDraft): string[] {
   if (!draft.patientAccountNumber.trim()) errors.push("Patient account number is required.");
   if (!draft.payerId.trim()) errors.push("Payer ID is required.");
   if (!draft.billingProvider.npi.trim()) errors.push("Billing provider NPI is required.");
+  if (![draft.billingProvider.phone, draft.billingProvider.email, draft.billingProvider.fax]
+    .some((value) => value?.trim())) {
+    errors.push("Billing provider phone, email, or fax is required.");
+  }
   if (!draft.renderingProvider.npi.trim()) errors.push("Rendering provider NPI is required.");
+  if (!draft.renderingProvider.lastName?.trim() && !draft.renderingProvider.name?.trim()) {
+    errors.push("Rendering provider last name or organization name is required.");
+  }
   requirePerson(draft.patient, "Patient", errors);
-  requirePerson(draft.subscriber, "Subscriber", errors);
-  if (!draft.subscriber.relationshipCode?.trim()) errors.push("Subscriber relationship code is required.");
+  const subscriber = subscriberForClaim(draft);
+  if (draft.subscriberIsPatient) {
+    requireAddress(draft.patient, "Patient", errors);
+  } else {
+    requirePerson(subscriber, "Subscriber", errors);
+    requireAddress(subscriber, "Subscriber", errors);
+  }
+  if (!subscriber.relationshipCode?.trim()) errors.push("Subscriber relationship code is required.");
   if (draft.diagnoses.length === 0) errors.push("At least one diagnosis is required.");
   draft.diagnoses.forEach((diagnosis, index) => {
     if (!diagnosis.code.trim()) errors.push(`Diagnosis ${index + 1} code is required.`);
@@ -514,7 +554,7 @@ export function buildProfessionalClaimInput(draft: ClaimDraft): ProfessionalClai
     payerId: draft.payerId.trim(),
     billingProvider: cleanProvider(draft.billingProvider),
     renderingProvider: cleanProvider(draft.renderingProvider),
-    subscriber: cleanPerson(draft.subscriber),
+    subscriber: subscriberForClaim(draft),
     patient: cleanPerson(draft.patient),
     diagnoses: draft.diagnoses.map((diagnosis) => ({
       system: diagnosis.system ?? ICD10_CM_SYSTEM,
@@ -582,6 +622,16 @@ export function claimDraftFromProfessionalClaimInput(
       };
     }),
   };
+}
+
+export function subscriberForClaim(draft: ClaimDraft): ClaimMdPersonInput {
+  if (!draft.subscriberIsPatient) return cleanPerson(draft.subscriber);
+  return cleanPerson({
+    ...draft.patient,
+    memberId: draft.subscriber.memberId,
+    groupNumber: draft.subscriber.groupNumber,
+    relationshipCode: draft.subscriber.relationshipCode,
+  });
 }
 
 export async function loadEncounterClaimDraft(
@@ -678,6 +728,13 @@ function requirePerson(person: ClaimMdPersonInput, label: string, errors: string
   if (!person.firstName.trim()) errors.push(`${label} first name is required.`);
   if (!person.lastName.trim()) errors.push(`${label} last name is required.`);
   if (!person.dateOfBirth) errors.push(`${label} date of birth is required.`);
+}
+
+function requireAddress(person: ClaimMdPersonInput, label: string, errors: string[]): void {
+  if (!person.address1?.trim()) errors.push(`${label} address is required.`);
+  if (!person.city?.trim()) errors.push(`${label} city is required.`);
+  if (!person.state?.trim()) errors.push(`${label} state is required.`);
+  if (!person.zip?.trim()) errors.push(`${label} ZIP is required.`);
 }
 
 function cleanProvider(provider: ClaimMdProviderInput): ClaimMdProviderInput {

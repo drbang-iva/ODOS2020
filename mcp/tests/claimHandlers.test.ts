@@ -88,6 +88,7 @@ const professionalClaim: ProfessionalClaimInput = {
     city: "TESTVILLE",
     state: "NY",
     zip: "100010000",
+    phone: "5555550100",
   },
   renderingProvider: { firstName: "ALEX", lastName: "SYNTHETIC", npi: "1111111112" },
   subscriber: {

@@ -205,7 +205,7 @@ export const ACCENT_VARIABLES: Record<AppearanceAccent, Readonly<Record<string, 
 
 export type AppearanceSettingsClient = Pick<
   typeof fhir,
-  "search" | "searchUrl" | "update"
+  "search" | "searchUrl" | "create" | "update"
 >;
 
 export function appearanceVariables(config: AppearanceConfig): Readonly<Record<string, string>> {

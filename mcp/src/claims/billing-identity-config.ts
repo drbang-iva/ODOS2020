@@ -20,6 +20,8 @@ export interface BillingIdentityConfig {
   state: string;
   zip: string;
   phone?: string;
+  email?: string;
+  fax?: string;
 }
 
 export function validateBillingIdentityConfig(config: BillingIdentityConfig): void {
@@ -50,6 +52,12 @@ export function validateBillingIdentityConfig(config: BillingIdentityConfig): vo
   }
   if (config.phone !== undefined && typeof config.phone !== "string") {
     throw new Error("Phone must be text.");
+  }
+  if (config.email !== undefined && typeof config.email !== "string") {
+    throw new Error("Email must be text.");
+  }
+  if (config.fax !== undefined && typeof config.fax !== "string") {
+    throw new Error("Fax must be text.");
   }
 }
 
@@ -122,12 +130,15 @@ export async function loadBillingIdentityConfig(
   client: Pick<MedplumClient, "search" | "searchUrl">,
 ): Promise<BillingIdentityConfig | undefined> {
   const resources = await searchAll<Basic>(client, "Basic", {
-    _id: ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID,
     code: `${ODOS_BILLING_IDENTITY_CONFIG_SYSTEM}|${ODOS_BILLING_IDENTITY_CONFIG_CODE}`,
-    _count: "1",
+    _count: "10",
   });
-  const resource = resources.find((candidate) => candidate.id === ODOS_BILLING_IDENTITY_CONFIG_RESOURCE_ID);
+  const resource = [...resources].sort((left, right) => lastUpdatedMs(right) - lastUpdatedMs(left))[0];
   return resource ? parseBillingIdentityConfig(resource) : undefined;
+}
+
+function lastUpdatedMs(resource: Basic): number {
+  return resource.meta?.lastUpdated ? Date.parse(resource.meta.lastUpdated) || 0 : 0;
 }
 
 function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityConfig {
@@ -142,5 +153,7 @@ function cleanBillingIdentity(config: BillingIdentityConfig): BillingIdentityCon
     state: config.state.trim().toUpperCase(),
     zip: config.zip.trim(),
     ...(config.phone?.trim() ? { phone: config.phone.trim() } : {}),
+    ...(config.email?.trim() ? { email: config.email.trim() } : {}),
+    ...(config.fax?.trim() ? { fax: config.fax.trim() } : {}),
   };
 }

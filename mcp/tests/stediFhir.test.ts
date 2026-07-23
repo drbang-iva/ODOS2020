@@ -68,6 +68,21 @@ test("Stedi claim mapper emits the documented 837P JSON shape", () => {
   assert.equal(payload.claimInformation.serviceLines[0].providerControlNumber, "line-1");
   assert.equal(payload.claimInformation.serviceLines[0].professionalService.procedureCode, "PROC-A");
   assert.equal(payload.billing.employerId, "900000001");
+  assert.equal(payload.billing.contactInformation.phoneNumber, "5555550100");
+  assert.equal(payload.claimInformation.serviceLines[0].renderingProvider.lastName, "PROVIDER");
+});
+
+test("Stedi claim mapper carries email and fax billing contacts and organization rendering names", () => {
+  const input: ProfessionalClaimInput = {
+    ...claimInput,
+    billingProvider: { ...claimInput.billingProvider, phone: undefined, email: "billing@example.test", fax: "555-555-0101" },
+    renderingProvider: { npi: "1999999984", name: "SYNTHETIC RENDERING GROUP" },
+  };
+  const payload = buildStediProfessionalClaimJson(input, buildProfessionalClaim(input), "test");
+  assert.equal(payload.billing.contactInformation.email, "billing@example.test");
+  assert.equal(payload.billing.contactInformation.faxNumber, "5555550101");
+  assert.equal(payload.claimInformation.serviceLines[0].renderingProvider.organizationName, "SYNTHETIC RENDERING GROUP");
+  assert.equal(payload.claimInformation.serviceLines[0].renderingProvider.lastName, undefined);
 });
 
 test("pre-adjudication correction stays CFC 1 without a payer claim control number", () => {
@@ -170,6 +185,14 @@ test("Stedi claim mapper classifies incomplete billing and subscriber addresses 
     {
       input: { ...claimInput, subscriber: { ...claimInput.subscriber, address1: undefined } },
       message: /subscriber address and complete physical address/,
+    },
+    {
+      input: { ...claimInput, billingProvider: { ...claimInput.billingProvider, phone: undefined } },
+      message: /billing provider phone, email, or fax/,
+    },
+    {
+      input: { ...claimInput, renderingProvider: { npi: "1999999984" } },
+      message: /rendering provider last name or organization name/,
     },
   ];
 

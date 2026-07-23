@@ -35,6 +35,8 @@ export interface ClaimMdProviderInput {
   state?: string;
   zip?: string;
   phone?: string;
+  email?: string;
+  fax?: string;
 }
 
 export interface ClaimMdPersonInput {
