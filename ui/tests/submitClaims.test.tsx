@@ -8,6 +8,7 @@ import {
   addDiagnosisLine,
   buildCoverageResource,
   buildProfessionalClaimInput,
+  claimDraftFromProfessionalClaimInput,
   coverageRelationshipCode,
   coverageGroupNumber,
   coverageIsSelf,
@@ -19,6 +20,8 @@ import {
   removeChargeLine,
   removeDiagnosisLine,
   resolveSubscriberFromCoverage,
+  previewStediClaimResubmission,
+  submitStediClaimResubmission,
   submitProfessionalClaim,
   subscriberFromCoverage,
   validateClaimDraft,
@@ -151,6 +154,45 @@ test("claim submission converts a non-JSON failure into the HTTP status error", 
     }),
     /Claim submission failed with HTTP 502/,
   );
+});
+
+test("Stedi resubmission preview and submit use the dedicated endpoints and explicit payer signal", async () => {
+  const claim = buildProfessionalClaimInput(validDraft());
+  const calls: Array<{ url: string; body: any }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), body: JSON.parse(String(init?.body)) });
+    return jsonResponse(String(input).endsWith("/preview")
+      ? { determination: { status: "ready", claimFrequencyCode: "7", claimControlNumber: "PCCN-1" }, originalClaim: claim }
+      : { claimId: "claim-2", claimReference: "Claim/claim-2", claimFrequencyCode: "7", claimControlNumber: "PCCN-1" });
+  };
+
+  await previewStediClaimResubmission({
+    originalClaimReference: "Claim/claim-1",
+    intent: "correct",
+    payerClassification: "confirmed-non-medicare",
+  }, { fetchImpl });
+  await submitStediClaimResubmission({
+    originalClaimReference: "Claim/claim-1",
+    intent: "correct",
+    payerClassification: "confirmed-non-medicare",
+    patientControlNumber: "NEW-PCN-1",
+    revisedClaim: claim,
+  }, { fetchImpl });
+
+  assert.deepEqual(calls.map((call) => call.url), ["/claims/resubmission/preview", "/claims/resubmission"]);
+  assert.equal(calls[0].body.payerClassification, "confirmed-non-medicare");
+  assert.equal(calls[1].body.patientControlNumber, "NEW-PCN-1");
+  assert.deepEqual(calls[1].body.revisedClaim, claim);
+});
+
+test("stored Stedi input converts back to an editable correction draft with a blank new PCN", () => {
+  const original = buildProfessionalClaimInput(validDraft());
+  const draft = claimDraftFromProfessionalClaimInput(original, "2026-07-22");
+  assert.equal(draft.patientAccountNumber, "");
+  assert.equal(draft.created, "2026-07-22");
+  assert.equal(draft.diagnoses[0].code, "TEST-DX");
+  assert.equal(draft.charges[0].code, "TEST-PROC");
+  assert.equal(draft.charges[0].feeDollars, "125.50");
 });
 
 test("Submit Claims surfaces encounter prefill and billing identity defaults fill only blank fields", () => {

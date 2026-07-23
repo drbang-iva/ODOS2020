@@ -79,6 +79,8 @@ export interface ProfessionalClaimInput {
   diagnoses: ProfessionalClaimDiagnosisInput[];
   chargeItems: ProfessionalClaimChargeItemInput[];
   facilityReference?: string;
+  claimFrequencyCode?: "1" | "7" | "8";
+  claimControlNumber?: string;
 }
 
 export interface ClaimMdProfessionalClaimPayload {
