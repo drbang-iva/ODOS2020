@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Coverage, Encounter, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
+import { searchAll } from "../../lib/fhir-search";
 import { patientName } from "../../lib/scheduler-appointment-ui";
 import {
   addChargeLine,
@@ -313,14 +314,12 @@ export function SubmitClaims({
     setDraftLoading(true);
     setDraftLoadStatus(undefined);
     try {
-      const bundle = await fhir.search<Encounter>("Encounter", {
+      const encounters = await searchAll<Encounter>(fhir, "Encounter", {
         subject: `Patient/${selected.id}`,
         status: "finished",
-        _count: "20",
+        _count: "100",
       });
-      const latest = latestFinishedEncounter(
-        (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []),
-      );
+      const latest = latestFinishedEncounter(encounters);
       if (latest?.id) {
         await loadFromEncounter(latest.id);
         return;
