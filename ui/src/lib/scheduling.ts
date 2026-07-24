@@ -302,6 +302,7 @@ export interface AppointmentBlockContent {
   patientDisplay: string;
   visitTypeDisplay: string;
   visitTypeCode?: string;
+  note?: string;
   color: string;
   status?: OdosAppointmentStatus;
   statusDisplay: string;
@@ -1308,11 +1309,13 @@ export function buildAppointmentBlockContent(
   const status = odosAppointmentStatusOf(appointment);
   const confirmation = confirmationStatusOf(appointment) ?? "not-confirmed";
   const badges = appointmentBadges(appointment, isNonPatient, status);
+  const note = appointment.comment?.trim();
 
   return {
     patientDisplay: patient?.actor?.display ?? appointment.description ?? "Non-patient",
     visitTypeDisplay: visitTypeDisplay(appointment, visitType, code),
     ...(code ? { visitTypeCode: code } : {}),
+    ...(note ? { note } : {}),
     color: isNonPatient ? SCHEDULER_PALETTE.nonPatientGold : visitTypeDisplayColor(visitType, discipline),
     ...(status ? { status } : {}),
     statusDisplay: status ? STATUS_BY_CODE.get(status)?.display ?? status : "Unknown",

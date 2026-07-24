@@ -137,6 +137,7 @@ function AppointmentBlock({
                 {cue.glyph}
               </span>
             ))}
+            {content.note && <AppointmentNoteIndicator />}
           </div>
         ) : (
           <>
@@ -144,7 +145,7 @@ function AppointmentBlock({
               {content.statusDisplay} · {content.confirmationDisplay}
             </div>
             <div className="truncate text-[10px] leading-tight opacity-80">{content.insuranceLine}</div>
-            {content.badges.length > 0 && (
+            {(content.badges.length > 0 || content.note) && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {content.badges.map((badge) => (
                   <span
@@ -154,6 +155,7 @@ function AppointmentBlock({
                     {badge.display}
                   </span>
                 ))}
+                {content.note && <AppointmentNoteIndicator />}
               </div>
             )}
           </>
@@ -161,6 +163,18 @@ function AppointmentBlock({
       </button>
       {hoverAnchor && <AppointmentHoverCard content={content} anchor={hoverAnchor} />}
     </>
+  );
+}
+
+function AppointmentNoteIndicator() {
+  return (
+    <span
+      aria-label="Appointment note"
+      title="Appointment note"
+      className="rounded-sm bg-[color-mix(in_srgb,currentColor_25%,transparent)] px-1 py-0.5 text-[9px] font-bold leading-none"
+    >
+      ●
+    </span>
   );
 }
 

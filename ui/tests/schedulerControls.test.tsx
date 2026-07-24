@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, HealthcareService, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Coverage, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui";
 import {
   ODOS_DISCIPLINE_SYSTEM,
+  buildAppointmentBlockContent,
   buildVisitType,
   filterSchedulingResourcesByHiddenActorReferences,
   type SchedulingPracticeConfig,
@@ -20,8 +21,10 @@ import {
   useSchedulingStore,
 } from "../src/lib/scheduling-store";
 import { SchedulerDayGrid, SchedulerToolbar } from "../src/scenes/SchedulerDayGrid";
+import { AppointmentHoverCard } from "../src/scenes/scheduler/AppointmentHoverCard";
 import { AppointmentDetailsModal } from "../src/scenes/scheduler/AppointmentDetailsModal";
-import { SchedulerTimeGutter } from "../src/scenes/scheduler/ResourceDayColumn";
+import { PatientQuickCard } from "../src/scenes/scheduler/PatientQuickCard";
+import { ResourceDayColumn, SchedulerTimeGutter } from "../src/scenes/scheduler/ResourceDayColumn";
 
 const RESOURCE: Schedule = {
   resourceType: "Schedule",
@@ -39,6 +42,86 @@ const SCHEDULER_RESOURCES: Schedule[] = [
 
 const ROUTINE = visitType("routine", "Routine Exam", 30);
 const OFF_PRESET = visitType("off-preset", "Off-preset Visit", 20);
+
+test("appointment block content trims notes and omits blank comments", () => {
+  const withNote = buildAppointmentBlockContent(
+    appointment({ comment: "  Dilate before OCT retina recheck.  " }),
+    [],
+  );
+  const withoutNote = buildAppointmentBlockContent(appointment({ comment: " \n\t " }), []);
+
+  assert.equal(withNote.note, "Dilate before OCT retina recheck.");
+  assert.equal(withoutNote.note, undefined);
+});
+
+test("shared day and week appointment blocks show the note indicator only when present", () => {
+  const withNote = renderGridBlock("Dilate before OCT retina recheck.");
+  const withoutNote = renderGridBlock();
+
+  assert.match(withNote, /aria-label="Appointment note"/);
+  assert.doesNotMatch(withoutNote, /aria-label="Appointment note"/);
+});
+
+test("appointment hover card shows the full note only when present", () => {
+  const originalWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { innerWidth: 1400, innerHeight: 900 },
+  });
+  try {
+    const content = buildAppointmentBlockContent(
+      appointment({ comment: "Dilate before OCT retina recheck." }),
+      [],
+    );
+    const withNote = renderToStaticMarkup(
+      <AppointmentHoverCard content={content} anchor={{ top: 100, left: 200, right: 360 }} />,
+    );
+    const withoutNote = renderToStaticMarkup(
+      <AppointmentHoverCard
+        content={buildAppointmentBlockContent(appointment(), [])}
+        anchor={{ top: 100, left: 200, right: 360 }}
+      />,
+    );
+
+    assert.match(withNote, /Appointment note/);
+    assert.match(withNote, /Dilate before OCT retina recheck\./);
+    assert.doesNotMatch(withoutNote, /Appointment note|Dilate before OCT retina recheck\./);
+  } finally {
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("patient quick card shows the full appointment note only when present", () => {
+  const props = {
+    pinned: false,
+    onPinnedChange: () => undefined,
+    onClose: () => undefined,
+    onDetails: () => undefined,
+    date: "2026-07-14",
+  };
+  const withNote = renderToStaticMarkup(
+    <PatientQuickCard
+      {...props}
+      appointment={appointment({
+        comment: "  Manifest refraction and dilation before doctor.  ",
+        participant: [{ actor: { reference: "Practitioner/doctor-1", display: "Dr One" } }],
+      })}
+    />,
+  );
+  const withoutNote = renderToStaticMarkup(
+    <PatientQuickCard
+      {...props}
+      appointment={appointment({
+        comment: " \n ",
+        participant: [{ actor: { reference: "Practitioner/doctor-1", display: "Dr One" } }],
+      })}
+    />,
+  );
+
+  assert.match(withNote, /Appointment note/);
+  assert.match(withNote, /Manifest refraction and dilation before doctor\./);
+  assert.doesNotMatch(withoutNote, /Appointment note|Manifest refraction and dilation before doctor\./);
+});
 
 test("slot interval override persists, survives office switches, and Auto re-derives config", () => {
   const originalStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
@@ -439,6 +522,46 @@ function draft(overrides: Partial<AppointmentModalDraft> = {}): AppointmentModal
 
 function visitType(code: string, name: string, durationMinutes: number): HealthcareService {
   return { ...buildVisitType({ code, name, durationMinutes, discipline: "eyecare" }), id: code };
+}
+
+function appointment(overrides: Partial<Appointment> = {}): Appointment {
+  return {
+    resourceType: "Appointment",
+    id: "appointment-1",
+    status: "booked",
+    start: "2026-07-14T09:00:00-05:00",
+    end: "2026-07-14T09:30:00-05:00",
+    participant: [
+      { actor: { reference: "Patient/patient-1", display: "Patient, Test" } },
+      { actor: { reference: "Practitioner/doctor-1", display: "Dr One" } },
+    ],
+    ...overrides,
+  };
+}
+
+function renderGridBlock(comment?: string): string {
+  const nextAppointment = appointment({ ...(comment === undefined ? {} : { comment }) });
+  return renderToStaticMarkup(
+    <ResourceDayColumn
+      resource={RESOURCE}
+      config={DEFAULT_SCHEDULING_PRACTICE_CONFIG}
+      date="2026-07-14"
+      rows={[{ startMinutes: 540 }]}
+      axisStartMinutes={540}
+      axisEndMinutes={570}
+      slotMinutes={30}
+      appointments={[{
+        appointment: nextAppointment,
+        geometry: { columnIndex: 0, rowStart: 0, rowSpan: 1 },
+        content: buildAppointmentBlockContent(nextAppointment, []),
+      }]}
+      columnKey="day-or-week"
+      rowHeight={46}
+      onAppointmentClick={() => undefined}
+      onBlockedRegionClick={() => undefined}
+      onCellClick={() => undefined}
+    />,
+  );
 }
 
 function coverage(id: string, kind: "vision" | "medical", carrier: string, plan: string): Coverage {
