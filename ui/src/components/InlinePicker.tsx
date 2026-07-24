@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export interface InlinePickerOption<T> {
   value: string;
@@ -39,6 +39,14 @@ export function InlinePicker<T>({
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!editing || value) {
@@ -92,16 +100,23 @@ export function InlinePicker<T>({
     setCreating(true);
     setError(undefined);
     try {
-      choose(await onCreate(query.trim()));
+      const option = await onCreate(query.trim());
+      if (mounted.current) choose(option);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      if (mounted.current) setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setCreating(false);
+      if (mounted.current) setCreating(false);
     }
   };
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onFocus={() => setEditing(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setEditing(false);
+      }}
+    >
       <label htmlFor={inputId} className="block text-xs font-semibold text-[color:var(--odos-muted)]">{label}</label>
       <input
         id={inputId}
@@ -118,7 +133,7 @@ export function InlinePicker<T>({
       />
       {value && <p className="mt-1 text-xs text-emerald-300">Selected: {selectedLabel}</p>}
       {validationMessage && <p className="mt-1 text-xs font-normal text-red-300">{validationMessage}</p>}
-      {(loading || error || options.length > 0 || (onCreate && query.trim().length >= 2 && !value)) && (
+      {editing && (loading || error || options.length > 0 || (onCreate && query.trim().length >= 2 && !value)) && (
         <div className="absolute z-20 mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] p-2 shadow-xl">
           {loading && <p className="px-2 py-1 text-xs text-[color:var(--odos-faint)]">Searching…</p>}
           {error && <p role="alert" className="px-2 py-1 text-xs text-red-300">{error}</p>}

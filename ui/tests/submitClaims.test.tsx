@@ -34,7 +34,18 @@ import {
   type ClaimDraft,
 } from "../src/lib/submit-claims";
 import { PatientSearch } from "../src/scenes/PatientPicker";
-import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert, SubmitClaims, validateCoverageEntry } from "../src/scenes/claims/SubmitClaims";
+import {
+  ClaimReview,
+  ClaimSubmissionResult,
+  CoverageChoices,
+  PersonFields,
+  SubmissionAlert,
+  SubmitClaims,
+  createPayerOrganization,
+  practitionerDisplay,
+  searchPayerOrganizations,
+  validateCoverageEntry,
+} from "../src/scenes/claims/SubmitClaims";
 
 const PATIENT: Patient = {
   resourceType: "Patient",
@@ -192,20 +203,85 @@ test("Stedi resubmission preview and submit use the dedicated endpoints and expl
   assert.deepEqual(calls[1].body.revisedClaim, claim);
 });
 
-test("inline picker typeahead selects a named Practitioner without exposing a raw reference field", async () => {
+test("inline picker keeps a multi-given-name Practitioner label aligned with the captured claim name", async () => {
   const originalWindow = globalThis.window;
   const practitioner: Practitioner = {
     resourceType: "Practitioner",
     id: "pract-1",
-    name: [{ given: ["Eric"], family: "Bang" }],
+    name: [{ given: ["Eric", "Michael"], family: "Bang" }],
   };
   const option: InlinePickerOption<Practitioner> = {
     value: "Practitioner/pract-1",
-    label: "Eric Bang",
+    label: practitionerDisplay(practitioner),
     item: practitioner,
   };
   const searches: string[] = [];
   let selected: InlinePickerOption<Practitioner> | undefined;
+  let renderer: ReactTestRenderer | undefined;
+  function PickerHarness() {
+    const [selection, setSelection] = React.useState<InlinePickerOption<Practitioner>>();
+    const provider = selection ? claimProviderFromPractitioner(selection.item) : undefined;
+    const selectedLabel = provider
+      ? [provider.firstName, provider.lastName].filter(Boolean).join(" ")
+      : undefined;
+    return (
+      <InlinePicker
+        label="Rendering provider"
+        value={selection?.value ?? ""}
+        selectedLabel={selectedLabel}
+        placeholder="Search practitioner name"
+        search={async (query) => {
+          searches.push(query);
+          return [option];
+        }}
+        onSelect={(next) => {
+          selected = next;
+          setSelection(next);
+        }}
+        onClear={() => setSelection(undefined)}
+        searchDelayMs={0}
+      />
+    );
+  }
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => globalThis.setTimeout(callback, 0),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(<PickerHarness />);
+    });
+    await act(async () => {
+      renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search practitioner name")
+        .props.onChange({ target: { value: "Eric" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 10));
+      await Promise.resolve();
+    });
+    const result = renderer!.root.findAllByType("button").find((button) =>
+      button.findAllByType("span").some((span) => span.children.join("") === "Eric Bang")
+    );
+    assert.ok(result, "Expected Eric Bang search result");
+    act(() => result.props.onClick());
+    assert.deepEqual(searches, ["Eric"]);
+    assert.equal(selected?.value, "Practitioner/pract-1");
+    assert.equal(claimProviderFromPractitioner(selected!.item).firstName, "Eric");
+    assert.equal(practitionerDisplay(selected!.item), "Eric Bang");
+    assert.equal(
+      renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search practitioner name").props.value,
+      "Eric Bang",
+    );
+    assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Practitioner\/pract-1/);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("inline picker closes its search results when focus leaves the picker", async () => {
+  const originalWindow = globalThis.window;
   let renderer: ReactTestRenderer | undefined;
   Object.defineProperty(globalThis, "window", {
     configurable: true,
@@ -221,11 +297,12 @@ test("inline picker typeahead selects a named Practitioner without exposing a ra
           label="Rendering provider"
           value=""
           placeholder="Search practitioner name"
-          search={async (query) => {
-            searches.push(query);
-            return [option];
-          }}
-          onSelect={(next) => { selected = next; }}
+          search={async () => [{
+            value: "Practitioner/pract-1",
+            label: "Eric Bang",
+            item: { resourceType: "Practitioner", id: "pract-1" } as Practitioner,
+          }]}
+          onSelect={() => undefined}
           onClear={() => undefined}
           searchDelayMs={0}
         />,
@@ -237,14 +314,14 @@ test("inline picker typeahead selects a named Practitioner without exposing a ra
       await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 10));
       await Promise.resolve();
     });
-    const result = renderer!.root.findAllByType("button").find((button) =>
+    assert.ok(renderer!.root.findAllByType("button").some((button) =>
       button.findAllByType("span").some((span) => span.children.join("") === "Eric Bang")
-    );
-    assert.ok(result, "Expected Eric Bang search result");
-    act(() => result.props.onClick());
-    assert.deepEqual(searches, ["Eric"]);
-    assert.equal(selected?.value, "Practitioner/pract-1");
-    assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Practitioner\/pract-1/);
+    ));
+    act(() => {
+      renderer!.root.find((node) => node.type === "div" && node.props.className === "relative")
+        .props.onBlur({ currentTarget: { contains: () => false }, relatedTarget: null });
+    });
+    assert.equal(renderer!.root.findAllByType("button").length, 0);
   } finally {
     if (renderer) act(() => renderer!.unmount());
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
@@ -295,6 +372,101 @@ test("inline picker creates and selects a payer Organization from only its name"
     assert.equal(createName, "New Payer");
     assert.equal(selected?.value, "Organization/payer-new");
     assert.equal(selected?.item.name, "New Payer");
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("payer Organization search and create use the verified payer type coding", async () => {
+  const originalSearch = fhir.search;
+  const originalCreate = fhir.create;
+  let searchParams: Record<string, string> | undefined;
+  let createdResource: Organization | undefined;
+  (fhir as any).search = async (resourceType: string, params: Record<string, string>) => {
+    assert.equal(resourceType, "Organization");
+    searchParams = params;
+    return {
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [
+        { resource: { resourceType: "Organization", id: "payer-1", name: "Blue Test", active: true } },
+        { resource: { resourceType: "Organization", id: "payer-old", name: "Old Blue", active: false } },
+      ],
+    };
+  };
+  (fhir as any).create = async (resource: Organization) => {
+    createdResource = resource;
+    return { ...resource, id: "payer-new" };
+  };
+  try {
+    const options = await searchPayerOrganizations("Blue");
+    assert.deepEqual(searchParams, {
+      name: "Blue",
+      type: "http://terminology.hl7.org/CodeSystem/organization-type|pay",
+      _count: "20",
+    });
+    assert.deepEqual(options.map((option) => option.value), ["Organization/payer-1"]);
+
+    const created = await createPayerOrganization("New Payer");
+    assert.deepEqual(createdResource?.type, [{
+      coding: [{
+        system: "http://terminology.hl7.org/CodeSystem/organization-type",
+        code: "pay",
+        display: "Payer",
+      }],
+    }]);
+    assert.equal(created.value, "Organization/payer-new");
+  } finally {
+    (fhir as any).search = originalSearch;
+    (fhir as any).create = originalCreate;
+  }
+});
+
+test("inline picker does not update selection after payer creation resolves post-unmount", async () => {
+  const originalWindow = globalThis.window;
+  let resolveCreate: (option: InlinePickerOption<Organization>) => void = () => undefined;
+  let selected = false;
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => globalThis.setTimeout(callback, 0),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(
+        <InlinePicker
+          label="Payor organization"
+          value=""
+          placeholder="Search payer name"
+          search={async () => []}
+          onSelect={() => { selected = true; }}
+          onClear={() => undefined}
+          onCreate={() => new Promise((resolve) => { resolveCreate = resolve; })}
+          createLabel="Create payer"
+          searchDelayMs={0}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
+        .props.onChange({ target: { value: "New Payer" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+    act(() => claimsButton(renderer!, "Create payer “New Payer”").props.onClick());
+    await act(async () => {
+      renderer!.unmount();
+      resolveCreate({
+        value: "Organization/payer-new",
+        label: "New Payer",
+        item: { resourceType: "Organization", id: "payer-new", name: "New Payer" },
+      });
+      await Promise.resolve();
+    });
+    assert.equal(selected, false);
   } finally {
     if (renderer) act(() => renderer!.unmount());
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
