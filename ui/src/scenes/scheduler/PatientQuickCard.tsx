@@ -26,6 +26,7 @@ export function PatientQuickCard({
   const [openInvoiceCount, setOpenInvoiceCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const visible = Boolean(appointment);
+  const appointmentNote = appointment?.comment?.trim();
 
   const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -132,6 +133,15 @@ export function PatientQuickCard({
         {error && (
           <div className="border border-red-400/40 bg-red-950/50 px-3 py-2 text-red-100">
             {error}
+          </div>
+        )}
+
+        {appointmentNote && (
+          <div className="rounded-sm border border-[var(--odos-overlay-line-2)] bg-[color-mix(in_srgb,var(--odos-text)_10%,transparent)] px-3 py-2">
+            <div className="text-xs font-bold uppercase opacity-[.55]">Appointment note</div>
+            <div className="mt-1 whitespace-pre-wrap break-words font-medium">
+              {appointmentNote}
+            </div>
           </div>
         )}
 
