@@ -94,6 +94,7 @@ test("appointment hover card shows the full note only when present", () => {
 test("patient quick card shows the full appointment note only when present", () => {
   const props = {
     pinned: false,
+    canStartChart: true,
     onPinnedChange: () => undefined,
     onClose: () => undefined,
     onDetails: () => undefined,
@@ -121,6 +122,26 @@ test("patient quick card shows the full appointment note only when present", () 
   assert.match(withNote, /Appointment note/);
   assert.match(withNote, /Manifest refraction and dilation before doctor\./);
   assert.doesNotMatch(withoutNote, /Appointment note|Manifest refraction and dilation before doctor\./);
+});
+
+test("patient quick card exposes the chart action only after check-in", () => {
+  const props = {
+    pinned: false,
+    canStartChart: true,
+    onPinnedChange: () => undefined,
+    onClose: () => undefined,
+    onDetails: () => undefined,
+    date: "2026-07-14",
+  };
+  const checkedIn = renderToStaticMarkup(
+    <PatientQuickCard {...props} appointment={appointment({ status: "arrived" })} />,
+  );
+  const booked = renderToStaticMarkup(
+    <PatientQuickCard {...props} appointment={appointment({ status: "booked" })} />,
+  );
+
+  assert.match(checkedIn, />Start chart</);
+  assert.doesNotMatch(booked, />Start chart|>Open chart</);
 });
 
 test("slot interval override persists, survives office switches, and Auto re-derives config", () => {

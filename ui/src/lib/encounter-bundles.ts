@@ -1,8 +1,23 @@
-import type { Bundle, Encounter, OperationOutcome, Provenance, Resource } from "@medplum/fhirtypes";
+import type {
+  Appointment,
+  Bundle,
+  Encounter,
+  OperationOutcome,
+  Provenance,
+  Resource,
+} from "@medplum/fhirtypes";
+import { fhir } from "./fhir";
 import type { JsonPatchOperation } from "./fhir";
+import {
+  medicalCoverageOf,
+  ODOS_VISIT_TYPE_SYSTEM,
+  visionCoverageOf,
+} from "./scheduling";
 
 export const ENCOUNTER_COMPREHENSIVE_EXAM_PROFILE =
   "https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam";
+export const INTENDED_COVERAGE_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/intended-coverage";
 
 const V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode";
 const V3_DATA_OPERATION_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-DataOperation";
@@ -15,11 +30,20 @@ export function buildStartEncounterCreateBundle(input: {
   now: string;
   practitionerReference?: string;
   episodeReference?: string;
+  appointmentContext?: {
+    appointmentId: string;
+    visitTypeCoding?: { system: string; code: string; display?: string };
+    intendedCoverageReferences?: string[];
+  };
 }): Bundle {
   const encounterFullUrl = `urn:uuid:encounter-${crypto.randomUUID()}`;
   const patientReference = input.patientId.startsWith("Patient/")
     ? input.patientId
     : `Patient/${input.patientId}`;
+  const appointmentReference = input.appointmentContext
+    ? referenceOf("Appointment", input.appointmentContext.appointmentId)
+    : undefined;
+  const intendedCoverageReferences = input.appointmentContext?.intendedCoverageReferences ?? [];
 
   const encounter: Encounter = {
     resourceType: "Encounter",
@@ -30,6 +54,18 @@ export function buildStartEncounterCreateBundle(input: {
     },
     subject: { reference: patientReference },
     ...(input.episodeReference ? { episodeOfCare: [{ reference: input.episodeReference }] } : {}),
+    ...(appointmentReference ? { appointment: [{ reference: appointmentReference }] } : {}),
+    ...(input.appointmentContext?.visitTypeCoding
+      ? { type: [{ coding: [{ ...input.appointmentContext.visitTypeCoding }] }] }
+      : {}),
+    ...(intendedCoverageReferences.length > 0
+      ? {
+          extension: intendedCoverageReferences.map((reference) => ({
+            url: INTENDED_COVERAGE_EXTENSION_URL,
+            valueReference: { reference },
+          })),
+        }
+      : {}),
     period: { start: input.now },
     meta: { profile: [ENCOUNTER_COMPREHENSIVE_EXAM_PROFILE] },
   };
@@ -41,7 +77,13 @@ export function buildStartEncounterCreateBundle(input: {
       {
         fullUrl: encounterFullUrl,
         resource: encounter,
-        request: { method: "POST", url: "Encounter" },
+        request: {
+          method: "POST",
+          url: "Encounter",
+          ...(appointmentReference
+            ? { ifNoneExist: activeAppointmentEncounterCriteria(appointmentReference) }
+            : {}),
+        },
       },
       {
         fullUrl: `urn:uuid:provenance-start-${crypto.randomUUID()}`,
@@ -58,6 +100,103 @@ export function buildStartEncounterCreateBundle(input: {
       },
     ],
   };
+}
+
+type AppointmentEncounterClient = Pick<typeof fhir, "search" | "executeTransaction">;
+
+export async function findOpenEncounterForAppointment(
+  appointmentId: string,
+  client: AppointmentEncounterClient = fhir,
+): Promise<Encounter | undefined> {
+  const appointmentReference = referenceOf("Appointment", appointmentId);
+  const bundle = await client.search<Encounter>("Encounter", [
+    ["appointment", appointmentReference],
+    ["status:not", "cancelled"],
+    ["status:not", "entered-in-error"],
+    ["_count", "2"],
+  ]);
+  return (bundle.entry ?? [])
+    .flatMap((entry) => (entry.resource ? [entry.resource] : []))
+    .find((encounter) =>
+      encounter.status !== "cancelled"
+      && encounter.status !== "entered-in-error"
+      && Boolean(encounter.id),
+    );
+}
+
+export async function startOrOpenEncounterForAppointment(
+  appointment: Appointment,
+  options: {
+    existingEncounter?: Encounter | null;
+    client?: AppointmentEncounterClient;
+    now?: () => Date;
+  } = {},
+): Promise<{ encounterId: string; created: boolean }> {
+  if (!appointment.id) {
+    throw new Error("Starting an appointment chart requires Appointment.id.");
+  }
+  const patientReference = appointment.participant.find((participant) =>
+    participant.actor?.reference?.startsWith("Patient/"),
+  )?.actor?.reference;
+  if (!patientReference) {
+    throw new Error("Starting an appointment chart requires a patient participant.");
+  }
+
+  const client = options.client ?? fhir;
+  const existing = options.existingEncounter === undefined
+    ? await findOpenEncounterForAppointment(appointment.id, client)
+    : options.existingEncounter ?? undefined;
+  if (existing?.id) {
+    return { encounterId: existing.id, created: false };
+  }
+
+  const visitType = appointment.serviceType?.[0]?.coding?.find(
+    (coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM && coding.code,
+  );
+  const visitTypeCoding = visitType
+    ? {
+        system: ODOS_VISIT_TYPE_SYSTEM,
+        code: visitType.code!,
+        ...(visitType.display ? { display: visitType.display } : {}),
+      }
+    : undefined;
+  const intendedCoverageReferences = [
+    visionCoverageOf(appointment)?.reference,
+    medicalCoverageOf(appointment)?.reference,
+  ].filter((reference, index, references): reference is string =>
+    Boolean(reference) && references.indexOf(reference) === index,
+  );
+  const now = (options.now ?? (() => new Date()))();
+  const patientId = patientReference.slice("Patient/".length);
+  const createResponse = await client.executeTransaction(
+    buildStartEncounterCreateBundle({
+      patientId,
+      now: now.toISOString(),
+      appointmentContext: {
+        appointmentId: appointment.id,
+        visitTypeCoding,
+        intendedCoverageReferences,
+      },
+    }),
+    "start_appointment_encounter",
+  );
+  assertTransactionSuccess(createResponse);
+
+  const encounterId = createdIdFromEntry(createResponse, 0, "Encounter");
+  const created = createResponse.entry?.[0]?.response?.status?.startsWith("201") === true;
+  const inProgressResponse = await client.executeTransaction(
+    buildEncounterStatusPatchBundle({
+      encounterId,
+      patientId,
+      recorded: new Date(now.getTime() + 1).toISOString(),
+      operatorDisplay: "ODOS UI start_appointment_encounter",
+      ops: [{ op: "replace", path: "/status", value: "in-progress" }],
+    }),
+    "start_appointment_encounter",
+  );
+  assertTransactionSuccess(inProgressResponse);
+
+  return { encounterId, created };
 }
 
 export function buildEncounterStatusPatchBundle(input: {
@@ -201,4 +340,18 @@ function formatOperationOutcome(outcome: OperationOutcome | undefined): string |
       return `${issue.diagnostics ?? issue.details?.text ?? issue.code}${expression}`;
     })
     .join("; ");
+}
+
+function referenceOf(resourceType: string, idOrReference: string): string {
+  return idOrReference.startsWith(`${resourceType}/`)
+    ? idOrReference
+    : `${resourceType}/${idOrReference}`;
+}
+
+function activeAppointmentEncounterCriteria(appointmentReference: string): string {
+  return new URLSearchParams([
+    ["appointment", appointmentReference],
+    ["status:not", "cancelled"],
+    ["status:not", "entered-in-error"],
+  ]).toString();
 }

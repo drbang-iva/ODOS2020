@@ -18,6 +18,14 @@ export const PRACTICE_ROLE_LABELS: Record<PracticeRoleId, string> = {
 };
 export interface WhoAmIResponse { roles: PracticeRoleId[] }
 
+export function canStartAppointmentChart(roles: readonly PracticeRoleId[]): boolean {
+  return roles.includes("practice-admin")
+    || (
+      roles.includes("front-desk")
+      && (roles.includes("clinician") || roles.includes("aesthetics-provider"))
+    );
+}
+
 let sessionRequest: { authorization: string; promise: Promise<WhoAmIResponse> } | undefined;
 
 export async function fetchWhoAmI(fetchImpl: typeof fetch = fetch): Promise<WhoAmIResponse> {
