@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import type {
   Bundle,
@@ -19,6 +20,7 @@ import {
 import {
   FAX_CALLBACK_TOKEN_EXTENSION_URL,
   FAX_DESTINATION_EXTENSION_URL,
+  faxCallbackTokenHash,
   faxStatus,
 } from "../src/fax/fax-record.js";
 import type { FaxSendInput } from "../src/fax/westfax-adapter.js";
@@ -66,12 +68,13 @@ test("referral fax send persists a pending DocumentReference and callback advanc
   assert.ok(callbackUrl);
   const callbackToken = new URL(callbackUrl).searchParams.get("token");
   assert.match(callbackToken ?? "", /^[a-f0-9]{64}$/);
-  assert.equal(
-    created.extension?.find(
-      (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
-    )?.valueString,
-    callbackToken,
-  );
+  const expectedTokenHash = createHash("sha256").update(callbackToken!).digest("hex");
+  const storedTokenHash = created.extension?.find(
+    (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
+  )?.valueString;
+  assert.notEqual(storedTokenHash, callbackToken);
+  assert.equal(storedTokenHash, expectedTokenHash);
+  assert.equal(faxCallbackTokenHash(created), expectedTokenHash);
 
   const callback = await handleFaxCallbackRequest(deps, {
     recordId: created.id,
@@ -117,6 +120,31 @@ test("fax callback rejects a missing or wrong token without mutating the record"
   const unchanged = await fhir.read<DocumentReference>("DocumentReference", created.id!);
   assert.equal(faxStatus(unchanged), "Pending");
   assert.equal(unchanged.meta?.versionId, versionBeforeRejectedCallbacks);
+});
+
+test("fax callback rejects the stored token hash as a replay credential", async () => {
+  const fhir = new MemoryFaxFhir();
+  seedReferralTarget(fhir, "8642231627");
+  const adapterCalls: FaxSendInput[] = [];
+  const deps = faxDeps(fhir, adapterCalls);
+  await sendReferralFax(deps, "8642231627");
+  const created = fhir.resources("DocumentReference")[0] as DocumentReference;
+  const storedTokenHash = created.extension?.find(
+    (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
+  )?.valueString;
+  assert.match(storedTokenHash ?? "", /^[a-f0-9]{64}$/);
+  const versionBeforeRejectedCallback = created.meta?.versionId;
+
+  const replay = await handleFaxCallbackRequest(deps, {
+    recordId: created.id,
+    callbackToken: storedTokenHash,
+    body: { Success: true, Result: "Sent" },
+  });
+
+  assert.equal(replay.status, 401);
+  const unchanged = await fhir.read<DocumentReference>("DocumentReference", created.id!);
+  assert.equal(faxStatus(unchanged), "Pending");
+  assert.equal(unchanged.meta?.versionId, versionBeforeRejectedCallback);
 });
 
 test("fax response projections never expose the callback token", async () => {

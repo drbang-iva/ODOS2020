@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DocumentReference, Reference, ServiceRequest } from "@medplum/fhirtypes";
 
 export const FAX_STATUS_EXTENSION_URL =
@@ -67,7 +68,10 @@ export function buildFaxSendRecord(input: {
     extension: [
       { url: FAX_STATUS_EXTENSION_URL, valueString: "Pending" },
       { url: FAX_DESTINATION_EXTENSION_URL, valueString: input.destinationNumber },
-      { url: FAX_CALLBACK_TOKEN_EXTENSION_URL, valueString: input.callbackToken },
+      {
+        url: FAX_CALLBACK_TOKEN_EXTENSION_URL,
+        valueString: hashCallbackToken(input.callbackToken),
+      },
     ],
   };
 }
@@ -110,10 +114,14 @@ export function faxStatus(record: DocumentReference): FaxTransmissionStatus {
   return "Unknown";
 }
 
-export function faxCallbackToken(record: DocumentReference): string | undefined {
+export function faxCallbackTokenHash(record: DocumentReference): string | undefined {
   return record.extension?.find(
     (extension) => extension.url === FAX_CALLBACK_TOKEN_EXTENSION_URL,
   )?.valueString;
+}
+
+export function hashCallbackToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export function westFaxResult(value: unknown): WestFaxResult {

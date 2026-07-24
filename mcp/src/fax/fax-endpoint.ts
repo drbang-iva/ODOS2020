@@ -27,8 +27,9 @@ import {
   buildFaxSendRecord,
   FAX_ERROR_EXTENSION_URL,
   FAX_STATUS_EXTENSION_URL,
-  faxCallbackToken,
+  faxCallbackTokenHash,
   faxStatus,
+  hashCallbackToken,
   withFaxSendResult,
   westFaxResult,
 } from "./fax-record.js";
@@ -219,11 +220,11 @@ export async function handleFaxCallbackRequest(
     "DocumentReference",
     parsedId.data,
   );
-  const expectedToken = faxCallbackToken(existing);
+  const expectedTokenHash = faxCallbackTokenHash(existing);
   if (
     !existing.extension?.some((extension) => extension.url === FAX_STATUS_EXTENSION_URL)
-    || !expectedToken
-    || !callbackTokenMatches(parsedToken.data, expectedToken)
+    || !expectedTokenHash
+    || !callbackTokenMatches(hashCallbackToken(parsedToken.data), expectedTokenHash)
   ) {
     return { status: 401, body: { error: "Fax callback authentication failed." } };
   }

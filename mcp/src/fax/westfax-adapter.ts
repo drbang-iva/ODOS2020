@@ -1,4 +1,5 @@
 export const WESTFAX_BASE_URL = "https://api2.westfax.com";
+export const WESTFAX_REQUEST_TIMEOUT_MS = 30_000;
 
 export interface WestFaxConfig {
   baseUrl: string;
@@ -115,19 +116,35 @@ export function createWestFaxAdapter(
       optional(form, "FaxQuality", input.faxQuality);
       optional(form, "CallbackUrl", input.callbackUrl);
 
-      const response = await fetchImpl(`${baseUrl}/REST/Fax_SendFax/json`, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: form,
-      });
-      const raw = await parseResponse(response);
-      const jobId = stringValue(raw.Result);
-      return {
-        success: response.ok && raw.Success === true,
-        ...(jobId ? { jobId } : {}),
-        ...(stringValue(raw.ErrorString) ? { errorString: stringValue(raw.ErrorString) } : {}),
-        ...(stringValue(raw.InfoString) ? { infoString: stringValue(raw.InfoString) } : {}),
-      };
+      const controller = new AbortController();
+      let timedOut = false;
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, WESTFAX_REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetchImpl(`${baseUrl}/REST/Fax_SendFax/json`, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          body: form,
+          signal: controller.signal,
+        });
+        const raw = await parseResponse(response);
+        const jobId = stringValue(raw.Result);
+        return {
+          success: response.ok && raw.Success === true,
+          ...(jobId ? { jobId } : {}),
+          ...(stringValue(raw.ErrorString) ? { errorString: stringValue(raw.ErrorString) } : {}),
+          ...(stringValue(raw.InfoString) ? { infoString: stringValue(raw.InfoString) } : {}),
+        };
+      } catch (error) {
+        if (timedOut && error instanceof Error && error.name === "AbortError") {
+          throw new Error("WestFax request timed out after 30 seconds.");
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
     },
   };
 }

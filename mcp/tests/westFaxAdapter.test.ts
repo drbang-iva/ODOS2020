@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   WESTFAX_BASE_URL,
+  WESTFAX_REQUEST_TIMEOUT_MS,
   createWestFaxAdapter,
   westFaxConfigFromEnv,
 } from "../src/fax/westfax-adapter.js";
@@ -75,6 +76,34 @@ test("WestFax adapter surfaces ErrorString and InfoString on failure", async () 
     errorString: "Bad fax number",
     infoString: "Check Numbers1",
   });
+});
+
+test("WestFax adapter aborts a stalled request at 30 seconds with a clear error", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let requestSignal: AbortSignal | null | undefined;
+  const adapter = createWestFaxAdapter(CONFIG, {
+    fetchImpl: (async (_url, init) => {
+      requestSignal = init?.signal;
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("This operation was aborted", "AbortError")),
+          { once: true },
+        );
+      });
+    }) as typeof fetch,
+  });
+
+  const request = adapter.sendFax({
+    destinationNumbers: ["8645550199"],
+    files: [{ content: Buffer.from("%PDF-synthetic"), filename: "referral.pdf" }],
+  });
+  assert.equal(requestSignal?.aborted, false);
+
+  t.mock.timers.tick(WESTFAX_REQUEST_TIMEOUT_MS);
+
+  await assert.rejects(request, /WestFax request timed out after 30 seconds/);
+  assert.equal(requestSignal?.aborted, true);
 });
 
 test("WestFax config is all-or-nothing, HTTPS-only, and never appears in client code", () => {
