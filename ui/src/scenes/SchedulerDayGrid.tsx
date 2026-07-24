@@ -53,8 +53,12 @@ import {
   SchedulerTimeGutter,
   type PositionedAppointment,
 } from "./scheduler/ResourceDayColumn";
+import {
+  canStartAppointmentChart,
+  type PracticeRoleId,
+} from "../lib/practice-roles";
 
-export function SchedulerDayGrid() {
+export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRoleId[] } = {}) {
   const clinicMode = useSchedulingStore((state) => state.clinicMode);
   const view = useSchedulingStore((state) => state.view);
   const date = useSchedulingStore((state) => state.date);
@@ -490,6 +494,7 @@ export function SchedulerDayGrid() {
       )}
       <PatientQuickCard
         appointment={quickCardAppointment}
+        canStartChart={canStartAppointmentChart(roles)}
         pinned={quickCardPinned}
         onPinnedChange={setQuickCardPinned}
         onClose={() => {

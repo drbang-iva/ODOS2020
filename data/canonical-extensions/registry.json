@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-22",
+  "generatedAt": "2026-07-24",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
@@ -517,6 +517,12 @@
       "namespace": "scheduling",
       "status": "active",
       "sliceConsumer": "scheduler-phase-1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/intended-coverage",
+      "namespace": "clinical",
+      "status": "active",
+      "sliceConsumer": "appointment-chart-bridge-a"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-appointment-follow-up",

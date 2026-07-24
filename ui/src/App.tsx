@@ -291,9 +291,9 @@ export function RouteSwitch({
       return <LabOrdersWorklist />;
     case "/schedule/day":
     case "/scheduler/day":
-      return <SchedulerDayGrid />;
+      return <SchedulerDayGrid roles={roles} />;
     case "/frontdesk":
-      return <FrontDeskCockpit />;
+      return <FrontDeskCockpit roles={roles} />;
     case DESK_HOME_PATH:
       return <DeskHome />;
     case "/desk/ledger":

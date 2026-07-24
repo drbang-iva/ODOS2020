@@ -13,7 +13,7 @@ import { useFloorBoardConfig } from "./useFloorBoardConfig";
 // on card click, mirroring how SchedulerDayGrid owns its quick card. Config source is
 // the persisted floor-config singleton (read via useFloorBoardConfig), falling back to
 // the ui-side DEFAULT_FLOOR_BOARD_CONFIG until a practice configures its own.
-export function CockpitFloorBoard() {
+export function CockpitFloorBoard({ canStartChart = false }: { canStartChart?: boolean } = {}) {
   const appointments = useSchedulingStore((state) => state.appointments);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const date = useSchedulingStore((state) => state.date);
@@ -100,7 +100,11 @@ export function CockpitFloorBoard() {
                 onDragStart={(event) => event.dataTransfer.setData("text/plain", card.appointment.id ?? "")}
                 className="w-56"
               >
-                <FloorCard card={card} onClick={() => setSelectedId(card.appointment.id ?? null)} />
+                <FloorCard
+                  card={card}
+                  canStartChart={canStartChart}
+                  onClick={() => setSelectedId(card.appointment.id ?? null)}
+                />
               </div>
             ))}
           </div>
@@ -108,6 +112,7 @@ export function CockpitFloorBoard() {
       ))}
       <PatientQuickCard
         appointment={selected}
+        canStartChart={canStartChart}
         pinned={pinned}
         onPinnedChange={setPinned}
         onClose={() => {

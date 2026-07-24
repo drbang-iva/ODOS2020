@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
-import type { Condition, Encounter, Patient } from "@medplum/fhirtypes";
+import type { Appointment, Condition, Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "../../lib/fhir";
 import {
   assertTransactionSuccess,
@@ -26,6 +26,11 @@ import {
   signOffSeriesProcedures,
   type SeriesSignOffPrompt,
 } from "../../lib/series-tracker";
+import {
+  isFollowUpAppointment,
+  isUrgentAppointment,
+  ODOS_VISIT_TYPE_SYSTEM,
+} from "../../lib/scheduling";
 
 interface Props {
   patient: Patient;
@@ -34,6 +39,8 @@ interface Props {
 
 export function EncounterHeader({ patient, encounterId }: Props) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
+  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [appointmentError, setAppointmentError] = useState<string | null>(null);
   const [encounterConditions, setEncounterConditions] = useState<Condition[]>([]);
   const [problemListConditions, setProblemListConditions] = useState<Condition[]>([]);
   const [busy, setBusy] = useState<"checking" | "finish" | "abandon" | null>(null);
@@ -85,6 +92,31 @@ export function EncounterHeader({ patient, encounterId }: Props) {
       completenessCheckVersion.current += 1;
     };
   }, [encounterId, patient.id]);
+
+  useEffect(() => {
+    const reference = encounter?.appointment?.find((candidate) =>
+      candidate.reference?.includes("Appointment/"),
+    )?.reference;
+    const appointmentId = reference?.match(/(?:^|\/)Appointment\/([^/?#]+)/)?.[1];
+    if (!appointmentId) {
+      setAppointment(null);
+      setAppointmentError(null);
+      return;
+    }
+    let cancelled = false;
+    setAppointment(null);
+    setAppointmentError(null);
+    void fhir.read<Appointment>("Appointment", appointmentId)
+      .then((loaded) => {
+        if (!cancelled) setAppointment(loaded);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setAppointmentError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [encounter]);
 
   const displayName = useMemo(() => patientName(patient), [patient]);
   const mdmHint = useMemo(
@@ -216,6 +248,8 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         </div>
       </div>
 
+      {appointment && <AppointmentContextBanner appointment={appointment} />}
+
       {mdmHint && (
         <div data-testid="mdm-hint-counter" className="mt-3 rounded border border-white/10 bg-bg-deep/70 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -244,6 +278,11 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           {error}
         </div>
       )}
+      {appointmentError && (
+        <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100">
+          Linked appointment could not be loaded: {appointmentError}
+        </div>
+      )}
       {completenessAdvisories.length > 0 && (
         <DiagnosisCompletenessDialog
           diagnoses={completenessAdvisories}
@@ -259,6 +298,46 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         />
       )}
     </header>
+  );
+}
+
+export function AppointmentContextBanner({ appointment }: { appointment: Appointment }) {
+  const note = appointment.comment?.trim();
+  const visitType = appointment.serviceType?.[0]?.text
+    ?? appointment.serviceType?.[0]?.coding?.find(
+      (coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM,
+    )?.display
+    ?? appointment.serviceType?.[0]?.coding?.find(
+      (coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM,
+    )?.code
+    ?? "Appointment";
+
+  return (
+    <div
+      data-testid="appointment-context-banner"
+      className="mt-3 rounded border border-[var(--odos-overlay-line-2)] bg-[color-mix(in_srgb,var(--odos-text)_10%,transparent)] px-4 py-3"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-widest text-[color:var(--odos-muted)]">
+          Booked visit · {visitType}
+        </span>
+        {isUrgentAppointment(appointment) && (
+          <span className="rounded-sm bg-[color:var(--odos-accent-tint-hi)] px-2 py-0.5 text-xs font-bold uppercase text-[color:var(--odos-text)]">
+            Urgent
+          </span>
+        )}
+        {isFollowUpAppointment(appointment) && (
+          <span className="rounded-sm bg-[color:var(--odos-accent-tint-hi)] px-2 py-0.5 text-xs font-bold uppercase text-[color:var(--odos-text)]">
+            Follow-up
+          </span>
+        )}
+      </div>
+      {note && (
+        <div className="mt-2 whitespace-pre-wrap break-words text-sm font-medium text-[color:var(--odos-text)]">
+          {note}
+        </div>
+      )}
+    </div>
   );
 }
 

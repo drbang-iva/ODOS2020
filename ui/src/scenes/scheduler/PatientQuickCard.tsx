@@ -4,6 +4,7 @@ import { fhir } from "../../lib/fhir";
 import { useSchedulingStore } from "../../lib/scheduling-store";
 import { patientQuickCardViewModel } from "../../lib/scheduler-appointment-ui";
 import { BalanceChips } from "../../components/commercial/BalanceChips";
+import { AppointmentChartButton } from "../../components/AppointmentChartButton";
 
 export function PatientQuickCard({
   appointment,
@@ -12,6 +13,7 @@ export function PatientQuickCard({
   onClose,
   onDetails,
   date,
+  canStartChart = false,
 }: {
   appointment: Appointment | null;
   pinned: boolean;
@@ -19,6 +21,7 @@ export function PatientQuickCard({
   onClose: () => void;
   onDetails: (appointment: Appointment) => void;
   date: string;
+  canStartChart?: boolean;
 }) {
   const patientReference = patientReferenceOf(appointment);
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -184,6 +187,9 @@ export function PatientQuickCard({
 
         {patientReference && (
           <div className="flex gap-2">
+            {canStartChart && (
+              <AppointmentChartButton appointment={appointment} onError={setActionError} />
+            )}
             <button className="scheduler-button" type="button" onClick={() => void handleCheckIn()}>
               Check In
             </button>
