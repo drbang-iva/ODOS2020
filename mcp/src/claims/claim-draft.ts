@@ -166,7 +166,22 @@ export async function buildClaimDraft(
   });
 
   const activeCoverages = coverages.filter((coverage) => coverage.status === "active");
-  let primaryCoverage = activeCoverages.find((coverage) => coverage.order === 1);
+  const intendedCoverageReferences = new Set(
+    (encounter.extension ?? [])
+      .filter((extension) =>
+        extension.url === "https://odos2020.com/fhir/StructureDefinition/intended-coverage"
+      )
+      .flatMap((extension) => extension.valueReference?.reference
+        ? [extension.valueReference.reference]
+        : []),
+  );
+  const activeIntendedCoverages = activeCoverages.filter((coverage) =>
+    coverage.id && intendedCoverageReferences.has(`Coverage/${coverage.id}`)
+  );
+  let primaryCoverage = activeIntendedCoverages.length === 1
+    ? activeIntendedCoverages[0]
+    : activeIntendedCoverages.find((coverage) => coverage.order === 1);
+  primaryCoverage ??= activeCoverages.find((coverage) => coverage.order === 1);
   if (!primaryCoverage && activeCoverages.length === 1 && coverages.length === 1) {
     primaryCoverage = activeCoverages[0];
   }

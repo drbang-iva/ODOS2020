@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Bundle, ChargeItem, Condition, Coverage, Encounter, Resource } from "@medplum/fhirtypes";
 import { buildClaimDraft, ClaimDraftAssemblyError } from "../src/claims/claim-draft.js";
+import { INTENDED_COVERAGE_EXTENSION_URL } from "../../ui/src/lib/encounter-bundles.js";
 
 const encounter: Encounter = {
   resourceType: "Encounter",
@@ -115,6 +116,48 @@ test("claim assembly uses the active order-one Coverage when other payers are pr
   );
 
   assert.equal(draft.coverageReference, "Coverage/primary");
+});
+
+test("claim assembly prefers the visit's active intended Coverage over unrelated active Coverages", async () => {
+  const bookedEncounter = encounterWithIntendedCoverages("booked-vision");
+  const bookedVision = coverage("booked-vision", 2);
+  const unrelatedMedical = coverage("unrelated-medical", 3);
+  delete bookedVision.order;
+  delete unrelatedMedical.order;
+
+  const draft = await buildClaimDraft(
+    client([], bookedEncounter, [unrelatedMedical, bookedVision]),
+    "enc-1",
+  );
+
+  assert.equal(draft.coverageReference, "Coverage/booked-vision");
+});
+
+test("claim assembly ignores a terminated intended Coverage and uses the existing fallback", async () => {
+  const bookedEncounter = encounterWithIntendedCoverages("terminated-booking");
+  const terminatedBooking = {
+    ...coverage("terminated-booking", 2),
+    status: "cancelled" as const,
+  };
+  const activePrimary = coverage("active-primary", 1);
+
+  const draft = await buildClaimDraft(
+    client([], bookedEncounter, [terminatedBooking, activePrimary]),
+    "enc-1",
+  );
+
+  assert.equal(draft.coverageReference, "Coverage/active-primary");
+});
+
+test("claim assembly breaks multiple active intended Coverage ties by order one, not extension order", async () => {
+  const bookedEncounter = encounterWithIntendedCoverages("booked-secondary", "booked-primary");
+
+  const draft = await buildClaimDraft(
+    client([], bookedEncounter, [coverage("booked-secondary", 2), coverage("booked-primary", 1)]),
+    "enc-1",
+  );
+
+  assert.equal(draft.coverageReference, "Coverage/booked-primary");
 });
 
 test("claim assembly accepts one lone active Coverage when its order is omitted", async () => {
@@ -272,5 +315,15 @@ function coverage(id: string, order: number): Coverage {
     beneficiary: { reference: "Patient/pat-1" },
     order,
     payor: [{ reference: `Organization/payer-${id}`, identifier: { value: `PAYER-${id}` } }],
+  };
+}
+
+function encounterWithIntendedCoverages(...coverageIds: string[]): Encounter {
+  return {
+    ...structuredClone(encounter),
+    extension: coverageIds.map((id) => ({
+      url: INTENDED_COVERAGE_EXTENSION_URL,
+      valueReference: { reference: `Coverage/${id}` },
+    })),
   };
 }
