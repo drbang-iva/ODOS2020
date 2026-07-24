@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, Encounter, Patient, Practitioner, RelatedPerson } from "@medplum/fhirtypes";
+import type { Coverage, Encounter, Organization, Patient, Practitioner, RelatedPerson } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { InlinePicker, type InlinePickerOption } from "../src/components/InlinePicker";
+import { fhir } from "../src/lib/fhir";
 import {
   addChargeLine,
   addDiagnosisLine,
@@ -30,6 +33,7 @@ import {
   validateClaimDraft,
   type ClaimDraft,
 } from "../src/lib/submit-claims";
+import { PatientSearch } from "../src/scenes/PatientPicker";
 import { ClaimReview, ClaimSubmissionResult, CoverageChoices, PersonFields, SubmissionAlert, SubmitClaims, validateCoverageEntry } from "../src/scenes/claims/SubmitClaims";
 
 const PATIENT: Patient = {
@@ -188,6 +192,154 @@ test("Stedi resubmission preview and submit use the dedicated endpoints and expl
   assert.deepEqual(calls[1].body.revisedClaim, claim);
 });
 
+test("inline picker typeahead selects a named Practitioner without exposing a raw reference field", async () => {
+  const originalWindow = globalThis.window;
+  const practitioner: Practitioner = {
+    resourceType: "Practitioner",
+    id: "pract-1",
+    name: [{ given: ["Eric"], family: "Bang" }],
+  };
+  const option: InlinePickerOption<Practitioner> = {
+    value: "Practitioner/pract-1",
+    label: "Eric Bang",
+    item: practitioner,
+  };
+  const searches: string[] = [];
+  let selected: InlinePickerOption<Practitioner> | undefined;
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => globalThis.setTimeout(callback, 0),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(
+        <InlinePicker
+          label="Rendering provider"
+          value=""
+          placeholder="Search practitioner name"
+          search={async (query) => {
+            searches.push(query);
+            return [option];
+          }}
+          onSelect={(next) => { selected = next; }}
+          onClear={() => undefined}
+          searchDelayMs={0}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search practitioner name")
+        .props.onChange({ target: { value: "Eric" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 10));
+      await Promise.resolve();
+    });
+    const result = renderer!.root.findAllByType("button").find((button) =>
+      button.findAllByType("span").some((span) => span.children.join("") === "Eric Bang")
+    );
+    assert.ok(result, "Expected Eric Bang search result");
+    act(() => result.props.onClick());
+    assert.deepEqual(searches, ["Eric"]);
+    assert.equal(selected?.value, "Practitioner/pract-1");
+    assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Practitioner\/pract-1/);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("inline picker creates and selects a payer Organization from only its name", async () => {
+  const originalWindow = globalThis.window;
+  const created: Organization = { resourceType: "Organization", id: "payer-new", name: "New Payer" };
+  let createName = "";
+  let selected: InlinePickerOption<Organization> | undefined;
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => globalThis.setTimeout(callback, 0),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(
+        <InlinePicker
+          label="Payor organization"
+          value=""
+          placeholder="Search payer name"
+          search={async () => []}
+          onSelect={(next) => { selected = next; }}
+          onClear={() => undefined}
+          onCreate={async (name) => {
+            createName = name;
+            return { value: "Organization/payer-new", label: name, item: created };
+          }}
+          createLabel="Create payer"
+          searchDelayMs={0}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
+        .props.onChange({ target: { value: "New Payer" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      claimsButton(renderer!, "Create payer “New Payer”").props.onClick();
+      await Promise.resolve();
+    });
+    assert.equal(createName, "New Payer");
+    assert.equal(selected?.value, "Organization/payer-new");
+    assert.equal(selected?.item.name, "New Payer");
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+test("claim draft validation messages appear inline before final review", async () => {
+  const originalSearch = fhir.search;
+  const originalWindow = globalThis.window;
+  let renderer: ReactTestRenderer | undefined;
+  (fhir as any).search = async (resourceType: string) => {
+    if (resourceType === "Basic" || resourceType === "Encounter" || resourceType === "Coverage") {
+      return { resourceType: "Bundle", type: "searchset", entry: [] };
+    }
+    throw new Error(`Unexpected ${resourceType} search`);
+  };
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+      scrollTo: () => undefined,
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(<SubmitClaims />);
+      await Promise.resolve();
+    });
+    await selectPatientInClaims(renderer!, PATIENT);
+    const rendered = JSON.stringify(renderer!.toJSON());
+    assert.match(rendered, /FHIR provider reference is required\./);
+    assert.match(rendered, /Select a Coverage\./);
+    assert.match(rendered, /Patient account number is required\./);
+    assert.match(rendered, /Rendering provider NPI is required\./);
+    assert.match(rendered, /Diagnosis 1 code is required\./);
+    assert.match(rendered, /Charge 1 code is required\./);
+    assert.ok(renderer!.root.findAll((node) => node.props["aria-invalid"] === true).length > 0);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    (fhir as any).search = originalSearch;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
 test("stored Stedi input converts back to an editable correction draft with a blank new PCN", () => {
   const original = buildProfessionalClaimInput(validDraft());
   const draft = claimDraftFromProfessionalClaimInput(original, "2026-07-22");
@@ -210,6 +362,29 @@ test("Submit Claims surfaces encounter prefill and billing identity defaults fil
     ),
     { npi: "1111111112", name: "Per-claim override", taxonomy: "152W00000X" },
   );
+});
+
+test("Claim Review renders named human summary, line detail, and calculated total without raw JSON", () => {
+  const claim = buildProfessionalClaimInput(validDraft());
+  claim.chargeItems[0].quantity = { value: 2 };
+  const html = renderToStaticMarkup(
+    <ClaimReview claim={claim} payerName="Blue Health" submitting={false} onEdit={() => undefined} onSubmit={() => undefined} />,
+  );
+  assert.match(html, /Patient/);
+  assert.match(html, /Subscriber/);
+  assert.match(html, /Blue Health/);
+  assert.match(html, /Test Practice/);
+  assert.match(html, /Eric Bang/);
+  assert.match(html, /TEST-DX/);
+  assert.match(html, /Synthetic diagnosis/);
+  assert.match(html, /TEST-PROC/);
+  assert.match(html, /Synthetic procedure/);
+  assert.match(html, /Fee \$125\.50/);
+  assert.match(html, /Qty 2/);
+  assert.match(html, /\$251\.00/);
+  assert.match(html, /Greenville, SC 29601/);
+  assert.doesNotMatch(html, /patientReference/);
+  assert.doesNotMatch(html, /<pre/);
 });
 
 test("Coverage creation stamps member ID twice and preserves group, relationship, payor, and period", () => {
@@ -346,6 +521,64 @@ test("latest signed encounter selection is encounter-scoped and chronological", 
     { resourceType: "Encounter", id: "latest", status: "finished", class: {}, period: { start: "2026-07-21T10:00:00Z" } },
   ];
   assert.equal(latestFinishedEncounter(encounters)?.id, "latest");
+});
+
+test("reselecting a patient restores their lone active Coverage without a signed encounter", async () => {
+  const originalSearch = fhir.search;
+  const originalWindow = globalThis.window;
+  const coverage = coverageFixture("self");
+  const otherPatient: Patient = {
+    resourceType: "Patient",
+    id: "pat-2",
+    name: [{ given: ["Other"], family: "Patient" }],
+    birthDate: "1990-02-03",
+  };
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+      scrollTo: () => undefined,
+    },
+  });
+  (fhir as any).search = async (resourceType: string, params: Record<string, string>) => {
+    if (resourceType === "Basic" || resourceType === "Encounter") {
+      return { resourceType: "Bundle", type: "searchset", entry: [] };
+    }
+    if (resourceType === "Coverage") {
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: params.beneficiary === "Patient/pat-1" ? [{ resource: coverage }] : [],
+      };
+    }
+    throw new Error(`Unexpected ${resourceType} search`);
+  };
+  try {
+    await act(async () => {
+      renderer = create(<SubmitClaims />);
+      await Promise.resolve();
+    });
+    await selectPatientInClaims(renderer!, PATIENT);
+    let coverageRadio = renderer!.root.findByProps({ type: "radio" });
+    await act(async () => {
+      await coverageRadio.props.onChange();
+    });
+    assert.equal(renderer!.root.findByProps({ type: "radio" }).props.checked, true);
+
+    act(() => claimsButton(renderer!, "Change").props.onClick());
+    await selectPatientInClaims(renderer!, otherPatient);
+    act(() => claimsButton(renderer!, "Change").props.onClick());
+    await selectPatientInClaims(renderer!, PATIENT);
+
+    coverageRadio = renderer!.root.findByProps({ type: "radio" });
+    assert.equal(coverageRadio.props.checked, true);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    (fhir as any).search = originalSearch;
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
 });
 
 test("provider validation requires rendering name and one billing contact method", () => {
@@ -564,4 +797,19 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+async function selectPatientInClaims(renderer: ReactTestRenderer, patient: Patient): Promise<void> {
+  await act(async () => {
+    renderer.root.findByType(PatientSearch).props.onSelect(patient);
+    await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+  });
+}
+
+function claimsButton(renderer: ReactTestRenderer, label: string): any {
+  const button = renderer.root.findAllByType("button").find((candidate) =>
+    candidate.children.join("") === label
+  );
+  assert.ok(button, `Expected ${label} button`);
+  return button;
 }
