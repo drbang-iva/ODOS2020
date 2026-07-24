@@ -18,6 +18,8 @@ import { FhirEncounterComplaintStore } from "./encounter-complaint-store.js";
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 
 const WRITE_HEADERS = { "X-ODOS-Source": "encounter-complaints" } as const;
+const CONCURRENT_EDIT_MESSAGE =
+  "This record was changed by someone else since you opened it. Reload and reapply your change.";
 
 export interface ComplaintEndpointFhirClient {
   search<T extends Basic>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
@@ -268,6 +270,12 @@ export async function handleEncounterComplaintMutationRequest(
     });
     return { status: 200, body: { complaints: finalRows.map((row) => complaintView(row, definitions)) } };
   } catch (error) {
+    if (isConcurrentEdit(error)) {
+      return {
+        status: 409,
+        body: { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" },
+      };
+    }
     return { status: 400, body: { error: errorMessage(error) } };
   }
 }
@@ -429,4 +437,10 @@ function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write" | "
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isConcurrentEdit(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("status" in error)) return false;
+  const status = Number(error.status);
+  return status === 409 || status === 412;
 }

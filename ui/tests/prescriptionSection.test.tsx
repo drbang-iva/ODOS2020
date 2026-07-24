@@ -189,13 +189,18 @@ test("PrescriptionSection rejects a stale loaded version with the friendly concu
   }
 });
 
-test("FHIR conflict conversion humanizes a 409 without swallowing the error", async () => {
-  const error = await toError(new Response("conflict", {
+test("FHIR conflict conversion only humanizes explicitly versioned writes", async () => {
+  const versionedError = await toError(new Response("conflict", {
+    status: 409,
+    statusText: "Conflict",
+  }), true);
+  const unversionedError = await toError(new Response("conditional create conflict", {
     status: 409,
     statusText: "Conflict",
   }));
 
-  assert.equal(error.message, CONCURRENT_EDIT_MESSAGE);
+  assert.equal(versionedError.message, CONCURRENT_EDIT_MESSAGE);
+  assert.equal(unversionedError.message, "FHIR 409 Conflict: conditional create conflict");
 });
 
 test("formatDate safely renders malformed and absent authoredOn values", () => {

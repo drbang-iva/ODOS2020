@@ -68,9 +68,9 @@ async function pkce(): Promise<{ verifier: string; challenge: string }> {
   return { verifier, challenge };
 }
 
-export async function toError(res: Response): Promise<Error> {
+export async function toError(res: Response, versionedWrite = false): Promise<Error> {
   const body = await res.text();
-  if (res.status === 409 || res.status === 412) {
+  if (versionedWrite && (res.status === 409 || res.status === 412)) {
     return new Error(CONCURRENT_EDIT_MESSAGE);
   }
   let detail = body;
@@ -311,7 +311,7 @@ export const fhir = {
       },
       body: JSON.stringify(resource),
     });
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) throw await toError(res, Boolean(ifMatchVersionId));
     return (await res.json()) as T;
   },
 
@@ -331,7 +331,7 @@ export const fhir = {
       },
       body: JSON.stringify(ops),
     });
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) throw await toError(res, Boolean(ifMatchVersionId));
     return (await res.json()) as T;
   },
 
