@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coverage, Encounter, Organization, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
 import { InlinePicker, type InlinePickerOption } from "../../components/InlinePicker";
 import { fhir } from "../../lib/fhir";
@@ -47,6 +47,8 @@ import { loadBillingIdentityConfigSingleton } from "../settings/BillingIdentityS
 import type { BillingIdentityConfig } from "../settings/billing-identity-config";
 
 type Step = "compose" | "review" | "success";
+const ORGANIZATION_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/organization-type";
+const PAYER_ORGANIZATION_TYPE_CODE = "pay";
 
 export function SubmitClaims({
   initialEncounterId = "",
@@ -821,7 +823,7 @@ export function ClaimReview({
   );
 }
 
-function ReviewGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function ReviewGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4">
       <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">{title}</h3>
@@ -830,7 +832,7 @@ function ReviewGroup({ title, children }: { title: string; children: React.React
   );
 }
 
-function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <section className="rounded-lg border border-white/10 bg-bg-panel/80 p-5">
       <h2 className="font-semibold">{title}</h2>
@@ -1007,17 +1009,31 @@ export function validateCoverageEntry(entry: CoverageEntryInput): string[] {
   return errors;
 }
 
-async function searchPayerOrganizations(query: string): Promise<InlinePickerOption<Organization>[]> {
-  const bundle = await fhir.search<Organization>("Organization", { name: query, _count: "20" });
+export async function searchPayerOrganizations(query: string): Promise<InlinePickerOption<Organization>[]> {
+  const bundle = await fhir.search<Organization>("Organization", {
+    name: query,
+    type: `${ORGANIZATION_TYPE_SYSTEM}|${PAYER_ORGANIZATION_TYPE_CODE}`,
+    _count: "20",
+  });
   return (bundle.entry ?? [])
     .flatMap((entry) => entry.resource?.id && entry.resource.name ? [entry.resource] : [])
     .filter((organization) => organization.active !== false)
     .map(organizationPickerOption);
 }
 
-async function createPayerOrganization(name: string): Promise<InlinePickerOption<Organization>> {
+export async function createPayerOrganization(name: string): Promise<InlinePickerOption<Organization>> {
   const organization = await fhir.create<Organization>(
-    { resourceType: "Organization", name },
+    {
+      resourceType: "Organization",
+      name,
+      type: [{
+        coding: [{
+          system: ORGANIZATION_TYPE_SYSTEM,
+          code: PAYER_ORGANIZATION_TYPE_CODE,
+          display: "Payer",
+        }],
+      }],
+    },
     "submit-claims-payer",
   );
   if (!organization.id) throw new Error("The payer Organization was created without an id.");
@@ -1048,9 +1064,9 @@ async function searchPractitioners(query: string): Promise<InlinePickerOption<Pr
     }));
 }
 
-function practitionerDisplay(practitioner: Practitioner): string {
-  const name = practitioner.name?.find((candidate) => candidate.use === "official") ?? practitioner.name?.[0];
-  return [name?.given?.join(" "), name?.family].filter(Boolean).join(" ") || `Practitioner/${practitioner.id}`;
+export function practitionerDisplay(practitioner: Practitioner): string {
+  const provider = claimProviderFromPractitioner(practitioner);
+  return [provider.firstName, provider.lastName].filter(Boolean).join(" ") || `Practitioner/${practitioner.id}`;
 }
 
 function providerDisplay(provider: ClaimMdProviderInput): string {
