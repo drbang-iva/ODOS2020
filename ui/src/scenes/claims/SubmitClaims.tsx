@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Coverage, Encounter, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
+import type { Coverage, Encounter, Organization, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
+import { InlinePicker, type InlinePickerOption } from "../../components/InlinePicker";
 import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
 import { patientName } from "../../lib/scheduler-appointment-ui";
@@ -34,6 +35,7 @@ import {
   type ClaimMdProviderInput,
   type CoverageEntryInput,
   type DiagnosisLine,
+  type ProfessionalClaimChargeItemInput,
   type ProfessionalClaimInput,
   type SubmitClaimResult,
   type StediClaimResubmissionPreview,
@@ -61,6 +63,7 @@ export function SubmitClaims({
   const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [coverageLoading, setCoverageLoading] = useState(false);
   const [coverageError, setCoverageError] = useState<string>();
+  const [payerName, setPayerName] = useState("");
   const [subscriberLoading, setSubscriberLoading] = useState(false);
   const [subscriberError, setSubscriberError] = useState<string>();
   const subscriberSelection = useRef(0);
@@ -82,6 +85,7 @@ export function SubmitClaims({
     resubmissionRoute?.payerClassification ?? "",
   );
   const [successWarning, setSuccessWarning] = useState<string>();
+  const liveErrors = useMemo(() => validateClaimDraft(draft), [draft]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,7 +135,11 @@ export function SubmitClaims({
         }
         if (coverageId) {
           const loadedCoverage = await fhir.read<Coverage>("Coverage", coverageId);
-          if (!cancelled) setCoverages([loadedCoverage]);
+          const loadedPayerName = await coveragePayerName(loadedCoverage);
+          if (!cancelled) {
+            setCoverages([loadedCoverage]);
+            setPayerName(loadedPayerName);
+          }
         }
       })
       .catch((cause) => {
@@ -155,7 +163,12 @@ export function SubmitClaims({
           _count: "50",
         });
         if (!cancelled) {
-          setCoverages((bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+          const loadedCoverages = (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+          setCoverages(loadedCoverages);
+          const activeCoverages = loadedCoverages.filter((coverage) => coverage.status === "active");
+          if (!draft.coverageReference && activeCoverages.length === 1 && patient) {
+            void selectCoverageForPatient(activeCoverages[0], patient);
+          }
         }
       } catch (cause) {
         if (!cancelled) {
@@ -178,6 +191,7 @@ export function SubmitClaims({
     setChoosingPatient(false);
     setCoverages([]);
     setShowCoverageEntry(false);
+    setPayerName("");
     subscriberSelection.current += 1;
     setSubscriberError(undefined);
     setSubscriberLoading(false);
@@ -194,8 +208,12 @@ export function SubmitClaims({
     void loadLatestEncounterForPatient(selected);
   };
 
-  const selectCoverage = async (coverage: Coverage) => {
-    if (!coverage.id || !patient) return;
+  const selectCoverage = (coverage: Coverage) => patient
+    ? selectCoverageForPatient(coverage, patient)
+    : Promise.resolve();
+
+  async function selectCoverageForPatient(coverage: Coverage, selectedPatient: Patient): Promise<void> {
+    if (!coverage.id) return;
     const selection = subscriberSelection.current + 1;
     subscriberSelection.current = selection;
     const coverageReference = `Coverage/${coverage.id}`;
@@ -205,21 +223,25 @@ export function SubmitClaims({
       ...current,
       coverageReference,
       insurerReference: coverage.payor[0]?.reference ?? "",
-      subscriber: subscriberFromCoverage(coverage, patient),
+      subscriber: subscriberFromCoverage(coverage, selectedPatient),
       subscriberIsPatient: coverageIsSelf(coverage),
     }));
-    const resolution = await resolveSubscriberFromCoverage(
-      coverage,
-      patient,
-      (id) => fhir.read<RelatedPerson>("RelatedPerson", id),
-    );
+    const [resolution, resolvedPayerName] = await Promise.all([
+      resolveSubscriberFromCoverage(
+        coverage,
+        selectedPatient,
+        (id) => fhir.read<RelatedPerson>("RelatedPerson", id),
+      ),
+      coveragePayerName(coverage),
+    ]);
     if (subscriberSelection.current !== selection) return;
     setDraft((current) => current.coverageReference === coverageReference
       ? { ...current, subscriber: resolution.subscriber }
       : current);
     setSubscriberError(resolution.error);
+    setPayerName(resolvedPayerName);
     setSubscriberLoading(false);
-  };
+  }
 
   const createCoverage = async () => {
     const entryErrors = validateCoverageEntry(coverageEntry);
@@ -277,6 +299,7 @@ export function SubmitClaims({
       setPatient(loadedPatient);
       setChoosingPatient(false);
       setCoverages(primaryCoverage ? [primaryCoverage] : []);
+      setPayerName(primaryCoverage ? await coveragePayerName(primaryCoverage) : "");
       setSubscriberError(subscriberResolutionError);
       setDraft((current) => ({
         ...current,
@@ -417,6 +440,7 @@ export function SubmitClaims({
     setPatient(undefined);
     setChoosingPatient(true);
     setCoverages([]);
+    setPayerName("");
     setCoverageEntry(emptyCoverageEntry(today));
     subscriberSelection.current += 1;
     setSubscriberError(undefined);
@@ -504,13 +528,31 @@ export function SubmitClaims({
                       {coverages.length === 0 && <p className="text-sm text-white/45">No Coverage records found for this patient.</p>}
                     </div>
                   )}
+                  <InlineErrors errors={claimErrors(liveErrors, "Select a Coverage.", "The selected Coverage")} />
                   <button type="button" onClick={() => setShowCoverageEntry((value) => !value)} className="mt-3 rounded bg-blue-700 px-3 py-2 text-sm font-semibold">
                     {showCoverageEntry ? "Cancel Coverage entry" : "Add Coverage"}
                   </button>
                   {showCoverageEntry && (
                     <div className="mt-4 grid gap-3 rounded border border-white/10 bg-black/20 p-4 md:grid-cols-2">
-                      <Field label="Payor Organization reference" value={coverageEntry.payorReference} placeholder="Organization/123" onChange={(value) => setCoverageEntry((current) => ({ ...current, payorReference: value }))} />
-                      <Field label="Payor display name" value={coverageEntry.payorDisplay ?? ""} onChange={(value) => setCoverageEntry((current) => ({ ...current, payorDisplay: value }))} />
+                      <InlinePicker
+                        label="Payor organization"
+                        value={coverageEntry.payorReference}
+                        selectedLabel={coverageEntry.payorDisplay}
+                        placeholder="Search payer name"
+                        search={searchPayerOrganizations}
+                        onSelect={(option) => setCoverageEntry((current) => ({
+                          ...current,
+                          payorReference: option.value,
+                          payorDisplay: option.label,
+                        }))}
+                        onClear={() => setCoverageEntry((current) => ({
+                          ...current,
+                          payorReference: "",
+                          payorDisplay: "",
+                        }))}
+                        onCreate={createPayerOrganization}
+                        createLabel="Create payer"
+                      />
                       <Field label="Member ID" value={coverageEntry.memberId} onChange={(value) => setCoverageEntry((current) => ({ ...current, memberId: value }))} />
                       <Field label="Group number (optional)" value={coverageEntry.groupNumber} onChange={(value) => setCoverageEntry((current) => ({ ...current, groupNumber: value }))} />
                       <SelectField label="Relationship" value={coverageEntry.relationship} options={[{ value: "self", label: "Subscriber is patient" }, { value: "other", label: "Other subscriber" }]} onChange={(value) => setCoverageEntry((current) => ({ ...current, relationship: value as "self" | "other" }))} />
@@ -522,44 +564,60 @@ export function SubmitClaims({
 
                 <Section title="Claim details" description="FHIR references and clearinghouse identifiers for this submission.">
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    <Field label="FHIR provider reference" value={draft.providerReference} placeholder="Practitioner/123" onChange={(value) => setDraft((current) => ({ ...current, providerReference: value }))} />
-                    <Field label="Payer ID" value={draft.payerId} onChange={(value) => setDraft((current) => ({ ...current, payerId: value }))} />
-                    <Field label="Patient account number" value={draft.patientAccountNumber} onChange={(value) => setDraft((current) => ({ ...current, patientAccountNumber: value }))} />
-                    <Field label="Service date" type="date" value={draft.serviceDate} onChange={(value) => setDraft((current) => ({ ...current, serviceDate: value }))} />
-                    <Field label="Created date" type="date" value={draft.created} onChange={(value) => setDraft((current) => ({ ...current, created: value }))} />
-                    <ReadOnlyField label="Insurer reference" value={draft.insurerReference || "Select Coverage"} />
+                    <InlinePicker
+                      label="Rendering provider"
+                      value={draft.providerReference}
+                      selectedLabel={providerDisplay(draft.renderingProvider)}
+                      placeholder="Search practitioner name"
+                      search={searchPractitioners}
+                      onSelect={(option) => setDraft((current) => ({
+                        ...current,
+                        providerReference: option.value,
+                        renderingProvider: claimProviderFromPractitioner(option.item),
+                      }))}
+                      onClear={() => setDraft((current) => ({ ...current, providerReference: "" }))}
+                      validationMessage={claimError(liveErrors, "FHIR provider reference")}
+                    />
+                    <Field label="Payer ID" value={draft.payerId} error={claimError(liveErrors, "Payer ID")} onChange={(value) => setDraft((current) => ({ ...current, payerId: value }))} />
+                    <Field label="Patient account number" value={draft.patientAccountNumber} error={claimError(liveErrors, "Patient account number")} onChange={(value) => setDraft((current) => ({ ...current, patientAccountNumber: value }))} />
+                    <Field label="Service date" type="date" value={draft.serviceDate} error={claimError(liveErrors, "Service date")} onChange={(value) => setDraft((current) => ({ ...current, serviceDate: value }))} />
+                    <Field label="Created date" type="date" value={draft.created} error={claimError(liveErrors, "Created date")} onChange={(value) => setDraft((current) => ({ ...current, created: value }))} />
+                    <ReadOnlyField label="Insurer reference" value={draft.insurerReference || "Select Coverage"} error={claimError(liveErrors, "The selected Coverage")} />
                   </div>
                 </Section>
 
                 <Section title="Billing provider" description="Prefilled from the practice billing identity when configured; editable for this claim.">
                   {billingIdentityError && <div className="mb-3"><SubmissionAlert message={`Billing identity defaults unavailable: ${billingIdentityError}`} /></div>}
-                  <ProviderFields provider={draft.billingProvider} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
+                  <ProviderFields provider={draft.billingProvider} errorPrefix="Billing provider" errors={liveErrors} onChange={(billingProvider) => setDraft((current) => ({ ...current, billingProvider }))} />
                 </Section>
 
                 <Section title="Rendering provider" description="NPI and either last name or organization name are required.">
-                  <ProviderFields provider={draft.renderingProvider} onChange={(renderingProvider) => setDraft((current) => ({ ...current, renderingProvider }))} />
+                  <ProviderFields provider={draft.renderingProvider} errorPrefix="Rendering provider" errors={liveErrors} onChange={(renderingProvider) => setDraft((current) => ({ ...current, renderingProvider }))} />
                 </Section>
 
                 <Section title="Patient demographics" description="Available FHIR Patient fields are prefilled and remain editable when the stored record is incomplete.">
-                  <PersonFields person={draft.patient} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
+                  <PersonFields person={draft.patient} errorPrefix="Patient" errors={liveErrors} onChange={(next) => setDraft((current) => ({ ...current, patient: next }))} />
                 </Section>
 
                 <Section title="Subscriber demographics" description={draft.subscriberIsPatient ? "Self relationship: copied from the selected patient." : "Other relationship: stored subscriber demographics are prefilled and remain editable."}>
                   {subscriberError && <div className="mb-3"><SubmissionAlert message={subscriberError} /></div>}
                   {subscriberLoading && <p className="mb-3 text-sm text-white/45">Loading subscriber record…</p>}
                   {draft.subscriberIsPatient ? (
-                    <PersonSummary person={claimSubscriber} />
+                    <>
+                      <PersonSummary person={claimSubscriber} />
+                      <InlineErrors errors={claimErrors(liveErrors, "Subscriber relationship")} />
+                    </>
                   ) : (
-                    <PersonFields person={draft.subscriber} includePolicy onChange={(next) => setDraft((current) => ({ ...current, subscriber: next }))} />
+                    <PersonFields person={draft.subscriber} errorPrefix="Subscriber" errors={liveErrors} includePolicy onChange={(next) => setDraft((current) => ({ ...current, subscriber: next }))} />
                   )}
                 </Section>
 
                 <Section title="Diagnoses" description="Prefilled from the signed encounter when available; confirm, reorder, or enter manually when needed.">
-                  <DiagnosisLines lines={draft.diagnoses} onChange={(diagnoses) => setDraft((current) => ({ ...current, diagnoses }))} />
+                  <DiagnosisLines lines={draft.diagnoses} errors={liveErrors} onChange={(diagnoses) => setDraft((current) => ({ ...current, diagnoses }))} />
                 </Section>
 
                 <Section title="Charges" description="Prefilled from billable encounter ChargeItems when available; manual entry remains available for no-encounter claims.">
-                  <ChargeLines lines={draft.charges} onChange={(charges) => setDraft((current) => ({ ...current, charges }))} />
+                  <ChargeLines lines={draft.charges} errors={liveErrors} onChange={(charges) => setDraft((current) => ({ ...current, charges }))} />
                 </Section>
 
                 {errors.length > 0 && <SubmissionAlert message={errors.join(" ")} />}
@@ -576,6 +634,7 @@ export function SubmitClaims({
             {resubmissionRoute && <StediCorrectionBanner preview={resubmissionPreview} payerClassification={payerClassification} />}
             <ClaimReview
               claim={reviewClaim}
+              payerName={payerName}
               error={submissionError}
               submitting={submitting}
               onEdit={() => setStep("compose")}
@@ -680,12 +739,14 @@ export function ClaimSubmissionResult({ result, onAnother }: { result: SubmitCla
 
 export function ClaimReview({
   claim,
+  payerName,
   error,
   submitting,
   onEdit,
   onSubmit,
 }: {
   claim: ProfessionalClaimInput;
+  payerName?: string;
   error?: string;
   submitting: boolean;
   onEdit: () => void;
@@ -696,15 +757,75 @@ export function ClaimReview({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Review assembled claim</h2>
-          <p className="mt-1 text-sm text-white/45">Read-only ProfessionalClaimInput sent to POST /claims/submit.</p>
+          <p className="mt-1 text-sm text-[color:var(--odos-faint)]">Confirm the people, payer, diagnoses, charges, and total before submission.</p>
         </div>
         <button type="button" onClick={onEdit} disabled={submitting} className="rounded border border-white/15 px-3 py-2 text-sm text-white/70 disabled:opacity-50">Back to edit</button>
       </div>
-      <pre className="mt-5 max-h-[60vh] overflow-auto rounded bg-black/35 p-4 text-xs leading-relaxed text-white/70">{JSON.stringify(claim, null, 2)}</pre>
+      <div className="mt-5 space-y-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ReviewGroup title="Patient">
+            <PersonSummary person={claim.patient} />
+          </ReviewGroup>
+          <ReviewGroup title="Subscriber">
+            <PersonSummary person={claim.subscriber} />
+          </ReviewGroup>
+          <ReviewGroup title="Payer">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <Detail label="Name" value={payerName || "Name unavailable"} />
+              <Detail label="Payer ID" value={claim.payerId} />
+            </dl>
+          </ReviewGroup>
+          <ReviewGroup title="Providers">
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <Detail label="Billing provider" value={providerDisplay(claim.billingProvider) || "Name unavailable"} />
+              <Detail label="Rendering provider" value={providerDisplay(claim.renderingProvider) || "Name unavailable"} />
+            </dl>
+          </ReviewGroup>
+        </div>
+        <ReviewGroup title="Diagnoses">
+          <ol className="space-y-2">
+            {claim.diagnoses.map((diagnosis, index) => (
+              <li key={`${diagnosis.system}:${diagnosis.code}:${index}`} className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] px-3 py-2 text-sm">
+                <span className="font-semibold text-[color:var(--odos-text)]">{index + 1}. {diagnosis.code}</span>
+                <span className="ml-2 text-[color:var(--odos-muted)]">{diagnosis.display || "No description"}</span>
+              </li>
+            ))}
+          </ol>
+        </ReviewGroup>
+        <ReviewGroup title="Charges">
+          <div className="space-y-2">
+            {claim.chargeItems.map((charge, index) => {
+              const coding = charge.code.coding?.[0];
+              return (
+                <div key={charge.id ?? index} className="grid gap-2 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] px-3 py-2 text-sm sm:grid-cols-[1fr_auto_auto]">
+                  <div>
+                    <span className="font-semibold text-[color:var(--odos-text)]">{coding?.code ?? "Missing code"}</span>
+                    <span className="ml-2 text-[color:var(--odos-muted)]">{coding?.display ?? charge.code.text ?? "No description"}</span>
+                  </div>
+                  <div className="text-[color:var(--odos-muted)]">Fee {formatClaimMoney(Number(charge.priceOverride?.value ?? 0))} · Qty {charge.quantity?.value ?? 1}</div>
+                  <div className="font-semibold text-[color:var(--odos-text)]">{formatClaimMoney(chargeLineTotal(charge))}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex justify-end border-t border-[color:var(--odos-line)] pt-4 text-lg font-semibold">
+            Claim total&nbsp;<span className="text-emerald-300">{formatClaimMoney(claimTotal(claim))}</span>
+          </div>
+        </ReviewGroup>
+      </div>
       {error && <div className="mt-4"><SubmissionAlert message={error} /></div>}
       <div className="mt-5 flex justify-end">
         <button type="button" onClick={onSubmit} disabled={submitting} className="rounded bg-emerald-700 px-5 py-3 font-semibold disabled:opacity-50">{submitting ? "Submitting…" : "Submit claim"}</button>
       </div>
+    </section>
+  );
+}
+
+function ReviewGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4">
+      <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]">{title}</h3>
+      {children}
     </section>
   );
 }
@@ -723,17 +844,18 @@ function StepLabel({ active, value }: { active: boolean; value: string }) {
   return <li className={active ? "rounded bg-blue-500/20 px-2 py-1 text-blue-200" : "px-2 py-1"}>{value}</li>;
 }
 
-function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string }) {
+function Field({ label, value, onChange, placeholder, type = "text", error }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string; error?: string }) {
   return (
     <label className="block text-xs font-semibold text-white/60">
       {label}
-      <input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-blue-400" />
+      <input type={type} value={value} placeholder={placeholder} aria-invalid={error ? true : undefined} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-blue-400" />
+      {error && <span className="mt-1 block font-normal text-red-300">{error}</span>}
     </label>
   );
 }
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
-  return <div className="text-xs font-semibold text-white/60"><div>{label}</div><div className="mt-1 min-h-9 rounded border border-white/10 bg-black/20 px-3 py-2 text-sm font-normal text-white/55">{value}</div></div>;
+function ReadOnlyField({ label, value, error }: { label: string; value: string; error?: string }) {
+  return <div className="text-xs font-semibold text-white/60"><div>{label}</div><div className="mt-1 min-h-9 rounded border border-white/10 bg-black/20 px-3 py-2 text-sm font-normal text-white/55">{value}</div>{error && <div className="mt-1 font-normal text-red-300">{error}</div>}</div>;
 }
 
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
@@ -747,76 +869,87 @@ function SelectField({ label, value, options, onChange }: { label: string; value
   );
 }
 
-function ProviderFields({ provider, onChange }: { provider: ClaimMdProviderInput; onChange: (provider: ClaimMdProviderInput) => void }) {
+function ProviderFields({ provider, onChange, errorPrefix, errors = [] }: { provider: ClaimMdProviderInput; onChange: (provider: ClaimMdProviderInput) => void; errorPrefix?: string; errors?: readonly string[] }) {
   const set = (key: keyof ClaimMdProviderInput, value: string) => onChange({ ...provider, [key]: value });
   return (
-    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      <Field label="Organization/name" value={provider.name ?? ""} onChange={(value) => set("name", value)} />
-      <Field label="First name" value={provider.firstName ?? ""} onChange={(value) => set("firstName", value)} />
-      <Field label="Last name" value={provider.lastName ?? ""} onChange={(value) => set("lastName", value)} />
-      <Field label="NPI" value={provider.npi} onChange={(value) => set("npi", value)} />
-      <Field label="Tax ID" value={provider.taxId ?? ""} onChange={(value) => set("taxId", value)} />
-      <SelectField label="Tax ID type" value={provider.taxIdType ?? "E"} options={[{ value: "E", label: "EIN" }, { value: "S", label: "SSN" }]} onChange={(value) => set("taxIdType", value)} />
-      <Field label="Taxonomy" value={provider.taxonomy ?? ""} onChange={(value) => set("taxonomy", value)} />
-      <Field label="Address" value={provider.address1 ?? ""} onChange={(value) => set("address1", value)} />
-      <Field label="City" value={provider.city ?? ""} onChange={(value) => set("city", value)} />
-      <Field label="State" value={provider.state ?? ""} onChange={(value) => set("state", value)} />
-      <Field label="ZIP" value={provider.zip ?? ""} onChange={(value) => set("zip", value)} />
-      <Field label="Phone" value={provider.phone ?? ""} onChange={(value) => set("phone", value)} />
-      <Field label="Email" value={provider.email ?? ""} onChange={(value) => set("email", value)} />
-      <Field label="Fax" value={provider.fax ?? ""} onChange={(value) => set("fax", value)} />
+    <div>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <Field label="Organization/name" value={provider.name ?? ""} onChange={(value) => set("name", value)} />
+        <Field label="First name" value={provider.firstName ?? ""} onChange={(value) => set("firstName", value)} />
+        <Field label="Last name" value={provider.lastName ?? ""} onChange={(value) => set("lastName", value)} />
+        <Field label="NPI" value={provider.npi} error={errorPrefix ? claimError(errors, `${errorPrefix} NPI`) : undefined} onChange={(value) => set("npi", value)} />
+        <Field label="Tax ID" value={provider.taxId ?? ""} onChange={(value) => set("taxId", value)} />
+        <SelectField label="Tax ID type" value={provider.taxIdType ?? "E"} options={[{ value: "E", label: "EIN" }, { value: "S", label: "SSN" }]} onChange={(value) => set("taxIdType", value)} />
+        <Field label="Taxonomy" value={provider.taxonomy ?? ""} onChange={(value) => set("taxonomy", value)} />
+        <Field label="Address" value={provider.address1 ?? ""} onChange={(value) => set("address1", value)} />
+        <Field label="City" value={provider.city ?? ""} onChange={(value) => set("city", value)} />
+        <Field label="State" value={provider.state ?? ""} onChange={(value) => set("state", value)} />
+        <Field label="ZIP" value={provider.zip ?? ""} onChange={(value) => set("zip", value)} />
+        <Field label="Phone" value={provider.phone ?? ""} onChange={(value) => set("phone", value)} />
+        <Field label="Email" value={provider.email ?? ""} onChange={(value) => set("email", value)} />
+        <Field label="Fax" value={provider.fax ?? ""} onChange={(value) => set("fax", value)} />
+      </div>
+      {errorPrefix && <InlineErrors errors={claimErrors(errors, `${errorPrefix} phone`, `${errorPrefix} last name`)} />}
     </div>
   );
 }
 
-export function PersonFields({ person, onChange, includePolicy = false }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean }) {
+export function PersonFields({ person, onChange, includePolicy = false, errorPrefix, errors = [] }: { person: ClaimMdPersonInput; onChange: (person: ClaimMdPersonInput) => void; includePolicy?: boolean; errorPrefix?: string; errors?: readonly string[] }) {
   const set = (key: keyof ClaimMdPersonInput, value: string) => onChange({ ...person, [key]: value });
+  const error = (field: string) => errorPrefix ? claimError(errors, `${errorPrefix} ${field}`) : undefined;
   return (
     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-      <Field label="First name" value={person.firstName} onChange={(value) => set("firstName", value)} />
+      <Field label="First name" value={person.firstName} error={error("first name")} onChange={(value) => set("firstName", value)} />
       <Field label="Middle name" value={person.middleName ?? ""} onChange={(value) => set("middleName", value)} />
-      <Field label="Last name" value={person.lastName} onChange={(value) => set("lastName", value)} />
-      <Field label="Date of birth" type="date" value={person.dateOfBirth} onChange={(value) => set("dateOfBirth", value)} />
+      <Field label="Last name" value={person.lastName} error={error("last name")} onChange={(value) => set("lastName", value)} />
+      <Field label="Date of birth" type="date" value={person.dateOfBirth} error={error("date of birth")} onChange={(value) => set("dateOfBirth", value)} />
       <SelectField label="Sex" value={person.sex} options={[{ value: "M", label: "Male" }, { value: "F", label: "Female" }, { value: "U", label: "Unknown/other" }]} onChange={(value) => set("sex", value)} />
-      <Field label="Address" value={person.address1 ?? ""} onChange={(value) => set("address1", value)} />
-      <Field label="City" value={person.city ?? ""} onChange={(value) => set("city", value)} />
-      <Field label="State" value={person.state ?? ""} onChange={(value) => set("state", value)} />
-      <Field label="ZIP" value={person.zip ?? ""} onChange={(value) => set("zip", value)} />
+      <Field label="Address" value={person.address1 ?? ""} error={error("address")} onChange={(value) => set("address1", value)} />
+      <Field label="City" value={person.city ?? ""} error={error("city")} onChange={(value) => set("city", value)} />
+      <Field label="State" value={person.state ?? ""} error={error("state")} onChange={(value) => set("state", value)} />
+      <Field label="ZIP" value={person.zip ?? ""} error={error("ZIP")} onChange={(value) => set("zip", value)} />
       {includePolicy && <Field label="Member ID" value={person.memberId ?? ""} onChange={(value) => set("memberId", value)} />}
       {includePolicy && <Field label="Group number" value={person.groupNumber ?? ""} onChange={(value) => set("groupNumber", value)} />}
-      {includePolicy && <Field label="Subscriber relationship code" value={person.relationshipCode ?? ""} onChange={(value) => set("relationshipCode", value)} />}
+      {includePolicy && <Field label="Subscriber relationship code" value={person.relationshipCode ?? ""} error={error("relationship code")} onChange={(value) => set("relationshipCode", value)} />}
     </div>
   );
 }
 
 function PersonSummary({ person }: { person: ClaimMdPersonInput }) {
+  const address = [
+    person.address1,
+    [person.city, person.state].filter(Boolean).join(", "),
+    person.zip,
+  ].filter(Boolean).join(" ");
   return (
-    <dl className="grid gap-3 text-sm md:grid-cols-3">
+    <dl className="grid gap-3 text-sm md:grid-cols-2">
       <Detail label="Name" value={[person.firstName, person.middleName, person.lastName].filter(Boolean).join(" ") || "Missing"} />
       <Detail label="DOB / sex" value={`${person.dateOfBirth || "Missing"} · ${person.sex}`} />
+      <Detail label="Address" value={address || "Missing"} />
       <Detail label="Member / group" value={`${person.memberId ?? "Missing"} · ${person.groupNumber ?? "Missing"}`} />
     </dl>
   );
 }
 
-function DiagnosisLines({ lines, onChange }: { lines: DiagnosisLine[]; onChange: (lines: DiagnosisLine[]) => void }) {
+function DiagnosisLines({ lines, onChange, errors }: { lines: DiagnosisLine[]; onChange: (lines: DiagnosisLine[]) => void; errors: readonly string[] }) {
   const update = (index: number, value: DiagnosisLine) => onChange(lines.map((line, candidate) => candidate === index ? value : line));
   return (
     <div className="space-y-3">
       {lines.map((line, index) => (
         <div key={index} className="grid gap-2 md:grid-cols-[4rem_1fr_2fr_auto] md:items-end">
           <ReadOnlyField label="Line" value={String(index + 1)} />
-          <Field label="ICD-10 code" value={line.code} onChange={(code) => update(index, { ...line, code })} />
+          <Field label="ICD-10 code" value={line.code} error={claimError(errors, `Diagnosis ${index + 1} code`)} onChange={(code) => update(index, { ...line, code })} />
           <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
           <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeDiagnosisLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
         </div>
       ))}
+      <InlineErrors errors={claimErrors(errors, "At least one diagnosis")} />
       <button type="button" onClick={() => onChange(addDiagnosisLine(lines))} className="rounded border border-blue-400/30 px-3 py-2 text-sm text-blue-200">Add diagnosis</button>
     </div>
   );
 }
 
-function ChargeLines({ lines, onChange }: { lines: ChargeLine[]; onChange: (lines: ChargeLine[]) => void }) {
+function ChargeLines({ lines, onChange, errors }: { lines: ChargeLine[]; onChange: (lines: ChargeLine[]) => void; errors: readonly string[] }) {
   const update = (index: number, value: ChargeLine) => onChange(lines.map((line, candidate) => candidate === index ? value : line));
   return (
     <div className="space-y-3">
@@ -824,15 +957,17 @@ function ChargeLines({ lines, onChange }: { lines: ChargeLine[]; onChange: (line
         <div key={line.id ?? index}>
           <div className="grid gap-2 md:grid-cols-[8rem_1fr_2fr_8rem_6rem_auto] md:items-end">
             <SelectField label="Code set" value={line.codeType} options={[{ value: "CPT", label: "CPT" }, { value: "HCPCS", label: "HCPCS" }]} onChange={(codeType) => update(index, { ...line, codeType: codeType as "CPT" | "HCPCS" })} />
-            <Field label="Code" value={line.code} onChange={(code) => update(index, { ...line, code })} />
+            <Field label="Code" value={line.code} error={claimError(errors, `Charge ${index + 1} code`)} onChange={(code) => update(index, { ...line, code })} />
             <Field label="Description" value={line.description} onChange={(description) => update(index, { ...line, description })} />
-            <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
-            <Field label="Quantity" type="number" value={line.quantity} onChange={(quantity) => update(index, { ...line, quantity })} />
+            <Field label="Fee (USD)" value={line.feeDollars} placeholder="125.50" error={claimError(errors, `Charge ${index + 1} fee`)} onChange={(feeDollars) => update(index, { ...line, feeDollars })} />
+            <Field label="Quantity" type="number" value={line.quantity} error={claimError(errors, `Charge ${index + 1} quantity`)} onChange={(quantity) => update(index, { ...line, quantity })} />
             <button type="button" disabled={lines.length === 1} onClick={() => onChange(removeChargeLine(lines, index))} className="rounded border border-white/15 px-3 py-2 text-sm text-white/60 disabled:opacity-30">Remove</button>
           </div>
           {line.id && <div className="mt-1 text-xs text-[color:var(--odos-muted)]">ChargeItem/{line.id} · diagnoses {line.diagnosisSequence?.join(", ") || "none"}{line.laterality ? ` · ${line.laterality}` : ""}</div>}
+          <InlineErrors errors={claimErrors(errors, `Charge ${index + 1} must`, `Charge ${index + 1} may`, `Charge ${index + 1} diagnosis`)} />
         </div>
       ))}
+      <InlineErrors errors={claimErrors(errors, "At least one charge")} />
       <button type="button" onClick={() => onChange(addChargeLine(lines))} className="rounded border border-blue-400/30 px-3 py-2 text-sm text-blue-200">Add charge</button>
     </div>
   );
@@ -840,6 +975,23 @@ function ChargeLines({ lines, onChange }: { lines: ChargeLine[]; onChange: (line
 
 function Detail({ label, value }: { label: string; value: string }) {
   return <div><dt className="text-xs text-white/40">{label}</dt><dd className="mt-1 break-all font-semibold text-white/75">{value}</dd></div>;
+}
+
+function claimError(errors: readonly string[], ...prefixes: string[]): string | undefined {
+  return errors.find((error) => prefixes.some((prefix) => error.startsWith(prefix)));
+}
+
+function claimErrors(errors: readonly string[], ...prefixes: string[]): string[] {
+  return errors.filter((error) => prefixes.some((prefix) => error.startsWith(prefix)));
+}
+
+function InlineErrors({ errors }: { errors: readonly string[] }) {
+  if (errors.length === 0) return null;
+  return (
+    <ul className="mt-2 space-y-1 text-xs text-red-300">
+      {errors.map((error) => <li key={error}>{error}</li>)}
+    </ul>
+  );
 }
 
 function emptyCoverageEntry(today: string, patientReference = ""): CoverageEntryInput {
@@ -853,6 +1005,81 @@ export function validateCoverageEntry(entry: CoverageEntryInput): string[] {
   if (!entry.memberId.trim()) errors.push("Member ID is required.");
   if (!entry.effectiveDate) errors.push("Effective date is required.");
   return errors;
+}
+
+async function searchPayerOrganizations(query: string): Promise<InlinePickerOption<Organization>[]> {
+  const bundle = await fhir.search<Organization>("Organization", { name: query, _count: "20" });
+  return (bundle.entry ?? [])
+    .flatMap((entry) => entry.resource?.id && entry.resource.name ? [entry.resource] : [])
+    .filter((organization) => organization.active !== false)
+    .map(organizationPickerOption);
+}
+
+async function createPayerOrganization(name: string): Promise<InlinePickerOption<Organization>> {
+  const organization = await fhir.create<Organization>(
+    { resourceType: "Organization", name },
+    "submit-claims-payer",
+  );
+  if (!organization.id) throw new Error("The payer Organization was created without an id.");
+  return organizationPickerOption(organization);
+}
+
+function organizationPickerOption(organization: Organization): InlinePickerOption<Organization> {
+  return {
+    value: `Organization/${organization.id}`,
+    label: organization.name!,
+    description: `Organization/${organization.id}`,
+    item: organization,
+  };
+}
+
+async function searchPractitioners(query: string): Promise<InlinePickerOption<Practitioner>[]> {
+  const bundle = await fhir.search<Practitioner>("Practitioner", { name: query, _count: "20" });
+  return (bundle.entry ?? [])
+    .flatMap((entry) => entry.resource?.id ? [entry.resource] : [])
+    .filter((practitioner) => practitioner.active !== false)
+    .map((practitioner) => ({
+      value: `Practitioner/${practitioner.id}`,
+      label: practitionerDisplay(practitioner),
+      description: claimProviderFromPractitioner(practitioner).npi
+        ? `NPI ${claimProviderFromPractitioner(practitioner).npi}`
+        : `Practitioner/${practitioner.id}`,
+      item: practitioner,
+    }));
+}
+
+function practitionerDisplay(practitioner: Practitioner): string {
+  const name = practitioner.name?.find((candidate) => candidate.use === "official") ?? practitioner.name?.[0];
+  return [name?.given?.join(" "), name?.family].filter(Boolean).join(" ") || `Practitioner/${practitioner.id}`;
+}
+
+function providerDisplay(provider: ClaimMdProviderInput): string {
+  return provider.name?.trim()
+    || [provider.firstName?.trim(), provider.lastName?.trim()].filter(Boolean).join(" ");
+}
+
+async function coveragePayerName(coverage: Coverage): Promise<string> {
+  const payor = coverage.payor[0];
+  if (payor?.display?.trim()) return payor.display.trim();
+  const organizationId = payor?.reference?.match(/^Organization\/([^/]+)$/)?.[1];
+  if (!organizationId) return "";
+  try {
+    return (await fhir.read<Organization>("Organization", organizationId)).name?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function chargeLineTotal(charge: ProfessionalClaimChargeItemInput): number {
+  return Number(charge.priceOverride?.value ?? 0) * Number(charge.quantity?.value ?? 1);
+}
+
+function claimTotal(claim: ProfessionalClaimInput): number {
+  return claim.chargeItems.reduce((total, charge) => total + chargeLineTotal(charge), 0);
+}
+
+function formatClaimMoney(value: number): string {
+  return `$${value.toFixed(2)}`;
 }
 
 function claimApiBaseUrl(): string {
