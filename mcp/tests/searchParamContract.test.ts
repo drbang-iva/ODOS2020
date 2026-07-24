@@ -20,7 +20,7 @@ type SearchSpec = {
 const EXPECTED_DIRECT_SEARCH_CALLS = 85;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
-  "src/clinic/clinic-summary.ts:233": [
+  "src/clinic/clinic-summary.ts:244": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Encounter", "date", "_count", "_sort"),
     spec("Task", "code", "_count", "_sort"),

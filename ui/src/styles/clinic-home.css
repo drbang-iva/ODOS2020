@@ -61,7 +61,12 @@
 .odos-clinic-state.is-checked-out, .odos-clinic-state.is-scheduled { color: var(--odos-faint); }
 .odos-clinic-late { color: var(--odos-alert); font-size: 11px; }
 .odos-clinic-wait { padding: 2px 7px; border: 1px solid var(--odos-line); border-radius: 999px; color: var(--odos-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
-.odos-clinic-glyphs { grid-column: 3; grid-row: 1 / span 2; align-self: center; justify-self: end; color: var(--odos-alert); font-size: 17px; text-align: center; }
+.odos-clinic-glyphs { grid-column: 3; grid-row: 1 / span 2; align-self: center; justify-self: end; display: flex; align-items: center; gap: 6px; color: var(--odos-alert); font-size: 17px; text-align: center; }
+.odos-clinic-note-cue { color: var(--odos-muted); font-size: 10px; }
+.odos-clinic-urgent-cue { padding: 1px 5px; border: 1px solid color-mix(in srgb, var(--odos-alert) 45%, transparent); border-radius: 999px; color: var(--odos-alert); font-size: 10px; font-weight: 800; line-height: 1.2; }
+.odos-clinic-chart-action { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 8px 8px 58px; }
+.odos-clinic-chart-button { padding: 5px 9px; font-size: 10px; }
+.odos-clinic-chart-error { color: var(--odos-alert); font-size: 10px; }
 .odos-clinic-target { margin-top: 8px; color: var(--odos-faint); font-size: 10.5px; line-height: 1.4; letter-spacing: .04em; }
 .odos-clinic-foot { align-self: flex-start; margin-top: auto; padding: 10px 0 0; border: 0; background: transparent; color: currentColor; font: inherit; font-size: 12px; letter-spacing: .03em; text-decoration: none; }
 .odos-clinic-signature-stats { display: flex; gap: 42px; padding: 10px 0 8px; }

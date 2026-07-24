@@ -52,6 +52,37 @@ test("checked-in appointment action relabels to Open chart after finding the lin
   }
 });
 
+test("appointment action can load the canonical Appointment by id for Clinic worklists", async () => {
+  const originalRead = fhir.read;
+  const originalSearch = fhir.search;
+  let readId = "";
+  fhir.read = (async (_resourceType, id) => {
+    readId = id;
+    return appointment();
+  }) as typeof fhir.read;
+  fhir.search = (async () => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: [],
+  })) as typeof fhir.search;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<AppointmentChartButton appointmentId="appointment-1" />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const button = renderer.root.findByType("button");
+    assert.equal(readId, "appointment-1");
+    assert.equal(button.props.disabled, false);
+    assert.equal(button.children.join(""), "Start chart");
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    fhir.read = originalRead;
+    fhir.search = originalSearch;
+  }
+});
+
 test("floor card has its own checked-in chart action without nesting buttons", () => {
   const html = renderToStaticMarkup(
     <FloorCard

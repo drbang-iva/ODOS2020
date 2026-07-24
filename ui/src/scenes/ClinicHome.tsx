@@ -1,14 +1,23 @@
 import { useEffect, useState, type MouseEvent } from "react";
-import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
+import { AppointmentChartButton } from "../components/AppointmentChartButton";
+import { fetchClinicSummary, type ClinicFlowRow, type ClinicSummary } from "../lib/clinic-summary";
+import { canStartAppointmentChart, type PracticeRoleId } from "../lib/practice-roles";
 import { openPatientOverview } from "../lib/view-state";
 import { PinnedOfficeNote, ageLabel as officeAgeLabel, useClinicSummaryContext, useOfficeChannel } from "../components/OfficeChannel";
 
 export const CLINIC_PATIENTS_PATH = "/clinic/patients";
 
-export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary } = {}) {
+export function ClinicHome({
+  initialSummary,
+  roles = [],
+}: {
+  initialSummary?: ClinicSummary;
+  roles?: readonly PracticeRoleId[];
+} = {}) {
   const shellState = useClinicSummaryContext();
   const [standaloneSummary, setStandaloneSummary] = useState(initialSummary);
   const [standaloneError, setStandaloneError] = useState<string>();
+  const canStartChart = canStartAppointmentChart(roles);
 
   useEffect(() => {
     if (initialSummary || shellState) return;
@@ -47,23 +56,28 @@ export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary 
               {!summary && !error && <div className="odos-clinic-empty">Loading today's flow…</div>}
               {error && <div className="odos-clinic-error">{error}</div>}
               {summary?.flow.length === 0 && <div className="odos-clinic-empty">No active appointments today.</div>}
-              {summary?.flow.map((row) => (
-                <div key={row.appointmentId ?? `${row.time}-${row.patient}`} className="odos-clinic-flow-row">
-                  <button type="button" className="odos-clinic-flow-open" disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
-                    <time>{row.time}</time>
-                    <span className="odos-clinic-who">{row.patient} <small>{[row.age, row.sex].filter((value) => value !== undefined).join(" ")}</small></span>
-                    <span className="odos-clinic-row-detail">
-                      <span className="odos-clinic-visit-type">{row.visitType}</span>
-                      <span className={`odos-clinic-state is-${row.state}`}>● {row.stateDetail}{row.room ? ` · ${row.room}` : ""}</span>
-                      {row.arrivedLateMinutes !== undefined && row.arrivedLateMinutes > 0 && <span className="odos-clinic-late">arrived {row.arrivedLateMinutes}m late</span>}
-                      {row.waitingMinutes !== undefined && <span className="odos-clinic-wait">waiting {row.waitingMinutes}m</span>}
-                      {row.timeInOfficeMinutes !== undefined && <span className="odos-clinic-wait">in office {row.timeInOfficeMinutes}m</span>}
-                    </span>
-                    <span className="odos-clinic-glyphs">{row.flags.unsigned && <span title="Chart not signed">✎</span>}</span>
-                  </button>
-                  <PinnedOfficeNote patientId={row.patientId} compact />
-                </div>
-              ))}
+              {summary?.flow.map((row) => {
+                const chartAction = canStartChart && isPresentFlowState(row.state) && Boolean(row.appointmentId);
+                const content = <ClinicFlowRowContent row={row} />;
+                return (
+                  <div key={row.appointmentId ?? `${row.time}-${row.patient}`} className="odos-clinic-flow-row">
+                    {chartAction
+                      ? <div className="odos-clinic-flow-open">{content}</div>
+                      : (
+                          <button type="button" className="odos-clinic-flow-open" disabled={!row.patientId} onClick={() => openPatient(row.patientId)}>
+                            {content}
+                          </button>
+                        )}
+                    {chartAction && row.appointmentId && (
+                      <ClinicFlowChartAction
+                        appointmentId={row.appointmentId}
+                        encounterId={row.encounterId}
+                      />
+                    )}
+                    <PinnedOfficeNote patientId={row.patientId} compact />
+                  </div>
+                );
+              })}
             </div>
             <div className="odos-clinic-target">Row order: with-you → roomed → waiting → unsigned check-outs → upcoming.</div>
             <a className="odos-clinic-foot" href="/schedule/day" onClick={navigateWithinApp}>Open full schedule →</a>
@@ -83,6 +97,52 @@ export function ClinicHome({ initialSummary }: { initialSummary?: ClinicSummary 
       </section>
     </main>
   );
+}
+
+function ClinicFlowRowContent({ row }: { row: ClinicFlowRow }) {
+  return (
+    <>
+      <time>{row.time}</time>
+      <span className="odos-clinic-who">{row.patient} <small>{[row.age, row.sex].filter((value) => value !== undefined).join(" ")}</small></span>
+      <span className="odos-clinic-row-detail">
+        <span className="odos-clinic-visit-type">{row.visitType}</span>
+        <span className={`odos-clinic-state is-${row.state}`}>● {row.stateDetail}{row.room ? ` · ${row.room}` : ""}</span>
+        {row.arrivedLateMinutes !== undefined && row.arrivedLateMinutes > 0 && <span className="odos-clinic-late">arrived {row.arrivedLateMinutes}m late</span>}
+        {row.waitingMinutes !== undefined && <span className="odos-clinic-wait">waiting {row.waitingMinutes}m</span>}
+        {row.timeInOfficeMinutes !== undefined && <span className="odos-clinic-wait">in office {row.timeInOfficeMinutes}m</span>}
+      </span>
+      <span className="odos-clinic-glyphs">
+        {row.note && <span className="odos-clinic-note-cue" aria-label="Appointment note" title={row.note}>●</span>}
+        {row.urgent && <span className="odos-clinic-urgent-cue" title="Urgent">!</span>}
+        {row.flags.unsigned && <span title="Chart not signed">✎</span>}
+      </span>
+    </>
+  );
+}
+
+function ClinicFlowChartAction({
+  appointmentId,
+  encounterId,
+}: {
+  appointmentId: string;
+  encounterId?: string;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="odos-clinic-chart-action">
+      {error && <span className="odos-clinic-chart-error">{error}</span>}
+      <AppointmentChartButton
+        appointmentId={appointmentId}
+        existingEncounterId={encounterId}
+        className="scheduler-button odos-clinic-chart-button"
+        onError={setError}
+      />
+    </div>
+  );
+}
+
+function isPresentFlowState(state: ClinicFlowRow["state"]): boolean {
+  return state === "with-you" || state === "roomed" || state === "waiting";
 }
 
 function WaitingOnMe({ summary, error }: { summary?: ClinicSummary; error?: string }) {
