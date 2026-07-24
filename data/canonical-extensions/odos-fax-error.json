@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "odos-fax-error",
+  "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-error",
+  "version": "westfax-referrals",
+  "name": "ODOSFaxError",
+  "title": "ODOS Fax Error",
+  "status": "active",
+  "date": "2026-07-23",
+  "publisher": "ODOS",
+  "description": "Vendor or transport error reported for an outbound fax DocumentReference.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "DocumentReference"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Outbound fax error",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/odos-fax-error"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      }
+    ]
+  }
+}

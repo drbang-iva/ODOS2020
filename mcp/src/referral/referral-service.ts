@@ -83,6 +83,7 @@ export interface UpdateReferralDraftInput {
   includeList?: ReferralIncludeList;
   priority?: ReferralPriority;
   reasonText?: string | null;
+  letterBody?: string;
 }
 
 export interface GenerateReferralLetterInput {
@@ -277,6 +278,20 @@ export class ReferralService {
         ),
       } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
+      ...(input.letterBody !== undefined ? {
+        extension: replaceExtension(
+          input.includeList
+            ? replaceExtension(
+                serviceRequest.extension,
+                buildReferralIncludeListExtension(input.includeList),
+              )
+            : serviceRequest.extension,
+          {
+            url: REFERRAL_LETTER_BODY_EXTENSION_URL,
+            valueString: input.letterBody,
+          },
+        ),
+      } : {}),
     };
     if (input.reasonText !== undefined) {
       const reasonText = input.reasonText?.trim();

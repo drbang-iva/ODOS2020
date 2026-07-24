@@ -19,6 +19,7 @@ export type ReferralPriority = "routine" | "urgent" | "stat";
 export interface ReferralConsultant {
   reference: string;
   display: string;
+  faxNumber?: string;
 }
 
 export interface ReferralDraftUpdate {
@@ -26,12 +27,27 @@ export interface ReferralDraftUpdate {
   includeList?: ReferralIncludeList;
   priority?: ReferralPriority;
   reasonText?: string | null;
+  letterBody?: string;
 }
 
 export interface ReferralArtifactResponse {
   serviceRequestReference: string;
   artifact: string;
   provenanceReference?: string;
+}
+
+export interface FaxStatus {
+  reference: string;
+  status: string;
+  jobId?: string;
+  error?: string;
+  updatedAt?: string;
+}
+
+export interface ReferralFaxResponse {
+  fax: FaxStatus;
+  provenanceReference?: string;
+  warning?: string;
 }
 
 export class ReferralConflictError extends Error {}
@@ -53,6 +69,15 @@ export interface ReferralApi {
   regenerateReferral(patientId: string, referralId: string): Promise<ServiceRequest>;
   previewReferral(patientId: string, referralId: string, editedLetterBody: string): Promise<ReferralArtifactResponse>;
   sendReferral(patientId: string, referralId: string, editedLetterBody: string): Promise<ReferralArtifactResponse>;
+  faxReferral(input: {
+    patientId: string;
+    referralId: string;
+    destinationNumber: string;
+    documentBase64: string;
+    filename: string;
+    billingCode: string;
+  }): Promise<ReferralFaxResponse>;
+  loadFaxStatus(patientId: string, referralId: string): Promise<FaxStatus | null>;
 }
 
 export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi {
@@ -145,6 +170,30 @@ export function createReferralApi(fetchImpl: typeof fetch = fetch): ReferralApi 
         { method: "POST", body: { editedLetterBody } },
       );
     },
+
+    faxReferral(input) {
+      const authorization = fhir.authHeader();
+      return requestResponse<ReferralFaxResponse>(fetchImpl, faxPath(input.patientId, input.referralId), {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/pdf",
+          "X-ODOS-Fax-Destination": input.destinationNumber,
+          "X-ODOS-Billing-Code": input.billingCode,
+          "X-ODOS-Filename": input.filename,
+          ...(authorization ? { Authorization: authorization } : {}),
+        },
+        body: base64Bytes(input.documentBase64),
+      });
+    },
+
+    async loadFaxStatus(patientId, referralId) {
+      const response = await requestJson<{ fax: FaxStatus | null }>(
+        fetchImpl,
+        `${faxPath(patientId, referralId)}/status`,
+      );
+      return response.fax;
+    },
   };
 }
 
@@ -158,6 +207,10 @@ export function readReferralLetterBody(serviceRequest: ServiceRequest): string {
 
 function referralPath(patientId: string, referralId: string): string {
   return `/referrals/patients/${encodeURIComponent(patientId)}/${encodeURIComponent(referralId)}`;
+}
+
+function faxPath(patientId: string, referralId: string): string {
+  return `/fax/referrals/${encodeURIComponent(patientId)}/${encodeURIComponent(referralId)}`;
 }
 
 async function requestJson<T>(
@@ -180,6 +233,19 @@ async function requestJson<T>(
     ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
     signal: options.signal,
   });
+  return responseBody<T>(response);
+}
+
+async function requestResponse<T>(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: RequestInit,
+): Promise<T> {
+  const response = await fetchImpl(url, init);
+  return responseBody<T>(response);
+}
+
+async function responseBody<T>(response: Response): Promise<T> {
   const body = await response.json() as T & { error?: string };
   if (!response.ok) {
     const message = body.error ?? `Referral request failed with HTTP ${response.status}.`;
@@ -187,4 +253,13 @@ async function requestJson<T>(
     throw new Error(message);
   }
   return body;
+}
+
+function base64Bytes(value: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(value);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
 }

@@ -13,6 +13,7 @@ import {
 export interface ReferralConsultant {
   reference: string;
   display: string;
+  faxNumber?: string;
 }
 
 export class ReferralDirectory {
@@ -61,7 +62,21 @@ export class ReferralDirectory {
           ? [{ reference: target.reference, display: target.display.trim() }]
           : [];
       });
-    return distinctConsultants(ordered).slice(0, 5);
+    return Promise.all(distinctConsultants(ordered).slice(0, 5).map(async (consultant) => {
+      const [resourceType, id] = consultant.reference.split("/");
+      try {
+        const target = await this.fhir.read<Practitioner | PractitionerRole | Organization>(
+          resourceType as "Practitioner" | "PractitionerRole" | "Organization",
+          id!,
+        );
+        return {
+          ...consultant,
+          ...(faxNumber(target) ? { faxNumber: faxNumber(target) } : {}),
+        };
+      } catch {
+        return consultant;
+      }
+    }));
   }
 }
 
@@ -70,6 +85,7 @@ function practitionerConsultant(practitioner: Practitioner): ReferralConsultant 
     reference: resourceReference(practitioner),
     display: humanName(practitioner.name?.find((name) => name.use === "official") ?? practitioner.name?.[0])
       || resourceReference(practitioner),
+    ...(faxNumber(practitioner) ? { faxNumber: faxNumber(practitioner) } : {}),
   };
 }
 
@@ -82,6 +98,7 @@ function practitionerRoleConsultant(role: PractitionerRole): ReferralConsultant 
       || role.code?.[0]?.coding?.find((coding) => coding.display?.trim())?.display?.trim()
       || role.specialty?.[0]?.text?.trim()
       || resourceReference(role),
+    ...(faxNumber(role) ? { faxNumber: faxNumber(role) } : {}),
   };
 }
 
@@ -89,6 +106,7 @@ function organizationConsultant(organization: Organization): ReferralConsultant 
   return {
     reference: resourceReference(organization),
     display: organization.name?.trim() || resourceReference(organization),
+    ...(faxNumber(organization) ? { faxNumber: faxNumber(organization) } : {}),
   };
 }
 
@@ -113,4 +131,10 @@ function resourceReference(resource: Resource): string {
 function humanName(name: { text?: string; given?: string[]; family?: string } | undefined): string {
   if (name?.text?.trim()) return name.text.trim();
   return [...(name?.given ?? []), name?.family].filter(Boolean).join(" ").trim();
+}
+
+function faxNumber(resource: Practitioner | PractitionerRole | Organization): string | undefined {
+  return resource.telecom?.find(
+    (contact) => contact.system === "fax" && contact.value?.trim(),
+  )?.value?.trim();
 }

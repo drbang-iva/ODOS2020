@@ -55,6 +55,7 @@ const updateReferralSchema = z.object({
   includeList: includeListSchema.optional(),
   priority: z.enum(["routine", "urgent", "stat"]).optional(),
   reasonText: z.string().trim().nullable().optional(),
+  letterBody: z.string().min(1).optional(),
 }).strict().refine((value) => Object.values(value).some((field) => field !== undefined), {
   message: "At least one referral field is required.",
 });
