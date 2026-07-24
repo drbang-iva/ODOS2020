@@ -8,8 +8,8 @@ import {
   AutoRefractionSection,
   buildAutoRefractionRequestBody,
 } from "../src/components/charting/AutoRefractionSection";
-import { authHeaders } from "../src/lib/clinical-graph-client";
-import { fhir, SESSION_STORAGE_KEY } from "../src/lib/fhir";
+import { authHeaders, clinicalGraphResponseError } from "../src/lib/clinical-graph-client";
+import { CONCURRENT_EDIT_MESSAGE, fhir, SESSION_STORAGE_KEY } from "../src/lib/fhir";
 
 const UI_ROOT = join(process.cwd(), "src");
 
@@ -39,6 +39,28 @@ test("clinical-graph requests share the literal Vite route and Medplum authoriza
     assert.match(source, /from "(?:\.\/|\.\.\/(?:\.\.\/)?lib\/)clinical-graph-client";/, path);
     assert.doesNotMatch(source, /function (?:authHeaders|clinicalGraphApiBase)\(/, path);
   }
+});
+
+test("clinical-graph concurrent-edit responses use the shared reload-and-reapply message", () => {
+  const codedConflict = clinicalGraphResponseError(
+    { status: 409 },
+    { error: "server wording", code: "concurrent-edit" },
+    "fallback",
+  );
+  const preconditionFailed = clinicalGraphResponseError(
+    { status: 412 },
+    { error: "raw FHIR precondition failure" },
+    "fallback",
+  );
+  const ordinaryConflict = clinicalGraphResponseError(
+    { status: 409 },
+    { error: "Signed encounter cannot be edited." },
+    "fallback",
+  );
+
+  assert.equal(codedConflict.message, CONCURRENT_EDIT_MESSAGE);
+  assert.equal(preconditionFailed.message, CONCURRENT_EDIT_MESSAGE);
+  assert.equal(ordinaryConflict.message, "Signed encounter cannot be edited.");
 });
 
 test("authHeaders returns the live Medplum client authorization", () => {

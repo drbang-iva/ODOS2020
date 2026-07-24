@@ -23,6 +23,8 @@ import {
 } from "../src/clinical-graph/encounter-complaint-store.js";
 
 const AUTH = "Bearer good";
+const CONCURRENT_EDIT_MESSAGE =
+  "This record was changed by someone else since you opened it. Reload and reapply your change.";
 
 class MemoryFhir {
   encounter: Encounter = {
@@ -32,9 +34,11 @@ class MemoryFhir {
     class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
     subject: { reference: "Patient/p1" },
     reasonCode: [{ coding: [{ system: "https://example.test", code: "coded" }] }, { text: "Legacy concern" }],
+    meta: { versionId: "1" },
   };
   basics: Basic[] = [];
-  writes: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
+  writes: Array<{ method: "create" | "update"; resourceType: string; id?: string; headers?: Record<string, string> }> = [];
+  beforeUpdate?: (resourceType: "Basic" | "Encounter", id: string) => void;
 
   async read<T extends Encounter>(): Promise<T> {
     return structuredClone(this.encounter) as T;
@@ -56,24 +60,47 @@ class MemoryFhir {
   }
 
   async create<T extends Basic>(resource: T, headers?: Record<string, string>): Promise<T> {
-    const saved = { ...structuredClone(resource), id: resource.id ?? `basic-${this.basics.length + 1}`, meta: { lastUpdated: new Date().toISOString() } } as T;
+    const saved = {
+      ...structuredClone(resource),
+      id: resource.id ?? `basic-${this.basics.length + 1}`,
+      meta: { lastUpdated: new Date().toISOString(), versionId: "1" },
+    } as T;
     this.basics.push(saved);
-    this.writes.push({ resourceType: resource.resourceType, headers });
+    this.writes.push({ method: "create", resourceType: resource.resourceType, id: saved.id, headers });
     return structuredClone(saved);
   }
 
   async update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
-    this.writes.push({ resourceType, headers });
+    this.writes.push({ method: "update", resourceType, id, headers });
+    const beforeUpdate = this.beforeUpdate;
+    this.beforeUpdate = undefined;
+    beforeUpdate?.(resourceType, id);
     if (resourceType === "Encounter") {
-      this.encounter = structuredClone(resource) as Encounter;
-      return structuredClone(resource);
+      assertIfMatch(headers, this.encounter.meta?.versionId);
+      const versionId = String(Number(this.encounter.meta?.versionId ?? "0") + 1);
+      this.encounter = {
+        ...structuredClone(resource) as Encounter,
+        meta: { ...resource.meta, versionId },
+      };
+      return structuredClone(this.encounter) as T;
     }
     const index = this.basics.findIndex((candidate) => candidate.id === id);
     assert.ok(index >= 0);
-    const saved = { ...structuredClone(resource as Basic), id, meta: { lastUpdated: new Date().toISOString() } };
+    assertIfMatch(headers, this.basics[index]?.meta?.versionId);
+    const versionId = String(Number(this.basics[index]?.meta?.versionId ?? "0") + 1);
+    const saved = {
+      ...structuredClone(resource as Basic),
+      id,
+      meta: { lastUpdated: new Date().toISOString(), versionId },
+    };
     this.basics[index] = saved;
     return structuredClone(saved) as T;
   }
+}
+
+function assertIfMatch(headers: Record<string, string> | undefined, versionId: string | undefined): void {
+  if (headers?.["If-Match"] === `W/"${versionId}"`) return;
+  throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
 }
 
 function fixture(role: PracticeRoleId = "clinician") {
@@ -185,11 +212,77 @@ test("two structured complaints round-trip, render deterministically, reorder, a
   assert.match(fhir.encounter.reasonCode?.[1]?.text ?? "", /^routine eye exam/);
   assert.equal(fhir.encounter.reasonCode?.[0]?.coding?.[0]?.code, "coded");
   assert.equal(fhir.writes.every((write) => write.headers?.["X-ODOS-Source"] === "encounter-complaints"), true);
+  const encounterUpdates = fhir.writes.filter((write) =>
+    write.method === "update" && write.resourceType === "Encounter" && write.id === "e1"
+  );
+  assert.deepEqual(encounterUpdates.map((write) => write.headers?.["If-Match"]), ['W/"1"', 'W/"2"', 'W/"3"']);
 
   const listed = await handleEncounterComplaintListRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" } });
   assert.equal(listed.status, 200);
   assert.equal((listed.body as { complaints: unknown[]; legacyFallback: boolean }).complaints.length, 2);
   assert.equal((listed.body as { legacyFallback: boolean }).legacyFallback, false);
+});
+
+test("stale Encounter complaint stamp returns a concurrent-edit response without overwriting the concurrent Encounter", async () => {
+  const { deps, fhir } = fixture();
+  let concurrentEncounter: Encounter | undefined;
+  fhir.beforeUpdate = (resourceType) => {
+    if (resourceType !== "Encounter") return;
+    fhir.encounter = {
+      ...fhir.encounter,
+      reasonCode: [{ text: "Concurrent clinician concern" }],
+      meta: { ...fhir.encounter.meta, versionId: "2" },
+    };
+    concurrentEncounter = structuredClone(fhir.encounter);
+  };
+
+  const result = await handleEncounterComplaintMutationRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { action: "create", patientReference: "Patient/p1", complaint: DRY_EYE },
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" });
+  assert.deepEqual(fhir.encounter, concurrentEncounter);
+});
+
+test("stale encounter-complaint Basic update returns a concurrent-edit response without overwriting the concurrent row", async () => {
+  const { deps, fhir } = fixture();
+  const created = await handleEncounterComplaintMutationRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { action: "create", patientReference: "Patient/p1", complaint: DRY_EYE },
+  });
+  const complaintId = (created.body as { complaints: Array<{ id: string }> }).complaints[0]!.id;
+  const encounterBefore = structuredClone(fhir.encounter);
+  let concurrentBasic: Basic | undefined;
+  fhir.beforeUpdate = (resourceType, id) => {
+    if (resourceType !== "Basic") return;
+    const index = fhir.basics.findIndex((candidate) => candidate.id === id);
+    assert.ok(index >= 0);
+    const stored = fhir.basics[index]!;
+    const concurrentComplaint = {
+      ...parseEncounterComplaintResource(stored),
+      additionalHistory: "saved by another clinician",
+    };
+    fhir.basics[index] = {
+      ...buildEncounterComplaintResource(concurrentComplaint, stored),
+      meta: { ...stored.meta, versionId: "2" },
+    };
+    concurrentBasic = structuredClone(fhir.basics[index]);
+  };
+
+  const result = await handleEncounterComplaintMutationRequest(deps, {
+    authHeader: AUTH,
+    params: { encounterId: "e1" },
+    body: { action: "update", complaintId, complaint: { ...DRY_EYE, severity: "moderate" } },
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" });
+  assert.deepEqual(fhir.basics.find((candidate) => candidate.id === concurrentBasic?.id), concurrentBasic);
+  assert.deepEqual(fhir.encounter, encounterBefore);
 });
 
 test("an active complaint can be edited and removal keeps its persisted audit row", async () => {

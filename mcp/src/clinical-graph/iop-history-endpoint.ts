@@ -176,7 +176,20 @@ export async function handleIopTargetRequest(
   });
 
   if (existing?.id && staff.fhir.update) {
-    await staff.fhir.update<Goal>("Goal", existing.id, goal, TARGET_HEADERS);
+    try {
+      await staff.fhir.update<Goal>("Goal", existing.id, goal, {
+        ...TARGET_HEADERS,
+        ...(existing.meta?.versionId ? { "If-Match": `W/"${existing.meta.versionId}"` } : {}),
+      });
+    } catch (error) {
+      if (isConcurrentEdit(error)) {
+        return {
+          status: 409,
+          body: { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" },
+        };
+      }
+      throw error;
+    }
   } else {
     await staff.fhir.create<Goal>(goal, TARGET_HEADERS);
   }
@@ -218,6 +231,15 @@ function targetSearchParams(patientReference: string): Record<string, string> {
     _count: "50",
   };
 }
+
+function isConcurrentEdit(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("status" in error)) return false;
+  const status = Number(error.status);
+  return status === 409 || status === 412;
+}
+
+const CONCURRENT_EDIT_MESSAGE =
+  "This record was changed by someone else since you opened it. Reload and reapply your change.";
 
 function observationToIopReading(observation: Observation): IopHistoryReading[] {
   const eye = observationEye(observation);

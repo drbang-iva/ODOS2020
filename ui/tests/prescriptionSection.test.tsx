@@ -7,6 +7,7 @@ import type { MedicationRequest } from "@medplum/fhirtypes";
 import {
   EMPTY_PRESCRIPTION_DRAFT,
   PrescriptionEditor,
+  PrescriptionSection,
   type DirectoryResult,
   type FormularyResult,
   type PrescriptionDraft,
@@ -17,6 +18,7 @@ import {
   mergeMedicationRequestUpdate,
   withDrugText,
 } from "../src/components/charting/PrescriptionSection";
+import { CONCURRENT_EDIT_MESSAGE, toError } from "../src/lib/fhir";
 
 const NOOP = () => undefined;
 
@@ -101,6 +103,104 @@ test("saving an edit preserves an on-hold prescription status and original reque
   assert.equal(update.medicationCodeableConcept?.text, "Edited medication");
   assert.equal(update.status, "on-hold");
   assert.deepEqual(update.requester, { reference: "Practitioner/original-prescriber" });
+});
+
+test("PrescriptionSection rejects a stale loaded version with the friendly concurrent-edit message", async () => {
+  const originalFetch = globalThis.fetch;
+  const updateHeaders: Headers[] = [];
+  let saved = 0;
+  const request: MedicationRequest = {
+    resourceType: "MedicationRequest",
+    id: "rx-1",
+    meta: { versionId: "7" },
+    status: "active",
+    intent: "order",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/encounter-1" },
+    medicationCodeableConcept: { text: "Latanoprost" },
+    dosageInstruction: [{ text: "1 drop OU nightly" }],
+    requester: { reference: "Practitioner/doc-1" },
+    authoredOn: "2026-07-24",
+  };
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (init?.method === "PUT") {
+      updateHeaders.push(new Headers(init.headers));
+      return new Response("stale version", {
+        status: 412,
+        statusText: "Precondition Failed",
+      });
+    }
+    if (url.endsWith("/Encounter/encounter-1")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-1",
+        status: "in-progress",
+        class: {},
+        subject: { reference: "Patient/patient-1" },
+        participant: [{ individual: { reference: "Practitioner/doc-1" } }],
+      });
+    }
+    if (url.includes("/Condition?")) {
+      return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+    }
+    if (url.includes("/MedicationRequest?")) {
+      return jsonResponse({
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: request }],
+      });
+    }
+    throw new Error(`Unexpected FHIR request ${url}`);
+  };
+
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <PrescriptionSection
+          patientReference="Patient/patient-1"
+          encounterReference="Encounter/encounter-1"
+          onSaved={() => { saved += 1; }}
+        />,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const editButton = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Edit"));
+    assert.ok(editButton);
+    act(() => editButton.props.onClick());
+
+    const updateButton = renderer.root.findAllByType("button")
+      .find((button) => button.children.includes("Update prescription"));
+    assert.ok(updateButton);
+    await act(async () => {
+      updateButton.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    assert.equal(updateHeaders.length, 1);
+    assert.equal(updateHeaders[0]?.get("If-Match"), 'W/"7"');
+    assert.equal(saved, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), new RegExp(CONCURRENT_EDIT_MESSAGE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  } finally {
+    if (renderer) act(() => renderer.unmount());
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("FHIR conflict conversion only humanizes explicitly versioned writes", async () => {
+  const versionedError = await toError(new Response("conflict", {
+    status: 409,
+    statusText: "Conflict",
+  }), true);
+  const unversionedError = await toError(new Response("conditional create conflict", {
+    status: 409,
+    statusText: "Conflict",
+  }));
+
+  assert.equal(versionedError.message, CONCURRENT_EDIT_MESSAGE);
+  assert.equal(unversionedError.message, "FHIR 409 Conflict: conditional create conflict");
 });
 
 test("formatDate safely renders malformed and absent authoredOn values", () => {
@@ -349,4 +449,11 @@ function directoryResult(): DirectoryResult {
     phone: "8645550100",
     onWeno: true,
   };
+}
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/fhir+json" },
+  });
 }

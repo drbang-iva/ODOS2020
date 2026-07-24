@@ -22,6 +22,8 @@ import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBi
 const AUTH = "Bearer good";
 const PATIENT = "Patient/p1";
 const ENCOUNTER = "Encounter/e1";
+const CONCURRENT_EDIT_MESSAGE =
+  "This record was changed by someone else since you opened it. Reload and reapply your change.";
 const provenance: ClinicalGraphProvenance = {
   source: "manual",
   recordedAt: "2026-07-09T12:00:00.000Z",
@@ -126,6 +128,7 @@ test("IOP target endpoint round-trips through history and latest write wins", as
   });
   assert.equal(second.status, 200);
   assert.equal(fixture.goals.length, 1);
+  assert.deepEqual(fixture.updateHeaders.map((headers) => headers["If-Match"]), ['W/"1"']);
 
   const history = await handleIopHistoryRequest(fixture.deps, {
     authHeader: AUTH,
@@ -155,12 +158,54 @@ test("IOP target endpoint requires chart.write", async () => {
   assert.equal(forbidden.status, 403);
 });
 
+test("IOP target endpoint rejects a stale Goal update without overwriting the concurrent target", async () => {
+  const fixture = deps();
+  await handleIopTargetRequest(fixture.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT,
+      eye: "OD",
+      percent: 20,
+      value: 16,
+      overridden: false,
+    },
+  });
+  let concurrentGoal: Goal | undefined;
+  fixture.controls.beforeUpdate = (id) => {
+    const index = fixture.goals.findIndex((goal) => goal.id === id);
+    assert.ok(index >= 0);
+    fixture.goals[index] = {
+      ...fixture.goals[index]!,
+      description: { text: "Concurrent clinician target" },
+      meta: { ...fixture.goals[index]!.meta, versionId: "2" },
+    };
+    concurrentGoal = structuredClone(fixture.goals[index]);
+  };
+
+  const result = await handleIopTargetRequest(fixture.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT,
+      eye: "OD",
+      value: 15,
+      overridden: true,
+    },
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { error: CONCURRENT_EDIT_MESSAGE, code: "concurrent-edit" });
+  assert.deepEqual(fixture.updateHeaders.map((headers) => headers["If-Match"]), ['W/"1"']);
+  assert.deepEqual(fixture.goals[0], concurrentGoal);
+});
+
 function deps(
   role: PracticeRoleId = "clinician",
   findingDefinitions: ClinicalFindingDefinition[] = defaultDefinitions(),
 ) {
   const observations: Observation[] = [];
   const goals: Goal[] = [];
+  const updateHeaders: Array<Record<string, string>> = [];
+  const controls: { beforeUpdate?: (id: string) => void } = {};
   const d: IopHistoryEndpointDeps = {
     findingDefinitions: () => findingDefinitions,
     authenticate: async (authHeader) =>
@@ -179,14 +224,18 @@ function deps(
                 return {
                   resourceType: "Bundle",
                   type: "searchset",
-                  entry: resources.map((resource) => ({ resource: resource as T })),
+                  entry: resources.map((resource) => ({ resource: structuredClone(resource) as T })),
                 };
               },
               create: async <T extends Goal>(resource: T): Promise<T> => {
                 const created = {
                   ...resource,
                   id: resource.id ?? `goal-${goals.length + 1}`,
-                  meta: { ...(resource.meta ?? {}), lastUpdated: `2026-07-09T12:0${goals.length}:00.000Z` },
+                  meta: {
+                    ...(resource.meta ?? {}),
+                    lastUpdated: `2026-07-09T12:0${goals.length}:00.000Z`,
+                    versionId: "1",
+                  },
                 };
                 goals.push(created);
                 return created as T;
@@ -195,18 +244,28 @@ function deps(
                 _resourceType: T["resourceType"],
                 id: string,
                 resource: T,
+                headers: Record<string, string> = {},
               ): Promise<T> => {
+                updateHeaders.push(headers);
+                const beforeUpdate = controls.beforeUpdate;
+                controls.beforeUpdate = undefined;
+                beforeUpdate?.(id);
+                const index = goals.findIndex((goal) => goal.id === id);
+                assert.ok(index >= 0);
+                const expectedIfMatch = `W/"${goals[index]?.meta?.versionId}"`;
+                if (headers["If-Match"] !== expectedIfMatch) {
+                  throw Object.assign(new Error("FHIR 412 Precondition Failed"), { status: 412 });
+                }
                 const updated = {
                   ...resource,
                   id,
-                  meta: { ...(resource.meta ?? {}), lastUpdated: "2026-07-09T12:05:00.000Z" },
+                  meta: {
+                    ...(resource.meta ?? {}),
+                    lastUpdated: "2026-07-09T12:05:00.000Z",
+                    versionId: "2",
+                  },
                 };
-                const index = goals.findIndex((goal) => goal.id === id);
-                if (index >= 0) {
-                  goals[index] = updated;
-                } else {
-                  goals.push(updated);
-                }
+                goals[index] = updated;
                 return updated as T;
               },
             },
@@ -214,7 +273,7 @@ function deps(
         : null,
     now: () => "2026-07-09T12:00:00.000Z",
   };
-  return { deps: d, observations, goals };
+  return { deps: d, observations, goals, updateHeaders, controls };
 }
 
 function defaultDefinitions(): ClinicalFindingDefinition[] {

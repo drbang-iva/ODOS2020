@@ -1,4 +1,20 @@
-import { fhir } from "./fhir";
+import { CONCURRENT_EDIT_MESSAGE, fhir } from "./fhir";
+
+export interface ClinicalGraphErrorBody {
+  error?: string;
+  code?: string;
+}
+
+export function clinicalGraphResponseError(
+  response: Pick<Response, "status">,
+  body: ClinicalGraphErrorBody,
+  fallback: string,
+): Error {
+  if ((response.status === 409 && body.code === "concurrent-edit") || response.status === 412) {
+    return new Error(CONCURRENT_EDIT_MESSAGE);
+  }
+  return new Error(body.error ?? fallback);
+}
 
 export function authHeaders(): Record<string, string> {
   const authorization = fhir.authHeader();
@@ -34,7 +50,7 @@ export async function readDiagnosisCompleteness(
       { headers: authHeaders(), signal: controller.signal },
     );
     const body = await response.json() as DiagnosisCompleteness & { error?: string };
-    if (!response.ok) throw new Error(body.error ?? `Diagnosis completeness failed: ${response.status}`);
+    if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis completeness failed: ${response.status}`);
     return body;
   } finally {
     clearTimeout(timeout);
@@ -64,7 +80,7 @@ export async function submitDiagnosisPick(input: {
     }),
   });
   const body = await response.json() as { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Diagnosis pick failed: ${response.status}`);
+  if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis pick failed: ${response.status}`);
   window.dispatchEvent(new CustomEvent("odos:diagnosis-picked", { detail: { encounterReference: input.encounterReference } }));
 }
 
@@ -93,7 +109,7 @@ export async function readDiagnosisVisitStatuses(encounterId: string): Promise<D
     { headers: authHeaders() },
   );
   const body = await response.json() as { statuses?: DiagnosisVisitStatusRow[]; error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Diagnosis visit statuses failed: ${response.status}`);
+  if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis visit statuses failed: ${response.status}`);
   return body.statuses ?? [];
 }
 
@@ -111,7 +127,7 @@ export async function updateDiagnosisVisitStatus(input: {
     },
   );
   const body = await response.json() as { status?: DiagnosisVisitStatusRow; error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Diagnosis visit status update failed: ${response.status}`);
+  if (!response.ok) throw clinicalGraphResponseError(response, body, `Diagnosis visit status update failed: ${response.status}`);
   if (!body.status) throw new Error("Diagnosis visit status update returned no status.");
   return body.status;
 }

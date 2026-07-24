@@ -30,6 +30,9 @@ export type JsonPatchOperation =
   | { op: "remove"; path: string }
   | { op: "move" | "copy"; from: string; path: string };
 
+export const CONCURRENT_EDIT_MESSAGE =
+  "This record was changed by someone else since you opened it. Reload and reapply your change.";
+
 type TransactionResponse<T> = Bundle & { readonly __odosResponseType?: T };
 export type FhirSearchParams = Record<string, string> | URLSearchParams | Array<[string, string]>;
 
@@ -65,8 +68,11 @@ async function pkce(): Promise<{ verifier: string; challenge: string }> {
   return { verifier, challenge };
 }
 
-export async function toError(res: Response): Promise<Error> {
+export async function toError(res: Response, versionedWrite = false): Promise<Error> {
   const body = await res.text();
+  if (versionedWrite && (res.status === 409 || res.status === 412)) {
+    return new Error(CONCURRENT_EDIT_MESSAGE);
+  }
   let detail = body;
   try {
     const parsed = JSON.parse(body) as OperationOutcome;
@@ -289,16 +295,23 @@ export const fhir = {
     return (await res.json()) as T;
   },
 
-  async update<T extends Resource>(resource: T, sourceTag: string): Promise<T> {
+  async update<T extends Resource>(
+    resource: T,
+    sourceTag: string,
+    ifMatchVersionId?: string,
+  ): Promise<T> {
     if (!resource.id) {
       throw new Error(`FHIR update requires ${resource.resourceType}.id.`);
     }
     const res = await fetch(`${BASE}/${resource.resourceType}/${resource.id}`, {
       method: "PUT",
-      headers: sourceHeaders(sourceTag),
+      headers: {
+        ...sourceHeaders(sourceTag),
+        ...(ifMatchVersionId ? { "If-Match": `W/"${ifMatchVersionId}"` } : {}),
+      },
       body: JSON.stringify(resource),
     });
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) throw await toError(res, Boolean(ifMatchVersionId));
     return (await res.json()) as T;
   },
 
@@ -318,7 +331,7 @@ export const fhir = {
       },
       body: JSON.stringify(ops),
     });
-    if (!res.ok) throw await toError(res);
+    if (!res.ok) throw await toError(res, Boolean(ifMatchVersionId));
     return (await res.json()) as T;
   },
 

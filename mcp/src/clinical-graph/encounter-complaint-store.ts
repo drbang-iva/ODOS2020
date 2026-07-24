@@ -37,7 +37,10 @@ export class FhirEncounterComplaintStore {
     }
     const resource = buildEncounterComplaintResource(validated, existing);
     const persisted = existing?.id
-      ? await this.fhir.update("Basic", existing.id, resource, ENCOUNTER_COMPLAINT_WRITE_HEADERS)
+      ? await this.fhir.update("Basic", existing.id, resource, {
+          ...ENCOUNTER_COMPLAINT_WRITE_HEADERS,
+          ...(existing.meta?.versionId ? { "If-Match": `W/"${existing.meta.versionId}"` } : {}),
+        })
       : await this.fhir.create(resource, {
           ...ENCOUNTER_COMPLAINT_WRITE_HEADERS,
           "If-None-Exist": `identifier=${ENCOUNTER_COMPLAINT_IDENTIFIER_SYSTEM}|${validated.id}`,
