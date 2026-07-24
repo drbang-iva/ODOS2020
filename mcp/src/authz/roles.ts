@@ -170,6 +170,10 @@ const CLAIMS_RESOURCE_RULES: OdosResourceRule[] = [
   },
 ];
 
+const PAYER_DIRECTORY_RESOURCE_RULES: OdosResourceRule[] = [
+  { resourceType: "Organization", interactions: CREATE_READ_INTERACTIONS, scope: { kind: "practice" } },
+];
+
 const BILLING_IDENTITY_CONFIG_READ_RULE: OdosResourceRule = {
   resourceType: "Basic",
   interactions: READ_INTERACTIONS,
@@ -393,6 +397,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
       APPEARANCE_CONFIG_READ_RULE,
       ...DISPENSARY_RESOURCE_RULES,
       ...CLAIMS_RESOURCE_RULES,
+      ...PAYER_DIRECTORY_RESOURCE_RULES,
       BILLING_IDENTITY_CONFIG_READ_RULE,
       ...OFFICE_CHANNEL_RESOURCE_RULES,
     ],

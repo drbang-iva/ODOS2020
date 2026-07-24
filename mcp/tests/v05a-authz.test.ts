@@ -116,6 +116,26 @@ test("non-billing roles get no PaymentReconciliation grant (clinician, auditor)"
   }
 });
 
+test("compiled front-desk and practice-admin AccessPolicies grant payer Organization directory operations", () => {
+  const frontDeskPolicy = buildMedplumAccessPolicy(getRoleDeclaration("front-desk"));
+  const organizationRule = frontDeskPolicy.resource?.find(
+    (rule) => rule.resourceType === "Organization",
+  );
+  assert.deepEqual(
+    organizationRule?.interaction,
+    ["create", "read", "search", "history", "vread"],
+  );
+  assert.equal(organizationRule?.criteria, undefined);
+  assert.equal(organizationRule?.interaction?.includes("update"), false);
+  assert.equal(organizationRule?.interaction?.includes("delete"), false);
+
+  const adminPolicy = buildMedplumAccessPolicy(getRoleDeclaration("practice-admin"));
+  const wildcardRule = adminPolicy.resource?.find((rule) => rule.resourceType === "*");
+  for (const interaction of ["create", "read", "search"] as const) {
+    assert.ok(wildcardRule?.interaction?.includes(interaction), `practice-admin needs ${interaction}`);
+  }
+});
+
 test("every role's AccessPolicy carries a machine-readable practice-role identifier (resolver anchor)", () => {
   for (const roleId of ["front-desk", "practice-admin", "clinician", "auditor", "aesthetics-provider"] as const) {
     const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
