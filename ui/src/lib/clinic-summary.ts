@@ -18,6 +18,9 @@ export interface ClinicFlowRow {
   timeInOfficeMinutes?: number;
   waitingMinutes?: number;
   arrivedLateMinutes?: number;
+  note?: string;
+  urgent?: boolean;
+  followUp?: boolean;
   flags: { unsigned: boolean };
 }
 

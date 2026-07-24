@@ -4,31 +4,72 @@ import {
   findOpenEncounterForAppointment,
   startOrOpenEncounterForAppointment,
 } from "../lib/encounter-bundles";
+import { fhir } from "../lib/fhir";
 import { odosAppointmentStatusOf } from "../lib/scheduling";
 import { openEncounter } from "../lib/view-state";
 
-export function AppointmentChartButton({
-  appointment,
-  className = "scheduler-button",
-  onError,
-}: {
-  appointment: Appointment;
+type AppointmentChartButtonProps = {
   className?: string;
   onError?: (message: string | null) => void;
-}) {
+} & (
+  | {
+      appointment: Appointment;
+      appointmentId?: never;
+      existingEncounterId?: never;
+    }
+  | {
+      appointment?: never;
+      appointmentId: string;
+      existingEncounterId?: string;
+    }
+);
+
+export function AppointmentChartButton(props: AppointmentChartButtonProps) {
+  const {
+    className = "scheduler-button",
+    onError,
+  } = props;
+  const suppliedAppointment = props.appointment;
+  const appointmentId = suppliedAppointment?.id ?? props.appointmentId;
+  const [fetchedAppointment, setFetchedAppointment] = useState<Appointment | null>();
   const [existingEncounter, setExistingEncounter] = useState<Encounter | null>();
   const [opening, setOpening] = useState(false);
   const openingRef = useRef(false);
-  const checkedIn = odosAppointmentStatusOf(appointment) === "checked-in";
+  const appointment = suppliedAppointment ?? fetchedAppointment ?? undefined;
+  const checkedIn = appointment
+    ? odosAppointmentStatusOf(appointment) === "checked-in"
+    : props.appointmentId !== undefined && fetchedAppointment !== null;
 
   useEffect(() => {
-    if (!checkedIn || !appointment.id) {
+    if (suppliedAppointment || !appointmentId) {
+      setFetchedAppointment(undefined);
+      return;
+    }
+    let cancelled = false;
+    setFetchedAppointment(undefined);
+    void fhir.read<Appointment>("Appointment", appointmentId)
+      .then((value) => {
+        if (!cancelled) setFetchedAppointment(value);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setFetchedAppointment(null);
+          onError?.(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [appointmentId, onError, suppliedAppointment]);
+
+  useEffect(() => {
+    if (!checkedIn || !appointmentId) {
       setExistingEncounter(undefined);
       return;
     }
     let cancelled = false;
     setExistingEncounter(undefined);
-    void findOpenEncounterForAppointment(appointment.id)
+    void findOpenEncounterForAppointment(appointmentId)
       .then((encounter) => {
         if (!cancelled) setExistingEncounter(encounter ?? null);
       })
@@ -41,13 +82,14 @@ export function AppointmentChartButton({
     return () => {
       cancelled = true;
     };
-  }, [appointment.id, checkedIn, onError]);
+  }, [appointmentId, checkedIn, onError]);
 
-  if (!checkedIn) {
+  if (!checkedIn || fetchedAppointment === null) {
     return null;
   }
 
   async function openChart() {
+    if (!appointment) return;
     if (openingRef.current) return;
     openingRef.current = true;
     setOpening(true);
@@ -72,8 +114,12 @@ export function AppointmentChartButton({
   }
 
   return (
-    <button className={className} type="button" disabled={opening} onClick={() => void openChart()}>
-      {opening ? "Opening chart…" : existingEncounter?.id ? "Open chart" : "Start chart"}
+    <button className={className} type="button" disabled={opening || !appointment} onClick={() => void openChart()}>
+      {opening
+        ? "Opening chart…"
+        : existingEncounter?.id || props.existingEncounterId
+          ? "Open chart"
+          : "Start chart"}
     </button>
   );
 }

@@ -24,6 +24,43 @@ test("Clinic home renders a mixed-state payload in the server-defined action ord
   assert.match(html, /Open full schedule →/);
 });
 
+test("flow rows show the full trimmed note on the compact cue and mark urgent appointments", () => {
+  const note = "Dilate before OCT retina recheck.";
+  const marked = { ...row("waiting", "Marked"), note, urgent: true, followUp: true };
+  const html = renderToStaticMarkup(<ClinicHome initialSummary={fixture([marked])} />);
+
+  assert.match(html, new RegExp(`aria-label="Appointment note" title="${note}"`));
+  assert.match(html, /class="odos-clinic-urgent-cue" title="Urgent">!<\/span>/);
+});
+
+test("authorized present rows get start-or-open while scheduled and checked-out rows keep patient navigation", () => {
+  const presentOpen = { ...row("with-you", "With You"), encounterId: "encounter-1" };
+  const summary = fixture([
+    presentOpen,
+    row("roomed", "Roomed"),
+    row("waiting", "Waiting"),
+    row("checked-out", "Checked Out"),
+    row("scheduled", "Scheduled"),
+  ]);
+  const html = renderToStaticMarkup(
+    <ClinicHome initialSummary={summary} roles={["front-desk", "clinician"]} />,
+  );
+
+  assert.equal((html.match(/>Open chart<\/button>/g) ?? []).length, 1);
+  assert.equal((html.match(/>Start chart<\/button>/g) ?? []).length, 2);
+  assert.equal((html.match(/class="odos-clinic-flow-open"/g) ?? []).length, 5);
+  assert.equal((html.match(/<button type="button" class="odos-clinic-flow-open"/g) ?? []).length, 2);
+});
+
+test("Clinic flow imports the existing chart RBAC gate instead of deriving roles locally", () => {
+  const source = readFileSync(new URL("../src/scenes/ClinicHome.tsx", import.meta.url), "utf8");
+  const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+  assert.match(source, /import \{ canStartAppointmentChart, type PracticeRoleId \} from "\.\.\/lib\/practice-roles"/);
+  assert.match(source, /const canStartChart = canStartAppointmentChart\(roles\)/);
+  assert.doesNotMatch(source, /roles\.includes\(/);
+  assert.match(appSource, /<ClinicHome roles=\{roles\} \/>/);
+});
+
 test("E-Rx wiring card contains no numeric zero placeholder", () => {
   const html = renderToStaticMarkup(<ClinicHome initialSummary={fixture([])} />);
   const card = html.match(/data-testid="clinic-erx-card"[\s\S]*?<\/section>/)?.[0] ?? "";

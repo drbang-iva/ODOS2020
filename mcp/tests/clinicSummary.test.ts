@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Appointment, Encounter, Patient, Provenance, Task } from "@medplum/fhirtypes";
 import { projectClinicSummary, type ClinicSummaryInput } from "../src/clinic/clinic-summary.js";
+import { ODOS_FOLLOW_UP_EXTENSION_URL } from "../src/fhir/schedulingAppointment.js";
 
 const NOW = "2026-07-11T15:00:00.000Z";
 const DATE = "2026-07-11";
@@ -72,6 +73,31 @@ test("flow rows within the same state stay chronological by Appointment instant"
     patients: [patient("later"), patient("earlier")],
   }));
   assert.deepEqual(summary.flow.map((row) => row.appointmentId), ["earlier", "later"]);
+});
+
+test("flow rows project trimmed Appointment notes and the shared urgent and follow-up signals", () => {
+  const marked = appointment("marked", "checked-in", "14:30:00.000Z");
+  marked.comment = "  Dilate before OCT retina recheck.  ";
+  marked.priority = 1;
+  marked.extension = [
+    ...(marked.extension ?? []),
+    { url: ODOS_FOLLOW_UP_EXTENSION_URL, valueBoolean: true },
+  ];
+  const blank = appointment("blank", "booked", "15:00:00.000Z");
+  blank.comment = " \n\t ";
+  const summary = projectClinicSummary(input({
+    appointments: [marked, blank],
+    patients: [patient("marked"), patient("blank")],
+  }));
+
+  const markedRow = summary.flow.find((row) => row.appointmentId === "marked");
+  const blankRow = summary.flow.find((row) => row.appointmentId === "blank");
+  assert.equal(markedRow?.note, "Dilate before OCT retina recheck.");
+  assert.equal(markedRow?.urgent, true);
+  assert.equal(markedRow?.followUp, true);
+  assert.equal("note" in (blankRow ?? {}), false);
+  assert.equal("urgent" in (blankRow ?? {}), false);
+  assert.equal("followUp" in (blankRow ?? {}), false);
 });
 
 test("E-Rx and result review remain explicit wiring states with no invented counts", () => {

@@ -13,6 +13,10 @@ import {
   LAB_ORDER_TRANSMISSION_TASK_CODE,
   ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
 } from "../lab-orders/adapters/manual-lab-order-adapter.js";
+import {
+  isFollowUpAppointment,
+  isUrgentAppointment,
+} from "../fhir/schedulingAppointment.js";
 
 const FLOOR_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
 const CLINIC_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
@@ -34,6 +38,9 @@ export interface ClinicFlowRow {
   timeInOfficeMinutes?: number;
   waitingMinutes?: number;
   arrivedLateMinutes?: number;
+  note?: string;
+  urgent?: boolean;
+  followUp?: boolean;
   flags: { unsigned: boolean };
 }
 
@@ -123,6 +130,7 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
     const arrivedLateMinutes = checkedInAt && appointment.start
       ? Math.max(0, minutesBetween(Date.parse(appointment.start), Date.parse(checkedInAt)))
       : undefined;
+    const note = appointment.comment?.trim();
     const row = {
       ...(appointment.id ? { appointmentId: appointment.id } : {}),
       ...(encounter?.id ? { encounterId: encounter.id } : {}),
@@ -138,6 +146,9 @@ export function projectClinicSummary(input: ClinicSummaryInput): ClinicSummary {
       ...(timeInOfficeMinutes !== undefined ? { timeInOfficeMinutes } : {}),
       ...(waitingMinutes !== undefined ? { waitingMinutes } : {}),
       ...(arrivedLateMinutes !== undefined ? { arrivedLateMinutes } : {}),
+      ...(note ? { note } : {}),
+      ...(isUrgentAppointment(appointment) ? { urgent: true } : {}),
+      ...(isFollowUpAppointment(appointment) ? { followUp: true } : {}),
       flags: { unsigned: encounter?.status === "finished" && encounter.id !== undefined && !signedEncounterIds.has(encounter.id) },
     } satisfies ClinicFlowRow;
     return { row, startMs: Date.parse(appointment.start ?? "") };

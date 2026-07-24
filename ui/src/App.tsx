@@ -306,7 +306,7 @@ export function RouteSwitch({
       return <MarginLedger initialPeriod={new URLSearchParams(search).get("period") ?? undefined} />;
     case CLINIC_PATH: {
       const clinicView = clinicRouteView(search, view);
-      return clinicView.kind === "picker" ? <ClinicHome /> : <ViewRouter view={clinicView} />;
+      return clinicView.kind === "picker" ? <ClinicHome roles={roles} /> : <ViewRouter view={clinicView} />;
     }
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
