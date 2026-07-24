@@ -483,7 +483,11 @@ export function PrescriptionSection({ patientReference, encounterReference, onSa
         transmissionMethod,
       });
       const saved = existing
-        ? await fhir.update<MedicationRequest>(mergeMedicationRequestUpdate(existing, resource), "update_medication_request")
+        ? await fhir.update<MedicationRequest>(
+            mergeMedicationRequestUpdate(existing, resource),
+            "update_medication_request",
+            existing.meta?.versionId,
+          )
         : await fhir.create<MedicationRequest>(resource, "create_medication_request");
       setRequests((current) => existing
         ? current.map((request) => request.id === existing.id ? saved : request)

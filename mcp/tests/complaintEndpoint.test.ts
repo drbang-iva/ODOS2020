@@ -32,9 +32,10 @@ class MemoryFhir {
     class: { system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB" },
     subject: { reference: "Patient/p1" },
     reasonCode: [{ coding: [{ system: "https://example.test", code: "coded" }] }, { text: "Legacy concern" }],
+    meta: { versionId: "1" },
   };
   basics: Basic[] = [];
-  writes: Array<{ resourceType: string; headers?: Record<string, string> }> = [];
+  writes: Array<{ method: "create" | "update"; resourceType: string; headers?: Record<string, string> }> = [];
 
   async read<T extends Encounter>(): Promise<T> {
     return structuredClone(this.encounter) as T;
@@ -56,21 +57,34 @@ class MemoryFhir {
   }
 
   async create<T extends Basic>(resource: T, headers?: Record<string, string>): Promise<T> {
-    const saved = { ...structuredClone(resource), id: resource.id ?? `basic-${this.basics.length + 1}`, meta: { lastUpdated: new Date().toISOString() } } as T;
+    const saved = {
+      ...structuredClone(resource),
+      id: resource.id ?? `basic-${this.basics.length + 1}`,
+      meta: { lastUpdated: new Date().toISOString(), versionId: "1" },
+    } as T;
     this.basics.push(saved);
-    this.writes.push({ resourceType: resource.resourceType, headers });
+    this.writes.push({ method: "create", resourceType: resource.resourceType, headers });
     return structuredClone(saved);
   }
 
   async update<T extends Basic | Encounter>(resourceType: T["resourceType"], id: string, resource: T, headers?: Record<string, string>): Promise<T> {
-    this.writes.push({ resourceType, headers });
+    this.writes.push({ method: "update", resourceType, headers });
     if (resourceType === "Encounter") {
-      this.encounter = structuredClone(resource) as Encounter;
-      return structuredClone(resource);
+      const versionId = String(Number(this.encounter.meta?.versionId ?? "0") + 1);
+      this.encounter = {
+        ...structuredClone(resource) as Encounter,
+        meta: { ...resource.meta, versionId },
+      };
+      return structuredClone(this.encounter) as T;
     }
     const index = this.basics.findIndex((candidate) => candidate.id === id);
     assert.ok(index >= 0);
-    const saved = { ...structuredClone(resource as Basic), id, meta: { lastUpdated: new Date().toISOString() } };
+    const versionId = String(Number(this.basics[index]?.meta?.versionId ?? "0") + 1);
+    const saved = {
+      ...structuredClone(resource as Basic),
+      id,
+      meta: { lastUpdated: new Date().toISOString(), versionId },
+    };
     this.basics[index] = saved;
     return structuredClone(saved) as T;
   }
@@ -185,6 +199,11 @@ test("two structured complaints round-trip, render deterministically, reorder, a
   assert.match(fhir.encounter.reasonCode?.[1]?.text ?? "", /^routine eye exam/);
   assert.equal(fhir.encounter.reasonCode?.[0]?.coding?.[0]?.code, "coded");
   assert.equal(fhir.writes.every((write) => write.headers?.["X-ODOS-Source"] === "encounter-complaints"), true);
+  const guardedUpdates = fhir.writes.filter((write) =>
+    write.method === "update" && write.headers?.["X-ODOS-Source"] === "encounter-complaints"
+  );
+  assert.ok(guardedUpdates.length > 0);
+  assert.equal(guardedUpdates.every((write) => /^W\/"\d+"$/.test(write.headers?.["If-Match"] ?? "")), true);
 
   const listed = await handleEncounterComplaintListRequest(deps, { authHeader: AUTH, params: { encounterId: "e1" } });
   assert.equal(listed.status, 200);

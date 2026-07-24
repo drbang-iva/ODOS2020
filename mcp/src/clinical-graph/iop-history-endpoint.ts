@@ -176,7 +176,10 @@ export async function handleIopTargetRequest(
   });
 
   if (existing?.id && staff.fhir.update) {
-    await staff.fhir.update<Goal>("Goal", existing.id, goal, TARGET_HEADERS);
+    await staff.fhir.update<Goal>("Goal", existing.id, goal, {
+      ...TARGET_HEADERS,
+      ...(existing.meta?.versionId ? { "If-Match": `W/"${existing.meta.versionId}"` } : {}),
+    });
   } else {
     await staff.fhir.create<Goal>(goal, TARGET_HEADERS);
   }

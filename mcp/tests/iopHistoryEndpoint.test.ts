@@ -126,6 +126,7 @@ test("IOP target endpoint round-trips through history and latest write wins", as
   });
   assert.equal(second.status, 200);
   assert.equal(fixture.goals.length, 1);
+  assert.deepEqual(fixture.updateHeaders.map((headers) => headers["If-Match"]), ['W/"1"']);
 
   const history = await handleIopHistoryRequest(fixture.deps, {
     authHeader: AUTH,
@@ -161,6 +162,7 @@ function deps(
 ) {
   const observations: Observation[] = [];
   const goals: Goal[] = [];
+  const updateHeaders: Array<Record<string, string>> = [];
   const d: IopHistoryEndpointDeps = {
     findingDefinitions: () => findingDefinitions,
     authenticate: async (authHeader) =>
@@ -186,7 +188,11 @@ function deps(
                 const created = {
                   ...resource,
                   id: resource.id ?? `goal-${goals.length + 1}`,
-                  meta: { ...(resource.meta ?? {}), lastUpdated: `2026-07-09T12:0${goals.length}:00.000Z` },
+                  meta: {
+                    ...(resource.meta ?? {}),
+                    lastUpdated: `2026-07-09T12:0${goals.length}:00.000Z`,
+                    versionId: "1",
+                  },
                 };
                 goals.push(created);
                 return created as T;
@@ -195,11 +201,17 @@ function deps(
                 _resourceType: T["resourceType"],
                 id: string,
                 resource: T,
+                headers: Record<string, string> = {},
               ): Promise<T> => {
+                updateHeaders.push(headers);
                 const updated = {
                   ...resource,
                   id,
-                  meta: { ...(resource.meta ?? {}), lastUpdated: "2026-07-09T12:05:00.000Z" },
+                  meta: {
+                    ...(resource.meta ?? {}),
+                    lastUpdated: "2026-07-09T12:05:00.000Z",
+                    versionId: "2",
+                  },
                 };
                 const index = goals.findIndex((goal) => goal.id === id);
                 if (index >= 0) {
@@ -214,7 +226,7 @@ function deps(
         : null,
     now: () => "2026-07-09T12:00:00.000Z",
   };
-  return { deps: d, observations, goals };
+  return { deps: d, observations, goals, updateHeaders };
 }
 
 function defaultDefinitions(): ClinicalFindingDefinition[] {

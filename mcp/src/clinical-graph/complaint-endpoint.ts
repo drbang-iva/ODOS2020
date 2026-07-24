@@ -262,7 +262,10 @@ export async function handleEncounterComplaintMutationRequest(
       }
     }
     const finalRows = await normalizeOrdinals(store, encounterId, provenance);
-    await staff.fhir.update("Encounter", encounterId, stampPrimaryComplaint(encounter, finalRows, definitions), WRITE_HEADERS);
+    await staff.fhir.update("Encounter", encounterId, stampPrimaryComplaint(encounter, finalRows, definitions), {
+      ...WRITE_HEADERS,
+      ...(encounter.meta?.versionId ? { "If-Match": `W/"${encounter.meta.versionId}"` } : {}),
+    });
     return { status: 200, body: { complaints: finalRows.map((row) => complaintView(row, definitions)) } };
   } catch (error) {
     return { status: 400, body: { error: errorMessage(error) } };
