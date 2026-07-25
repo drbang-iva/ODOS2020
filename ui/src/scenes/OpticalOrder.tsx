@@ -39,12 +39,12 @@ import {
   type RxDisplayRow,
 } from "../lib/optical-order";
 import {
-  decrementPracticeFrameInventory,
-  loadPracticeFrameInventory,
+  loadPracticeFrameInventoryUnits,
+  loadPracticeFrameVariantSettings,
   rankFramePosLookupRows,
   searchFrameCatalog,
+  summarizeInventoryByVariant,
   type FramePosLookupMatch,
-  type PracticeFrameInventoryItem,
 } from "../lib/optical-frames";
 import { openPrintWindow } from "../lib/print-window";
 import { advanceLabOrderTransport, cancelLabOrder, submitLabOrder } from "../lib/lab-order-transport";
@@ -124,7 +124,8 @@ interface OpticalOrderProps {
     fetchPatientInsurance?: typeof fetchPatientInsurance;
     fetchVisionBenefits?: typeof fetchVisionBenefits;
     searchFrameCatalog?: typeof searchFrameCatalog;
-    loadPracticeFrameInventory?: typeof loadPracticeFrameInventory;
+    loadPracticeFrameInventoryUnits?: typeof loadPracticeFrameInventoryUnits;
+    loadPracticeFrameVariantSettings?: typeof loadPracticeFrameVariantSettings;
   };
   lensCatalog?: Pick<LensesOrderSurfaceProps, "products" | "coatings" | "modifiers" | "resolver">;
 }
@@ -139,7 +140,8 @@ export function OpticalOrder({
   const fetchInsurance = api?.fetchPatientInsurance ?? fetchPatientInsurance;
   const fetchBenefits = api?.fetchVisionBenefits ?? fetchVisionBenefits;
   const searchFrames = api?.searchFrameCatalog ?? searchFrameCatalog;
-  const loadFrameInventory = api?.loadPracticeFrameInventory ?? loadPracticeFrameInventory;
+  const loadFrameInventoryUnits = api?.loadPracticeFrameInventoryUnits ?? loadPracticeFrameInventoryUnits;
+  const loadFrameVariantSettings = api?.loadPracticeFrameVariantSettings ?? loadPracticeFrameVariantSettings;
   const [patientReference] = useState(params.get("patient") ?? "");
   const [rxReference] = useState(params.get("rx") ?? "");
   const [encounterReference] = useState(params.get("encounter") ?? "");
@@ -178,7 +180,6 @@ export function OpticalOrder({
   });
   const [frameType, setFrameType] = useState("");
   const [frameMatches, setFrameMatches] = useState<FramePosLookupMatch[]>([]);
-  const [inventoryRows, setInventoryRows] = useState<PracticeFrameInventoryItem[]>([]);
   const [visionPrescription, setVisionPrescription] = useState<VisionPrescription | null>(initialVisionPrescription ?? null);
   const [insuranceContext, setInsuranceContext] = useState<{
     coverages: Coverage[];
@@ -262,10 +263,10 @@ export function OpticalOrder({
   useEffect(() => {
     let cancelled = false;
     const query = Object.values(frameCriteria).filter(Boolean).join(" ");
-    Promise.all([searchFrames(query), loadFrameInventory()])
-      .then(([catalog, inventory]) => {
+    Promise.all([searchFrames(query), loadFrameInventoryUnits(), loadFrameVariantSettings()])
+      .then(([catalog, units, settings]) => {
         if (cancelled) return;
-        setInventoryRows(inventory);
+        const inventory = summarizeInventoryByVariant(units, settings, catalog);
         setFrameMatches(rankFramePosLookupRows(catalog, inventory, query, 12) as FramePosLookupMatch[]);
       })
       .catch((err) => {
@@ -274,7 +275,7 @@ export function OpticalOrder({
     return () => {
       cancelled = true;
     };
-  }, [frameCriteria, loadFrameInventory, searchFrames]);
+  }, [frameCriteria, loadFrameInventoryUnits, loadFrameVariantSettings, searchFrames]);
 
   const opticalCollectCharges = useMemo<OpenChargeLine[]>(() =>
     chargeLines.filter((line) => line.selected).map((line) => ({
@@ -426,17 +427,6 @@ export function OpticalOrder({
       lensMaterial: "",
       treatments: [],
     }));
-  }
-
-  async function dispenseSelectedFrame() {
-    if (!selectedCharge.frame?.inventoryId) return;
-    const inventory = inventoryRows.find((row) => row.id === selectedCharge.frame?.inventoryId);
-    if (!inventory) return;
-    const updated = await decrementPracticeFrameInventory(inventory);
-    setInventoryRows((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
-    setChargeLines((current) =>
-      current.map((line) => (line.id === selectedCharge.id ? { ...line, dispensed: true } : line)),
-    );
   }
 
   function assembleLabOrderInput(): BuildLabOrderInput | null {
@@ -720,7 +710,6 @@ export function OpticalOrder({
                 ),
               )
             }
-            onDispense={() => void dispenseSelectedFrame()}
           />
           <QuickAdvancePanel
             currentStatus={header.orderStatus}
@@ -1317,7 +1306,6 @@ function FrameAttachPanel({
   onFrameTypeChange,
   onAttach,
   onUnattach,
-  onDispense,
 }: {
   criteria: Record<FrameCriteriaKey, string>;
   frameType: string;
@@ -1328,7 +1316,6 @@ function FrameAttachPanel({
   onFrameTypeChange: (frameType: string) => void;
   onAttach: (match: FramePosLookupMatch) => void;
   onUnattach: () => void;
-  onDispense: () => void;
 }) {
   return (
     <section className="overflow-hidden rounded border border-white/10">
@@ -1366,7 +1353,7 @@ function FrameAttachPanel({
                 <ReadCell value={match.catalog.properties.eyesize ?? ""} />
                 <ReadCell value={match.catalog.properties.temple ?? ""} />
                 <ReadCell value={match.catalog.properties.dbl ?? ""} />
-                <ReadCell value={String(match.inventory?.qtyOnHand ?? 0)} />
+                <ReadCell value={String(match.inventory?.onHandCount ?? 0)} />
                 <td className="border-r border-white/10 px-2 py-2">
                   <button className="sidebar-button h-8 w-full py-1" disabled={locked} onClick={() => onAttach(match)}>
                     Attach
@@ -1378,7 +1365,7 @@ function FrameAttachPanel({
         </table>
       </div>
       {selectedCharge.frame ? (
-        <AttachedFramePanel frame={selectedCharge.frame} dispensed={Boolean(selectedCharge.dispensed)} onUnattach={onUnattach} onDispense={onDispense} />
+        <AttachedFramePanel frame={selectedCharge.frame} onUnattach={onUnattach} />
       ) : null}
     </section>
   );
@@ -1386,14 +1373,10 @@ function FrameAttachPanel({
 
 function AttachedFramePanel({
   frame,
-  dispensed,
   onUnattach,
-  onDispense,
 }: {
   frame: AttachedFrame;
-  dispensed: boolean;
   onUnattach: () => void;
-  onDispense: () => void;
 }) {
   const fields: Array<[string, string]> = [
     ["Brand", frame.brand],
@@ -1410,7 +1393,7 @@ function AttachedFramePanel({
     ["Frame Type", frame.frameType],
   ];
   return (
-    <div className={`border-t border-white/10 p-3 ${dispensed ? "bg-emerald-950/20" : ""}`}>
+    <div className="border-t border-white/10 p-3">
       <div className="grid gap-2 md:grid-cols-6">
         {fields.map(([label, value]) => (
           <label key={label} className="grid gap-1 text-xs text-white/60">
@@ -1422,9 +1405,6 @@ function AttachedFramePanel({
       <div className="mt-3 flex flex-wrap gap-2">
         <button className="sidebar-button" onClick={onUnattach}>
           Unattach Frame
-        </button>
-        <button className="sidebar-button" disabled={dispensed || !frame.inventoryId} onClick={onDispense}>
-          Dispense
         </button>
       </div>
     </div>
@@ -1558,7 +1538,6 @@ function visionPrescriptionReference(reference: string): string {
 function attachedFrameFromMatch(match: FramePosLookupMatch, frameType: string): AttachedFrame {
   const properties = match.catalog.properties;
   return {
-    inventoryId: match.inventory?.id,
     canonicalUrl: match.catalog.canonicalUrl,
     upc: match.catalog.gtin14 ?? "",
     brand: match.catalog.manufacturer,

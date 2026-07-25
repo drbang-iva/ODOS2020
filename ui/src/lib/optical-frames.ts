@@ -4,18 +4,20 @@ import { fhir } from "./fhir";
 import type { RoleId } from "./roles";
 
 const BASIC_KIND_SYSTEM = "https://odos2020.com/fhir/CodeSystem/basic-kind";
-const FRAME_INVENTORY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/frame-inventory-canonical-url";
+const FRAME_VARIANT_SETTINGS_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/frame-variant-settings-canonical-url";
 const EXTENSION_URLS = {
   catalogCanonicalUrl: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url",
   catalogPublicityClass: "https://odos2020.com/fhir/StructureDefinition/catalog-publicity-class",
+  costCents: "https://odos2020.com/fhir/StructureDefinition/cost-cents",
   dispensaryLocation: "https://odos2020.com/fhir/StructureDefinition/dispensary-location",
   framesDataLastIngestAt: "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-at",
   framesDataLastIngestSourceFile: "https://odos2020.com/fhir/StructureDefinition/frames-data-last-ingest-source-file",
   framesDataSubscriptionActive: "https://odos2020.com/fhir/StructureDefinition/frames-data-subscription-active",
   framesDataUsername: "https://odos2020.com/fhir/StructureDefinition/frames-data-username",
-  inventoryStatus: "https://odos2020.com/fhir/StructureDefinition/inventory-status",
-  qtyOnHand: "https://odos2020.com/fhir/StructureDefinition/qty-on-hand",
+  receivedAt: "https://odos2020.com/fhir/StructureDefinition/received-at",
   salePriceCents: "https://odos2020.com/fhir/StructureDefinition/sale-price-cents",
+  unitStatus: "https://odos2020.com/fhir/StructureDefinition/unit-status",
 } as const;
 
 export interface FrameCatalogItem {
@@ -28,13 +30,42 @@ export interface FrameCatalogItem {
   readonly publicityClass: "staff_only" | "no_public_price" | "open";
 }
 
-export interface PracticeFrameInventoryItem {
+export type FrameInventoryUnitStatus = "on_hand" | "hold" | "dispensed";
+
+export interface PracticeFrameInventoryUnit {
   readonly id: string;
   readonly canonicalUrl: string;
-  readonly qtyOnHand: number;
-  readonly status: "active" | "clearance" | "hold" | "discontinued_local";
+  readonly status: FrameInventoryUnitStatus;
   readonly location?: string;
+  readonly receivedAt: string;
+}
+
+export interface PracticeFrameVariantSettings {
+  readonly id: string;
+  readonly canonicalUrl: string;
   readonly salePriceCents?: number;
+  readonly costCents?: number;
+}
+
+export interface PracticeFrameInventorySummary {
+  readonly canonicalUrl: string;
+  readonly onHandCount: number;
+  readonly holdCount: number;
+  readonly dispensedCount: number;
+  readonly salePriceCents?: number;
+  readonly location?: string;
+}
+
+export interface ReceiveFrameInventoryInput {
+  readonly quantity: number;
+  readonly salePriceCents?: number;
+  readonly costCents?: number;
+  readonly location?: string;
+}
+
+export interface ReceivedFrameInventory {
+  readonly units: readonly PracticeFrameInventoryUnit[];
+  readonly variantSettings?: PracticeFrameVariantSettings;
 }
 
 export interface FramesDataSubscriptionSettings {
@@ -46,7 +77,7 @@ export interface FramesDataSubscriptionSettings {
 
 export interface FramePosLookupMatch {
   readonly catalog: FrameCatalogItem;
-  readonly inventory?: PracticeFrameInventoryItem;
+  readonly inventory?: PracticeFrameInventorySummary;
   readonly score: number;
 }
 
@@ -62,108 +93,178 @@ export async function searchFrameCatalog(query: string): Promise<FrameCatalogIte
     .map(deviceDefinitionToFrameCatalogItem);
 }
 
-export async function loadPracticeFrameInventory(): Promise<PracticeFrameInventoryItem[]> {
+export async function loadPracticeFrameInventoryUnits(): Promise<PracticeFrameInventoryUnit[]> {
   const rows = await searchAllBasics({
-    code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory`,
+    code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory-unit`,
     _count: "100",
   });
-  return rows.map(basicToInventoryItem);
+  return rows.map(basicToInventoryUnit);
 }
 
-export async function addFrameToInventory(item: FrameCatalogItem, actorId: string): Promise<PracticeFrameInventoryItem> {
+export async function loadPracticeFrameVariantSettings(): Promise<PracticeFrameVariantSettings[]> {
   const rows = await searchAllBasics({
-    code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory`,
+    code: `${BASIC_KIND_SYSTEM}|practice-frame-variant-settings`,
     _count: "100",
   });
-  const existing = rows.find(
-    (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === item.canonicalUrl,
-  );
+  return rows.map(basicToVariantSettings);
+}
 
-  if (existing?.id) {
-    const current = await fhir.read<Basic>("Basic", existing.id);
-    const qtyIndex = current.extension?.findIndex((candidate) => candidate.url === EXTENSION_URLS.qtyOnHand) ?? -1;
-    if (qtyIndex < 0) {
-      throw new Error("Practice frame inventory item is missing qty-on-hand.");
-    }
-    const qtyOnHand = extensionNumber(current, EXTENSION_URLS.qtyOnHand);
-    if (qtyOnHand === null) {
-      throw new Error("Practice frame inventory item has a malformed qty-on-hand value.");
-    }
-    const target = `Basic/${existing.id}`;
-    await writeInventoryTransaction({
-      resourceEntry: {
-        resource: jsonPatchBinary([
-          { op: "replace", path: `/extension/${qtyIndex}/valueInteger`, value: qtyOnHand + 1 },
-        ]),
-        request: {
-          method: "PATCH",
-          url: target,
-          ...(current.meta?.versionId ? { ifMatch: `W/\"${current.meta.versionId}\"` } : {}),
-        },
+export async function receiveFrameInventory(
+  item: FrameCatalogItem,
+  input: ReceiveFrameInventoryInput,
+  actorId: string,
+): Promise<ReceivedFrameInventory> {
+  validateReceiveInput(input);
+  const now = new Date().toISOString();
+  const location = input.location?.trim() || undefined;
+  const unitEntries = Array.from({ length: input.quantity }, () => {
+    const fullUrl = `urn:uuid:${crypto.randomUUID()}`;
+    const resource: Basic = {
+      resourceType: "Basic",
+      code: {
+        coding: [{ system: BASIC_KIND_SYSTEM, code: "practice-frame-inventory-unit" }],
       },
-      target,
-      actorId,
-    });
-    return { ...basicToInventoryItem(current), qtyOnHand: qtyOnHand + 1 };
-  }
-
-  // fullUrl must be a bare urn:uuid or Medplum will not rewrite intra-bundle references.
-  const fullUrl = `urn:uuid:${crypto.randomUUID()}`;
-  const ifNoneExist = new URLSearchParams({
-    identifier: `${FRAME_INVENTORY_IDENTIFIER_SYSTEM}|${item.canonicalUrl}`,
-  }).toString();
-  const inventory: Basic = {
-    resourceType: "Basic",
-    identifier: [{ system: FRAME_INVENTORY_IDENTIFIER_SYSTEM, value: item.canonicalUrl }],
-    code: {
-      coding: [
-        {
-          system: BASIC_KIND_SYSTEM,
-          code: "practice-frame-inventory",
-        },
+      extension: [
+        extension(EXTENSION_URLS.catalogCanonicalUrl, { valueString: item.canonicalUrl }),
+        extension(EXTENSION_URLS.unitStatus, { valueString: "on_hand" }),
+        extension(EXTENSION_URLS.receivedAt, { valueDateTime: now }),
+        ...(location ? [extension(EXTENSION_URLS.dispensaryLocation, { valueString: location })] : []),
       ],
-    },
-    extension: [
-      extension(EXTENSION_URLS.catalogCanonicalUrl, { valueString: item.canonicalUrl }),
-      extension(EXTENSION_URLS.qtyOnHand, { valueInteger: 1 }),
-      extension(EXTENSION_URLS.inventoryStatus, { valueString: "active" }),
-    ],
-  };
-  const response = await writeInventoryTransaction({
-    resourceEntry: {
+    };
+    return {
       fullUrl,
-      resource: inventory,
-      request: { method: "POST", url: "Basic", ifNoneExist },
-    },
-    target: fullUrl,
-    actorId,
+      resource,
+      request: { method: "POST" as const, url: "Basic" },
+    };
   });
-  const id = createdId(response, "Basic");
-  return basicToInventoryItem({ ...inventory, id });
+
+  const settingsUpsert = input.salePriceCents !== undefined || input.costCents !== undefined
+    ? await variantSettingsUpsert(item.canonicalUrl, input)
+    : undefined;
+  const resourceEntries: NonNullable<Bundle["entry"]> = [
+    ...unitEntries,
+    ...(settingsUpsert ? [settingsUpsert.entry] : []),
+  ];
+  const targets = [
+    ...unitEntries.map((entry) => ({ reference: entry.fullUrl, name: "practice-frame-inventory-unit" })),
+    ...(settingsUpsert
+      ? [{ reference: settingsUpsert.target, name: "practice-frame-variant-settings" }]
+      : []),
+  ];
+  const response = await writeInventoryTransaction({
+    resourceEntries,
+    targets,
+    actorId,
+    eventCode: "practice.frame-inventory.received",
+    action: "C",
+  });
+  const units = unitEntries.map((entry, index) => basicToInventoryUnit({
+    ...entry.resource,
+    id: responseEntryId(response, index, "Basic"),
+  }));
+  const variantSettings = settingsUpsert
+    ? basicToVariantSettings({
+        ...settingsUpsert.resource,
+        id: settingsUpsert.resource.id
+          ?? responseEntryId(response, unitEntries.length, "Basic"),
+      })
+    : undefined;
+  return { units, ...(variantSettings ? { variantSettings } : {}) };
 }
 
-export async function decrementPracticeFrameInventory(
-  item: PracticeFrameInventoryItem,
-): Promise<PracticeFrameInventoryItem> {
-  if (!item.id) {
-    throw new Error("Practice frame inventory item is missing its FHIR Basic id.");
+export async function dispenseFrameInventoryUnit(
+  unitId: string,
+  actorId: string,
+): Promise<PracticeFrameInventoryUnit> {
+  if (!unitId) {
+    throw new Error("Frame inventory unit is missing its FHIR Basic id.");
   }
-  if (item.qtyOnHand <= 0) {
-    throw new Error("Practice frame inventory quantity is already zero.");
+  const current = await fhir.read<Basic>("Basic", unitId);
+  if (basicKind(current) !== "practice-frame-inventory-unit") {
+    throw new Error("The selected Basic is not a frame inventory unit.");
   }
-  const current = await fhir.read<Basic>("Basic", item.id);
-  const qtyIndex = current.extension?.findIndex((extension) => extension.url === EXTENSION_URLS.qtyOnHand) ?? -1;
-  if (qtyIndex < 0) {
-    throw new Error("Practice frame inventory item is missing qty-on-hand.");
+  const statusIndex = current.extension?.findIndex((entry) => entry.url === EXTENSION_URLS.unitStatus) ?? -1;
+  if (statusIndex < 0) {
+    throw new Error("Frame inventory unit is missing unit status.");
   }
-  const updated = await fhir.patch<Basic>(
-    "Basic",
-    item.id,
-    [{ op: "replace", path: `/extension/${qtyIndex}/valueInteger`, value: item.qtyOnHand - 1 }],
-    "practice.frame-inventory.dispense",
-    current.meta?.versionId,
-  );
-  return basicToInventoryItem(updated);
+  const status = extensionString(current, EXTENSION_URLS.unitStatus);
+  if (status === "dispensed") {
+    throw new Error("Frame inventory unit is already dispensed.");
+  }
+  if (!isUnitStatus(status)) {
+    throw new Error("Frame inventory unit has an invalid unit status.");
+  }
+  const target = `Basic/${unitId}`;
+  await writeInventoryTransaction({
+    resourceEntries: [{
+      resource: jsonPatchBinary([
+        { op: "replace", path: `/extension/${statusIndex}/valueString`, value: "dispensed" },
+      ]),
+      request: {
+        method: "PATCH",
+        url: target,
+        ...(current.meta?.versionId ? { ifMatch: `W/\"${current.meta.versionId}\"` } : {}),
+      },
+    }],
+    targets: [{ reference: target, name: "practice-frame-inventory-unit" }],
+    actorId,
+    eventCode: "practice.frame-inventory.dispensed",
+    action: "U",
+  });
+  return basicToInventoryUnit({
+    ...current,
+    extension: current.extension?.map((entry, index) =>
+      index === statusIndex ? { ...entry, valueString: "dispensed" } : entry),
+  });
+}
+
+export function summarizeInventoryByVariant(
+  units: readonly PracticeFrameInventoryUnit[],
+  variantSettings: readonly PracticeFrameVariantSettings[],
+  catalog: readonly FrameCatalogItem[],
+): PracticeFrameInventorySummary[] {
+  const settingsByUrl = new Map(variantSettings.map((settings) => [settings.canonicalUrl, settings]));
+  const catalogOrder = new Map(catalog.map((item, index) => [item.canonicalUrl, index]));
+  const grouped = new Map<string, PracticeFrameInventoryUnit[]>();
+  for (const unit of units) {
+    const group = grouped.get(unit.canonicalUrl);
+    if (group) group.push(unit);
+    else grouped.set(unit.canonicalUrl, [unit]);
+  }
+  return [...grouped.entries()]
+    .map(([canonicalUrl, variantUnits]) => {
+      const settings = settingsByUrl.get(canonicalUrl);
+      const location = variantUnits.find((unit) => unit.status === "on_hand" && unit.location)?.location
+        ?? variantUnits.find((unit) => unit.location)?.location;
+      return {
+        canonicalUrl,
+        onHandCount: variantUnits.filter((unit) => unit.status === "on_hand").length,
+        holdCount: variantUnits.filter((unit) => unit.status === "hold").length,
+        dispensedCount: variantUnits.filter((unit) => unit.status === "dispensed").length,
+        ...(settings?.salePriceCents !== undefined ? { salePriceCents: settings.salePriceCents } : {}),
+        ...(location ? { location } : {}),
+      };
+    })
+    .sort((left, right) => {
+      const leftIndex = catalogOrder.get(left.canonicalUrl) ?? Number.MAX_SAFE_INTEGER;
+      const rightIndex = catalogOrder.get(right.canonicalUrl) ?? Number.MAX_SAFE_INTEGER;
+      return leftIndex - rightIndex || left.canonicalUrl.localeCompare(right.canonicalUrl);
+    });
+}
+
+export function dollarsToCentsExact(value: string): number {
+  const normalized = value.trim().replace(/^\$/, "");
+  const match = normalized.match(/^(\d+)(?:\.(\d{1,2}))?$/);
+  if (!match) {
+    throw new Error("Dollar amounts must be nonnegative with at most two decimal places.");
+  }
+  const dollars = Number(match[1]);
+  const cents = Number((match[2] ?? "").padEnd(2, "0"));
+  const total = dollars * 100 + cents;
+  if (!Number.isSafeInteger(total)) {
+    throw new Error("Dollar amount is too large.");
+  }
+  return total;
 }
 
 export async function loadFramesDataSubscriptionSettings(): Promise<FramesDataSubscriptionSettings> {
@@ -193,12 +294,7 @@ export async function saveFramesDataSubscriptionSettings(input: {
   const settingsBasic: Basic = {
     resourceType: "Basic",
     code: {
-      coding: [
-        {
-          system: BASIC_KIND_SYSTEM,
-          code: "frames-data-subscription",
-        },
-      ],
+      coding: [{ system: BASIC_KIND_SYSTEM, code: "frames-data-subscription" }],
     },
     subject: { reference: `Organization/${input.practiceId}` },
     extension: [
@@ -257,7 +353,7 @@ export function exportableFrameRows(rows: readonly FrameCatalogItem[]): readonly
 
 export function rankFramePosLookupRows(
   rows: readonly FrameCatalogItem[],
-  inventory: readonly PracticeFrameInventoryItem[],
+  inventory: readonly PracticeFrameInventorySummary[],
   query: string,
   limit = 8,
 ): readonly FramePosLookupMatch[] {
@@ -304,40 +400,156 @@ function basicEntries(bundle: Bundle<Basic>): Basic[] {
     .filter((resource): resource is Basic => resource?.resourceType === "Basic");
 }
 
-function basicToInventoryItem(resource: Basic): PracticeFrameInventoryItem {
+function basicToInventoryUnit(resource: Basic): PracticeFrameInventoryUnit {
+  const status = extensionString(resource, EXTENSION_URLS.unitStatus);
+  if (!isUnitStatus(status)) {
+    throw new Error(`Frame inventory unit ${resource.id ?? "(unknown)"} has an invalid unit status.`);
+  }
+  const receivedAt = extensionString(resource, EXTENSION_URLS.receivedAt);
+  if (!receivedAt) {
+    throw new Error(`Frame inventory unit ${resource.id ?? "(unknown)"} is missing received-at.`);
+  }
   return {
     id: resource.id ?? "",
     canonicalUrl: extensionString(resource, EXTENSION_URLS.catalogCanonicalUrl) ?? "",
-    qtyOnHand: extensionNumber(resource, EXTENSION_URLS.qtyOnHand) ?? 0,
-    status: (extensionString(resource, EXTENSION_URLS.inventoryStatus) as PracticeFrameInventoryItem["status"]) ?? "active",
+    status,
     location: extensionString(resource, EXTENSION_URLS.dispensaryLocation) ?? undefined,
-    salePriceCents: extensionNumber(resource, EXTENSION_URLS.salePriceCents) ?? undefined,
+    receivedAt,
   };
 }
 
-async function writeInventoryTransaction(input: {
-  resourceEntry: NonNullable<Bundle["entry"]>[number];
+function basicToVariantSettings(resource: Basic): PracticeFrameVariantSettings {
+  return {
+    id: resource.id ?? "",
+    canonicalUrl: extensionString(resource, EXTENSION_URLS.catalogCanonicalUrl) ?? "",
+    salePriceCents: extensionNumber(resource, EXTENSION_URLS.salePriceCents) ?? undefined,
+    costCents: extensionNumber(resource, EXTENSION_URLS.costCents) ?? undefined,
+  };
+}
+
+function validateReceiveInput(input: ReceiveFrameInventoryInput): void {
+  if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) {
+    throw new Error("Receipt quantity must be an integer of at least 1.");
+  }
+  for (const [label, value] of [["Sale price", input.salePriceCents], ["Cost", input.costCents]] as const) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
+      throw new Error(`${label} must be a nonnegative integer number of cents.`);
+    }
+  }
+}
+
+async function variantSettingsUpsert(
+  canonicalUrl: string,
+  input: Pick<ReceiveFrameInventoryInput, "salePriceCents" | "costCents">,
+): Promise<{
+  entry: NonNullable<Bundle["entry"]>[number];
   target: string;
+  resource: Basic;
+}> {
+  const rows = await searchAllBasics({
+    code: `${BASIC_KIND_SYSTEM}|practice-frame-variant-settings`,
+    _count: "100",
+  });
+  const existing = rows.find(
+    (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === canonicalUrl,
+  );
+  if (existing?.id) {
+    const current = await fhir.read<Basic>("Basic", existing.id);
+    const resource: Basic = {
+      ...current,
+      extension: variantSettingsExtensions(current.extension, canonicalUrl, input),
+    };
+    const target = `Basic/${existing.id}`;
+    return {
+      resource,
+      target,
+      entry: {
+        resource,
+        request: {
+          method: "PUT",
+          url: target,
+          ...(current.meta?.versionId ? { ifMatch: `W/\"${current.meta.versionId}\"` } : {}),
+        },
+      },
+    };
+  }
+
+  const fullUrl = `urn:uuid:${crypto.randomUUID()}`;
+  const resource: Basic = {
+    resourceType: "Basic",
+    identifier: [{ system: FRAME_VARIANT_SETTINGS_IDENTIFIER_SYSTEM, value: canonicalUrl }],
+    code: {
+      coding: [{ system: BASIC_KIND_SYSTEM, code: "practice-frame-variant-settings" }],
+    },
+    extension: variantSettingsExtensions(undefined, canonicalUrl, input),
+  };
+  return {
+    resource,
+    target: fullUrl,
+    entry: {
+      fullUrl,
+      resource,
+      request: {
+        method: "POST",
+        url: "Basic",
+        ifNoneExist: new URLSearchParams({
+          identifier: `${FRAME_VARIANT_SETTINGS_IDENTIFIER_SYSTEM}|${canonicalUrl}`,
+        }).toString(),
+      },
+    },
+  };
+}
+
+function variantSettingsExtensions(
+  existing: Basic["extension"],
+  canonicalUrl: string,
+  input: Pick<ReceiveFrameInventoryInput, "salePriceCents" | "costCents">,
+): NonNullable<Basic["extension"]> {
+  const managedUrls = new Set<string>([
+    EXTENSION_URLS.catalogCanonicalUrl,
+    ...(input.salePriceCents !== undefined ? [EXTENSION_URLS.salePriceCents] : []),
+    ...(input.costCents !== undefined ? [EXTENSION_URLS.costCents] : []),
+  ]);
+  return [
+    ...(existing ?? []).filter((entry) => !entry.url || !managedUrls.has(entry.url)),
+    extension(EXTENSION_URLS.catalogCanonicalUrl, { valueString: canonicalUrl }),
+    ...(input.salePriceCents !== undefined
+      ? [extension(EXTENSION_URLS.salePriceCents, { valueInteger: input.salePriceCents })]
+      : []),
+    ...(input.costCents !== undefined
+      ? [extension(EXTENSION_URLS.costCents, { valueInteger: input.costCents })]
+      : []),
+  ];
+}
+
+async function writeInventoryTransaction(input: {
+  resourceEntries: NonNullable<Bundle["entry"]>;
+  targets: readonly { reference: string; name: string }[];
   actorId: string;
+  eventCode: string;
+  action: NonNullable<AuditEvent["action"]>;
 }): Promise<Bundle> {
   const now = new Date().toISOString();
   const auditEvent: AuditEvent = {
     resourceType: "AuditEvent",
     type: {
       system: "https://odos2020.com/fhir/CodeSystem/audit-event-type",
-      code: "practice.frame-inventory.incremented",
+      code: input.eventCode,
     },
-    action: input.resourceEntry.request?.method === "POST" ? "C" : "U",
+    action: input.action,
     recorded: now,
     outcome: "0",
     agent: [{ who: { reference: `Practitioner/${input.actorId}` }, requestor: true }],
     source: { observer: { reference: "Device/odos-ui" } },
-    entity: [{ what: { reference: input.target }, name: "practice-frame-inventory" }],
+    entity: input.targets.map((target) => ({
+      what: { reference: target.reference },
+      name: target.name,
+    })),
   };
   const provenance: Provenance = {
     resourceType: "Provenance",
     recorded: now,
-    target: [{ reference: input.target }],
+    target: input.targets.map((target) => ({ reference: target.reference })),
     agent: [{ who: { reference: `Practitioner/${input.actorId}` } }],
   };
   const response = await fhir.executeTransaction(
@@ -345,21 +557,18 @@ async function writeInventoryTransaction(input: {
       resourceType: "Bundle",
       type: "transaction",
       entry: [
-        input.resourceEntry,
+        ...input.resourceEntries,
         { resource: auditEvent, request: { method: "POST", url: "AuditEvent" } },
         { resource: provenance, request: { method: "POST", url: "Provenance" } },
       ],
     },
-    "practice.frame-inventory.increment",
+    input.eventCode,
   );
-  const failed = response.entry?.find((entry) => !entry.response?.status || !/^2\d\d/.test(entry.response.status));
-  if (failed) {
-    throw new Error(`Frame inventory transaction failed: ${failed.response?.status ?? "missing response status"}.`);
-  }
+  assertTransactionSuccess(response);
   return response;
 }
 
-function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: number }>): Binary {
+function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: string }>): Binary {
   return {
     resourceType: "Binary",
     contentType: "application/json-patch+json",
@@ -367,13 +576,21 @@ function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: number
   };
 }
 
-function createdId(bundle: Bundle, resourceType: string): string {
-  const location = bundle.entry?.find((entry) => entry.response?.location?.startsWith(`${resourceType}/`))?.response?.location;
+function responseEntryId(bundle: Bundle, index: number, resourceType: string): string {
+  const location = bundle.entry?.[index]?.response?.location;
   const id = location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
   if (!id) {
     throw new Error(`FHIR transaction did not return the created ${resourceType} id.`);
   }
   return id;
+}
+
+function basicKind(resource: Basic): string | undefined {
+  return resource.code.coding?.find((coding) => coding.system === BASIC_KIND_SYSTEM)?.code;
+}
+
+function isUnitStatus(value: string | null): value is FrameInventoryUnitStatus {
+  return value === "on_hand" || value === "hold" || value === "dispensed";
 }
 
 type ExtensionValue =
@@ -397,16 +614,25 @@ async function searchAllBasics(params: Record<string, string>): Promise<Basic[]>
   }
 }
 
-function extensionString(resource: { extension?: readonly { url?: string; valueString?: string; valueDateTime?: string }[] } | undefined, url: string): string | null {
+function extensionString(
+  resource: { extension?: readonly { url?: string; valueString?: string; valueDateTime?: string }[] } | undefined,
+  url: string,
+): string | null {
   const entry = resource?.extension?.find((candidate) => candidate.url === url);
   return entry?.valueString ?? entry?.valueDateTime ?? null;
 }
 
-function extensionBoolean(resource: { extension?: readonly { url?: string; valueBoolean?: boolean }[] } | undefined, url: string): boolean | null {
+function extensionBoolean(
+  resource: { extension?: readonly { url?: string; valueBoolean?: boolean }[] } | undefined,
+  url: string,
+): boolean | null {
   return resource?.extension?.find((candidate) => candidate.url === url)?.valueBoolean ?? null;
 }
 
-function extensionNumber(resource: { extension?: readonly { url?: string; valueInteger?: number }[] } | undefined, url: string): number | null {
+function extensionNumber(
+  resource: { extension?: readonly { url?: string; valueInteger?: number }[] } | undefined,
+  url: string,
+): number | null {
   return resource?.extension?.find((candidate) => candidate.url === url)?.valueInteger ?? null;
 }
 

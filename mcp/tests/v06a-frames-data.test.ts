@@ -27,7 +27,7 @@ import { seedFrameHcpcsRows } from "../src/catalog-sync/hcpcs/hcpcs-sync.js";
 import { assertLocalTerminologyUrl, validateFrameTerminologyLocally } from "../src/catalog/terminology-validation.js";
 import { parseSmartResourceScope } from "../src/smart/scope.js";
 import { evaluateSmartScopeIntersection } from "../src/smart/scope-intersection.js";
-import { rankFramePosLookupRows, type FrameCatalogItem, type PracticeFrameInventoryItem } from "../../ui/src/lib/optical-frames.js";
+import { rankFramePosLookupRows, type FrameCatalogItem, type PracticeFrameInventorySummary } from "../../ui/src/lib/optical-frames.js";
 
 const REPO_ROOT = resolve(process.cwd(), "..");
 const V06A_DR_TABLES = [
@@ -430,18 +430,18 @@ test("Dispensary POS lookup remains under 100ms p95 over a 100K-row fixture", ()
     properties: {},
     publicityClass: "open",
   }));
-  const inventory: PracticeFrameInventoryItem[] = rows.slice(99_990, 100_000).map((row, index) => ({
-    id: `inv-${index}`,
+  const inventory: PracticeFrameInventorySummary[] = rows.slice(99_990, 100_000).map((row, index) => ({
     canonicalUrl: row.canonicalUrl,
-    qtyOnHand: index + 1,
-    status: "active",
+    onHandCount: index + 1,
+    holdCount: 0,
+    dispensedCount: 0,
   }));
   const durations = Array.from({ length: 7 }, () => {
     const started = performance.now();
     const matches = rankFramePosLookupRows(rows, inventory, "SKU-99999", 8);
     const duration = performance.now() - started;
     assert.equal(matches[0]?.catalog.sku, "SKU-99999");
-    assert.equal(matches[0]?.inventory?.qtyOnHand, 10);
+    assert.equal(matches[0]?.inventory?.onHandCount, 10);
     return duration;
   }).sort((a, b) => a - b);
   const p95 = durations[Math.ceil(durations.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY;

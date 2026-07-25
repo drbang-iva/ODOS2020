@@ -677,7 +677,8 @@ function opticalOrderApi(options: {
       return { responses: [activeLensBenefit()] };
     }),
     searchFrameCatalog: async () => [],
-    loadPracticeFrameInventory: async () => [],
+    loadPracticeFrameInventoryUnits: async () => [],
+    loadPracticeFrameVariantSettings: async () => [],
   };
 }
 
