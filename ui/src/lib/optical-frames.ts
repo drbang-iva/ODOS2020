@@ -6,6 +6,7 @@ import type { RoleId } from "./roles";
 const BASIC_KIND_SYSTEM = "https://odos2020.com/fhir/CodeSystem/basic-kind";
 const FRAME_VARIANT_SETTINGS_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/frame-variant-settings-canonical-url";
+export const MAX_RECEIPT_QUANTITY = 200;
 const EXTENSION_URLS = {
   catalogCanonicalUrl: "https://odos2020.com/fhir/StructureDefinition/catalog-canonical-url",
   catalogPublicityClass: "https://odos2020.com/fhir/StructureDefinition/catalog-publicity-class",
@@ -38,6 +39,11 @@ export interface PracticeFrameInventoryUnit {
   readonly status: FrameInventoryUnitStatus;
   readonly location?: string;
   readonly receivedAt: string;
+}
+
+export interface PracticeFrameInventoryLoad {
+  readonly units: readonly PracticeFrameInventoryUnit[];
+  readonly skippedCount: number;
 }
 
 export interface PracticeFrameVariantSettings {
@@ -93,12 +99,22 @@ export async function searchFrameCatalog(query: string): Promise<FrameCatalogIte
     .map(deviceDefinitionToFrameCatalogItem);
 }
 
-export async function loadPracticeFrameInventoryUnits(): Promise<PracticeFrameInventoryUnit[]> {
+export async function loadPracticeFrameInventoryUnits(): Promise<PracticeFrameInventoryLoad> {
   const rows = await searchAllBasics({
     code: `${BASIC_KIND_SYSTEM}|practice-frame-inventory-unit`,
     _count: "100",
   });
-  return rows.map(basicToInventoryUnit);
+  const units: PracticeFrameInventoryUnit[] = [];
+  let skippedCount = 0;
+  for (const row of rows) {
+    try {
+      units.push(basicToInventoryUnit(row));
+    } catch (cause) {
+      skippedCount += 1;
+      console.warn(`Skipping malformed frame inventory unit ${row.id ?? "(unknown)"}.`, cause);
+    }
+  }
+  return { units, skippedCount };
 }
 
 export async function loadPracticeFrameVariantSettings(): Promise<PracticeFrameVariantSettings[]> {
@@ -162,13 +178,20 @@ export async function receiveFrameInventory(
     ...entry.resource,
     id: responseEntryId(response, index, "Basic"),
   }));
-  const variantSettings = settingsUpsert
-    ? basicToVariantSettings({
+  let variantSettings: PracticeFrameVariantSettings | undefined;
+  if (settingsUpsert) {
+    const responseIndex = unitEntries.length;
+    const settingsId = settingsUpsert.resource.id
+      ?? responseEntryId(response, responseIndex, "Basic");
+    if (settingsUpsert.conditionalCreate && responseStatusCode(response, responseIndex) === 200) {
+      variantSettings = basicToVariantSettings(await fhir.read<Basic>("Basic", settingsId));
+    } else {
+      variantSettings = basicToVariantSettings({
         ...settingsUpsert.resource,
-        id: settingsUpsert.resource.id
-          ?? responseEntryId(response, unitEntries.length, "Basic"),
-      })
-    : undefined;
+        id: settingsId,
+      });
+    }
+  }
   return { units, ...(variantSettings ? { variantSettings } : {}) };
 }
 
@@ -198,6 +221,7 @@ export async function dispenseFrameInventoryUnit(
   await writeInventoryTransaction({
     resourceEntries: [{
       resource: jsonPatchBinary([
+        { op: "test", path: `/extension/${statusIndex}/url`, value: EXTENSION_URLS.unitStatus },
         { op: "replace", path: `/extension/${statusIndex}/valueString`, value: "dispensed" },
       ]),
       request: {
@@ -431,6 +455,9 @@ function validateReceiveInput(input: ReceiveFrameInventoryInput): void {
   if (!Number.isSafeInteger(input.quantity) || input.quantity < 1) {
     throw new Error("Receipt quantity must be an integer of at least 1.");
   }
+  if (input.quantity > MAX_RECEIPT_QUANTITY) {
+    throw new Error(`Receipt quantity cannot exceed ${MAX_RECEIPT_QUANTITY} units.`);
+  }
   for (const [label, value] of [["Sale price", input.salePriceCents], ["Cost", input.costCents]] as const) {
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) {
       throw new Error(`${label} must be a nonnegative integer number of cents.`);
@@ -445,12 +472,23 @@ async function variantSettingsUpsert(
   entry: NonNullable<Bundle["entry"]>[number];
   target: string;
   resource: Basic;
+  conditionalCreate: boolean;
 }> {
-  const rows = await searchAllBasics({
+  const identifierBundle = await fhir.search<Basic>("Basic", {
     code: `${BASIC_KIND_SYSTEM}|practice-frame-variant-settings`,
-    _count: "100",
+    identifier: `${FRAME_VARIANT_SETTINGS_IDENTIFIER_SYSTEM}|${canonicalUrl}`,
+    _count: "2",
   });
-  const existing = rows.find(
+  const identifierMatch = basicEntries(identifierBundle).find(
+    (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === canonicalUrl,
+  );
+  const fallbackBundle = identifierMatch
+    ? undefined
+    : await fhir.search<Basic>("Basic", {
+        code: `${BASIC_KIND_SYSTEM}|practice-frame-variant-settings`,
+        _count: "100",
+      });
+  const existing = identifierMatch ?? (fallbackBundle ? basicEntries(fallbackBundle) : []).find(
     (candidate) => extensionString(candidate, EXTENSION_URLS.catalogCanonicalUrl) === canonicalUrl,
   );
   if (existing?.id) {
@@ -463,6 +501,7 @@ async function variantSettingsUpsert(
     return {
       resource,
       target,
+      conditionalCreate: false,
       entry: {
         resource,
         request: {
@@ -486,6 +525,7 @@ async function variantSettingsUpsert(
   return {
     resource,
     target: fullUrl,
+    conditionalCreate: true,
     entry: {
       fullUrl,
       resource,
@@ -568,7 +608,9 @@ async function writeInventoryTransaction(input: {
   return response;
 }
 
-function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: string }>): Binary {
+function jsonPatchBinary(
+  ops: Array<{ op: "test" | "replace"; path: string; value: string }>,
+): Binary {
   return {
     resourceType: "Binary",
     contentType: "application/json-patch+json",
@@ -578,11 +620,21 @@ function jsonPatchBinary(ops: Array<{ op: "replace"; path: string; value: string
 
 function responseEntryId(bundle: Bundle, index: number, resourceType: string): string {
   const location = bundle.entry?.[index]?.response?.location;
-  const id = location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
+  const segments = location?.split("/").filter(Boolean) ?? [];
+  const resourceTypeIndex = segments.lastIndexOf(resourceType);
+  const id = resourceTypeIndex >= 0
+    ? segments[resourceTypeIndex + 1]?.split(/[?#]/, 1)[0]
+    : undefined;
   if (!id) {
     throw new Error(`FHIR transaction did not return the created ${resourceType} id.`);
   }
   return id;
+}
+
+function responseStatusCode(bundle: Bundle, index: number): number | undefined {
+  const status = bundle.entry?.[index]?.response?.status;
+  const code = status ? Number.parseInt(status, 10) : Number.NaN;
+  return Number.isFinite(code) ? code : undefined;
 }
 
 function basicKind(resource: Basic): string | undefined {

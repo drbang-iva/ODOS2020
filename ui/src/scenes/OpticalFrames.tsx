@@ -7,6 +7,7 @@ import {
   loadFramesDataSubscriptionSettings,
   loadPracticeFrameInventoryUnits,
   loadPracticeFrameVariantSettings,
+  MAX_RECEIPT_QUANTITY,
   rankFramePosLookupRows,
   receiveFrameInventory,
   saveFramesDataSubscriptionSettings,
@@ -15,6 +16,7 @@ import {
   type FrameCatalogItem,
   type FramesDataSubscriptionSettings,
   type PracticeFrameInventorySummary,
+  type PracticeFrameInventoryLoad,
   type PracticeFrameInventoryUnit,
   type PracticeFrameVariantSettings,
   type ReceivedFrameInventory,
@@ -27,7 +29,7 @@ type OpticalFramesRoute = "catalog" | "inventory" | "lookup" | "settings";
 
 export interface OpticalFramesApi {
   searchCatalog(query: string): Promise<FrameCatalogItem[]>;
-  loadInventoryUnits(): Promise<PracticeFrameInventoryUnit[]>;
+  loadInventoryUnits(): Promise<PracticeFrameInventoryLoad>;
   loadVariantSettings(): Promise<PracticeFrameVariantSettings[]>;
   receiveInventory(item: FrameCatalogItem, input: ReceiveFrameInventoryInput): Promise<ReceivedFrameInventory>;
   dispenseUnit(unitId: string): Promise<PracticeFrameInventoryUnit>;
@@ -51,6 +53,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
   const [catalogRows, setCatalogRows] = useState<FrameCatalogItem[]>([]);
   const [units, setUnits] = useState<PracticeFrameInventoryUnit[]>([]);
   const [variantSettings, setVariantSettings] = useState<PracticeFrameVariantSettings[]>([]);
+  const [skippedUnitCount, setSkippedUnitCount] = useState(0);
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const inventoryRows = useMemo(
@@ -60,30 +63,35 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      setError(null);
-      try {
-        const loadInventory = route === "catalog"
-          ? Promise.resolve([[], []] as [PracticeFrameInventoryUnit[], PracticeFrameVariantSettings[]])
-          : Promise.all([api.loadInventoryUnits(), api.loadVariantSettings()]);
-        const [catalog, [loadedUnits, loadedSettings]] = await Promise.all([
-          api.searchCatalog(query),
-          loadInventory,
-        ]);
-        if (!cancelled) {
-          setCatalogRows(catalog);
-          setUnits(loadedUnits);
-          setVariantSettings(loadedSettings);
-        }
-      } catch (err) {
+    api.searchCatalog(query)
+      .then((catalog) => {
+        if (!cancelled) setCatalogRows(catalog);
+      })
+      .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      }
-    }
-    void load();
+      });
     return () => {
       cancelled = true;
     };
-  }, [api, query, route]);
+  }, [api, query]);
+
+  useEffect(() => {
+    if (route === "settings") return;
+    let cancelled = false;
+    Promise.all([api.loadInventoryUnits(), api.loadVariantSettings()])
+      .then(([inventoryLoad, loadedSettings]) => {
+        if (cancelled) return;
+        setUnits([...inventoryLoad.units]);
+        setSkippedUnitCount(inventoryLoad.skippedCount);
+        setVariantSettings(loadedSettings);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, route]);
 
   function inventoryReceived(received: ReceivedFrameInventory) {
     setUnits((current) => [...current, ...received.units]);
@@ -115,6 +123,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
           {route === "inventory" ? <CsvExportButton rows={catalogRows} /> : null}
         </div>
         {error ? <div role="alert" className="rounded border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</div> : null}
+        {skippedUnitCount > 0 ? <MalformedUnitWarning count={skippedUnitCount} /> : null}
         {route === "catalog" ? (
           <CatalogTable
             rows={catalogRows}
@@ -157,6 +166,14 @@ function OpticalNav({ active }: { active: OpticalFramesRoute }) {
           {label}
         </a>
       ))}
+    </div>
+  );
+}
+
+function MalformedUnitWarning({ count }: { count: number }) {
+  return (
+    <div role="alert" className="rounded border border-[color:var(--odos-amber)] bg-[color:var(--odos-surface)] p-3 text-sm text-[color:var(--odos-amber)]">
+      Skipped {count} malformed frame inventory {count === 1 ? "unit" : "units"}. Valid inventory remains available.
     </div>
   );
 }
@@ -274,8 +291,10 @@ export function CatalogTable({
               <ReceiptField
                 label="Quantity"
                 value={quantity}
+                type="number"
                 required
                 min="1"
+                max={MAX_RECEIPT_QUANTITY}
                 step="1"
                 onChange={setQuantity}
               />
@@ -301,8 +320,10 @@ export function CatalogTable({
 function ReceiptField({
   label,
   value,
+  type = "text",
   required,
   min,
+  max,
   step,
   placeholder,
   inputMode,
@@ -310,8 +331,10 @@ function ReceiptField({
 }: {
   label: string;
   value: string;
+  type?: "text" | "number";
   required?: boolean;
   min?: string;
+  max?: number;
   step?: string;
   placeholder?: string;
   inputMode?: "decimal";
@@ -323,10 +346,11 @@ function ReceiptField({
       <input
         aria-label={label}
         className="sidebar-input"
-        type={label === "Quantity" ? "number" : "text"}
+        type={type}
         value={value}
         required={required}
         min={min}
+        max={max}
         step={step}
         placeholder={placeholder}
         inputMode={inputMode}
@@ -354,6 +378,15 @@ function InventoryTable({
   const [expandedUrls, setExpandedUrls] = useState<Set<string>>(() => new Set());
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const catalogByUrl = useMemo(() => new Map(catalog.map((row) => [row.canonicalUrl, row])), [catalog]);
+  const unitsByUrl = useMemo(() => {
+    const grouped = new Map<string, PracticeFrameInventoryUnit[]>();
+    for (const unit of units) {
+      const group = grouped.get(unit.canonicalUrl);
+      if (group) group.push(unit);
+      else grouped.set(unit.canonicalUrl, [unit]);
+    }
+    return grouped;
+  }, [units]);
 
   function toggle(canonicalUrl: string) {
     setExpandedUrls((current) => {
@@ -398,7 +431,7 @@ function InventoryTable({
           {rows.map((row) => {
             const catalogRow = catalogByUrl.get(row.canonicalUrl);
             const expanded = expandedUrls.has(row.canonicalUrl);
-            const rowUnits = units.filter((unit) => unit.canonicalUrl === row.canonicalUrl);
+            const rowUnits = unitsByUrl.get(row.canonicalUrl) ?? [];
             return (
               <Fragment key={row.canonicalUrl}>
                 <tr className="border-t border-[color:var(--odos-line)]">

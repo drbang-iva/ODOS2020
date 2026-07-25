@@ -22,6 +22,12 @@ import {
   resolveLensSelectionBilling,
   type LensSelection,
 } from "../src/lib/lens-selection";
+import type {
+  FrameCatalogItem,
+  PracticeFrameInventoryLoad,
+  PracticeFrameInventoryUnit,
+  PracticeFrameVariantSettings,
+} from "../src/lib/optical-frames";
 import { opticalCollectionChargeFromDraft, type OpticalChargeLineDraft } from "../src/lib/optical-order";
 import { resolveVCode } from "../src/lib/v-code-resolver";
 import { OpticalOrder } from "../src/scenes/OpticalOrder";
@@ -50,6 +56,16 @@ const TEST_RX: VisionPrescription = {
       add: 2,
     },
   ],
+};
+
+const FRAME_CANONICAL_URL = "https://odos2020.com/catalog/frames/FIFO-100";
+const FRAME_CATALOG_ITEM: FrameCatalogItem = {
+  canonicalUrl: FRAME_CANONICAL_URL,
+  sku: "FIFO-100",
+  display: "FIFO Test Frame",
+  manufacturer: "ODOS",
+  properties: { color: "Blue", eyesize: "52", dbl: "18", temple: "140" },
+  publicityClass: "open",
 };
 
 test("Rx-envelope filtering applies every published axis to both eyes and leaves undefined axes unconstrained", () => {
@@ -256,6 +272,82 @@ test("OpticalOrder skips benefit fetches and V-code resolution when no patient i
   await openSceneLensPicker(renderer);
   chooseSingleVision(renderer);
   assert.equal(resolverCalls, 0);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest on-hand unit", async () => {
+  let inventoryLoads = 0;
+  let settingsLoads = 0;
+  const dispensedIds: string[] = [];
+  const units: PracticeFrameInventoryUnit[] = [
+    frameUnit("already-dispensed", "2026-07-01T12:00:00.000Z", "dispensed"),
+    frameUnit("newer-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
+    frameUnit("oldest-on-hand", "2026-07-10T12:00:00.000Z", "on_hand"),
+  ];
+  const api = opticalOrderApi({
+    searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+    loadInventory: async () => {
+      inventoryLoads += 1;
+      return { units, skippedCount: 0 };
+    },
+    loadSettings: async () => {
+      settingsLoads += 1;
+      return [{
+        id: "settings-1",
+        canonicalUrl: FRAME_CANONICAL_URL,
+        salePriceCents: 17_900,
+      }];
+    },
+    dispenseUnit: async (unitId) => {
+      dispensedIds.push(unitId);
+      return { ...units.find((unit) => unit.id === unitId)!, status: "dispensed" };
+    },
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={api} />);
+    await flushPromises();
+  });
+
+  assert.equal(inventoryLoads, 1);
+  assert.equal(settingsLoads, 1);
+  assert.match(nodeText(renderer.root), /FIFO Test Frame/);
+  assert.ok(renderer.root.findAllByType("td").some((cell) => nodeText(cell) === "2"));
+
+  const nameInput = inputByLabel(renderer.root, "Name");
+  for (const value of ["F", "FI", "FIF", "FIFO"]) {
+    act(() => nameInput.props.onChange({ target: { value } }));
+  }
+  await act(async () => { await flushPromises(); });
+  assert.equal(inventoryLoads, 1);
+  assert.equal(settingsLoads, 1);
+
+  clickButton(renderer, "Attach");
+  assert.ok(renderer.root.findAllByType("input").some((input) => input.props.value === "179.00"));
+  await act(async () => {
+    buttonByText(renderer.root, "Dispense").props.onClick();
+    await flushPromises();
+  });
+
+  assert.deepEqual(dispensedIds, ["oldest-on-hand"]);
+  assert.equal(nodeText(buttonByText(renderer.root, "Dispensed")), "Dispensed");
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "oldest-on-hand");
+  assert.ok(renderer.root.findAllByType("td").some((cell) => nodeText(cell) === "1"));
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder surfaces the malformed-unit skip count without blocking frame search", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units: [], skippedCount: 2 }),
+    })} />);
+    await flushPromises();
+  });
+
+  assert.match(renderer.root.findByProps({ role: "alert" }).children.join(""), /Skipped 2 malformed frame inventory units/);
+  assert.match(nodeText(renderer.root), /FIFO Test Frame/);
   act(() => renderer.unmount());
 });
 
@@ -665,6 +757,10 @@ function opticalOrderApi(options: {
   failure?: Error;
   fetchInsurance?: () => Promise<{ coverages: Coverage[]; relatedPeople: [] }>;
   fetchBenefits?: () => Promise<{ responses: CoverageEligibilityResponse[] }>;
+  searchFrameCatalog?: () => Promise<FrameCatalogItem[]>;
+  loadInventory?: () => Promise<PracticeFrameInventoryLoad>;
+  loadSettings?: () => Promise<PracticeFrameVariantSettings[]>;
+  dispenseUnit?: (unitId: string) => Promise<PracticeFrameInventoryUnit>;
 } = {}) {
   const failure = options.failure ?? new Error("benefit context unavailable");
   return {
@@ -676,9 +772,12 @@ function opticalOrderApi(options: {
       if (options.rejected === "benefits") throw failure;
       return { responses: [activeLensBenefit()] };
     }),
-    searchFrameCatalog: async () => [],
-    loadPracticeFrameInventoryUnits: async () => [],
-    loadPracticeFrameVariantSettings: async () => [],
+    searchFrameCatalog: options.searchFrameCatalog ?? (async () => []),
+    loadPracticeFrameInventoryUnits: options.loadInventory ?? (async () => ({ units: [], skippedCount: 0 })),
+    loadPracticeFrameVariantSettings: options.loadSettings ?? (async () => []),
+    dispenseFrameInventoryUnit: options.dispenseUnit ?? (async () => {
+      throw new Error("Unexpected frame dispense");
+    }),
   };
 }
 
@@ -710,6 +809,21 @@ async function flushPromises(): Promise<void> {
 
 function charge(id: string, procedure: string, selected: boolean): OpticalChargeLineDraft {
   return { id, procedure, modifier: "", diagnosis: "", units: 1, feeCents: 0, taxCents: 0, selected, taxable: false };
+}
+
+function frameUnit(
+  id: string,
+  receivedAt: string,
+  status: PracticeFrameInventoryUnit["status"],
+): PracticeFrameInventoryUnit {
+  return { id, canonicalUrl: FRAME_CANONICAL_URL, receivedAt, status };
+}
+
+function inputByLabel(root: ReactTestInstance, label: string): ReactTestInstance {
+  const matches = root.findAllByType("label").filter((candidate) =>
+    candidate.findAllByType("span").some((span) => nodeText(span) === label));
+  assert.equal(matches.length, 1, `Expected one input labeled ${label}, found ${matches.length}`);
+  return matches[0]!.findByType("input");
 }
 
 function clickButton(renderer: ReturnType<typeof create>, text: string) {

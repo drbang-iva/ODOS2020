@@ -135,6 +135,24 @@ const DISPENSARY_RESOURCE_RULES: OdosResourceRule[] = [
   },
   {
     resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings",
+    },
+  },
+  {
+    resourceType: "Basic",
     interactions: CREATE_READ_INTERACTIONS,
     scope: {
       kind: "practice-search",
