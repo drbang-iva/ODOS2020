@@ -73,7 +73,7 @@ test("SpineNav groups the traditional spine and appends custom sections after ev
     "Soft Contact Lenses",
     "Specialty Contact Lens",
     "Ortho-K",
-    "Myopia Management",
+    "Myopia Progression",
     "OCULAR HEALTH",
     "Cup/Disc",
     "Dry Eye",

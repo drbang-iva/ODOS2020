@@ -17,6 +17,7 @@ import {
 } from "./ocular-health-definition.js";
 import { buildHpiFindingDefinition } from "./hpi-definition.js";
 import { buildEntranceFindingDefinitions, PACHYMETRY_KEY } from "./entrance-definition.js";
+import { buildMyopiaFindingDefinitions } from "./myopia-finding-definition.js";
 
 export const FINDING_DEFINITION_CODE_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/odos-finding-definition";
@@ -135,6 +136,7 @@ export function buildFindingDefinitionSeeds(): ClinicalFindingDefinition[] {
     buildSpecialtyContactLensFindingDefinitionStub(provenance),
     ...buildPretestFindingDefinitionStubs(provenance),
     ...buildEntranceFindingDefinitions(provenance),
+    ...buildMyopiaFindingDefinitions(provenance),
     ...buildAnteriorOcularHealthDefinitions(provenance),
     ...buildPosteriorOcularHealthDefinitions(provenance),
   ];

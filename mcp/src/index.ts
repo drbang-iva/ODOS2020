@@ -141,6 +141,17 @@ import {
   handleIopHistoryRequest,
   handleIopTargetRequest,
 } from "./clinical-graph/iop-history-endpoint.js";
+import {
+  buildMyopiaEyeCapture,
+  handleMyopiaCaptureRequest,
+  handleMyopiaDefinitionRequest,
+  handleMyopiaHistoryRequest,
+  handleMyopiaReferencePopulationRequest,
+  resolveMyopiaDefinitions,
+} from "./clinical-graph/myopia-progression-endpoint.js";
+import { BIOMETRY_METHODS } from "./clinical-graph/myopia-finding-definition.js";
+import { PgMyopiaReferencePopulationStore } from "./clinical-graph/myopia-reference-population-store.js";
+import { patientScopedProvenanceTargets } from "./clinical-graph/glaucoma-suspect.js";
 import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
 import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
 import { FhirProcedureDefinitionStore } from "./clinical-graph/procedure-definition-store.js";
@@ -356,7 +367,6 @@ import {
   ATROPINE_MEDICATION_TIMELINE_STATUS_CODES,
   MYOPIA_CONTROL_INTERVENTION_CODES,
   buildAtropineMedicationStatement,
-  buildMyopiaAxialLengthObservation,
   buildMyopiaManagementCarePlan,
   buildUpdateMyopiaCarePlanPatch,
   carePlanInterventionReference,
@@ -506,6 +516,9 @@ const commercialEngineStore = new PgCommercialEngineStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 const diagnosisVisitStatusStore = new PgDiagnosisVisitStatusStore({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+const myopiaReferencePopulationStore = new PgMyopiaReferencePopulationStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 startPackageExpiryWorker({
@@ -1757,21 +1770,19 @@ const tools = [
   {
     name: "record_myopia_axial_length_measurement",
     description:
-      "Create an axial length Observation using the existing v0.3 profile. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_myopia_axial_length_measurement.",
+      "Capture a per-eye axial length finding through the clinical graph with required biometry method. Provenance is mandatory and writes use X-ODOS-Source=mcp/record_myopia_axial_length_measurement.",
     inputSchema: {
       type: "object",
-      required: ["patient_id", "encounter_id", "eye", "value_mm"],
+      required: ["patient_id", "encounter_id", "eye", "value_mm", "biometry_method"],
       properties: {
         patient_id: { type: "string" },
         encounter_id: { type: "string" },
-        eye: { type: "string", enum: ["OD", "OS", "OU", "od", "os", "ou"] },
+        eye: { type: "string", enum: ["OD", "OS"] },
         measured_at: { type: "string" },
-        value_mm: { type: "number" },
-        device_reference: { type: "string" },
-        performer_references: { type: "array", items: { type: "string" } },
-        source_references: { type: "array", items: { type: "string" } },
-        quality_score: { type: "number" },
-        confidence_score: { type: "number" },
+        value_mm: { type: "number", minimum: 18, maximum: 32 },
+        corneal_radius_mm: { type: "number", minimum: 5, maximum: 12 },
+        biometry_method: { type: "string", enum: BIOMETRY_METHODS },
+        instrument: { type: "string", minLength: 1, maxLength: 200 },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
       },
@@ -2535,14 +2546,12 @@ const updateAtropineMedicationStatusSchema = z.object({
 const recordMyopiaAxialLengthMeasurementSchema = z.object({
   patient_id: z.string().min(1),
   encounter_id: z.string().min(1),
-  eye: z.enum(["OD", "OS", "OU", "od", "os", "ou"]),
+  eye: z.enum(["OD", "OS"]),
   measured_at: isoTimestampSchema.optional(),
-  value_mm: z.number(),
-  device_reference: z.string().optional(),
-  performer_references: z.array(z.string()).optional(),
-  source_references: z.array(z.string()).optional(),
-  quality_score: z.number().optional(),
-  confidence_score: z.number().optional(),
+  value_mm: z.number().min(18).max(32),
+  corneal_radius_mm: z.number().min(5).max(12).optional(),
+  biometry_method: z.enum(BIOMETRY_METHODS),
+  instrument: z.string().trim().min(1).max(200).optional(),
   ...v04ProvenanceAgentSchema,
 });
 const aggregateMyopiaTreatmentsSchema = z.object({
@@ -4199,35 +4208,58 @@ function createServer(): Server {
         }
         case "record_myopia_axial_length_measurement": {
           const input = recordMyopiaAxialLengthMeasurementSchema.parse(args);
-          const observation = buildMyopiaAxialLengthObservation({
+          const definitions = resolveMyopiaDefinitions(await findingDefinitionStore.list());
+          const measuredAt = input.measured_at ?? new Date().toISOString();
+          const graphs = buildMyopiaEyeCapture({
+            definitions,
             patientReference: patientReference(input.patient_id),
             encounterReference: encounterReference(input.encounter_id),
-            eye: normalizeLaterality(input.eye),
-            measuredAt: input.measured_at ?? new Date().toISOString(),
-            valueMm: input.value_mm,
-            deviceReference: input.device_reference,
-            performerReferences: input.performer_references,
-            sourceReferences: input.source_references,
-            qualityScore: input.quality_score,
-            confidenceScore: input.confidence_score,
+            eye: input.eye,
+            measuredAt,
+            axialLengthMm: input.value_mm,
+            cornealRadiusMm: input.corneal_radius_mm,
+            biometryMethod: input.biometry_method,
+            instrument: input.instrument,
+            staffReference: input.provenance_agent_reference ?? "Practitioner/odos-mcp",
           });
-          const observationBodySiteResult = await persistObservationBodyStructures(observation);
           const created = await fhir.create<Observation>(
-            observationBodySiteResult.observation,
+            graphs.axialLength.observation,
             auditHeaders("record_myopia_axial_length_measurement"),
           );
-          const provenance = await createV04Provenance(
-            "record_myopia_axial_length_measurement",
-            input,
-            [
-              `Observation/${created.id}`,
-              ...(observationBodySiteResult.bodyStructures ?? []).map((bodyStructure) => `BodyStructure/${bodyStructure.id}`),
-            ],
-            "CREATE",
-            observation.effectiveDateTime,
+          const provenance = await fhir.create<Provenance>(
+            {
+              ...graphs.axialLength.provenance,
+              target: patientScopedProvenanceTargets(
+                `Observation/${created.id}`,
+                patientReference(input.patient_id),
+              ),
+            },
+            auditHeaders("record_myopia_axial_length_measurement"),
           );
-
-          return toolJson({ observation: created, bodyStructures: observationBodySiteResult.bodyStructures ?? [], provenance });
+          let cornealRadiusObservation: Observation | undefined;
+          let cornealRadiusProvenance: Provenance | undefined;
+          if (graphs.cornealRadius) {
+            cornealRadiusObservation = await fhir.create<Observation>(
+              graphs.cornealRadius.observation,
+              auditHeaders("record_myopia_axial_length_measurement"),
+            );
+            cornealRadiusProvenance = await fhir.create<Provenance>(
+              {
+                ...graphs.cornealRadius.provenance,
+                target: patientScopedProvenanceTargets(
+                  `Observation/${cornealRadiusObservation.id}`,
+                  patientReference(input.patient_id),
+                ),
+              },
+              auditHeaders("record_myopia_axial_length_measurement"),
+            );
+          }
+          return toolJson({
+            observation: created,
+            provenance,
+            cornealRadiusObservation,
+            cornealRadiusProvenance,
+          });
         }
         case "aggregate_myopia_treatments": {
           const input = aggregateMyopiaTreatmentsSchema.parse(args);
@@ -6364,6 +6396,74 @@ async function main(): Promise<void> {
           if (!res.headersSent) {
             res.status(500).json({ error: "IOP clinical-graph route failed" });
           }
+        }
+      });
+
+      app.get("/clinical-graph/myopia/definition", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleMyopiaDefinitionRequest(
+            {
+              ...(await clinicalGraphRouteDeps(req.header("authorization"), "chart.read")),
+              settingsStore: myopiaReferencePopulationStore,
+            },
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/myopia/definition failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Myopia definition route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/myopia/axial-length", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleMyopiaCaptureRequest(
+            {
+              ...(await clinicalGraphRouteDeps(req.header("authorization"), "chart.write")),
+              settingsStore: myopiaReferencePopulationStore,
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/myopia/axial-length failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Myopia capture route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/myopia/history", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleMyopiaHistoryRequest(
+            {
+              ...(await clinicalGraphRouteDeps(req.header("authorization"), "chart.read")),
+              settingsStore: myopiaReferencePopulationStore,
+            },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/myopia/history failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Myopia history route failed" });
+        }
+      });
+
+      app.put("/clinical-graph/myopia/reference-population", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleMyopiaReferencePopulationRequest(
+            {
+              ...(await clinicalGraphRouteDeps(req.header("authorization"), "chart.write")),
+              settingsStore: myopiaReferencePopulationStore,
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/myopia/reference-population failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "Myopia reference population route failed" });
         }
       });
 

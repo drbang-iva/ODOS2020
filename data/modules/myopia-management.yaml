@@ -31,3 +31,21 @@ sharedSubstrate:
   - MedicationStatement
   - DeviceUseStatement
   - ocular-measurement-graph
+findingDefinitions:
+  - stableKey: AXIAL_LENGTH
+    display: Axial Length
+    perEye: true
+    valueType: decimal
+    unitSystem: http://unitsofmeasure.org
+    unitCode: mm
+    requiredComponents:
+      - biometryMethod
+    optionalComponents:
+      - instrument
+  - stableKey: CORNEAL_RADIUS
+    display: Corneal Radius
+    perEye: true
+    valueType: decimal
+    unitSystem: http://unitsofmeasure.org
+    unitCode: mm
+    lifecycle: captured, not currently consumed

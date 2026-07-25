@@ -29,7 +29,7 @@ const SECTIONS: SpineSection[] = [
   { id: "soft-contact-lens", label: "Soft Contact Lenses", group: "CONTACT LENSES" },
   { id: "specialty-contact-lens", label: "Specialty Contact Lens", group: "CONTACT LENSES" },
   { id: "ortho-k", label: "Ortho-K", group: "CONTACT LENSES" },
-  { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
+  { id: "myopia-management", label: "Myopia Progression", group: "CONTACT LENSES" },
   { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" },
   { id: "gonioscopy", label: "Gonioscopy", group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },

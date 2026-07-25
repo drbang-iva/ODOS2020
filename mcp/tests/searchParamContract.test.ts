@@ -17,7 +17,7 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 85;
+const EXPECTED_DIRECT_SEARCH_CALLS = 87;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
   "src/clinic/clinic-summary.ts:244": [
@@ -43,6 +43,8 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/clinical-graph/iop-history-endpoint.ts:120": [spec("Observation", "subject", "code", "_count")],
   "src/clinical-graph/iop-history-endpoint.ts:121": [spec("Goal", "subject", "category", "_count")],
   "src/clinical-graph/iop-history-endpoint.ts:163": [spec("Goal", "subject", "category", "_count")],
+  "src/clinical-graph/myopia-progression-endpoint.ts:239": [spec("Observation", "subject", "code", "_count")],
+  "src/clinical-graph/myopia-progression-endpoint.ts:240": [spec("Observation", "subject", "code", "_count")],
   "src/clinical-graph/protocol-store.ts:79": [spec("Basic", "code", "identifier", "_count")],
   "src/desk/day-ledger.ts:234": [
     spec("Invoice", "date", "_count", "_sort"),
@@ -59,12 +61,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2602": [spec("Patient", "name", "_count")],
-  "src/index.ts:2643": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2651": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2659": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4257": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4279": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2611": [spec("Patient", "name", "_count")],
+  "src/index.ts:2652": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2660": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2668": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4289": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4311": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
@@ -113,7 +115,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 85 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 87 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();
