@@ -375,6 +375,12 @@
       "sliceConsumer": "v0.6a"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/cost-cents",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "frame-unit-ledger"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/dispensary-location",
       "namespace": "frames-catalog",
       "status": "active",
@@ -417,10 +423,22 @@
       "sliceConsumer": "v0.6a"
     },
     {
+      "url": "https://odos2020.com/fhir/StructureDefinition/received-at",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "frame-unit-ledger"
+    },
+    {
       "url": "https://odos2020.com/fhir/StructureDefinition/sale-price-cents",
       "namespace": "frames-catalog",
       "status": "active",
       "sliceConsumer": "v0.6a"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/unit-status",
+      "namespace": "frames-catalog",
+      "status": "active",
+      "sliceConsumer": "frame-unit-ledger"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-payment-tender",

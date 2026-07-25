@@ -117,6 +117,8 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-era-import|odos-era-import",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-manual-eob|odos-manual-eob",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory-unit",
+    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-variant-settings",
     "Basic?code=https://odos2020.com/fhir/CodeSystem/scheduling-config|odos-scheduling-config",
   ];
   const readTierCriteria = [
@@ -162,11 +164,20 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
     assert.ok(!rule.interaction?.includes("delete"));
   }
 
-  const inventoryCriteria =
-    "Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|practice-frame-inventory";
-  const inventoryRule = rules.find((candidate) => candidate.criteria === inventoryCriteria);
-  assert.ok(inventoryRule?.interaction?.includes("read"));
-  assert.ok(inventoryRule?.interaction?.includes("update"));
+  for (const kind of [
+    "practice-frame-inventory",
+    "practice-frame-inventory-unit",
+    "practice-frame-variant-settings",
+  ]) {
+    const inventoryCriteria =
+      `Basic?code=https://odos2020.com/fhir/CodeSystem/basic-kind|${kind}`;
+    const inventoryRule = rules.find((candidate) => candidate.criteria === inventoryCriteria);
+    assert.ok(inventoryRule?.interaction?.includes("create"), kind);
+    assert.ok(inventoryRule?.interaction?.includes("read"), kind);
+    assert.ok(inventoryRule?.interaction?.includes("update"), kind);
+    assert.ok(inventoryRule?.interaction?.includes("search"), kind);
+    assert.ok(!inventoryRule?.interaction?.includes("delete"), kind);
+  }
   assert.equal(
     rules.some(
       (candidate) =>
