@@ -1,0 +1,576 @@
+import type {
+  Bundle,
+  CodeableConcept,
+  Observation,
+  Patient,
+  Provenance,
+} from "@medplum/fhirtypes";
+import { z } from "zod";
+import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import { OBSERVATION_AXIAL_LENGTH_PROFILE_URL } from "../fhir/myopiaManagement.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
+import { odosConcept } from "../fhir/ophthalmology/extensions.js";
+import {
+  captureGlaucomaFinding,
+  patientScopedProvenanceTargets,
+  type CapturedGlaucomaFinding,
+  type ClinicalFindingDefinition,
+  type ClinicalGraphProvenance,
+} from "./glaucoma-suspect.js";
+import {
+  AXIAL_LENGTH_KEY,
+  BIOMETRY_METHODS,
+  CORNEAL_RADIUS_KEY,
+  buildMyopiaFindingDefinitions,
+  type BiometryMethod,
+} from "./myopia-finding-definition.js";
+import {
+  MYOPIA_REFERENCE_BAND_PROVIDER,
+  type ReferenceBandProvider,
+  type ReferencePopulation,
+  REFERENCE_POPULATIONS,
+} from "./myopia-reference-dataset.js";
+import type { MyopiaReferencePopulationStore } from "./myopia-reference-population-store.js";
+
+type Eye = "OD" | "OS";
+
+export interface MyopiaProgressionFhirClient {
+  create<T extends Observation | Provenance>(
+    resource: T,
+    extraHeaders?: Record<string, string>,
+  ): Promise<T>;
+  read<T extends Patient>(resourceType: "Patient", id: string): Promise<T>;
+  search<T extends Observation>(
+    resourceType: "Observation",
+    params?: Record<string, string>,
+  ): Promise<Bundle<T>>;
+}
+
+export interface MyopiaProgressionAuthenticatedStaff {
+  staffReference: string;
+  actorRole: PracticeRoleId;
+  fhir: MyopiaProgressionFhirClient;
+}
+
+export interface MyopiaProgressionEndpointDeps {
+  authenticate(authHeader: string | undefined): Promise<MyopiaProgressionAuthenticatedStaff | null>;
+  settingsStore: MyopiaReferencePopulationStore;
+  findingDefinitions?: () => ClinicalFindingDefinition[];
+  bandProvider?: ReferenceBandProvider;
+  now?: () => string;
+}
+
+export interface MyopiaProgressionEndpointResult {
+  status: number;
+  body: unknown;
+}
+
+export interface MyopiaProgressionReading {
+  eye: Eye;
+  axialLengthMm: number;
+  cornealRadiusMm: number | null;
+  ageInYears: number;
+  measuredAt: string;
+  biometryMethod: BiometryMethod;
+  instrument: string | null;
+  observationReference: string;
+}
+
+export interface MyopiaProgressionHistoryResponse {
+  referencePopulation: ReferencePopulation;
+  patientSex: "MALE" | "FEMALE" | null;
+  birthDate: string;
+  readings: MyopiaProgressionReading[];
+  referenceDataset: {
+    datasetId: string;
+    version: string;
+    citation: string;
+    populationNote: string;
+    percentiles: number[];
+    rows: Array<{ age: number; values: number[] }>;
+  } | null;
+  noReferenceMessage: string | null;
+}
+
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/myopia_progression" } as const;
+const LEDGER_REF = "data/code-bindings/myopia-growth-ledger.md";
+const EYES = ["OD", "OS"] as const;
+const NO_REFERENCE_MESSAGE =
+  "No validated reference data exists for this population. Patient measurements are shown without reference bands.";
+
+const eyePayloadSchema = z.object({
+  axialLengthMm: z.number().min(18).max(32),
+  cornealRadiusMm: z.number().min(5).max(12).optional(),
+  biometryMethod: z.enum(BIOMETRY_METHODS),
+  instrument: z.string().trim().min(1).max(200).optional(),
+}).strict();
+
+const captureRequestSchema = z.object({
+  patientReference: z.string().regex(/^Patient\/[^/]+$/),
+  encounterReference: z.string().regex(/^Encounter\/[^/]+$/),
+  measuredAt: z.string().datetime({ offset: true }).optional(),
+  eyes: z.object({
+    OD: eyePayloadSchema.optional(),
+    OS: eyePayloadSchema.optional(),
+  }).strict().refine((eyes) => Boolean(eyes.OD || eyes.OS), {
+    message: "At least one eye payload is required.",
+  }),
+}).strict();
+
+const historyQuerySchema = z.object({
+  patient: z.string().regex(/^Patient\/[^/]+$/),
+}).strict();
+
+const populationRequestSchema = z.object({
+  patientReference: z.string().regex(/^Patient\/[^/]+$/),
+  referencePopulation: z.enum(REFERENCE_POPULATIONS),
+}).strict();
+
+export async function handleMyopiaDefinitionRequest(
+  deps: Pick<MyopiaProgressionEndpointDeps, "authenticate" | "findingDefinitions" | "settingsStore">,
+  input: { authHeader: string | undefined },
+): Promise<MyopiaProgressionEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read myopia definitions." } };
+  if (!staffMay(staff.actorRole, "chart.read")) {
+    return { status: 403, body: { error: "chart.read role required" } };
+  }
+  const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
+  return {
+    status: 200,
+    body: {
+      definitions: {
+        axialLength: definitionSummary(definitions.axialLength),
+        cornealRadius: definitionSummary(definitions.cornealRadius),
+      },
+      referencePopulations: REFERENCE_POPULATIONS,
+    },
+  };
+}
+
+export async function handleMyopiaCaptureRequest(
+  deps: MyopiaProgressionEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<MyopiaProgressionEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to save myopia findings." } };
+  if (!staffMay(staff.actorRole, "chart.write")) {
+    return { status: 403, body: { error: "chart.write role required" } };
+  }
+  const parsed = captureRequestSchema.safeParse(input.body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return {
+      status: 400,
+      body: { error: issue ? `${issue.path.join(".") || "Myopia request"}: ${issue.message}` : "Invalid myopia request." },
+    };
+  }
+
+  const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
+  const measuredAt = parsed.data.measuredAt ?? deps.now?.() ?? new Date().toISOString();
+  const captured = EYES.flatMap((eye) => {
+    const payload = parsed.data.eyes[eye];
+    if (!payload) return [];
+    return [{
+      eye,
+      payload,
+      graphs: buildMyopiaEyeCapture({
+        definitions,
+        patientReference: parsed.data.patientReference,
+        encounterReference: parsed.data.encounterReference,
+        eye,
+        measuredAt,
+        biometryMethod: payload.biometryMethod,
+        instrument: payload.instrument,
+        axialLengthMm: payload.axialLengthMm,
+        cornealRadiusMm: payload.cornealRadiusMm,
+        staffReference: staff.staffReference,
+      }),
+    }];
+  });
+
+  const eyes: Record<string, unknown> = {};
+  for (const item of captured) {
+    const axial = await persistGraph(
+      staff.fhir,
+      item.graphs.axialLength,
+      parsed.data.patientReference,
+    );
+    const cornealRadius = item.graphs.cornealRadius
+      ? await persistGraph(staff.fhir, item.graphs.cornealRadius, parsed.data.patientReference)
+      : undefined;
+    eyes[item.eye] = {
+      axialLengthObservationReference: axial.observationReference,
+      axialLengthProvenanceReference: axial.provenanceReference,
+      ...(cornealRadius
+        ? {
+            cornealRadiusObservationReference: cornealRadius.observationReference,
+            cornealRadiusProvenanceReference: cornealRadius.provenanceReference,
+          }
+        : {}),
+      biometryMethod: item.payload.biometryMethod,
+      instrument: item.payload.instrument ?? null,
+    };
+  }
+  return { status: 200, body: { eyes } };
+}
+
+export async function handleMyopiaHistoryRequest(
+  deps: MyopiaProgressionEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<MyopiaProgressionEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read myopia progression." } };
+  if (!staffMay(staff.actorRole, "chart.read")) {
+    return { status: 403, body: { error: "chart.read role required" } };
+  }
+  const parsed = historyQuerySchema.safeParse(input.query);
+  if (!parsed.success) {
+    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid myopia history request." } };
+  }
+
+  const patientId = parsed.data.patient.replace(/^Patient\//, "");
+  const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
+  const [patient, axialBundle, cornealBundle, settings] = await Promise.all([
+    staff.fhir.read<Patient>("Patient", patientId),
+    staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.axialLength)),
+    staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.cornealRadius)),
+    deps.settingsStore.get(parsed.data.patient),
+  ]);
+  if (!patient.birthDate) {
+    return { status: 422, body: { error: "Patient birth date is required to calculate age for myopia progression." } };
+  }
+
+  const cornealByEyeAndTime = new Map(
+    bundleResources(cornealBundle).flatMap((observation) => {
+      const eye = observationEye(observation);
+      const measuredAt = observation.effectiveDateTime;
+      const value = observation.valueQuantity?.value;
+      return eye && measuredAt && typeof value === "number"
+        ? [[`${eye}|${measuredAt}`, value] as const]
+        : [];
+    }),
+  );
+  const readings = bundleResources(axialBundle)
+    .flatMap((observation) => observationToReading(observation, patient.birthDate!, cornealByEyeAndTime))
+    .sort((left, right) => left.measuredAt.localeCompare(right.measuredAt));
+  const patientSex = patient.gender === "male" ? "MALE" : patient.gender === "female" ? "FEMALE" : null;
+  const referenceDataset = patientSex
+    ? buildReferenceDataset(deps.bandProvider ?? MYOPIA_REFERENCE_BAND_PROVIDER, settings.referencePopulation, patientSex)
+    : null;
+
+  return {
+    status: 200,
+    body: {
+      referencePopulation: settings.referencePopulation,
+      patientSex,
+      birthDate: patient.birthDate,
+      readings,
+      referenceDataset,
+      noReferenceMessage: referenceDataset ? null : NO_REFERENCE_MESSAGE,
+    } satisfies MyopiaProgressionHistoryResponse,
+  };
+}
+
+export async function handleMyopiaReferencePopulationRequest(
+  deps: MyopiaProgressionEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+): Promise<MyopiaProgressionEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to save reference population." } };
+  if (!staffMay(staff.actorRole, "chart.write")) {
+    return { status: 403, body: { error: "chart.write role required" } };
+  }
+  const parsed = populationRequestSchema.safeParse(input.body);
+  if (!parsed.success) {
+    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid reference population request." } };
+  }
+  const saved = await deps.settingsStore.set({
+    patientReference: parsed.data.patientReference,
+    referencePopulation: parsed.data.referencePopulation,
+    updatedBy: staff.staffReference,
+    updatedAt: deps.now?.() ?? new Date().toISOString(),
+  });
+  return { status: 200, body: saved };
+}
+
+export function resolveMyopiaDefinitions(
+  suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
+): { axialLength: ClinicalFindingDefinition; cornealRadius: ClinicalFindingDefinition } {
+  const definitions = suppliedDefinitions ?? buildMyopiaFindingDefinitions(myopiaProvenance(
+    "Practitioner/odos-system",
+    new Date(0).toISOString(),
+  ));
+  const axialLength = definitions.find((row) => row.stableKey === AXIAL_LENGTH_KEY);
+  const cornealRadius = definitions.find((row) => row.stableKey === CORNEAL_RADIUS_KEY);
+  if (!axialLength) throw new Error(`${AXIAL_LENGTH_KEY} finding definition seed is missing.`);
+  if (!cornealRadius) throw new Error(`${CORNEAL_RADIUS_KEY} finding definition seed is missing.`);
+  return { axialLength, cornealRadius };
+}
+
+export function buildMyopiaEyeCapture(input: {
+  definitions: { axialLength: ClinicalFindingDefinition; cornealRadius: ClinicalFindingDefinition };
+  patientReference: string;
+  encounterReference: string;
+  eye: Eye;
+  measuredAt: string;
+  biometryMethod: BiometryMethod;
+  instrument?: string;
+  axialLengthMm: number;
+  cornealRadiusMm?: number;
+  staffReference: string;
+}): { axialLength: CapturedGlaucomaFinding; cornealRadius?: CapturedGlaucomaFinding } {
+  const method = odosConcept(input.biometryMethod, biometryMethodDisplay(input.biometryMethod));
+  const provenance = myopiaProvenance(input.staffReference, input.measuredAt);
+  const common = {
+    patientReference: input.patientReference,
+    encounterReference: input.encounterReference,
+    laterality: input.eye,
+    method,
+    sourceType: "manual" as const,
+    performerReferences: [input.staffReference],
+    recordedAt: input.measuredAt,
+    provenance,
+  };
+  const axialLength = captureGlaucomaFinding({
+    ...common,
+    definition: input.definitions.axialLength,
+    value: {
+      type: "quantity",
+      value: input.axialLengthMm,
+      unit: "mm",
+      system: "http://unitsofmeasure.org",
+      code: "mm",
+    },
+  });
+  axialLength.observation.meta = {
+    ...axialLength.observation.meta,
+    profile: Array.from(new Set([
+      ...(axialLength.observation.meta?.profile ?? []),
+      OBSERVATION_AXIAL_LENGTH_PROFILE_URL,
+    ])),
+  };
+  addCaptureComponents(axialLength.observation, input.biometryMethod, input.instrument);
+
+  const cornealRadius = input.cornealRadiusMm === undefined
+    ? undefined
+    : captureGlaucomaFinding({
+        ...common,
+        definition: input.definitions.cornealRadius,
+        value: {
+          type: "quantity",
+          value: input.cornealRadiusMm,
+          unit: "mm",
+          system: "http://unitsofmeasure.org",
+          code: "mm",
+        },
+      });
+  if (cornealRadius) addCaptureComponents(cornealRadius.observation, input.biometryMethod, input.instrument);
+  return { axialLength, cornealRadius };
+}
+
+function buildReferenceDataset(
+  provider: ReferenceBandProvider,
+  population: ReferencePopulation,
+  sex: "MALE" | "FEMALE",
+): MyopiaProgressionHistoryResponse["referenceDataset"] {
+  const rows = [];
+  let identity: {
+    datasetId: string;
+    version: string;
+    citation: string;
+    populationNote: string;
+  } | null = null;
+  for (let age = 4; age <= 18; age += 1) {
+    const result = provider.getBands({
+      measure: "AXIAL_LENGTH",
+      population,
+      sex,
+      ageInYears: age,
+    });
+    if (!result) return null;
+    identity ??= result;
+    if (
+      result.datasetId !== identity.datasetId ||
+      result.version !== identity.version ||
+      result.bands.length === 0
+    ) {
+      return null;
+    }
+    rows.push({ age, values: result.bands.map((band) => band.value) });
+  }
+  const first = provider.getBands({
+    measure: "AXIAL_LENGTH",
+    population,
+    sex,
+    ageInYears: 4,
+  });
+  return identity && first
+    ? {
+        ...identity,
+        percentiles: first.bands.map((band) => band.percentile),
+        rows,
+      }
+    : null;
+}
+
+function observationToReading(
+  observation: Observation,
+  birthDate: string,
+  cornealByEyeAndTime: ReadonlyMap<string, number>,
+): MyopiaProgressionReading[] {
+  const eye = observationEye(observation);
+  const axialLengthMm = observation.valueQuantity?.value;
+  const measuredAt = observation.effectiveDateTime;
+  const method = biometryMethodFromObservation(observation);
+  if (
+    !eye ||
+    typeof axialLengthMm !== "number" ||
+    !measuredAt ||
+    !method ||
+    !observation.id
+  ) {
+    return [];
+  }
+  const ageInYears = decimalAge(birthDate, measuredAt);
+  if (!Number.isFinite(ageInYears)) return [];
+  return [{
+    eye,
+    axialLengthMm,
+    cornealRadiusMm: cornealByEyeAndTime.get(`${eye}|${measuredAt}`) ?? null,
+    ageInYears,
+    measuredAt,
+    biometryMethod: method,
+    instrument: componentString(observation, "instrument"),
+    observationReference: `Observation/${observation.id}`,
+  }];
+}
+
+function observationSearchParams(
+  patientReference: string,
+  definition: ClinicalFindingDefinition,
+): Record<string, string> {
+  const coding = definition.fhirObservationCode?.coding?.find((candidate) => candidate.system && candidate.code);
+  return {
+    subject: patientReference,
+    code: coding?.system && coding.code
+      ? `${coding.system}|${coding.code}`
+      : `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`,
+    _count: "500",
+  };
+}
+
+function observationEye(observation: Observation): Eye | null {
+  const values = [
+    ...(observation.bodySite?.coding ?? []).map((coding) => coding.code),
+    ...(observation.extension ?? []).flatMap((extension) =>
+      extension.valueCodeableConcept?.coding?.map((coding) => coding.code) ?? []),
+    ...(observation.contained ?? []).flatMap((resource) =>
+      resource.resourceType === "BodyStructure"
+        ? resource.location?.coding?.map((coding) => coding.code) ?? []
+        : []),
+  ];
+  return values.some((value) => value === "OD" || value === "right") ? "OD"
+    : values.some((value) => value === "OS" || value === "left") ? "OS"
+      : null;
+}
+
+function biometryMethodFromObservation(observation: Observation): BiometryMethod | null {
+  const component = observation.component?.find((candidate) =>
+    candidate.code.coding?.some((coding) => coding.code === "biometryMethod"));
+  const code = component?.valueCodeableConcept?.coding?.[0]?.code ??
+    observation.method?.coding?.[0]?.code;
+  return code && (BIOMETRY_METHODS as readonly string[]).includes(code)
+    ? code as BiometryMethod
+    : null;
+}
+
+function componentString(observation: Observation, code: string): string | null {
+  return observation.component?.find((candidate) =>
+    candidate.code.coding?.some((coding) => coding.code === code))?.valueString ?? null;
+}
+
+function decimalAge(birthDate: string, measuredAt: string): number {
+  const birth = Date.parse(`${birthDate}T00:00:00Z`);
+  const measured = Date.parse(measuredAt);
+  return (measured - birth) / (365.2425 * 24 * 60 * 60 * 1000);
+}
+
+function addCaptureComponents(
+  observation: Observation,
+  method: BiometryMethod,
+  instrument: string | undefined,
+): void {
+  observation.component = [
+    ...(observation.component ?? []),
+    {
+      code: odosConcept("biometryMethod", "Biometry method"),
+      valueCodeableConcept: odosConcept(method, biometryMethodDisplay(method)),
+    },
+    ...(instrument
+      ? [{ code: odosConcept("instrument", "Instrument"), valueString: instrument }]
+      : []),
+  ];
+}
+
+function definitionSummary(definition: ClinicalFindingDefinition) {
+  return {
+    id: definition.id,
+    stableKey: definition.stableKey,
+    display: definition.display,
+    fields: asRecord(definition.valueSchema.fields),
+    normalSemantics: definition.normalSemantics,
+  };
+}
+
+function biometryMethodDisplay(method: BiometryMethod): string {
+  return method === "OPTICAL_BIOMETRY" ? "Optical biometry" : "Ultrasound A-scan";
+}
+
+function myopiaProvenance(staffReference: string, recordedAt: string): ClinicalGraphProvenance {
+  return {
+    source: "manual",
+    recordedAt,
+    actorReference: staffReference,
+    ledgerRefs: [LEDGER_REF],
+    note: "Clinical-graph capture of axial length and optional corneal radius for longitudinal myopia progression.",
+  };
+}
+
+async function persistGraph(
+  fhir: MyopiaProgressionFhirClient,
+  graph: CapturedGlaucomaFinding,
+  patientReference: string,
+): Promise<{ observationReference: string; provenanceReference?: string }> {
+  const observation = await fhir.create<Observation>(graph.observation, WRITE_HEADERS);
+  const id = observation.id ?? graph.observation.id;
+  if (!id) throw new Error("Observation create response did not include an id.");
+  const observationReference = `Observation/${id}`;
+  const provenance = await fhir.create<Provenance>({
+    ...graph.provenance,
+    target: patientScopedProvenanceTargets(observationReference, patientReference),
+  }, WRITE_HEADERS);
+  return {
+    observationReference,
+    provenanceReference: provenance.id ? `Provenance/${provenance.id}` : undefined,
+  };
+}
+
+function bundleResources<T extends Observation>(bundle: Bundle<T>): T[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function staffMay(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
+  try {
+    assertBusinessActionAllowed(role, action);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
