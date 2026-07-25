@@ -10,6 +10,16 @@ import {
 const readings: AxialGrowthReading[] = [
   {
     eye: "OD",
+    axialLengthMm: 24.5,
+    cornealRadiusMm: null,
+    ageInYears: 10.4,
+    measuredAt: "2026-05-12T12:00:00Z",
+    biometryMethod: "OPTICAL_BIOMETRY",
+    instrument: "IOLMaster 700",
+    observationReference: "Observation/od-2",
+  },
+  {
+    eye: "OD",
     axialLengthMm: 24.1,
     cornealRadiusMm: null,
     ageInYears: 9.2,
@@ -17,6 +27,16 @@ const readings: AxialGrowthReading[] = [
     biometryMethod: "OPTICAL_BIOMETRY",
     instrument: "IOLMaster 700",
     observationReference: "Observation/od-1",
+  },
+  {
+    eye: "OS",
+    axialLengthMm: 24.8,
+    cornealRadiusMm: null,
+    ageInYears: 10.4,
+    measuredAt: "2026-05-12T12:00:00Z",
+    biometryMethod: "ULTRASOUND_A_SCAN",
+    instrument: null,
+    observationReference: "Observation/os-2",
   },
   {
     eye: "OS",
@@ -41,7 +61,11 @@ test("NOT_REPRESENTED renders both patient-eye series and zero reference bands",
   assert.match(html, /data-reference-band-count="0"/);
   assert.match(html, /data-patient-series="OD"/);
   assert.match(html, /data-patient-series="OS"/);
-  assert.equal((html.match(/data-patient-point=/g) ?? []).length, 2);
+  assert.match(html, /data-patient-trend="OD"/);
+  assert.match(html, /data-patient-trend="OS"/);
+  assert.equal((html.match(/data-patient-point=/g) ?? []).length, 4);
+  assert.ok(html.indexOf("OD · age 9.20") < html.indexOf("OD · age 10.40"));
+  assert.ok(html.indexOf("OS · age 9.20") < html.indexOf("OS · age 10.40"));
   assert.match(html, /No validated reference data exists for this population/);
   assert.doesNotMatch(html, /typical for this cohort/);
 });

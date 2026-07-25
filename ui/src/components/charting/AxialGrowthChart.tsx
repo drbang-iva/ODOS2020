@@ -118,6 +118,7 @@ export function AxialGrowthChart({
                     fill="none"
                     stroke={EYE_STYLE[eye].stroke}
                     strokeWidth="2.5"
+                    data-patient-trend={eye}
                   />
                 )}
                 {points.map((point) => (
@@ -178,11 +179,13 @@ function chartModel(
   referenceDataset: AxialGrowthReferenceDataset | null,
 ) {
   const referenceValues = referenceDataset?.rows.flatMap((row) => row.values) ?? [];
+  const referenceAges = referenceDataset?.rows.map((row) => row.age) ?? [];
   const patientValues = readings.map((reading) => reading.axialLengthMm);
   const patientAges = readings.map((reading) => reading.ageInYears);
+  const allAges = [...referenceAges, ...patientAges];
   const allValues = [...referenceValues, ...patientValues];
-  const minAge = Math.min(4, ...patientAges);
-  const maxAge = Math.max(18, ...patientAges);
+  const minAge = allAges.length ? Math.min(...allAges) : 4;
+  const maxAge = allAges.length ? Math.max(...allAges) : 18;
   const rawMin = allValues.length ? Math.min(...allValues) : 20;
   const rawMax = allValues.length ? Math.max(...allValues) : 28;
   const minValue = Math.floor((rawMin - 0.5) * 2) / 2;

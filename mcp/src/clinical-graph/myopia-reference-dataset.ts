@@ -194,6 +194,7 @@ export function evaluateTranscriptionInvariants(
   const v4: TranscriptionInvariantResult = { invariant: "V4", checks: 0, violations: [] };
   const v5: TranscriptionInvariantResult = { invariant: "V5", checks: 1, violations: [] };
   let valueCount = 0;
+  const axialLength = dataset.measure === "AXIAL_LENGTH";
 
   for (const sex of ["MALE", "FEMALE"] as const) {
     const rows = payload.tables[sex] ?? [];
@@ -208,52 +209,55 @@ export function evaluateTranscriptionInvariants(
           );
         }
       }
-      for (const value of row.values) {
-        v4.checks += 1;
-        if (value < 18 || value > 32) {
-          v4.violations.push(`${sex} age ${row.age}: ${value} mm is outside 18.0-32.0 mm.`);
+      if (axialLength) {
+        for (const value of row.values) {
+          v4.checks += 1;
+          if (value < 18 || value > 32) {
+            v4.violations.push(`${sex} age ${row.age}: ${value} mm is outside 18.0-32.0 mm.`);
+          }
         }
       }
     }
 
-    for (let index = 0; index < payload.percentiles.length; index += 1) {
-      for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex += 1) {
-        const current = rows[rowIndex]!;
-        const next = rows[rowIndex + 1]!;
-        const delta = next.values[index]! - current.values[index]!;
-        v2.checks += 1;
-        v3.checks += 1;
-        if (delta < -0.10 - Number.EPSILON) {
-          v2.violations.push(
-            `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
-            `${delta.toFixed(2)} mm is below -0.10 mm.`,
-          );
-        }
-        if (delta > 0.60 + Number.EPSILON) {
-          v3.violations.push(
-            `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
-            `${delta.toFixed(2)} mm exceeds 0.60 mm.`,
-          );
+    if (axialLength) {
+      for (let index = 0; index < payload.percentiles.length; index += 1) {
+        for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex += 1) {
+          const current = rows[rowIndex]!;
+          const next = rows[rowIndex + 1]!;
+          const delta = next.values[index]! - current.values[index]!;
+          v2.checks += 1;
+          v3.checks += 1;
+          if (delta < -0.10 - Number.EPSILON) {
+            v2.violations.push(
+              `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
+              `${delta.toFixed(2)} mm is below -0.10 mm.`,
+            );
+          }
+          if (delta > 0.60 + Number.EPSILON) {
+            v3.violations.push(
+              `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
+              `${delta.toFixed(2)} mm exceeds 0.60 mm.`,
+            );
+          }
         }
       }
     }
   }
 
+  const expectedRows = dataset.ageRangeMax - dataset.ageRangeMin + 1;
+  const expectedValues = payload.percentiles.length * expectedRows * 2;
   const agesComplete = (["MALE", "FEMALE"] as const).every((sex) => {
     const rows = payload.tables[sex] ?? [];
-    return rows.length === 15 &&
+    return rows.length === expectedRows &&
       rows.every((row, index) =>
         row.age === dataset.ageRangeMin + index &&
-        row.values.length === 8 &&
+        row.values.length === payload.percentiles.length &&
         row.values.every((value) => Number.isFinite(value)));
   });
-  if (
-    payload.percentiles.length !== 8 ||
-    valueCount !== 240 ||
-    !agesComplete
-  ) {
+  if (valueCount !== expectedValues || !agesComplete) {
     v5.violations.push(
-      `Expected 8 percentiles x 15 ages x 2 sexes = 240 finite values; found ${valueCount}.`,
+      `Expected ${payload.percentiles.length} percentiles x ${expectedRows} ages x 2 sexes = ` +
+      `${expectedValues} finite values; found ${valueCount}.`,
     );
   }
 
@@ -264,8 +268,18 @@ function interpolateRows(
   rows: readonly PercentileTableRow[],
   ageInYears: number,
 ): number[] | undefined {
-  const lower = [...rows].reverse().find((row) => row.age < ageInYears);
-  const upper = rows.find((row) => row.age > ageInYears);
+  let lower: PercentileTableRow | undefined;
+  let upper: PercentileTableRow | undefined;
+  for (const row of rows) {
+    if (row.age < ageInYears) {
+      lower = row;
+      continue;
+    }
+    if (row.age > ageInYears) {
+      upper = row;
+      break;
+    }
+  }
   if (!lower || !upper || upper.age === lower.age) return undefined;
   const fraction = (ageInYears - lower.age) / (upper.age - lower.age);
   return lower.values.map((value, index) =>

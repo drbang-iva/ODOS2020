@@ -5,6 +5,7 @@ import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-clie
 import { buildEpisodeOfCare } from "../../lib/fhir-clinical/episodeOfCare";
 import {
   ATROPINE_CONCENTRATION_CODES,
+  MYOPIA_MANAGEMENT_CAREPLAN_PROFILE_URL,
   buildAtropineMedicationStatement,
   buildMyopiaManagementCarePlan,
   buildUpdateMyopiaCarePlanPatch,
@@ -74,6 +75,12 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
     setError(null);
     Promise.all([
       fhir.search<EpisodeOfCare>("EpisodeOfCare", { patient: patientReference, _count: "20" }),
+      fhir.search<CarePlan>("CarePlan", { patient: patientReference, status: "active", _count: "20" }),
+      fhir.search<MedicationStatement>("MedicationStatement", {
+        patient: patientReference,
+        status: "active",
+        _count: "50",
+      }),
       fetch(
         `${clinicalGraphApiBase()}/clinical-graph/myopia/history?${new URLSearchParams({ patient: patientReference })}`,
         { headers: authHeaders(), signal: controller.signal },
@@ -82,8 +89,8 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
         return response.json() as Promise<ProgressionHistory>;
       }),
     ])
-      .then(([bundle, progression]) => {
-        const activeEpisode = (bundle.entry ?? [])
+      .then(([episodeBundle, carePlanBundle, medicationBundle, progression]) => {
+        const activeEpisode = (episodeBundle.entry ?? [])
           .map((entry) => entry.resource)
           .find((resource): resource is EpisodeOfCare =>
             resource?.resourceType === "EpisodeOfCare" &&
@@ -92,7 +99,33 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
               type.coding?.some((coding) => coding.code === "myopia-management"),
             ) === true,
           );
+        const activeCarePlan = latestResource(
+          (carePlanBundle.entry ?? [])
+            .map((entry) => entry.resource)
+            .filter((resource): resource is CarePlan =>
+              resource?.resourceType === "CarePlan" &&
+              resource.meta?.profile?.includes(MYOPIA_MANAGEMENT_CAREPLAN_PROFILE_URL) === true),
+        );
+        const activeAtropine = latestResource(
+          (medicationBundle.entry ?? [])
+            .map((entry) => entry.resource)
+            .filter((resource): resource is MedicationStatement =>
+              resource?.resourceType === "MedicationStatement" &&
+              resource.medicationCodeableConcept?.coding?.some((coding) =>
+                coding.system === "http://www.nlm.nih.gov/research/umls/rxnorm" &&
+                coding.code === "1223") === true),
+        );
         setEpisode(activeEpisode ?? null);
+        setCarePlan(activeCarePlan ?? null);
+        setAtropine(activeAtropine ?? null);
+        const savedConcentration = activeAtropine?.dosage?.[0]?.doseAndRate?.[0]?.doseQuantity?.code;
+        if (
+          savedConcentration &&
+          (ATROPINE_CONCENTRATION_CODES as readonly string[]).includes(savedConcentration)
+        ) {
+          setConcentration(savedConcentration as AtropineConcentrationCode);
+        }
+        if (activeAtropine?.dosage?.[0]?.text) setFrequency(activeAtropine.dosage[0].text);
         setHistory(progression);
       })
       .catch((caught) => {
@@ -132,9 +165,9 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
       (["OD", "OS"] as const).flatMap((eye) => {
         const axialLengthMm = Number(eyes[eye].axialLength);
         if (!eyes[eye].axialLength.trim() || !Number.isFinite(axialLengthMm)) return [];
-        const cornealRadiusMm = eyes[eye].cornealRadius.trim()
-          ? Number(eyes[eye].cornealRadius)
-          : undefined;
+        const rawCornealRadius = eyes[eye].cornealRadius.trim();
+        const cornealRadiusMm = rawCornealRadius ? Number(rawCornealRadius) : undefined;
+        if (cornealRadiusMm !== undefined && !Number.isFinite(cornealRadiusMm)) return [];
         return [[eye, {
           axialLengthMm,
           ...(cornealRadiusMm !== undefined ? { cornealRadiusMm } : {}),
@@ -466,6 +499,20 @@ function populationLabel(population: MyopiaReferencePopulation): string {
   if (population === "ASIAN") return "Asian";
   if (population === "CAUCASIAN") return "Caucasian (no dataset available)";
   return "Not represented (no dataset available)";
+}
+
+function latestResource<T extends CarePlan | MedicationStatement>(resources: T[]): T | undefined {
+  return resources.sort((left, right) =>
+    resourceTimestamp(right) - resourceTimestamp(left))[0];
+}
+
+function resourceTimestamp(resource: CarePlan | MedicationStatement): number {
+  const timestamp = resource.meta?.lastUpdated ??
+    (resource.resourceType === "CarePlan"
+      ? resource.created
+      : resource.effectiveDateTime ?? resource.dateAsserted);
+  const millis = timestamp ? Date.parse(timestamp) : 0;
+  return Number.isFinite(millis) ? millis : 0;
 }
 
 async function responseError(response: Response, fallback: string): Promise<string> {

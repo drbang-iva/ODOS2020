@@ -16,6 +16,7 @@ import { buildMyopiaFindingDefinitions } from "../src/clinical-graph/myopia-find
 import {
   handleMyopiaCaptureRequest,
   handleMyopiaHistoryRequest,
+  resolveMyopiaDefinitions,
   type MyopiaProgressionEndpointDeps,
   type MyopiaProgressionHistoryResponse,
 } from "../src/clinical-graph/myopia-progression-endpoint.js";
@@ -115,6 +116,16 @@ test("registry accepts LMS parameters but provider leaves LMS evaluation unavail
   );
 });
 
+test("non-axial tabulated bands apply V1 and V5 without axial-length V2-V4 bounds", () => {
+  const dataset = syntheticTabulatedDataset(10, 11, "AL_CR_RATIO");
+  const results = evaluateTranscriptionInvariants(dataset);
+
+  assert.deepEqual(
+    results.map((result) => [result.invariant, result.checks, result.violations.length]),
+    [["V1", 8, 0], ["V2", 0, 0], ["V3", 0, 0], ["V4", 0, 0], ["V5", 1, 0]],
+  );
+});
+
 test("reference provider returns bands only for covered population and in-range ages", () => {
   const covered = MYOPIA_REFERENCE_BAND_PROVIDER.getBands({
     measure: "AXIAL_LENGTH",
@@ -137,6 +148,39 @@ test("reference provider returns bands only for covered population and in-range 
       ...input,
     }), null);
   }
+});
+
+test("reference history follows each dataset's declared age range", async () => {
+  for (const [ageRangeMin, ageRangeMax] of [[6, 16], [3, 18]] as const) {
+    const registry = new ReferenceDatasetRegistry([
+      syntheticTabulatedDataset(ageRangeMin, ageRangeMax, "AXIAL_LENGTH"),
+    ]);
+    const fixture = endpointFixture("ASIAN", {
+      bandProvider: new PercentileBandProvider(registry),
+      referenceDatasetRegistry: registry,
+    });
+    const history = await handleMyopiaHistoryRequest(fixture.deps, {
+      authHeader: AUTH,
+      query: { patient: PATIENT_REFERENCE },
+    });
+    const body = history.body as MyopiaProgressionHistoryResponse;
+
+    assert.equal(history.status, 200);
+    assert.deepEqual(
+      body.referenceDataset?.rows.map((row) => row.age),
+      Array.from(
+        { length: ageRangeMax - ageRangeMin + 1 },
+        (_, index) => ageRangeMin + index,
+      ),
+    );
+  }
+});
+
+test("empty finding-definition lists fall back to the built-in myopia seed", () => {
+  const definitions = resolveMyopiaDefinitions([]);
+
+  assert.equal(definitions.axialLength.stableKey, "AXIAL_LENGTH");
+  assert.equal(definitions.cornealRadius.stableKey, "CORNEAL_RADIUS");
 });
 
 test("clinical graph round-trip preserves both eyes, required method, and optional instrument", async () => {
@@ -288,7 +332,10 @@ test("reference-population migration succeeds on fresh and populated Postgres da
   }
 });
 
-function endpointFixture(referencePopulation: MyopiaPatientSettings["referencePopulation"]) {
+function endpointFixture(
+  referencePopulation: MyopiaPatientSettings["referencePopulation"],
+  overrides: Partial<MyopiaProgressionEndpointDeps> = {},
+) {
   const created: Array<Observation | Provenance> = [];
   const settingsStore: MyopiaReferencePopulationStore = {
     get: async (patientReference) => ({ patientReference, referencePopulation }),
@@ -324,12 +371,53 @@ function endpointFixture(referencePopulation: MyopiaPatientSettings["referencePo
               return {
                 resourceType: "Bundle",
                 type: "searchset",
-                entry: resources.map((resource) => ({ resource: resource as T })),
+                entry: resources.map((resource) => ({
+                  resource: {
+                    ...resource,
+                    ...(code === "CORNEAL_RADIUS" && resource.effectiveDateTime
+                      ? { effectiveDateTime: resource.effectiveDateTime.replace(".000Z", "Z") }
+                      : {}),
+                  } as T,
+                })),
               };
             },
           },
         }
       : null,
+    ...overrides,
   };
   return { created, deps };
+}
+
+function syntheticTabulatedDataset(
+  ageRangeMin: number,
+  ageRangeMax: number,
+  measure: PercentileBandsDataset["measure"],
+): PercentileBandsDataset {
+  const rows = Array.from(
+    { length: ageRangeMax - ageRangeMin + 1 },
+    (_, index) => ({
+      age: ageRangeMin + index,
+      values: measure === "AXIAL_LENGTH"
+        ? [20 + index * 0.1, 21 + index * 0.1, 22 + index * 0.1]
+        : [2.8 + index * 0.01, 3 + index * 0.01, 3.2 + index * 0.01],
+    }),
+  );
+  return {
+    datasetId: `synthetic-${measure.toLowerCase()}-${ageRangeMin}-${ageRangeMax}`,
+    version: "1.0.0",
+    citation: "Synthetic regression fixture.",
+    populationNote: "Synthetic regression fixture; not for clinical use.",
+    populationsCovered: ["ASIAN"],
+    sexStratified: true,
+    ageRangeMin,
+    ageRangeMax,
+    measure,
+    modelType: "PERCENTILE_BANDS",
+    payload: {
+      type: "TABULATED_BANDS",
+      percentiles: [3, 50, 95],
+      tables: { MALE: rows, FEMALE: rows.map((row) => ({ ...row, values: [...row.values] })) },
+    },
+  };
 }

@@ -10,10 +10,11 @@ export const CORNEAL_RADIUS_KEY = "CORNEAL_RADIUS";
 export const BIOMETRY_METHODS = ["OPTICAL_BIOMETRY", "ULTRASOUND_A_SCAN"] as const;
 export type BiometryMethod = (typeof BIOMETRY_METHODS)[number];
 
-const BIOMETRY_OPTIONS = [
-  { code: "OPTICAL_BIOMETRY", display: "Optical biometry", active: true },
-  { code: "ULTRASOUND_A_SCAN", display: "Ultrasound A-scan", active: true },
-] as const;
+const BIOMETRY_OPTIONS = BIOMETRY_METHODS.map((code) => ({
+  code,
+  display: code === "OPTICAL_BIOMETRY" ? "Optical biometry" : "Ultrasound A-scan",
+  active: true as const,
+}));
 
 export function buildMyopiaFindingDefinitions(
   provenance: ClinicalGraphProvenance,

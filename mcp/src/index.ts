@@ -151,6 +151,7 @@ import {
 } from "./clinical-graph/myopia-progression-endpoint.js";
 import { BIOMETRY_METHODS } from "./clinical-graph/myopia-finding-definition.js";
 import { PgMyopiaReferencePopulationStore } from "./clinical-graph/myopia-reference-population-store.js";
+import { patientScopedProvenanceTargets } from "./clinical-graph/glaucoma-suspect.js";
 import { handleRefractionHistoryRequest } from "./clinical-graph/refraction-history-endpoint.js";
 import { FhirFindingDefinitionStore } from "./clinical-graph/finding-definition-store.js";
 import { FhirProcedureDefinitionStore } from "./clinical-graph/procedure-definition-store.js";
@@ -1778,10 +1779,10 @@ const tools = [
         encounter_id: { type: "string" },
         eye: { type: "string", enum: ["OD", "OS"] },
         measured_at: { type: "string" },
-        value_mm: { type: "number" },
-        corneal_radius_mm: { type: "number" },
+        value_mm: { type: "number", minimum: 18, maximum: 32 },
+        corneal_radius_mm: { type: "number", minimum: 5, maximum: 12 },
         biometry_method: { type: "string", enum: BIOMETRY_METHODS },
-        instrument: { type: "string" },
+        instrument: { type: "string", minLength: 1, maxLength: 200 },
         provenance_agent_reference: { type: "string" },
         provenance_agent_display: { type: "string" },
       },
@@ -4228,10 +4229,10 @@ function createServer(): Server {
           const provenance = await fhir.create<Provenance>(
             {
               ...graphs.axialLength.provenance,
-              target: [
-                { reference: `Observation/${created.id}` },
-                { reference: patientReference(input.patient_id) },
-              ],
+              target: patientScopedProvenanceTargets(
+                `Observation/${created.id}`,
+                patientReference(input.patient_id),
+              ),
             },
             auditHeaders("record_myopia_axial_length_measurement"),
           );
@@ -4245,10 +4246,10 @@ function createServer(): Server {
             cornealRadiusProvenance = await fhir.create<Provenance>(
               {
                 ...graphs.cornealRadius.provenance,
-                target: [
-                  { reference: `Observation/${cornealRadiusObservation.id}` },
-                  { reference: patientReference(input.patient_id) },
-                ],
+                target: patientScopedProvenanceTargets(
+                  `Observation/${cornealRadiusObservation.id}`,
+                  patientReference(input.patient_id),
+                ),
               },
               auditHeaders("record_myopia_axial_length_measurement"),
             );

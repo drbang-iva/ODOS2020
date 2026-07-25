@@ -26,7 +26,9 @@ import {
 } from "./myopia-finding-definition.js";
 import {
   MYOPIA_REFERENCE_BAND_PROVIDER,
+  MYOPIA_REFERENCE_DATASET_REGISTRY,
   type ReferenceBandProvider,
+  type ReferenceDatasetRegistry,
   type ReferencePopulation,
   REFERENCE_POPULATIONS,
 } from "./myopia-reference-dataset.js";
@@ -57,6 +59,7 @@ export interface MyopiaProgressionEndpointDeps {
   settingsStore: MyopiaReferencePopulationStore;
   findingDefinitions?: () => ClinicalFindingDefinition[];
   bandProvider?: ReferenceBandProvider;
+  referenceDatasetRegistry?: ReferenceDatasetRegistry;
   now?: () => string;
 }
 
@@ -246,8 +249,9 @@ export async function handleMyopiaHistoryRequest(
       const eye = observationEye(observation);
       const measuredAt = observation.effectiveDateTime;
       const value = observation.valueQuantity?.value;
-      return eye && measuredAt && typeof value === "number"
-        ? [[`${eye}|${measuredAt}`, value] as const]
+      const key = measuredAt ? instantKey(measuredAt) : null;
+      return eye && key !== null && typeof value === "number"
+        ? [[`${eye}|${key}`, value] as const]
         : [];
     }),
   );
@@ -256,7 +260,12 @@ export async function handleMyopiaHistoryRequest(
     .sort((left, right) => left.measuredAt.localeCompare(right.measuredAt));
   const patientSex = patient.gender === "male" ? "MALE" : patient.gender === "female" ? "FEMALE" : null;
   const referenceDataset = patientSex
-    ? buildReferenceDataset(deps.bandProvider ?? MYOPIA_REFERENCE_BAND_PROVIDER, settings.referencePopulation, patientSex)
+    ? buildReferenceDataset(
+        deps.bandProvider ?? MYOPIA_REFERENCE_BAND_PROVIDER,
+        deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY,
+        settings.referencePopulation,
+        patientSex,
+      )
     : null;
 
   return {
@@ -297,10 +306,12 @@ export async function handleMyopiaReferencePopulationRequest(
 export function resolveMyopiaDefinitions(
   suppliedDefinitions: ClinicalFindingDefinition[] | undefined,
 ): { axialLength: ClinicalFindingDefinition; cornealRadius: ClinicalFindingDefinition } {
-  const definitions = suppliedDefinitions ?? buildMyopiaFindingDefinitions(myopiaProvenance(
-    "Practitioner/odos-system",
-    new Date(0).toISOString(),
-  ));
+  const definitions = suppliedDefinitions?.length
+    ? suppliedDefinitions
+    : buildMyopiaFindingDefinitions(myopiaProvenance(
+        "Practitioner/odos-system",
+        new Date(0).toISOString(),
+      ));
   const axialLength = definitions.find((row) => row.stableKey === AXIAL_LENGTH_KEY);
   const cornealRadius = definitions.find((row) => row.stableKey === CORNEAL_RADIUS_KEY);
   if (!axialLength) throw new Error(`${AXIAL_LENGTH_KEY} finding definition seed is missing.`);
@@ -371,9 +382,18 @@ export function buildMyopiaEyeCapture(input: {
 
 function buildReferenceDataset(
   provider: ReferenceBandProvider,
+  registry: ReferenceDatasetRegistry,
   population: ReferencePopulation,
   sex: "MALE" | "FEMALE",
 ): MyopiaProgressionHistoryResponse["referenceDataset"] {
+  const dataset = registry.latest({ measure: "AXIAL_LENGTH", population });
+  if (
+    !dataset ||
+    dataset.modelType !== "PERCENTILE_BANDS" ||
+    dataset.payload.type !== "TABULATED_BANDS"
+  ) {
+    return null;
+  }
   const rows = [];
   let identity: {
     datasetId: string;
@@ -381,7 +401,7 @@ function buildReferenceDataset(
     citation: string;
     populationNote: string;
   } | null = null;
-  for (let age = 4; age <= 18; age += 1) {
+  for (let age = dataset.ageRangeMin; age <= dataset.ageRangeMax; age += 1) {
     const result = provider.getBands({
       measure: "AXIAL_LENGTH",
       population,
@@ -391,6 +411,8 @@ function buildReferenceDataset(
     if (!result) return null;
     identity ??= result;
     if (
+      result.datasetId !== dataset.datasetId ||
+      result.version !== dataset.version ||
       result.datasetId !== identity.datasetId ||
       result.version !== identity.version ||
       result.bands.length === 0
@@ -403,7 +425,7 @@ function buildReferenceDataset(
     measure: "AXIAL_LENGTH",
     population,
     sex,
-    ageInYears: 4,
+    ageInYears: dataset.ageRangeMin,
   });
   return identity && first
     ? {
@@ -433,11 +455,12 @@ function observationToReading(
     return [];
   }
   const ageInYears = decimalAge(birthDate, measuredAt);
-  if (!Number.isFinite(ageInYears)) return [];
+  const measuredAtKey = instantKey(measuredAt);
+  if (!Number.isFinite(ageInYears) || measuredAtKey === null) return [];
   return [{
     eye,
     axialLengthMm,
-    cornealRadiusMm: cornealByEyeAndTime.get(`${eye}|${measuredAt}`) ?? null,
+    cornealRadiusMm: cornealByEyeAndTime.get(`${eye}|${measuredAtKey}`) ?? null,
     ageInYears,
     measuredAt,
     biometryMethod: method,
@@ -494,6 +517,11 @@ function decimalAge(birthDate: string, measuredAt: string): number {
   const birth = Date.parse(`${birthDate}T00:00:00Z`);
   const measured = Date.parse(measuredAt);
   return (measured - birth) / (365.2425 * 24 * 60 * 60 * 1000);
+}
+
+function instantKey(value: string): number | null {
+  const millis = Date.parse(value);
+  return Number.isFinite(millis) ? millis : null;
 }
 
 function addCaptureComponents(

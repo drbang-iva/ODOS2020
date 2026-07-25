@@ -40,6 +40,8 @@ export class PgMyopiaReferencePopulationStore implements MyopiaReferencePopulati
     this.pool = new Pool({
       connectionString: options.postgresUrl ?? DEFAULT_POSTGRES_URL,
       max: 4,
+      connectionTimeoutMillis: 5_000,
+      statement_timeout: 10_000,
     });
   }
 
