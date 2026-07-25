@@ -8,6 +8,9 @@ import {
   evaluateTranscriptionInvariants,
   loadReferenceDatasetSeeds,
   MYOPIA_REFERENCE_BAND_PROVIDER,
+  PercentileBandProvider,
+  ReferenceDatasetRegistry,
+  type PercentileBandsDataset,
 } from "../src/clinical-graph/myopia-reference-dataset.js";
 import { buildMyopiaFindingDefinitions } from "../src/clinical-graph/myopia-finding-definition.js";
 import {
@@ -55,6 +58,9 @@ test("myopia finding definitions keep exact stable keys and capture contract", (
 test("accepted He Table 4 seed satisfies transcription invariants V1-V5", () => {
   const dataset = loadReferenceDatasetSeeds()[0];
   assert.ok(dataset);
+  assert.equal(dataset.modelType, "PERCENTILE_BANDS");
+  if (dataset.modelType !== "PERCENTILE_BANDS") assert.fail("Expected percentile-band seed.");
+  assert.equal(dataset.payload.type, "TABULATED_BANDS");
   const results = evaluateTranscriptionInvariants(dataset);
   for (const result of results) {
     console.log(`${result.invariant}: checks=${result.checks} violations=${result.violations.length}`);
@@ -63,6 +69,49 @@ test("accepted He Table 4 seed satisfies transcription invariants V1-V5", () => 
   assert.deepEqual(
     results.map((result) => [result.invariant, result.checks]),
     [["V1", 210], ["V2", 224], ["V3", 224], ["V4", 240], ["V5", 1]],
+  );
+});
+
+test("registry accepts LMS parameters but provider leaves LMS evaluation unavailable", () => {
+  const dataset: PercentileBandsDataset = {
+    datasetId: "synthetic-lms-contract",
+    version: "1.0.0",
+    citation: "Synthetic schema fixture.",
+    populationNote: "Synthetic schema fixture; not for clinical use.",
+    populationsCovered: ["CAUCASIAN"],
+    sexStratified: true,
+    ageRangeMin: 4,
+    ageRangeMax: 4,
+    measure: "AXIAL_LENGTH",
+    modelType: "PERCENTILE_BANDS",
+    payload: {
+      type: "LMS_PARAMETERS",
+      percentiles: [3, 50, 95],
+      tables: {
+        MALE: [{ age: 4, L: 1, M: 22.4, S: 0.04 }],
+        FEMALE: [{ age: 4, L: 1, M: 22.2, S: 0.04 }],
+      },
+    },
+  };
+  const registry = new ReferenceDatasetRegistry([dataset]);
+  const provider = new PercentileBandProvider(registry);
+
+  assert.equal(provider.getBands({
+    measure: "AXIAL_LENGTH",
+    population: "CAUCASIAN",
+    sex: "MALE",
+    ageInYears: 4,
+  }), null);
+  assert.deepEqual(
+    evaluateTranscriptionInvariants(dataset).map((result) => result.checks),
+    [0, 0, 0, 0, 0],
+  );
+  assert.throws(
+    () => new ReferenceDatasetRegistry([{
+      ...dataset,
+      payload: { type: "UNKNOWN_PAYLOAD", percentiles: [], tables: {} },
+    } as never]),
+    /Unsupported percentile payload type UNKNOWN_PAYLOAD/,
   );
 });
 

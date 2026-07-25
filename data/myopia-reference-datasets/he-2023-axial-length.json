@@ -12,6 +12,7 @@
   "measure": "AXIAL_LENGTH",
   "modelType": "PERCENTILE_BANDS",
   "payload": {
+    "type": "TABULATED_BANDS",
     "percentiles": [
       3,
       5,

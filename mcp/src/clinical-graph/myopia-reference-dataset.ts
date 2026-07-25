@@ -14,10 +14,27 @@ export interface PercentileTableRow {
   values: number[];
 }
 
-export interface PercentileBandsPayload {
+export interface TabulatedBandsPayload {
+  type: "TABULATED_BANDS";
   percentiles: number[];
   tables: Record<ReferenceSex, PercentileTableRow[]>;
 }
+
+export interface LmsParameterRow {
+  age: number;
+  L: number;
+  M: number;
+  S: number;
+}
+
+/** Reserved representation; its future evaluator uses M * (1 + L * S * Z)^(1/L). */
+export interface LmsParametersPayload {
+  type: "LMS_PARAMETERS";
+  percentiles: number[];
+  tables: Record<ReferenceSex, LmsParameterRow[]>;
+}
+
+export type PercentileBandsPayload = TabulatedBandsPayload | LmsParametersPayload;
 
 export interface PercentileBandsDataset {
   datasetId: string;
@@ -127,6 +144,7 @@ export class PercentileBandProvider implements ReferenceBandProvider {
     if (
       !dataset ||
       dataset.modelType !== "PERCENTILE_BANDS" ||
+      dataset.payload.type !== "TABULATED_BANDS" ||
       input.ageInYears < dataset.ageRangeMin ||
       input.ageInYears > dataset.ageRangeMax
     ) {
@@ -166,15 +184,9 @@ export function loadReferenceDatasetSeeds(): ReferenceDataset[] {
 export function evaluateTranscriptionInvariants(
   dataset: ReferenceDataset,
 ): TranscriptionInvariantResult[] {
-  if (dataset.modelType !== "PERCENTILE_BANDS") {
-    return [
-      { invariant: "V1", checks: 0, violations: [] },
-      { invariant: "V2", checks: 0, violations: [] },
-      { invariant: "V3", checks: 0, violations: [] },
-      { invariant: "V4", checks: 0, violations: [] },
-      { invariant: "V5", checks: 0, violations: [] },
-    ];
-  }
+  if (dataset.modelType !== "PERCENTILE_BANDS") return emptyInvariantResults();
+  const payload = dataset.payload;
+  if (payload.type !== "TABULATED_BANDS") return emptyInvariantResults();
 
   const v1: TranscriptionInvariantResult = { invariant: "V1", checks: 0, violations: [] };
   const v2: TranscriptionInvariantResult = { invariant: "V2", checks: 0, violations: [] };
@@ -184,15 +196,15 @@ export function evaluateTranscriptionInvariants(
   let valueCount = 0;
 
   for (const sex of ["MALE", "FEMALE"] as const) {
-    const rows = dataset.payload.tables[sex] ?? [];
+    const rows = payload.tables[sex] ?? [];
     for (const row of rows) {
       valueCount += row.values.length;
       for (let index = 0; index < row.values.length - 1; index += 1) {
         v1.checks += 1;
         if (!(row.values[index + 1]! > row.values[index]!)) {
           v1.violations.push(
-            `${sex} age ${row.age}: P${dataset.payload.percentiles[index]} ${row.values[index]} ` +
-            `must be less than P${dataset.payload.percentiles[index + 1]} ${row.values[index + 1]}.`,
+            `${sex} age ${row.age}: P${payload.percentiles[index]} ${row.values[index]} ` +
+            `must be less than P${payload.percentiles[index + 1]} ${row.values[index + 1]}.`,
           );
         }
       }
@@ -204,7 +216,7 @@ export function evaluateTranscriptionInvariants(
       }
     }
 
-    for (let index = 0; index < dataset.payload.percentiles.length; index += 1) {
+    for (let index = 0; index < payload.percentiles.length; index += 1) {
       for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex += 1) {
         const current = rows[rowIndex]!;
         const next = rows[rowIndex + 1]!;
@@ -213,13 +225,13 @@ export function evaluateTranscriptionInvariants(
         v3.checks += 1;
         if (delta < -0.10 - Number.EPSILON) {
           v2.violations.push(
-            `${sex} P${dataset.payload.percentiles[index]} age ${current.age}->${next.age}: ` +
+            `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
             `${delta.toFixed(2)} mm is below -0.10 mm.`,
           );
         }
         if (delta > 0.60 + Number.EPSILON) {
           v3.violations.push(
-            `${sex} P${dataset.payload.percentiles[index]} age ${current.age}->${next.age}: ` +
+            `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
             `${delta.toFixed(2)} mm exceeds 0.60 mm.`,
           );
         }
@@ -228,7 +240,7 @@ export function evaluateTranscriptionInvariants(
   }
 
   const agesComplete = (["MALE", "FEMALE"] as const).every((sex) => {
-    const rows = dataset.payload.tables[sex] ?? [];
+    const rows = payload.tables[sex] ?? [];
     return rows.length === 15 &&
       rows.every((row, index) =>
         row.age === dataset.ageRangeMin + index &&
@@ -236,7 +248,7 @@ export function evaluateTranscriptionInvariants(
         row.values.every((value) => Number.isFinite(value)));
   });
   if (
-    dataset.payload.percentiles.length !== 8 ||
+    payload.percentiles.length !== 8 ||
     valueCount !== 240 ||
     !agesComplete
   ) {
@@ -287,15 +299,56 @@ function assertDataset(dataset: ReferenceDataset): void {
     throw new Error(`Unsupported reference model type ${dataset.modelType}.`);
   }
   if (dataset.modelType === "PERCENTILE_BANDS") {
+    if (!isRecord(dataset.payload)) {
+      throw new Error("Percentile dataset payload must be an object.");
+    }
+    if (!["TABULATED_BANDS", "LMS_PARAMETERS"].includes(String(dataset.payload.type))) {
+      throw new Error(`Unsupported percentile payload type ${String(dataset.payload.type)}.`);
+    }
     if (!Array.isArray(dataset.payload.percentiles)) {
       throw new Error("Percentile dataset payload must include percentiles.");
+    }
+    if (!dataset.payload.percentiles.every((percentile) => Number.isFinite(percentile))) {
+      throw new Error("Percentile dataset payload percentiles must be finite.");
     }
     for (const sex of ["MALE", "FEMALE"] as const) {
       if (!Array.isArray(dataset.payload.tables?.[sex])) {
         throw new Error(`Percentile dataset payload is missing ${sex} rows.`);
       }
+      if (dataset.payload.type === "TABULATED_BANDS") {
+        for (const row of dataset.payload.tables[sex]) {
+          if (
+            !Number.isFinite(row.age) ||
+            !Array.isArray(row.values) ||
+            !row.values.every((value) => Number.isFinite(value))
+          ) {
+            throw new Error(`TABULATED_BANDS payload contains an invalid ${sex} row.`);
+          }
+        }
+      } else {
+        for (const row of dataset.payload.tables[sex]) {
+          if (
+            !Number.isFinite(row.age) ||
+            !Number.isFinite(row.L) ||
+            !Number.isFinite(row.M) ||
+            !Number.isFinite(row.S)
+          ) {
+            throw new Error(`LMS_PARAMETERS payload contains an invalid ${sex} row.`);
+          }
+        }
+      }
     }
   }
+}
+
+function emptyInvariantResults(): TranscriptionInvariantResult[] {
+  return [
+    { invariant: "V1", checks: 0, violations: [] },
+    { invariant: "V2", checks: 0, violations: [] },
+    { invariant: "V3", checks: 0, violations: [] },
+    { invariant: "V4", checks: 0, violations: [] },
+    { invariant: "V5", checks: 0, violations: [] },
+  ];
 }
 
 function requiredString(value: unknown, field: string): asserts value is string {
