@@ -496,7 +496,15 @@ export function OpticalOrder({
           : line));
       setStatus(`Dispensed frame inventory unit ${updated.id}.`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      const message = cause instanceof Error ? cause.message : String(cause);
+      try {
+        const refreshed = await loadFrameInventoryUnits();
+        setFrameInventoryUnits([...refreshed.units]);
+        setSkippedFrameUnitCount(refreshed.skippedCount);
+      } catch (refreshCause) {
+        console.warn("Frame inventory refresh after a failed dispense was unsuccessful.", refreshCause);
+      }
+      setError(message);
     } finally {
       setFrameDispenseBusy(false);
     }

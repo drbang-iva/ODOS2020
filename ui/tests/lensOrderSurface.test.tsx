@@ -336,6 +336,58 @@ test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest o
   act(() => renderer.unmount());
 });
 
+test("OpticalOrder refreshes stale inventory after a conflicting dispense so retry advances", async () => {
+  let inventoryLoads = 0;
+  const dispensedIds: string[] = [];
+  const staleUnits: PracticeFrameInventoryUnit[] = [
+    frameUnit("stale-oldest", "2026-07-10T12:00:00.000Z", "on_hand"),
+    frameUnit("next-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
+  ];
+  const refreshedUnits: PracticeFrameInventoryUnit[] = [
+    { ...staleUnits[0], status: "dispensed" },
+    staleUnits[1],
+  ];
+  const api = opticalOrderApi({
+    searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+    loadInventory: async () => {
+      inventoryLoads += 1;
+      return { units: inventoryLoads === 1 ? staleUnits : refreshedUnits, skippedCount: 0 };
+    },
+    dispenseUnit: async (unitId) => {
+      dispensedIds.push(unitId);
+      if (unitId === "stale-oldest") {
+        throw new Error("Frame inventory changed on another terminal.");
+      }
+      return { ...refreshedUnits.find((unit) => unit.id === unitId)!, status: "dispensed" };
+    },
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={api} />);
+    await flushPromises();
+  });
+
+  clickButton(renderer, "Attach");
+  await act(async () => {
+    buttonByText(renderer.root, "Dispense").props.onClick();
+    await flushPromises();
+  });
+
+  assert.equal(inventoryLoads, 2);
+  assert.deepEqual(dispensedIds, ["stale-oldest"]);
+  assert.match(nodeText(renderer.root), /Frame inventory changed on another terminal/);
+
+  await act(async () => {
+    buttonByText(renderer.root, "Dispense").props.onClick();
+    await flushPromises();
+  });
+
+  assert.deepEqual(dispensedIds, ["stale-oldest", "next-on-hand"]);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "next-on-hand");
+  assert.equal(nodeText(buttonByText(renderer.root, "Dispensed")), "Dispensed");
+  act(() => renderer.unmount());
+});
+
 test("OpticalOrder surfaces the malformed-unit skip count without blocking frame search", async () => {
   let renderer!: ReactTestRenderer;
   await act(async () => {
