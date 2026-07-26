@@ -294,8 +294,11 @@ export function assertFrameInventoryAssignment(
   frameOwnership: string | undefined,
   inventoryId: string | undefined,
 ): void {
-  if (!inventoryId) return;
-  if (!frameSourceUsesPracticeInventory(frameSource, frameOwnership)) {
+  const usesPracticeInventory = frameSourceUsesPracticeInventory(frameSource, frameOwnership);
+  if (usesPracticeInventory && !inventoryId) {
+    throw new Error("A practice-stock frame must have a reserved inventory unit before it can be sent to the lab.");
+  }
+  if (!usesPracticeInventory && inventoryId) {
     throw new Error("A frame inventory unit may only be linked to FSRC 4 + in-house.");
   }
 }

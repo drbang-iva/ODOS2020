@@ -351,6 +351,56 @@ test("OpticalOrder reserves the FIFO unit on attach and dispenses that same phys
   act(() => renderer.unmount());
 });
 
+test("OpticalOrder blocks lab-sheet submission when an FSRC 4 in-house frame loses its inventory assignment", async () => {
+  const unit = frameUnit("unit-123", "2026-07-10T12:00:00.000Z", "on_hand");
+  const transitions: Array<[string, PracticeFrameInventoryUnit["status"]]> = [];
+  const api = opticalOrderApi({
+    searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+    loadInventory: async () => ({ units: [unit], skippedCount: 0 }),
+    transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+      transitions.push([unitId, toStatus]);
+      return { ...unit, status: toStatus };
+    },
+    dispenseUnit: async () => ({ ...unit, id: undefined as never, status: "dispensed" }),
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <OpticalOrder
+        search="?patient=Patient%2Flens-a2&rx=VisionPrescription%2Frx-1"
+        initialVisionPrescription={TEST_RX}
+        api={api}
+      />,
+    );
+    await flushPromises();
+  });
+
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, [["unit-123", "reserved"]]);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "unit-123");
+
+  await act(async () => {
+    buttonByText(renderer.root, "Dispense").props.onClick();
+    await flushPromises();
+  });
+  act(() => {
+    selectByLabel(renderer.root, "Lab").props.onChange({ target: { value: "Cherry Optical Lab" } });
+    inputByLabel(renderer.root, "Patient Name").props.onChange({ target: { value: "Maria Alvarez" } });
+  });
+  const printButton = buttonByText(renderer.root, "Print Lab Sheet");
+  assert.equal(printButton.props.disabled, false);
+  act(() => printButton.props.onClick());
+
+  assert.match(
+    nodeText(renderer.root),
+    /A practice-stock frame must have a reserved inventory unit before it can be sent to the lab\./,
+  );
+  act(() => renderer.unmount());
+});
+
 test("OpticalOrder refreshes a conflicting reservation and requires an explicit retry", async () => {
   let inventoryLoads = 0;
   const reservedIds: string[] = [];

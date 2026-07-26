@@ -41,14 +41,14 @@ const URLS = {
 } as const;
 
 test("inventory ids are assignable only to FSRC 4 + in-house", () => {
-  assert.doesNotThrow(() => assertFrameInventoryAssignment(4, "in-house", "unit-1"));
+  assert.throws(
+    () => assertFrameInventoryAssignment(4, "in-house", undefined),
+    /practice-stock frame must have a reserved inventory unit/,
+  );
+  assert.doesNotThrow(() => assertFrameInventoryAssignment(4, "in-house", "unit-123"));
   assert.doesNotThrow(() => assertFrameInventoryAssignment(4, "patients-own", undefined));
   assert.throws(
-    () => assertFrameInventoryAssignment(4, "patients-own", "unit-1"),
-    /FSRC 4 \+ in-house/,
-  );
-  assert.throws(
-    () => assertFrameInventoryAssignment(3, "in-house", "unit-1"),
+    () => assertFrameInventoryAssignment(0, undefined, "unit-123"),
     /FSRC 4 \+ in-house/,
   );
 });
