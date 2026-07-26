@@ -15,6 +15,7 @@ import {
   type FindingInstance,
 } from "./glaucoma-suspect.js";
 import { buildDiagnosisCatalogSeeds } from "./diagnosis-catalog-seeds.js";
+import { sphericalEquivalent } from "./refractive-status.js";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const REFRACTIVE_ERROR_LEDGER_PATH = resolve(
@@ -347,11 +348,6 @@ function codeFor(kind: "hyperopia" | "myopia" | "astigmatism", laterality: EyeLa
   if (kind === "hyperopia") return { OD: "H52.01", OS: "H52.02", OU: "H52.03", UNKNOWN: "H52.00" }[eye];
   if (kind === "myopia") return { OD: "H52.11", OS: "H52.12", OU: "H52.13", UNKNOWN: "H52.10" }[eye];
   return { OD: "H52.201", OS: "H52.202", OU: "H52.203", UNKNOWN: "H52.209" }[eye];
-}
-
-function sphericalEquivalent(evidence: RefractionEvidence): number | undefined {
-  if (evidence.sphere === undefined && evidence.cylinder === undefined) return undefined;
-  return (evidence.sphere ?? 0) + (evidence.cylinder ?? 0) / 2;
 }
 
 function powerField(display: string): Record<string, unknown> {
