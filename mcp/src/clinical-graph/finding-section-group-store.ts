@@ -28,6 +28,15 @@ export interface FindingSectionGroup {
   active: boolean;
 }
 
+export const DRY_EYE_WORKUP_SECTION_GROUP: FindingSectionGroup = {
+  id: "finding-section-group-dry-eye-workup",
+  groupKey: "dry-eye-workup",
+  label: "Dry Eye Workup",
+  sectionKeyPrefixes: ["dry-eye:"],
+  defaultForVisitTypeCategories: ["dry-eye"],
+  active: true,
+};
+
 export interface EncounterSectionOverride {
   encounterId: string;
   groupKeys: string[];
@@ -49,17 +58,27 @@ export interface FindingSectionGroupFhirClient {
 }
 
 export class FhirFindingSectionGroupStore {
-  constructor(private readonly fhir: FindingSectionGroupFhirClient) {}
+  constructor(
+    private readonly fhir: FindingSectionGroupFhirClient,
+    private readonly seeds: readonly FindingSectionGroup[] = [
+      DRY_EYE_WORKUP_SECTION_GROUP,
+    ],
+  ) {}
 
   async list(): Promise<FindingSectionGroup[]> {
-    return (await this.readStoredRows())
-      .map((row) => row.group)
+    const stored = (await this.readStoredRows()).map((row) => row.group);
+    const storedByKey = new Map(stored.map((group) => [group.groupKey, group]));
+    const seedKeys = new Set(this.seeds.map((group) => group.groupKey));
+    return [
+      ...this.seeds.map((seed) => storedByKey.get(seed.groupKey) ?? seed),
+      ...stored.filter((group) => !seedKeys.has(group.groupKey)),
+    ]
       .sort((left, right) => left.label.localeCompare(right.label));
   }
 
   async create(group: FindingSectionGroup): Promise<FindingSectionGroup> {
     const validated = assertFindingSectionGroup(group);
-    if ((await this.readStoredRows()).some((row) => row.group.groupKey === validated.groupKey)) {
+    if ((await this.list()).some((group) => group.groupKey === validated.groupKey)) {
       throw new FindingSectionGroupAlreadyExistsError(
         `Finding section group ${validated.groupKey} already exists.`,
       );

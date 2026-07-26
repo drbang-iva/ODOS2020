@@ -12,6 +12,8 @@ export interface CustomFindingField {
   min?: number;
   max?: number;
   step?: number;
+  inputControl?: "date" | "toggle";
+  defaultValue?: number | string;
   options?: Array<{ code: string; display: string; active: boolean; parentCode?: string; priority?: boolean }>;
   order: number;
   active: boolean;
@@ -153,7 +155,11 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
         <div className="border-b border-white/10 pb-4">
           <h2 className="text-lg font-semibold text-white">{definition.display}</h2>
           <p className="mt-1 text-sm text-white/45">
-            {resourceKind === "procedure" ? "Data-defined clinical procedure" : "Practice-created chart section"}
+            {resourceKind === "procedure"
+              ? "Data-defined clinical procedure"
+              : definition.stableKey.startsWith("dry-eye:")
+                ? "Compiled dry-eye workup section"
+                : "Practice-created chart section"}
           </p>
         </div>
         {fields.length > 0 ? (
@@ -166,7 +172,8 @@ export function CustomFindingSection({ definition, patientReference, encounterRe
                     <CustomFieldControl
                       key={field.localCode}
                       field={field}
-                      value={values[valueKey(field.localCode, eye)] ?? (field.valueType === "multi-select" ? [] : "")}
+                      value={values[valueKey(field.localCode, eye)] ??
+                        (field.valueType === "multi-select" ? [] : String(field.defaultValue ?? ""))}
                       onChange={(value) => update(valueKey(field.localCode, eye), value)}
                     />
                   ))}
@@ -222,7 +229,24 @@ function CustomFieldControl({ field, value, onChange }: {
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
-      {field.valueType === "number" ? (
+      {field.inputControl === "toggle" ? (
+        <label className="flex h-11 items-center gap-3 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white/75">
+          <input
+            type="checkbox"
+            checked={value === field.options?.[0]?.code}
+            onChange={(event) => onChange(event.target.checked ? field.options?.[0]?.code ?? "true" : "")}
+            className="accent-brand"
+          />
+          {value === field.options?.[0]?.code ? "Yes" : "No"}
+        </label>
+      ) : field.inputControl === "date" ? (
+        <input
+          type="date"
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)] outline-none focus:border-brand"
+        />
+      ) : field.valueType === "number" ? (
         <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
           <input type="number" value={typeof value === "string" ? value : ""} min={field.min} max={field.max} step={field.step ?? "any"} onChange={(event) => onChange(event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-white outline-none" />
           {field.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{field.unit}</span>}

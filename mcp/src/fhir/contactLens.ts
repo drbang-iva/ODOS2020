@@ -50,7 +50,7 @@ export const ODOS_SUBSTANCE_IDENTIFIER_SYSTEM = `${ODOS_FHIR_BASE}/Identifier/co
 export const UCUM_CODE_SYSTEM = "http://unitsofmeasure.org";
 export const LOINC_CODE_SYSTEM = "http://loinc.org";
 
-export const UCUM_UNIT_CODES = ["[diop]", "mm", "um", "ms", "s", "%", "deg", "mJ", "nm"] as const;
+export const UCUM_UNIT_CODES = ["[diop]", "mm", "um", "ms", "s", "%", "deg", "mJ", "nm", "mosm/L"] as const;
 export type UcumUnitCode = (typeof UCUM_UNIT_CODES)[number];
 
 const CONTACT_LENS_TYPE_DEFINITIONS = [

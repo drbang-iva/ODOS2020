@@ -16,6 +16,7 @@ import { GonioscopySection } from "../components/charting/GonioscopySection";
 import { CustomFindingSection, type CustomFindingDefinition } from "../components/charting/CustomFindingSection";
 import { CustomSectionEditor, type CustomSectionEditorValue } from "../components/charting/CustomSectionEditor";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
+import { DryEyeGlandStructureSection } from "../components/charting/DryEyeGlandStructureSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { IopSection } from "../components/charting/IopSection";
@@ -344,6 +345,35 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const ocularHealthDefinitions = visibleDefinitions.filter((definition) =>
     definition.sectionKey?.startsWith("ocular-health:")
   );
+  const tearFilmDefinition = ocularHealthDefinitions.find(
+    (definition) => definition.stableKey === "ocular-health:anterior:tear-film",
+  );
+  const corneaDefinition = ocularHealthDefinitions.find(
+    (definition) => definition.stableKey === "ocular-health:anterior:cornea",
+  );
+  const dryEyeDefinitions = visibleDefinitions.filter((definition) =>
+    definition.sectionKey?.startsWith("dry-eye:")
+  );
+  const dryEyeDefinitionByKey = new Map(
+    dryEyeDefinitions.map((definition) => [definition.stableKey, definition]),
+  );
+  const dryEyeSections = dryEyeDefinitions.length === 0
+    ? []
+    : [
+        section("dry-eye:symptoms", "Symptoms"),
+        ...(tearFilmDefinition
+          ? [section("dry-eye:tear-stability", "Tear Stability")]
+          : []),
+        section("dry-eye:tear-volume", "Tear Volume"),
+        section("dry-eye:markers", "Tear Film Markers"),
+        section("dry-eye:gland-structure", "Gland Structure"),
+        section("dry-eye:gland-function", "Gland Function"),
+        section("dry-eye:conjunctival-staining", "Surface Staining"),
+        section("dry-eye:staging", "Staging & Subtype"),
+      ].filter((candidate) =>
+        candidate.id === "dry-eye:tear-stability" ||
+        dryEyeDefinitionByKey.has(candidate.id)
+      );
   const ocularHealthSections = ocularHealthDefinitions.map((definition) => ({
     id: definition.stableKey as ChartSectionId,
     label: definition.display,
@@ -361,6 +391,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     group: "AESTHETICS",
   }));
   const spineCustomSections = [
+    ...dryEyeSections,
     ...(discipline === "aesthetics"
       ? [{ id: "aesthetics-consent" as ChartSectionId, label: "Cosmetic consent", group: "AESTHETICS" }]
       : []),
@@ -372,6 +403,9 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     : undefined;
   const procedureDefinition = activeSection.startsWith("procedure:")
     ? procedureDefinitions.find((definition) => definition.stableKey === activeSection)
+    : undefined;
+  const dryEyeDefinition = activeSection.startsWith("dry-eye:")
+    ? dryEyeDefinitionByKey.get(activeSection)
     : undefined;
   const effectiveGroupKeys = new Set(sectionGroupCatalog.effectiveGroupKeys ?? []);
   const availableSectionGroups = sectionGroupCatalog.groups.filter(
@@ -621,8 +655,56 @@ export function EncounterCharting({ patient, encounterId }: Props) {
               onSaved={(status, stableKeys) => stableKeys.forEach((stableKey) => markSaved(stableKey as ChartSectionId, status))}
             />
           )}
+          {activeSection === "dry-eye:tear-stability" && tearFilmDefinition && (
+            <OcularHealthSection
+              definitions={[tearFilmDefinition]}
+              focusedStableKey={tearFilmDefinition.stableKey}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status, stableKeys) => {
+                stableKeys.forEach((stableKey) => markSaved(stableKey as ChartSectionId, status));
+                markSaved("dry-eye:tear-stability", status);
+              }}
+            />
+          )}
+          {activeSection === "dry-eye:conjunctival-staining" && dryEyeDefinition && (
+            <OcularHealthSection
+              definitions={[
+                ...(corneaDefinition ? [corneaDefinition] : []),
+                dryEyeDefinition,
+              ]}
+              focusedStableKey={dryEyeDefinition.stableKey}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status, stableKeys) => stableKeys.forEach((stableKey) =>
+                markSaved(stableKey as ChartSectionId, status)
+              )}
+            />
+          )}
+          {activeSection === "dry-eye:gland-structure" && dryEyeDefinition && (
+            <DryEyeGlandStructureSection
+              definition={dryEyeDefinition}
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => markSaved(activeSection, status)}
+            />
+          )}
+          {activeSection.startsWith("dry-eye:") &&
+            activeSection !== "dry-eye:tear-stability" &&
+            activeSection !== "dry-eye:conjunctival-staining" &&
+            activeSection !== "dry-eye:gland-structure" &&
+            dryEyeDefinition && (
+              <CustomFindingSection
+                key={dryEyeDefinition.stableKey}
+                definition={dryEyeDefinition}
+                patientReference={patientReference}
+                encounterReference={encounterReference}
+                onSaved={(status) => markSaved(activeSection, status)}
+              />
+            )}
           {activeSection.startsWith("custom:") && customDefinition && (
             <CustomFindingSection
+              key={customDefinition.stableKey}
               definition={customDefinition}
               patientReference={patientReference}
               encounterReference={encounterReference}
@@ -631,6 +713,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           )}
           {activeSection.startsWith("procedure:") && procedureDefinition && (
             <CustomFindingSection
+              key={procedureDefinition.stableKey}
               definition={procedureDefinition}
               patientReference={patientReference}
               encounterReference={encounterReference}
@@ -691,4 +774,8 @@ function MissingDefinitionState({ section }: { section: string }) {
       </div>
     </section>
   );
+}
+
+function section(id: `dry-eye:${string}`, label: string) {
+  return { id: id as ChartSectionId, label, group: "DRY EYE WORKUP" };
 }

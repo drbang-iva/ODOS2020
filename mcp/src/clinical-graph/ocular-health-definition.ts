@@ -64,7 +64,15 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Adequate tear film; normal meniscus and break-up.",
     priority: ["reduced tear meniscus", "rapid TBUT", "debris in tear film"],
     additional: ["mucus strands", "foam", "increased/decreased lake", "frothing"],
-    gradeFields: [{ display: "TBUT", kind: "number", min: 0, max: 60, step: 1, unit: "s" }],
+    gradeFields: [
+      { display: "TBUT", kind: "number", min: 0, max: 60, step: 1, unit: "s" },
+      {
+        display: "TBUT method",
+        kind: "select",
+        options: ["Fluorescein", "Non-invasive"],
+        slugOptionCodes: true,
+      },
+    ],
   },
   {
     key: "cornea",
@@ -72,6 +80,26 @@ const ANTERIOR_STRUCTURES: StructureSeed[] = [
     normalTemplate: "Clear, no staining; normal thickness and clarity.",
     priority: ["superficial punctate keratitis (SPK)", "corneal staining", "dry eye keratopathy", "arcus", "scar", "keratoconus", "guttata", "pterygium (encroaching)", "neovascularization", "infiltrate"],
     additional: ["abrasion", "dendrite", "edema", "foreign body", "filaments", "erosion", "RCES (recurrent erosion)", "EBMD (map-dot-fingerprint)", "Fuchs' endothelial dystrophy", "band keratopathy", "Salzmann's nodule", "keratic precipitates", "ulcer", "haze", "opacification", "pannus", "nodules", "phlyctenule", "Descemet folds", "Krukenberg spindle", "iron line (Hudson-Stahli/Stocker's/Fleischer's)", "Vogt striae", "vortex keratopathy (verticillata)", "Thygeson's SPK", "lipid keratopathy", "Mooren's ulcer", "Terrien's marginal degeneration", "peripheral thinning", "central thinning", "hydrops", "pigment on endothelium"],
+    gradeFields: [
+      {
+        display: "Corneal staining grade (grading scheme provisional)",
+        kind: "select",
+        options: ["Grade 0", "Grade 1", "Grade 2", "Grade 3", "Grade 4"],
+        slugOptionCodes: true,
+      },
+      {
+        display: "Corneal staining zone (grading scheme provisional)",
+        kind: "select",
+        options: ["Central", "Nasal", "Temporal", "Superior", "Inferior", "Diffuse"],
+        slugOptionCodes: true,
+      },
+      {
+        display: "Vital dye",
+        kind: "select",
+        options: ["Fluorescein", "Lissamine green"],
+        slugOptionCodes: true,
+      },
+    ],
   },
   {
     key: "anterior-chamber",
@@ -151,6 +179,7 @@ const POSTERIOR_STRUCTURES: StructureSeed[] = [
 interface DiagnosisCandidateSeed {
   option: string;
   diagnosisKey: string;
+  fieldDisplay?: string;
 }
 
 const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[]> = {
@@ -192,6 +221,64 @@ const DIAGNOSIS_CANDIDATE_SEEDS: Record<string, readonly DiagnosisCandidateSeed[
     { option: "operculated-hole", diagnosisKey: "retinal_round_hole" },
     { option: "retinoschisis", diagnosisKey: "retinoschisis" },
     { option: "retinal-detachment", diagnosisKey: "retinal_detachment_single_break" },
+  ],
+  "dry-eye:markers": [
+    {
+      fieldDisplay: "Inflammatory result",
+      option: "positive",
+      diagnosisKey: "kcs_not_sjogren",
+    },
+  ],
+  "dry-eye:gland-function": [
+    {
+      fieldDisplay: "Expressibility",
+      option: "reduced",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
+    {
+      fieldDisplay: "Expressibility",
+      option: "non-expressible",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
+    {
+      fieldDisplay: "Secretion quality",
+      option: "granular",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
+    {
+      fieldDisplay: "Secretion quality",
+      option: "inspissated",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
+  ],
+  "dry-eye:conjunctival-staining": [
+    ...["grade-1", "grade-2", "grade-3", "grade-4"].map((option) => ({
+      fieldDisplay: "Conjunctival staining grade (grading scheme provisional)",
+      option,
+      diagnosisKey: "kcs_not_sjogren",
+    })),
+  ],
+  "dry-eye:staging": [
+    {
+      fieldDisplay: "Subtype",
+      option: "aqueous-deficient",
+      diagnosisKey: "kcs_not_sjogren",
+    },
+    {
+      fieldDisplay: "Subtype",
+      option: "evaporative-mgd",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
+    {
+      fieldDisplay: "Subtype",
+      option: "mixed",
+      diagnosisKey: "kcs_not_sjogren",
+    },
+    {
+      fieldDisplay: "Subtype",
+      option: "mixed",
+      diagnosisKey: "meibomian_gland_dysfunction",
+    },
   ],
 };
 
@@ -237,31 +324,41 @@ function buildOcularHealthDefinitions(
       notBillReady: true,
       provenance,
     });
-    const seeds = DIAGNOSIS_CANDIDATE_SEEDS[stableKey];
-    if (!seeds) return definition;
-    return {
-      ...definition,
-      allowDiagnosisMapping: true,
-      diagnosisCandidates: diagnosisCandidates(definition, seeds),
-    };
+    return applyOcularHealthDiagnosisCandidates(definition);
   });
 }
 
-function diagnosisCandidates(
+export function applyOcularHealthDiagnosisCandidates(
   definition: ClinicalFindingDefinition,
-  seeds: readonly DiagnosisCandidateSeed[],
-): DiagnosisCandidateEntry[] {
-  const abnormal = Object.values(definition.valueSchema.fields as Record<string, CustomFieldEntry>)
-    .find((field) => field.display === "Abnormal findings" && field.valueType === "multi-select");
-  if (!abnormal) throw new Error(`Ocular-health definition ${definition.stableKey} has no Abnormal findings field.`);
-  return seeds.map((seed, index) => ({
+): ClinicalFindingDefinition {
+  const seeds = DIAGNOSIS_CANDIDATE_SEEDS[definition.stableKey];
+  if (!seeds) return definition;
+  const fields = Object.values(
+    definition.valueSchema.fields as Record<string, CustomFieldEntry>,
+  );
+  const diagnosisCandidates: DiagnosisCandidateEntry[] = seeds.map((seed, index) => {
+    const field = fields.find((candidate) =>
+      candidate.display === (seed.fieldDisplay ?? "Abnormal findings")
+    );
+    if (!field) {
+      throw new Error(
+        `Finding definition ${definition.stableKey} has no ${seed.fieldDisplay ?? "Abnormal findings"} field.`,
+      );
+    }
+    return {
     id: `SEED_${seed.diagnosisKey.toUpperCase()}_${index + 1}`,
     diagnosisKey: seed.diagnosisKey,
-    trigger: { kind: "option", field: abnormal.localCode, anyOf: [seed.option] },
+    trigger: { kind: "option", field: field.localCode, anyOf: [seed.option] },
     priority: true,
     origin: "seed",
     active: true,
-  }));
+    };
+  });
+  return {
+    ...definition,
+    allowDiagnosisMapping: true,
+    diagnosisCandidates,
+  };
 }
 
 function gradeField(
