@@ -38,7 +38,7 @@ export const V04_WRITE_TOOL_NAMES = [
   "create_or_update_myopia_plan",
   "create_atropine_medication_statement",
   "update_atropine_medication_status",
-  "record_myopia_axial_length_measurement",
+  "record_eye_growth_axial_length_measurement",
 ] as const;
 
 export type V035WriteToolName = (typeof V035_WRITE_TOOL_NAMES)[number];

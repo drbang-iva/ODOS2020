@@ -244,10 +244,10 @@ test("v0.4c Ortho-K and myopia MCP write tools create resources with mandatory P
     assertProvenance(output.provenance, `MedicationStatement/${output.medicationStatement.id}`);
   });
 
-  await t.test("record_myopia_axial_length_measurement writes mm Observation", async () => {
+  await t.test("record_eye_growth_axial_length_measurement writes mm Observation", async () => {
     const output = parseToolOutput<ObservationOutput>(
       await mcp.client.callTool({
-        name: "record_myopia_axial_length_measurement",
+        name: "record_eye_growth_axial_length_measurement",
         arguments: {
           patient_id: patient.id,
           encounter_id: "v04c-no-encounter",

@@ -20,6 +20,12 @@ export interface TabulatedBandsPayload {
   tables: Record<ReferenceSex, PercentileTableRow[]>;
 }
 
+export interface PercentileZoneThresholds {
+  neutralUpper: number;
+  typicalUpper: number;
+  borderlineUpper: number;
+}
+
 export interface LmsParameterRow {
   age: number;
   L: number;
@@ -47,6 +53,7 @@ export interface PercentileBandsDataset {
   ageRangeMax: number;
   measure: ReferenceMeasure;
   modelType: "PERCENTILE_BANDS";
+  zoneThresholds: PercentileZoneThresholds;
   payload: PercentileBandsPayload;
 }
 
@@ -94,9 +101,12 @@ export interface TranscriptionInvariantResult {
   violations: string[];
 }
 
-const SEED_PATH = fileURLToPath(
-  new URL("../../../data/myopia-reference-datasets/he-2023-axial-length.json", import.meta.url),
-);
+const SEED_PATHS = [
+  "he-2023-axial-length.json",
+  "truckenbrod-2021-german-axial-length.json",
+].map((filename) => fileURLToPath(
+  new URL(`../../../data/myopia-reference-datasets/${filename}`, import.meta.url),
+));
 
 export class ReferenceDatasetRegistry {
   private readonly datasets: readonly ReferenceDataset[];
@@ -169,16 +179,18 @@ export class PercentileBandProvider implements ReferenceBandProvider {
 }
 
 export function loadReferenceDatasetSeeds(): ReferenceDataset[] {
-  const raw = JSON.parse(readFileSync(SEED_PATH, "utf8")) as unknown;
-  if (!isRecord(raw)) throw new Error("Myopia reference dataset seed must be an object.");
-  const dataset = raw as unknown as ReferenceDataset;
-  assertDataset(dataset);
-  const failures = evaluateTranscriptionInvariants(dataset)
-    .filter((result) => result.violations.length > 0);
-  if (failures.length) {
-    throw new Error(failures.flatMap((result) => result.violations).join("; "));
-  }
-  return [dataset];
+  return SEED_PATHS.map((seedPath) => {
+    const raw = JSON.parse(readFileSync(seedPath, "utf8")) as unknown;
+    if (!isRecord(raw)) throw new Error("Myopia reference dataset seed must be an object.");
+    const dataset = raw as unknown as ReferenceDataset;
+    assertDataset(dataset);
+    const failures = evaluateTranscriptionInvariants(dataset)
+      .filter((result) => result.violations.length > 0);
+    if (failures.length) {
+      throw new Error(failures.flatMap((result) => result.violations).join("; "));
+    }
+    return dataset;
+  });
 }
 
 export function evaluateTranscriptionInvariants(
@@ -224,19 +236,21 @@ export function evaluateTranscriptionInvariants(
         for (let rowIndex = 0; rowIndex < rows.length - 1; rowIndex += 1) {
           const current = rows[rowIndex]!;
           const next = rows[rowIndex + 1]!;
-          const delta = next.values[index]! - current.values[index]!;
+          const yearSpan = next.age - current.age;
+          const deltaPerYear = (next.values[index]! - current.values[index]!) / yearSpan;
           v2.checks += 1;
           v3.checks += 1;
-          if (delta < -0.10 - Number.EPSILON) {
+          if (!(yearSpan > 0)) continue;
+          if (deltaPerYear < -0.10 - Number.EPSILON) {
             v2.violations.push(
               `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
-              `${delta.toFixed(2)} mm is below -0.10 mm.`,
+              `${deltaPerYear.toFixed(2)} mm/year is below -0.10 mm/year.`,
             );
           }
-          if (delta > 0.60 + Number.EPSILON) {
+          if (deltaPerYear > 0.60 + Number.EPSILON) {
             v3.violations.push(
               `${sex} P${payload.percentiles[index]} age ${current.age}->${next.age}: ` +
-              `${delta.toFixed(2)} mm exceeds 0.60 mm.`,
+              `${deltaPerYear.toFixed(2)} mm/year exceeds 0.60 mm/year.`,
             );
           }
         }
@@ -244,19 +258,27 @@ export function evaluateTranscriptionInvariants(
     }
   }
 
-  const expectedRows = dataset.ageRangeMax - dataset.ageRangeMin + 1;
+  const maleRows = payload.tables.MALE ?? [];
+  const femaleRows = payload.tables.FEMALE ?? [];
+  const expectedRows = maleRows.length;
   const expectedValues = payload.percentiles.length * expectedRows * 2;
-  const agesComplete = (["MALE", "FEMALE"] as const).every((sex) => {
-    const rows = payload.tables[sex] ?? [];
-    return rows.length === expectedRows &&
-      rows.every((row, index) =>
-        row.age === dataset.ageRangeMin + index &&
+  const expectedAges = maleRows.map((row) => row.age);
+  const agesComplete =
+    expectedRows > 0 &&
+    femaleRows.length === expectedRows &&
+    expectedAges[0] === dataset.ageRangeMin &&
+    expectedAges.at(-1) === dataset.ageRangeMax &&
+    expectedAges.every((age, index) => index === 0 || age > expectedAges[index - 1]!) &&
+    (["MALE", "FEMALE"] as const).every((sex) => {
+      const rows = payload.tables[sex] ?? [];
+      return rows.every((row, index) =>
+        row.age === expectedAges[index] &&
         row.values.length === payload.percentiles.length &&
         row.values.every((value) => Number.isFinite(value)));
-  });
+    });
   if (valueCount !== expectedValues || !agesComplete) {
     v5.violations.push(
-      `Expected ${payload.percentiles.length} percentiles x ${expectedRows} ages x 2 sexes = ` +
+      `Expected ${payload.percentiles.length} percentiles x ${expectedRows} published ages x 2 sexes = ` +
       `${expectedValues} finite values; found ${valueCount}.`,
     );
   }
@@ -324,6 +346,21 @@ function assertDataset(dataset: ReferenceDataset): void {
     }
     if (!dataset.payload.percentiles.every((percentile) => Number.isFinite(percentile))) {
       throw new Error("Percentile dataset payload percentiles must be finite.");
+    }
+    if (!isRecord(dataset.zoneThresholds)) {
+      throw new Error("Percentile dataset must include zoneThresholds.");
+    }
+    const zoneThresholds = [
+      dataset.zoneThresholds.neutralUpper,
+      dataset.zoneThresholds.typicalUpper,
+      dataset.zoneThresholds.borderlineUpper,
+    ];
+    if (
+      !zoneThresholds.every((percentile) =>
+        Number.isFinite(percentile) && dataset.payload.percentiles.includes(percentile)) ||
+      !(zoneThresholds[0]! < zoneThresholds[1]! && zoneThresholds[1]! < zoneThresholds[2]!)
+    ) {
+      throw new Error("Percentile zone thresholds must be ordered centiles published by the dataset.");
     }
     for (const sex of ["MALE", "FEMALE"] as const) {
       if (!Array.isArray(dataset.payload.tables?.[sex])) {

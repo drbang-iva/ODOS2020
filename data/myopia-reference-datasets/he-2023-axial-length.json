@@ -11,6 +11,11 @@
   "ageRangeMax": 18,
   "measure": "AXIAL_LENGTH",
   "modelType": "PERCENTILE_BANDS",
+  "zoneThresholds": {
+    "neutralUpper": 25,
+    "typicalUpper": 50,
+    "borderlineUpper": 75
+  },
   "payload": {
     "type": "TABULATED_BANDS",
     "percentiles": [

@@ -7,6 +7,7 @@ interface SpineSection {
   readOnly?: boolean;
   group?: string;
   subHeader?: string;
+  onDemand?: boolean;
 }
 
 const SECTIONS: SpineSection[] = [
@@ -26,10 +27,11 @@ const SECTIONS: SpineSection[] = [
   { id: "dilation", label: "Dilation", group: "PRETEST" },
   { id: "refraction", label: "Refraction", group: "REFRACTION" },
   { id: "refraction-history", label: "Refraction History", readOnly: true, group: "REFRACTION" },
+  { id: "eye-growth", label: "Eye Growth", group: "REFRACTION" },
   { id: "soft-contact-lens", label: "Soft Contact Lenses", group: "CONTACT LENSES" },
   { id: "specialty-contact-lens", label: "Specialty Contact Lens", group: "CONTACT LENSES" },
   { id: "ortho-k", label: "Ortho-K", group: "CONTACT LENSES" },
-  { id: "myopia-management", label: "Myopia Progression", group: "CONTACT LENSES" },
+  { id: "myopia-management", label: "Myopia Management", group: "CONTACT LENSES" },
   { id: "cup-disc", label: "Cup/Disc", group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" },
   { id: "gonioscopy", label: "Gonioscopy", group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" },
   { id: "dry-eye", label: "Dry Eye", group: "OCULAR HEALTH" },
@@ -44,15 +46,27 @@ interface Props {
   onSelect: (section: ChartSectionId) => void;
   customSections?: Array<{ id: ChartSectionId; label: string; group?: string }>;
   ocularHealthSections?: Array<{ id: ChartSectionId; label: string; segment?: "anterior" | "posterior" }>;
+  eyeGrowthDefaultVisible?: boolean;
   onAddSection?: () => void;
 }
 
-export function SpineNav({ active, statuses, onSelect, customSections = [], ocularHealthSections = [], onAddSection }: Props) {
+export function SpineNav({
+  active,
+  statuses,
+  onSelect,
+  customSections = [],
+  ocularHealthSections = [],
+  eyeGrowthDefaultVisible = true,
+  onAddSection,
+}: Props) {
   const cupDiscIndex = SECTIONS.findIndex((section) => section.id === "cup-disc");
   const anterior = ocularHealthSections.filter((section) => section.segment !== "posterior");
   const posterior = ocularHealthSections.filter((section) => section.segment === "posterior");
   const sections: SpineSection[] = [
-    ...SECTIONS.slice(0, cupDiscIndex),
+    ...SECTIONS.slice(0, cupDiscIndex).map((section) =>
+      section.id === "eye-growth" && !eyeGrowthDefaultVisible
+        ? { ...section, onDemand: true }
+        : section),
     ...anterior.map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "ANTERIOR SEGMENT" })),
     ...posterior.slice(0, 1).map((section) => ({ ...section, group: "OCULAR HEALTH", subHeader: "POSTERIOR SEGMENT" })),
     SECTIONS[cupDiscIndex]!,
@@ -121,6 +135,13 @@ function SpineGroup({ label, sections, active, statuses, open, onToggle, onSelec
   onSelect(section: ChartSectionId): void;
 }) {
   const panelId = `spine-group-${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
+  const defaultSections = sections.filter((section) => !section.onDemand);
+  const onDemandSections = sections.filter((section) => section.onDemand);
+  const activeOnDemand = onDemandSections.some((section) => section.id === active);
+  const [showOnDemand, setShowOnDemand] = useState(activeOnDemand);
+  useEffect(() => {
+    if (activeOnDemand) setShowOnDemand(true);
+  }, [activeOnDemand]);
   return (
     <section className="w-44 shrink-0 md:w-full" data-spine-group={label}>
       <button
@@ -134,16 +155,39 @@ function SpineGroup({ label, sections, active, statuses, open, onToggle, onSelec
         <span className="text-sm text-white/30" aria-hidden>{open ? "−" : "+"}</span>
       </button>
       <div id={panelId} className="space-y-1 pb-1" data-spine-group-panel={label} hidden={!open}>
-        {sections.map((section, index) => (
+        {defaultSections.map((section, index) => (
           <SpineRow
             key={section.id}
             section={section}
-            previousSection={sections[index - 1]}
+            previousSection={defaultSections[index - 1]}
             active={active}
             statuses={statuses}
             onSelect={onSelect}
           />
         ))}
+        {onDemandSections.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="flex min-h-8 w-full items-center justify-between rounded border border-dashed border-[color:var(--odos-line)] px-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--odos-muted)] transition hover:border-[color:var(--odos-line-2)] hover:text-[color:var(--odos-text)]"
+              aria-expanded={showOnDemand}
+              onClick={() => setShowOnDemand((current) => !current)}
+            >
+              <span>Available on demand</span>
+              <span aria-hidden>{showOnDemand ? "−" : "+"}</span>
+            </button>
+            {showOnDemand && onDemandSections.map((section, index) => (
+              <SpineRow
+                key={section.id}
+                section={section}
+                previousSection={onDemandSections[index - 1]}
+                active={active}
+                statuses={statuses}
+                onSelect={onSelect}
+              />
+            ))}
+          </>
+        )}
       </div>
     </section>
   );

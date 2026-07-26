@@ -1,0 +1,43 @@
+{
+  "datasetId": "truckenbrod-2021-german-axial-length",
+  "version": "1.0.0",
+  "citation": "Truckenbrod C, Meigen C, Brandt M, Vogel M, Sanz Diez P, Wahl S, Jurkutat A, Kiess W. Longitudinal analysis of axial length growth in a German cohort of healthy children and adolescents. Ophthalmic Physiol Opt. 2021;41(3):532-540. doi:10.1111/opo.12817. PMID 33792977. Open Access under CC BY-NC.",
+  "populationNote": "German cohort (LIFE Child Study, n=1,965; 4,511 visits). Percentiles published at ages 6, 9, 12 and 15 only.",
+  "populationsCovered": [
+    "CAUCASIAN"
+  ],
+  "sexStratified": true,
+  "ageRangeMin": 6,
+  "ageRangeMax": 15,
+  "measure": "AXIAL_LENGTH",
+  "modelType": "PERCENTILE_BANDS",
+  "zoneThresholds": {
+    "neutralUpper": 25,
+    "typicalUpper": 50,
+    "borderlineUpper": 75
+  },
+  "payload": {
+    "type": "TABULATED_BANDS",
+    "percentiles": [
+      2,
+      25,
+      50,
+      75,
+      98
+    ],
+    "tables": {
+      "MALE": [
+        { "age": 6, "values": [21.08, 22.13, 22.61, 23.08, 24.00] },
+        { "age": 9, "values": [21.53, 22.59, 23.10, 23.61, 24.65] },
+        { "age": 12, "values": [21.83, 22.90, 23.44, 24.00, 25.17] },
+        { "age": 15, "values": [21.99, 23.06, 23.63, 24.23, 25.57] }
+      ],
+      "FEMALE": [
+        { "age": 6, "values": [20.76, 21.60, 22.00, 22.39, 23.16] },
+        { "age": 9, "values": [21.21, 22.14, 22.59, 23.04, 23.97] },
+        { "age": 12, "values": [21.48, 22.48, 22.99, 23.51, 24.64] },
+        { "age": 15, "values": [21.57, 22.63, 23.19, 23.80, 25.18] }
+      ]
+    }
+  }
+}

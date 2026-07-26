@@ -14,12 +14,14 @@ import {
 } from "../src/clinical-graph/myopia-reference-dataset.js";
 import { buildMyopiaFindingDefinitions } from "../src/clinical-graph/myopia-finding-definition.js";
 import {
+  handleEyeGrowthVisibilityRequest,
   handleMyopiaCaptureRequest,
   handleMyopiaHistoryRequest,
   resolveMyopiaDefinitions,
+  type EyeGrowthVisibilityResponse,
   type MyopiaProgressionEndpointDeps,
   type MyopiaProgressionHistoryResponse,
-} from "../src/clinical-graph/myopia-progression-endpoint.js";
+} from "../src/clinical-graph/eye-growth-endpoint.js";
 import type {
   MyopiaPatientSettings,
   MyopiaReferencePopulationStore,
@@ -57,7 +59,8 @@ test("myopia finding definitions keep exact stable keys and capture contract", (
 });
 
 test("accepted He Table 4 seed satisfies transcription invariants V1-V5", () => {
-  const dataset = loadReferenceDatasetSeeds()[0];
+  const dataset = loadReferenceDatasetSeeds()
+    .find((candidate) => candidate.datasetId === "he-2023-chinese-axial-length");
   assert.ok(dataset);
   assert.equal(dataset.modelType, "PERCENTILE_BANDS");
   if (dataset.modelType !== "PERCENTILE_BANDS") assert.fail("Expected percentile-band seed.");
@@ -73,6 +76,40 @@ test("accepted He Table 4 seed satisfies transcription invariants V1-V5", () => 
   );
 });
 
+test("supplied Truckenbrod seed transcribes all 40 values and satisfies per-year V1-V5", () => {
+  const dataset = loadReferenceDatasetSeeds()
+    .find((candidate) => candidate.datasetId === "truckenbrod-2021-german-axial-length");
+  assert.ok(dataset);
+  assert.equal(dataset.modelType, "PERCENTILE_BANDS");
+  if (dataset.modelType !== "PERCENTILE_BANDS") assert.fail("Expected percentile-band seed.");
+  assert.equal(dataset.payload.type, "TABULATED_BANDS");
+  if (dataset.payload.type !== "TABULATED_BANDS") assert.fail("Expected tabulated seed.");
+  assert.deepEqual(dataset.payload.percentiles, [2, 25, 50, 75, 98]);
+  assert.deepEqual(dataset.payload.tables, {
+    MALE: [
+      { age: 6, values: [21.08, 22.13, 22.61, 23.08, 24.00] },
+      { age: 9, values: [21.53, 22.59, 23.10, 23.61, 24.65] },
+      { age: 12, values: [21.83, 22.90, 23.44, 24.00, 25.17] },
+      { age: 15, values: [21.99, 23.06, 23.63, 24.23, 25.57] },
+    ],
+    FEMALE: [
+      { age: 6, values: [20.76, 21.60, 22.00, 22.39, 23.16] },
+      { age: 9, values: [21.21, 22.14, 22.59, 23.04, 23.97] },
+      { age: 12, values: [21.48, 22.48, 22.99, 23.51, 24.64] },
+      { age: 15, values: [21.57, 22.63, 23.19, 23.80, 25.18] },
+    ],
+  });
+  const results = evaluateTranscriptionInvariants(dataset);
+  for (const result of results) {
+    console.log(`Truckenbrod ${result.invariant}: checks=${result.checks} violations=${result.violations.length}`);
+    assert.deepEqual(result.violations, []);
+  }
+  assert.deepEqual(
+    results.map((result) => [result.invariant, result.checks]),
+    [["V1", 32], ["V2", 30], ["V3", 30], ["V4", 40], ["V5", 1]],
+  );
+});
+
 test("registry accepts LMS parameters but provider leaves LMS evaluation unavailable", () => {
   const dataset: PercentileBandsDataset = {
     datasetId: "synthetic-lms-contract",
@@ -85,6 +122,7 @@ test("registry accepts LMS parameters but provider leaves LMS evaluation unavail
     ageRangeMax: 4,
     measure: "AXIAL_LENGTH",
     modelType: "PERCENTILE_BANDS",
+    zoneThresholds: { neutralUpper: 3, typicalUpper: 50, borderlineUpper: 95 },
     payload: {
       type: "LMS_PARAMETERS",
       percentiles: [3, 50, 95],
@@ -135,12 +173,21 @@ test("reference provider returns bands only for covered population and in-range 
   });
   assert.equal(covered?.bands.length, 8);
   assert.match(covered?.populationNote ?? "", /typical for this cohort, not a marker of normal or healthy eye growth/);
+  const german = MYOPIA_REFERENCE_BAND_PROVIDER.getBands({
+    measure: "AXIAL_LENGTH",
+    population: "CAUCASIAN",
+    sex: "FEMALE",
+    ageInYears: 10,
+  });
+  assert.equal(german?.bands.length, 5);
+  assert.deepEqual(german?.bands.map((band) => band.percentile), [2, 25, 50, 75, 98]);
 
   for (const input of [
-    { population: "CAUCASIAN" as const, ageInYears: 10 },
     { population: "NOT_REPRESENTED" as const, ageInYears: 10 },
     { population: "ASIAN" as const, ageInYears: 3.99 },
     { population: "ASIAN" as const, ageInYears: 18.01 },
+    { population: "CAUCASIAN" as const, ageInYears: 5.99 },
+    { population: "CAUCASIAN" as const, ageInYears: 15.01 },
   ]) {
     assert.equal(MYOPIA_REFERENCE_BAND_PROVIDER.getBands({
       measure: "AXIAL_LENGTH",
@@ -148,6 +195,41 @@ test("reference provider returns bands only for covered population and in-range 
       ...input,
     }), null);
   }
+});
+
+test("Eye Growth defaults visible only inside the active dataset's declared age range", async () => {
+  for (const [ageRangeMin, ageRangeMax, expected] of [
+    [6, 15, true],
+    [11, 15, false],
+  ] as const) {
+    const registry = new ReferenceDatasetRegistry([
+      syntheticTabulatedDataset(ageRangeMin, ageRangeMax, "AXIAL_LENGTH"),
+    ]);
+    const fixture = endpointFixture("ASIAN", { referenceDatasetRegistry: registry });
+    const visibility = await handleEyeGrowthVisibilityRequest(fixture.deps, {
+      authHeader: AUTH,
+      query: { patient: PATIENT_REFERENCE },
+    });
+    const body = visibility.body as EyeGrowthVisibilityResponse;
+    assert.equal(visibility.status, 200);
+    assert.equal(body.defaultVisible, expected);
+    assert.equal(body.ageRangeMin, ageRangeMin);
+    assert.equal(body.ageRangeMax, ageRangeMax);
+    console.log(
+      `visibility: age=${body.currentAgeInYears.toFixed(2)} range=${ageRangeMin}-${ageRangeMax} default=${body.defaultVisible}`,
+    );
+  }
+  const notRepresented = endpointFixture("NOT_REPRESENTED");
+  const visibility = await handleEyeGrowthVisibilityRequest(notRepresented.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = visibility.body as EyeGrowthVisibilityResponse;
+  assert.ok(body.currentAgeInYears > 9.99 && body.currentAgeInYears < 10.01);
+  assert.deepEqual(
+    { ageRangeMin: body.ageRangeMin, ageRangeMax: body.ageRangeMax, defaultVisible: body.defaultVisible },
+    { ageRangeMin: null, ageRangeMax: null, defaultVisible: false },
+  );
 });
 
 test("reference history follows each dataset's declared age range", async () => {
@@ -183,7 +265,7 @@ test("empty finding-definition lists fall back to the built-in myopia seed", () 
   assert.equal(definitions.cornealRadius.stableKey, "CORNEAL_RADIUS");
 });
 
-test("clinical graph round-trip preserves both eyes, required method, and optional instrument", async () => {
+test("section id migration is data-neutral: Eye Growth reads existing AXIAL_LENGTH stable keys and values", async () => {
   const fixture = endpointFixture("ASIAN");
   const capture = await handleMyopiaCaptureRequest(fixture.deps, {
     authHeader: AUTH,
@@ -213,6 +295,9 @@ test("clinical graph round-trip preserves both eyes, required method, and option
     resource.resourceType === "Observation" &&
     resource.code.coding?.some((coding) => coding.code === "AXIAL_LENGTH") === true);
   assert.equal(axial.length, 2);
+  assert.equal(axial.every((observation) =>
+    !JSON.stringify(observation).includes("eye-growth") &&
+    !JSON.stringify(observation).includes("myopia-management")), true);
   assert.equal(axial.every((observation) =>
     observation.meta?.profile?.includes(OBSERVATION_AXIAL_LENGTH_PROFILE_URL)), true);
   assert.deepEqual(
@@ -414,6 +499,7 @@ function syntheticTabulatedDataset(
     ageRangeMax,
     measure,
     modelType: "PERCENTILE_BANDS",
+    zoneThresholds: { neutralUpper: 3, typicalUpper: 50, borderlineUpper: 95 },
     payload: {
       type: "TABULATED_BANDS",
       percentiles: [3, 50, 95],

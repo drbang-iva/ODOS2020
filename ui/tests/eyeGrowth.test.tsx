@@ -50,7 +50,7 @@ const readings: AxialGrowthReading[] = [
   },
 ];
 
-test("NOT_REPRESENTED renders both patient-eye series and zero reference bands", () => {
+test("Eye Growth renders NOT_REPRESENTED measurements with zero reference bands", () => {
   const html = renderToStaticMarkup(
     <AxialGrowthChart
       readings={readings}
@@ -81,7 +81,10 @@ test("rendered reference bands always carry citation and population safety note"
         version: "1.0.0",
         citation: "He X et al. Ophthalmology. 2023.",
         populationNote,
+        ageRangeMin: 4,
+        ageRangeMax: 18,
         percentiles: [3, 5, 10, 25, 50, 75, 90, 95],
+        zoneThresholds: { neutralUpper: 25, typicalUpper: 50, borderlineUpper: 75 },
         rows: [
           { age: 4, values: [21, 21.2, 21.4, 21.8, 22.2, 22.6, 23, 23.2] },
           { age: 18, values: [22.8, 23, 23.2, 24, 25.4, 26.2, 27, 27.4] },
@@ -94,4 +97,44 @@ test("rendered reference bands always carry citation and population safety note"
   assert.equal((html.match(/data-percentile=/g) ?? []).length, 8);
   assert.match(html, /He X et al/);
   assert.match(html, /typical for this cohort, not a marker of normal or healthy eye growth/);
+  assert.match(html, /Eye length vs age-matched peers/i);
+  assert.match(html, /SHORTER THAN TYPICAL/);
+  assert.match(html, /TYPICAL LENGTH/);
+  assert.match(html, /BORDERLINE LENGTH/);
+  assert.match(html, /EXCESSIVE LENGTH/);
+  assert.doesNotMatch(html, /NORMAL RANGE|OUTSIDE NORMAL/);
+  assert.match(html, /fill="#22c55e"/);
+  assert.match(html, /fill="#eab308"/);
+  assert.match(html, /fill="#ef4444"/);
+});
+
+test("mixed percentile sets render labels and centile zones from the active dataset", () => {
+  const html = renderToStaticMarkup(
+    <AxialGrowthChart
+      readings={readings}
+      referenceDataset={{
+        datasetId: "truckenbrod-2021-german-axial-length",
+        version: "1.0.0",
+        citation: "Truckenbrod C et al. Ophthalmic Physiol Opt. 2021.",
+        populationNote: "German cohort. Percentiles published at ages 6, 9, 12 and 15 only.",
+        ageRangeMin: 6,
+        ageRangeMax: 15,
+        percentiles: [2, 25, 50, 75, 98],
+        zoneThresholds: { neutralUpper: 25, typicalUpper: 50, borderlineUpper: 75 },
+        rows: [
+          { age: 6, values: [21.08, 22.13, 22.61, 23.08, 24.00] },
+          { age: 9, values: [21.53, 22.59, 23.10, 23.61, 24.65] },
+          { age: 12, values: [21.83, 22.90, 23.44, 24.00, 25.17] },
+          { age: 15, values: [21.99, 23.06, 23.63, 24.23, 25.57] },
+        ],
+      }}
+      noReferenceMessage={null}
+    />,
+  );
+  assert.match(html, /data-reference-band-count="5"/);
+  assert.equal((html.match(/data-percentile=/g) ?? []).length, 5);
+  assert.match(html, /data-percentile-labels="2,25,50,75,98"/);
+  assert.match(html, /Reference percentiles P2 · P25 · P50 · P75 · P98/);
+  assert.doesNotMatch(html, /P3 · P5 · P10/);
+  assert.equal((html.match(/data-centile-zone=/g) ?? []).length, 4);
 });
