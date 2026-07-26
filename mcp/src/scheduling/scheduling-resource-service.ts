@@ -11,6 +11,7 @@ import {
 } from "../fhir/schedulingResource.js";
 
 const SCHEDULING_ACTOR_TYPES = new Set(["Practitioner", "Location", "Device"]);
+const INTEGRITY_APPOINTMENT_MAX_ROWS = 100_000;
 const FUTURE_APPOINTMENT_STATUSES = new Set<Appointment["status"]>([
   "proposed",
   "pending",
@@ -127,7 +128,12 @@ export async function inspectSchedulingIntegrity(
 ): Promise<SchedulingIntegrityIssue[]> {
   const [schedules, appointments] = await Promise.all([
     searchAll<Schedule>(fhir, "Schedule"),
-    searchAll<Appointment>(fhir, "Appointment"),
+    searchAll<Appointment>(
+      fhir,
+      "Appointment",
+      {},
+      { maxRows: INTEGRITY_APPOINTMENT_MAX_ROWS },
+    ),
   ]);
   const resolutions = new Map<string, Promise<boolean>>();
   const issues: SchedulingIntegrityIssue[] = [];
