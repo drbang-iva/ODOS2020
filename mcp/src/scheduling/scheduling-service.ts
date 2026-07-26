@@ -94,10 +94,10 @@ function appointmentActors(appointment: Appointment): string[] {
 }
 
 function isNotFound(error: unknown): boolean {
-  return (
-    (typeof error === "object" && error !== null && "status" in error && error.status === 404) ||
-    (error instanceof Error && /not found|FHIR 404/i.test(error.message))
-  );
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return false;
+  }
+  return error.status === 404;
 }
 
 export function createSchedulingService(deps: SchedulingServiceDeps): SchedulingService {

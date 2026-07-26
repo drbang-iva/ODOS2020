@@ -107,6 +107,24 @@ test("listResources filters resource columns by clinic mode", async () => {
   );
 });
 
+test("listResources surfaces non-404 errors containing not-found text", async () => {
+  const base = fakeFhir({ schedules: seededSchedules() });
+  const invalid = new Error(
+    "FHIR 400 Bad Request: referenced item was not found in the submitted payload",
+  ) as Error & { status: number };
+  invalid.status = 400;
+  const fhir: SchedulingFhirClient = {
+    ...base,
+    async read(resourceType, id) {
+      if (resourceType === "Practitioner" && id === "bang-eric") throw invalid;
+      return base.read(resourceType, id);
+    },
+  };
+  const service = createSchedulingService({ fhir, clinicMode: "both", now: NOW });
+
+  await assert.rejects(service.listResources(), /FHIR 400 Bad Request/);
+});
+
 test("bookAppointment books off the catalog: duration/display/discipline derived, resource actor resolved from the Schedule", async () => {
   const fhir = fakeFhir({ visitTypes: seededCatalog(), schedules: seededSchedules() });
   const service = createSchedulingService({ fhir, clinicMode: "both", now: NOW });

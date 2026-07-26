@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type {
   Appointment,
   Bundle,
+  Location,
   Practitioner,
   Resource,
   Schedule,
@@ -198,16 +199,18 @@ test("read containment returns valid columns identically and excludes malformed 
   ]);
 });
 
-test("read containment surfaces resolver failures instead of hiding every affected column", async () => {
+test("read containment surfaces non-404 errors containing not-found text", async () => {
   const valid = schedule("valid", "Practitioner/real-provider", "Real Provider");
   const fhir = new FakeSchedulingFhir([practitioner, valid]);
-  const unavailable = new Error("FHIR 503 Service Unavailable") as Error & { status: number };
-  unavailable.status = 503;
-  fhir.readErrors.set("Practitioner/real-provider", unavailable);
+  const invalid = new Error(
+    "FHIR 400 Bad Request: referenced item was not found in the submitted payload",
+  ) as Error & { status: number };
+  invalid.status = 400;
+  fhir.readErrors.set("Practitioner/real-provider", invalid);
 
   await assert.rejects(
     listRenderableSchedulingResources(fhir),
-    /FHIR 503 Service Unavailable/,
+    /FHIR 400 Bad Request/,
   );
 });
 
@@ -290,6 +293,59 @@ test("Schedule HTTP create returns a real 400 for an empty actor id and does not
     assert.equal(response.status, 400);
     assert.match(body.error ?? "", /Practitioner\/<id>/);
     assert.equal(fhir.created.length, 0);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve()),
+    );
+  }
+});
+
+test("Schedule HTTP update applies create-equivalent discipline and kind validation", async () => {
+  const existing = schedule("provider-column", "Practitioner/real-provider", "Real Provider");
+  const location: Location = {
+    resourceType: "Location",
+    id: "exam-room",
+    status: "active",
+  };
+  const fhir = new FakeSchedulingFhir([practitioner, location, existing]);
+  const app = express();
+  app.use(express.json());
+  registerSchedulingResourceRoutes(app, {
+    authenticateService: async () => undefined,
+    authenticate: async () => ({ roles: ["practice-admin"], fhir }),
+    serviceFhir: fhir,
+  });
+  const server = app.listen(0);
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const update = async (body: Schedule) => {
+      const response = await fetch(
+        `http://127.0.0.1:${address.port}/scheduling/resources/provider-column`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer test" },
+          body: JSON.stringify(body),
+        },
+      );
+      return {
+        status: response.status,
+        body: await response.json() as { error?: string },
+      };
+    };
+
+    const invalidDiscipline = structuredClone(existing);
+    invalidDiscipline.serviceCategory![0]!.coding![0]!.code = "invalid";
+    const disciplineResult = await update(invalidDiscipline);
+    assert.equal(disciplineResult.status, 400);
+    assert.match(disciplineResult.body.error ?? "", /Unknown scheduling discipline/);
+
+    const mismatchedActor = structuredClone(existing);
+    mismatchedActor.actor = [{ reference: "Location/exam-room", display: "Exam Room" }];
+    const actorResult = await update(mismatchedActor);
+    assert.equal(actorResult.status, 400);
+    assert.match(actorResult.body.error ?? "", /provider actor.*Practitioner/i);
+    assert.equal(fhir.updated.length, 0);
   } finally {
     await new Promise<void>((resolve, reject) =>
       server.close((error) => error ? reject(error) : resolve()),

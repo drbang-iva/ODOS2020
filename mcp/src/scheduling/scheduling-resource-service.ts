@@ -7,6 +7,8 @@ import {
 } from "../fhir/reference.js";
 import {
   buildSchedulingResource,
+  resourceDisciplines,
+  resourceKind,
   type SchedulingResourceInput,
 } from "../fhir/schedulingResource.js";
 
@@ -79,6 +81,29 @@ export async function updateSchedulingResource(
 ): Promise<Schedule> {
   if (!schedule.id) {
     throw new SchedulingResourceInputError("Schedule update requires an existing Schedule id.");
+  }
+  const existing = await fhir.read<Schedule>("Schedule", schedule.id);
+  const kind = resourceKind(existing);
+  if (!kind) {
+    throw new SchedulingResourceInputError(
+      "Existing Schedule must have a valid provider, room, or equipment actor.",
+    );
+  }
+  try {
+    buildSchedulingResource({
+      kind,
+      actorReference: schedule.actor?.[0]?.reference ?? "",
+      ...(schedule.actor?.[0]?.display
+        ? { actorDisplay: schedule.actor[0].display }
+        : {}),
+      disciplines: resourceDisciplines(schedule),
+      ...(schedule.comment ? { comment: schedule.comment } : {}),
+      ...(typeof schedule.active === "boolean" ? { active: schedule.active } : {}),
+    });
+  } catch (error) {
+    throw new SchedulingResourceInputError(
+      error instanceof Error ? error.message : "Schedule resource is invalid.",
+    );
   }
   await assertScheduleActorExists(fhir, schedule);
   return persistSchedulingResourceUpdate(fhir, schedule);
@@ -320,8 +345,8 @@ function appointmentDisplay(appointment: Appointment): string {
 }
 
 function isNotFound(error: unknown): boolean {
-  return (
-    (typeof error === "object" && error !== null && "status" in error && error.status === 404) ||
-    (error instanceof Error && /not found|FHIR 404/i.test(error.message))
-  );
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return false;
+  }
+  return error.status === 404;
 }
