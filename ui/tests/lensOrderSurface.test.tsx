@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, CoverageEligibilityResponse, VisionPrescription } from "@medplum/fhirtypes";
+import type { Coverage, CoverageEligibilityResponse, Task, VisionPrescription } from "@medplum/fhirtypes";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
+import { CollectPanel } from "../src/components/CollectPanel";
 import { AttachedLensPanel, LensesOrderSurface } from "../src/components/LensesOrderSurface";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
@@ -28,7 +29,11 @@ import type {
   PracticeFrameInventoryUnit,
   PracticeFrameVariantSettings,
 } from "../src/lib/optical-frames";
-import { opticalCollectionChargeFromDraft, type OpticalChargeLineDraft } from "../src/lib/optical-order";
+import {
+  opticalCollectionChargeFromDraft,
+  type OpticalChargeLineDraft,
+  type OpticalOrderStatusCode,
+} from "../src/lib/optical-order";
 import { resolveVCode } from "../src/lib/v-code-resolver";
 import { OpticalOrder } from "../src/scenes/OpticalOrder";
 
@@ -483,6 +488,60 @@ test("OpticalOrder status changes move the attached unit without double-advancin
   act(() => renderer.unmount());
 });
 
+test("OpticalOrder does not advance the Task or header when the physical inventory transition fails", async () => {
+  const unit = frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand");
+  let inventoryLoads = 0;
+  const taskTransitions: OpticalOrderStatusCode[] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => {
+        inventoryLoads += 1;
+        return {
+          units: [{ ...unit, status: inventoryLoads === 1 ? "on_hand" : "reserved" }],
+          skippedCount: 0,
+        };
+      },
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        if (toStatus === "at_lab") throw new Error("Physical frame transition failed.");
+        return { ...unit, id: unitId, status: toStatus };
+      },
+      transitionOrder: async (_taskId, toStatus) => {
+        taskTransitions.push(toStatus);
+        return { resourceType: "Task", status: "in-progress", intent: "order" };
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  act(() => {
+    renderer.root.findByType(CollectPanel).props.onCollected({
+      deviceRequestId: "order-1",
+      taskId: "task-1",
+      chargeItemIds: [],
+      invoiceId: "invoice-1",
+      outcome: "success",
+      amountChargedCents: 0,
+      tender: "CASH",
+    });
+  });
+
+  await act(async () => {
+    selectByLabel(renderer.root, "Order Status").props.onChange({ target: { value: "at-lab" } });
+    await flushPromises();
+  });
+
+  assert.deepEqual(taskTransitions, []);
+  assert.equal(selectByLabel(renderer.root, "Order Status").props.value, "quote");
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
+  assert.match(nodeText(renderer.root), /Physical frame transition failed/);
+  act(() => renderer.unmount());
+});
+
 test("OpticalOrder never mutates inventory for a patient's-own frame", async () => {
   const units = [frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand")];
   let transitions = 0;
@@ -513,7 +572,7 @@ test("OpticalOrder never mutates inventory for a patient's-own frame", async () 
   act(() => renderer.unmount());
 });
 
-test("OpticalOrder keeps the no-lab Frame Only path on_hand to dispensed for the linked unit", async () => {
+test("OpticalOrder reserves Frame Only stock, dispenses the same unit, and refuses a post-dispense unattach", async () => {
   const units = [
     frameUnit("oldest-on-hand", "2026-07-10T12:00:00.000Z", "on_hand"),
     frameUnit("newer-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
@@ -525,9 +584,9 @@ test("OpticalOrder keeps the no-lab Frame Only path on_hand to dispensed for the
     renderer = create(<OpticalOrder search="" api={opticalOrderApi({
       searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
       loadInventory: async () => ({ units, skippedCount: 0 }),
-      transitionUnit: async (unitId) => {
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
         transitions.push(unitId);
-        throw new Error("Frame Only attach must not reserve");
+        return { ...units.find((unit) => unit.id === unitId)!, status: toStatus };
       },
       dispenseUnit: async (unitId) => {
         dispensed.push(unitId);
@@ -542,14 +601,57 @@ test("OpticalOrder keeps the no-lab Frame Only path on_hand to dispensed for the
     await flushPromises();
   });
   assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "oldest-on-hand");
-  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "On hand");
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
   await act(async () => {
     buttonByText(renderer.root, "Dispense").props.onClick();
     await flushPromises();
   });
-  assert.deepEqual(transitions, []);
+  assert.deepEqual(transitions, ["oldest-on-hand"]);
   assert.deepEqual(dispensed, ["oldest-on-hand"]);
   assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "Dispensed");
+  await act(async () => {
+    buttonByText(renderer.root, "Unattach Frame").props.onClick();
+    await flushPromises();
+  });
+  assert.match(nodeText(renderer.root), /already dispensed and cannot be returned/);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "oldest-on-hand");
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder preserves unrelated capture edits while an inventory release is pending", async () => {
+  const unit = frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand");
+  let finishRelease!: () => void;
+  const release = new Promise<void>((resolve) => { finishRelease = resolve; });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units: [unit], skippedCount: 0 }),
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        if (toStatus === "on_hand") await release;
+        return { ...unit, id: unitId, status: toStatus };
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+
+  act(() => {
+    selectByLabel(renderer.root, "Frame Ownership").props.onChange({ target: { value: "patients-own" } });
+  });
+  const treatment = buttonByText(renderer.root, "Add Treatment").parent!.findAllByType("input")[0]!;
+  act(() => treatment.props.onChange({ target: { value: "AR coating" } }));
+  await act(async () => {
+    finishRelease();
+    await flushPromises();
+  });
+
+  const currentTreatment = buttonByText(renderer.root, "Add Treatment").parent!.findAllByType("input")[0]!;
+  assert.equal(currentTreatment.props.value, "AR coating");
+  assert.equal(nodeText(renderer.root).includes("Inventory Unit"), false);
   act(() => renderer.unmount());
 });
 
@@ -1001,6 +1103,7 @@ function opticalOrderApi(options: {
     fromStatuses: PracticeFrameInventoryUnit["status"] | readonly PracticeFrameInventoryUnit["status"][],
     toStatus: PracticeFrameInventoryUnit["status"],
   ) => Promise<PracticeFrameInventoryUnit>;
+  transitionOrder?: (taskId: string, toStatus: OpticalOrderStatusCode) => Promise<Task>;
 } = {}) {
   const failure = options.failure ?? new Error("benefit context unavailable");
   return {
@@ -1020,6 +1123,7 @@ function opticalOrderApi(options: {
     }),
     transitionFrameInventoryUnitStatus: options.transitionUnit ?? (async (unitId, _fromStatuses, toStatus) =>
       frameUnit(unitId, "2026-07-10T12:00:00.000Z", toStatus)),
+    transitionOpticalOrderStatus: options.transitionOrder,
   };
 }
 

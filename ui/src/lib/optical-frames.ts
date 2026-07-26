@@ -31,16 +31,7 @@ export interface FrameCatalogItem {
   readonly publicityClass: "staff_only" | "no_public_price" | "open";
 }
 
-export type FrameInventoryUnitStatus =
-  | "on_hand"
-  | "reserved"
-  | "outbound"
-  | "at_lab"
-  | "inbound"
-  | "hold"
-  | "dispensed";
-
-export const FRAME_INVENTORY_UNIT_STATUS_LABELS: Record<FrameInventoryUnitStatus, string> = {
+export const FRAME_INVENTORY_UNIT_STATUS_LABELS = {
   on_hand: "On hand",
   reserved: "In office — not sent",
   outbound: "Outbound",
@@ -48,7 +39,9 @@ export const FRAME_INVENTORY_UNIT_STATUS_LABELS: Record<FrameInventoryUnitStatus
   inbound: "Inbound",
   hold: "Hold",
   dispensed: "Dispensed",
-};
+} as const;
+
+export type FrameInventoryUnitStatus = keyof typeof FRAME_INVENTORY_UNIT_STATUS_LABELS;
 
 export interface PracticeFrameInventoryUnit {
   readonly id: string;
@@ -294,6 +287,17 @@ export function frameSourceUsesPracticeInventory(
   frameOwnership: string | undefined,
 ): boolean {
   return frameSource === 4 && frameOwnership === "in-house";
+}
+
+export function assertFrameInventoryAssignment(
+  frameSource: number,
+  frameOwnership: string | undefined,
+  inventoryId: string | undefined,
+): void {
+  if (!inventoryId) return;
+  if (!frameSourceUsesPracticeInventory(frameSource, frameOwnership)) {
+    throw new Error("A frame inventory unit may only be linked to FSRC 4 + in-house.");
+  }
 }
 
 export function summarizeInventoryByVariant(
@@ -705,13 +709,8 @@ function basicKind(resource: Basic): string | undefined {
 }
 
 function isUnitStatus(value: string | null): value is FrameInventoryUnitStatus {
-  return value === "on_hand"
-    || value === "reserved"
-    || value === "outbound"
-    || value === "at_lab"
-    || value === "inbound"
-    || value === "hold"
-    || value === "dispensed";
+  return value !== null
+    && Object.prototype.hasOwnProperty.call(FRAME_INVENTORY_UNIT_STATUS_LABELS, value);
 }
 
 type ExtensionValue =

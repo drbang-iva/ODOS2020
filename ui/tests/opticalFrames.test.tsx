@@ -4,6 +4,7 @@ import type { AuditEvent, Basic, Bundle, Provenance } from "@medplum/fhirtypes";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
+  assertFrameInventoryAssignment,
   dispenseFrameInventoryUnit,
   dollarsToCentsExact,
   frameSourceUsesPracticeInventory,
@@ -38,6 +39,19 @@ const URLS = {
   sale: "https://odos2020.com/fhir/StructureDefinition/sale-price-cents",
   status: "https://odos2020.com/fhir/StructureDefinition/unit-status",
 } as const;
+
+test("inventory ids are assignable only to FSRC 4 + in-house", () => {
+  assert.doesNotThrow(() => assertFrameInventoryAssignment(4, "in-house", "unit-1"));
+  assert.doesNotThrow(() => assertFrameInventoryAssignment(4, "patients-own", undefined));
+  assert.throws(
+    () => assertFrameInventoryAssignment(4, "patients-own", "unit-1"),
+    /FSRC 4 \+ in-house/,
+  );
+  assert.throws(
+    () => assertFrameInventoryAssignment(3, "in-house", "unit-1"),
+    /FSRC 4 \+ in-house/,
+  );
+});
 
 test("receiveFrameInventory creates the requested units and priced settings in one audited transaction", async () => {
   let transaction: Bundle | undefined;

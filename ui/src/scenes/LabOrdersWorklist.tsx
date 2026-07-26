@@ -80,6 +80,7 @@ export function LabOrdersWorklist() {
           <span>{dateLabel()} · {summary?.activeCount ?? "…"} active</span>
         </div>
         {error && <div role="alert" className="odos-orders-error">{error}</div>}
+        {summary && <InventoryJoinWarning count={summary.skippedInventoryUnitCount} />}
         {summary && <AlarmStrip summary={summary} setFilter={setFilter} />}
         {summary && <FilterRail summary={summary} filter={filter} setFilter={setFilter} />}
         {loading && !summary
@@ -102,6 +103,15 @@ export function LabOrdersWorklist() {
         </div>
       </section>
     </main>
+  );
+}
+
+export function InventoryJoinWarning({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <div role="alert" className="odos-orders-error">
+      Skipped {count} missing frame inventory unit{count === 1 ? "" : "s"}. Orders with valid inventory remain available.
+    </div>
   );
 }
 

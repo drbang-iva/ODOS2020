@@ -39,6 +39,7 @@ import {
   type RxDisplayRow,
 } from "../lib/optical-order";
 import {
+  assertFrameInventoryAssignment,
   dispenseFrameInventoryUnit,
   frameInventoryUnitStatusLabel,
   frameSourceUsesPracticeInventory,
@@ -140,6 +141,7 @@ interface OpticalOrderProps {
       fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
       toStatus: FrameInventoryUnitStatus,
     ) => Promise<PracticeFrameInventoryUnit>;
+    transitionOpticalOrderStatus?: typeof transitionOpticalOrderStatus;
   };
   lensCatalog?: Pick<LensesOrderSurfaceProps, "products" | "coatings" | "modifiers" | "resolver">;
 }
@@ -163,6 +165,7 @@ export function OpticalOrder({
     fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
     toStatus: FrameInventoryUnitStatus,
   ) => transitionFrameInventoryUnitStatus(unitId, fromStatuses, toStatus, actingPractitionerId()));
+  const transitionOrderStatus = api?.transitionOpticalOrderStatus ?? transitionOpticalOrderStatus;
   const [patientReference] = useState(params.get("patient") ?? "");
   const [rxReference] = useState(params.get("rx") ?? "");
   const [encounterReference] = useState(params.get("encounter") ?? "");
@@ -376,7 +379,16 @@ export function OpticalOrder({
   }
 
   async function patchLabOrderCapture(patch: Partial<LabOrderCaptureState>) {
-    if (frameDispenseBusy) return;
+    const changesInventoryAssignment = Object.prototype.hasOwnProperty.call(patch, "frameSource")
+      || Object.prototype.hasOwnProperty.call(patch, "frameOwnership");
+    if (!changesInventoryAssignment) {
+      setLabOrderCapture((current) => ({ ...current, ...patch }));
+      return;
+    }
+    if (frameDispenseBusy) {
+      setError("A frame inventory update is still in progress. Retry the frame-source change.");
+      return;
+    }
     const nextCapture = { ...labOrderCapture, ...patch };
     const attachedLine = chargeLines.find((line) => line.frame);
     const frame = attachedLine?.frame;
@@ -387,16 +399,13 @@ export function OpticalOrder({
       nextCapture.frameSource,
       nextCapture.frameOwnership,
     );
-    const shouldReserve = frameSourceUsesPracticeInventory(
-      nextCapture.frameSource,
-      nextCapture.frameOwnership,
-    ) && header.orderType !== "frame-only" && nextCapture.jobType !== "Frame Only";
+    const shouldReserve = inventoryCase;
     const linkedUnitReserved = linkedUnit
       ? ["reserved", "outbound", "at_lab", "inbound"].includes(linkedUnit.status)
       : false;
     if (!frame || (
       inventoryCase === Boolean(frame.inventoryId)
-      && shouldReserve === linkedUnitReserved
+      && inventoryCase === linkedUnitReserved
     )) {
       setLabOrderCapture(nextCapture);
       return;
@@ -425,12 +434,21 @@ export function OpticalOrder({
       } else if (!inventoryCase) {
         inventoryId = undefined;
       }
+      assertFrameInventoryAssignment(
+        nextCapture.frameSource,
+        nextCapture.frameOwnership,
+        inventoryId,
+      );
       // FSRC 3 + in-house stays aggregate before receipt; a later slice links it to a Stock Order.
       setChargeLines((current) => current.map((line) =>
         line.id === attachedLine.id && line.frame
           ? { ...line, frame: { ...line.frame, inventoryId } }
           : line));
-      setLabOrderCapture(nextCapture);
+      setLabOrderCapture((current) => ({
+        ...current,
+        frameSource: nextCapture.frameSource,
+        frameOwnership: nextCapture.frameOwnership,
+      }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -521,9 +539,6 @@ export function OpticalOrder({
       return;
     }
     try {
-      if (createdTaskId) {
-        await transitionOpticalOrderStatus(createdTaskId, next);
-      }
       if (next === "at-lab") {
         await transitionAttachedFrameUnit(["reserved", "outbound"], "at_lab");
       } else if (next === "dispensed") {
@@ -531,12 +546,17 @@ export function OpticalOrder({
           ["on_hand", "reserved", "outbound", "at_lab", "inbound"],
           "dispensed",
         );
-        setChargeLines((current) => current.map((line) =>
-          line.frame?.inventoryId ? { ...line, dispensed: true } : line));
       } else if (next === "cancelled") {
         await releaseAttachedFrameUnit();
       }
+      if (createdTaskId) {
+        await transitionOrderStatus(createdTaskId, next);
+      }
       setHeader((current) => ({ ...current, orderStatus: next }));
+      if (next === "dispensed") {
+        setChargeLines((current) => current.map((line) =>
+          line.frame?.inventoryId ? { ...line, dispensed: true } : line));
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -567,17 +587,17 @@ export function OpticalOrder({
         labOrderCapture.frameSource,
         labOrderCapture.frameOwnership,
       );
-      const labBoundPracticeFrame = practiceInventoryFrame
-        && header.orderType !== "frame-only"
-        && labOrderCapture.jobType !== "Frame Only";
-      const linkedUnit = labBoundPracticeFrame
+      const linkedUnit = practiceInventoryFrame
         ? await reserveFrameUnit(attached.canonicalUrl)
-        : practiceInventoryFrame
-          ? oldestOnHandUnit(frameInventoryUnits, attached.canonicalUrl)
-          : undefined;
+        : undefined;
       if (practiceInventoryFrame && !linkedUnit) {
         throw new Error("No on-hand inventory unit is available for the attached frame.");
       }
+      assertFrameInventoryAssignment(
+        labOrderCapture.frameSource,
+        labOrderCapture.frameOwnership,
+        linkedUnit?.id,
+      );
       setChargeLines((current) =>
         current.map((line) =>
           line.id === selectedCharge.id
@@ -674,6 +694,13 @@ export function OpticalOrder({
 
   async function unattachSelectedFrame() {
     if (!selectedCharge.frame || frameDispenseBusy) return;
+    const linkedUnit = selectedCharge.frame.inventoryId
+      ? frameInventoryUnits.find((unit) => unit.id === selectedCharge.frame?.inventoryId)
+      : undefined;
+    if (selectedCharge.dispensed || linkedUnit?.status === "dispensed") {
+      setError("This frame is already dispensed and cannot be returned to on-hand inventory.");
+      return;
+    }
     setFrameDispenseBusy(true);
     setError(null);
     try {
@@ -709,6 +736,16 @@ export function OpticalOrder({
     }
     if (!labOrderCapture.patientName.trim()) {
       setError("Patient name is required before printing a lab sheet.");
+      return null;
+    }
+    try {
+      assertFrameInventoryAssignment(
+        labOrderCapture.frameSource,
+        labOrderCapture.frameOwnership,
+        attachedLabFrame?.inventoryId,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
       return null;
     }
 

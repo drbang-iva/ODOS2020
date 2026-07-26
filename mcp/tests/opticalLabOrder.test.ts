@@ -133,6 +133,24 @@ test("DCS FSRC accepts only 0, 1, 3, and 4 with ownership required exactly for 3
   assert.throws(() => buildLabOrder({ ...BASE, frameSource: 2 as 0 }), /0, 1, 3, or 4/);
 });
 
+test("frame inventoryId is accepted only for FSRC 4 + in-house", () => {
+  const frame = {
+    inventoryId: "unit-1",
+    brand: "Walkthrough",
+    model: "Wayfarer",
+    source: "stock" as const,
+  };
+  assert.equal(buildLabOrder({ ...BASE, frameSource: 4, frameOwnership: "in-house", frame }).frame?.inventoryId, "unit-1");
+  assert.throws(
+    () => buildLabOrder({ ...BASE, frameSource: 4, frameOwnership: "patients-own", frame }),
+    /inventoryId.*FSRC 4 \+ in-house/,
+  );
+  assert.throws(
+    () => buildLabOrder({ ...BASE, frameSource: 3, frameOwnership: "in-house", frame }),
+    /inventoryId.*FSRC 4 \+ in-house/,
+  );
+});
+
 test("buildLabOrder requires at least one eye's Rx in the VisionPrescription", () => {
   assert.throws(
     () => buildLabOrder({ ...BASE, visionPrescription: { ...RX, lensSpecification: [] } }),

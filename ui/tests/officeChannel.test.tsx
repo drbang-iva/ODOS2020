@@ -256,6 +256,8 @@ function summary(): ClinicSummary {
         dispensed: 0,
       },
       activeCount: 2,
+      unprojectableCount: 0,
+      skippedInventoryUnitCount: 0,
       alarms: { flaggedProblems: 0, atLabOverdue: 0, transmissionFailures: 0, receivedNotNotified: 0 },
       rollups: { preLab: 2, outbound: 0, atLab: 0, inbound: 0, notified: 0 },
       agingConfig: { outboundDays: 3, inboundDays: 3, atLabDays: 5, receivedNotifyHours: 24, notifiedRetryDays: 2, notifiedFollowUpDays: 7 },

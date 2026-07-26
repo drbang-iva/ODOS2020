@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Task } from "@medplum/fhirtypes";
 import {
+  FRAME_INVENTORY_STATUS_LABELS,
   backfilledLabOrderStatusRecord,
   backfilledStatusForTransport,
   flagLabOrderProblem,
@@ -11,8 +12,13 @@ import {
   withLabOrderStatusRecord,
   type LabOrderStatus,
 } from "../src/fhir/labOrderStatus.js";
+import { FRAME_INVENTORY_UNIT_STATUS_LABELS } from "../../ui/src/lib/optical-frames.js";
 
 const STAFF = "Practitioner/front-desk";
+
+test("UI and MCP frame inventory status vocabularies remain identical", () => {
+  assert.deepEqual(FRAME_INVENTORY_STATUS_LABELS, FRAME_INVENTORY_UNIT_STATUS_LABELS);
+});
 
 test("legacy queued, sent, and received transport facts backfill to staff statuses without changing transport", () => {
   assert.equal(backfilledStatusForTransport("queued"), "in-office-not-sent");
