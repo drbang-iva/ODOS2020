@@ -7,6 +7,7 @@ import {
   disciplineCoding,
   disciplinesForMode,
 } from "../scheduling/clinic-mode.js";
+import { assertRelativeFhirReference } from "./reference.js";
 
 /**
  * Scheduler resources — the columns of the day grid. Provider / room / equipment are the three
@@ -57,11 +58,11 @@ export interface SchedulingResourceInput {
 export function buildSchedulingResource(input: SchedulingResourceInput): Schedule {
   assertResourceKind(input.kind);
   const kind = KIND_BY_CODE.get(input.kind)!;
-  if (!input.actorReference.startsWith(`${kind.actorType}/`)) {
-    throw new Error(
-      `A ${kind.code} resource actor must be a ${kind.actorType} reference, got "${input.actorReference}".`,
-    );
-  }
+  assertRelativeFhirReference(
+    input.actorReference,
+    kind.actorType,
+    `Schedule ${kind.code} actor`,
+  );
   if (!input.disciplines || input.disciplines.length === 0) {
     throw new Error("A scheduling resource requires at least one discipline.");
   }

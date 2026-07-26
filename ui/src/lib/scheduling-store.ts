@@ -60,6 +60,13 @@ import {
   buildSchedulingPracticeConfigResource,
   parseSchedulingPracticeConfig,
 } from "./scheduling-config";
+import {
+  schedulingResourceAdmin,
+  type SchedulingIntegrityIssue,
+  type SchedulingResourceAdminClient,
+  type SchedulingResourceDeactivationResult,
+} from "./scheduling-resource-admin";
+import { assertRelativeFhirReference } from "./fhir-reference";
 
 export const SCHEDULING_SOURCE_TAGS = {
   create: "scheduler",
@@ -165,7 +172,14 @@ export interface SchedulingFhirClient {
 
 export interface SchedulingWriteDeps {
   fhirClient?: SchedulingFhirClient;
+  resourceAdmin?: SchedulingResourceAdminClient;
   now?: () => string;
+}
+
+export interface SchedulingLoadDeps {
+  fhirClient?: SchedulingFhirClient;
+  resourceAdmin?: SchedulingResourceAdminClient;
+  force?: boolean;
 }
 
 export interface AppointmentChangeInput {
@@ -218,6 +232,9 @@ export interface SchedulingStoreState {
   hiddenResourceRefs: string[];
   zoom: number;
   resources: Schedule[];
+  resourceIssues: SchedulingIntegrityIssue[];
+  integrityIssues: SchedulingIntegrityIssue[];
+  integrityLoading: boolean;
   visitTypes: HealthcareService[];
   appointments: Appointment[];
   appointmentsByDay: Record<string, Appointment[]>;
@@ -246,12 +263,18 @@ export interface SchedulingStoreState {
   zoomIn: () => void;
   zoomOut: () => void;
   saveConfig: (config: SchedulingPracticeConfig, deps?: SchedulingWriteDeps) => Promise<void>;
-  loadDay: (deps?: { fhirClient?: SchedulingFhirClient; force?: boolean }) => Promise<void>;
+  loadDay: (deps?: SchedulingLoadDeps) => Promise<void>;
   loadWindow: (
     fromYmd: string,
     toYmdExclusive: string,
-    deps?: { fhirClient?: SchedulingFhirClient; force?: boolean },
+    deps?: SchedulingLoadDeps,
   ) => Promise<void>;
+  inspectIntegrity: (deps?: { resourceAdmin?: SchedulingResourceAdminClient }) => Promise<void>;
+  deactivateResource: (
+    scheduleId: string,
+    acknowledgeFutureAppointments: boolean,
+    deps?: SchedulingWriteDeps,
+  ) => Promise<SchedulingResourceDeactivationResult>;
   findOpenings: (input: FindOpeningsInput, deps?: { fhirClient?: SchedulingFhirClient; now?: () => string }) => Promise<SchedulingOpening[]>;
   createAppointment: (
     input: BookSchedulingAppointmentInput,
@@ -290,6 +313,9 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
   hiddenResourceRefs: initialHiddenResourceRefs,
   zoom: 1,
   resources: [],
+  resourceIssues: [],
+  integrityIssues: [],
+  integrityLoading: false,
   visitTypes: [],
   appointments: [],
   appointmentsByDay: {},
@@ -401,7 +427,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         ? await updateResource(client, resource, SCHEDULING_SOURCE_TAGS.config)
         : await createResource(client, resource, SCHEDULING_SOURCE_TAGS.config);
       set(configStatePatch(get(), config, saved, null, false, { loading: false, error: null }));
-      await reloadSelectedSchedulerView(get, client);
+      await reloadSelectedSchedulerView(get, client, false, deps?.resourceAdmin);
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
@@ -426,10 +452,10 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         return;
       }
       const config = loadedConfig.config;
-      const [resources, visitTypes, appointments] = await Promise.all([
+      const [resourceResult, visitTypes, appointments] = await Promise.all([
         shouldLoadCatalogs
-          ? searchAll<Schedule>(client, "Schedule", { active: "true" })
-          : Promise.resolve(get().resources),
+          ? loadRenderableResources(client, deps)
+          : Promise.resolve({ resources: get().resources, issues: get().resourceIssues }),
         shouldLoadCatalogs
           ? searchAll<HealthcareService>(client, "HealthcareService", { active: "true" })
           : Promise.resolve(get().visitTypes),
@@ -451,7 +477,8 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       );
       const officeId = patched.officeId ?? get().officeId;
       set({
-        resources,
+        resources: resourceResult.resources,
+        resourceIssues: resourceResult.issues,
         visitTypes,
         appointments,
         appointmentsByDay: bucketAppointmentsByPracticeDay(appointments, config.timezoneOffset),
@@ -464,7 +491,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         ...patched,
         weekResourceScheduleReference: reconcileWeekResourceReference({
           currentReference: get().weekResourceScheduleReference,
-          resources,
+          resources: resourceResult.resources,
           clinicMode: get().clinicMode,
           config,
           officeId,
@@ -501,10 +528,10 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         return;
       }
       const config = loadedConfig.config;
-      const [resources, visitTypes, appointments] = await Promise.all([
+      const [resourceResult, visitTypes, appointments] = await Promise.all([
         shouldLoadCatalogs
-          ? searchAll<Schedule>(client, "Schedule", { active: "true" })
-          : Promise.resolve(get().resources),
+          ? loadRenderableResources(client, deps)
+          : Promise.resolve({ resources: get().resources, issues: get().resourceIssues }),
         shouldLoadCatalogs
           ? searchAll<HealthcareService>(client, "HealthcareService", { active: "true" })
           : Promise.resolve(get().visitTypes),
@@ -526,7 +553,8 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
       );
       const officeId = patched.officeId ?? get().officeId;
       set({
-        resources,
+        resources: resourceResult.resources,
+        resourceIssues: resourceResult.issues,
         visitTypes,
         appointments,
         appointmentsByDay: bucketAppointmentsByPracticeDay(appointments, config.timezoneOffset),
@@ -539,7 +567,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         ...patched,
         weekResourceScheduleReference: reconcileWeekResourceReference({
           currentReference: get().weekResourceScheduleReference,
-          resources,
+          resources: resourceResult.resources,
           clinicMode: get().clinicMode,
           config,
           officeId,
@@ -555,6 +583,34 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         loading: false,
         error: err instanceof Error ? err.message : String(err),
       });
+    }
+  },
+  async inspectIntegrity(deps) {
+    set({ integrityLoading: true });
+    try {
+      const issues = await (deps?.resourceAdmin ?? schedulingResourceAdmin).inspectIntegrity();
+      set({ integrityIssues: issues, integrityLoading: false });
+    } catch (err) {
+      set({ integrityLoading: false, error: errorMessage(err) });
+      throw err;
+    }
+  },
+  async deactivateResource(scheduleId, acknowledgeFutureAppointments, deps) {
+    set({ loading: true, error: null });
+    try {
+      const result = await (deps?.resourceAdmin ?? schedulingResourceAdmin)
+        .deactivate(scheduleId, acknowledgeFutureAppointments);
+      if (result.deactivated) {
+        get().clearHiddenResources();
+        await reloadSelectedSchedulerView(get, deps?.fhirClient ?? fhir, true, deps?.resourceAdmin);
+        await get().inspectIntegrity({ resourceAdmin: deps?.resourceAdmin });
+      } else {
+        set({ loading: false });
+      }
+      return result;
+    } catch (err) {
+      set({ loading: false, error: errorMessage(err) });
+      throw err;
     }
   },
   async findOpenings(input, deps) {
@@ -602,7 +658,7 @@ export const useSchedulingStore = create<SchedulingStoreState>((set, get) => ({
         now: deps?.now,
       });
       await createResource(client, appointment, SCHEDULING_SOURCE_TAGS.create);
-      await reloadSelectedSchedulerView(get, client);
+      await reloadSelectedSchedulerView(get, client, false, deps?.resourceAdmin);
     } catch (err) {
       set({ loading: false, error: errorMessage(err) });
       throw err;
@@ -673,6 +729,22 @@ export function todayYmd(
   return new Date(date.getTime() + timezoneOffsetMinutes(timezoneOffset) * 60_000)
     .toISOString()
     .slice(0, 10);
+}
+
+async function loadRenderableResources(
+  client: SchedulingFhirClient,
+  deps: SchedulingLoadDeps | undefined,
+): Promise<{ resources: Schedule[]; issues: SchedulingIntegrityIssue[] }> {
+  if (deps?.resourceAdmin) {
+    return deps.resourceAdmin.listResources();
+  }
+  if (!deps?.fhirClient || deps.fhirClient === fhir) {
+    return schedulingResourceAdmin.listResources();
+  }
+  return {
+    resources: await searchAll<Schedule>(client, "Schedule", { active: "true" }),
+    issues: [],
+  };
 }
 
 async function fetchSchedulingConfig(client: SchedulingFhirClient): Promise<{
@@ -773,12 +845,19 @@ async function writeAppointmentUpdate(
     const state = get();
     const current = currentAppointment(state, appointment);
     const updated = rebuildAppointmentForUpdate(state, current, changes, deps);
+    for (const participant of updated.participant) {
+      assertRelativeFhirReference(
+        participant.actor?.reference,
+        undefined,
+        "Appointment participant actor",
+      );
+    }
     if (shouldCheckUpdateConflicts(current, updated, changes)) {
       const conflicts = await fetchTargetConflictAppointmentsForAppointment(state, client, updated);
       assertNoAppointmentConflicts(updated, conflicts, current.id);
     }
     await updateResource(client, updated, sourceTag);
-    await reloadSelectedSchedulerView(get, client);
+    await reloadSelectedSchedulerView(get, client, false, deps?.resourceAdmin);
   } catch (err) {
     set({ loading: false, error: errorMessage(err) });
     throw err;
@@ -788,14 +867,23 @@ async function writeAppointmentUpdate(
 async function reloadSelectedSchedulerView(
   get: () => SchedulingStoreState,
   client: SchedulingFhirClient,
+  force = false,
+  resourceAdmin?: SchedulingResourceAdminClient,
 ): Promise<void> {
   const state = get();
+  const deps: SchedulingLoadDeps | undefined = client === fhir && !resourceAdmin
+    ? (force ? { force: true } : undefined)
+    : {
+        fhirClient: client,
+        ...(resourceAdmin ? { resourceAdmin } : {}),
+        ...(force ? { force: true } : {}),
+      };
   if (state.view === "day") {
-    await state.loadDay({ fhirClient: client });
+    await state.loadDay(deps);
     return;
   }
   const window = schedulerWindowForView(state.date, state.view);
-  await state.loadWindow(window.fromYmd, window.toYmdExclusive, { fhirClient: client });
+  await state.loadWindow(window.fromYmd, window.toYmdExclusive, deps);
 }
 
 function rebuildAppointmentForUpdate(

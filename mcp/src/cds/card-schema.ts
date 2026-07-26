@@ -8,6 +8,7 @@ import type {
 import { hasPredictiveDsiSourceAttributes } from "../agentops/device-registry.js";
 import { INITIATION_MODES } from "../agentops/types.js";
 import type { Device } from "@medplum/fhirtypes";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 
 export interface CdsCardValidationResult {
   readonly valid: boolean;
@@ -53,7 +54,7 @@ export function validateCdsCard(card: unknown, options: CdsCardValidationOptions
       errors.push("initiation_mode must be user-initiated or autonomously-initiated");
     }
     const reference = requireString(card, "agent_device_reference", errors);
-    if (reference && !reference.startsWith("Device/")) {
+    if (reference && !isRelativeFhirReference(reference, "Device")) {
       errors.push("agent_device_reference must be a FHIR Reference(Device)");
     }
   }

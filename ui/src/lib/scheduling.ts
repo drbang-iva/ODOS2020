@@ -1,4 +1,5 @@
 import type { Appointment, Extension, HealthcareService, Reference, Schedule, Slot } from "@medplum/fhirtypes";
+import { assertRelativeFhirReference } from "./fhir-reference";
 
 export const CLINIC_MODES = [
   { code: "eyecare", display: "Eyecare Only" },
@@ -443,6 +444,12 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
   assertDiscipline(input.discipline);
   if (!input.resources || input.resources.length === 0) {
     throw new Error("An appointment requires at least one resource (provider/room/equipment).");
+  }
+  if (input.patient) {
+    assertRelativeFhirReference(input.patient.reference, "Patient", "Appointment patient actor");
+  }
+  for (const resource of input.resources) {
+    assertRelativeFhirReference(resource.reference, undefined, "Appointment participant actor");
   }
   if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
     throw new Error("Appointment duration (durationMinutes) must be a positive integer.");

@@ -21,11 +21,18 @@ function fakeFhir(seed: {
   schedules?: Schedule[];
   appointments?: Appointment[];
 }): SchedulingFhirClient & { created: Resource[] } {
+  const actorResources = (seed.schedules ?? []).flatMap((schedule): Resource[] => {
+    const [resourceType, id] = schedule.actor?.[0]?.reference?.split("/") ?? [];
+    return resourceType && id ? [{ resourceType, id } as Resource] : [];
+  });
   const byType: Record<string, Resource[]> = {
     HealthcareService: [...(seed.visitTypes ?? [])],
     Schedule: [...(seed.schedules ?? [])],
     Appointment: [...(seed.appointments ?? [])],
   };
+  for (const actor of actorResources) {
+    byType[actor.resourceType] = [...(byType[actor.resourceType] ?? []), actor];
+  }
   const created: Resource[] = [];
   return {
     created,
@@ -98,6 +105,24 @@ test("listResources filters resource columns by clinic mode", async () => {
     resources.map((s) => s.id),
     ["sch-room"],
   );
+});
+
+test("listResources surfaces non-404 errors containing not-found text", async () => {
+  const base = fakeFhir({ schedules: seededSchedules() });
+  const invalid = new Error(
+    "FHIR 400 Bad Request: referenced item was not found in the submitted payload",
+  ) as Error & { status: number };
+  invalid.status = 400;
+  const fhir: SchedulingFhirClient = {
+    ...base,
+    async read(resourceType, id) {
+      if (resourceType === "Practitioner" && id === "bang-eric") throw invalid;
+      return base.read(resourceType, id);
+    },
+  };
+  const service = createSchedulingService({ fhir, clinicMode: "both", now: NOW });
+
+  await assert.rejects(service.listResources(), /FHIR 400 Bad Request/);
 });
 
 test("bookAppointment books off the catalog: duration/display/discipline derived, resource actor resolved from the Schedule", async () => {

@@ -1,5 +1,6 @@
 import type { Binary } from "@medplum/fhirtypes";
 import type { JsonPatchOperation } from "../fhir-client.js";
+import { parseRelativeFhirReference } from "../fhir/reference.js";
 
 export const SECURITY_CONTEXT_HEADER = "X-Security-Context";
 export const BINARY_PARSER_GUARD_HEADER = "X-ODOS-Binary-Parser";
@@ -94,16 +95,16 @@ export function assertValidSecurityContextReference(
     );
   }
 
-  const [resourceType, id, extra] = reference.split("/");
-  if (!resourceType || !id || extra !== undefined) {
+  const parsed = parseRelativeFhirReference(reference);
+  if (!parsed) {
     throw new Error(
       `Binary.securityContext must be a FHIR reference like Patient/<id>; received "${reference}".`,
     );
   }
 
-  if (!BINARY_SECURITY_CONTEXT_ANCHOR_TYPES.includes(resourceType as BinarySecurityContextAnchorType)) {
+  if (!BINARY_SECURITY_CONTEXT_ANCHOR_TYPES.includes(parsed.resourceType as BinarySecurityContextAnchorType)) {
     throw new Error(
-      `Binary.securityContext anchor ${resourceType} is not allowed for ODOS parser uploads.`,
+      `Binary.securityContext anchor ${parsed.resourceType} is not allowed for ODOS parser uploads.`,
     );
   }
 }
@@ -112,6 +113,8 @@ function assertAllowedPatientCompartment(
   securityContextReference: string,
   allowedPatientCompartments: string[] | undefined,
 ): void {
+  // Only a Patient anchor can be compared directly with Patient/<id> compartments.
+  // Other allowed anchors are authorized through their own resource access path.
   if (!allowedPatientCompartments?.length || !securityContextReference.startsWith("Patient/")) {
     return;
   }

@@ -551,7 +551,11 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     practiceConfig: Basic;
     practiceConfigCreated: boolean;
   }> {
+    if (!input.practitioner.id) {
+      throw new Error("Setup wizard cannot create a Schedule for a Practitioner without an id.");
+    }
     const practitionerReference = `Practitioner/${input.practitioner.id}`;
+    await this.client().read<Practitioner>("Practitioner", input.practitioner.id);
     const schedules = (await searchAll<Schedule>(this.client(), "Schedule", {
       actor: practitionerReference,
       _count: "100",

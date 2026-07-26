@@ -66,6 +66,9 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
   const slotMinutesOverride = useSchedulingStore((state) => state.slotMinutesOverride);
   const hiddenResourceRefs = useSchedulingStore((state) => state.hiddenResourceRefs);
   const resources = useSchedulingStore((state) => state.resources);
+  const resourceIssues = useSchedulingStore((state) => state.resourceIssues);
+  const integrityIssues = useSchedulingStore((state) => state.integrityIssues);
+  const integrityLoading = useSchedulingStore((state) => state.integrityLoading);
   const visitTypes = useSchedulingStore((state) => state.visitTypes);
   const appointments = useSchedulingStore((state) => state.appointments);
   const appointmentsByDay = useSchedulingStore((state) => state.appointmentsByDay);
@@ -92,6 +95,8 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
   const loadDay = useSchedulingStore((state) => state.loadDay);
   const loadWindow = useSchedulingStore((state) => state.loadWindow);
   const saveConfig = useSchedulingStore((state) => state.saveConfig);
+  const inspectIntegrity = useSchedulingStore((state) => state.inspectIntegrity);
+  const deactivateResource = useSchedulingStore((state) => state.deactivateResource);
   const findOpenings = useSchedulingStore((state) => state.findOpenings);
   const createAppointment = useSchedulingStore((state) => state.createAppointment);
   const updateAppointment = useSchedulingStore((state) => state.updateAppointment);
@@ -412,6 +417,11 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
           </button>
         </div>
       )}
+      {resourceIssues.length > 0 && (
+        <div className="border-y border-amber-300/40 bg-amber-950/50 px-4 py-2 text-sm text-amber-100">
+          {resourceIssues.length} scheduler resource{resourceIssues.length === 1 ? "" : "s"} hidden because the provider, room, or equipment link could not be verified. A practice admin can review details in Settings.
+        </div>
+      )}
       {view === "day" ? (
         <section className="px-4 pb-5">
           <div className="overflow-hidden border border-white/10 bg-black/20">
@@ -524,11 +534,16 @@ export function SchedulerDayGrid({ roles = [] }: { roles?: readonly PracticeRole
           currentDate={date}
           initialBlockIndex={settingsBlockIndex}
           resources={resources}
+          canManageResources={roles.includes("practice-admin")}
+          integrityIssues={integrityIssues}
+          integrityLoading={integrityLoading}
           onClose={() => {
             setSettingsOpen(false);
             setSettingsBlockIndex(undefined);
           }}
           onSave={saveConfig}
+          onInspectIntegrity={inspectIntegrity}
+          onDeactivateResource={deactivateResource}
         />
       )}
     </main>
@@ -824,13 +839,14 @@ function SchedulerLegend({ visitTypes }: { visitTypes: HealthcareService[] }) {
 }
 
 function ResourceHeader({ resource }: { resource: Schedule }) {
+  const kind = RESOURCE_KINDS.find((candidate) => candidate.code === resourceKind(resource));
   return (
     <div
       className="border-r border-white/10 bg-black/30 px-3 py-2"
       data-scheduler-resource-column={resourceActorReference(resource)}
     >
       <div className="truncate text-sm font-semibold text-white">{resourceDisplay(resource)}</div>
-      <div className="truncate text-xs text-white/45">{resource.actor?.[0]?.reference ?? "No actor"}</div>
+      {kind && <div className="truncate text-xs text-white/45">{kind.display}</div>}
     </div>
   );
 }

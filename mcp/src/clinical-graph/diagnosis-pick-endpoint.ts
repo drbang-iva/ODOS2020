@@ -8,6 +8,7 @@ import {
 } from "../fhir/condition.js";
 import { ODOS_EXTENSION_URLS } from "../fhir/ophthalmology/extensions.js";
 import { buildProvenance } from "../fhir/ophthalmology/provenance.js";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { FhirDiagnosisPickTallyStore } from "./diagnosis-pick-tally-store.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -115,7 +116,7 @@ export async function handleDiagnosisPickRequest(
   if (parsed.data.status && encounter?.status === "finished") {
     return { status: 409, body: { error: "Diagnosis visit status cannot change after the encounter is signed." } };
   }
-  if (!patientReference?.startsWith("Patient/")) {
+  if (!isRelativeFhirReference(patientReference, "Patient")) {
     return { status: 422, body: { error: "The encounter does not resolve to a Patient reference." } };
   }
 

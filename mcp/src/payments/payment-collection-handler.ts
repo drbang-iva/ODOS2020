@@ -5,6 +5,7 @@ import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.j
 import type { MedplumClient } from "../fhir-client.js";
 import { buildOpticalInvoice } from "../fhir/opticalInvoice.js";
 import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 import {
   createOpticalCashOrder,
   type CreatedOpticalCashOrderIds,
@@ -381,7 +382,7 @@ function forbidden(): ChargeHandlerResult {
 function normalizePatientReference(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const reference = value.startsWith("Patient/") ? value : `Patient/${value}`;
-  return /^Patient\/[A-Za-z0-9.-]+$/.test(reference) ? reference : undefined;
+  return isRelativeFhirReference(reference, "Patient") ? reference : undefined;
 }
 
 class CollectionInputError extends Error {}
