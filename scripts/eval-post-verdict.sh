@@ -69,7 +69,7 @@ head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
 
 if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-  --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+  --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
   die "could not fetch inline review comments for PR #$pr_number"
 fi
 

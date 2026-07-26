@@ -100,7 +100,7 @@ print_review_feedback() {
   echo "----------------------"
 
   if inline_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-    --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+    --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
     if [[ -n "$inline_rows" ]]; then
       sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n)"
       previous_location=""
