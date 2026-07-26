@@ -26,7 +26,7 @@ test("v0.4 foundation write tools each emit their per-tool X-ODOS-Source header 
     "create_or_update_myopia_plan",
     "create_atropine_medication_statement",
     "update_atropine_medication_status",
-    "record_myopia_axial_length_measurement",
+    "record_eye_growth_axial_length_measurement",
   ]);
 
   for (const toolName of V04_WRITE_TOOL_NAMES) {

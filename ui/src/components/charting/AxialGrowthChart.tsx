@@ -19,7 +19,15 @@ export interface AxialGrowthReferenceDataset {
   version: string;
   citation: string;
   populationNote: string;
+  medianRepresentsHealthy: boolean;
+  ageRangeMin: number;
+  ageRangeMax: number;
   percentiles: number[];
+  zoneThresholds: {
+    neutralUpper: number;
+    typicalUpper: number;
+    borderlineUpper: number;
+  };
   rows: Array<{ age: number; values: number[] }>;
 }
 
@@ -65,6 +73,17 @@ export function AxialGrowthChart({
             fill="currentColor"
             fillOpacity="0.025"
           />
+          {plot.zones.map((zone) => (
+            <polygon
+              key={zone.id}
+              points={zone.points}
+              fill={zone.color}
+              fillOpacity={zone.opacity}
+              data-centile-zone={zone.id}
+            >
+              <title>{zone.label}</title>
+            </polygon>
+          ))}
           {plot.yTicks.map((tick) => (
             <g key={`y-${tick}`}>
               <line
@@ -156,9 +175,33 @@ export function AxialGrowthChart({
         <div className="mt-2 flex gap-4 text-xs text-[color:var(--odos-muted)]">
           <span><span className="mr-1 inline-block h-2 w-4 rounded bg-blue-400" />OD</span>
           <span><span className="mr-1 inline-block h-2 w-4 rounded bg-pink-400" />OS</span>
-          {referenceDataset && <span>Reference percentiles P{referenceDataset.percentiles.join(" · P")}</span>}
+          {referenceDataset && (
+            <span data-percentile-labels={referenceDataset.percentiles.join(",")}>
+              Reference percentiles P{referenceDataset.percentiles.join(" · P")}
+            </span>
+          )}
         </div>
       </div>
+
+      {referenceDataset && (
+        <div className="mt-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--odos-muted)]">
+            Eye length vs age-matched peers
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-[color:var(--odos-text)]">
+            {plot.zones.map((zone) => (
+              <span
+                key={zone.id}
+                className="inline-flex items-center gap-1.5 rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] px-2 py-1"
+                data-zone-label={zone.id}
+              >
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: zone.color }} />
+                {zone.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {referenceDataset ? (
         <div className="mt-3 rounded border border-[color:var(--odos-accent-border)] bg-[var(--odos-accent-tint-lo)] p-3 text-xs leading-5 text-[color:var(--odos-muted)]">
@@ -178,8 +221,10 @@ function chartModel(
   readings: AxialGrowthReading[],
   referenceDataset: AxialGrowthReferenceDataset | null,
 ) {
-  const referenceValues = referenceDataset?.rows.flatMap((row) => row.values) ?? [];
-  const referenceAges = referenceDataset?.rows.map((row) => row.age) ?? [];
+  const referenceRows = [...(referenceDataset?.rows ?? [])]
+    .sort((left, right) => left.age - right.age);
+  const referenceValues = referenceRows.flatMap((row) => row.values);
+  const referenceAges = referenceRows.map((row) => row.age);
   const patientValues = readings.map((reading) => reading.axialLengthMm);
   const patientAges = readings.map((reading) => reading.ageInYears);
   const allAges = [...referenceAges, ...patientAges];
@@ -196,16 +241,70 @@ function chartModel(
   const y = (value: number) => MARGIN.top + ((maxValue - value) / Math.max(0.5, maxValue - minValue)) * plotHeight;
   const referenceLines = (referenceDataset?.percentiles ?? []).map((percentile, index) => ({
     percentile,
-    points: (referenceDataset?.rows ?? [])
+    points: referenceRows
       .map((row) => `${x(row.age)},${y(row.values[index]!)}`)
       .join(" "),
   }));
+  const zones = referenceDataset
+    ? centileZones(referenceDataset, x, y, minValue, maxValue)
+    : [];
   const patientPoints = readings
     .map((reading) => ({ ...reading, x: x(reading.ageInYears), y: y(reading.axialLengthMm) }))
     .sort((left, right) => left.ageInYears - right.ageInYears);
   const xTicks = integerTicks(Math.ceil(minAge), Math.floor(maxAge), 2);
   const yTicks = decimalTicks(minValue, maxValue, 1);
-  return { plotWidth, plotHeight, x, y, xTicks, yTicks, referenceLines, patientPoints };
+  return { plotWidth, plotHeight, x, y, xTicks, yTicks, referenceLines, zones, patientPoints };
+}
+
+function centileZones(
+  dataset: AxialGrowthReferenceDataset,
+  x: (age: number) => number,
+  y: (value: number) => number,
+  minValue: number,
+  maxValue: number,
+) {
+  const rows = [...dataset.rows].sort((left, right) => left.age - right.age);
+  const firstAge = rows[0]?.age;
+  const lastAge = rows.at(-1)?.age;
+  if (firstAge === undefined || lastAge === undefined) return [];
+  const indexFor = (percentile: number) => dataset.percentiles.indexOf(percentile);
+  const p25 = indexFor(dataset.zoneThresholds.neutralUpper);
+  const p50 = indexFor(dataset.zoneThresholds.typicalUpper);
+  const p75 = indexFor(dataset.zoneThresholds.borderlineUpper);
+  if ([p25, p50, p75].some((index) => index < 0)) return [];
+  const curve = (index: number) => rows.map((row) => `${x(row.age)},${y(row.values[index]!)}`);
+  const band = (lowerIndex: number, upperIndex: number) =>
+    [...curve(lowerIndex), ...curve(upperIndex).reverse()].join(" ");
+  return [
+    {
+      id: "neutral",
+      label: "SHORTER THAN TYPICAL",
+      color: "#64748b",
+      opacity: 0.14,
+      points: [`${x(firstAge)},${y(minValue)}`, ...curve(p25), `${x(lastAge)},${y(minValue)}`].join(" "),
+    },
+    {
+      id: "typical",
+      label: dataset.medianRepresentsHealthy ? "TYPICAL LENGTH" : "TYPICAL FOR COHORT",
+      color: dataset.medianRepresentsHealthy ? "#22c55e" : "#eab308",
+      opacity: 0.48,
+      points: band(p25, p50),
+    },
+    {
+      id: "borderline",
+      label: "BORDERLINE LENGTH",
+      color: "#eab308",
+      opacity: 0.48,
+      points: band(p50, p75),
+    },
+    {
+      id: "excessive",
+      label: "EXCESSIVE LENGTH",
+      color: "#ef4444",
+      opacity: 0.48,
+      points: [...curve(p75), `${x(lastAge)},${y(maxValue)}`, `${x(firstAge)},${y(maxValue)}`].join(" "),
+    },
+  ];
 }
 
 function integerTicks(min: number, max: number, step: number): number[] {

@@ -89,13 +89,28 @@ export interface MyopiaProgressionHistoryResponse {
     version: string;
     citation: string;
     populationNote: string;
+    medianRepresentsHealthy: boolean;
+    ageRangeMin: number;
+    ageRangeMax: number;
     percentiles: number[];
+    zoneThresholds: {
+      neutralUpper: number;
+      typicalUpper: number;
+      borderlineUpper: number;
+    };
     rows: Array<{ age: number; values: number[] }>;
   } | null;
   noReferenceMessage: string | null;
 }
 
-const WRITE_HEADERS = { "X-ODOS-Source": "mcp/myopia_progression" } as const;
+export interface EyeGrowthVisibilityResponse {
+  currentAgeInYears: number;
+  ageRangeMin: number | null;
+  ageRangeMax: number | null;
+  defaultVisible: boolean;
+}
+
+const WRITE_HEADERS = { "X-ODOS-Source": "mcp/eye_growth" } as const;
 const LEDGER_REF = "data/code-bindings/myopia-growth-ledger.md";
 const EYES = ["OD", "OS"] as const;
 const NO_REFERENCE_MESSAGE =
@@ -281,6 +296,49 @@ export async function handleMyopiaHistoryRequest(
   };
 }
 
+export async function handleEyeGrowthVisibilityRequest(
+  deps: Pick<MyopiaProgressionEndpointDeps, "authenticate" | "settingsStore" | "referenceDatasetRegistry" | "now">,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<MyopiaProgressionEndpointResult> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read eye-growth visibility." } };
+  if (!staffMay(staff.actorRole, "chart.read")) {
+    return { status: 403, body: { error: "chart.read role required" } };
+  }
+  const parsed = historyQuerySchema.safeParse(input.query);
+  if (!parsed.success) {
+    return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid eye-growth visibility request." } };
+  }
+  const patientId = parsed.data.patient.replace(/^Patient\//, "");
+  const [patient, settings] = await Promise.all([
+    staff.fhir.read<Patient>("Patient", patientId),
+    deps.settingsStore.get(parsed.data.patient),
+  ]);
+  if (!patient.birthDate) {
+    return { status: 422, body: { error: "Patient birth date is required to calculate eye-growth visibility." } };
+  }
+  const currentAgeInYears = decimalAge(
+    patient.birthDate,
+    deps.now?.() ?? new Date().toISOString(),
+  );
+  const dataset = (deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY)
+    .latest({ measure: "AXIAL_LENGTH", population: settings.referencePopulation });
+  const ageRangeMin = dataset?.ageRangeMin ?? null;
+  const ageRangeMax = dataset?.ageRangeMax ?? null;
+  return {
+    status: 200,
+    body: {
+      currentAgeInYears,
+      ageRangeMin,
+      ageRangeMax,
+      defaultVisible: ageRangeMin !== null &&
+        ageRangeMax !== null &&
+        currentAgeInYears >= ageRangeMin &&
+        currentAgeInYears <= ageRangeMax,
+    } satisfies EyeGrowthVisibilityResponse,
+  };
+}
+
 export async function handleMyopiaReferencePopulationRequest(
   deps: MyopiaProgressionEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
@@ -401,12 +459,12 @@ function buildReferenceDataset(
     citation: string;
     populationNote: string;
   } | null = null;
-  for (let age = dataset.ageRangeMin; age <= dataset.ageRangeMax; age += 1) {
+  for (const sourceRow of dataset.payload.tables[sex]) {
     const result = provider.getBands({
       measure: "AXIAL_LENGTH",
       population,
       sex,
-      ageInYears: age,
+      ageInYears: sourceRow.age,
     });
     if (!result) return null;
     identity ??= result;
@@ -419,7 +477,7 @@ function buildReferenceDataset(
     ) {
       return null;
     }
-    rows.push({ age, values: result.bands.map((band) => band.value) });
+    rows.push({ age: sourceRow.age, values: result.bands.map((band) => band.value) });
   }
   const first = provider.getBands({
     measure: "AXIAL_LENGTH",
@@ -430,7 +488,11 @@ function buildReferenceDataset(
   return identity && first
     ? {
         ...identity,
+        medianRepresentsHealthy: dataset.medianRepresentsHealthy,
+        ageRangeMin: dataset.ageRangeMin,
+        ageRangeMax: dataset.ageRangeMax,
         percentiles: first.bands.map((band) => band.percentile),
+        zoneThresholds: dataset.zoneThresholds,
         rows,
       }
     : null;

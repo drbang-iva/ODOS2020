@@ -9,10 +9,8 @@ eventTypes:
   - episode-start
   - care-plan-change
   - atropine-status-change
-  - axial-length-measurement
 profiles:
   - https://odos2020.com/fhir/StructureDefinition/CarePlan-MyopiaManagement
-  - https://odos2020.com/fhir/StructureDefinition/Observation-AxialLength
   - http://hl7.org/fhir/StructureDefinition/EpisodeOfCare
   - http://hl7.org/fhir/StructureDefinition/MedicationStatement
   - http://hl7.org/fhir/StructureDefinition/DeviceUseStatement
@@ -22,7 +20,6 @@ toolDeclarations:
   - create_or_update_myopia_plan
   - create_atropine_medication_statement
   - update_atropine_medication_status
-  - record_myopia_axial_length_measurement
   - aggregate_myopia_treatments
 sharedSubstrate:
   - contact-lens-foundation
@@ -30,22 +27,3 @@ sharedSubstrate:
   - CarePlan.activity
   - MedicationStatement
   - DeviceUseStatement
-  - ocular-measurement-graph
-findingDefinitions:
-  - stableKey: AXIAL_LENGTH
-    display: Axial Length
-    perEye: true
-    valueType: decimal
-    unitSystem: http://unitsofmeasure.org
-    unitCode: mm
-    requiredComponents:
-      - biometryMethod
-    optionalComponents:
-      - instrument
-  - stableKey: CORNEAL_RADIUS
-    display: Corneal Radius
-    perEye: true
-    valueType: decimal
-    unitSystem: http://unitsofmeasure.org
-    unitCode: mm
-    lifecycle: captured, not currently consumed

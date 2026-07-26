@@ -17,6 +17,7 @@ import { CustomFindingSection, type CustomFindingDefinition } from "../component
 import { CustomSectionEditor, type CustomSectionEditorValue } from "../components/charting/CustomSectionEditor";
 import { DryEyeSection } from "../components/charting/DryEyeSection";
 import { EncounterHeader } from "../components/charting/EncounterHeader";
+import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
 import { HpiSection } from "../components/charting/HpiSection";
@@ -66,6 +67,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [savingSection, setSavingSection] = useState(false);
   const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
   const [referralComposeOpen, setReferralComposeOpen] = useState(false);
+  const [eyeGrowthDefaultVisible, setEyeGrowthDefaultVisible] = useState(false);
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -87,6 +89,32 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  async function loadEyeGrowthVisibility(signal?: { cancelled: boolean }) {
+    try {
+      const patientReference = `Patient/${patient.id}`;
+      const response = await fetch(
+        `${clinicalGraphApiBase()}/clinical-graph/eye-growth/visibility?${new URLSearchParams({ patient: patientReference })}`,
+        { headers: authHeaders() },
+      );
+      const body = await response.json() as { defaultVisible?: boolean; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `Eye-growth visibility failed: ${response.status}`);
+      if (signal?.cancelled) return;
+      setEyeGrowthDefaultVisible(body.defaultVisible === true);
+    } catch (caught) {
+      if (signal?.cancelled) return;
+      console.error("Eye-growth visibility unavailable; section remains available on demand.", caught);
+      setEyeGrowthDefaultVisible(false);
+    }
+  }
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    void loadEyeGrowthVisibility(signal);
+    return () => {
+      signal.cancelled = true;
+    };
+  }, [patient.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,6 +256,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onSelect={setActiveSection}
           customSections={spineCustomSections}
           ocularHealthSections={ocularHealthSections}
+          eyeGrowthDefaultVisible={eyeGrowthDefaultVisible}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
@@ -320,6 +349,16 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           )}
           {activeSection === "refraction-history" && (
             <RefractionHistorySection patientReference={patientReference} />
+          )}
+          {activeSection === "eye-growth" && (
+            <EyeGrowthSection
+              patientReference={patientReference}
+              encounterReference={encounterReference}
+              onSaved={(status) => {
+                markSaved("eye-growth", status);
+                void loadEyeGrowthVisibility();
+              }}
+            />
           )}
           {activeSection === "ortho-k" && (
             <OrthoKSection

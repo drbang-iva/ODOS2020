@@ -17,6 +17,7 @@ export type BuiltInSectionId =
   | "soft-contact-lens"
   | "specialty-contact-lens"
   | "refraction-history"
+  | "eye-growth"
   | "ortho-k"
   | "dry-eye"
   | "myopia-management"

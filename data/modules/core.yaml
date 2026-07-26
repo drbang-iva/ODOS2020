@@ -2,6 +2,8 @@ module: core
 version: 0.4.0
 status: active
 description: ODOS core FHIR foundation and longitudinal chart infrastructure.
+routes:
+  - /encounter/:encounterId/eye-growth
 profiles:
   - https://odos2020.com/fhir/StructureDefinition/Encounter-ComprehensiveExam
   - https://odos2020.com/fhir/StructureDefinition/Observation-VA
@@ -12,6 +14,7 @@ event_types:
   - clinical-resource-created
   - clinical-resource-updated
   - raw-asset-indexed
+  - axial-length-measurement
 tools:
   - list_patients
   - get_patient
@@ -20,3 +23,22 @@ tools:
   - get_observations
   - create_observation
   - create_raw_asset_reference
+  - record_eye_growth_axial_length_measurement
+findingDefinitions:
+  - stableKey: AXIAL_LENGTH
+    display: Axial Length
+    perEye: true
+    valueType: decimal
+    unitSystem: http://unitsofmeasure.org
+    unitCode: mm
+    requiredComponents:
+      - biometryMethod
+    optionalComponents:
+      - instrument
+  - stableKey: CORNEAL_RADIUS
+    display: Corneal Radius
+    perEye: true
+    valueType: decimal
+    unitSystem: http://unitsofmeasure.org
+    unitCode: mm
+    lifecycle: captured, not currently consumed

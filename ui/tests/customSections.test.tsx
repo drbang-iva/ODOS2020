@@ -31,7 +31,7 @@ test("SpineNav preserves its section inventory for an empty custom registry and 
   const before = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} />);
   const emptyRegistry = renderToStaticMarkup(<SpineNav active="va" statuses={{}} onSelect={() => undefined} customSections={[]} />);
   assert.equal(emptyRegistry, before);
-  assert.equal((before.match(/data-status=/g) ?? []).length, 26);
+  assert.equal((before.match(/data-status=/g) ?? []).length, 27);
   assert.match(before, /ASSESSMENT &amp; PLAN/);
   assert.ok(before.indexOf("Assessment") < before.indexOf("Plan · Prescriptions"));
 
@@ -46,7 +46,7 @@ test("SpineNav preserves its section inventory for an empty custom registry and 
   );
   assert.match(custom, /Skin Carotenoid Score/);
   assert.match(custom, /\+ Add section/);
-  assert.equal((custom.match(/data-status=/g) ?? []).length, 27);
+  assert.equal((custom.match(/data-status=/g) ?? []).length, 28);
   assert.deepEqual(sectionStatus({}, "custom:missing"), { completed: false });
 });
 
@@ -69,11 +69,12 @@ test("SpineNav groups the traditional spine and appends custom sections after ev
     "IOP",
     "REFRACTION",
     "Refraction History",
+    "Eye Growth",
     "CONTACT LENSES",
     "Soft Contact Lenses",
     "Specialty Contact Lens",
     "Ortho-K",
-    "Myopia Progression",
+    "Myopia Management",
     "OCULAR HEALTH",
     "Cup/Disc",
     "Dry Eye",
@@ -137,26 +138,93 @@ test("SpineNav status dots expose complete, incomplete, and read-only labels wit
   assert.match(html, /title="Incomplete — OSDI 34"/);
 });
 
-test("ongoing Dry Eye and Myopia summaries stay available without a completed dot", () => {
+test("ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomplete", () => {
   const html = renderToStaticMarkup(
     <SpineNav
       active="dry-eye"
       statuses={{
         "dry-eye": { completed: false, summary: "OSDI 34" },
-        "myopia-management": { completed: false, summary: "OD axial length 24.12 mm" },
+        "eye-growth": { completed: false, summary: "OD axial length 24.12 mm" },
+        "myopia-management": { completed: false, summary: "Atropine 0.025%" },
       }}
       onSelect={() => undefined}
     />,
   );
   assert.match(html, /OSDI 34/);
   assert.match(html, /OD axial length 24\.12 mm/);
+  assert.match(html, /Atropine 0\.025%/);
   assert.doesNotMatch(html, /bg-emerald-400/);
 
-  for (const file of ["DryEyeSection.tsx", "MyopiaManagementSection.tsx"]) {
+  for (const file of ["DryEyeSection.tsx", "EyeGrowthSection.tsx", "MyopiaManagementSection.tsx"]) {
     const source = readFileSync(new URL(`../src/components/charting/${file}`, import.meta.url), "utf8");
     const markSaved = source.slice(source.indexOf("function markSaved"));
     assert.match(markSaved, /completed: false/);
   }
+});
+
+test("Eye Growth is default-visible inside the active dataset range and available on demand outside it", async () => {
+  const inRange = renderToStaticMarkup(
+    <SpineNav
+      active="refraction-history"
+      statuses={{}}
+      onSelect={() => undefined}
+      eyeGrowthDefaultVisible
+    />,
+  );
+  assert.ok(inRange.indexOf("Refraction History") < inRange.indexOf("Eye Growth"));
+  assert.doesNotMatch(inRange, /Available on demand/);
+
+  let selected: string | undefined;
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <SpineNav
+        active="refraction-history"
+        statuses={{}}
+        onSelect={(section) => {
+          selected = section;
+        }}
+        eyeGrowthDefaultVisible={false}
+      />,
+    );
+  });
+  const refractionGroup = renderer.root.find((node) =>
+    node.type === "section" && node.props["data-spine-group"] === "REFRACTION");
+  const available = refractionGroup.findAllByType("button")
+    .find((button) => button.props.className.includes("border-dashed"));
+  assert.ok(available);
+  assert.equal(available.props["aria-controls"], "spine-group-refraction-on-demand");
+  assert.equal(
+    refractionGroup.findByProps({ id: "spine-group-refraction-on-demand" }).props.hidden,
+    true,
+  );
+  await act(async () => available.props.onClick());
+  assert.equal(
+    refractionGroup.findByProps({ id: "spine-group-refraction-on-demand" }).props.hidden,
+    false,
+  );
+  const eyeGrowthLabel = refractionGroup.find((node) =>
+    node.type === "span" && node.children.includes("Eye Growth"));
+  const eyeGrowthButton = eyeGrowthLabel.parent;
+  assert.ok(eyeGrowthButton);
+  await act(async () => eyeGrowthButton.props.onClick());
+  assert.equal(selected, "eye-growth");
+  renderer.unmount();
+});
+
+test("Eye Growth screening and Myopia Management plan stay on separate surfaces", () => {
+  const eyeGrowth = readFileSync(
+    new URL("../src/components/charting/EyeGrowthSection.tsx", import.meta.url),
+    "utf8",
+  );
+  const myopiaManagement = readFileSync(
+    new URL("../src/components/charting/MyopiaManagementSection.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(eyeGrowth, /AxialGrowthChart/);
+  assert.doesNotMatch(eyeGrowth, /CarePlan|Atropine|Treatment Plan|startEpisode/);
+  assert.match(myopiaManagement, /Treatment Plan/);
+  assert.doesNotMatch(myopiaManagement, /AxialGrowthChart|recordAxialLength|reference-population/);
 });
 
 test("the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history", () => {
@@ -829,9 +897,9 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps the 27 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
+test("EncounterCharting keeps the 28 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 27);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 28);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
