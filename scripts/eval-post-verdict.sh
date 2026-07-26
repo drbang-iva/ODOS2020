@@ -6,7 +6,7 @@ set -euo pipefail
 # gate. Merge remains a separate, deliberate command and is never automated.
 
 usage() {
-  echo "Usage: scripts/eval-post-verdict.sh <PR#> <PASS|FAIL> <model> [--dry-run]" >&2
+  echo "Usage: scripts/eval-post-verdict.sh <PR#> <PASS|FAIL> <model> [--dry-run] [--ack-comments <N>]" >&2
 }
 
 die() {
@@ -14,7 +14,7 @@ die() {
   exit 1
 }
 
-if [[ $# -lt 3 || $# -gt 4 ]]; then
+if [[ $# -lt 3 ]]; then
   usage
   exit 2
 fi
@@ -23,14 +23,35 @@ pr_number="$1"
 verdict="$2"
 model="$3"
 dry_run=false
+ack_comments=""
+ack_comments_set=false
 
 [[ "$pr_number" =~ ^[1-9][0-9]*$ ]] || die "PR number must be a positive integer"
 [[ "$verdict" == "PASS" || "$verdict" == "FAIL" ]] || die "verdict must be exactly PASS or FAIL"
-if [[ $# -eq 4 ]]; then
-  [[ "$4" == "--dry-run" ]] || { usage; exit 2; }
-  dry_run=true
-fi
 [[ "$model" != *$'\n'* && "$model" != *$'\r'* ]] || die "evaluator model must be one line"
+
+shift 3
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      [[ "$dry_run" == false ]] || die "--dry-run may be specified only once"
+      dry_run=true
+      shift
+      ;;
+    --ack-comments)
+      [[ "$ack_comments_set" == false ]] || die "--ack-comments may be specified only once"
+      [[ $# -ge 2 ]] || die "--ack-comments requires a non-negative integer"
+      [[ "$2" =~ ^(0|[1-9][0-9]*)$ ]] || die "--ack-comments must be a non-negative integer"
+      ack_comments="$2"
+      ack_comments_set=true
+      shift 2
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+done
 
 trusted_model_pattern='^(Fable|(Claude[[:space:]]+)?Opus)([[:space:]]+[0-9]+(\.[0-9]+)*)?([[:space:]]+\(Claude\))?$'
 if ! printf '%s\n' "$model" | grep -Eiq "$trusted_model_pattern"; then
@@ -47,6 +68,31 @@ head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .
 [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || die "could not resolve a full head SHA for PR #$pr_number"
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
 
+if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
+  --jq '.[] | [((.path // "?") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+  die "could not fetch inline review comments for PR #$pr_number"
+fi
+
+current_comments=()
+if [[ -n "$inline_comment_rows" ]]; then
+  while IFS=$'\t' read -r comment_path comment_line comment_author comment_commit_id comment_first_line; do
+    [[ -n "$comment_path" ]] || continue
+    normalized_comment_commit="$(printf '%s' "$comment_commit_id" | tr '[:upper:]' '[:lower:]')"
+    [[ "$normalized_comment_commit" == "$head_sha" ]] || continue
+    current_comments+=("$comment_path:$comment_line — $comment_author — ${comment_first_line:-(no comment body)}")
+  done <<<"$inline_comment_rows"
+fi
+current_count="${#current_comments[@]}"
+
+echo "Current-head inline review comments: $current_count"
+if [[ "$current_count" -eq 0 ]]; then
+  echo "  (none)"
+else
+  for current_comment in "${current_comments[@]}"; do
+    printf '  - %s\n' "$current_comment"
+  done
+fi
+
 marker="Evaluated-by: $model — $verdict
 Head-SHA: $head_sha"
 
@@ -55,6 +101,13 @@ if [[ "$dry_run" == true ]]; then
   echo "PR: #$pr_number ($repo_name)"
   printf '%s\n' "$marker"
   exit 0
+fi
+
+if [[ "$current_count" -gt 0 && "$ack_comments_set" == false ]]; then
+  die "--ack-comments $current_count is required before posting; review and adjudicate the $current_count current-head inline comment(s) listed above"
+fi
+if [[ "$ack_comments_set" == true && "$ack_comments" -ne "$current_count" ]]; then
+  die "--ack-comments must equal the current-head inline comment count: expected $current_count, received $ack_comments; review and adjudicate the comments listed above"
 fi
 
 existing_check_ids="$(gh api "repos/$repo_name/commits/$head_sha/check-runs?check_name=check-evaluation&per_page=100" \
