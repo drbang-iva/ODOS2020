@@ -32,6 +32,19 @@ Evaluated-by: Opus 4.8 — PASS
 Head-SHA: 0123456789abcdef0123456789abcdef01234567
 ```
 
+Run `scripts/eval-worktree.sh <PR#> --keep` to verify the exact head and surface
+all paginated inline comments plus review submissions. Before posting a verdict,
+adjudicate every current-head inline comment, then acknowledge the displayed
+count:
+
+```text
+scripts/eval-post-verdict.sh <PR#> PASS "Opus 4.8" --ack-comments <N>
+```
+
+Stale comments remain visible but do not count toward `<N>`. When the
+current-head count is zero, omit `--ack-comments`. Use `--dry-run` to inspect
+the count and marker without requiring acknowledgment or posting anything.
+
 Only Fable or Opus can issue the final verdict. Any new commit requires a new
 marker for the new head. The `evaluated` label is an explicit operator override
 that bypasses marker and head-SHA enforcement.
