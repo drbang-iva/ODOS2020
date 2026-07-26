@@ -1,6 +1,7 @@
 import type {
   Appointment,
   Encounter,
+  HealthcareService,
   Patient,
   Provenance,
   Resource,
@@ -14,9 +15,15 @@ import {
   ODOS_LAB_ORDER_TASK_CODE_SYSTEM,
 } from "../lab-orders/adapters/manual-lab-order-adapter.js";
 import {
+  appointmentVisitTypeCode,
   isFollowUpAppointment,
   isUrgentAppointment,
 } from "../fhir/schedulingAppointment.js";
+import {
+  ODOS_VISIT_TYPE_SYSTEM,
+  visitTypeCategory,
+  visitTypeCode,
+} from "../fhir/schedulingVisitType.js";
 
 const FLOOR_STATE_URL = "https://odos2020.com/fhir/StructureDefinition/odos-floor-state";
 const CLINIC_SEARCH_LIMITS = { maxPages: 5, maxRows: 5_000 } as const;
@@ -322,6 +329,39 @@ function visitTypeOf(appointment: Appointment, encounter: Encounter | undefined)
     ?? encounter?.type?.[0]?.coding?.[0]?.display
     ?? encounter?.type?.[0]?.coding?.[0]?.code
     ?? "Visit";
+}
+
+export async function resolveVisitTypeCategoryForEncounter(
+  encounter: Encounter | undefined,
+  appointment: Appointment | undefined,
+  fhir: Pick<MedplumClient, "read" | "search">,
+): Promise<string | undefined> {
+  try {
+    let resolvedAppointment = appointment;
+    if (!resolvedAppointment) {
+      const reference = encounter?.appointment?.[0]?.reference;
+      const appointmentId = reference?.match(/^Appointment\/([^/]+)$/)?.[1];
+      if (!appointmentId) return undefined;
+      resolvedAppointment = await fhir.read<Appointment>("Appointment", appointmentId);
+    }
+    const code = appointmentVisitTypeCode(resolvedAppointment);
+    if (!code) return undefined;
+    const bundle = await fhir.search<HealthcareService>("HealthcareService", {
+      "service-type": `${ODOS_VISIT_TYPE_SYSTEM}|${code}`,
+      _count: "10",
+    });
+    const service = (bundle.entry ?? [])
+      .map((entry) => entry.resource)
+      .find(
+        (candidate): candidate is HealthcareService =>
+          candidate?.resourceType === "HealthcareService" &&
+          candidate.active !== false &&
+          visitTypeCode(candidate) === code,
+      );
+    return service ? visitTypeCategory(service)?.code : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function ageOnDate(birthDate: string, onDate: string): number {

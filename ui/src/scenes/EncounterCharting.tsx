@@ -34,6 +34,10 @@ import { VaSection } from "../components/charting/VaSection";
 import { WearingSection } from "../components/charting/WearingSection";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 import { fhir } from "../lib/fhir";
+import {
+  filterDefinitionsForSectionGroups,
+  type FindingSectionGroupCatalog,
+} from "../lib/finding-section-groups";
 import { useRole } from "../lib/role-context";
 import { ODOS_DISCIPLINE_SYSTEM, type SchedulingDiscipline } from "../lib/scheduling";
 import type { ChartSectionId, SectionSaveStatus, SectionStatusMap } from "../components/charting/types";
@@ -61,6 +65,12 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [activeSection, setActiveSection] = useState<ChartSectionId>("va");
   const [statuses, setStatuses] = useState<SectionStatusMap>({});
   const [catalog, setCatalog] = useState<CatalogResponse>({ canWrite: false, definitions: [] });
+  const [sectionGroupCatalog, setSectionGroupCatalog] = useState<FindingSectionGroupCatalog>({
+    canWrite: false,
+    groups: [],
+    visitTypeCategories: [],
+    effectiveGroupKeys: [],
+  });
   const [procedureCatalog, setProcedureCatalog] = useState<ProcedureCatalogResponse>({ definitions: [] });
   const [discipline, setDiscipline] = useState<SchedulingDiscipline>();
   const [creatingSection, setCreatingSection] = useState(false);
@@ -68,6 +78,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const [sidebarExpanded, setSidebarExpanded] = useState(sidebarExpandedForSession);
   const [referralComposeOpen, setReferralComposeOpen] = useState(false);
   const [eyeGrowthDefaultVisible, setEyeGrowthDefaultVisible] = useState(false);
+  const [addingSectionGroup, setAddingSectionGroup] = useState(false);
+  const [sectionGroupError, setSectionGroupError] = useState<string | null>(null);
 
   function setSidebarOpen(expanded: boolean) {
     sidebarExpandedForSession = expanded;
@@ -89,6 +101,44 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   useEffect(() => {
     void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams({ encounterId });
+    fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-section-groups?${query}`, {
+      headers: authHeaders(),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const body = await response.json() as FindingSectionGroupCatalog;
+        if (!response.ok) {
+          throw new Error(body.error ?? `Finding section groups failed: ${response.status}`);
+        }
+        return body;
+      })
+      .then((body) => {
+        setSectionGroupCatalog({
+          ...body,
+          canWrite: body.canWrite === true,
+          groups: Array.isArray(body.groups) ? body.groups : [],
+          visitTypeCategories: Array.isArray(body.visitTypeCategories) ? body.visitTypeCategories : [],
+          effectiveGroupKeys: Array.isArray(body.effectiveGroupKeys) ? body.effectiveGroupKeys : [],
+        });
+        setSectionGroupError(null);
+      })
+      .catch((caught) => {
+        if ((caught as Error).name === "AbortError") return;
+        console.error("Finding section groups unavailable; definitions remain ungated.", caught);
+        setSectionGroupCatalog({
+          canWrite: false,
+          groups: [],
+          visitTypeCategories: [],
+          effectiveGroupKeys: [],
+        });
+        setSectionGroupError("Section-group visibility could not be loaded.");
+      });
+    return () => controller.abort();
+  }, [encounterId]);
 
   async function loadEyeGrowthVisibility(signal?: { cancelled: boolean }) {
     try {
@@ -191,6 +241,34 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     }
   }
 
+  async function addSectionGroup(groupKey: string) {
+    setAddingSectionGroup(true);
+    setSectionGroupError(null);
+    try {
+      const response = await fetch(
+        `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/section-groups`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "add", groupKey }),
+        },
+      );
+      const body = await response.json() as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? `Section-group pull-in failed: ${response.status}`);
+      }
+      setSectionGroupCatalog((current) => ({
+        ...current,
+        pulledInGroupKeys: [...new Set([...(current.pulledInGroupKeys ?? []), groupKey])],
+        effectiveGroupKeys: [...new Set([...(current.effectiveGroupKeys ?? []), groupKey])],
+      }));
+    } catch (caught) {
+      setSectionGroupError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setAddingSectionGroup(false);
+    }
+  }
+
   function markSaved(section: ChartSectionId, status: SectionSaveStatus) {
     setStatuses((current) => ({
       ...current,
@@ -200,11 +278,16 @@ export function EncounterCharting({ patient, encounterId }: Props) {
 
   const patientReference = `Patient/${patient.id}`;
   const encounterReference = `Encounter/${encounterId}`;
-  const customDefinitions = catalog.definitions.filter((definition) =>
-    definition.sectionKey?.startsWith("custom:") && definition.active
+  const visibleDefinitions = filterDefinitionsForSectionGroups(
+    catalog.definitions,
+    sectionGroupCatalog.groups,
+    sectionGroupCatalog.effectiveGroupKeys ?? [],
   );
-  const entranceDefinitions = catalog.definitions.filter((definition) =>
-    definition.sectionKey?.startsWith("entrance:") && definition.active
+  const customDefinitions = visibleDefinitions.filter((definition) =>
+    definition.sectionKey?.startsWith("custom:")
+  );
+  const entranceDefinitions = visibleDefinitions.filter((definition) =>
+    definition.sectionKey?.startsWith("entrance:")
   );
   const pupilsDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:pupils");
   const stereopsisDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:stereo");
@@ -214,8 +297,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const pachymetryDefinition = entranceDefinitions.find((definition) => definition.stableKey === "pachymetry_um");
   const manualKDefinition = entranceDefinitions.find((definition) => definition.stableKey === "manual_keratometry");
   const dilationDefinition = entranceDefinitions.find((definition) => definition.stableKey === "entrance:dilation");
-  const ocularHealthDefinitions = catalog.definitions.filter((definition) =>
-    definition.sectionKey?.startsWith("ocular-health:") && definition.active
+  const ocularHealthDefinitions = visibleDefinitions.filter((definition) =>
+    definition.sectionKey?.startsWith("ocular-health:")
   );
   const ocularHealthSections = ocularHealthDefinitions.map((definition) => ({
     id: definition.stableKey as ChartSectionId,
@@ -245,6 +328,10 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const procedureDefinition = activeSection.startsWith("procedure:")
     ? procedureDefinitions.find((definition) => definition.stableKey === activeSection)
     : undefined;
+  const effectiveGroupKeys = new Set(sectionGroupCatalog.effectiveGroupKeys ?? []);
+  const availableSectionGroups = sectionGroupCatalog.groups.filter(
+    (group) => group.active && !effectiveGroupKeys.has(group.groupKey),
+  );
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -259,7 +346,32 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           eyeGrowthDefaultVisible={eyeGrowthDefaultVisible}
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
-        <main className="min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
+        <main className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
+          {(availableSectionGroups.length > 0 || sectionGroupError) && (
+            <div className="absolute right-4 top-3 z-20 flex max-w-sm items-center gap-2">
+              {sectionGroupError && (
+                <span role="alert" className="rounded border border-red-400/25 bg-bg-panel px-2 py-1 text-xs text-red-200">
+                  {sectionGroupError}
+                </span>
+              )}
+              {sectionGroupCatalog.canPullIn && availableSectionGroups.length > 0 && (
+                <select
+                  aria-label="Add section group"
+                  value=""
+                  disabled={addingSectionGroup}
+                  onChange={(event) => {
+                    if (event.target.value) void addSectionGroup(event.target.value);
+                  }}
+                  className="rounded border border-brand/50 bg-bg-panel px-3 py-2 text-sm text-brand-light shadow-lg"
+                >
+                  <option value="">{addingSectionGroup ? "Adding section group…" : "Add section group…"}</option>
+                  {availableSectionGroups.map((group) => (
+                    <option key={group.groupKey} value={group.groupKey}>{group.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
           {activeSection === "hpi" && (
             <HpiSection
               patientReference={patientReference}

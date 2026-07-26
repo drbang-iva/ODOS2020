@@ -17,10 +17,10 @@ type SearchSpec = {
   parameterKeys: string[];
 };
 
-const EXPECTED_DIRECT_SEARCH_CALLS = 87;
+const EXPECTED_DIRECT_SEARCH_CALLS = 91;
 const DYNAMIC_FHIR_SEARCH = "dynamic-fhir-search";
 const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SEARCH> = {
-  "src/clinic/clinic-summary.ts:244": [
+  "src/clinic/clinic-summary.ts:251": [
     spec("Appointment", "date", "_count", "_sort"),
     spec("Encounter", "date", "_count", "_sort"),
     spec("Task", "code", "_count", "_sort"),
@@ -61,12 +61,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2612": [spec("Patient", "name", "_count")],
-  "src/index.ts:2653": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2661": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2669": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4290": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4312": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2618": [spec("Patient", "name", "_count")],
+  "src/index.ts:2659": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2667": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2675": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4296": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4318": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
@@ -115,7 +115,7 @@ test("historical ChargeItem status search is rejected while known-valid searches
   assert.doesNotThrow(() => assertSearchParameterKeys("AccessPolicy", ["name:exact"]));
 });
 
-test("all 87 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
+test("all 91 direct fhir.search call sites are statically resolved or explicitly dynamic", () => {
   const calls = collectDirectFhirSearchCalls();
   assert.equal(calls.length, EXPECTED_DIRECT_SEARCH_CALLS);
   const usedOverrides = new Set<string>();

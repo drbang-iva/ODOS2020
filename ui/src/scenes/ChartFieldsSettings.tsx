@@ -7,6 +7,7 @@ import {
   CustomSectionEditor,
   type CustomSectionEditorValue,
 } from "../components/charting/CustomSectionEditor";
+import { FindingSectionGroupsSettings } from "../components/settings/FindingSectionGroupsSettings";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 interface CustomField extends CustomFieldEditorValue {
@@ -133,6 +134,7 @@ export function ChartFieldsSettings() {
         {!loading && catalog && (
           <div className="mt-6 space-y-4">
             {!catalog.canWrite && <div className="rounded border border-amber-300/25 bg-amber-300/10 p-4 text-sm text-amber-100">Read only. Practice-admin field-management grant required.</div>}
+            <FindingSectionGroupsSettings />
             <section className="rounded border border-white/10 bg-bg-panel/70 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><h2 className="font-semibold">Sections</h2><p className="mt-1 text-sm text-white/40">Practice-created chart sections and their lifecycle</p></div>

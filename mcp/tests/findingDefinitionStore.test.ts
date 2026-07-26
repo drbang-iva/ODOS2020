@@ -353,7 +353,7 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 68);
+  assert.equal(clinicalRoutes.length, 72);
   assert.equal(routeDependencies.length, 43);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);
@@ -367,6 +367,10 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
   assert.match(source, /handleComplaintDefinitionMutationRequest/);
   assert.match(source, /handleEncounterComplaintListRequest/);
   assert.match(source, /handleEncounterComplaintMutationRequest/);
+  assert.match(source, /handleFindingSectionGroupCatalogRequest/);
+  assert.match(source, /handleFindingSectionGroupCreationRequest/);
+  assert.match(source, /handleFindingSectionGroupMutationRequest/);
+  assert.match(source, /handleEncounterSectionOverrideMutationRequest/);
   assert.match(source, /handleProtocolOffersRequest/);
   assert.match(source, /handleProtocolApplyRequest/);
   assert.match(source, /handleProtocolApplicationsRequest/);
