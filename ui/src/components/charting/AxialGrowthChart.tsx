@@ -78,7 +78,7 @@ export function AxialGrowthChart({
               key={zone.id}
               points={zone.points}
               fill={zone.color}
-              fillOpacity="0.22"
+              fillOpacity={zone.opacity}
               data-centile-zone={zone.id}
             >
               <title>{zone.label}</title>
@@ -280,24 +280,28 @@ function centileZones(
       id: "neutral",
       label: "SHORTER THAN TYPICAL",
       color: "#64748b",
+      opacity: 0.14,
       points: [`${x(firstAge)},${y(minValue)}`, ...curve(p25), `${x(lastAge)},${y(minValue)}`].join(" "),
     },
     {
       id: "typical",
       label: dataset.medianRepresentsHealthy ? "TYPICAL LENGTH" : "TYPICAL FOR COHORT",
       color: dataset.medianRepresentsHealthy ? "#22c55e" : "#eab308",
+      opacity: 0.48,
       points: band(p25, p50),
     },
     {
       id: "borderline",
       label: "BORDERLINE LENGTH",
       color: "#eab308",
+      opacity: 0.48,
       points: band(p50, p75),
     },
     {
       id: "excessive",
       label: "EXCESSIVE LENGTH",
       color: "#ef4444",
+      opacity: 0.48,
       points: [...curve(p75), `${x(lastAge)},${y(maxValue)}`, `${x(firstAge)},${y(maxValue)}`].join(" "),
     },
   ];
