@@ -23,6 +23,15 @@ const GROUP: FindingSectionGroup = {
   active: true,
 };
 
+const DRY_EYE_GROUP: FindingSectionGroup = {
+  id: "finding-section-group-dry-eye-workup",
+  groupKey: "dry-eye-workup",
+  label: "Dry Eye Workup",
+  sectionKeyPrefixes: ["dry-eye:"],
+  defaultForVisitTypeCategories: ["dry-eye"],
+  active: true,
+};
+
 test("ungrouped definitions remain visible for every category while grouped definitions require an effective group", () => {
   const definitions = [
     { stableKey: "entrance:pupils", sectionKey: "entrance:pupils", active: true },
@@ -50,6 +59,152 @@ test("ungrouped definitions remain visible for every category while grouped defi
       .map((definition) => definition.stableKey),
     ["entrance:pupils", "custom:ordinary"],
   );
+});
+
+test("dry-eye category renders the eight-section battery in order while comprehensive renders none and leaves Pupils", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRead = fhir.read;
+  const originalDocument = globalThis.document;
+  const definitions = [
+    {
+      stableKey: "entrance:pupils",
+      sectionKey: "entrance:pupils",
+      display: "Pupils",
+      active: true,
+      perEye: true,
+      customFields: [],
+    },
+    {
+      stableKey: "ocular-health:anterior:tear-film",
+      sectionKey: "ocular-health:anterior:tear-film",
+      display: "Tear Film",
+      active: true,
+      perEye: true,
+      customFields: [],
+    },
+    ...[
+      ["dry-eye:symptoms", "Symptoms"],
+      ["dry-eye:tear-volume", "Tear Volume"],
+      ["dry-eye:markers", "Tear Film Markers"],
+      ["dry-eye:gland-structure", "Gland Structure"],
+      ["dry-eye:gland-function", "Gland Function"],
+      ["dry-eye:conjunctival-staining", "Surface Staining"],
+      ["dry-eye:staging", "Staging & Subtype"],
+    ].map(([stableKey, display]) => ({
+      stableKey,
+      sectionKey: stableKey,
+      display,
+      active: true,
+      perEye: stableKey !== "dry-eye:symptoms" && stableKey !== "dry-eye:staging",
+      customFields: [],
+    })),
+  ];
+  fhir.read = (async (_resourceType: string, id: string) => ({
+    resourceType: "Encounter",
+    id,
+    status: "in-progress",
+    class: { code: "AMB" },
+  })) as typeof fhir.read;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/clinical-graph/finding-definitions")) {
+      return jsonResponse({ canWrite: false, definitions });
+    }
+    if (url.includes("/clinical-graph/finding-section-groups")) {
+      const dryEye = url.includes("encounter-dry-eye");
+      return jsonResponse({
+        canWrite: false,
+        canPullIn: true,
+        groups: [DRY_EYE_GROUP],
+        visitTypeCategories: [
+          { id: "dry-eye", label: "Dry Eye" },
+          { id: "comprehensive", label: "Comprehensive" },
+        ],
+        visitTypeCategory: dryEye ? "dry-eye" : "comprehensive",
+        defaultGroupKeys: dryEye ? ["dry-eye-workup"] : [],
+        overrideGroupKeys: [],
+        effectiveGroupKeys: dryEye ? ["dry-eye-workup"] : [],
+      });
+    }
+    if (url.includes("/clinical-graph/eye-growth/visibility")) {
+      return jsonResponse({ defaultVisible: false });
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as Document,
+  });
+  let dryEyeRenderer!: ReactTestRenderer;
+  let comprehensiveRenderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      dryEyeRenderer = create(
+        <RoleProvider>
+          <EncounterCharting
+            patient={{ resourceType: "Patient", id: "patient-1" }}
+            encounterId="encounter-dry-eye"
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    assert.deepEqual(
+      dryEyeRenderer.root.findByType(SpineNav).props.customSections
+        .filter((section: { id: string }) => section.id.startsWith("dry-eye:"))
+        .map((section: { id: string }) => section.id),
+      [
+        "dry-eye:symptoms",
+        "dry-eye:tear-stability",
+        "dry-eye:tear-volume",
+        "dry-eye:markers",
+        "dry-eye:gland-structure",
+        "dry-eye:gland-function",
+        "dry-eye:conjunctival-staining",
+        "dry-eye:staging",
+      ],
+    );
+    await act(async () => {
+      comprehensiveRenderer = create(
+        <RoleProvider>
+          <EncounterCharting
+            patient={{ resourceType: "Patient", id: "patient-1" }}
+            encounterId="encounter-comprehensive"
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    assert.equal(
+      comprehensiveRenderer.root.findByType(SpineNav).props.customSections
+        .some((section: { id: string }) => section.id.startsWith("dry-eye:")),
+      false,
+    );
+    assert.ok(
+      comprehensiveRenderer.root.findByType(SpineNav).findAllByType("span")
+        .some((span) => span.children.includes("Pupils")),
+    );
+    assert.deepEqual(
+      filterDefinitionsForSectionGroups(definitions, [DRY_EYE_GROUP], [])
+        .filter((definition) => definition.stableKey === "entrance:pupils")
+        .map((definition) => definition.stableKey),
+      ["entrance:pupils"],
+    );
+  } finally {
+    dryEyeRenderer?.unmount();
+    comprehensiveRenderer?.unmount();
+    fhir.read = originalRead;
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", {
+      configurable: true,
+      value: originalDocument,
+    });
+  }
 });
 
 test("EncounterCharting pulls a group into only the current encounter and renders it without reloading", async () => {

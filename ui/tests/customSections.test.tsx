@@ -9,6 +9,7 @@ import { AestheticsConsentSection } from "../src/components/charting/AestheticsC
 import { CustomFindingSection } from "../src/components/charting/CustomFindingSection";
 import { CustomSectionEditor } from "../src/components/charting/CustomSectionEditor";
 import { CupDiscSection } from "../src/components/charting/CupDiscSection";
+import { DryEyeGlandStructureSection } from "../src/components/charting/DryEyeGlandStructureSection";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
 import {
@@ -257,6 +258,222 @@ test("the generic renderer shows ordered fields, OD and OS columns, automatic no
   assert.match(html, /Stable/);
   assert.match(html, /Other \/ notes/);
   assert.match(html, /History/);
+});
+
+test("an optionless toggle displays its true fallback and can be unset", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({ rows: [] })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <CustomFindingSection
+          definition={{
+            stableKey: "custom:optionless-toggle",
+            display: "Optionless Toggle",
+            active: true,
+            perEye: false,
+            customFields: [{
+              localCode: "CUSTOM_TOGGLE",
+              display: "Toggle",
+              valueType: "string",
+              inputControl: "toggle",
+              order: 0,
+              active: true,
+            }],
+          }}
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+    const checkbox = renderer.root.findByType("input");
+    assert.equal(checkbox.props.checked, false);
+
+    await act(async () => checkbox.props.onChange({ target: { checked: true } }));
+    assert.equal(renderer.root.findByType("input").props.checked, true);
+    assert.equal(
+      renderer.root.findAll((node) => node.children.includes("Yes")).length,
+      1,
+    );
+
+    await act(async () =>
+      renderer.root.findByType("input").props.onChange({ target: { checked: false } })
+    );
+    assert.equal(renderer.root.findByType("input").props.checked, false);
+    assert.equal(
+      renderer.root.findAll((node) => node.children.includes("No")).length,
+      1,
+    );
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("gland-structure history reads the saved dropout grade back beside its meibography image", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: string[] = [];
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    requests.push(url);
+    if (url.includes("/clinical-graph/dry-eye/meibography/image")) {
+      return jsonResponse({
+        contentType: "image/png",
+        data: "iVBORw==",
+        title: "synthetic-meibography.png",
+      });
+    }
+    if (url.includes("/clinical-graph/dry-eye/meibography")) {
+      return jsonResponse({
+        rows: [{
+          documentReference: "DocumentReference/meibo-1",
+          imageUrl:
+            "/clinical-graph/dry-eye/meibography/image?patient=Patient%2Fp1&document=DocumentReference%2Fmeibo-1",
+          recordedAt: "2026-07-26T21:29:39.000Z",
+          eye: "OD",
+          lid: "lower",
+          score: 2,
+          scoringSystem: "arita",
+        }],
+      });
+    }
+    return jsonResponse({
+      rows: [{
+        eye: "OD",
+        values: [
+          { code: "CUSTOM_IMAGE_REFERENCE", value: "DocumentReference/meibo-1" },
+          { code: "CUSTOM_DROPOUT_GRADE", value: "grade-2" },
+        ],
+      }],
+    });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DryEyeGlandStructureSection
+          definition={{
+            stableKey: "dry-eye:gland-structure",
+            display: "Gland Structure",
+            active: true,
+            perEye: true,
+            customFields: [{
+              localCode: "CUSTOM_DROPOUT_GRADE",
+              display: "Dropout grade",
+              valueType: "select",
+              options: [{ code: "grade-2", display: "Grade 2", active: true }],
+              order: 1,
+              active: true,
+            }],
+          }}
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          apiBase=""
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+    assert.equal(requests.length, 2);
+    const text = renderer.root.findAll((node) => typeof node.children?.[0] === "string")
+      .flatMap((node) => node.children)
+      .join(" ")
+      .replace(/\s+/g, " ");
+    assert.match(text, /OD lower lid · score 2/);
+    assert.match(text, /Grade 2/);
+    const loadImage = renderer.root.find((node) =>
+      node.type === "button" && node.props.children === "Load image"
+    );
+    await act(async () => loadImage.props.onClick());
+    assert.equal(requests.length, 3);
+    assert.equal(renderer.root.findByType("img").props.src, "data:image/png;base64,iVBORw==");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("gland-structure grade retry reuses the successful image upload", async () => {
+  const originalFetch = globalThis.fetch;
+  let uploadCalls = 0;
+  let gradeCalls = 0;
+  globalThis.fetch = (async (input, init) => {
+    const url = String(input);
+    if (init?.method !== "POST") return jsonResponse({ rows: [] });
+    if (url.includes("/clinical-graph/dry-eye/meibography")) {
+      uploadCalls += 1;
+      return jsonResponse({ documentReference: { id: "meibo-retry-1" } });
+    }
+    gradeCalls += 1;
+    return gradeCalls === 1
+      ? new Response(JSON.stringify({ error: "synthetic grade failure" }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        })
+      : jsonResponse({});
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <DryEyeGlandStructureSection
+          definition={{
+            stableKey: "dry-eye:gland-structure",
+            display: "Gland Structure",
+            active: true,
+            perEye: true,
+            customFields: [{
+              localCode: "CUSTOM_DROPOUT_GRADE",
+              display: "Dropout grade",
+              valueType: "select",
+              options: [{ code: "grade-2", display: "Grade 2", active: true }],
+              order: 1,
+              active: true,
+            }],
+          }}
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          apiBase=""
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+    const fileInput = renderer.root.find((node) =>
+      node.type === "input" && node.props.type === "file"
+    );
+    const scoreInput = renderer.root.findByProps({
+      "aria-label": "Meibography total score",
+    });
+    const gradeSelect = renderer.root.findByProps({ "aria-label": "Dropout grade" });
+    await act(async () => {
+      fileInput.props.onChange({
+        target: {
+          files: [new File(["synthetic"], "meibo.png", { type: "image/png" })],
+        },
+      });
+      scoreInput.props.onChange({ target: { value: "2" } });
+      gradeSelect.props.onChange({ target: { value: "grade-2" } });
+    });
+    const save = () => renderer.root.find((node) =>
+      node.type === "button" &&
+      (node.props.children === "Save image + grade" || node.props.children === "Retry grade")
+    );
+    await act(async () => save().props.onClick());
+    assert.equal(uploadCalls, 1);
+    assert.equal(gradeCalls, 1);
+    assert.equal(save().props.children, "Retry grade");
+
+    await act(async () => save().props.onClick());
+    assert.equal(uploadCalls, 1);
+    assert.equal(gradeCalls, 2);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("the same generic renderer records a data-defined Procedure without an aesthetics component fork", async () => {
@@ -841,16 +1058,23 @@ test("all-normal skips touched structures and copy-to-eye produces an independen
       OD: { selections: [], other: "" },
       OS: { selections: [], other: "" },
     },
+    "dry-eye:conjunctival-staining": {
+      OD: { selections: [], other: "" },
+      OS: { selections: [], other: "" },
+    },
   };
   const result = applyAnteriorAllNormal([
     { stableKey: "ocular-health:anterior:cornea" },
     { stableKey: "ocular-health:anterior:lens" },
+    { stableKey: "dry-eye:conjunctival-staining" },
   ], captures);
-  assert.equal(result.filled, 1);
+  assert.equal(result.filled, 2);
   assert.equal(result.skipped, 1);
   assert.equal(result.captures["ocular-health:anterior:cornea"]?.OD.state, "abnormal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OD.state, "normal");
   assert.equal(result.captures["ocular-health:anterior:lens"]?.OS.state, "normal");
+  assert.equal(result.captures["dry-eye:conjunctival-staining"]?.OD.state, "normal");
+  assert.equal(result.captures["dry-eye:conjunctival-staining"]?.OS.state, "normal");
 
   const source = { state: "abnormal" as const, selections: ["demodex", "demodex::collarettes"], other: "trace" };
   const copied = copyEyeCapture(source);
@@ -897,13 +1121,17 @@ test("hydrated state is pristine until a capture differs from its baseline", () 
   ]);
 });
 
-test("EncounterCharting keeps the 28 shipped eyecare branches and reuses the custom renderer for procedure definitions", () => {
+test("EncounterCharting keeps the shipped eyecare branches, adds three dry-eye renderers, and reuses the custom renderer for procedure definitions", () => {
   const source = readFileSync(new URL("../src/scenes/EncounterCharting.tsx", import.meta.url), "utf8");
-  assert.equal((source.match(/activeSection === "/g) ?? []).length, 28);
+  assert.equal((source.match(/activeSection === "/g) ?? []).length, 31);
   assert.equal((source.match(/activeSection\.startsWith\("custom:"\)/g) ?? []).length, 2);
   assert.equal((source.match(/activeSection\.startsWith\("procedure:"\)/g) ?? []).length, 2);
   assert.match(source, /Custom section catalog unavailable; charting built-ins only\./);
   assert.match(source, /<CustomFindingSection[\s\S]*definition=\{procedureDefinition\}/);
+  assert.match(source, /key=\{dryEyeDefinition\.stableKey\}[\s\S]*definition=\{dryEyeDefinition\}/);
+  assert.match(source, /key=\{customDefinition\.stableKey\}[\s\S]*definition=\{customDefinition\}/);
+  assert.match(source, /key=\{procedureDefinition\.stableKey\}[\s\S]*definition=\{procedureDefinition\}/);
+  assert.match(source, /markSaved\("dry-eye:tear-stability", status\)/);
 });
 
 test("an aesthetics-tagged Encounter loads the procedure catalog into the shared clinical spine", async () => {

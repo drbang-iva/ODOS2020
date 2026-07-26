@@ -266,6 +266,7 @@ function resolveCustomDefinition(
     !stableKey?.startsWith("custom:") &&
     !stableKey?.startsWith("ocular-health:") &&
     !stableKey?.startsWith("entrance:") &&
+    !stableKey?.startsWith("dry-eye:") &&
     stableKey !== "pachymetry_um" &&
     stableKey !== "manual_keratometry"
   ) return undefined;

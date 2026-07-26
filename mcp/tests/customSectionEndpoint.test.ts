@@ -6,6 +6,7 @@ import {
   handleCustomSectionCaptureRequest,
   handleCustomSectionHistoryRequest,
 } from "../src/clinical-graph/custom-section-endpoint.js";
+import { handleDiagnosisCandidatesRequest } from "../src/clinical-graph/diagnosis-candidates-endpoint.js";
 import {
   handleFindingDefinitionCreationRequest,
   handleFindingDefinitionMutationRequest,
@@ -866,6 +867,296 @@ test("E1 Pachymetry and Manual K use measurement capture without exam state", as
   assert.equal(component(fhir.observations.at(-1), "entrance.manual-keratometry"), undefined);
 });
 
+test("DE-1 dry-eye sections round-trip detail fields and per-eye anatomy through shared history", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const dryEye = definitions.filter((definition) =>
+    definition.sectionKey?.startsWith("dry-eye:")
+  );
+  const cases: Array<{
+    stableKey: string;
+    body: Record<string, unknown>;
+    expectedRows: number;
+  }> = [
+    {
+      stableKey: "dry-eye:symptoms",
+      body: {
+        customFields: [
+          { code: "CUSTOM_INSTRUMENT", value: "SPEED" },
+          { code: "CUSTOM_TOTAL_SCORE", value: 12 },
+          { code: "CUSTOM_DATE_ADMINISTERED", value: "2026-07-26" },
+          { code: "CUSTOM_UNABLE_TO_TEST", value: "unable" },
+        ],
+      },
+      expectedRows: 1,
+    },
+    {
+      stableKey: "dry-eye:tear-volume",
+      body: {
+        eyes: {
+          OD: { customFields: [
+            { code: "CUSTOM_SCHIRMER_MM", value: 8 },
+            { code: "CUSTOM_VARIANT", value: "without-anesthesia" },
+            { code: "CUSTOM_DURATION_MIN", value: 5 },
+          ] },
+          OS: { customFields: [
+            { code: "CUSTOM_SCHIRMER_MM", value: 6 },
+            { code: "CUSTOM_VARIANT", value: "without-anesthesia" },
+            { code: "CUSTOM_DURATION_MIN", value: 5 },
+          ] },
+        },
+      },
+      expectedRows: 2,
+    },
+    {
+      stableKey: "dry-eye:markers",
+      body: {
+        eyes: {
+          OD: { customFields: [
+            { code: "CUSTOM_OSMOLARITY_MOSM_L", value: 300 },
+            { code: "CUSTOM_INSTRUMENT", value: "Synthetic analyzer" },
+            { code: "CUSTOM_INFLAMMATORY_MARKER_TEST", value: "mmp-9-inflammadry" },
+            { code: "CUSTOM_INFLAMMATORY_RESULT", value: "positive" },
+          ] },
+          OS: { customFields: [
+            { code: "CUSTOM_OSMOLARITY_MOSM_L", value: 302 },
+            { code: "CUSTOM_INFLAMMATORY_RESULT", value: "negative" },
+          ] },
+        },
+      },
+      expectedRows: 2,
+    },
+    {
+      stableKey: "dry-eye:gland-structure",
+      body: {
+        eyes: {
+          OD: { customFields: [
+            { code: "CUSTOM_IMAGE_REFERENCE", value: "DocumentReference/meibo-1" },
+            { code: "CUSTOM_DROPOUT_GRADE", value: "grade-2" },
+          ] },
+        },
+      },
+      expectedRows: 1,
+    },
+    {
+      stableKey: "dry-eye:gland-function",
+      body: {
+        eyes: {
+          OD: { customFields: [
+            { code: "CUSTOM_EXPRESSIBILITY", value: "reduced" },
+            { code: "CUSTOM_SECRETION_QUALITY", value: "granular" },
+            { code: "CUSTOM_GLANDS_YIELDING_LIQUID", value: 4 },
+          ] },
+          OS: { customFields: [
+            { code: "CUSTOM_EXPRESSIBILITY", value: "normal" },
+            { code: "CUSTOM_SECRETION_QUALITY", value: "clear" },
+            { code: "CUSTOM_GLANDS_YIELDING_LIQUID", value: 7 },
+          ] },
+        },
+      },
+      expectedRows: 2,
+    },
+    {
+      stableKey: "dry-eye:conjunctival-staining",
+      body: {
+        eyes: {
+          OD: {
+            state: "abnormal",
+            customFields: [
+              { code: "CUSTOM_CONJUNCTIVAL_STAINING_GRADE", value: "grade-2" },
+              { code: "CUSTOM_VITAL_DYE", value: "lissamine-green" },
+            ],
+          },
+          OS: { state: "normal", customFields: [] },
+        },
+      },
+      expectedRows: 2,
+    },
+    {
+      stableKey: "dry-eye:staging",
+      body: {
+        customFields: [
+          { code: "CUSTOM_SUBTYPE", value: "mixed" },
+          { code: "CUSTOM_SEVERITY_LEVEL", value: "level-2" },
+          { code: "CUSTOM_TREATMENT_PHASE_NOTE", value: "Escalation discussed." },
+        ],
+      },
+      expectedRows: 1,
+    },
+  ];
+  for (const row of cases) {
+    const definition = dryEye.find((candidate) => candidate.stableKey === row.stableKey);
+    assert.ok(definition, row.stableKey);
+    const captured = await handleCustomSectionCaptureRequest(
+      clinicalDeps("clinician", fhir, dryEye),
+      {
+        authHeader: AUTH,
+        params: { stableKey: row.stableKey },
+        body: {
+          patientReference: "Patient/dry-eye-roundtrip",
+          encounterReference: "Encounter/dry-eye-roundtrip",
+          ...row.body,
+        },
+      },
+    );
+    assert.equal(captured.status, 200, `${row.stableKey}: ${JSON.stringify(captured.body)}`);
+    const history = await handleCustomSectionHistoryRequest(
+      clinicalDeps("clinician", fhir, dryEye),
+      {
+        authHeader: AUTH,
+        params: { stableKey: row.stableKey },
+        query: {
+          patient: "Patient/dry-eye-roundtrip",
+          encounter: "Encounter/dry-eye-roundtrip",
+        },
+      },
+    );
+    assert.equal(history.status, 200, row.stableKey);
+    const rows = (history.body as {
+      rows: Array<{ values: unknown[]; normalTemplate?: string }>;
+    }).rows;
+    assert.equal(rows.length, row.expectedRows, row.stableKey);
+    assert.equal(rows.some((historyRow) => historyRow.values.length > 0), true, row.stableKey);
+    if (row.stableKey === "dry-eye:conjunctival-staining") {
+      assert.equal(
+        rows.some((historyRow) => historyRow.normalTemplate === "No conjunctival staining."),
+        true,
+      );
+    }
+  }
+});
+
+test("DE-1 tear-stability and routine tear-film entry share one stableKey and one history", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const tearFilm = definitions.find(
+    (definition) => definition.stableKey === "ocular-health:anterior:tear-film",
+  );
+  assert.ok(tearFilm);
+  assert.equal(
+    definitions.some((definition) => definition.stableKey === "dry-eye:tear-stability"),
+    false,
+  );
+  for (const [encounterReference, eye, seconds, method] of [
+    ["Encounter/dry-eye-battery", "OD", 5, "fluorescein"],
+    ["Encounter/routine-ocular-health", "OS", 7, "non-invasive"],
+  ] as const) {
+    const capture = await handleCustomSectionCaptureRequest(
+      clinicalDeps("clinician", fhir, [tearFilm]),
+      {
+        authHeader: AUTH,
+        params: { stableKey: tearFilm.stableKey },
+        body: {
+          patientReference: "Patient/tbut-one-history",
+          encounterReference,
+          eyes: {
+            [eye]: {
+              state: "normal",
+              customFields: [
+                { code: "CUSTOM_GRADE_TBUT", value: seconds },
+                { code: "CUSTOM_GRADE_TBUT_METHOD", value: method },
+              ],
+            },
+          },
+        },
+      },
+    );
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  }
+  const history = await handleCustomSectionHistoryRequest(
+    clinicalDeps("clinician", fhir, [tearFilm]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: tearFilm.stableKey },
+      query: { patient: "Patient/tbut-one-history" },
+    },
+  );
+  const rows = (history.body as {
+    rows: Array<{ eye: string; values: Array<{ code: string; value: unknown }> }>;
+  }).rows;
+  assert.deepEqual(rows.map((row) => [
+    row.eye,
+    row.values.find((value) => value.code === "CUSTOM_GRADE_TBUT")?.value,
+    row.values.find((value) => value.code === "CUSTOM_GRADE_TBUT_METHOD")?.value,
+  ]), [
+    ["OD", 5, "Fluorescein"],
+    ["OS", 7, "Non-invasive"],
+  ]);
+  assert.equal(
+    fhir.observations.every((observation) =>
+      observation.code.coding?.some((coding) =>
+        coding.code === "ocular-health:anterior:tear-film"
+      )
+    ),
+    true,
+  );
+});
+
+test("DE-1 abnormal mappings return proposal badges and never auto-confirm a diagnosis", async () => {
+  const fhir = new MemoryFhir();
+  const definitions = await catalog(fhir);
+  const markers = definitions.find(
+    (definition) => definition.stableKey === "dry-eye:markers",
+  );
+  assert.ok(markers);
+  const capture = await handleCustomSectionCaptureRequest(
+    clinicalDeps("clinician", fhir, [markers]),
+    {
+      authHeader: AUTH,
+      params: { stableKey: markers.stableKey },
+      body: {
+        patientReference: "Patient/dry-eye-mapping",
+        encounterReference: "Encounter/dry-eye-mapping",
+        eyes: {
+          OD: {
+            customFields: [{
+              code: "CUSTOM_INFLAMMATORY_RESULT",
+              value: "positive",
+            }],
+          },
+        },
+      },
+    },
+  );
+  assert.equal(capture.status, 200, JSON.stringify(capture.body));
+  const candidates = await handleDiagnosisCandidatesRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/doc-1",
+      actorRole: "clinician",
+      fhir,
+    }),
+    now: () => NOW,
+  }, {
+    authHeader: AUTH,
+    params: { encounterId: "dry-eye-mapping" },
+  });
+  assert.equal(candidates.status, 200, JSON.stringify(candidates.body));
+  const findings = (candidates.body as {
+    findings: Array<{
+      findingDefinitionKey: string;
+      candidates: Array<{ diagnosisKey: string; source: string }>;
+    }>;
+  }).findings;
+  assert.deepEqual(findings.map((finding) => ({
+    findingDefinitionKey: finding.findingDefinitionKey,
+    candidates: finding.candidates.map((candidate) => ({
+      diagnosisKey: candidate.diagnosisKey,
+      source: candidate.source,
+    })),
+  })), [{
+    findingDefinitionKey: "dry-eye:markers",
+    candidates: [{
+      diagnosisKey: "kcs_not_sjogren",
+      source: "mapping",
+    }],
+  }]);
+  assert.equal(
+    JSON.stringify(candidates.body).includes('"verificationStatus":"confirmed"'),
+    false,
+  );
+  assert.equal(fhir.captureWrites.filter((write) => write.resourceType === "Condition").length, 0);
+});
+
 class MemoryFhir {
   readonly basics: Basic[] = [];
   readonly observations: Observation[] = [];
@@ -878,8 +1169,14 @@ class MemoryFhir {
     const resources = resourceType === "Basic"
       ? this.basics
       : this.observations
-        .filter((observation) => observation.subject?.reference === params.subject)
+        .filter((observation) =>
+          !params.subject || observation.subject?.reference === params.subject
+        )
+        .filter((observation) =>
+          !params.encounter || observation.encounter?.reference === params.encounter
+        )
         .filter((observation) => {
+          if (!params.code) return true;
           const [system, code] = params.code?.split("|") ?? [];
           return observation.code.coding?.some((coding) => coding.system === system && coding.code === code);
         });

@@ -271,7 +271,7 @@ test("default group resolution supports zero, one, and two matches and excludes 
 
 test("finding section group resource and store support create, edit, deactivate, and duplicate rejection", async () => {
   const fhir = new MemoryFhir();
-  const original = group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]);
+  const original = group("specialty-lens-workup", ["specialty-lens:"], ["specialty-lens"]);
   const resource = buildFindingSectionGroupResource(original);
   assert.equal(resource.code?.coding?.[0]?.system, FINDING_SECTION_GROUP_CODE_SYSTEM);
   assert.equal(resource.code?.coding?.[0]?.code, FINDING_SECTION_GROUP_CODE);
@@ -299,14 +299,17 @@ test("finding section group resource and store support create, edit, deactivate,
 test("stale group and encounter-override writes fail instead of overwriting concurrent versions", async () => {
   const fhir = new MemoryFhir();
   const groupStore = new FhirFindingSectionGroupStore(fhir);
-  const original = group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]);
+  const original = group("specialty-lens-workup", ["specialty-lens:"], ["specialty-lens"]);
   await groupStore.create(original);
   fhir.concurrentVersionBumpOnNextUpdate = true;
   await assert.rejects(
     () => groupStore.save({ ...original, label: "Stale group label" }),
     (error: unknown) => (error as { status?: number }).status === 412,
   );
-  assert.equal((await groupStore.list())[0]?.label, original.label);
+  assert.equal(
+    (await groupStore.list()).find((row) => row.groupKey === original.groupKey)?.label,
+    original.label,
+  );
 
   const overrideStore = new FhirEncounterSectionOverrideStore(fhir);
   await overrideStore.setGroupKeys("encounter-1", ["dry-eye-workup"]);
@@ -325,7 +328,7 @@ test("stale group and encounter-override writes fail instead of overwriting conc
 test("stale HTTP mutations surface a reload-and-retry conflict", async () => {
   const fhir = new MemoryFhir();
   const sectionGroup = group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]);
-  await new FhirFindingSectionGroupStore(fhir).create(sectionGroup);
+  await new FhirFindingSectionGroupStore(fhir).save(sectionGroup);
   fhir.resources.push({
     resourceType: "Encounter",
     id: "encounter-1",
@@ -377,17 +380,17 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   const valid = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
-      groupKey: "dry-eye-workup",
-      label: "Dry eye",
-      sectionKeyPrefixes: ["dry-eye:"],
-      defaultForVisitTypeCategories: ["dry-eye"],
+      groupKey: "specialty-lens-workup",
+      label: "Specialty lens",
+      sectionKeyPrefixes: ["specialty-lens:"],
+      defaultForVisitTypeCategories: ["specialty-lens"],
       active: true,
     },
   });
   const duplicate = await handleFindingSectionGroupCreationRequest(deps, {
     authHeader: AUTH,
     body: {
-      groupKey: "dry-eye-workup",
+      groupKey: "specialty-lens-workup",
       label: "Duplicate",
       sectionKeyPrefixes: ["custom:duplicate-"],
       defaultForVisitTypeCategories: [],
@@ -396,8 +399,8 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   });
   const edited = await handleFindingSectionGroupMutationRequest(deps, {
     authHeader: AUTH,
-    params: { groupKey: "dry-eye-workup" },
-    body: { label: "Dry eye battery", active: false },
+    params: { groupKey: "specialty-lens-workup" },
+    body: { label: "Specialty lens battery", active: false },
   });
 
   assert.equal(invalid.status, 400);
@@ -407,9 +410,9 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
   assert.deepEqual(
     (edited.body as { group: FindingSectionGroup }).group,
     {
-      ...group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]),
+      ...group("specialty-lens-workup", ["specialty-lens:"], ["specialty-lens"]),
       id: "group-1",
-      label: "Dry eye battery",
+      label: "Specialty lens battery",
       active: false,
     },
   );
@@ -418,7 +421,6 @@ test("group creation rejects non-kebab keys and duplicate keys through the HTTP 
 test("pull-in persists for one encounter and does not leak to a second encounter for the same patient", async () => {
   const fhir = new MemoryFhir();
   const sectionGroup = group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]);
-  await new FhirFindingSectionGroupStore(fhir).create(sectionGroup);
   fhir.resources.push(
     {
       ...encounterFixture("encounter-1", "appointment-1"),
@@ -448,7 +450,7 @@ test("a deactivated pull-in can be removed and does not resurrect after reactiva
   const fhir = new MemoryFhir();
   const groupStore = new FhirFindingSectionGroupStore(fhir);
   const sectionGroup = group("dry-eye-workup", ["dry-eye:"], ["dry-eye"]);
-  await groupStore.create(sectionGroup);
+  await groupStore.save(sectionGroup);
   fhir.resources.push({
     resourceType: "Encounter",
     id: "encounter-1",

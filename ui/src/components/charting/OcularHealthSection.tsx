@@ -35,6 +35,7 @@ interface Props {
 const EYES: Eye[] = ["OD", "OS"];
 const ANTERIOR_PREFIX = "ocular-health:anterior:";
 const POSTERIOR_PREFIX = "ocular-health:posterior:";
+const DRY_EYE_ANTERIOR_STABLE_KEY = "dry-eye:conjunctival-staining";
 
 export function OcularHealthSection({
   definitions,
@@ -431,7 +432,10 @@ function applySegmentAllNormal(
   prefix: string,
 ): { captures: Record<string, Record<Eye, EyeCapture>>; filled: number; skipped: number } {
   let skipped = 0;
-  const segmentDefinitions = definitions.filter((definition) => definition.stableKey.startsWith(prefix));
+  const segmentDefinitions = definitions.filter((definition) =>
+    definition.stableKey.startsWith(prefix) ||
+    (prefix === ANTERIOR_PREFIX && definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY)
+  );
   const next = { ...captures };
   for (const definition of segmentDefinitions) {
     const row = captures[definition.stableKey] ?? emptyRow();
@@ -450,7 +454,13 @@ function applySegmentAllNormal(
 
 function segmentGroups(definitions: CustomFindingDefinition[]) {
   return [
-    { label: "Anterior Segment", definitions: definitions.filter((definition) => definition.stableKey.startsWith(ANTERIOR_PREFIX)) },
+    {
+      label: "Anterior Segment",
+      definitions: definitions.filter((definition) =>
+        definition.stableKey.startsWith(ANTERIOR_PREFIX) ||
+        definition.stableKey === DRY_EYE_ANTERIOR_STABLE_KEY
+      ),
+    },
     { label: "Posterior Segment", definitions: definitions.filter((definition) => definition.stableKey.startsWith(POSTERIOR_PREFIX)) },
   ].filter((group) => group.definitions.length > 0);
 }

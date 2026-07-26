@@ -158,6 +158,89 @@ test("E2 seeds nine entrance definitions with canonical Pachymetry and declarati
   );
 });
 
+test("DE-1 seeds seven new definitions and references the one existing TBUT stable key as the eighth workup section", () => {
+  const seeds = buildFindingDefinitionSeeds();
+  const dryEye = seeds.filter((definition) => definition.sectionKey?.startsWith("dry-eye:"));
+  assert.deepEqual(dryEye.map((definition) => definition.stableKey), [
+    "dry-eye:symptoms",
+    "dry-eye:tear-volume",
+    "dry-eye:markers",
+    "dry-eye:gland-structure",
+    "dry-eye:gland-function",
+    "dry-eye:conjunctival-staining",
+    "dry-eye:staging",
+  ]);
+  assert.equal(seeds.some((definition) => definition.stableKey === "dry-eye:tear-stability"), false);
+  const tearFilm = seeds.filter(
+    (definition) => definition.stableKey === "ocular-health:anterior:tear-film",
+  );
+  assert.equal(tearFilm.length, 1);
+  assert.equal(tearFilm[0]?.valueSchema.perEye, true);
+  const tearFields = tearFilm[0]?.valueSchema.fields as Record<
+    string,
+    { display?: string; valueType?: string; unit?: string }
+  >;
+  assert.deepEqual(
+    Object.values(tearFields)
+      .filter((field) => field.display === "TBUT" || field.display === "TBUT method")
+      .map((field) => [field.display, field.valueType, field.unit]),
+    [
+      ["TBUT", "number", "s"],
+      ["TBUT method", "select", undefined],
+    ],
+  );
+  const cornea = seeds.find(
+    (definition) => definition.stableKey === "ocular-health:anterior:cornea",
+  );
+  assert.ok(cornea);
+  assert.deepEqual(
+    Object.values(cornea.valueSchema.fields as Record<string, { display?: string }>)
+      .map((field) => field.display)
+      .filter((display) => display?.includes("staining") || display === "Vital dye"),
+    [
+      "Corneal staining grade (grading scheme provisional)",
+      "Corneal staining zone (grading scheme provisional)",
+      "Vital dye",
+    ],
+  );
+  for (const stableKey of [
+    "dry-eye:symptoms",
+    "dry-eye:tear-volume",
+    "dry-eye:markers",
+    "dry-eye:gland-function",
+    "dry-eye:staging",
+  ]) {
+    assert.equal(
+      dryEye.find((definition) => definition.stableKey === stableKey)
+        ?.normalSemantics?.template,
+      undefined,
+      stableKey,
+    );
+  }
+  const conjunctival = dryEye.find(
+    (definition) => definition.stableKey === "dry-eye:conjunctival-staining",
+  );
+  assert.equal(conjunctival?.normalSemantics?.template, "No conjunctival staining.");
+  const diagnosisMapped = dryEye.filter(
+    (definition) => definition.diagnosisCandidates?.length,
+  );
+  assert.deepEqual(diagnosisMapped.map((definition) => definition.stableKey), [
+    "dry-eye:markers",
+    "dry-eye:gland-function",
+    "dry-eye:conjunctival-staining",
+    "dry-eye:staging",
+  ]);
+  assert.equal(
+    diagnosisMapped.flatMap((definition) => definition.diagnosisCandidates ?? [])
+      .every((candidate) =>
+        candidate.origin === "seed" &&
+        candidate.active &&
+        !("verificationStatus" in candidate)
+      ),
+    true,
+  );
+});
+
 test("stored rows override compiled seeds by stableKey and survive a store restart", async () => {
   const fhir = new MemoryFindingDefinitionFhir();
   const seeds = buildFindingDefinitionSeeds();
@@ -353,7 +436,7 @@ test("every definition-backed clinical-graph HTTP closure receives the persisten
     /await procedureDefinitionRouteDeps\(req\.header\("authorization"\), "[a-z.-]+"\)/g,
   ) ?? [];
 
-  assert.equal(clinicalRoutes.length, 72);
+  assert.equal(clinicalRoutes.length, 75);
   assert.equal(routeDependencies.length, 43);
   assert.equal(procedureRouteDependencies.length, 6);
   assert.match(source, /handleImagingCaptureRequest\(\s*\{ authenticate: authenticateStaffRouteForAction\("chart\.write"\) \}/);

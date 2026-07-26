@@ -25,6 +25,8 @@ export interface CustomFieldEntry {
   min?: number;
   max?: number;
   step?: number;
+  inputControl?: "date" | "toggle";
+  defaultValue?: number | string;
   options?: Array<{
     code: string;
     display: string;
@@ -453,6 +455,12 @@ function parseCustomField(row: Record<string, unknown>): CustomFieldEntry | unde
     ...(readFiniteNumber(row.min) !== undefined ? { min: readFiniteNumber(row.min) } : {}),
     ...(readFiniteNumber(row.max) !== undefined ? { max: readFiniteNumber(row.max) } : {}),
     ...(readFiniteNumber(row.step) !== undefined ? { step: readFiniteNumber(row.step) } : {}),
+    ...(row.inputControl === "date" || row.inputControl === "toggle"
+      ? { inputControl: row.inputControl }
+      : {}),
+    ...(typeof row.defaultValue === "number" || typeof row.defaultValue === "string"
+      ? { defaultValue: row.defaultValue }
+      : {}),
     ...(options ? { options } : {}),
     order: row.order,
     active: row.active,

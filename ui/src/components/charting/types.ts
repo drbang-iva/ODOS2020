@@ -31,6 +31,7 @@ export type BuiltInSectionId =
 export type ChartSectionId =
   | BuiltInSectionId
   | `custom:${string}`
+  | `dry-eye:${string}`
   | `ocular-health:${string}`
   | `procedure:${string}`;
 
