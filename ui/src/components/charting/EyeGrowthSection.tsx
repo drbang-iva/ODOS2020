@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import {
   AxialGrowthChart,
+  type AxialGrowthRate,
   type AxialGrowthReading,
   type AxialGrowthReferenceDataset,
   type MyopiaReferencePopulation,
@@ -24,6 +25,7 @@ interface EyeGrowthHistory {
   patientSex: "MALE" | "FEMALE" | null;
   birthDate: string;
   readings: AxialGrowthReading[];
+  growthRates?: AxialGrowthRate[];
   referenceDataset: AxialGrowthReferenceDataset | null;
   noReferenceMessage: string | null;
 }
@@ -145,10 +147,10 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ patientReference, referencePopulation }),
       });
-      if (!response.ok) throw new Error(await responseError(response, "Reference population save failed"));
+      if (!response.ok) throw new Error(await responseError(response, "Reference curve save failed"));
       setHistory((current) => current ? { ...current, referencePopulation } : current);
       setHistoryRefresh((value) => value + 1);
-      markSaved(`Reference population: ${populationLabel(referencePopulation)}`);
+      markSaved(`Reference curve: ${referenceCurveLabel(referencePopulation)}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -179,19 +181,22 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                 Decimal age is calculated from the measurement date and date of birth.
               </div>
             </div>
-            <label className="text-xs text-[color:var(--odos-muted)]">
-              Reference population
+            <label className="max-w-sm text-xs text-[color:var(--odos-muted)]">
+              Reference curve
               <select
-                value={history?.referencePopulation ?? "NOT_REPRESENTED"}
+                value={history?.referencePopulation ?? "CAUCASIAN"}
                 onChange={(event) => void saveReferencePopulation(event.target.value as MyopiaReferencePopulation)}
                 disabled={busy !== null}
-                aria-describedby="eye-growth-status-message"
+                aria-label="Reference curve"
+                aria-describedby="eye-growth-reference-curve-help eye-growth-status-message"
                 className="mt-1 block h-9 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)] disabled:opacity-50"
               >
+                <option value="CAUCASIAN">European (default)</option>
                 <option value="ASIAN">Asian</option>
-                <option value="CAUCASIAN">Caucasian</option>
-                <option value="NOT_REPRESENTED">Not represented — no dataset available</option>
               </select>
+              <span id="eye-growth-reference-curve-help" className="mt-1 block leading-4">
+                Select a published comparison curve. This does not record patient demographics.
+              </span>
             </label>
           </div>
           <div className="mt-4 grid gap-2 lg:grid-cols-[70px_1fr_1fr]">
@@ -277,6 +282,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
           <div className="mt-5">
             <AxialGrowthChart
               readings={history?.readings ?? []}
+              growthRates={history?.growthRates ?? []}
               referenceDataset={history?.referenceDataset ?? null}
               noReferenceMessage={history?.noReferenceMessage ?? null}
             />
@@ -296,10 +302,9 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
   );
 }
 
-function populationLabel(population: MyopiaReferencePopulation): string {
+function referenceCurveLabel(population: MyopiaReferencePopulation): string {
   if (population === "ASIAN") return "Asian";
-  if (population === "CAUCASIAN") return "Caucasian";
-  return "Not represented (no dataset available)";
+  return "European (default)";
 }
 
 async function responseError(response: Response, fallback: string): Promise<string> {

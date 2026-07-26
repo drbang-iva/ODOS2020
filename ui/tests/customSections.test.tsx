@@ -162,8 +162,8 @@ test("ongoing Dry Eye, Eye Growth, and Myopia Management summaries stay incomple
   }
 });
 
-test("Eye Growth is default-visible inside the active dataset range and available on demand outside it", async () => {
-  const inRange = renderToStaticMarkup(
+test("Eye Growth is default-visible for paediatric patients independent of reference-band coverage", async () => {
+  const paediatric = renderToStaticMarkup(
     <SpineNav
       active="refraction-history"
       statuses={{}}
@@ -171,8 +171,8 @@ test("Eye Growth is default-visible inside the active dataset range and availabl
       eyeGrowthDefaultVisible
     />,
   );
-  assert.ok(inRange.indexOf("Refraction History") < inRange.indexOf("Eye Growth"));
-  assert.doesNotMatch(inRange, /Available on demand/);
+  assert.ok(paediatric.indexOf("Refraction History") < paediatric.indexOf("Eye Growth"));
+  assert.doesNotMatch(paediatric, /Available on demand/);
 
   let selected: string | undefined;
   let renderer!: ReactTestRenderer;

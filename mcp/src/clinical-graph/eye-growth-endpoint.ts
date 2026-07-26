@@ -27,6 +27,7 @@ import {
 import {
   MYOPIA_REFERENCE_BAND_PROVIDER,
   MYOPIA_REFERENCE_DATASET_REGISTRY,
+  type AxialGrowthRateThresholds,
   type ReferenceBandProvider,
   type ReferenceDatasetRegistry,
   type ReferencePopulation,
@@ -79,11 +80,26 @@ export interface MyopiaProgressionReading {
   observationReference: string;
 }
 
+export type AxialGrowthRateClassification = "NORMAL" | "WATCH" | "FLAG";
+export type AxialGrowthRateStatus = "AVAILABLE" | "INTERVAL_TOO_SHORT" | "BIOMETRY_METHOD_CHANGED";
+
+export interface MyopiaAxialGrowthRate {
+  eye: Eye;
+  status: AxialGrowthRateStatus;
+  earlierMeasuredAt: string;
+  laterMeasuredAt: string;
+  intervalYears: number;
+  biometryMethod: BiometryMethod | null;
+  mmPerYear: number | null;
+  classification: AxialGrowthRateClassification | null;
+}
+
 export interface MyopiaProgressionHistoryResponse {
   referencePopulation: ReferencePopulation;
   patientSex: "MALE" | "FEMALE" | null;
   birthDate: string;
   readings: MyopiaProgressionReading[];
+  growthRates?: MyopiaAxialGrowthRate[];
   referenceDataset: {
     datasetId: string;
     version: string;
@@ -113,8 +129,10 @@ export interface EyeGrowthVisibilityResponse {
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/eye_growth" } as const;
 const LEDGER_REF = "data/code-bindings/myopia-growth-ledger.md";
 const EYES = ["OD", "OS"] as const;
-const NO_REFERENCE_MESSAGE =
-  "No validated reference data exists for this population. Patient measurements are shown without reference bands.";
+const AGE_NOT_COVERED_MESSAGE =
+  "No reference data covers this age. Patient measurements are shown without reference bands.";
+const PEDIATRIC_MAX_AGE_YEARS = 18;
+const RATE_BOUNDARY_EPSILON = 1e-9;
 
 const eyePayloadSchema = z.object({
   axialLengthMm: z.number().min(18).max(32),
@@ -274,26 +292,92 @@ export async function handleMyopiaHistoryRequest(
     .flatMap((observation) => observationToReading(observation, patient.birthDate!, cornealByEyeAndTime))
     .sort((left, right) => left.measuredAt.localeCompare(right.measuredAt));
   const patientSex = patient.gender === "male" ? "MALE" : patient.gender === "female" ? "FEMALE" : null;
-  const referenceDataset = patientSex
+  const registry = deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY;
+  const referencePopulation = displayReferencePopulation(settings.referencePopulation);
+  const currentAgeInYears = decimalAge(patient.birthDate, deps.now?.() ?? new Date().toISOString());
+  const activeDataset = registry.latest({ measure: "AXIAL_LENGTH", population: referencePopulation });
+  const referenceDataset = patientSex &&
+      activeDataset &&
+      currentAgeInYears >= activeDataset.ageRangeMin &&
+      currentAgeInYears <= activeDataset.ageRangeMax
     ? buildReferenceDataset(
         deps.bandProvider ?? MYOPIA_REFERENCE_BAND_PROVIDER,
-        deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY,
-        settings.referencePopulation,
+        registry,
+        referencePopulation,
         patientSex,
       )
     : null;
+  const rateThresholds = registry.axialGrowthRateThresholds();
 
   return {
     status: 200,
     body: {
-      referencePopulation: settings.referencePopulation,
+      referencePopulation,
       patientSex,
       birthDate: patient.birthDate,
       readings,
+      ...(rateThresholds ? { growthRates: calculateAxialGrowthRates(readings, rateThresholds) } : {}),
       referenceDataset,
-      noReferenceMessage: referenceDataset ? null : NO_REFERENCE_MESSAGE,
+      noReferenceMessage: referenceDataset ? null : AGE_NOT_COVERED_MESSAGE,
     } satisfies MyopiaProgressionHistoryResponse,
   };
+}
+
+export function calculateAxialGrowthRates(
+  readings: readonly MyopiaProgressionReading[],
+  thresholds: AxialGrowthRateThresholds,
+): MyopiaAxialGrowthRate[] {
+  return EYES.flatMap<MyopiaAxialGrowthRate>((eye) => {
+    const eyeReadings = readings
+      .filter((reading) => reading.eye === eye)
+      .sort((left, right) =>
+        left.ageInYears - right.ageInYears ||
+        left.measuredAt.localeCompare(right.measuredAt));
+    if (eyeReadings.length < 2) return [];
+    const earlier = eyeReadings.at(-2)!;
+    const later = eyeReadings.at(-1)!;
+    const intervalYears = later.ageInYears - earlier.ageInYears;
+    const common = {
+      eye,
+      earlierMeasuredAt: earlier.measuredAt,
+      laterMeasuredAt: later.measuredAt,
+      intervalYears,
+    };
+    if (earlier.biometryMethod !== later.biometryMethod) {
+      return [{
+        ...common,
+        status: "BIOMETRY_METHOD_CHANGED" as const,
+        biometryMethod: null,
+        mmPerYear: null,
+        classification: null,
+      }];
+    }
+    if (intervalYears < 0.5) {
+      return [{
+        ...common,
+        status: "INTERVAL_TOO_SHORT" as const,
+        biometryMethod: later.biometryMethod,
+        mmPerYear: null,
+        classification: null,
+      }];
+    }
+    const mmPerYear = (later.axialLengthMm - earlier.axialLengthMm) / intervalYears;
+    const band = later.ageInYears < thresholds.ageBoundaryYears
+      ? thresholds.younger
+      : thresholds.older;
+    const classification = mmPerYear <= band.normalUpperMmPerYear + RATE_BOUNDARY_EPSILON
+      ? "NORMAL"
+      : mmPerYear <= band.watchUpperMmPerYear + RATE_BOUNDARY_EPSILON
+        ? "WATCH"
+        : "FLAG";
+    return [{
+      ...common,
+      status: "AVAILABLE" as const,
+      biometryMethod: later.biometryMethod,
+      mmPerYear,
+      classification,
+    }];
+  });
 }
 
 export async function handleEyeGrowthVisibilityRequest(
@@ -321,8 +405,9 @@ export async function handleEyeGrowthVisibilityRequest(
     patient.birthDate,
     deps.now?.() ?? new Date().toISOString(),
   );
+  const referencePopulation = displayReferencePopulation(settings.referencePopulation);
   const dataset = (deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY)
-    .latest({ measure: "AXIAL_LENGTH", population: settings.referencePopulation });
+    .latest({ measure: "AXIAL_LENGTH", population: referencePopulation });
   const ageRangeMin = dataset?.ageRangeMin ?? null;
   const ageRangeMax = dataset?.ageRangeMax ?? null;
   return {
@@ -331,10 +416,7 @@ export async function handleEyeGrowthVisibilityRequest(
       currentAgeInYears,
       ageRangeMin,
       ageRangeMax,
-      defaultVisible: ageRangeMin !== null &&
-        ageRangeMax !== null &&
-        currentAgeInYears >= ageRangeMin &&
-        currentAgeInYears <= ageRangeMax,
+      defaultVisible: currentAgeInYears <= PEDIATRIC_MAX_AGE_YEARS,
     } satisfies EyeGrowthVisibilityResponse,
   };
 }
@@ -496,6 +578,10 @@ function buildReferenceDataset(
         rows,
       }
     : null;
+}
+
+function displayReferencePopulation(population: ReferencePopulation): ReferencePopulation {
+  return population === "ASIAN" ? "ASIAN" : "CAUCASIAN";
 }
 
 function observationToReading(

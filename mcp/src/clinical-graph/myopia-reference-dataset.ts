@@ -26,6 +26,18 @@ export interface PercentileZoneThresholds {
   borderlineUpper: number;
 }
 
+export interface AxialGrowthRateThresholds {
+  ageBoundaryYears: number;
+  younger: {
+    normalUpperMmPerYear: number;
+    watchUpperMmPerYear: number;
+  };
+  older: {
+    normalUpperMmPerYear: number;
+    watchUpperMmPerYear: number;
+  };
+}
+
 export interface LmsParameterRow {
   age: number;
   L: number;
@@ -55,6 +67,7 @@ export interface PercentileBandsDataset {
   measure: ReferenceMeasure;
   modelType: "PERCENTILE_BANDS";
   zoneThresholds: PercentileZoneThresholds;
+  axialGrowthRateThresholds?: AxialGrowthRateThresholds;
   payload: PercentileBandsPayload;
 }
 
@@ -139,6 +152,20 @@ export class ReferenceDatasetRegistry {
       .sort((left, right) =>
         right.version.localeCompare(left.version, undefined, { numeric: true }) ||
         right.datasetId.localeCompare(left.datasetId))[0];
+  }
+
+  axialGrowthRateThresholds(): AxialGrowthRateThresholds | undefined {
+    const dataset = this.datasets
+      .filter((candidate): candidate is PercentileBandsDataset =>
+        candidate.modelType === "PERCENTILE_BANDS" &&
+        candidate.measure === "AXIAL_LENGTH" &&
+        // Practice-set rate thresholds are European-derived and apply regardless of the selected comparison curve.
+        candidate.populationsCovered.includes("CAUCASIAN") &&
+        candidate.axialGrowthRateThresholds !== undefined)
+      .sort((left, right) =>
+        right.version.localeCompare(left.version, undefined, { numeric: true }) ||
+        right.datasetId.localeCompare(left.datasetId))[0];
+    return dataset?.axialGrowthRateThresholds;
   }
 }
 
@@ -367,6 +394,9 @@ function assertDataset(dataset: ReferenceDataset): void {
     ) {
       throw new Error("Percentile zone thresholds must be ordered centiles published by the dataset.");
     }
+    if (dataset.axialGrowthRateThresholds !== undefined) {
+      assertAxialGrowthRateThresholds(dataset.axialGrowthRateThresholds);
+    }
     for (const sex of ["MALE", "FEMALE"] as const) {
       if (!Array.isArray(dataset.payload.tables?.[sex])) {
         throw new Error(`Percentile dataset payload is missing ${sex} rows.`);
@@ -394,6 +424,25 @@ function assertDataset(dataset: ReferenceDataset): void {
         }
       }
     }
+  }
+}
+
+function assertAxialGrowthRateThresholds(value: unknown): asserts value is AxialGrowthRateThresholds {
+  if (!isRecord(value) || !isRecord(value.younger) || !isRecord(value.older)) {
+    throw new Error("Axial growth-rate thresholds must include younger and older bands.");
+  }
+  const ageBoundaryYears = value.ageBoundaryYears;
+  const youngerNormal = value.younger.normalUpperMmPerYear;
+  const youngerWatch = value.younger.watchUpperMmPerYear;
+  const olderNormal = value.older.normalUpperMmPerYear;
+  const olderWatch = value.older.watchUpperMmPerYear;
+  if (
+    ![ageBoundaryYears, youngerNormal, youngerWatch, olderNormal, olderWatch]
+      .every((number) => Number.isFinite(number) && Number(number) >= 0) ||
+    !(Number(youngerNormal) < Number(youngerWatch)) ||
+    !(Number(olderNormal) < Number(olderWatch))
+  ) {
+    throw new Error("Axial growth-rate thresholds must be finite, nonnegative, and ordered.");
   }
 }
 
