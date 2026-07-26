@@ -68,4 +68,32 @@ body {
   .scheduler-segment-active {
     @apply h-8 rounded bg-white/15 px-3 text-sm font-semibold text-white;
   }
+
+  .scheduler-warning-panel {
+    border-color: color-mix(in srgb, var(--odos-amber) 40%, transparent);
+    background: color-mix(in srgb, var(--odos-amber) 10%, var(--odos-ground));
+    color: var(--odos-amber);
+  }
+
+  .scheduler-success-text {
+    color: var(--odos-emerald);
+  }
+
+  .scheduler-subpanel {
+    border-color: var(--odos-line-2);
+    background: color-mix(in srgb, var(--odos-surface-2) 70%, transparent);
+  }
+
+  .scheduler-subpanel-deep {
+    border-color: var(--odos-line-2);
+    background: color-mix(in srgb, var(--odos-ground) 45%, transparent);
+  }
+
+  .scheduler-subpanel-title {
+    color: var(--odos-text);
+  }
+
+  .scheduler-subpanel-detail {
+    color: var(--odos-faint);
+  }
 }

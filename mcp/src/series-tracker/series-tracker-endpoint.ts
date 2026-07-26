@@ -2,6 +2,7 @@ import type { Application, Request, Response } from "express";
 import type { Bundle, CarePlan, Encounter, Procedure, Resource } from "@medplum/fhirtypes";
 import { resolveBusinessActionRole, type BusinessAction, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 import {
   FhirSeriesProtocolDefinitionStore,
   SeriesProtocolConflictError,
@@ -121,7 +122,7 @@ async function signOffSeriesProcedures(deps: SeriesTrackerRouteDeps, req: Reques
     return { status: 409, body: { error: "The encounter must be finished before series procedures are signed." } };
   }
   const patientReference = encounter.subject?.reference;
-  if (!patientReference?.startsWith("Patient/")) {
+  if (!isRelativeFhirReference(patientReference, "Patient")) {
     return { status: 422, body: { error: "Encounter has no patient subject." } };
   }
   const [patientCarePlans, patientProcedures] = await loadPatientSeries(staff.fhir, patientReference);

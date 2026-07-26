@@ -9,6 +9,7 @@ import type {
 import type { CommonObservationInput, EyeLaterality } from "./types.js";
 import { dualCoding, ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "./codeBindings.js";
 import { attachBodyStructureToObservation, buildEyeBodyStructure } from "./bodyStructure.js";
+import { assertRelativeFhirReference } from "../reference.js";
 
 export const ODOS_EXTENSION_URLS = {
   qualityScore: "https://odos2020.com/fhir/StructureDefinition/quality-score",
@@ -40,11 +41,15 @@ export function reference<T extends Resource = Resource>(reference: string): Ref
 }
 
 export function patientReference(patientId: string): string {
-  return patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
+  const value = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
+  assertRelativeFhirReference(value, "Patient", "Patient reference");
+  return value;
 }
 
 export function encounterReference(encounterId: string): string {
-  return encounterId.startsWith("Encounter/") ? encounterId : `Encounter/${encounterId}`;
+  const value = encounterId.startsWith("Encounter/") ? encounterId : `Encounter/${encounterId}`;
+  assertRelativeFhirReference(value, "Encounter", "Encounter reference");
+  return value;
 }
 
 export function normalizeLaterality(value: string): EyeLaterality {

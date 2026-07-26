@@ -6,6 +6,7 @@ import {
   toFhirAppointmentStatus,
 } from "./schedulingAppointmentStatus.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "./schedulingVisitType.js";
+import { assertRelativeFhirReference } from "./reference.js";
 
 /**
  * The scheduler Appointment builder — the Eyefinity details-modal data model on FHIR R4
@@ -110,6 +111,12 @@ export function buildSchedulingAppointment(input: SchedulingAppointmentInput): A
   assertDiscipline(input.discipline);
   if (!input.resources || input.resources.length === 0) {
     throw new Error("An appointment requires at least one resource (provider/room/equipment).");
+  }
+  if (input.patient) {
+    assertRelativeFhirReference(input.patient.reference, "Patient", "Appointment patient actor");
+  }
+  for (const resource of input.resources) {
+    assertRelativeFhirReference(resource.reference, undefined, "Appointment participant actor");
   }
   if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0) {
     throw new Error("Appointment duration (durationMinutes) must be a positive integer.");

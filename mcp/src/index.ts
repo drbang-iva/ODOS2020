@@ -67,6 +67,7 @@ import { registerDeskRoutes } from "./desk/desk-routes.js";
 import { registerStaffInviteRoute } from "./desk/staff-invite.js";
 import { registerClinicRoutes } from "./clinic/clinic-routes.js";
 import { registerOfficeRoutes } from "./office/office-routes.js";
+import { registerSchedulingResourceRoutes } from "./scheduling/scheduling-resource-routes.js";
 import { PostgresWenoDrugDatabaseStorage } from "./jobs/syncWenoDrugDatabase.js";
 import { PostgresWenoPharmacyDirectoryStorage } from "./jobs/syncWenoPharmacyDirectory.js";
 import { registerWenoSearchRoutes } from "./weno/weno-search-routes.js";
@@ -6918,6 +6919,11 @@ async function main(): Promise<void> {
         store: commercialEngineStore,
       });
       registerSeriesTrackerRoutes(app, {
+        authenticateService: authenticateWithMedplum,
+        authenticate: authenticateStaffRoute,
+        serviceFhir: fhir,
+      });
+      registerSchedulingResourceRoutes(app, {
         authenticateService: authenticateWithMedplum,
         authenticate: authenticateStaffRoute,
         serviceFhir: fhir,

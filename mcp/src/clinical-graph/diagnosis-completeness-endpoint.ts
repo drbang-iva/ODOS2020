@@ -1,6 +1,7 @@
 import type { Basic, Bundle, Condition, Encounter, Observation, Resource } from "@medplum/fhirtypes";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { searchAll } from "../fhir-search.js";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 import { FhirDiagnosisCatalogStore } from "./diagnosis-catalog-store.js";
 import { DIAGNOSIS_KEY_IDENTIFIER_SYSTEM } from "./diagnosis-pick-endpoint.js";
 import { FhirFindingDefinitionStore } from "./finding-definition-store.js";
@@ -73,7 +74,7 @@ export async function handleDiagnosisCompletenessRequest(
     );
   });
   const patientReference = encounter.subject?.reference;
-  const historyObservations = needsHistory && patientReference?.startsWith("Patient/")
+  const historyObservations = needsHistory && isRelativeFhirReference(patientReference, "Patient")
     ? await searchAll<Observation>(staff.fhir, "Observation", { subject: patientReference })
     : [];
   const now = new Date(deps.now?.() ?? new Date().toISOString());

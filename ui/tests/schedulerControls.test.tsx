@@ -8,6 +8,7 @@ import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui"
 import {
   ODOS_DISCIPLINE_SYSTEM,
   buildAppointmentBlockContent,
+  buildSchedulingAppointment,
   buildVisitType,
   filterSchedulingResourcesByHiddenActorReferences,
   type SchedulingPracticeConfig,
@@ -304,6 +305,12 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
       await Promise.resolve();
     });
 
+    const schedulerText = testInstanceText(renderer.root);
+    assert.ok(schedulerText.includes("Dr One"));
+    assert.ok(schedulerText.includes("Provider"));
+    assert.ok(!schedulerText.includes("Practitioner/doctor-1"));
+    assert.ok(!schedulerText.includes("Schedule/schedule-1"));
+
     const pickerText = testInstanceText(renderer.root.findByProps({ "aria-label": "Scheduler columns" }));
     for (const label of ["Providers", "Rooms", "Equipment", "Dr One", "Exam 1", "OCT 1"]) {
       assert.ok(pickerText.includes(label), `picker includes ${label}`);
@@ -333,6 +340,120 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
     if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
     else delete (globalThis as { localStorage?: Storage }).localStorage;
   }
+});
+
+test("practice-admin resource lifecycle guards future appointments, supports acknowledgement, and lists broken links without raw ids", async () => {
+  const originalState = useSchedulingStore.getState();
+  const calls: Array<{ scheduleId: string; acknowledge: boolean }> = [];
+  let renderer!: ReactTestRenderer;
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      clinicMode: "eyecare",
+      view: "day",
+      date: "2026-07-14",
+      resources: [SCHEDULER_RESOURCES[0]!],
+      resourceIssues: [],
+      integrityIssues: [{
+        sourceType: "Schedule",
+        sourceId: "ghost-schedule",
+        display: "Ghost Provider",
+        actorDisplay: "Ghost Provider",
+        problem: "Resource is missing a valid provider, room, or equipment link.",
+      }],
+      integrityLoading: false,
+      visitTypes: [],
+      appointments: [],
+      appointmentsByDay: {},
+      config: DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+      catalogsLoaded: true,
+      loading: false,
+      error: null,
+      loadDay: async () => undefined,
+      loadWindow: async () => undefined,
+      inspectIntegrity: async () => undefined,
+      deactivateResource: async (scheduleId, acknowledge) => {
+        calls.push({ scheduleId, acknowledge });
+        if (!acknowledge) {
+          return { deactivated: false, futureAppointmentCount: 2 };
+        }
+        useSchedulingStore.setState({ resources: [] });
+        return { deactivated: true, futureAppointmentCount: 2 };
+      },
+    });
+    await act(async () => {
+      renderer = create(<SchedulerDayGrid roles={["practice-admin"]} />);
+      await Promise.resolve();
+    });
+    act(() => button(renderer, "Settings").props.onClick());
+    await act(async () => Promise.resolve());
+
+    const settingsText = testInstanceText(renderer.root);
+    assert.ok(settingsText.includes("Scheduler Resources"));
+    assert.ok(settingsText.includes("Ghost Provider"));
+    assert.ok(settingsText.includes("Read-only check"));
+    assert.ok(!settingsText.includes("Practitioner/doctor-1"));
+    assert.ok(!settingsText.includes("Schedule/schedule-1"));
+
+    await act(async () => {
+      button(renderer, "Deactivate resource").props.onClick();
+      await Promise.resolve();
+    });
+    assert.match(testInstanceText(renderer.root), /2\s+future appointment/);
+    assert.deepEqual(calls[0], { scheduleId: "schedule-1", acknowledge: false });
+
+    await act(async () => {
+      button(renderer, "Acknowledge and deactivate").props.onClick();
+      await Promise.resolve();
+    });
+    assert.deepEqual(calls[1], { scheduleId: "schedule-1", acknowledge: true });
+    assert.deepEqual(renderedColumnRefs(renderer), []);
+  } finally {
+    renderer?.unmount();
+    useSchedulingStore.setState(originalState, true);
+  }
+});
+
+test("scheduler resource lifecycle controls stay practice-admin-only", async () => {
+  const originalState = useSchedulingStore.getState();
+  let renderer!: ReactTestRenderer;
+  try {
+    useSchedulingStore.setState({
+      ...originalState,
+      resources: [SCHEDULER_RESOURCES[0]!],
+      resourceIssues: [],
+      integrityIssues: [],
+      visitTypes: [],
+      appointments: [],
+      appointmentsByDay: {},
+      catalogsLoaded: true,
+      loadDay: async () => undefined,
+      loadWindow: async () => undefined,
+    });
+    await act(async () => {
+      renderer = create(<SchedulerDayGrid roles={["front-desk"]} />);
+      await Promise.resolve();
+    });
+    act(() => button(renderer, "Settings").props.onClick());
+    assert.ok(!testInstanceText(renderer.root).includes("Scheduler Resources"));
+  } finally {
+    renderer?.unmount();
+    useSchedulingStore.setState(originalState, true);
+  }
+});
+
+test("browser Appointment builder rejects an empty-id participant actor before FHIR write", () => {
+  assert.throws(
+    () => buildSchedulingAppointment({
+      patient: { reference: "Patient/patient-1" },
+      visitTypeCode: "routine",
+      discipline: "eyecare",
+      resources: [{ reference: "Practitioner/" }],
+      start: "2026-07-14T09:00:00-05:00",
+      durationMinutes: 30,
+    }),
+    /Appointment participant actor.*Type\/<id>/,
+  );
 });
 
 test("one visible hours-less column retains the base practice time axis while true empty cases stay empty", async () => {
