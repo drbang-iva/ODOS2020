@@ -1,6 +1,6 @@
 {
   "resourceType": "ODOSCanonicalExtensionRegistry",
-  "generatedAt": "2026-07-24",
+  "generatedAt": "2026-07-26",
   "extensions": [
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-fax-callback-token",
@@ -133,6 +133,18 @@
       "namespace": "clinical-graph",
       "status": "active",
       "sliceConsumer": "tier3-d1"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-finding-section-group-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "section-group-visibility"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/odos-encounter-section-override-json",
+      "namespace": "clinical-graph",
+      "status": "active",
+      "sliceConsumer": "section-group-visibility"
     },
     {
       "url": "https://odos2020.com/fhir/StructureDefinition/odos-procedure-definition-json",

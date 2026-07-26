@@ -19,6 +19,7 @@ export interface CustomFindingField {
 
 export interface CustomFindingDefinition {
   resourceKind?: "finding" | "procedure";
+  discipline?: "eyecare" | "aesthetics";
   stableKey: string;
   sectionKey?: string;
   display: string;

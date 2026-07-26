@@ -162,6 +162,12 @@ import {
   handleFindingDefinitionMutationRequest,
 } from "./clinical-graph/finding-definition-endpoint.js";
 import {
+  handleEncounterSectionOverrideMutationRequest,
+  handleFindingSectionGroupCatalogRequest,
+  handleFindingSectionGroupCreationRequest,
+  handleFindingSectionGroupMutationRequest,
+} from "./clinical-graph/finding-section-group-endpoint.js";
+import {
   handleProcedureDefinitionCaptureRequest,
   handleProcedureDefinitionCatalogRequest,
   handleProcedureDefinitionHistoryRequest,
@@ -5822,6 +5828,89 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/finding-definitions/:stableKey failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "finding-definition mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/finding-section-groups", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingSectionGroupCatalogRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              serviceFhir: fhir,
+            },
+            {
+              authHeader: req.header("authorization"),
+              query: {
+                encounterId: typeof req.query.encounterId === "string"
+                  ? req.query.encounterId
+                  : undefined,
+              },
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/finding-section-groups failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding section group catalog route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/finding-section-groups", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingSectionGroupCreationRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("finding-definitions.write"),
+              serviceFhir: fhir,
+            },
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: POST /clinical-graph/finding-section-groups failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding section group creation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/finding-section-groups/:groupKey", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleFindingSectionGroupMutationRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("finding-definitions.write"),
+              serviceFhir: fhir,
+            },
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: /clinical-graph/finding-section-groups/:groupKey failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "finding section group mutation route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/section-groups", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleEncounterSectionOverrideMutationRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              serviceFhir: fhir,
+            },
+            {
+              authHeader: req.header("authorization"),
+              params: req.params,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter section group override failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter section group override route failed" });
         }
       });
 
