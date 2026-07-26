@@ -3,6 +3,7 @@ import {
   buildMedicationRequest,
   ODOS_TRANSMISSION_METHOD_EXTENSION_URL,
 } from "../fhir/medicationOrder.js";
+import { isRelativeFhirReference } from "../fhir/reference.js";
 import type { WenoEzIntegrationConfig } from "../integrations/weno/config.js";
 import {
   pullNewRxSyncReport,
@@ -160,7 +161,7 @@ function parseCsv(source: string): string[][] {
 
 function patientReference(patientId: string): string {
   const reference = patientId.startsWith("Patient/") ? patientId : `Patient/${patientId}`;
-  if (!/^Patient\/[A-Za-z0-9.-]+$/.test(reference)) {
+  if (!isRelativeFhirReference(reference, "Patient")) {
     throw new Error("WENO Sync Report PatientID cannot be converted to a local Patient reference.");
   }
   return reference;
