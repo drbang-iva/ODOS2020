@@ -1,10 +1,11 @@
-import type { Appointment, HealthcareService, Schedule, Slot } from "@medplum/fhirtypes";
+import type { Appointment, HealthcareService, Resource, Schedule, Slot } from "@medplum/fhirtypes";
 import type { MedplumClient } from "../fhir-client.js";
 import {
   type CoverageInput,
   buildSchedulingAppointment,
 } from "../fhir/schedulingAppointment.js";
 import { isResourceVisibleInMode, resourceDisciplines } from "../fhir/schedulingResource.js";
+import { parseRelativeFhirReference } from "../fhir/reference.js";
 import {
   visitTypeCode,
   visitTypeDiscipline,
@@ -92,6 +93,13 @@ function appointmentActors(appointment: Appointment): string[] {
     .filter((reference): reference is string => Boolean(reference));
 }
 
+function isNotFound(error: unknown): boolean {
+  return (
+    (typeof error === "object" && error !== null && "status" in error && error.status === 404) ||
+    (error instanceof Error && /not found|FHIR 404/i.test(error.message))
+  );
+}
+
 export function createSchedulingService(deps: SchedulingServiceDeps): SchedulingService {
   assertClinicMode(deps.clinicMode);
   const mode = deps.clinicMode;
@@ -126,6 +134,21 @@ export function createSchedulingService(deps: SchedulingServiceDeps): Scheduling
     );
   }
 
+  async function scheduleActorResolves(schedule: Schedule): Promise<boolean> {
+    const reference = schedule.actor?.[0]?.reference;
+    const parsed = parseRelativeFhirReference(reference);
+    if (!parsed || !["Practitioner", "Location", "Device"].includes(parsed.resourceType)) {
+      return false;
+    }
+    try {
+      await deps.fhir.read(parsed.resourceType as Resource["resourceType"], parsed.id);
+      return true;
+    } catch (error) {
+      if (isNotFound(error)) return false;
+      throw error;
+    }
+  }
+
   return {
     clinicMode() {
       return mode;
@@ -144,12 +167,14 @@ export function createSchedulingService(deps: SchedulingServiceDeps): Scheduling
 
     async listResources(): Promise<Schedule[]> {
       const schedules = await searchAll<Schedule>("Schedule");
-      return schedules.filter(
+      const candidates = schedules.filter(
         (schedule) =>
           schedule.active !== false &&
           resourceDisciplines(schedule).length > 0 &&
           isResourceVisibleInMode(schedule, mode),
       );
+      const resolutions = await Promise.all(candidates.map(scheduleActorResolves));
+      return candidates.filter((_, index) => resolutions[index]);
     },
 
     async getAvailability(query: AvailabilityQuery): Promise<Slot[]> {
@@ -216,8 +241,8 @@ export function createSchedulingService(deps: SchedulingServiceDeps): Scheduling
           );
         }
         const actor = schedule.actor?.[0];
-        if (!actor?.reference) {
-          throw new Error(`Resource ${scheduleReference} has no actor reference.`);
+        if (!actor?.reference || !(await scheduleActorResolves(schedule))) {
+          throw new Error(`Resource ${scheduleReference} does not resolve to a bookable provider, room, or equipment actor.`);
         }
         if (eligible.length > 0 && !eligible.includes(actor.reference)) {
           throw new Error(

@@ -61,12 +61,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2618": [spec("Patient", "name", "_count")],
-  "src/index.ts:2659": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2667": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2675": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4296": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4318": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2619": [spec("Patient", "name", "_count")],
+  "src/index.ts:2660": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2668": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2676": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4297": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4319": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),
@@ -88,7 +88,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
-  "src/scheduling/scheduling-service.ts:104": [
+  "src/scheduling/scheduling-service.ts:112": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),
     spec("Schedule"),

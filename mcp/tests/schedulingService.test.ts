@@ -21,11 +21,18 @@ function fakeFhir(seed: {
   schedules?: Schedule[];
   appointments?: Appointment[];
 }): SchedulingFhirClient & { created: Resource[] } {
+  const actorResources = (seed.schedules ?? []).flatMap((schedule): Resource[] => {
+    const [resourceType, id] = schedule.actor?.[0]?.reference?.split("/") ?? [];
+    return resourceType && id ? [{ resourceType, id } as Resource] : [];
+  });
   const byType: Record<string, Resource[]> = {
     HealthcareService: [...(seed.visitTypes ?? [])],
     Schedule: [...(seed.schedules ?? [])],
     Appointment: [...(seed.appointments ?? [])],
   };
+  for (const actor of actorResources) {
+    byType[actor.resourceType] = [...(byType[actor.resourceType] ?? []), actor];
+  }
   const created: Resource[] = [];
   return {
     created,

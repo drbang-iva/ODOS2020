@@ -27,20 +27,37 @@ import {
   replaceSchedulingBlock,
   validateSchedulingPracticeSettings,
 } from "../../lib/scheduling-settings";
+import type {
+  SchedulingIntegrityIssue,
+  SchedulingResourceDeactivationResult,
+} from "../../lib/scheduling-resource-admin";
 
 export function SchedulingSettingsModal({
   config,
   currentDate,
   initialBlockIndex,
   resources,
+  canManageResources,
+  integrityIssues,
+  integrityLoading,
   onClose,
+  onDeactivateResource,
+  onInspectIntegrity,
   onSave,
 }: {
   config: SchedulingPracticeConfig;
   currentDate: string;
   initialBlockIndex?: number;
   resources: Schedule[];
+  canManageResources: boolean;
+  integrityIssues: SchedulingIntegrityIssue[];
+  integrityLoading: boolean;
   onClose: () => void;
+  onDeactivateResource: (
+    scheduleId: string,
+    acknowledgeFutureAppointments: boolean,
+  ) => Promise<SchedulingResourceDeactivationResult>;
+  onInspectIntegrity: () => Promise<void>;
   onSave: (config: SchedulingPracticeConfig) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<SchedulingPracticeConfig>(() => clone(config));
@@ -50,6 +67,12 @@ export function SchedulingSettingsModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [blockScopeError, setBlockScopeError] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivationGuard, setDeactivationGuard] = useState<{
+    scheduleId: string;
+    display: string;
+    futureAppointmentCount: number;
+  } | null>(null);
   const resourceOptions = useMemo(
     () =>
       resources
@@ -65,10 +88,16 @@ export function SchedulingSettingsModal({
   }, [config, initialBlockIndex]);
 
   useEffect(() => {
-    if (!selectedResource && resourceOptions[0]) {
-      setSelectedResource(resourceOptions[0].reference);
-    }
+    if (resourceOptions.some((entry) => entry.reference === selectedResource)) return;
+    setSelectedResource(resourceOptions[0]?.reference ?? "");
   }, [resourceOptions, selectedResource]);
+
+  useEffect(() => {
+    if (!canManageResources) return;
+    void onInspectIntegrity().catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : String(err));
+    });
+  }, [canManageResources, onInspectIntegrity]);
 
   async function save() {
     setSaving(true);
@@ -102,6 +131,27 @@ export function SchedulingSettingsModal({
     }
   }
 
+  async function deactivate(scheduleId: string, display: string, acknowledge: boolean) {
+    setDeactivating(true);
+    setError(null);
+    try {
+      const result = await onDeactivateResource(scheduleId, acknowledge);
+      if (!result.deactivated) {
+        setDeactivationGuard({
+          scheduleId,
+          display,
+          futureAppointmentCount: result.futureAppointmentCount,
+        });
+      } else {
+        setDeactivationGuard(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeactivating(false);
+    }
+  }
+
   const selectedResourceEntry = resourceOptions.find((entry) => entry.reference === selectedResource);
   const selectedBlock = draft.blocks[selectedBlockIndex];
 
@@ -111,7 +161,7 @@ export function SchedulingSettingsModal({
         <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <div className="text-xs uppercase text-white/45">Scheduler Settings</div>
-            <h2 className="text-lg font-semibold">Hours, Blocks, Offices</h2>
+            <h2 className="text-lg font-semibold">Hours, Resources, Blocks, Offices</h2>
             <a className="mt-1 inline-block text-xs text-blue-300 hover:text-blue-200" href="/settings/visit-types">
               Manage visit types
             </a>
@@ -198,6 +248,117 @@ export function SchedulingSettingsModal({
                 )}
               </div>
             </Panel>
+            {canManageResources && (
+              <Panel title="Scheduler Resources">
+                <div className="grid gap-3">
+                  {selectedResourceEntry?.resource.id && (
+                    <div className="scheduler-subpanel flex flex-wrap items-center justify-between gap-3 rounded border p-3">
+                      <div>
+                        <div className="scheduler-subpanel-title text-sm font-semibold">
+                          {resourceDisplay(selectedResourceEntry.resource)}
+                        </div>
+                        <div className="scheduler-subpanel-detail text-xs">
+                          Deactivation removes this column without deleting its history.
+                        </div>
+                      </div>
+                      <button
+                        className="scheduler-button"
+                        type="button"
+                        disabled={deactivating}
+                        onClick={() => void deactivate(
+                          selectedResourceEntry.resource.id!,
+                          resourceDisplay(selectedResourceEntry.resource),
+                          false,
+                        )}
+                      >
+                        Deactivate resource
+                      </button>
+                    </div>
+                  )}
+                  {deactivationGuard && (
+                    <div className="scheduler-warning-panel rounded border p-3 text-sm">
+                      <div className="font-semibold">
+                        {deactivationGuard.display} has {deactivationGuard.futureAppointmentCount} future appointment{deactivationGuard.futureAppointmentCount === 1 ? "" : "s"}.
+                      </div>
+                      <div className="mt-1 opacity-80">
+                        Move those appointments first, or explicitly acknowledge that they will retain this inactive resource assignment.
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          className="scheduler-button"
+                          type="button"
+                          onClick={() => setDeactivationGuard(null)}
+                        >
+                          Keep active
+                        </button>
+                        <button
+                          className="scheduler-button"
+                          type="button"
+                          disabled={deactivating}
+                          onClick={() => void deactivate(
+                            deactivationGuard.scheduleId,
+                            deactivationGuard.display,
+                            true,
+                          )}
+                        >
+                          Acknowledge and deactivate
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="scheduler-subpanel-deep rounded border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="scheduler-subpanel-title text-sm font-semibold">Resource integrity</div>
+                        <div className="scheduler-subpanel-detail text-xs">Read-only check; no records are repaired automatically.</div>
+                      </div>
+                      <button
+                        className="scheduler-button"
+                        type="button"
+                        disabled={integrityLoading}
+                        onClick={() => void onInspectIntegrity()}
+                      >
+                        {integrityLoading ? "Checking..." : "Refresh check"}
+                      </button>
+                    </div>
+                    {!integrityLoading && integrityIssues.length === 0 && (
+                      <div className="scheduler-success-text mt-3 text-sm">No broken Schedule or Appointment actor links found.</div>
+                    )}
+                    {integrityIssues.length > 0 && (
+                      <div className="mt-3 grid gap-2">
+                        {integrityIssues.map((issue, index) => (
+                          <div
+                            className="scheduler-warning-panel flex flex-wrap items-center justify-between gap-3 rounded border p-2"
+                            key={`${issue.sourceType}-${issue.sourceId ?? index}-${index}`}
+                          >
+                            <div>
+                              <div className="text-sm">
+                                {issue.sourceType}: {issue.actorDisplay ?? issue.display}
+                              </div>
+                              <div className="text-xs opacity-70">{issue.problem}</div>
+                            </div>
+                            {issue.sourceType === "Schedule" && issue.sourceId && (
+                              <button
+                                className="scheduler-button"
+                                type="button"
+                                disabled={deactivating}
+                                onClick={() => void deactivate(
+                                  issue.sourceId!,
+                                  issue.actorDisplay ?? issue.display,
+                                  false,
+                                )}
+                              >
+                                Deactivate
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Panel>
+            )}
           </section>
 
           <section className="grid content-start gap-4">

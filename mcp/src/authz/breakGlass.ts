@@ -4,6 +4,7 @@ import {
   type OdosAuditEventRow,
 } from "./odosAudit.js";
 import { buildProjectMembershipAccess, type PracticeRoleId } from "./roles.js";
+import { assertRelativeFhirReference } from "../fhir/reference.js";
 
 export const BREAK_GLASS_POLICY_URL = "https://odos2020.com/fhir/AccessPolicy/break-glass";
 export const DEFAULT_BREAK_GLASS_DURATION_MINUTES = 60;
@@ -104,7 +105,9 @@ export function assertHumanBreakGlassRequest(input: BreakGlassRequest): void {
     throw new Error("Break-glass reason is mandatory free text.");
   }
 
-  if (!input.patientReference.startsWith("Patient/")) {
-    throw new Error("Break-glass patientReference must be Patient/<id>.");
-  }
+  assertRelativeFhirReference(
+    input.patientReference,
+    "Patient",
+    "Break-glass patientReference",
+  );
 }
