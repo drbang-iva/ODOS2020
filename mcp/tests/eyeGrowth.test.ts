@@ -8,7 +8,9 @@ import {
   evaluateTranscriptionInvariants,
   loadReferenceDatasetSeeds,
   MYOPIA_REFERENCE_BAND_PROVIDER,
+  MYOPIA_REFERENCE_DATASET_REGISTRY,
   PercentileBandProvider,
+  REFERENCE_POPULATIONS,
   ReferenceDatasetRegistry,
   type PercentileBandsDataset,
 } from "../src/clinical-graph/myopia-reference-dataset.js";
@@ -17,6 +19,7 @@ import {
   handleEyeGrowthVisibilityRequest,
   handleMyopiaCaptureRequest,
   handleMyopiaHistoryRequest,
+  calculateAxialGrowthRates,
   resolveMyopiaDefinitions,
   type EyeGrowthVisibilityResponse,
   type MyopiaProgressionEndpointDeps,
@@ -27,6 +30,7 @@ import type {
   MyopiaReferencePopulationStore,
 } from "../src/clinical-graph/myopia-reference-population-store.js";
 import { PgMyopiaReferencePopulationStore } from "../src/clinical-graph/myopia-reference-population-store.js";
+import { defaultMyopiaPatientSettings } from "../src/clinical-graph/myopia-reference-population-store.js";
 
 const AUTH = "Bearer good";
 const PATIENT_REFERENCE = "Patient/p1";
@@ -106,6 +110,24 @@ test("supplied Truckenbrod seed transcribes all 40 values and satisfies per-year
     results.map((result) => [result.invariant, result.checks]),
     [["V1", 32], ["V2", 30], ["V3", 30], ["V4", 40], ["V5", 1]],
   );
+  assert.deepEqual(dataset.axialGrowthRateThresholds, {
+    ageBoundaryYears: 10,
+    younger: { normalUpperMmPerYear: 0.2, watchUpperMmPerYear: 0.3 },
+    older: { normalUpperMmPerYear: 0.1, watchUpperMmPerYear: 0.2 },
+  });
+});
+
+test("a patient without saved settings resolves to the European reference dataset", () => {
+  const settings = defaultMyopiaPatientSettings(PATIENT_REFERENCE);
+  assert.equal(settings.referencePopulation, "CAUCASIAN");
+  assert.equal(
+    MYOPIA_REFERENCE_DATASET_REGISTRY.latest({
+      measure: "AXIAL_LENGTH",
+      population: settings.referencePopulation,
+    })?.datasetId,
+    "truckenbrod-2021-german-axial-length",
+  );
+  assert.deepEqual(REFERENCE_POPULATIONS, ["ASIAN", "CAUCASIAN", "NOT_REPRESENTED"]);
 });
 
 test("registry accepts LMS parameters but provider leaves LMS evaluation unavailable", () => {
@@ -350,8 +372,76 @@ test("NOT_REPRESENTED history returns patient series with zero reference bands",
   assert.equal(body.referenceDataset, null);
   assert.equal(
     body.noReferenceMessage,
-    "No validated reference data exists for this population. Patient measurements are shown without reference bands.",
+    "No reference curve selected. Patient measurements are shown without reference bands.",
   );
+});
+
+test("latest consecutive same-method readings calculate the rate independently per eye", () => {
+  const rates = calculateAxialGrowthRates([
+    growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+    growthReading("OS", 9.1, 24.10, "ULTRASOUND_A_SCAN", "2025-02-01T00:00:00Z", "os-1"),
+    growthReading("OD", 9.5, 24.10, "OPTICAL_BIOMETRY", "2025-07-02T00:00:00Z", "od-2"),
+    growthReading("OS", 10.1, 24.30, "ULTRASOUND_A_SCAN", "2026-02-01T00:00:00Z", "os-2"),
+  ], MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds());
+
+  assert.equal(rates.length, 2);
+  assert.ok(Math.abs(rates[0]!.mmPerYear! - 0.2) < 1e-9);
+  assert.equal(rates[0]!.classification, "NORMAL");
+  assert.ok(Math.abs(rates[1]!.mmPerYear! - 0.2) < 1e-9);
+  assert.equal(rates[1]!.classification, "WATCH");
+});
+
+test("growth-rate guards suppress short, mixed-method, and first-visit intervals", () => {
+  const thresholds = MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds();
+  assert.deepEqual(calculateAxialGrowthRates([
+    growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+  ], thresholds), []);
+
+  const short = calculateAxialGrowthRates([
+    growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+    growthReading("OD", 9.49, 24.03, "OPTICAL_BIOMETRY", "2025-06-29T00:00:00Z", "od-2"),
+  ], thresholds);
+  assert.equal(short[0]?.status, "INTERVAL_TOO_SHORT");
+  assert.equal(short[0]?.mmPerYear, null);
+
+  const mixedMethod = calculateAxialGrowthRates([
+    growthReading("OD", 8.0, 23.80, "OPTICAL_BIOMETRY", "2024-01-01T00:00:00Z", "od-0"),
+    growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+    growthReading("OD", 10.0, 24.20, "ULTRASOUND_A_SCAN", "2026-01-01T00:00:00Z", "od-2"),
+  ], thresholds);
+  assert.equal(mixedMethod[0]?.status, "BIOMETRY_METHOD_CHANGED");
+  assert.equal(mixedMethod[0]?.mmPerYear, null);
+});
+
+test("growth-rate classifications honor configured age and rate boundaries", () => {
+  const configured = {
+    ageBoundaryYears: 10,
+    younger: { normalUpperMmPerYear: 0.2, watchUpperMmPerYear: 0.3 },
+    older: { normalUpperMmPerYear: 0.1, watchUpperMmPerYear: 0.2 },
+  };
+  for (const [age, rate, expected] of [
+    [9.9, 0.2, "NORMAL"],
+    [9.9, 0.3, "WATCH"],
+    [9.9, 0.3001, "FLAG"],
+    [10.1, 0.1, "NORMAL"],
+    [10.1, 0.2, "WATCH"],
+    [10.1, 0.2001, "FLAG"],
+  ] as const) {
+    const result = calculateAxialGrowthRates([
+      growthReading("OD", age - 1, 24, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+      growthReading("OD", age, 24 + rate, "OPTICAL_BIOMETRY", "2026-01-01T00:00:00Z", "od-2"),
+    ], configured);
+    assert.equal(result[0]?.classification, expected, `age ${age}, rate ${rate}`);
+  }
+
+  const custom = calculateAxialGrowthRates([
+    growthReading("OD", 8.9, 24, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
+    growthReading("OD", 9.9, 24.22, "OPTICAL_BIOMETRY", "2026-01-01T00:00:00Z", "od-2"),
+  ], {
+    ...configured,
+    younger: { normalUpperMmPerYear: 0.25, watchUpperMmPerYear: 0.35 },
+  });
+  assert.equal(custom[0]?.classification, "NORMAL");
 });
 
 test("reference-population migration succeeds on fresh and populated Postgres databases", { timeout: 30_000 }, async (t) => {
@@ -394,7 +484,7 @@ test("reference-population migration succeeds on fresh and populated Postgres da
         }
         assert.deepEqual(await store.get("Patient/existing"), {
           patientReference: "Patient/existing",
-          referencePopulation: "NOT_REPRESENTED",
+          referencePopulation: "CAUCASIAN",
         });
         const saved = await store.set({
           patientReference: "Patient/existing",
@@ -403,6 +493,14 @@ test("reference-population migration succeeds on fresh and populated Postgres da
           updatedAt: MEASURED_AT,
         });
         assert.equal(saved.referencePopulation, "ASIAN");
+        const deliberatelyNone = await store.set({
+          patientReference: "Patient/existing",
+          referencePopulation: "NOT_REPRESENTED",
+          updatedBy: "Practitioner/doc1",
+          updatedAt: MEASURED_AT,
+        });
+        assert.equal(deliberatelyNone.referencePopulation, "NOT_REPRESENTED");
+        assert.equal((await store.get("Patient/existing")).referencePopulation, "NOT_REPRESENTED");
         if (index === 1) {
           const existing = await probe.query(
             "SELECT display_name FROM synthetic_existing_patient_data WHERE patient_reference = $1",
@@ -500,17 +598,42 @@ function syntheticTabulatedDataset(
     citation: "Synthetic regression fixture.",
     populationNote: "Synthetic regression fixture; not for clinical use.",
     medianRepresentsHealthy: false,
-    populationsCovered: ["ASIAN"],
+    populationsCovered: ["ASIAN", "CAUCASIAN"],
     sexStratified: true,
     ageRangeMin,
     ageRangeMax,
     measure,
     modelType: "PERCENTILE_BANDS",
     zoneThresholds: { neutralUpper: 3, typicalUpper: 50, borderlineUpper: 95 },
+    axialGrowthRateThresholds: {
+      ageBoundaryYears: 10,
+      younger: { normalUpperMmPerYear: 0.2, watchUpperMmPerYear: 0.3 },
+      older: { normalUpperMmPerYear: 0.1, watchUpperMmPerYear: 0.2 },
+    },
     payload: {
       type: "TABULATED_BANDS",
       percentiles: [3, 50, 95],
       tables: { MALE: rows, FEMALE: rows.map((row) => ({ ...row, values: [...row.values] })) },
     },
+  };
+}
+
+function growthReading(
+  eye: "OD" | "OS",
+  ageInYears: number,
+  axialLengthMm: number,
+  biometryMethod: "OPTICAL_BIOMETRY" | "ULTRASOUND_A_SCAN",
+  measuredAt: string,
+  observationId: string,
+) {
+  return {
+    eye,
+    axialLengthMm,
+    cornealRadiusMm: null,
+    ageInYears,
+    measuredAt,
+    biometryMethod,
+    instrument: null,
+    observationReference: `Observation/${observationId}`,
   };
 }

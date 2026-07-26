@@ -55,7 +55,7 @@ export class PgMyopiaReferencePopulationStore implements MyopiaReferencePopulati
     `, [patientReference]);
     return result.rows[0]
       ? rowFromDb(result.rows[0])
-      : { patientReference, referencePopulation: "NOT_REPRESENTED" };
+      : defaultMyopiaPatientSettings(patientReference);
   }
 
   async set(input: {
@@ -124,6 +124,11 @@ export class PgMyopiaReferencePopulationStore implements MyopiaReferencePopulati
       client.release();
     }
   }
+}
+
+export function defaultMyopiaPatientSettings(patientReference: string): MyopiaPatientSettings {
+  assertPatientReference(patientReference);
+  return { patientReference, referencePopulation: "CAUCASIAN" };
 }
 
 interface MyopiaPatientSettingsDbRow {

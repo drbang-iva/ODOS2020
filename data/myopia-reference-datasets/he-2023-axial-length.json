@@ -2,7 +2,7 @@
   "datasetId": "he-2023-chinese-axial-length",
   "version": "1.0.0",
   "citation": "He X, Sankaridurg P, Naduvilath T, et al. Normative data and percentile curves for axial length and axial length/corneal curvature in Chinese children and adolescents aged 4-18 years. Br J Ophthalmol. 2023;107(2):167-175. doi:10.1136/bjophthalmol-2021-319431. PMID 34531198. PMCID PMC9887397.",
-  "populationNote": "Urban Chinese cohort (n=14,127). Myopia prevalence in this population is among the highest in the world — the 50th percentile here is typical for this cohort, not a marker of normal or healthy eye growth.",
+  "populationNote": "Published Asian reference curve from an urban Chinese cohort (n=14,127). Selecting this curve compares measurements with the published cohort; it does not record patient demographics. Myopia prevalence in this population is among the highest in the world — the 50th percentile here is typical for this cohort, not a marker of normal or healthy eye growth.",
   "medianRepresentsHealthy": false,
   "populationsCovered": [
     "ASIAN"

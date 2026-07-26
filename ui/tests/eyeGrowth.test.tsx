@@ -201,6 +201,118 @@ test("reference lines and centile polygons sort unsorted rows by age", () => {
   assert.deepEqual(neutralZone?.split(" ").map((point) => Number(point.split(",")[0])), [58, 58, 308, 558, 808, 808]);
 });
 
+test("latest per-eye growth rates render clinical colors and guard notes", () => {
+  const html = renderToStaticMarkup(
+    <AxialGrowthChart
+      readings={readings}
+      growthRates={[
+        {
+          eye: "OD",
+          status: "AVAILABLE",
+          earlierMeasuredAt: "2025-03-01T12:00:00Z",
+          laterMeasuredAt: "2026-05-12T12:00:00Z",
+          intervalYears: 1.2,
+          biometryMethod: "OPTICAL_BIOMETRY",
+          mmPerYear: 0.2,
+          classification: "WATCH",
+        },
+        {
+          eye: "OS",
+          status: "BIOMETRY_METHOD_CHANGED",
+          earlierMeasuredAt: "2025-03-01T12:00:00Z",
+          laterMeasuredAt: "2026-05-12T12:00:00Z",
+          intervalYears: 1.2,
+          biometryMethod: null,
+          mmPerYear: null,
+          classification: null,
+        },
+      ]}
+      referenceDataset={null}
+      noReferenceMessage="No reference curve selected."
+    />,
+  );
+
+  assert.match(html, /Latest axial growth rate/);
+  assert.match(html, /data-growth-rate-eye="OD"/);
+  assert.match(html, /data-growth-rate-status="WATCH"/);
+  assert.match(html, /\+0.20 mm\/year/);
+  assert.match(html, /#eab308/);
+  assert.match(html, /data-growth-rate-status="BIOMETRY_METHOD_CHANGED"/);
+  assert.match(html, /consecutive OS measurements use different biometry methods/);
+
+  const firstVisit = renderToStaticMarkup(
+    <AxialGrowthChart
+      readings={[readings[0]!]}
+      growthRates={[]}
+      referenceDataset={null}
+      noReferenceMessage="No reference curve selected."
+    />,
+  );
+  assert.doesNotMatch(firstVisit, /Latest axial growth rate/);
+  assert.doesNotMatch(firstVisit, /mm\/year/);
+});
+
+test("reference curve defaults to European while Asian and None remain selectable", async () => {
+  for (const selected of ["ASIAN", "NOT_REPRESENTED"] as const) {
+    const originalFetch = globalThis.fetch;
+    const saved: string[] = [];
+    let renderer!: ReactTestRenderer;
+    globalThis.fetch = async (request, init) => {
+      const url = String(request);
+      if (url.includes("/clinical-graph/eye-growth/history")) {
+        return Response.json({
+          referencePopulation: "CAUCASIAN",
+          patientSex: "FEMALE",
+          birthDate: "2016-07-26",
+          readings: [],
+          growthRates: [],
+          referenceDataset: null,
+          noReferenceMessage: "Fixture has no reference dataset.",
+        });
+      }
+      if (url.includes("/clinical-graph/eye-growth/reference-population") && init?.method === "PUT") {
+        saved.push((JSON.parse(String(init.body)) as { referencePopulation: string }).referencePopulation);
+        return Response.json({ patientReference: "Patient/p1", referencePopulation: selected });
+      }
+      throw new Error(`Unexpected Eye Growth fixture request: ${url}`);
+    };
+    try {
+      await act(async () => {
+        renderer = create(
+          <EyeGrowthSection
+            patientReference="Patient/p1"
+            encounterReference="Encounter/e1"
+            onSaved={() => undefined}
+          />,
+        );
+      });
+      const select = renderer.root.findByProps({ "aria-label": "Reference curve" });
+      assert.equal(select.props.value, "CAUCASIAN");
+      assert.deepEqual(
+        select.findAllByType("option").map((option) => [option.props.value, option.children.join("")]),
+        [
+          ["CAUCASIAN", "European (default)"],
+          ["ASIAN", "Asian"],
+          ["NOT_REPRESENTED", "None"],
+        ],
+      );
+      await act(async () => {
+        select.props.onChange({ target: { value: selected } });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      assert.deepEqual(saved, [selected]);
+      assert.match(
+        JSON.stringify(renderer.toJSON()),
+        /Select a published comparison curve\. This does not record patient demographics\./,
+      );
+    } finally {
+      if (renderer) act(() => renderer.unmount());
+      globalThis.fetch = originalFetch;
+    }
+  }
+});
+
 test("malformed optional corneal radii report field errors without discarding valid axial lengths", async () => {
   for (const eyes of [
     { OD: { axialLength: "24.12", cornealRadius: "7.7.4" } },

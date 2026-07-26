@@ -14,6 +14,17 @@ export interface AxialGrowthReading {
   observationReference: string;
 }
 
+export interface AxialGrowthRate {
+  eye: MyopiaEye;
+  status: "AVAILABLE" | "INTERVAL_TOO_SHORT" | "BIOMETRY_METHOD_CHANGED";
+  earlierMeasuredAt: string;
+  laterMeasuredAt: string;
+  intervalYears: number;
+  biometryMethod: AxialGrowthReading["biometryMethod"] | null;
+  mmPerYear: number | null;
+  classification: "NORMAL" | "WATCH" | "FLAG" | null;
+}
+
 export interface AxialGrowthReferenceDataset {
   datasetId: string;
   version: string;
@@ -33,6 +44,7 @@ export interface AxialGrowthReferenceDataset {
 
 interface Props {
   readings: AxialGrowthReading[];
+  growthRates?: AxialGrowthRate[];
   referenceDataset: AxialGrowthReferenceDataset | null;
   noReferenceMessage: string | null;
 }
@@ -44,9 +56,15 @@ const EYE_STYLE = {
   OD: { stroke: "#60a5fa", fill: "#1d4ed8" },
   OS: { stroke: "#f472b6", fill: "#be185d" },
 } as const;
+const RATE_STYLE = {
+  NORMAL: { color: "#22c55e", label: "NORMAL GROWTH" },
+  WATCH: { color: "#eab308", label: "WATCH GROWTH" },
+  FLAG: { color: "#ef4444", label: "ACCELERATED GROWTH" },
+} as const;
 
 export function AxialGrowthChart({
   readings,
+  growthRates = [],
   referenceDataset,
   noReferenceMessage,
 }: Props) {
@@ -203,6 +221,19 @@ export function AxialGrowthChart({
         </div>
       )}
 
+      {growthRates.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--odos-muted)]">
+            Latest axial growth rate
+          </div>
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
+            {growthRates.map((rate) => (
+              <GrowthRateCard key={rate.eye} rate={rate} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {referenceDataset ? (
         <div className="mt-3 rounded border border-[color:var(--odos-accent-border)] bg-[var(--odos-accent-tint-lo)] p-3 text-xs leading-5 text-[color:var(--odos-muted)]">
           <div>{referenceDataset.citation}</div>
@@ -215,6 +246,61 @@ export function AxialGrowthChart({
       )}
     </div>
   );
+}
+
+function GrowthRateCard({ rate }: { rate: AxialGrowthRate }) {
+  if (
+    rate.status === "AVAILABLE" &&
+    rate.mmPerYear !== null &&
+    rate.classification !== null &&
+    rate.biometryMethod !== null
+  ) {
+    const style = RATE_STYLE[rate.classification];
+    return (
+      <div
+        className="rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3"
+        data-growth-rate-eye={rate.eye}
+        data-growth-rate-status={rate.classification}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-semibold text-[color:var(--odos-text)]">{rate.eye}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: style.color }}>
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: style.color }} />
+            {style.label}
+          </span>
+        </div>
+        <div className="mt-1 text-xl font-semibold" style={{ color: style.color }}>
+          {formatGrowthRate(rate.mmPerYear)} mm/year
+        </div>
+        <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
+          {dateLabel(rate.earlierMeasuredAt)} to {dateLabel(rate.laterMeasuredAt)} · {methodLabel(rate.biometryMethod)}
+        </div>
+      </div>
+    );
+  }
+  const message = rate.status === "INTERVAL_TOO_SHORT"
+    ? `Rate needs at least 6 months between consecutive ${rate.eye} measurements.`
+    : `Rate is not calculated because consecutive ${rate.eye} measurements use different biometry methods.`;
+  return (
+    <div
+      className="rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-muted)]"
+      data-growth-rate-eye={rate.eye}
+      data-growth-rate-status={rate.status}
+    >
+      <span className="font-semibold text-[color:var(--odos-text)]">{rate.eye}</span>
+      <span className="ml-2">{message}</span>
+    </div>
+  );
+}
+
+function formatGrowthRate(value: number): string {
+  if (value > 0) return `+${value.toFixed(2)}`;
+  if (value < 0) return `−${Math.abs(value).toFixed(2)}`;
+  return "0.00";
+}
+
+function dateLabel(value: string): string {
+  return value.slice(0, 10);
 }
 
 function chartModel(
