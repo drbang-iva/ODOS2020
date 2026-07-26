@@ -45,7 +45,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
   "src/clinical-graph/iop-history-endpoint.ts:163": [spec("Goal", "subject", "category", "_count")],
   "src/clinical-graph/eye-growth-endpoint.ts:278": [spec("Observation", "subject", "code", "_count")],
   "src/clinical-graph/eye-growth-endpoint.ts:279": [spec("Observation", "subject", "code", "_count")],
-  "src/clinical-graph/eye-growth-endpoint.ts:280": [spec("Observation", "subject", "code", "_count")],
+  "src/clinical-graph/eye-growth-endpoint.ts:280": [spec("Observation", "subject", "code", "_count", "_sort")],
   "src/clinical-graph/protocol-store.ts:79": [spec("Basic", "code", "identifier", "_count")],
   "src/desk/day-ledger.ts:234": [
     spec("Invoice", "date", "_count", "_sort"),

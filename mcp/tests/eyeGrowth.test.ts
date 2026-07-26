@@ -437,6 +437,46 @@ test("Eye Growth returns independently classified refraction candidates with a c
   );
 });
 
+test("a first-visit refraction saved after axial length pairs by encounter and resolves MYOPIC", async () => {
+  const fixture = endpointFixture("CAUCASIAN");
+  await handleMyopiaCaptureRequest(fixture.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT_REFERENCE,
+      encounterReference: ENCOUNTER_REFERENCE,
+      measuredAt: MEASURED_AT,
+      eyes: {
+        OD: { axialLengthMm: 22.90, biometryMethod: "OPTICAL_BIOMETRY" },
+      },
+    },
+  });
+  fixture.created.push(
+    refractionObservation({
+      id: "first-visit-manifest",
+      system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      type: "MANIFEST",
+      effectiveDateTime: "2026-07-25T15:00:00.000Z",
+      sphere: -1.25,
+      encounterReference: ENCOUNTER_REFERENCE,
+      status: "preliminary",
+    }),
+  );
+
+  const history = await handleMyopiaHistoryRequest(fixture.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = history.body as MyopiaProgressionHistoryResponse;
+
+  assert.equal(history.status, 200);
+  assert.equal(body.readings.length, 1);
+  assert.equal(body.readings[0]?.refractiveStatus.status, "MYOPIC");
+  assert.equal(
+    body.readings[0]?.refractiveStatus.observationReference,
+    "Observation/first-visit-manifest",
+  );
+});
+
 test("latest consecutive same-method readings calculate the rate independently per eye", () => {
   const thresholds = MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds();
   assert.ok(thresholds);
@@ -793,14 +833,19 @@ function refractionObservation(input: {
   type: string;
   effectiveDateTime: string;
   sphere: number;
+  encounterReference?: string;
+  status?: Observation["status"];
 }): Observation {
   const concept = (code: string) => ({ coding: [{ system: input.system, code }] });
   return {
     resourceType: "Observation",
     id: input.id,
-    status: "final",
+    status: input.status ?? "final",
     code: concept("REFRACTION"),
     subject: { reference: PATIENT_REFERENCE },
+    ...(input.encounterReference
+      ? { encounter: { reference: input.encounterReference } }
+      : {}),
     effectiveDateTime: input.effectiveDateTime,
     bodySite: concept("OD"),
     component: [

@@ -629,7 +629,12 @@ function observationToReading(
     biometryMethod: method,
     instrument: componentString(observation, "instrument"),
     observationReference: `Observation/${observation.id}`,
-    refractiveStatus: resolveRefractiveStatus(refractionObservations, eye, measuredAt),
+    refractiveStatus: resolveRefractiveStatus(
+      refractionObservations,
+      eye,
+      measuredAt,
+      observation.encounter?.reference,
+    ),
   }];
 }
 
@@ -654,6 +659,7 @@ function refractionSearchParams(patientReference: string): Record<string, string
       `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
       `${LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
     ].join(","),
+    _sort: "-date",
     _count: "500",
   };
 }

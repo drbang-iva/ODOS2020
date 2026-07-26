@@ -417,12 +417,22 @@ function displayedRefractiveStatus(
 function patientPointTitle(reading: AxialGrowthReading): string {
   const status = reading.refractiveStatus;
   const base = `${reading.eye} · age ${reading.ageInYears.toFixed(2)} · ${reading.axialLengthMm.toFixed(2)} mm`;
-  return status.status === "UNKNOWN" ||
-      status.sphericalEquivalent === null ||
-      status.refractionType === null ||
-      status.refractionDate === null
-    ? `${base} · no cycloplegic or manifest refraction on file`
-    : `${base} · ${formatDiopter(status.sphericalEquivalent)} D (${REFRACTION_TYPE_LABEL[status.refractionType].toLowerCase()}, ${dateLabel(status.refractionDate)})`;
+  return hasRefractiveEvidence(status)
+    ? `${base} · ${formatDiopter(status.sphericalEquivalent)} D (${REFRACTION_TYPE_LABEL[status.refractionType].toLowerCase()}, ${dateLabel(status.refractionDate)})`
+    : `${base} · no cycloplegic or manifest refraction on file`;
+}
+
+function hasRefractiveEvidence(
+  status: AxialGrowthRefractiveStatus,
+): status is AxialGrowthRefractiveStatus & {
+  sphericalEquivalent: number;
+  refractionType: EligibleRefractionType;
+  refractionDate: string;
+} {
+  return status.status !== "UNKNOWN" &&
+    status.sphericalEquivalent !== null &&
+    status.refractionType !== null &&
+    status.refractionDate !== null;
 }
 
 function formatDiopter(value: number): string {
@@ -442,12 +452,9 @@ function latestReadingPerEye(readings: AxialGrowthReading[]): AxialGrowthReading
 
 function drivingRefractionLabel(reading: AxialGrowthReading): string {
   const status = reading.refractiveStatus;
-  return status.status === "UNKNOWN" ||
-      status.sphericalEquivalent === null ||
-      status.refractionType === null ||
-      status.refractionDate === null
-    ? `${reading.eye} · age ${reading.ageInYears.toFixed(2)} · ${reading.axialLengthMm.toFixed(2)} mm · no cycloplegic or manifest refraction on file`
-    : `${reading.eye} · ${REFRACTION_TYPE_LABEL[status.refractionType]} · ${dateLabel(status.refractionDate)} · ${formatDiopter(status.sphericalEquivalent)} D`;
+  return hasRefractiveEvidence(status)
+    ? `${reading.eye} · ${REFRACTION_TYPE_LABEL[status.refractionType]} · ${dateLabel(status.refractionDate)} · ${formatDiopter(status.sphericalEquivalent)} D`
+    : `${reading.eye} · age ${reading.ageInYears.toFixed(2)} · ${reading.axialLengthMm.toFixed(2)} mm · no cycloplegic or manifest refraction on file`;
 }
 
 function dateLabel(value: string): string {

@@ -54,32 +54,50 @@ export function resolveRefractiveStatus(
   observations: readonly Observation[],
   eye: "OD" | "OS",
   measuredAt: string,
+  encounterReference?: string,
 ): ResolvedRefractiveStatus {
   const measuredAtMillis = Date.parse(measuredAt);
-  const latestByType = new Map<EligibleRefractionType, RefractiveStatusCandidate>();
+  const latestByType = new Map<
+    EligibleRefractionType,
+    { candidate: RefractiveStatusCandidate; sameEncounter: boolean }
+  >();
   if (Number.isFinite(measuredAtMillis)) {
     for (const observation of observations) {
-      const candidate = observationCandidate(observation, eye, measuredAtMillis);
-      if (!candidate) continue;
+      const rankedCandidate = observationCandidate(
+        observation,
+        eye,
+        measuredAtMillis,
+        encounterReference,
+      );
+      if (!rankedCandidate) continue;
+      const { candidate, sameEncounter } = rankedCandidate;
       const current = latestByType.get(candidate.refractionType);
       if (
         !current ||
-        Date.parse(candidate.refractionDate) > Date.parse(current.refractionDate) ||
+        (sameEncounter && !current.sameEncounter) ||
         (
-          candidate.refractionDate === current.refractionDate &&
-          candidate.observationReference.localeCompare(current.observationReference) > 0
+          sameEncounter === current.sameEncounter &&
+          Date.parse(candidate.refractionDate) > Date.parse(current.candidate.refractionDate)
+        ) ||
+        (
+          sameEncounter === current.sameEncounter &&
+          candidate.refractionDate === current.candidate.refractionDate &&
+          candidate.observationReference.localeCompare(current.candidate.observationReference) > 0
         )
       ) {
-        latestByType.set(candidate.refractionType, candidate);
+        latestByType.set(candidate.refractionType, { candidate, sameEncounter });
       }
     }
   }
 
   const candidates = ELIGIBLE_REFRACTION_TYPES.flatMap((type) => {
-    const candidate = latestByType.get(type);
-    return candidate ? [candidate] : [];
+    const rankedCandidate = latestByType.get(type);
+    return rankedCandidate ? [rankedCandidate.candidate] : [];
   });
-  const resolved = latestByType.get("CYCLOPLEGIC") ?? latestByType.get("MANIFEST");
+  const resolved = (
+    latestByType.get("CYCLOPLEGIC") ??
+    latestByType.get("MANIFEST")
+  )?.candidate;
   return resolved
     ? {
         status: resolved.status,
@@ -103,17 +121,23 @@ function observationCandidate(
   observation: Observation,
   eye: "OD" | "OS",
   measuredAtMillis: number,
-): RefractiveStatusCandidate | null {
+  encounterReference: string | undefined,
+): { candidate: RefractiveStatusCandidate; sameEncounter: boolean } | null {
   const refractionDate = observation.effectiveDateTime;
   const refractionMillis = refractionDate ? Date.parse(refractionDate) : Number.NaN;
   const observationEye = eyeFromObservation(observation);
   const refractionType = componentCode(observation, "REFRACTION_TYPE");
+  const sameEncounter =
+    encounterReference !== undefined &&
+    observation.encounter?.reference === encounterReference;
   if (
     !observation.id ||
+    observation.status === "cancelled" ||
+    observation.status === "entered-in-error" ||
     observationEye !== eye ||
     !refractionDate ||
     !Number.isFinite(refractionMillis) ||
-    refractionMillis > measuredAtMillis ||
+    (!sameEncounter && refractionMillis > measuredAtMillis) ||
     !isEligibleRefractionType(refractionType)
   ) {
     return null;
@@ -124,11 +148,14 @@ function observationCandidate(
   });
   if (sphericalEquivalentValue === undefined) return null;
   return {
-    refractionType,
-    sphericalEquivalent: sphericalEquivalentValue,
-    status: classifySphericalEquivalent(sphericalEquivalentValue),
-    refractionDate,
-    observationReference: `Observation/${observation.id}`,
+    sameEncounter,
+    candidate: {
+      refractionType,
+      sphericalEquivalent: sphericalEquivalentValue,
+      status: classifySphericalEquivalent(sphericalEquivalentValue),
+      refractionDate,
+      observationReference: `Observation/${observation.id}`,
+    },
   };
 }
 
@@ -136,11 +163,13 @@ function isEligibleRefractionType(value: string | undefined): value is EligibleR
   return value === "CYCLOPLEGIC" || value === "MANIFEST";
 }
 
+function isOphthalmologyCoding(coding: { system?: string }): boolean {
+  return coding.system !== undefined && OPHTHALMOLOGY_CODE_SYSTEMS.has(coding.system);
+}
+
 function componentCode(observation: Observation, code: string): string | undefined {
   return component(observation, code)?.valueCodeableConcept?.coding?.find((coding) =>
-    coding.system !== undefined &&
-    OPHTHALMOLOGY_CODE_SYSTEMS.has(coding.system) &&
-    coding.code)?.code;
+    isOphthalmologyCoding(coding) && coding.code)?.code;
 }
 
 function componentNumber(observation: Observation, code: string): number | undefined {
@@ -151,9 +180,7 @@ function componentNumber(observation: Observation, code: string): number | undef
 function component(observation: Observation, code: string): ObservationComponent | undefined {
   return observation.component?.find((candidate) =>
     candidate.code.coding?.some((coding) =>
-      coding.system !== undefined &&
-      OPHTHALMOLOGY_CODE_SYSTEMS.has(coding.system) &&
-      coding.code === code));
+      isOphthalmologyCoding(coding) && coding.code === code));
 }
 
 function eyeFromObservation(observation: Observation): "OD" | "OS" | null {
@@ -166,7 +193,7 @@ function eyeFromObservation(observation: Observation): "OD" | "OS" | null {
         ? resource.location?.coding ?? []
         : []),
   ].flatMap((coding) =>
-    coding.system !== undefined && OPHTHALMOLOGY_CODE_SYSTEMS.has(coding.system) && coding.code
+    isOphthalmologyCoding(coding) && coding.code
       ? [coding.code]
       : []);
   return codes.some((code) => code === "OD" || code === "right") ? "OD"
