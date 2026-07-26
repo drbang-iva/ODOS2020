@@ -14,10 +14,12 @@ Throwaway configuration:
 Observed:
 
 1. The settings surface listed the active group, prefix, `dry-eye` default, and matching custom section.
-2. A synthetic encounter linked to a `dry-eye` HealthcareService rendered **ZZ test marker** by default.
-3. A synthetic encounter linked to an uncategorized comprehensive HealthcareService did not render **ZZ test marker**. The existing ungrouped **Pupils** section remained visible.
-4. Selecting **ZZ test workup** from **Add section group…** rendered **ZZ test marker** immediately without a page reload.
-5. A second uncategorized comprehensive encounter for the same synthetic patient did not render **ZZ test marker**. **Pupils** remained visible, confirming that the pull-in stayed encounter-local.
+2. A correctly coded eyecare Encounter linked to a readable practice Appointment and a `dry-eye` HealthcareService rendered **ZZ test marker** by default. The in-frame context identified the Encounter, `eyecare` discipline, `dry-eye` category, default group, and no pull-in.
+3. A separate correctly coded eyecare Encounter linked to a practice Appointment created through the scheduler and an uncategorized comprehensive HealthcareService did not render **ZZ test marker**. **Pupils** remained visible and the Appointment banner loaded without a 404.
+4. Selecting **ZZ test workup** from **Add section group…** rendered **ZZ test marker** immediately without a page reload. The context changed from `Pulled in none` to `Pulled in ZZ test workup`.
+5. The bottom of the comprehensive eyecare spine ended at **Assessment & Plan** with no **AESTHETICS** group or aesthetics procedure section.
+6. The browser sequence add → deactivate → remove → reactivate left the Encounter at `Pulled in none`; **ZZ test marker** did not resurrect and **Pupils** remained visible.
+7. With only the section-group catalog forced to return HTTP 500, the chart displayed the visibility warning while leaving both **Pupils** and the otherwise grouped **ZZ test marker** visible.
 
 Screenshots:
 
@@ -25,5 +27,8 @@ Screenshots:
 - `02-dry-eye-default-visible.png`
 - `03-comprehensive-before-pull-in.png`
 - `04-comprehensive-after-pull-in.png`
+- `05-eyecare-no-aesthetics.png`
+- `06-reactivated-no-resurrection.png`
+- `07-section-groups-fail-open.png`
 
-The supplied local clinician account could read the settings catalog but did not hold the practice-admin field-management grant. The throwaway group and section were therefore seeded through the local service account without changing the user's roles or account state. The clinician AccessPolicy also does not grant direct Appointment reads, so the existing encounter header shows its pre-existing linked-appointment warning in the encounter screenshots; the section-group resolver uses the trusted local service client only after proving the clinician can read the patient-compartment Encounter.
+The local clinician account could read the settings catalog but did not hold the practice-admin field-management grant. Throwaway group activation/deactivation was therefore performed through the local service account without changing roles or account state; encounter pull-in and removal were performed in the browser. The HTTP 500 proof used a temporary local proxy that failed only the section-group catalog and forwarded every other request to the live local MCP server.

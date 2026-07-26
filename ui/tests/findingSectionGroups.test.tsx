@@ -45,6 +45,11 @@ test("ungrouped definitions remain visible for every category while grouped defi
       .map((definition) => definition.stableKey),
     ["entrance:pupils", "custom:ordinary", "custom:zz-test-marker"],
   );
+  assert.deepEqual(
+    filterDefinitionsForSectionGroups(definitions, [{ ...GROUP, active: false }], [])
+      .map((definition) => definition.stableKey),
+    ["entrance:pupils", "custom:ordinary"],
+  );
 });
 
 test("EncounterCharting pulls a group into only the current encounter and renders it without reloading", async () => {
@@ -88,13 +93,18 @@ test("EncounterCharting pulls a group into only the current encounter and render
         visitTypeCategories: [],
         visitTypeCategory: "comprehensive",
         defaultGroupKeys: [],
+        overrideGroupKeys: [],
         pulledInGroupKeys: [],
         effectiveGroupKeys: [],
       });
     }
     if (url.includes("/clinical-graph/encounters/encounter-1/section-groups")) {
+      const action = JSON.parse(String(init?.body)).action as "add" | "remove";
       return jsonResponse({
-        override: { encounterId: "encounter-1", groupKeys: ["dry-eye-workup"] },
+        override: {
+          encounterId: "encounter-1",
+          groupKeys: action === "add" ? ["dry-eye-workup"] : [],
+        },
       });
     }
     if (url.includes("/clinical-graph/eye-growth/visibility")) {
@@ -143,12 +153,33 @@ test("EncounterCharting pulls a group into only the current encounter and render
         .map((section: { id: string }) => section.id),
       ["custom:ordinary", "custom:zz-test-marker"],
     );
-    const mutation = requests.find((request) =>
+    const mutations = requests.filter((request) =>
       request.url.includes("/clinical-graph/encounters/encounter-1/section-groups")
     );
-    assert.equal(mutation?.init?.method, "POST");
-    assert.deepEqual(JSON.parse(String(mutation?.init?.body)), {
+    assert.equal(mutations[0]?.init?.method, "POST");
+    assert.deepEqual(JSON.parse(String(mutations[0]?.init?.body)), {
       action: "add",
+      groupKey: "dry-eye-workup",
+    });
+
+    await act(async () => {
+      renderer.root.findAllByType("button")
+        .find((button) => button.children.join("") === "Remove Dry eye workup")!
+        .props.onClick();
+      await flushEffects();
+    });
+
+    assert.deepEqual(
+      renderer.root.findByType(SpineNav).props.customSections
+        .filter((section: { id: string }) => section.id.startsWith("custom:"))
+        .map((section: { id: string }) => section.id),
+      ["custom:ordinary"],
+    );
+    const removeMutation = requests.filter((request) =>
+      request.url.includes("/clinical-graph/encounters/encounter-1/section-groups")
+    )[1];
+    assert.deepEqual(JSON.parse(String(removeMutation?.init?.body)), {
+      action: "remove",
       groupKey: "dry-eye-workup",
     });
   } finally {
@@ -159,6 +190,72 @@ test("EncounterCharting pulls a group into only the current encounter and render
       configurable: true,
       value: originalDocument,
     });
+  }
+});
+
+test("EncounterCharting fails open when the section-group catalog returns 500", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalRead = fhir.read;
+  fhir.read = (async () => ({
+    resourceType: "Encounter",
+    id: "encounter-1",
+    status: "in-progress",
+    class: { code: "AMB" },
+  })) as typeof fhir.read;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/clinical-graph/finding-definitions")) {
+      return jsonResponse({
+        canWrite: false,
+        definitions: [{
+          stableKey: "custom:zz-test-marker",
+          sectionKey: "custom:zz-test-marker",
+          display: "ZZ test marker",
+          active: true,
+        }],
+      });
+    }
+    if (url.includes("/clinical-graph/finding-section-groups")) {
+      return jsonResponse({ error: "Synthetic catalog failure" }, 500);
+    }
+    if (url.includes("/clinical-graph/eye-growth/visibility")) {
+      return jsonResponse({ defaultVisible: false });
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting
+            patient={{ resourceType: "Patient", id: "patient-1" }}
+            encounterId="encounter-1"
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+
+    assert.deepEqual(
+      renderer.root.findByType(SpineNav).props.customSections
+        .filter((section: { id: string }) => section.id.startsWith("custom:"))
+        .map((section: { id: string }) => section.id),
+      ["custom:zz-test-marker"],
+    );
+    assert.equal(
+      renderer.root.findByProps({ role: "alert" }).children.join(""),
+      "Section-group visibility could not be loaded.",
+    );
+    assert.ok(
+      renderer.root.findByType(SpineNav).findAllByType("span")
+        .some((span) => span.children.includes("Pupils")),
+    );
+  } finally {
+    renderer?.unmount();
+    fhir.read = originalRead;
+    globalThis.fetch = originalFetch;
   }
 });
 
@@ -191,6 +288,9 @@ test("section-group settings creates a keyed group from the existing visit-type 
         .find((button) => button.children.join("").includes("Create group"))!
         .props.onClick();
     });
+    const dialog = renderer.root.findByProps({ role: "dialog" });
+    assert.equal(dialog.props["aria-modal"], "true");
+    assert.equal(dialog.props["aria-labelledby"], "section-group-editor-title");
     const textInputs = renderer.root.findAllByType("input").filter(
       (input) => input.props.type !== "checkbox",
     );
@@ -229,6 +329,39 @@ test("section-group settings creates a keyed group from the existing visit-type 
       defaultForVisitTypeCategories: ["dry-eye"],
       active: true,
     });
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("section-group settings dialog closes on Escape", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => jsonResponse({
+    canWrite: true,
+    groups: [],
+    visitTypeCategories: [],
+  })) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<FindingSectionGroupsSettings />);
+      await flushEffects();
+    });
+    await act(async () => {
+      renderer.root.findAllByType("button")
+        .find((button) => button.children.join("").includes("Create group"))!
+        .props.onClick();
+    });
+    const dialog = renderer.root.findByProps({ role: "dialog" });
+    await act(async () => {
+      dialog.props.onKeyDown({
+        key: "Escape",
+        preventDefault: () => undefined,
+        stopPropagation: () => undefined,
+      });
+    });
+    assert.equal(renderer.root.findAllByProps({ role: "dialog" }).length, 0);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

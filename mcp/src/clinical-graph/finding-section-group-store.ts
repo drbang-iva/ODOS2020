@@ -15,6 +15,10 @@ export const FINDING_SECTION_GROUP_WRITE_HEADERS = {
   "X-ODOS-Source": "finding-section-groups",
 } as const;
 
+export class FindingSectionGroupAlreadyExistsError extends Error {
+  override readonly name = "FindingSectionGroupAlreadyExistsError";
+}
+
 export interface FindingSectionGroup {
   id: string;
   groupKey: string;
@@ -56,7 +60,9 @@ export class FhirFindingSectionGroupStore {
   async create(group: FindingSectionGroup): Promise<FindingSectionGroup> {
     const validated = assertFindingSectionGroup(group);
     if ((await this.readStoredRows()).some((row) => row.group.groupKey === validated.groupKey)) {
-      throw new Error(`Finding section group ${validated.groupKey} already exists.`);
+      throw new FindingSectionGroupAlreadyExistsError(
+        `Finding section group ${validated.groupKey} already exists.`,
+      );
     }
     const persisted = await this.fhir.create(
       buildFindingSectionGroupResource(validated),
@@ -68,18 +74,14 @@ export class FhirFindingSectionGroupStore {
   async save(group: FindingSectionGroup): Promise<FindingSectionGroup> {
     const validated = assertFindingSectionGroup(group);
     const rows = await this.readStoredRows();
-    let existing = rows.find((row) => row.group.groupKey === validated.groupKey)?.resource;
-    if (!existing?.id) {
-      const refreshed = await this.readStoredRows();
-      existing = refreshed.find((row) => row.group.groupKey === validated.groupKey)?.resource;
-    }
+    const existing = rows.find((row) => row.group.groupKey === validated.groupKey)?.resource;
     const resource = buildFindingSectionGroupResource(validated, existing);
     const persisted = existing?.id
       ? await this.fhir.update(
           "Basic",
           existing.id,
           resource,
-          FINDING_SECTION_GROUP_WRITE_HEADERS,
+          guardedWriteHeaders(existing),
         )
       : await this.fhir.create(resource, FINDING_SECTION_GROUP_WRITE_HEADERS);
     return parseFindingSectionGroupResource(persisted);
@@ -129,17 +131,14 @@ export class FhirEncounterSectionOverrideStore {
       encounterId,
       groupKeys: [...new Set(groupKeys)].sort(),
     });
-    let existing = (await this.readStoredRows(encounterId))[0]?.resource;
-    if (!existing?.id) {
-      existing = (await this.readStoredRows(encounterId))[0]?.resource;
-    }
+    const existing = (await this.readStoredRows(encounterId))[0]?.resource;
     const resource = buildEncounterSectionOverrideResource(value, existing);
     const persisted = existing?.id
       ? await this.fhir.update(
           "Basic",
           existing.id,
           resource,
-          FINDING_SECTION_GROUP_WRITE_HEADERS,
+          guardedWriteHeaders(existing),
         )
       : await this.fhir.create(resource, FINDING_SECTION_GROUP_WRITE_HEADERS);
     return parseEncounterSectionOverrideResource(persisted);
@@ -388,6 +387,16 @@ function resolveDuplicates<T extends { resource: Basic }>(
 function compareResources(left: Basic, right: Basic): number {
   const lastUpdated = (left.meta?.lastUpdated ?? "").localeCompare(right.meta?.lastUpdated ?? "");
   return lastUpdated || (left.id ?? "").localeCompare(right.id ?? "");
+}
+
+function guardedWriteHeaders(resource: Basic): Record<string, string> {
+  if (!resource.meta?.versionId) {
+    throw new Error(`Cannot update Basic/${resource.id ?? "unknown"} without a FHIR version.`);
+  }
+  return {
+    ...FINDING_SECTION_GROUP_WRITE_HEADERS,
+    "If-Match": `W/"${resource.meta.versionId}"`,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

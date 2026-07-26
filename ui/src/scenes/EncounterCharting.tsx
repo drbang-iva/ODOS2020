@@ -69,6 +69,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     canWrite: false,
     groups: [],
     visitTypeCategories: [],
+    overrideGroupKeys: [],
     effectiveGroupKeys: [],
   });
   const [procedureCatalog, setProcedureCatalog] = useState<ProcedureCatalogResponse>({ definitions: [] });
@@ -122,6 +123,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           canWrite: body.canWrite === true,
           groups: Array.isArray(body.groups) ? body.groups : [],
           visitTypeCategories: Array.isArray(body.visitTypeCategories) ? body.visitTypeCategories : [],
+          overrideGroupKeys: Array.isArray(body.overrideGroupKeys) ? body.overrideGroupKeys : [],
           effectiveGroupKeys: Array.isArray(body.effectiveGroupKeys) ? body.effectiveGroupKeys : [],
         });
         setSectionGroupError(null);
@@ -133,6 +135,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           canWrite: false,
           groups: [],
           visitTypeCategories: [],
+          overrideGroupKeys: [],
           effectiveGroupKeys: [],
         });
         setSectionGroupError("Section-group visibility could not be loaded.");
@@ -259,9 +262,50 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       }
       setSectionGroupCatalog((current) => ({
         ...current,
+        overrideGroupKeys: [...new Set([...(current.overrideGroupKeys ?? []), groupKey])],
         pulledInGroupKeys: [...new Set([...(current.pulledInGroupKeys ?? []), groupKey])],
         effectiveGroupKeys: [...new Set([...(current.effectiveGroupKeys ?? []), groupKey])],
       }));
+    } catch (caught) {
+      setSectionGroupError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setAddingSectionGroup(false);
+    }
+  }
+
+  async function removeSectionGroup(groupKey: string) {
+    setAddingSectionGroup(true);
+    setSectionGroupError(null);
+    try {
+      const response = await fetch(
+        `${clinicalGraphApiBase()}/clinical-graph/encounters/${encodeURIComponent(encounterId)}/section-groups`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "remove", groupKey }),
+        },
+      );
+      const body = await response.json() as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? `Section-group removal failed: ${response.status}`);
+      }
+      setSectionGroupCatalog((current) => {
+        const overrideGroupKeys = (current.overrideGroupKeys ?? [])
+          .filter((key) => key !== groupKey);
+        const activeGroupKeys = new Set(
+          current.groups.filter((group) => group.active).map((group) => group.groupKey),
+        );
+        const pulledInGroupKeys = overrideGroupKeys.filter((key) => activeGroupKeys.has(key));
+        return {
+          ...current,
+          overrideGroupKeys,
+          pulledInGroupKeys,
+          effectiveGroupKeys: [...new Set([
+            ...(current.defaultGroupKeys ?? []),
+            ...pulledInGroupKeys,
+          ])],
+        };
+      });
     } catch (caught) {
       setSectionGroupError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -308,7 +352,8 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const customSections = customDefinitions.map((definition) => ({ id: definition.stableKey as ChartSectionId, label: definition.display }));
   const procedureDefinitions = procedureCatalog.definitions.filter((definition) =>
     definition.resourceKind === "procedure" &&
-    definition.active
+    definition.active &&
+    definition.discipline === discipline
   );
   const procedureSections = procedureDefinitions.map((definition) => ({
     id: definition.stableKey as ChartSectionId,
@@ -332,6 +377,11 @@ export function EncounterCharting({ patient, encounterId }: Props) {
   const availableSectionGroups = sectionGroupCatalog.groups.filter(
     (group) => group.active && !effectiveGroupKeys.has(group.groupKey),
   );
+  const overrideGroupKeys = sectionGroupCatalog.overrideGroupKeys ?? [];
+  const groupLabel = (groupKey: string) =>
+    sectionGroupCatalog.groups.find((group) => group.groupKey === groupKey)?.label ?? groupKey;
+  const defaultGroupLabels = (sectionGroupCatalog.defaultGroupKeys ?? []).map(groupLabel);
+  const overrideGroupLabels = overrideGroupKeys.map(groupLabel);
 
   return (
     <div className={["odos-charting-workspace flex h-screen w-screen flex-col bg-bg-deep text-white", config.encounterDensity === "compact" ? "text-[0.95rem]" : ""].join(" ")}>
@@ -347,28 +397,54 @@ export function EncounterCharting({ patient, encounterId }: Props) {
           onAddSection={catalog.canWrite ? () => setCreatingSection(true) : undefined}
         />
         <main className="relative min-w-0 flex-1 bg-bg-deep" {...(sidebarExpanded ? { inert: "" } : {})}>
-          {(availableSectionGroups.length > 0 || sectionGroupError) && (
-            <div className="absolute right-4 top-3 z-20 flex max-w-sm items-center gap-2">
+          {(sectionGroupCatalog.groups.length > 0 || sectionGroupError) && (
+            <div className="absolute right-4 top-3 z-20 flex max-w-xl flex-col items-end gap-2">
+              {!sectionGroupError && (
+                <div
+                  data-testid="section-visibility-context"
+                  className="rounded border border-[color:var(--odos-line)] bg-bg-panel/95 px-3 py-2 text-right text-xs text-[color:var(--odos-muted)] shadow-lg"
+                >
+                  Encounter {encounterId.slice(0, 8)} · Discipline {discipline ?? "unresolved"} ·
+                  Category {sectionGroupCatalog.visitTypeCategory ?? "none"} ·
+                  Default {defaultGroupLabels.join(", ") || "none"} ·
+                  Pulled in {overrideGroupLabels.join(", ") || "none"}
+                </div>
+              )}
               {sectionGroupError && (
                 <span role="alert" className="rounded border border-red-400/25 bg-bg-panel px-2 py-1 text-xs text-red-200">
                   {sectionGroupError}
                 </span>
               )}
-              {sectionGroupCatalog.canPullIn && availableSectionGroups.length > 0 && (
-                <select
-                  aria-label="Add section group"
-                  value=""
-                  disabled={addingSectionGroup}
-                  onChange={(event) => {
-                    if (event.target.value) void addSectionGroup(event.target.value);
-                  }}
-                  className="rounded border border-brand/50 bg-bg-panel px-3 py-2 text-sm text-brand-light shadow-lg"
-                >
-                  <option value="">{addingSectionGroup ? "Adding section group…" : "Add section group…"}</option>
-                  {availableSectionGroups.map((group) => (
-                    <option key={group.groupKey} value={group.groupKey}>{group.label}</option>
+              {sectionGroupCatalog.canPullIn && (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {overrideGroupKeys.map((groupKey) => (
+                    <button
+                      key={groupKey}
+                      type="button"
+                      disabled={addingSectionGroup}
+                      onClick={() => void removeSectionGroup(groupKey)}
+                      className="rounded border border-red-300/25 bg-bg-panel px-3 py-2 text-xs text-red-200 shadow-lg"
+                    >
+                      Remove {groupLabel(groupKey)}
+                    </button>
                   ))}
-                </select>
+                  {availableSectionGroups.length > 0 && (
+                    <select
+                      aria-label="Add section group"
+                      value=""
+                      disabled={addingSectionGroup}
+                      onChange={(event) => {
+                        if (event.target.value) void addSectionGroup(event.target.value);
+                      }}
+                      className="rounded border border-brand/50 bg-bg-panel px-3 py-2 text-sm text-brand-light shadow-lg"
+                    >
+                      <option value="">{addingSectionGroup ? "Updating section groups…" : "Add section group…"}</option>
+                      {availableSectionGroups.map((group) => (
+                        <option key={group.groupKey} value={group.groupKey}>{group.label}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               )}
             </div>
           )}

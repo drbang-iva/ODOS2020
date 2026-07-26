@@ -17,6 +17,7 @@ import {
 import {
   FhirEncounterSectionOverrideStore,
   FhirFindingSectionGroupStore,
+  FindingSectionGroupAlreadyExistsError,
   resolveDefaultSectionGroups,
   type FindingSectionGroup,
   type FindingSectionGroupFhirClient,
@@ -108,6 +109,7 @@ export async function handleFindingSectionGroupCatalogRequest(
         visitTypeCategories,
         visitTypeCategory,
         defaultGroupKeys,
+        overrideGroupKeys: override.groupKeys,
         pulledInGroupKeys,
         effectiveGroupKeys,
       },
@@ -147,7 +149,7 @@ export async function handleFindingSectionGroupCreationRequest(
     });
     return { status: 201, body: { group } };
   } catch (error) {
-    const duplicate = /already exists/.test(errorMessage(error));
+    const duplicate = error instanceof FindingSectionGroupAlreadyExistsError;
     return { status: duplicate ? 409 : 400, body: { error: errorMessage(error) } };
   }
 }
@@ -184,6 +186,15 @@ export async function handleFindingSectionGroupMutationRequest(
     const group = await store.save({ ...existing, ...parsed.data });
     return { status: 200, body: { group } };
   } catch (error) {
+    if (isConcurrentEdit(error)) {
+      return {
+        status: 409,
+        body: {
+          error: "This section group changed concurrently — reload and retry.",
+          code: "concurrent-edit",
+        },
+      };
+    }
     return { status: 400, body: { error: errorMessage(error) } };
   }
 }
@@ -216,7 +227,7 @@ export async function handleEncounterSectionOverrideMutationRequest(
     const serviceFhir = deps.serviceFhir ?? staff.fhir;
     const groups = await new FhirFindingSectionGroupStore(serviceFhir).list();
     const group = groups.find((candidate) => candidate.groupKey === parsed.data.groupKey);
-    if (!group || !group.active) {
+    if (parsed.data.action === "add" && (!group || !group.active)) {
       return {
         status: 404,
         body: { error: `Active finding section group ${parsed.data.groupKey} does not exist.` },
@@ -230,6 +241,15 @@ export async function handleEncounterSectionOverrideMutationRequest(
     const override = await store.setGroupKeys(encounterId, groupKeys);
     return { status: 200, body: { override } };
   } catch (error) {
+    if (isConcurrentEdit(error)) {
+      return {
+        status: 409,
+        body: {
+          error: "Encounter section groups changed concurrently — reload and retry.",
+          code: "concurrent-edit",
+        },
+      };
+    }
     const status = errorStatus(error) === 404 ? 404 : 400;
     return { status, body: { error: errorMessage(error) } };
   }
@@ -275,4 +295,9 @@ function errorStatus(error: unknown): number | undefined {
   return typeof error === "object" && error !== null && "status" in error
     ? Number((error as { status?: unknown }).status)
     : undefined;
+}
+
+function isConcurrentEdit(error: unknown): boolean {
+  const status = errorStatus(error);
+  return status === 409 || status === 412;
 }

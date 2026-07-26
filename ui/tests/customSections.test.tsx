@@ -931,15 +931,38 @@ test("an aesthetics-tagged Encounter loads the procedure catalog into the shared
     }
     if (url.includes("/clinical-graph/procedure-definitions")) {
       return jsonResponse({
-        definitions: [{
-          resourceKind: "procedure",
-          stableKey: "procedure:aesthetics:neurotoxin-glabella",
-          sectionKey: "procedure:aesthetics:neurotoxin-glabella",
-          display: "Neurotoxin injection — glabella",
-          active: true,
-          perEye: false,
-          customFields: [],
-        }],
+        definitions: [
+          {
+            resourceKind: "procedure",
+            discipline: "aesthetics",
+            stableKey: "procedure:aesthetics:neurotoxin-glabella",
+            sectionKey: "procedure:aesthetics:neurotoxin-glabella",
+            display: "Neurotoxin injection — glabella",
+            active: true,
+            perEye: false,
+            customFields: [],
+          },
+          {
+            resourceKind: "procedure",
+            discipline: "aesthetics",
+            stableKey: "procedure:aesthetics:dermal-filler-nasolabial-fold",
+            sectionKey: "procedure:aesthetics:dermal-filler-nasolabial-fold",
+            display: "Dermal filler — nasolabial fold",
+            active: true,
+            perEye: false,
+            customFields: [],
+          },
+          {
+            resourceKind: "procedure",
+            discipline: "aesthetics",
+            stableKey: "procedure:aesthetics:chemical-peel-full-face",
+            sectionKey: "procedure:aesthetics:chemical-peel-full-face",
+            display: "Chemical peel — full face",
+            active: true,
+            perEye: false,
+            customFields: [],
+          },
+        ],
       });
     }
     if (url.includes("/clinical-graph/aesthetics-consent")) {
@@ -981,6 +1004,95 @@ test("an aesthetics-tagged Encounter loads the procedure catalog into the shared
     assert.match(text, /AESTHETICS/);
     assert.match(text, /Cosmetic consent/);
     assert.match(text, /Neurotoxin injection — glabella/);
+    assert.match(text, /Dermal filler — nasolabial fold/);
+    assert.match(text, /Chemical peel — full face/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
+});
+
+test("an eyecare-tagged Encounter does not load or render aesthetics procedure sections", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  globalThis.fetch = (async (input) => {
+    const url = String(input);
+    if (url.includes("/fhir/R4/Encounter/encounter-eyecare")) {
+      return jsonResponse({
+        resourceType: "Encounter",
+        id: "encounter-eyecare",
+        status: "in-progress",
+        class: { code: "AMB" },
+        subject: { reference: "Patient/shared-1" },
+        serviceType: {
+          coding: [{
+            system: "https://odos2020.com/fhir/CodeSystem/scheduling-discipline",
+            code: "eyecare",
+          }],
+        },
+      });
+    }
+    if (url.includes("/clinical-graph/finding-definitions")) {
+      return jsonResponse({ canWrite: false, definitions: [] });
+    }
+    if (url.includes("/clinical-graph/finding-section-groups")) {
+      return jsonResponse({
+        canWrite: false,
+        groups: [],
+        visitTypeCategories: [],
+        effectiveGroupKeys: [],
+      });
+    }
+    if (url.includes("/clinical-graph/eye-growth/visibility")) {
+      return jsonResponse({ defaultVisible: false });
+    }
+    if (url.includes("/clinical-graph/procedure-definitions")) {
+      return jsonResponse({
+        definitions: [{
+          resourceKind: "procedure",
+          discipline: "aesthetics",
+          stableKey: "procedure:aesthetics:neurotoxin-glabella",
+          sectionKey: "procedure:aesthetics:neurotoxin-glabella",
+          display: "Neurotoxin injection — glabella",
+          active: true,
+          perEye: false,
+          customFields: [],
+        }],
+      });
+    }
+    return jsonResponse({ resourceType: "Bundle", type: "searchset", entry: [] });
+  }) as typeof fetch;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    } as unknown as Document,
+  });
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <RoleProvider>
+          <EncounterCharting
+            patient={{ resourceType: "Patient", id: "shared-1" }}
+            encounterId="encounter-eyecare"
+          />
+        </RoleProvider>,
+      );
+      await flushEffects();
+      await flushEffects();
+    });
+    const text = renderer.root.findAll((node) => typeof node.children?.[0] === "string")
+      .flatMap((node) => node.children)
+      .join(" ");
+    assert.doesNotMatch(text, /AESTHETICS/);
+    assert.equal(
+      renderer.root.findByType(SpineNav).props.customSections
+        .some((section: { id: string }) => section.id === "procedure:aesthetics:neurotoxin-glabella"),
+      false,
+    );
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

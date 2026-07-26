@@ -20,11 +20,14 @@ export interface FindingSectionGroupCatalog {
   visitTypeCategories: VisitTypeCategory[];
   visitTypeCategory?: string;
   defaultGroupKeys?: string[];
+  overrideGroupKeys?: string[];
   pulledInGroupKeys?: string[];
   effectiveGroupKeys?: string[];
   error?: string;
 }
 
+// Inactive registry rows intentionally continue to reserve and hide their matching
+// prefixes. To make those sections universal instead, delete the group or clear its prefixes.
 export function filterDefinitionsForSectionGroups<
   T extends { sectionKey?: string; active: boolean },
 >(

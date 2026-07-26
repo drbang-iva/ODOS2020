@@ -359,8 +359,10 @@ export async function resolveVisitTypeCategoryForEncounter(
           visitTypeCode(candidate) === code,
       );
     return service ? visitTypeCategory(service)?.code : undefined;
-  } catch {
-    return undefined;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Visit-type category resolution failed: ${message}`);
+    throw new Error(`Visit-type category resolution failed: ${message}`);
   }
 }
 

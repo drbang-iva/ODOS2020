@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   type FindingSectionGroup,
   type FindingSectionGroupCatalog,
@@ -18,6 +18,9 @@ export function FindingSectionGroupsSettings() {
   const [editing, setEditing] = useState<{ original?: FindingSectionGroup; draft: Draft } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const initialFocusRef = useRef<HTMLInputElement>(null);
+  const editingKey = editing ? editing.original?.groupKey ?? "new" : undefined;
 
   function load() {
     fetch(`${clinicalGraphApiBase()}/clinical-graph/finding-section-groups`, {
@@ -36,6 +39,46 @@ export function FindingSectionGroupsSettings() {
   }
 
   useEffect(load, []);
+
+  useEffect(() => {
+    if (!editingKey || typeof document === "undefined") return;
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    initialFocusRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, [editingKey]);
+
+  function closeEditor() {
+    if (!saving) setEditing(null);
+  }
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeEditor();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? [])];
+    if (!focusable.length) {
+      event.preventDefault();
+      dialogRef.current?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
 
   function edit(group: FindingSectionGroup) {
     setEditing({
@@ -214,7 +257,15 @@ export function FindingSectionGroupsSettings() {
         )}
       </section>
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--odos-ground)_70%,transparent)] p-4">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="section-group-editor-title"
+          tabIndex={-1}
+          onKeyDown={handleDialogKeyDown}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--odos-ground)_70%,transparent)] p-4"
+        >
           <form
             aria-label={editing.original ? "Edit section group" : "Create section group"}
             className="w-full max-w-xl rounded border border-[color:var(--odos-line-2)] bg-bg-panel p-5 shadow-2xl"
@@ -224,7 +275,9 @@ export function FindingSectionGroupsSettings() {
             }}
           >
             <div className="text-xs uppercase tracking-[0.18em] text-brand-light">Section visibility</div>
-            <h2 className="mt-2 text-xl font-semibold">{editing.original ? `Edit ${editing.original.label}` : "Create section group"}</h2>
+            <h2 id="section-group-editor-title" className="mt-2 text-xl font-semibold">
+              {editing.original ? `Edit ${editing.original.label}` : "Create section group"}
+            </h2>
             <label className="mt-5 block text-sm text-[color:var(--odos-muted)]">
               Group key
               <input
@@ -242,6 +295,7 @@ export function FindingSectionGroupsSettings() {
             <label className="mt-4 block text-sm text-[color:var(--odos-muted)]">
               Label
               <input
+                ref={initialFocusRef}
                 required
                 value={editing.draft.label}
                 onChange={(event) => setEditing({
@@ -304,7 +358,7 @@ export function FindingSectionGroupsSettings() {
               <button
                 type="button"
                 disabled={saving}
-                onClick={() => setEditing(null)}
+                onClick={closeEditor}
                 className="rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm text-[color:var(--odos-muted)]"
               >
                 Cancel
