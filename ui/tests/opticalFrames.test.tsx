@@ -6,11 +6,13 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import {
   dispenseFrameInventoryUnit,
   dollarsToCentsExact,
+  frameSourceUsesPracticeInventory,
   loadPracticeFrameInventoryUnits,
   MAX_RECEIPT_QUANTITY,
   receiveFrameInventory,
   saveFramesDataSubscriptionSettings,
   summarizeInventoryByVariant,
+  transitionFrameInventoryUnitStatus,
   type FrameCatalogItem,
   type PracticeFrameInventoryUnit,
 } from "../src/lib/optical-frames";
@@ -218,6 +220,7 @@ test("dispenseFrameInventoryUnit performs an audited version-safe status patch",
   const patch = JSON.parse(Buffer.from((patchEntry?.resource as { data?: string }).data ?? "", "base64").toString("utf8"));
   assert.deepEqual(patch, [
     { op: "test", path: "/extension/1/url", value: URLS.status },
+    { op: "test", path: "/extension/1/valueString", value: "on_hand" },
     { op: "replace", path: "/extension/1/valueString", value: "dispensed" },
   ]);
   assert.equal((transaction?.entry?.[1]?.resource as AuditEvent).type.code, "practice.frame-inventory.dispensed");
@@ -225,16 +228,114 @@ test("dispenseFrameInventoryUnit performs an audited version-safe status patch",
   assert.equal((transaction?.entry?.[2]?.resource as Provenance).target[0]?.reference, "Basic/unit-1");
 });
 
-test("dispenseFrameInventoryUnit throws without writing when the unit is already dispensed", async () => {
+test("dispenseFrameInventoryUnit is idempotent without writing when the unit is already dispensed", async () => {
   let writes = 0;
-  await assert.rejects(withFetch(async (input, init) => {
+  const result = await withFetch(async (input, init) => {
     if (String(input).endsWith("/Basic/unit-1") && (!init?.method || init.method === "GET")) {
       return jsonResponse(unitBasic("unit-1", "dispensed", { versionId: "2" }));
     }
     writes += 1;
     return jsonResponse({});
-  }, () => dispenseFrameInventoryUnit("unit-1", ACTOR_ID)), /already dispensed/);
+  }, () => dispenseFrameInventoryUnit("unit-1", ACTOR_ID));
+  assert.equal(result.status, "dispensed");
   assert.equal(writes, 0);
+});
+
+test("frame-source inventory gate is strict for every shipped non-inventory combination", () => {
+  assert.equal(frameSourceUsesPracticeInventory(4, "in-house"), true);
+  assert.equal(frameSourceUsesPracticeInventory(0, undefined), false);
+  assert.equal(frameSourceUsesPracticeInventory(1, undefined), false);
+  assert.equal(frameSourceUsesPracticeInventory(3, "in-house"), false);
+  assert.equal(frameSourceUsesPracticeInventory(3, "patients-own"), false);
+  assert.equal(frameSourceUsesPracticeInventory(4, "patients-own"), false);
+});
+
+test("one physical unit walks the audited lab ladder and repeated status is idempotent", async () => {
+  let current = unitBasic("unit-1", "on_hand", { versionId: "1" });
+  const events: string[] = [];
+  let writes = 0;
+  const statuses = ["reserved", "outbound", "at_lab", "inbound", "dispensed"] as const;
+
+  await withFetch(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/Basic/unit-1") && (!init?.method || init.method === "GET")) {
+      return jsonResponse(current);
+    }
+    if (url.endsWith("/fhir/R4") && init?.method === "POST") {
+      writes += 1;
+      const transaction = JSON.parse(String(init.body)) as Bundle;
+      const audit = transaction.entry?.[1]?.resource as AuditEvent;
+      events.push(audit.type.code);
+      const patch = JSON.parse(Buffer.from(
+        (transaction.entry?.[0]?.resource as { data?: string }).data ?? "",
+        "base64",
+      ).toString("utf8")) as Array<{ op: string; value: string }>;
+      const next = patch.at(-1)?.value as PracticeFrameInventoryUnit["status"];
+      current = unitBasic("unit-1", next, { versionId: String(writes + 1) });
+      return transactionResponse([
+        `Basic/unit-1/_history/${writes + 1}`,
+        `AuditEvent/audit-${writes}/_history/1`,
+        `Provenance/provenance-${writes}/_history/1`,
+      ], ["200 OK", "201 Created", "201 Created"]);
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  }, async () => {
+    let from: PracticeFrameInventoryUnit["status"] = "on_hand";
+    for (const to of statuses) {
+      const updated = await transitionFrameInventoryUnitStatus("unit-1", from, to, ACTOR_ID);
+      assert.equal(updated.status, to);
+      from = to;
+    }
+    const repeated = await transitionFrameInventoryUnitStatus("unit-1", "inbound", "dispensed", ACTOR_ID);
+    assert.equal(repeated.status, "dispensed");
+  });
+
+  assert.equal(writes, 5);
+  assert.deepEqual(events, [
+    "practice.frame-inventory.reserved",
+    "practice.frame-inventory.outbound",
+    "practice.frame-inventory.at-lab",
+    "practice.frame-inventory.inbound",
+    "practice.frame-inventory.dispensed",
+  ]);
+});
+
+test("cancel releases every committed stage and a stale unit fails without a silent swap", async () => {
+  for (const status of ["reserved", "outbound", "at_lab", "inbound"] as const) {
+    let writes = 0;
+    const result = await withFetch(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/Basic/unit-1") && (!init?.method || init.method === "GET")) {
+        return jsonResponse(unitBasic("unit-1", status, { versionId: "7" }));
+      }
+      if (url.endsWith("/fhir/R4") && init?.method === "POST") {
+        writes += 1;
+        return transactionResponse([
+          "Basic/unit-1/_history/8",
+          "AuditEvent/audit-1/_history/1",
+          "Provenance/provenance-1/_history/1",
+        ], ["200 OK", "201 Created", "201 Created"]);
+      }
+      throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+    }, () => transitionFrameInventoryUnitStatus(
+      "unit-1",
+      ["reserved", "outbound", "at_lab", "inbound"],
+      "on_hand",
+      ACTOR_ID,
+    ));
+    assert.equal(result.status, "on_hand");
+    assert.equal(writes, 1);
+  }
+
+  let staleWrites = 0;
+  await assert.rejects(withFetch(async (input, init) => {
+    if (String(input).endsWith("/Basic/unit-1") && (!init?.method || init.method === "GET")) {
+      return jsonResponse(unitBasic("unit-1", "dispensed", { versionId: "9" }));
+    }
+    staleWrites += 1;
+    return jsonResponse({});
+  }, () => transitionFrameInventoryUnitStatus("unit-1", "reserved", "at_lab", ACTOR_ID)), /changed on another terminal.*Dispensed/);
+  assert.equal(staleWrites, 0);
 });
 
 test("loadPracticeFrameInventoryUnits skips and counts malformed rows without hiding valid units", async () => {
@@ -314,9 +415,13 @@ test("summarizeInventoryByVariant counts mixed unit states and joins optional se
   const units: PracticeFrameInventoryUnit[] = [
     unit("unit-1", CATALOG_URL, "on_hand", "Optical Front"),
     unit("unit-2", CATALOG_URL, "on_hand", "Optical Front"),
-    unit("unit-3", CATALOG_URL, "hold", "Optical Front"),
-    unit("unit-4", CATALOG_URL, "dispensed", "Optical Front"),
-    unit("unit-5", secondUrl, "dispensed"),
+    unit("unit-3", CATALOG_URL, "reserved", "Optical Front"),
+    unit("unit-4", CATALOG_URL, "outbound", "Optical Front"),
+    unit("unit-5", CATALOG_URL, "at_lab", "Optical Front"),
+    unit("unit-6", CATALOG_URL, "inbound", "Optical Front"),
+    unit("unit-7", CATALOG_URL, "hold", "Optical Front"),
+    unit("unit-8", CATALOG_URL, "dispensed", "Optical Front"),
+    unit("unit-9", secondUrl, "dispensed"),
   ];
   const rows = summarizeInventoryByVariant(
     units,
@@ -326,6 +431,11 @@ test("summarizeInventoryByVariant counts mixed unit states and joins optional se
   assert.deepEqual(rows[0], {
     canonicalUrl: CATALOG_URL,
     onHandCount: 2,
+    reservedCount: 1,
+    outboundCount: 1,
+    atLabCount: 1,
+    inboundCount: 1,
+    committedCount: 4,
     holdCount: 1,
     dispensedCount: 1,
     salePriceCents: 17_900,
@@ -334,6 +444,11 @@ test("summarizeInventoryByVariant counts mixed unit states and joins optional se
   assert.deepEqual(rows[1], {
     canonicalUrl: secondUrl,
     onHandCount: 0,
+    reservedCount: 0,
+    outboundCount: 0,
+    atLabCount: 0,
+    inboundCount: 0,
+    committedCount: 0,
     holdCount: 0,
     dispensedCount: 1,
   });
@@ -432,7 +547,7 @@ test("Inventory ledger expands to individual units and decrements its rollup wit
     await Promise.resolve();
   });
   assert.equal(ledgerOnHand(renderer), "5");
-  assert.ok(renderer.root.findAllByType("td").some((cell) => cell.children.join("") === "dispensed"));
+  assert.ok(renderer.root.findAllByType("td").some((cell) => cell.children.join("") === "Dispensed"));
   assert.equal(loadCalls, 1);
 });
 
@@ -549,7 +664,7 @@ function testApi(overrides: Partial<OpticalFramesApi> = {}): OpticalFramesApi {
 
 function ledgerOnHand(renderer: ReactTestRenderer): string {
   const outerRows = renderer.root.findAllByType("tr");
-  const ledgerRow = outerRows.find((row) => row.findAllByType("td").length === 7);
+  const ledgerRow = outerRows.find((row) => row.findAllByType("td").length === 8);
   assert.ok(ledgerRow);
   return ledgerRow.findAllByType("td")[2]?.children.join("") ?? "";
 }

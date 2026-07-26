@@ -69,6 +69,24 @@ test("status-specific aging crosses the configured at-lab threshold and preserve
   }
 });
 
+test("board projection keeps live frame inventory state distinct from staff status and transport", () => {
+  const task = labTask("inventory", "sent", "2026-07-01T12:00:00Z");
+  const envelope = JSON.parse(task.input?.[0]?.valueString ?? "{}");
+  envelope.order.frame.inventoryId = "unit-1";
+  task.input![0]!.valueString = JSON.stringify(envelope);
+  const board = projectLabOrderBoard(
+    [task],
+    "2026-07-02T12:00:00Z",
+    undefined,
+    new Map([["unit-1", "at_lab"]]),
+  );
+  assert.equal(board.items[0].status, "at-lab");
+  assert.equal(board.items[0].transportState, "sent");
+  assert.equal(board.items[0].inventoryUnitId, "unit-1");
+  assert.equal(board.items[0].inventoryStatus, "at_lab");
+  assert.equal(board.items[0].inventoryStatusLabel, "At Lab");
+});
+
 test("problem flags append, breakage alone resets aging, pin open problems, and retain resolved history", () => {
   const normal = withLabOrderStatusRecord(labTask("normal", "sent", "2026-07-04T12:00:00Z"), {
     version: 1,

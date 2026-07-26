@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { labTransportStateConcept, type LabTransportState } from "../src/fhir/labTransportState.js";
 import { labOrderToExport, type LabOrder } from "../src/fhir/opticalLabOrder.js";
@@ -41,6 +41,7 @@ const ORDER: LabOrder = {
   },
   frameSource: 4,
   frameOwnership: "in-house",
+  frame: { inventoryId: "inventory-1", brand: "Modo", model: "7008", source: "stock" },
 };
 
 function transmission(id: string, state: LabTransportState): Task {
@@ -76,13 +77,30 @@ function setup() {
     ["lab-received", transmission("lab-received", "received")],
   ]);
   const calls: Array<{ operation: string; staff?: string; reference?: string }> = [];
+  const inventoryUnit: Basic = {
+    resourceType: "Basic",
+    id: "inventory-1",
+    code: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/basic-kind",
+        code: "practice-frame-inventory-unit",
+      }],
+    },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/unit-status",
+      valueString: "at_lab",
+    }],
+  };
   const updates: Array<{ id: string; headers?: Record<string, string> }> = [];
   const updateControls: {
     before?: (input: { id: string; current: Task }) => void;
     alwaysConflict?: boolean;
   } = {};
   const fhir = {
-    read: async <T extends Resource>(_resourceType: T["resourceType"], id: string): Promise<T> => {
+    read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      if (resourceType === "Basic" && id === inventoryUnit.id) {
+        return structuredClone(inventoryUnit) as T;
+      }
       const task = tasks.get(id);
       if (!task) throw new Error(`Task/${id} not found`);
       return structuredClone(task) as T;
@@ -200,6 +218,8 @@ test("sheet handler renders stored export and board GET computes legacy statuses
     "Task/lab-sent": "at-lab",
   });
   assert.equal((board.body as { unprojectableCount: number }).unprojectableCount, 0);
+  assert.ok((board.body as { items: Array<{ inventoryStatusLabel?: string }> }).items
+    .every((item) => item.inventoryStatusLabel === "At Lab"));
   assert.equal(fixture.updates.length, 0);
 
   const worklist = await handleLabOrderWorklistRequest(fixture.deps, {

@@ -30,6 +30,14 @@ export const LAB_ORDER_STATUSES = [
 export type LabOrderStatus = (typeof LAB_ORDER_STATUSES)[number];
 export type LabOrderNotificationReason = "reached" | "left-message" | "unable";
 export type LabOrderProblemReason = "lab-lost" | "lab-breakage-remake" | "cannot-locate" | "other";
+export type FrameInventoryUnitStatus =
+  | "on_hand"
+  | "reserved"
+  | "outbound"
+  | "at_lab"
+  | "inbound"
+  | "hold"
+  | "dispensed";
 
 export interface LabOrderProblemFlag {
   id: string;
@@ -52,6 +60,9 @@ export interface LabOrderBoardItem {
   frameSource?: 0 | 1 | 3 | 4;
   frameSourceLabel: string;
   frameOwnership?: "in-house" | "patients-own";
+  inventoryUnitId?: string;
+  inventoryStatus?: FrameInventoryUnitStatus;
+  inventoryStatusLabel?: string;
   status: LabOrderStatus;
   statusLabel: string;
   notificationReason?: LabOrderNotificationReason;

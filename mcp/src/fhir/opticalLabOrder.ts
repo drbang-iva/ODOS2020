@@ -36,6 +36,7 @@ export interface LabOrderLensSpec {
 }
 
 export interface LabOrderFrame {
+  inventoryId?: string;
   brand?: string;
   model?: string;
   color?: string;

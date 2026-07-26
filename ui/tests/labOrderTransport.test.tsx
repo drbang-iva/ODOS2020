@@ -100,10 +100,10 @@ test("lab-order transport reports response status and server error", async () =>
   );
 });
 
-test("Orders board renders DCS frame source, ownership, status age, transmission fact, and contextual action", () => {
+test("Orders board renders frame source, ownership, inventory, status, and transmission as distinct facts", () => {
   const html = renderToStaticMarkup(
     <OrdersBoard
-      items={[boardItem()]}
+      items={[boardItem({ inventoryUnitId: "unit-1", inventoryStatus: "at_lab", inventoryStatusLabel: "At Lab" })]}
       onStatus={() => undefined}
       onFlag={async () => undefined}
       onResolve={() => undefined}
@@ -115,6 +115,7 @@ test("Orders board renders DCS frame source, ownership, status age, transmission
   assert.match(html, /Patient Example/);
   assert.match(html, /FRAME ENCLOSED/);
   assert.match(html, /POF — PATIENT&#x27;S OWN/);
+  assert.match(html, /INVENTORY · AT LAB/);
   assert.match(html, /Outbound/);
   assert.match(html, /At lab ✓/);
   assert.match(html, /print \+ mail/);

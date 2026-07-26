@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { labOrderFrameFromAttachedFrame, type AttachedFrame } from "../../ui/src/lib/optical-order.js";
 
 const FRAME: AttachedFrame = {
-  inventoryId: "Inventory/frame-1",
+  inventoryId: "frame-1",
   canonicalUrl: "https://odos2020.com/fhir/frames/frame-1",
   upc: "00000000000001",
   brand: "Walkthrough",
@@ -21,6 +21,7 @@ const FRAME: AttachedFrame = {
 
 test("labOrderFrameFromAttachedFrame maps attached frame fields into the lab-order frame", () => {
   assert.deepEqual(labOrderFrameFromAttachedFrame(FRAME, "stock"), {
+    inventoryId: "frame-1",
     brand: "Walkthrough",
     model: "Wayfarer",
     color: "Black",

@@ -209,6 +209,7 @@ export function labOrderFrameFromAttachedFrame(
   return {
     ...(frame
       ? {
+          ...(frame.inventoryId ? { inventoryId: frame.inventoryId } : {}),
           brand: frame.brand,
           model: frame.model,
           color: frame.color,

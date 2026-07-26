@@ -31,7 +31,24 @@ export interface FrameCatalogItem {
   readonly publicityClass: "staff_only" | "no_public_price" | "open";
 }
 
-export type FrameInventoryUnitStatus = "on_hand" | "hold" | "dispensed";
+export type FrameInventoryUnitStatus =
+  | "on_hand"
+  | "reserved"
+  | "outbound"
+  | "at_lab"
+  | "inbound"
+  | "hold"
+  | "dispensed";
+
+export const FRAME_INVENTORY_UNIT_STATUS_LABELS: Record<FrameInventoryUnitStatus, string> = {
+  on_hand: "On hand",
+  reserved: "In office — not sent",
+  outbound: "Outbound",
+  at_lab: "At Lab",
+  inbound: "Inbound",
+  hold: "Hold",
+  dispensed: "Dispensed",
+};
 
 export interface PracticeFrameInventoryUnit {
   readonly id: string;
@@ -56,6 +73,11 @@ export interface PracticeFrameVariantSettings {
 export interface PracticeFrameInventorySummary {
   readonly canonicalUrl: string;
   readonly onHandCount: number;
+  readonly reservedCount: number;
+  readonly outboundCount: number;
+  readonly atLabCount: number;
+  readonly inboundCount: number;
+  readonly committedCount: number;
   readonly holdCount: number;
   readonly dispensedCount: number;
   readonly salePriceCents?: number;
@@ -199,6 +221,20 @@ export async function dispenseFrameInventoryUnit(
   unitId: string,
   actorId: string,
 ): Promise<PracticeFrameInventoryUnit> {
+  return transitionFrameInventoryUnitStatus(
+    unitId,
+    ["on_hand", "reserved", "outbound", "at_lab", "inbound"],
+    "dispensed",
+    actorId,
+  );
+}
+
+export async function transitionFrameInventoryUnitStatus(
+  unitId: string,
+  fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
+  toStatus: FrameInventoryUnitStatus,
+  actorId: string,
+): Promise<PracticeFrameInventoryUnit> {
   if (!unitId) {
     throw new Error("Frame inventory unit is missing its FHIR Basic id.");
   }
@@ -211,18 +247,25 @@ export async function dispenseFrameInventoryUnit(
     throw new Error("Frame inventory unit is missing unit status.");
   }
   const status = extensionString(current, EXTENSION_URLS.unitStatus);
-  if (status === "dispensed") {
-    throw new Error("Frame inventory unit is already dispensed.");
-  }
   if (!isUnitStatus(status)) {
     throw new Error("Frame inventory unit has an invalid unit status.");
+  }
+  if (status === toStatus) {
+    return basicToInventoryUnit(current);
+  }
+  const allowed = Array.isArray(fromStatuses) ? fromStatuses : [fromStatuses];
+  if (!allowed.includes(status)) {
+    throw new Error(
+      `Frame inventory unit ${unitId} changed on another terminal: expected ${allowed.map(frameInventoryUnitStatusLabel).join(" or ")}, found ${frameInventoryUnitStatusLabel(status)}. Refresh inventory and retry.`,
+    );
   }
   const target = `Basic/${unitId}`;
   await writeInventoryTransaction({
     resourceEntries: [{
       resource: jsonPatchBinary([
         { op: "test", path: `/extension/${statusIndex}/url`, value: EXTENSION_URLS.unitStatus },
-        { op: "replace", path: `/extension/${statusIndex}/valueString`, value: "dispensed" },
+        { op: "test", path: `/extension/${statusIndex}/valueString`, value: status },
+        { op: "replace", path: `/extension/${statusIndex}/valueString`, value: toStatus },
       ]),
       request: {
         method: "PATCH",
@@ -232,14 +275,25 @@ export async function dispenseFrameInventoryUnit(
     }],
     targets: [{ reference: target, name: "practice-frame-inventory-unit" }],
     actorId,
-    eventCode: "practice.frame-inventory.dispensed",
+    eventCode: `practice.frame-inventory.${toStatus.replace("_", "-")}`,
     action: "U",
   });
   return basicToInventoryUnit({
     ...current,
     extension: current.extension?.map((entry, index) =>
-      index === statusIndex ? { ...entry, valueString: "dispensed" } : entry),
+      index === statusIndex ? { ...entry, valueString: toStatus } : entry),
   });
+}
+
+export function frameInventoryUnitStatusLabel(status: FrameInventoryUnitStatus): string {
+  return FRAME_INVENTORY_UNIT_STATUS_LABELS[status];
+}
+
+export function frameSourceUsesPracticeInventory(
+  frameSource: number,
+  frameOwnership: string | undefined,
+): boolean {
+  return frameSource === 4 && frameOwnership === "in-house";
 }
 
 export function summarizeInventoryByVariant(
@@ -263,6 +317,15 @@ export function summarizeInventoryByVariant(
       return {
         canonicalUrl,
         onHandCount: variantUnits.filter((unit) => unit.status === "on_hand").length,
+        reservedCount: variantUnits.filter((unit) => unit.status === "reserved").length,
+        outboundCount: variantUnits.filter((unit) => unit.status === "outbound").length,
+        atLabCount: variantUnits.filter((unit) => unit.status === "at_lab").length,
+        inboundCount: variantUnits.filter((unit) => unit.status === "inbound").length,
+        committedCount: variantUnits.filter((unit) =>
+          unit.status === "reserved"
+          || unit.status === "outbound"
+          || unit.status === "at_lab"
+          || unit.status === "inbound").length,
         holdCount: variantUnits.filter((unit) => unit.status === "hold").length,
         dispensedCount: variantUnits.filter((unit) => unit.status === "dispensed").length,
         ...(settings?.salePriceCents !== undefined ? { salePriceCents: settings.salePriceCents } : {}),
@@ -642,7 +705,13 @@ function basicKind(resource: Basic): string | undefined {
 }
 
 function isUnitStatus(value: string | null): value is FrameInventoryUnitStatus {
-  return value === "on_hand" || value === "hold" || value === "dispensed";
+  return value === "on_hand"
+    || value === "reserved"
+    || value === "outbound"
+    || value === "at_lab"
+    || value === "inbound"
+    || value === "hold"
+    || value === "dispensed";
 }
 
 type ExtensionValue =
