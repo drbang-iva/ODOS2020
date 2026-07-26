@@ -69,7 +69,7 @@ head_sha="$(gh pr view "$pr_number" --repo "$repo_name" --json headRefOid --jq .
 head_sha="$(printf '%s' "$head_sha" | tr '[:upper:]' '[:lower:]')"
 
 if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-  --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), (((.body // "") | split("\n")[0]) // "")] | @tsv')"; then
+  --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
   die "could not fetch inline review comments for PR #$pr_number"
 fi
 
@@ -106,7 +106,7 @@ fi
 if [[ "$current_count" -gt 0 && "$ack_comments_set" == false ]]; then
   die "--ack-comments $current_count is required before posting; review and adjudicate the $current_count current-head inline comment(s) listed above"
 fi
-if [[ "$current_count" -gt 0 && "$ack_comments" -ne "$current_count" ]]; then
+if [[ "$ack_comments_set" == true && "$ack_comments" -ne "$current_count" ]]; then
   die "--ack-comments must equal the current-head inline comment count: expected $current_count, received $ack_comments; review and adjudicate the comments listed above"
 fi
 

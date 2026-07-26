@@ -99,46 +99,44 @@ print_review_feedback() {
   echo "Inline review comments"
   echo "----------------------"
 
-  if ! inline_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
-    --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), (((.body // "") | split("\n")[0]) // "")] | @tsv')"; then
-    echo "Inline review comments unavailable; gh api request failed."
-    echo "Review submissions unavailable because inline comments could not be classified."
-    return 0
-  fi
+  if inline_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
+    --jq '.[] | [(.path // "?"), ((.line // .original_line // "?") | tostring), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
+    if [[ -n "$inline_rows" ]]; then
+      sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n)"
+      previous_location=""
+      while IFS=$'\t' read -r path line author commit_id first_line; do
+        [[ -n "$path" ]] || continue
+        normalized_commit="$(printf '%s' "$commit_id" | tr '[:upper:]' '[:lower:]')"
+        marker=""
+        if [[ "$normalized_commit" == "$head_sha" ]]; then
+          current_count=$((current_count + 1))
+        else
+          stale_count=$((stale_count + 1))
+          marker=" STALE"
+        fi
+        total_count=$((total_count + 1))
+        location="$path:$line"
+        if [[ "$location" != "$previous_location" ]]; then
+          printf '%s\n' "$location"
+          previous_location="$location"
+        fi
+        printf '  - %s — %s%s — %s\n' "$author" "${normalized_commit:0:7}" "$marker" "${first_line:-(no comment body)}"
+      done <<<"$sorted_inline_rows"
+    fi
 
-  if [[ -n "$inline_rows" ]]; then
-    sorted_inline_rows="$(printf '%s\n' "$inline_rows" | LC_ALL=C sort -t $'\t' -k1,1 -k2,2n)"
-    previous_location=""
-    while IFS=$'\t' read -r path line author commit_id first_line; do
-      [[ -n "$path" ]] || continue
-      normalized_commit="$(printf '%s' "$commit_id" | tr '[:upper:]' '[:lower:]')"
-      marker=""
-      if [[ "$normalized_commit" == "$head_sha" ]]; then
-        current_count=$((current_count + 1))
-      else
-        stale_count=$((stale_count + 1))
-        marker=" STALE"
-      fi
-      total_count=$((total_count + 1))
-      location="$path:$line"
-      if [[ "$location" != "$previous_location" ]]; then
-        printf '%s\n' "$location"
-        previous_location="$location"
-      fi
-      printf '  - %s — %s%s — %s\n' "$author" "${normalized_commit:0:7}" "$marker" "${first_line:-(no comment body)}"
-    done <<<"$sorted_inline_rows"
-  fi
-
-  if [[ "$total_count" -eq 0 ]]; then
-    echo "Inline review comments: 0 at this head."
+    if [[ "$total_count" -eq 0 ]]; then
+      echo "Inline review comments: 0 at this head."
+    else
+      echo "Inline review comments at this head: $current_count current, $stale_count stale ($total_count total)."
+    fi
   else
-    echo "Inline review comments at this head: $current_count current, $stale_count stale ($total_count total)."
+    echo "Inline review comments unavailable; gh api request failed."
   fi
 
   echo
   echo "Review submissions"
   if ! review_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/reviews" \
-    --jq '.[] | [(.state // "UNKNOWN"), (.user.login // "unknown"), (.commit_id // ""), (((.body // "") | split("\n")[0]) // "")] | @tsv')"; then
+    --jq '.[] | [(.state // "UNKNOWN"), (.user.login // "unknown"), (.commit_id // ""), ((((.body // "") | split("\n")[0]) // "") | explode | map(select(. >= 32 and . != 127 and (. < 128 or . > 159))) | implode)] | @tsv')"; then
     echo "  Review submissions unavailable; gh api request failed."
     return 0
   fi
