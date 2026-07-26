@@ -336,13 +336,31 @@ export async function resolveVisitTypeCategoryForEncounter(
   appointment: Appointment | undefined,
   fhir: Pick<MedplumClient, "read" | "search">,
 ): Promise<string | undefined> {
+  // Missing or unresolvable Appointment links return undefined so sections stay gated;
+  // operational FHIR failures throw so the chart explicitly fails open.
   try {
     let resolvedAppointment = appointment;
     if (!resolvedAppointment) {
       const reference = encounter?.appointment?.[0]?.reference;
       const appointmentId = reference?.match(/^Appointment\/([^/]+)$/)?.[1];
       if (!appointmentId) return undefined;
-      resolvedAppointment = await fhir.read<Appointment>("Appointment", appointmentId);
+      try {
+        resolvedAppointment = await fhir.read<Appointment>("Appointment", appointmentId);
+      } catch (error) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "status" in error &&
+          Number((error as { status?: unknown }).status) === 404
+        ) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(
+            `Visit-type category resolution skipped dangling Appointment/${appointmentId} reference: ${message}`,
+          );
+          return undefined;
+        }
+        throw error;
+      }
     }
     const code = appointmentVisitTypeCode(resolvedAppointment);
     if (!code) return undefined;

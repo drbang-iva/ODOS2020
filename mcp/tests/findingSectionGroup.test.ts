@@ -203,6 +203,29 @@ test("visit-type category resolver returns undefined for every unresolved link w
   );
 });
 
+test("visit-type category resolver logs a dangling Appointment reference and treats it as missing", async () => {
+  const fhir = new MemoryFhir();
+  const messages: string[] = [];
+  const originalError = console.error;
+  console.error = (message?: unknown) => messages.push(String(message));
+  try {
+    assert.equal(
+      await resolveVisitTypeCategoryForEncounter(
+        encounterFixture("encounter-dangling", "appointment-missing"),
+        undefined,
+        fhir,
+      ),
+      undefined,
+    );
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(messages, [
+    "Visit-type category resolution skipped dangling Appointment/appointment-missing reference: " +
+      "Appointment/appointment-missing not found",
+  ]);
+});
+
 test("visit-type category resolver logs and propagates operational FHIR failures", async () => {
   const fhir = new MemoryFhir();
   const appointment = appointmentFixture("appointment-1", "dry-eye-workup");
