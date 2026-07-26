@@ -25,7 +25,7 @@ interface EyeGrowthHistory {
   patientSex: "MALE" | "FEMALE" | null;
   birthDate: string;
   readings: AxialGrowthReading[];
-  growthRates: AxialGrowthRate[];
+  growthRates?: AxialGrowthRate[];
   referenceDataset: AxialGrowthReferenceDataset | null;
   noReferenceMessage: string | null;
 }
@@ -193,7 +193,6 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
               >
                 <option value="CAUCASIAN">European (default)</option>
                 <option value="ASIAN">Asian</option>
-                <option value="NOT_REPRESENTED">None</option>
               </select>
               <span id="eye-growth-reference-curve-help" className="mt-1 block leading-4">
                 Select a published comparison curve. This does not record patient demographics.
@@ -305,8 +304,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
 
 function referenceCurveLabel(population: MyopiaReferencePopulation): string {
   if (population === "ASIAN") return "Asian";
-  if (population === "CAUCASIAN") return "European (default)";
-  return "None";
+  return "European (default)";
 }
 
 async function responseError(response: Response, fallback: string): Promise<string> {

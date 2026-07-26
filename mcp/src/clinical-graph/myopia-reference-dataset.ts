@@ -154,20 +154,18 @@ export class ReferenceDatasetRegistry {
         right.datasetId.localeCompare(left.datasetId))[0];
   }
 
-  axialGrowthRateThresholds(): AxialGrowthRateThresholds {
+  axialGrowthRateThresholds(): AxialGrowthRateThresholds | undefined {
     const dataset = this.datasets
       .filter((candidate): candidate is PercentileBandsDataset =>
         candidate.modelType === "PERCENTILE_BANDS" &&
         candidate.measure === "AXIAL_LENGTH" &&
+        // Practice-set rate thresholds are European-derived and apply regardless of the selected comparison curve.
         candidate.populationsCovered.includes("CAUCASIAN") &&
         candidate.axialGrowthRateThresholds !== undefined)
       .sort((left, right) =>
         right.version.localeCompare(left.version, undefined, { numeric: true }) ||
         right.datasetId.localeCompare(left.datasetId))[0];
-    if (!dataset?.axialGrowthRateThresholds) {
-      throw new Error("European axial-length dataset must configure axial growth-rate thresholds.");
-    }
-    return dataset.axialGrowthRateThresholds;
+    return dataset?.axialGrowthRateThresholds;
   }
 }
 

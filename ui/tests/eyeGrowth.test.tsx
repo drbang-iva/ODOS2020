@@ -52,12 +52,12 @@ const readings: AxialGrowthReading[] = [
   },
 ];
 
-test("Eye Growth renders NOT_REPRESENTED measurements with zero reference bands", () => {
+test("Eye Growth renders measurements and an age-coverage note without reference bands", () => {
   const html = renderToStaticMarkup(
     <AxialGrowthChart
       readings={readings}
       referenceDataset={null}
-      noReferenceMessage="No validated reference data exists for this population. Patient measurements are shown without reference bands."
+      noReferenceMessage="No reference data covers this age. Patient measurements are shown without reference bands."
     />,
   );
   assert.match(html, /data-reference-band-count="0"/);
@@ -68,7 +68,7 @@ test("Eye Growth renders NOT_REPRESENTED measurements with zero reference bands"
   assert.equal((html.match(/data-patient-point=/g) ?? []).length, 4);
   assert.ok(html.indexOf("OD · age 9.20") < html.indexOf("OD · age 10.40"));
   assert.ok(html.indexOf("OS · age 9.20") < html.indexOf("OS · age 10.40"));
-  assert.match(html, /No validated reference data exists for this population/);
+  assert.match(html, /No reference data covers this age/);
   assert.doesNotMatch(html, /typical for this cohort/);
 });
 
@@ -228,11 +228,13 @@ test("latest per-eye growth rates render clinical colors and guard notes", () =>
         },
       ]}
       referenceDataset={null}
-      noReferenceMessage="No reference curve selected."
+      noReferenceMessage="No reference data covers this age."
     />,
   );
 
   assert.match(html, /Latest axial growth rate/);
+  assert.match(html, /data-reference-band-count="0"/);
+  assert.match(html, /No reference data covers this age/);
   assert.match(html, /data-growth-rate-eye="OD"/);
   assert.match(html, /data-growth-rate-status="WATCH"/);
   assert.match(html, /\+0.20 mm\/year/);
@@ -245,15 +247,15 @@ test("latest per-eye growth rates render clinical colors and guard notes", () =>
       readings={[readings[0]!]}
       growthRates={[]}
       referenceDataset={null}
-      noReferenceMessage="No reference curve selected."
+      noReferenceMessage="No reference data covers this age."
     />,
   );
   assert.doesNotMatch(firstVisit, /Latest axial growth rate/);
   assert.doesNotMatch(firstVisit, /mm\/year/);
 });
 
-test("reference curve defaults to European while Asian and None remain selectable", async () => {
-  for (const selected of ["ASIAN", "NOT_REPRESENTED"] as const) {
+test("reference curve defaults to European and offers only European and Asian", async () => {
+  for (const selected of ["ASIAN"] as const) {
     const originalFetch = globalThis.fetch;
     const saved: string[] = [];
     let renderer!: ReactTestRenderer;
@@ -293,7 +295,6 @@ test("reference curve defaults to European while Asian and None remain selectabl
         [
           ["CAUCASIAN", "European (default)"],
           ["ASIAN", "Asian"],
-          ["NOT_REPRESENTED", "None"],
         ],
       );
       await act(async () => {
@@ -353,10 +354,11 @@ async function submitEyeGrowthFixture(
     const url = String(request);
     if (url.includes("/clinical-graph/eye-growth/history")) {
       return Response.json({
-        referencePopulation: "NOT_REPRESENTED",
+        referencePopulation: "CAUCASIAN",
         patientSex: "FEMALE",
         birthDate: "2016-07-26",
         readings: [],
+        growthRates: [],
         referenceDataset: null,
         noReferenceMessage: "Fixture has no reference dataset.",
       });

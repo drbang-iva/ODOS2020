@@ -224,41 +224,25 @@ test("reference provider returns bands only for covered population and in-range 
   }
 });
 
-test("Eye Growth defaults visible only inside the active dataset's declared age range", async () => {
-  for (const [ageRangeMin, ageRangeMax, expected] of [
-    [6, 15, true],
-    [11, 15, false],
+test("Eye Growth stays default-visible for paediatric ages below and above the active dataset range", async () => {
+  for (const [referencePopulation, now, expectedAge, expectedVisible] of [
+    ["CAUCASIAN", "2021-07-25T14:00:00.000Z", 5, true],
+    ["CAUCASIAN", "2033-07-25T14:00:00.000Z", 17, true],
+    ["NOT_REPRESENTED", "2021-07-25T14:00:00.000Z", 5, true],
+    ["CAUCASIAN", "2035-07-25T14:00:00.000Z", 19, false],
   ] as const) {
-    const registry = new ReferenceDatasetRegistry([
-      syntheticTabulatedDataset(ageRangeMin, ageRangeMax, "AXIAL_LENGTH"),
-    ]);
-    const fixture = endpointFixture("ASIAN", { referenceDatasetRegistry: registry });
+    const fixture = endpointFixture(referencePopulation, { now: () => now });
     const visibility = await handleEyeGrowthVisibilityRequest(fixture.deps, {
       authHeader: AUTH,
       query: { patient: PATIENT_REFERENCE },
     });
     const body = visibility.body as EyeGrowthVisibilityResponse;
     assert.equal(visibility.status, 200);
-    assert.equal(body.defaultVisible, expected);
-    assert.equal(body.ageRangeMin, ageRangeMin);
-    assert.equal(body.ageRangeMax, ageRangeMax);
+    assert.ok(Math.abs(body.currentAgeInYears - expectedAge) < 0.01);
+    assert.equal(body.defaultVisible, expectedVisible);
+    assert.equal(body.ageRangeMin, 6);
+    assert.equal(body.ageRangeMax, 15);
   }
-  const notRepresentedRegistry = new ReferenceDatasetRegistry([
-    syntheticTabulatedDataset(6, 15, "AXIAL_LENGTH"),
-  ]);
-  const notRepresented = endpointFixture("NOT_REPRESENTED", {
-    referenceDatasetRegistry: notRepresentedRegistry,
-  });
-  const visibility = await handleEyeGrowthVisibilityRequest(notRepresented.deps, {
-    authHeader: AUTH,
-    query: { patient: PATIENT_REFERENCE },
-  });
-  const body = visibility.body as EyeGrowthVisibilityResponse;
-  assert.ok(body.currentAgeInYears > 9.99 && body.currentAgeInYears < 10.01);
-  assert.deepEqual(
-    { ageRangeMin: body.ageRangeMin, ageRangeMax: body.ageRangeMax, defaultVisible: body.defaultVisible },
-    { ageRangeMin: null, ageRangeMax: null, defaultVisible: false },
-  );
 });
 
 test("reference history follows each dataset's declared age range", async () => {
@@ -350,7 +334,7 @@ test("section id migration is data-neutral: Eye Growth reads existing AXIAL_LENG
   assert.match(body.referenceDataset?.populationNote ?? "", /50th percentile here is typical for this cohort/);
 });
 
-test("NOT_REPRESENTED history returns patient series with zero reference bands", async () => {
+test("a persisted NOT_REPRESENTED setting renders on the European curve without rewriting storage", async () => {
   const fixture = endpointFixture("NOT_REPRESENTED");
   await handleMyopiaCaptureRequest(fixture.deps, {
     authHeader: AUTH,
@@ -369,20 +353,21 @@ test("NOT_REPRESENTED history returns patient series with zero reference bands",
   });
   const body = history.body as MyopiaProgressionHistoryResponse;
   assert.equal(body.readings.length, 1);
-  assert.equal(body.referenceDataset, null);
-  assert.equal(
-    body.noReferenceMessage,
-    "No reference curve selected. Patient measurements are shown without reference bands.",
-  );
+  assert.equal(body.referencePopulation, "CAUCASIAN");
+  assert.equal(body.referenceDataset?.datasetId, "truckenbrod-2021-german-axial-length");
+  assert.deepEqual(body.referenceDataset?.percentiles, [2, 25, 50, 75, 98]);
+  assert.equal(body.noReferenceMessage, null);
 });
 
 test("latest consecutive same-method readings calculate the rate independently per eye", () => {
+  const thresholds = MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds();
+  assert.ok(thresholds);
   const rates = calculateAxialGrowthRates([
     growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
     growthReading("OS", 9.1, 24.10, "ULTRASOUND_A_SCAN", "2025-02-01T00:00:00Z", "os-1"),
     growthReading("OD", 9.5, 24.10, "OPTICAL_BIOMETRY", "2025-07-02T00:00:00Z", "od-2"),
     growthReading("OS", 10.1, 24.30, "ULTRASOUND_A_SCAN", "2026-02-01T00:00:00Z", "os-2"),
-  ], MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds());
+  ], thresholds);
 
   assert.equal(rates.length, 2);
   assert.ok(Math.abs(rates[0]!.mmPerYear! - 0.2) < 1e-9);
@@ -393,6 +378,7 @@ test("latest consecutive same-method readings calculate the rate independently p
 
 test("growth-rate guards suppress short, mixed-method, and first-visit intervals", () => {
   const thresholds = MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds();
+  assert.ok(thresholds);
   assert.deepEqual(calculateAxialGrowthRates([
     growthReading("OD", 9.0, 24.00, "OPTICAL_BIOMETRY", "2025-01-01T00:00:00Z", "od-1"),
   ], thresholds), []);
@@ -411,6 +397,81 @@ test("growth-rate guards suppress short, mixed-method, and first-visit intervals
   ], thresholds);
   assert.equal(mixedMethod[0]?.status, "BIOMETRY_METHOD_CHANGED");
   assert.equal(mixedMethod[0]?.mmPerYear, null);
+});
+
+test("out-of-range history omits bands but preserves the patient series and qualifying rate", async () => {
+  const fixture = endpointFixture("CAUCASIAN", { now: () => "2021-07-25T14:00:00.000Z" });
+  for (const [measuredAt, axialLengthMm] of [
+    ["2020-07-25T14:00:00.000Z", 22.40],
+    ["2021-07-25T14:00:00.000Z", 22.56],
+  ] as const) {
+    const capture = await handleMyopiaCaptureRequest(fixture.deps, {
+      authHeader: AUTH,
+      body: {
+        patientReference: PATIENT_REFERENCE,
+        encounterReference: ENCOUNTER_REFERENCE,
+        measuredAt,
+        eyes: {
+          OD: { axialLengthMm, biometryMethod: "OPTICAL_BIOMETRY" },
+        },
+      },
+    });
+    assert.equal(capture.status, 200);
+  }
+
+  const history = await handleMyopiaHistoryRequest(fixture.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = history.body as MyopiaProgressionHistoryResponse;
+  assert.equal(history.status, 200);
+  assert.equal(body.readings.length, 2);
+  assert.equal(body.referenceDataset, null);
+  assert.equal(
+    body.noReferenceMessage,
+    "No reference data covers this age. Patient measurements are shown without reference bands.",
+  );
+  assert.equal(body.growthRates?.length, 1);
+  assert.equal(body.growthRates?.[0]?.status, "AVAILABLE");
+  assert.ok(Math.abs(body.growthRates?.[0]?.mmPerYear ?? 0) > 0);
+});
+
+test("missing growth-rate threshold config returns history with readings and bands but omits rates", async () => {
+  const dataset = syntheticTabulatedDataset(6, 15, "AXIAL_LENGTH");
+  delete dataset.axialGrowthRateThresholds;
+  const registry = new ReferenceDatasetRegistry([dataset]);
+  const fixture = endpointFixture("ASIAN", {
+    bandProvider: new PercentileBandProvider(registry),
+    referenceDatasetRegistry: registry,
+  });
+  for (const [measuredAt, axialLengthMm] of [
+    ["2025-07-25T14:00:00.000Z", 23.90],
+    ["2026-07-25T14:00:00.000Z", 24.06],
+  ] as const) {
+    const capture = await handleMyopiaCaptureRequest(fixture.deps, {
+      authHeader: AUTH,
+      body: {
+        patientReference: PATIENT_REFERENCE,
+        encounterReference: ENCOUNTER_REFERENCE,
+        measuredAt,
+        eyes: {
+          OD: { axialLengthMm, biometryMethod: "OPTICAL_BIOMETRY" },
+        },
+      },
+    });
+    assert.equal(capture.status, 200);
+  }
+
+  const history = await handleMyopiaHistoryRequest(fixture.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = history.body as MyopiaProgressionHistoryResponse;
+  assert.equal(history.status, 200);
+  assert.equal(body.readings.length, 2);
+  assert.ok(body.referenceDataset);
+  assert.equal(body.noReferenceMessage, null);
+  assert.equal("growthRates" in body, false);
 });
 
 test("growth-rate classifications honor configured age and rate boundaries", () => {
