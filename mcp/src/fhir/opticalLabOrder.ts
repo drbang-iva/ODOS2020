@@ -36,6 +36,7 @@ export interface LabOrderLensSpec {
 }
 
 export interface LabOrderFrame {
+  inventoryId?: string;
   brand?: string;
   model?: string;
   color?: string;
@@ -124,6 +125,7 @@ export function buildLabOrder(input: BuildLabOrderInput): LabOrder {
     throw new Error("Lab order requires a destination lab.");
   }
   assertLabOrderFrameSource(input.frameSource, input.frameOwnership);
+  assertLabOrderFrameInventoryId(input);
 
   const specs = input.visionPrescription.lensSpecification ?? [];
   const right = specs.find((s) => s.eye === "right");
@@ -169,6 +171,7 @@ export interface LabOrderExport {
 
 export function labOrderToExport(order: LabOrder): LabOrderExport {
   assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
+  assertLabOrderFrameInventoryId(order);
   return { format: "odos-lab-order", version: "0", order };
 }
 
@@ -187,6 +190,23 @@ export function assertLabOrderFrameSource(
   }
   if (frameOwnership !== undefined) {
     throw new Error(`Lab order frameOwnership must be absent when FSRC is ${frameSource}.`);
+  }
+}
+
+export function assertLabOrderFrameInventoryId(
+  order: {
+    frameSource?: number;
+    frameOwnership?: string;
+    frame?: { inventoryId?: string };
+  },
+): void {
+  const inventoryId = order.frame?.inventoryId;
+  if (inventoryId === undefined) return;
+  if (order.frameSource !== 4 || order.frameOwnership !== "in-house") {
+    throw new Error("Lab-order frame inventoryId is valid only for FSRC 4 + in-house.");
+  }
+  if (!/^[A-Za-z0-9.-]+$/.test(inventoryId)) {
+    throw new Error("Lab-order frame inventoryId must be a local FHIR id.");
   }
 }
 

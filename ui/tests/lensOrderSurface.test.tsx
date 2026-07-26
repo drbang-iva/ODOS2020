@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Coverage, CoverageEligibilityResponse, VisionPrescription } from "@medplum/fhirtypes";
+import type { Coverage, CoverageEligibilityResponse, Task, VisionPrescription } from "@medplum/fhirtypes";
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
+import { CollectPanel } from "../src/components/CollectPanel";
 import { AttachedLensPanel, LensesOrderSurface } from "../src/components/LensesOrderSurface";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
@@ -28,7 +29,11 @@ import type {
   PracticeFrameInventoryUnit,
   PracticeFrameVariantSettings,
 } from "../src/lib/optical-frames";
-import { opticalCollectionChargeFromDraft, type OpticalChargeLineDraft } from "../src/lib/optical-order";
+import {
+  opticalCollectionChargeFromDraft,
+  type OpticalChargeLineDraft,
+  type OpticalOrderStatusCode,
+} from "../src/lib/optical-order";
 import { resolveVCode } from "../src/lib/v-code-resolver";
 import { OpticalOrder } from "../src/scenes/OpticalOrder";
 
@@ -275,10 +280,11 @@ test("OpticalOrder skips benefit fetches and V-code resolution when no patient i
   act(() => renderer.unmount());
 });
 
-test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest on-hand unit", async () => {
+test("OpticalOrder reserves the FIFO unit on attach and dispenses that same physical unit", async () => {
   let inventoryLoads = 0;
   let settingsLoads = 0;
   const dispensedIds: string[] = [];
+  const transitions: Array<[string, PracticeFrameInventoryUnit["status"]]> = [];
   const units: PracticeFrameInventoryUnit[] = [
     frameUnit("already-dispensed", "2026-07-01T12:00:00.000Z", "dispensed"),
     frameUnit("newer-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
@@ -302,6 +308,10 @@ test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest o
       dispensedIds.push(unitId);
       return { ...units.find((unit) => unit.id === unitId)!, status: "dispensed" };
     },
+    transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+      transitions.push([unitId, toStatus]);
+      return { ...units.find((unit) => unit.id === unitId)!, status: toStatus };
+    },
   });
   let renderer!: ReactTestRenderer;
   await act(async () => {
@@ -322,8 +332,13 @@ test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest o
   assert.equal(inventoryLoads, 1);
   assert.equal(settingsLoads, 1);
 
-  clickButton(renderer, "Attach");
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, [["oldest-on-hand", "reserved"]]);
   assert.ok(renderer.root.findAllByType("input").some((input) => input.props.value === "179.00"));
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
   await act(async () => {
     buttonByText(renderer.root, "Dispense").props.onClick();
     await flushPromises();
@@ -336,9 +351,59 @@ test("OpticalOrder caches inventory while typing and FIFO-dispenses the oldest o
   act(() => renderer.unmount());
 });
 
-test("OpticalOrder refreshes stale inventory after a conflicting dispense so retry advances", async () => {
+test("OpticalOrder blocks lab-sheet submission when an FSRC 4 in-house frame loses its inventory assignment", async () => {
+  const unit = frameUnit("unit-123", "2026-07-10T12:00:00.000Z", "on_hand");
+  const transitions: Array<[string, PracticeFrameInventoryUnit["status"]]> = [];
+  const api = opticalOrderApi({
+    searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+    loadInventory: async () => ({ units: [unit], skippedCount: 0 }),
+    transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+      transitions.push([unitId, toStatus]);
+      return { ...unit, status: toStatus };
+    },
+    dispenseUnit: async () => ({ ...unit, id: undefined as never, status: "dispensed" }),
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <OpticalOrder
+        search="?patient=Patient%2Flens-a2&rx=VisionPrescription%2Frx-1"
+        initialVisionPrescription={TEST_RX}
+        api={api}
+      />,
+    );
+    await flushPromises();
+  });
+
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, [["unit-123", "reserved"]]);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "unit-123");
+
+  await act(async () => {
+    buttonByText(renderer.root, "Dispense").props.onClick();
+    await flushPromises();
+  });
+  act(() => {
+    selectByLabel(renderer.root, "Lab").props.onChange({ target: { value: "Cherry Optical Lab" } });
+    inputByLabel(renderer.root, "Patient Name").props.onChange({ target: { value: "Maria Alvarez" } });
+  });
+  const printButton = buttonByText(renderer.root, "Print Lab Sheet");
+  assert.equal(printButton.props.disabled, false);
+  act(() => printButton.props.onClick());
+
+  assert.match(
+    nodeText(renderer.root),
+    /A practice-stock frame must have a reserved inventory unit before it can be sent to the lab\./,
+  );
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder refreshes a conflicting reservation and requires an explicit retry", async () => {
   let inventoryLoads = 0;
-  const dispensedIds: string[] = [];
+  const reservedIds: string[] = [];
   const staleUnits: PracticeFrameInventoryUnit[] = [
     frameUnit("stale-oldest", "2026-07-10T12:00:00.000Z", "on_hand"),
     frameUnit("next-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
@@ -353,12 +418,12 @@ test("OpticalOrder refreshes stale inventory after a conflicting dispense so ret
       inventoryLoads += 1;
       return { units: inventoryLoads === 1 ? staleUnits : refreshedUnits, skippedCount: 0 };
     },
-    dispenseUnit: async (unitId) => {
-      dispensedIds.push(unitId);
+    transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+      reservedIds.push(unitId);
       if (unitId === "stale-oldest") {
         throw new Error("Frame inventory changed on another terminal.");
       }
-      return { ...refreshedUnits.find((unit) => unit.id === unitId)!, status: "dispensed" };
+      return { ...refreshedUnits.find((unit) => unit.id === unitId)!, status: toStatus };
     },
   });
   let renderer!: ReactTestRenderer;
@@ -367,24 +432,294 @@ test("OpticalOrder refreshes stale inventory after a conflicting dispense so ret
     await flushPromises();
   });
 
-  clickButton(renderer, "Attach");
   await act(async () => {
-    buttonByText(renderer.root, "Dispense").props.onClick();
+    buttonByText(renderer.root, "Attach").props.onClick();
     await flushPromises();
   });
 
   assert.equal(inventoryLoads, 2);
-  assert.deepEqual(dispensedIds, ["stale-oldest"]);
+  assert.deepEqual(reservedIds, ["stale-oldest"]);
   assert.match(nodeText(renderer.root), /Frame inventory changed on another terminal/);
+  assert.equal(renderer.root.findAllByType("button").some((button) => nodeText(button) === "Dispense"), false);
 
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+
+  assert.deepEqual(reservedIds, ["stale-oldest", "next-on-hand"]);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "next-on-hand");
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder releases the reserved unit on unattach and on ownership change", async () => {
+  const units = [
+    frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand"),
+    frameUnit("unit-2", "2026-07-20T12:00:00.000Z", "on_hand"),
+  ];
+  const transitions: Array<[string, PracticeFrameInventoryUnit["status"]]> = [];
+  const api = opticalOrderApi({
+    searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+    loadInventory: async () => ({ units, skippedCount: 0 }),
+    transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+      transitions.push([unitId, toStatus]);
+      return { ...units.find((unit) => unit.id === unitId)!, status: toStatus };
+    },
+  });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={api} />);
+    await flushPromises();
+  });
+
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Unattach Frame").props.onClick();
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, [["unit-1", "reserved"], ["unit-1", "on_hand"]]);
+
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  await act(async () => {
+    selectByLabel(renderer.root, "Frame Ownership").props.onChange({ target: { value: "patients-own" } });
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, [
+    ["unit-1", "reserved"],
+    ["unit-1", "on_hand"],
+    ["unit-1", "reserved"],
+    ["unit-1", "on_hand"],
+  ]);
+  assert.equal(nodeText(renderer.root).includes("Inventory Unit"), false);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder status changes move the attached unit without double-advancing", async () => {
+  const unit = frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand");
+  const transitions: PracticeFrameInventoryUnit["status"][] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units: [unit], skippedCount: 0 }),
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        assert.equal(unitId, "unit-1");
+        transitions.push(toStatus);
+        return { ...unit, status: toStatus };
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  await act(async () => {
+    selectByLabel(renderer.root, "Order Status").props.onChange({ target: { value: "at-lab" } });
+    await flushPromises();
+  });
+  await act(async () => {
+    selectByLabel(renderer.root, "Order Status").props.onChange({ target: { value: "at-lab" } });
+    await flushPromises();
+  });
+  await act(async () => {
+    selectByLabel(renderer.root, "Order Status").props.onChange({ target: { value: "dispensed" } });
+    await flushPromises();
+  });
+  assert.deepEqual(transitions, ["reserved", "at_lab", "dispensed"]);
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "Dispensed");
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder does not advance the Task or header when the physical inventory transition fails", async () => {
+  const unit = frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand");
+  let inventoryLoads = 0;
+  const taskTransitions: OpticalOrderStatusCode[] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => {
+        inventoryLoads += 1;
+        return {
+          units: [{ ...unit, status: inventoryLoads === 1 ? "on_hand" : "reserved" }],
+          skippedCount: 0,
+        };
+      },
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        if (toStatus === "at_lab") throw new Error("Physical frame transition failed.");
+        return { ...unit, id: unitId, status: toStatus };
+      },
+      transitionOrder: async (_taskId, toStatus) => {
+        taskTransitions.push(toStatus);
+        return { resourceType: "Task", status: "in-progress", intent: "order" };
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  act(() => {
+    renderer.root.findByType(CollectPanel).props.onCollected({
+      deviceRequestId: "order-1",
+      taskId: "task-1",
+      chargeItemIds: [],
+      invoiceId: "invoice-1",
+      outcome: "success",
+      amountChargedCents: 0,
+      tender: "CASH",
+    });
+  });
+
+  await act(async () => {
+    selectByLabel(renderer.root, "Order Status").props.onChange({ target: { value: "at-lab" } });
+    await flushPromises();
+  });
+
+  assert.deepEqual(taskTransitions, []);
+  assert.equal(selectByLabel(renderer.root, "Order Status").props.value, "quote");
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
+  assert.match(nodeText(renderer.root), /Physical frame transition failed/);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder never mutates inventory for a patient's-own frame", async () => {
+  const units = [frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand")];
+  let transitions = 0;
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units, skippedCount: 0 }),
+      transitionUnit: async () => {
+        transitions += 1;
+        throw new Error("Patient-owned frames must not touch inventory");
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    selectByLabel(renderer.root, "Frame Ownership").props.onChange({ target: { value: "patients-own" } });
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+
+  assert.equal(transitions, 0);
+  assert.equal(nodeText(renderer.root).includes("Inventory Unit"), false);
+  assert.equal(buttonByText(renderer.root, "Dispense").props.disabled, true);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder reserves Frame Only stock, dispenses the same unit, and refuses a post-dispense unattach", async () => {
+  const units = [
+    frameUnit("oldest-on-hand", "2026-07-10T12:00:00.000Z", "on_hand"),
+    frameUnit("newer-on-hand", "2026-07-20T12:00:00.000Z", "on_hand"),
+  ];
+  const transitions: string[] = [];
+  const dispensed: string[] = [];
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units, skippedCount: 0 }),
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        transitions.push(unitId);
+        return { ...units.find((unit) => unit.id === unitId)!, status: toStatus };
+      },
+      dispenseUnit: async (unitId) => {
+        dispensed.push(unitId);
+        return { ...units.find((unit) => unit.id === unitId)!, status: "dispensed" };
+      },
+    })} />);
+    await flushPromises();
+  });
+  act(() => selectByLabel(renderer.root, "Order Type").props.onChange({ target: { value: "frame-only" } }));
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "oldest-on-hand");
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "In office — not sent");
   await act(async () => {
     buttonByText(renderer.root, "Dispense").props.onClick();
     await flushPromises();
   });
+  assert.deepEqual(transitions, ["oldest-on-hand"]);
+  assert.deepEqual(dispensed, ["oldest-on-hand"]);
+  assert.equal(inputByLabel(renderer.root, "Inventory State").props.value, "Dispensed");
+  await act(async () => {
+    buttonByText(renderer.root, "Unattach Frame").props.onClick();
+    await flushPromises();
+  });
+  assert.match(nodeText(renderer.root), /already dispensed and cannot be returned/);
+  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "oldest-on-hand");
+  act(() => renderer.unmount());
+});
 
-  assert.deepEqual(dispensedIds, ["stale-oldest", "next-on-hand"]);
-  assert.equal(inputByLabel(renderer.root, "Inventory Unit").props.value, "next-on-hand");
-  assert.equal(nodeText(buttonByText(renderer.root, "Dispensed")), "Dispensed");
+test("OpticalOrder preserves unrelated capture edits while an inventory release is pending", async () => {
+  const unit = frameUnit("unit-1", "2026-07-10T12:00:00.000Z", "on_hand");
+  let finishRelease!: () => void;
+  const release = new Promise<void>((resolve) => { finishRelease = resolve; });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units: [unit], skippedCount: 0 }),
+      transitionUnit: async (unitId, _fromStatuses, toStatus) => {
+        if (toStatus === "on_hand") await release;
+        return { ...unit, id: unitId, status: toStatus };
+      },
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+
+  act(() => {
+    selectByLabel(renderer.root, "Frame Ownership").props.onChange({ target: { value: "patients-own" } });
+  });
+  const treatment = buttonByText(renderer.root, "Add Treatment").parent!.findAllByType("input")[0]!;
+  act(() => treatment.props.onChange({ target: { value: "AR coating" } }));
+  await act(async () => {
+    finishRelease();
+    await flushPromises();
+  });
+
+  const currentTreatment = buttonByText(renderer.root, "Add Treatment").parent!.findAllByType("input")[0]!;
+  assert.equal(currentTreatment.props.value, "AR coating");
+  assert.equal(nodeText(renderer.root).includes("Inventory Unit"), false);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder refuses a practice-stock attach when no on-hand unit exists", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi({
+      searchFrameCatalog: async () => [FRAME_CATALOG_ITEM],
+      loadInventory: async () => ({ units: [], skippedCount: 0 }),
+    })} />);
+    await flushPromises();
+  });
+  await act(async () => {
+    buttonByText(renderer.root, "Attach").props.onClick();
+    await flushPromises();
+  });
+  assert.match(nodeText(renderer.root), /No on-hand inventory unit is available/);
+  assert.equal(nodeText(renderer.root).includes("Inventory Unit"), false);
   act(() => renderer.unmount());
 });
 
@@ -813,6 +1148,12 @@ function opticalOrderApi(options: {
   loadInventory?: () => Promise<PracticeFrameInventoryLoad>;
   loadSettings?: () => Promise<PracticeFrameVariantSettings[]>;
   dispenseUnit?: (unitId: string) => Promise<PracticeFrameInventoryUnit>;
+  transitionUnit?: (
+    unitId: string,
+    fromStatuses: PracticeFrameInventoryUnit["status"] | readonly PracticeFrameInventoryUnit["status"][],
+    toStatus: PracticeFrameInventoryUnit["status"],
+  ) => Promise<PracticeFrameInventoryUnit>;
+  transitionOrder?: (taskId: string, toStatus: OpticalOrderStatusCode) => Promise<Task>;
 } = {}) {
   const failure = options.failure ?? new Error("benefit context unavailable");
   return {
@@ -830,6 +1171,9 @@ function opticalOrderApi(options: {
     dispenseFrameInventoryUnit: options.dispenseUnit ?? (async () => {
       throw new Error("Unexpected frame dispense");
     }),
+    transitionFrameInventoryUnitStatus: options.transitionUnit ?? (async (unitId, _fromStatuses, toStatus) =>
+      frameUnit(unitId, "2026-07-10T12:00:00.000Z", toStatus)),
+    transitionOpticalOrderStatus: options.transitionOrder,
   };
 }
 
@@ -876,6 +1220,13 @@ function inputByLabel(root: ReactTestInstance, label: string): ReactTestInstance
     candidate.findAllByType("span").some((span) => nodeText(span) === label));
   assert.equal(matches.length, 1, `Expected one input labeled ${label}, found ${matches.length}`);
   return matches[0]!.findByType("input");
+}
+
+function selectByLabel(root: ReactTestInstance, label: string): ReactTestInstance {
+  const matches = root.findAllByType("label").filter((candidate) =>
+    candidate.findAllByType("span").some((span) => nodeText(span) === label));
+  assert.equal(matches.length, 1, `Expected one select labeled ${label}, found ${matches.length}`);
+  return matches[0]!.findByType("select");
 }
 
 function clickButton(renderer: ReturnType<typeof create>, text: string) {

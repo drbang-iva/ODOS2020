@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { test } from "node:test";
-import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import express from "express";
 import { labTransportStateConcept, type LabTransportState } from "../src/fhir/labTransportState.js";
 import { labOrderToExport, type LabOrder } from "../src/fhir/opticalLabOrder.js";
@@ -41,9 +41,10 @@ const ORDER: LabOrder = {
   },
   frameSource: 4,
   frameOwnership: "in-house",
+  frame: { inventoryId: "inventory-1", brand: "Modo", model: "7008", source: "stock" },
 };
 
-function transmission(id: string, state: LabTransportState): Task {
+function transmission(id: string, state: LabTransportState, order: LabOrder = ORDER): Task {
   return {
     resourceType: "Task",
     id,
@@ -64,7 +65,7 @@ function transmission(id: string, state: LabTransportState): Task {
         coding: [{ system: ODOS_LAB_ORDER_TASK_INPUT_SYSTEM, code: LAB_ORDER_EXPORT_INPUT_CODE }],
         text: "Lab order export",
       },
-      valueString: JSON.stringify(labOrderToExport(ORDER)),
+      valueString: JSON.stringify(labOrderToExport(order)),
     }],
   };
 }
@@ -76,13 +77,34 @@ function setup() {
     ["lab-received", transmission("lab-received", "received")],
   ]);
   const calls: Array<{ operation: string; staff?: string; reference?: string }> = [];
+  const missingInventoryIds = new Set<string>();
+  const inventoryUnit: Basic = {
+    resourceType: "Basic",
+    id: "inventory-1",
+    code: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/basic-kind",
+        code: "practice-frame-inventory-unit",
+      }],
+    },
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/unit-status",
+      valueString: "at_lab",
+    }],
+  };
   const updates: Array<{ id: string; headers?: Record<string, string> }> = [];
   const updateControls: {
     before?: (input: { id: string; current: Task }) => void;
     alwaysConflict?: boolean;
   } = {};
   const fhir = {
-    read: async <T extends Resource>(_resourceType: T["resourceType"], id: string): Promise<T> => {
+    read: async <T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> => {
+      if (resourceType === "Basic" && missingInventoryIds.has(id)) {
+        throw Object.assign(new Error(`Basic/${id} not found`), { status: 404 });
+      }
+      if (resourceType === "Basic" && id === inventoryUnit.id) {
+        return structuredClone(inventoryUnit) as T;
+      }
       const task = tasks.get(id);
       if (!task) throw new Error(`Task/${id} not found`);
       return structuredClone(task) as T;
@@ -156,7 +178,7 @@ function setup() {
     },
     now: () => "2026-07-11T14:00:00.000Z",
   };
-  return { adapter, calls, deps, fhir, tasks, updates, updateControls };
+  return { adapter, calls, deps, fhir, missingInventoryIds, tasks, updates, updateControls };
 }
 
 test("submit handler authenticates, uses the verified staff identity, and defaults routing to manual", async () => {
@@ -180,6 +202,24 @@ test("submit handler authenticates, uses the verified staff identity, and defaul
   assert.equal(fixture.calls[0].staff, "Practitioner/verified-staff");
 });
 
+test("submit handler rejects an inventoryId outside FSRC 4 + in-house", async () => {
+  const fixture = setup();
+  const invalidOrder = {
+    ...ORDER,
+    frameOwnership: "patients-own",
+  };
+  const result = await handleSubmitLabOrderRequest(fixture.deps, {
+    authHeader: "Bearer good",
+    body: {
+      order: invalidOrder,
+      orderTaskReference: "Task/order-1",
+      lab: "Cherry Optical Lab",
+    },
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(fixture.calls, []);
+});
+
 test("sheet handler renders stored export and board GET computes legacy statuses without writes", async () => {
   const fixture = setup();
   const sheet = await handleLabOrderSheetRequest(fixture.deps, {
@@ -200,6 +240,8 @@ test("sheet handler renders stored export and board GET computes legacy statuses
     "Task/lab-sent": "at-lab",
   });
   assert.equal((board.body as { unprojectableCount: number }).unprojectableCount, 0);
+  assert.ok((board.body as { items: Array<{ inventoryStatusLabel?: string }> }).items
+    .every((item) => item.inventoryStatusLabel === "At Lab"));
   assert.equal(fixture.updates.length, 0);
 
   const worklist = await handleLabOrderWorklistRequest(fixture.deps, {
@@ -216,6 +258,47 @@ test("sheet handler renders stored export and board GET computes legacy statuses
   assert.equal(invalid.status, 400);
   assert.match(String((invalid.body as { error: string }).error), /status/i);
   assert.equal(fixture.updates.length, 0);
+});
+
+test("worklist skips a missing inventory unit, counts it, and keeps valid orders visible", async () => {
+  const fixture = setup();
+  const missingOrder: LabOrder = {
+    ...ORDER,
+    header: { ...ORDER.header, orderId: "ORD-MISSING" },
+    frame: { ...ORDER.frame!, inventoryId: "inventory-missing" },
+  };
+  fixture.tasks.set("lab-missing", transmission("lab-missing", "sent", missingOrder));
+  fixture.missingInventoryIds.add("inventory-missing");
+
+  const result = await handleLabOrderWorklistRequest(fixture.deps, {
+    authHeader: "Bearer good",
+  });
+
+  assert.equal(result.status, 200);
+  const board = result.body as {
+    items: Array<{ reference: string; inventoryStatus?: string }>;
+    skippedInventoryUnitCount: number;
+  };
+  assert.equal(board.skippedInventoryUnitCount, 1);
+  assert.ok(board.items.some((item) => item.reference === "Task/lab-missing"));
+  assert.ok(board.items.some((item) => item.reference === "Task/lab-sent" && item.inventoryStatus === "at_lab"));
+});
+
+test("worklist rethrows a non-404 inventory join failure", async () => {
+  const fixture = setup();
+  const brokenOrder: LabOrder = {
+    ...ORDER,
+    header: { ...ORDER.header, orderId: "ORD-BROKEN" },
+    frame: { ...ORDER.frame!, inventoryId: "inventory-broken" },
+  };
+  fixture.tasks.set("lab-broken", transmission("lab-broken", "sent", brokenOrder));
+
+  const result = await handleLabOrderWorklistRequest(fixture.deps, {
+    authHeader: "Bearer good",
+  });
+
+  assert.equal(result.status, 400);
+  assert.match(String((result.body as { error: string }).error), /inventory-broken/);
 });
 
 test("staff status and problem actions persist verified identity and resolve without losing history", async () => {

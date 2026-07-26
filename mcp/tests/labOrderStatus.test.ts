@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Task } from "@medplum/fhirtypes";
 import {
+  FRAME_INVENTORY_STATUS_LABELS,
   backfilledLabOrderStatusRecord,
   backfilledStatusForTransport,
   flagLabOrderProblem,
@@ -11,8 +12,13 @@ import {
   withLabOrderStatusRecord,
   type LabOrderStatus,
 } from "../src/fhir/labOrderStatus.js";
+import { FRAME_INVENTORY_UNIT_STATUS_LABELS } from "../../ui/src/lib/optical-frames.js";
 
 const STAFF = "Practitioner/front-desk";
+
+test("UI and MCP frame inventory status vocabularies remain identical", () => {
+  assert.deepEqual(FRAME_INVENTORY_STATUS_LABELS, FRAME_INVENTORY_UNIT_STATUS_LABELS);
+});
 
 test("legacy queued, sent, and received transport facts backfill to staff statuses without changing transport", () => {
   assert.equal(backfilledStatusForTransport("queued"), "in-office-not-sent");
@@ -67,6 +73,24 @@ test("status-specific aging crosses the configured at-lab threshold and preserve
     assert.equal(nestedBoard.items[0].overdue, true);
     assert.equal(nestedBoard.alarms.atLabOverdue, 1);
   }
+});
+
+test("board projection keeps live frame inventory state distinct from staff status and transport", () => {
+  const task = labTask("inventory", "sent", "2026-07-01T12:00:00Z");
+  const envelope = JSON.parse(task.input?.[0]?.valueString ?? "{}");
+  envelope.order.frame.inventoryId = "unit-1";
+  task.input![0]!.valueString = JSON.stringify(envelope);
+  const board = projectLabOrderBoard(
+    [task],
+    "2026-07-02T12:00:00Z",
+    undefined,
+    new Map([["unit-1", "at_lab"]]),
+  );
+  assert.equal(board.items[0].status, "at-lab");
+  assert.equal(board.items[0].transportState, "sent");
+  assert.equal(board.items[0].inventoryUnitId, "unit-1");
+  assert.equal(board.items[0].inventoryStatus, "at_lab");
+  assert.equal(board.items[0].inventoryStatusLabel, "At Lab");
 });
 
 test("problem flags append, breakage alone resets aging, pin open problems, and retain resolved history", () => {

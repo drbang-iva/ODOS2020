@@ -1,5 +1,8 @@
 import { fhir } from "./fhir";
 import type { LabOrder } from "./optical-lab-order";
+import type { FrameInventoryUnitStatus } from "./optical-frames";
+
+export type { FrameInventoryUnitStatus } from "./optical-frames";
 
 export interface LabOrderSubmission {
   labOrderReference: string;
@@ -52,6 +55,9 @@ export interface LabOrderBoardItem {
   frameSource?: 0 | 1 | 3 | 4;
   frameSourceLabel: string;
   frameOwnership?: "in-house" | "patients-own";
+  inventoryUnitId?: string;
+  inventoryStatus?: FrameInventoryUnitStatus;
+  inventoryStatusLabel?: string;
   status: LabOrderStatus;
   statusLabel: string;
   notificationReason?: LabOrderNotificationReason;
@@ -71,6 +77,8 @@ export interface LabOrderBoardSummary {
   items: LabOrderBoardItem[];
   counts: Record<LabOrderStatus, number>;
   activeCount: number;
+  unprojectableCount: number;
+  skippedInventoryUnitCount: number;
   alarms: { flaggedProblems: number; atLabOverdue: number; transmissionFailures: number; receivedNotNotified: number };
   rollups: { preLab: number; outbound: number; atLab: number; inbound: number; notified: number };
   agingConfig: {

@@ -39,14 +39,19 @@ import {
   type RxDisplayRow,
 } from "../lib/optical-order";
 import {
+  assertFrameInventoryAssignment,
   dispenseFrameInventoryUnit,
+  frameInventoryUnitStatusLabel,
+  frameSourceUsesPracticeInventory,
   loadPracticeFrameInventoryUnits,
   loadPracticeFrameVariantSettings,
   rankFramePosLookupRows,
   searchFrameCatalog,
   summarizeInventoryByVariant,
+  transitionFrameInventoryUnitStatus,
   type FramePosLookupMatch,
   type FrameCatalogItem,
+  type FrameInventoryUnitStatus,
   type PracticeFrameInventoryUnit,
   type PracticeFrameVariantSettings,
 } from "../lib/optical-frames";
@@ -131,6 +136,12 @@ interface OpticalOrderProps {
     loadPracticeFrameInventoryUnits?: typeof loadPracticeFrameInventoryUnits;
     loadPracticeFrameVariantSettings?: typeof loadPracticeFrameVariantSettings;
     dispenseFrameInventoryUnit?: (unitId: string) => Promise<PracticeFrameInventoryUnit>;
+    transitionFrameInventoryUnitStatus?: (
+      unitId: string,
+      fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
+      toStatus: FrameInventoryUnitStatus,
+    ) => Promise<PracticeFrameInventoryUnit>;
+    transitionOpticalOrderStatus?: typeof transitionOpticalOrderStatus;
   };
   lensCatalog?: Pick<LensesOrderSurfaceProps, "products" | "coatings" | "modifiers" | "resolver">;
 }
@@ -149,6 +160,12 @@ export function OpticalOrder({
   const loadFrameVariantSettings = api?.loadPracticeFrameVariantSettings ?? loadPracticeFrameVariantSettings;
   const dispenseFrameUnit = api?.dispenseFrameInventoryUnit ?? ((unitId: string) =>
     dispenseFrameInventoryUnit(unitId, actingPractitionerId()));
+  const transitionFrameUnit = api?.transitionFrameInventoryUnitStatus ?? ((
+    unitId: string,
+    fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
+    toStatus: FrameInventoryUnitStatus,
+  ) => transitionFrameInventoryUnitStatus(unitId, fromStatuses, toStatus, actingPractitionerId()));
+  const transitionOrderStatus = api?.transitionOpticalOrderStatus ?? transitionOpticalOrderStatus;
   const [patientReference] = useState(params.get("patient") ?? "");
   const [rxReference] = useState(params.get("rx") ?? "");
   const [encounterReference] = useState(params.get("encounter") ?? "");
@@ -361,8 +378,127 @@ export function OpticalOrder({
     setHeader((current) => ({ ...current, lab }));
   }
 
-  function patchLabOrderCapture(patch: Partial<LabOrderCaptureState>) {
-    setLabOrderCapture((current) => ({ ...current, ...patch }));
+  async function patchLabOrderCapture(patch: Partial<LabOrderCaptureState>) {
+    const changesInventoryAssignment = Object.prototype.hasOwnProperty.call(patch, "frameSource")
+      || Object.prototype.hasOwnProperty.call(patch, "frameOwnership");
+    if (!changesInventoryAssignment) {
+      setLabOrderCapture((current) => ({ ...current, ...patch }));
+      return;
+    }
+    if (frameDispenseBusy) {
+      setError("A frame inventory update is still in progress. Retry the frame-source change.");
+      return;
+    }
+    const nextCapture = { ...labOrderCapture, ...patch };
+    const attachedLine = chargeLines.find((line) => line.frame);
+    const frame = attachedLine?.frame;
+    const linkedUnit = frame?.inventoryId
+      ? frameInventoryUnits.find((unit) => unit.id === frame.inventoryId)
+      : undefined;
+    const inventoryCase = frameSourceUsesPracticeInventory(
+      nextCapture.frameSource,
+      nextCapture.frameOwnership,
+    );
+    const shouldReserve = inventoryCase;
+    const linkedUnitReserved = linkedUnit
+      ? ["reserved", "outbound", "at_lab", "inbound"].includes(linkedUnit.status)
+      : false;
+    if (!frame || (
+      inventoryCase === Boolean(frame.inventoryId)
+      && inventoryCase === linkedUnitReserved
+    )) {
+      setLabOrderCapture(nextCapture);
+      return;
+    }
+
+    setFrameDispenseBusy(true);
+    setError(null);
+    try {
+      let inventoryId = frame.inventoryId;
+      if (shouldReserve) {
+        if (frame.inventoryId && (!linkedUnit || linkedUnit.status !== "on_hand")) {
+          throw new Error(
+            `Frame inventory unit ${frame.inventoryId} is no longer on hand. Refresh inventory and retry.`,
+          );
+        }
+        inventoryId = linkedUnit?.status === "on_hand"
+          ? (await mutateFrameUnit(linkedUnit.id, "on_hand", "reserved")).id
+          : (await reserveFrameUnit(frame.canonicalUrl)).id;
+      } else if (linkedUnitReserved && frame.inventoryId) {
+        await mutateFrameUnit(frame.inventoryId, ["reserved", "outbound", "at_lab", "inbound"], "on_hand");
+        if (!inventoryCase) inventoryId = undefined;
+      } else if (inventoryCase && !frame.inventoryId) {
+        const unit = oldestOnHandUnit(frameInventoryUnits, frame.canonicalUrl);
+        if (!unit) throw new Error("No on-hand inventory unit is available for the attached frame.");
+        inventoryId = unit.id;
+      } else if (!inventoryCase) {
+        inventoryId = undefined;
+      }
+      assertFrameInventoryAssignment(
+        nextCapture.frameSource,
+        nextCapture.frameOwnership,
+        inventoryId,
+      );
+      // FSRC 3 + in-house stays aggregate before receipt; a later slice links it to a Stock Order.
+      setChargeLines((current) => current.map((line) =>
+        line.id === attachedLine.id && line.frame
+          ? { ...line, frame: { ...line.frame, inventoryId } }
+          : line));
+      setLabOrderCapture((current) => ({
+        ...current,
+        frameSource: nextCapture.frameSource,
+        frameOwnership: nextCapture.frameOwnership,
+      }));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setFrameDispenseBusy(false);
+    }
+  }
+
+  async function mutateFrameUnit(
+    unitId: string,
+    fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
+    toStatus: FrameInventoryUnitStatus,
+  ): Promise<PracticeFrameInventoryUnit> {
+    try {
+      const updated = await transitionFrameUnit(unitId, fromStatuses, toStatus);
+      setFrameInventoryUnits((current) =>
+        current.map((candidate) => candidate.id === updated.id ? updated : candidate));
+      return updated;
+    } catch (cause) {
+      try {
+        const refreshed = await loadFrameInventoryUnits();
+        setFrameInventoryUnits([...refreshed.units]);
+        setSkippedFrameUnitCount(refreshed.skippedCount);
+      } catch (refreshCause) {
+        console.warn("Frame inventory refresh after a failed transition was unsuccessful.", refreshCause);
+      }
+      throw cause;
+    }
+  }
+
+  async function reserveFrameUnit(canonicalUrl: string): Promise<PracticeFrameInventoryUnit> {
+    const unit = oldestOnHandUnit(frameInventoryUnits, canonicalUrl);
+    if (!unit) {
+      throw new Error("No on-hand inventory unit is available for the attached frame.");
+    }
+    return mutateFrameUnit(unit.id, "on_hand", "reserved");
+  }
+
+  async function transitionAttachedFrameUnit(
+    fromStatuses: FrameInventoryUnitStatus | readonly FrameInventoryUnitStatus[],
+    toStatus: FrameInventoryUnitStatus,
+  ): Promise<PracticeFrameInventoryUnit | undefined> {
+    const inventoryId = chargeLines.find((line) => line.frame?.inventoryId)?.frame?.inventoryId;
+    return inventoryId ? mutateFrameUnit(inventoryId, fromStatuses, toStatus) : undefined;
+  }
+
+  async function releaseAttachedFrameUnit(): Promise<void> {
+    await transitionAttachedFrameUnit(
+      ["reserved", "outbound", "at_lab", "inbound"],
+      "on_hand",
+    );
   }
 
   function updateTreatment(index: number, value: string) {
@@ -397,14 +533,33 @@ export function OpticalOrder({
 
   async function changeOrderStatus(next: OpticalOrderStatusCode) {
     setError(null);
-    if (createdTaskId) {
-      if (!canTransitionOpticalOrderStatus(header.orderStatus, next)) {
-        setError(`Optical order status "${header.orderStatus}" is terminal.`);
-        return;
-      }
-      await transitionOpticalOrderStatus(createdTaskId, next);
+    if (next === header.orderStatus) return;
+    if (createdTaskId && !canTransitionOpticalOrderStatus(header.orderStatus, next)) {
+      setError(`Optical order status "${header.orderStatus}" is terminal.`);
+      return;
     }
-    setHeader((current) => ({ ...current, orderStatus: next }));
+    try {
+      if (next === "at-lab") {
+        await transitionAttachedFrameUnit(["reserved", "outbound"], "at_lab");
+      } else if (next === "dispensed") {
+        await transitionAttachedFrameUnit(
+          ["on_hand", "reserved", "outbound", "at_lab", "inbound"],
+          "dispensed",
+        );
+      } else if (next === "cancelled") {
+        await releaseAttachedFrameUnit();
+      }
+      if (createdTaskId) {
+        await transitionOrderStatus(createdTaskId, next);
+      }
+      setHeader((current) => ({ ...current, orderStatus: next }));
+      if (next === "dispensed") {
+        setChargeLines((current) => current.map((line) =>
+          line.frame?.inventoryId ? { ...line, dispensed: true } : line));
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
   }
 
   function applyDiscount() {
@@ -422,21 +577,44 @@ export function OpticalOrder({
     );
   }
 
-  function attachFrame(match: FramePosLookupMatch) {
-    if (!selectedCharge || selectedCharge.frame) return;
-    const attached = attachedFrameFromMatch(match, frameType);
-    setChargeLines((current) =>
-      current.map((line) =>
-        line.id === selectedCharge.id
-          ? {
-              ...line,
-              procedure: "V2020",
-              feeCents: match.inventory?.salePriceCents ?? line.feeCents,
-              frame: attached,
-            }
-          : line,
-      ),
-    );
+  async function attachFrame(match: FramePosLookupMatch) {
+    if (!selectedCharge || selectedCharge.frame || frameDispenseBusy) return;
+    setFrameDispenseBusy(true);
+    setError(null);
+    try {
+      const attached = attachedFrameFromMatch(match, frameType);
+      const practiceInventoryFrame = frameSourceUsesPracticeInventory(
+        labOrderCapture.frameSource,
+        labOrderCapture.frameOwnership,
+      );
+      const linkedUnit = practiceInventoryFrame
+        ? await reserveFrameUnit(attached.canonicalUrl)
+        : undefined;
+      if (practiceInventoryFrame && !linkedUnit) {
+        throw new Error("No on-hand inventory unit is available for the attached frame.");
+      }
+      assertFrameInventoryAssignment(
+        labOrderCapture.frameSource,
+        labOrderCapture.frameOwnership,
+        linkedUnit?.id,
+      );
+      setChargeLines((current) =>
+        current.map((line) =>
+          line.id === selectedCharge.id
+            ? {
+                ...line,
+                procedure: "V2020",
+                feeCents: match.inventory?.salePriceCents ?? line.feeCents,
+                frame: { ...attached, ...(linkedUnit ? { inventoryId: linkedUnit.id } : {}) },
+              }
+            : line,
+        ),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setFrameDispenseBusy(false);
+    }
   }
 
   function attachLenses(selection: LensSelection) {
@@ -475,9 +653,13 @@ export function OpticalOrder({
 
   async function dispenseSelectedFrame() {
     if (!selectedCharge.frame || selectedCharge.dispensed || frameDispenseBusy) return;
-    const unit = oldestOnHandUnit(frameInventoryUnits, selectedCharge.frame.canonicalUrl);
+    const unit = selectedCharge.frame.inventoryId
+      ? frameInventoryUnits.find((candidate) => candidate.id === selectedCharge.frame?.inventoryId)
+      : oldestOnHandUnit(frameInventoryUnits, selectedCharge.frame.canonicalUrl);
     if (!unit) {
-      setError("No on-hand inventory unit is available for the attached frame.");
+      setError(selectedCharge.frame.inventoryId
+        ? "The reserved frame inventory unit is no longer available. Refresh inventory and retry."
+        : "No on-hand inventory unit is available for the attached frame.");
       return;
     }
     setFrameDispenseBusy(true);
@@ -510,6 +692,34 @@ export function OpticalOrder({
     }
   }
 
+  async function unattachSelectedFrame() {
+    if (!selectedCharge.frame || frameDispenseBusy) return;
+    const linkedUnit = selectedCharge.frame.inventoryId
+      ? frameInventoryUnits.find((unit) => unit.id === selectedCharge.frame?.inventoryId)
+      : undefined;
+    if (selectedCharge.dispensed || linkedUnit?.status === "dispensed") {
+      setError("This frame is already dispensed and cannot be returned to on-hand inventory.");
+      return;
+    }
+    setFrameDispenseBusy(true);
+    setError(null);
+    try {
+      if (selectedCharge.frame.inventoryId) {
+        await mutateFrameUnit(
+          selectedCharge.frame.inventoryId,
+          ["reserved", "outbound", "at_lab", "inbound"],
+          "on_hand",
+        );
+      }
+      setChargeLines((lines) => lines.map((line) =>
+        line.id === selectedCharge.id ? { ...line, frame: undefined, dispensed: false } : line));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setFrameDispenseBusy(false);
+    }
+  }
+
   function assembleLabOrderInput(): BuildLabOrderInput | null {
     setError(null);
     if (!patientReference) {
@@ -526,6 +736,16 @@ export function OpticalOrder({
     }
     if (!labOrderCapture.patientName.trim()) {
       setError("Patient name is required before printing a lab sheet.");
+      return null;
+    }
+    try {
+      assertFrameInventoryAssignment(
+        labOrderCapture.frameSource,
+        labOrderCapture.frameOwnership,
+        attachedLabFrame?.inventoryId,
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
       return null;
     }
 
@@ -605,6 +825,7 @@ export function OpticalOrder({
       });
       setLabOrderReference(result.labOrderReference);
       setLabTransportState(result.transportState);
+      await transitionAttachedFrameUnit("reserved", "outbound");
       setStatus(`Lab order ${result.labOrderReference} sent to ${input.lab}.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -620,6 +841,7 @@ export function OpticalOrder({
     try {
       const result = await advanceLabOrderTransport(labOrderReference, "received");
       setLabTransportState(result.transportState);
+      await transitionAttachedFrameUnit(["at_lab", "outbound"], "inbound");
       setStatus(`Lab order ${labOrderReference} marked received.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -635,6 +857,7 @@ export function OpticalOrder({
     try {
       const result = await cancelLabOrder(labOrderReference);
       setLabTransportState(result.transportState);
+      await releaseAttachedFrameUnit();
       setStatus(`Lab order ${labOrderReference} cancelled.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -783,16 +1006,13 @@ export function OpticalOrder({
             selectedCharge={selectedCharge}
             onCriteriaChange={setFrameCriteria}
             onFrameTypeChange={setFrameType}
-            onAttach={attachFrame}
+            onAttach={(match) => void attachFrame(match)}
             dispenseBusy={frameDispenseBusy}
             onDispense={() => void dispenseSelectedFrame()}
-            onUnattach={() =>
-              setChargeLines((lines) =>
-                lines.map((line) =>
-                  line.id === selectedCharge.id ? { ...line, frame: undefined, dispensed: false } : line,
-                ),
-              )
-            }
+            inventoryUnit={selectedCharge.frame?.inventoryId
+              ? frameInventoryUnits.find((unit) => unit.id === selectedCharge.frame?.inventoryId)
+              : undefined}
+            onUnattach={() => void unattachSelectedFrame()}
           />
           <QuickAdvancePanel
             currentStatus={header.orderStatus}
@@ -1396,6 +1616,7 @@ function FrameAttachPanel({
   onUnattach,
   dispenseBusy,
   onDispense,
+  inventoryUnit,
 }: {
   criteria: Record<FrameCriteriaKey, string>;
   frameType: string;
@@ -1408,6 +1629,7 @@ function FrameAttachPanel({
   onUnattach: () => void;
   dispenseBusy: boolean;
   onDispense: () => void;
+  inventoryUnit?: PracticeFrameInventoryUnit;
 }) {
   return (
     <section className="overflow-hidden rounded border border-white/10">
@@ -1447,7 +1669,7 @@ function FrameAttachPanel({
                 <ReadCell value={match.catalog.properties.dbl ?? ""} />
                 <ReadCell value={String(match.inventory?.onHandCount ?? 0)} />
                 <td className="border-r border-white/10 px-2 py-2">
-                  <button className="sidebar-button h-8 w-full py-1" disabled={locked} onClick={() => onAttach(match)}>
+                  <button className="sidebar-button h-8 w-full py-1" disabled={locked || dispenseBusy} onClick={() => onAttach(match)}>
                     Attach
                   </button>
                 </td>
@@ -1461,6 +1683,7 @@ function FrameAttachPanel({
           frame={selectedCharge.frame}
           dispensed={Boolean(selectedCharge.dispensed)}
           dispenseBusy={dispenseBusy}
+          inventoryUnit={inventoryUnit}
           onUnattach={onUnattach}
           onDispense={onDispense}
         />
@@ -1473,12 +1696,14 @@ function AttachedFramePanel({
   frame,
   dispensed,
   dispenseBusy,
+  inventoryUnit,
   onUnattach,
   onDispense,
 }: {
   frame: AttachedFrame;
   dispensed: boolean;
   dispenseBusy: boolean;
+  inventoryUnit?: PracticeFrameInventoryUnit;
   onUnattach: () => void;
   onDispense: () => void;
 }) {
@@ -1496,6 +1721,7 @@ function AttachedFramePanel({
     ["Temple", frame.temple],
     ["Frame Type", frame.frameType],
     ...(frame.inventoryId ? [["Inventory Unit", frame.inventoryId] as [string, string]] : []),
+    ...(inventoryUnit ? [["Inventory State", frameInventoryUnitStatusLabel(inventoryUnit.status)] as [string, string]] : []),
   ];
   return (
     <div className={`border-t border-white/10 p-3 ${dispensed ? "bg-emerald-950/20" : ""}`}>
@@ -1508,10 +1734,10 @@ function AttachedFramePanel({
         ))}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button className="sidebar-button" onClick={onUnattach}>
+        <button className="sidebar-button" disabled={dispenseBusy} onClick={onUnattach}>
           Unattach Frame
         </button>
-        <button className="sidebar-button" disabled={dispensed || dispenseBusy} onClick={onDispense}>
+        <button className="sidebar-button" disabled={dispensed || dispenseBusy || !frame.inventoryId} onClick={onDispense}>
           {dispensed ? "Dispensed" : dispenseBusy ? "Dispensing…" : "Dispense"}
         </button>
       </div>

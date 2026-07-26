@@ -16,7 +16,7 @@ import {
   type LabOrderBoardItem,
   type LabOrderBoardSummary,
 } from "../src/lib/lab-order-transport";
-import { FilterRail, OrdersBoard } from "../src/scenes/LabOrdersWorklist";
+import { FilterRail, InventoryJoinWarning, OrdersBoard } from "../src/scenes/LabOrdersWorklist";
 import type { LabOrder } from "../src/lib/optical-lab-order";
 import { RouteSwitch } from "../src/App";
 import { AppShell } from "../src/components/AppShell";
@@ -100,10 +100,15 @@ test("lab-order transport reports response status and server error", async () =>
   );
 });
 
-test("Orders board renders DCS frame source, ownership, status age, transmission fact, and contextual action", () => {
+test("Orders board renders frame source, ownership, inventory, status, and transmission as distinct facts", () => {
   const html = renderToStaticMarkup(
     <OrdersBoard
-      items={[boardItem()]}
+      items={[boardItem({
+        frameOwnership: "in-house",
+        inventoryUnitId: "unit-1",
+        inventoryStatus: "at_lab",
+        inventoryStatusLabel: "At Lab",
+      })]}
       onStatus={() => undefined}
       onFlag={async () => undefined}
       onResolve={() => undefined}
@@ -114,10 +119,18 @@ test("Orders board renders DCS frame source, ownership, status age, transmission
   assert.match(html, /Cherry Optical Lab/);
   assert.match(html, /Patient Example/);
   assert.match(html, /FRAME ENCLOSED/);
-  assert.match(html, /POF — PATIENT&#x27;S OWN/);
+  assert.match(html, /IN-HOUSE/);
+  assert.match(html, /INVENTORY · AT LAB/);
   assert.match(html, /Outbound/);
   assert.match(html, /At lab ✓/);
   assert.match(html, /print \+ mail/);
+});
+
+test("worklist warns when a missing inventory unit was skipped without hiding valid orders", () => {
+  const html = renderToStaticMarkup(<InventoryJoinWarning count={1} />);
+  assert.match(html, /Skipped 1 missing frame inventory unit/);
+  assert.match(html, /Orders with valid inventory remain available/);
+  assert.equal(renderToStaticMarkup(<InventoryJoinWarning count={0} />), "");
 });
 
 test("Orders board busy state matches the exact Task reference, not a string-prefix neighbor", () => {
@@ -218,6 +231,8 @@ function boardSummary(): LabOrderBoardSummary {
     items: [],
     counts,
     activeCount: 0,
+    unprojectableCount: 0,
+    skippedInventoryUnitCount: 0,
     alarms: { flaggedProblems: 0, atLabOverdue: 0, transmissionFailures: 0, receivedNotNotified: 0 },
     rollups: { preLab: 0, outbound: 0, atLab: 0, inbound: 0, notified: 0 },
     agingConfig: { outboundDays: 3, inboundDays: 3, atLabDays: 5, receivedNotifyHours: 24, notifiedRetryDays: 2, notifiedFollowUpDays: 7 },

@@ -3,6 +3,7 @@ import {
   canExportFrameCatalogCsv,
   dispenseFrameInventoryUnit,
   dollarsToCentsExact,
+  frameInventoryUnitStatusLabel,
   exportableFrameRows,
   loadFramesDataSubscriptionSettings,
   loadPracticeFrameInventoryUnits,
@@ -421,6 +422,7 @@ function InventoryTable({
             <th className="w-12 px-3 py-2" />
             <th className="px-3 py-2">Frame</th>
             <th className="w-24 px-3 py-2">On Hand</th>
+            <th className="w-36 px-3 py-2">Committed</th>
             <th className="w-20 px-3 py-2">Hold</th>
             <th className="w-24 px-3 py-2">Dispensed</th>
             <th className="w-40 px-3 py-2">Location</th>
@@ -448,6 +450,19 @@ function InventoryTable({
                   </td>
                   <td className="px-3 py-3">{catalogRow?.display ?? row.canonicalUrl}</td>
                   <td className="px-3 py-3 font-medium">{row.onHandCount}</td>
+                  <td className="px-3 py-3">
+                    <div className="font-medium">{row.committedCount}</div>
+                    {row.committedCount > 0 ? (
+                      <div className="text-xs text-[color:var(--odos-muted)]">
+                        {[
+                          row.reservedCount ? `${row.reservedCount} In office — not sent` : "",
+                          row.outboundCount ? `${row.outboundCount} Outbound` : "",
+                          row.atLabCount ? `${row.atLabCount} At Lab` : "",
+                          row.inboundCount ? `${row.inboundCount} Inbound` : "",
+                        ].filter(Boolean).join(" · ")}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-3">{row.holdCount}</td>
                   <td className="px-3 py-3">{row.dispensedCount}</td>
                   <td className="px-3 py-3">{row.location ?? ""}</td>
@@ -457,7 +472,7 @@ function InventoryTable({
                 </tr>
                 {expanded ? (
                   <tr className="border-t border-[color:var(--odos-line)] bg-[color:var(--odos-surface)]">
-                    <td colSpan={7} className="px-5 py-4">
+                    <td colSpan={8} className="px-5 py-4">
                       <table className="w-full text-left text-xs">
                         <thead className="text-[color:var(--odos-faint)]">
                           <tr>
@@ -472,7 +487,7 @@ function InventoryTable({
                             <tr key={unit.id} className="border-t border-[color:var(--odos-line)]">
                               <td className="py-2 font-mono">{unit.id}</td>
                               <td className="py-2">{unit.receivedAt}</td>
-                              <td className="py-2">{unit.status}</td>
+                              <td className="py-2">{frameInventoryUnitStatusLabel(unit.status)}</td>
                               <td className="py-2 text-right">
                                 {unit.status === "on_hand" ? (
                                   <button

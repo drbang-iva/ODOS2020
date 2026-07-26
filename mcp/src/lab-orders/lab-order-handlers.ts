@@ -1,13 +1,19 @@
-import type { Bundle, Resource, Task } from "@medplum/fhirtypes";
+import type { Basic, Bundle, Resource, Task } from "@medplum/fhirtypes";
 import type { OdosActorRole } from "../authz/odosAudit.js";
 import { assertLabTransportState, type LabTransportState } from "../fhir/labTransportState.js";
-import { assertLabOrderFrameSource, renderLabOrderSheet, type LabOrder } from "../fhir/opticalLabOrder.js";
+import {
+  assertLabOrderFrameInventoryId,
+  assertLabOrderFrameSource,
+  renderLabOrderSheet,
+  type LabOrder,
+} from "../fhir/opticalLabOrder.js";
 import {
   assertLabOrderNotificationReason,
   assertLabOrderProblemReason,
   assertLabOrderStatus,
   backfilledLabOrderStatusRecord,
   flagLabOrderProblem,
+  frameInventoryStatusFromBasic,
   projectLabOrderBoard,
   resolveLabOrderProblem,
   setLabOrderStatus,
@@ -297,7 +303,32 @@ export async function handleLabOrderWorklistRequest(
       return badRequest("Lab-order worklist exceeded one FHIR page; no partial worklist was returned.");
     }
     const tasks = resources(bundle).filter(isLabOrderTransmissionTask);
-    const board = projectLabOrderBoard(tasks, now(deps), deps.agingConfig);
+    const inventoryIds = [...new Set(tasks.flatMap((task) => {
+      try {
+        const inventoryId = storedLabOrderExport(task).order.frame?.inventoryId;
+        return inventoryId ? [inventoryId] : [];
+      } catch {
+        return [];
+      }
+    }))];
+    const inventoryEntries = await Promise.all(inventoryIds.map(async (inventoryId) => {
+      try {
+        const unit = await authenticated.staff.fhir.read<Basic>("Basic", inventoryId);
+        return [inventoryId, frameInventoryStatusFromBasic(unit)] as const;
+      } catch (error) {
+        if (isNotFound(error)) return undefined;
+        throw error;
+      }
+    }));
+    const inventoryStatuses = new Map(inventoryEntries.flatMap((entry) => entry ? [entry] : []));
+    const skippedInventoryUnitCount = inventoryEntries.length - inventoryStatuses.size;
+    const board = projectLabOrderBoard(
+      tasks,
+      now(deps),
+      deps.agingConfig,
+      inventoryStatuses,
+      skippedInventoryUnitCount,
+    );
     return {
       status: 200,
       body: state === undefined ? board : { ...board, items: board.items.filter((item) => item.status === state) },
@@ -385,6 +416,7 @@ function isLabOrder(value: unknown): value is LabOrder {
     && typeof order.frameSource === "number")) return false;
   try {
     assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
+    assertLabOrderFrameInventoryId(order);
     return true;
   } catch {
     return false;
@@ -415,6 +447,13 @@ function conflict(error: string): LabOrderHandlerResult {
 function isVersionConflict(error: unknown): boolean {
   const status = (error as { status?: unknown })?.status;
   return status === 409 || status === 412 || /FHIR (409|412)\b/.test(messageOf(error));
+}
+
+function isNotFound(error: unknown): boolean {
+  return typeof error === "object"
+    && error !== null
+    && "status" in error
+    && error.status === 404;
 }
 
 function messageOf(error: unknown): string {

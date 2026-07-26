@@ -1,6 +1,7 @@
-import type { Task } from "@medplum/fhirtypes";
+import type { Basic, Task } from "@medplum/fhirtypes";
 import {
   LAB_ORDER_FRAME_SOURCE_LABELS,
+  assertLabOrderFrameInventoryId,
   assertLabOrderFrameSource,
   type LabOrderFrameOwnership,
   type LabOrderFrameSource,
@@ -26,7 +27,6 @@ export const LAB_ORDER_STATUSES = [
 export type LabOrderStatus = (typeof LAB_ORDER_STATUSES)[number];
 export type LabOrderNotificationReason = "reached" | "left-message" | "unable";
 export type LabOrderProblemReason = "lab-lost" | "lab-breakage-remake" | "cannot-locate" | "other";
-
 export interface LabOrderStatusHistoryEntry {
   status: LabOrderStatus;
   enteredAt: string;
@@ -94,6 +94,22 @@ const PROBLEM_LABELS: Record<LabOrderProblemReason, string> = {
   other: "Other",
 };
 
+export const FRAME_INVENTORY_STATUS_LABELS = {
+  on_hand: "On hand",
+  reserved: "In office — not sent",
+  outbound: "Outbound",
+  at_lab: "At Lab",
+  inbound: "Inbound",
+  hold: "Hold",
+  dispensed: "Dispensed",
+} as const;
+
+export type FrameInventoryUnitStatus = keyof typeof FRAME_INVENTORY_STATUS_LABELS;
+
+const FRAME_INVENTORY_UNIT_STATUS_URL =
+  "https://odos2020.com/fhir/StructureDefinition/unit-status";
+const BASIC_KIND_SYSTEM = "https://odos2020.com/fhir/CodeSystem/basic-kind";
+
 export interface LabOrderBoardItem {
   reference: string;
   orderId: string;
@@ -105,6 +121,9 @@ export interface LabOrderBoardItem {
   frameSource?: LabOrderFrameSource;
   frameSourceLabel: string;
   frameOwnership?: LabOrderFrameOwnership;
+  inventoryUnitId?: string;
+  inventoryStatus?: FrameInventoryUnitStatus;
+  inventoryStatusLabel?: string;
   status: LabOrderStatus;
   statusLabel: string;
   notificationReason?: LabOrderNotificationReason;
@@ -125,6 +144,7 @@ export interface LabOrderBoardSummary {
   counts: Record<LabOrderStatus, number>;
   activeCount: number;
   unprojectableCount: number;
+  skippedInventoryUnitCount: number;
   alarms: {
     flaggedProblems: number;
     atLabOverdue: number;
@@ -312,6 +332,8 @@ export function projectLabOrderBoard(
   tasks: readonly Task[],
   now: string,
   agingConfig: LabOrderAgingConfig = DEFAULT_LAB_ORDER_AGING_CONFIG,
+  inventoryStatusById: ReadonlyMap<string, FrameInventoryUnitStatus> = new Map(),
+  skippedInventoryUnitCount = 0,
 ): LabOrderBoardSummary {
   const nowMs = Date.parse(now);
   if (!Number.isFinite(nowMs)) throw new Error(`Invalid board projection instant "${now}".`);
@@ -334,6 +356,10 @@ export function projectLabOrderBoard(
       const openFlag = [...record.problemFlags].reverse().find((flag) => !flag.resolvedAt);
       const stored = storedOrderFromTask(task);
       const frameSource = stored.frameSource;
+      const inventoryUnitId = stored.frame?.inventoryId;
+      const inventoryStatus = inventoryUnitId
+        ? inventoryStatusById.get(inventoryUnitId)
+        : undefined;
       const warningReached = thresholds.warningMinutes !== undefined && ageMinutes >= thresholds.warningMinutes;
       const overdue = thresholds.limitMinutes !== undefined && ageMinutes >= thresholds.limitMinutes;
       const needsAction = Boolean(openFlag)
@@ -353,6 +379,13 @@ export function projectLabOrderBoard(
         ...(frameSource !== undefined ? { frameSource } : {}),
         frameSourceLabel: frameSource === undefined ? "FSRC unavailable" : LAB_ORDER_FRAME_SOURCE_LABELS[frameSource],
         ...(stored.frameOwnership ? { frameOwnership: stored.frameOwnership } : {}),
+        ...(inventoryUnitId ? { inventoryUnitId } : {}),
+        ...(inventoryStatus
+          ? {
+              inventoryStatus,
+              inventoryStatusLabel: FRAME_INVENTORY_STATUS_LABELS[inventoryStatus],
+            }
+          : {}),
         status: record.currentStatus,
         statusLabel: STATUS_LABELS[record.currentStatus],
         ...(currentEntry.notificationReason ? { notificationReason: currentEntry.notificationReason } : {}),
@@ -377,6 +410,7 @@ export function projectLabOrderBoard(
     counts,
     activeCount,
     unprojectableCount,
+    skippedInventoryUnitCount,
     alarms: {
       flaggedProblems: items.filter((item) => item.openFlag).length,
       atLabOverdue: items.filter((item) => isAtLabStatus(item.status) && item.overdue).length,
@@ -428,7 +462,7 @@ function transmissionFact(state: LabTransportState): LabOrderBoardItem["transmis
 function storedOrderFromTask(task: Task): {
   header: { orderId: string; patientName: string; patientRef?: string; lab: string };
   lensSpec: { lensDesign?: string; lensMaterial?: string };
-  frame?: { brand?: string; model?: string };
+  frame?: { inventoryId?: string; brand?: string; model?: string };
   frameSource?: LabOrderFrameSource;
   frameOwnership?: LabOrderFrameOwnership;
 } {
@@ -455,7 +489,21 @@ function storedOrderFromTask(task: Task): {
   } else {
     assertLabOrderFrameSource(order.frameSource, order.frameOwnership);
   }
+  assertLabOrderFrameInventoryId(order);
   return order;
+}
+
+export function frameInventoryStatusFromBasic(resource: Basic): FrameInventoryUnitStatus {
+  if (!resource.code.coding?.some((coding) =>
+    coding.system === BASIC_KIND_SYSTEM && coding.code === "practice-frame-inventory-unit")) {
+    throw new Error(`Basic/${resource.id ?? "(missing-id)"} is not a frame inventory unit.`);
+  }
+  const status = resource.extension?.find((entry) =>
+    entry.url === FRAME_INVENTORY_UNIT_STATUS_URL)?.valueString;
+  if (!isFrameInventoryUnitStatus(status)) {
+    throw new Error(`Basic/${resource.id ?? "(missing-id)"} has an invalid frame inventory unit status.`);
+  }
+  return status;
 }
 
 function transportStateFromTask(task: Task): LabTransportState {
@@ -505,6 +553,11 @@ function isLabOrderStatusRecord(value: unknown): value is LabOrderStatusRecord {
   } catch {
     return false;
   }
+}
+
+function isFrameInventoryUnitStatus(value: unknown): value is FrameInventoryUnitStatus {
+  return typeof value === "string"
+    && Object.prototype.hasOwnProperty.call(FRAME_INVENTORY_STATUS_LABELS, value);
 }
 
 function isAtLabStatus(status: LabOrderStatus): boolean {

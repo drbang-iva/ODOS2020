@@ -80,6 +80,7 @@ export function LabOrdersWorklist() {
           <span>{dateLabel()} · {summary?.activeCount ?? "…"} active</span>
         </div>
         {error && <div role="alert" className="odos-orders-error">{error}</div>}
+        {summary && <InventoryJoinWarning count={summary.skippedInventoryUnitCount} />}
         {summary && <AlarmStrip summary={summary} setFilter={setFilter} />}
         {summary && <FilterRail summary={summary} filter={filter} setFilter={setFilter} />}
         {loading && !summary
@@ -102,6 +103,15 @@ export function LabOrdersWorklist() {
         </div>
       </section>
     </main>
+  );
+}
+
+export function InventoryJoinWarning({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <div role="alert" className="odos-orders-error">
+      Skipped {count} missing frame inventory unit{count === 1 ? "" : "s"}. Orders with valid inventory remain available.
+    </div>
   );
 }
 
@@ -199,7 +209,7 @@ function OrderRow({ item, busy, onStatus, onFlag, onResolve, onPrint }: {
     <div className={`odos-orders-row${item.openFlag ? " is-flagged" : item.needsAction ? " is-alarm" : ""}`}>
       <span className="odos-orders-id">#{item.orderId}</span>
       <span className="odos-orders-who">{item.patientName}</span>
-      <span className="odos-orders-what">{item.frame} · {item.lenses}<small><i>{item.frameSourceLabel.toUpperCase()}</i>{item.frameOwnership && <i className={item.frameOwnership === "patients-own" ? "is-pof" : ""}>{item.frameOwnership === "patients-own" ? "POF — PATIENT'S OWN" : "IN-HOUSE"}</i>}</small></span>
+      <span className="odos-orders-what">{item.frame} · {item.lenses}<small><i>{item.frameSourceLabel.toUpperCase()}</i>{item.frameOwnership && <i className={item.frameOwnership === "patients-own" ? "is-pof" : ""}>{item.frameOwnership === "patients-own" ? "POF — PATIENT'S OWN" : "IN-HOUSE"}</i>}{item.inventoryStatusLabel && <i>INVENTORY · {item.inventoryStatusLabel.toUpperCase()}</i>}</small></span>
       <span className="odos-orders-lab">{item.lab}</span>
       <span><StatusChip item={item} /></span>
       <span className={`odos-orders-age${item.overdue ? " is-hot" : item.needsAction ? " is-warm" : ""}`}>{ageLabel(item.ageMinutes)}<small>{ageDetail(item)}</small></span>
