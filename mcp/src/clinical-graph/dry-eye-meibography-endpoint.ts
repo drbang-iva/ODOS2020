@@ -69,6 +69,11 @@ const listSchema = z.object({
   patient: z.string().regex(/^Patient\/[^/]+$/),
 }).strict();
 
+const imageSchema = z.object({
+  patient: z.string().regex(/^Patient\/[^/]+$/),
+  document: z.string().regex(/^DocumentReference\/[^/]+$/),
+}).strict();
+
 export async function handleDryEyeMeibographyCaptureRequest(
   deps: DryEyeMeibographyEndpointDeps,
   input: { authHeader: string | undefined; body: unknown },
@@ -88,33 +93,47 @@ export async function handleDryEyeMeibographyCaptureRequest(
     };
   }
   const recordedAt = deps.now?.() ?? new Date().toISOString();
+  let documentReferenceInput: DocumentReference;
+  let observationInput: Observation;
+  try {
+    documentReferenceInput = buildDocumentReference({
+      patientReference: parsed.data.patientReference,
+      encounterReference: parsed.data.encounterReference,
+      contentType: parsed.data.file.contentType,
+      data: parsed.data.file.data,
+      title: parsed.data.file.name,
+      categoryCode: "MEIBOGRAPHY_IMAGE",
+      typeCode: "MEIBOGRAPHY_IMAGE",
+      creation: recordedAt,
+    });
+    observationInput = buildMeibographyObservation({
+      patientReference: parsed.data.patientReference,
+      encounterReference: parsed.data.encounterReference,
+      documentReference: "DocumentReference/pending",
+      eye: parsed.data.eye,
+      lid: parsed.data.lid,
+      scoringSystem: parsed.data.scoringSystem,
+      totalScore: parsed.data.totalScore,
+      glandScores: parsed.data.glandScores,
+      effectiveDateTime: recordedAt,
+    });
+  } catch (error) {
+    return {
+      status: 400,
+      body: { error: error instanceof Error ? error.message : String(error) },
+    };
+  }
   try {
     const documentReference = await staff.fhir.create<DocumentReference>(
-      buildDocumentReference({
-        patientReference: parsed.data.patientReference,
-        encounterReference: parsed.data.encounterReference,
-        contentType: parsed.data.file.contentType,
-        data: parsed.data.file.data,
-        title: parsed.data.file.name,
-        categoryCode: "MEIBOGRAPHY_IMAGE",
-        typeCode: "MEIBOGRAPHY_IMAGE",
-        creation: recordedAt,
-      }),
+      documentReferenceInput,
       WRITE_HEADERS,
     );
     const documentReferenceId = requiredId(documentReference, "DocumentReference");
     const observation = await staff.fhir.create<Observation>(
-      buildMeibographyObservation({
-        patientReference: parsed.data.patientReference,
-        encounterReference: parsed.data.encounterReference,
-        documentReference: `DocumentReference/${documentReferenceId}`,
-        eye: parsed.data.eye,
-        lid: parsed.data.lid,
-        scoringSystem: parsed.data.scoringSystem,
-        totalScore: parsed.data.totalScore,
-        glandScores: parsed.data.glandScores,
-        effectiveDateTime: recordedAt,
-      }),
+      {
+        ...observationInput,
+        derivedFrom: [reference(`DocumentReference/${documentReferenceId}`)],
+      },
       WRITE_HEADERS,
     );
     const observationId = requiredId(observation, "Observation");
@@ -143,8 +162,12 @@ export async function handleDryEyeMeibographyCaptureRequest(
     };
   } catch (error) {
     return {
-      status: 400,
-      body: { error: error instanceof Error ? error.message : String(error) },
+      status: 502,
+      body: {
+        error: `Meibography persistence failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
     };
   }
 }
@@ -182,9 +205,15 @@ export async function handleDryEyeMeibographyListRequest(
     const id = documentReference?.startsWith("DocumentReference/")
       ? documentReference.slice("DocumentReference/".length)
       : undefined;
-    const document = id
-      ? await staff.fhir.read<DocumentReference>("DocumentReference", id)
-      : undefined;
+    let document: DocumentReference | undefined;
+    if (id) {
+      try {
+        document = await staff.fhir.read<DocumentReference>("DocumentReference", id);
+      } catch {
+        document = undefined;
+      }
+    }
+    const attachment = document?.content?.[0]?.attachment;
     return {
       observationReference: observation.id
         ? `Observation/${observation.id}`
@@ -197,17 +226,78 @@ export async function handleDryEyeMeibographyListRequest(
       scoringSystem: observation.code.coding?.[0]?.code?.startsWith("arita")
         ? "arita"
         : "meiboscore",
-      contentType: document?.content?.[0]?.attachment.contentType,
-      data: document?.content?.[0]?.attachment.data,
-      title: document?.content?.[0]?.attachment.title,
+      contentType: attachment?.contentType,
+      title: attachment?.title,
+      size: attachment?.size,
+      ...(documentReference && document
+        ? {
+            imageUrl: meibographyImageUrl(
+              parsed.data.patient,
+              documentReference,
+            ),
+          }
+        : { imageUnavailable: true }),
     };
   }));
   return { status: 200, body: { rows } };
 }
 
+export async function handleDryEyeMeibographyImageRequest(
+  deps: DryEyeMeibographyEndpointDeps,
+  input: { authHeader: string | undefined; query: unknown },
+): Promise<{ status: number; body: unknown }> {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) {
+    return { status: 401, body: { error: "Authentication required to read meibography." } };
+  }
+  if (!staffMay(staff.actorRole, "chart.read")) {
+    return { status: 403, body: { error: "chart.read role required" } };
+  }
+  const parsed = imageSchema.safeParse(input.query);
+  if (!parsed.success) {
+    return { status: 400, body: { error: "Valid Patient and DocumentReference values are required." } };
+  }
+  const id = parsed.data.document.slice("DocumentReference/".length);
+  try {
+    const document = await staff.fhir.read<DocumentReference>("DocumentReference", id);
+    if (document.subject?.reference !== parsed.data.patient) {
+      return { status: 404, body: { error: "Meibography image not found." } };
+    }
+    const attachment = document.content?.[0]?.attachment;
+    if (!attachment?.data || !attachment.contentType) {
+      return { status: 404, body: { error: "Meibography image data not found." } };
+    }
+    return {
+      status: 200,
+      body: {
+        contentType: attachment.contentType,
+        data: attachment.data,
+        title: attachment.title,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return /not found|404/i.test(message)
+      ? { status: 404, body: { error: "Meibography image not found." } }
+      : { status: 502, body: { error: `Meibography image read failed: ${message}` } };
+  }
+}
+
 function requiredId(resource: Resource, resourceType: string): string {
   if (!resource.id) throw new Error(`${resourceType} create response did not include an id.`);
   return resource.id;
+}
+
+function meibographyImageUrl(
+  patientReference: string,
+  documentReference: string,
+): string {
+  return `/clinical-graph/dry-eye/meibography/image?${
+    new URLSearchParams({
+      patient: patientReference,
+      document: documentReference,
+    })
+  }`;
 }
 
 function isStrictBase64(value: string): boolean {

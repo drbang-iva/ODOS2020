@@ -226,18 +226,19 @@ function CustomFieldControl({ field, value, onChange }: {
     field.max !== undefined ? `max ${field.max}` : "",
     field.step !== undefined ? `step ${field.step}` : "",
   ].filter(Boolean).join(" · ");
+  const toggleValue = field.options?.[0]?.code ?? "true";
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
       {field.inputControl === "toggle" ? (
-        <label className="flex h-11 items-center gap-3 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white/75">
+        <label className="flex h-11 items-center gap-3 rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-muted)]">
           <input
             type="checkbox"
-            checked={value === field.options?.[0]?.code}
-            onChange={(event) => onChange(event.target.checked ? field.options?.[0]?.code ?? "true" : "")}
+            checked={value === toggleValue}
+            onChange={(event) => onChange(event.target.checked ? toggleValue : "")}
             className="accent-brand"
           />
-          {value === field.options?.[0]?.code ? "Yes" : "No"}
+          {value === toggleValue ? "Yes" : "No"}
         </label>
       ) : field.inputControl === "date" ? (
         <input

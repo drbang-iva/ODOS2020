@@ -108,6 +108,7 @@ import {
 } from "./clinical-graph/imaging-endpoint.js";
 import {
   handleDryEyeMeibographyCaptureRequest,
+  handleDryEyeMeibographyImageRequest,
   handleDryEyeMeibographyListRequest,
 } from "./clinical-graph/dry-eye-meibography-endpoint.js";
 import {
@@ -5619,6 +5620,10 @@ async function main(): Promise<void> {
         "/clinical-graph/longitudinal-imaging",
         express.json({ type: LONGITUDINAL_IMAGING_CONTENT_TYPE, limit: "21mb" }),
       );
+      app.use(
+        "/clinical-graph/dry-eye/meibography",
+        express.json({ limit: "21mb" }),
+      );
       app.use(express.urlencoded({ extended: false, limit: "64kb" }));
       app.use(express.json({ limit: "4mb" }));
       app.use((req, res, next) => {
@@ -6444,6 +6449,20 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: meibography list failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "meibography list failed" });
+        }
+      });
+
+      app.get("/clinical-graph/dry-eye/meibography/image", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleDryEyeMeibographyImageRequest(
+            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: meibography image failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "meibography image failed" });
         }
       });
 
