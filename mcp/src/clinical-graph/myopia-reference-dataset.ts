@@ -47,6 +47,7 @@ export interface PercentileBandsDataset {
   version: string;
   citation: string;
   populationNote: string;
+  medianRepresentsHealthy: boolean;
   populationsCovered: ReferencePopulation[];
   sexStratified: boolean;
   ageRangeMin: number;
@@ -62,6 +63,7 @@ export interface ProjectionRegressionDataset {
   version: string;
   citation: string;
   populationNote: string;
+  medianRepresentsHealthy: boolean;
   populationsCovered: ReferencePopulation[];
   sexStratified: boolean;
   ageRangeMin: number;
@@ -314,6 +316,9 @@ function assertDataset(dataset: ReferenceDataset): void {
   requiredString(dataset.version, "version");
   requiredString(dataset.citation, "citation");
   requiredString(dataset.populationNote, "populationNote");
+  if (typeof dataset.medianRepresentsHealthy !== "boolean") {
+    throw new Error("Reference dataset medianRepresentsHealthy must be boolean.");
+  }
   if (!Array.isArray(dataset.populationsCovered) || dataset.populationsCovered.length === 0) {
     throw new Error("Reference dataset populationsCovered must be non-empty.");
   }

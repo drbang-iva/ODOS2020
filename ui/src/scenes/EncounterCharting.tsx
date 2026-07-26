@@ -90,7 +90,7 @@ export function EncounterCharting({ patient, encounterId }: Props) {
     void loadCatalog();
   }, []);
 
-  async function loadEyeGrowthVisibility() {
+  async function loadEyeGrowthVisibility(signal?: { cancelled: boolean }) {
     try {
       const patientReference = `Patient/${patient.id}`;
       const response = await fetch(
@@ -99,15 +99,21 @@ export function EncounterCharting({ patient, encounterId }: Props) {
       );
       const body = await response.json() as { defaultVisible?: boolean; error?: string };
       if (!response.ok) throw new Error(body.error ?? `Eye-growth visibility failed: ${response.status}`);
+      if (signal?.cancelled) return;
       setEyeGrowthDefaultVisible(body.defaultVisible === true);
     } catch (caught) {
+      if (signal?.cancelled) return;
       console.error("Eye-growth visibility unavailable; section remains available on demand.", caught);
       setEyeGrowthDefaultVisible(false);
     }
   }
 
   useEffect(() => {
-    void loadEyeGrowthVisibility();
+    const signal = { cancelled: false };
+    void loadEyeGrowthVisibility(signal);
+    return () => {
+      signal.cancelled = true;
+    };
   }, [patient.id]);
 
   useEffect(() => {

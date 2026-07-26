@@ -67,7 +67,6 @@ test("accepted He Table 4 seed satisfies transcription invariants V1-V5", () => 
   assert.equal(dataset.payload.type, "TABULATED_BANDS");
   const results = evaluateTranscriptionInvariants(dataset);
   for (const result of results) {
-    console.log(`${result.invariant}: checks=${result.checks} violations=${result.violations.length}`);
     assert.deepEqual(result.violations, []);
   }
   assert.deepEqual(
@@ -101,7 +100,6 @@ test("supplied Truckenbrod seed transcribes all 40 values and satisfies per-year
   });
   const results = evaluateTranscriptionInvariants(dataset);
   for (const result of results) {
-    console.log(`Truckenbrod ${result.invariant}: checks=${result.checks} violations=${result.violations.length}`);
     assert.deepEqual(result.violations, []);
   }
   assert.deepEqual(
@@ -116,6 +114,7 @@ test("registry accepts LMS parameters but provider leaves LMS evaluation unavail
     version: "1.0.0",
     citation: "Synthetic schema fixture.",
     populationNote: "Synthetic schema fixture; not for clinical use.",
+    medianRepresentsHealthy: false,
     populationsCovered: ["CAUCASIAN"],
     sexStratified: true,
     ageRangeMin: 4,
@@ -151,6 +150,12 @@ test("registry accepts LMS parameters but provider leaves LMS evaluation unavail
       payload: { type: "UNKNOWN_PAYLOAD", percentiles: [], tables: {} },
     } as never]),
     /Unsupported percentile payload type UNKNOWN_PAYLOAD/,
+  );
+  const withoutMedianSemantics = { ...dataset } as Partial<PercentileBandsDataset>;
+  delete withoutMedianSemantics.medianRepresentsHealthy;
+  assert.throws(
+    () => new ReferenceDatasetRegistry([withoutMedianSemantics as PercentileBandsDataset]),
+    /medianRepresentsHealthy must be boolean/,
   );
 });
 
@@ -215,11 +220,13 @@ test("Eye Growth defaults visible only inside the active dataset's declared age 
     assert.equal(body.defaultVisible, expected);
     assert.equal(body.ageRangeMin, ageRangeMin);
     assert.equal(body.ageRangeMax, ageRangeMax);
-    console.log(
-      `visibility: age=${body.currentAgeInYears.toFixed(2)} range=${ageRangeMin}-${ageRangeMax} default=${body.defaultVisible}`,
-    );
   }
-  const notRepresented = endpointFixture("NOT_REPRESENTED");
+  const notRepresentedRegistry = new ReferenceDatasetRegistry([
+    syntheticTabulatedDataset(6, 15, "AXIAL_LENGTH"),
+  ]);
+  const notRepresented = endpointFixture("NOT_REPRESENTED", {
+    referenceDatasetRegistry: notRepresentedRegistry,
+  });
   const visibility = await handleEyeGrowthVisibilityRequest(notRepresented.deps, {
     authHeader: AUTH,
     query: { patient: PATIENT_REFERENCE },
@@ -403,7 +410,6 @@ test("reference-population migration succeeds on fresh and populated Postgres da
           );
           assert.equal(existing.rows[0]?.display_name, "Synthetic Existing Patient");
         }
-        console.log(`migration fixture: ${index === 0 ? "fresh" : "populated"} database passed`);
       } finally {
         await store.close();
         await probe.end().catch(() => undefined);
@@ -493,6 +499,7 @@ function syntheticTabulatedDataset(
     version: "1.0.0",
     citation: "Synthetic regression fixture.",
     populationNote: "Synthetic regression fixture; not for clinical use.",
+    medianRepresentsHealthy: false,
     populationsCovered: ["ASIAN"],
     sexStratified: true,
     ageRangeMin,

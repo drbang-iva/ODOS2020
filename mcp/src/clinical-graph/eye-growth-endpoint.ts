@@ -89,6 +89,7 @@ export interface MyopiaProgressionHistoryResponse {
     version: string;
     citation: string;
     populationNote: string;
+    medianRepresentsHealthy: boolean;
     ageRangeMin: number;
     ageRangeMax: number;
     percentiles: number[];
@@ -487,6 +488,7 @@ function buildReferenceDataset(
   return identity && first
     ? {
         ...identity,
+        medianRepresentsHealthy: dataset.medianRepresentsHealthy,
         ageRangeMin: dataset.ageRangeMin,
         ageRangeMax: dataset.ageRangeMax,
         percentiles: first.bands.map((band) => band.percentile),

@@ -170,22 +170,25 @@ function SpineGroup({ label, sections, active, statuses, open, onToggle, onSelec
             <button
               type="button"
               className="flex min-h-8 w-full items-center justify-between rounded border border-dashed border-[color:var(--odos-line)] px-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--odos-muted)] transition hover:border-[color:var(--odos-line-2)] hover:text-[color:var(--odos-text)]"
+              aria-controls={`${panelId}-on-demand`}
               aria-expanded={showOnDemand}
               onClick={() => setShowOnDemand((current) => !current)}
             >
               <span>Available on demand</span>
               <span aria-hidden>{showOnDemand ? "−" : "+"}</span>
             </button>
-            {showOnDemand && onDemandSections.map((section, index) => (
-              <SpineRow
-                key={section.id}
-                section={section}
-                previousSection={onDemandSections[index - 1]}
-                active={active}
-                statuses={statuses}
-                onSelect={onSelect}
-              />
-            ))}
+            <div id={`${panelId}-on-demand`} hidden={!showOnDemand}>
+              {onDemandSections.map((section, index) => (
+                <SpineRow
+                  key={section.id}
+                  section={section}
+                  previousSection={onDemandSections[index - 1]}
+                  active={active}
+                  statuses={statuses}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>

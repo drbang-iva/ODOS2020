@@ -2544,7 +2544,7 @@ const updateAtropineMedicationStatusSchema = z.object({
   status: z.enum(ATROPINE_MEDICATION_TIMELINE_STATUS_CODES),
   ...v04ProvenanceAgentSchema,
 });
-const recordMyopiaAxialLengthMeasurementSchema = z.object({
+const recordEyeGrowthAxialLengthMeasurementSchema = z.object({
   patient_id: z.string().min(1),
   encounter_id: z.string().min(1),
   eye: z.enum(["OD", "OS"]),
@@ -4208,7 +4208,7 @@ function createServer(): Server {
           return toolJson({ medicationStatement: updated, provenance });
         }
         case "record_eye_growth_axial_length_measurement": {
-          const input = recordMyopiaAxialLengthMeasurementSchema.parse(args);
+          const input = recordEyeGrowthAxialLengthMeasurementSchema.parse(args);
           const definitions = resolveMyopiaDefinitions(await findingDefinitionStore.list());
           const measuredAt = input.measured_at ?? new Date().toISOString();
           const graphs = buildMyopiaEyeCapture({

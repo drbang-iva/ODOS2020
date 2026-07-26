@@ -19,6 +19,7 @@ export interface AxialGrowthReferenceDataset {
   version: string;
   citation: string;
   populationNote: string;
+  medianRepresentsHealthy: boolean;
   ageRangeMin: number;
   ageRangeMax: number;
   percentiles: number[];
@@ -220,8 +221,10 @@ function chartModel(
   readings: AxialGrowthReading[],
   referenceDataset: AxialGrowthReferenceDataset | null,
 ) {
-  const referenceValues = referenceDataset?.rows.flatMap((row) => row.values) ?? [];
-  const referenceAges = referenceDataset?.rows.map((row) => row.age) ?? [];
+  const referenceRows = [...(referenceDataset?.rows ?? [])]
+    .sort((left, right) => left.age - right.age);
+  const referenceValues = referenceRows.flatMap((row) => row.values);
+  const referenceAges = referenceRows.map((row) => row.age);
   const patientValues = readings.map((reading) => reading.axialLengthMm);
   const patientAges = readings.map((reading) => reading.ageInYears);
   const allAges = [...referenceAges, ...patientAges];
@@ -238,7 +241,7 @@ function chartModel(
   const y = (value: number) => MARGIN.top + ((maxValue - value) / Math.max(0.5, maxValue - minValue)) * plotHeight;
   const referenceLines = (referenceDataset?.percentiles ?? []).map((percentile, index) => ({
     percentile,
-    points: (referenceDataset?.rows ?? [])
+    points: referenceRows
       .map((row) => `${x(row.age)},${y(row.values[index]!)}`)
       .join(" "),
   }));
@@ -260,15 +263,16 @@ function centileZones(
   minValue: number,
   maxValue: number,
 ) {
-  const firstAge = dataset.rows[0]?.age;
-  const lastAge = dataset.rows.at(-1)?.age;
+  const rows = [...dataset.rows].sort((left, right) => left.age - right.age);
+  const firstAge = rows[0]?.age;
+  const lastAge = rows.at(-1)?.age;
   if (firstAge === undefined || lastAge === undefined) return [];
   const indexFor = (percentile: number) => dataset.percentiles.indexOf(percentile);
   const p25 = indexFor(dataset.zoneThresholds.neutralUpper);
   const p50 = indexFor(dataset.zoneThresholds.typicalUpper);
   const p75 = indexFor(dataset.zoneThresholds.borderlineUpper);
   if ([p25, p50, p75].some((index) => index < 0)) return [];
-  const curve = (index: number) => dataset.rows.map((row) => `${x(row.age)},${y(row.values[index]!)}`);
+  const curve = (index: number) => rows.map((row) => `${x(row.age)},${y(row.values[index]!)}`);
   const band = (lowerIndex: number, upperIndex: number) =>
     [...curve(lowerIndex), ...curve(upperIndex).reverse()].join(" ");
   return [
@@ -280,8 +284,8 @@ function centileZones(
     },
     {
       id: "typical",
-      label: "TYPICAL LENGTH",
-      color: "#22c55e",
+      label: dataset.medianRepresentsHealthy ? "TYPICAL LENGTH" : "TYPICAL FOR COHORT",
+      color: dataset.medianRepresentsHealthy ? "#22c55e" : "#eab308",
       points: band(p25, p50),
     },
     {

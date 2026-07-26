@@ -190,12 +190,19 @@ test("Eye Growth is default-visible inside the active dataset range and availabl
   });
   const refractionGroup = renderer.root.find((node) =>
     node.type === "section" && node.props["data-spine-group"] === "REFRACTION");
-  assert.equal(refractionGroup.findAll((node) =>
-    node.type === "span" && node.children.includes("Eye Growth")).length, 0);
   const available = refractionGroup.findAllByType("button")
     .find((button) => button.props.className.includes("border-dashed"));
   assert.ok(available);
+  assert.equal(available.props["aria-controls"], "spine-group-refraction-on-demand");
+  assert.equal(
+    refractionGroup.findByProps({ id: "spine-group-refraction-on-demand" }).props.hidden,
+    true,
+  );
   await act(async () => available.props.onClick());
+  assert.equal(
+    refractionGroup.findByProps({ id: "spine-group-refraction-on-demand" }).props.hidden,
+    false,
+  );
   const eyeGrowthLabel = refractionGroup.find((node) =>
     node.type === "span" && node.children.includes("Eye Growth"));
   const eyeGrowthButton = eyeGrowthLabel.parent;

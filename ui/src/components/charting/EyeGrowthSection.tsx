@@ -38,6 +38,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<SectionSaveStatus | null>(null);
   const [eyes, setEyes] = useState<Record<"OD" | "OS", EyeInput>>(EMPTY_EYES);
+  const [cornealRadiusErrors, setCornealRadiusErrors] = useState<Partial<Record<"OD" | "OS", string>>>({});
   const [biometryMethod, setBiometryMethod] = useState<"OPTICAL_BIOMETRY" | "ULTRASOUND_A_SCAN">("OPTICAL_BIOMETRY");
   const [instrument, setInstrument] = useState("");
   const [history, setHistory] = useState<EyeGrowthHistory | null>(null);
@@ -66,21 +67,47 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
   }, [patientReference, historyRefresh]);
 
   async function recordAxialLength() {
+    const axialLengthErrors: string[] = [];
+    const nextCornealRadiusErrors: Partial<Record<"OD" | "OS", string>> = {};
     const payloadEyes = Object.fromEntries(
       (["OD", "OS"] as const).flatMap((eye) => {
+        const rawAxialLength = eyes[eye].axialLength.trim();
+        if (!rawAxialLength) return [];
         const axialLengthMm = Number(eyes[eye].axialLength);
-        if (!eyes[eye].axialLength.trim() || !Number.isFinite(axialLengthMm)) return [];
+        if (!Number.isFinite(axialLengthMm)) {
+          axialLengthErrors.push(`Axial length for ${eye} is not a number.`);
+          return [];
+        }
+        if (axialLengthMm < 18 || axialLengthMm > 32) {
+          axialLengthErrors.push(`Axial length for ${eye} must be between 18 and 32 mm.`);
+          return [];
+        }
         const rawCornealRadius = eyes[eye].cornealRadius.trim();
         const cornealRadiusMm = rawCornealRadius ? Number(rawCornealRadius) : undefined;
-        if (cornealRadiusMm !== undefined && !Number.isFinite(cornealRadiusMm)) return [];
+        const validCornealRadiusMm = cornealRadiusMm !== undefined &&
+          Number.isFinite(cornealRadiusMm) &&
+          cornealRadiusMm >= 5 &&
+          cornealRadiusMm <= 12
+          ? cornealRadiusMm
+          : undefined;
+        if (cornealRadiusMm !== undefined && !Number.isFinite(cornealRadiusMm)) {
+          nextCornealRadiusErrors[eye] = `Corneal radius for ${eye} is not a number.`;
+        } else if (cornealRadiusMm !== undefined && validCornealRadiusMm === undefined) {
+          nextCornealRadiusErrors[eye] = `Corneal radius for ${eye} must be between 5 and 12 mm.`;
+        }
         return [[eye, {
           axialLengthMm,
-          ...(cornealRadiusMm !== undefined ? { cornealRadiusMm } : {}),
+          ...(validCornealRadiusMm !== undefined ? { cornealRadiusMm: validCornealRadiusMm } : {}),
           biometryMethod,
           ...(instrument.trim() ? { instrument: instrument.trim() } : {}),
         }]];
       }),
     );
+    setCornealRadiusErrors(nextCornealRadiusErrors);
+    if (axialLengthErrors.length > 0) {
+      setError(axialLengthErrors.join(" "));
+      return;
+    }
     if (Object.keys(payloadEyes).length === 0) {
       setError("Enter axial length for OD, OS, or both eyes.");
       return;
@@ -158,6 +185,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                 value={history?.referencePopulation ?? "NOT_REPRESENTED"}
                 onChange={(event) => void saveReferencePopulation(event.target.value as MyopiaReferencePopulation)}
                 disabled={busy !== null}
+                aria-describedby="eye-growth-status-message"
                 className="mt-1 block h-9 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)] disabled:opacity-50"
               >
                 <option value="ASIAN">Asian</option>
@@ -186,19 +214,35 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                   aria-label={`${eye} axial length in millimeters`}
                   className="h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
                 />
-                <input
-                  type="number"
-                  min="5"
-                  max="12"
-                  step="0.01"
-                  value={eyes[eye].cornealRadius}
-                  onChange={(event) => setEyes((current) => ({
-                    ...current,
-                    [eye]: { ...current[eye], cornealRadius: event.target.value },
-                  }))}
-                  aria-label={`${eye} corneal radius in millimeters`}
-                  className="h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
-                />
+                <div>
+                  <input
+                    type="number"
+                    min="5"
+                    max="12"
+                    step="0.01"
+                    value={eyes[eye].cornealRadius}
+                    onChange={(event) => {
+                      setEyes((current) => ({
+                        ...current,
+                        [eye]: { ...current[eye], cornealRadius: event.target.value },
+                      }));
+                      setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
+                    }}
+                    aria-label={`${eye} corneal radius in millimeters`}
+                    aria-invalid={cornealRadiusErrors[eye] ? true : undefined}
+                    aria-describedby={cornealRadiusErrors[eye] ? `eye-growth-corneal-radius-${eye}-error` : undefined}
+                    className="h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
+                  />
+                  {cornealRadiusErrors[eye] && (
+                    <div
+                      id={`eye-growth-corneal-radius-${eye}-error`}
+                      aria-live="polite"
+                      className="mt-1 text-xs text-red-200"
+                    >
+                      {cornealRadiusErrors[eye]}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -238,7 +282,7 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
             />
           </div>
         </div>
-        <div className="mt-5 min-h-10">
+        <div id="eye-growth-status-message" aria-live="polite" className="mt-5 min-h-10">
           {error && <div className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">{error}</div>}
           {status && !error && (
             <div className="text-sm text-[color:var(--odos-muted)]">
