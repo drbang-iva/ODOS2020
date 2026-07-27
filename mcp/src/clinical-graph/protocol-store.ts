@@ -1,10 +1,12 @@
 import type { Basic, Bundle } from "@medplum/fhirtypes";
+import type { ProtocolDefinition } from "./protocol-types.js";
 
 export const PROTOCOL_WRITE_HEADERS = { "X-ODOS-Source": "protocol-module" } as const;
 const BASE = "https://odos2020.com/fhir";
 
 export const PROTOCOL_BASIC_CODES = {
   protocolDefinition: "odos-protocol-definition",
+  protocolDefinitionSnapshot: "odos-protocol-definition-snapshot",
   planActionInstance: "odos-plan-action-instance",
   protocolApplication: "odos-protocol-application",
   procedureChargeRule: "odos-procedure-charge-rule",
@@ -25,6 +27,77 @@ export interface ProtocolFhirClient {
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
   delete?(resourceType: "Basic", id: string): Promise<unknown>;
+}
+
+interface ProtocolDefinitionSnapshotRecord {
+  id: string;
+  definition: ProtocolDefinition;
+}
+
+export function protocolSnapshotIdentifier(id: string, version: number): string {
+  return `${id}@v${version}`;
+}
+
+export class ProtocolDefinitionStore {
+  private readonly heads: ProtocolBasicStore<ProtocolDefinition>;
+  private readonly snapshots: ProtocolBasicStore<ProtocolDefinitionSnapshotRecord>;
+
+  constructor(fhir: ProtocolFhirClient) {
+    this.heads = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.protocolDefinition);
+    this.snapshots = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.protocolDefinitionSnapshot);
+  }
+
+  async list(): Promise<ProtocolDefinition[]> {
+    return (await this.heads.list()).map((definition) => normalizeStoredDefinition(definition));
+  }
+
+  async get(id: string): Promise<ProtocolDefinition | undefined> {
+    const definition = await this.heads.get(id);
+    return definition ? normalizeStoredDefinition(definition) : undefined;
+  }
+
+  saveHead(definition: ProtocolDefinition): Promise<ProtocolDefinition> {
+    return this.heads.save(definition);
+  }
+
+  async getSnapshot(id: string, version: number): Promise<ProtocolDefinition | undefined> {
+    const row = await this.snapshots.get(protocolSnapshotIdentifier(id, version));
+    if (row) return normalizeStoredDefinition(row.definition);
+    const legacy = await this.heads.get(id);
+    return legacy?.version === version && !legacy.draft ? normalizeStoredDefinition(legacy) : undefined;
+  }
+
+  async saveSnapshot(definition: ProtocolDefinition): Promise<ProtocolDefinition> {
+    const id = protocolSnapshotIdentifier(definition.id, definition.version);
+    const existing = await this.snapshots.get(id);
+    if (existing) {
+      if (JSON.stringify(existing.definition) !== JSON.stringify(definition)) {
+        throw new Error(`Protocol snapshot ${id} is immutable.`);
+      }
+      return structuredClone(existing.definition);
+    }
+    const saved = await this.snapshots.createImmutable({ id, definition: structuredClone(definition) });
+    if (JSON.stringify(saved.definition) !== JSON.stringify(definition)) {
+      throw new Error(`Protocol snapshot ${id} already exists with different content.`);
+    }
+    return structuredClone(saved.definition);
+  }
+
+  async save(definition: ProtocolDefinition): Promise<ProtocolDefinition> {
+    const snapshot = withoutDraft(definition);
+    await this.saveSnapshot(snapshot);
+    return this.saveHead(snapshot);
+  }
+
+  async ensureSeed(definition: ProtocolDefinition): Promise<ProtocolDefinition> {
+    const existing = await this.heads.get(definition.id);
+    const normalized = normalizeStoredDefinition(existing ?? definition, definition.authoring);
+    await this.saveSnapshot(withoutDraft(normalized));
+    if (!existing || JSON.stringify(existing) !== JSON.stringify(normalized)) {
+      return this.saveHead(normalized);
+    }
+    return normalized;
+  }
 }
 
 export class ProtocolBasicStore<T extends { id: string }> {
@@ -48,6 +121,14 @@ export class ProtocolBasicStore<T extends { id: string }> {
           ...PROTOCOL_WRITE_HEADERS,
           "If-None-Exist": `identifier=${identifierSystem(this.code)}|${value.id}`,
         });
+    return parseProtocolBasic<T>(persisted, this.code);
+  }
+
+  async createImmutable(value: T): Promise<T> {
+    const persisted = await this.fhir.create(buildProtocolBasic(value, this.code), {
+      ...PROTOCOL_WRITE_HEADERS,
+      "If-None-Exist": `identifier=${identifierSystem(this.code)}|${value.id}`,
+    });
     return parseProtocolBasic<T>(persisted, this.code);
   }
 
@@ -130,4 +211,33 @@ function identifier(resource: Basic): string | undefined {
 
 function identifierSystem(code: ProtocolBasicCode): string {
   return `${BASE}/NamingSystem/${code}`;
+}
+
+function withoutDraft(definition: ProtocolDefinition): ProtocolDefinition {
+  const { draft: _draft, ...snapshot } = definition;
+  return structuredClone(snapshot);
+}
+
+function normalizeStoredDefinition(
+  definition: ProtocolDefinition,
+  fallbackAuthoring?: ProtocolDefinition["authoring"],
+): ProtocolDefinition {
+  const audit = definition.audit ?? {
+    createdBy: "legacy-import",
+    createdAt: "unknown",
+  };
+  return {
+    ...definition,
+    authoring: definition.authoring ?? fallbackAuthoring ?? {
+      origin: "clinician",
+      at: audit.createdAt,
+      actor: audit.createdBy,
+    },
+    audit: {
+      ...audit,
+      ...(typeof audit.forkedFrom === "string"
+        ? { forkedFrom: { id: audit.forkedFrom, version: 1 } }
+        : {}),
+    },
+  };
 }

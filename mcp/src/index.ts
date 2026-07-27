@@ -33,6 +33,7 @@ import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
+  logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
 } from "./authz/boot-role-verification.js";
@@ -92,10 +93,20 @@ import {
 import {
   handleProtocolApplyRequest,
   handleProtocolApplicationsRequest,
+  handleProtocolCaptureRequest,
+  handleProtocolCreateRequest,
+  handleProtocolDraftRequest,
+  handleProtocolForkRequest,
+  handleProtocolLibraryRequest,
   handleProtocolOffersRequest,
+  handleProtocolPublishRequest,
+  handleProtocolRetireRequest,
   handleProtocolUnapplyRequest,
   handleProtocolSignCleanupRequest,
 } from "./clinical-graph/protocol-endpoint.js";
+import { ProtocolDefinitionStore } from "./clinical-graph/protocol-store.js";
+import { GLAUCOMA_SUSPECT_PROTOCOL } from "./clinical-graph/protocol-fixtures.js";
+import { PROCEDURE_FEE_SEEDS } from "./clinical-graph/procedure-fee-schedule.js";
 import {
   handleProcedureFeeScheduleMutationRequest,
   handleProcedureFeeScheduleRequest,
@@ -552,6 +563,7 @@ const fhir = createMedplumClient({
 });
 const findingDefinitionStore = new FhirFindingDefinitionStore(fhir);
 const procedureDefinitionStore = new FhirProcedureDefinitionStore(fhir);
+const protocolDefinitionStore = new ProtocolDefinitionStore(fhir);
 let authPromise: Promise<void> | undefined;
 
 /* --------------------------------------------------------------------------
@@ -5592,6 +5604,9 @@ async function main(): Promise<void> {
     await authenticateWithMedplum();
     await logPracticeRoleBootVerification(fhir);
   }
+  await logProtocolSeedBootFailure({
+    seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
+  });
 
   switch (transportMode) {
     case "stdio": {
@@ -5631,7 +5646,7 @@ async function main(): Promise<void> {
         const origin = process.env.ODOS_MCP_ALLOWED_ORIGIN ?? "*";
         res.header("Access-Control-Allow-Origin", origin);
         res.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-ODOS-Role, X-ODOS-Actor-Id, X-ODOS-Actor-Role");
-        res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS");
         if (req.method === "OPTIONS") {
           res.sendStatus(204);
           return;
@@ -5752,6 +5767,26 @@ async function main(): Promise<void> {
         return {
           authenticate: async () => staff,
           procedureDefinitions: () => procedureDefinitions,
+        };
+      };
+      const protocolRouteDeps = async (
+        authHeader: string | undefined,
+        businessAction: BusinessAction,
+      ) => {
+        const staff = await authenticateStaffRouteForAction(businessAction)(authHeader);
+        const [findingDefinitions, procedureDefinitions] = staff
+          ? await Promise.all([findingDefinitionStore.list(), procedureDefinitionStore.list()])
+          : [[], []];
+        const catalogs = {
+          findingKeys: new Set(findingDefinitions.map((row) => row.stableKey)),
+          procedureKeys: new Set([
+            ...PROCEDURE_FEE_SEEDS.map((row) => row.procedureConceptKey),
+            ...procedureDefinitions.flatMap((row) => [row.stableKey, row.id]),
+          ]),
+        };
+        return {
+          authenticate: async () => staff,
+          catalogs: () => catalogs,
         };
       };
       const paymentCreditDeps = {
@@ -6338,6 +6373,104 @@ async function main(): Promise<void> {
         } catch (error) {
           console.error("odos-mcp: fee schedule mutation route failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "fee schedule mutation route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/protocols", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolLibraryRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization") },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol library route failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol library route failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolCreateRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol draft creation failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol draft creation failed" });
+        }
+      });
+
+      app.patch("/clinical-graph/protocols/:id/draft", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolDraftRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol draft autosave failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol draft autosave failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/:id/publish", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolPublishRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol publish failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol publish failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/:id/retire", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolRetireRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol retire failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol retire failed" });
+        }
+      });
+
+      app.post("/clinical-graph/protocols/:id/fork", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolForkRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: protocol fork failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "protocol fork failed" });
+        }
+      });
+
+      app.post("/clinical-graph/encounters/:encounterId/save-as-protocol", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleProtocolCaptureRequest(
+            await protocolRouteDeps(req.header("authorization"), "protocols.author"),
+            { authHeader: req.header("authorization"), params: req.params, body: req.body },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: encounter protocol capture failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "encounter protocol capture failed" });
         }
       });
 

@@ -1,6 +1,15 @@
 import type { CodeableConcept } from "@medplum/fhirtypes";
 
 export type LateralityMode = "inherit-dx" | "OU-always" | { fixed: "OD" | "OS" | "OU" };
+export type DiagnosisVisitStatus =
+  | "new"
+  | "stable"
+  | "improved"
+  | "worsening"
+  | "resolved-this-visit";
+export type ProtocolTrigger =
+  | { kind: "diagnosis"; dxKeys: string[]; statusScope?: DiagnosisVisitStatus[] }
+  | { kind: "visit-type"; visitTypes: string[] };
 export type ProtocolItemType =
   | "finding-seed" | "order" | "medication" | "counseling" | "education"
   | "instruction" | "follow-up" | "charge-seed";
@@ -13,16 +22,30 @@ export interface ProtocolItem {
   mergeKey?: string;
   linkedDxScope?: string[];
   payload: Record<string, unknown>;
+  capture?: {
+    source: "device-measured" | "observed-estimate" | "structured";
+    seedValueKept?: boolean;
+  };
+}
+
+export interface ProtocolDefinitionDraft {
+  title: string;
+  trigger: ProtocolTrigger;
+  applicability?: Record<string, unknown>;
+  ownership: { ownerId: string; sharing: string };
+  categories: string[];
+  items: ProtocolItem[];
+  mergePolicy?: Record<string, unknown>;
+  provenanceNote?: string;
 }
 
 export interface ProtocolDefinition {
   id: string;
   version: number;
-  draft?: Record<string, unknown>;
+  acceptCharges?: boolean;
+  draft?: ProtocolDefinitionDraft;
   title: string;
-  trigger:
-    | { kind: "diagnosis"; dxKeys: string[] }
-    | { kind: "visit-type"; visitTypes: string[] };
+  trigger: ProtocolTrigger;
   applicability?: Record<string, unknown>;
   ownership: { ownerId: string; sharing: string };
   categories: string[];
@@ -30,12 +53,17 @@ export interface ProtocolDefinition {
   items: ProtocolItem[];
   mergePolicy?: Record<string, unknown>;
   provenanceNote?: string;
+  authoring: {
+    origin: "clinician" | "encounter-capture";
+    at: string;
+    actor: string;
+  };
   audit: {
     createdBy: string;
     createdAt: string;
     publishedBy?: string;
     publishedAt?: string;
-    forkedFrom?: string;
+    forkedFrom?: { id: string; version: number };
   };
 }
 
@@ -158,6 +186,7 @@ export interface ProtocolOfferDiagnosis {
   reference: string;
   code: string;
   confirmed: boolean;
+  visitStatus?: DiagnosisVisitStatus;
 }
 
 export type ProtocolConcept = CodeableConcept | string;

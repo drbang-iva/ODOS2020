@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { AccessPolicy, Bundle } from "@medplum/fhirtypes";
 import {
   formatPracticeRoleBootFailure,
+  logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
   missingPracticeRolePolicies,
@@ -69,5 +70,23 @@ test("SSE startup logs authentication failure in the red boot block and continue
   assert.equal(messages.length, 1);
   assert.match(messages[0]!, /^\u001b\[31m\n/);
   assert.match(messages[0]!, /verification unavailable: connect ECONNREFUSED 127\.0\.0\.1:8103/);
+  assert.match(messages[0]!, /server will continue/i);
+});
+
+test("server startup continues and logs loudly when the built-in protocol seed fails", async () => {
+  const messages: string[] = [];
+  let serverStarted = false;
+
+  await logProtocolSeedBootFailure({
+    seed: async () => { throw new Error("connect ECONNREFUSED 127.0.0.1:8103"); },
+    log: (message) => messages.push(message),
+  });
+  serverStarted = true;
+
+  assert.equal(serverStarted, true);
+  assert.equal(messages.length, 1);
+  assert.match(messages[0]!, /^\u001b\[31m\n/);
+  assert.match(messages[0]!, /ODOS PROTOCOL SEED FAILED/);
+  assert.match(messages[0]!, /connect ECONNREFUSED 127\.0\.0\.1:8103/);
   assert.match(messages[0]!, /server will continue/i);
 });

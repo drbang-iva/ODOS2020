@@ -36,6 +36,11 @@ export const GLAUCOMA_SUSPECT_PROTOCOL: ProtocolDefinition = {
   categories: [],
   status: "active",
   provenanceNote: "Operator-authored (E. Bang, O.D.) initial glaucoma-suspect workup.",
+  authoring: {
+    origin: "clinician",
+    at: "2026-07-18T00:00:00.000Z",
+    actor: "Practitioner/odos-system",
+  },
   audit: {
     createdBy: "Practitioner/odos-system",
     createdAt: "2026-07-18T00:00:00.000Z",
@@ -134,6 +139,7 @@ export const DRY_EYE_PUNCTAL_OCCLUSION_RULE_ID = "rule-dry-eye-punctal-occlusion
 export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
   id: "dry-eye-evaluation",
   version: 1,
+  acceptCharges: true,
   title: "Dry Eye — Evaluation Workup",
   trigger: {
     kind: "diagnosis",
@@ -143,6 +149,11 @@ export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
   categories: ["Dry Eye"],
   status: "active",
   provenanceNote: "Operator-authored dry-eye evaluation workup.",
+  authoring: {
+    origin: "clinician",
+    at: "2026-07-26T00:00:00.000Z",
+    actor: "Practitioner/odos-system",
+  },
   audit: {
     createdBy: "Practitioner/odos-system",
     createdAt: "2026-07-26T00:00:00.000Z",
