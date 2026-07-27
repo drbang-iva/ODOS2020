@@ -746,8 +746,10 @@ test("publish returns a named 400 reason for every deterministic validation fail
   }
 });
 
-test("dry-eye built-in offers without a read-path write, then applies eight prompts and one reviewed charge", async () => {
+test("persisted legacy dry-eye built-in inherits charge acceptance, then applies reviewed charges", async () => {
   const fhir = new EndpointFhir();
+  const legacyDefinition = structuredClone(DRY_EYE_EVALUATION_PROTOCOL);
+  delete legacyDefinition.acceptCharges;
   const condition: Condition = {
     resourceType: "Condition",
     id: "dry-eye-condition",
@@ -756,7 +758,10 @@ test("dry-eye built-in offers without a read-path write, then applies eight prom
     code: { coding: [{ code: "H16.223" }] },
     verificationStatus: { coding: [{ code: "confirmed" }] },
   };
-  fhir.resources.push(condition);
+  fhir.resources.push(
+    buildProtocolBasic(legacyDefinition, PROTOCOL_BASIC_CODES.protocolDefinition),
+    condition,
+  );
   const offer = await handleProtocolOffersRequest(endpointDeps(fhir), {
     authHeader: "Bearer test",
     body: {

@@ -289,11 +289,14 @@ export async function handleProtocolOffersRequest(
     protocol.trigger.kind === "diagnosis" &&
     protocol.trigger.dxKeys.some((pattern) => confirmedCodes.some((code) => matchesCode(code, pattern)))
   );
-  const protocols = [...stored, ...builtIns].map((protocol) => ({
-    ...protocol,
-    acceptCharges: protocol.acceptCharges === true,
-    statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
-  }));
+  const protocols = [...stored, ...builtIns].map((protocol) => {
+    const builtIn = BUILTIN_PROTOCOLS.find((candidate) => candidate.id === protocol.id);
+    return {
+      ...protocol,
+      acceptCharges: protocol.acceptCharges ?? builtIn?.acceptCharges ?? false,
+      statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
+    };
+  });
   return { status: 200, body: { protocols } };
 }
 
