@@ -52,7 +52,9 @@ test("Assessment hydrates protocol state, aborts stale offers, surfaces errors, 
   assert.match(source, /signal: controller\.signal/);
   assert.match(source, /return \(\) => controller\.abort\(\)/);
   assert.match(source, /name !== "AbortError"\) setError/);
-  assert.match(source, /\[protocolDiagnosis\?\.id, protocolDiagnosisCode\]/);
+  assert.match(source, /protocolDiagnoses\.map\(\(\{ reference, code, confirmed, visitStatus \}\)/);
+  assert.match(source, /\[JSON\.stringify\(protocolDiagnoses\.map/);
+  assert.match(source, /setSelectedProtocolId/);
   assert.match(source, /event\.key === "Escape"/);
   assert.match(source, /event\.key !== "Tab"/);
   assert.match(source, /previous\?\.focus\(\)/);
