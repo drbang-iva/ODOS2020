@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
-import { GLAUCOMA_SUSPECT_CHARGE_RULES, GLAUCOMA_SUSPECT_PROTOCOL } from "../clinical-graph/protocol-fixtures.js";
+import {
+  DRY_EYE_EVALUATION_PROTOCOL,
+  GLAUCOMA_SUSPECT_CHARGE_RULES,
+  GLAUCOMA_SUSPECT_PROTOCOL,
+} from "../clinical-graph/protocol-fixtures.js";
 import {
   handleProtocolApplicationsRequest,
   handleProtocolApplyRequest,
@@ -739,6 +743,67 @@ test("publish returns a named 400 reason for every deterministic validation fail
     assert.equal(result.status, 400, reason);
     assert.equal((result.body as { reason: string }).reason, reason);
   }
+});
+
+test("dry-eye built-in offers without a read-path write, then applies eight prompts and one reviewed charge", async () => {
+  const fhir = new EndpointFhir();
+  const condition: Condition = {
+    resourceType: "Condition",
+    id: "dry-eye-condition",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/enc-1" },
+    code: { coding: [{ code: "H16.223" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  };
+  fhir.resources.push(condition);
+  const offer = await handleProtocolOffersRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      diagnoses: [{
+        reference: "Condition/dry-eye-condition",
+        code: "H16.223",
+        confirmed: true,
+      }],
+    },
+  });
+  assert.equal(offer.status, 200);
+  assert.deepEqual(
+    (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
+    [DRY_EYE_EVALUATION_PROTOCOL.id],
+  );
+  assert.equal(fhir.writes.length, 0);
+
+  const applied = await handleProtocolApplyRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      protocolId: DRY_EYE_EVALUATION_PROTOCOL.id,
+      encounterId: "enc-1",
+      patientId: "patient-1",
+      diagnosis: {
+        reference: "Condition/dry-eye-condition",
+        code: "H16.223",
+        confirmed: true,
+      },
+      acceptCharges: true,
+    },
+  });
+  assert.equal(applied.status, 200);
+  const body = applied.body as {
+    findings: Array<{ value?: unknown; observationReference?: string }>;
+    actions: Array<{ actionType: string; materializedFhirRef?: string }>;
+    charges: ChargeProposal[];
+  };
+  assert.equal(body.findings.length, 8);
+  assert.equal(body.findings.every((finding) =>
+    finding.value === undefined && finding.observationReference === undefined
+  ), true);
+  assert.equal(body.actions.filter((action) =>
+    action.actionType === "order" && action.materializedFhirRef?.startsWith("ServiceRequest/")
+  ).length, 1);
+  assert.equal(body.charges.length, 1);
+  assert.equal(body.charges[0]?.state, "accepted");
+  assert.equal(body.charges[0]?.coverageEvaluations[0]?.outcome, "needs-review");
+  assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Observation").length, 0);
 });
 
 test("apply verifies the persisted Condition and creates no prompt-only Observations", async () => {

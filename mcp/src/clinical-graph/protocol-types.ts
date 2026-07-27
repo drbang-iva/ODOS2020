@@ -140,7 +140,7 @@ export interface ChargeProposal {
     at: string;
     ruleId: string;
     ruleVersion: number;
-    outcome: "no-rule";
+    outcome: ProcedureChargeRule["outcome"] | "no-rule";
     messages: string[];
     detectedIssueRef?: string;
   }>;

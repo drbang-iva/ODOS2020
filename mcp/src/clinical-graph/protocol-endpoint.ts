@@ -2,6 +2,12 @@ import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resour
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
+  BUILTIN_CHARGE_RULES,
+  BUILTIN_PROTOCOLS,
+  DRY_EYE_CHARGE_RULES,
+  DRY_EYE_EVALUATION_PROTOCOL,
+} from "./protocol-fixtures.js";
+import {
   AcceptedChargeUnapplyError,
   matchesCode,
   ProtocolPublishValidationError,
@@ -100,6 +106,7 @@ const applySchema = z.object({
     selected: z.boolean(),
     payload: z.record(z.unknown()).optional(),
   }).strict()).optional(),
+  acceptCharges: z.boolean().optional(),
 }).strict();
 
 export async function handleProtocolLibraryRequest(
@@ -270,7 +277,19 @@ export async function handleProtocolOffersRequest(
   if (!may(staff.actorRole, "chart.read")) return { status: 403, body: { error: "chart.read role required" } };
   const parsed = z.object({ diagnoses: diagnosesSchema }).strict().safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: "Valid diagnoses are required." } };
-  const protocols = (await liveService(staff, deps.now).offers(parsed.data.diagnoses)).map((protocol) => ({
+  const service = liveService(staff, deps.now);
+  const stored = await service.offers(parsed.data.diagnoses);
+  const storedIds = new Set(stored.map((protocol) => protocol.id));
+  const confirmedCodes = parsed.data.diagnoses
+    .filter((diagnosis) => diagnosis.confirmed)
+    .map((diagnosis) => diagnosis.code);
+  const builtIns = BUILTIN_PROTOCOLS.filter((protocol) =>
+    !storedIds.has(protocol.id) &&
+    protocol.status === "active" &&
+    protocol.trigger.kind === "diagnosis" &&
+    protocol.trigger.dxKeys.some((pattern) => confirmedCodes.some((code) => matchesCode(code, pattern)))
+  );
+  const protocols = [...stored, ...builtIns].map((protocol) => ({
     ...protocol,
     statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
   }));
@@ -287,6 +306,7 @@ export async function handleProtocolApplyRequest(
   const parsed = applySchema.safeParse(input.body);
   if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol application." } };
   const service = liveService(staff, deps.now);
+  await ensureBuiltInProtocol(service, parsed.data.protocolId);
   const conditionId = parsed.data.diagnosis.reference.slice("Condition/".length);
   let condition: Condition;
   try {
@@ -324,6 +344,12 @@ export async function handleProtocolApplyRequest(
     actor: staff.staffReference,
   });
   await service.commit(opened.application.id, parsed.data.selections ?? [], [parsed.data.diagnosis.reference]);
+  if (parsed.data.acceptCharges) {
+    for (const charge of (await service.charges.list()).filter((candidate) =>
+      candidate.protocolApplicationId === opened.application.id &&
+      candidate.state === "staged"
+    )) await service.charges.save({ ...charge, state: "accepted" });
+  }
   return {
     status: 200,
     body: {
@@ -333,6 +359,23 @@ export async function handleProtocolApplyRequest(
       charges: (await service.charges.list()).filter((row) => row.protocolApplicationId === opened.application.id),
     },
   };
+}
+
+async function ensureBuiltInProtocol(service: ProtocolService, protocolId: string): Promise<void> {
+  const builtIn = BUILTIN_PROTOCOLS.find((protocol) => protocol.id === protocolId);
+  if (!builtIn) return;
+  if (!await service.definitions.get(builtIn.id)) await service.definitions.save(builtIn);
+  const referencedRuleIds = new Set(builtIn.items.flatMap((item) =>
+    item.itemType === "charge-seed" && Array.isArray(item.payload.chargeRuleRefs)
+      ? item.payload.chargeRuleRefs.map(String)
+      : []
+  ));
+  const rules = builtIn.id === DRY_EYE_EVALUATION_PROTOCOL.id
+    ? DRY_EYE_CHARGE_RULES
+    : BUILTIN_CHARGE_RULES.filter((rule) => referencedRuleIds.has(rule.id));
+  for (const rule of rules) {
+    if (!await service.chargeRules.get(rule.id)) await service.chargeRules.save(rule);
+  }
 }
 
 export async function handleProtocolApplicationsRequest(

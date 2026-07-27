@@ -35,6 +35,11 @@ import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
 export const GLAUCOMA_SUSPECT_TRIGGER_PREFIX = "H40.0";
+export const PROTOCOL_TRIGGER_CONFIGS = [
+  { codePrefix: GLAUCOMA_SUSPECT_TRIGGER_PREFIX, protocolId: "glaucoma-suspect-initial" },
+  { codePrefix: "H16.22", protocolId: "dry-eye-evaluation" },
+  { codePrefix: "H02.88", protocolId: "dry-eye-evaluation" },
+] as const;
 
 interface Props {
   patientReference: string;
@@ -262,13 +267,20 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     }
   }
 
-  const protocolDiagnosis = sortedConditions.find((condition) =>
-    verificationStatus(condition) === "confirmed" &&
-    condition.code?.coding?.some((coding) => coding.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX))
-  );
-  const protocolDiagnosisCode = protocolDiagnosis?.code?.coding?.find((row) =>
-    row.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX)
-  )?.code;
+  const protocolDiagnosisMatch = sortedConditions.flatMap((condition) => {
+    if (verificationStatus(condition) !== "confirmed") return [];
+    return condition.code?.coding?.flatMap((coding) => {
+      const trigger = PROTOCOL_TRIGGER_CONFIGS.find((candidate) =>
+        coding.code?.startsWith(candidate.codePrefix)
+      );
+      return coding.code && trigger
+        ? [{ condition, code: coding.code, protocolId: trigger.protocolId }]
+        : [];
+    }) ?? [];
+  })[0];
+  const protocolDiagnosis = protocolDiagnosisMatch?.condition;
+  const protocolDiagnosisCode = protocolDiagnosisMatch?.code;
+  const protocolDefinitionId = protocolDiagnosisMatch?.protocolId;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -282,7 +294,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       if (!response.ok) throw new Error(body.error ?? `Protocol applications load failed: ${response.status}`);
       if (controller.signal.aborted) return;
       const active = body.applications?.find((application) =>
-        application.protocolId === "glaucoma-suspect-initial" && application.confirmed && application.undoState === "active"
+        application.protocolId === protocolDefinitionId && application.confirmed && application.undoState === "active"
       );
       setProtocolApplied(Boolean(active));
       setProtocolApplicationId(active?.id);
@@ -290,7 +302,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
     });
     return () => controller.abort();
-  }, [encounterId]);
+  }, [encounterId, protocolDefinitionId]);
 
   useEffect(() => {
     if (!protocolDiagnosis?.id || !protocolDiagnosisCode) {
@@ -350,21 +362,20 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     };
   }, [protocolSheetOpen]);
 
-  async function applyGlaucomaSuspectProtocol() {
-    if (!protocolDiagnosis?.id) return;
-    const code = protocolDiagnosis.code?.coding?.find((coding) => coding.code?.startsWith(GLAUCOMA_SUSPECT_TRIGGER_PREFIX))?.code;
-    if (!code) return;
+  async function applyProtocol() {
+    if (!protocolDiagnosis?.id || !protocolDiagnosisCode || !protocolDefinitionId) return;
     setBusy("protocol"); setError(null);
     try {
       const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/apply`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({
-          protocolId: protocolOffer?.id ?? "glaucoma-suspect-initial",
+          protocolId: protocolOffer?.id ?? protocolDefinitionId,
           encounterId,
           patientId: patientReference.replace(/^Patient\//, ""),
-          diagnosis: { reference: `Condition/${protocolDiagnosis.id}`, code, confirmed: true },
+          diagnosis: { reference: `Condition/${protocolDiagnosis.id}`, code: protocolDiagnosisCode, confirmed: true },
           selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
+          acceptCharges: protocolDefinitionId === "dry-eye-evaluation",
         }),
       });
       const body = await response.json() as { error?: string; application?: { id?: string } };
@@ -438,8 +449,12 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         {canShowEditing && protocolDiagnosis && protocolOffer && (
           <div className="mt-4 flex items-center justify-between gap-3 rounded border border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)] p-4">
             <div>
-              <div className="text-sm font-semibold text-[color:var(--odos-text)]">Glaucoma Suspect — Initial Workup</div>
-              <div className="mt-1 text-xs text-[color:var(--odos-muted)]">Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.</div>
+              <div className="text-sm font-semibold text-[color:var(--odos-text)]">{protocolOffer.title}</div>
+              <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
+                {protocolDefinitionId === "dry-eye-evaluation"
+                  ? "Reviewable protocol defaults; confirmation writes exam prompts, plan actions, and accepted charges."
+                  : "Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges."}
+              </div>
             </div>
             <button ref={protocolTriggerRef} disabled={busy !== null} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className={BUTTON_CLASS}>
               {protocolApplied ? "Un-apply" : "Apply protocol"}
@@ -463,15 +478,23 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                       <span className="mt-0.5 block text-xs text-[color:var(--odos-muted)]">{item.itemType} · {item.itemKey}</span>
                     </span>
                     {item.itemType === "charge-seed" && (
-                      <span className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-muted)]">no rule</span>
+                      <span className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-muted)]">
+                        {Array.isArray(item.payload.chargeRuleRefs) && item.payload.chargeRuleRefs.length
+                          ? "coverage review"
+                          : "no rule"}
+                      </span>
                     )}
                   </label>
                 ))}
               </div>
               <div className="mt-5 flex justify-end gap-3">
                 <button type="button" onClick={() => setProtocolSheetOpen(false)} className={BUTTON_CLASS}>Cancel</button>
-                <button type="button" disabled={busy !== null} onClick={applyGlaucomaSuspectProtocol} className={BUTTON_CLASS}>
-                  {busy === "protocol" ? "Applying..." : "Confirm and apply"}
+                <button type="button" disabled={busy !== null} onClick={applyProtocol} className={BUTTON_CLASS}>
+                  {busy === "protocol"
+                    ? "Applying..."
+                    : protocolDefinitionId === "dry-eye-evaluation"
+                      ? "Confirm, accept charges, and apply"
+                      : "Confirm and apply"}
                 </button>
               </div>
             </div>
