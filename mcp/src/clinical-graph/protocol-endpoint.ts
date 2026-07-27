@@ -352,22 +352,25 @@ export async function handleProtocolApplyRequest(
     application.protocolId === parsed.data.protocolId &&
     application.confirmed && application.undoState === "active"
   )) return { status: 409, body: { error: "Protocol is already applied to this encounter." } };
-  const selectedSeriesItems = protocol.items.flatMap((item) => {
-    if (item.itemType !== "series-prescription") return [];
+  const selectedPinnedItems = protocol.items.flatMap((item) => {
+    if (item.itemType !== "series-prescription" && item.itemType !== "charge-seed") return [];
     const selection = parsed.data.selections?.find((candidate) => candidate.itemKey === item.itemKey);
     if (!(selection?.selected ?? item.defaultSelected)) return [];
     return [{ item, submittedPayload: selection?.payload }];
   });
+  for (const { item, submittedPayload } of selectedPinnedItems) {
+    if (submittedPayload && !isDeepStrictEqual(submittedPayload, item.payload)) {
+      return {
+        status: 400,
+        body: { error: `Selected ${item.itemType} ${item.itemKey} must use the canonical protocol payload.` },
+      };
+    }
+  }
+  const selectedSeriesItems = selectedPinnedItems.filter(({ item }) =>
+    item.itemType === "series-prescription"
+  );
   const resolvedSeriesProtocols = new Map<string, SeriesProtocolDefinition>();
   if (selectedSeriesItems.length > 0) {
-    for (const { item, submittedPayload } of selectedSeriesItems) {
-      if (submittedPayload && !isDeepStrictEqual(submittedPayload, item.payload)) {
-        return {
-          status: 400,
-          body: { error: `Selected series prescription ${item.itemKey} must use the canonical protocol payload.` },
-        };
-      }
-    }
     if (!deps.serviceFhir) {
       return {
         status: 500,
@@ -393,7 +396,8 @@ export async function handleProtocolApplyRequest(
   }
   const canonicalSelections = parsed.data.selections?.map((selection) => {
     const item = protocol.items.find((candidate) =>
-      candidate.itemKey === selection.itemKey && candidate.itemType === "series-prescription"
+      candidate.itemKey === selection.itemKey &&
+      (candidate.itemType === "series-prescription" || candidate.itemType === "charge-seed")
     );
     return item ? { ...selection, payload: item.payload } : selection;
   }) ?? [];
@@ -540,6 +544,9 @@ function liveService(
           "X-ODOS-Source": "protocol-module",
           "If-None-Exist": `identifier=${SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM}|${identifierValue}`,
         });
+        if (saved.status === "revoked" && saved.id) {
+          await updateProjected(staff.fhir, "CarePlan", saved.id, { ...saved, status: "active" });
+        }
         return saved.id ? `CarePlan/${saved.id}` : undefined;
       }
       if (

@@ -146,6 +146,8 @@ export interface ChargeProposal {
     detectedIssueRef?: string;
   }>;
   state: "staged" | "accepted" | "overridden" | "removed" | "finalized";
+  protocolDefaultPayload?: Record<string, unknown>;
+  modifiedFields?: string[];
   override?: { reason: string; actor: string; at: string; abnFlag: boolean };
   chargeItemRef?: string;
   provenance: InstanceProvenance;

@@ -20,6 +20,7 @@ import {
   DRY_EYE_LLLT_INIT_PROTOCOL,
   DRY_EYE_RF_INIT_PROTOCOL,
 } from "../src/clinical-graph/protocol-fixtures.js";
+import { ProtocolService } from "../src/clinical-graph/protocol-service.js";
 import { PROTOCOL_BASIC_CODES } from "../src/clinical-graph/protocol-store.js";
 import {
   buildSeriesActivityDefinition,
@@ -189,6 +190,28 @@ test("un-apply revokes the series CarePlan and removes it from the tracker view"
   assert.equal((await trackerSeries(fhir)).length, 0);
 });
 
+test("re-applying after un-apply restores the revoked series to the tracker", async () => {
+  const fhir = dryEyeFhir();
+  const first = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id);
+  const applicationId = (first.body as { application: { id: string } }).application.id;
+  const firstCarePlan = structuredClone(fhir.resourcesOf("CarePlan")[0]!);
+  firstCarePlan.activity![0]!.detail = {
+    ...firstCarePlan.activity![0]!.detail!,
+    status: "completed",
+  };
+  await fhir.update("CarePlan", firstCarePlan.id!, firstCarePlan);
+  await unapplyProtocol(fhir, applicationId);
+
+  const reapplied = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id);
+
+  assert.equal(reapplied.status, 200);
+  assert.equal(fhir.resourcesOf("CarePlan").length, 1);
+  assert.equal(fhir.resourcesOf("CarePlan")[0]?.status, "active");
+  const series = await trackerSeries(fhir);
+  assert.equal(series.length, 1);
+  assert.equal(series[0]?.sessions[0]?.status, "completed");
+});
+
 test("un-apply remains blocked while the companion package charge is accepted", async () => {
   const fhir = dryEyeFhir();
   const applied = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id, { acceptCharges: true });
@@ -199,6 +222,67 @@ test("un-apply remains blocked while the companion package charge is accepted", 
   assert.equal(unapplied.status, 409);
   assert.match(String((unapplied.body as { error: string }).error), /accepted charge/i);
   assert.equal(fhir.resourcesOf("CarePlan")[0]?.status, "active");
+});
+
+test("charge seeds reject client payloads that differ from the canonical protocol item", async () => {
+  const fhir = dryEyeFhir();
+
+  const result = await applyProtocol(fhir, DRY_EYE_RF_INIT_PROTOCOL.id, {
+    selections: [{
+      itemKey: "charge-rf-package",
+      selected: true,
+      payload: {
+        procedureConceptKey: "dry-eye-ipl-4-sessions",
+        chargeRuleRefs: ["rule-dry-eye-ipl-package"],
+      },
+    }],
+  });
+
+  assert.equal(result.status, 400);
+  assert.match(String((result.body as { error: string }).error), /canonical protocol payload/i);
+  assert.equal(fhir.protocolBasics(PROTOCOL_BASIC_CODES.chargeProposal).length, 0);
+});
+
+test("modified charge staging records clinician provenance and changed fields", async () => {
+  const fhir = dryEyeFhir();
+  let nextId = 1;
+  const service = new ProtocolService(fhir as never, {
+    async commitFinding() {
+      return undefined;
+    },
+    async materializeAction() {
+      return undefined;
+    },
+  }, () => NOW, () => `direct-${nextId++}`);
+  await service.definitions.save(DRY_EYE_RF_INIT_PROTOCOL);
+  const opened = await service.open(DRY_EYE_RF_INIT_PROTOCOL.id, {
+    encounterId: ENCOUNTER_ID,
+    patientId: PATIENT_ID,
+    diagnosis: protocolApplyBody(DRY_EYE_RF_INIT_PROTOCOL.id).diagnosis,
+    actor: "Practitioner/synthetic-clinician",
+  });
+
+  await service.commit(opened.application.id, [
+    { itemKey: "series-rf", selected: false },
+    {
+      itemKey: "charge-rf-package",
+      selected: true,
+      payload: {
+        procedureConceptKey: "dry-eye-ipl-4-sessions",
+        chargeRuleRefs: ["rule-dry-eye-ipl-package"],
+      },
+    },
+  ], [`Condition/${CONDITION_ID}`]);
+
+  const [charge] = await service.charges.list();
+  const canonicalPayload = DRY_EYE_RF_INIT_PROTOCOL.items
+    .find((item) => item.itemKey === "charge-rf-package")?.payload;
+  assert.equal(charge?.provenance.source, "clinician-entered");
+  assert.deepEqual(charge?.protocolDefaultPayload, canonicalPayload);
+  assert.deepEqual(
+    new Set(charge?.modifiedFields),
+    new Set(["procedureConceptKey", "chargeRuleRefs", "requiresOrderCompletion"]),
+  );
 });
 
 test("at-home regimen applies only counseling, education, and instruction with no series or charge", async () => {
@@ -337,7 +421,7 @@ async function unapplyProtocol(fhir: MemoryDryEyeFhir, applicationId: string) {
 
 async function trackerSeries(fhir: MemoryDryEyeFhir): Promise<Array<{
   title: string;
-  sessions: unknown[];
+  sessions: Array<{ status: string }>;
 }>> {
   const app = express();
   app.use(express.json());
@@ -364,7 +448,7 @@ async function trackerSeries(fhir: MemoryDryEyeFhir): Promise<Array<{
     });
     assert.equal(response.status, 200);
     return (await response.json() as {
-      series: Array<{ title: string; sessions: unknown[] }>;
+      series: Array<{ title: string; sessions: Array<{ status: string }> }>;
     }).series;
   } finally {
     await new Promise<void>((resolve, reject) =>
