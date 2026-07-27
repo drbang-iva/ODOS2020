@@ -52,15 +52,7 @@ test("DE-2 compiles all seven eyecare procedure definitions without unverified C
     definition.fhirProcedureCode.code === definition.stableKey &&
     definition.fhirProcedureCode.system !== "urn:ama:cpt"
   ), true);
-  assert.equal(
-    dryEye.find((definition) => definition.stableKey === DRY_EYE_PROCEDURE_STABLE_KEYS.punctalOcclusion)?.notBillReady,
-    true,
-  );
-  assert.equal(
-    dryEye.filter((definition) => definition.stableKey !== DRY_EYE_PROCEDURE_STABLE_KEYS.punctalOcclusion)
-      .every((definition) => !definition.notBillReady),
-    true,
-  );
+  assert.equal(dryEye.every((definition) => definition.notBillReady), true);
 });
 
 test("IPL and LLLT series and package forks share one procedure vocabulary while RF stays definition-only", () => {
@@ -110,6 +102,24 @@ test("the first-run treatment seed is idempotent across the authored-only stores
   ]);
   assert.equal(adapter.series.length, 2);
   assert.equal(adapter.packages.length, 4);
+});
+
+test("the first-run treatment seed skips archived definitions without attempting rejected updates", async () => {
+  const adapter = new MemoryTreatmentSeedAdapter();
+  await seedDryEyeTreatmentDefinitions(adapter);
+  adapter.series[0] = { ...adapter.series[0]!, active: false, name: "Archived IPL" };
+  adapter.packages[0] = { ...adapter.packages[0]!, active: false, priceCents: 1 };
+
+  const result = await seedDryEyeTreatmentDefinitions(adapter);
+
+  assert.deepEqual(result.series.skippedArchived, ["IPL"]);
+  assert.deepEqual(result.packages.skippedArchived, ["IPL single session"]);
+  assert.deepEqual(result.series.unchanged, ["LLLT"]);
+  assert.deepEqual(result.packages.unchanged, [
+    "IPL 4 sessions",
+    "LLLT single session",
+    "LLLT 4 sessions",
+  ]);
 });
 
 test("dry-eye evaluation proposes eight prompt-only sections and materializes one coverage-reviewed charge", async () => {
@@ -245,6 +255,8 @@ class MemoryTreatmentSeedAdapter implements DryEyeTreatmentSeedAdapter {
   }
 
   async saveSeriesProtocol(draft: SeriesProtocolDefinitionDraft): Promise<SeriesProtocolDefinition> {
+    const existing = this.series.find((definition) => definition.id === draft.id);
+    if (existing && !existing.active) throw new Error("Archived protocol definitions cannot be edited.");
     const saved: SeriesProtocolDefinition = {
       ...draft,
       id: draft.id ?? `series-${this.series.length + 1}`,
@@ -265,6 +277,7 @@ class MemoryTreatmentSeedAdapter implements DryEyeTreatmentSeedAdapter {
 
   async savePackageDefinition(draft: PackageDefinitionDraft): Promise<PackageDefinition> {
     const existing = draft.id ? this.packages.find((definition) => definition.id === draft.id) : undefined;
+    if (existing && !existing.active) throw new Error("Archived package definitions cannot be edited.");
     const saved: PackageDefinition = {
       ...draft,
       id: draft.id ?? `package-${this.nextPackage++}`,
