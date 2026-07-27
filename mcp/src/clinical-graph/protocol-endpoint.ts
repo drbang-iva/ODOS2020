@@ -20,6 +20,7 @@ import {
   matchesCode,
   ProtocolPublishValidationError,
   ProtocolService,
+  rankProtocolOffers,
   validateProtocolDefinition,
   type ProtocolCatalogs,
 } from "./protocol-service.js";
@@ -300,7 +301,7 @@ export async function handleProtocolOffersRequest(
     protocol.trigger.kind === "diagnosis" &&
     protocol.trigger.dxKeys.some((pattern) => confirmedCodes.some((code) => matchesCode(code, pattern)))
   );
-  const protocols = [...stored, ...builtIns].map((protocol) => {
+  const protocols = rankProtocolOffers([...stored, ...builtIns], parsed.data.diagnoses).map((protocol) => {
     const builtIn = BUILTIN_PROTOCOLS.find((candidate) => candidate.id === protocol.id);
     return {
       ...protocol,
