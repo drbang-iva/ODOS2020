@@ -167,6 +167,28 @@ test("publishing v2 preserves a byte-identical v1 snapshot and a v1-pinned appli
   await assert.doesNotReject(service.commit(opened.application.id, [], ["Condition/c1"]));
 });
 
+test("publishing v2 preserves definition-owned charge acceptance in the snapshot", async () => {
+  const { service } = harness();
+  const acceptingProtocol = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "accepting-protocol",
+    acceptCharges: true,
+  };
+  await service.definitions.save(acceptingProtocol);
+  await service.saveDraft(acceptingProtocol.id, {
+    title: `${acceptingProtocol.title} v2`,
+    trigger: acceptingProtocol.trigger,
+    ownership: acceptingProtocol.ownership,
+    categories: acceptingProtocol.categories,
+    items: acceptingProtocol.items,
+  });
+  await service.publish(acceptingProtocol.id, "Practitioner/test", protocolCatalogs());
+  assert.equal(
+    (await service.definitions.getSnapshot(acceptingProtocol.id, 2))?.acceptCharges,
+    true,
+  );
+});
+
 test("legacy heads without authoring provenance are normalized at the read boundary", async () => {
   const { fhir, service } = harness();
   const { authoring: _authoring, ...legacyWithoutAuthoring } = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
@@ -777,18 +799,19 @@ test("persisted legacy dry-eye built-in inherits charge acceptance, then applies
     },
   });
   assert.equal(offer.status, 200);
+  const protocols = (offer.body as { protocols: ProtocolDefinition[] }).protocols;
   assert.deepEqual(
-    (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
+    protocols.map((protocol) => protocol.id),
     [
+      DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL.id,
       DRY_EYE_EVALUATION_PROTOCOL.id,
       DRY_EYE_IPL_INIT_PROTOCOL.id,
-      DRY_EYE_RF_INIT_PROTOCOL.id,
       DRY_EYE_LLLT_INIT_PROTOCOL.id,
-      DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL.id,
+      DRY_EYE_RF_INIT_PROTOCOL.id,
     ],
   );
   assert.equal(
-    (offer.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols[0]?.acceptCharges,
+    protocols.find((protocol) => protocol.id === DRY_EYE_EVALUATION_PROTOCOL.id)?.acceptCharges,
     true,
   );
   assert.equal(fhir.writes.length, 0);
@@ -824,6 +847,69 @@ test("persisted legacy dry-eye built-in inherits charge acceptance, then applies
   assert.equal(body.charges[0]?.state, "accepted");
   assert.equal(body.charges[0]?.coverageEvaluations[0]?.outcome, "needs-review");
   assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Observation").length, 0);
+});
+
+test("unpersisted dry-eye built-in offers charge acceptance without a read-path write", async () => {
+  const fhir = new EndpointFhir();
+  const offer = await handleProtocolOffersRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      diagnoses: [{
+        reference: "Condition/dry-eye-condition",
+        code: "H16.223",
+        confirmed: true,
+      }],
+    },
+  });
+  assert.equal(offer.status, 200);
+  const dryEye = (offer.body as { protocols: ProtocolDefinition[] }).protocols.find(
+    (protocol) => protocol.id === DRY_EYE_EVALUATION_PROTOCOL.id,
+  );
+  assert.equal(dryEye?.acceptCharges, true);
+  assert.equal(fhir.writes.length, 0);
+});
+
+test("combined offers rank a matching stored scope before an unscoped built-in and a non-match", async () => {
+  const fhir = new EndpointFhir();
+  const matching = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "stored-stable",
+    title: "Stored Stable",
+    trigger: {
+      kind: "diagnosis" as const,
+      dxKeys: ["H40.0*"],
+      statusScope: ["stable" as const],
+    },
+  };
+  const nonMatching = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "stored-worsening",
+    title: "Stored Worsening",
+    trigger: {
+      kind: "diagnosis" as const,
+      dxKeys: ["H40.0*"],
+      statusScope: ["worsening" as const],
+    },
+  };
+  fhir.resources.push(
+    buildProtocolBasic(nonMatching, PROTOCOL_BASIC_CODES.protocolDefinition),
+    buildProtocolBasic(matching, PROTOCOL_BASIC_CODES.protocolDefinition),
+  );
+  const offer = await handleProtocolOffersRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    body: {
+      diagnoses: [{
+        reference: "Condition/glaucoma",
+        code: "H40.021",
+        confirmed: true,
+        visitStatus: "stable",
+      }],
+    },
+  });
+  assert.deepEqual(
+    (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
+    [matching.id, GLAUCOMA_SUSPECT_PROTOCOL.id, nonMatching.id],
+  );
 });
 
 test("apply verifies the persisted Condition and creates no prompt-only Observations", async () => {

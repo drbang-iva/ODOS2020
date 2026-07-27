@@ -93,30 +93,14 @@ export class ProtocolService {
 
   async offers(diagnoses: ProtocolOfferDiagnosis[]): Promise<ProtocolDefinition[]> {
     const confirmedCodes = diagnoses.filter((row) => row.confirmed).map((row) => row.code);
-    return (await this.definitions.list())
+    const definitions = (await this.definitions.list())
       .filter((definition) =>
         definition.status === "active" &&
         definition.trigger.kind === "diagnosis" &&
         definition.trigger.dxKeys.some((pattern) => confirmedCodes.some((code) => matchesCode(code, pattern)))
       )
-      .map(publishedFromHead)
-      .sort((left, right) => {
-        // Advisory status match first, then unscoped definitions, then scoped non-matches;
-        // title and id make the rail stable without ever hiding a clinician-selectable variant.
-        const scopeRank = (definition: ProtocolDefinition) => {
-          if (definition.trigger.kind !== "diagnosis" || !definition.trigger.statusScope?.length) return 1;
-          return diagnoses.some((diagnosis) =>
-            diagnosis.confirmed &&
-            diagnosis.visitStatus &&
-            definition.trigger.kind === "diagnosis" &&
-            definition.trigger.dxKeys.some((pattern) => matchesCode(diagnosis.code, pattern)) &&
-            definition.trigger.statusScope?.includes(diagnosis.visitStatus as DiagnosisVisitStatus)
-          ) ? 2 : 0;
-        };
-        return scopeRank(right) - scopeRank(left) ||
-          left.title.localeCompare(right.title) ||
-          left.id.localeCompare(right.id);
-      });
+      .map(publishedFromHead);
+    return rankProtocolOffers(definitions, diagnoses);
   }
 
   async createDraft(
@@ -176,6 +160,7 @@ export class ProtocolService {
       id: head.id,
       version: head.version + 1,
       ...normalizeDraft(head.draft),
+      ...(head.acceptCharges !== undefined ? { acceptCharges: head.acceptCharges } : {}),
       status: "active",
       authoring: head.authoring,
       audit: {
@@ -690,6 +675,29 @@ export function validateProtocolDefinition(
 export function matchesCode(code: string, pattern: string): boolean {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*");
   return new RegExp(`^${escaped}$`, "i").test(code);
+}
+
+export function rankProtocolOffers(
+  definitions: readonly ProtocolDefinition[],
+  diagnoses: readonly ProtocolOfferDiagnosis[],
+): ProtocolDefinition[] {
+  // Advisory status match first, then unscoped definitions, then scoped non-matches;
+  // title and id make the rail stable without ever hiding a clinician-selectable variant.
+  const scopeRank = (definition: ProtocolDefinition) => {
+    if (definition.trigger.kind !== "diagnosis" || !definition.trigger.statusScope?.length) return 1;
+    return diagnoses.some((diagnosis) =>
+      diagnosis.confirmed &&
+      diagnosis.visitStatus &&
+      definition.trigger.kind === "diagnosis" &&
+      definition.trigger.dxKeys.some((pattern) => matchesCode(diagnosis.code, pattern)) &&
+      definition.trigger.statusScope?.includes(diagnosis.visitStatus as DiagnosisVisitStatus)
+    ) ? 2 : 0;
+  };
+  return [...definitions].sort((left, right) =>
+    scopeRank(right) - scopeRank(left) ||
+    left.title.localeCompare(right.title) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
 export function committedFindingEvidence(findings: ProtocolFindingInstance[]): ProtocolFindingInstance[] {
