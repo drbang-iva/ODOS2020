@@ -1,0 +1,39 @@
+name: PR-Agent review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, ready_for_review, synchronize]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  pr-agent:
+    if: >-
+      github.event.sender.type != 'Bot' &&
+      (github.event_name == 'pull_request' || github.event.issue.pull_request)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: Run PR-Agent
+    steps:
+      - name: Review pull request
+        uses: docker://pragent/pr-agent:0.41.0-github_action
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER__KEY: ${{ secrets.OPENROUTER_KEY }}
+          config.model: "openrouter/openai/gpt-5.6-terra"
+          config.fallback_models: "[]"
+          config.custom_model_max_tokens: "32000"
+          config.propagate_tool_errors: "true"
+          config.restricted_mode: "true"
+          openrouter.reasoning_effort: "medium"
+          openrouter.max_tokens: "8000"
+          github_action_config.auto_review: "true"
+          github_action_config.auto_describe: "false"
+          github_action_config.auto_improve: "false"
+          github_action_config.pr_actions: '["opened", "reopened", "ready_for_review", "synchronize"]'
