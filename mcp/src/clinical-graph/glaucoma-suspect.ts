@@ -134,9 +134,6 @@ export type ProcedureChargeSupportStatus =
   | "warn-only"
   | "provisional";
 
-/** Charge proposal lifecycle before a selected charge becomes a ChargeItem. */
-export type ChargeProposalStatus = "suggested" | "selected" | "removed" | "overridden" | "staged";
-
 /** Mandate-14 coding state; only verified rows may project code-bearing FHIR artifacts. */
 export type CodingStatus = "verified" | "placeholder" | "provisional";
 
@@ -379,22 +376,6 @@ export interface ProcedureChargeRule {
   notBillReady: boolean;
   sourceUrl?: string;
   accessDate?: string;
-  provenance: ClinicalGraphProvenance;
-}
-
-/** Staged billing candidate; not final billing until selected and projected downstream. */
-export interface ChargeProposal {
-  id: string;
-  planActionInstanceId?: string;
-  procedureSystem: string;
-  procedureCode: string;
-  linkedEncounterDiagnosisIds: string[];
-  evidenceFindingInstanceIds: string[];
-  status: ChargeProposalStatus;
-  coverageWarnings: string[];
-  selected: boolean;
-  overrideReason?: string;
-  chargeItemReference?: string;
   provenance: ClinicalGraphProvenance;
 }
 
@@ -775,34 +756,6 @@ export function buildProcedureChargeRule(
     id: input.id ?? randomUUID(),
     requiredEvidence: input.requiredEvidence ?? [],
     notBillReady: input.notBillReady ?? input.verificationStatus !== "verified",
-  };
-}
-
-/**
- * Builds a staged charge proposal that remains separate from final Claim submission.
- */
-export function buildChargeProposal(
-  input: Omit<ChargeProposal, "id" | "linkedEncounterDiagnosisIds" | "evidenceFindingInstanceIds" | "coverageWarnings" | "selected" | "status"> &
-    Partial<
-      Pick<
-        ChargeProposal,
-        | "id"
-        | "linkedEncounterDiagnosisIds"
-        | "evidenceFindingInstanceIds"
-        | "coverageWarnings"
-        | "selected"
-        | "status"
-      >
-    >,
-): ChargeProposal {
-  return {
-    ...input,
-    id: input.id ?? randomUUID(),
-    linkedEncounterDiagnosisIds: input.linkedEncounterDiagnosisIds ?? [],
-    evidenceFindingInstanceIds: input.evidenceFindingInstanceIds ?? [],
-    coverageWarnings: input.coverageWarnings ?? [],
-    selected: input.selected ?? false,
-    status: input.status ?? "suggested",
   };
 }
 
