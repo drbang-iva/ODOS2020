@@ -6,7 +6,6 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   DiagnosisRankActions,
-  PROTOCOL_TRIGGER_CONFIGS,
   diagnosisRankMoveNeighbors,
 } from "../src/components/charting/AssessmentSection";
 import {
@@ -21,18 +20,16 @@ const CONDITIONS = ["principal", "secondary-a", "secondary-b"].map((id) => ({
   id,
 }));
 
-test("assessment protocol routing includes both verified dry-eye diagnosis families", () => {
-  assert.deepEqual(PROTOCOL_TRIGGER_CONFIGS, [
-    { codePrefix: "H40.0", protocolId: "glaucoma-suspect-initial" },
-    { codePrefix: "H16.22", protocolId: "dry-eye-evaluation" },
-    { codePrefix: "H02.88", protocolId: "dry-eye-evaluation" },
-  ]);
+test("assessment protocol routing delegates diagnosis matching and charge acceptance to server offers", () => {
   const source = readFileSync(
     new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /acceptCharges: protocolDefinitionId === "dry-eye-evaluation"/);
-  assert.match(source, /Confirm, accept charges, and apply/);
+  assert.match(source, /clinical-graph\/protocols\/offers/);
+  assert.match(source, /protocolDiagnoses\.map/);
+  assert.match(source, /const acceptCharges = protocolOffer\?\.acceptCharges === true/);
+  assert.doesNotMatch(source, /dry-eye-evaluation/);
+  assert.doesNotMatch(source, /PROTOCOL_TRIGGER_CONFIGS/);
 });
 
 test("creation rank rules retain the duplicate-principal guard and append secondaries", () => {

@@ -42,6 +42,7 @@ import { ProtocolDefinitionsSettings } from "./components/series-tracker/Protoco
 import { StatementMessagesSettings } from "./scenes/settings/StatementMessagesSettings";
 import { BillingIdentitySettings } from "./scenes/settings/BillingIdentitySettings";
 import { AppearanceSettings } from "./scenes/settings/AppearanceSettings";
+import { ProtocolLibrary } from "./scenes/ProtocolLibrary";
 import { DeskHome, CLINIC_PATH, DESK_HOME_PATH } from "./scenes/DeskHome";
 import { DayLedger } from "./scenes/DayLedger";
 import { MarginLedger } from "./scenes/MarginLedger";
@@ -308,6 +309,8 @@ export function RouteSwitch({
       const clinicView = clinicRouteView(search, view);
       return clinicView.kind === "picker" ? <ClinicHome roles={roles} /> : <ViewRouter view={clinicView} />;
     }
+    case "/clinic/protocols":
+      return <ProtocolLibrary />;
     case CLINIC_PATIENTS_PATH:
       return <ViewRouter view={view.kind === "picker" ? view : { kind: "picker" }} />;
     case "/billing/claims/worklist":

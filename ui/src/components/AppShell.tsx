@@ -24,6 +24,7 @@ const BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   [DESK_HOME_PATH]: [{ label: "Desk" }],
   [CLINIC_PATH]: [{ label: "Clinic" }],
   "/clinic/patients": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Patients" }],
+  "/clinic/protocols": [{ label: "Clinic", href: CLINIC_PATH }, { label: "Protocol Library" }],
   "/audit/log": [{ label: "Audit log" }],
   "/admin/optical/catalog/frames": [{ label: "Catalog & pricing" }, { label: "Frames" }],
   "/admin/optical/inventory/frames": [{ label: "Inventory" }, { label: "Frames" }],
@@ -184,6 +185,9 @@ function SectionsDrawer({ open, roles, onClose }: { open: boolean; roles: readon
           <DrawerLink icon="≡" title="Audit log" detail="every access and change" href="/audit/log" onClick={route} />
           {roles.includes("practice-admin") && <DrawerLink icon="⚙" title="Administration / Settings" detail="practice configuration" href="/settings" onClick={route} />}
           <DrawerLink icon="◉" title="Clinic" detail="Clinic home and patients" href={CLINIC_PATH} onClick={route} />
+          {(roles.includes("clinician") || roles.includes("practice-admin")) && (
+            <DrawerLink icon="▣" title="Protocol Library" detail="author and manage clinical protocols" href="/clinic/protocols" onClick={route} />
+          )}
         </DrawerGroup>
       </aside>
     </>
