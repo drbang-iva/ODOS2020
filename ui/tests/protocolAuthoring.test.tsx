@@ -5,6 +5,10 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { ProtocolStagingList } from "../src/components/charting/ProtocolStagingList";
+import {
+  protocolApplicationDisclosure,
+  protocolConfirmationLabel,
+} from "../src/components/charting/AssessmentSection";
 import type {
   ProtocolDefinition,
   ProtocolDraft,
@@ -142,6 +146,41 @@ test("builder preview and encounter staging use the same shared renderer", () =>
   assert.match(html, /checked=""/);
 });
 
+test("protocol staging distinguishes coverage review from a charge with no rule", () => {
+  const charge = {
+    itemKey: "charge-with-rule",
+    itemType: "charge-seed" as const,
+    defaultSelected: true,
+    lateralityMode: "OU-always" as const,
+    payload: { procedureConceptKey: "office-visit", chargeRuleRefs: ["rule-1"] },
+  };
+  const html = renderToStaticMarkup(
+    <ProtocolStagingList
+      items={[charge, {
+        ...charge,
+        itemKey: "charge-without-rule",
+        payload: { procedureConceptKey: "unmatched-charge", chargeRuleRefs: [] },
+      }]}
+      selections={{}}
+    />,
+  );
+  assert.match(html, /coverage review/);
+  assert.match(html, /no rule/);
+});
+
+test("protocol charge disclosure and confirmation follow the server offer capability", () => {
+  assert.equal(
+    protocolApplicationDisclosure(true),
+    "Reviewable protocol defaults; confirmation writes exam prompts, plan actions, and accepted charges.",
+  );
+  assert.equal(
+    protocolApplicationDisclosure(false),
+    "Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.",
+  );
+  assert.equal(protocolConfirmationLabel(true), "Confirm, accept charges, and apply");
+  assert.equal(protocolConfirmationLabel(false), "Confirm and apply");
+});
+
 test("assessment protocol UI is diagnosis-generic and renders ranked multi-offer selection", () => {
   const source = readFileSync(new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /glaucoma/i);
@@ -150,6 +189,10 @@ test("assessment protocol UI is diagnosis-generic and renders ranked multi-offer
   assert.match(source, /selectedProtocolId/);
   assert.match(source, /type="radio"/);
   assert.doesNotMatch(source, /protocolId:\s*"[^"]+"/);
+  assert.doesNotMatch(source, /dry-eye-evaluation/);
+  assert.match(source, /acceptCharges: boolean/);
+  assert.match(source, /const acceptCharges = protocolOffer\?\.acceptCharges === true/);
+  assert.match(source, /acceptCharges,/);
 });
 
 test("an applied protocol remains un-applyable after its triggering diagnosis is removed", async () => {

@@ -20,14 +20,15 @@ const CONDITIONS = ["principal", "secondary-a", "secondary-b"].map((id) => ({
   id,
 }));
 
-test("assessment protocol routing delegates diagnosis-family matching to server offers and accepts dry-eye charges", () => {
+test("assessment protocol routing delegates diagnosis matching and charge acceptance to server offers", () => {
   const source = readFileSync(
     new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url),
     "utf8",
   );
   assert.match(source, /clinical-graph\/protocols\/offers/);
   assert.match(source, /protocolDiagnoses\.map/);
-  assert.match(source, /acceptCharges: protocolOffer\.id === "dry-eye-evaluation"/);
+  assert.match(source, /const acceptCharges = protocolOffer\?\.acceptCharges === true/);
+  assert.doesNotMatch(source, /dry-eye-evaluation/);
   assert.doesNotMatch(source, /PROTOCOL_TRIGGER_CONFIGS/);
 });
 

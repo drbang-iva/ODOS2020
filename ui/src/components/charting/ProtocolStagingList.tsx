@@ -37,7 +37,9 @@ export function ProtocolStagingList({
           </span>
           {item.itemType === "charge-seed" && (
             <span className="rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-surface-2)] px-2 py-1 text-xs text-[color:var(--odos-muted)]">
-              charge seed
+              {Array.isArray(item.payload.chargeRuleRefs) && item.payload.chargeRuleRefs.length > 0
+                ? "coverage review"
+                : "no rule"}
             </span>
           )}
         </label>

@@ -62,6 +62,7 @@ interface ProtocolOffer {
   id: string;
   title: string;
   version: number;
+  acceptCharges: boolean;
   statusScope: DiagnosisVisitStatus[];
   trigger: { kind: "diagnosis"; dxKeys: string[]; statusScope?: DiagnosisVisitStatus[] };
   items: ProtocolItem[];
@@ -287,6 +288,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     }] : []);
   });
   const protocolOffer = protocolOffers.find((offer) => offer.id === selectedProtocolId) ?? protocolOffers[0];
+  const acceptCharges = protocolOffer?.acceptCharges === true;
   const protocolApplication = protocolOffer
     ? protocolApplications.find((application) =>
         application.protocolId === protocolOffer.id &&
@@ -411,7 +413,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           confirmed: true,
         },
         selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
-        acceptCharges: protocolOffer.id === "dry-eye-evaluation",
+        acceptCharges,
       });
       if (body.application?.id) {
         setProtocolApplications((current) => [...current, {
@@ -527,6 +529,9 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               <div>
                 <div className="text-sm font-semibold text-[color:var(--odos-text)]">Protocol offers</div>
                 <div className="mt-1 text-xs text-[color:var(--odos-muted)]">Ranked by visit-status match; every matching diagnosis variant remains selectable.</div>
+                <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
+                  {protocolApplicationDisclosure(acceptCharges)}
+                </div>
               </div>
               <button
                 ref={protocolTriggerRef}
@@ -580,7 +585,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
               <div className="mt-5 flex justify-end gap-3">
                 <button type="button" onClick={() => setProtocolSheetOpen(false)} className={BUTTON_CLASS}>Cancel</button>
                 <button type="button" disabled={busy !== null} onClick={applySelectedProtocol} className={BUTTON_CLASS}>
-                  {busy === "protocol" ? "Applying..." : "Confirm and apply"}
+                  {busy === "protocol" ? "Applying..." : protocolConfirmationLabel(acceptCharges)}
                 </button>
               </div>
             </div>
@@ -631,6 +636,16 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       </div>
     </section>
   );
+}
+
+export function protocolApplicationDisclosure(acceptCharges: boolean): string {
+  return acceptCharges
+    ? "Reviewable protocol defaults; confirmation writes exam prompts, plan actions, and accepted charges."
+    : "Reviewable protocol defaults; applying writes committed exam seeds, plan actions, and staged charges.";
+}
+
+export function protocolConfirmationLabel(acceptCharges: boolean): string {
+  return acceptCharges ? "Confirm, accept charges, and apply" : "Confirm and apply";
 }
 
 export function diagnosisRankMoveNeighbors(
