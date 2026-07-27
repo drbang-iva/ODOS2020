@@ -12,7 +12,7 @@ export type ProtocolTrigger =
   | { kind: "visit-type"; visitTypes: string[] };
 export type ProtocolItemType =
   | "finding-seed" | "order" | "medication" | "counseling" | "education"
-  | "instruction" | "follow-up" | "charge-seed";
+  | "instruction" | "follow-up" | "series-prescription" | "charge-seed";
 
 export interface ProtocolItem {
   itemKey: string;
@@ -146,6 +146,8 @@ export interface ChargeProposal {
     detectedIssueRef?: string;
   }>;
   state: "staged" | "accepted" | "overridden" | "removed" | "finalized";
+  protocolDefaultPayload?: Record<string, unknown>;
+  modifiedFields?: string[];
   override?: { reason: string; actor: string; at: string; abnFlag: boolean };
   chargeItemRef?: string;
   provenance: InstanceProvenance;

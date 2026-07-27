@@ -589,6 +589,7 @@ export class ProtocolService {
       row.state !== "removed"
     );
     if (existing) return;
+    const modifiedFields = changedFields(item.payload, payload);
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
     const rule = ruleId ? await this.chargeRules.get(ruleId) : undefined;
     await this.charges.save({
@@ -611,8 +612,10 @@ export class ProtocolService {
           : ["No coverage review rule resolved for this charge proposal."],
       }],
       state: "staged",
+      protocolDefaultPayload: item.payload,
+      modifiedFields,
       provenance: {
-        source: "protocol-default",
+        source: modifiedFields.length ? "clinician-entered" : "protocol-default",
         actor: application.appliedBy,
         at,
         protocolId: application.protocolId,

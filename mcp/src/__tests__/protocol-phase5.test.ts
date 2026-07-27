@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import {
+  DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
   DRY_EYE_EVALUATION_PROTOCOL,
+  DRY_EYE_IPL_INIT_PROTOCOL,
+  DRY_EYE_LLLT_INIT_PROTOCOL,
+  DRY_EYE_RF_INIT_PROTOCOL,
   GLAUCOMA_SUSPECT_CHARGE_RULES,
   GLAUCOMA_SUSPECT_PROTOCOL,
 } from "../clinical-graph/protocol-fixtures.js";
@@ -775,7 +779,13 @@ test("persisted legacy dry-eye built-in inherits charge acceptance, then applies
   assert.equal(offer.status, 200);
   assert.deepEqual(
     (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
-    [DRY_EYE_EVALUATION_PROTOCOL.id],
+    [
+      DRY_EYE_EVALUATION_PROTOCOL.id,
+      DRY_EYE_IPL_INIT_PROTOCOL.id,
+      DRY_EYE_RF_INIT_PROTOCOL.id,
+      DRY_EYE_LLLT_INIT_PROTOCOL.id,
+      DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL.id,
+    ],
   );
   assert.equal(
     (offer.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols[0]?.acceptCharges,

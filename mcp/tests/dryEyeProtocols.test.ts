@@ -55,9 +55,10 @@ test("DE-2 compiles all seven eyecare procedure definitions without unverified C
   assert.equal(dryEye.every((definition) => definition.notBillReady), true);
 });
 
-test("IPL and LLLT series and package forks share one procedure vocabulary while RF stays definition-only", () => {
+test("IPL, RF, and LLLT series and package forks share one procedure vocabulary", () => {
   for (const [name, code] of [
     ["IPL", DRY_EYE_PROCEDURE_STABLE_KEYS.ipl],
+    ["RF", DRY_EYE_PROCEDURE_STABLE_KEYS.rf],
     ["LLLT", DRY_EYE_PROCEDURE_STABLE_KEYS.lllt],
   ] as const) {
     const series = DRY_EYE_SERIES_PROTOCOL_DRAFTS.find((draft) => draft.name === name);
@@ -74,34 +75,72 @@ test("IPL and LLLT series and package forks share one procedure vocabulary while
     ), true);
     assert.deepEqual(new Set(packages.map((draft) => draft.sessionCount)), new Set([1, 4]));
   }
-  assert.equal(DRY_EYE_SERIES_PROTOCOL_DRAFTS.some((draft) =>
-    draft.eligibleProcedureTypeCodes.includes(DRY_EYE_PROCEDURE_STABLE_KEYS.rf)
-  ), false);
-  assert.equal(DRY_EYE_PACKAGE_DEFINITION_DRAFTS.some((draft) =>
-    draft.eligibleProcedureTypeCodes.includes(DRY_EYE_PROCEDURE_STABLE_KEYS.rf)
-  ), false);
+  assert.equal(DRY_EYE_SERIES_PROTOCOL_DRAFTS.length, 3);
+  assert.equal(DRY_EYE_PACKAGE_DEFINITION_DRAFTS.length, 6);
+  assert.equal(
+    DRY_EYE_PACKAGE_DEFINITION_DRAFTS.find((draft) => draft.name === "RF single session")?.priceCents,
+    22_500,
+  );
+  assert.equal(
+    DRY_EYE_PACKAGE_DEFINITION_DRAFTS.find((draft) => draft.name === "RF 4 sessions")?.priceCents,
+    80_000,
+  );
+});
+
+test("dry-eye treatment definitions contain no combination artifacts", () => {
+  const procedureDefinitions = buildProcedureDefinitionSeeds()
+    .filter((definition) => definition.stableKey.startsWith("procedure:dry-eye:"))
+    .map((definition) => ({
+      kind: "procedure",
+      id: definition.stableKey,
+      eligibleProcedureTypeCodes: [definition.stableKey],
+    }));
+  const artifacts = [
+    ...procedureDefinitions,
+    ...DRY_EYE_SERIES_PROTOCOL_DRAFTS.map((definition) => ({
+      kind: "series protocol",
+      id: definition.id,
+      eligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
+    })),
+    ...DRY_EYE_PACKAGE_DEFINITION_DRAFTS.map((definition) => ({
+      kind: "package",
+      id: definition.name,
+      eligibleProcedureTypeCodes: definition.eligibleProcedureTypeCodes,
+    })),
+  ];
+  for (const artifact of artifacts) {
+    assert.equal(
+      artifact.eligibleProcedureTypeCodes.length <= 1,
+      true,
+      `${artifact.kind} ${artifact.id} must not combine procedure types`,
+    );
+  }
 });
 
 test("the first-run treatment seed is idempotent across the authored-only stores", async () => {
   const adapter = new MemoryTreatmentSeedAdapter();
   const first = await seedDryEyeTreatmentDefinitions(adapter);
-  assert.deepEqual(first.series.created, ["IPL", "LLLT"]);
+  assert.deepEqual(first.series.created, ["IPL", "RF", "LLLT"]);
   assert.deepEqual(first.packages.created, [
     "IPL single session",
     "IPL 4 sessions",
+    "RF single session",
+    "RF 4 sessions",
     "LLLT single session",
     "LLLT 4 sessions",
   ]);
   const second = await seedDryEyeTreatmentDefinitions(adapter);
-  assert.deepEqual(second.series.unchanged, ["IPL", "LLLT"]);
+  assert.deepEqual(second.series.unchanged, ["IPL", "RF", "LLLT"]);
   assert.deepEqual(second.packages.unchanged, [
     "IPL single session",
     "IPL 4 sessions",
+    "RF single session",
+    "RF 4 sessions",
     "LLLT single session",
     "LLLT 4 sessions",
   ]);
-  assert.equal(adapter.series.length, 2);
-  assert.equal(adapter.packages.length, 4);
+  assert.equal(adapter.series.length, 3);
+  assert.equal(adapter.packages.length, 6);
 });
 
 test("the first-run treatment seed skips archived definitions without attempting rejected updates", async () => {
@@ -114,9 +153,11 @@ test("the first-run treatment seed skips archived definitions without attempting
 
   assert.deepEqual(result.series.skippedArchived, ["IPL"]);
   assert.deepEqual(result.packages.skippedArchived, ["IPL single session"]);
-  assert.deepEqual(result.series.unchanged, ["LLLT"]);
+  assert.deepEqual(result.series.unchanged, ["RF", "LLLT"]);
   assert.deepEqual(result.packages.unchanged, [
     "IPL 4 sessions",
+    "RF single session",
+    "RF 4 sessions",
     "LLLT single session",
     "LLLT 4 sessions",
   ]);
