@@ -1,9 +1,16 @@
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
+import type { MedplumClient } from "../fhir-client.js";
+import {
+  FhirSeriesProtocolDefinitionStore,
+  type SeriesProtocolDefinition,
+} from "../series-tracker/protocol-definition-store.js";
+import { buildSeriesCarePlan } from "../series-tracker/series-care-plan.js";
 import {
   BUILTIN_CHARGE_RULES,
   BUILTIN_PROTOCOLS,
+  DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
   DRY_EYE_CHARGE_RULES,
   DRY_EYE_EVALUATION_PROTOCOL,
 } from "./protocol-fixtures.js";
@@ -29,6 +36,8 @@ import {
 } from "./procedure-fee-schedule.js";
 
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
+const SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/series-care-plan-source";
 
 interface LiveFhir extends ProtocolFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
@@ -41,6 +50,7 @@ interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveF
 export interface ProtocolEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<Staff | null>;
   feeScheduleFhir?: ProcedureFeeScheduleFhir;
+  serviceFhir?: MedplumClient;
   now?: () => string;
   catalogs?: () => ProtocolCatalogs;
 }
@@ -341,13 +351,45 @@ export async function handleProtocolApplyRequest(
     application.protocolId === parsed.data.protocolId &&
     application.confirmed && application.undoState === "active"
   )) return { status: 409, body: { error: "Protocol is already applied to this encounter." } };
+  const selectedSeriesItems = protocol.items.flatMap((item) => {
+    if (item.itemType !== "series-prescription") return [];
+    const selection = parsed.data.selections?.find((candidate) => candidate.itemKey === item.itemKey);
+    if (!(selection?.selected ?? item.defaultSelected)) return [];
+    return [{ item, payload: selection?.payload ?? item.payload }];
+  });
+  const resolvedSeriesProtocols = new Map<string, SeriesProtocolDefinition>();
+  if (selectedSeriesItems.length > 0) {
+    if (!deps.serviceFhir) {
+      throw new Error("Protocol series prescriptions require the service FHIR client.");
+    }
+    const definitions = await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, deps.now).list({
+      includeArchived: true,
+    });
+    for (const { item, payload } of selectedSeriesItems) {
+      const seriesProtocolId = typeof payload.seriesProtocolId === "string"
+        ? payload.seriesProtocolId.trim()
+        : "";
+      const definition = definitions.find((candidate) => candidate.id === seriesProtocolId);
+      if (!seriesProtocolId || !definition?.active) {
+        return {
+          status: 400,
+          body: { error: `Selected series prescription ${item.itemKey} has no active series protocol definition.` },
+        };
+      }
+      resolvedSeriesProtocols.set(seriesProtocolId, definition);
+    }
+  }
   const opened = await service.open(parsed.data.protocolId, {
     encounterId: parsed.data.encounterId,
     patientId: parsed.data.patientId,
     diagnosis: parsed.data.diagnosis,
     actor: staff.staffReference,
   });
-  await service.commit(opened.application.id, parsed.data.selections ?? [], [parsed.data.diagnosis.reference]);
+  await liveService(staff, deps.now, resolvedSeriesProtocols).commit(
+    opened.application.id,
+    parsed.data.selections ?? [],
+    [parsed.data.diagnosis.reference],
+  );
   if (parsed.data.acceptCharges) {
     for (const charge of (await service.charges.list()).filter((candidate) =>
       candidate.protocolApplicationId === opened.application.id &&
@@ -445,7 +487,11 @@ export async function handleProtocolSignCleanupRequest(
   return { status: 200, body: { abandoned, ...charges } };
 }
 
-function liveService(staff: Staff, now?: () => string): ProtocolService {
+function liveService(
+  staff: Staff,
+  now?: () => string,
+  seriesProtocols: ReadonlyMap<string, SeriesProtocolDefinition> = new Map(),
+): ProtocolService {
   return new ProtocolService(staff.fhir, {
     async commitFinding(finding) {
       if (finding.value === undefined) return undefined;
@@ -456,6 +502,34 @@ function liveService(staff: Staff, now?: () => string): ProtocolService {
       return saved.id ? `Observation/${saved.id}` : undefined;
     },
     async materializeAction(action) {
+      if (action.actionType === "series-prescription") {
+        const seriesProtocolId = String(action.payload.seriesProtocolId ?? "");
+        const protocol = seriesProtocols.get(seriesProtocolId);
+        if (!protocol) throw new Error(`Series protocol ${seriesProtocolId || "(missing)"} was not resolved before commit.`);
+        const identifierValue = `${action.encounterId}:${action.provenance.protocolId}:${action.sourceItemKey}`;
+        const saved = await staff.fhir.create({
+          ...buildSeriesCarePlan({
+            protocol,
+            patientReference: `Patient/${action.patientId}`,
+            authorReference: action.provenance.actor,
+            created: action.provenance.at,
+          }),
+          identifier: [{
+            system: SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM,
+            value: identifierValue,
+          }],
+        }, {
+          "X-ODOS-Source": "protocol-module",
+          "If-None-Exist": `identifier=${SERIES_CARE_PLAN_SOURCE_IDENTIFIER_SYSTEM}|${identifierValue}`,
+        });
+        return saved.id ? `CarePlan/${saved.id}` : undefined;
+      }
+      if (
+        action.provenance.protocolId === DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL.id &&
+        ["counseling", "education", "instruction"].includes(action.actionType)
+      ) {
+        return undefined;
+      }
       const resource = action.actionType === "order"
         ? serviceRequest(action)
         : carePlan(action);

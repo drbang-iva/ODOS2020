@@ -135,6 +135,9 @@ const DRY_EYE_PROMPT_FINDINGS = [
 export const DRY_EYE_EVALUATION_PROCEDURE_KEY = "dry-eye-evaluation";
 export const DRY_EYE_EVALUATION_RULE_ID = "rule-dry-eye-evaluation";
 export const DRY_EYE_PUNCTAL_OCCLUSION_RULE_ID = "rule-dry-eye-punctal-occlusion";
+export const DRY_EYE_IPL_PACKAGE_RULE_ID = "rule-dry-eye-ipl-package";
+export const DRY_EYE_RF_PACKAGE_RULE_ID = "rule-dry-eye-rf-package";
+export const DRY_EYE_LLLT_PACKAGE_RULE_ID = "rule-dry-eye-lllt-package";
 
 export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
   id: "dry-eye-evaluation",
@@ -191,6 +194,142 @@ export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
   ],
 };
 
+function dryEyeSeriesInitiationProtocol(input: {
+  id: string;
+  title: string;
+  modality: "ipl" | "rf" | "lllt";
+  seriesProtocolId: string;
+  procedureConceptKey: string;
+  chargeRuleId: string;
+}): ProtocolDefinition {
+  return {
+    id: input.id,
+    version: 1,
+    title: input.title,
+    trigger: {
+      kind: "diagnosis",
+      dxKeys: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+    },
+    ownership: { ownerId: "practice", sharing: "practice" },
+    categories: ["Dry Eye"],
+    status: "active",
+    provenanceNote: "Operator-authored dry-eye treatment-initiation protocol.",
+    authoring: {
+      origin: "clinician",
+      at: "2026-07-26T00:00:00.000Z",
+      actor: "Practitioner/odos-system",
+    },
+    audit: {
+      createdBy: "Practitioner/odos-system",
+      createdAt: "2026-07-26T00:00:00.000Z",
+      publishedBy: "Practitioner/odos-system",
+      publishedAt: "2026-07-26T00:00:00.000Z",
+    },
+    items: [
+      {
+        ...OU,
+        itemKey: `series-${input.modality}`,
+        itemType: "series-prescription",
+        payload: {
+          seriesProtocolId: input.seriesProtocolId,
+          chargeSeedRef: `charge-${input.modality}-package`,
+        },
+      },
+      {
+        ...DEFAULT,
+        itemKey: `charge-${input.modality}-package`,
+        itemType: "charge-seed",
+        payload: {
+          procedureConceptKey: input.procedureConceptKey,
+          chargeRuleRefs: [input.chargeRuleId],
+          requiresOrderCompletion: true,
+        },
+      },
+    ],
+  };
+}
+
+export const DRY_EYE_IPL_INIT_PROTOCOL = dryEyeSeriesInitiationProtocol({
+  id: "dry-eye-ipl-init",
+  title: "Dry Eye — IPL Initiation",
+  modality: "ipl",
+  seriesProtocolId: "dry-eye-ipl",
+  procedureConceptKey: "dry-eye-ipl-4-sessions",
+  chargeRuleId: DRY_EYE_IPL_PACKAGE_RULE_ID,
+});
+
+export const DRY_EYE_RF_INIT_PROTOCOL = dryEyeSeriesInitiationProtocol({
+  id: "dry-eye-rf-init",
+  title: "Dry Eye — RF Initiation",
+  modality: "rf",
+  seriesProtocolId: "dry-eye-rf",
+  procedureConceptKey: "dry-eye-rf-4-sessions",
+  chargeRuleId: DRY_EYE_RF_PACKAGE_RULE_ID,
+});
+
+export const DRY_EYE_LLLT_INIT_PROTOCOL = dryEyeSeriesInitiationProtocol({
+  id: "dry-eye-lllt-init",
+  title: "Dry Eye — LLLT Initiation",
+  modality: "lllt",
+  seriesProtocolId: "dry-eye-lllt",
+  procedureConceptKey: "dry-eye-lllt-4-sessions",
+  chargeRuleId: DRY_EYE_LLLT_PACKAGE_RULE_ID,
+});
+
+export const DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL: ProtocolDefinition = {
+  id: "dry-eye-at-home-regimen-init",
+  version: 1,
+  title: "Dry Eye — At-Home Regimen Initiation",
+  trigger: {
+    kind: "diagnosis",
+    dxKeys: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+  },
+  ownership: { ownerId: "practice", sharing: "practice" },
+  categories: ["Dry Eye"],
+  status: "active",
+  provenanceNote: "Operator-authored dry-eye at-home regimen protocol.",
+  authoring: {
+    origin: "clinician",
+    at: "2026-07-26T00:00:00.000Z",
+    actor: "Practitioner/odos-system",
+  },
+  audit: {
+    createdBy: "Practitioner/odos-system",
+    createdAt: "2026-07-26T00:00:00.000Z",
+    publishedBy: "Practitioner/odos-system",
+    publishedAt: "2026-07-26T00:00:00.000Z",
+  },
+  items: [
+    {
+      ...OU,
+      itemKey: "counsel-lid-hygiene",
+      itemType: "counseling",
+      payload: {
+        topicKey: "lid-hygiene",
+        narrativeTemplate: "Reviewed daily lid hygiene technique.",
+      },
+    },
+    {
+      ...OU,
+      itemKey: "instruction-warm-compress",
+      itemType: "instruction",
+      payload: {
+        topicKey: "warm-compress-mask",
+        narrativeTemplate: "Use a warm compress or mask as instructed.",
+      },
+    },
+    {
+      ...OU,
+      itemKey: "education-artificial-tears",
+      itemType: "education",
+      payload: {
+        assetRef: "artificial-tears-guidance",
+        narrativeTemplate: "Reviewed artificial tear use.",
+      },
+    },
+  ],
+};
+
 export const DRY_EYE_CHARGE_RULES: ProcedureChargeRule[] = [
   {
     id: DRY_EYE_EVALUATION_RULE_ID,
@@ -224,11 +363,44 @@ export const DRY_EYE_CHARGE_RULES: ProcedureChargeRule[] = [
     effectivePeriod: { start: "2026-07-26" },
     verificationStatus: "provisional",
   },
+  ...[
+    {
+      id: DRY_EYE_IPL_PACKAGE_RULE_ID,
+      procedureConceptKey: "dry-eye-ipl-4-sessions",
+    },
+    {
+      id: DRY_EYE_RF_PACKAGE_RULE_ID,
+      procedureConceptKey: "dry-eye-rf-4-sessions",
+    },
+    {
+      id: DRY_EYE_LLLT_PACKAGE_RULE_ID,
+      procedureConceptKey: "dry-eye-lllt-4-sessions",
+    },
+  ].map(({ id, procedureConceptKey }) => ({
+    id,
+    version: 1,
+    procedureConceptKey,
+    dxScope: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+    jurisdiction: { payerClass: "unspecified" },
+    outcome: "needs-review" as const,
+    sourceAuthority: {
+      kind: "operator-design",
+      citation: `${DRY_EYE_DESIGN} §3`,
+      url: DRY_EYE_DESIGN,
+      accessedDate: "2026-07-26",
+    },
+    effectivePeriod: { start: "2026-07-26" },
+    verificationStatus: "provisional" as const,
+  })),
 ];
 
 export const BUILTIN_PROTOCOLS = [
   GLAUCOMA_SUSPECT_PROTOCOL,
   DRY_EYE_EVALUATION_PROTOCOL,
+  DRY_EYE_IPL_INIT_PROTOCOL,
+  DRY_EYE_RF_INIT_PROTOCOL,
+  DRY_EYE_LLLT_INIT_PROTOCOL,
+  DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
 ] as const;
 
 export const BUILTIN_CHARGE_RULES = [

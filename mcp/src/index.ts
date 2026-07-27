@@ -6492,7 +6492,7 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleProtocolApplyRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            { authenticate: authenticateStaffRouteForAction("chart.write"), serviceFhir: fhir },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);

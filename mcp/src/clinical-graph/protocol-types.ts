@@ -12,7 +12,7 @@ export type ProtocolTrigger =
   | { kind: "visit-type"; visitTypes: string[] };
 export type ProtocolItemType =
   | "finding-seed" | "order" | "medication" | "counseling" | "education"
-  | "instruction" | "follow-up" | "charge-seed";
+  | "instruction" | "follow-up" | "series-prescription" | "charge-seed";
 
 export interface ProtocolItem {
   itemKey: string;
