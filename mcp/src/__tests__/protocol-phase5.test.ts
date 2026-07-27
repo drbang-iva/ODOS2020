@@ -602,7 +602,8 @@ test("offers performs no writes on the chart.read path", async () => {
     body: { diagnoses: [{ reference: "Condition/c1", code: "H40.021", confirmed: true }] },
   });
   assert.equal(result.status, 200);
-  assert.equal((result.body as { protocols: unknown[] }).protocols.length, 1);
+  const [offer] = (result.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols;
+  assert.equal(offer?.acceptCharges, false);
   assert.equal(fhir.writes.length, 0);
 });
 
@@ -770,6 +771,10 @@ test("dry-eye built-in offers without a read-path write, then applies eight prom
   assert.deepEqual(
     (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
     [DRY_EYE_EVALUATION_PROTOCOL.id],
+  );
+  assert.equal(
+    (offer.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols[0]?.acceptCharges,
+    true,
   );
   assert.equal(fhir.writes.length, 0);
 

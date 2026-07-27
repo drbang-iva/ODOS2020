@@ -42,6 +42,7 @@ export interface ProtocolDefinitionDraft {
 export interface ProtocolDefinition {
   id: string;
   version: number;
+  acceptCharges?: boolean;
   draft?: ProtocolDefinitionDraft;
   title: string;
   trigger: ProtocolTrigger;

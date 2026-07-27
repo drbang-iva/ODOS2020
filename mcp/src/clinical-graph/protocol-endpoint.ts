@@ -291,6 +291,7 @@ export async function handleProtocolOffersRequest(
   );
   const protocols = [...stored, ...builtIns].map((protocol) => ({
     ...protocol,
+    acceptCharges: protocol.acceptCharges === true,
     statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
   }));
   return { status: 200, body: { protocols } };

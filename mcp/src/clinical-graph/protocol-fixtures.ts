@@ -139,6 +139,7 @@ export const DRY_EYE_PUNCTAL_OCCLUSION_RULE_ID = "rule-dry-eye-punctal-occlusion
 export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
   id: "dry-eye-evaluation",
   version: 1,
+  acceptCharges: true,
   title: "Dry Eye — Evaluation Workup",
   trigger: {
     kind: "diagnosis",
