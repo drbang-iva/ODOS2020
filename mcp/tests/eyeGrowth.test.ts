@@ -15,6 +15,7 @@ import {
   type PercentileBandsDataset,
 } from "../src/clinical-graph/myopia-reference-dataset.js";
 import { buildMyopiaFindingDefinitions } from "../src/clinical-graph/myopia-finding-definition.js";
+import { LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/clinical-graph/refractive-status.js";
 import {
   handleEyeGrowthVisibilityRequest,
   handleMyopiaCaptureRequest,
@@ -31,6 +32,7 @@ import type {
 } from "../src/clinical-graph/myopia-reference-population-store.js";
 import { PgMyopiaReferencePopulationStore } from "../src/clinical-graph/myopia-reference-population-store.js";
 import { defaultMyopiaPatientSettings } from "../src/clinical-graph/myopia-reference-population-store.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
 
 const AUTH = "Bearer good";
 const PATIENT_REFERENCE = "Patient/p1";
@@ -359,6 +361,122 @@ test("a persisted NOT_REPRESENTED setting renders on the European curve without 
   assert.equal(body.noReferenceMessage, null);
 });
 
+test("Eye Growth returns independently classified refraction candidates with a cycloplegic default", async () => {
+  const fixture = endpointFixture("CAUCASIAN");
+  await handleMyopiaCaptureRequest(fixture.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT_REFERENCE,
+      encounterReference: ENCOUNTER_REFERENCE,
+      measuredAt: MEASURED_AT,
+      eyes: {
+        OD: { axialLengthMm: 23.61, biometryMethod: "OPTICAL_BIOMETRY" },
+      },
+    },
+  });
+  fixture.created.push(
+    refractionObservation({
+      id: "legacy-manifest",
+      system: LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      type: "MANIFEST",
+      effectiveDateTime: "2026-07-24T10:00:00.000Z",
+      sphere: -1.5,
+    }),
+    refractionObservation({
+      id: "current-cycloplegic",
+      system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      type: "CYCLOPLEGIC",
+      effectiveDateTime: "2026-07-24T11:00:00.000Z",
+      sphere: -0.25,
+    }),
+    refractionObservation({
+      id: "future-manifest",
+      system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      type: "MANIFEST",
+      effectiveDateTime: "2026-07-26T10:00:00.000Z",
+      sphere: -4,
+    }),
+  );
+
+  const history = await handleMyopiaHistoryRequest(fixture.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = history.body as MyopiaProgressionHistoryResponse;
+
+  assert.equal(history.status, 200);
+  assert.equal(body.readings.length, 1);
+  assert.deepEqual(body.readings[0]?.refractiveStatus, {
+    status: "PRE_MYOPIA",
+    sphericalEquivalent: -0.25,
+    refractionType: "CYCLOPLEGIC",
+    refractionDate: "2026-07-24T11:00:00.000Z",
+    observationReference: "Observation/current-cycloplegic",
+    candidates: [
+      {
+        refractionType: "CYCLOPLEGIC",
+        sphericalEquivalent: -0.25,
+        status: "PRE_MYOPIA",
+        refractionDate: "2026-07-24T11:00:00.000Z",
+        observationReference: "Observation/current-cycloplegic",
+      },
+      {
+        refractionType: "MANIFEST",
+        sphericalEquivalent: -1.5,
+        status: "MYOPIC",
+        refractionDate: "2026-07-24T10:00:00.000Z",
+        observationReference: "Observation/legacy-manifest",
+      },
+    ],
+  });
+  const refractionSearch = fixture.searches.find((params) =>
+    params.code?.includes("REFRACTION"));
+  assert.equal(
+    refractionSearch?.code,
+    `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION,${LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
+  );
+});
+
+test("a first-visit refraction saved after axial length pairs by encounter and resolves MYOPIC", async () => {
+  const fixture = endpointFixture("CAUCASIAN");
+  await handleMyopiaCaptureRequest(fixture.deps, {
+    authHeader: AUTH,
+    body: {
+      patientReference: PATIENT_REFERENCE,
+      encounterReference: ENCOUNTER_REFERENCE,
+      measuredAt: MEASURED_AT,
+      eyes: {
+        OD: { axialLengthMm: 22.90, biometryMethod: "OPTICAL_BIOMETRY" },
+      },
+    },
+  });
+  fixture.created.push(
+    refractionObservation({
+      id: "first-visit-manifest",
+      system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+      type: "MANIFEST",
+      effectiveDateTime: "2026-07-25T15:00:00.000Z",
+      sphere: -1.25,
+      encounterReference: ENCOUNTER_REFERENCE,
+      status: "preliminary",
+    }),
+  );
+
+  const history = await handleMyopiaHistoryRequest(fixture.deps, {
+    authHeader: AUTH,
+    query: { patient: PATIENT_REFERENCE },
+  });
+  const body = history.body as MyopiaProgressionHistoryResponse;
+
+  assert.equal(history.status, 200);
+  assert.equal(body.readings.length, 1);
+  assert.equal(body.readings[0]?.refractiveStatus.status, "MYOPIC");
+  assert.equal(
+    body.readings[0]?.refractiveStatus.observationReference,
+    "Observation/first-visit-manifest",
+  );
+});
+
 test("latest consecutive same-method readings calculate the rate independently per eye", () => {
   const thresholds = MYOPIA_REFERENCE_DATASET_REGISTRY.axialGrowthRateThresholds();
   assert.ok(thresholds);
@@ -587,6 +705,7 @@ function endpointFixture(
   overrides: Partial<MyopiaProgressionEndpointDeps> = {},
 ) {
   const created: Array<Observation | Provenance> = [];
+  const searches: Array<Record<string, string>> = [];
   const settingsStore: MyopiaReferencePopulationStore = {
     get: async (patientReference) => ({ patientReference, referencePopulation }),
     set: async (input) => input,
@@ -614,6 +733,7 @@ function endpointFixture(
               _resourceType: "Observation",
               params?: Record<string, string>,
             ): Promise<Bundle<T>> => {
+              searches.push(params ?? {});
               const code = params?.code?.split("|").at(-1);
               const resources = created.filter((resource): resource is Observation =>
                 resource.resourceType === "Observation" &&
@@ -636,7 +756,7 @@ function endpointFixture(
       : null,
     ...overrides,
   };
-  return { created, deps };
+  return { created, searches, deps };
 }
 
 function syntheticTabulatedDataset(
@@ -696,5 +816,52 @@ function growthReading(
     biometryMethod,
     instrument: null,
     observationReference: `Observation/${observationId}`,
+    refractiveStatus: {
+      status: "UNKNOWN" as const,
+      sphericalEquivalent: null,
+      refractionType: null,
+      refractionDate: null,
+      observationReference: null,
+      candidates: [],
+    },
+  };
+}
+
+function refractionObservation(input: {
+  id: string;
+  system: string;
+  type: string;
+  effectiveDateTime: string;
+  sphere: number;
+  encounterReference?: string;
+  status?: Observation["status"];
+}): Observation {
+  const concept = (code: string) => ({ coding: [{ system: input.system, code }] });
+  return {
+    resourceType: "Observation",
+    id: input.id,
+    status: input.status ?? "final",
+    code: concept("REFRACTION"),
+    subject: { reference: PATIENT_REFERENCE },
+    ...(input.encounterReference
+      ? { encounter: { reference: input.encounterReference } }
+      : {}),
+    effectiveDateTime: input.effectiveDateTime,
+    bodySite: concept("OD"),
+    component: [
+      {
+        code: concept("REFRACTION_TYPE"),
+        valueCodeableConcept: concept(input.type),
+      },
+      {
+        code: concept("SPHERE"),
+        valueQuantity: {
+          value: input.sphere,
+          unit: "D",
+          system: "http://unitsofmeasure.org",
+          code: "[diop]",
+        },
+      },
+    ],
   };
 }

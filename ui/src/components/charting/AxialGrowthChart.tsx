@@ -1,7 +1,26 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export type MyopiaReferencePopulation = "ASIAN" | "CAUCASIAN" | "NOT_REPRESENTED";
 export type MyopiaEye = "OD" | "OS";
+export type EligibleRefractionType = "CYCLOPLEGIC" | "MANIFEST";
+export type RefractiveStatus = "MYOPIC" | "PRE_MYOPIA" | "NOT_MYOPIC" | "UNKNOWN";
+
+export interface AxialGrowthRefractiveCandidate {
+  refractionType: EligibleRefractionType;
+  sphericalEquivalent: number;
+  status: Exclude<RefractiveStatus, "UNKNOWN">;
+  refractionDate: string;
+  observationReference: string;
+}
+
+export interface AxialGrowthRefractiveStatus {
+  status: RefractiveStatus;
+  sphericalEquivalent: number | null;
+  refractionType: EligibleRefractionType | null;
+  refractionDate: string | null;
+  observationReference: string | null;
+  candidates: AxialGrowthRefractiveCandidate[];
+}
 
 export interface AxialGrowthReading {
   eye: MyopiaEye;
@@ -12,6 +31,7 @@ export interface AxialGrowthReading {
   biometryMethod: "OPTICAL_BIOMETRY" | "ULTRASOUND_A_SCAN";
   instrument: string | null;
   observationReference: string;
+  refractiveStatus: AxialGrowthRefractiveStatus;
 }
 
 export interface AxialGrowthRate {
@@ -52,6 +72,9 @@ interface Props {
 const WIDTH = 840;
 const HEIGHT = 370;
 const MARGIN = { top: 24, right: 32, bottom: 48, left: 58 };
+const HALF_UNIT = 1 / 2;
+const AXIS_LABEL_OPACITY = 3 / 4;
+const ALERT_RED = "#ef4444";
 const EYE_STYLE = {
   OD: { stroke: "#60a5fa", fill: "#1d4ed8" },
   OS: { stroke: "#f472b6", fill: "#be185d" },
@@ -59,7 +82,11 @@ const EYE_STYLE = {
 const RATE_STYLE = {
   NORMAL: { color: "#22c55e", label: "NORMAL GROWTH" },
   WATCH: { color: "#eab308", label: "WATCH GROWTH" },
-  FLAG: { color: "#ef4444", label: "ACCELERATED GROWTH" },
+  FLAG: { color: ALERT_RED, label: "ACCELERATED GROWTH" },
+} as const;
+const REFRACTION_TYPE_LABEL = {
+  CYCLOPLEGIC: "Cycloplegic",
+  MANIFEST: "Manifest",
 } as const;
 
 export function AxialGrowthChart({
@@ -68,14 +95,65 @@ export function AxialGrowthChart({
   referenceDataset,
   noReferenceMessage,
 }: Props) {
-  const plot = useMemo(
-    () => chartModel(readings, referenceDataset),
-    [readings, referenceDataset],
+  const [referenceRefraction, setReferenceRefraction] =
+    useState<EligibleRefractionType>("CYCLOPLEGIC");
+  const hasReferenceChoice = readings.some((reading) =>
+    reading.refractiveStatus.candidates.some((candidate) =>
+      candidate.refractionType === "CYCLOPLEGIC") &&
+    reading.refractiveStatus.candidates.some((candidate) =>
+      candidate.refractionType === "MANIFEST"));
+  const displayedReadings = useMemo(
+    () => readings.map((reading) => ({
+      ...reading,
+      refractiveStatus: displayedRefractiveStatus(
+        reading.refractiveStatus,
+        referenceRefraction,
+      ),
+    })),
+    [readings, referenceRefraction],
   );
+  const plot = useMemo(
+    () => chartModel(displayedReadings, referenceDataset),
+    [displayedReadings, referenceDataset],
+  );
+  const drivingRefractions = latestReadingPerEye(displayedReadings);
 
   return (
     <div>
       <div className="overflow-x-auto rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3">
+        {hasReferenceChoice && (
+          <div
+            className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[color:var(--odos-muted)]"
+            role="group"
+            aria-label="Reference refraction"
+          >
+            <span className="font-semibold text-[color:var(--odos-text)]">
+              Reference refraction
+            </span>
+            {(["CYCLOPLEGIC", "MANIFEST"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                aria-pressed={referenceRefraction === type}
+                onClick={() => setReferenceRefraction(type)}
+                className={[
+                  "rounded border px-2.5 py-1 font-semibold",
+                  referenceRefraction === type
+                    ? "border-[color:var(--odos-accent-border)] bg-[var(--odos-accent-tint-hi)] text-[color:var(--odos-text)]"
+                    : "border-[color:var(--odos-line)] bg-[var(--odos-deep-surface)]",
+                ].join(" ")}
+              >
+                {REFRACTION_TYPE_LABEL[type]}
+              </button>
+            ))}
+            <span
+              className="ml-auto font-semibold text-[color:var(--odos-text)]"
+              data-active-refraction-type={referenceRefraction}
+            >
+              Active: {REFRACTION_TYPE_LABEL[referenceRefraction]}
+            </span>
+          </div>
+        )}
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="min-w-[700px] text-[color:var(--odos-text)]"
@@ -164,18 +242,21 @@ export function AxialGrowthChart({
                     cx={point.x}
                     cy={point.y}
                     r="4.5"
-                    fill={EYE_STYLE[eye].fill}
+                    fill={point.refractiveStatus.status === "MYOPIC"
+                      ? ALERT_RED
+                      : EYE_STYLE[eye].fill}
                     stroke={EYE_STYLE[eye].stroke}
                     strokeWidth="2"
                     data-patient-point={eye}
+                    data-refractive-status={point.refractiveStatus.status}
                   >
-                    <title>{`${eye} · age ${point.ageInYears.toFixed(2)} · ${point.axialLengthMm.toFixed(2)} mm · ${methodLabel(point.biometryMethod)}`}</title>
+                    <title>{patientPointTitle(point)}</title>
                   </circle>
                 ))}
               </g>
             );
           })}
-          <text x={WIDTH / 2} y={HEIGHT - 8} textAnchor="middle" fill="currentColor" opacity="0.75" fontSize="13">
+          <text x={WIDTH / 2} y={HEIGHT - 8} textAnchor="middle" fill="currentColor" opacity={AXIS_LABEL_OPACITY} fontSize="13">
             Age (years)
           </text>
           <text
@@ -183,13 +264,29 @@ export function AxialGrowthChart({
             y={HEIGHT / 2}
             textAnchor="middle"
             fill="currentColor"
-            opacity="0.75"
+            opacity={AXIS_LABEL_OPACITY}
             fontSize="13"
             transform={`rotate(-90 16 ${HEIGHT / 2})`}
           >
             Axial length (mm)
           </text>
         </svg>
+        <div
+          className="mt-2 text-[11px] leading-5 text-[color:var(--odos-muted)]"
+          data-chart-provenance
+        >
+          {referenceDataset
+            ? `Dataset ${referenceDataset.datasetId} · v${referenceDataset.version} · ${readings.length} ${readings.length === 1 ? "reading" : "readings"} · ages ${referenceDataset.ageRangeMin}–${referenceDataset.ageRangeMax}`
+            : `No reference dataset · ${readings.length} ${readings.length === 1 ? "reading" : "readings"}`}
+        </div>
+        {drivingRefractions.length > 0 && (
+          <div
+            className="text-[11px] leading-5 text-[color:var(--odos-text)]"
+            data-driving-refractions
+          >
+            Driving refraction: {drivingRefractions.map(drivingRefractionLabel).join(" · ")}
+          </div>
+        )}
         <div className="mt-2 flex gap-4 text-xs text-[color:var(--odos-muted)]">
           <span><span className="mr-1 inline-block h-2 w-4 rounded bg-blue-400" />OD</span>
           <span><span className="mr-1 inline-block h-2 w-4 rounded bg-pink-400" />OS</span>
@@ -299,6 +396,67 @@ function formatGrowthRate(value: number): string {
   return "0.00";
 }
 
+function displayedRefractiveStatus(
+  status: AxialGrowthRefractiveStatus,
+  preferredType: EligibleRefractionType,
+): AxialGrowthRefractiveStatus {
+  const candidate = status.candidates.find((item) => item.refractionType === preferredType)
+    ?? status.candidates.find((item) => item.refractionType !== preferredType);
+  return candidate
+    ? {
+        status: candidate.status,
+        sphericalEquivalent: candidate.sphericalEquivalent,
+        refractionType: candidate.refractionType,
+        refractionDate: candidate.refractionDate,
+        observationReference: candidate.observationReference,
+        candidates: status.candidates,
+      }
+    : status;
+}
+
+function patientPointTitle(reading: AxialGrowthReading): string {
+  const status = reading.refractiveStatus;
+  const base = `${reading.eye} · age ${reading.ageInYears.toFixed(2)} · ${reading.axialLengthMm.toFixed(2)} mm`;
+  return hasRefractiveEvidence(status)
+    ? `${base} · ${formatDiopter(status.sphericalEquivalent)} D (${REFRACTION_TYPE_LABEL[status.refractionType].toLowerCase()}, ${dateLabel(status.refractionDate)})`
+    : `${base} · no cycloplegic or manifest refraction on file`;
+}
+
+function hasRefractiveEvidence(
+  status: AxialGrowthRefractiveStatus,
+): status is AxialGrowthRefractiveStatus & {
+  sphericalEquivalent: number;
+  refractionType: EligibleRefractionType;
+  refractionDate: string;
+} {
+  return status.status !== "UNKNOWN" &&
+    status.sphericalEquivalent !== null &&
+    status.refractionType !== null &&
+    status.refractionDate !== null;
+}
+
+function formatDiopter(value: number): string {
+  if (value > 0) return `+${value.toFixed(2)}`;
+  if (value < 0) return `−${Math.abs(value).toFixed(2)}`;
+  return "0.00";
+}
+
+function latestReadingPerEye(readings: AxialGrowthReading[]): AxialGrowthReading[] {
+  return (["OD", "OS"] as const).flatMap((eye) => {
+    const latest = readings
+      .filter((reading) => reading.eye === eye)
+      .sort((left, right) => right.measuredAt.localeCompare(left.measuredAt))[0];
+    return latest ? [latest] : [];
+  });
+}
+
+function drivingRefractionLabel(reading: AxialGrowthReading): string {
+  const status = reading.refractiveStatus;
+  return hasRefractiveEvidence(status)
+    ? `${reading.eye} · ${REFRACTION_TYPE_LABEL[status.refractionType]} · ${dateLabel(status.refractionDate)} · ${formatDiopter(status.sphericalEquivalent)} D`
+    : `${reading.eye} · age ${reading.ageInYears.toFixed(2)} · ${reading.axialLengthMm.toFixed(2)} mm · no cycloplegic or manifest refraction on file`;
+}
+
 function dateLabel(value: string): string {
   return value.slice(0, 10);
 }
@@ -319,12 +477,13 @@ function chartModel(
   const maxAge = allAges.length ? Math.max(...allAges) : 18;
   const rawMin = allValues.length ? Math.min(...allValues) : 20;
   const rawMax = allValues.length ? Math.max(...allValues) : 28;
-  const minValue = Math.floor((rawMin - 0.5) * 2) / 2;
-  const maxValue = Math.ceil((rawMax + 0.5) * 2) / 2;
+  const minValue = Math.floor((rawMin - HALF_UNIT) * 2) / 2;
+  const maxValue = Math.ceil((rawMax + HALF_UNIT) * 2) / 2;
   const plotWidth = WIDTH - MARGIN.left - MARGIN.right;
   const plotHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
   const x = (age: number) => MARGIN.left + ((age - minAge) / Math.max(1, maxAge - minAge)) * plotWidth;
-  const y = (value: number) => MARGIN.top + ((maxValue - value) / Math.max(0.5, maxValue - minValue)) * plotHeight;
+  const y = (value: number) =>
+    MARGIN.top + ((maxValue - value) / Math.max(HALF_UNIT, maxValue - minValue)) * plotHeight;
   const referenceLines = (referenceDataset?.percentiles ?? []).map((percentile, index) => ({
     percentile,
     points: referenceRows

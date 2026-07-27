@@ -9,6 +9,15 @@ import {
 } from "../src/components/charting/AxialGrowthChart";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
 
+const UNKNOWN_REFRACTIVE_STATUS = {
+  status: "UNKNOWN" as const,
+  sphericalEquivalent: null,
+  refractionType: null,
+  refractionDate: null,
+  observationReference: null,
+  candidates: [],
+};
+
 const readings: AxialGrowthReading[] = [
   {
     eye: "OD",
@@ -19,6 +28,7 @@ const readings: AxialGrowthReading[] = [
     biometryMethod: "OPTICAL_BIOMETRY",
     instrument: "IOLMaster 700",
     observationReference: "Observation/od-2",
+    refractiveStatus: UNKNOWN_REFRACTIVE_STATUS,
   },
   {
     eye: "OD",
@@ -29,6 +39,7 @@ const readings: AxialGrowthReading[] = [
     biometryMethod: "OPTICAL_BIOMETRY",
     instrument: "IOLMaster 700",
     observationReference: "Observation/od-1",
+    refractiveStatus: UNKNOWN_REFRACTIVE_STATUS,
   },
   {
     eye: "OS",
@@ -39,6 +50,7 @@ const readings: AxialGrowthReading[] = [
     biometryMethod: "ULTRASOUND_A_SCAN",
     instrument: null,
     observationReference: "Observation/os-2",
+    refractiveStatus: UNKNOWN_REFRACTIVE_STATUS,
   },
   {
     eye: "OS",
@@ -49,6 +61,7 @@ const readings: AxialGrowthReading[] = [
     biometryMethod: "ULTRASOUND_A_SCAN",
     instrument: null,
     observationReference: "Observation/os-1",
+    refractiveStatus: UNKNOWN_REFRACTIVE_STATUS,
   },
 ];
 
@@ -70,6 +83,128 @@ test("Eye Growth renders measurements and an age-coverage note without reference
   assert.ok(html.indexOf("OS · age 9.20") < html.indexOf("OS · age 10.40"));
   assert.match(html, /No reference data covers this age/);
   assert.doesNotMatch(html, /typical for this cohort/);
+  assert.doesNotMatch(html, /Reference refraction/);
+  assert.equal((html.match(/data-refractive-status="UNKNOWN"/g) ?? []).length, 4);
+  assert.match(html, /no cycloplegic or manifest refraction on file/);
+});
+
+test("a myopic patient marker is alert red while sitting inside the green typical-length band", () => {
+  const html = renderToStaticMarkup(
+    <AxialGrowthChart
+      readings={[refractiveReading({
+        observationReference: "Observation/myopic-green",
+        axialLengthMm: 23.3,
+        refractiveStatus: resolvedStatus("MANIFEST", -1.5, "MYOPIC"),
+      })]}
+      referenceDataset={greenReferenceDataset()}
+      noReferenceMessage={null}
+    />,
+  );
+
+  assert.match(html, /fill="#22c55e"[^>]*data-centile-zone="typical"/);
+  assert.match(
+    html,
+    /fill="#ef4444"[^>]*data-patient-point="OD"[^>]*data-refractive-status="MYOPIC"/,
+  );
+  assert.match(html, /OD · age 9\.30 · 23\.30 mm · −1\.50 D \(manifest, 2026-03-14\)/);
+  assert.match(
+    html,
+    /Dataset synthetic-green-band · v1\.0\.0 · 1 reading · ages 6–15/,
+  );
+  assert.match(html, /Driving refraction: OD · Manifest · 2026-03-14 · −1\.50 D/);
+});
+
+test("reference-refraction toggle is absent unless at least one reading has both candidates", () => {
+  const html = renderToStaticMarkup(
+    <AxialGrowthChart
+      readings={[refractiveReading({
+        refractiveStatus: resolvedStatus("CYCLOPLEGIC", -0.25, "PRE_MYOPIA"),
+      })]}
+      referenceDataset={greenReferenceDataset()}
+      noReferenceMessage={null}
+    />,
+  );
+
+  assert.doesNotMatch(html, /aria-label="Reference refraction"/);
+  assert.doesNotMatch(html, /data-active-refraction-type/);
+});
+
+test("toggling a disagreeing patient to manifest flips the marker and chart-face active label", () => {
+  const cycloplegic = candidate("CYCLOPLEGIC", -0.25, "PRE_MYOPIA", "cycloplegic");
+  const manifest = candidate("MANIFEST", -1.5, "MYOPIC", "manifest");
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(
+      <AxialGrowthChart
+        readings={[refractiveReading({
+          refractiveStatus: {
+            ...cycloplegic,
+            candidates: [cycloplegic, manifest],
+          },
+        })]}
+        referenceDataset={greenReferenceDataset()}
+        noReferenceMessage={null}
+      />,
+    );
+  });
+
+  const patientPoint = () => renderer.root.findByProps({ "data-patient-point": "OD" });
+  const activeLabel = () => renderer.root.findByProps({
+    "data-active-refraction-type": patientPoint().props["data-refractive-status"] === "MYOPIC"
+      ? "MANIFEST"
+      : "CYCLOPLEGIC",
+  });
+  assert.equal(patientPoint().props["data-refractive-status"], "PRE_MYOPIA");
+  assert.equal(patientPoint().props.fill, "#1d4ed8");
+  assert.match(activeLabel().children.join(""), /Active: Cycloplegic/);
+
+  const manifestButton = renderer.root.findAllByType("button")
+    .find((button) => button.children.includes("Manifest"));
+  assert.ok(manifestButton);
+  act(() => manifestButton.props.onClick());
+
+  assert.equal(patientPoint().props["data-refractive-status"], "MYOPIC");
+  assert.equal(patientPoint().props.fill, "#ef4444");
+  assert.match(activeLabel().children.join(""), /Active: Manifest/);
+  assert.match(JSON.stringify(renderer.toJSON()), /Driving refraction:.*Manifest.*−1\.50 D/);
+  act(() => renderer.unmount());
+});
+
+test("manifest preference falls back to a cycloplegic-only reading instead of rendering UNKNOWN", () => {
+  const cycloplegic = candidate("CYCLOPLEGIC", -0.25, "PRE_MYOPIA", "cycloplegic");
+  const manifest = candidate("MANIFEST", -1.5, "MYOPIC", "manifest");
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(
+      <AxialGrowthChart
+        readings={[
+          refractiveReading({
+            observationReference: "Observation/choice",
+            measuredAt: "2026-03-14T12:00:00Z",
+            refractiveStatus: { ...cycloplegic, candidates: [cycloplegic, manifest] },
+          }),
+          refractiveReading({
+            observationReference: "Observation/cycloplegic-only",
+            measuredAt: "2025-03-14T12:00:00Z",
+            ageInYears: 8.3,
+            refractiveStatus: { ...cycloplegic, candidates: [cycloplegic] },
+          }),
+        ]}
+        referenceDataset={greenReferenceDataset()}
+        noReferenceMessage={null}
+      />,
+    );
+  });
+  const manifestButton = renderer.root.findAllByType("button")
+    .find((button) => button.children.includes("Manifest"));
+  assert.ok(manifestButton);
+  act(() => manifestButton.props.onClick());
+
+  const statuses = renderer.root.findAllByProps({ "data-patient-point": "OD" })
+    .map((point) => point.props["data-refractive-status"]);
+  assert.deepEqual(statuses.sort(), ["MYOPIC", "PRE_MYOPIA"]);
+  assert.equal(statuses.includes("UNKNOWN"), false);
+  act(() => renderer.unmount());
 });
 
 test("rendered reference bands always carry citation and population safety note", () => {
@@ -402,4 +537,63 @@ async function submitEyeGrowthFixture(
     if (renderer) act(() => renderer.unmount());
     globalThis.fetch = originalFetch;
   }
+}
+
+function refractiveReading(
+  overrides: Partial<AxialGrowthReading> = {},
+): AxialGrowthReading {
+  return {
+    eye: "OD",
+    axialLengthMm: 23.3,
+    cornealRadiusMm: null,
+    ageInYears: 9.3,
+    measuredAt: "2026-03-14T12:00:00Z",
+    biometryMethod: "OPTICAL_BIOMETRY",
+    instrument: "IOLMaster 700",
+    observationReference: "Observation/reading",
+    refractiveStatus: UNKNOWN_REFRACTIVE_STATUS,
+    ...overrides,
+  };
+}
+
+function candidate(
+  refractionType: "CYCLOPLEGIC" | "MANIFEST",
+  sphericalEquivalent: number,
+  status: "MYOPIC" | "PRE_MYOPIA" | "NOT_MYOPIC",
+  id: string,
+) {
+  return {
+    refractionType,
+    sphericalEquivalent,
+    status,
+    refractionDate: "2026-03-14T10:00:00Z",
+    observationReference: `Observation/${id}`,
+  };
+}
+
+function resolvedStatus(
+  refractionType: "CYCLOPLEGIC" | "MANIFEST",
+  sphericalEquivalent: number,
+  status: "MYOPIC" | "PRE_MYOPIA" | "NOT_MYOPIC",
+) {
+  const resolved = candidate(refractionType, sphericalEquivalent, status, "resolved");
+  return { ...resolved, candidates: [resolved] };
+}
+
+function greenReferenceDataset() {
+  return {
+    datasetId: "synthetic-green-band",
+    version: "1.0.0",
+    citation: "Synthetic visual regression fixture.",
+    populationNote: "Synthetic visual regression fixture; not for clinical use.",
+    medianRepresentsHealthy: true,
+    ageRangeMin: 6,
+    ageRangeMax: 15,
+    percentiles: [2, 25, 50, 75, 98],
+    zoneThresholds: { neutralUpper: 25, typicalUpper: 50, borderlineUpper: 75 },
+    rows: [
+      { age: 6, values: [21.5, 22.5, 23, 23.5, 24.5] },
+      { age: 15, values: [22, 23, 24, 25, 26] },
+    ],
+  };
 }

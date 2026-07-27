@@ -34,6 +34,11 @@ import {
   REFERENCE_POPULATIONS,
 } from "./myopia-reference-dataset.js";
 import type { MyopiaReferencePopulationStore } from "./myopia-reference-population-store.js";
+import {
+  LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+  resolveRefractiveStatus,
+  type ResolvedRefractiveStatus,
+} from "./refractive-status.js";
 
 type Eye = "OD" | "OS";
 
@@ -78,6 +83,7 @@ export interface MyopiaProgressionReading {
   biometryMethod: BiometryMethod;
   instrument: string | null;
   observationReference: string;
+  refractiveStatus: ResolvedRefractiveStatus;
 }
 
 export type AxialGrowthRateClassification = "NORMAL" | "WATCH" | "FLAG";
@@ -267,10 +273,11 @@ export async function handleMyopiaHistoryRequest(
 
   const patientId = parsed.data.patient.replace(/^Patient\//, "");
   const definitions = resolveMyopiaDefinitions(deps.findingDefinitions?.());
-  const [patient, axialBundle, cornealBundle, settings] = await Promise.all([
+  const [patient, axialBundle, cornealBundle, refractionBundle, settings] = await Promise.all([
     staff.fhir.read<Patient>("Patient", patientId),
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.axialLength)),
     staff.fhir.search<Observation>("Observation", observationSearchParams(parsed.data.patient, definitions.cornealRadius)),
+    staff.fhir.search<Observation>("Observation", refractionSearchParams(parsed.data.patient)),
     deps.settingsStore.get(parsed.data.patient),
   ]);
   if (!patient.birthDate) {
@@ -288,8 +295,15 @@ export async function handleMyopiaHistoryRequest(
         : [];
     }),
   );
+  const refractionObservations = bundleResources(refractionBundle);
   const readings = bundleResources(axialBundle)
-    .flatMap((observation) => observationToReading(observation, patient.birthDate!, cornealByEyeAndTime))
+    .flatMap((observation) =>
+      observationToReading(
+        observation,
+        patient.birthDate!,
+        cornealByEyeAndTime,
+        refractionObservations,
+      ))
     .sort((left, right) => left.measuredAt.localeCompare(right.measuredAt));
   const patientSex = patient.gender === "male" ? "MALE" : patient.gender === "female" ? "FEMALE" : null;
   const registry = deps.referenceDatasetRegistry ?? MYOPIA_REFERENCE_DATASET_REGISTRY;
@@ -588,6 +602,7 @@ function observationToReading(
   observation: Observation,
   birthDate: string,
   cornealByEyeAndTime: ReadonlyMap<string, number>,
+  refractionObservations: readonly Observation[],
 ): MyopiaProgressionReading[] {
   const eye = observationEye(observation);
   const axialLengthMm = observation.valueQuantity?.value;
@@ -614,6 +629,12 @@ function observationToReading(
     biometryMethod: method,
     instrument: componentString(observation, "instrument"),
     observationReference: `Observation/${observation.id}`,
+    refractiveStatus: resolveRefractiveStatus(
+      refractionObservations,
+      eye,
+      measuredAt,
+      observation.encounter?.reference,
+    ),
   }];
 }
 
@@ -627,6 +648,18 @@ function observationSearchParams(
     code: coding?.system && coding.code
       ? `${coding.system}|${coding.code}`
       : `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|${definition.stableKey}`,
+    _count: "500",
+  };
+}
+
+function refractionSearchParams(patientReference: string): Record<string, string> {
+  return {
+    subject: patientReference,
+    code: [
+      `${ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
+      `${LEGACY_ODOS_OPHTHALMOLOGY_CODE_SYSTEM}|REFRACTION`,
+    ].join(","),
+    _sort: "-date",
     _count: "500",
   };
 }
