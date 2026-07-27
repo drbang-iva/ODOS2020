@@ -22,7 +22,7 @@ jobs:
     name: Run PR-Agent
     steps:
       - name: Review pull request
-        uses: docker://pragent/pr-agent:0.41.0-github_action
+        uses: docker://pragent/pr-agent@sha256:3121a7b8e3ab497b4df09dea6a444da8f01a474496c8c2f722828512c52fd266  # v0.41.0-github_action
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER__KEY: ${{ secrets.OPENROUTER_KEY }}
