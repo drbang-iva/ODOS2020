@@ -11,6 +11,7 @@ import type {
   ProtocolFindingInstance,
   ProtocolItem,
   ProtocolOfferDiagnosis,
+  ProcedureChargeRule,
 } from "./protocol-types.js";
 
 export interface ProtocolProjection {
@@ -40,6 +41,7 @@ export class ProtocolService {
   readonly actions: ProtocolBasicStore<PlanActionInstance>;
   readonly findings: ProtocolBasicStore<ProtocolFindingInstance>;
   readonly charges: ProtocolBasicStore<ChargeProposal>;
+  readonly chargeRules: ProtocolBasicStore<ProcedureChargeRule>;
 
   constructor(
     fhir: ProtocolFhirClient,
@@ -52,6 +54,7 @@ export class ProtocolService {
     this.actions = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.planActionInstance);
     this.findings = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.findingInstance);
     this.charges = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.chargeProposal);
+    this.chargeRules = new ProtocolBasicStore(fhir, PROTOCOL_BASIC_CODES.procedureChargeRule);
   }
 
   async offers(diagnoses: ProtocolOfferDiagnosis[]): Promise<ProtocolDefinition[]> {
@@ -327,6 +330,7 @@ export class ProtocolService {
     );
     if (existing) return;
     const ruleId = Array.isArray(payload.chargeRuleRefs) ? String(payload.chargeRuleRefs[0] ?? "") : "";
+    const rule = ruleId ? await this.chargeRules.get(ruleId) : undefined;
     await this.charges.save({
       id: this.id(),
       encounterId: application.encounterId,
@@ -340,9 +344,11 @@ export class ProtocolService {
       coverageEvaluations: [{
         at,
         ruleId,
-        ruleVersion: 1,
-        outcome: "no-rule",
-        messages: ["Coverage rules are stored but not evaluated in Phase 5."],
+        ruleVersion: rule?.version ?? 1,
+        outcome: rule?.outcome ?? "no-rule",
+        messages: rule
+          ? [`Coverage review rule ${rule.id} resolved (${rule.verificationStatus}).`]
+          : ["No coverage review rule resolved for this charge proposal."],
       }],
       state: "staged",
       provenance: {

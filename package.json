@@ -15,6 +15,7 @@
     "logs": "docker-compose logs -f medplum-server",
     "poc": "tsx src/index.ts",
     "seed-scheduler": "tsx scripts/seed-scheduler-demo.ts",
+    "seed-dry-eye-treatment": "tsx --env-file-if-exists=.env scripts/seed-dry-eye-treatment.ts",
     "install-profiles": "tsx scripts/install-profiles.ts",
     "setup-practice": "tsx scripts/setup-practice.ts",
     "repair-practice-roles": "tsx --env-file-if-exists=.env scripts/repair-practice-roles.ts",
