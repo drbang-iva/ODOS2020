@@ -127,7 +127,9 @@ class MemoryFhir {
 }
 
 test("three aesthetics procedure types are seeded as procedure-definition data and round-trip through Basic", () => {
-  const seeds = buildProcedureDefinitionSeeds();
+  const seeds = buildProcedureDefinitionSeeds().filter((definition) =>
+    definition.discipline === "aesthetics"
+  );
   assert.deepEqual(
     seeds.map((definition) => definition.display),
     [
@@ -213,7 +215,7 @@ test("the procedure-definition endpoint serves the same persisted data store use
   const rows = (catalog.body as {
     definitions: Array<{ stableKey: string; display: string; sourceStatus: string }>;
   }).definitions;
-  assert.equal(rows.length, 3);
+  assert.equal(rows.length, buildProcedureDefinitionSeeds().length);
   assert.equal(rows[0]?.display, "Local glabella neurotoxin");
   assert.equal(rows[0]?.sourceStatus, "local-practice");
   assert.equal((rows[0] as unknown as { photo_posture: string }).photo_posture, "timeline");

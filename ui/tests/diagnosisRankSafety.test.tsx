@@ -6,6 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   DiagnosisRankActions,
+  PROTOCOL_TRIGGER_CONFIGS,
   diagnosisRankMoveNeighbors,
 } from "../src/components/charting/AssessmentSection";
 import {
@@ -19,6 +20,20 @@ const CONDITIONS = ["principal", "secondary-a", "secondary-b"].map((id) => ({
   resourceType: "Condition" as const,
   id,
 }));
+
+test("assessment protocol routing includes both verified dry-eye diagnosis families", () => {
+  assert.deepEqual(PROTOCOL_TRIGGER_CONFIGS, [
+    { codePrefix: "H40.0", protocolId: "glaucoma-suspect-initial" },
+    { codePrefix: "H16.22", protocolId: "dry-eye-evaluation" },
+    { codePrefix: "H02.88", protocolId: "dry-eye-evaluation" },
+  ]);
+  const source = readFileSync(
+    new URL("../src/components/charting/AssessmentSection.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /acceptCharges: protocolDefinitionId === "dry-eye-evaluation"/);
+  assert.match(source, /Confirm, accept charges, and apply/);
+});
 
 test("creation rank rules retain the duplicate-principal guard and append secondaries", () => {
   const encounter = rankedEncounter([1, 2]);
