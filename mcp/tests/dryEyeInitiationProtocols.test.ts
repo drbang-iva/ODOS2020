@@ -17,6 +17,7 @@ import {
 import {
   DRY_EYE_AT_HOME_REGIMEN_INIT_PROTOCOL,
   DRY_EYE_IPL_INIT_PROTOCOL,
+  DRY_EYE_LLLT_INIT_PROTOCOL,
   DRY_EYE_RF_INIT_PROTOCOL,
 } from "../src/clinical-graph/protocol-fixtures.js";
 import { PROTOCOL_BASIC_CODES } from "../src/clinical-graph/protocol-store.js";
@@ -69,6 +70,66 @@ test("selected IPL initiation creates a real series CarePlan returned by the tra
   });
 });
 
+test("series prescriptions reject client payloads that differ from the canonical protocol item", async () => {
+  for (const payload of [
+    {
+      seriesProtocolId: "dry-eye-lllt",
+      chargeSeedRef: "charge-ipl-package",
+    },
+    {
+      seriesProtocolId: "dry-eye-ipl",
+      chargeSeedRef: "charge-lllt-package",
+    },
+  ]) {
+    const fhir = dryEyeFhir();
+
+    const result = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id, {
+      selections: [{
+        itemKey: "series-ipl",
+        selected: true,
+        payload,
+      }],
+    });
+
+    assert.equal(result.status, 400);
+    assert.match(String((result.body as { error: string }).error), /canonical protocol payload/i);
+    assert.equal(fhir.resourcesOf("CarePlan").length, 0);
+    assert.equal(fhir.protocolBasics(PROTOCOL_BASIC_CODES.protocolApplication).length, 0);
+    assert.equal(fhir.protocolBasics(PROTOCOL_BASIC_CODES.chargeProposal).length, 0);
+  }
+});
+
+test("missing service FHIR returns a structured server error before encounter writes", async () => {
+  const fhir = dryEyeFhir();
+
+  const result = await handleProtocolApplyRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/synthetic-clinician",
+      actorRole: "clinician",
+      fhir: fhir as never,
+    }),
+    now: () => NOW,
+  }, {
+    authHeader: AUTHORIZATION,
+    body: {
+      protocolId: DRY_EYE_IPL_INIT_PROTOCOL.id,
+      encounterId: ENCOUNTER_ID,
+      patientId: PATIENT_ID,
+      diagnosis: {
+        reference: `Condition/${CONDITION_ID}`,
+        code: "H16.223",
+        confirmed: true,
+      },
+    },
+  });
+
+  assert.deepEqual(result, {
+    status: 500,
+    body: { error: "Protocol series prescriptions require the service FHIR client." },
+  });
+  assert.equal(fhir.protocolBasics(PROTOCOL_BASIC_CODES.protocolApplication).length, 0);
+});
+
 test("deselecting a series prescription records opted-out and creates no series CarePlan", async () => {
   const fhir = dryEyeFhir();
 
@@ -93,19 +154,11 @@ test("deselecting a series prescription records opted-out and creates no series 
 
 test("missing and archived series protocols fail pre-flight with zero encounter artifacts", async () => {
   for (const mode of ["missing", "archived"] as const) {
-    const fhir = dryEyeFhir(mode === "archived" ? ["dry-eye-ipl"] : []);
-    const result = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id, mode === "missing"
-      ? {
-          selections: [{
-            itemKey: "series-ipl",
-            selected: true,
-            payload: {
-              seriesProtocolId: "missing-series",
-              chargeSeedRef: "charge-ipl-package",
-            },
-          }],
-        }
-      : {});
+    const fhir = dryEyeFhir(
+      mode === "archived" ? ["dry-eye-ipl"] : [],
+      mode === "missing" ? ["dry-eye-ipl"] : [],
+    );
+    const result = await applyProtocol(fhir, DRY_EYE_IPL_INIT_PROTOCOL.id);
 
     assert.equal(result.status, 400, mode);
     assert.match(String((result.body as { error: string }).error), /no active series protocol definition/i);
@@ -176,6 +229,29 @@ test("at-home regimen applies only counseling, education, and instruction with n
   assert.equal((await trackerSeries(fhir)).length, 0);
 });
 
+test("LLLT initiation creates its four-session CarePlan and package charge proposal", async () => {
+  const fhir = dryEyeFhir();
+
+  const applied = await applyProtocol(fhir, DRY_EYE_LLLT_INIT_PROTOCOL.id);
+
+  assert.equal(applied.status, 200);
+  const series = await trackerSeries(fhir);
+  assert.equal(series.length, 1);
+  assert.equal(series[0]?.title, "LLLT");
+  assert.equal(series[0]?.sessions.length, 4);
+  const carePlan = fhir.resourcesOf("CarePlan")[0];
+  assert.equal(carePlan?.instantiatesCanonical?.some((canonical) =>
+    canonical.includes("/PlanDefinition/series-protocol-dry-eye-lllt")
+  ), true);
+  const charges = fhir.protocolBasics(PROTOCOL_BASIC_CODES.chargeProposal)
+    .map((resource) => JSON.parse(resource.extension?.[0]?.valueString ?? "{}") as {
+      procedureConceptKey?: string;
+    });
+  assert.deepEqual(charges.map((charge) => charge.procedureConceptKey), [
+    "dry-eye-lllt-4-sessions",
+  ]);
+});
+
 test("IPL and RF initiation on one encounter create two independent series and package charges", async () => {
   const fhir = dryEyeFhir();
 
@@ -198,10 +274,14 @@ test("IPL and RF initiation on one encounter create two independent series and p
   assert.equal(fhir.resourcesOf("CarePlan").length, 2);
 });
 
-function dryEyeFhir(archivedSeries: readonly string[] = []): MemoryDryEyeFhir {
+function dryEyeFhir(
+  archivedSeries: readonly string[] = [],
+  omittedSeries: readonly string[] = [],
+): MemoryDryEyeFhir {
   const fhir = new MemoryDryEyeFhir();
   fhir.add(condition());
   for (const draft of DRY_EYE_SERIES_PROTOCOL_DRAFTS) {
+    if (draft.id && omittedSeries.includes(draft.id)) continue;
     const status = draft.id && archivedSeries.includes(draft.id) ? "retired" : "active";
     fhir.addSeries(draft, status);
   }

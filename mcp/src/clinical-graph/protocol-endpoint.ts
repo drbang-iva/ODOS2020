@@ -1,4 +1,5 @@
 import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
@@ -355,19 +356,30 @@ export async function handleProtocolApplyRequest(
     if (item.itemType !== "series-prescription") return [];
     const selection = parsed.data.selections?.find((candidate) => candidate.itemKey === item.itemKey);
     if (!(selection?.selected ?? item.defaultSelected)) return [];
-    return [{ item, payload: selection?.payload ?? item.payload }];
+    return [{ item, submittedPayload: selection?.payload }];
   });
   const resolvedSeriesProtocols = new Map<string, SeriesProtocolDefinition>();
   if (selectedSeriesItems.length > 0) {
+    for (const { item, submittedPayload } of selectedSeriesItems) {
+      if (submittedPayload && !isDeepStrictEqual(submittedPayload, item.payload)) {
+        return {
+          status: 400,
+          body: { error: `Selected series prescription ${item.itemKey} must use the canonical protocol payload.` },
+        };
+      }
+    }
     if (!deps.serviceFhir) {
-      throw new Error("Protocol series prescriptions require the service FHIR client.");
+      return {
+        status: 500,
+        body: { error: "Protocol series prescriptions require the service FHIR client." },
+      };
     }
     const definitions = await new FhirSeriesProtocolDefinitionStore(deps.serviceFhir, deps.now).list({
       includeArchived: true,
     });
-    for (const { item, payload } of selectedSeriesItems) {
-      const seriesProtocolId = typeof payload.seriesProtocolId === "string"
-        ? payload.seriesProtocolId.trim()
+    for (const { item } of selectedSeriesItems) {
+      const seriesProtocolId = typeof item.payload.seriesProtocolId === "string"
+        ? item.payload.seriesProtocolId.trim()
         : "";
       const definition = definitions.find((candidate) => candidate.id === seriesProtocolId);
       if (!seriesProtocolId || !definition?.active) {
@@ -379,6 +391,12 @@ export async function handleProtocolApplyRequest(
       resolvedSeriesProtocols.set(seriesProtocolId, definition);
     }
   }
+  const canonicalSelections = parsed.data.selections?.map((selection) => {
+    const item = protocol.items.find((candidate) =>
+      candidate.itemKey === selection.itemKey && candidate.itemType === "series-prescription"
+    );
+    return item ? { ...selection, payload: item.payload } : selection;
+  }) ?? [];
   const opened = await service.open(parsed.data.protocolId, {
     encounterId: parsed.data.encounterId,
     patientId: parsed.data.patientId,
@@ -387,7 +405,7 @@ export async function handleProtocolApplyRequest(
   });
   await liveService(staff, deps.now, resolvedSeriesProtocols).commit(
     opened.application.id,
-    parsed.data.selections ?? [],
+    canonicalSelections,
     [parsed.data.diagnosis.reference],
   );
   if (parsed.data.acceptCharges) {
