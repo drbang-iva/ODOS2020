@@ -107,6 +107,19 @@ test("protocol authoring is limited to clinician and practice-admin with code-fe
   );
   assert.equal(definitionRule?.interaction?.includes("delete"), false);
   assert.equal(snapshotRule?.interaction?.includes("update"), false);
+
+  for (const roleId of ["front-desk", "auditor", "aesthetics-provider"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const protocolRules = policy.resource?.filter(
+      (rule) =>
+        rule.resourceType === "Basic" &&
+        (
+          rule.criteria?.endsWith("|odos-protocol-definition") ||
+          rule.criteria?.endsWith("|odos-protocol-definition-snapshot")
+        ),
+    ) ?? [];
+    assert.deepEqual(protocolRules, [], `${roleId} must not receive protocol Basic rules`);
+  }
 });
 
 // --- v0.6c payments authorization model: front-desk dispensary grants (decision 2026-07-05 §2) ---

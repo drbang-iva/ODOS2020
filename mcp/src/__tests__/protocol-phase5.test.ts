@@ -215,6 +215,24 @@ test("forked protocols retain object lineage and publish as independent offerabl
   );
 });
 
+test("forking an unpublished draft omits snapshot lineage instead of inventing version zero", async () => {
+  const { service } = harness();
+  const source = await service.createDraft({
+    title: "Unpublished source",
+    trigger: { kind: "diagnosis", dxKeys: ["H04.12*"] },
+    ownership: { ownerId: "Practitioner/source", sharing: "private" },
+    categories: [],
+    items: GLAUCOMA_SUSPECT_PROTOCOL.items,
+  }, "Practitioner/source");
+
+  const fork = await service.fork(source.id, "Practitioner/fork", "Unpublished fork");
+
+  assert.equal(source.version, 0);
+  assert.equal(await service.definitions.getSnapshot(source.id, 0), undefined);
+  assert.equal(fork.audit.forkedFrom, undefined);
+  assert.equal(Object.hasOwn(fork.draft!.items.find((item) => item.itemKey === "cd-ratio")!, "mergeKey"), false);
+});
+
 test("encounter capture strips device values and free text while retaining staged charge rule references", async () => {
   const { fhir, service } = harness();
   await service.charges.save({
@@ -273,6 +291,45 @@ test("encounter capture strips device values and free text while retaining stage
     ["rule-gonioscopy-h40x"],
   );
   assert.equal((await ruleStore.list()).length, 0);
+});
+
+test("encounter capture preserves repeat and format while excluding actual temporal payload keys", async () => {
+  const { service } = harness();
+  await service.actions.save({
+    id: "capture-structured-action",
+    encounterId: "enc-structured-capture",
+    patientId: "patient-1",
+    protocolApplicationId: null,
+    sourceItemKey: "follow-up-structured",
+    actionType: "follow-up",
+    linkedDx: [],
+    linkedFindings: [],
+    state: "selected",
+    payload: {
+      repeat: "quarterly",
+      format: "structured",
+      effectiveDate: "2026-07-18",
+      recordedAt: "2026-07-18T12:00:00.000Z",
+    },
+    modifiedFields: [],
+    provenance: {
+      source: "clinician-entered",
+      actor: "Practitioner/test",
+      at: "2026-07-18T12:00:00.000Z",
+    },
+  });
+
+  const captured = await service.captureDraft({
+    encounterId: "enc-structured-capture",
+    name: "Structured capture",
+    actor: "Practitioner/test",
+    confirmedDiagnoses: [{ code: "H04.123" }],
+    findingKeys: new Set(),
+    observations: [],
+  });
+  const payload = captured.draft?.items.find((item) => item.itemKey === "follow-up-structured")?.payload;
+
+  assert.deepEqual(payload, { repeat: "quarterly", format: "structured" });
 });
 
 test("ProtocolBasicStore follows next links and uses identifier-scoped conditional first writes", async () => {
@@ -547,7 +604,7 @@ test("offers performs no writes on the chart.read path", async () => {
 
 test("all Phase A authoring endpoints reject a non-author and admit a clinician", async () => {
   const blockedFhir = new EndpointFhir();
-  const blocked = endpointDeps(blockedFhir, "front-desk");
+  const blocked = endpointDeps(blockedFhir, "front-desk", "Practitioner/disposable-front-desk");
   const blockedResults = await Promise.all([
     handleProtocolLibraryRequest(blocked, { authHeader: "Bearer test" }),
     handleProtocolCreateRequest(blocked, { authHeader: "Bearer test", body: {} }),
@@ -612,6 +669,34 @@ test("all Phase A authoring endpoints reject a non-author and admit a clinician"
     params: { encounterId: "enc-capture" },
     body: { name: "Captured" },
   })).status, 201);
+});
+
+test("encounter capture does not treat two absent subject references as a patient match", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-identifier-subject",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { identifier: { value: "encounter-subject" } },
+  } satisfies Encounter, {
+    resourceType: "Condition",
+    id: "identifier-subject-dx",
+    subject: { identifier: { value: "condition-subject" } },
+    encounter: { reference: "Encounter/enc-identifier-subject" },
+    code: { coding: [{ code: "H04.123" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } satisfies Condition);
+
+  const result = await handleProtocolCaptureRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    params: { encounterId: "enc-identifier-subject" },
+    body: { name: "Identifier-only subjects" },
+  });
+
+  assert.equal(result.status, 201);
+  const trigger = (result.body as { protocol: ProtocolDefinition }).protocol.draft?.trigger;
+  assert.deepEqual(trigger, { kind: "diagnosis", dxKeys: [] });
 });
 
 test("publish returns a named 400 reason for every deterministic validation failure", async () => {
@@ -776,9 +861,10 @@ class EndpointFhir {
 function endpointDeps(
   fhir: EndpointFhir,
   actorRole: "clinician" | "front-desk" | "auditor" = "clinician",
+  staffReference = "Practitioner/test",
 ) {
   return {
-    authenticate: async () => ({ staffReference: "Practitioner/test", actorRole, fhir }),
+    authenticate: async () => ({ staffReference, actorRole, fhir }),
     now: () => "2026-07-18T12:00:00.000Z",
     catalogs: protocolCatalogs,
   };

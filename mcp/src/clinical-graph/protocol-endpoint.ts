@@ -1,4 +1,4 @@
-import type { Basic, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
+import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -25,14 +25,12 @@ import {
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
 
 interface LiveFhir extends ProtocolFhirClient {
-  read<T extends Observation | ServiceRequest | CarePlan | Condition>(resourceType: T["resourceType"], id: string): Promise<T>;
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
 }
-interface CaptureFhir {
-  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
-  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<import("@medplum/fhirtypes").Bundle<T>>;
-  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<import("@medplum/fhirtypes").Bundle<T>>;
-}
+type CaptureFhir = Pick<LiveFhir, "read" | "search" | "searchUrl">;
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
 export interface ProtocolEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<Staff | null>;
@@ -229,7 +227,7 @@ export async function handleProtocolCaptureRequest(
   const params = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
   const body = z.object({ name: z.string().trim().min(1) }).strict().safeParse(input.body);
   if (!params.success || !body.success) return { status: 400, body: { error: "Encounter id and protocol name are required." } };
-  const captureFhir = staff.fhir as unknown as CaptureFhir;
+  const captureFhir = staff.fhir;
   const encounter = await captureFhir.read<Encounter>("Encounter", params.data.encounterId);
   const [conditions, observations] = await Promise.all([
     searchAll<Condition>(captureFhir, "Condition", {
@@ -241,9 +239,11 @@ export async function handleProtocolCaptureRequest(
       _count: "500",
     }),
   ]);
-  const confirmedDiagnoses = conditions
+  const patientReference = encounter.subject?.reference;
+  const confirmedDiagnoses = (patientReference ? conditions : [])
     .filter((condition) =>
-      condition.subject.reference === encounter.subject?.reference &&
+      Boolean(condition.subject.reference) &&
+      condition.subject.reference === patientReference &&
       condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")
     )
     .flatMap((condition) => condition.code?.coding?.flatMap((coding) => coding.code ? [{ code: coding.code }] : []) ?? []);

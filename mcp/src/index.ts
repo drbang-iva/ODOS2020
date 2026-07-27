@@ -33,6 +33,7 @@ import { z } from "zod";
 import { createMedplumClient, type JsonPatchOperation } from "./fhir-client.js";
 import { createLiveOdosAuditRuntime, type LiveAuditQueryFilters } from "./authz/liveAudit.js";
 import {
+  logProtocolSeedBootFailure,
   logPracticeRoleBootVerification,
   logSsePracticeRoleBootVerification,
 } from "./authz/boot-role-verification.js";
@@ -5603,7 +5604,9 @@ async function main(): Promise<void> {
     await authenticateWithMedplum();
     await logPracticeRoleBootVerification(fhir);
   }
-  await protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL);
+  await logProtocolSeedBootFailure({
+    seed: () => protocolDefinitionStore.ensureSeed(GLAUCOMA_SUSPECT_PROTOCOL).then(() => undefined),
+  });
 
   switch (transportMode) {
     case "stdio": {

@@ -202,7 +202,9 @@ export class ProtocolService {
       ...draftFromDefinition(source),
       title: title?.trim() || `Copy of ${source.title}`,
       ownership: { ownerId: actor, sharing: "private" },
-    }, actor, "clinician", { id: head.id, version: head.version });
+    }, actor, "clinician", head.version > 0
+      ? { id: head.id, version: head.version }
+      : undefined);
   }
 
   async captureDraft(input: CaptureProtocolInput): Promise<ProtocolDefinition> {
@@ -702,11 +704,14 @@ function normalizeDraft(draft: ProtocolDefinitionDraft): ProtocolDefinitionDraft
           kind: "visit-type" as const,
           visitTypes: [...new Set(draft.trigger.visitTypes.map((row) => row.trim()).filter(Boolean))],
         },
-    items: draft.items.map((item) => ({
-      ...item,
-      itemKey: item.itemKey.trim(),
-      ...(item.mergeKey?.trim() ? { mergeKey: item.mergeKey.trim() } : { mergeKey: undefined }),
-    })),
+    items: draft.items.map((item) => {
+      const { mergeKey, ...content } = item;
+      return {
+        ...content,
+        itemKey: item.itemKey.trim(),
+        ...(mergeKey?.trim() ? { mergeKey: mergeKey.trim() } : {}),
+      };
+    }),
   });
 }
 
@@ -777,11 +782,17 @@ function structuredCapturePayload(payload: Record<string, unknown>): Record<stri
   return Object.fromEntries(Object.entries(payload).filter(([key, value]) => {
     if (value === undefined || value === null) return false;
     if (/(?:patient|encounter)(?:id|ref|reference)?$/i.test(key)) return false;
-    if (/(?:date|time|at)$/i.test(key) && key !== "performContext") return false;
+    if (isTemporalCaptureKey(key)) return false;
     if (/(?:narrative|note|text|reason|instruction)/i.test(key)) return false;
     if (/(?:reference|refs?)$/i.test(key) && !["assetRef", "chargeRuleRefs", "chargeSeedRef"].includes(key)) return false;
     return typeof value !== "string" || Boolean(value.trim());
   }));
+}
+
+function isTemporalCaptureKey(key: string): boolean {
+  return /^(?:date|time|at)$/i.test(key) ||
+    /(?:Date|Time|At)$/.test(key) ||
+    /(?:^|[_-])(?:date|time|at)$/i.test(key);
 }
 
 function capturedFreeText(payload: Record<string, unknown>): boolean {
