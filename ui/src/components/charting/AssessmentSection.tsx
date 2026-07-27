@@ -31,7 +31,14 @@ import {
   type DiagnosisVisitStatus,
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
-import { captureEncounterProtocol, type ProtocolItem } from "../../lib/protocol-authoring";
+import {
+  applyEncounterProtocol,
+  captureEncounterProtocol,
+  protocolActionDisabled,
+  retainAppliedProtocolOffers,
+  unapplyEncounterProtocol,
+  type ProtocolItem,
+} from "../../lib/protocol-authoring";
 import { ProtocolStagingList } from "./ProtocolStagingList";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
@@ -313,8 +320,11 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   useEffect(() => {
     if (!protocolDiagnoses.length) {
-      setProtocolOffers([]);
-      setSelectedProtocolId(undefined);
+      const activeIds = new Set(protocolApplications
+        .filter((application) => application.confirmed && application.undoState === "active")
+        .map((application) => application.protocolId));
+      setProtocolOffers((current) => retainAppliedProtocolOffers(current, protocolApplications));
+      setSelectedProtocolId((selected) => selected && activeIds.has(selected) ? selected : undefined);
       return;
     }
     const controller = new AbortController();
@@ -341,7 +351,10 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
       if ((reason as Error).name !== "AbortError") setError(String((reason as Error).message ?? reason));
     });
     return () => controller.abort();
-  }, [JSON.stringify(protocolDiagnoses.map((row) => [row.reference, row.code, row.visitStatus]))]);
+  }, [
+    JSON.stringify(protocolDiagnoses.map((row) => [row.reference, row.code, row.visitStatus])),
+    JSON.stringify(protocolApplications.map((row) => [row.id, row.protocolId, row.confirmed, row.undoState])),
+  ]);
 
   useEffect(() => {
     if (!protocolOffer) {
@@ -389,23 +402,17 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     if (!protocolDiagnosis || !protocolOffer) return;
     setBusy("protocol"); setError(null);
     try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/apply`, {
-        method: "POST",
-        headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          protocolId: protocolOffer.id,
-          encounterId,
-          patientId: patientReference.replace(/^Patient\//, ""),
-          diagnosis: {
-            reference: protocolDiagnosis.reference,
-            code: protocolDiagnosis.code,
-            confirmed: true,
-          },
-          selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
-        }),
+      const body = await applyEncounterProtocol({
+        protocolId: protocolOffer.id,
+        encounterId,
+        patientId: patientReference.replace(/^Patient\//, ""),
+        diagnosis: {
+          reference: protocolDiagnosis.reference,
+          code: protocolDiagnosis.code,
+          confirmed: true,
+        },
+        selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
       });
-      const body = await response.json() as { error?: string; application?: { id?: string } };
-      if (!response.ok) throw new Error(body.error ?? `Protocol apply failed: ${response.status}`);
       if (body.application?.id) {
         setProtocolApplications((current) => [...current, {
           id: body.application!.id!,
@@ -424,11 +431,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
     if (!protocolApplication?.id) return;
     setBusy("protocol-unapply"); setError(null);
     try {
-      const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/protocols/${encodeURIComponent(protocolApplication.id)}/unapply`, {
-        method: "POST", headers: authHeaders(),
-      });
-      const body = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(body.error ?? `Protocol un-apply failed: ${response.status}`);
+      await unapplyEncounterProtocol(protocolApplication.id);
       setProtocolApplications((current) => current.map((application) =>
         application.id === protocolApplication.id ? { ...application, undoState: "unapplied" } : application
       ));
@@ -525,7 +528,12 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                 <div className="text-sm font-semibold text-[color:var(--odos-text)]">Protocol offers</div>
                 <div className="mt-1 text-xs text-[color:var(--odos-muted)]">Ranked by visit-status match; every matching diagnosis variant remains selectable.</div>
               </div>
-              <button ref={protocolTriggerRef} disabled={busy !== null || !protocolDiagnosis} onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)} className={BUTTON_CLASS}>
+              <button
+                ref={protocolTriggerRef}
+                disabled={protocolActionDisabled(busy !== null, protocolApplication?.id, Boolean(protocolDiagnosis))}
+                onClick={protocolApplied ? unapplyProtocol : () => setProtocolSheetOpen(true)}
+                className={BUTTON_CLASS}
+              >
                 {protocolApplied ? "Un-apply" : "Apply selected"}
               </button>
             </div>

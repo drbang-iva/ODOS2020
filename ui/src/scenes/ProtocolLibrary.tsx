@@ -101,7 +101,9 @@ export function ProtocolLibrary() {
       <ProtocolBuilder
         protocol={selected}
         catalogs={library.catalogs}
-        onPublished={() => void load()}
+        onPublished={() => {
+          void load().catch((reason) => setError(message(reason)));
+        }}
       />
     );
   }
@@ -222,6 +224,7 @@ export function ProtocolBuilder({
   const queue = useRef<Promise<void>>(Promise.resolve());
   const lastSaveError = useRef<unknown>();
   const initialized = useRef(false);
+  const duplicateKeys = duplicateProtocolItemKeys(draft.items);
 
   function updateDraft(next: ProtocolDraft) {
     setDraft(next);
@@ -271,6 +274,7 @@ export function ProtocolBuilder({
   async function publish() {
     setError(undefined);
     try {
+      if (duplicateKeys.size > 0) throw new Error("Every protocol item key must be unique.");
       await queue.current;
       if (lastSaveError.current) throw lastSaveError.current;
       await publishProtocol(protocol.id);
@@ -310,7 +314,7 @@ export function ProtocolBuilder({
               {saveState === "saving" ? "Autosaving…" : saveState === "saved" ? "All edits saved" : "Autosave failed"}
             </span>
             <ProtocolThemeToggle />
-            <button type="button" className={BUTTON_CLASS} onClick={() => void publish()}>
+            <button type="button" className={BUTTON_CLASS} disabled={duplicateKeys.size > 0} onClick={() => void publish()}>
               Publish v{protocol.version + 1}
             </button>
           </div>
@@ -323,6 +327,11 @@ export function ProtocolBuilder({
             <ul className="mt-1 list-disc pl-5">
               {validation.map((issue, index) => <li key={`${issue.reason}-${issue.itemKey ?? index}`}>{issue.message}</li>)}
             </ul>
+          </div>
+        )}
+        {duplicateKeys.size > 0 && (
+          <div className="mt-4 rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface)] p-3 text-sm text-[color:var(--odos-alert)]">
+            Every protocol item key must be unique before publishing or previewing.
           </div>
         )}
 
@@ -358,6 +367,7 @@ export function ProtocolBuilder({
                   index={index}
                   count={draft.items.length}
                   catalogs={catalogs}
+                  duplicateKey={duplicateKeys.has(item.itemKey.trim())}
                   onChange={(next) => updateItem(index, next)}
                   onMove={(offset) => moveItem(index, offset)}
                   onRemove={() => removeItem(index)}
@@ -370,11 +380,15 @@ export function ProtocolBuilder({
             <h2 className="mt-1 font-semibold">{draft.title}</h2>
             <p className="mt-1 text-xs text-[color:var(--odos-muted)]">The same staged-row renderer clinicians see at apply time.</p>
             <div className="mt-4">
-              <ProtocolStagingList
-                items={draft.items}
-                selections={Object.fromEntries(draft.items.map((item) => [item.itemKey, item.defaultSelected]))}
-                preview
-              />
+              {duplicateKeys.size > 0 ? (
+                <p className="text-sm text-[color:var(--odos-alert)]">Resolve duplicate item keys to restore the live preview.</p>
+              ) : (
+                <ProtocolStagingList
+                  items={draft.items}
+                  selections={Object.fromEntries(draft.items.map((item) => [item.itemKey, item.defaultSelected]))}
+                  preview
+                />
+              )}
             </div>
           </aside>
         </div>
@@ -503,6 +517,7 @@ function ItemEditor({
   index,
   count,
   catalogs,
+  duplicateKey,
   onChange,
   onMove,
   onRemove,
@@ -511,6 +526,7 @@ function ItemEditor({
   index: number;
   count: number;
   catalogs: ProtocolLibraryResponse["catalogs"];
+  duplicateKey: boolean;
   onChange: (item: ProtocolItem) => void;
   onMove: (offset: -1 | 1) => void;
   onRemove: () => void;
@@ -532,14 +548,20 @@ function ItemEditor({
           {item.capture && <div className="mt-1 text-xs text-[color:var(--odos-muted)]">{item.capture.source}</div>}
         </div>
         <div className="flex gap-2">
-          <button type="button" className={BUTTON_CLASS} disabled={index === 0} onClick={() => onMove(-1)}>↑</button>
-          <button type="button" className={BUTTON_CLASS} disabled={index === count - 1} onClick={() => onMove(1)}>↓</button>
+          <button type="button" aria-label="Move item up" className={BUTTON_CLASS} disabled={index === 0} onClick={() => onMove(-1)}>↑</button>
+          <button type="button" aria-label="Move item down" className={BUTTON_CLASS} disabled={index === count - 1} onClick={() => onMove(1)}>↓</button>
           <button type="button" className={BUTTON_CLASS} onClick={onRemove}>Remove</button>
         </div>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <Field label="Item key">
-          <input className={FIELD_CLASS} value={item.itemKey} onChange={(event) => onChange({ ...item, itemKey: event.target.value })} />
+          <input
+            className={FIELD_CLASS}
+            value={item.itemKey}
+            aria-invalid={duplicateKey}
+            onChange={(event) => onChange({ ...item, itemKey: event.target.value })}
+          />
+          {duplicateKey && <p className="mt-1 text-xs text-[color:var(--odos-alert)]">Item key must be unique.</p>}
         </Field>
         <Field label="Laterality">
           <select
@@ -815,6 +837,17 @@ const ITEM_TYPES: ProtocolItemType[] = [
   "follow-up",
   "charge-seed",
 ];
+
+export function duplicateProtocolItemKeys(items: ProtocolItem[]): Set<string> {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+  for (const item of items) {
+    const key = item.itemKey.trim();
+    if (seen.has(key)) duplicates.add(key);
+    seen.add(key);
+  }
+  return duplicates;
+}
 
 function blankItem(type: ProtocolItemType, existing: ProtocolItem[]): ProtocolItem {
   const number = existing.filter((row) => row.itemType === type).length + 1;

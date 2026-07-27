@@ -10,7 +10,13 @@ import type {
   ProtocolDraft,
   ProtocolLibraryResponse,
 } from "../src/lib/protocol-authoring";
-import { ProtocolBuilder } from "../src/scenes/ProtocolLibrary";
+import {
+  loadProtocolLibrary,
+  protocolActionDisabled,
+  retainAppliedProtocolOffers,
+  unapplyEncounterProtocol,
+} from "../src/lib/protocol-authoring";
+import { duplicateProtocolItemKeys, ProtocolBuilder } from "../src/scenes/ProtocolLibrary";
 
 const draft: ProtocolDraft = {
   title: "Dry Eye — Stable",
@@ -142,5 +148,78 @@ test("assessment protocol UI is diagnosis-generic and renders ranked multi-offer
   assert.match(source, /protocolOffers\.map/);
   assert.match(source, /selectedProtocolId/);
   assert.match(source, /type="radio"/);
-  assert.doesNotMatch(source, /protocolId:\\s*"[^"]+"/);
+  assert.doesNotMatch(source, /protocolId:\s*"[^"]+"/);
+});
+
+test("an applied protocol remains un-applyable after its triggering diagnosis is removed", async () => {
+  const originalFetch = globalThis.fetch;
+  let request: { url: string; method?: string; signal?: AbortSignal | null } | undefined;
+  globalThis.fetch = async (input, init) => {
+    request = { url: String(input), method: init?.method, signal: init?.signal };
+    return new Response(JSON.stringify({ removed: ["finding-1"], preserved: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+
+  try {
+    const applicationId = "application-without-current-diagnosis";
+    const retained = retainAppliedProtocolOffers(
+      [{ id: "dry-eye-stable", title: "Dry Eye — Stable" }],
+      [{ protocolId: "dry-eye-stable", confirmed: true, undoState: "active" }],
+    );
+    assert.deepEqual(retained.map((offer) => offer.id), ["dry-eye-stable"]);
+    assert.equal(protocolActionDisabled(false, applicationId, false), false);
+    await unapplyEncounterProtocol(applicationId);
+    assert.match(request?.url ?? "", /application-without-current-diagnosis\/unapply$/);
+    assert.equal(request?.method, "POST");
+    assert.equal(request?.signal instanceof AbortSignal, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("protocol requests time out and preserve useful errors for non-JSON failures", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalSetTimeout = globalThis.setTimeout;
+
+  try {
+    Object.defineProperty(globalThis, "setTimeout", {
+      configurable: true,
+      value: (callback: () => void) => {
+        queueMicrotask(callback);
+        return 1;
+      },
+    });
+    globalThis.fetch = async (_input, init) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    });
+    await assert.rejects(loadProtocolLibrary(), /timed out after 15 seconds/);
+
+    Object.defineProperty(globalThis, "setTimeout", { configurable: true, value: originalSetTimeout });
+    globalThis.fetch = async () => new Response("<html>Bad gateway</html>", {
+      status: 502,
+      statusText: "Bad Gateway",
+      headers: { "Content-Type": "text/html" },
+    });
+    await assert.rejects(loadProtocolLibrary(), /Protocol request failed: 502 Bad Gateway/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "setTimeout", { configurable: true, value: originalSetTimeout });
+  }
+});
+
+test("builder flags duplicate item keys and gives reorder controls accessible names", () => {
+  assert.deepEqual(
+    [...duplicateProtocolItemKeys([
+      draft.items[0]!,
+      { ...draft.items[1]!, itemKey: ` ${draft.items[0]!.itemKey} ` },
+    ])],
+    [draft.items[0]!.itemKey],
+  );
+  const source = readFileSync(new URL("../src/scenes/ProtocolLibrary.tsx", import.meta.url), "utf8");
+  assert.match(source, /aria-label="Move item up"/);
+  assert.match(source, /aria-label="Move item down"/);
+  assert.match(source, /Item key must be unique/);
+  assert.match(source, /load\(\)\.catch\(\(reason\) => setError\(message\(reason\)\)\)/);
 });

@@ -77,6 +77,24 @@ export interface ProtocolLibraryResponse {
   };
 }
 
+export function protocolActionDisabled(
+  busy: boolean,
+  applicationId: string | undefined,
+  diagnosisAvailable: boolean,
+): boolean {
+  return busy || (!applicationId && !diagnosisAvailable);
+}
+
+export function retainAppliedProtocolOffers<T extends { id: string }>(
+  offers: T[],
+  applications: Array<{ protocolId: string; confirmed: boolean; undoState: string }>,
+): T[] {
+  const activeIds = new Set(applications
+    .filter((application) => application.confirmed && application.undoState === "active")
+    .map((application) => application.protocolId));
+  return offers.filter((offer) => activeIds.has(offer.id));
+}
+
 export function editableProtocolDraft(protocol: ProtocolDefinition): ProtocolDraft {
   return structuredClone(protocol.draft ?? {
     title: protocol.title,
@@ -144,24 +162,59 @@ export async function captureEncounterProtocol(
   });
 }
 
+export async function applyEncounterProtocol(input: {
+  protocolId: string;
+  encounterId: string;
+  patientId: string;
+  diagnosis: { reference: string; code: string; confirmed: true };
+  selections: Array<{ itemKey: string; selected: boolean }>;
+}): Promise<{ application?: { id?: string } }> {
+  return request("/clinical-graph/protocols/apply", { method: "POST", body: input });
+}
+
+export async function unapplyEncounterProtocol(
+  applicationId: string,
+): Promise<{ removed?: string[]; preserved?: string[] }> {
+  return request(`/clinical-graph/protocols/${encodeURIComponent(applicationId)}/unapply`, {
+    method: "POST",
+  });
+}
+
 async function request<T>(
   path: string,
   options: { method?: "POST" | "PATCH"; body?: unknown } = {},
 ): Promise<T> {
-  const response = await fetch(`${clinicalGraphApiBase()}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      ...authHeaders(),
-      ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
-    },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-  });
-  const body = await response.json() as T & {
-    error?: string;
-    reason?: string;
-  };
-  if (!response.ok) {
-    throw new Error([body.reason, body.error ?? `Protocol request failed: ${response.status}`].filter(Boolean).join(": "));
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetch(`${clinicalGraphApiBase()}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        ...authHeaders(),
+        ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let body: (T & { error?: string; reason?: string }) | undefined;
+    try {
+      body = text ? JSON.parse(text) as T & { error?: string; reason?: string } : undefined;
+    } catch {
+      body = undefined;
+    }
+    if (!response.ok) {
+      throw new Error([
+        body?.reason,
+        body?.error ?? `Protocol request failed: ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`,
+      ].filter(Boolean).join(": "));
+    }
+    if (body === undefined) throw new Error(`Protocol request returned invalid JSON: ${response.status}.`);
+    return body;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("Protocol request timed out after 15 seconds.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-  return body;
 }
