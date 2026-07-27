@@ -111,16 +111,7 @@ test("missing service FHIR returns a structured server error before encounter wr
     now: () => NOW,
   }, {
     authHeader: AUTHORIZATION,
-    body: {
-      protocolId: DRY_EYE_IPL_INIT_PROTOCOL.id,
-      encounterId: ENCOUNTER_ID,
-      patientId: PATIENT_ID,
-      diagnosis: {
-        reference: `Condition/${CONDITION_ID}`,
-        code: "H16.223",
-        confirmed: true,
-      },
-    },
+    body: protocolApplyBody(DRY_EYE_IPL_INIT_PROTOCOL.id),
   });
 
   assert.deepEqual(result, {
@@ -288,17 +279,33 @@ function dryEyeFhir(
   return fhir;
 }
 
+interface ApplyOverrides {
+  selections?: Array<{
+    itemKey: string;
+    selected: boolean;
+    payload?: Record<string, unknown>;
+  }>;
+  acceptCharges?: boolean;
+}
+
+function protocolApplyBody(protocolId: string, overrides: ApplyOverrides = {}) {
+  return {
+    protocolId,
+    encounterId: ENCOUNTER_ID,
+    patientId: PATIENT_ID,
+    diagnosis: {
+      reference: `Condition/${CONDITION_ID}`,
+      code: "H16.223",
+      confirmed: true,
+    },
+    ...overrides,
+  };
+}
+
 async function applyProtocol(
   fhir: MemoryDryEyeFhir,
   protocolId: string,
-  overrides: {
-    selections?: Array<{
-      itemKey: string;
-      selected: boolean;
-      payload?: Record<string, unknown>;
-    }>;
-    acceptCharges?: boolean;
-  } = {},
+  overrides: ApplyOverrides = {},
 ) {
   return handleProtocolApplyRequest({
     authenticate: async () => ({
@@ -310,17 +317,7 @@ async function applyProtocol(
     now: () => NOW,
   }, {
     authHeader: AUTHORIZATION,
-    body: {
-      protocolId,
-      encounterId: ENCOUNTER_ID,
-      patientId: PATIENT_ID,
-      diagnosis: {
-        reference: `Condition/${CONDITION_ID}`,
-        code: "H16.223",
-        confirmed: true,
-      },
-      ...overrides,
-    },
+    body: protocolApplyBody(protocolId, overrides),
   });
 }
 
