@@ -1,9 +1,23 @@
 import type { ProcedureChargeRule, ProtocolDefinition } from "./protocol-types.js";
+import {
+  DRY_EYE_CONJUNCTIVAL_STAINING_KEY,
+  DRY_EYE_GLAND_FUNCTION_KEY,
+  DRY_EYE_GLAND_STRUCTURE_KEY,
+  DRY_EYE_MARKERS_KEY,
+  DRY_EYE_STAGING_KEY,
+  DRY_EYE_SYMPTOMS_KEY,
+  DRY_EYE_TEAR_VOLUME_KEY,
+} from "./dry-eye-finding-definition.js";
+import { DRY_EYE_PROCEDURE_STABLE_KEYS } from "./procedure-definition-store.js";
 
 const DEFAULT = { defaultSelected: true, lateralityMode: "inherit-dx" as const };
 const OU = { defaultSelected: true, lateralityMode: "OU-always" as const };
 export const GLAUCOMA_SUSPECT_TRIGGER_PREFIX = "H40.0";
+export const DRY_EYE_KCS_TRIGGER_PREFIX = "H16.22";
+export const DRY_EYE_MGD_TRIGGER_PREFIX = "H02.88";
 const PHASE0_LEDGER = "data/code-bindings/glaucoma-suspect-phase0-ledger.json";
+const DRY_EYE_DESIGN =
+  "performance-od/decisions/2026-07-26-odos-dry-eye-workup-pack-design.md";
 const PROCEDURES = [
   { key: "gonioscopy", context: "in-office-today" },
   { key: "corneal-pachymetry", context: "in-office-today" },
@@ -101,3 +115,112 @@ export const GLAUCOMA_SUSPECT_CHARGE_RULES: ProcedureChargeRule[] = PROCEDURES.m
   effectivePeriod: { start: "2026-07-18" },
   verificationStatus: "provisional",
 }));
+
+const DRY_EYE_PROMPT_FINDINGS = [
+  { itemKey: "dry-eye-symptoms", findingDefKey: DRY_EYE_SYMPTOMS_KEY },
+  { itemKey: "dry-eye-tear-stability", findingDefKey: "ocular-health:anterior:tear-film" },
+  { itemKey: "dry-eye-tear-volume", findingDefKey: DRY_EYE_TEAR_VOLUME_KEY },
+  { itemKey: "dry-eye-markers", findingDefKey: DRY_EYE_MARKERS_KEY },
+  { itemKey: "dry-eye-gland-structure", findingDefKey: DRY_EYE_GLAND_STRUCTURE_KEY },
+  { itemKey: "dry-eye-gland-function", findingDefKey: DRY_EYE_GLAND_FUNCTION_KEY },
+  { itemKey: "dry-eye-conjunctival-staining", findingDefKey: DRY_EYE_CONJUNCTIVAL_STAINING_KEY },
+  { itemKey: "dry-eye-staging", findingDefKey: DRY_EYE_STAGING_KEY },
+] as const;
+
+export const DRY_EYE_EVALUATION_PROCEDURE_KEY = "dry-eye-evaluation";
+export const DRY_EYE_EVALUATION_RULE_ID = "rule-dry-eye-evaluation";
+export const DRY_EYE_PUNCTAL_OCCLUSION_RULE_ID = "rule-dry-eye-punctal-occlusion";
+
+export const DRY_EYE_EVALUATION_PROTOCOL: ProtocolDefinition = {
+  id: "dry-eye-evaluation",
+  version: 1,
+  title: "Dry Eye — Evaluation Workup",
+  trigger: {
+    kind: "diagnosis",
+    dxKeys: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+  },
+  ownership: { ownerId: "practice", sharing: "practice" },
+  categories: ["Dry Eye"],
+  status: "active",
+  provenanceNote: "Operator-authored dry-eye evaluation workup.",
+  audit: {
+    createdBy: "Practitioner/odos-system",
+    createdAt: "2026-07-26T00:00:00.000Z",
+    publishedBy: "Practitioner/odos-system",
+    publishedAt: "2026-07-26T00:00:00.000Z",
+  },
+  items: [
+    ...DRY_EYE_PROMPT_FINDINGS.map(({ itemKey, findingDefKey }) => ({
+      ...OU,
+      itemKey,
+      itemType: "finding-seed" as const,
+      payload: { findingDefKey, mode: "promptOnly" },
+    })),
+    {
+      ...OU,
+      itemKey: "order-dry-eye-evaluation",
+      itemType: "order",
+      mergeKey: "order:dry-eye-evaluation",
+      payload: {
+        orderableKey: DRY_EYE_EVALUATION_PROCEDURE_KEY,
+        performContext: "in-office-today",
+        chargeSeedRef: "charge-dry-eye-evaluation",
+      },
+    },
+    {
+      ...DEFAULT,
+      itemKey: "charge-dry-eye-evaluation",
+      itemType: "charge-seed",
+      payload: {
+        procedureConceptKey: DRY_EYE_EVALUATION_PROCEDURE_KEY,
+        chargeRuleRefs: [DRY_EYE_EVALUATION_RULE_ID],
+        requiresOrderCompletion: true,
+      },
+    },
+  ],
+};
+
+export const DRY_EYE_CHARGE_RULES: ProcedureChargeRule[] = [
+  {
+    id: DRY_EYE_EVALUATION_RULE_ID,
+    version: 1,
+    procedureConceptKey: DRY_EYE_EVALUATION_PROCEDURE_KEY,
+    dxScope: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+    jurisdiction: { payerClass: "unspecified" },
+    outcome: "needs-review",
+    sourceAuthority: {
+      kind: "operator-design",
+      citation: `${DRY_EYE_DESIGN} §3`,
+      url: DRY_EYE_DESIGN,
+      accessedDate: "2026-07-26",
+    },
+    effectivePeriod: { start: "2026-07-26" },
+    verificationStatus: "provisional",
+  },
+  {
+    id: DRY_EYE_PUNCTAL_OCCLUSION_RULE_ID,
+    version: 1,
+    procedureConceptKey: DRY_EYE_PROCEDURE_STABLE_KEYS.punctalOcclusion,
+    dxScope: [`${DRY_EYE_KCS_TRIGGER_PREFIX}*`, `${DRY_EYE_MGD_TRIGGER_PREFIX}*`],
+    jurisdiction: { payerClass: "unspecified" },
+    outcome: "needs-review",
+    sourceAuthority: {
+      kind: "operator-design",
+      citation: `${DRY_EYE_DESIGN} §4`,
+      url: DRY_EYE_DESIGN,
+      accessedDate: "2026-07-26",
+    },
+    effectivePeriod: { start: "2026-07-26" },
+    verificationStatus: "provisional",
+  },
+];
+
+export const BUILTIN_PROTOCOLS = [
+  GLAUCOMA_SUSPECT_PROTOCOL,
+  DRY_EYE_EVALUATION_PROTOCOL,
+] as const;
+
+export const BUILTIN_CHARGE_RULES = [
+  ...GLAUCOMA_SUSPECT_CHARGE_RULES,
+  ...DRY_EYE_CHARGE_RULES,
+] as const;

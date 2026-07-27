@@ -412,6 +412,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
           confirmed: true,
         },
         selections: Object.entries(protocolSelections).map(([itemKey, selected]) => ({ itemKey, selected })),
+        acceptCharges: protocolOffer.id === "dry-eye-evaluation",
       });
       if (body.application?.id) {
         setProtocolApplications((current) => [...current, {

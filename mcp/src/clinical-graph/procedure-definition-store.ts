@@ -9,6 +9,7 @@ import {
   type ProcedureCodeInput,
   type ProcedureStatusCode,
 } from "../fhir/procedure.js";
+import { SERIES_PROCEDURE_TYPE_SYSTEM } from "../series-tracker/protocol-definition-store.js";
 import type { ClinicalGraphProvenance } from "./glaucoma-suspect.js";
 
 export const PROCEDURE_DEFINITION_CODE_SYSTEM =
@@ -20,6 +21,15 @@ export const PROCEDURE_DEFINITION_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-procedure-definition-json";
 export const AESTHETICS_PROCEDURE_TYPE_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/aesthetics-procedure-type";
+export const DRY_EYE_PROCEDURE_STABLE_KEYS = {
+  ipl: "procedure:dry-eye:ipl",
+  rf: "procedure:dry-eye:rf",
+  lllt: "procedure:dry-eye:lllt",
+  blephex: "procedure:dry-eye:blephex",
+  glandExpression: "procedure:dry-eye:gland-expression",
+  maskinProbing: "procedure:dry-eye:maskin-probing",
+  punctalOcclusion: "procedure:dry-eye:punctal-occlusion",
+} as const;
 export const PROCEDURE_DEFINITION_WRITE_HEADERS = {
   "X-ODOS-Source": "procedure-definitions",
 } as const;
@@ -119,30 +129,86 @@ export class FhirProcedureDefinitionStore {
 }
 
 export function buildProcedureDefinitionSeeds(): ClinicalProcedureDefinition[] {
-  const provenance: ClinicalGraphProvenance = {
+  const aestheticsProvenance: ClinicalGraphProvenance = {
     source: "manual",
     recordedAt: new Date(0).toISOString(),
     actorReference: "Practitioner/odos-system",
     note: "ODOS local aesthetics procedure definition seed.",
+  };
+  const dryEyeProvenance: ClinicalGraphProvenance = {
+    source: "manual",
+    recordedAt: new Date(0).toISOString(),
+    actorReference: "Practitioner/odos-system",
+    note: "ODOS dry-eye procedure seed; external CPT mappings are intentionally omitted pending Mandate 14 verification.",
   };
   return [
     procedureSeed(
       "procedure:aesthetics:neurotoxin-glabella",
       "neurotoxin-injection-glabella",
       "Neurotoxin injection — glabella",
-      provenance,
+      aestheticsProvenance,
     ),
     procedureSeed(
       "procedure:aesthetics:dermal-filler-nasolabial-fold",
       "dermal-filler-nasolabial-fold",
       "Dermal filler — nasolabial fold",
-      provenance,
+      aestheticsProvenance,
     ),
     procedureSeed(
       "procedure:aesthetics:chemical-peel-full-face",
       "chemical-peel-full-face",
       "Chemical peel — full face",
-      provenance,
+      aestheticsProvenance,
+    ),
+    // Package eligibility is separate from billing readiness; dry-eye rows stay notBillReady until external codes are verified.
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.ipl,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.ipl,
+      "IPL (OptiLight-class)",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "compare" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.rf,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.rf,
+      "RF (Opus-class)",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "compare" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.lllt,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.lllt,
+      "LLLT (Equinox-class)",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "timeline" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.blephex,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.blephex,
+      "BlephEx / microblepharoexfoliation",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "timeline" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.glandExpression,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.glandExpression,
+      "Meibomian gland expression",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "timeline" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.maskinProbing,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.maskinProbing,
+      "Maskin probing",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "timeline" },
+    ),
+    procedureSeed(
+      DRY_EYE_PROCEDURE_STABLE_KEYS.punctalOcclusion,
+      DRY_EYE_PROCEDURE_STABLE_KEYS.punctalOcclusion,
+      "Punctal occlusion (plugs)",
+      dryEyeProvenance,
+      { discipline: "eyecare", codeSystem: SERIES_PROCEDURE_TYPE_SYSTEM, photoPosture: "timeline", notBillReady: true },
     ),
   ];
 }
@@ -230,16 +296,22 @@ function procedureSeed(
   code: string,
   display: string,
   provenance: ClinicalGraphProvenance,
+  options: {
+    discipline?: SchedulingDiscipline;
+    codeSystem?: string;
+    photoPosture?: ClinicalProcedureDefinition["photo_posture"];
+    notBillReady?: boolean;
+  } = {},
 ): ClinicalProcedureDefinition {
   return {
     id: randomUUID(),
     stableKey,
     display,
     sectionKey: stableKey,
-    discipline: "aesthetics",
+    discipline: options.discipline ?? "aesthetics",
     sourceStatus: "verified-seed",
     fhirProcedureCode: {
-      system: AESTHETICS_PROCEDURE_TYPE_SYSTEM,
+      system: options.codeSystem ?? AESTHETICS_PROCEDURE_TYPE_SYSTEM,
       code,
       display,
     },
@@ -248,9 +320,9 @@ function procedureSeed(
       perEye: false,
       fields: {},
     },
-    photo_posture: "compare",
+    photo_posture: options.photoPosture ?? "compare",
     defaultStatus: "completed",
-    notBillReady: true,
+    notBillReady: options.notBillReady ?? true,
     active: true,
     provenance,
   };

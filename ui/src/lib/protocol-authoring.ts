@@ -168,6 +168,7 @@ export async function applyEncounterProtocol(input: {
   patientId: string;
   diagnosis: { reference: string; code: string; confirmed: true };
   selections: Array<{ itemKey: string; selected: boolean }>;
+  acceptCharges?: boolean;
 }): Promise<{ application?: { id?: string } }> {
   return request("/clinical-graph/protocols/apply", { method: "POST", body: input });
 }
