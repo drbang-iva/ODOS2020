@@ -11,6 +11,7 @@ import type {
   ProtocolLibraryResponse,
 } from "../src/lib/protocol-authoring";
 import {
+  activeProtocolIds,
   loadProtocolLibrary,
   protocolActionDisabled,
   retainAppliedProtocolOffers,
@@ -164,6 +165,10 @@ test("an applied protocol remains un-applyable after its triggering diagnosis is
 
   try {
     const applicationId = "application-without-current-diagnosis";
+    assert.deepEqual(
+      [...activeProtocolIds([{ protocolId: "dry-eye-stable", confirmed: true, undoState: "active" }])],
+      ["dry-eye-stable"],
+    );
     const retained = retainAppliedProtocolOffers(
       [{ id: "dry-eye-stable", title: "Dry Eye — Stable" }],
       [{ protocolId: "dry-eye-stable", confirmed: true, undoState: "active" }],
@@ -179,24 +184,19 @@ test("an applied protocol remains un-applyable after its triggering diagnosis is
   }
 });
 
-test("protocol requests time out and preserve useful errors for non-JSON failures", async () => {
+test("protocol requests time out and preserve useful errors for non-JSON failures", async (context) => {
   const originalFetch = globalThis.fetch;
-  const originalSetTimeout = globalThis.setTimeout;
 
   try {
-    Object.defineProperty(globalThis, "setTimeout", {
-      configurable: true,
-      value: (callback: () => void) => {
-        queueMicrotask(callback);
-        return 1;
-      },
-    });
+    context.mock.timers.enable({ apis: ["setTimeout"] });
     globalThis.fetch = async (_input, init) => new Promise<Response>((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
     });
-    await assert.rejects(loadProtocolLibrary(), /timed out after 15 seconds/);
+    const timedOut = loadProtocolLibrary();
+    context.mock.timers.tick(15_000);
+    await assert.rejects(timedOut, /timed out after 15 seconds/);
 
-    Object.defineProperty(globalThis, "setTimeout", { configurable: true, value: originalSetTimeout });
+    context.mock.timers.reset();
     globalThis.fetch = async () => new Response("<html>Bad gateway</html>", {
       status: 502,
       statusText: "Bad Gateway",
@@ -205,7 +205,7 @@ test("protocol requests time out and preserve useful errors for non-JSON failure
     await assert.rejects(loadProtocolLibrary(), /Protocol request failed: 502 Bad Gateway/);
   } finally {
     globalThis.fetch = originalFetch;
-    Object.defineProperty(globalThis, "setTimeout", { configurable: true, value: originalSetTimeout });
+    context.mock.timers.reset();
   }
 });
 

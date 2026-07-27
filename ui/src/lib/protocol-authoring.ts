@@ -85,13 +85,19 @@ export function protocolActionDisabled(
   return busy || (!applicationId && !diagnosisAvailable);
 }
 
+export function activeProtocolIds(
+  applications: Array<{ protocolId: string; confirmed: boolean; undoState: string }>,
+): Set<string> {
+  return new Set(applications
+    .filter((application) => application.confirmed && application.undoState === "active")
+    .map((application) => application.protocolId));
+}
+
 export function retainAppliedProtocolOffers<T extends { id: string }>(
   offers: T[],
   applications: Array<{ protocolId: string; confirmed: boolean; undoState: string }>,
 ): T[] {
-  const activeIds = new Set(applications
-    .filter((application) => application.confirmed && application.undoState === "active")
-    .map((application) => application.protocolId));
+  const activeIds = activeProtocolIds(applications);
   return offers.filter((offer) => activeIds.has(offer.id));
 }
 

@@ -32,6 +32,7 @@ import {
 } from "../../lib/clinical-graph-client";
 import { ODOS_EXTENSION_URLS } from "../../lib/fhir-ophthalmology/extensions";
 import {
+  activeProtocolIds,
   applyEncounterProtocol,
   captureEncounterProtocol,
   protocolActionDisabled,
@@ -320,9 +321,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
   useEffect(() => {
     if (!protocolDiagnoses.length) {
-      const activeIds = new Set(protocolApplications
-        .filter((application) => application.confirmed && application.undoState === "active")
-        .map((application) => application.protocolId));
+      const activeIds = activeProtocolIds(protocolApplications);
       setProtocolOffers((current) => retainAppliedProtocolOffers(current, protocolApplications));
       setSelectedProtocolId((selected) => selected && activeIds.has(selected) ? selected : undefined);
       return;
