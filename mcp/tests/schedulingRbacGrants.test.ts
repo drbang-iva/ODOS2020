@@ -190,14 +190,19 @@ test("front-desk Basic grants stay criteria-scoped to approved inventory, config
   );
 });
 
-test("clinician gets only the read-only practice appearance Basic grant", () => {
+test("clinician appearance access remains one read-only coded Basic grant", () => {
   const rules = rulesFor("clinician", "Basic");
-  assert.equal(rules.length, 1);
+  const appearanceRules = rules.filter(
+    (rule) =>
+      rule.criteria ===
+      "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
+  );
+  assert.equal(appearanceRules.length, 1);
   assert.equal(
-    rules[0]?.criteria,
+    appearanceRules[0]?.criteria,
     "Basic?code=https://odos2020.com/fhir/CodeSystem/appearance-config|odos-appearance-config",
   );
-  assert.deepEqual(rules[0]?.interaction, ["read", "search", "history", "vread"]);
+  assert.deepEqual(appearanceRules[0]?.interaction, ["read", "search", "history", "vread"]);
 });
 
 test("every non-admin app role can read but never write the appearance singleton", () => {

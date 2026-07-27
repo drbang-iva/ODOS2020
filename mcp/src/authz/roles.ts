@@ -44,6 +44,7 @@ export const BUSINESS_ACTIONS = [
   "margin.read",
   "claims.manage",
   "finding-definitions.write",
+  "protocols.author",
   "document.fax-send",
 ] as const;
 
@@ -335,13 +336,47 @@ const APPEARANCE_CONFIG_READ_RULE: OdosResourceRule = {
   },
 };
 
+const PROTOCOL_MODULE_RESOURCE_RULES: OdosResourceRule[] = [
+  {
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-definition",
+    },
+  },
+  {
+    resourceType: "Basic",
+    interactions: CREATE_READ_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria:
+        "Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|odos-protocol-definition-snapshot",
+    },
+  },
+  ...[
+    "odos-plan-action-instance",
+    "odos-protocol-application",
+    "odos-charge-proposal",
+    "odos-finding-instance",
+  ].map((code): OdosResourceRule => ({
+    resourceType: "Basic",
+    interactions: UPDATE_INTERACTIONS,
+    scope: {
+      kind: "practice-search",
+      criteria: `Basic?code=https://odos2020.com/fhir/CodeSystem/odos-protocol-module|${code}`,
+    },
+  })),
+];
+
 export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
   "practice-admin": {
     id: "practice-admin",
     display: "Practice Admin",
     description:
       "Practice-internal administrator for membership, role review, AccessPolicy binding, and audit-log access.",
-    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write", "document.fax-send"],
+    businessActions: ["identity.manage", "role.review", "audit.read", "break-glass.invoke", "payment.charge", "payment.seal-day", "margin.read", "claims.manage", "finding-definitions.write", "protocols.author", "document.fax-send"],
     resourceRules: [{ resourceType: "*", interactions: FULL_INTERACTIONS, scope: { kind: "practice" } }],
   },
   clinician: {
@@ -349,7 +384,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
     display: "Clinician",
     description:
       "Clinical user with patient-compartment-scoped chart access for assigned patients or explicit emergency access.",
-    businessActions: ["chart.read", "chart.write", "clinical.sign", "break-glass.invoke", "document.fax-send"],
+    businessActions: ["chart.read", "chart.write", "clinical.sign", "break-glass.invoke", "protocols.author", "document.fax-send"],
     membershipParameters: [
       {
         name: "provider_profile",
@@ -390,6 +425,7 @@ export const ROLE_REGISTRY: Record<PracticeRoleId, OdosRoleDeclaration> = {
         scope: { kind: "patient-compartment", parameterName: "patient_compartment" },
       },
       ...OFFICE_CHANNEL_RESOURCE_RULES,
+      ...PROTOCOL_MODULE_RESOURCE_RULES,
       APPEARANCE_CONFIG_READ_RULE,
     ],
   },

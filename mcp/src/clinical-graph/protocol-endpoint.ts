@@ -1,4 +1,4 @@
-import type { Basic, CarePlan, Condition, Observation, ServiceRequest } from "@medplum/fhirtypes";
+import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import {
@@ -7,10 +7,21 @@ import {
   DRY_EYE_CHARGE_RULES,
   DRY_EYE_EVALUATION_PROTOCOL,
 } from "./protocol-fixtures.js";
-import { AcceptedChargeUnapplyError, matchesCode, ProtocolService } from "./protocol-service.js";
+import {
+  AcceptedChargeUnapplyError,
+  matchesCode,
+  ProtocolPublishValidationError,
+  ProtocolService,
+  validateProtocolDefinition,
+  type ProtocolCatalogs,
+} from "./protocol-service.js";
 import type { ProtocolFhirClient } from "./protocol-store.js";
 import { protocolFindingToGonioObservation } from "./gonioscopy.js";
-import type { PlanActionInstance, ProtocolFindingInstance } from "./protocol-types.js";
+import type {
+  PlanActionInstance,
+  ProtocolDefinitionDraft,
+  ProtocolFindingInstance,
+} from "./protocol-types.js";
 import {
   materializeAcceptedChargeProposals,
   type ProcedureChargeFhir,
@@ -20,21 +31,71 @@ import {
 const FINDING_SOURCE_URL = "https://odos2020.com/fhir/StructureDefinition/finding-source";
 
 interface LiveFhir extends ProtocolFhirClient {
-  read<T extends Observation | ServiceRequest | CarePlan | Condition>(resourceType: T["resourceType"], id: string): Promise<T>;
+  read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>>;
+  searchUrl?<T extends Resource>(url: string, resourceType: T["resourceType"]): Promise<Bundle<T>>;
   create<T extends Basic | Observation | ServiceRequest | CarePlan>(resource: T, headers?: Record<string, string>): Promise<T>;
 }
+type CaptureFhir = Pick<LiveFhir, "read" | "search" | "searchUrl">;
 interface Staff { staffReference: string; actorRole: PracticeRoleId; fhir: LiveFhir }
 export interface ProtocolEndpointDeps {
   authenticate(authHeader: string | undefined): Promise<Staff | null>;
   feeScheduleFhir?: ProcedureFeeScheduleFhir;
   now?: () => string;
+  catalogs?: () => ProtocolCatalogs;
 }
 
+const diagnosisVisitStatusSchema = z.enum([
+  "new",
+  "stable",
+  "improved",
+  "worsening",
+  "resolved-this-visit",
+]);
 const diagnosesSchema = z.array(z.object({
   reference: z.string(),
   code: z.string(),
   confirmed: z.boolean(),
+  visitStatus: diagnosisVisitStatusSchema.optional(),
 }).strict());
+const lateralityModeSchema = z.union([
+  z.enum(["inherit-dx", "OU-always"]),
+  z.object({ fixed: z.enum(["OD", "OS", "OU"]) }).strict(),
+]);
+const protocolItemSchema = z.object({
+  itemKey: z.string(),
+  itemType: z.enum([
+    "finding-seed", "order", "medication", "counseling", "education",
+    "instruction", "follow-up", "charge-seed",
+  ]),
+  defaultSelected: z.boolean(),
+  lateralityMode: lateralityModeSchema,
+  mergeKey: z.string().optional(),
+  linkedDxScope: z.array(z.string()).optional(),
+  payload: z.record(z.unknown()),
+  capture: z.object({
+    source: z.enum(["device-measured", "observed-estimate", "structured"]),
+    seedValueKept: z.boolean().optional(),
+  }).strict().optional(),
+}).strict();
+const protocolTriggerSchema = z.union([
+  z.object({
+    kind: z.literal("diagnosis"),
+    dxKeys: z.array(z.string()),
+    statusScope: z.array(diagnosisVisitStatusSchema).optional(),
+  }).strict(),
+  z.object({ kind: z.literal("visit-type"), visitTypes: z.array(z.string()) }).strict(),
+]);
+const protocolDraftSchema = z.object({
+  title: z.string(),
+  trigger: protocolTriggerSchema,
+  applicability: z.record(z.unknown()).optional(),
+  ownership: z.object({ ownerId: z.string(), sharing: z.string() }).strict(),
+  categories: z.array(z.string()),
+  items: z.array(protocolItemSchema),
+  mergePolicy: z.record(z.unknown()).optional(),
+  provenanceNote: z.string().optional(),
+}).strict();
 const applySchema = z.object({
   protocolId: z.string(),
   encounterId: z.string(),
@@ -47,6 +108,165 @@ const applySchema = z.object({
   }).strict()).optional(),
   acceptCharges: z.boolean().optional(),
 }).strict();
+
+export async function handleProtocolLibraryRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to read protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const catalogs = protocolCatalogs(deps);
+  return {
+    status: 200,
+    body: {
+      protocols: await liveService(staff, deps.now).definitions.list(),
+      catalogs: {
+        findingKeys: [...catalogs.findingKeys].sort(),
+        procedureKeys: [...catalogs.procedureKeys].sort(),
+      },
+    },
+  };
+}
+
+export async function handleProtocolCreateRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to author protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const parsed = protocolDraftSchema.partial().safeParse(input.body);
+  if (!parsed.success) return { status: 400, body: { error: parsed.error.issues[0]?.message ?? "Invalid protocol draft." } };
+  const protocol = await liveService(staff, deps.now).createDraft(
+    parsed.data as Partial<ProtocolDefinitionDraft>,
+    staff.staffReference,
+  );
+  return {
+    status: 201,
+    body: { protocol, validation: validateProtocolDefinition(protocol.draft!, protocolCatalogs(deps)) },
+  };
+}
+
+export async function handleProtocolDraftRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to author protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
+  const body = protocolDraftSchema.safeParse(input.body);
+  if (!params.success || !body.success) {
+    return { status: 400, body: { error: body.success ? "Protocol id is required." : body.error.issues[0]?.message } };
+  }
+  const protocol = await liveService(staff, deps.now).saveDraft(params.data.id, body.data);
+  return {
+    status: 200,
+    body: { protocol, validation: validateProtocolDefinition(protocol.draft!, protocolCatalogs(deps)) },
+  };
+}
+
+export async function handleProtocolPublishRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to publish protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
+  const body = z.object({}).strict().safeParse(input.body ?? {});
+  if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty publish body are required." } };
+  try {
+    const protocol = await liveService(staff, deps.now).publish(
+      params.data.id,
+      staff.staffReference,
+      protocolCatalogs(deps),
+    );
+    return { status: 200, body: { protocol } };
+  } catch (error) {
+    if (error instanceof ProtocolPublishValidationError) {
+      return {
+        status: 400,
+        body: { error: error.message, reason: error.issues[0]?.reason, issues: error.issues },
+      };
+    }
+    throw error;
+  }
+}
+
+export async function handleProtocolRetireRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to retire protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
+  const body = z.object({}).strict().safeParse(input.body ?? {});
+  if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and empty retire body are required." } };
+  return { status: 200, body: { protocol: await liveService(staff, deps.now).retire(params.data.id) } };
+}
+
+export async function handleProtocolForkRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to copy protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const params = z.object({ id: z.string().min(1) }).strict().safeParse(input.params);
+  const body = z.object({ title: z.string().min(1).optional() }).strict().safeParse(input.body ?? {});
+  if (!params.success || !body.success) return { status: 400, body: { error: "Valid protocol id and fork body are required." } };
+  return {
+    status: 201,
+    body: { protocol: await liveService(staff, deps.now).fork(params.data.id, staff.staffReference, body.data.title) },
+  };
+}
+
+export async function handleProtocolCaptureRequest(
+  deps: ProtocolEndpointDeps,
+  input: { authHeader: string | undefined; params: unknown; body: unknown },
+) {
+  const staff = await deps.authenticate(input.authHeader);
+  if (!staff) return { status: 401, body: { error: "Authentication required to capture protocols." } };
+  if (!may(staff.actorRole, "protocols.author")) return { status: 403, body: { error: "protocols.author role required" } };
+  const params = z.object({ encounterId: z.string().min(1) }).strict().safeParse(input.params);
+  const body = z.object({ name: z.string().trim().min(1) }).strict().safeParse(input.body);
+  if (!params.success || !body.success) return { status: 400, body: { error: "Encounter id and protocol name are required." } };
+  const captureFhir = staff.fhir;
+  const encounter = await captureFhir.read<Encounter>("Encounter", params.data.encounterId);
+  const [conditions, observations] = await Promise.all([
+    searchAll<Condition>(captureFhir, "Condition", {
+      encounter: `Encounter/${params.data.encounterId}`,
+      _count: "200",
+    }),
+    searchAll<Observation>(captureFhir, "Observation", {
+      encounter: `Encounter/${params.data.encounterId}`,
+      _count: "500",
+    }),
+  ]);
+  const patientReference = encounter.subject?.reference;
+  const confirmedDiagnoses = (patientReference ? conditions : [])
+    .filter((condition) =>
+      Boolean(condition.subject.reference) &&
+      condition.subject.reference === patientReference &&
+      condition.verificationStatus?.coding?.some((coding) => coding.code === "confirmed")
+    )
+    .flatMap((condition) => condition.code?.coding?.flatMap((coding) => coding.code ? [{ code: coding.code }] : []) ?? []);
+  const protocol = await liveService(staff, deps.now).captureDraft({
+    encounterId: params.data.encounterId,
+    name: body.data.name,
+    actor: staff.staffReference,
+    confirmedDiagnoses,
+    observations,
+    findingKeys: protocolCatalogs(deps).findingKeys,
+  });
+  return {
+    status: 201,
+    body: { protocol, validation: validateProtocolDefinition(protocol.draft!, protocolCatalogs(deps)) },
+  };
+}
 
 export async function handleProtocolOffersRequest(
   deps: ProtocolEndpointDeps,
@@ -69,7 +289,12 @@ export async function handleProtocolOffersRequest(
     protocol.trigger.kind === "diagnosis" &&
     protocol.trigger.dxKeys.some((pattern) => confirmedCodes.some((code) => matchesCode(code, pattern)))
   );
-  return { status: 200, body: { protocols: [...stored, ...builtIns] } };
+  const protocols = [...stored, ...builtIns].map((protocol) => ({
+    ...protocol,
+    acceptCharges: protocol.acceptCharges === true,
+    statusScope: protocol.trigger.kind === "diagnosis" ? protocol.trigger.statusScope ?? [] : [],
+  }));
+  return { status: 200, body: { protocols } };
 }
 
 export async function handleProtocolApplyRequest(
@@ -307,6 +532,29 @@ function carePlan(action: PlanActionInstance): CarePlan {
     created: action.provenance.at,
   };
 }
-function may(role: PracticeRoleId, action: "chart.read" | "chart.write"): boolean {
+function may(role: PracticeRoleId, action: "chart.read" | "chart.write" | "protocols.author"): boolean {
   try { assertBusinessActionAllowed(role, action); return true; } catch { return false; }
+}
+
+function protocolCatalogs(deps: ProtocolEndpointDeps): ProtocolCatalogs {
+  return deps.catalogs?.() ?? { findingKeys: new Set(), procedureKeys: new Set() };
+}
+
+async function searchAll<T extends Resource>(
+  fhir: CaptureFhir,
+  resourceType: T["resourceType"],
+  params: Record<string, string>,
+): Promise<T[]> {
+  const resources: T[] = [];
+  const visited = new Set<string>();
+  let bundle = await fhir.search<T>(resourceType, params);
+  while (true) {
+    resources.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+    const next = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!next) return resources;
+    if (!fhir.searchUrl) throw new Error("Protocol capture search requires pagination support.");
+    if (visited.has(next)) throw new Error("Protocol capture search returned a repeated next link.");
+    visited.add(next);
+    bundle = await fhir.searchUrl<T>(next, resourceType);
+  }
 }

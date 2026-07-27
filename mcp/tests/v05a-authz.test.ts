@@ -16,6 +16,7 @@ import {
   PRACTICE_ROLE_IDS,
   accessPolicyHasNoBusinessActionVocabulary,
   assertAestheticsProviderScope,
+  assertBusinessActionAllowed,
   buildMedplumAccessPolicy,
   buildProjectMembershipAccess,
   getRoleDeclaration,
@@ -72,6 +73,53 @@ test("AccessPolicy generator emits Medplum interactions, criteria, and writeCons
     medicationAdministrationRule?.criteria,
     "MedicationAdministration?_compartment=%patient_compartment",
   );
+});
+
+test("protocol authoring is limited to clinician and practice-admin with code-fenced Basic grants", () => {
+  for (const roleId of ["clinician", "practice-admin"] as const) {
+    assert.doesNotThrow(() => assertBusinessActionAllowed(roleId, "protocols.author"));
+  }
+  for (const roleId of ["front-desk", "auditor", "aesthetics-provider"] as const) {
+    assert.throws(
+      () => assertBusinessActionAllowed(roleId, "protocols.author"),
+      /lacks business action protocols\.author/,
+    );
+  }
+
+  const clinician = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const definitionRule = clinician.resource?.find(
+    (rule) =>
+      rule.resourceType === "Basic" &&
+      rule.criteria?.endsWith("|odos-protocol-definition"),
+  );
+  const snapshotRule = clinician.resource?.find(
+    (rule) =>
+      rule.resourceType === "Basic" &&
+      rule.criteria?.endsWith("|odos-protocol-definition-snapshot"),
+  );
+  assert.deepEqual(
+    definitionRule?.interaction,
+    ["create", "read", "update", "search", "history", "vread"],
+  );
+  assert.deepEqual(
+    snapshotRule?.interaction,
+    ["create", "read", "search", "history", "vread"],
+  );
+  assert.equal(definitionRule?.interaction?.includes("delete"), false);
+  assert.equal(snapshotRule?.interaction?.includes("update"), false);
+
+  for (const roleId of ["front-desk", "auditor", "aesthetics-provider"] as const) {
+    const policy = buildMedplumAccessPolicy(getRoleDeclaration(roleId));
+    const protocolRules = policy.resource?.filter(
+      (rule) =>
+        rule.resourceType === "Basic" &&
+        (
+          rule.criteria?.endsWith("|odos-protocol-definition") ||
+          rule.criteria?.endsWith("|odos-protocol-definition-snapshot")
+        ),
+    ) ?? [];
+    assert.deepEqual(protocolRules, [], `${roleId} must not receive protocol Basic rules`);
+  }
 });
 
 // --- v0.6c payments authorization model: front-desk dispensary grants (decision 2026-07-05 §2) ---

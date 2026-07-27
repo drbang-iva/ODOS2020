@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Basic, Bundle, CarePlan, Condition, Observation, ServiceRequest } from "@medplum/fhirtypes";
+import type { Basic, Bundle, CarePlan, Condition, Encounter, Observation, Resource, ServiceRequest } from "@medplum/fhirtypes";
 import {
   DRY_EYE_EVALUATION_PROTOCOL,
   GLAUCOMA_SUSPECT_CHARGE_RULES,
@@ -9,7 +9,14 @@ import {
 import {
   handleProtocolApplicationsRequest,
   handleProtocolApplyRequest,
+  handleProtocolCaptureRequest,
+  handleProtocolCreateRequest,
+  handleProtocolDraftRequest,
+  handleProtocolForkRequest,
+  handleProtocolLibraryRequest,
   handleProtocolOffersRequest,
+  handleProtocolPublishRequest,
+  handleProtocolRetireRequest,
   handleProtocolUnapplyRequest,
   protocolFindingObservation,
 } from "../clinical-graph/protocol-endpoint.js";
@@ -101,7 +108,14 @@ function harness() {
   return { fhir, service, projectedFindings, materialized, projectionControl };
 }
 
-test("fixture stores six Basic entity codes with X-ODOS-Source writes", async () => {
+function protocolCatalogs() {
+  return {
+    findingKeys: new Set(["cup_disc_ratio", "gonio_angle_structures", "gonio_tm_pigmentation", "iop", "pachymetry_um"]),
+    procedureKeys: new Set(["gonioscopy", "corneal-pachymetry", "scodi-optic-nerve", "visual-field-threshold", "fundus-photography"]),
+  };
+}
+
+test("fixture stores seven Basic entity codes with X-ODOS-Source writes", async () => {
   const { fhir, service } = harness();
   await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
   const ruleStore = new ProtocolBasicStore<ProcedureChargeRule>(fhir, PROTOCOL_BASIC_CODES.procedureChargeRule);
@@ -118,7 +132,208 @@ test("fixture stores six Basic entity codes with X-ODOS-Source writes", async ()
   assert.deepEqual(Object.values(PROTOCOL_BASIC_CODES).sort(), [
     "odos-charge-proposal", "odos-finding-instance", "odos-plan-action-instance",
     "odos-procedure-charge-rule", "odos-protocol-application", "odos-protocol-definition",
+    "odos-protocol-definition-snapshot",
   ]);
+});
+
+test("publishing v2 preserves a byte-identical v1 snapshot and a v1-pinned application still commits", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const v1 = await service.definitions.getSnapshot(GLAUCOMA_SUSPECT_PROTOCOL.id, 1);
+  const opened = await service.open(GLAUCOMA_SUSPECT_PROTOCOL.id, {
+    encounterId: "enc-v1-pin",
+    patientId: "patient-1",
+    diagnosis: { reference: "Condition/c1", code: "H40.021", confirmed: true },
+    actor: "Practitioner/test",
+  });
+  await service.saveDraft(GLAUCOMA_SUSPECT_PROTOCOL.id, {
+    title: `${GLAUCOMA_SUSPECT_PROTOCOL.title} v2`,
+    trigger: GLAUCOMA_SUSPECT_PROTOCOL.trigger,
+    ownership: GLAUCOMA_SUSPECT_PROTOCOL.ownership,
+    categories: GLAUCOMA_SUSPECT_PROTOCOL.categories,
+    items: GLAUCOMA_SUSPECT_PROTOCOL.items,
+  });
+  const published = await service.publish(
+    GLAUCOMA_SUSPECT_PROTOCOL.id,
+    "Practitioner/test",
+    protocolCatalogs(),
+  );
+  assert.equal(published.version, 2);
+  assert.deepEqual(await service.definitions.getSnapshot(GLAUCOMA_SUSPECT_PROTOCOL.id, 1), v1);
+  await assert.doesNotReject(service.commit(opened.application.id, [], ["Condition/c1"]));
+});
+
+test("legacy heads without authoring provenance are normalized at the read boundary", async () => {
+  const { fhir, service } = harness();
+  const { authoring: _authoring, ...legacyWithoutAuthoring } = structuredClone(GLAUCOMA_SUSPECT_PROTOCOL);
+  const legacy = legacyWithoutAuthoring as ProtocolDefinition;
+  fhir.rows.push(buildProtocolBasic(
+    legacy as ProtocolDefinition,
+    PROTOCOL_BASIC_CODES.protocolDefinition,
+  ));
+  const [listed] = await service.definitions.list();
+  assert.equal(listed?.authoring.origin, "clinician");
+  assert.equal(listed?.authoring.actor, legacy.audit.createdBy);
+  assert.equal((await service.definitions.get(legacy.id))?.authoring.at, legacy.audit.createdAt);
+});
+
+test("statusScope ranks a matching variant first without filtering the non-match", async () => {
+  const { service } = harness();
+  const stable = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "dry-eye-stable",
+    title: "Dry Eye — Stable",
+    trigger: { kind: "diagnosis" as const, dxKeys: ["H04.12*"], statusScope: ["stable" as const] },
+  };
+  const worse = {
+    ...GLAUCOMA_SUSPECT_PROTOCOL,
+    id: "dry-eye-worse",
+    title: "Dry Eye — Worse",
+    trigger: { kind: "diagnosis" as const, dxKeys: ["H04.12*"], statusScope: ["worsening" as const] },
+  };
+  await service.definitions.save(worse);
+  await service.definitions.save(stable);
+  const offers = await service.offers([{
+    reference: "Condition/dry-eye",
+    code: "H04.123",
+    confirmed: true,
+    visitStatus: "stable",
+  }]);
+  assert.deepEqual(offers.map((row) => row.id), ["dry-eye-stable", "dry-eye-worse"]);
+});
+
+test("forked protocols retain object lineage and publish as independent offerable definitions", async () => {
+  const { service } = harness();
+  await service.definitions.save(GLAUCOMA_SUSPECT_PROTOCOL);
+  const fork = await service.fork(GLAUCOMA_SUSPECT_PROTOCOL.id, "Practitioner/test", "Glaucoma Suspect — Worse");
+  await service.saveDraft(fork.id, {
+    ...fork.draft!,
+    trigger: { kind: "diagnosis", dxKeys: ["H40.0*"], statusScope: ["worsening"] },
+  });
+  const published = await service.publish(fork.id, "Practitioner/test", protocolCatalogs());
+  assert.deepEqual(published.audit.forkedFrom, { id: GLAUCOMA_SUSPECT_PROTOCOL.id, version: 1 });
+  assert.equal(published.version, 1);
+  assert.deepEqual(
+    new Set((await service.offers([{ reference: "Condition/c1", code: "H40.021", confirmed: true }])).map((row) => row.id)),
+    new Set([GLAUCOMA_SUSPECT_PROTOCOL.id, fork.id]),
+  );
+});
+
+test("forking an unpublished draft omits snapshot lineage instead of inventing version zero", async () => {
+  const { service } = harness();
+  const source = await service.createDraft({
+    title: "Unpublished source",
+    trigger: { kind: "diagnosis", dxKeys: ["H04.12*"] },
+    ownership: { ownerId: "Practitioner/source", sharing: "private" },
+    categories: [],
+    items: GLAUCOMA_SUSPECT_PROTOCOL.items,
+  }, "Practitioner/source");
+
+  const fork = await service.fork(source.id, "Practitioner/fork", "Unpublished fork");
+
+  assert.equal(source.version, 0);
+  assert.equal(await service.definitions.getSnapshot(source.id, 0), undefined);
+  assert.equal(fork.audit.forkedFrom, undefined);
+  assert.equal(Object.hasOwn(fork.draft!.items.find((item) => item.itemKey === "cd-ratio")!, "mergeKey"), false);
+});
+
+test("encounter capture strips device values and free text while retaining staged charge rule references", async () => {
+  const { fhir, service } = harness();
+  await service.charges.save({
+    id: "charge-capture",
+    encounterId: "enc-capture",
+    protocolApplicationId: "app-missing",
+    planActionRef: "charge-gonioscopy",
+    procedureConceptKey: "gonioscopy",
+    units: 1,
+    laterality: "OU",
+    dxPointers: ["Condition/dx"],
+    evidenceRefs: [],
+    coverageEvaluations: [{
+      at: "2026-07-18T12:00:00.000Z",
+      ruleId: "rule-gonioscopy-h40x",
+      ruleVersion: 1,
+      outcome: "no-rule",
+      messages: [],
+    }],
+    state: "staged",
+    provenance: { source: "protocol-default", actor: "Practitioner/test", at: "2026-07-18T12:00:00.000Z" },
+  });
+  const ruleStore = new ProtocolBasicStore<ProcedureChargeRule>(
+    fhir,
+    PROTOCOL_BASIC_CODES.procedureChargeRule,
+  );
+  const draft = await service.captureDraft({
+    encounterId: "enc-capture",
+    name: "Captured",
+    actor: "Practitioner/test",
+    confirmedDiagnoses: [{ code: "H04.123" }],
+    findingKeys: new Set(["iop", "cup_disc_ratio"]),
+    observations: [
+      {
+        resourceType: "Observation",
+        id: "device-iop",
+        status: "final",
+        code: { coding: [{ code: "iop" }] },
+        valueQuantity: { value: 18 },
+        note: [{ text: "sourceType=device" }],
+      },
+      {
+        resourceType: "Observation",
+        id: "free-text",
+        status: "final",
+        code: { coding: [{ code: "cup_disc_ratio" }] },
+        valueString: "patient-specific narrative",
+      },
+    ],
+  });
+  assert.equal(draft.authoring.origin, "encounter-capture");
+  assert.equal(draft.draft?.items.find((row) => row.payload.findingDefKey === "iop")?.payload.mode, "promptOnly");
+  assert.equal(JSON.stringify(draft).includes("patient-specific narrative"), false);
+  assert.deepEqual(
+    draft.draft?.items.find((row) => row.itemType === "charge-seed")?.payload.chargeRuleRefs,
+    ["rule-gonioscopy-h40x"],
+  );
+  assert.equal((await ruleStore.list()).length, 0);
+});
+
+test("encounter capture preserves repeat and format while excluding actual temporal payload keys", async () => {
+  const { service } = harness();
+  await service.actions.save({
+    id: "capture-structured-action",
+    encounterId: "enc-structured-capture",
+    patientId: "patient-1",
+    protocolApplicationId: null,
+    sourceItemKey: "follow-up-structured",
+    actionType: "follow-up",
+    linkedDx: [],
+    linkedFindings: [],
+    state: "selected",
+    payload: {
+      repeat: "quarterly",
+      format: "structured",
+      effectiveDate: "2026-07-18",
+      recordedAt: "2026-07-18T12:00:00.000Z",
+    },
+    modifiedFields: [],
+    provenance: {
+      source: "clinician-entered",
+      actor: "Practitioner/test",
+      at: "2026-07-18T12:00:00.000Z",
+    },
+  });
+
+  const captured = await service.captureDraft({
+    encounterId: "enc-structured-capture",
+    name: "Structured capture",
+    actor: "Practitioner/test",
+    confirmedDiagnoses: [{ code: "H04.123" }],
+    findingKeys: new Set(),
+    observations: [],
+  });
+  const payload = captured.draft?.items.find((item) => item.itemKey === "follow-up-structured")?.payload;
+
+  assert.deepEqual(payload, { repeat: "quarterly", format: "structured" });
 });
 
 test("ProtocolBasicStore follows next links and uses identifier-scoped conditional first writes", async () => {
@@ -387,8 +602,148 @@ test("offers performs no writes on the chart.read path", async () => {
     body: { diagnoses: [{ reference: "Condition/c1", code: "H40.021", confirmed: true }] },
   });
   assert.equal(result.status, 200);
-  assert.equal((result.body as { protocols: unknown[] }).protocols.length, 1);
+  const [offer] = (result.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols;
+  assert.equal(offer?.acceptCharges, false);
   assert.equal(fhir.writes.length, 0);
+});
+
+test("all Phase A authoring endpoints reject a non-author and admit a clinician", async () => {
+  const blockedFhir = new EndpointFhir();
+  const blocked = endpointDeps(blockedFhir, "front-desk", "Practitioner/disposable-front-desk");
+  const blockedResults = await Promise.all([
+    handleProtocolLibraryRequest(blocked, { authHeader: "Bearer test" }),
+    handleProtocolCreateRequest(blocked, { authHeader: "Bearer test", body: {} }),
+    handleProtocolDraftRequest(blocked, { authHeader: "Bearer test", params: { id: "p" }, body: validDraftBody() }),
+    handleProtocolPublishRequest(blocked, { authHeader: "Bearer test", params: { id: "p" }, body: {} }),
+    handleProtocolRetireRequest(blocked, { authHeader: "Bearer test", params: { id: "p" }, body: {} }),
+    handleProtocolForkRequest(blocked, { authHeader: "Bearer test", params: { id: "p" }, body: {} }),
+    handleProtocolCaptureRequest(blocked, {
+      authHeader: "Bearer test",
+      params: { encounterId: "enc" },
+      body: { name: "Captured" },
+    }),
+  ]);
+  assert.equal(blockedResults.every((result) => result.status === 403), true);
+
+  const fhir = new EndpointFhir();
+  const deps = endpointDeps(fhir);
+  const created = await handleProtocolCreateRequest(deps, {
+    authHeader: "Bearer test",
+    body: validDraftBody(),
+  });
+  assert.equal(created.status, 201);
+  const id = (created.body as { protocol: ProtocolDefinition }).protocol.id;
+  assert.equal((await handleProtocolDraftRequest(deps, {
+    authHeader: "Bearer test",
+    params: { id },
+    body: { ...validDraftBody(), title: "Autosaved" },
+  })).status, 200);
+  assert.equal((await handleProtocolPublishRequest(deps, {
+    authHeader: "Bearer test",
+    params: { id },
+    body: {},
+  })).status, 200);
+  assert.equal((await handleProtocolForkRequest(deps, {
+    authHeader: "Bearer test",
+    params: { id },
+    body: { title: "Forked" },
+  })).status, 201);
+  assert.equal((await handleProtocolRetireRequest(deps, {
+    authHeader: "Bearer test",
+    params: { id },
+    body: {},
+  })).status, 200);
+  assert.equal((await handleProtocolLibraryRequest(deps, { authHeader: "Bearer test" })).status, 200);
+
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-capture",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { reference: "Patient/patient-1" },
+  } satisfies Encounter, {
+    resourceType: "Condition",
+    id: "capture-dx",
+    subject: { reference: "Patient/patient-1" },
+    encounter: { reference: "Encounter/enc-capture" },
+    code: { coding: [{ code: "H04.123" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } satisfies Condition);
+  assert.equal((await handleProtocolCaptureRequest(deps, {
+    authHeader: "Bearer test",
+    params: { encounterId: "enc-capture" },
+    body: { name: "Captured" },
+  })).status, 201);
+});
+
+test("encounter capture does not treat two absent subject references as a patient match", async () => {
+  const fhir = new EndpointFhir();
+  fhir.resources.push({
+    resourceType: "Encounter",
+    id: "enc-identifier-subject",
+    status: "in-progress",
+    class: { code: "AMB" },
+    subject: { identifier: { value: "encounter-subject" } },
+  } satisfies Encounter, {
+    resourceType: "Condition",
+    id: "identifier-subject-dx",
+    subject: { identifier: { value: "condition-subject" } },
+    encounter: { reference: "Encounter/enc-identifier-subject" },
+    code: { coding: [{ code: "H04.123" }] },
+    verificationStatus: { coding: [{ code: "confirmed" }] },
+  } satisfies Condition);
+
+  const result = await handleProtocolCaptureRequest(endpointDeps(fhir), {
+    authHeader: "Bearer test",
+    params: { encounterId: "enc-identifier-subject" },
+    body: { name: "Identifier-only subjects" },
+  });
+
+  assert.equal(result.status, 201);
+  const trigger = (result.body as { protocol: ProtocolDefinition }).protocol.draft?.trigger;
+  assert.deepEqual(trigger, { kind: "diagnosis", dxKeys: [] });
+});
+
+test("publish returns a named 400 reason for every deterministic validation failure", async () => {
+  const cases: Array<[string, ReturnType<typeof validDraftBody>]> = [
+    ["EMPTY_ITEM_LIST", validDraftBody([])],
+    ["UNKNOWN_CATALOG_KEY", validDraftBody([{
+      itemKey: "unknown",
+      itemType: "finding-seed",
+      defaultSelected: true,
+      lateralityMode: "inherit-dx",
+      payload: { findingDefKey: "does-not-exist", mode: "promptOnly" },
+    }])],
+    ["DEVICE_MEASURED_SEED", validDraftBody([{
+      itemKey: "device",
+      itemType: "finding-seed",
+      defaultSelected: true,
+      lateralityMode: "inherit-dx",
+      payload: { findingDefKey: "iop", mode: "seedValue", defaultValue: 18 },
+      capture: { source: "device-measured", seedValueKept: true },
+    }])],
+    ["CAPTURED_FREE_TEXT", validDraftBody([{
+      itemKey: "narrative",
+      itemType: "counseling",
+      defaultSelected: true,
+      lateralityMode: "inherit-dx",
+      payload: { topicKey: "dry-eye", narrativeTemplate: "patient-specific" },
+      capture: { source: "structured" },
+    }])],
+  ];
+  for (const [reason, draft] of cases) {
+    const fhir = new EndpointFhir();
+    const deps = endpointDeps(fhir);
+    const created = await handleProtocolCreateRequest(deps, { authHeader: "Bearer test", body: draft });
+    const id = (created.body as { protocol: ProtocolDefinition }).protocol.id;
+    const result = await handleProtocolPublishRequest(deps, {
+      authHeader: "Bearer test",
+      params: { id },
+      body: {},
+    });
+    assert.equal(result.status, 400, reason);
+    assert.equal((result.body as { reason: string }).reason, reason);
+  }
 });
 
 test("dry-eye built-in offers without a read-path write, then applies eight prompts and one reviewed charge", async () => {
@@ -416,6 +771,10 @@ test("dry-eye built-in offers without a read-path write, then applies eight prom
   assert.deepEqual(
     (offer.body as { protocols: ProtocolDefinition[] }).protocols.map((protocol) => protocol.id),
     [DRY_EYE_EVALUATION_PROTOCOL.id],
+  );
+  assert.equal(
+    (offer.body as { protocols: Array<{ acceptCharges: boolean }> }).protocols[0]?.acceptCharges,
+    true,
   );
   assert.equal(fhir.writes.length, 0);
 
@@ -527,14 +886,14 @@ test("protocol numeric findings require the explicit cup-disc ratio unit mapping
   assert.throws(() => protocolFindingObservation({ ...base, findingDefKey: "iop" }), /explicit unit mapping/);
 });
 
-type EndpointResource = Basic | Observation | ServiceRequest | CarePlan | Condition;
+type EndpointResource = Basic | Observation | ServiceRequest | CarePlan | Condition | Encounter;
 
 class EndpointFhir {
   resources: EndpointResource[] = [];
   writes: EndpointResource[] = [];
   next = 1;
 
-  async search<T extends Basic | Observation>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
+  async search<T extends Resource>(resourceType: T["resourceType"], params?: Record<string, string>): Promise<Bundle<T>> {
     let rows = this.resources.filter((resource) => resource.resourceType === resourceType);
     const code = params?.code?.split("|")[1];
     if (code) rows = rows.filter((resource) => "code" in resource && resource.code?.coding?.some((coding) => coding.code === code));
@@ -562,17 +921,22 @@ class EndpointFhir {
     this.writes.push(saved);
     return saved;
   }
-  async read<T extends Observation | ServiceRequest | CarePlan | Condition>(resourceType: T["resourceType"], id: string): Promise<T> {
+  async read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T> {
     const resource = this.resources.find((candidate) => candidate.resourceType === resourceType && candidate.id === id);
     if (!resource) throw new Error(`${resourceType}/${id} not found`);
     return resource as T;
   }
 }
 
-function endpointDeps(fhir: EndpointFhir, actorRole: "clinician" | "auditor" = "clinician") {
+function endpointDeps(
+  fhir: EndpointFhir,
+  actorRole: "clinician" | "front-desk" | "auditor" = "clinician",
+  staffReference = "Practitioner/test",
+) {
   return {
-    authenticate: async () => ({ staffReference: "Practitioner/test", actorRole, fhir }),
+    authenticate: async () => ({ staffReference, actorRole, fhir }),
     now: () => "2026-07-18T12:00:00.000Z",
+    catalogs: protocolCatalogs,
   };
 }
 
@@ -639,6 +1003,22 @@ function applyBody(code: string) {
   return {
     protocolId: GLAUCOMA_SUSPECT_PROTOCOL.id, encounterId: "enc-1", patientId: "patient-1",
     diagnosis: { reference: "Condition/c1", code, confirmed: true },
+  };
+}
+
+function validDraftBody(items: ProtocolDefinition["items"] = [{
+  itemKey: "iop",
+  itemType: "finding-seed",
+  defaultSelected: true,
+  lateralityMode: "inherit-dx",
+  payload: { findingDefKey: "iop", mode: "promptOnly" },
+}]) {
+  return {
+    title: "Dry Eye — Stable",
+    trigger: { kind: "diagnosis" as const, dxKeys: ["H04.12*"], statusScope: ["stable" as const] },
+    ownership: { ownerId: "Practitioner/test", sharing: "private" },
+    categories: ["dry-eye"],
+    items,
   };
 }
 

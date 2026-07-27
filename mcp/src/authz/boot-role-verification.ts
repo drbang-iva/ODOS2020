@@ -46,6 +46,25 @@ export function formatPracticeRoleBootFailure(missing: readonly string[]): strin
   ].join("\n");
 }
 
+export async function logProtocolSeedBootFailure(input: {
+  seed(): Promise<void>;
+  log?: (message: string) => void;
+}): Promise<void> {
+  try {
+    await input.seed();
+  } catch (error) {
+    (input.log ?? console.error)([
+      "\u001b[31m",
+      "============================================================",
+      "ODOS PROTOCOL SEED FAILED",
+      `- ${error instanceof Error ? error.message : String(error)}`,
+      "The server will continue, but the built-in protocol may be unavailable.",
+      "============================================================",
+      "\u001b[0m",
+    ].join("\n"));
+  }
+}
+
 export async function logSsePracticeRoleBootVerification(input: {
   authenticate(): Promise<void>;
   verify(): Promise<void>;
