@@ -5,9 +5,12 @@ import type {
   Encounter,
   Media,
   Patient,
+  ProjectMembership,
 } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
+import { patientAccessEntry } from "../mcp/src/clinical-graph/provider-assignment-endpoint.js";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
+import { searchAll } from "../mcp/src/fhir-search.js";
 import { uploadBinary } from "../mcp/src/fhir/binary-upload.js";
 import { PgBinaryAttemptStore } from "../mcp/src/legacy-import/binary-attempt-store.js";
 import {
@@ -54,7 +57,8 @@ const clinicianContext = await readSessionContext(baseUrl, clinicianToken);
 if (clinicianContext.projectId !== projectId || clinicianContext.superAdmin) {
   throw new Error("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN must be a non-superadmin in the target project.");
 }
-if (!/^Practitioner(Role)?\/[^/]+$/.test(clinicianContext.profileReference ?? "")) {
+const clinicianProfileReference = clinicianContext.profileReference;
+if (!clinicianProfileReference || !/^Practitioner(Role)?\/[^/]+$/.test(clinicianProfileReference)) {
   throw new Error("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN must resolve to a staff profile.");
 }
 const importerToken = await exchangeClientCredentials({
@@ -73,9 +77,39 @@ try {
     active: true,
     name: [{ family: `MigrationM0${Date.now()}`, given: ["Synthetic"] }],
     gender: "unknown",
-    generalPractitioner: [{ reference: clinicianContext.profileReference }],
+    generalPractitioner: [{ reference: clinicianProfileReference }],
   });
   if (!patient.id) throw new Error("Acceptance Patient has no id.");
+  const clinicianMemberships = (await searchAll<ProjectMembership>(
+    serviceFhir,
+    "ProjectMembership",
+    { profile: clinicianProfileReference },
+  )).filter((membership) => membership.profile.reference === clinicianProfileReference);
+  if (clinicianMemberships.length !== 1) {
+    throw new Error(
+      `Expected one clinician ProjectMembership for ${clinicianProfileReference}; found ${clinicianMemberships.length}.`,
+    );
+  }
+  const clinicianMembership = clinicianMemberships[0]!;
+  const clinicianPolicyReference = clinicianMembership.access
+    ?.find((access) => access.policy.reference)?.policy.reference
+    ?? clinicianMembership.accessPolicy?.reference;
+  if (!clinicianMembership.id || !clinicianMembership.meta?.versionId || !clinicianPolicyReference) {
+    throw new Error("Clinician ProjectMembership must carry id, meta.versionId, and a policy reference.");
+  }
+  const clinicianPatientAccess = patientAccessEntry(
+    clinicianPolicyReference,
+    clinicianProfileReference,
+    `Patient/${patient.id}`,
+  );
+  await serviceFhir.patch<ProjectMembership>(
+    "ProjectMembership",
+    clinicianMembership.id,
+    clinicianMembership.access?.length
+      ? [{ op: "add", path: "/access/-", value: clinicianPatientAccess }]
+      : [{ op: "add", path: "/access", value: [clinicianPatientAccess] }],
+    { "If-Match": `W/"${clinicianMembership.meta.versionId}"` },
+  );
   const encounter = await serviceFhir.create<Encounter>({
     resourceType: "Encounter",
     meta: { project: projectId, tag: [{ system: "https://odos2020.com/tags/test", code: "legacy-import-m0" }] },
@@ -139,8 +173,10 @@ try {
 
   restartMedplum(composeProject);
   await waitForMedplum(baseUrl);
+  await serviceFhir.read<Media>("Media", media.id);
   const clinicianFhir = createMedplumClient({ baseUrl, accessToken: clinicianToken });
   const clinicianMedia = await clinicianFhir.read<Media>("Media", media.id);
+  console.log(`BISECT operator_media_read=200 clinician_media_read=200 media=${media.id}`);
   const rewrittenUrl = clinicianMedia.content.url;
   if (!rewrittenUrl || rewrittenUrl.startsWith("Binary/")) {
     throw new Error("Ordinary clinician Media read did not rewrite content.url to a presigned URL.");
