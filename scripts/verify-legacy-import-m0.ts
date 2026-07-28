@@ -5,13 +5,10 @@ import type {
   Encounter,
   Media,
   Patient,
-  ProjectMembership,
-  User,
 } from "@medplum/fhirtypes";
 import { exchangeClientCredentials } from "../data/medplum-adapters/migration-importer-adapter.js";
 import { createMedplumClient } from "../mcp/src/fhir-client.js";
 import { uploadBinary } from "../mcp/src/fhir/binary-upload.js";
-import { searchAll } from "../mcp/src/fhir-search.js";
 import { PgBinaryAttemptStore } from "../mcp/src/legacy-import/binary-attempt-store.js";
 import {
   assertBinaryHash,
@@ -21,11 +18,10 @@ import {
 } from "../mcp/src/legacy-import/binary-transport.js";
 import {
   PgBinaryReferenceScanner,
-  findPracticeClinicianPolicy,
+  readLegacyAcceptancePatientCounts,
   readStoredMedia,
   sweepLegacyImportBinaries,
 } from "../mcp/src/legacy-import/orphan-sweep.js";
-import { loginForLocalRepair } from "./repair-practice-roles.js";
 import { resolvePracticeProjectId } from "./setup-legacy-importer.js";
 
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
@@ -35,26 +31,30 @@ const postgresUrl =
   ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const composeProject = process.env.ODOS_COMPOSE_PROJECT ?? "odos2020";
 assertLocalBaseUrl(baseUrl);
-
-const humanEmail =
-  process.env.ODOS_ADMIN_EMAIL
-  ?? process.env.OSOD_ADMIN_EMAIL
-  ?? requireEnv("MEDPLUM_ADMIN_EMAIL");
-const humanPassword =
-  process.env.ODOS_ADMIN_PASSWORD
-  ?? process.env.OSOD_ADMIN_PASSWORD
-  ?? requireEnv("MEDPLUM_ADMIN_PASSWORD");
-const serviceEmail = requireEnv("MEDPLUM_ADMIN_EMAIL");
-const servicePassword = requireEnv("MEDPLUM_ADMIN_PASSWORD");
-const humanToken = await loginWithRetry({ baseUrl, email: humanEmail, password: humanPassword });
-const serviceToken = humanEmail === serviceEmail && humanPassword === servicePassword
-  ? humanToken
-  : await loginWithRetry({ baseUrl, email: serviceEmail, password: servicePassword });
-const serviceFhir = createMedplumClient({ baseUrl, accessToken: serviceToken });
-const projectId = await resolvePracticeProjectId(baseUrl, humanToken, serviceFhir, postgresUrl);
-const clinicianPolicy = await findPracticeClinicianPolicy(postgresUrl);
-if (clinicianPolicy.projectId !== projectId) {
-  throw new Error("Stored clinician policy project does not match the resolved practice project.");
+if (process.env.ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE !== "1") {
+  throw new Error(
+    "Refusing destructive legacy-import acceptance. It restarts Medplum, removes a synthetic blob, "
+    + "and disposes a synthetic Binary. Use a disposable synthetic-only project and set "
+    + "ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE=1.",
+  );
+}
+const operatorToken = requireEnv("ODOS_OPERATOR_ACCESS_TOKEN");
+const clinicianToken = requireEnv("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN");
+const serviceFhir = createMedplumClient({ baseUrl, accessToken: operatorToken });
+const projectId = await resolvePracticeProjectId(baseUrl, operatorToken, serviceFhir, postgresUrl);
+const patientCounts = await readLegacyAcceptancePatientCounts(postgresUrl, projectId);
+if (patientCounts.nonSynthetic > 0) {
+  throw new Error(
+    `Refusing destructive legacy-import acceptance: project ${projectId} contains `
+    + `${patientCounts.nonSynthetic} non-synthetic Patient resource(s) out of ${patientCounts.total}.`,
+  );
+}
+const clinicianContext = await readSessionContext(baseUrl, clinicianToken);
+if (clinicianContext.projectId !== projectId || clinicianContext.superAdmin) {
+  throw new Error("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN must be a non-superadmin in the target project.");
+}
+if (!/^Practitioner(Role)?\/[^/]+$/.test(clinicianContext.profileReference ?? "")) {
+  throw new Error("ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN must resolve to a staff profile.");
 }
 const importerToken = await exchangeClientCredentials({
   baseUrl,
@@ -72,6 +72,7 @@ try {
     active: true,
     name: [{ family: `MigrationM0${Date.now()}`, given: ["Synthetic"] }],
     gender: "unknown",
+    generalPractitioner: [{ reference: clinicianContext.profileReference }],
   });
   if (!patient.id) throw new Error("Acceptance Patient has no id.");
   const encounter = await serviceFhir.create<Encounter>({
@@ -106,7 +107,7 @@ try {
     auth: importerAuth,
   });
   await attempts.recordReturned(directAttempt.attemptId, raw.binaryId);
-  const tagged = await tagMigrationBinary(raw.resource, importerAuth);
+  const tagged = await tagMigrationBinary(raw.resource, importerFhir);
   await assertBinaryHash(raw.binaryId, original, importerAuth);
   const media = await importerFhir.create<Media>({
     resourceType: "Media",
@@ -137,20 +138,6 @@ try {
 
   restartMedplum(composeProject);
   await waitForMedplum(baseUrl);
-  const clinician = await ensureSyntheticClinician({
-    baseUrl,
-    projectId,
-    humanToken,
-    serviceToken,
-    serviceFhir,
-    clinicianPolicyId: clinicianPolicy.policyId,
-    patient,
-  });
-  const clinicianToken = await loginWithRetry({
-    baseUrl,
-    email: clinician.email,
-    password: clinician.password,
-  });
   const clinicianFhir = createMedplumClient({ baseUrl, accessToken: clinicianToken });
   const clinicianMedia = await clinicianFhir.read<Media>("Media", media.id);
   const rewrittenUrl = clinicianMedia.content.url;
@@ -214,6 +201,7 @@ try {
     scanner,
     auth: importerAuth,
     execute: true,
+    binaryIds: [crash.binaryId],
   });
   const disposedCrash = disposed.find((entry) => entry.binaryId === crash.binaryId);
   if (disposedCrash?.outcome !== "disposed") {
@@ -224,100 +212,6 @@ try {
 } finally {
   await attempts.close();
   await scanner.close();
-}
-
-async function ensureSyntheticClinician(input: {
-  baseUrl: string;
-  projectId: string;
-  humanToken: string;
-  serviceToken: string;
-  serviceFhir: ReturnType<typeof createMedplumClient>;
-  clinicianPolicyId: string;
-  patient: Patient;
-}): Promise<{ email: string; password: string }> {
-  const email = "migration-m0-clinician@odos.local";
-  const password = `M0-${randomBytes(24).toString("base64url")}!`;
-  let users = (await searchAll<User>(input.serviceFhir, "User", { email }))
-    .filter((user) => user.email?.toLowerCase() === email);
-  if (users.length === 0) {
-    const response = await fetch(
-      `${input.baseUrl.replace(/\/$/, "")}/admin/projects/${input.projectId}/invite`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${input.humanToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resourceType: "Practitioner",
-          email,
-          firstName: "Synthetic",
-          lastName: "M0 Clinician",
-          sendEmail: false,
-        }),
-      },
-    );
-    if (!response.ok) {
-      throw new Error(`Synthetic clinician invite failed: ${response.status} ${await response.text()}`);
-    }
-    users = (await searchAll<User>(input.serviceFhir, "User", { email }))
-      .filter((user) => user.email?.toLowerCase() === email);
-  }
-  if (users.length !== 1 || !users[0]?.id) {
-    throw new Error(`Expected one synthetic clinician User; found ${users.length}.`);
-  }
-  const memberships = (await searchAll<ProjectMembership>(input.serviceFhir, "ProjectMembership", {
-    user: `User/${users[0].id}`,
-  })).filter((membership) => membership.project.reference === `Project/${input.projectId}`);
-  if (memberships.length !== 1 || !memberships[0]?.id || !memberships[0].meta?.versionId) {
-    throw new Error(`Expected one versioned synthetic clinician membership; found ${memberships.length}.`);
-  }
-  const membership = memberships[0];
-  const providerReference = membership.profile.reference;
-  if (!/^Practitioner\/[^/]+$/.test(providerReference)) {
-    throw new Error("Synthetic clinician membership has no Practitioner profile.");
-  }
-  await input.serviceFhir.update<ProjectMembership>(
-    "ProjectMembership",
-    membership.id,
-    {
-      ...membership,
-      admin: false,
-      accessPolicy: undefined,
-      access: [{
-        policy: { reference: `AccessPolicy/${input.clinicianPolicyId}` },
-        parameter: [
-          { name: "provider_profile", valueReference: { reference: providerReference } },
-          { name: "patient_compartment", valueString: `Patient/${input.patient.id}` },
-        ],
-      }],
-    },
-    { "If-Match": `W/"${membership.meta.versionId}"` },
-  );
-  const passwordResponse = await fetch(`${input.baseUrl.replace(/\/$/, "")}/admin/super/setpassword`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${input.serviceToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!passwordResponse.ok) {
-    throw new Error(`Synthetic clinician password setup failed: ${passwordResponse.status}.`);
-  }
-  if (!input.patient.id || !input.patient.meta?.versionId) {
-    throw new Error("Synthetic acceptance Patient requires id/meta.versionId for provider assignment.");
-  }
-  await input.serviceFhir.update<Patient>(
-    "Patient",
-    input.patient.id,
-    {
-      ...input.patient,
-      generalPractitioner: [{ reference: providerReference }],
-    },
-    { "If-Match": `W/"${input.patient.meta.versionId}"` },
-  );
-  return { email, password };
 }
 
 async function runCrashWorker(input: {
@@ -343,10 +237,29 @@ async function runCrashWorker(input: {
     ],
     { cwd: process.cwd(), env: process.env, stdio: ["ignore", "pipe", "pipe"] },
   );
+  const exit = new Promise<void>((resolve) => child.once("close", () => resolve()));
   const line = await new Promise<string>((resolve, reject) => {
     let stdout = "";
     let stderr = "";
-    const timeout = setTimeout(() => reject(new Error(`Crash worker timed out: ${stderr}`)), 60_000);
+    let settled = false;
+    const finishError = (error: Error, kill: boolean): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (kill) child.kill("SIGKILL");
+      reject(error);
+    };
+    const finishLine = (value: string): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      resolve(value);
+    };
+    const timeout = setTimeout(
+      () => finishError(new Error(`Crash worker timed out: ${stderr}`), true),
+      60_000,
+    );
+    child.once("error", (error) => finishError(error, true));
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.stdout.setEncoding("utf8");
@@ -354,19 +267,20 @@ async function runCrashWorker(input: {
       stdout += chunk;
       const newline = stdout.indexOf("\n");
       if (newline >= 0) {
-        clearTimeout(timeout);
-        resolve(stdout.slice(0, newline));
+        finishLine(stdout.slice(0, newline));
       }
     });
     child.once("exit", (code) => {
-      if (code !== null && code !== 0) {
-        clearTimeout(timeout);
-        reject(new Error(`Crash worker exited ${code}: ${stderr}`));
+      if (!settled) {
+        finishError(
+          new Error(`Crash worker exited ${code ?? "without a code"} before reporting state: ${stderr}`),
+          false,
+        );
       }
     });
   });
   child.kill("SIGKILL");
-  await new Promise<void>((resolve) => child.once("exit", () => resolve()));
+  await exit;
   const parsed = JSON.parse(line) as {
     phase?: string;
     mediaId?: string;
@@ -387,27 +301,38 @@ async function runCrashWorker(input: {
 }
 
 function restartMedplum(project: string): void {
-  execFileSync("docker-compose", ["-p", project, "restart", "medplum-server"], {
-    stdio: "ignore",
-  });
+  execCompose(["-p", project, "restart", "medplum-server"]);
 }
 
 function removeSyntheticBlob(project: string, binaryId: string): void {
   assertUuid(binaryId);
-  execFileSync(
-    "docker-compose",
-    [
-      "-p",
-      project,
-      "exec",
-      "-T",
-      "medplum-server",
-      "node",
-      "-e",
-      `require("node:fs").rmSync("/data/binary/${binaryId}",{recursive:true,force:true})`,
-    ],
-    { stdio: "ignore" },
-  );
+  execCompose([
+    "-p",
+    project,
+    "exec",
+    "-T",
+    "medplum-server",
+    "node",
+    "-e",
+    `require("node:fs").rmSync("/data/binary/${binaryId}",{recursive:true,force:true})`,
+  ]);
+}
+
+let composeCommand: { executable: string; prefix: string[] } | undefined;
+
+function execCompose(args: string[]): void {
+  if (!composeCommand) {
+    try {
+      execFileSync("docker", ["compose", "version"], { stdio: "ignore" });
+      composeCommand = { executable: "docker", prefix: ["compose"] };
+    } catch {
+      execFileSync("docker-compose", ["version"], { stdio: "ignore" });
+      composeCommand = { executable: "docker-compose", prefix: [] };
+    }
+  }
+  execFileSync(composeCommand.executable, [...composeCommand.prefix, ...args], {
+    stdio: "ignore",
+  });
 }
 
 async function waitForMedplum(base: string): Promise<void> {
@@ -424,20 +349,28 @@ async function waitForMedplum(base: string): Promise<void> {
   throw new Error("Timed out waiting for Medplum restart.");
 }
 
-async function loginWithRetry(input: {
-  baseUrl: string;
-  email: string;
-  password: string;
-}): Promise<string> {
-  for (let attempt = 1; attempt <= 5; attempt += 1) {
-    try {
-      return await loginForLocalRepair(input);
-    } catch (error) {
-      if (!String(error).includes("429") || attempt === 5) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 30_000));
-    }
+async function readSessionContext(
+  base: string,
+  accessToken: string,
+): Promise<{ projectId?: string; profileReference?: string; superAdmin: boolean }> {
+  const response = await fetch(`${base.replace(/\/$/, "")}/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Acceptance token /auth/me failed: ${response.status}.`);
   }
-  throw new Error("Unreachable login retry state.");
+  const body = (await response.json()) as {
+    project?: { id?: string; superAdmin?: boolean };
+    profile?: { resourceType?: string; id?: string };
+  };
+  return {
+    projectId: body.project?.id,
+    profileReference: body.profile?.resourceType && body.profile.id
+      ? `${body.profile.resourceType}/${body.profile.id}`
+      : undefined,
+    superAdmin: body.project?.superAdmin === true,
+  };
 }
 
 function crashBytes(seed: string): Uint8Array {

@@ -11,7 +11,9 @@ either stack:
 ```bash
 npm run generate-medplum-signing-keys
 docker-compose up -d
+export ODOS_OPERATOR_ACCESS_TOKEN="<temporary token copied from a human-authenticated local Medplum session>"
 npm run setup-legacy-importer
+unset ODOS_OPERATOR_ACCESS_TOKEN
 ```
 
 The pinned `medplum/medplum-server:5.1.8` loader accepts comma-separated config
@@ -28,7 +30,9 @@ starts. Repeated `up` operations are safe.
 `odos-migration-importer`, binds its dedicated AccessPolicy, and writes the
 client credentials to `.odos/migration-importer.env`. The importer is not a
 superadmin. Its Binary rule has no search interaction; operator recovery never
-attempts a Binary search.
+attempts a Binary search. Setup accepts only the temporary operator access token;
+it has no password parameter and performs no automated login. The AccessPolicy's
+dedicated `migration-importer` tag and rules are reconciled together.
 
 ## Transport and recovery
 
@@ -53,33 +57,50 @@ blob is missing or hash-mismatched.
 
 ## Operator sweep
 
-Dry-run first:
+The sweep begins only with open importer attempt rows. It resolves the FHIR table
+list once, scans each table once for the batch, and normalizes relative, absolute,
+versioned, and absolute-versioned Binary URLs to `{resourceType,id}`. A candidate
+URL containing the Binary id that cannot be parsed confidently is treated as a
+reference. A Media, DocumentReference, or any other resource reference is
+reported and never deleted. Immediately before DELETE, the sweep repeats the
+reference check; a new reference or any re-verification error aborts disposal.
+Rows without a recorded Binary id remain open and visible but cannot nominate a
+database resource.
+
+Execution is deliberately two-step and must not overlap an import:
 
 ```bash
 npm run sweep-legacy-import-binaries
-```
-
-Execute only after reviewing the JSON report:
-
-```bash
+export ODOS_SWEEP_ALLOW_DESTRUCTIVE=1
 npm run sweep-legacy-import-binaries -- --execute
+unset ODOS_SWEEP_ALLOW_DESTRUCTIVE
 ```
 
-The sweep begins only with open importer attempt rows. For each recorded Binary
-id, it scans current and historical FHIR resource JSON in Postgres for an exact
-`Attachment.url`-shape `Binary/{id}` value. A Media, DocumentReference, or any
-other resource reference is reported and never deleted. A candidate with no
-reference can be deleted through the importer’s Binary-only delete grant; the
-attempt row then resolves as disposed. Rows without a recorded Binary id remain
-open and visible but cannot nominate any database resource.
+The explicit environment variable is required in addition to `--execute`, so a
+production-localhost invocation cannot enter disposal mode by accident. There is
+no cross-process import lock; stop all importer workers for the entire reviewed
+disposal run.
 
 ## Acceptance
 
-Run against the local synthetic stack:
+The acceptance gate is destructive by design. Run it only against a disposable
+project containing no Patient resources except prior M0 synthetic-tagged
+fixtures. Obtain two access tokens manually: an operator token for setup/admin
+FHIR operations and a non-superadmin clinician token from the same project.
+Neither token is written to disk.
 
 ```bash
+export ODOS_OPERATOR_ACCESS_TOKEN="<temporary operator token>"
+export ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN="<temporary ordinary-clinician token>"
+export ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE=1
 npm run verify-legacy-import-m0
+unset ODOS_OPERATOR_ACCESS_TOKEN ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE
 ```
+
+Without the explicit opt-in the script refuses before authentication. With the
+opt-in it additionally queries the target project and refuses if any
+non-synthetic Patient exists. The disposal pass is scoped to the crash fixture's
+single Binary id.
 
 The gate uploads more than 1 MB, verifies canonical stored Media JSON and
 migration tagging, restarts Medplum, proves a scoped ordinary clinician can

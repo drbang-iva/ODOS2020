@@ -3,6 +3,8 @@ export interface MigrationImporterClientResult {
   readonly clientSecret: string;
 }
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export async function createMigrationImporterClient(input: {
   readonly baseUrl: string;
   readonly projectId: string;
@@ -23,6 +25,7 @@ export async function createMigrationImporterClient(input: {
         description: "ODOS local legacy migration importer",
         accessPolicy: { reference: input.accessPolicyReference },
       }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     },
   );
   if (!response.ok) {
@@ -50,6 +53,7 @@ export async function exchangeClientCredentials(input: {
       client_id: input.clientId,
       client_secret: input.clientSecret,
     }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(

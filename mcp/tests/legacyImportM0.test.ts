@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import type { AccessPolicy, Binary, Bundle, Media } from "@medplum/fhirtypes";
@@ -8,6 +9,8 @@ import {
 } from "../src/fhir/binary-upload.js";
 import {
   buildMigrationImporterAccessPolicy,
+  MIGRATION_IMPORTER_POLICY_TAG_CODE,
+  MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
   MIGRATION_TAG_CODE,
   MIGRATION_TAG_SYSTEM,
 } from "../src/legacy-import/access-policy.js";
@@ -22,9 +25,15 @@ import {
   type LegacyMediaSource,
 } from "../src/legacy-import/binary-transport.js";
 import {
+  PgBinaryReferenceScanner,
   sweepLegacyImportBinaries,
+  type BinaryReferenceDatabase,
   type BinaryReferenceScanner,
 } from "../src/legacy-import/orphan-sweep.js";
+import {
+  reconciledAccessPolicy,
+  samePolicyDefinition,
+} from "../../scripts/setup-legacy-importer.js";
 
 const sourceBytes = new Uint8Array(1024 * 1024 + 17).fill(0x5a);
 const source: LegacyMediaSource = {
@@ -63,6 +72,7 @@ test("raw Binary upload sends >1 MB bytes and the parser security-context header
   assert.equal(headers(observed).get("content-type"), "image/jpeg");
   assert.equal(headers(observed).get("x-security-context"), source.patientReference);
   assert.equal(headers(observed).get("x-odos-binary-parser"), "security-context-v1");
+  assert.ok(observed?.signal instanceof AbortSignal);
 });
 
 test("raw Binary upload rejects a missing security context before fetch", async () => {
@@ -88,7 +98,9 @@ test("raw Binary upload rejects a missing security context before fetch", async 
 });
 
 test("migration Binary tag uses full JSON PUT, If-Match, and leaves data absent", async () => {
-  let observed: RequestInit | undefined;
+  let observed:
+    | { resourceType: string; id: string; resource: Binary; headers?: Record<string, string> }
+    | undefined;
   const updated = await tagMigrationBinary({
     resourceType: "Binary",
     id: binaryId,
@@ -96,17 +108,28 @@ test("migration Binary tag uses full JSON PUT, If-Match, and leaves data absent"
     contentType: source.contentType,
     securityContext: { reference: source.patientReference },
   }, {
-    baseUrl: "http://localhost:8103",
-    accessToken: "token",
-    fetch: async (_url, init) => {
-      observed = init;
-      const body = JSON.parse(String(init?.body)) as Binary;
-      return fhirResponse({ ...body, meta: { ...body.meta, versionId: "2" } });
+    update: async <T>(
+      resourceType: string,
+      id: string,
+      resource: T,
+      extraHeaders?: Record<string, string>,
+    ): Promise<T> => {
+      observed = {
+        resourceType,
+        id,
+        resource: resource as Binary,
+        headers: extraHeaders,
+      };
+      return {
+        ...resource,
+        meta: { ...(resource as Binary).meta, versionId: "2" },
+      } as T;
     },
   });
-  const body = JSON.parse(String(observed?.body)) as Binary;
-  assert.equal(observed?.method, "PUT");
-  assert.equal(headers(observed).get("if-match"), 'W/"1"');
+  const body = observed?.resource;
+  assert.equal(observed?.resourceType, "Binary");
+  assert.equal(observed?.id, binaryId);
+  assert.equal(observed?.headers?.["If-Match"], 'W/"1"');
   assert.equal(body.data, undefined);
   assert.deepEqual(body.meta?.tag, [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }]);
   assert.equal(updated.meta?.versionId, "2");
@@ -131,13 +154,39 @@ test("migration importer AccessPolicy grants the exact resource interactions", (
   assert.deepEqual(rule(policy, "Organization").interaction, ["search", "read", "create"]);
   assert.deepEqual(rule(policy, "Location").interaction, ["search", "read"]);
   const binaryRules = rules.filter((entry) => entry.resourceType === "Binary");
-  assert.deepEqual(binaryRules[0]?.interaction, ["read", "create", "delete"]);
-  assert.deepEqual(binaryRules[1]?.interaction, ["update"]);
-  assert.ok(binaryRules[1]?.readonlyFields?.includes("securityContext"));
+  const binaryDataRule = binaryRules.find((entry) => entry.interaction?.includes("create"));
+  const binaryUpdateRule = binaryRules.find((entry) => entry.interaction?.includes("update"));
+  assert.deepEqual(binaryDataRule?.interaction, ["read", "create", "delete"]);
+  assert.deepEqual(binaryUpdateRule?.interaction, ["update"]);
+  assert.ok(binaryUpdateRule?.readonlyFields?.includes("securityContext"));
   assert.equal(JSON.stringify(binaryRules).includes("search"), false);
+  assert.deepEqual(
+    policy.meta?.tag?.filter((tag) => tag.system === MIGRATION_IMPORTER_POLICY_TAG_SYSTEM),
+    [{ system: MIGRATION_IMPORTER_POLICY_TAG_SYSTEM, code: MIGRATION_IMPORTER_POLICY_TAG_CODE }],
+  );
   for (const entry of rules.filter((candidate) => candidate.resourceType !== "Binary")) {
     assert.equal(entry.interaction?.includes("delete"), false);
   }
+});
+
+test("migration importer policy reconciliation repairs its canonical tag and preserves unrelated tags", () => {
+  const desired = buildMigrationImporterAccessPolicy("project-1");
+  const drifted: AccessPolicy = {
+    ...desired,
+    meta: {
+      ...desired.meta,
+      tag: [
+        { system: MIGRATION_IMPORTER_POLICY_TAG_SYSTEM, code: "wrong" },
+        { system: "https://example.test/other", code: "preserved" },
+      ],
+    },
+  };
+  assert.equal(samePolicyDefinition(drifted, desired), false);
+  const reconciled = reconciledAccessPolicy(drifted, desired);
+  assert.equal(samePolicyDefinition(reconciled, desired), true);
+  assert.ok(reconciled.meta?.tag?.some(
+    (tag) => tag.system === "https://example.test/other" && tag.code === "preserved",
+  ));
 });
 
 test("all four Media recovery states converge or skip as designed", async (t) => {
@@ -191,9 +240,6 @@ test("all four Media recovery states converge or skip as designed", async (t) =>
             posts += 1;
             return fhirResponse(binary(nextBinaryId, "1"), 201);
           }
-          if (init?.method === "PUT") {
-            return fhirResponse(binary(nextBinaryId, "2"));
-          }
           const bytes = href.endsWith(`/${binaryId}`)
             ? recoveryCase.existingBytes ?? sourceBytes
             : sourceBytes;
@@ -217,12 +263,12 @@ test("post-response/pre-Media crash leaves an open attempt carrying the Binary i
   const uploaded = await uploadMigrationBinary({
     source,
     attempts,
+    fhir: new MemoryMediaFhir(),
     auth: {
       baseUrl: "http://localhost:8103",
       accessToken: "token",
       fetch: async (_url, init) => {
         if (init?.method === "POST") return fhirResponse(binary(binaryId, "1"), 201);
-        if (init?.method === "PUT") return fhirResponse(binary(binaryId, "2"));
         return new Response(sourceBytes);
       },
     },
@@ -255,20 +301,123 @@ test("completed Media recovery closes an open post-Media-update attempt", async 
   assert.equal(attempts.rows[0]?.status, "resolved-attached");
 });
 
-test("orphan sweep reports and never deletes a Binary referenced only by DocumentReference", async () => {
-  const attempts = new MemoryAttemptStore();
-  const opened = await attempts.open({
-    sourceFilename: source.fileNameNew,
-    patientReference: source.patientReference,
-  });
-  await attempts.recordReturned(opened.attemptId, binaryId);
+test("orphan sweep detects every Binary URL form through the database scanner and fails closed", async (t) => {
+  const cases = [
+    ["relative", `Binary/${binaryId}`],
+    ["absolute", `https://any-host.example/fhir/R4/Binary/${binaryId}`],
+    ["versioned", `Binary/${binaryId}/_history/7`],
+    ["absolute versioned", `https://other.example/fhir/R4/Binary/${binaryId}/_history/7`],
+    ["unparseable", `Binary/${binaryId}/not-a-valid-fhir-reference`],
+  ] as const;
+  for (const [name, url] of cases) {
+    await t.test(name, async () => {
+      const attempts = await openAttempt(binaryId);
+      const database = new FakeBinaryReferenceDatabase([{
+        id: `doc-${name}`,
+        content: JSON.stringify({
+          resourceType: "DocumentReference",
+          content: [{ attachment: { url } }],
+        }),
+      }]);
+      const scanner = new PgBinaryReferenceScanner({ pool: database });
+      let deleted = false;
+      const results = await sweepLegacyImportBinaries({
+        attempts,
+        scanner,
+        execute: true,
+        auth: {
+          baseUrl: "http://localhost:8103",
+          accessToken: "token",
+          fetch: async () => {
+            deleted = true;
+            return new Response(null, { status: 204 });
+          },
+        },
+      });
+      assert.equal(results[0]?.outcome, "reported-referenced");
+      assert.equal(results[0]?.references[0]?.url, url);
+      assert.equal(database.tableDiscoveryQueries, 1);
+      assert.equal(database.contentQueries, 1);
+      assert.equal(deleted, false);
+    });
+  }
+});
+
+test("orphan sweep rechecks immediately before deletion and fails closed on a new reference", async () => {
+  const attempts = await openAttempt(binaryId);
+  let scans = 0;
   let deleted = false;
   const scanner: BinaryReferenceScanner = {
-    findAttachmentReferences: async () => [{
-      table: "DocumentReference",
-      resourceId: "doc-1",
-      url: `Binary/${binaryId}`,
-    }],
+    findAttachmentReferences: async (binaryIds) => {
+      scans += 1;
+      return new Map(binaryIds.map((id) => [
+        id,
+        scans === 1
+          ? []
+          : [{ table: "Media", resourceId: "media-raced", url: `Binary/${id}` }],
+      ]));
+    },
+    binaryMetadataExists: async () => true,
+  };
+  const results = await sweepLegacyImportBinaries({
+    attempts,
+    scanner,
+    execute: true,
+    auth: {
+      baseUrl: "http://localhost:8103",
+      accessToken: "token",
+      fetch: async () => {
+        deleted = true;
+        return new Response(null, { status: 204 });
+      },
+    },
+  });
+  assert.equal(scans, 2);
+  assert.equal(results[0]?.outcome, "reported-referenced");
+  assert.equal(results[0]?.references[0]?.resourceId, "media-raced");
+  assert.equal(deleted, false);
+});
+
+test("orphan sweep batches multiple open Binary ids into one table discovery and one table query", async () => {
+  const secondBinaryId = "66666666-6666-4666-8666-666666666666";
+  const attempts = await openAttempt(binaryId);
+  const second = await attempts.open({
+    sourceFilename: "legacy-image-002.jpg",
+    patientReference: source.patientReference,
+  });
+  await attempts.recordReturned(second.attemptId, secondBinaryId);
+  const database = new FakeBinaryReferenceDatabase([{
+    id: "doc-batch",
+    content: JSON.stringify({
+      resourceType: "DocumentReference",
+      content: [
+        { attachment: { url: `Binary/${binaryId}` } },
+        { attachment: { url: `https://host.example/fhir/R4/Binary/${secondBinaryId}` } },
+      ],
+    }),
+  }]);
+  const scanner = new PgBinaryReferenceScanner({ pool: database });
+  const results = await sweepLegacyImportBinaries({
+    attempts,
+    scanner,
+    auth: { baseUrl: "http://localhost:8103", accessToken: "token" },
+  });
+  assert.equal(results.length, 2);
+  assert.ok(results.every((result) => result.outcome === "reported-referenced"));
+  assert.equal(database.tableDiscoveryQueries, 1);
+  assert.equal(database.contentQueries, 1);
+});
+
+test("orphan sweep treats a re-verification error as referenced and never deletes", async () => {
+  const attempts = await openAttempt(binaryId);
+  let scans = 0;
+  let deleted = false;
+  const scanner: BinaryReferenceScanner = {
+    findAttachmentReferences: async (binaryIds) => {
+      scans += 1;
+      if (scans === 2) throw new Error("database unavailable");
+      return new Map(binaryIds.map((id) => [id, []]));
+    },
     binaryMetadataExists: async () => true,
   };
   const results = await sweepLegacyImportBinaries({
@@ -285,8 +434,56 @@ test("orphan sweep reports and never deletes a Binary referenced only by Documen
     },
   });
   assert.equal(results[0]?.outcome, "reported-referenced");
-  assert.equal(results[0]?.references[0]?.table, "DocumentReference");
+  assert.match(results[0]?.reverificationError ?? "", /database unavailable/);
   assert.equal(deleted, false);
+});
+
+test("transient attachment verification failure never triggers corrupt replacement", async () => {
+  const attempts = new MemoryAttemptStore();
+  let posts = 0;
+  await assert.rejects(
+    recoverLegacyMedia({
+      source,
+      attempts,
+      fhir: new MemoryMediaFhir(media("completed", `Binary/${binaryId}`)),
+      auth: {
+        baseUrl: "http://localhost:8103",
+        accessToken: "token",
+        fetch: async (_url, init) => {
+          if (init?.method === "POST") posts += 1;
+          return new Response(null, { status: 503, statusText: "Unavailable" });
+        },
+      },
+    }),
+    /verification failed transiently: 503/,
+  );
+  assert.equal(posts, 0);
+  assert.equal(attempts.rows.length, 0);
+});
+
+test("destructive scripts refuse before authentication without explicit opt-in", () => {
+  const root = new URL("../../", import.meta.url);
+  for (const script of [
+    "scripts/sweep-legacy-import-binaries.ts",
+    "scripts/verify-legacy-import-m0.ts",
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", script, ...(script.includes("sweep") ? ["--execute"] : [])],
+      {
+        cwd: new URL(root).pathname,
+        env: {
+          ...process.env,
+          ODOS_SWEEP_ALLOW_DESTRUCTIVE: "",
+          ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE: "",
+        },
+        encoding: "utf8",
+      },
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Refusing (Binary disposal|destructive legacy-import acceptance)/);
+    assert.doesNotMatch(result.stderr, /ODOS_MIGRATION_IMPORTER_CLIENT_ID is required/);
+  }
 });
 
 test("tracked config, compose init, and inline-limit strings remain truthful", () => {
@@ -297,20 +494,26 @@ test("tracked config, compose init, and inline-limit strings remain truthful", (
   assert.equal(drill.signingKey, "INERT_ENV_OVERLAY_REQUIRED");
   const mainCompose = readFileSync(new URL("docker-compose.yml", root), "utf8");
   const drillCompose = readFileSync(new URL("docker-compose.dr-drill.yml", root), "utf8");
+  const ci = readFileSync(new URL(".github/workflows/ci.yml", root), "utf8");
   for (const compose of [mainCompose, drillCompose]) {
     assert.match(compose, /medplum-binary-init:/);
     assert.match(compose, /"1000:1000"/);
     assert.match(compose, /service_completed_successfully/);
     assert.match(compose, /file:\/config\/medplum\.config\.json,env/);
   }
+  assert.ok(
+    ci.indexOf("npm run generate-medplum-signing-keys")
+      < ci.indexOf("start Medplum contract backend"),
+  );
   for (const path of [
     "mcp/src/clinical-graph/imaging-endpoint.ts",
+    "mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts",
     "ui/src/components/charting/ImagingSection.tsx",
     "ui/src/components/LongitudinalImagingCard.tsx",
   ]) {
     const content = readFileSync(new URL(path, root), "utf8");
-    assert.doesNotMatch(content, /15 MB|15 \* 1024 \* 1024/);
-    assert.match(content, /1 MB|1 \* 1024 \* 1024/);
+    assert.doesNotMatch(content, /(?:^|[^\d])15 MB(?:$|[^\d])|(?:^|[^\d])15 \* 1024 \* 1024(?:$|[^\d])/m);
+    assert.match(content, /(?:^|[^\d])1 MB(?:$|[^\d])|(?:^|[^\d])1 \* 1024 \* 1024(?:$|[^\d])/m);
   }
 });
 
@@ -427,6 +630,48 @@ class MemoryAttemptStore implements BinaryAttemptStore {
     this.rows[index] = next;
     return next;
   }
+}
+
+class FakeBinaryReferenceDatabase implements BinaryReferenceDatabase {
+  tableDiscoveryQueries = 0;
+  contentQueries = 0;
+
+  constructor(
+    private readonly documentRows: Array<{ id: string; content: string }>,
+  ) {}
+
+  async query<T>(text: string): Promise<{ rows: T[]; rowCount: number }> {
+    if (text.includes("information_schema.columns")) {
+      this.tableDiscoveryQueries += 1;
+      return {
+        rows: [{ table_name: "DocumentReference" }] as T[],
+        rowCount: 1,
+      };
+    }
+    if (text.includes('FROM "DocumentReference"')) {
+      this.contentQueries += 1;
+      return {
+        rows: this.documentRows as T[],
+        rowCount: this.documentRows.length,
+      };
+    }
+    if (text.includes('FROM "Binary"')) {
+      return { rows: [{ exists: 1 }] as T[], rowCount: 1 };
+    }
+    throw new Error(`Unexpected fake database query: ${text}`);
+  }
+
+  async end(): Promise<void> {}
+}
+
+async function openAttempt(nextBinaryId: string): Promise<MemoryAttemptStore> {
+  const attempts = new MemoryAttemptStore();
+  const opened = await attempts.open({
+    sourceFilename: source.fileNameNew,
+    patientReference: source.patientReference,
+  });
+  await attempts.recordReturned(opened.attemptId, nextBinaryId);
+  return attempts;
 }
 
 function media(status: Media["status"], url?: string): Media {

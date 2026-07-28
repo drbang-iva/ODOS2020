@@ -2,6 +2,9 @@ import type { AccessPolicy } from "@medplum/fhirtypes";
 
 export const MIGRATION_IMPORTER_NAME = "odos-migration-importer";
 export const MIGRATION_IMPORTER_POLICY_NAME = "ODOS Migration Importer";
+export const MIGRATION_IMPORTER_POLICY_TAG_SYSTEM =
+  "https://odos2020.com/tags/access-policy";
+export const MIGRATION_IMPORTER_POLICY_TAG_CODE = "migration-importer";
 export const MIGRATION_TAG_SYSTEM = "https://odos2020.com/tags/migration";
 export const MIGRATION_TAG_CODE = "eyefinity-import";
 
@@ -11,7 +14,13 @@ export function buildMigrationImporterAccessPolicy(projectId?: string): AccessPo
   return {
     resourceType: "AccessPolicy",
     name: MIGRATION_IMPORTER_POLICY_NAME,
-    ...(projectId ? { meta: { project: projectId } } : {}),
+    meta: {
+      ...(projectId ? { project: projectId } : {}),
+      tag: [{
+        system: MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
+        code: MIGRATION_IMPORTER_POLICY_TAG_CODE,
+      }],
+    },
     resource: [
       ...[
         "Patient",

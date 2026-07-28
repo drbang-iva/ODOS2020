@@ -2,6 +2,8 @@ import { Readable } from "node:stream";
 import type { Binary } from "@medplum/fhirtypes";
 import { parserBinaryHeaders } from "../parsers/binarySecurityContext.js";
 
+const BINARY_UPLOAD_TIMEOUT_MS = 60_000;
+
 export interface BinaryUploadAuth {
   readonly baseUrl: string;
   readonly accessToken: string;
@@ -46,6 +48,7 @@ export async function uploadBinary(input: UploadBinaryInput): Promise<UploadedBi
         ...securityHeaders,
       },
       body: input.bytes ?? input.stream,
+      signal: AbortSignal.timeout(BINARY_UPLOAD_TIMEOUT_MS),
       ...(input.stream ? { duplex: "half" } : {}),
     } as RequestInit & { duplex?: "half" },
   );

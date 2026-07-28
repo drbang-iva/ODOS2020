@@ -4,7 +4,6 @@ import type { Bundle, Media, Provenance, QuestionnaireResponse } from "@medplum/
 import {
   handleLongitudinalImagingCaptureRequest,
   handleLongitudinalImagingListRequest,
-  MAX_MANUAL_IMAGING_BYTES,
   suggestComparisonPair,
   type ImagingEndpointDeps,
   type LongitudinalImageSummary,
@@ -16,6 +15,7 @@ import {
 } from "../src/fhir/aestheticsConsent.js";
 
 const AUTH = "Bearer good";
+const LONGITUDINAL_IMAGE_LIMIT_BYTES = 1 * 1024 * 1024;
 const DATA = Buffer.from("clinical photo").toString("base64");
 const BODY = {
   patientReference: "Patient/p1",
@@ -97,7 +97,7 @@ test("longitudinal capture rejects above-ceiling files with the truthful 1 MB me
       ...BODY,
       file: {
         ...BODY.file,
-        data: Buffer.alloc(MAX_MANUAL_IMAGING_BYTES + 1).toString("base64"),
+        data: Buffer.alloc(LONGITUDINAL_IMAGE_LIMIT_BYTES + 1).toString("base64"),
       },
     },
   });

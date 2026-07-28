@@ -13,12 +13,12 @@ import {
   buildMigrationImporterAccessPolicy,
   MIGRATION_IMPORTER_NAME,
   MIGRATION_IMPORTER_POLICY_NAME,
+  MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
 } from "../mcp/src/legacy-import/access-policy.js";
 import {
   findPracticeProjectId,
   readMigrationImporterPolicies,
 } from "../mcp/src/legacy-import/orphan-sweep.js";
-import { loginForLocalRepair } from "./repair-practice-roles.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_STATE_PATH = resolve(".odos/migration-importer-state.json");
@@ -26,8 +26,7 @@ const DEFAULT_CREDENTIALS_PATH = resolve(".odos/migration-importer.env");
 
 export async function setupLegacyImporter(input: {
   readonly baseUrl: string;
-  readonly adminEmail: string;
-  readonly adminPassword: string;
+  readonly accessToken: string;
   readonly statePath?: string;
   readonly credentialsPath?: string;
   readonly postgresUrl?: string;
@@ -38,11 +37,7 @@ export async function setupLegacyImporter(input: {
   readonly createdClient: boolean;
 }> {
   assertLocalBaseUrl(input.baseUrl);
-  const accessToken = await loginForLocalRepair({
-    baseUrl: input.baseUrl,
-    email: input.adminEmail,
-    password: input.adminPassword,
-  });
+  const accessToken = input.accessToken;
   const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
   const projectId = await resolvePracticeProjectId(
     input.baseUrl,
@@ -66,11 +61,34 @@ export async function setupLegacyImporter(input: {
   const statePath = input.statePath ?? DEFAULT_STATE_PATH;
   const credentialsPath = input.credentialsPath ?? DEFAULT_CREDENTIALS_PATH;
   const existing = readExistingCredentials(statePath, credentialsPath);
+  let policy = storedPolicies[0]?.policy;
+  if (!policy) {
+    policy = await fhir.create<AccessPolicy>(desired);
+  } else if (!samePolicyDefinition(policy, desired)) {
+    const current = await fhir.read<AccessPolicy>("AccessPolicy", storedPolicies[0]!.policyId);
+    if (!current.id || !current.meta?.versionId) {
+      throw new Error("Migration importer AccessPolicy lacks id/meta.versionId for a safe update.");
+    }
+    const reconciled = reconciledAccessPolicy(current, desired);
+    policy = await fhir.update<AccessPolicy>(
+      "AccessPolicy",
+      current.id,
+      {
+        ...reconciled,
+        meta: {
+          ...reconciled.meta,
+          project: projectId,
+        },
+      },
+      { "If-Match": `W/"${current.meta.versionId}"` },
+    );
+  }
+  const policyId = policy.id ?? storedPolicies[0]?.policyId;
+  if (!policyId) throw new Error("Migration importer AccessPolicy has no id.");
   if (
     existing
     && existing.projectId === projectId
-    && storedPolicies[0]?.policyId === existing.policyId
-    && samePolicyRules(storedPolicies[0].policy, desired)
+    && existing.policyId === policyId
   ) {
     await exchangeClientCredentials({
       baseUrl: input.baseUrl,
@@ -79,34 +97,11 @@ export async function setupLegacyImporter(input: {
     });
     return {
       projectId,
-      accessPolicyId: existing.policyId,
+      accessPolicyId: policyId,
       clientId: existing.clientId,
       createdClient: false,
     };
   }
-
-  let policy = storedPolicies[0]?.policy;
-  if (!policy) {
-    policy = await fhir.create<AccessPolicy>(desired);
-  } else if (!samePolicyRules(policy, desired)) {
-    const current = await fhir.read<AccessPolicy>("AccessPolicy", storedPolicies[0]!.policyId);
-    if (!current.id || !current.meta?.versionId) {
-      throw new Error("Migration importer AccessPolicy lacks id/meta.versionId for a safe update.");
-    }
-    policy = await fhir.update<AccessPolicy>(
-      "AccessPolicy",
-      current.id,
-      {
-        ...current,
-        name: desired.name,
-        resource: desired.resource,
-        meta: { ...current.meta, project: projectId },
-      },
-      { "If-Match": `W/"${current.meta.versionId}"` },
-    );
-  }
-  const policyId = policy.id ?? storedPolicies[0]?.policyId;
-  if (!policyId) throw new Error("Migration importer AccessPolicy has no id.");
 
   const created = await createMigrationImporterClient({
     baseUrl: input.baseUrl,
@@ -127,14 +122,7 @@ export async function setupLegacyImporter(input: {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const result = await setupLegacyImporter({
     baseUrl: process.env.MEDPLUM_BASE_URL ?? DEFAULT_BASE_URL,
-    adminEmail:
-      process.env.ODOS_ADMIN_EMAIL
-      ?? process.env.OSOD_ADMIN_EMAIL
-      ?? requireEnv("MEDPLUM_ADMIN_EMAIL"),
-    adminPassword:
-      process.env.ODOS_ADMIN_PASSWORD
-      ?? process.env.OSOD_ADMIN_PASSWORD
-      ?? requireEnv("MEDPLUM_ADMIN_PASSWORD"),
+    accessToken: requireEnv("ODOS_OPERATOR_ACCESS_TOKEN"),
     postgresUrl:
       process.env.ODOS_POSTGRES_URL
       ?? process.env.OSOD_POSTGRES_URL
@@ -165,6 +153,7 @@ export async function resolvePracticeProjectId(
   if (postgresUrl) return findPracticeProjectId(postgresUrl);
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) throw new Error(`Migration importer /auth/me failed: ${response.status}.`);
   const body = (await response.json()) as { project?: { id?: string; superAdmin?: boolean } };
@@ -175,8 +164,36 @@ export async function resolvePracticeProjectId(
   return body.project.id;
 }
 
-function samePolicyRules(left: AccessPolicy, right: AccessPolicy): boolean {
-  return JSON.stringify(left.resource ?? []) === JSON.stringify(right.resource ?? []);
+export function samePolicyDefinition(left: AccessPolicy, right: AccessPolicy): boolean {
+  const desiredTag = right.meta?.tag?.find(
+    (tag) => tag.system === MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
+  );
+  const matchingTags = left.meta?.tag?.filter(
+    (tag) => tag.system === MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
+  ) ?? [];
+  return matchingTags.length === 1
+    && matchingTags[0]?.code === desiredTag?.code
+    && JSON.stringify(left.resource ?? []) === JSON.stringify(right.resource ?? []);
+}
+
+export function reconciledAccessPolicy(existing: AccessPolicy, desired: AccessPolicy): AccessPolicy {
+  const desiredTag = desired.meta?.tag?.find(
+    (tag) => tag.system === MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
+  );
+  return {
+    ...existing,
+    name: desired.name,
+    meta: {
+      ...existing.meta,
+      tag: [
+        ...(existing.meta?.tag ?? []).filter(
+          (tag) => tag.system !== MIGRATION_IMPORTER_POLICY_TAG_SYSTEM,
+        ),
+        ...(desiredTag ? [desiredTag] : []),
+      ],
+    },
+    resource: desired.resource,
+  };
 }
 
 function readExistingCredentials(
@@ -214,6 +231,7 @@ function persistCredentials(
   projectId: string,
 ): void {
   mkdirSync(dirname(statePath), { recursive: true, mode: 0o700 });
+  mkdirSync(dirname(credentialsPath), { recursive: true, mode: 0o700 });
   writeFileSync(
     credentialsPath,
     [

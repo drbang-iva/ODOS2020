@@ -119,8 +119,14 @@ The no-op path emits an audit row with `event_type = noop` and `action_reason = 
 Provision the non-superadmin migration client after the practice roles exist:
 
 ```bash
+export ODOS_OPERATOR_ACCESS_TOKEN="<temporary token copied from a human-authenticated local Medplum session>"
 npm run setup-legacy-importer
+unset ODOS_OPERATOR_ACCESS_TOKEN
 ```
+
+The setup command never accepts an administrator password and never performs a
+login. Keep the temporary operator token in the current shell only; do not write
+it to `.env` or `.odos/`.
 
 The generated client credentials stay in `.odos/migration-importer.env`. See
 [`docs/legacy-import-m0.md`](legacy-import-m0.md) for the raw Binary transport,

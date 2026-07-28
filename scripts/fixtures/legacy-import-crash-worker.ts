@@ -15,6 +15,7 @@ if (!fileNameNew || !patientReference || !encounterReference) {
   throw new Error("Crash worker requires filename, Patient reference, and Encounter reference.");
 }
 const baseUrl = process.env.MEDPLUM_BASE_URL ?? "http://localhost:8103";
+assertLocalBaseUrl(baseUrl);
 const postgresUrl =
   process.env.ODOS_POSTGRES_URL
   ?? process.env.OSOD_POSTGRES_URL
@@ -34,14 +35,22 @@ const source: LegacyMediaSource = {
   contentType: "image/jpeg",
   bytes: crashBytes(fileNameNew),
 };
-const media = await fhir.create<Media>(buildPreparationMedia(source));
-if (!media.id) throw new Error("Crash worker preparation Media has no id.");
-const upload = await uploadMigrationBinary({
-  source,
-  mediaId: media.id,
-  auth,
-  attempts,
-});
+let media: Media;
+let upload: Awaited<ReturnType<typeof uploadMigrationBinary>>;
+try {
+  media = await fhir.create<Media>(buildPreparationMedia(source));
+  if (!media.id) throw new Error("Crash worker preparation Media has no id.");
+  upload = await uploadMigrationBinary({
+    source,
+    mediaId: media.id,
+    auth,
+    fhir,
+    attempts,
+  });
+} catch (error) {
+  await attempts.close();
+  throw error;
+}
 process.stdout.write(JSON.stringify({
   phase: "post-response-pre-media-update",
   mediaId: media.id,
@@ -59,4 +68,11 @@ function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required.`);
   return value;
+}
+
+function assertLocalBaseUrl(value: string): void {
+  const url = new URL(value);
+  if (!["localhost", "127.0.0.1", "::1", "medplum-server"].includes(url.hostname)) {
+    throw new Error("Legacy-import crash worker is restricted to a local self-hosted Medplum.");
+  }
 }
