@@ -60,6 +60,8 @@ jobs:
       - name: install ui deps
         working-directory: ui
         run: npm ci
+      - name: typecheck scripts
+        run: npm run typecheck:scripts
       - name: typecheck mcp
         working-directory: mcp
         run: npx tsc --noEmit

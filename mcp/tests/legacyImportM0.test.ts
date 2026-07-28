@@ -301,6 +301,35 @@ test("completed Media recovery closes an open post-Media-update attempt", async 
   assert.equal(attempts.rows[0]?.status, "resolved-attached");
 });
 
+test("completed Media recovery converges for intact versioned Binary references", async (t) => {
+  for (const [name, url] of [
+    ["relative", `Binary/${binaryId}/_history/7`],
+    ["absolute", `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`],
+  ] as const) {
+    await t.test(name, async () => {
+      const attempts = await openAttempt(binaryId);
+      let posts = 0;
+      const result = await recoverLegacyMedia({
+        source,
+        fhir: new MemoryMediaFhir(media("completed", url)),
+        attempts,
+        auth: {
+          baseUrl: "http://localhost:8103",
+          accessToken: "token",
+          fetch: async (_url, init) => {
+            if (init?.method === "POST") posts += 1;
+            return new Response(sourceBytes);
+          },
+        },
+      });
+      assert.equal(result.action, "skipped-verified");
+      assert.equal(result.binaryId, binaryId);
+      assert.equal(posts, 0);
+      assert.equal(attempts.rows[0]?.status, "resolved-attached");
+    });
+  }
+});
+
 test("orphan sweep detects every Binary URL form through the database scanner and fails closed", async (t) => {
   const cases = [
     ["relative", `Binary/${binaryId}`],
@@ -506,6 +535,7 @@ test("destructive scripts refuse before authentication without explicit opt-in",
           ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE: "",
         },
         encoding: "utf8",
+        timeout: 10_000,
       },
     );
     assert.notEqual(result.status, 0);

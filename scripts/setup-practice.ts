@@ -447,7 +447,12 @@ export class InMemorySetupPracticeAdapter implements SetupPracticeAdapter {
 
   private async resolveCanonicalPolicies(
     createPolicy: (role: PracticeRoleId) => Promise<AccessPolicy>,
-  ): Promise<readonly { role: PracticeRoleId; policy: AccessPolicy; created: boolean }[]> {
+  ): Promise<readonly {
+    role: PracticeRoleId;
+    policy: AccessPolicy;
+    created: boolean;
+    updated: boolean;
+  }[]> {
     const resolved = [];
     for (const roleId of PRACTICE_ROLE_IDS) {
       const role = getRoleDeclaration(roleId);
@@ -837,7 +842,7 @@ function buildSetupConfig(options: SetupPracticeOptions): SetupPracticeConfig {
 }
 
 function buildSetupAuditRow(input: {
-  eventType: "create" | "projectmembership-lifecycle" | "noop";
+  eventType: "create" | "update" | "projectmembership-lifecycle" | "noop";
   resourceType: string;
   resourceId: string;
   actionReason: string;
@@ -858,12 +863,13 @@ function readSetupState(path: string): SetupPracticeState {
     return { version: "v0.5d" };
   }
   const parsed = JSON.parse(readFileSync(path, "utf8")) as SetupPracticeState;
-  return { version: "v0.5d", ...parsed };
+  return { ...parsed, version: "v0.5d" };
 }
 
 function persistSetupState(path: string, state: SetupPracticeState): SetupPracticeState {
-  writeFileSync(path, JSON.stringify({ version: "v0.5d", ...state }, null, 2) + "\n");
-  return { version: "v0.5d", ...state };
+  const normalized = { ...state, version: "v0.5d" as const };
+  writeFileSync(path, JSON.stringify(normalized, null, 2) + "\n");
+  return normalized;
 }
 
 function requireConfigValue(value: string | undefined, name: string): string {

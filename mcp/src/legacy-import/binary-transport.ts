@@ -14,6 +14,7 @@ import type {
   BinaryAttempt,
   BinaryAttemptStore,
 } from "./binary-attempt-store.js";
+import { binaryIdFromReferenceUrl } from "./binary-reference.js";
 
 export const LEGACY_FILE_IDENTIFIER_SYSTEM =
   "https://odos2020.com/fhir/NamingSystem/legacy-file-name-new";
@@ -102,7 +103,7 @@ export async function recoverLegacyMedia(input: {
     action = "recovered-preparation";
   } else if (existing.status === "completed" && existing.content.url) {
     const verification = await verifyAttachment(existing.content.url, input.source.bytes, input.auth);
-    const currentBinaryId = binaryIdFromAttachmentUrl(existing.content.url);
+    const currentBinaryId = binaryIdFromReferenceUrl(existing.content.url);
     if (verification.matches && currentBinaryId) {
       if (!existing.id) throw new Error("Verified completed Media has no id.");
       await input.attempts.resolveAttachedByBinaryId(currentBinaryId, existing.id);
@@ -237,24 +238,6 @@ export async function assertBinaryHash(
   }
 }
 
-export function binaryIdFromAttachmentUrl(url: string): string | undefined {
-  const canonical = /^Binary\/([^/?#]+)$/.exec(url);
-  if (canonical) return canonical[1];
-  try {
-    const parts = new URL(url).pathname.split("/").filter(Boolean);
-    const binaryIndex = parts.lastIndexOf("Binary");
-    if (binaryIndex >= 0 && parts.length === binaryIndex + 2) {
-      return parts[binaryIndex + 1];
-    }
-    const storageIndex = parts.lastIndexOf("storage");
-    return storageIndex >= 0 && parts.length === storageIndex + 2
-      ? parts[storageIndex + 1]
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 async function findMediaByLegacyIdentifier(
   fhir: Pick<MedplumClient, "search">,
   fileNameNew: string,
@@ -276,7 +259,7 @@ async function verifyAttachment(
   expected: Uint8Array,
   auth: BinaryUploadAuth,
 ): Promise<{ matches: boolean }> {
-  const canonicalId = binaryIdFromAttachmentUrl(url);
+  const canonicalId = binaryIdFromReferenceUrl(url);
   const baseUrl = new URL(auth.baseUrl);
   let resolvedUrl: string;
   if (url.startsWith("Binary/") && canonicalId) {
