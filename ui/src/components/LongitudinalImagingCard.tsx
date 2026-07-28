@@ -26,7 +26,7 @@ interface ImagingPayload {
   error?: string;
 }
 
-const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const MAX_FILE_BYTES = 1 * 1024 * 1024;
 
 export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
   const [definitions, setDefinitions] = useState<ProcedureDefinitionSummary[]>([]);
@@ -120,7 +120,7 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
       return;
     }
     if (next.size > MAX_FILE_BYTES) {
-      setError("Clinical photos may not exceed 15 MB.");
+      setError("Clinical photos may not exceed 1 MB.");
       return;
     }
     setFile(next);

@@ -4,6 +4,7 @@ import type { Bundle, Media, Provenance, QuestionnaireResponse } from "@medplum/
 import {
   handleLongitudinalImagingCaptureRequest,
   handleLongitudinalImagingListRequest,
+  MAX_MANUAL_IMAGING_BYTES,
   suggestComparisonPair,
   type ImagingEndpointDeps,
   type LongitudinalImageSummary,
@@ -85,6 +86,24 @@ test("longitudinal capture blocks before any Media write when cosmetic consent i
   assert.match(JSON.stringify(result.body), /consent is required/i);
   assert.equal(fhir.media.length, 0);
   assert.equal(fhir.provenances.length, 0);
+});
+
+test("longitudinal capture rejects above-ceiling files with the truthful 1 MB message", async () => {
+  const fhir = new PhotoFhir();
+  fhir.responses.push(consent());
+  const result = await handleLongitudinalImagingCaptureRequest(deps(fhir), {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      file: {
+        ...BODY.file,
+        data: Buffer.alloc(MAX_MANUAL_IMAGING_BYTES + 1).toString("base64"),
+      },
+    },
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(result.body, { error: "Imaging files may not exceed 1 MB." });
+  assert.equal(fhir.media.length, 0);
 });
 
 test("consented capture tags Media to patient, series, session, and structure", async () => {

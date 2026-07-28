@@ -106,4 +106,5 @@ test("manual imaging upload rejects missing authority and unsafe file boundaries
     body: { ...BODY, file: { ...BODY.file, data: Buffer.alloc(MAX_MANUAL_IMAGING_BYTES + 1).toString("base64") } },
   });
   assert.equal(oversized.status, 400);
+  assert.deepEqual(oversized.body, { error: "Imaging files may not exceed 1 MB." });
 });

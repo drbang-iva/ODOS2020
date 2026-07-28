@@ -42,6 +42,14 @@ services:
     networks:
       - odos-internal
 
+  medplum-binary-init:
+    image: alpine:3.21
+    user: "0:0"
+    command: ["chown", "-R", "1000:1000", "/data/binary"]
+    volumes:
+      - medplum-binary:/data/binary
+    restart: "no"
+
   # Upgrade server + app together only after the scoped-clinician live RBAC gates pass.
   medplum-server:
     image: medplum/medplum-server:5.1.8
@@ -51,8 +59,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      medplum-binary-init:
+        condition: service_completed_successfully
     env_file:
       - .env
+      - .odos/medplum-signing.env
     environment:
       MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: ${MEDPLUM_ADMIN_EMAIL}
       MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD}

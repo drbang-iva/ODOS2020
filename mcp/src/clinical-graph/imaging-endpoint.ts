@@ -17,7 +17,7 @@ import type { ClinicalProcedureDefinition } from "./procedure-definition-store.j
 
 export const MANUAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.manual-imaging+json";
 export const LONGITUDINAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.longitudinal-imaging+json";
-export const MAX_MANUAL_IMAGING_BYTES = 15 * 1024 * 1024;
+export const MAX_MANUAL_IMAGING_BYTES = 1 * 1024 * 1024;
 
 export interface ImagingFhirClient {
   create<T extends Media | DiagnosticReport | Provenance>(
@@ -122,7 +122,7 @@ export async function handleImagingCaptureRequest(
   }
   const bytes = Buffer.from(parsed.data.file.data, "base64");
   if (bytes.length > MAX_MANUAL_IMAGING_BYTES) {
-    return { status: 400, body: { error: "Imaging files may not exceed 15 MB." } };
+    return { status: 400, body: { error: "Imaging files may not exceed 1 MB." } };
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
@@ -190,7 +190,7 @@ export async function handleLongitudinalImagingCaptureRequest(
   }
   const bytes = Buffer.from(parsed.data.file.data, "base64");
   if (bytes.length > MAX_MANUAL_IMAGING_BYTES) {
-    return { status: 400, body: { error: "Imaging files may not exceed 15 MB." } };
+    return { status: 400, body: { error: "Imaging files may not exceed 1 MB." } };
   }
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   const media = await staff.fhir.create<Media>(buildLongitudinalMedia(

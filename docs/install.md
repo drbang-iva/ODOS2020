@@ -30,11 +30,20 @@ git clone https://github.com/drbang-iva/ODOS2020.git
 cd ODOS2020
 npm install
 cd mcp && npm install && cd ..
+npm run generate-medplum-signing-keys
 docker-compose up -d
 docker-compose ps
 ```
 
 The root `docker-compose.yml` starts Postgres, Redis, Medplum server, and the local Medplum admin UI. ODOS setup and preflight commands run from the repo against that local stack.
+
+The signing-key generator writes independent main and DR-drill RSA keys to ignored,
+mode-0600 files under `.odos/`. Medplum 5.1.8 loads the tracked JSON first and then
+overlays `MEDPLUM_SIGNING_KEY`, `MEDPLUM_SIGNING_KEY_ID`, and
+`MEDPLUM_SIGNING_KEY_PASSPHRASE` from those files. The tracked values are inert.
+For an intentional rotation, run `npm run generate-medplum-signing-keys -- --force`
+and restart the applicable Medplum server. Rotation expires outstanding one-hour
+storage URLs; it does not change stored Binary data.
 
 The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
 
@@ -104,6 +113,18 @@ Practice already provisioned. To re-provision, see docs/install.md §Re-provisio
 ```
 
 The no-op path emits an audit row with `event_type = noop` and `action_reason = "v0.5d setup wizard re-run, already provisioned"`.
+
+## Legacy Import Transport Identity
+
+Provision the non-superadmin migration client after the practice roles exist:
+
+```bash
+npm run setup-legacy-importer
+```
+
+The generated client credentials stay in `.odos/migration-importer.env`. See
+[`docs/legacy-import-m0.md`](legacy-import-m0.md) for the raw Binary transport,
+Media recovery, operator sweep, and direct-FHIR acceptance gate.
 
 ## Repair a Partially Provisioned Local Practice
 

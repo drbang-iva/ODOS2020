@@ -42,7 +42,7 @@ export interface DryEyeMeibographyEndpointDeps {
 const WRITE_HEADERS = {
   "X-ODOS-Source": "mcp/create_meibography_observation",
 } as const;
-const MAX_IMAGE_BASE64_LENGTH = Math.ceil((15 * 1024 * 1024) / 3) * 4;
+const MAX_IMAGE_BASE64_LENGTH = Math.ceil((1 * 1024 * 1024) / 3) * 4;
 
 const captureSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
