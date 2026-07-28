@@ -261,22 +261,19 @@ async function verifyAttachment(
 ): Promise<{ matches: boolean }> {
   const canonicalId = binaryIdFromReferenceUrl(url);
   const baseUrl = new URL(auth.baseUrl);
-  let resolvedUrl: string;
-  if (url.startsWith("Binary/") && canonicalId) {
-    resolvedUrl = `${auth.baseUrl.replace(/\/$/, "")}/fhir/R4/Binary/${canonicalId}`;
-  } else {
-    let absoluteUrl: URL;
-    try {
-      absoluteUrl = new URL(url);
-    } catch {
-      return { matches: false };
-    }
-    if (!canonicalId || absoluteUrl.origin !== baseUrl.origin) {
-      return { matches: false };
-    }
-    resolvedUrl = absoluteUrl.toString();
+  if (!canonicalId) return { matches: false };
+  let absoluteUrl: URL;
+  try {
+    absoluteUrl = url.startsWith("Binary/")
+      ? new URL(`/fhir/R4/${url}`, baseUrl)
+      : new URL(url, baseUrl);
+  } catch {
+    return { matches: false };
   }
-  const response = await (auth.fetch ?? fetch)(resolvedUrl, {
+  if (absoluteUrl.origin !== baseUrl.origin) {
+    return { matches: false };
+  }
+  const response = await (auth.fetch ?? fetch)(absoluteUrl.toString(), {
     headers: {
       Accept: "application/octet-stream",
       Authorization: `Bearer ${auth.accessToken}`,

@@ -302,13 +302,27 @@ test("completed Media recovery closes an open post-Media-update attempt", async 
 });
 
 test("completed Media recovery converges for intact versioned Binary references", async (t) => {
-  for (const [name, url] of [
-    ["relative", `Binary/${binaryId}/_history/7`],
-    ["absolute", `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`],
+  for (const [name, url, expectedFetchUrl] of [
+    [
+      "relative",
+      `Binary/${binaryId}/_history/7`,
+      `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`,
+    ],
+    [
+      "absolute",
+      `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`,
+      `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`,
+    ],
+    [
+      "root-relative",
+      `/fhir/R4/Binary/${binaryId}/_history/7`,
+      `http://localhost:8103/fhir/R4/Binary/${binaryId}/_history/7`,
+    ],
   ] as const) {
     await t.test(name, async () => {
       const attempts = await openAttempt(binaryId);
       let posts = 0;
+      const fetchedUrls: string[] = [];
       const result = await recoverLegacyMedia({
         source,
         fhir: new MemoryMediaFhir(media("completed", url)),
@@ -316,8 +330,9 @@ test("completed Media recovery converges for intact versioned Binary references"
         auth: {
           baseUrl: "http://localhost:8103",
           accessToken: "token",
-          fetch: async (_url, init) => {
+          fetch: async (requestUrl, init) => {
             if (init?.method === "POST") posts += 1;
+            else fetchedUrls.push(String(requestUrl));
             return new Response(sourceBytes);
           },
         },
@@ -325,6 +340,7 @@ test("completed Media recovery converges for intact versioned Binary references"
       assert.equal(result.action, "skipped-verified");
       assert.equal(result.binaryId, binaryId);
       assert.equal(posts, 0);
+      assert.deepEqual(fetchedUrls, [expectedFetchUrl]);
       assert.equal(attempts.rows[0]?.status, "resolved-attached");
     });
   }
