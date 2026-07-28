@@ -30,6 +30,7 @@ const postgresUrl =
   ?? process.env.OSOD_POSTGRES_URL
   ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
 const composeProject = process.env.ODOS_COMPOSE_PROJECT ?? "odos2020";
+let composeCommand: { executable: string; prefix: string[] } | undefined;
 assertLocalBaseUrl(baseUrl);
 if (process.env.ODOS_ACCEPTANCE_ALLOW_DESTRUCTIVE !== "1") {
   throw new Error(
@@ -317,8 +318,6 @@ function removeSyntheticBlob(project: string, binaryId: string): void {
     `require("node:fs").rmSync("/data/binary/${binaryId}",{recursive:true,force:true})`,
   ]);
 }
-
-let composeCommand: { executable: string; prefix: string[] } | undefined;
 
 function execCompose(args: string[]): void {
   if (!composeCommand) {
