@@ -107,7 +107,7 @@ try {
     auth: importerAuth,
   });
   await attempts.recordReturned(directAttempt.attemptId, raw.binaryId);
-  const tagged = await tagMigrationBinary(raw.resource, importerFhir);
+  const tagged = await tagMigrationBinary(raw.resource, importerAuth);
   await assertBinaryHash(raw.binaryId, original, importerAuth);
   const media = await importerFhir.create<Media>({
     resourceType: "Media",

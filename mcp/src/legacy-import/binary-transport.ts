@@ -77,7 +77,7 @@ export async function uploadMigrationBinary(input: {
     attempt.attemptId,
     uploaded.binaryId,
   );
-  const tagged = await tagMigrationBinary(uploaded.resource, input.fhir);
+  const tagged = await tagMigrationBinary(uploaded.resource, input.auth);
   const binary = { ...uploaded, resource: tagged };
   await assertBinaryHash(binary.binaryId, input.source.bytes, input.auth);
   return { attempt: returnedAttempt, binary };
@@ -186,7 +186,7 @@ export function buildPreparationMedia(source: LegacyMediaSource): Media {
 
 export async function tagMigrationBinary(
   binary: Binary,
-  fhir: Pick<MedplumClient, "update">,
+  auth: BinaryUploadAuth,
 ): Promise<Binary> {
   if (!binary.id || !binary.meta?.versionId || !binary.contentType) {
     throw new Error("Migration Binary tagging requires id, meta.versionId, and contentType.");
@@ -206,12 +206,27 @@ export async function tagMigrationBinary(
     ...(binary.language ? { language: binary.language } : {}),
     ...(binary.securityContext ? { securityContext: binary.securityContext } : {}),
   };
-  return fhir.update<Binary>(
-    "Binary",
-    binary.id,
-    resource,
-    { "If-Match": `W/"${binary.meta.versionId}"` },
+  // Binary migration tags use direct transport because fhir-client guards Binary PUTs as parser writes.
+  const response = await (auth.fetch ?? fetch)(
+    `${auth.baseUrl.replace(/\/$/, "")}/fhir/R4/Binary/${binary.id}`,
+    {
+      method: "PUT",
+      headers: {
+        Accept: "application/fhir+json",
+        Authorization: `Bearer ${auth.accessToken}`,
+        "Content-Type": "application/fhir+json",
+        "If-Match": `W/"${binary.meta.versionId}"`,
+      },
+      body: JSON.stringify(resource),
+    },
   );
+  if (!response.ok) {
+    throw new Error(
+      `Migration Binary tag update failed: ${response.status} ${response.statusText}: `
+      + `${(await response.text()).slice(0, 2_000)}`,
+    );
+  }
+  return (await response.json()) as Binary;
 }
 
 export async function assertBinaryHash(

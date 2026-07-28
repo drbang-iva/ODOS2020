@@ -7,6 +7,7 @@ import {
   uploadBinary,
   type BinaryUploadAuth,
 } from "../src/fhir/binary-upload.js";
+import { createMedplumClient } from "../src/fhir-client.js";
 import {
   buildMigrationImporterAccessPolicy,
   MIGRATION_IMPORTER_POLICY_TAG_CODE,
@@ -98,9 +99,7 @@ test("raw Binary upload rejects a missing security context before fetch", async 
 });
 
 test("migration Binary tag uses full JSON PUT, If-Match, and leaves data absent", async () => {
-  let observed:
-    | { resourceType: string; id: string; resource: Binary; headers?: Record<string, string> }
-    | undefined;
+  let observed: RequestInit | undefined;
   const updated = await tagMigrationBinary({
     resourceType: "Binary",
     id: binaryId,
@@ -108,28 +107,50 @@ test("migration Binary tag uses full JSON PUT, If-Match, and leaves data absent"
     contentType: source.contentType,
     securityContext: { reference: source.patientReference },
   }, {
-    update: async <T>(
-      resourceType: string,
-      id: string,
-      resource: T,
-      extraHeaders?: Record<string, string>,
-    ): Promise<T> => {
-      observed = {
-        resourceType,
-        id,
-        resource: resource as Binary,
-        headers: extraHeaders,
-      };
-      return {
-        ...resource,
-        meta: { ...(resource as Binary).meta, versionId: "2" },
-      } as T;
+    baseUrl: "http://localhost:8103",
+    accessToken: "token",
+    fetch: async (_url, init) => {
+      observed = init;
+      const body = JSON.parse(String(init?.body)) as Binary;
+      return fhirResponse({ ...body, meta: { ...body.meta, versionId: "2" } });
     },
   });
-  const body = observed?.resource;
-  assert.equal(observed?.resourceType, "Binary");
-  assert.equal(observed?.id, binaryId);
-  assert.equal(observed?.headers?.["If-Match"], 'W/"1"');
+  const body = JSON.parse(String(observed?.body)) as Binary;
+  assert.equal(observed?.method, "PUT");
+  assert.equal(headers(observed).get("if-match"), 'W/"1"');
+  assert.equal(body.data, undefined);
+  assert.deepEqual(body.meta?.tag, [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }]);
+  assert.equal(updated.meta?.versionId, "2");
+});
+
+test("migration Binary tag bypasses the genuine fhir-client Mandate 8 update guard", async () => {
+  let observed: RequestInit | undefined;
+  const fhir = createMedplumClient({
+    baseUrl: "http://localhost:8103",
+    accessToken: "token",
+  });
+  const transport = Object.assign(fhir, {
+    baseUrl: "http://localhost:8103",
+    accessToken: "token",
+    fetch: async (_url: URL | RequestInfo, init?: RequestInit) => {
+      observed = init;
+      const body = JSON.parse(String(init?.body)) as Binary;
+      return fhirResponse({ ...body, meta: { ...body.meta, versionId: "2" } });
+    },
+  });
+
+  const updated = await tagMigrationBinary({
+    resourceType: "Binary",
+    id: binaryId,
+    meta: { versionId: "1" },
+    contentType: source.contentType,
+    securityContext: { reference: source.patientReference },
+  }, transport);
+
+  const body = JSON.parse(String(observed?.body)) as Binary;
+  assert.equal(observed?.method, "PUT");
+  assert.equal(headers(observed).get("if-match"), 'W/"1"');
+  assert.equal(headers(observed).has("x-odos-binary-parser"), false);
   assert.equal(body.data, undefined);
   assert.deepEqual(body.meta?.tag, [{ system: MIGRATION_TAG_SYSTEM, code: MIGRATION_TAG_CODE }]);
   assert.equal(updated.meta?.versionId, "2");
@@ -240,6 +261,9 @@ test("all four Media recovery states converge or skip as designed", async (t) =>
             posts += 1;
             return fhirResponse(binary(nextBinaryId, "1"), 201);
           }
+          if (init?.method === "PUT") {
+            return fhirResponse(binary(nextBinaryId, "2"));
+          }
           const bytes = href.endsWith(`/${binaryId}`)
             ? recoveryCase.existingBytes ?? sourceBytes
             : sourceBytes;
@@ -269,6 +293,7 @@ test("post-response/pre-Media crash leaves an open attempt carrying the Binary i
       accessToken: "token",
       fetch: async (_url, init) => {
         if (init?.method === "POST") return fhirResponse(binary(binaryId, "1"), 201);
+        if (init?.method === "PUT") return fhirResponse(binary(binaryId, "2"));
         return new Response(sourceBytes);
       },
     },
@@ -524,6 +549,7 @@ test("recovery never fetches an untrusted attachment origin", async () => {
       fetch: async (url, init) => {
         requestedUrls.push(String(url));
         if (init?.method === "POST") return fhirResponse(binary(replacementId, "1"), 201);
+        if (init?.method === "PUT") return fhirResponse(binary(replacementId, "2"));
         return new Response(sourceBytes, { status: 200 });
       },
     },
