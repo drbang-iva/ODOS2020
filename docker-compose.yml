@@ -67,6 +67,7 @@ services:
     environment:
       MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: ${MEDPLUM_ADMIN_EMAIL}
       MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD}
+      MEDPLUM_STORAGE_BASE_URL: ${MEDPLUM_STORAGE_BASE_URL:-http://localhost:8103/storage/}
     volumes:
       - ./medplum.config.json:/config/medplum.config.json:ro
       - medplum-binary:/data/binary

@@ -595,6 +595,10 @@ test("tracked config, compose init, and inline-limit strings remain truthful", (
   const mainCompose = readFileSync(new URL("docker-compose.yml", root), "utf8");
   const drillCompose = readFileSync(new URL("docker-compose.dr-drill.yml", root), "utf8");
   const ci = readFileSync(new URL(".github/workflows/ci.yml", root), "utf8");
+  assert.match(
+    mainCompose,
+    /MEDPLUM_STORAGE_BASE_URL: \$\{MEDPLUM_STORAGE_BASE_URL:-http:\/\/localhost:8103\/storage\/\}/,
+  );
   for (const compose of [mainCompose, drillCompose]) {
     assert.match(compose, /medplum-binary-init:/);
     assert.match(compose, /"1000:1000"/);
