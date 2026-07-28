@@ -242,8 +242,14 @@ export function binaryIdFromAttachmentUrl(url: string): string | undefined {
   if (canonical) return canonical[1];
   try {
     const parts = new URL(url).pathname.split("/").filter(Boolean);
+    const binaryIndex = parts.lastIndexOf("Binary");
+    if (binaryIndex >= 0 && parts.length === binaryIndex + 2) {
+      return parts[binaryIndex + 1];
+    }
     const storageIndex = parts.lastIndexOf("storage");
-    return storageIndex >= 0 ? parts[storageIndex + 1] : undefined;
+    return storageIndex >= 0 && parts.length === storageIndex + 2
+      ? parts[storageIndex + 1]
+      : undefined;
   } catch {
     return undefined;
   }
@@ -271,16 +277,27 @@ async function verifyAttachment(
   auth: BinaryUploadAuth,
 ): Promise<{ matches: boolean }> {
   const canonicalId = binaryIdFromAttachmentUrl(url);
-  const resolvedUrl = url.startsWith("Binary/") && canonicalId
-    ? `${auth.baseUrl.replace(/\/$/, "")}/fhir/R4/Binary/${canonicalId}`
-    : url;
+  const baseUrl = new URL(auth.baseUrl);
+  let resolvedUrl: string;
+  if (url.startsWith("Binary/") && canonicalId) {
+    resolvedUrl = `${auth.baseUrl.replace(/\/$/, "")}/fhir/R4/Binary/${canonicalId}`;
+  } else {
+    let absoluteUrl: URL;
+    try {
+      absoluteUrl = new URL(url);
+    } catch {
+      return { matches: false };
+    }
+    if (!canonicalId || absoluteUrl.origin !== baseUrl.origin) {
+      return { matches: false };
+    }
+    resolvedUrl = absoluteUrl.toString();
+  }
   const response = await (auth.fetch ?? fetch)(resolvedUrl, {
-    headers: url.startsWith("Binary/")
-      ? {
-          Accept: "application/octet-stream",
-          Authorization: `Bearer ${auth.accessToken}`,
-        }
-      : undefined,
+    headers: {
+      Accept: "application/octet-stream",
+      Authorization: `Bearer ${auth.accessToken}`,
+    },
     signal: AbortSignal.timeout(60_000),
   });
   if (response.status === 404 || response.status === 410) {

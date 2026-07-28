@@ -461,6 +461,34 @@ test("transient attachment verification failure never triggers corrupt replaceme
   assert.equal(attempts.rows.length, 0);
 });
 
+test("recovery never fetches an untrusted attachment origin", async () => {
+  const attempts = new MemoryAttemptStore();
+  const requestedUrls: string[] = [];
+  const replacementId = "77777777-7777-4777-8777-777777777777";
+  const fhir = new MemoryMediaFhir(media(
+    "completed",
+    `http://169.254.169.254/latest/meta-data/${binaryId}`,
+  ));
+  const result = await recoverLegacyMedia({
+    source,
+    attempts,
+    fhir,
+    auth: {
+      baseUrl: "http://localhost:8103",
+      accessToken: "token",
+      fetch: async (url, init) => {
+        requestedUrls.push(String(url));
+        if (init?.method === "POST") return fhirResponse(binary(replacementId, "1"), 201);
+        return new Response(sourceBytes, { status: 200 });
+      },
+    },
+  });
+  assert.equal(result.action, "replaced-corrupt");
+  assert.equal(requestedUrls.some((url) => url.startsWith("http://169.254.169.254")), false);
+  assert.equal(requestedUrls.filter((url) => url.endsWith("/fhir/R4/Binary")).length, 1);
+  assert.equal(attempts.rows[0]?.status, "resolved-attached");
+});
+
 test("destructive scripts refuse before authentication without explicit opt-in", () => {
   const root = new URL("../../", import.meta.url);
   for (const script of [
