@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
@@ -26,6 +26,8 @@ export class ImportLedger {
     this.stateDirectory = options.stateDirectory ?? DEFAULT_M2A_STATE_DIR;
     this.databasePath = options.databasePath ?? join(this.stateDirectory, "legacy-import.sqlite");
     this.now = options.now ?? (() => new Date().toISOString());
+    mkdirSync(this.stateDirectory, { recursive: true, mode: 0o700 });
+    chmodSync(this.stateDirectory, 0o700);
     mkdirSync(dirname(this.databasePath), { recursive: true, mode: 0o700 });
     this.database = new DatabaseSync(this.databasePath);
     this.database.exec("PRAGMA foreign_keys = ON");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -276,6 +276,19 @@ test("adjudication decisions persist when the SQLite ledger is reopened", () => 
     });
   } finally {
     reopened.close();
+    state.cleanup();
+  }
+});
+
+test("ImportLedger enforces mode 0700 on its PHI-adjacent state directory", () => {
+  const state = tempState();
+  const stateDirectory = join(state.path, "ledger-state");
+  mkdirSync(stateDirectory, { mode: 0o777 });
+  const ledger = new ImportLedger({ stateDirectory });
+  try {
+    assert.equal(statSync(stateDirectory).mode & 0o777, 0o700);
+  } finally {
+    ledger.close();
     state.cleanup();
   }
 });

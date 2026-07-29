@@ -100,6 +100,11 @@ Re-run both commands with a new run id against the same source. The Patient and 
 authorization operations must report `skipped`; no duplicate Patient or access entry is
 created.
 
+The generalPractitioner update and the clinician and front-desk membership grants are three
+independent, idempotent writes. If provisioning fails after one or two writes succeed, those
+changes remain in place. Rerun the failed provisioning command until it completes; already
+applied writes are reported as `skipped`, and the remaining writes converge without duplication.
+
 ## Ordinary-role reachability gate
 
 The gate accepts only ordinary clinician and front-desk tokens. It rejects superadmin

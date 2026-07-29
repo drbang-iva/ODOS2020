@@ -1,5 +1,11 @@
 #!/usr/bin/env tsx
 import type { Bundle, Patient } from "@medplum/fhirtypes";
+import {
+  cliArgument,
+  ordinarySessionContext,
+  referenceId,
+  requireEnv,
+} from "./legacy-import-m2a-cli.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -43,13 +49,13 @@ export async function verifyLegacyImportM2aReachability(
   const coverageId = referenceId(input.coverageReference, "Coverage");
   const observationId = referenceId(input.observationReference, "Observation");
 
-  const clinician = await sessionContext(
+  const clinician = await ordinarySessionContext(
     request,
     input.baseUrl,
     input.clinicianToken,
     "clinician",
   );
-  const frontDesk = await sessionContext(
+  const frontDesk = await ordinarySessionContext(
     request,
     input.baseUrl,
     input.frontDeskToken,
@@ -57,6 +63,12 @@ export async function verifyLegacyImportM2aReachability(
   );
   if (clinician.projectId !== frontDesk.projectId) {
     throw new Error("Clinician and front-desk tokens must target the same practice project.");
+  }
+  if (!clinician.profileReference) {
+    throw new Error("clinician token has no staff profile reference.");
+  }
+  if (!frontDesk.profileReference) {
+    throw new Error("front-desk token has no staff profile reference.");
   }
   if (clinician.profileReference !== input.clinicianProfileReference) {
     throw new Error("Clinician token does not match the expected Practitioner profile.");
@@ -158,38 +170,6 @@ export async function verifyLegacyImportM2aReachability(
   return { transcript };
 }
 
-async function sessionContext(
-  request: typeof fetch,
-  baseUrl: string,
-  token: string,
-  label: string,
-): Promise<{
-  projectId: string;
-  profileReference: string;
-}> {
-  const response = await request(`${baseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (response.status !== 200) {
-    throw new Error(`${label} /auth/me expected 200; received ${response.status}.`);
-  }
-  const body = (await response.json()) as {
-    project?: { id?: string; superAdmin?: boolean };
-    profile?: { resourceType?: string; id?: string; reference?: string };
-    profileReference?: string;
-  };
-  if (!body.project?.id) throw new Error(`${label} token has no active project.`);
-  if (body.project.superAdmin) throw new Error(`${label} token must be an ordinary practice login.`);
-  const profileReference = body.profile?.reference
-    ?? (body.profile?.resourceType && body.profile.id
-      ? `${body.profile.resourceType}/${body.profile.id}`
-      : undefined)
-    ?? body.profileReference;
-  if (!profileReference) throw new Error(`${label} token has no staff profile reference.`);
-  return { projectId: body.project.id, profileReference };
-}
-
 async function expectSearch(
   request: typeof fetch,
   baseUrl: string,
@@ -251,25 +231,6 @@ async function expectStatus(
 
 function resourceUrl(baseUrl: string, resourceType: string, id: string): string {
   return `${baseUrl}/fhir/R4/${resourceType}/${id}`;
-}
-
-function referenceId(reference: string, resourceType: string): string {
-  const match = reference.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]{1,64})$`));
-  if (!match) throw new Error(`${resourceType} reference must be ${resourceType}/<id>.`);
-  return match[1]!;
-}
-
-function cliArgument(args: readonly string[], name: string): string {
-  const index = args.indexOf(name);
-  const value = index >= 0 ? args[index + 1]?.trim() : undefined;
-  if (!value || value.startsWith("--")) throw new Error(`${name} requires a value.`);
-  return value;
-}
-
-function requireEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required.`);
-  return value;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

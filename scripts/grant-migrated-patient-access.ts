@@ -25,6 +25,12 @@ import {
   DEFAULT_M2A_STATE_DIR,
   ImportLedger,
 } from "../mcp/src/legacy-import/import-ledger.js";
+import {
+  cliArgument,
+  ordinarySessionContext,
+  referenceId,
+  requireEnv,
+} from "./legacy-import-m2a-cli.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -434,31 +440,17 @@ function ledgerParameters(access: ProjectMembershipAccess): Array<{
   }));
 }
 
-function referenceId(reference: string, resourceType: "Patient" | "Practitioner"): string {
-  const match = reference.match(new RegExp(`^${resourceType}/([A-Za-z0-9.-]{1,64})$`));
-  if (!match) throw new Error(`${resourceType} reference must be ${resourceType}/<id>.`);
-  return match[1]!;
-}
-
 async function operatorContext(
   baseUrl: string,
   accessToken: string,
 ): Promise<{ projectId: string }> {
-  const response = await fetch(`${baseUrl}/auth/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!response.ok) throw new Error(`Operator /auth/me failed: ${response.status}.`);
-  const body = (await response.json()) as {
-    project?: { id?: string; superAdmin?: boolean };
-  };
-  if (!body.project?.id) throw new Error("Operator token has no active project.");
-  if (body.project.superAdmin) {
-    throw new Error(
+  const context = await ordinarySessionContext(fetch, baseUrl, accessToken, "Operator", {
+    responseStatus: (status) => `Operator /auth/me failed: ${status}.`,
+    missingProject: "Operator token has no active project.",
+    superAdmin:
       "ODOS_OPERATOR_ACCESS_TOKEN must be a short-lived practice operator token, not superadmin.",
-    );
-  }
-  return { projectId: body.project.id };
+  });
+  return { projectId: context.projectId };
 }
 
 export async function runGrantCli(input: {
@@ -509,23 +501,10 @@ export async function runGrantCli(input: {
   }
 }
 
-function cliArgument(args: readonly string[], name: string): string {
-  const index = args.indexOf(name);
-  const value = index >= 0 ? args[index + 1]?.trim() : undefined;
-  if (!value || value.startsWith("--")) throw new Error(`${name} requires a value.`);
-  return value;
-}
-
 function optionalCliArgument(args: readonly string[], name: string): string | undefined {
   const index = args.indexOf(name);
   const value = index >= 0 ? args[index + 1]?.trim() : undefined;
   return value && !value.startsWith("--") ? value : undefined;
-}
-
-function requireEnv(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required.`);
-  return value;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
