@@ -54,13 +54,20 @@ const [manufacturer, setManufacturer] = useState("");
 const [products, setProducts] = useState<OdosSelectOption<string>[]>([]);
 const [product, setProduct] = useState("");
 const [loadingProducts, setLoadingProducts] = useState(false);
+const [productsError, setProductsError] = useState<string>();
 
 useEffect(() => {
   let cancelled = false;
   setProduct("");
+  setProductsError(undefined);
   setLoadingProducts(true);
   loadProducts(manufacturer).then((rows) => {
     if (!cancelled) setProducts(rows.map((row) => ({ value: row.id, label: row.name })));
+  }).catch((cause: unknown) => {
+    if (!cancelled) {
+      setProducts([]);
+      setProductsError(cause instanceof Error ? cause.message : String(cause));
+    }
   }).finally(() => {
     if (!cancelled) setLoadingProducts(false);
   });
@@ -81,6 +88,7 @@ useEffect(() => {
   ariaLabel="Product"
   onChange={setProduct}
 />
+{productsError && <p role="alert">{productsError}</p>}
 ```
 
 For numeric catalog parameters, derive `min`, `max`, `step`, and required `centerOn` from the selected product and pass them to `OdosWheel`. The same stale-value clearing rule applies.

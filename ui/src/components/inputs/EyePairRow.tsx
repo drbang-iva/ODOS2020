@@ -4,6 +4,7 @@ export interface EyePairControlProps<T> {
   eye: "OD" | "OS";
   value: T;
   onChange: (value: T) => void;
+  disabled: boolean;
 }
 
 export interface EyePairRowProps<T> {
@@ -34,18 +35,23 @@ export function EyePairRow<T>({
   const displayedRecordedOn = recordedOn || initialRecordedOn.current;
 
   useEffect(() => {
+    if (recordedOn) {
+      publishedInitial.current = true;
+      return;
+    }
+    if (disabled) return;
     if (publishedInitial.current) return;
     publishedInitial.current = true;
     onRecordedOnChange(initialRecordedOn.current);
-  }, [onRecordedOnChange]);
+  }, [disabled, onRecordedOnChange, recordedOn]);
 
   return (
-    <fieldset className="min-w-0 rounded border border-[color:var(--odos-line)] p-3">
+    <fieldset disabled={disabled} className="min-w-0 rounded border border-[color:var(--odos-line)] p-3">
       {label && <legend className="px-1 text-xs font-semibold text-[color:var(--odos-muted)]">{label}</legend>}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-end">
         <div className="min-w-0">
           <p className="mb-2 text-xs font-semibold text-[color:var(--odos-muted)]">OD</p>
-          {renderControl({ eye: "OD", value: odValue, onChange: onOdChange })}
+          {renderControl({ eye: "OD", value: odValue, onChange: onOdChange, disabled })}
         </div>
         <div className="flex gap-2 lg:flex-col">
           <button
@@ -69,7 +75,7 @@ export function EyePairRow<T>({
         </div>
         <div className="min-w-0">
           <p className="mb-2 text-xs font-semibold text-[color:var(--odos-muted)]">OS</p>
-          {renderControl({ eye: "OS", value: osValue, onChange: onOsChange })}
+          {renderControl({ eye: "OS", value: osValue, onChange: onOsChange, disabled })}
         </div>
       </div>
       <label className="mt-3 block text-xs font-semibold text-[color:var(--odos-muted)]">

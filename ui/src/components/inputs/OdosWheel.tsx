@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 export interface OdosWheelState {
   value: string;
@@ -48,16 +48,22 @@ export function OdosWheel({
   const values = useMemo(() => wheelValues(min, max, step), [max, min, step]);
   const centerIndex = closestIndex(values, centerOn);
   const [open, setOpen] = useState(false);
-  const [typedValue, setTypedValue] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  const [typedValue, setTypedValue] = useState(() => format(value));
+  const editingRef = useRef(editing);
+  const formatRef = useRef(format);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const drag = useRef<DragState>();
   const suppressClick = useRef(false);
   const listboxId = useId();
+  editingRef.current = editing;
+  formatRef.current = format;
 
   useEffect(() => {
-    setTypedValue(String(value));
+    if (!editingRef.current) setTypedValue(formatRef.current(value));
   }, [value]);
 
   useEffect(() => {
@@ -84,19 +90,33 @@ export function OdosWheel({
   function commitTypedValue() {
     const parsed = Number(typedValue);
     if (!Number.isFinite(parsed)) {
-      setTypedValue(String(value));
+      setTypedValue(format(value));
+      setEditing(false);
       return;
     }
     const normalized = normalizeWheelValue(parsed, min, max, step);
-    setTypedValue(String(normalized));
+    setTypedValue(format(normalized));
+    setEditing(false);
     if (normalized !== value) onChange(normalized);
   }
 
-  function changeBy(next: number) {
+  const changeBy = useCallback((next: number) => {
     const normalized = normalizeWheelValue(next, min, max, step);
-    setTypedValue(String(normalized));
-    onChange(normalized);
-  }
+    setTypedValue(format(normalized));
+    if (normalized !== value) onChange(normalized);
+  }, [format, max, min, onChange, step, value]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const handleWheel = (event: WheelEvent) => {
+      if (disabled) return;
+      event.preventDefault();
+      changeBy(value + (event.deltaY > 0 ? step : -step));
+    };
+    input.addEventListener("wheel", handleWheel, { passive: false });
+    return () => input.removeEventListener("wheel", handleWheel);
+  }, [changeBy, disabled, step, value]);
 
   function select(next: number) {
     changeBy(next);
@@ -116,9 +136,11 @@ export function OdosWheel({
     } else if (event.key === "Enter") {
       event.preventDefault();
       commitTypedValue();
+      setOpen(false);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setTypedValue(String(value));
+      setTypedValue(format(value));
+      setEditing(false);
       setOpen(false);
     }
   }
@@ -146,6 +168,7 @@ export function OdosWheel({
     <div ref={rootRef} className="relative min-w-0">
       <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
         <input
+          ref={inputRef}
           type="text"
           inputMode="decimal"
           role="combobox"
@@ -154,14 +177,14 @@ export function OdosWheel({
           aria-controls={listboxId}
           disabled={disabled}
           value={typedValue}
-          onChange={(event) => setTypedValue(event.target.value)}
+          onFocus={() => setEditing(true)}
+          onChange={(event) => {
+            setEditing(true);
+            setTypedValue(event.target.value);
+          }}
           onBlur={commitTypedValue}
           onClick={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          onWheel={(event) => {
-            event.preventDefault();
-            changeBy(value + (event.deltaY > 0 ? step : -step));
-          }}
           className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
         />
         {unit && <span aria-hidden="true" className="flex min-h-11 items-center px-2 text-xs text-[color:var(--odos-muted)]">{unit}</span>}

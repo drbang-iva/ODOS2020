@@ -119,8 +119,13 @@ export function OdosSearchPicker<T>({
     }
   }
 
-  const showResults = editing
-    && (loading || Boolean(error) || options.length > 0 || Boolean(onCreate && query.trim().length >= 2 && !value));
+  const trimmedQuery = query.trim();
+  const hasExactMatch = options.some(
+    (option) => option.label.trim().toLocaleLowerCase() === trimmedQuery.toLocaleLowerCase(),
+  );
+  const canCreate = Boolean(onCreate && trimmedQuery.length >= 2 && !value && !hasExactMatch);
+  const showResults = !disabled && editing
+    && (loading || Boolean(error) || options.length > 0 || canCreate);
 
   return (
     <div
@@ -146,6 +151,8 @@ export function OdosSearchPicker<T>({
         onChange={(event) => {
           setEditing(true);
           setQuery(event.target.value);
+          setOptions([]);
+          setActiveIndex(0);
           if (value) onClear();
         }}
         onKeyDown={(event) => {
@@ -164,6 +171,9 @@ export function OdosSearchPicker<T>({
           } else if (event.key === "Enter" && options[activeIndex]) {
             event.preventDefault();
             choose(options[activeIndex]);
+          } else if (event.key === "Enter" && canCreate) {
+            event.preventDefault();
+            void create();
           } else if (event.key === "Escape") {
             event.preventDefault();
             setEditing(false);
@@ -203,7 +213,7 @@ export function OdosSearchPicker<T>({
             {option.description && <span className="mt-1 block text-xs text-[color:var(--odos-faint)]">{option.description}</span>}
           </button>
         ))}
-        {onCreate && query.trim().length >= 2 && !value && (
+        {canCreate && (
           <button
             type="button"
             disabled={creating}

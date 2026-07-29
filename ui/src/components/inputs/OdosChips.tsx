@@ -34,7 +34,7 @@ export function OdosChips<T>({
         const isSelected = selected.some((item) => isEqual(item, option.value));
         return (
           <button
-            key={option.label}
+            key={String(option.value)}
             type="button"
             aria-pressed={isSelected}
             disabled={disabled || option.disabled}

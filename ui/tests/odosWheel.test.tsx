@@ -1,20 +1,21 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { normalizeWheelValue, OdosWheel } from "../src/components/inputs/OdosWheel";
 
 test("OdosWheel centerOn stays a required compile-time prop", () => {
-  const tsc = new URL("../node_modules/.bin/tsc", import.meta.url);
-  execFileSync(tsc.pathname, [
+  const tsc = fileURLToPath(new URL("../node_modules/.bin/tsc", import.meta.url));
+  execFileSync(tsc, [
     "--noEmit",
     "--skipLibCheck",
     "--jsx", "react-jsx",
     "--module", "ESNext",
     "--moduleResolution", "Bundler",
     "--target", "ES2022",
-    new URL("./odosWheelCenterOn.typecheck.tsx", import.meta.url).pathname,
+    fileURLToPath(new URL("./odosWheelCenterOn.typecheck.tsx", import.meta.url)),
   ], { stdio: "pipe" });
 });
 
@@ -44,9 +45,17 @@ test("OdosWheel opens centered on centerOn rather than the first row", () => {
           ariaLabel="Sphere"
         />,
         {
-          createNodeMock: (element) => element.props["data-center"] === "true"
-            ? { scrollIntoView: () => { centered = true; } }
-            : {},
+          createNodeMock: (element) => {
+            if (element.type === "input") {
+              return {
+                addEventListener: () => undefined,
+                removeEventListener: () => undefined,
+              };
+            }
+            return element.props["data-center"] === "true"
+              ? { scrollIntoView: () => { centered = true; } }
+              : {};
+          },
         },
       );
     });
@@ -86,5 +95,99 @@ test("OdosWheel clamps and snaps typed values on blur", () => {
   assert.equal(changed, 10);
   assert.equal(renderer.root.findByProps({ "aria-label": "Power" }).props.value, "10");
   assert.equal(normalizeWheelValue(0.37, -10, 10, 0.25), 0.25);
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel formats idle values, closes on Enter, and skips unchanged change events", () => {
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const originalDocument = globalThis.document;
+  const changes: number[] = [];
+  let renderer: ReactTestRenderer | undefined;
+  globalThis.requestAnimationFrame = (callback) => { callback(0); return 1; };
+  globalThis.cancelAnimationFrame = () => undefined;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: { addEventListener: () => undefined, removeEventListener: () => undefined },
+  });
+  try {
+    act(() => {
+      renderer = create(
+        <OdosWheel
+          value={10}
+          centerOn={0}
+          min={-10}
+          max={10}
+          step={0.25}
+          format={(value) => value.toFixed(2)}
+          onChange={(value) => { changes.push(value); }}
+          ariaLabel="Power"
+        />,
+      );
+    });
+    const input = () => renderer!.root.findByProps({ "aria-label": "Power" });
+    assert.equal(input().props.value, "10.00");
+    act(() => input().props.onKeyDown({
+      key: "ArrowDown",
+      preventDefault: () => undefined,
+    }));
+    assert.deepEqual(changes, []);
+
+    act(() => input().props.onClick());
+    assert.equal(renderer.root.findByProps({ role: "listbox" }).props.hidden, false);
+    act(() => input().props.onChange({ target: { value: "9.87" } }));
+    act(() => input().props.onKeyDown({
+      key: "Enter",
+      preventDefault: () => undefined,
+    }));
+    assert.deepEqual(changes, [9.75]);
+    assert.equal(input().props.value, "9.75");
+    assert.equal(renderer.root.findByProps({ role: "listbox" }).props.hidden, true);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+  }
+});
+
+test("OdosWheel ignores native wheel input while disabled", () => {
+  let wheelHandler: ((event: { deltaY: number; preventDefault: () => void }) => void) | undefined;
+  let changed: number | undefined;
+  let prevented = false;
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={(value) => { changed = value; }}
+        ariaLabel="Power"
+        disabled
+      />,
+      {
+        createNodeMock: (element) => element.type === "input" ? {
+          addEventListener: (
+            type: string,
+            handler: (event: { deltaY: number; preventDefault: () => void }) => void,
+          ) => {
+            if (type === "wheel") wheelHandler = handler;
+          },
+          removeEventListener: () => undefined,
+        } : {},
+      },
+    );
+  });
+  assert.ok(wheelHandler);
+  act(() => wheelHandler?.({
+    deltaY: 1,
+    preventDefault: () => { prevented = true; },
+  }));
+  assert.equal(changed, undefined);
+  assert.equal(prevented, false);
   act(() => renderer.unmount());
 });

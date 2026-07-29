@@ -59,3 +59,74 @@ test("OdosSearchPicker creates and selects a non-matching query as a structured 
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
+
+test("OdosSearchPicker suppresses exact-match creation and creates a non-match with Enter", async () => {
+  const originalWindow = globalThis.window;
+  const existing = {
+    value: "payer-existing",
+    label: "Existing Payer",
+    item: { id: "payer-existing" },
+  };
+  let createdName = "";
+  let selected: OdosSearchPickerOption<{ id: string }> | undefined;
+  let prevented = false;
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => globalThis.setTimeout(callback, 0),
+      clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(
+        <OdosSearchPicker
+          label="Payer"
+          value=""
+          placeholder="Search payer"
+          search={async (query) => query.toLocaleLowerCase() === "existing payer" ? [existing] : []}
+          onSelect={(option) => { selected = option; }}
+          onClear={() => undefined}
+          onCreate={async (name) => {
+            createdName = name;
+            return { value: "payer-new", label: name, item: { id: "payer-new" } };
+          }}
+          createLabel="Create payer"
+          searchDelayMs={0}
+        />,
+      );
+    });
+    const input = () => renderer!.root.find(
+      (node) => node.type === "input" && node.props.placeholder === "Search payer",
+    );
+
+    await act(async () => {
+      input().props.onChange({ target: { value: "existing payer" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+    assert.equal(
+      renderer!.root.findAllByType("button")
+        .some((button) => button.children.join("").startsWith("Create payer")),
+      false,
+    );
+
+    await act(async () => {
+      input().props.onChange({ target: { value: "New Payer" } });
+      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      input().props.onKeyDown({
+        key: "Enter",
+        preventDefault: () => { prevented = true; },
+      });
+      await Promise.resolve();
+    });
+    assert.equal(prevented, true);
+    assert.equal(createdName, "New Payer");
+    assert.equal(selected?.value, "payer-new");
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});

@@ -3,7 +3,7 @@ import { OdosSelect, type OdosSelectOption } from "./OdosSelect";
 
 export interface MethodFieldProps<T> {
   label?: string;
-  valueControl: ReactNode;
+  renderValueControl: (state: { disabled: boolean }) => ReactNode;
   methodValue: T;
   methodOptions: readonly OdosSelectOption<T>[];
   onMethodChange: (method: T) => void;
@@ -14,7 +14,7 @@ export interface MethodFieldProps<T> {
 
 export function MethodField<T>({
   label,
-  valueControl,
+  renderValueControl,
   methodValue,
   methodOptions,
   onMethodChange,
@@ -23,10 +23,10 @@ export function MethodField<T>({
   disabled = false,
 }: MethodFieldProps<T>) {
   return (
-    <fieldset className="min-w-0 rounded border border-[color:var(--odos-line)] p-3">
+    <fieldset disabled={disabled} className="min-w-0 rounded border border-[color:var(--odos-line)] p-3">
       {label && <legend className="px-1 text-xs font-semibold text-[color:var(--odos-muted)]">{label}</legend>}
       <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-        <div className="min-w-0">{valueControl}</div>
+        <div className="min-w-0">{renderValueControl({ disabled })}</div>
         <div className="min-w-0">
           <OdosSelect
             value={methodValue}
