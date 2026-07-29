@@ -248,6 +248,39 @@ test("explicit practice project verification rejects a noncanonical clinician po
   assert.equal(discoveryCalls, 0);
 });
 
+test("explicit practice project requires a PostgreSQL URL before verification", async () => {
+  let verificationCalls = 0;
+  const database: PracticeProjectResolutionDatabase = {
+    findPracticeProjectId: async () => {
+      throw new Error("Discovery must not run for an explicit project.");
+    },
+    verifyPracticeProjectClinicianPolicy: async () => {
+      verificationCalls += 1;
+      return storedPracticePolicy(
+        buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+      );
+    },
+  };
+  const fhir = {
+    search: async () => {
+      throw new Error("FHIR search must not run for an explicit project.");
+    },
+  } as unknown as ReturnType<typeof createMedplumClient>;
+
+  await assert.rejects(
+    resolvePracticeProjectId(
+      "http://localhost:8103",
+      "operator-token",
+      fhir,
+      undefined,
+      "named-project",
+      database,
+    ),
+    /Explicit practiceProjectId verification requires ODOS_POSTGRES_URL/,
+  );
+  assert.equal(verificationCalls, 0);
+});
+
 test("single-practice callers without an explicit project keep database discovery", async () => {
   let discoveryCalls = 0;
   let verificationCalls = 0;

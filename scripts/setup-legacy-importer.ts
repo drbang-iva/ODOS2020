@@ -22,10 +22,9 @@ import {
   type StoredPracticeClinicianPolicy,
 } from "../mcp/src/legacy-import/orphan-sweep.js";
 import {
-  buildMedplumAccessPolicy,
-  getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
 } from "../mcp/src/authz/roles.js";
+import { assertCanonicalPolicyRules } from "./grant-migrated-patient-access.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_STATE_PATH = resolve(".odos/migration-importer-state.json");
@@ -200,47 +199,27 @@ const LIVE_PRACTICE_PROJECT_DATABASE: PracticeProjectResolutionDatabase = {
   verifyPracticeProjectClinicianPolicy,
 };
 
-function assertCanonicalClinicianPolicy(stored: StoredPracticeClinicianPolicy): void {
-  const expected = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+export function assertCanonicalClinicianPolicy(stored: StoredPracticeClinicianPolicy): void {
   const roleTags = stored.policy.meta?.tag?.filter(
     (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM,
   ) ?? [];
+  let canonicalRules = true;
+  try {
+    assertCanonicalPolicyRules(stored.policy, "clinician");
+  } catch {
+    canonicalRules = false;
+  }
   if (
-    stored.policy.name !== expected.name
+    stored.policy.name !== "ODOS Clinician"
     || roleTags.length !== 1
     || roleTags[0]?.code !== "clinician"
-    || canonicalPolicyRules(stored.policy) !== canonicalPolicyRules(expected)
+    || !canonicalRules
   ) {
     throw new Error(
       `Explicit practice project ${stored.projectId} (${stored.projectName}) `
       + `does not carry a canonical ODOS Clinician policy.`,
     );
   }
-}
-
-function canonicalPolicyRules(policy: AccessPolicy): string {
-  return JSON.stringify(
-    (policy.resource ?? [])
-      .map((rule) => canonicalPolicyValue(rule))
-      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
-  );
-}
-
-function canonicalPolicyValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value
-      .map(canonicalPolicyValue)
-      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
-  }
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, nested]) => nested !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalPolicyValue(nested)]),
-    );
-  }
-  return value;
 }
 
 export function samePolicyDefinition(left: AccessPolicy, right: AccessPolicy): boolean {

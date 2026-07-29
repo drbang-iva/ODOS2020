@@ -38,6 +38,27 @@ export class ReachabilityVerificationError extends Error {
   }
 }
 
+export async function verifyImporterProjectMembershipDenied(input: {
+  readonly baseUrl: string;
+  readonly importerToken: string;
+  readonly request?: typeof fetch;
+}): Promise<403> {
+  assertLocalMedplumBaseUrl(input.baseUrl);
+  const response = await (input.request ?? fetch)(
+    `${input.baseUrl}/fhir/R4/ProjectMembership?_count=1`,
+    {
+      headers: { Authorization: `Bearer ${input.importerToken}` },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
+  if (response.status !== 403) {
+    throw new Error(
+      `Importer ProjectMembership search returned ${response.status}; expected 403.`,
+    );
+  }
+  return 403;
+}
+
 export async function verifyLegacyImportM2aReachability(
   input: M2aReachabilityInput,
 ): Promise<M2aReachabilityResult> {

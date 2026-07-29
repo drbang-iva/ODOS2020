@@ -183,13 +183,7 @@ export interface StoredPracticeClinicianPolicy {
 export async function findPracticeClinicianPolicy(
   postgresUrl: string,
 ): Promise<StoredPracticeClinicianPolicy> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
-  try {
+  return withLegacyImportPool(postgresUrl, async (pool) => {
     const result = await pool.query<{
       project_id: string;
       project_name: string | null;
@@ -202,7 +196,7 @@ export async function findPracticeClinicianPolicy(
         policy.id::text AS policy_id,
         policy.content AS policy
       FROM "AccessPolicy" AS policy
-      LEFT JOIN "Project" AS project
+      INNER JOIN "Project" AS project
         ON project.id = policy."projectId"
         AND project.deleted = false
       WHERE policy.deleted = false
@@ -227,22 +221,14 @@ export async function findPracticeClinicianPolicy(
       policyId: result.rows[0]!.policy_id,
       policy: JSON.parse(result.rows[0]!.policy) as AccessPolicy,
     };
-  } finally {
-    await pool.end();
-  }
+  });
 }
 
 export async function verifyPracticeProjectClinicianPolicy(
   postgresUrl: string,
   projectId: string,
 ): Promise<StoredPracticeClinicianPolicy> {
-  const pool = new Pool({
-    connectionString: postgresUrl,
-    max: 1,
-    connectionTimeoutMillis: 5_000,
-    statement_timeout: 10_000,
-  });
-  try {
+  return withLegacyImportPool(postgresUrl, async (pool) => {
     const projects = await pool.query<{
       project_id: string;
       project_name: string | null;
@@ -277,6 +263,21 @@ export async function verifyPracticeProjectClinicianPolicy(
       policyId: policies.rows[0]!.policy_id,
       policy: JSON.parse(policies.rows[0]!.policy) as AccessPolicy,
     };
+  });
+}
+
+async function withLegacyImportPool<T>(
+  postgresUrl: string,
+  callback: (pool: Pool) => Promise<T>,
+): Promise<T> {
+  const pool = new Pool({
+    connectionString: postgresUrl,
+    max: 1,
+    connectionTimeoutMillis: 5_000,
+    statement_timeout: 10_000,
+  });
+  try {
+    return await callback(pool);
   } finally {
     await pool.end();
   }

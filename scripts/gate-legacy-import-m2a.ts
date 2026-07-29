@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
@@ -31,21 +32,39 @@ import {
 } from "../mcp/src/authz/roles.js";
 import { createMedplumClient, type MedplumClient } from "../mcp/src/fhir-client.js";
 import { searchAll } from "../mcp/src/fhir-search.js";
-import { runGrantCli } from "./grant-migrated-patient-access.js";
+import {
+  assertCanonicalPolicyRules,
+  runGrantCli,
+} from "./grant-migrated-patient-access.js";
 import { runPatientImportCli } from "./import-legacy-patient-m2a.js";
-import { setupLegacyImporter } from "./setup-legacy-importer.js";
+import {
+  assertCanonicalClinicianPolicy,
+  setupLegacyImporter,
+} from "./setup-legacy-importer.js";
 import { runSetupPractice } from "./setup-practice.js";
-import { verifyLegacyImportM2aReachability } from "./verify-legacy-import-m2a.js";
+import {
+  verifyImporterProjectMembershipDenied,
+  verifyLegacyImportM2aReachability,
+} from "./verify-legacy-import-m2a.js";
+import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
-const headSha = process.env.GATE_HEAD_SHA!;
-const baseUrl = process.env.MEDPLUM_BASE_URL!;
-const postgresUrl = process.env.ODOS_POSTGRES_URL!;
-const stateDirectory = process.env.ODOS_M2A_STATE_DIR!;
+const headSha = requiredEnv("GATE_HEAD_SHA");
+const baseUrl = requiredEnv("MEDPLUM_BASE_URL");
+assertLocalMedplumBaseUrl(baseUrl);
+const postgresUrl = requiredEnv("ODOS_POSTGRES_URL");
+const stateDirectory = requiredEnv("ODOS_M2A_STATE_DIR");
 const credentialsPath = join(process.cwd(), ".odos", "migration-importer.env");
 const manifestPath = join(stateDirectory, "m2a-synthetic-source.json");
 const setupStatePath = join(stateDirectory, "setup-state.json");
 
 if (!/^[0-9a-f]{40}$/.test(headSha)) throw new Error("GATE_HEAD_SHA must be a full SHA.");
+const actualHeadSha = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: process.cwd(),
+  encoding: "utf8",
+}).trim();
+if (actualHeadSha !== headSha) {
+  throw new Error(`GATE_HEAD_SHA ${headSha} does not match checked-out HEAD ${actualHeadSha}.`);
+}
 mkdirSync(stateDirectory, { recursive: true, mode: 0o700 });
 chmodSync(stateDirectory, 0o700);
 
@@ -116,7 +135,8 @@ const frontDeskProfileReference = requiredProfile(frontDeskMembership);
 const clinicianToken = await login(baseUrl, clinicianEmail, clinicianPassword);
 const frontDeskToken = await login(baseUrl, frontDeskEmail, frontDeskPassword);
 
-const importer = await setupLegacyImporter({
+try {
+await setupLegacyImporter({
   baseUrl,
   accessToken: operatorToken,
   statePath: join(process.cwd(), ".odos", "migration-importer-state.json"),
@@ -132,6 +152,7 @@ appendFileSync(
     `ODOS_ACCEPTANCE_FRONT_DESK_ACCESS_TOKEN=${frontDeskToken}`,
     "",
   ].join("\n"),
+  { mode: 0o600 },
 );
 chmodSync(credentialsPath, 0o600);
 process.loadEnvFile(credentialsPath);
@@ -254,10 +275,10 @@ const importerToken = await exchangeClientCredentials({
   clientId: requiredEnv("ODOS_MIGRATION_IMPORTER_CLIENT_ID"),
   clientSecret: requiredEnv("ODOS_MIGRATION_IMPORTER_CLIENT_SECRET"),
 });
-const importerMembershipSearch = await fetch(
-  `${baseUrl}/fhir/R4/ProjectMembership?_count=1`,
-  { headers: { Authorization: `Bearer ${importerToken}` } },
-);
+const importerMembershipStatus = await verifyImporterProjectMembershipDenied({
+  baseUrl,
+  importerToken,
+});
 const clinicianGrant = await serviceFhir.read<ProjectMembership>(
   "ProjectMembership",
   clinicianMembership.id!,
@@ -282,12 +303,13 @@ console.log(`junk rejections per run: first=${firstImport.junkRejections}, secon
 console.log(`Patient identifiers=${patient.identifier?.length ?? 0}; generalPractitioner=${patient.generalPractitioner?.length ?? 0}`);
 console.log(`clinician grant parameters=${patientParameterNames(clinicianGrant).join(",")}`);
 console.log(`front-desk grant parameters=${patientParameterNames(frontDeskGrant).join(",")}`);
-console.log(`importer ProjectMembership search=${importerMembershipSearch.status}`);
+console.log(`importer ProjectMembership search=${importerMembershipStatus}`);
 console.log(reachability.transcript.join("\n"));
 console.log("LEGACY_IMPORT_M2A_REACHABILITY PASS");
-
-rmSync(credentialsPath, { force: true });
-rmSync(manifestPath, { force: true });
+} finally {
+  rmSync(credentialsPath, { force: true });
+  rmSync(manifestPath, { force: true });
+}
 
 function requiredEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -368,7 +390,7 @@ async function inviteOrdinaryUser(input: {
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
-        sendEmail: true,
+        sendEmail: false,
       }),
     },
   );
@@ -390,7 +412,7 @@ async function inviteOrdinaryUser(input: {
   if (
     !resolvedMembership.id
     || !resolvedMembership.meta?.versionId
-    || !resolvedMembership.profile.reference
+    || !resolvedMembership.profile?.reference
   ) {
     throw new Error("Persisted Practitioner membership is incomplete.");
   }
@@ -470,7 +492,7 @@ async function grantRole(
   fhir: MedplumClient,
   membership: ProjectMembership,
   email: string,
-  role: PracticeRoleId,
+  role: Extract<PracticeRoleId, "clinician" | "front-desk">,
 ): Promise<void> {
   await grantPracticeRoles(
     {
@@ -495,7 +517,20 @@ async function grantRole(
         if (policies.length !== 1) {
           throw new Error(`Expected one ${requestedRole} AccessPolicy; found ${policies.length}.`);
         }
-        return policies[0]!;
+        const policy = policies[0]!;
+        if (requestedRole === "clinician") {
+          assertCanonicalClinicianPolicy({
+            projectId: membership.project.reference?.replace(/^Project\//, "") ?? "unknown",
+            projectName: "M2a gate practice",
+            policyId: policy.id ?? "unpersisted",
+            policy,
+          });
+        } else if (requestedRole === "front-desk") {
+          assertCanonicalPolicyRules(policy, "front-desk");
+        } else {
+          throw new Error(`M2a gate cannot grant the ${requestedRole} role.`);
+        }
+        return policy;
       },
       patchMembership: (id, operations, versionId) =>
         fhir.patch("ProjectMembership", id, operations, {
@@ -507,7 +542,7 @@ async function grantRole(
 }
 
 function requiredProfile(membership: ProjectMembership): string {
-  const reference = membership.profile.reference;
+  const reference = membership.profile?.reference;
   if (!reference?.startsWith("Practitioner/")) {
     throw new Error("Ordinary membership has no Practitioner profile.");
   }

@@ -34,10 +34,30 @@ import {
 } from "../../scripts/grant-migrated-patient-access.js";
 import {
   ReachabilityVerificationError,
+  verifyImporterProjectMembershipDenied,
   verifyLegacyImportM2aReachability,
 } from "../../scripts/verify-legacy-import-m2a.js";
 
 const PROJECT_ID = "project-1";
+
+test("importer ProjectMembership probe accepts only a 403 response", async () => {
+  assert.equal(
+    await verifyImporterProjectMembershipDenied({
+      baseUrl: "http://localhost:8103",
+      importerToken: "importer-token",
+      request: async () => new Response(null, { status: 403 }),
+    }),
+    403,
+  );
+  await assert.rejects(
+    verifyImporterProjectMembershipDenied({
+      baseUrl: "http://localhost:8103",
+      importerToken: "importer-token",
+      request: async () => new Response(null, { status: 200 }),
+    }),
+    /returned 200; expected 403/,
+  );
+});
 
 test("Patient import creates once, records junk, then converges and version-updates changed source data", async () => {
   const state = tempState();

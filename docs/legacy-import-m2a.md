@@ -154,6 +154,11 @@ Keep `.env` at mode `0600`. From the checkout at the exact `GATE_HEAD_SHA`, run:
 npm run gate:legacy-import-m2a
 ```
 
+During the run, the harness writes live operator, clinician, and front-desk bearer tokens
+to the gitignored `.odos/migration-importer.env` file at mode `0600`. Normal success and
+handled failure paths remove that file automatically. If the process is interrupted or
+force-terminated, remove `.odos/migration-importer.env` before continuing.
+
 The command loads `.env` through the package script. Its transcript records the exact head,
 first- and second-run action outcomes, ordinary-role allow/deny statuses, and the final
 `LEGACY_IMPORT_M2A_REACHABILITY PASS` marker.
