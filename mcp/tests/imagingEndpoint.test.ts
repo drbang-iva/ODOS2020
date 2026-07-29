@@ -127,7 +127,6 @@ function deps(
         entry: [
           { resource: structuredClone(updated), response: { status: "200 OK" } },
           {
-            resource: { ...structuredClone(provenance), id: "provenance-transaction-1" },
             response: { status: "201 Created", location: "Provenance/provenance-transaction-1/_history/1" },
           },
         ],
@@ -388,7 +387,21 @@ test("imaging list keeps all eight coded categories and uncoded M0 legacy imagin
     modality: undefined,
     bodySite: { text: "Meibomian glands" },
   });
-  const harness = deps("clinician", [...legitimate, legacy, longitudinal, meibographyShaped]);
+  const inheritedCategory = image("inherited-category", "2026-07-23T10:00:00.000Z", "other", {
+    modality: {
+      coding: [{
+        system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+        code: "constructor",
+      }],
+    },
+  });
+  const harness = deps("clinician", [
+    ...legitimate,
+    legacy,
+    longitudinal,
+    meibographyShaped,
+    inheritedCategory,
+  ]);
 
   const result = await handleImagingListRequest(harness.deps, {
     authHeader: AUTH,
@@ -401,6 +414,30 @@ test("imaging list keeps all eight coded categories and uncoded M0 legacy imagin
   assert.equal(images.some((row) => row.id === "legacy-uncoded" && row.category === "other"), true);
   assert.equal(images.some((row) => row.id === "aesthetic-photo"), false);
   assert.equal(images.some((row) => row.id === "meibography-media"), false);
+  assert.equal(images.some((row) => row.id === "inherited-category"), false);
+});
+
+test("imaging list refuses unsupported inline attachment content types", async () => {
+  const harness = deps("clinician", [
+    image("unsafe-inline", "2026-07-22T10:00:00.000Z", "outside-record", {
+      content: {
+        contentType: "text/html",
+        title: "unsafe.html",
+        data: Buffer.from("<script>window.opener.location='https://attacker.test'</script>").toString("base64"),
+      },
+    }),
+  ]);
+
+  const result = await handleImagingListRequest(harness.deps, {
+    authHeader: AUTH,
+    query: { patient: "Patient/p1" },
+  });
+
+  assert.equal(result.status, 200);
+  const unsafe = (result.body as { images: Array<Record<string, unknown>> }).images[0];
+  assert.equal(unsafe?.contentType, "text/html");
+  assert.equal(unsafe?.contentUrl, undefined);
+  assert.equal(unsafe?.contentState, "missing");
 });
 
 test("imaging list follows every 50-row FHIR page and rejects unsafe attachment schemes", async () => {

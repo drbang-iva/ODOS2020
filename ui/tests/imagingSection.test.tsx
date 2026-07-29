@@ -243,6 +243,45 @@ test("inline PDFs are opened through a revocable blob URL", async () => {
   }
 });
 
+test("unsupported inline attachment data fails soft within its tile", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCreateObjectUrl = URL.createObjectURL;
+  let blobCreations = 0;
+  URL.createObjectURL = () => {
+    blobCreations += 1;
+    return "blob:unexpected";
+  };
+  globalThis.fetch = async () => imagingResponse([{
+    ...image(
+      "parameterized-inline",
+      "2026-07-15T15:00:00Z",
+      undefined,
+      "data:application/pdf;charset=utf-8;base64,cGRm",
+    ),
+    category: "outside-record",
+    contentType: "application/pdf",
+  }]);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    assert.equal(blobCreations, 0);
+    assert.match(JSON.stringify(renderer.toJSON()), /Attachment unavailable.*Metadata remains in the chart/);
+  } finally {
+    renderer?.unmount();
+    URL.createObjectURL = originalCreateObjectUrl;
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("OCT refinement moves focus into the form and restores the trigger after cancel", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => imagingResponse([
@@ -250,7 +289,6 @@ test("OCT refinement moves focus into the form and restores the trigger after ca
   ]);
   let inputFocuses = 0;
   let triggerFocuses = 0;
-  const triggerNode = { focus: () => { triggerFocuses += 1; } };
   let renderer!: ReactTestRenderer;
   try {
     await act(async () => {
@@ -264,6 +302,10 @@ test("OCT refinement moves focus into the form and restores the trigger after ca
           createNodeMock: (element) =>
             element.props["aria-label"] === "OCT structure"
               ? { focus: () => { inputFocuses += 1; } }
+              : element.props["data-refine-image-id"] === "oct-focus"
+                ? { focus: () => { triggerFocuses += 1; } }
+                : element.props["data-imaging-id"] === "oct-focus"
+                  ? { focus: () => undefined }
               : {},
         },
       );
@@ -273,7 +315,7 @@ test("OCT refinement moves focus into the form and restores the trigger after ca
       .find((button) => button.children.join("") === "Refine structure");
     assert.ok(refine);
     await act(async () => {
-      refine.props.onClick({ currentTarget: triggerNode });
+      refine.props.onClick();
       await Promise.resolve();
     });
     assert.equal(inputFocuses, 1);
@@ -286,6 +328,79 @@ test("OCT refinement moves focus into the form and restores the trigger after ca
       await Promise.resolve();
     });
     assert.equal(triggerFocuses, 1);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("successful OCT refinement restores focus to the trigger from the updated tile", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input).endsWith("/clinical-graph/imaging/oct-save-focus/structure")) {
+      assert.equal(init?.method, "POST");
+      return new Response(JSON.stringify({
+        image: image("oct-save-focus", "2026-07-15T15:00:00Z", "RNFL"),
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return imagingResponse([
+      image("oct-save-focus", "2026-07-15T15:00:00Z", "Macula"),
+    ]);
+  };
+  let inputFocuses = 0;
+  let triggerMounts = 0;
+  let focusedTriggerMount = 0;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+        {
+          createNodeMock: (element) => {
+            if (element.props["aria-label"] === "OCT structure") {
+              return { focus: () => { inputFocuses += 1; } };
+            }
+            if (element.props["data-refine-image-id"] === "oct-save-focus") {
+              triggerMounts += 1;
+              const mount = triggerMounts;
+              return { focus: () => { focusedTriggerMount = mount; } };
+            }
+            if (element.props["data-imaging-id"] === "oct-save-focus") {
+              return { focus: () => undefined };
+            }
+            return {};
+          },
+        },
+      );
+      await Promise.resolve();
+    });
+    const refine = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Refine structure");
+    assert.ok(refine);
+    await act(async () => {
+      refine.props.onClick();
+      await Promise.resolve();
+    });
+    assert.equal(inputFocuses, 1);
+
+    const structure = renderer.root.findByProps({ "aria-label": "OCT structure" });
+    act(() => structure.props.onChange({ target: { value: "RNFL" } }));
+    const save = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save refinement");
+    assert.ok(save);
+    const triggerMountsBeforeSave = triggerMounts;
+    await act(async () => {
+      await save.props.onClick();
+      await Promise.resolve();
+    });
+    assert.ok(focusedTriggerMount > triggerMountsBeforeSave);
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

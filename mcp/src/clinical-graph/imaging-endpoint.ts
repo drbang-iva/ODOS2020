@@ -588,9 +588,9 @@ function imagingBodySite(
 
 function imagingCategory(media: Media): ImagingCategory {
   const code = media.modality?.coding?.find((coding) =>
-    coding.code && coding.code in CATEGORY_DISPLAY
+    coding.code && Object.hasOwn(CATEGORY_DISPLAY, coding.code)
   )?.code;
-  return code && code in CATEGORY_DISPLAY ? code as ImagingCategory : "other";
+  return code && Object.hasOwn(CATEGORY_DISPLAY, code) ? code as ImagingCategory : "other";
 }
 
 function imagingStructure(bodySite: CodeableConcept | undefined): string | undefined {
@@ -619,8 +619,9 @@ function attachmentContentUrl(
   media: Media,
   storageBaseUrls: readonly string[],
 ): string | undefined {
-  if (media.content.data && media.content.contentType) {
-    return `data:${media.content.contentType};base64,${media.content.data}`;
+  const contentType = media.content.contentType?.trim().toLowerCase();
+  if (media.content.data && contentType && ACCEPTED_CONTENT_TYPES.has(contentType)) {
+    return `data:${contentType};base64,${media.content.data}`;
   }
   const url = media.content.url?.trim();
   if (!url || url.startsWith("Binary/")) return undefined;
@@ -680,7 +681,7 @@ function isImagingReadSurfaceMedia(media: Media): boolean {
   const codedImaging = media.modality?.coding?.some((coding) =>
     coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM
     && coding.code !== undefined
-    && coding.code in CATEGORY_DISPLAY
+    && Object.hasOwn(CATEGORY_DISPLAY, coding.code)
   );
   const migratedImaging = media.identifier?.some(
     (identifier) => identifier.system === LEGACY_FILE_IDENTIFIER_SYSTEM,
@@ -746,7 +747,9 @@ function transactionResourceId(
 ): string | undefined {
   const entry = bundle.entry?.[entryIndex];
   if (entry?.resource?.resourceType === resourceType && entry.resource.id) return entry.resource.id;
-  return entry?.response?.location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
+  const location = entry?.response?.location;
+  if (!location?.startsWith(`${resourceType}/`)) return undefined;
+  return location.slice(resourceType.length + 1).split("/")[0] || undefined;
 }
 
 async function hasAestheticsConsent(

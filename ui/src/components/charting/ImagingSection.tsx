@@ -76,7 +76,8 @@ export const CATEGORY_OPTIONS = [
 export function ImagingSection({ patientReference, encounterReference, onSaved }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const refinementInputRef = useRef<HTMLInputElement>(null);
-  const refinementTriggerRef = useRef<HTMLButtonElement>();
+  const refinementTriggerNodes = useRef(new Map<string, HTMLButtonElement>());
+  const imagingTileNodes = useRef(new Map<string, HTMLElement>());
   const retriedImages = useRef(new Set<string>());
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState<(typeof CATEGORY_OPTIONS)[number][0]>("visual-field");
@@ -95,6 +96,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     confidence: "provisional" | "clinician-confirmed";
   }>();
   const [refining, setRefining] = useState(false);
+  const [focusReturnImageId, setFocusReturnImageId] = useState<string>();
   const activeScopeKey = useRef("");
   activeScopeKey.current = imagingScopeKey(scope, patientReference, encounterReference);
 
@@ -140,6 +142,14 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
   useEffect(() => {
     if (refinement) refinementInputRef.current?.focus();
   }, [refinement?.id]);
+
+  useEffect(() => {
+    if (!focusReturnImageId || refinement) return;
+    const target = refinementTriggerNodes.current.get(focusReturnImageId)
+      ?? imagingTileNodes.current.get(focusReturnImageId);
+    target?.focus();
+    setFocusReturnImageId(undefined);
+  }, [focusReturnImageId, images, refinement]);
 
   const groups = useMemo(() => groupImagingRows(images), [images]);
 
@@ -283,8 +293,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     }
   }
 
-  function openRefinement(image: ImagingSummary, trigger: HTMLButtonElement) {
-    refinementTriggerRef.current = trigger;
+  function openRefinement(image: ImagingSummary) {
     setRefinement({
       id: image.id,
       structure: image.structure ?? "",
@@ -294,8 +303,8 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
   }
 
   function closeRefinement() {
+    if (refinement?.id) setFocusReturnImageId(refinement.id);
     setRefinement(undefined);
-    queueMicrotask(() => refinementTriggerRef.current?.focus());
   }
 
   return (
@@ -335,8 +344,10 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
                                 image={image}
                                 onImageError={() => void retryImage(image)}
                                 onRefine={image.category === "oct"
-                                  ? (trigger) => openRefinement(image, trigger)
+                                  ? () => openRefinement(image)
                                   : undefined}
+                                registerRefineTrigger={(node) => registerNode(refinementTriggerNodes.current, image.id, node)}
+                                registerTile={(node) => registerNode(imagingTileNodes.current, image.id, node)}
                               />
                             ))}
                           </div>
@@ -435,14 +446,23 @@ function ImagingTile({
   image,
   onImageError,
   onRefine,
+  registerRefineTrigger,
+  registerTile,
 }: {
   image: ImagingSummary;
   onImageError: () => void;
-  onRefine?: (trigger: HTMLButtonElement) => void;
+  onRefine?: () => void;
+  registerRefineTrigger: (node: HTMLButtonElement | null) => void;
+  registerTile: (node: HTMLElement | null) => void;
 }) {
   const imageContent = image.contentType.startsWith("image/");
   return (
-    <article className="overflow-hidden rounded border border-[color:var(--odos-line)] bg-bg-deep" data-imaging-id={image.id}>
+    <article
+      ref={registerTile}
+      className="overflow-hidden rounded border border-[color:var(--odos-line)] bg-bg-deep"
+      data-imaging-id={image.id}
+      tabIndex={-1}
+    >
       {image.contentState === "missing" || !image.contentUrl ? (
         <div className="flex aspect-[4/3] items-center justify-center bg-red-950/20 p-4 text-center text-sm text-red-200" role="img" aria-label={`${image.title} unavailable`}>
           Image unavailable. Metadata remains in the chart.
@@ -457,9 +477,11 @@ function ImagingTile({
         <span>{[image.structure, image.laterality, image.device].filter(Boolean).join(" · ") || "Structure and device not recorded"}</span>
         {onRefine && (
           <button
+            ref={registerRefineTrigger}
             type="button"
             className="mt-2 block text-brand-light"
-            onClick={(event) => onRefine(event.currentTarget)}
+            data-refine-image-id={image.id}
+            onClick={onRefine}
           >
             Refine structure
           </button>
@@ -473,14 +495,21 @@ function ImagingAttachment({ image }: { image: ImagingSummary }) {
   const [href, setHref] = useState(
     image.contentUrl?.startsWith("data:") ? undefined : image.contentUrl,
   );
+  const [decodeFailed, setDecodeFailed] = useState(false);
 
   useEffect(() => {
     const contentUrl = image.contentUrl;
+    setDecodeFailed(false);
     if (!contentUrl?.startsWith("data:")) {
       setHref(contentUrl);
       return;
     }
     const blob = dataUrlBlob(contentUrl);
+    if (!blob) {
+      setHref(undefined);
+      setDecodeFailed(true);
+      return;
+    }
     const blobUrl = URL.createObjectURL(blob);
     setHref(blobUrl);
     return () => URL.revokeObjectURL(blobUrl);
@@ -495,6 +524,10 @@ function ImagingAttachment({ image }: { image: ImagingSummary }) {
     >
       Open {image.contentType === "application/pdf" ? "PDF" : "attachment"}
     </a>
+  ) : decodeFailed ? (
+    <span className="flex aspect-[4/3] items-center justify-center bg-red-950/20 p-4 text-center text-sm text-red-200">
+      Attachment unavailable. Metadata remains in the chart.
+    </span>
   ) : (
     <span className="flex aspect-[4/3] items-center justify-center bg-bg-mid text-sm text-[color:var(--odos-muted)]">
       Preparing attachment…
@@ -544,7 +577,7 @@ export function imagingContentType(file: Pick<File, "name" | "type">): string | 
 
 function contentTypeFromName(name: string): string | undefined {
   const extension = name.split(".").pop()?.toLowerCase();
-  return extension && extension in CONTENT_TYPE_BY_EXTENSION
+  return extension && Object.hasOwn(CONTENT_TYPE_BY_EXTENSION, extension)
     ? CONTENT_TYPE_BY_EXTENSION[extension as keyof typeof CONTENT_TYPE_BY_EXTENSION]
     : undefined;
 }
@@ -591,13 +624,28 @@ function imagingScopeKey(
   return `${scope}:${scope === "patient" ? patientReference : encounterReference}`;
 }
 
-function dataUrlBlob(value: string): Blob {
+function dataUrlBlob(value: string): Blob | undefined {
   const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/.exec(value);
-  if (!match?.[1] || match[2] === undefined) {
-    throw new Error("Inline attachment data is not a supported base64 data URL.");
+  const contentType = match?.[1]?.trim().toLowerCase();
+  const payload = match?.[2];
+  if (!contentType || payload === undefined || !ACCEPTED_CONTENT_TYPES.has(contentType)) {
+    return undefined;
   }
-  const binary = atob(match[2]);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: match[1] });
+  try {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new Blob([bytes], { type: contentType });
+  } catch {
+    return undefined;
+  }
+}
+
+function registerNode<T>(
+  nodes: Map<string, T>,
+  id: string,
+  node: T | null,
+): void {
+  if (node) nodes.set(id, node);
+  else nodes.delete(id);
 }
