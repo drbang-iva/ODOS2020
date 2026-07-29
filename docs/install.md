@@ -44,6 +44,9 @@ overlays `MEDPLUM_SIGNING_KEY`, `MEDPLUM_SIGNING_KEY_ID`, and
 For an intentional rotation, run `npm run generate-medplum-signing-keys -- --force`
 and restart the applicable Medplum server. Rotation expires outstanding one-hour
 storage URLs; it does not change stored Binary data.
+If you remap the storage port or serve storage from another host, set
+`MEDPLUM_STORAGE_BASE_URL` to that public storage origin; otherwise attachment
+fetches fail with HTTP 401 `Invalid signature` and no server-log breadcrumb.
 
 The root npm scripts use `docker-compose` in this checkout. If your Docker install exposes only `docker compose`, use the equivalent space-separated command.
 
@@ -75,6 +78,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_ADMIN_NAME` | yes | First admin/practitioner display name. |
 | `ODOS_ADMIN_PASSWORD` | yes | Human-owned Medplum password. `MEDPLUM_ADMIN_PASSWORD` is also accepted. |
 | `MEDPLUM_BASE_URL` | no | Defaults to `http://localhost:8103`. |
+| `MEDPLUM_STORAGE_BASE_URL` | no | Defaults to `http://localhost:8103/storage/`; set it to the public storage origin when the port or host is remapped. |
 | `ODOS_POSTGRES_URL` | no | Defaults to local compose Postgres. Used for audit rows. |
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
 | `ODOS_SETUP_INTERACTIVE_ACK` | no | Set to `human-supervised` only when a human is intentionally running without a TTY. |

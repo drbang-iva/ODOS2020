@@ -594,7 +594,12 @@ test("tracked config, compose init, and inline-limit strings remain truthful", (
   assert.equal(drill.signingKey, "INERT_ENV_OVERLAY_REQUIRED");
   const mainCompose = readFileSync(new URL("docker-compose.yml", root), "utf8");
   const drillCompose = readFileSync(new URL("docker-compose.dr-drill.yml", root), "utf8");
+  const envExample = readFileSync(new URL(".env.example", root), "utf8");
   const ci = readFileSync(new URL(".github/workflows/ci.yml", root), "utf8");
+  assert.match(
+    envExample,
+    /^# MEDPLUM_STORAGE_BASE_URL=http:\/\/localhost:8103\/storage\/$/m,
+  );
   assert.match(
     mainCompose,
     /MEDPLUM_STORAGE_BASE_URL: \$\{MEDPLUM_STORAGE_BASE_URL:-http:\/\/localhost:8103\/storage\/\}/,
