@@ -40,11 +40,11 @@ export function EyePairRow<T>({
   }, [onRecordedOnChange]);
 
   return (
-    <fieldset className="min-w-0 rounded border border-white/10 p-3">
-      {label && <legend className="px-1 text-xs font-semibold text-white/75">{label}</legend>}
+    <fieldset className="min-w-0 rounded border border-[color:var(--odos-line)] p-3">
+      {label && <legend className="px-1 text-xs font-semibold text-[color:var(--odos-muted)]">{label}</legend>}
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-end">
         <div className="min-w-0">
-          <p className="mb-2 text-xs font-semibold text-white/55">OD</p>
+          <p className="mb-2 text-xs font-semibold text-[color:var(--odos-muted)]">OD</p>
           {renderControl({ eye: "OD", value: odValue, onChange: onOdChange })}
         </div>
         <div className="flex gap-2 lg:flex-col">
@@ -53,7 +53,7 @@ export function EyePairRow<T>({
             aria-label="Copy OD to OS"
             disabled={disabled}
             onClick={() => onOsChange(odValue)}
-            className="min-h-11 min-w-11 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white/75 outline-none hover:bg-white/[0.06] focus-visible:border-brand disabled:opacity-45"
+            className="min-h-11 min-w-11 rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-muted)] outline-none hover:bg-[var(--odos-surface-2)] focus-visible:border-brand disabled:opacity-45"
           >
             OD→OS
           </button>
@@ -62,24 +62,24 @@ export function EyePairRow<T>({
             aria-label="Copy OS to OD"
             disabled={disabled}
             onClick={() => onOdChange(osValue)}
-            className="min-h-11 min-w-11 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white/75 outline-none hover:bg-white/[0.06] focus-visible:border-brand disabled:opacity-45"
+            className="min-h-11 min-w-11 rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-muted)] outline-none hover:bg-[var(--odos-surface-2)] focus-visible:border-brand disabled:opacity-45"
           >
             OS→OD
           </button>
         </div>
         <div className="min-w-0">
-          <p className="mb-2 text-xs font-semibold text-white/55">OS</p>
+          <p className="mb-2 text-xs font-semibold text-[color:var(--odos-muted)]">OS</p>
           {renderControl({ eye: "OS", value: osValue, onChange: onOsChange })}
         </div>
       </div>
-      <label className="mt-3 block text-xs font-semibold text-white/55">
+      <label className="mt-3 block text-xs font-semibold text-[color:var(--odos-muted)]">
         Recorded On
         <input
           type="datetime-local"
           value={displayedRecordedOn}
           disabled={disabled}
           onChange={(event) => onRecordedOnChange(event.target.value)}
-          className="mt-2 min-h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
+          className="mt-2 min-h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-brand disabled:opacity-45"
         />
       </label>
     </fieldset>

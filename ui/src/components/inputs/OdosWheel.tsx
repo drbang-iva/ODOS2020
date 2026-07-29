@@ -144,7 +144,7 @@ export function OdosWheel({
 
   return (
     <div ref={rootRef} className="relative min-w-0">
-      <div className="flex min-h-11 overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
+      <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
         <input
           type="text"
           inputMode="decimal"
@@ -162,9 +162,9 @@ export function OdosWheel({
             event.preventDefault();
             changeBy(value + (event.deltaY > 0 ? step : -step));
           }}
-          className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none disabled:opacity-45"
+          className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
         />
-        {unit && <span aria-hidden="true" className="flex min-h-11 items-center px-2 text-xs text-white/55">{unit}</span>}
+        {unit && <span aria-hidden="true" className="flex min-h-11 items-center px-2 text-xs text-[color:var(--odos-muted)]">{unit}</span>}
         <button
           type="button"
           aria-label={`${ariaLabel} wheel`}
@@ -172,7 +172,7 @@ export function OdosWheel({
           aria-controls={listboxId}
           disabled={disabled}
           onClick={() => setOpen((current) => !current)}
-          className="min-h-11 min-w-11 border-l border-white/10 text-white/55 outline-none hover:bg-white/[0.06] hover:text-white focus-visible:bg-brand/20 disabled:opacity-45"
+          className="min-h-11 min-w-11 border-l border-[color:var(--odos-line)] text-[color:var(--odos-muted)] outline-none hover:bg-[var(--odos-surface-2)] hover:text-[color:var(--odos-text)] focus-visible:bg-brand/20 disabled:opacity-45"
         >
           ↕
         </button>
@@ -182,10 +182,10 @@ export function OdosWheel({
         role="listbox"
         aria-label={`${ariaLabel} wheel values`}
         hidden={!open}
-        className="absolute z-50 mt-2 w-full min-w-[8rem] max-w-[calc(100vw-2rem)] rounded border border-white/15 bg-bg-deep shadow-xl"
+        className="absolute z-50 mt-2 w-full min-w-[8rem] max-w-[calc(100vw-2rem)] rounded border border-[color:var(--odos-line-2)] bg-bg-deep shadow-xl"
       >
         {states.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-b border-white/10 p-2">
+          <div className="flex flex-wrap gap-2 border-b border-[color:var(--odos-line)] p-2">
             {states.map((state) => (
               <button
                 key={state.value}
@@ -200,8 +200,8 @@ export function OdosWheel({
                 className={[
                   "min-h-11 min-w-11 rounded border px-3 text-sm outline-none",
                   selectedState === state.value
-                    ? "border-brand bg-brand/20 text-white"
-                    : "border-white/15 text-white/75 hover:bg-white/[0.06] focus-visible:border-brand",
+                    ? "border-brand bg-brand/20 text-[color:var(--odos-text)]"
+                    : "border-[color:var(--odos-line-2)] text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:border-brand",
                 ].join(" ")}
               >
                 {state.label}
@@ -269,8 +269,8 @@ export function OdosWheel({
               className={[
                 "block min-h-11 w-full snap-center rounded px-3 py-2 text-center text-sm outline-none",
                 option === value
-                  ? "bg-brand/20 text-white"
-                  : "text-white/75 hover:bg-white/[0.06] focus-visible:bg-brand/20",
+                  ? "bg-brand/20 text-[color:var(--odos-text)]"
+                  : "text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:bg-brand/20",
               ].join(" ")}
             >
               {format(option)}{unit ? ` ${unit}` : ""}

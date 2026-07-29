@@ -132,7 +132,7 @@ export function OdosSelect<T>({
 
   return (
     <div ref={rootRef} className="relative min-w-0">
-      <div className="flex min-h-11 overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
+      <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
         {onInputChange ? (
           <input
             type="text"
@@ -153,7 +153,7 @@ export function OdosSelect<T>({
               if (!open) openAtCenter();
             }}
             onKeyDown={handleKeyDown}
-            className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none disabled:opacity-45"
+            className="min-h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
           />
         ) : (
           <button
@@ -167,7 +167,7 @@ export function OdosSelect<T>({
             disabled={disabled}
             onClick={() => open ? setOpen(false) : openAtCenter()}
             onKeyDown={handleKeyDown}
-            className="min-h-11 min-w-0 flex-1 px-3 text-left text-sm text-white outline-none disabled:opacity-45"
+            className="min-h-11 min-w-0 flex-1 px-3 text-left text-sm text-[color:var(--odos-text)] outline-none disabled:opacity-45"
           >
             {selectedOption?.label ?? ""}
           </button>
@@ -179,7 +179,7 @@ export function OdosSelect<T>({
           aria-controls={listboxId}
           disabled={disabled}
           onClick={() => open ? setOpen(false) : openAtCenter()}
-          className="min-h-11 min-w-11 border-l border-white/10 text-xs text-white/55 outline-none hover:bg-white/[0.06] hover:text-white focus-visible:bg-brand/20 disabled:opacity-45"
+          className="min-h-11 min-w-11 border-l border-[color:var(--odos-line)] text-xs text-[color:var(--odos-muted)] outline-none hover:bg-[var(--odos-surface-2)] hover:text-[color:var(--odos-text)] focus-visible:bg-brand/20 disabled:opacity-45"
         >
           ▾
         </button>
@@ -190,10 +190,10 @@ export function OdosSelect<T>({
         aria-label={`${ariaLabel} options`}
         hidden={!open}
         aria-busy={loading || undefined}
-        className="absolute z-50 mt-2 w-full min-w-[11rem] max-w-[calc(100vw-2rem)] rounded border border-white/15 bg-bg-deep shadow-xl"
+        className="absolute z-50 mt-2 w-full min-w-[11rem] max-w-[calc(100vw-2rem)] rounded border border-[color:var(--odos-line-2)] bg-bg-deep shadow-xl"
       >
         {states.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-b border-white/10 p-2">
+          <div className="flex flex-wrap gap-2 border-b border-[color:var(--odos-line)] p-2">
             {states.map((state) => (
               <button
                 key={state.label}
@@ -205,8 +205,8 @@ export function OdosSelect<T>({
                 className={[
                   "min-h-11 min-w-11 rounded border px-3 text-sm outline-none",
                   isEqual(value, state.value)
-                    ? "border-brand bg-brand/20 text-white"
-                    : "border-white/15 text-white/75 hover:bg-white/[0.06] focus-visible:border-brand",
+                    ? "border-brand bg-brand/20 text-[color:var(--odos-text)]"
+                    : "border-[color:var(--odos-line-2)] text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:border-brand",
                 ].join(" ")}
               >
                 {state.label}
@@ -215,7 +215,7 @@ export function OdosSelect<T>({
           </div>
         )}
         <div className="max-h-[min(16rem,calc(100dvh-8rem))] space-y-2 overflow-y-auto p-2">
-          {loading && <p className="min-h-11 px-3 py-3 text-sm text-white/55">Loading…</p>}
+          {loading && <p className="min-h-11 px-3 py-3 text-sm text-[color:var(--odos-muted)]">Loading…</p>}
           {!loading && selectableOptions.map((option, index) => {
             const group = option.group;
             const showGroup = Boolean(group && group !== lastGroup);
@@ -223,7 +223,7 @@ export function OdosSelect<T>({
             return (
               <div key={`${group ?? ""}-${option.label}`}>
                 {showGroup && (
-                  <div role="separator" aria-hidden="true" className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-white/45">
+                  <div role="separator" aria-hidden="true" className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-faint)]">
                     {group}
                   </div>
                 )}
@@ -241,8 +241,8 @@ export function OdosSelect<T>({
                   className={[
                     "block min-h-11 w-full rounded px-3 py-2 text-left text-sm outline-none",
                     index === activeIndex
-                      ? "bg-brand/20 text-white"
-                      : "text-white/75 hover:bg-white/[0.06] focus-visible:bg-brand/20",
+                      ? "bg-brand/20 text-[color:var(--odos-text)]"
+                      : "text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:bg-brand/20",
                   ].join(" ")}
                 >
                   {option.label}
@@ -251,7 +251,7 @@ export function OdosSelect<T>({
             );
           })}
           {!loading && selectableOptions.length === 0 && (
-            <p className="min-h-11 px-3 py-3 text-sm text-white/55">No options available</p>
+            <p className="min-h-11 px-3 py-3 text-sm text-[color:var(--odos-muted)]">No options available</p>
           )}
         </div>
       </div>

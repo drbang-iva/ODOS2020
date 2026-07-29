@@ -80,7 +80,9 @@ test("OdosSelect renders grouped options, fixed states, and 44px targets with 8p
   assert.match(html, /min-h-11/);
   assert.match(html, /space-y-2/);
   assert.match(html, /gap-2/);
-  assert.doesNotMatch(html, /--odos-/);
+  assert.match(html, /--odos-text/);
+  assert.match(html, /--odos-line/);
+  assert.doesNotMatch(html, /(?:text|border|bg)-white/);
 });
 
 function key(value: string) {

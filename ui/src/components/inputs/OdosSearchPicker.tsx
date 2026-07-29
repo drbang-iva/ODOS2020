@@ -130,7 +130,7 @@ export function OdosSearchPicker<T>({
         if (!event.currentTarget.contains(event.relatedTarget)) setEditing(false);
       }}
     >
-      <label htmlFor={inputId} className="block text-xs font-semibold text-white/75">{label}</label>
+      <label htmlFor={inputId} className="block text-xs font-semibold text-[color:var(--odos-muted)]">{label}</label>
       <input
         id={inputId}
         role="combobox"
@@ -169,7 +169,7 @@ export function OdosSearchPicker<T>({
             setEditing(false);
           }
         }}
-        className="mt-2 min-h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-brand disabled:opacity-45"
+        className="mt-2 min-h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm text-[color:var(--odos-text)] outline-none placeholder:text-[color:var(--odos-faint)] focus:border-brand disabled:opacity-45"
       />
       {value && <p className="mt-2 text-xs text-emerald-300">Selected: {selectedLabel}</p>}
       {validationMessage && <p className="mt-2 text-xs font-normal text-red-300">{validationMessage}</p>}
@@ -178,9 +178,9 @@ export function OdosSearchPicker<T>({
         role="listbox"
         aria-label={`${label} results`}
         hidden={!showResults}
-        className="absolute z-50 mt-2 max-h-[min(20rem,calc(100dvh-8rem))] w-full space-y-2 overflow-y-auto rounded border border-white/15 bg-bg-deep p-2 shadow-xl"
+        className="absolute z-50 mt-2 max-h-[min(20rem,calc(100dvh-8rem))] w-full space-y-2 overflow-y-auto rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2 shadow-xl"
       >
-        {loading && <p className="min-h-11 px-3 py-3 text-sm text-white/55">Searching…</p>}
+        {loading && <p className="min-h-11 px-3 py-3 text-sm text-[color:var(--odos-muted)]">Searching…</p>}
         {error && <p role="alert" className="min-h-11 px-3 py-3 text-sm text-red-300">{error}</p>}
         {!loading && options.map((option, index) => (
           <button
@@ -195,12 +195,12 @@ export function OdosSearchPicker<T>({
             className={[
               "block min-h-11 w-full rounded px-3 py-2 text-left text-sm outline-none",
               index === activeIndex
-                ? "bg-brand/20 text-white"
-                : "text-white/75 hover:bg-white/[0.06] focus-visible:bg-brand/20",
+                ? "bg-brand/20 text-[color:var(--odos-text)]"
+                : "text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:bg-brand/20",
             ].join(" ")}
           >
             <span className="block font-semibold">{option.label}</span>
-            {option.description && <span className="mt-1 block text-xs text-white/45">{option.description}</span>}
+            {option.description && <span className="mt-1 block text-xs text-[color:var(--odos-faint)]">{option.description}</span>}
           </button>
         ))}
         {onCreate && query.trim().length >= 2 && !value && (

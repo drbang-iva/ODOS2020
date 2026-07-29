@@ -42,8 +42,8 @@ export function OdosChips<T>({
             className={[
               "min-h-11 min-w-11 rounded border px-3 py-2 text-sm outline-none",
               isSelected
-                ? "border-brand bg-brand/20 text-white"
-                : "border-white/15 bg-bg-deep text-white/75 hover:bg-white/[0.06] focus-visible:border-brand",
+                ? "border-brand bg-brand/20 text-[color:var(--odos-text)]"
+                : "border-[color:var(--odos-line-2)] bg-bg-deep text-[color:var(--odos-muted)] hover:bg-[var(--odos-surface-2)] focus-visible:border-brand",
               "disabled:opacity-45",
             ].join(" ")}
           >
