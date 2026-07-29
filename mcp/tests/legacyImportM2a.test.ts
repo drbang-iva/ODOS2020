@@ -10,7 +10,7 @@ import type {
   ProjectMembership,
   Resource,
 } from "@medplum/fhirtypes";
-import type { JsonPatchOperation } from "../src/fhir-client.js";
+import type { JsonPatchOperation, MedplumClient } from "../src/fhir-client.js";
 import {
   ImportLedger,
 } from "../src/legacy-import/import-ledger.js";
@@ -23,6 +23,7 @@ import {
   type PatientImportManifest,
 } from "../src/legacy-import/patient-import.js";
 import {
+  LiveMigratedPatientAccessGrantAdapter,
   grantMigratedPatientAccess,
   type MigratedPatientAccessGrantAdapter,
 } from "../../scripts/grant-migrated-patient-access.js";
@@ -309,6 +310,36 @@ test("operator provisioning hard-stops an existing compartment entry with the wr
     ledger.close();
     state.cleanup();
   }
+});
+
+test("live policy resolution uses active-project search context and hard-stops duplicates", async () => {
+  const policy: AccessPolicy = {
+    resourceType: "AccessPolicy",
+    id: "front-desk-policy",
+    name: "ODOS Front Desk",
+    meta: {
+      tag: [{
+        system: "https://odos2020.com/fhir/NamingSystem/practice-role",
+        code: "front-desk",
+      }],
+    },
+  };
+  const rows = [policy];
+  const fhir = {
+    search: async () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: rows.map((resource) => ({ resource })),
+    }),
+  } as unknown as MedplumClient;
+  const adapter = new LiveMigratedPatientAccessGrantAdapter(fhir, PROJECT_ID);
+  assert.equal(await adapter.resolvePolicy("front-desk"), policy);
+
+  rows.push({ ...policy, id: "front-desk-policy-duplicate" });
+  await assert.rejects(
+    adapter.resolvePolicy("front-desk"),
+    /Expected one tagged ODOS Front Desk policy; found 2/,
+  );
 });
 
 test("reachability gate requires every ordinary-role allow and both front-desk denials", async () => {

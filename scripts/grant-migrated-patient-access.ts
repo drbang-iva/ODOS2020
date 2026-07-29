@@ -171,8 +171,7 @@ implements MigratedPatientAccessGrantAdapter {
       { "name:exact": `ODOS ${display}` },
     )).filter((policy) =>
       policy.name === `ODOS ${display}`
-      && policy.meta?.project === this.projectId
-      && policy.meta.tag?.some((tag) =>
+      && policy.meta?.tag?.some((tag) =>
         tag.system === ODOS_PRACTICE_ROLE_SYSTEM && tag.code === role
       )
     );
