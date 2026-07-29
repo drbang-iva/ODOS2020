@@ -186,7 +186,7 @@ test("PowerDropdown closes and disables its open options when the field becomes 
     act(() => {
       renderer = create(<PowerDropdown value="" options={["14", "15", "16"]} defaultValue="15" onChange={() => undefined} ariaLabel="IOP value" />);
     });
-    const trigger = renderer!.root.findAllByProps({ "aria-label": "IOP value options" })
+    const trigger = renderer!.root.findAllByProps({ "aria-label": "Show IOP value options" })
       .find((item) => item.type === "button");
     act(() => trigger!.props.onClick());
     assert.equal(renderer!.root.findByProps({ role: "listbox" }).props.hidden, false);
