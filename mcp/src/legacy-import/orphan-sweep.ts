@@ -173,9 +173,16 @@ export async function findPracticeProjectId(
   return (await findPracticeClinicianPolicy(postgresUrl)).projectId;
 }
 
+export interface StoredPracticeClinicianPolicy {
+  readonly projectId: string;
+  readonly projectName: string;
+  readonly policyId: string;
+  readonly policy: AccessPolicy;
+}
+
 export async function findPracticeClinicianPolicy(
   postgresUrl: string,
-): Promise<{ projectId: string; policyId: string }> {
+): Promise<StoredPracticeClinicianPolicy> {
   const pool = new Pool({
     connectionString: postgresUrl,
     max: 1,
@@ -183,20 +190,92 @@ export async function findPracticeClinicianPolicy(
     statement_timeout: 10_000,
   });
   try {
-    const result = await pool.query<{ project_id: string; policy_id: string }>(`
-      SELECT "projectId"::text AS project_id, id::text AS policy_id
-      FROM "AccessPolicy"
-      WHERE deleted = false
-        AND content::jsonb->>'name' = 'ODOS Clinician'
+    const result = await pool.query<{
+      project_id: string;
+      project_name: string | null;
+      policy_id: string;
+      policy: string;
+    }>(`
+      SELECT
+        policy."projectId"::text AS project_id,
+        project.content::jsonb->>'name' AS project_name,
+        policy.id::text AS policy_id,
+        policy.content AS policy
+      FROM "AccessPolicy" AS policy
+      LEFT JOIN "Project" AS project
+        ON project.id = policy."projectId"
+        AND project.deleted = false
+      WHERE policy.deleted = false
+        AND policy.content::jsonb->>'name' = 'ODOS Clinician'
+      ORDER BY policy."projectId", policy.id
     `);
     if (result.rows.length !== 1) {
+      const candidates = result.rows.length
+        ? result.rows.map((row) =>
+            `${row.project_id} (${row.project_name?.trim() || "unnamed project"})`
+          ).join(", ")
+        : "none";
       throw new Error(
-        `Expected one practice project from stored ODOS Clinician policy; found ${result.rows.length}.`,
+        "Legacy importer discovery assumes one ODOS practice project per database; "
+        + `found ${result.rows.length} ODOS Clinician policy candidates: ${candidates}. `
+        + "Pass an explicit practiceProjectId when the database hosts multiple practices.",
       );
     }
     return {
       projectId: result.rows[0]!.project_id,
+      projectName: result.rows[0]!.project_name?.trim() || "unnamed project",
       policyId: result.rows[0]!.policy_id,
+      policy: JSON.parse(result.rows[0]!.policy) as AccessPolicy,
+    };
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function verifyPracticeProjectClinicianPolicy(
+  postgresUrl: string,
+  projectId: string,
+): Promise<StoredPracticeClinicianPolicy> {
+  const pool = new Pool({
+    connectionString: postgresUrl,
+    max: 1,
+    connectionTimeoutMillis: 5_000,
+    statement_timeout: 10_000,
+  });
+  try {
+    const projects = await pool.query<{
+      project_id: string;
+      project_name: string | null;
+    }>(`
+      SELECT id::text AS project_id, content::jsonb->>'name' AS project_name
+      FROM "Project"
+      WHERE deleted = false
+        AND id::text = $1
+    `, [projectId]);
+    if (projects.rows.length !== 1) {
+      throw new Error(`Explicit practice project ${projectId} does not exist.`);
+    }
+    const project = projects.rows[0]!;
+    const policies = await pool.query<{ policy_id: string; policy: string }>(`
+      SELECT id::text AS policy_id, content AS policy
+      FROM "AccessPolicy"
+      WHERE deleted = false
+        AND "projectId"::text = $1
+        AND content::jsonb->>'name' = 'ODOS Clinician'
+      ORDER BY id
+    `, [projectId]);
+    if (policies.rows.length !== 1) {
+      throw new Error(
+        `Explicit practice project ${projectId} `
+        + `(${project.project_name?.trim() || "unnamed project"}) must carry exactly one `
+        + `ODOS Clinician policy; found ${policies.rows.length}.`,
+      );
+    }
+    return {
+      projectId: project.project_id,
+      projectName: project.project_name?.trim() || "unnamed project",
+      policyId: policies.rows[0]!.policy_id,
+      policy: JSON.parse(policies.rows[0]!.policy) as AccessPolicy,
     };
   } finally {
     await pool.end();

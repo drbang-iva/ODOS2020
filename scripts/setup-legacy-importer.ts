@@ -18,7 +18,14 @@ import {
 import {
   findPracticeProjectId,
   readMigrationImporterPolicies,
+  verifyPracticeProjectClinicianPolicy,
+  type StoredPracticeClinicianPolicy,
 } from "../mcp/src/legacy-import/orphan-sweep.js";
+import {
+  buildMedplumAccessPolicy,
+  getRoleDeclaration,
+  ODOS_PRACTICE_ROLE_SYSTEM,
+} from "../mcp/src/authz/roles.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_STATE_PATH = resolve(".odos/migration-importer-state.json");
@@ -30,6 +37,7 @@ export async function setupLegacyImporter(input: {
   readonly statePath?: string;
   readonly credentialsPath?: string;
   readonly postgresUrl?: string;
+  readonly practiceProjectId?: string;
 }): Promise<{
   readonly projectId: string;
   readonly accessPolicyId: string;
@@ -39,15 +47,16 @@ export async function setupLegacyImporter(input: {
   assertLocalBaseUrl(input.baseUrl);
   const accessToken = input.accessToken;
   const fhir = createMedplumClient({ baseUrl: input.baseUrl, accessToken });
+  const postgresUrl = input.postgresUrl
+    ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
   const projectId = await resolvePracticeProjectId(
     input.baseUrl,
     accessToken,
     fhir,
-    input.postgresUrl,
+    postgresUrl,
+    input.practiceProjectId,
   );
   const desired = buildMigrationImporterAccessPolicy(projectId);
-  const postgresUrl = input.postgresUrl
-    ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
   const storedPolicies = await readMigrationImporterPolicies(
     postgresUrl,
     projectId,
@@ -127,6 +136,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       process.env.ODOS_POSTGRES_URL
       ?? process.env.OSOD_POSTGRES_URL
       ?? "postgresql://medplum:medplum@127.0.0.1:5432/medplum",
+    practiceProjectId: process.env.ODOS_PRACTICE_PROJECT_ID?.trim() || undefined,
   });
   console.log(
     `Migration importer ready: policy=${result.accessPolicyId} client=${result.clientId} `
@@ -139,7 +149,20 @@ export async function resolvePracticeProjectId(
   accessToken: string,
   fhir: ReturnType<typeof createMedplumClient>,
   postgresUrl?: string,
+  practiceProjectId?: string,
+  database: PracticeProjectResolutionDatabase = LIVE_PRACTICE_PROJECT_DATABASE,
 ): Promise<string> {
+  if (practiceProjectId) {
+    if (!postgresUrl) {
+      throw new Error("Explicit practiceProjectId verification requires ODOS_POSTGRES_URL.");
+    }
+    const stored = await database.verifyPracticeProjectClinicianPolicy(
+      postgresUrl,
+      practiceProjectId,
+    );
+    assertCanonicalClinicianPolicy(stored);
+    return stored.projectId;
+  }
   const clinicianPolicies = (await searchAll<AccessPolicy>(fhir, "AccessPolicy", {
     "name:exact": "ODOS Clinician",
   })).filter((policy) => policy.name === "ODOS Clinician" && policy.meta?.project);
@@ -150,7 +173,7 @@ export async function resolvePracticeProjectId(
   if (practiceProjects.length > 1) {
     throw new Error(`Expected one practice project from ODOS Clinician policy; found ${practiceProjects.length}.`);
   }
-  if (postgresUrl) return findPracticeProjectId(postgresUrl);
+  if (postgresUrl) return database.findPracticeProjectId(postgresUrl);
   const response = await fetch(`${baseUrl.replace(/\/$/, "")}/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(30_000),
@@ -162,6 +185,62 @@ export async function resolvePracticeProjectId(
     throw new Error("Migration importer setup found only the Super Admin project and no shipped clinician policy.");
   }
   return body.project.id;
+}
+
+export interface PracticeProjectResolutionDatabase {
+  findPracticeProjectId(postgresUrl: string): Promise<string>;
+  verifyPracticeProjectClinicianPolicy(
+    postgresUrl: string,
+    projectId: string,
+  ): Promise<StoredPracticeClinicianPolicy>;
+}
+
+const LIVE_PRACTICE_PROJECT_DATABASE: PracticeProjectResolutionDatabase = {
+  findPracticeProjectId,
+  verifyPracticeProjectClinicianPolicy,
+};
+
+function assertCanonicalClinicianPolicy(stored: StoredPracticeClinicianPolicy): void {
+  const expected = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  const roleTags = stored.policy.meta?.tag?.filter(
+    (tag) => tag.system === ODOS_PRACTICE_ROLE_SYSTEM,
+  ) ?? [];
+  if (
+    stored.policy.name !== expected.name
+    || roleTags.length !== 1
+    || roleTags[0]?.code !== "clinician"
+    || canonicalPolicyRules(stored.policy) !== canonicalPolicyRules(expected)
+  ) {
+    throw new Error(
+      `Explicit practice project ${stored.projectId} (${stored.projectName}) `
+      + `does not carry a canonical ODOS Clinician policy.`,
+    );
+  }
+}
+
+function canonicalPolicyRules(policy: AccessPolicy): string {
+  return JSON.stringify(
+    (policy.resource ?? [])
+      .map((rule) => canonicalPolicyValue(rule))
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+  );
+}
+
+function canonicalPolicyValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map(canonicalPolicyValue)
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nested]) => nested !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, canonicalPolicyValue(nested)]),
+    );
+  }
+  return value;
 }
 
 export function samePolicyDefinition(left: AccessPolicy, right: AccessPolicy): boolean {

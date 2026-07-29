@@ -121,6 +121,43 @@ npm run verify-legacy-import-m2a -- \
   --observation 'Observation/<id>'
 ```
 
+## Reproducible live gate harness
+
+The tracked live harness provisions a synthetic gate practice, creates real ordinary
+clinician and front-desk sessions, exercises the full reachability matrix, and reruns the
+patient import and access grants to prove convergence. It is safe to run alongside prior gate
+projects because role-policy resolution uses the gate practice administrator's project-scoped
+session and passes the setup-created project id into importer bootstrap.
+
+Without an explicit project id, importer bootstrap retains the single-practice behavior and
+discovers the one ODOS practice project across the database. A database hosting multiple ODOS
+practice projects must provide `practiceProjectId` to `setupLegacyImporter`, or set
+`ODOS_PRACTICE_PROJECT_ID` when running `npm run setup-legacy-importer`. The named project is
+verified to exist and to carry the canonical ODOS Clinician policy; an invalid or noncanonical
+target fails without falling back to database-wide discovery.
+
+Put the harness configuration in the checkout's gitignored `.env` file. Never provide these
+values as inline command assignments:
+
+```dotenv
+GATE_HEAD_SHA=<full 40-character SHA of the checked-out head>
+MEDPLUM_BASE_URL=http://localhost:8103
+ODOS_POSTGRES_URL=postgresql://<local practice database>
+ODOS_M2A_STATE_DIR=/Users/iris/Migration/importer-state/m2a-gate
+MEDPLUM_ADMIN_EMAIL=<local Medplum service administrator>
+MEDPLUM_ADMIN_PASSWORD=<local Medplum service administrator password>
+```
+
+Keep `.env` at mode `0600`. From the checkout at the exact `GATE_HEAD_SHA`, run:
+
+```sh
+npm run gate:legacy-import-m2a
+```
+
+The command loads `.env` through the package script. Its transcript records the exact head,
+first- and second-run action outcomes, ordinary-role allow/deny statuses, and the final
+`LEGACY_IMPORT_M2A_REACHABILITY PASS` marker.
+
 Passing output includes HTTP status `200` for both Patient searches, the clinician's Patient,
 Encounter, Media, and Observation reads, and the front desk's Patient, Coverage, and Encounter
 reads. It also requires HTTP `403` for the front desk's same Media and Observation resources.
