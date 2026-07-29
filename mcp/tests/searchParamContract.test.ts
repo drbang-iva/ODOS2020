@@ -50,6 +50,9 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Condition", "encounter", "_count"),
     spec("Observation", "encounter", "_count"),
   ],
+  "src/clinical-graph/imaging-endpoint.ts:602": [
+    spec("Media", "patient", "encounter", "status", "_sort", "_count"),
+  ],
   "src/clinical-graph/protocol-store.ts:160": [spec("Basic", "code", "identifier", "_count")],
   "src/desk/day-ledger.ts:234": [
     spec("Invoice", "date", "_count", "_sort"),

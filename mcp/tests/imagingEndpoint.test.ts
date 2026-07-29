@@ -33,12 +33,19 @@ const BODY = {
   },
 };
 
-function deps(role: PracticeRoleId = "clinician", seededMedia: Media[] = []) {
+function deps(
+  role: PracticeRoleId = "clinician",
+  seededMedia: Media[] = [],
+  pagedMedia: Media[][] = [],
+) {
   const created: Array<{ resource: Media | DiagnosticReport | Provenance; headers?: Record<string, string> }> = [];
   const searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
   const patches: JsonPatchOperation[][] = [];
   const binaryBodies: Uint8Array[] = [];
-  const media = seededMedia.map((row) => structuredClone(row));
+  const firstPageMedia = seededMedia.map((row) => structuredClone(row));
+  const followingPages = pagedMedia.map((page) => page.map((row) => structuredClone(row)));
+  const media = [...firstPageMedia, ...followingPages.flat()];
+  const pageReads: string[] = [];
   const fhir: ImagingFhirClient = {
     read: async <T extends Media>(_resourceType: T["resourceType"], id: string): Promise<T> => {
       const row = media.find((candidate) => candidate.id === id);
@@ -73,8 +80,29 @@ function deps(role: PracticeRoleId = "clinician", seededMedia: Media[] = []) {
         resourceType: "Bundle",
         type: "searchset",
         entry: resourceType === "Media"
-          ? media.map((resource) => ({ resource: structuredClone(resource) as T }))
+          ? firstPageMedia.map((resource) => ({ resource: structuredClone(resource) as T }))
           : [],
+        ...(resourceType === "Media" && followingPages.length
+          ? { link: [{ relation: "next", url: "https://medplum.test/fhir/R4/Media?page=0" }] }
+          : {}),
+      };
+    },
+    searchUrl: async <T extends Media | QuestionnaireResponse>(
+      url: string,
+      resourceType: T["resourceType"],
+    ): Promise<Bundle<T>> => {
+      pageReads.push(url);
+      const pageIndex = Number(new URL(url).searchParams.get("page"));
+      const page = followingPages[pageIndex] ?? [];
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: resourceType === "Media"
+          ? page.map((resource) => ({ resource: structuredClone(resource) as T }))
+          : [],
+        ...(pageIndex + 1 < followingPages.length
+          ? { link: [{ relation: "next", url: `https://medplum.test/fhir/R4/Media?page=${pageIndex + 1}` }] }
+          : {}),
       };
     },
   };
@@ -105,7 +133,7 @@ function deps(role: PracticeRoleId = "clinician", seededMedia: Media[] = []) {
       : null,
     now: () => "2026-07-13T18:00:00.000Z",
   };
-  return { binaryBodies, created, deps: value, media, patches, searches };
+  return { binaryBodies, created, deps: value, media, pageReads, patches, searches };
 }
 
 test("manual imaging upload persists Media, preliminary interpretation report, and patient-scoped Provenance", async () => {
@@ -286,6 +314,31 @@ test("imaging list enforces chart.read and exactly one supported scope", async (
   assert.equal(ambiguous.status, 400);
 });
 
+test("imaging list follows every 50-row FHIR page and rejects unsafe attachment schemes", async () => {
+  const harness = deps(
+    "clinician",
+    [image("page-1", "2026-07-12T10:00:00.000Z", "fundus-photo")],
+    [[
+      image("page-2", "2026-07-11T10:00:00.000Z", "oct"),
+      image("unsafe", "2026-07-10T10:00:00.000Z", "other", {
+        content: { contentType: "application/pdf", title: "Unsafe", url: "javascript:alert(1)" },
+      }),
+    ]],
+  );
+
+  const result = await handleImagingListRequest(harness.deps, {
+    authHeader: AUTH,
+    query: { patient: "Patient/p1" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(harness.pageReads, ["https://medplum.test/fhir/R4/Media?page=0"]);
+  const images = (result.body as { images: Array<Record<string, unknown>> }).images;
+  assert.deepEqual(images.map((row) => row.id), ["page-1", "page-2", "unsafe"]);
+  assert.equal(images[2]?.contentState, "missing");
+  assert.equal(images[2]?.contentUrl, undefined);
+});
+
 test("OCT structure refinement changes bodySite and records provisional or confirmed Provenance", async () => {
   const harness = deps("clinician", [image("oct-1", "2026-07-12T10:00:00.000Z", "oct")]);
   const result = await handleImagingStructureRefinementRequest(harness.deps, {
@@ -305,6 +358,20 @@ test("OCT structure refinement changes bodySite and records provisional or confi
     "Patient/p1",
     "Encounter/e1",
   ]);
+});
+
+test("structure refinement refuses non-OCT Media before any patch or Provenance write", async () => {
+  const harness = deps("clinician", [image("fundus-1", "2026-07-12T10:00:00.000Z", "fundus-photo")]);
+  const result = await handleImagingStructureRefinementRequest(harness.deps, {
+    authHeader: AUTH,
+    mediaId: "fundus-1",
+    body: { structure: "Posterior pole", confidence: "clinician-confirmed" },
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, { error: "Structure refinement is limited to OCT Media." });
+  assert.equal(harness.patches.length, 0);
+  assert.equal(harness.created.length, 0);
 });
 
 function image(

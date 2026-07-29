@@ -44,6 +44,10 @@ export interface ImagingFhirClient {
     resourceType: T["resourceType"],
     params?: Record<string, string>,
   ): Promise<Bundle<T>>;
+  searchUrl?<T extends Media | QuestionnaireResponse>(
+    url: string,
+    resourceType: T["resourceType"],
+  ): Promise<Bundle<T>>;
 }
 
 export interface ImagingEndpointDeps {
@@ -253,7 +257,7 @@ export async function handleImagingListRequest(
       body: { error: parsed.error.issues[0]?.message ?? "A Patient or Encounter reference is required." },
     };
   }
-  const bundle = await staff.fhir.search<Media>("Media", {
+  const mediaRows = await searchImagingMedia(staff.fhir, {
     ...(parsed.data.patient ? { patient: parsed.data.patient } : {}),
     ...(parsed.data.encounter ? { encounter: parsed.data.encounter } : {}),
     status: "completed",
@@ -261,8 +265,8 @@ export async function handleImagingListRequest(
     _count: "50",
   });
   const readableMedia = await Promise.all(
-    (bundle.entry ?? []).flatMap((entry) =>
-      entry.resource?.id ? [staff.fhir.read<Media>("Media", entry.resource.id)] : []
+    mediaRows.flatMap((media) =>
+      media.id ? [staff.fhir.read<Media>("Media", media.id)] : []
     ),
   );
   const images = readableMedia
@@ -306,6 +310,9 @@ export async function handleImagingStructureRefinementRequest(
   const current = await staff.fhir.read<Media>("Media", input.mediaId);
   if (!current.id || !current.subject?.reference) {
     return { status: 409, body: { error: "Media is missing its patient association." } };
+  }
+  if (imagingCategory(current) !== "oct") {
+    return { status: 409, body: { error: "Structure refinement is limited to OCT Media." } };
   }
   const bodySite = imagingBodySite(parsed.data.structure, parsed.data.laterality);
   const updated = await staff.fhir.patch<Media>(
@@ -577,7 +584,31 @@ function attachmentContentUrl(media: Media): string | undefined {
     return `data:${media.content.contentType};base64,${media.content.data}`;
   }
   const url = media.content.url?.trim();
-  return url && !url.startsWith("Binary/") ? url : undefined;
+  if (!url || url.startsWith("Binary/")) return undefined;
+  try {
+    const candidate = new URL(url);
+    return ["http:", "https:"].includes(candidate.protocol) ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function searchImagingMedia(
+  fhir: ImagingFhirClient,
+  params: Record<string, string>,
+): Promise<Media[]> {
+  const rows: Media[] = [];
+  const seenNextUrls = new Set<string>();
+  let bundle = await fhir.search<Media>("Media", params);
+  while (true) {
+    rows.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
+    const nextUrl = bundle.link?.find((link) => link.relation === "next")?.url;
+    if (!nextUrl) return rows;
+    if (!fhir.searchUrl) throw new Error("Imaging FHIR client cannot follow search pagination.");
+    if (seenNextUrls.has(nextUrl)) throw new Error("Imaging search returned a pagination cycle.");
+    seenNextUrls.add(nextUrl);
+    bundle = await fhir.searchUrl<Media>(nextUrl, "Media");
+  }
 }
 
 function isLongitudinalMedia(media: Media): boolean {
