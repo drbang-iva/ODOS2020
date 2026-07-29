@@ -32,12 +32,11 @@ Screenshots are committed under
 - A repeated JSX helper or mapped field family is one finding row. The rendered labels
   column names every affected field family; totals below count finding rows, not the number
   of OD/OS or mapped runtime instances.
-- Pass 2 rendered the encounter and most operational routes at **1440×1000**. The final
-  insurance/scheduler routes reverted to the in-app browser's 402px responsive viewport;
-  their controls were confirmed in the semantic DOM, but the W26 and W30-W32 edit overlays
-  are clipped off-canvas in the PNGs. That evidence bound is explicit and is also a separate
-  responsive-layout risk; it did not change the input-control classifications.
-- The rendered sweep produced **52 PNG evidence artifacts**. Each BLOCKER and WARN row links
+- Pass 2 used **1440×1000** for encounter and modal-heavy routes; naturally responsive
+  full-page routes were also inspected at the in-app browser's 402px viewport. The
+  insurance and appointment overlays were re-captured at 1440×1000 after authentication,
+  so no BLOCKER/WARN evidence overlay remains clipped off-canvas.
+- The rendered sweep produced **54 PNG evidence artifacts**. Each BLOCKER and WARN row links
   to its screen; where a fixture-dependent subcontrol could not be instantiated, the row says
   so rather than presenting the screenshot as full control-level proof.
 - Conditional controls were exercised where the synthetic fixtures allowed. Six clinical
@@ -169,13 +168,13 @@ missing shared keyboard/touch implementation.
 | W23 | `ui/src/scenes/claims/SubmitClaims.tsx:680,867,961` | Payer classification; Relationship; Code set and other shared selects | Submit Claims | 12 (sub-44px native selects) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/46-submit-claims.png) — Rendered; finding confirmed. |
 | W24 | `ui/src/scenes/claims/SubmitClaims.tsx:943,962` | ICD-10 code; CPT/HCPCS code | Submit Claims | 2 (open medical code sets entered as raw text) | `OdosSearchPicker` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/46-submit-claims.png) — Rendered; finding confirmed. |
 | W25 | `ui/src/scenes/claims/SubmitClaims.tsx:964-965` | Fee; Quantity | Submit Claims | 1, 12 (raw numeric fields) | `OdosWheel` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/46-submit-claims.png) — Rendered; finding confirmed. |
-| W26 | `ui/src/scenes/insurance/PatientInsurance.tsx:264` | Coverage status / order / relationship enumerations | Patient Insurance | 12 (sub-44px native select helper) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/47-patient-insurance-edit.png) — Coverage editor rendered in the semantic DOM; 402px PNG clips the editor off-canvas. |
+| W26 | `ui/src/scenes/insurance/PatientInsurance.tsx:264` | Coverage status / order / relationship enumerations | Patient Insurance | 12 (sub-44px native select helper) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/47-patient-insurance-edit.png) — Coverage editor rendered at 1440×1000; finding confirmed. |
 | W27 | `ui/src/scenes/insurance/VisionPlanBenefits.tsx:237` | Apply template | Vision Plan Benefits | 12 (sub-44px native select) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/48-vision-plan-benefits.png) — Rendered; finding confirmed. |
 | W28 | `ui/src/scenes/insurance/VisionPlanBenefits.tsx:263,272` | Allowance; Copay; Used; Frequency months | Vision Plan Benefits | 1, 12 (numeric benefits use raw text/number fields) | `OdosWheel` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/48-vision-plan-benefits.png) — Rendered; finding confirmed. |
 | W29 | `ui/src/scenes/SchedulerDayGrid.tsx:662,715,729` | Grid interval; Office; Clinic mode | Scheduler day grid | 12 (36px native selects) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/49-scheduler-day.png) — Rendered; finding confirmed. |
-| W30 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:295,313,433,449,629` | Service type; Duration preset; Confirmation status; Appointment status; Coverage / plan choice | Appointment details | 12 (40px native selects) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50-scheduler-appointment-editor.png) — Editor rendered in the semantic DOM; 402px PNG clips the editor off-canvas. |
-| W31 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:336` | Custom duration minutes | Appointment details | 1, 12 (40px raw numeric input) | `OdosWheel` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50-scheduler-appointment-editor.png) — Editor rendered in the semantic DOM; custom-minutes also requires the Custom preset. |
-| W32 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:771` | Search patient | Appointment details | 2, 12 (custom async/open-set picker) | `OdosSearchPicker` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50-scheduler-appointment-editor.png) — Editor rendered in the semantic DOM; patient-search subflow was not opened and the PNG clips the editor. |
+| W30 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:295,313,433,449,629` | Service type; Duration preset; Confirmation status; Appointment status; Coverage / plan choice | Appointment details | 12 (40px native selects) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50-scheduler-appointment-editor.png) — Appointment editor rendered at 1440×1000; finding confirmed. |
+| W31 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:336` | Custom duration minutes | Appointment details | 1, 12 (40px raw numeric input) | `OdosWheel` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50b-scheduler-custom-duration.png) — `Custom…` selected and raw minutes input rendered; finding confirmed. |
+| W32 | `ui/src/scenes/scheduler/AppointmentDetailsModal.tsx:771` | Search patient | Appointment details | 2, 12 (custom async/open-set picker) | `OdosSearchPicker` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/50c-scheduler-patient-search.png) — `Change Patient` opened and custom search field rendered; finding confirmed. |
 | W33 | `ui/src/scenes/scheduler/FindOpenPanel.tsx:97,114` | Visit type; Resource | Find Open | 12 (40px native selects) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/51-scheduler-find-open.png) — Rendered; finding confirmed. |
 | W34 | `ui/src/scenes/scheduler/SchedulerWeekGrid.tsx:98` | Resource | Scheduler week grid | 12 (40px native select) | `OdosSelect` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/52-scheduler-week.png) — Rendered; finding confirmed. |
 | W35 | `ui/src/scenes/SchedulerDayGrid.tsx:797-805` | Show resource column | Scheduler day-grid column chooser | 9, 12 (multi-valued column selection uses approximately 28px checkbox rows) | `OdosChips` | [Screenshot](build-log/touchscreen-compliance-audit-2026-07-29/53-scheduler-columns.png) — Rendered; finding confirmed. |
@@ -227,10 +226,9 @@ audit and must be audited when those scenes land**.
    data, an unobstructed referral composer, editable lab/claims rows, and transferable
    payment fixtures should re-capture those exact conditional controls.
 2. At the in-app browser's default 402px width, the fixed encounter layout hid the main
-   work area, and the insurance/appointment editors were clipped off-canvas. This audit
-   widened the viewport to 1440×1000 for the clinical sweep, while the final responsive
-   captures are explicitly bounded above. Narrow-screen behavior is a separate release risk
-   not scored as an additional input-control finding here.
+   work area. This audit widened the viewport to 1440×1000 for the clinical sweep and
+   modal re-captures. Narrow-screen behavior remains a separate release risk not scored as
+   an additional input-control finding here.
 3. Several shared helpers multiply one source defect across many runtime fields. In
    particular, `VaValueSelect`, `CatalogFieldKit`, `InlinePicker`, `PatientPicker`, and the
    charting `SelectField` helpers should be triaged as shared fixback seams rather than as
