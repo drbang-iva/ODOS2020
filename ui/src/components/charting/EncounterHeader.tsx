@@ -19,6 +19,7 @@ import {
   readDiagnosisCompleteness,
   type DiagnosisCompleteness,
 } from "../../lib/clinical-graph-client";
+import { isMigratedEncounter } from "../../lib/patient-overview";
 import { BalanceChips } from "../commercial/BalanceChips";
 import {
   formatSeriesDueWindow,
@@ -126,9 +127,10 @@ export function EncounterHeader({ patient, encounterId }: Props) {
         : undefined,
     [encounter, encounterConditions, problemListConditions],
   );
+  const migrated = isMigratedEncounter(encounter);
 
   async function finishEncounter() {
-    if (!patient.id || busy === "finish" || busy === "abandon") return;
+    if (!patient.id || migrated || busy === "finish" || busy === "abandon") return;
     setBusy("finish");
     setError(null);
     try {
@@ -166,7 +168,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   }
 
   async function requestFinishEncounter() {
-    if (!patient.id || busy) return;
+    if (!patient.id || migrated || busy) return;
     const requestVersion = ++completenessCheckVersion.current;
     setBusy("checking");
     setError(null);
@@ -184,7 +186,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
   }
 
   async function abandonEncounter() {
-    if (!patient.id || busy) return;
+    if (!patient.id || migrated || busy) return;
     setBusy("abandon");
     setError(null);
     try {
@@ -223,7 +225,7 @@ export function EncounterHeader({ patient, encounterId }: Props) {
             <h1 className="text-xl font-semibold text-white">{displayName}</h1>
             {patient.birthDate && <span className="text-sm text-white/50">DOB {patient.birthDate}</span>}
             <span className="rounded border border-white/10 px-2 py-1 text-xs text-white/60">
-              {encounter?.status ?? "loading"}
+              {migrated ? "Migrated" : encounter?.status ?? "loading"}
             </span>
           </div>
           {patient.id && <BalanceChips patientReference={`Patient/${patient.id}`} />}
@@ -233,14 +235,16 @@ export function EncounterHeader({ patient, encounterId }: Props) {
           <RoleSelector />
           <button
             onClick={abandonEncounter}
-            disabled={busy !== null}
+            disabled={busy !== null || migrated}
+            title={migrated ? "Migrated historical encounters are read-only." : undefined}
             className="rounded border border-white/15 px-3 py-2 text-sm text-white/65 transition hover:border-red-400/60 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "abandon" ? "Abandoning..." : "Abandon encounter"}
           </button>
           <button
             onClick={requestFinishEncounter}
-            disabled={busy !== null}
+            disabled={busy !== null || migrated}
+            title={migrated ? "Migrated historical encounters are read-only." : undefined}
             className="rounded border border-emerald-400/60 bg-emerald-400/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy === "checking" ? "Checking..." : busy === "finish" ? "Signing..." : "Sign & finish"}

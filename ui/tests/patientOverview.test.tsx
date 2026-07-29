@@ -89,6 +89,33 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Start today&#x27;s visit →/);
 });
 
+test("a migrated ledger row is visibly tagged and opens its encounter without requiring a diagnosis chip", () => {
+  const migrated = fixture();
+  migrated.visits[1] = {
+    ...migrated.visits[1]!,
+    status: "Migrated",
+    diagnoses: [],
+  };
+  useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={migrated} />);
+  });
+
+  const row = renderer.root.findAllByProps({ className: "odos-visit-row" })
+    .find((candidate) => String(candidate.props["aria-label"]).includes("Office visit"));
+  assert.ok(row);
+  assert.match(JSON.stringify(renderer.toJSON()), /Migrated/);
+  assert.equal(row.props.role, "button");
+  assert.equal(row.props.tabIndex, 0);
+  act(() => row.props.onClick());
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "older",
+  });
+});
+
 test("zero-data overview renders an honest empty state for every snapshot section", () => {
   const empty = fixture();
   empty.insurance = [];

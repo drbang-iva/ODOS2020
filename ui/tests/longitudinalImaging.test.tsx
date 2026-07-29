@@ -56,7 +56,8 @@ function image(id: string, seriesReference: string, structure: string): Longitud
     createdAt: "2026-07-18T15:00:00.000Z",
     title: `${id}.jpg`,
     contentType: "image/jpeg",
-    data: DATA,
+    contentUrl: `data:image/jpeg;base64,${DATA}`,
+    contentState: "available",
     structure,
     seriesReference,
   };

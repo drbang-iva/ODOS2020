@@ -4,6 +4,7 @@ import type { Bundle, Media, Provenance, QuestionnaireResponse } from "@medplum/
 import {
   handleLongitudinalImagingCaptureRequest,
   handleLongitudinalImagingListRequest,
+  MAX_MANUAL_IMAGING_BYTES,
   suggestComparisonPair,
   type ImagingEndpointDeps,
   type LongitudinalImageSummary,
@@ -15,7 +16,6 @@ import {
 } from "../src/fhir/aestheticsConsent.js";
 
 const AUTH = "Bearer good";
-const LONGITUDINAL_IMAGE_LIMIT_BYTES = 1 * 1024 * 1024;
 const DATA = Buffer.from("clinical photo").toString("base64");
 const BODY = {
   patientReference: "Patient/p1",
@@ -32,6 +32,24 @@ class PhotoFhir {
   readonly responses: QuestionnaireResponse[] = [];
   readonly sources: string[] = [];
   readonly searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
+
+  async read<T extends Media>(_resourceType: T["resourceType"], id: string): Promise<T> {
+    const row = this.media.find((candidate) => candidate.id === id);
+    if (!row) throw new Error(`Missing Media/${id}`);
+    return {
+      ...structuredClone(row),
+      content: {
+        ...structuredClone(row.content),
+        url: row.content.url?.startsWith("Binary/")
+          ? `https://storage.test/${row.content.url.slice("Binary/".length)}/1?Expires=60&Signature=signed`
+          : row.content.url,
+      },
+    } as T;
+  }
+
+  async patch<T extends Media>(): Promise<T> {
+    throw new Error("Unexpected patch");
+  }
 
   async search<T extends Media | QuestionnaireResponse>(
     resourceType: T["resourceType"],
@@ -69,6 +87,20 @@ function deps(fhir: PhotoFhir): ImagingEndpointDeps {
       staffReference: "Practitioner/doc1",
       actorRole: "clinician",
       fhir,
+      binaryAuth: {
+        baseUrl: "http://medplum.test",
+        accessToken: "good",
+        fetch: async (_url, init) => new Response(JSON.stringify({
+          resourceType: "Binary",
+          id: `binary-${fhir.media.length + 1}`,
+          contentType: init?.headers
+            ? new Headers(init.headers).get("Content-Type") ?? undefined
+            : undefined,
+        }), {
+          status: 201,
+          headers: { "Content-Type": "application/fhir+json" },
+        }),
+      },
     } : null,
     procedureDefinitions: buildProcedureDefinitionSeeds,
     now: () => "2026-07-18T15:00:00.000Z",
@@ -88,7 +120,7 @@ test("longitudinal capture blocks before any Media write when cosmetic consent i
   assert.equal(fhir.provenances.length, 0);
 });
 
-test("longitudinal capture rejects above-ceiling files with the truthful 1 MB message", async () => {
+test("longitudinal capture rejects above-ceiling files with the truthful 15 MB message", async () => {
   const fhir = new PhotoFhir();
   fhir.responses.push(consent());
   const result = await handleLongitudinalImagingCaptureRequest(deps(fhir), {
@@ -97,22 +129,26 @@ test("longitudinal capture rejects above-ceiling files with the truthful 1 MB me
       ...BODY,
       file: {
         ...BODY.file,
-        data: Buffer.alloc(LONGITUDINAL_IMAGE_LIMIT_BYTES + 1).toString("base64"),
+        data: Buffer.alloc(MAX_MANUAL_IMAGING_BYTES + 1).toString("base64"),
       },
     },
   });
   assert.equal(result.status, 400);
-  assert.deepEqual(result.body, { error: "Imaging files may not exceed 1 MB." });
+  assert.deepEqual(result.body, { error: "Imaging files may not exceed 15 MB." });
   assert.equal(fhir.media.length, 0);
 });
 
-test("consented capture tags Media to patient, series, session, and structure", async () => {
+test("consented raw Binary capture above 1 MB tags Media to patient, series, session, and structure", async () => {
   const fhir = new PhotoFhir();
   fhir.responses.push(consent());
   fhir.responses.push({ ...consent(), subject: { reference: "Patient/other" } });
+  const bytes = Buffer.alloc((1 * 1024 * 1024) + 1, 4);
   const result = await handleLongitudinalImagingCaptureRequest(deps(fhir), {
     authHeader: AUTH,
-    body: BODY,
+    body: {
+      ...BODY,
+      file: { ...BODY.file, data: bytes.toString("base64") },
+    },
   });
 
   assert.equal(result.status, 201, JSON.stringify(result.body));
@@ -121,7 +157,13 @@ test("consented capture tags Media to patient, series, session, and structure", 
   assert.equal(fhir.media[0]?.bodySite?.text, "Lid margin");
   assert.equal(fhir.media[0]?.basedOn?.[0]?.reference, "CarePlan/series-1");
   assert.equal(fhir.media[0]?.partOf?.[0]?.reference, "Procedure/session-1");
-  assert.equal(fhir.media[0]?.content.data, DATA);
+  assert.equal(fhir.media[0]?.content.data, undefined);
+  assert.equal(fhir.media[0]?.content.url, "Binary/binary-1");
+  assert.equal(fhir.media[0]?.content.size, bytes.byteLength);
+  assert.equal(
+    (result.body as { image: LongitudinalImageSummary }).image.contentUrl,
+    "https://storage.test/binary-1/1?Expires=60&Signature=signed",
+  );
   assert.deepEqual(fhir.sources, ["mcp/longitudinal_imaging", "mcp/longitudinal_imaging"]);
   assert.equal((result.body as { defaultLens: string }).defaultLens, "compare");
   const consentSearch = fhir.searches.find((search) => search.resourceType === "QuestionnaireResponse");
@@ -132,8 +174,14 @@ test("consented capture tags Media to patient, series, session, and structure", 
 
 test("timeline read returns patient images and suggests the same-series comparison", async () => {
   const fhir = new PhotoFhir();
+  const current = photo("current", "2026-07-18T15:00:00.000Z", "CarePlan/series-1");
+  current.content = {
+    contentType: "image/jpeg",
+    url: "https://storage.test/current/1?Expires=60&Signature=signed",
+    title: "current.jpg",
+  };
   fhir.media.push(
-    photo("current", "2026-07-18T15:00:00.000Z", "CarePlan/series-1"),
+    current,
     photo("baseline", "2026-06-18T15:00:00.000Z", "CarePlan/series-1"),
   );
   const result = await handleLongitudinalImagingListRequest(deps(fhir), {
@@ -146,6 +194,9 @@ test("timeline read returns patient images and suggests the same-series comparis
     "Media/baseline",
     "Media/current",
   ]);
+  const images = (result.body as { images: LongitudinalImageSummary[] }).images;
+  assert.equal(images[0]?.contentUrl, "https://storage.test/current/1?Expires=60&Signature=signed");
+  assert.match(images[1]?.contentUrl ?? "", /^data:image\/jpeg;base64,/);
 });
 
 test("pair suggestion prefers matching series and structure over chronology alone", () => {
@@ -191,7 +242,8 @@ function summary(id: string, seriesReference: string, structure: string): Longit
     createdAt: "2026-07-18T15:00:00.000Z",
     title: `${id}.jpg`,
     contentType: "image/jpeg",
-    data: DATA,
+    contentUrl: `data:image/jpeg;base64,${DATA}`,
+    contentState: "available",
     structure,
     seriesReference,
   };

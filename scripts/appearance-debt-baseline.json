@@ -11,7 +11,7 @@
   "ui/src/components/charting/DiagnosisPicker.tsx": 8,
   "ui/src/components/charting/DryEyeSection.tsx": 30,
   "ui/src/components/charting/EncounterHeader.tsx": 20,
-  "ui/src/components/charting/ImagingSection.tsx": 9,
+  "ui/src/components/charting/ImagingSection.tsx": 0,
   "ui/src/components/charting/IopSection.tsx": 20,
   "ui/src/components/charting/IopTimeline.tsx": 54,
   "ui/src/components/charting/MyopiaManagementSection.tsx": 39,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 export type PhotoLens = "timeline" | "compare";
@@ -14,7 +14,8 @@ export interface LongitudinalImageSummary {
   createdAt: string;
   title: string;
   contentType: string;
-  data: string;
+  contentUrl?: string;
+  contentState: "available" | "missing";
   structure: string;
   seriesReference?: string;
   procedureReference?: string;
@@ -26,9 +27,10 @@ interface ImagingPayload {
   error?: string;
 }
 
-const MAX_FILE_BYTES = 1 * 1024 * 1024;
+const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
+  const retriedImages = useRef(new Set<string>());
   const [definitions, setDefinitions] = useState<ProcedureDefinitionSummary[]>([]);
   const [definitionKey, setDefinitionKey] = useState("");
   const [lens, setLens] = useState<PhotoLens>("timeline");
@@ -43,7 +45,7 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
-  async function loadImages() {
+  async function loadImages(): Promise<LongitudinalImageSummary[]> {
     const response = await fetch(
       `${clinicalGraphApiBase()}/clinical-graph/longitudinal-imaging?patient=${encodeURIComponent(patientReference)}`,
       { headers: authHeaders() },
@@ -52,10 +54,12 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
     if (!response.ok) throw new Error(body.error ?? `Clinical-photo timeline failed: ${response.status}`);
     setImages(body.images ?? []);
     setSuggestedPair(body.suggestedPair);
+    return body.images ?? [];
   }
 
   useEffect(() => {
     let cancelled = false;
+    retriedImages.current.clear();
     Promise.all([
       fetch(`${clinicalGraphApiBase()}/clinical-graph/procedure-definitions`, { headers: authHeaders() })
         .then(async (response) => {
@@ -120,7 +124,7 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
       return;
     }
     if (next.size > MAX_FILE_BYTES) {
-      setError("Clinical photos may not exceed 1 MB.");
+      setError("Clinical photos may not exceed 15 MB.");
       return;
     }
     setFile(next);
@@ -165,6 +169,35 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
     }
   }
 
+  async function retryImage(image: LongitudinalImageSummary) {
+    if (retriedImages.current.has(image.mediaReference)) {
+      setImages((currentImages) => currentImages.map((candidate) =>
+        candidate.mediaReference === image.mediaReference
+          ? { ...candidate, contentUrl: undefined, contentState: "missing" }
+          : candidate
+      ));
+      return;
+    }
+    retriedImages.current.add(image.mediaReference);
+    try {
+      const refreshed = await loadImages();
+      const replacement = refreshed.find((candidate) => candidate.mediaReference === image.mediaReference);
+      if (!replacement?.contentUrl || replacement.contentUrl === image.contentUrl) {
+        setImages((currentImages) => currentImages.map((candidate) =>
+          candidate.mediaReference === image.mediaReference
+            ? { ...candidate, contentUrl: undefined, contentState: "missing" }
+            : candidate
+        ));
+      }
+    } catch {
+      setImages((currentImages) => currentImages.map((candidate) =>
+        candidate.mediaReference === image.mediaReference
+          ? { ...candidate, contentUrl: undefined, contentState: "missing" }
+          : candidate
+      ));
+    }
+  }
+
   return (
     <section data-testid="longitudinal-imaging-card" className="rounded border border-white/10 bg-bg-mid/60 p-3">
       <div className="flex items-start justify-between gap-3">
@@ -194,7 +227,13 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
           {images.length === 0 && <p className="text-xs text-white/40">No longitudinal photos recorded.</p>}
           {images.map((image) => (
             <figure key={image.mediaReference} className="overflow-hidden rounded border border-white/10 bg-bg-deep">
-              <img className="aspect-[4/3] w-full object-cover" src={imageSource(image)} alt={`${image.structure} ${localDate(image.createdAt)}`} />
+              {image.contentState === "available" && image.contentUrl ? (
+                <img className="aspect-[4/3] w-full object-cover" src={image.contentUrl} alt={`${image.structure} ${localDate(image.createdAt)}`} onError={() => void retryImage(image)} />
+              ) : (
+                <div role="img" aria-label={`${image.title} unavailable`} className="flex aspect-[4/3] items-center justify-center bg-red-950/20 p-3 text-center text-xs text-red-200">
+                  Image unavailable. Metadata remains in the chart.
+                </div>
+              )}
               <figcaption className="p-2 text-xs text-white/55">
                 <strong className="block text-white/75">{image.structure}</strong>
                 {localDate(image.createdAt)} · {image.title}
@@ -213,8 +252,8 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
                 <ImageSelect label="Current" value={currentReference} images={images} onChange={setCurrentReference} />
               </div>
               <div className="grid grid-cols-2 gap-1 overflow-hidden rounded border border-white/10 bg-bg-deep">
-                {baseline && <ImageTile image={baseline} label="Baseline" />}
-                {current && <ImageTile image={current} label="Current" />}
+                {baseline && <ImageTile image={baseline} label="Baseline" onImageError={() => void retryImage(baseline)} />}
+                {current && <ImageTile image={current} label="Current" onImageError={() => void retryImage(current)} />}
               </div>
               {baseline?.seriesReference && baseline.seriesReference === current?.seriesReference && (
                 <p className="text-[11px] text-brand-light">Suggested from the same treatment series.</p>
@@ -237,12 +276,15 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
             <div className="relative aspect-[4/3] overflow-hidden rounded border border-white/10 bg-black">
               <img src={previewUrl} alt="New clinical photo preview" className="absolute inset-0 h-full w-full object-contain" />
               {ghost && (
-                <img
-                  src={imageSource(ghost)}
-                  alt="Prior photo alignment guide"
-                  className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-                  style={{ opacity: overlayOpacity / 100 }}
-                />
+                ghost.contentState === "available" && ghost.contentUrl && (
+                  <img
+                    src={ghost.contentUrl}
+                    alt="Prior photo alignment guide"
+                    className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                    style={{ opacity: overlayOpacity / 100 }}
+                    onError={() => void retryImage(ghost)}
+                  />
+                )
               )}
             </div>
           )}
@@ -301,17 +343,25 @@ function ImageSelect({
   );
 }
 
-function ImageTile({ image, label }: { image: LongitudinalImageSummary; label: string }) {
+function ImageTile({
+  image,
+  label,
+  onImageError,
+}: {
+  image: LongitudinalImageSummary;
+  label: string;
+  onImageError: () => void;
+}) {
   return (
     <figure className="min-w-0">
-      <img className="aspect-square w-full object-cover" src={imageSource(image)} alt={`${label}: ${image.structure}`} />
+      {image.contentState === "available" && image.contentUrl ? (
+        <img className="aspect-square w-full object-cover" src={image.contentUrl} alt={`${label}: ${image.structure}`} onError={onImageError} />
+      ) : (
+        <div role="img" aria-label={`${label}: ${image.title} unavailable`} className="flex aspect-square items-center justify-center bg-red-950/20 p-2 text-center text-[10px] text-red-200">Image unavailable</div>
+      )}
       <figcaption className="p-1.5 text-[10px] text-white/45">{label} · {localDate(image.createdAt)}</figcaption>
     </figure>
   );
-}
-
-function imageSource(image: Pick<LongitudinalImageSummary, "contentType" | "data">): string {
-  return `data:${image.contentType};base64,${image.data}`;
 }
 
 function localDate(value: string): string {
