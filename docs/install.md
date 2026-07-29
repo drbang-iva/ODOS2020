@@ -30,12 +30,17 @@ git clone https://github.com/drbang-iva/ODOS2020.git
 cd ODOS2020
 npm install
 cd mcp && npm install && cd ..
+cd ui && npm install && cd ..
 npm run generate-medplum-signing-keys
 docker-compose up -d
 docker-compose ps
 ```
 
 The root `docker-compose.yml` starts Postgres, Redis, Medplum server, and the local Medplum admin UI. ODOS setup and preflight commands run from the repo against that local stack.
+Run `npm install` in `mcp/` after pulling changes as well as during first install.
+Its dependencies are separate from the root package; stale `mcp/node_modules` can
+otherwise surface only at backend start as an `ERR_MODULE_NOT_FOUND` crash loop
+(for example, when `csv-parse` is first imported by a newly pulled job).
 
 The signing-key generator writes independent main and DR-drill RSA keys to ignored,
 mode-0600 files under `.odos/`. Medplum 5.1.8 loads the tracked JSON first and then
@@ -83,7 +88,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_SETUP_STATE_PATH` | no | Defaults to `./.odos-setup-state.json`. No PHI is written there. |
 | `ODOS_SETUP_INTERACTIVE_ACK` | no | Set to `human-supervised` only when a human is intentionally running without a TTY. |
 | `ODOS_MCP_TRANSPORT` | yes for the browser UI | Set to `sse` so the UI can call the local HTTP routes. The default `stdio` mode is for launch-on-demand MCP clients. |
-| `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Path to the local mode-0600 SMART RS256 private key. |
+| `ODOS_SMART_SIGNING_KEY_PATH` | yes for the local HTTP backend | Absolute path to the local mode-0600 SMART RS256 private key. |
 | `ODOS_BACKUP_DIR` | no | Destination used by backup scripts and backup-destination verification. |
 
 ## Setup Wizard
@@ -152,7 +157,19 @@ This is the normal recovery path for partial local provisioning. A volume wipe i
 
 ## Developer Screen Bring-up
 
-After the Compose stack is running and `.env` contains the existing local developer credentials:
+After the Compose stack is running, copy both environment templates and fill in
+the root `.env` with the local developer credentials. Keep
+`VITE_ODOS_MCP_BASE_URL=http://localhost:3333` in `ui/.env`:
+
+```bash
+test -e .env || cp .env.example .env
+test -e ui/.env || cp ui/.env.example ui/.env
+```
+
+When either template gains new variables, diff its `.env.example` against the existing `.env`
+and copy the additions deliberately.
+
+Then repair the local practice roles:
 
 ```bash
 npm run repair-practice-roles -- --email "$HUMAN_EMAIL"
@@ -163,20 +180,59 @@ Start the two checked-in launch configurations in `.claude/launch.json`:
 | Launch | Address | Purpose |
 |---|---|---|
 | `odos-mcp` | `http://localhost:3333` | ODOS service routes used by Desk, Statements, and Clinic. |
-| `odos-ui` | `http://localhost:5173` | Browser UI. |
+| `odos-ui` | `http://localhost:5173` | Browser UI; requires `odos-mcp` to be running. |
 
-The `odos-mcp` launch must run with `ODOS_MCP_TRANSPORT=sse`; otherwise it starts only the stdio MCP transport and does not expose the browser-facing HTTP routes. Generate the local SMART signing key once before starting the backend:
+The `odos-mcp` launch must run with `ODOS_MCP_TRANSPORT=sse`; otherwise it starts only the stdio MCP transport and does not expose the browser-facing HTTP routes. Generate an RSA-2048 local SMART signing key once before starting the backend:
 
 ```bash
 mkdir -p .odos/keys
-odos certs generate --purpose smart-signing --out .odos/keys/smart-signing.pem
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .odos/keys/smart-signing.pem
 chmod 600 .odos/keys/smart-signing.pem
 export ODOS_SMART_SIGNING_KEY_PATH="$PWD/.odos/keys/smart-signing.pem"
 ```
 
-Keep the private key outside git and preserve its `0600` permissions. The service fails closed when a signing-required action has no usable key.
+Keep the private key outside git and preserve its `0600` permissions. Node must
+be able to parse it as a private key, and the service enforces the exact mode and
+fails closed if the path is missing or the mode is not `0600`. Put the absolute
+path emitted by the export command into the root `.env`.
 
-Open `http://localhost:5173`, then sign in through the ODOS login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` service identity; no password is stored in this repository.
+Start the backend from the `mcp/` package in one terminal. There is no root-level
+backend start script; load the root environment before changing directories:
+
+```bash
+set -a
+source .env
+set +a
+cd mcp && npm run dev
+```
+
+Start the UI in a second terminal:
+
+```bash
+cd ui && npm run dev
+```
+
+Open `http://localhost:5173`, then sign in through the ODOS login screen with the human account named by `--email`. Keep that account distinct from the `MEDPLUM_ADMIN_EMAIL` service identity; no password is stored in this repository. The UI is inert unless the backend is running on `http://localhost:3333`.
+
+### Remote Browser Access
+
+Keep both development services bound to loopback. The MCP server intentionally
+fails closed if its SSE transport is bound to `0.0.0.0` or any other
+non-loopback host without `ODOS_MCP_TLS`; do not set that variable merely to
+bypass the control. From the operator workstation, tunnel both loopback
+services instead:
+
+```bash
+ssh -N -o ExitOnForwardFailure=yes -L 5173:127.0.0.1:5173 -L 3333:127.0.0.1:3333 <user>@<host>
+```
+
+If either local port is already in use, SSH exits instead of leaving a partial tunnel that can
+make the browser show a different local application.
+
+Then open `http://localhost:5173` on the operator workstation. The tunnel keeps
+the shipped `VITE_ODOS_MCP_BASE_URL=http://localhost:3333` default correct, so
+remote access does not require exposing either service or overriding the UI
+backend URL.
 
 To open a patient chart directly, use `http://localhost:5173/clinic?patientId=<id>`; add `&encounterId=<id>` to open a specific encounter.
 
