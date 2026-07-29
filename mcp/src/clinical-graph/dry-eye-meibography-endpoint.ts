@@ -42,7 +42,8 @@ export interface DryEyeMeibographyEndpointDeps {
 const WRITE_HEADERS = {
   "X-ODOS-Source": "mcp/create_meibography_observation",
 } as const;
-const MAX_IMAGE_BASE64_LENGTH = Math.ceil((15 * 1024 * 1024) / 3) * 4;
+const MAX_IMAGE_BYTES = 1 * 1024 * 1024;
+const MAX_IMAGE_BASE64_LENGTH = Math.ceil((1 * 1024 * 1024) / 3) * 4;
 
 const captureSchema = z.object({
   patientReference: z.string().regex(/^Patient\/[^/]+$/),
@@ -91,6 +92,9 @@ export async function handleDryEyeMeibographyCaptureRequest(
       status: 400,
       body: { error: parsed.error.issues[0]?.message ?? "Invalid meibography capture." },
     };
+  }
+  if (Buffer.from(parsed.data.file.data, "base64").byteLength > MAX_IMAGE_BYTES) {
+    return { status: 400, body: { error: "Meibography images may not exceed 1 MB." } };
   }
   const recordedAt = deps.now?.() ?? new Date().toISOString();
   let documentReferenceInput: DocumentReference;

@@ -15,6 +15,7 @@ import {
 } from "../src/fhir/aestheticsConsent.js";
 
 const AUTH = "Bearer good";
+const LONGITUDINAL_IMAGE_LIMIT_BYTES = 1 * 1024 * 1024;
 const DATA = Buffer.from("clinical photo").toString("base64");
 const BODY = {
   patientReference: "Patient/p1",
@@ -85,6 +86,24 @@ test("longitudinal capture blocks before any Media write when cosmetic consent i
   assert.match(JSON.stringify(result.body), /consent is required/i);
   assert.equal(fhir.media.length, 0);
   assert.equal(fhir.provenances.length, 0);
+});
+
+test("longitudinal capture rejects above-ceiling files with the truthful 1 MB message", async () => {
+  const fhir = new PhotoFhir();
+  fhir.responses.push(consent());
+  const result = await handleLongitudinalImagingCaptureRequest(deps(fhir), {
+    authHeader: AUTH,
+    body: {
+      ...BODY,
+      file: {
+        ...BODY.file,
+        data: Buffer.alloc(LONGITUDINAL_IMAGE_LIMIT_BYTES + 1).toString("base64"),
+      },
+    },
+  });
+  assert.equal(result.status, 400);
+  assert.deepEqual(result.body, { error: "Imaging files may not exceed 1 MB." });
+  assert.equal(fhir.media.length, 0);
 });
 
 test("consented capture tags Media to patient, series, session, and structure", async () => {

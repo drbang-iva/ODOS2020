@@ -146,10 +146,11 @@ async function installCanonicalResource(resource: CanonicalResource, file: strin
       `${file} is not a supported canonical resource with a canonical url.`,
     );
   }
+  const canonicalUrl = resource.url;
   const installResource = await hydrateStructureDefinitionSnapshot(resource);
 
   const existingBundle = await fhir.search<CanonicalResource>(installResource.resourceType, {
-    url: installResource.url,
+    url: canonicalUrl,
     _count: "1",
   });
   const existing = existingBundle.entry?.[0]?.resource;
@@ -361,10 +362,12 @@ function parseLabMappingYaml(text: string, file: string): LabMappingInput {
     targetUri,
     organizationReference: scalars.organization_reference,
     mappings: mappings.map((mapping) => ({
-      sourceCode: mapping.sourceCode ?? (mapping as Record<string, string>).source,
-      sourceDisplay: mapping.sourceDisplay ?? (mapping as Record<string, string>).source_display,
-      targetCode: mapping.targetCode ?? (mapping as Record<string, string>).target,
-      targetDisplay: mapping.targetDisplay ?? (mapping as Record<string, string>).target_display,
+      sourceCode: mapping.sourceCode ?? (mapping as unknown as Record<string, string>).source,
+      sourceDisplay: mapping.sourceDisplay
+        ?? (mapping as unknown as Record<string, string>).source_display,
+      targetCode: mapping.targetCode ?? (mapping as unknown as Record<string, string>).target,
+      targetDisplay: mapping.targetDisplay
+        ?? (mapping as unknown as Record<string, string>).target_display,
       equivalence: mapping.equivalence,
     })),
   };

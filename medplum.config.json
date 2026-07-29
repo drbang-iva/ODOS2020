@@ -4,9 +4,9 @@
   "appBaseUrl": "http://localhost:8100/",
   "storageBaseUrl": "http://localhost:8103/storage/",
   "binaryStorage": "file:/data/binary/",
-  "signingKeyId": "dev-signing-key",
-  "signingKey": "dev-only-key-replace-before-production",
-  "signingKeyPassphrase": "dev",
+  "signingKeyId": "INERT_ENV_OVERLAY_REQUIRED",
+  "signingKey": "INERT_ENV_OVERLAY_REQUIRED",
+  "signingKeyPassphrase": "INERT_ENV_OVERLAY_REQUIRED",
   "supportEmail": "admin@odos.local",
   "database": {
     "host": "postgres",

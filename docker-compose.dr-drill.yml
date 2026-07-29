@@ -33,6 +33,14 @@ services:
       timeout: 3s
       retries: 10
 
+  medplum-binary-init:
+    image: alpine:3.21
+    user: "0:0"
+    command: ["chown", "-R", "1000:1000", "/data/binary"]
+    volumes:
+      - odos_dr_drill_binary:/data/binary
+    restart: "no"
+
   medplum-server:
     image: medplum/medplum-server:5.1.8
     restart: unless-stopped
@@ -41,13 +49,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      medplum-binary-init:
+        condition: service_completed_successfully
+    env_file:
+      - .odos/medplum-dr-drill-signing.env
     volumes:
       - ./medplum.dr-drill.config.json:/config/medplum.config.json:ro
       - odos_dr_drill_binary:/data/binary
       - ./backup-dr-drill:/backup
     ports:
       - "18103:8103"
-    command: ["file:/config/medplum.config.json"]
+    command: ["file:/config/medplum.config.json,env"]
 
   medplum-app:
     image: medplum/medplum-app:5.1.8

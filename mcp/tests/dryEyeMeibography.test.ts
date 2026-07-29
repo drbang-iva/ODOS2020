@@ -149,6 +149,25 @@ test("meibography capture distinguishes input validation from upstream persisten
   );
 });
 
+test("meibography capture rejects a decoded payload one byte above 1 MiB", async () => {
+  const fhir = new MemoryFhir();
+  const result = await handleDryEyeMeibographyCaptureRequest(deps(fhir), {
+    authHeader: AUTH,
+    body: captureBody({
+      file: {
+        name: "oversized-meibography.png",
+        contentType: "image/png",
+        data: Buffer.alloc(1 * 1024 * 1024 + 1).toString("base64"),
+      },
+    }),
+  });
+  assert.deepEqual(result, {
+    status: 400,
+    body: { error: "Meibography images may not exceed 1 MB." },
+  });
+  assert.equal(fhir.writes.length, 0);
+});
+
 test("meibography history keeps score metadata when one image read fails", async () => {
   const fhir = new MemoryFhir();
   const captured = await handleDryEyeMeibographyCaptureRequest(deps(fhir), {

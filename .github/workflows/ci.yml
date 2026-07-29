@@ -32,6 +32,10 @@ jobs:
             package-lock.json
             mcp/package-lock.json
             ui/package-lock.json
+      - name: install root deps
+        run: npm ci
+      - name: generate ephemeral Medplum signing keys
+        run: npm run generate-medplum-signing-keys
       - name: start Medplum contract backend
         run: >-
           docker compose -p odos-contract-ci -f docker-compose.dr-drill.yml
@@ -47,8 +51,6 @@ jobs:
           done
           docker compose -p odos-contract-ci -f docker-compose.dr-drill.yml logs medplum-server
           exit 1
-      - name: install root deps
-        run: npm ci
       - name: install mcp deps
         working-directory: mcp
         run: npm ci
@@ -58,6 +60,8 @@ jobs:
       - name: install ui deps
         working-directory: ui
         run: npm ci
+      - name: typecheck scripts
+        run: npm run typecheck:scripts
       - name: typecheck mcp
         working-directory: mcp
         run: npx tsc --noEmit

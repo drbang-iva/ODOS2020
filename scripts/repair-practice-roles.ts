@@ -23,7 +23,7 @@ import { assertLocalMedplumBaseUrl, decidePracticeRoleTag } from "./reseed-pract
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 const DEFAULT_POSTGRES_URL = "postgresql://medplum:medplum@127.0.0.1:5432/medplum";
-export const DEV_ADMIN_ROLE: PracticeRoleId = "front-desk";
+export const DEV_ADMIN_ROLE = "front-desk" as const satisfies PracticeRoleId;
 export const DEV_ADMIN_GRANT_ROLES = [DEV_ADMIN_ROLE, "practice-admin", "clinician"] as const;
 export type DevAdminGrantRole = (typeof DEV_ADMIN_GRANT_ROLES)[number];
 export type DevAdminPrimaryRole = Extract<DevAdminGrantRole, "front-desk" | "clinician">;

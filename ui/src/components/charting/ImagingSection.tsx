@@ -22,7 +22,7 @@ const CONTENT_TYPE_BY_EXTENSION = {
 } as const;
 const ACCEPTED_FILE_TYPES = Object.keys(CONTENT_TYPE_BY_EXTENSION).map((extension) => `.${extension}`).join(",");
 const ACCEPTED_CONTENT_TYPES = new Set<string>(Object.values(CONTENT_TYPE_BY_EXTENSION));
-const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const MAX_FILE_BYTES = 1 * 1024 * 1024;
 const CATEGORY_OPTIONS = [
   ["visual-field", "Visual field printout"],
   ["fundus-photo", "Fundus photo"],
@@ -53,7 +53,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     }
     if (next.size > MAX_FILE_BYTES) {
       setFile(null);
-      setError("Files may not exceed 15 MB.");
+      setError("Files may not exceed 1 MB.");
       return;
     }
     setFile(next);
@@ -147,7 +147,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             onDrop={dropFile}
           >
             <span className="text-base font-semibold text-white">Drop a scan or image here</span>
-            <span className="mt-2 text-sm text-white/45">or choose a PDF, JPEG, PNG, TIFF, HEIC, BMP, or WebP file · 15 MB max</span>
+            <span className="mt-2 text-sm text-white/45">or choose a PDF, JPEG, PNG, TIFF, HEIC, BMP, or WebP file · 1 MB max</span>
             {file && <span className="mt-4 rounded bg-brand/15 px-3 py-2 text-sm text-brand-light">{file.name} · {formatBytes(file.size)}</span>}
           </div>
           <input
