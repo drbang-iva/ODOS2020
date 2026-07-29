@@ -39,6 +39,7 @@ import {
 import { runPatientImportCli } from "./import-legacy-patient-m2a.js";
 import {
   assertCanonicalClinicianPolicy,
+  assertLocalBaseUrl,
   setupLegacyImporter,
 } from "./setup-legacy-importer.js";
 import { runSetupPractice } from "./setup-practice.js";
@@ -46,11 +47,10 @@ import {
   verifyImporterProjectMembershipDenied,
   verifyLegacyImportM2aReachability,
 } from "./verify-legacy-import-m2a.js";
-import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const headSha = requiredEnv("GATE_HEAD_SHA");
 const baseUrl = requiredEnv("MEDPLUM_BASE_URL");
-assertLocalMedplumBaseUrl(baseUrl);
+assertLocalBaseUrl(baseUrl);
 const postgresUrl = requiredEnv("ODOS_POSTGRES_URL");
 const stateDirectory = requiredEnv("ODOS_M2A_STATE_DIR");
 const credentialsPath = join(process.cwd(), ".odos", "migration-importer.env");

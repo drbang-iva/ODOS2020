@@ -326,9 +326,10 @@ function requireEnv(name: string): string {
   return value;
 }
 
-function assertLocalBaseUrl(value: string): void {
+export function assertLocalBaseUrl(value: string): void {
   const url = new URL(value);
-  if (!["localhost", "127.0.0.1", "::1", "medplum-server"].includes(url.hostname)) {
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  if (!["localhost", "127.0.0.1", "::1", "medplum-server"].includes(hostname)) {
     throw new Error("Migration importer setup is restricted to a local self-hosted Medplum.");
   }
 }

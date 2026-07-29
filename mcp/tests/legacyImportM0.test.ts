@@ -33,6 +33,7 @@ import {
   type StoredPracticeClinicianPolicy,
 } from "../src/legacy-import/orphan-sweep.js";
 import {
+  assertLocalBaseUrl,
   reconciledAccessPolicy,
   resolvePracticeProjectId,
   samePolicyDefinition,
@@ -52,6 +53,21 @@ const source: LegacyMediaSource = {
   encounterReference: "Encounter/22222222-2222-4222-8222-222222222222",
 };
 const binaryId = "33333333-3333-4333-8333-333333333333";
+
+test("legacy importer local-base guard rejects private-network hosts", () => {
+  for (const baseUrl of [
+    "http://localhost:8103",
+    "http://127.0.0.1:8103",
+    "http://[::1]:8103",
+    "http://medplum-server:8103",
+  ]) {
+    assert.doesNotThrow(() => assertLocalBaseUrl(baseUrl));
+  }
+  assert.throws(
+    () => assertLocalBaseUrl("http://192.168.1.25:8103"),
+    /restricted to a local self-hosted Medplum/,
+  );
+});
 
 test("raw Binary upload sends >1 MB bytes and the parser security-context headers", async () => {
   let observed: RequestInit | undefined;
