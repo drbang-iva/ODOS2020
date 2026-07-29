@@ -1,9 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { homedir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
 
-export const DEFAULT_M2A_STATE_DIR = "/Users/iris/Migration/importer-state";
+export const DEFAULT_M2A_STATE_DIR =
+  process.env.ODOS_M2A_STATE_DIR?.trim() || join(homedir(), ".odos", "legacy-import-m2a");
 
 export type ImportAction = "created" | "updated" | "skipped" | "conflict";
 export type GrantAction = "added" | "skipped" | "conflict";
@@ -57,11 +59,14 @@ export class ImportLedger {
   }
 
   finishRun(runId: string, status: "patient-imported" | "completed" | "failed"): void {
-    this.database.prepare(`
+    const result = this.database.prepare(`
       UPDATE runs
       SET completed_at = ?, status = ?
       WHERE run_id = ?
     `).run(this.now(), status, runId);
+    if (result.changes !== 1) {
+      throw new Error(`Import run ${runId} is not present in the ledger.`);
+    }
   }
 
   recordResourceAction(input: {

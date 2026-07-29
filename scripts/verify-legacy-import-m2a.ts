@@ -22,6 +22,16 @@ export interface M2aReachabilityResult {
   readonly transcript: readonly string[];
 }
 
+export class ReachabilityVerificationError extends Error {
+  constructor(
+    message: string,
+    readonly transcript: readonly string[],
+  ) {
+    super(message);
+    this.name = "ReachabilityVerificationError";
+  }
+}
+
 export async function verifyLegacyImportM2aReachability(
   input: M2aReachabilityInput,
 ): Promise<M2aReachabilityResult> {
@@ -86,6 +96,14 @@ export async function verifyLegacyImportM2aReachability(
     input.clinicianToken,
     200,
     "clinician media_read",
+    transcript,
+  );
+  await expectStatus(
+    request,
+    resourceUrl(input.baseUrl, "Observation", observationId),
+    input.clinicianToken,
+    200,
+    "clinician observation_read",
     transcript,
   );
 
@@ -199,9 +217,10 @@ async function expectSearch(
   }
   transcript.push(`${label} status=${response.status} matches=${matchCount}`);
   if (response.status !== 200 || matchCount !== 1) {
-    throw new Error(
+    throw new ReachabilityVerificationError(
       `${label} expected status 200 with one exact Patient; `
       + `received ${response.status} with ${matchCount}.`,
+      [...transcript],
     );
   }
 }
@@ -223,7 +242,10 @@ async function expectStatus(
   });
   transcript.push(`${label} status=${response.status}`);
   if (response.status !== expected) {
-    throw new Error(`${label} expected ${expected}; received ${response.status}.`);
+    throw new ReachabilityVerificationError(
+      `${label} expected ${expected}; received ${response.status}.`,
+      [...transcript],
+    );
   }
 }
 
@@ -268,6 +290,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(result.transcript.join("\n"));
     console.log("LEGACY_IMPORT_M2A_REACHABILITY PASS");
   } catch (error) {
+    if (error instanceof ReachabilityVerificationError && error.transcript.length > 0) {
+      console.error(error.transcript.join("\n"));
+    }
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   }

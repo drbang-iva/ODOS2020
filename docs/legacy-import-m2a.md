@@ -11,6 +11,30 @@ The clinical-data and authorization actors remain separate:
   `ODOS_OPERATOR_ACCESS_TOKEN`.
 - The migration importer AccessPolicy and the native provider-assignment endpoint are unchanged.
 
+## Local environment file
+
+Keep migration credentials and the Iris state path in the gitignored local environment file.
+Do not put access tokens in an inline shell assignment or command argument:
+
+```sh
+mkdir -p .odos
+touch .odos/migration-importer.env
+chmod 600 .odos/migration-importer.env
+```
+
+Open `.odos/migration-importer.env` in a local editor and set the values needed for the step:
+
+```dotenv
+MEDPLUM_BASE_URL=http://localhost:8103
+ODOS_M2A_STATE_DIR=/Users/iris/Migration/importer-state
+ODOS_OPERATOR_ACCESS_TOKEN=<short-lived practice operator token>
+ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN=<ordinary clinician token>
+ODOS_ACCEPTANCE_FRONT_DESK_ACCESS_TOKEN=<ordinary front-desk token>
+```
+
+Both M2a commands load this file with `--env-file-if-exists`. Keep it at mode `0600`, rotate
+the short-lived tokens after the proof, and never commit or paste the file.
+
 ## Source manifest
 
 Keep the manifest on Iris. Never commit it. It contains one selected EPM row, the matching EHR
@@ -59,7 +83,6 @@ npm run import-legacy-patient-m2a -- \
 Use the returned run id and Patient reference for the provisioning step:
 
 ```sh
-ODOS_OPERATOR_ACCESS_TOKEN='<short-lived token>' \
 npm run grant-migrated-patient-access -- \
   --run-id '<run id>' \
   --patient 'Patient/<id>' \
@@ -67,7 +90,9 @@ npm run grant-migrated-patient-access -- \
   --front-desk-profile 'Practitioner/<id>'
 ```
 
-Both commands default to `/Users/iris/Migration/importer-state/legacy-import.sqlite`.
+With `ODOS_M2A_STATE_DIR` set as above, both commands use
+`/Users/iris/Migration/importer-state/legacy-import.sqlite`. Without it, the safe local fallback
+is `~/.odos/legacy-import-m2a/legacy-import.sqlite`.
 Per-run Markdown reports are written under `importer-state/reports/`. Reports and ledger data
 stay on Iris.
 
@@ -81,8 +106,6 @@ The gate accepts only ordinary clinician and front-desk tokens. It rejects super
 sessions and verifies each token resolves to the expected Practitioner:
 
 ```sh
-ODOS_ACCEPTANCE_CLINICIAN_ACCESS_TOKEN='<ordinary clinician token>' \
-ODOS_ACCEPTANCE_FRONT_DESK_ACCESS_TOKEN='<ordinary front-desk token>' \
 npm run verify-legacy-import-m2a -- \
   --clinician-profile 'Practitioner/<id>' \
   --front-desk-profile 'Practitioner/<id>' \
@@ -94,5 +117,6 @@ npm run verify-legacy-import-m2a -- \
 ```
 
 Passing output includes HTTP status `200` for both Patient searches, the clinician's Patient,
-Encounter, and Media reads, and the front desk's Patient, Coverage, and Encounter reads. It
-also requires HTTP `403` for the front desk's Media and Observation reads.
+Encounter, Media, and Observation reads, and the front desk's Patient, Coverage, and Encounter
+reads. It also requires HTTP `403` for the front desk's same Media and Observation resources.
+If a status check fails, the command prints the completed transcript before the failure.

@@ -341,6 +341,7 @@ function mergePatient(
 ): Patient {
   const migrationSystems = new Set(identifiers.map((identifier) => identifier.system));
   const existingTags = existing.meta?.tag ?? [];
+  const importedName = sourceName(manifest.epm);
   return {
     ...existing,
     meta: {
@@ -359,12 +360,27 @@ function mergePatient(
       ...identifiers,
     ],
     active: manifest.epm.active ?? existing.active ?? true,
-    name: [sourceName(manifest.epm)],
+    name: upsertName(existing.name ?? [], importedName),
     gender: manifest.epm.gender ?? existing.gender ?? "unknown",
     birthDate: manifest.epm.birthDate,
     ...(manifest.epm.telecom ? { telecom: manifest.epm.telecom as ContactPoint[] } : {}),
     ...(manifest.epm.address ? { address: manifest.epm.address as Address[] } : {}),
   };
+}
+
+function upsertName(existing: readonly HumanName[], imported: HumanName): HumanName[] {
+  const importedKey = nameKey(imported);
+  const matchIndex = existing.findIndex((name) => nameKey(name) === importedKey);
+  if (matchIndex === -1) return [...existing, imported];
+  return existing.map((name, index) => index === matchIndex ? imported : name);
+}
+
+function nameKey(name: HumanName): string {
+  return [
+    normalize(name.use),
+    normalize(name.family),
+    (name.given ?? []).map(normalize).join("\u001e"),
+  ].join("\u001f");
 }
 
 function sourceName(source: z.infer<typeof epmPatientSchema>): HumanName {
@@ -383,15 +399,33 @@ function sameManagedPatientState(left: Patient, right: Patient): boolean {
 
 function managedPatientState(patient: Patient): unknown {
   return {
-    tag: patient.meta?.tag ?? [],
-    identifier: patient.identifier ?? [],
+    tag: canonicalCollection(patient.meta?.tag ?? []),
+    identifier: canonicalCollection(patient.identifier ?? []),
     active: patient.active,
-    name: patient.name ?? [],
+    name: canonicalCollection(patient.name ?? []),
     gender: patient.gender,
     birthDate: patient.birthDate,
-    telecom: patient.telecom ?? [],
-    address: patient.address ?? [],
+    telecom: canonicalCollection(patient.telecom ?? []),
+    address: canonicalCollection(patient.address ?? []),
   };
+}
+
+function canonicalCollection<T>(values: readonly T[]): T[] {
+  return [...values].sort((left, right) =>
+    stableKey(left).localeCompare(stableKey(right))
+  );
+}
+
+function stableKey(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableKey).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .filter(([, nested]) => nested !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => `${JSON.stringify(key)}:${stableKey(nested)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
 }
 
 function identityTuple(source: SourcePerson): string {

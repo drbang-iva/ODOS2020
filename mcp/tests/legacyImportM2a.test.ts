@@ -12,6 +12,10 @@ import type {
 } from "@medplum/fhirtypes";
 import type { JsonPatchOperation, MedplumClient } from "../src/fhir-client.js";
 import {
+  buildMedplumAccessPolicy,
+  getRoleDeclaration,
+} from "../src/authz/roles.js";
+import {
   ImportLedger,
 } from "../src/legacy-import/import-ledger.js";
 import {
@@ -24,10 +28,12 @@ import {
 } from "../src/legacy-import/patient-import.js";
 import {
   LiveMigratedPatientAccessGrantAdapter,
+  PolicyDriftError,
   grantMigratedPatientAccess,
   type MigratedPatientAccessGrantAdapter,
 } from "../../scripts/grant-migrated-patient-access.js";
 import {
+  ReachabilityVerificationError,
   verifyLegacyImportM2aReachability,
 } from "../../scripts/verify-legacy-import-m2a.js";
 
@@ -49,6 +55,10 @@ test("Patient import creates once, records junk, then converges and version-upda
     ledger.finishRun(firstRun, "patient-imported");
     ledger.resumePatientImportedRun(firstRun);
     assert.throws(() => ledger.startRun(firstRun), /already exists/);
+    assert.throws(
+      () => ledger.finishRun("missing-run", "failed"),
+      /missing-run is not present/,
+    );
 
     assert.equal(first.action, "created");
     assert.equal(first.junkRejections, 1);
@@ -109,7 +119,10 @@ test("Patient adoption attaches both migration identifiers to one exact native n
     resourceType: "Patient",
     id: "native-1",
     meta: { versionId: "7", project: PROJECT_ID },
-    name: [{ family: "Patient", given: ["Typical"] }],
+    name: [
+      { family: "Patient", given: ["Typical"] },
+      { use: "old", family: "Maiden", given: ["Typical"] },
+    ],
     birthDate: "1980-02-03",
     gender: "unknown",
   };
@@ -131,6 +144,54 @@ test("Patient adoption attaches both migration identifiers to one exact native n
       fhir.patients.get("native-1")?.identifier?.map((identifier) => identifier.system),
       [EPM_PATIENT_IDENTIFIER_SYSTEM, EHR_PATIENT_IDENTIFIER_SYSTEM],
     );
+    assert.deepEqual(
+      fhir.patients.get("native-1")?.name,
+      [
+        { family: "Patient", given: ["Typical"] },
+        { use: "old", family: "Maiden", given: ["Typical"] },
+      ],
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("Patient convergence ignores server reordering of managed repeating fields", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new PatientFhir();
+  const source = manifest();
+  source.epm.telecom = [
+    { system: "phone", value: "555-0100", use: "mobile" },
+    { system: "email", value: "patient@example.test", use: "home" },
+  ];
+  source.epm.address = [
+    { use: "home", line: ["1 Main St"], city: "Example" },
+    { use: "old", line: ["2 Prior St"], city: "Example" },
+  ];
+  try {
+    await importLegacyPatient({
+      fhir,
+      ledger,
+      runId: ledger.startRun("run-order-first"),
+      projectId: PROJECT_ID,
+      manifest: source,
+    });
+    const patient = [...fhir.patients.values()][0]!;
+    patient.identifier?.reverse();
+    patient.telecom?.reverse();
+    patient.address?.reverse();
+
+    const rerun = await importLegacyPatient({
+      fhir,
+      ledger,
+      runId: ledger.startRun("run-order-second"),
+      projectId: PROJECT_ID,
+      manifest: source,
+    });
+    assert.equal(rerun.action, "skipped");
+    assert.equal(fhir.updateHeaders.length, 0);
   } finally {
     ledger.close();
     state.cleanup();
@@ -192,7 +253,11 @@ test("person identity and junk filters enforce the approved source rules", () =>
 
 test("adjudication decisions persist when the SQLite ledger is reopened", () => {
   const state = tempState();
-  const first = new ImportLedger({ stateDirectory: state.path });
+  const decidedAt = "2026-07-29T12:34:56.000Z";
+  const first = new ImportLedger({
+    stateDirectory: state.path,
+    now: () => decidedAt,
+  });
   first.recordAdjudication({
     sourceKind: "patient",
     sourceKey: "source-key-1",
@@ -206,7 +271,7 @@ test("adjudication decisions persist when the SQLite ledger is reopened", () => 
     assert.deepEqual(reopened.readAdjudication("patient", "source-key-1"), {
       decision: "exclude",
       decidedBy: "operator",
-      decidedAt: reopened.readAdjudication("patient", "source-key-1")?.decidedAt,
+      decidedAt,
       note: "synthetic test decision",
     });
   } finally {
@@ -312,17 +377,37 @@ test("operator provisioning hard-stops an existing compartment entry with the wr
   }
 });
 
+test("operator provisioning records policy drift and refuses every grant", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const adapter = new GrantAdapter();
+  adapter.policies.get("front-desk")!.resource![0]!.interaction = ["read"];
+  try {
+    const runId = ledger.startRun("grant-policy-drift");
+    await assert.rejects(
+      grantMigratedPatientAccess({
+        adapter,
+        ledger,
+        runId,
+        patientReference: "Patient/patient-1",
+        clinicianProfileReference: "Practitioner/clinician-1",
+        frontDeskProfileReference: "Practitioner/front-desk-1",
+      }),
+      PolicyDriftError,
+    );
+    assert.equal(adapter.versionHeaders.length, 0);
+    assert.match(ledger.renderReport(runId), /AccessPolicy\/front-desk-policy/);
+    assert.match(ledger.renderReport(runId), /canonical-policy-rules-diverged/);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
 test("live policy resolution uses active-project search context and hard-stops duplicates", async () => {
   const policy: AccessPolicy = {
-    resourceType: "AccessPolicy",
+    ...buildMedplumAccessPolicy(getRoleDeclaration("front-desk")),
     id: "front-desk-policy",
-    name: "ODOS Front Desk",
-    meta: {
-      tag: [{
-        system: "https://odos2020.com/fhir/NamingSystem/practice-role",
-        code: "front-desk",
-      }],
-    },
   };
   const rows = [policy];
   const fhir = {
@@ -334,6 +419,20 @@ test("live policy resolution uses active-project search context and hard-stops d
   } as unknown as MedplumClient;
   const adapter = new LiveMigratedPatientAccessGrantAdapter(fhir, PROJECT_ID);
   assert.equal(await adapter.resolvePolicy("front-desk"), policy);
+
+  const drifted = structuredClone(policy);
+  drifted.resource![0]!.interaction = ["read"];
+  const driftAdapter = new LiveMigratedPatientAccessGrantAdapter({
+    search: async () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [{ resource: drifted }],
+    }),
+  } as unknown as MedplumClient, PROJECT_ID);
+  await assert.rejects(
+    driftAdapter.resolvePolicy("front-desk"),
+    /rules diverge from the canonical front-desk AccessPolicy/,
+  );
 
   rows.push({ ...policy, id: "front-desk-policy-duplicate" });
   await assert.rejects(
@@ -348,6 +447,7 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
     ["/fhir/R4/Patient/patient-1|clinician", 200],
     ["/fhir/R4/Encounter/encounter-1|clinician", 200],
     ["/fhir/R4/Media/media-1|clinician", 200],
+    ["/fhir/R4/Observation/observation-1|clinician", 200],
     ["/fhir/R4/Patient?_id=patient-1|front-desk", 200],
     ["/fhir/R4/Patient/patient-1|front-desk", 200],
     ["/fhir/R4/Coverage/coverage-1|front-desk", 200],
@@ -394,6 +494,7 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
     "clinician patient_read status=200",
     "clinician encounter_read status=200",
     "clinician media_read status=200",
+    "clinician observation_read status=200",
     "front_desk patient_search status=200 matches=1",
     "front_desk patient_read status=200",
     "front_desk coverage_read status=200",
@@ -401,6 +502,28 @@ test("reachability gate requires every ordinary-role allow and both front-desk d
     "front_desk media_read_denied status=403",
     "front_desk observation_read_denied status=403",
   ]);
+
+  statuses.set("/fhir/R4/Media/media-1|front-desk", 200);
+  await assert.rejects(
+    verifyLegacyImportM2aReachability({
+      baseUrl: "http://localhost:8103",
+      clinicianToken: "clinician",
+      frontDeskToken: "front-desk",
+      clinicianProfileReference: "Practitioner/clinician-1",
+      frontDeskProfileReference: "Practitioner/front-desk-1",
+      patientReference: "Patient/patient-1",
+      encounterReference: "Encounter/encounter-1",
+      mediaReference: "Media/media-1",
+      coverageReference: "Coverage/coverage-1",
+      observationReference: "Observation/observation-1",
+      request: request as typeof fetch,
+    }),
+    (error: unknown) => {
+      assert.ok(error instanceof ReachabilityVerificationError);
+      assert.equal(error.transcript.at(-1), "front_desk media_read_denied status=200");
+      return true;
+    },
+  );
 });
 
 class PatientFhir {
@@ -578,15 +701,8 @@ function nativePatient(id: string): Patient {
 
 function policy(id: string, role: "clinician" | "front-desk"): AccessPolicy {
   return {
-    resourceType: "AccessPolicy",
+    ...buildMedplumAccessPolicy(getRoleDeclaration(role)),
     id,
-    meta: {
-      tag: [{
-        system: "https://odos2020.com/fhir/NamingSystem/practice-role",
-        code: role,
-      }],
-    },
-    name: role === "clinician" ? "ODOS Clinician" : "ODOS Front Desk",
   };
 }
 

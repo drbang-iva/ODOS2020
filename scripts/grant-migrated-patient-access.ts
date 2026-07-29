@@ -9,7 +9,9 @@ import {
   hasPatientCompartmentGrant,
 } from "../mcp/src/clinical-graph/provider-assignment-endpoint.js";
 import {
+  buildMedplumAccessPolicy,
   buildProjectMembershipAccess,
+  getRoleDeclaration,
   ODOS_PRACTICE_ROLE_SYSTEM,
   type PracticeRoleId,
 } from "../mcp/src/authz/roles.js";
@@ -61,6 +63,16 @@ export class MembershipResolutionError extends Error {
   }
 }
 
+export class PolicyDriftError extends Error {
+  constructor(
+    readonly role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+    readonly policyReference: string,
+  ) {
+    super(`${policyReference} rules diverge from the canonical ${role} AccessPolicy.`);
+    this.name = "PolicyDriftError";
+  }
+}
+
 export async function grantMigratedPatientAccess(input: {
   readonly adapter: MigratedPatientAccessGrantAdapter;
   readonly ledger: ImportLedger;
@@ -76,14 +88,38 @@ export async function grantMigratedPatientAccess(input: {
     throw new Error("Clinician and front-desk profiles must be two distinct Practitioners.");
   }
 
-  const [patient, clinicianMembership, frontDeskMembership, clinicianPolicy, frontDeskPolicy] =
-    await Promise.all([
+  let resolved: [
+    Patient,
+    ProjectMembership,
+    ProjectMembership,
+    AccessPolicy,
+    AccessPolicy,
+  ];
+  try {
+    resolved = await Promise.all([
       input.adapter.readPatient(patientId),
       input.adapter.resolveMembership(input.clinicianProfileReference),
       input.adapter.resolveMembership(input.frontDeskProfileReference),
       input.adapter.resolvePolicy("clinician"),
       input.adapter.resolvePolicy("front-desk"),
     ]);
+    assertCanonicalPolicyRules(resolved[3], "clinician");
+    assertCanonicalPolicyRules(resolved[4], "front-desk");
+  } catch (error) {
+    if (error instanceof PolicyDriftError) {
+      input.ledger.recordResourceAction({
+        runId: input.runId,
+        sourceKey: error.role,
+        resourceType: "AccessPolicy",
+        resourceReference: error.policyReference,
+        action: "conflict",
+        reason: "canonical-policy-rules-diverged",
+      });
+    }
+    throw error;
+  }
+  const [patient, clinicianMembership, frontDeskMembership, clinicianPolicy, frontDeskPolicy] =
+    resolved;
   assertMembership(clinicianMembership, input.clinicianProfileReference, clinicianPolicy);
   assertMembership(frontDeskMembership, input.frontDeskProfileReference, frontDeskPolicy);
   if (clinicianMembership.id === frontDeskMembership.id) {
@@ -178,7 +214,9 @@ implements MigratedPatientAccessGrantAdapter {
     if (matches.length !== 1) {
       throw new Error(`Expected one tagged ODOS ${display} policy; found ${matches.length}.`);
     }
-    return matches[0]!;
+    const policy = matches[0]!;
+    assertCanonicalPolicyRules(policy, role);
+    return policy;
   }
 
   patchPatient(
@@ -206,6 +244,44 @@ implements MigratedPatientAccessGrantAdapter {
       { ...WRITE_HEADERS, "If-Match": `W/"${versionId}"` },
     );
   }
+}
+
+export function assertCanonicalPolicyRules(
+  policy: AccessPolicy,
+  role: Extract<PracticeRoleId, "clinician" | "front-desk">,
+): void {
+  const expected = buildMedplumAccessPolicy(getRoleDeclaration(role));
+  if (canonicalPolicyRules(policy) !== canonicalPolicyRules(expected)) {
+    throw new PolicyDriftError(
+      role,
+      policy.id ? `AccessPolicy/${policy.id}` : `AccessPolicy/${role}`,
+    );
+  }
+}
+
+function canonicalPolicyRules(policy: AccessPolicy): string {
+  return JSON.stringify(
+    (policy.resource ?? [])
+      .map((rule) => canonicalPolicyValue(rule))
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+  );
+}
+
+function canonicalPolicyValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map(canonicalPolicyValue)
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, nested]) => nested !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, canonicalPolicyValue(nested)]),
+    );
+  }
+  return value;
 }
 
 async function grantGeneralPractitioner(input: {
