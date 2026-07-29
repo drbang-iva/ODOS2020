@@ -41,6 +41,7 @@ export function OdosSearchPicker<T>({
   const [query, setQuery] = useState(selectedLabel ?? "");
   const [editing, setEditing] = useState(false);
   const [options, setOptions] = useState<OdosSearchPickerOption<T>[]>([]);
+  const [settledQuery, setSettledQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -65,6 +66,7 @@ export function OdosSearchPicker<T>({
     const trimmed = query.trim();
     if (!editing || trimmed.length < 2 || (value && trimmed === selectedLabel)) {
       setOptions([]);
+      setSettledQuery("");
       setActiveIndex(0);
       setLoading(false);
       setError(undefined);
@@ -78,6 +80,7 @@ export function OdosSearchPicker<T>({
         .then((results) => {
           if (!cancelled) {
             setOptions(results);
+            setSettledQuery(trimmed);
             setActiveIndex(0);
           }
         })
@@ -85,6 +88,7 @@ export function OdosSearchPicker<T>({
           if (!cancelled) {
             setError(cause instanceof Error ? cause.message : String(cause));
             setOptions([]);
+            setSettledQuery("");
           }
         })
         .finally(() => {
@@ -101,6 +105,7 @@ export function OdosSearchPicker<T>({
     setEditing(false);
     setQuery(option.label);
     setOptions([]);
+    setSettledQuery("");
     setError(undefined);
     onSelect(option);
   }
@@ -123,7 +128,13 @@ export function OdosSearchPicker<T>({
   const hasExactMatch = options.some(
     (option) => option.label.trim().toLocaleLowerCase() === trimmedQuery.toLocaleLowerCase(),
   );
-  const canCreate = Boolean(onCreate && trimmedQuery.length >= 2 && !value && !hasExactMatch);
+  const canCreate = Boolean(
+    onCreate
+    && trimmedQuery.length >= 2
+    && settledQuery === trimmedQuery
+    && !value
+    && !hasExactMatch,
+  );
   const showResults = !disabled && editing
     && (loading || Boolean(error) || options.length > 0 || canCreate);
 
@@ -152,6 +163,7 @@ export function OdosSearchPicker<T>({
           setEditing(true);
           setQuery(event.target.value);
           setOptions([]);
+          setSettledQuery("");
           setActiveIndex(0);
           if (value) onClear();
         }}

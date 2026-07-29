@@ -38,10 +38,12 @@ test("OdosSearchPicker creates and selects a non-matching query as a structured 
     await act(async () => {
       renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer")
         .props.onChange({ target: { value: "New Payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
-    const createButton = renderer!.root.findAllByType("button")
-      .find((button) => button.children.join("") === "Create payer “New Payer”");
+    await waitForObservable(
+      () => Boolean(findButton(renderer!, "Create payer “New Payer”")),
+      "create option for settled non-matching query",
+    );
+    const createButton = findButton(renderer!, "Create payer “New Payer”");
     assert.ok(createButton);
     assert.match(createButton.props.className, /min-h-11/);
     await act(async () => {
@@ -103,8 +105,11 @@ test("OdosSearchPicker suppresses exact-match creation and creates a non-match w
 
     await act(async () => {
       input().props.onChange({ target: { value: "existing payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
+    await waitForObservable(
+      () => hasOptionLabel(renderer!, "Existing Payer"),
+      "existing payer result for settled exact-match query",
+    );
     assert.equal(
       renderer!.root.findAllByType("button")
         .some((button) => button.children.join("").startsWith("Create payer")),
@@ -113,8 +118,11 @@ test("OdosSearchPicker suppresses exact-match creation and creates a non-match w
 
     await act(async () => {
       input().props.onChange({ target: { value: "New Payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
+    await waitForObservable(
+      () => Boolean(findButton(renderer!, "Create payer “New Payer”")),
+      "create option for settled non-matching query",
+    );
     await act(async () => {
       input().props.onKeyDown({
         key: "Enter",
@@ -130,3 +138,98 @@ test("OdosSearchPicker suppresses exact-match creation and creates a non-match w
     Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
   }
 });
+
+test("OdosSearchPicker blocks Enter-to-create before debounce and while the current search is pending", async () => {
+  const originalWindow = globalThis.window;
+  let scheduledSearch: (() => void) | undefined;
+  let resolveSearch!: (options: OdosSearchPickerOption<{ id: string }>[]) => void;
+  const pendingSearch = new Promise<OdosSearchPickerOption<{ id: string }>[]>((resolve) => {
+    resolveSearch = resolve;
+  });
+  let createCalls = 0;
+  let renderer: ReactTestRenderer | undefined;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {
+      setTimeout: (callback: () => void) => {
+        scheduledSearch = callback;
+        return 1;
+      },
+      clearTimeout: () => {
+        scheduledSearch = undefined;
+      },
+    },
+  });
+  try {
+    await act(async () => {
+      renderer = create(
+        <OdosSearchPicker
+          label="Payer"
+          value=""
+          placeholder="Search payer"
+          search={() => pendingSearch}
+          onSelect={() => undefined}
+          onClear={() => undefined}
+          onCreate={async (name) => {
+            createCalls += 1;
+            return { value: "payer-new", label: name, item: { id: "payer-new" } };
+          }}
+          createLabel="Create payer"
+          searchDelayMs={250}
+        />,
+      );
+    });
+    const input = () => renderer!.root.find(
+      (node) => node.type === "input" && node.props.placeholder === "Search payer",
+    );
+    const pressEnter = () => input().props.onKeyDown({
+      key: "Enter",
+      preventDefault: () => undefined,
+    });
+
+    act(() => input().props.onChange({ target: { value: "Pending Payer" } }));
+    assert.equal(findButton(renderer!, "Create payer “Pending Payer”"), undefined);
+    act(pressEnter);
+    assert.equal(createCalls, 0);
+
+    assert.ok(scheduledSearch);
+    act(() => scheduledSearch?.());
+    assert.equal(findButton(renderer!, "Create payer “Pending Payer”"), undefined);
+    act(pressEnter);
+    assert.equal(createCalls, 0);
+
+    await act(async () => {
+      resolveSearch([]);
+      await pendingSearch;
+    });
+    await waitForObservable(
+      () => Boolean(findButton(renderer!, "Create payer “Pending Payer”")),
+      "create option after the pending search settles",
+    );
+    assert.equal(createCalls, 0);
+  } finally {
+    if (renderer) act(() => renderer!.unmount());
+    Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+  }
+});
+
+function findButton(renderer: ReactTestRenderer, text: string) {
+  return renderer.root.findAllByType("button")
+    .find((button) => button.children.join("") === text);
+}
+
+function hasOptionLabel(renderer: ReactTestRenderer, label: string) {
+  return renderer.root.findAllByProps({ role: "option" }).some(
+    (option) => option.findAllByType("span").some((span) => span.children.join("") === label),
+  );
+}
+
+async function waitForObservable(predicate: () => boolean, description: string) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (predicate()) return;
+    await act(async () => {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    });
+  }
+  assert.fail(`Timed out waiting for ${description}`);
+}
