@@ -73,14 +73,9 @@ if [[ "$verdict" == "FAIL" ]]; then
 fi
 
 evaluation_workflow_run_id() {
-  gh run list \
-    --repo "$repo_name" \
-    --workflow evaluation-gate.yml \
-    --commit "$head_sha" \
-    --event pull_request_target \
-    --limit 100 \
-    --json databaseId,createdAt \
-    --jq 'sort_by(.createdAt) | last | .databaseId // empty'
+  gh api \
+    "repos/$repo_name/actions/workflows/evaluation-gate.yml/runs?event=pull_request_target&head_sha=$head_sha&per_page=100" \
+    --jq ".workflow_runs | map(select(any(.pull_requests[]?; .number == $pr_number))) | sort_by(.created_at) | last | .id // empty"
 }
 
 if ! inline_comment_rows="$(gh api --paginate "repos/$repo_name/pulls/$pr_number/comments" \
@@ -195,7 +190,8 @@ previous_attempt="$(gh api "repos/$repo_name/actions/runs/$workflow_run_id" --jq
 
 echo "check-evaluation reached conclusion=$expected_conclusion for $head_sha."
 echo "Re-running evaluation-gate workflow run $workflow_run_id for the PR head..."
-gh run rerun "$workflow_run_id" --repo "$repo_name"
+gh run rerun "$workflow_run_id" --repo "$repo_name" \
+  || die "failed to trigger rerun of evaluation-gate workflow run $workflow_run_id"
 
 deadline=$(( $(date +%s) + timeout_seconds ))
 latest_state="waiting for run attempt $(( previous_attempt + 1 ))"
@@ -210,7 +206,12 @@ while [[ $(date +%s) -lt "$deadline" ]]; do
       && [[ "$workflow_attempt" -gt "$previous_attempt" ]] \
       && [[ "$workflow_status" == "completed" ]]; then
       job_state="$(gh api "repos/$repo_name/actions/runs/$workflow_run_id/jobs?filter=latest" \
-        --jq '[.jobs[] | select(.name == "publish-evaluation-status")] | last | [.status, (.conclusion // "")] | @tsv')"
+        --jq '[.jobs[] | select(.name == "publish-evaluation-status")] | last | if . == null then empty else [.status, (.conclusion // "")] | @tsv end' \
+        2>/dev/null || true)"
+      if [[ -z "$job_state" ]]; then
+        sleep "$poll_seconds"
+        continue
+      fi
       IFS=$'\t' read -r job_status job_conclusion <<<"$job_state"
       [[ "$job_status" == "completed" && "$job_conclusion" == "$expected_conclusion" ]] \
         || die "publish-evaluation-status finished unexpectedly (status=${job_status:-not found} conclusion=${job_conclusion:-unknown}; expected $expected_conclusion)"
