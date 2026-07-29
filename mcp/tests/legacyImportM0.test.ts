@@ -30,11 +30,19 @@ import {
   sweepLegacyImportBinaries,
   type BinaryReferenceDatabase,
   type BinaryReferenceScanner,
+  type StoredPracticeClinicianPolicy,
 } from "../src/legacy-import/orphan-sweep.js";
 import {
+  assertLocalBaseUrl,
   reconciledAccessPolicy,
+  resolvePracticeProjectId,
   samePolicyDefinition,
+  type PracticeProjectResolutionDatabase,
 } from "../../scripts/setup-legacy-importer.js";
+import {
+  buildMedplumAccessPolicy,
+  getRoleDeclaration,
+} from "../src/authz/roles.js";
 
 const sourceBytes = new Uint8Array(1024 * 1024 + 17).fill(0x5a);
 const source: LegacyMediaSource = {
@@ -45,6 +53,21 @@ const source: LegacyMediaSource = {
   encounterReference: "Encounter/22222222-2222-4222-8222-222222222222",
 };
 const binaryId = "33333333-3333-4333-8333-333333333333";
+
+test("legacy importer local-base guard rejects private-network hosts", () => {
+  for (const baseUrl of [
+    "http://localhost:8103",
+    "http://127.0.0.1:8103",
+    "http://[::1]:8103",
+    "http://medplum-server:8103",
+  ]) {
+    assert.doesNotThrow(() => assertLocalBaseUrl(baseUrl));
+  }
+  assert.throws(
+    () => assertLocalBaseUrl("http://192.168.1.25:8103"),
+    /restricted to a local self-hosted Medplum/,
+  );
+});
 
 test("raw Binary upload sends >1 MB bytes and the parser security-context headers", async () => {
   let observed: RequestInit | undefined;
@@ -210,6 +233,108 @@ test("migration importer policy reconciliation repairs its canonical tag and pre
   ));
 });
 
+test("explicit practice project verification rejects a noncanonical clinician policy without discovery", async () => {
+  const policy = buildMedplumAccessPolicy(getRoleDeclaration("clinician"));
+  policy.resource![0]!.interaction = ["read"];
+  let discoveryCalls = 0;
+  const database: PracticeProjectResolutionDatabase = {
+    findPracticeProjectId: async () => {
+      discoveryCalls += 1;
+      return "discovered-project";
+    },
+    verifyPracticeProjectClinicianPolicy: async () => storedPracticePolicy(policy),
+  };
+  const fhir = {
+    search: async () => {
+      throw new Error("Explicit project verification must not search or discover.");
+    },
+  } as unknown as ReturnType<typeof createMedplumClient>;
+
+  await assert.rejects(
+    resolvePracticeProjectId(
+      "http://localhost:8103",
+      "operator-token",
+      fhir,
+      "postgresql://local",
+      "named-project",
+      database,
+    ),
+    /does not carry a canonical ODOS Clinician policy/,
+  );
+  assert.equal(discoveryCalls, 0);
+});
+
+test("explicit practice project requires a PostgreSQL URL before verification", async () => {
+  let verificationCalls = 0;
+  const database: PracticeProjectResolutionDatabase = {
+    findPracticeProjectId: async () => {
+      throw new Error("Discovery must not run for an explicit project.");
+    },
+    verifyPracticeProjectClinicianPolicy: async () => {
+      verificationCalls += 1;
+      return storedPracticePolicy(
+        buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+      );
+    },
+  };
+  const fhir = {
+    search: async () => {
+      throw new Error("FHIR search must not run for an explicit project.");
+    },
+  } as unknown as ReturnType<typeof createMedplumClient>;
+
+  await assert.rejects(
+    resolvePracticeProjectId(
+      "http://localhost:8103",
+      "operator-token",
+      fhir,
+      undefined,
+      "named-project",
+      database,
+    ),
+    /Explicit practiceProjectId verification requires ODOS_POSTGRES_URL/,
+  );
+  assert.equal(verificationCalls, 0);
+});
+
+test("single-practice callers without an explicit project keep database discovery", async () => {
+  let discoveryCalls = 0;
+  let verificationCalls = 0;
+  const database: PracticeProjectResolutionDatabase = {
+    findPracticeProjectId: async () => {
+      discoveryCalls += 1;
+      return "single-practice-project";
+    },
+    verifyPracticeProjectClinicianPolicy: async () => {
+      verificationCalls += 1;
+      return storedPracticePolicy(
+        buildMedplumAccessPolicy(getRoleDeclaration("clinician")),
+      );
+    },
+  };
+  const fhir = {
+    search: async () => ({
+      resourceType: "Bundle",
+      type: "searchset",
+      entry: [],
+    }),
+  } as unknown as ReturnType<typeof createMedplumClient>;
+
+  assert.equal(
+    await resolvePracticeProjectId(
+      "http://localhost:8103",
+      "operator-token",
+      fhir,
+      "postgresql://local",
+      undefined,
+      database,
+    ),
+    "single-practice-project",
+  );
+  assert.equal(discoveryCalls, 1);
+  assert.equal(verificationCalls, 0);
+});
+
 test("all four Media recovery states converge or skip as designed", async (t) => {
   const cases: Array<{
     name: string;
@@ -281,6 +406,15 @@ test("all four Media recovery states converge or skip as designed", async (t) =>
     });
   }
 });
+
+function storedPracticePolicy(policy: AccessPolicy): StoredPracticeClinicianPolicy {
+  return {
+    projectId: "named-project",
+    projectName: "Named Practice",
+    policyId: "clinician-policy",
+    policy,
+  };
+}
 
 test("post-response/pre-Media crash leaves an open attempt carrying the Binary id", async () => {
   const attempts = new MemoryAttemptStore();
