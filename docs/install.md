@@ -162,9 +162,12 @@ the root `.env` with the local developer credentials. Keep
 `VITE_ODOS_MCP_BASE_URL=http://localhost:3333` in `ui/.env`:
 
 ```bash
-cp .env.example .env
-cp ui/.env.example ui/.env
+test -e .env || cp .env.example .env
+test -e ui/.env || cp ui/.env.example ui/.env
 ```
+
+When either template gains new variables, diff its `.env.example` against the existing `.env`
+and copy the additions deliberately.
 
 Then repair the local practice roles:
 
@@ -220,8 +223,11 @@ bypass the control. From the operator workstation, tunnel both loopback
 services instead:
 
 ```bash
-ssh -N -L 5173:127.0.0.1:5173 -L 3333:127.0.0.1:3333 <user>@<host>
+ssh -N -o ExitOnForwardFailure=yes -L 5173:127.0.0.1:5173 -L 3333:127.0.0.1:3333 <user>@<host>
 ```
+
+If either local port is already in use, SSH exits instead of leaving a partial tunnel that can
+make the browser show a different local application.
 
 Then open `http://localhost:5173` on the operator workstation. The tunnel keeps
 the shipped `VITE_ODOS_MCP_BASE_URL=http://localhost:3333` default correct, so
