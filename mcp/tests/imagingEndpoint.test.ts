@@ -18,7 +18,12 @@ import {
   type ImagingEndpointDeps,
   type ImagingFhirClient,
 } from "../src/clinical-graph/imaging-endpoint.js";
-import type { JsonPatchOperation } from "../src/fhir-client.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../src/fhir/ophthalmology/codeBindings.js";
+import type {
+  BinaryAttempt,
+  BinaryAttemptStore,
+} from "../src/legacy-import/binary-attempt-store.js";
+import { LEGACY_FILE_IDENTIFIER_SYSTEM } from "../src/legacy-import/binary-transport.js";
 
 const AUTH = "Bearer good";
 const DATA = Buffer.from("manual scan bytes").toString("base64");
@@ -37,11 +42,18 @@ function deps(
   role: PracticeRoleId = "clinician",
   seededMedia: Media[] = [],
   pagedMedia: Media[][] = [],
+  options: {
+    authToken?: string;
+    failCreateResourceType?: string;
+    failTransaction?: boolean;
+    staffReference?: string;
+  } = {},
 ) {
   const created: Array<{ resource: Media | DiagnosticReport | Provenance; headers?: Record<string, string> }> = [];
   const searches: Array<{ resourceType: string; params: Record<string, string> }> = [];
-  const patches: JsonPatchOperation[][] = [];
   const binaryBodies: Uint8Array[] = [];
+  const transactions: Bundle[] = [];
+  const attempts = new TestBinaryAttemptStore();
   const firstPageMedia = seededMedia.map((row) => structuredClone(row));
   const followingPages = pagedMedia.map((page) => page.map((row) => structuredClone(row)));
   const media = [...firstPageMedia, ...followingPages.flat()];
@@ -56,33 +68,27 @@ function deps(
       resource: T,
       headers?: Record<string, string>,
     ): Promise<T> => {
+      if (resource.resourceType === options.failCreateResourceType) {
+        throw new Error(`Synthetic ${resource.resourceType} create failure`);
+      }
       created.push({ resource, headers });
       return { ...resource, id: `${resource.resourceType.toLowerCase()}-${created.length}` };
-    },
-    patch: async <T extends Media>(
-      _resourceType: T["resourceType"],
-      id: string,
-      operations: JsonPatchOperation[],
-    ): Promise<T> => {
-      patches.push(operations);
-      const row = media.find((candidate) => candidate.id === id);
-      if (!row) throw new Error(`Missing Media/${id}`);
-      const bodySite = operations.find((operation) => operation.path === "/bodySite")?.value;
-      if (bodySite) row.bodySite = bodySite as Media["bodySite"];
-      return structuredClone(row) as T;
     },
     search: async <T extends Media | QuestionnaireResponse>(
       resourceType: T["resourceType"],
       params: Record<string, string> = {},
     ): Promise<Bundle<T>> => {
       searches.push({ resourceType, params: { ...params } });
+      const selectedMedia = params._id
+        ? media.filter((resource) => params._id!.split(",").includes(resource.id ?? ""))
+        : firstPageMedia;
       return {
         resourceType: "Bundle",
         type: "searchset",
         entry: resourceType === "Media"
-          ? firstPageMedia.map((resource) => ({ resource: structuredClone(resource) as T }))
+          ? selectedMedia.map((resource) => ({ resource: structuredClone(resource) as T }))
           : [],
-        ...(resourceType === "Media" && followingPages.length
+        ...(resourceType === "Media" && !params._id && followingPages.length
           ? { link: [{ relation: "next", url: "https://medplum.test/fhir/R4/Media?page=0" }] }
           : {}),
       };
@@ -105,11 +111,34 @@ function deps(
           : {}),
       };
     },
+    executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
+      transactions.push(structuredClone(bundle));
+      if (options.failTransaction) throw new Error("Synthetic transaction failure");
+      const updated = bundle.entry?.[0]?.resource;
+      const provenance = bundle.entry?.[1]?.resource;
+      assert.equal(updated?.resourceType, "Media");
+      assert.equal(provenance?.resourceType, "Provenance");
+      const index = media.findIndex((candidate) => candidate.id === updated.id);
+      assert.notEqual(index, -1);
+      media[index] = structuredClone(updated as Media);
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [
+          { resource: structuredClone(updated), response: { status: "200 OK" } },
+          {
+            resource: { ...structuredClone(provenance), id: "provenance-transaction-1" },
+            response: { status: "201 Created", location: "Provenance/provenance-transaction-1/_history/1" },
+          },
+        ],
+      };
+    },
   };
+  const authToken = options.authToken ?? AUTH;
   const value: ImagingEndpointDeps = {
-    authenticate: async (authHeader) => authHeader === AUTH
+    authenticate: async (authHeader) => authHeader === authToken
       ? {
-          staffReference: "Practitioner/doc1",
+          staffReference: options.staffReference ?? "Practitioner/doc1",
           actorRole: role,
           fhir,
           binaryAuth: {
@@ -131,9 +160,11 @@ function deps(
           },
         }
       : null,
+    binaryAttempts: attempts,
+    storageBaseUrls: ["https://storage.test/"],
     now: () => "2026-07-13T18:00:00.000Z",
   };
-  return { binaryBodies, created, deps: value, media, pageReads, patches, searches };
+  return { attempts, binaryBodies, created, deps: value, media, pageReads, searches, transactions };
 }
 
 test("manual imaging upload persists Media, preliminary interpretation report, and patient-scoped Provenance", async () => {
@@ -203,6 +234,26 @@ test("manual imaging raw Binary transport accepts files above 1 MB and restores 
   assert.equal(binaryBodies[0]?.byteLength, aboveLegacyCeiling.byteLength);
   assert.equal((created[0]?.resource as Media).content.data, undefined);
   assert.equal((created[0]?.resource as Media).content.url, "Binary/binary-1");
+});
+
+test("a Binary whose Media create fails remains open in the M0 disposal ledger", async () => {
+  const harness = deps("clinician", [], [], { failCreateResourceType: "Media" });
+
+  await assert.rejects(
+    handleImagingCaptureRequest(harness.deps, { authHeader: AUTH, body: BODY }),
+    /Synthetic Media create failure/,
+  );
+
+  assert.equal(harness.created.length, 0);
+  assert.deepEqual(await harness.attempts.listOpen(), [{
+    attemptId: "attempt-1",
+    sourceFilename: "Humphrey VF.pdf",
+    patientReference: "Patient/p1",
+    binaryId: "binary-1",
+    status: "open",
+    openedAt: "2026-07-13T18:00:00.000Z",
+    requestReturnedAt: "2026-07-13T18:00:00.000Z",
+  }]);
 });
 
 test("manual imaging upload rejects missing authority and unsafe file boundaries", async () => {
@@ -297,13 +348,19 @@ test("imaging list reads patient or encounter scope with all modalities and disp
   assert.equal(images[2]?.contentUrl, undefined);
   assert.deepEqual(harness.searches.map((search) => search.params), [
     { patient: "Patient/p1", status: "completed", _sort: "-created", _count: "50" },
+    { _id: "oct-os,inline-biometry,broken", _count: "100" },
     { encounter: "Encounter/e1", status: "completed", _sort: "-created", _count: "50" },
+    { _id: "oct-os,inline-biometry,broken", _count: "100" },
   ]);
 });
 
 test("imaging list enforces chart.read and exactly one supported scope", async () => {
-  const forbidden = await handleImagingListRequest(deps("auditor").deps, {
-    authHeader: AUTH,
+  const auditorAuth = "Bearer disposable-auditor";
+  const forbidden = await handleImagingListRequest(deps("auditor", [], [], {
+    authToken: auditorAuth,
+    staffReference: "Practitioner/disposable-auditor",
+  }).deps, {
+    authHeader: auditorAuth,
     query: { patient: "Patient/p1" },
   });
   const ambiguous = await handleImagingListRequest(deps().deps, {
@@ -312,6 +369,38 @@ test("imaging list enforces chart.read and exactly one supported scope", async (
   });
   assert.equal(forbidden.status, 403);
   assert.equal(ambiguous.status, 400);
+});
+
+test("imaging list keeps all eight coded categories and uncoded M0 legacy imaging while excluding longitudinal and meibography-shaped Media", async () => {
+  const legitimate = Object.keys(CATEGORY_DISPLAY).map((category, index) =>
+    image(`category-${category}`, `2026-07-${String(index + 1).padStart(2, "0")}T10:00:00.000Z`, category as keyof typeof CATEGORY_DISPLAY)
+  );
+  const legacy = image("legacy-uncoded", "2026-07-20T10:00:00.000Z", "other", {
+    modality: undefined,
+    identifier: [{ system: LEGACY_FILE_IDENTIFIER_SYSTEM, value: "legacy-uncoded.png" }],
+  });
+  const longitudinal = image("aesthetic-photo", "2026-07-21T10:00:00.000Z", "other", {
+    modality: undefined,
+    bodySite: { text: "Full face" },
+    note: [{ text: "Procedure definition: botox-follow-up" }],
+  });
+  const meibographyShaped = image("meibography-media", "2026-07-22T10:00:00.000Z", "other", {
+    modality: undefined,
+    bodySite: { text: "Meibomian glands" },
+  });
+  const harness = deps("clinician", [...legitimate, legacy, longitudinal, meibographyShaped]);
+
+  const result = await handleImagingListRequest(harness.deps, {
+    authHeader: AUTH,
+    query: { patient: "Patient/p1" },
+  });
+
+  assert.equal(result.status, 200);
+  const images = (result.body as { images: Array<{ id: string; category: string }> }).images;
+  assert.deepEqual(new Set(images.map((row) => row.category)), new Set(Object.keys(CATEGORY_DISPLAY)));
+  assert.equal(images.some((row) => row.id === "legacy-uncoded" && row.category === "other"), true);
+  assert.equal(images.some((row) => row.id === "aesthetic-photo"), false);
+  assert.equal(images.some((row) => row.id === "meibography-media"), false);
 });
 
 test("imaging list follows every 50-row FHIR page and rejects unsafe attachment schemes", async () => {
@@ -339,6 +428,26 @@ test("imaging list follows every 50-row FHIR page and rejects unsafe attachment 
   assert.equal(images[2]?.contentUrl, undefined);
 });
 
+test("imaging list fails closed when FHIR pagination exceeds the explicit page cap", async () => {
+  const followingPages = Array.from({ length: 100 }, (_, index) => [
+    image(`page-${index + 2}`, "2026-07-11T10:00:00.000Z", "fundus-photo"),
+  ]);
+  const harness = deps(
+    "clinician",
+    [image("page-1", "2026-07-12T10:00:00.000Z", "fundus-photo")],
+    followingPages,
+  );
+
+  await assert.rejects(
+    handleImagingListRequest(harness.deps, {
+      authHeader: AUTH,
+      query: { patient: "Patient/p1" },
+    }),
+    /exceeded 100 pages/,
+  );
+  assert.equal(harness.pageReads.length, 99);
+});
+
 test("OCT structure refinement changes bodySite and records provisional or confirmed Provenance", async () => {
   const harness = deps("clinician", [image("oct-1", "2026-07-12T10:00:00.000Z", "oct")]);
   const result = await handleImagingStructureRefinementRequest(harness.deps, {
@@ -348,9 +457,11 @@ test("OCT structure refinement changes bodySite and records provisional or confi
   });
 
   assert.equal(result.status, 200);
-  assert.equal(harness.patches[0]?.[0]?.path, "/bodySite");
-  const provenance = harness.created.find((entry) => entry.resource.resourceType === "Provenance")
-    ?.resource as Provenance;
+  const transaction = harness.transactions[0];
+  assert.equal(transaction?.entry?.[0]?.request?.method, "PUT");
+  assert.equal(transaction?.entry?.[0]?.request?.ifMatch, 'W/"1"');
+  assert.equal((transaction?.entry?.[0]?.resource as Media).bodySite?.text, "RNFL");
+  const provenance = transaction?.entry?.[1]?.resource as Provenance;
   assert.equal(provenance.meta?.tag?.[0]?.system, IMAGING_REFINEMENT_CONFIDENCE_SYSTEM);
   assert.equal(provenance.meta?.tag?.[0]?.code, "clinician-confirmed");
   assert.deepEqual(provenance.target.map((target) => target.reference), [
@@ -358,9 +469,10 @@ test("OCT structure refinement changes bodySite and records provisional or confi
     "Patient/p1",
     "Encounter/e1",
   ]);
+  assert.equal((result.body as { provenanceReference?: string }).provenanceReference, "Provenance/provenance-transaction-1");
 });
 
-test("structure refinement refuses non-OCT Media before any patch or Provenance write", async () => {
+test("structure refinement refuses non-OCT Media before any transaction write", async () => {
   const harness = deps("clinician", [image("fundus-1", "2026-07-12T10:00:00.000Z", "fundus-photo")]);
   const result = await handleImagingStructureRefinementRequest(harness.deps, {
     authHeader: AUTH,
@@ -370,8 +482,50 @@ test("structure refinement refuses non-OCT Media before any patch or Provenance 
 
   assert.equal(result.status, 409);
   assert.deepEqual(result.body, { error: "Structure refinement is limited to OCT Media." });
-  assert.equal(harness.patches.length, 0);
+  assert.equal(harness.transactions.length, 0);
   assert.equal(harness.created.length, 0);
+});
+
+test("migrated OCT Media remains eligible for atomic clinician refinement", async () => {
+  const harness = deps("clinician", [image("migrated-oct", "2021-03-04T10:00:00.000Z", "oct", {
+    meta: {
+      versionId: "7",
+      tag: [{
+        system: "https://odos2020.com/tags/migration",
+        code: "eyefinity-import",
+      }],
+    },
+  })]);
+
+  const result = await handleImagingStructureRefinementRequest(harness.deps, {
+    authHeader: AUTH,
+    mediaId: "migrated-oct",
+    body: { structure: "Optic nerve", laterality: "OU", confidence: "clinician-confirmed" },
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(harness.transactions[0]?.entry?.[0]?.request?.ifMatch, 'W/"7"');
+  assert.equal((harness.transactions[0]?.entry?.[0]?.resource as Media).bodySite?.text, "Optic nerve");
+});
+
+test("structure refinement transaction failure leaves Media unchanged and creates no Provenance", async () => {
+  const original = image("oct-atomic", "2026-07-12T10:00:00.000Z", "oct", {
+    bodySite: { text: "Macula" },
+  });
+  const harness = deps("clinician", [original], [], { failTransaction: true });
+
+  await assert.rejects(
+    handleImagingStructureRefinementRequest(harness.deps, {
+      authHeader: AUTH,
+      mediaId: "oct-atomic",
+      body: { structure: "RNFL", laterality: "OU", confidence: "clinician-confirmed" },
+    }),
+    /Synthetic transaction failure/,
+  );
+
+  assert.equal(harness.transactions.length, 1);
+  assert.deepEqual(harness.media[0]?.bodySite, { text: "Macula" });
+  assert.equal(harness.created.some((entry) => entry.resource.resourceType === "Provenance"), false);
 });
 
 function image(
@@ -387,7 +541,14 @@ function image(
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/e1" },
     createdDateTime,
-    modality: { coding: [{ code: category, display: CATEGORY_DISPLAY[category] }] },
+    meta: { versionId: "1" },
+    modality: {
+      coding: [{
+        system: ODOS_OPHTHALMOLOGY_CODE_SYSTEM,
+        code: category,
+        display: CATEGORY_DISPLAY[category],
+      }],
+    },
     content: {
       contentType: "image/png",
       title: `${id}.png`,
@@ -395,4 +556,66 @@ function image(
     },
     ...overrides,
   };
+}
+
+class TestBinaryAttemptStore implements BinaryAttemptStore {
+  readonly rows: BinaryAttempt[] = [];
+
+  async open(input: {
+    sourceFilename: string;
+    patientReference: string;
+    mediaId?: string;
+  }): Promise<BinaryAttempt> {
+    const row: BinaryAttempt = {
+      attemptId: `attempt-${this.rows.length + 1}`,
+      sourceFilename: input.sourceFilename,
+      patientReference: input.patientReference,
+      ...(input.mediaId ? { mediaId: input.mediaId } : {}),
+      status: "open",
+      openedAt: "2026-07-13T18:00:00.000Z",
+    };
+    this.rows.push(row);
+    return row;
+  }
+
+  async recordReturned(attemptId: string, binaryId: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { binaryId, requestReturnedAt: "2026-07-13T18:00:00.000Z" });
+  }
+
+  async resolveAttached(attemptId: string, mediaId: string, binaryId: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, {
+      mediaId,
+      binaryId,
+      status: "resolved-attached",
+      resolvedAt: "2026-07-13T18:00:00.000Z",
+    });
+  }
+
+  async resolveAttachedByBinaryId(): Promise<number> {
+    return 0;
+  }
+
+  async resolveNotCreated(attemptId: string, detail: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { status: "resolved-not-created", resolutionDetail: detail });
+  }
+
+  async resolveDisposed(attemptId: string, detail: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { status: "resolved-disposed", resolutionDetail: detail });
+  }
+
+  async reopenByBinaryId(): Promise<void> {
+    return;
+  }
+
+  async listOpen(): Promise<BinaryAttempt[]> {
+    return this.rows.filter((row) => row.status === "open");
+  }
+
+  private replace(attemptId: string, updates: Partial<BinaryAttempt>): BinaryAttempt {
+    const index = this.rows.findIndex((row) => row.attemptId === attemptId);
+    assert.notEqual(index, -1);
+    const next = { ...this.rows[index]!, ...updates };
+    this.rows[index] = next;
+    return next;
+  }
 }

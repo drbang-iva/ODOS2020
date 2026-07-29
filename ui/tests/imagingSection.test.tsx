@@ -59,6 +59,239 @@ test("OCT rows group by structure then occurrence date and keep unclassified sca
   assert.deepEqual(oct?.structures[1]?.dates[0]?.images.map((row) => row.id), ["unclassified"]);
 });
 
+test("imaging groups use the local calendar date rather than the UTC date", () => {
+  const originalTimezone = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  try {
+    const oct = groupImagingRows([
+      image("local-evening", "2026-07-15T01:00:00.000Z", "Macula"),
+    ])[0];
+    assert.equal(oct?.structures[0]?.dates[0]?.date, "2026-07-14");
+  } finally {
+    if (originalTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTimezone;
+  }
+});
+
+test("a stale patient imaging request cannot overwrite the newly selected patient's images", async () => {
+  const originalFetch = globalThis.fetch;
+  let resolveFirst!: (response: Response) => void;
+  const first = new Promise<Response>((resolve) => { resolveFirst = resolve; });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.includes("Patient%2Fp1")) return first;
+    return imagingResponse([image("patient-two", "2026-07-15T15:00:00Z", "Macula")]);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    act(() => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer.update(
+        <ImagingSection
+          patientReference="Patient/p2"
+          encounterReference="Encounter/e2"
+          onSaved={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /patient-two/);
+
+    await act(async () => {
+      resolveFirst(imagingResponse([image("patient-one-stale", "2026-07-16T15:00:00Z", "Macula")]));
+      await Promise.resolve();
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /patient-two/);
+    assert.doesNotMatch(rendered, /patient-one-stale/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("switching to encounter scope drops the late all-chart response", async () => {
+  const originalFetch = globalThis.fetch;
+  let resolvePatient!: (response: Response) => void;
+  const patientResponse = new Promise<Response>((resolve) => { resolvePatient = resolve; });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    return url.includes("patient=")
+      ? patientResponse
+      : imagingResponse([image("encounter-current", "2026-07-15T15:00:00Z", "Macula")]);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    act(() => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+    });
+    const visitScope = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "This visit");
+    assert.ok(visitScope);
+    await act(async () => {
+      visitScope.props.onClick();
+      await Promise.resolve();
+    });
+    assert.match(JSON.stringify(renderer.toJSON()), /encounter-current/);
+
+    await act(async () => {
+      resolvePatient(imagingResponse([image("patient-scope-stale", "2026-07-16T15:00:00Z", "Macula")]));
+      await Promise.resolve();
+    });
+    const rendered = JSON.stringify(renderer.toJSON());
+    assert.match(rendered, /encounter-current/);
+    assert.doesNotMatch(rendered, /patient-scope-stale/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a successful upload still reports onSaved when the history refresh fails", async () => {
+  const originalFetch = globalThis.fetch;
+  let getCalls = 0;
+  let saved = 0;
+  globalThis.fetch = async (input, init) => {
+    if (init?.method === "POST") {
+      return new Response(JSON.stringify({ mediaReference: "Media/uploaded" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    getCalls += 1;
+    return getCalls === 1
+      ? imagingResponse([])
+      : new Response(JSON.stringify({ error: "refresh unavailable" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => { saved += 1; }}
+        />,
+      );
+      await Promise.resolve();
+    });
+    const file = new File(["scan"], "scan.png", { type: "image/png" });
+    const input = renderer.root.findByProps({ "aria-label": "Choose imaging file" });
+    act(() => input.props.onChange({ target: { files: [file] } }));
+    const upload = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Upload to chart");
+    assert.ok(upload);
+    await act(async () => upload.props.onClick());
+    assert.equal(saved, 1);
+    assert.match(JSON.stringify(renderer.toJSON()), /Imaging saved\. Refresh the chart/);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("inline PDFs are opened through a revocable blob URL", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCreateObjectUrl = URL.createObjectURL;
+  const originalRevokeObjectUrl = URL.revokeObjectURL;
+  const revoked: string[] = [];
+  URL.createObjectURL = () => "blob:imaging-pdf";
+  URL.revokeObjectURL = (value) => { revoked.push(value); };
+  globalThis.fetch = async () => imagingResponse([{
+    ...image("inline-pdf", "2026-07-15T15:00:00Z", undefined, "data:application/pdf;base64,cGRm"),
+    category: "outside-record",
+    contentType: "application/pdf",
+  }]);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    const attachment = renderer.root.findByType("a");
+    assert.equal(attachment.props.href, "blob:imaging-pdf");
+    assert.equal(String(attachment.props.href).startsWith("data:"), false);
+  } finally {
+    act(() => renderer?.unmount());
+    assert.deepEqual(revoked, ["blob:imaging-pdf"]);
+    URL.createObjectURL = originalCreateObjectUrl;
+    URL.revokeObjectURL = originalRevokeObjectUrl;
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("OCT refinement moves focus into the form and restores the trigger after cancel", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => imagingResponse([
+    image("oct-focus", "2026-07-15T15:00:00Z", "Macula"),
+  ]);
+  let inputFocuses = 0;
+  let triggerFocuses = 0;
+  const triggerNode = { focus: () => { triggerFocuses += 1; } };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+        {
+          createNodeMock: (element) =>
+            element.props["aria-label"] === "OCT structure"
+              ? { focus: () => { inputFocuses += 1; } }
+              : {},
+        },
+      );
+      await Promise.resolve();
+    });
+    const refine = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Refine structure");
+    assert.ok(refine);
+    await act(async () => {
+      refine.props.onClick({ currentTarget: triggerNode });
+      await Promise.resolve();
+    });
+    assert.equal(inputFocuses, 1);
+
+    const cancel = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Cancel");
+    assert.ok(cancel);
+    await act(async () => {
+      cancel.props.onClick();
+      await Promise.resolve();
+    });
+    assert.equal(triggerFocuses, 1);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("an expired image URL is refreshed once, then becomes a broken state with metadata preserved", async () => {
   const originalFetch = globalThis.fetch;
   const urls = [
@@ -148,4 +381,11 @@ function image(id: string, date: string, structure?: string, contentUrl = `https
     contentUrl,
     contentState: "available",
   };
+}
+
+function imagingResponse(images: ImagingSummary[]): Response {
+  return new Response(JSON.stringify({ images }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }

@@ -120,6 +120,7 @@ import {
   LONGITUDINAL_IMAGING_CONTENT_TYPE,
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
+import { PgBinaryAttemptStore } from "./legacy-import/binary-attempt-store.js";
 import {
   handleDryEyeMeibographyCaptureRequest,
   handleDryEyeMeibographyImageRequest,
@@ -545,6 +546,9 @@ const diagnosisVisitStatusStore = new PgDiagnosisVisitStatusStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 const myopiaReferencePopulationStore = new PgMyopiaReferencePopulationStore({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+const imagingBinaryAttemptStore = new PgBinaryAttemptStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 startPackageExpiryWorker({
@@ -5772,6 +5776,7 @@ async function main(): Promise<void> {
         const procedureDefinitions = staff ? await procedureDefinitionStore.list() : [];
         return {
           authenticate: async () => staff,
+          binaryAttempts: imagingBinaryAttemptStore,
           procedureDefinitions: () => procedureDefinitions,
         };
       };
@@ -6568,7 +6573,10 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingCaptureRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
@@ -6582,7 +6590,10 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingListRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.read") },
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
             { authHeader: req.header("authorization"), query: req.query },
           );
           res.status(result.status).json(result.body);
@@ -6596,7 +6607,10 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingStructureRefinementRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
             {
               authHeader: req.header("authorization"),
               mediaId: req.params.mediaId,

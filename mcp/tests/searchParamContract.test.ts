@@ -50,8 +50,9 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Condition", "encounter", "_count"),
     spec("Observation", "encounter", "_count"),
   ],
-  "src/clinical-graph/imaging-endpoint.ts:602": [
+  "src/clinical-graph/imaging-endpoint.ts:643": [
     spec("Media", "patient", "encounter", "status", "_sort", "_count"),
+    spec("Media", "_id", "_count"),
   ],
   "src/clinical-graph/protocol-store.ts:160": [spec("Basic", "code", "identifier", "_count")],
   "src/desk/day-ledger.ts:234": [
@@ -69,12 +70,12 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Patient", "_id", "_count"),
   ],
   "src/fhir/wenoMappingCatalog.ts:120": [spec("Basic", "code", "_count")],
-  "src/index.ts:2638": [spec("Patient", "name", "_count")],
-  "src/index.ts:2679": [spec("Observation", "subject", "category", "_count")],
-  "src/index.ts:2687": [spec("ChargeItem", "subject", "context", "_count")],
-  "src/index.ts:2695": DYNAMIC_FHIR_SEARCH,
-  "src/index.ts:4316": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
-  "src/index.ts:4338": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:2642": [spec("Patient", "name", "_count")],
+  "src/index.ts:2683": [spec("Observation", "subject", "category", "_count")],
+  "src/index.ts:2691": [spec("ChargeItem", "subject", "context", "_count")],
+  "src/index.ts:2699": DYNAMIC_FHIR_SEARCH,
+  "src/index.ts:4320": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
+  "src/index.ts:4342": [spec("Observation", "subject", "code", "date", "focus", "_count", "_sort")],
   "src/office/office-channel.ts:190": [
     spec("Communication", "category", "_count", "_sort"),
     spec("Provenance", "_tag", "recorded", "_count", "_sort"),

@@ -10,16 +10,22 @@ import type {
 import { z } from "zod";
 import { assertBusinessActionAllowed, type PracticeRoleId } from "../authz/roles.js";
 import { uploadBinary, type BinaryUploadAuth } from "../fhir/binary-upload.js";
-import type { JsonPatchOperation } from "../fhir-client.js";
 import {
   lateralityExtension,
   odosConcept,
   reference,
 } from "../fhir/ophthalmology/extensions.js";
+import { ODOS_OPHTHALMOLOGY_CODE_SYSTEM } from "../fhir/ophthalmology/codeBindings.js";
 import {
   AESTHETICS_CONSENT_ACKNOWLEDGEMENT_LINK_ID,
   AESTHETICS_COSMETIC_CONSENT_URL,
 } from "../fhir/aestheticsConsent.js";
+import type { BinaryAttemptStore } from "../legacy-import/binary-attempt-store.js";
+import { LEGACY_FILE_IDENTIFIER_SYSTEM } from "../legacy-import/binary-transport.js";
+import {
+  defaultReferralStorageBaseUrls,
+  referralBinaryId,
+} from "../referral/referral-service.js";
 import type { ClinicalProcedureDefinition } from "./procedure-definition-store.js";
 
 export const MANUAL_IMAGING_CONTENT_TYPE = "application/vnd.odos.manual-imaging+json";
@@ -34,12 +40,6 @@ export interface ImagingFhirClient {
     resource: T,
     extraHeaders?: Record<string, string>,
   ): Promise<T>;
-  patch<T extends Media>(
-    resourceType: T["resourceType"],
-    id: string,
-    operations: JsonPatchOperation[],
-    extraHeaders?: Record<string, string>,
-  ): Promise<T>;
   search<T extends Media | QuestionnaireResponse>(
     resourceType: T["resourceType"],
     params?: Record<string, string>,
@@ -48,6 +48,7 @@ export interface ImagingFhirClient {
     url: string,
     resourceType: T["resourceType"],
   ): Promise<Bundle<T>>;
+  executeTransaction(bundle: Bundle, extraHeaders?: Record<string, string>): Promise<Bundle>;
 }
 
 export interface ImagingEndpointDeps {
@@ -57,13 +58,17 @@ export interface ImagingEndpointDeps {
     fhir: ImagingFhirClient;
     binaryAuth: BinaryUploadAuth;
   } | null>;
+  binaryAttempts: BinaryAttemptStore;
   procedureDefinitions?: () => ClinicalProcedureDefinition[];
+  storageBaseUrls?: readonly string[];
   now?: () => string;
 }
 
 const WRITE_HEADERS = { "X-ODOS-Source": "mcp/manual_imaging_upload" } as const;
 const LONGITUDINAL_WRITE_HEADERS = { "X-ODOS-Source": "mcp/longitudinal_imaging" } as const;
 const REFINEMENT_WRITE_HEADERS = { "X-ODOS-Source": "mcp/imaging_structure_refinement" } as const;
+const MAX_IMAGING_SEARCH_PAGES = 100;
+const MAX_MEDIA_IDS_PER_SEARCH = 100;
 export const CATEGORY_DISPLAY = {
   "visual-field": "Visual field",
   "fundus-photo": "Fundus photo",
@@ -191,15 +196,16 @@ export async function handleImagingCaptureRequest(
   }
 
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const binary = await uploadBinary({
+  const upload = await uploadTrackedBinary(
+    deps.binaryAttempts,
+    parsed.data.patientReference,
+    parsed.data.file.name,
     bytes,
-    contentType: parsed.data.file.contentType,
-    filename: parsed.data.file.name,
-    securityContext: parsed.data.patientReference,
-    auth: staff.binaryAuth,
-  });
+    parsed.data.file.contentType,
+    staff.binaryAuth,
+  );
   const media = await staff.fhir.create<Media>(
-    buildMedia(parsed.data, staff.staffReference, recordedAt, bytes, binary.url),
+    buildMedia(parsed.data, staff.staffReference, recordedAt, bytes, upload.binary.url),
     WRITE_HEADERS,
   );
   const mediaReference = resourceReference("Media", media.id);
@@ -228,6 +234,11 @@ export async function handleImagingCaptureRequest(
     recorded: recordedAt,
     agent: [{ who: reference(staff.staffReference) }],
   }, WRITE_HEADERS);
+  await deps.binaryAttempts.resolveAttached(
+    upload.attemptId,
+    resourceReferenceId(mediaReference),
+    upload.binary.binaryId,
+  );
 
   return {
     status: 200,
@@ -264,13 +275,11 @@ export async function handleImagingListRequest(
     _sort: "-created",
     _count: "50",
   });
-  const readableMedia = await Promise.all(
-    mediaRows.flatMap((media) =>
-      media.id ? [staff.fhir.read<Media>("Media", media.id)] : []
-    ),
-  );
+  const eligibleRows = mediaRows.filter(isImagingReadSurfaceMedia);
+  const readableMedia = await readImagingMediaBatch(staff.fhir, eligibleRows);
+  const storageBaseUrls = deps.storageBaseUrls ?? defaultReferralStorageBaseUrls();
   const images = readableMedia
-    .map(summarizeImagingMedia)
+    .map((media) => summarizeImagingMedia(media, storageBaseUrls))
     .sort((left, right) => right.date.localeCompare(left.date));
   return {
     status: 200,
@@ -311,25 +320,15 @@ export async function handleImagingStructureRefinementRequest(
   if (!current.id || !current.subject?.reference) {
     return { status: 409, body: { error: "Media is missing its patient association." } };
   }
+  if (!current.meta?.versionId) {
+    return { status: 409, body: { error: "Media is missing the version required for refinement." } };
+  }
   if (imagingCategory(current) !== "oct") {
     return { status: 409, body: { error: "Structure refinement is limited to OCT Media." } };
   }
   const bodySite = imagingBodySite(parsed.data.structure, parsed.data.laterality);
-  const updated = await staff.fhir.patch<Media>(
-    "Media",
-    current.id,
-    [{
-      op: current.bodySite ? "replace" : "add",
-      path: "/bodySite",
-      value: bodySite,
-    }],
-    {
-      ...REFINEMENT_WRITE_HEADERS,
-      ...(current.meta?.versionId ? { "If-Match": `W/"${current.meta.versionId}"` } : {}),
-    },
-  );
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const provenance = await staff.fhir.create<Provenance>({
+  const provenance: Provenance = {
     resourceType: "Provenance",
     meta: {
       tag: [{
@@ -348,13 +347,34 @@ export async function handleImagingStructureRefinementRequest(
     recorded: recordedAt,
     activity: odosConcept("imaging-structure-refinement", "Imaging structure refinement"),
     agent: [{ who: reference(staff.staffReference) }],
+  };
+  const transaction = await staff.fhir.executeTransaction({
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [
+      {
+        resource: { ...current, bodySite },
+        request: {
+          method: "PUT",
+          url: `Media/${current.id}`,
+          ifMatch: `W/"${current.meta.versionId}"`,
+        },
+      },
+      {
+        resource: provenance,
+        request: { method: "POST", url: "Provenance" },
+      },
+    ],
   }, REFINEMENT_WRITE_HEADERS);
+  const updated = await staff.fhir.read<Media>("Media", current.id);
+  const provenanceId = transactionResourceId(transaction, 1, "Provenance");
+  const storageBaseUrls = deps.storageBaseUrls ?? defaultReferralStorageBaseUrls();
   return {
     status: 200,
     body: {
-      image: summarizeImagingMedia(updated),
+      image: summarizeImagingMedia(updated, storageBaseUrls),
       confidence: parsed.data.confidence,
-      ...(provenance.id ? { provenanceReference: `Provenance/${provenance.id}` } : {}),
+      ...(provenanceId ? { provenanceReference: `Provenance/${provenanceId}` } : {}),
     },
   };
 }
@@ -386,19 +406,20 @@ export async function handleLongitudinalImagingCaptureRequest(
     return { status: 400, body: { error: "Imaging files may not exceed 15 MB." } };
   }
   const recordedAt = deps.now?.() ?? new Date().toISOString();
-  const binary = await uploadBinary({
+  const upload = await uploadTrackedBinary(
+    deps.binaryAttempts,
+    parsed.data.patientReference,
+    parsed.data.file.name,
     bytes,
-    contentType: parsed.data.file.contentType,
-    filename: parsed.data.file.name,
-    securityContext: parsed.data.patientReference,
-    auth: staff.binaryAuth,
-  });
+    parsed.data.file.contentType,
+    staff.binaryAuth,
+  );
   const media = await staff.fhir.create<Media>(buildLongitudinalMedia(
     parsed.data,
     staff.staffReference,
     recordedAt,
     bytes,
-    binary.url,
+    upload.binary.url,
   ), LONGITUDINAL_WRITE_HEADERS);
   const mediaReference = resourceReference("Media", media.id);
   const provenance = await staff.fhir.create<Provenance>({
@@ -407,11 +428,18 @@ export async function handleLongitudinalImagingCaptureRequest(
     recorded: recordedAt,
     agent: [{ who: reference(staff.staffReference) }],
   }, LONGITUDINAL_WRITE_HEADERS);
-  const readableMedia = await staff.fhir.read<Media>("Media", resourceReferenceId(mediaReference));
+  await deps.binaryAttempts.resolveAttached(
+    upload.attemptId,
+    resourceReferenceId(mediaReference),
+    upload.binary.binaryId,
+  );
+  const mediaId = resourceReferenceId(mediaReference);
+  const readableMedia = await staff.fhir.read<Media>("Media", mediaId);
+  const storageBaseUrls = deps.storageBaseUrls ?? defaultReferralStorageBaseUrls();
   return {
     status: 201,
     body: {
-      image: summarizeLongitudinalMedia(readableMedia),
+      image: summarizeLongitudinalMedia(readableMedia, storageBaseUrls),
       defaultLens: definition.photo_posture,
       ...(provenance.id ? { provenanceReference: `Provenance/${provenance.id}` } : {}),
     },
@@ -443,7 +471,12 @@ export async function handleLongitudinalImagingListRequest(
   });
   const images = (await Promise.all(
     candidates.map((id) => staff.fhir.read<Media>("Media", id)),
-  )).map(summarizeLongitudinalMedia);
+  )).map((media) =>
+    summarizeLongitudinalMedia(
+      media,
+      deps.storageBaseUrls ?? defaultReferralStorageBaseUrls(),
+    )
+  );
   return { status: 200, body: { images, suggestedPair: suggestComparisonPair(images) } };
 }
 
@@ -521,9 +554,12 @@ function buildLongitudinalMedia(
   };
 }
 
-export function summarizeImagingMedia(media: Media): ImagingSummary {
+export function summarizeImagingMedia(
+  media: Media,
+  storageBaseUrls: readonly string[] = defaultReferralStorageBaseUrls(),
+): ImagingSummary {
   if (!media.id) throw new Error("Imaging Media is missing its id.");
-  const contentUrl = attachmentContentUrl(media);
+  const contentUrl = attachmentContentUrl(media, storageBaseUrls);
   return {
     id: media.id,
     mediaReference: `Media/${media.id}`,
@@ -579,18 +615,22 @@ function imagingLaterality(
   return code as "OD" | "OS" | "OU" | "UNKNOWN" | undefined;
 }
 
-function attachmentContentUrl(media: Media): string | undefined {
+function attachmentContentUrl(
+  media: Media,
+  storageBaseUrls: readonly string[],
+): string | undefined {
   if (media.content.data && media.content.contentType) {
     return `data:${media.content.contentType};base64,${media.content.data}`;
   }
   const url = media.content.url?.trim();
   if (!url || url.startsWith("Binary/")) return undefined;
   try {
-    const candidate = new URL(url);
-    return ["http:", "https:"].includes(candidate.protocol) ? url : undefined;
+    new URL(url);
   } catch {
     return undefined;
   }
+  if (!referralBinaryId(url, storageBaseUrls)) return undefined;
+  return url;
 }
 
 async function searchImagingMedia(
@@ -599,16 +639,53 @@ async function searchImagingMedia(
 ): Promise<Media[]> {
   const rows: Media[] = [];
   const seenNextUrls = new Set<string>();
+  let pageCount = 1;
   let bundle = await fhir.search<Media>("Media", params);
   while (true) {
     rows.push(...(bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []));
     const nextUrl = bundle.link?.find((link) => link.relation === "next")?.url;
     if (!nextUrl) return rows;
+    if (pageCount >= MAX_IMAGING_SEARCH_PAGES) {
+      throw new Error(`Imaging search exceeded ${MAX_IMAGING_SEARCH_PAGES} pages.`);
+    }
     if (!fhir.searchUrl) throw new Error("Imaging FHIR client cannot follow search pagination.");
     if (seenNextUrls.has(nextUrl)) throw new Error("Imaging search returned a pagination cycle.");
     seenNextUrls.add(nextUrl);
     bundle = await fhir.searchUrl<Media>(nextUrl, "Media");
+    pageCount += 1;
   }
+}
+
+async function readImagingMediaBatch(
+  fhir: ImagingFhirClient,
+  mediaRows: readonly Media[],
+): Promise<Media[]> {
+  const orderedIds = mediaRows.flatMap((media) => media.id ? [media.id] : []);
+  const canonicalById = new Map<string, Media>();
+  for (let offset = 0; offset < orderedIds.length; offset += MAX_MEDIA_IDS_PER_SEARCH) {
+    const ids = orderedIds.slice(offset, offset + MAX_MEDIA_IDS_PER_SEARCH);
+    const canonicalRows = await searchImagingMedia(fhir, {
+      _id: ids.join(","),
+      _count: String(MAX_MEDIA_IDS_PER_SEARCH),
+    });
+    for (const media of canonicalRows) {
+      if (media.id && ids.includes(media.id)) canonicalById.set(media.id, media);
+    }
+  }
+  return orderedIds.flatMap((id) => canonicalById.get(id) ?? []);
+}
+
+function isImagingReadSurfaceMedia(media: Media): boolean {
+  if (isLongitudinalMedia(media)) return false;
+  const codedImaging = media.modality?.coding?.some((coding) =>
+    coding.system === ODOS_OPHTHALMOLOGY_CODE_SYSTEM
+    && coding.code !== undefined
+    && coding.code in CATEGORY_DISPLAY
+  );
+  const migratedImaging = media.identifier?.some(
+    (identifier) => identifier.system === LEGACY_FILE_IDENTIFIER_SYSTEM,
+  );
+  return Boolean(codedImaging || migratedImaging);
 }
 
 function isLongitudinalMedia(media: Media): boolean {
@@ -621,11 +698,14 @@ function isLongitudinalMedia(media: Media): boolean {
   );
 }
 
-function summarizeLongitudinalMedia(media: Media): LongitudinalImageSummary {
+function summarizeLongitudinalMedia(
+  media: Media,
+  storageBaseUrls: readonly string[],
+): LongitudinalImageSummary {
   if (!media.id || !media.content.contentType || !media.bodySite?.text) {
     throw new Error("Longitudinal Media is missing required display data.");
   }
-  const contentUrl = attachmentContentUrl(media);
+  const contentUrl = attachmentContentUrl(media, storageBaseUrls);
   return {
     mediaReference: `Media/${media.id}`,
     createdAt: media.createdDateTime ?? media.issued ?? media.meta?.lastUpdated ?? "",
@@ -637,6 +717,36 @@ function summarizeLongitudinalMedia(media: Media): LongitudinalImageSummary {
     ...(media.basedOn?.[0]?.reference ? { seriesReference: media.basedOn[0].reference } : {}),
     ...(media.partOf?.[0]?.reference ? { procedureReference: media.partOf[0].reference } : {}),
   };
+}
+
+async function uploadTrackedBinary(
+  attempts: BinaryAttemptStore,
+  patientReference: string,
+  sourceFilename: string,
+  bytes: Uint8Array,
+  contentType: string,
+  auth: BinaryUploadAuth,
+): Promise<{ attemptId: string; binary: Awaited<ReturnType<typeof uploadBinary>> }> {
+  const attempt = await attempts.open({ sourceFilename, patientReference });
+  const binary = await uploadBinary({
+    bytes,
+    contentType,
+    filename: sourceFilename,
+    securityContext: patientReference,
+    auth,
+  });
+  await attempts.recordReturned(attempt.attemptId, binary.binaryId);
+  return { attemptId: attempt.attemptId, binary };
+}
+
+function transactionResourceId(
+  bundle: Bundle,
+  entryIndex: number,
+  resourceType: string,
+): string | undefined {
+  const entry = bundle.entry?.[entryIndex];
+  if (entry?.resource?.resourceType === resourceType && entry.resource.id) return entry.resource.id;
+  return entry?.response?.location?.match(new RegExp(`^${resourceType}/([^/]+)`))?.[1];
 }
 
 async function hasAestheticsConsent(

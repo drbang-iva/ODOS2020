@@ -204,7 +204,7 @@ export class ReferralService {
     private readonly now: () => string = () => new Date().toISOString(),
     options: ReferralServiceOptions = {},
   ) {
-    this.storageBaseUrls = options.storageBaseUrls ?? defaultStorageBaseUrls();
+    this.storageBaseUrls = options.storageBaseUrls ?? defaultReferralStorageBaseUrls();
   }
 
   async createReferral(input: CreateReferralInput): Promise<ServiceRequest> {
@@ -890,7 +890,7 @@ export function referralBinaryId(
   return undefined;
 }
 
-function defaultStorageBaseUrls(): string[] {
+export function defaultReferralStorageBaseUrls(): string[] {
   const configured = process.env.MEDPLUM_STORAGE_BASE_URL?.trim();
   if (configured) return [configured];
   const medplumBase = process.env.MEDPLUM_BASE_URL?.trim();

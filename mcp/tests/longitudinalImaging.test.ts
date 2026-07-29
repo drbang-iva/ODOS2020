@@ -14,6 +14,10 @@ import {
   AESTHETICS_CONSENT_ACKNOWLEDGEMENT_LINK_ID,
   AESTHETICS_COSMETIC_CONSENT_URL,
 } from "../src/fhir/aestheticsConsent.js";
+import type {
+  BinaryAttempt,
+  BinaryAttemptStore,
+} from "../src/legacy-import/binary-attempt-store.js";
 
 const AUTH = "Bearer good";
 const DATA = Buffer.from("clinical photo").toString("base64");
@@ -36,19 +40,11 @@ class PhotoFhir {
   async read<T extends Media>(_resourceType: T["resourceType"], id: string): Promise<T> {
     const row = this.media.find((candidate) => candidate.id === id);
     if (!row) throw new Error(`Missing Media/${id}`);
-    return {
-      ...structuredClone(row),
-      content: {
-        ...structuredClone(row.content),
-        url: row.content.url?.startsWith("Binary/")
-          ? `https://storage.test/${row.content.url.slice("Binary/".length)}/1?Expires=60&Signature=signed`
-          : row.content.url,
-      },
-    } as T;
+    return structuredClone(row) as T;
   }
 
-  async patch<T extends Media>(): Promise<T> {
-    throw new Error("Unexpected patch");
+  async executeTransaction(): Promise<Bundle> {
+    throw new Error("Unexpected transaction");
   }
 
   async search<T extends Media | QuestionnaireResponse>(
@@ -82,6 +78,7 @@ class PhotoFhir {
 }
 
 function deps(fhir: PhotoFhir): ImagingEndpointDeps {
+  const binaryAttempts = new PhotoBinaryAttemptStore();
   return {
     authenticate: async (header) => header === AUTH ? {
       staffReference: "Practitioner/doc1",
@@ -102,7 +99,9 @@ function deps(fhir: PhotoFhir): ImagingEndpointDeps {
         }),
       },
     } : null,
+    binaryAttempts,
     procedureDefinitions: buildProcedureDefinitionSeeds,
+    storageBaseUrls: ["https://storage.test/"],
     now: () => "2026-07-18T15:00:00.000Z",
   };
 }
@@ -162,8 +161,9 @@ test("consented raw Binary capture above 1 MB tags Media to patient, series, ses
   assert.equal(fhir.media[0]?.content.size, bytes.byteLength);
   assert.equal(
     (result.body as { image: LongitudinalImageSummary }).image.contentUrl,
-    "https://storage.test/binary-1/1?Expires=60&Signature=signed",
+    undefined,
   );
+  assert.equal((result.body as { image: LongitudinalImageSummary }).image.contentState, "missing");
   assert.deepEqual(fhir.sources, ["mcp/longitudinal_imaging", "mcp/longitudinal_imaging"]);
   assert.equal((result.body as { defaultLens: string }).defaultLens, "compare");
   const consentSearch = fhir.searches.find((search) => search.resourceType === "QuestionnaireResponse");
@@ -220,6 +220,63 @@ function consent(): QuestionnaireResponse {
       answer: [{ valueBoolean: true }],
     }],
   };
+}
+
+class PhotoBinaryAttemptStore implements BinaryAttemptStore {
+  private rows: BinaryAttempt[] = [];
+
+  async open(input: {
+    sourceFilename: string;
+    patientReference: string;
+    mediaId?: string;
+  }): Promise<BinaryAttempt> {
+    const row: BinaryAttempt = {
+      attemptId: `attempt-${this.rows.length + 1}`,
+      sourceFilename: input.sourceFilename,
+      patientReference: input.patientReference,
+      ...(input.mediaId ? { mediaId: input.mediaId } : {}),
+      status: "open",
+      openedAt: "2026-07-18T15:00:00.000Z",
+    };
+    this.rows.push(row);
+    return row;
+  }
+
+  async recordReturned(attemptId: string, binaryId: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { binaryId });
+  }
+
+  async resolveAttached(attemptId: string, mediaId: string, binaryId: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { mediaId, binaryId, status: "resolved-attached" });
+  }
+
+  async resolveAttachedByBinaryId(): Promise<number> {
+    return 0;
+  }
+
+  async resolveNotCreated(attemptId: string, detail: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { status: "resolved-not-created", resolutionDetail: detail });
+  }
+
+  async resolveDisposed(attemptId: string, detail: string): Promise<BinaryAttempt> {
+    return this.replace(attemptId, { status: "resolved-disposed", resolutionDetail: detail });
+  }
+
+  async reopenByBinaryId(): Promise<void> {
+    return;
+  }
+
+  async listOpen(): Promise<BinaryAttempt[]> {
+    return this.rows.filter((row) => row.status === "open");
+  }
+
+  private replace(attemptId: string, updates: Partial<BinaryAttempt>): BinaryAttempt {
+    const index = this.rows.findIndex((row) => row.attemptId === attemptId);
+    assert.notEqual(index, -1);
+    const next = { ...this.rows[index]!, ...updates };
+    this.rows[index] = next;
+    return next;
+  }
 }
 
 function photo(id: string, createdDateTime: string, seriesReference: string): Media {

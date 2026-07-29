@@ -103,17 +103,34 @@ test("a migrated ledger row is visibly tagged and opens its encounter without re
   });
 
   const row = renderer.root.findAllByProps({ className: "odos-visit-row" })
-    .find((candidate) => String(candidate.props["aria-label"]).includes("Office visit"));
+    .find((candidate) => candidate.findAllByProps({ "data-testid": "visit-status-older" }).length > 0);
   assert.ok(row);
-  assert.match(JSON.stringify(renderer.toJSON()), /Migrated/);
-  assert.equal(row.props.role, "button");
-  assert.equal(row.props.tabIndex, 0);
-  act(() => row.props.onClick());
+  const status = row.findByProps({ "data-testid": "visit-status-older" });
+  assert.deepEqual(status.children, ["Migrated"]);
+  assert.equal(row.props.role, undefined);
+  assert.equal(row.props.tabIndex, undefined);
+  const openVisit = row.findAllByType("button")
+    .find((button) => button.children.join("") === "Open visit");
+  assert.ok(openVisit);
+  act(() => openVisit.props.onClick({ stopPropagation: () => undefined }));
   assert.deepEqual(useViewState.getState().view, {
     kind: "encounter",
     patientId: "patient-1",
     encounterId: "older",
   });
+  for (const key of ["Enter", " "]) {
+    useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+    act(() => openVisit.props.onKeyDown({
+      key,
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+    }));
+    assert.deepEqual(useViewState.getState().view, {
+      kind: "encounter",
+      patientId: "patient-1",
+      encounterId: "older",
+    });
+  }
 });
 
 test("zero-data overview renders an honest empty state for every snapshot section", () => {

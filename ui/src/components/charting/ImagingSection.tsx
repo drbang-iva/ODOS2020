@@ -75,6 +75,8 @@ export const CATEGORY_OPTIONS = [
 
 export function ImagingSection({ patientReference, encounterReference, onSaved }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const refinementInputRef = useRef<HTMLInputElement>(null);
+  const refinementTriggerRef = useRef<HTMLButtonElement>();
   const retriedImages = useRef(new Set<string>());
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState<(typeof CATEGORY_OPTIONS)[number][0]>("visual-field");
@@ -93,29 +95,37 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
     confidence: "provisional" | "clinician-confirmed";
   }>();
   const [refining, setRefining] = useState(false);
+  const activeScopeKey = useRef("");
+  activeScopeKey.current = imagingScopeKey(scope, patientReference, encounterReference);
 
-  async function loadImages(nextScope = scope): Promise<ImagingSummary[]> {
+  async function loadImages(
+    nextScope: "patient" | "encounter",
+    requestedPatient: string,
+    requestedEncounter: string,
+  ): Promise<ImagingSummary[]> {
     const query = new URLSearchParams(
       nextScope === "patient"
-        ? { patient: patientReference }
-        : { encounter: encounterReference },
+        ? { patient: requestedPatient }
+        : { encounter: requestedEncounter },
     );
     const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/imaging?${query}`, {
       headers: authHeaders(),
     });
     const body = await response.json() as ImagingPayload;
     if (!response.ok) throw new Error(body.error ?? `Imaging history failed: ${response.status}`);
-    const nextImages = body.images ?? [];
-    setImages(nextImages);
-    return nextImages;
+    return body.images ?? [];
   }
 
   useEffect(() => {
     let cancelled = false;
+    const requestedKey = imagingScopeKey(scope, patientReference, encounterReference);
     setLoading(true);
     setError(null);
     retriedImages.current.clear();
-    loadImages(scope)
+    loadImages(scope, patientReference, encounterReference)
+      .then((nextImages) => {
+        if (!cancelled && requestedKey === activeScopeKey.current) setImages(nextImages);
+      })
       .catch((caught) => {
         if (!cancelled) setError(messageOf(caught));
       })
@@ -126,6 +136,10 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
       cancelled = true;
     };
   }, [patientReference, encounterReference, scope]);
+
+  useEffect(() => {
+    if (refinement) refinementInputRef.current?.focus();
+  }, [refinement?.id]);
 
   const groups = useMemo(() => groupImagingRows(images), [images]);
 
@@ -154,6 +168,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
 
   async function upload() {
     if (!file) return;
+    const requestedKey = imagingScopeKey(scope, patientReference, encounterReference);
     const contentType = imagingContentType(file);
     if (!contentType) {
       setFile(null);
@@ -183,18 +198,25 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
       if (!response.ok || !body.mediaReference) {
         throw new Error(body.error ?? `Imaging upload failed: ${response.status}`);
       }
+      if (requestedKey !== activeScopeKey.current) return;
       const summary = `${file.name} uploaded`;
       setSaved(summary);
       setFile(null);
       setInterpretation("");
       if (inputRef.current) inputRef.current.value = "";
-      await loadImages();
       onSaved({
         completed: true,
         summary,
         savedAt: new Date().toISOString(),
         operator: "ODOS UI manual imaging",
       });
+      try {
+        const refreshed = await loadImages(scope, patientReference, encounterReference);
+        if (requestedKey === activeScopeKey.current) setImages(refreshed);
+      } catch (refreshError) {
+        console.error("Imaging saved but chart history could not refresh.", refreshError);
+        setError("Imaging saved. Refresh the chart to reload imaging history.");
+      }
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
@@ -210,8 +232,11 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
       return;
     }
     retriedImages.current.add(image.id);
+    const requestedKey = imagingScopeKey(scope, patientReference, encounterReference);
     try {
-      const refreshed = await loadImages();
+      const refreshed = await loadImages(scope, patientReference, encounterReference);
+      if (requestedKey !== activeScopeKey.current) return;
+      setImages(refreshed);
       const replacement = refreshed.find((row) => row.id === image.id);
       if (!replacement?.contentUrl || replacement.contentUrl === image.contentUrl) {
         setImages((current) => current.map((row) =>
@@ -219,6 +244,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
         ));
       }
     } catch {
+      if (requestedKey !== activeScopeKey.current) return;
       setImages((current) => current.map((row) =>
         row.id === image.id ? { ...row, contentUrl: undefined, contentState: "missing" } : row
       ));
@@ -227,6 +253,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
 
   async function saveRefinement() {
     if (!refinement?.structure.trim()) return;
+    const requestedKey = imagingScopeKey(scope, patientReference, encounterReference);
     setRefining(true);
     setError(null);
     try {
@@ -246,13 +273,29 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
       if (!response.ok || !body.image) {
         throw new Error(body.error ?? `Structure refinement failed: ${response.status}`);
       }
+      if (requestedKey !== activeScopeKey.current) return;
       setImages((current) => current.map((row) => row.id === body.image!.id ? body.image! : row));
-      setRefinement(undefined);
+      closeRefinement();
     } catch (caught) {
       setError(messageOf(caught));
     } finally {
       setRefining(false);
     }
+  }
+
+  function openRefinement(image: ImagingSummary, trigger: HTMLButtonElement) {
+    refinementTriggerRef.current = trigger;
+    setRefinement({
+      id: image.id,
+      structure: image.structure ?? "",
+      laterality: image.laterality ?? "",
+      confidence: "clinician-confirmed",
+    });
+  }
+
+  function closeRefinement() {
+    setRefinement(undefined);
+    queueMicrotask(() => refinementTriggerRef.current?.focus());
   }
 
   return (
@@ -291,12 +334,9 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
                                 key={image.id}
                                 image={image}
                                 onImageError={() => void retryImage(image)}
-                                onRefine={image.category === "oct" ? () => setRefinement({
-                                  id: image.id,
-                                  structure: image.structure ?? "",
-                                  laterality: image.laterality ?? "",
-                                  confidence: "clinician-confirmed",
-                                }) : undefined}
+                                onRefine={image.category === "oct"
+                                  ? (trigger) => openRefinement(image, trigger)
+                                  : undefined}
                               />
                             ))}
                           </div>
@@ -314,7 +354,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
           <section className="mt-5 rounded border border-violet-300/25 bg-violet-300/5 p-4" aria-label="Refine OCT structure">
             <h3 className="text-sm font-semibold text-violet-100">Refine OCT structure</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <input aria-label="OCT structure" className="sidebar-input" value={refinement.structure} placeholder="e.g. Optic nerve or Macula" onChange={(event) => setRefinement({ ...refinement, structure: event.target.value })} />
+              <input ref={refinementInputRef} aria-label="OCT structure" className="sidebar-input" value={refinement.structure} placeholder="e.g. Optic nerve or Macula" onChange={(event) => setRefinement({ ...refinement, structure: event.target.value })} />
               <select aria-label="OCT laterality" className="sidebar-input" value={refinement.laterality} onChange={(event) => setRefinement({ ...refinement, laterality: event.target.value as typeof refinement.laterality })}>
                 <option value="">Laterality not recorded</option>
                 <option value="OD">Right eye (OD)</option>
@@ -329,7 +369,7 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             </div>
             <div className="mt-3 flex gap-2">
               <button type="button" className="sidebar-button" disabled={refining || !refinement.structure.trim()} onClick={() => void saveRefinement()}>{refining ? "Saving…" : "Save refinement"}</button>
-              <button type="button" className="px-3 py-2 text-sm text-[color:var(--odos-muted)]" disabled={refining} onClick={() => setRefinement(undefined)}>Cancel</button>
+              <button type="button" className="px-3 py-2 text-sm text-[color:var(--odos-muted)]" disabled={refining} onClick={closeRefinement}>Cancel</button>
             </div>
           </section>
         )}
@@ -398,7 +438,7 @@ function ImagingTile({
 }: {
   image: ImagingSummary;
   onImageError: () => void;
-  onRefine?: () => void;
+  onRefine?: (trigger: HTMLButtonElement) => void;
 }) {
   const imageContent = image.contentType.startsWith("image/");
   return (
@@ -410,14 +450,55 @@ function ImagingTile({
       ) : imageContent ? (
         <img className="aspect-[4/3] w-full bg-[color:var(--odos-ground)] object-contain" src={image.contentUrl} alt={image.title} onError={onImageError} />
       ) : (
-        <a className="flex aspect-[4/3] items-center justify-center bg-bg-mid text-sm font-medium text-brand-light" href={image.contentUrl} target="_blank" rel="noreferrer">Open {image.contentType === "application/pdf" ? "PDF" : "attachment"}</a>
+        <ImagingAttachment image={image} />
       )}
       <div className="p-3 text-xs text-[color:var(--odos-muted)]">
         <strong className="block text-sm text-[color:var(--odos-text)]">{image.title}</strong>
         <span>{[image.structure, image.laterality, image.device].filter(Boolean).join(" · ") || "Structure and device not recorded"}</span>
-        {onRefine && <button type="button" className="mt-2 block text-brand-light" onClick={onRefine}>Refine structure</button>}
+        {onRefine && (
+          <button
+            type="button"
+            className="mt-2 block text-brand-light"
+            onClick={(event) => onRefine(event.currentTarget)}
+          >
+            Refine structure
+          </button>
+        )}
       </div>
     </article>
+  );
+}
+
+function ImagingAttachment({ image }: { image: ImagingSummary }) {
+  const [href, setHref] = useState(
+    image.contentUrl?.startsWith("data:") ? undefined : image.contentUrl,
+  );
+
+  useEffect(() => {
+    const contentUrl = image.contentUrl;
+    if (!contentUrl?.startsWith("data:")) {
+      setHref(contentUrl);
+      return;
+    }
+    const blob = dataUrlBlob(contentUrl);
+    const blobUrl = URL.createObjectURL(blob);
+    setHref(blobUrl);
+    return () => URL.revokeObjectURL(blobUrl);
+  }, [image.contentUrl]);
+
+  return href ? (
+    <a
+      className="flex aspect-[4/3] items-center justify-center bg-bg-mid text-sm font-medium text-brand-light"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+    >
+      Open {image.contentType === "application/pdf" ? "PDF" : "attachment"}
+    </a>
+  ) : (
+    <span className="flex aspect-[4/3] items-center justify-center bg-bg-mid text-sm text-[color:var(--odos-muted)]">
+      Preparing attachment…
+    </span>
   );
 }
 
@@ -480,7 +561,12 @@ async function fileBase64(file: File): Promise<string> {
 function dateKey(value: string): string {
   if (!value) return "Date not recorded";
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value.slice(0, 10) : parsed.toISOString().slice(0, 10);
+  if (Number.isNaN(parsed.getTime())) return value.slice(0, 10);
+  return [
+    parsed.getFullYear(),
+    String(parsed.getMonth() + 1).padStart(2, "0"),
+    String(parsed.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function displayDate(value: string): string {
@@ -495,4 +581,23 @@ function unique<T>(values: readonly T[]): T[] {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function imagingScopeKey(
+  scope: "patient" | "encounter",
+  patientReference: string,
+  encounterReference: string,
+): string {
+  return `${scope}:${scope === "patient" ? patientReference : encounterReference}`;
+}
+
+function dataUrlBlob(value: string): Blob {
+  const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/.exec(value);
+  if (!match?.[1] || match[2] === undefined) {
+    throw new Error("Inline attachment data is not a supported base64 data URL.");
+  }
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: match[1] });
 }

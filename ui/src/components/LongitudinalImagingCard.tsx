@@ -31,6 +31,8 @@ const MAX_FILE_BYTES = 15 * 1024 * 1024;
 
 export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
   const retriedImages = useRef(new Set<string>());
+  const activePatient = useRef(patientReference);
+  activePatient.current = patientReference;
   const [definitions, setDefinitions] = useState<ProcedureDefinitionSummary[]>([]);
   const [definitionKey, setDefinitionKey] = useState("");
   const [lens, setLens] = useState<PhotoLens>("timeline");
@@ -45,16 +47,14 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
 
-  async function loadImages(): Promise<LongitudinalImageSummary[]> {
+  async function loadImages(requestedPatient: string): Promise<ImagingPayload> {
     const response = await fetch(
-      `${clinicalGraphApiBase()}/clinical-graph/longitudinal-imaging?patient=${encodeURIComponent(patientReference)}`,
+      `${clinicalGraphApiBase()}/clinical-graph/longitudinal-imaging?patient=${encodeURIComponent(requestedPatient)}`,
       { headers: authHeaders() },
     );
     const body = await response.json() as ImagingPayload;
     if (!response.ok) throw new Error(body.error ?? `Clinical-photo timeline failed: ${response.status}`);
-    setImages(body.images ?? []);
-    setSuggestedPair(body.suggestedPair);
-    return body.images ?? [];
+    return { ...body, images: body.images ?? [] };
   }
 
   useEffect(() => {
@@ -67,14 +67,7 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
           if (!response.ok) throw new Error(body.error ?? `Procedure definitions failed: ${response.status}`);
           return body.definitions ?? [];
         }),
-      fetch(
-        `${clinicalGraphApiBase()}/clinical-graph/longitudinal-imaging?patient=${encodeURIComponent(patientReference)}`,
-        { headers: authHeaders() },
-      ).then(async (response) => {
-        const body = await response.json() as ImagingPayload;
-        if (!response.ok) throw new Error(body.error ?? `Clinical-photo timeline failed: ${response.status}`);
-        return { ...body, images: body.images ?? [] };
-      }),
+      loadImages(patientReference),
     ]).then(([nextDefinitions, payload]) => {
       if (cancelled) return;
       setDefinitions(nextDefinitions);
@@ -153,11 +146,15 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
       if (!response.ok || !body.image) {
         throw new Error(body.error ?? `Clinical-photo capture failed: ${response.status}`);
       }
+      if (patientReference !== activePatient.current) return;
       setFile(undefined);
       setLens(body.defaultLens ?? lens);
       setImages((currentImages) => [body.image!, ...currentImages]);
       try {
-        await loadImages();
+        const payload = await loadImages(patientReference);
+        if (patientReference !== activePatient.current) return;
+        setImages(payload.images);
+        setSuggestedPair(payload.suggestedPair);
       } catch (refreshError) {
         console.error("Clinical photo saved but the longitudinal timeline could not refresh.", refreshError);
         setError("Photo saved. Refresh the chart to reload the longitudinal timeline.");
@@ -179,9 +176,17 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
       return;
     }
     retriedImages.current.add(image.mediaReference);
+    const requestedPatient = patientReference;
     try {
-      const refreshed = await loadImages();
-      const replacement = refreshed.find((candidate) => candidate.mediaReference === image.mediaReference);
+      const payload = await loadImages(requestedPatient);
+      if (requestedPatient !== activePatient.current) return;
+      setImages(payload.images);
+      setSuggestedPair(payload.suggestedPair);
+      const replacement = payload.images.find((candidate) => candidate.mediaReference === image.mediaReference);
+      if (replacement?.contentUrl && replacement.contentUrl !== image.contentUrl) {
+        retriedImages.current.delete(image.mediaReference);
+        return;
+      }
       if (!replacement?.contentUrl || replacement.contentUrl === image.contentUrl) {
         setImages((currentImages) => currentImages.map((candidate) =>
           candidate.mediaReference === image.mediaReference
@@ -190,6 +195,7 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
         ));
       }
     } catch {
+      if (requestedPatient !== activePatient.current) return;
       setImages((currentImages) => currentImages.map((candidate) =>
         candidate.mediaReference === image.mediaReference
           ? { ...candidate, contentUrl: undefined, contentState: "missing" }
