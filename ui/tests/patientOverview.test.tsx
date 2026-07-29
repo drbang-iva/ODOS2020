@@ -89,6 +89,50 @@ test("seeded overview renders real snapshot data, newest-first visits, and linke
   assert.match(html, /Start today&#x27;s visit →/);
 });
 
+test("a migrated ledger row is visibly tagged and opens its encounter without requiring a diagnosis chip", () => {
+  const migrated = fixture();
+  migrated.visits[1] = {
+    ...migrated.visits[1]!,
+    status: "Migrated",
+    diagnoses: [],
+  };
+  useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(<PatientOverview patient={patient} initialOverview={migrated} />);
+  });
+
+  const row = renderer.root.findAllByProps({ className: "odos-visit-row" })
+    .find((candidate) => candidate.findAllByProps({ "data-testid": "visit-status-older" }).length > 0);
+  assert.ok(row);
+  const status = row.findByProps({ "data-testid": "visit-status-older" });
+  assert.deepEqual(status.children, ["Migrated"]);
+  assert.equal(row.props.role, undefined);
+  assert.equal(row.props.tabIndex, undefined);
+  const openVisit = row.findAllByType("button")
+    .find((button) => button.children.join("") === "Open visit");
+  assert.ok(openVisit);
+  act(() => openVisit.props.onClick({ stopPropagation: () => undefined }));
+  assert.deepEqual(useViewState.getState().view, {
+    kind: "encounter",
+    patientId: "patient-1",
+    encounterId: "older",
+  });
+  for (const key of ["Enter", " "]) {
+    useViewState.setState({ view: { kind: "overview", patientId: "patient-1" } });
+    act(() => openVisit.props.onKeyDown({
+      key,
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+    }));
+    assert.deepEqual(useViewState.getState().view, {
+      kind: "encounter",
+      patientId: "patient-1",
+      encounterId: "older",
+    });
+  }
+});
+
 test("zero-data overview renders an honest empty state for every snapshot section", () => {
   const empty = fixture();
   empty.insurance = [];

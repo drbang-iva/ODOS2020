@@ -113,11 +113,14 @@ import {
 } from "./clinical-graph/procedure-fee-schedule-endpoint.js";
 import {
   handleImagingCaptureRequest,
+  handleImagingListRequest,
+  handleImagingStructureRefinementRequest,
   handleLongitudinalImagingCaptureRequest,
   handleLongitudinalImagingListRequest,
   LONGITUDINAL_IMAGING_CONTENT_TYPE,
   MANUAL_IMAGING_CONTENT_TYPE,
 } from "./clinical-graph/imaging-endpoint.js";
+import { PgBinaryAttemptStore } from "./legacy-import/binary-attempt-store.js";
 import {
   handleDryEyeMeibographyCaptureRequest,
   handleDryEyeMeibographyImageRequest,
@@ -543,6 +546,9 @@ const diagnosisVisitStatusStore = new PgDiagnosisVisitStatusStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 const myopiaReferencePopulationStore = new PgMyopiaReferencePopulationStore({
+  postgresUrl: process.env.ODOS_POSTGRES_URL,
+});
+const imagingBinaryAttemptStore = new PgBinaryAttemptStore({
   postgresUrl: process.env.ODOS_POSTGRES_URL,
 });
 startPackageExpiryWorker({
@@ -5581,6 +5587,10 @@ async function authenticateStaffRoute(header: string | undefined) {
       baseUrl: BASE_URL,
       accessToken: header.slice("Bearer ".length),
     }),
+    binaryAuth: {
+      baseUrl: BASE_URL,
+      accessToken: header.slice("Bearer ".length),
+    },
   };
 }
 
@@ -5766,6 +5776,7 @@ async function main(): Promise<void> {
         const procedureDefinitions = staff ? await procedureDefinitionStore.list() : [];
         return {
           authenticate: async () => staff,
+          binaryAttempts: imagingBinaryAttemptStore,
           procedureDefinitions: () => procedureDefinitions,
         };
       };
@@ -6562,13 +6573,54 @@ async function main(): Promise<void> {
         try {
           await authenticateWithMedplum();
           const result = await handleImagingCaptureRequest(
-            { authenticate: authenticateStaffRouteForAction("chart.write") },
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
             { authHeader: req.header("authorization"), body: req.body },
           );
           res.status(result.status).json(result.body);
         } catch (error) {
           console.error("odos-mcp: /clinical-graph/imaging failed:", error);
           if (!res.headersSent) res.status(500).json({ error: "imaging upload route failed" });
+        }
+      });
+
+      app.get("/clinical-graph/imaging", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleImagingListRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.read"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
+            { authHeader: req.header("authorization"), query: req.query },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: imaging list failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "imaging list failed" });
+        }
+      });
+
+      app.post("/clinical-graph/imaging/:mediaId/structure", async (req, res) => {
+        try {
+          await authenticateWithMedplum();
+          const result = await handleImagingStructureRefinementRequest(
+            {
+              authenticate: authenticateStaffRouteForAction("chart.write"),
+              binaryAttempts: imagingBinaryAttemptStore,
+            },
+            {
+              authHeader: req.header("authorization"),
+              mediaId: req.params.mediaId,
+              body: req.body,
+            },
+          );
+          res.status(result.status).json(result.body);
+        } catch (error) {
+          console.error("odos-mcp: imaging structure refinement failed:", error);
+          if (!res.headersSent) res.status(500).json({ error: "imaging structure refinement failed" });
         }
       });
 

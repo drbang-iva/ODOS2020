@@ -19,6 +19,7 @@ import {
   generateReferralLetterBody,
   readReferralIncludeList,
   REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES,
+  referralBinaryId,
   ReferralService,
   type ReferralFhirClient,
   type ReferralIncludeList,
@@ -342,10 +343,59 @@ test("inline media is attribute-escaped and bounded by per-file and aggregate by
   assert.equal(fhir.readKeys.includes("Media/oversized"), false);
 });
 
+test("referral rendering resolves only trusted Binary references through the authenticated FHIR reader", async () => {
+  const fhir = seededFhir();
+  await Promise.all([
+    fhir.create<Media>(urlMedia("canonical", "Canonical Binary", "Binary/binary-canonical")),
+    fhir.create<Media>(urlMedia(
+      "signed",
+      "Signed storage URL",
+      "http://localhost:8103/storage/binary-signed/7?Expires=60&Signature=signed",
+    )),
+    fhir.create<Media>(urlMedia(
+      "untrusted",
+      "Untrusted URL",
+      "https://attacker.example/patient-image.png",
+    )),
+    fhir.create<Media>(urlMedia("missing", "Missing Binary", "Binary/binary-missing")),
+  ]);
+  const referral = await fhir.create<ServiceRequest>(referralResource("binary-images", {
+    ...flagsOff(),
+    images: true,
+  }));
+
+  const html = await new ReferralService(fhir, () => NOW, {
+    storageBaseUrls: ["http://localhost:8103/storage/"],
+  }).assembleReferralArtifact(referral.id!);
+
+  assert.match(html, /Canonical Binary/);
+  assert.match(html, /Signed storage URL/);
+  assert.match(html, /data:image\/png;base64,YmluYXJ5LWNhbm9uaWNhbA==/);
+  assert.match(html, /data:image\/png;base64,YmluYXJ5LXNpZ25lZA==/);
+  assert.match(html, /Untrusted URL — image unavailable/);
+  assert.match(html, /Attachment URL was not a trusted Medplum Binary reference/);
+  assert.match(html, /Missing Binary — image unavailable/);
+  assert.match(html, /Binary content could not be resolved/);
+  assert.deepEqual(fhir.binaryReads, ["binary-canonical", "binary-signed", "binary-missing"]);
+  assert.equal(referralBinaryId("https://attacker.example/Binary/secret", [
+    "http://localhost:8103/storage/",
+  ]), undefined);
+});
+
 class MemoryFhir implements ReferralFhirClient {
   private readonly rows = new Map<string, Resource>();
   private sequence = 0;
   readonly readKeys: string[] = [];
+  readonly binaryReads: string[] = [];
+
+  async readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }> {
+    this.binaryReads.push(id);
+    if (id === "binary-missing") throw new Error("Missing Binary");
+    return {
+      contentType: "image/png",
+      bytes: Buffer.from(id),
+    };
+  }
 
   async create<T extends Resource>(resource: T): Promise<T> {
     const id = resource.id ?? `${resource.resourceType.toLowerCase()}-${++this.sequence}`;
@@ -548,6 +598,17 @@ function media(id: string, title: string, size: number): Media {
     subject: { reference: "Patient/p1" },
     encounter: { reference: "Encounter/current" },
     content: { contentType: "image/png", title, data: "aW1hZ2U=", size },
+  };
+}
+
+function urlMedia(id: string, title: string, url: string): Media {
+  return {
+    resourceType: "Media",
+    id,
+    status: "completed",
+    subject: { reference: "Patient/p1" },
+    encounter: { reference: "Encounter/current" },
+    content: { contentType: "image/png", title, url },
   };
 }
 

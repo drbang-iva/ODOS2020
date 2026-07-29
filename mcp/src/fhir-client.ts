@@ -39,6 +39,7 @@ export interface FhirAuditRecorder {
 export interface MedplumClient {
   login(email: string, password: string): Promise<void>;
   read<T extends Resource>(rt: T["resourceType"], id: string): Promise<T>;
+  readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
   search<T extends Resource>(
     rt: T["resourceType"],
     params?: FhirSearchParams,
@@ -261,6 +262,31 @@ export function createMedplumClient(opts: {
           const res = await authorizedFetch(`${base}/fhir/R4/${rt}/${id}`, () => ({ headers: headers() }));
           if (!res.ok) throw await toError(res);
           return (await res.json()) as T;
+        },
+      );
+    },
+
+    async readBinaryData(id: string): Promise<{ contentType: string; bytes: Uint8Array }> {
+      return audited(
+        {
+          eventType: "read",
+          resourceType: "Binary",
+          resourceId: id,
+          targetReference: `Binary/${id}`,
+          actionOutcome: "granted",
+        },
+        async () => {
+          const res = await authorizedFetch(`${base}/fhir/R4/Binary/${id}`, () => ({
+            headers: {
+              Accept: "application/octet-stream",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }));
+          if (!res.ok) throw await toError(res);
+          return {
+            contentType: res.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream",
+            bytes: new Uint8Array(await res.arrayBuffer()),
+          };
         },
       );
     },

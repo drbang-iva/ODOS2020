@@ -48,6 +48,7 @@ export interface ReferralIncludeList {
 
 export interface ReferralFhirClient {
   read<T extends Resource>(resourceType: T["resourceType"], id: string): Promise<T>;
+  readBinaryData?(id: string): Promise<{ contentType: string; bytes: Uint8Array }>;
   search<T extends Resource>(
     resourceType: T["resourceType"],
     params?: FhirSearchParams,
@@ -65,6 +66,15 @@ export interface ReferralFhirClient {
 export type ReferralPriority = "routine" | "urgent" | "stat";
 
 export class ReferralSendConflictError extends Error {}
+
+interface ReferralImage {
+  media: Media;
+  missing?: string;
+}
+
+export interface ReferralServiceOptions {
+  storageBaseUrls?: readonly string[];
+}
 
 export interface CreateReferralInput {
   subjectReference: string;
@@ -187,10 +197,15 @@ export function generateReferralLetterBody(input: GenerateReferralLetterInput): 
 }
 
 export class ReferralService {
+  private readonly storageBaseUrls: readonly string[];
+
   constructor(
     private readonly fhir: ReferralFhirClient,
     private readonly now: () => string = () => new Date().toISOString(),
-  ) {}
+    options: ReferralServiceOptions = {},
+  ) {
+    this.storageBaseUrls = options.storageBaseUrls ?? defaultReferralStorageBaseUrls();
+  }
 
   async createReferral(input: CreateReferralInput): Promise<ServiceRequest> {
     const patientId = assertReference(input.subjectReference, "Patient");
@@ -500,7 +515,7 @@ export class ReferralService {
     };
   }
 
-  private async loadImages(patientId: string, encounterId: string | undefined): Promise<Media[]> {
+  private async loadImages(patientId: string, encounterId: string | undefined): Promise<ReferralImage[]> {
     const metadataBundle = await this.fhir.search<Media>("Media", {
       subject: `Patient/${patientId}`,
       ...(encounterId ? { encounter: `Encounter/${encounterId}` } : {}),
@@ -508,7 +523,7 @@ export class ReferralService {
       _summary: "true",
       _count: "50",
     });
-    const accepted: Media[] = [];
+    const accepted: ReferralImage[] = [];
     let remainingBytes = REFERRAL_MEDIA_MAX_TOTAL_BYTES;
     for (const metadata of resources(metadataBundle)) {
       if (!metadata.id || metadata.status !== "completed") continue;
@@ -527,13 +542,41 @@ export class ReferralService {
       const inlineBytes = media.content.data
         ? Buffer.byteLength(media.content.data, "base64")
         : 0;
-      const attachmentBytes = Math.max(media.content.size ?? 0, inlineBytes);
+      let resolvedMedia = media;
+      let missing: string | undefined;
+      let resolvedBytes = inlineBytes;
+      if (!media.content.data && media.content.url) {
+        const binaryId = referralBinaryId(media.content.url, this.storageBaseUrls);
+        if (!binaryId) {
+          missing = "Attachment URL was not a trusted Medplum Binary reference.";
+        } else if (!this.fhir.readBinaryData) {
+          missing = "Binary reader is unavailable.";
+        } else {
+          try {
+            const binary = await this.fhir.readBinaryData(binaryId);
+            resolvedBytes = binary.bytes.byteLength;
+            resolvedMedia = {
+              ...media,
+              content: {
+                ...media.content,
+                contentType: media.content.contentType ?? binary.contentType,
+                data: Buffer.from(binary.bytes).toString("base64"),
+              },
+            };
+          } catch {
+            missing = "Binary content could not be resolved.";
+          }
+        }
+      } else if (!media.content.data) {
+        missing = "Attachment content is missing.";
+      }
+      const attachmentBytes = Math.max(media.content.size ?? 0, resolvedBytes);
       if (
         attachmentBytes > REFERRAL_MEDIA_MAX_ATTACHMENT_BYTES
         || attachmentBytes > remainingBytes
       ) continue;
       remainingBytes -= attachmentBytes;
-      accepted.push(media);
+      accepted.push({ media: resolvedMedia, ...(missing ? { missing } : {}) });
     }
     return accepted;
   }
@@ -795,11 +838,14 @@ function renderClinicalSummary(summary: ClinicalSummary): string {
   return `<section data-section="clinical_summary" class="page-break"><h2>Clinical summary</h2>${renderList("Problems", conditions)}${renderList("Medications", unique([...medicationRequests, ...medicationStatements]))}${renderList("Allergies", allergies)}</section>`;
 }
 
-function renderImages(images: Media[]): string {
-  const rows = images.map((media) => {
+function renderImages(images: ReferralImage[]): string {
+  const rows = images.map(({ media, missing }) => {
     const title = media.content.title ?? conceptText(media.modality) ?? "Clinical image";
     const contentType = media.content.contentType ?? "application/octet-stream";
     const data = media.content.data;
+    if (missing) {
+      return `<p data-image-missing="true">${escapeHtml(title)} — image unavailable: ${escapeHtml(missing)}</p>`;
+    }
     if (data && contentType.startsWith("image/")) {
       return `<figure><img alt="${escapeHtml(title)}" src="data:${escapeHtml(contentType)};base64,${escapeHtml(data)}"><figcaption>${escapeHtml(title)}</figcaption></figure>`;
     }
@@ -809,6 +855,46 @@ function renderImages(images: Media[]): string {
     return `<p>${escapeHtml(title)}</p>`;
   }).join("\n");
   return `<section data-section="images" class="page-break"><h2>Attached imaging</h2>${rows || "<p>No completed imaging found for this visit.</p>"}</section>`;
+}
+
+export function referralBinaryId(
+  value: string,
+  storageBaseUrls: readonly string[],
+): string | undefined {
+  const relative = /^Binary\/([A-Za-z0-9.-]+)(?:\/_history\/[A-Za-z0-9.-]+)?$/.exec(value);
+  if (relative?.[1]) return relative[1];
+
+  let candidate: URL;
+  try {
+    candidate = new URL(value);
+  } catch {
+    return undefined;
+  }
+  for (const baseValue of storageBaseUrls) {
+    let base: URL;
+    try {
+      base = new URL(baseValue.endsWith("/") ? baseValue : `${baseValue}/`);
+    } catch {
+      continue;
+    }
+    if (candidate.origin !== base.origin || !candidate.pathname.startsWith(base.pathname)) continue;
+    const path = candidate.pathname.slice(base.pathname.length).split("/").filter(Boolean);
+    if (
+      (path.length === 1 || path.length === 2)
+      && /^[A-Za-z0-9.-]+$/.test(path[0] ?? "")
+      && (path.length === 1 || /^[A-Za-z0-9.-]+$/.test(path[1] ?? ""))
+    ) {
+      return path[0];
+    }
+  }
+  return undefined;
+}
+
+export function defaultReferralStorageBaseUrls(): string[] {
+  const configured = process.env.MEDPLUM_STORAGE_BASE_URL?.trim();
+  if (configured) return [configured];
+  const medplumBase = process.env.MEDPLUM_BASE_URL?.trim();
+  return medplumBase ? [new URL("storage/", medplumBase.endsWith("/") ? medplumBase : `${medplumBase}/`).toString()] : [];
 }
 
 function renderList(title: string, values: string[]): string {

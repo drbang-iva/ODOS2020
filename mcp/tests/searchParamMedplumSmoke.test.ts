@@ -9,6 +9,7 @@ import type {
   ClaimResponse,
   Coverage,
   Encounter,
+  Media,
   Organization,
   Patient,
   Practitioner,
@@ -16,6 +17,12 @@ import type {
   Resource,
   Task,
 } from "@medplum/fhirtypes";
+import {
+  handleImagingListRequest,
+  type ImagingSummary,
+} from "../src/clinical-graph/imaging-endpoint.js";
+import { uploadBinary } from "../src/fhir/binary-upload.js";
+import type { BinaryAttemptStore } from "../src/legacy-import/binary-attempt-store.js";
 import { buildOpticalInvoice } from "../src/fhir/opticalInvoice.js";
 import { buildPaymentReconciliation } from "../src/payments/payment-reconciliation.js";
 import {
@@ -27,6 +34,8 @@ import type { ContractResourceType } from "./search-param-contract.js";
 type AuthenticatedFhir = Awaited<ReturnType<typeof createAuthenticatedFhirClient>>["fhir"];
 
 type SmokeFixture = {
+  accessToken: string;
+  baseUrl: string;
   fhir: AuthenticatedFhir;
   references: Record<
     "auditEvent" | "basic" | "chargeItem" | "claim" | "claimResponse" | "invoice" | "patient" | "payment" | "provenance" | "task",
@@ -60,8 +69,8 @@ before(async () => {
   if (!email || !password) return;
 
   await ensureContractIdentity({ baseUrl, email, password });
-  const { fhir } = await createAuthenticatedFhirClient({ baseUrl, email, password });
-  fixture = await seedSmokeFixture(fhir);
+  const { fhir, accessToken } = await createAuthenticatedFhirClient({ baseUrl, email, password });
+  fixture = await seedSmokeFixture(fhir, baseUrl, accessToken);
 });
 
 const searches: SmokeSearch[] = [
@@ -164,7 +173,71 @@ for (const search of searches) {
   });
 }
 
-async function seedSmokeFixture(fhir: AuthenticatedFhir): Promise<SmokeFixture> {
+test("real Medplum Media search rewrites Binary content for the imaging handler to a fetchable URL", async (t) => {
+  if (!fixture) {
+    t.skip(MEDPLUM_SKIP_MESSAGE);
+    return;
+  }
+  const bytes = Buffer.from(`contract-imaging-${randomBytes(12).toString("hex")}`);
+  const binary = await uploadBinary({
+    bytes,
+    contentType: "image/png",
+    filename: "contract-imaging.png",
+    securityContext: fixture.references.patient,
+    auth: { baseUrl: fixture.baseUrl, accessToken: fixture.accessToken },
+  });
+  const media = await fixture.fhir.create<Media>({
+    resourceType: "Media",
+    status: "completed",
+    modality: {
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/ophthalmology",
+        code: "fundus-photo",
+        display: "Fundus photo",
+      }],
+    },
+    subject: { reference: fixture.references.patient },
+    createdDateTime: new Date().toISOString(),
+    content: {
+      contentType: "image/png",
+      title: "contract-imaging.png",
+      size: bytes.byteLength,
+      url: binary.url,
+    },
+  });
+  assert.ok(media.id);
+
+  const result = await handleImagingListRequest({
+    authenticate: async () => ({
+      staffReference: "Practitioner/contract-smoke",
+      actorRole: "clinician",
+      fhir: fixture!.fhir,
+      binaryAuth: { baseUrl: fixture!.baseUrl, accessToken: fixture!.accessToken },
+    }),
+    binaryAttempts: unusedBinaryAttempts,
+    storageBaseUrls: [`${fixture.baseUrl.replace(/\/$/, "")}/storage/`],
+  }, {
+    authHeader: "Bearer contract-smoke",
+    query: { patient: fixture.references.patient },
+  });
+
+  assert.equal(result.status, 200);
+  const image = (result.body as { images: ImagingSummary[] }).images.find(
+    (candidate) => candidate.id === media.id,
+  );
+  assert.equal(image?.contentState, "available");
+  assert.ok(image?.contentUrl?.startsWith(`${fixture.baseUrl.replace(/\/$/, "")}/storage/`));
+  assert.equal(image.contentUrl?.startsWith("Binary/"), false);
+  const attachment = await fetch(image.contentUrl!);
+  assert.equal(attachment.status, 200);
+  assert.deepEqual(Buffer.from(await attachment.arrayBuffer()), bytes);
+});
+
+async function seedSmokeFixture(
+  fhir: AuthenticatedFhir,
+  baseUrl: string,
+  accessToken: string,
+): Promise<SmokeFixture> {
   const timestamp = new Date(Date.now() - 60_000).toISOString();
   const today = timestamp.slice(0, 10);
   const suffix = randomBytes(8).toString("hex");
@@ -294,6 +367,8 @@ async function seedSmokeFixture(fhir: AuthenticatedFhir): Promise<SmokeFixture> 
   });
 
   return {
+    accessToken,
+    baseUrl,
     fhir,
     timestamp,
     references: {
@@ -310,6 +385,17 @@ async function seedSmokeFixture(fhir: AuthenticatedFhir): Promise<SmokeFixture> 
     },
   };
 }
+
+const unusedBinaryAttempts: BinaryAttemptStore = {
+  open: async () => { throw new Error("Unexpected attempt open"); },
+  recordReturned: async () => { throw new Error("Unexpected attempt update"); },
+  resolveAttached: async () => { throw new Error("Unexpected attempt resolution"); },
+  resolveAttachedByBinaryId: async () => 0,
+  resolveNotCreated: async () => { throw new Error("Unexpected attempt resolution"); },
+  resolveDisposed: async () => { throw new Error("Unexpected attempt resolution"); },
+  reopenByBinaryId: async () => undefined,
+  listOpen: async () => [],
+};
 
 async function ensureContractIdentity(input: {
   baseUrl: string;

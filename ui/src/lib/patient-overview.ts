@@ -1,7 +1,9 @@
-import type { Patient } from "@medplum/fhirtypes";
+import type { Encounter, Patient } from "@medplum/fhirtypes";
 import { fhir } from "./fhir";
 
 export type VisitLedgerFilter = "all" | "eye-exams" | "office-visits";
+export const MIGRATION_TAG_SYSTEM = "https://odos2020.com/tags/migration";
+export const MIGRATION_TAG_CODE = "eyefinity-import";
 
 export interface PatientOverviewDiagnosis {
   conditionId: string;
@@ -37,7 +39,7 @@ export interface PatientOverviewPayload {
     provider?: string;
     facility?: string;
     visitType: string;
-    status: "Preliminary" | "Final";
+    status: "Preliminary" | "Final" | "Migrated";
     diagnoses: PatientOverviewDiagnosis[];
   }>;
   diagnosisChoices: Array<{ name: string; code: string; system: string }>;
@@ -138,4 +140,10 @@ function isStickyNoteHistory(body: unknown): body is StickyNoteHistoryEntry[] {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isMigratedEncounter(encounter: Encounter | null | undefined): boolean {
+  return encounter?.meta?.tag?.some((tag) =>
+    tag.system === MIGRATION_TAG_SYSTEM && tag.code === MIGRATION_TAG_CODE
+  ) === true;
 }

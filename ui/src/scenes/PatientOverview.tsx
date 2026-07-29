@@ -271,17 +271,53 @@ export function PatientOverview({
               {loadingLedger && <p className="odos-overview-loading">Refreshing visit ledger…</p>}
               {!loadingLedger && overview.visits.length === 0 && <p className="odos-overview-none">No matching visits recorded</p>}
               {!loadingLedger && overview.visits.map((visit) => (
-                <article className="odos-visit-row" key={visit.encounterId}>
+                <article
+                  className="odos-visit-row"
+                  key={visit.encounterId}
+                >
                   <time>{visit.date ? monthDay(visit.date) : "Date not recorded"}<small>{visit.date ? yearOf(visit.date) : ""}</small></time>
                   <div className="odos-visit-head">
                     <span className="odos-visit-type">{visit.visitType}</span>
                     <span>{visit.provider ?? "Provider not recorded"} · {visit.facility ?? "Facility not recorded"}</span>
-                    <span className={visit.status === "Final" ? "is-final" : "is-preliminary"}>{visit.status}{visit.status === "Final" ? " ✓" : ""}</span>
+                    <span data-testid={`visit-status-${visit.encounterId}`} className={
+                      visit.status === "Final"
+                        ? "is-final"
+                        : visit.status === "Migrated" ? "is-migrated" : "is-preliminary"
+                    }>
+                      {visit.status}{visit.status === "Final" ? " ✓" : ""}
+                    </span>
+                    <button
+                      type="button"
+                      className="odos-visit-open"
+                      aria-label={`Open ${visit.visitType} from ${visit.date ? shortDate(visit.date) : "date not recorded"}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setView({ kind: "encounter", patientId: patient.id ?? "", encounterId: visit.encounterId });
+                      }}
+                      onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setView({ kind: "encounter", patientId: patient.id ?? "", encounterId: visit.encounterId });
+                        }
+                      }}
+                    >
+                      Open visit
+                    </button>
                   </div>
                   <div className="odos-dx-row">
                     {visit.diagnoses.length === 0 && <span className="odos-overview-none">No confirmed diagnoses recorded for this visit</span>}
                     {visit.diagnoses.map((diagnosis) => (
-                      <button type="button" className="odos-dx-chip" key={diagnosis.conditionId} onClick={() => setView({ kind: "encounter", patientId: patient.id ?? "", encounterId: diagnosis.encounterId })}>
+                      <button
+                        type="button"
+                        className="odos-dx-chip"
+                        key={diagnosis.conditionId}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setView({ kind: "encounter", patientId: patient.id ?? "", encounterId: diagnosis.encounterId });
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
                         {diagnosis.name}{diagnosis.laterality && <small>{diagnosis.laterality}</small>}{diagnosis.code && <code>{diagnosis.code}</code>}
                       </button>
                     ))}

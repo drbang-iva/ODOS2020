@@ -73,9 +73,12 @@
 .odos-visit-row time small { display: block; color: var(--overview-faint); font-family: -apple-system, "SF Pro Text", sans-serif; font-size: 10.5px; letter-spacing: 0.04em; }
 .odos-visit-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--overview-muted); font-size: 12px; }
 .odos-visit-type { padding: 3px 8px; border-radius: 6px; background: rgba(76, 127, 232, 0.13); color: #8fb0f5; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
-.odos-visit-head .is-final, .odos-visit-head .is-preliminary { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+.odos-visit-head .is-final, .odos-visit-head .is-preliminary, .odos-visit-head .is-migrated { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
 .odos-visit-head .is-final { color: var(--overview-emerald); }
 .odos-visit-head .is-preliminary { color: #e7a94c; }
+.odos-visit-head .is-migrated { padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--overview-amethyst) 45%, transparent); border-radius: 999px; color: #c1a3f7; }
+.odos-visit-open { margin-left: auto; border: 0; background: transparent; color: var(--overview-amethyst); font: inherit; font-size: 11px; cursor: pointer; }
+.odos-visit-open:focus-visible { outline: 2px solid var(--overview-amethyst); outline-offset: 2px; border-radius: 4px; }
 .odos-dx-row { grid-column: 2; display: flex; gap: 7px; flex-wrap: wrap; margin-top: 5px; }
 .odos-dx-chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid rgba(157, 113, 240, 0.3); border-radius: 999px; background: rgba(157, 113, 240, 0.08); color: #d9c8fb; font: inherit; font-size: 11.5px; cursor: pointer; }
 .odos-dx-chip small { padding: 1px 5px; border: 1px solid var(--overview-line); border-radius: 5px; color: var(--overview-faint); font-size: 9.5px; letter-spacing: 0.08em; }

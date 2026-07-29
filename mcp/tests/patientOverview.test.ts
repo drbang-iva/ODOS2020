@@ -138,6 +138,32 @@ test("empty snapshot stays honestly empty and visit filters issue distinct FHIR 
   assert.match(fake.searches.find((row) => row.resourceType === "Encounter")?.params.type ?? "", /office-visit/);
 });
 
+test("legacy encounter ledger status comes from the migration tag and does not invent Provenance", async () => {
+  const fake = new FakeFhir();
+  fake.add(patient());
+  fake.add({
+    ...encounter("migrated", "2019-04-03T14:00:00Z"),
+    meta: {
+      tag: [{
+        system: "https://odos2020.com/tags/migration",
+        code: "eyefinity-import",
+      }],
+    },
+  });
+
+  const overview = await loadPatientOverview(fake as never, "p1");
+
+  assert.equal(overview.visits[0]?.status, "Migrated");
+  assert.equal(
+    fake.searches.find((row) => row.resourceType === "Provenance")?.params.patient,
+    "Patient/p1",
+  );
+  assert.equal(
+    fake.resources.some((resource) => resource.resourceType === "Provenance"),
+    false,
+  );
+});
+
 test("overview stays usable and reports honest wiring when role-scoped optional reads are unavailable", async () => {
   const fake = new FakeFhir();
   fake.add(patient());

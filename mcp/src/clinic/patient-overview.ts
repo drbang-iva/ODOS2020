@@ -16,6 +16,10 @@ import type { MedplumClient } from "../fhir-client.js";
 import { conditionEncounterId, hasConditionCategory, isConfirmedEncounterDiagnosis, referenceId } from "../fhir/condition.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../fhir/schedulingVisitType.js";
 import { TOBACCO_SMOKING_STATUS_LOINC_CODE } from "../fhir/smokingStatus.js";
+import {
+  MIGRATION_TAG_CODE,
+  MIGRATION_TAG_SYSTEM,
+} from "../legacy-import/access-policy.js";
 
 export const PATIENT_STICKY_NOTE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/patient-sticky-note";
 export const PATIENT_STICKY_NOTE_CODE = "patient-sticky-note";
@@ -38,7 +42,7 @@ export interface PatientOverviewVisit {
   provider?: string;
   facility?: string;
   visitType: string;
-  status: "Preliminary" | "Final";
+  status: "Preliminary" | "Final" | "Migrated";
   diagnoses: PatientOverviewDiagnosis[];
 }
 
@@ -368,7 +372,9 @@ function projectOverview(input: {
           ? { facility: encounter.serviceProvider?.display ?? encounter.location?.[0]?.location?.display }
           : {}),
         visitType: conceptText(encounter.type?.[0]) || "Visit type not recorded",
-        status: signedEncounterIds.has(encounter.id) ? "Final" : "Preliminary",
+        status: isMigratedEncounter(encounter)
+          ? "Migrated"
+          : signedEncounterIds.has(encounter.id) ? "Final" : "Preliminary",
         diagnoses: byEncounter.get(encounter.id) ?? [],
       }] : []),
     diagnosisChoices: uniqueBy(
@@ -505,6 +511,12 @@ function sameInstant(left: string | undefined, right: string): boolean {
   const leftMs = Date.parse(left ?? "");
   const rightMs = Date.parse(right);
   return Number.isFinite(leftMs) && leftMs === rightMs;
+}
+
+export function isMigratedEncounter(encounter: Encounter): boolean {
+  return encounter.meta?.tag?.some((tag) =>
+    tag.system === MIGRATION_TAG_SYSTEM && tag.code === MIGRATION_TAG_CODE
+  ) === true;
 }
 
 function unique(values: string[]): string[] {

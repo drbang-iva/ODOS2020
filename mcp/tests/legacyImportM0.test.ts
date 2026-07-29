@@ -611,14 +611,18 @@ test("tracked config, compose init, and inline-limit strings remain truthful", (
   );
   for (const path of [
     "mcp/src/clinical-graph/imaging-endpoint.ts",
-    "mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts",
     "ui/src/components/charting/ImagingSection.tsx",
     "ui/src/components/LongitudinalImagingCard.tsx",
   ]) {
     const content = readFileSync(new URL(path, root), "utf8");
-    assert.doesNotMatch(content, /(?:^|[^\d])15 MB(?:$|[^\d])|(?:^|[^\d])15 \* 1024 \* 1024(?:$|[^\d])/m);
-    assert.match(content, /(?:^|[^\d])1 MB(?:$|[^\d])|(?:^|[^\d])1 \* 1024 \* 1024(?:$|[^\d])/m);
+    assert.match(content, /(?:^|[^\d])15 MB(?:$|[^\d])|(?:^|[^\d])15 \* 1024 \* 1024(?:$|[^\d])/m);
   }
+  const meibography = readFileSync(
+    new URL("mcp/src/clinical-graph/dry-eye-meibography-endpoint.ts", root),
+    "utf8",
+  );
+  assert.doesNotMatch(meibography, /(?:^|[^\d])15 MB(?:$|[^\d])|(?:^|[^\d])15 \* 1024 \* 1024(?:$|[^\d])/m);
+  assert.match(meibography, /(?:^|[^\d])1 MB(?:$|[^\d])|(?:^|[^\d])1 \* 1024 \* 1024(?:$|[^\d])/m);
 });
 
 class MemoryMediaFhir {
