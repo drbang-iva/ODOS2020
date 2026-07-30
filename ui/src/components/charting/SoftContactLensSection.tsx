@@ -5,6 +5,7 @@ import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 interface Props {
   patientReference: string;
@@ -151,7 +152,6 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const fields = definition?.definition.fields ?? {};
   const manufacturerOptions = useMemo(() => activeOptions(fields.manufacturer), [fields.manufacturer]);
   const products = useMemo(() => activeProductOptions(fields.product), [fields.product]);
-  const sphereOptions = useMemo(() => numericOptions(fields.sphere, -30, 30, 0.25), [fields.sphere]);
   const cylinderOptions = useMemo(() => numericOptions(fields.cylinder, -20, 0, 0.25), [fields.cylinder]);
   const addOptions = useMemo(() => numericOptions(fields.add, 0, 4, 0.25), [fields.add]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
@@ -326,7 +326,13 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                     ) : (
                       <NativeSelectField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} />
                     )}
-                    <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
+                    <SphereWheelField
+                      label="Sphere"
+                      value={state.sphere}
+                      onChange={(value) => updateEye(eye, { sphere: value })}
+                      field={fields.sphere}
+                      ariaLabel={`${eye} sphere`}
+                    />
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
                     <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} />
                     <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} />
@@ -488,6 +494,37 @@ function PowerField({ label, value, onChange, options }: { label: string; value:
   );
 }
 
+function SphereWheelField({ label, value, onChange, field, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  field: DefinitionField | undefined;
+  ariaLabel: string;
+}) {
+  const minimum = field?.minimum ?? -30;
+  const maximum = field?.maximum ?? 30;
+  const step = field?.step ?? 0.25;
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">{label}</span>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={minimum}
+        max={maximum}
+        step={step}
+        format={formatSpherePower}
+        onChange={(next) => onChange(next.toFixed(2))}
+        ariaLabel={ariaLabel}
+        unit="D"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
+    </label>
+  );
+}
+
 function AxisField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
   return (
     <label className="block">
@@ -498,6 +535,11 @@ function AxisField({ label, value, onChange, options }: { label: string; value: 
       </select>
     </label>
   );
+}
+
+function formatSpherePower(value: number): string {
+  if (value === 0) return "pl";
+  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
 }
 
 function VaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

@@ -98,6 +98,41 @@ test("OdosWheel clamps and snaps typed values on blur", () => {
   act(() => renderer.unmount());
 });
 
+test("OdosWheel preserves a blank state while keeping direct typing available", () => {
+  let changedState: string | undefined;
+  let changedValue: number | undefined;
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={(value) => value === 0 ? "pl" : value.toFixed(2)}
+        onChange={(value) => { changedValue = value; }}
+        ariaLabel="Sphere"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState=""
+        onStateChange={(value) => { changedState = value; }}
+      />,
+    );
+  });
+  const input = () => renderer.root.findByProps({ "aria-label": "Sphere" });
+  assert.equal(input().props.value, "");
+  assert.equal(input().props.placeholder, "Not recorded");
+
+  act(() => input().props.onChange({ target: { value: "-0.38" } }));
+  act(() => input().props.onBlur());
+  assert.equal(changedValue, -0.5);
+
+  act(() => input().props.onChange({ target: { value: "" } }));
+  act(() => input().props.onBlur());
+  assert.equal(changedState, "");
+  act(() => renderer.unmount());
+});
+
 test("OdosWheel formats idle values, closes on Enter, and skips unchanged change events", () => {
   const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;

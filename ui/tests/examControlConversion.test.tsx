@@ -97,6 +97,8 @@ test("soft-lens BC and DIA options change with the selected catalog product", ()
 
   const soft = source("SoftContactLensSection.tsx");
   assert.match(soft, /PowerDropdown value=\{binocularPdDistance\}[\s\S]*defaultValue="63\.00"/);
+  assert.match(soft, /<SphereWheelField[\s\S]*value=\{state\.sphere\}[\s\S]*field=\{fields\.sphere\}/);
+  assert.match(soft, /centerOn=\{0\}[\s\S]*states=\{\[\{ value: "", label: "Not recorded" \}\]\}/);
   assert.match(soft, /SelectField label="Base Curve \(mm\)"[\s\S]*options=\{baseCurveOptions\}/);
   assert.match(soft, /SelectField label="Diameter \(mm\)"[\s\S]*options=\{diameterOptions\}/);
   assert.match(soft, /product: "", baseCurve: "", diameter: ""/);

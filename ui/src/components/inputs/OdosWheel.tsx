@@ -47,9 +47,10 @@ export function OdosWheel({
 }: OdosWheelProps) {
   const values = useMemo(() => wheelValues(min, max, step), [max, min, step]);
   const centerIndex = closestIndex(values, centerOn);
+  const selectedStateLabel = states.find((state) => state.value === selectedState)?.label;
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [typedValue, setTypedValue] = useState(() => format(value));
+  const [typedValue, setTypedValue] = useState(() => selectedStateLabel === undefined ? format(value) : "");
   const editingRef = useRef(editing);
   const formatRef = useRef(format);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -63,8 +64,8 @@ export function OdosWheel({
   formatRef.current = format;
 
   useEffect(() => {
-    if (!editingRef.current) setTypedValue(formatRef.current(value));
-  }, [value]);
+    if (!editingRef.current) setTypedValue(selectedStateLabel === undefined ? formatRef.current(value) : "");
+  }, [selectedStateLabel, value]);
 
   useEffect(() => {
     if (!open || centerIndex < 0) return;
@@ -88,6 +89,15 @@ export function OdosWheel({
   }, [disabled]);
 
   function commitTypedValue() {
+    if (typedValue.trim() === "") {
+      const blankState = states.find((state) => state.value === "");
+      if (blankState && onStateChange) {
+        onStateChange(blankState.value);
+        setTypedValue("");
+        setEditing(false);
+        return;
+      }
+    }
     const parsed = Number(typedValue);
     if (!Number.isFinite(parsed)) {
       setTypedValue(format(value));
@@ -177,6 +187,7 @@ export function OdosWheel({
           aria-controls={listboxId}
           disabled={disabled}
           value={typedValue}
+          placeholder={selectedStateLabel}
           onFocus={() => setEditing(true)}
           onChange={(event) => {
             setEditing(true);
