@@ -105,6 +105,53 @@ independent, idempotent writes. If provisioning fails after one or two writes su
 changes remain in place. Rerun the failed provisioning command until it completes; already
 applied writes are reported as `skipped`, and the remaining writes converge without duplication.
 
+## M2b-1 Appointment and Encounter continuation
+
+M2b-1 runs after a successful M2a run and imports one selected patient's Appointments plus
+Encounter visit days. It reads the entire Greenwood `AppointmentsExport` first so that exact
+duplicates and composite-key collisions are handled before any selected-patient FHIR write.
+The collision rules are verified only for the `00127314` export; another office export is
+rejected until its full-file collision shape is measured.
+
+Keep the M2b-1 manifest beside the source data on Iris. `visitTypeMap` is explicit because
+legacy appointment labels are not ODOS visit-type codes and must never be silently recoded:
+
+```json
+{
+  "sourceOfficeNumber": "00127314",
+  "patientReference": "Patient/<migrated patient id>",
+  "patientUid": "<AppointmentsExport PatientUID>",
+  "epmPatientId": "<AppointmentsExport PatientID>",
+  "ehrPatientId": "<exam-source ptSrNo>",
+  "organizationReference": "Organization/<practice id>",
+  "locationReference": "Location/<facility id>",
+  "visitTypeMap": {
+    "Office Visit": {
+      "code": "office-visit",
+      "display": "Office Visit (Medical)"
+    }
+  }
+}
+```
+
+Run it with the same SQLite state directory after the Patient and access grants are complete.
+M2b-1 starts its own ledger run; `--run-id` is optional when an operator-selected id is useful:
+
+```sh
+npm run import-legacy-visits-m2b1 -- \
+  --manifest /Users/iris/Migration/importer-state/m2b1-source.json \
+  --appointments '/Users/iris/Migration/extract-scoped/EPM data/00127314--AppointmentsExport-Thu-06-18-2026.csv' \
+  --exams /Users/iris/Migration/all-exams.tsv
+```
+
+The command prints the full-file source row, exact-duplicate, collision, cancel-resolution,
+all-cancelled-skip, and queued-collision counts before the selected-patient action totals and
+report path. Byte-identical duplicates and collision groups containing only cancelled rows are
+recorded through `junk_rejections`; all-cancelled groups produce no Appointment. A composite
+collision with multiple active rows is written to `ambiguity_queue`; no row number, hash, or
+other manufactured per-row key is used. Multi-appointment visit days are likewise queued and
+produce no Encounter until M2b-2 adjudication.
+
 ## Ordinary-role reachability gate
 
 The gate accepts only ordinary clinician and front-desk tokens. It rejects superadmin

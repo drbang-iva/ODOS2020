@@ -40,11 +40,20 @@ export class FhirClient {
     return h;
   }
 
+  async request(path: string, init: RequestInit = {}): Promise<Response> {
+    const url = new URL(path, `${this.baseUrl}/`);
+    const configured = new URL(this.baseUrl);
+    if (url.origin !== configured.origin) {
+      throw new Error("FHIR request must stay on the configured server origin.");
+    }
+    const headers = new Headers(this.headers());
+    new Headers(init.headers).forEach((value, name) => headers.set(name, value));
+    return fetch(url, { ...init, headers });
+  }
+
   async create<T extends Resource>(resource: T): Promise<T> {
-    const url = `${this.baseUrl}/fhir/R4/${resource.resourceType}`;
-    const res = await fetch(url, {
+    const res = await this.request(`/fhir/R4/${resource.resourceType}`, {
       method: "POST",
-      headers: this.headers(),
       body: JSON.stringify(resource),
     });
     if (!res.ok) throw await this.toError(res);
@@ -55,8 +64,7 @@ export class FhirClient {
     resourceType: T["resourceType"],
     id: string,
   ): Promise<T> {
-    const url = `${this.baseUrl}/fhir/R4/${resourceType}/${id}`;
-    const res = await fetch(url, { headers: this.headers() });
+    const res = await this.request(`/fhir/R4/${resourceType}/${id}`);
     if (!res.ok) throw await this.toError(res);
     return (await res.json()) as T;
   }
@@ -66,8 +74,9 @@ export class FhirClient {
     params: Record<string, string> = {},
   ): Promise<Bundle<T>> {
     const query = new URLSearchParams(params).toString();
-    const url = `${this.baseUrl}/fhir/R4/${resourceType}${query ? "?" + query : ""}`;
-    const res = await fetch(url, { headers: this.headers() });
+    const res = await this.request(
+      `/fhir/R4/${resourceType}${query ? "?" + query : ""}`,
+    );
     if (!res.ok) throw await this.toError(res);
     return (await res.json()) as Bundle<T>;
   }
