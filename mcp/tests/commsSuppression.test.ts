@@ -133,6 +133,7 @@ test("a configured campaign frequency cap suppresses a repeat inside the lookbac
 
   const result = await provider.sendEmail(baseRequest({
     campaignType: "review-request",
+    messageId: "current-send",
     suppression: { frequencyCapDays: 90 },
   }));
   assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
@@ -180,11 +181,45 @@ test("frequency-cap evaluation follows FHIR next links before allowing a send", 
 
   const result = await provider.sendEmail(baseRequest({
     campaignType: "review-request",
+    messageId: "current-send",
     suppression: { frequencyCapDays: 90 },
   }));
 
   assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
   assert.equal(nextReads, 1);
+  assert.equal(sent.length, 0);
+});
+
+test("an in-progress Communication claim reserves the patient and campaign frequency cap", async () => {
+  const sent: SendEmailRequest[] = [];
+  const competingClaim: Communication = {
+    resourceType: "Communication",
+    status: "in-progress",
+    identifier: [{
+      system: "https://odos2020.com/fhir/NamingSystem/comms-send",
+      value: "competing-send",
+    }],
+    subject: { reference: "Patient/synthetic-1" },
+    category: [{
+      coding: [{
+        system: "https://odos2020.com/fhir/CodeSystem/comms-campaign-type",
+        code: "review-request",
+      }],
+    }],
+  };
+  const provider = createSuppressedCommsProvider(fakeProvider(sent), {
+    fhir: fhirFor(patient(), [competingClaim]),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  const result = await provider.sendEmail(baseRequest({
+    campaignType: "review-request",
+    messageId: "current-send",
+    suppression: { frequencyCapDays: 90 },
+  }));
+
+  assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
   assert.equal(sent.length, 0);
 });
 

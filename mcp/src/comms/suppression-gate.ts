@@ -42,6 +42,7 @@ export function createSuppressedCommsProvider(
           request.campaignType,
           request.suppression.frequencyCapDays,
           now,
+          request.messageId,
         )
       ) {
         return { outcome: "suppressed", reason: "frequency-cap" };
@@ -87,6 +88,7 @@ async function isFrequencyCapped(
   campaignType: string,
   capDays: number,
   now: Date,
+  messageId: string | undefined,
 ): Promise<boolean> {
   if (!Number.isInteger(capDays) || capDays <= 0) {
     throw new Error("Communications frequencyCapDays must be a positive integer.");
@@ -94,17 +96,45 @@ async function isFrequencyCapped(
   if (!patient.id) {
     throw new Error("Patient must have an id before communications suppression can be evaluated.");
   }
+  if (!messageId?.trim()) {
+    throw new Error("Frequency-capped communications require a persisted messageId claim.");
+  }
   const cutoff = new Date(now.getTime() - capDays * 86_400_000).toISOString();
-  let bundle = await fhir.search<Communication>("Communication", [
+  const completed = await fhir.search<Communication>("Communication", [
     ["subject", `Patient/${patient.id}`],
     ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
     ["sent", `ge${cutoff}`],
     ["_count", "100"],
   ]);
+  if (await searchHasCommunication(fhir, completed, (communication) =>
+    communication.status === "completed"
+    && Boolean(communication.sent)
+    && Date.parse(communication.sent!) >= Date.parse(cutoff)
+    && matchesFrequencyCapScope(communication, patient.id!, campaignType))) {
+    return true;
+  }
+  const inProgress = await fhir.search<Communication>("Communication", [
+    ["subject", `Patient/${patient.id}`],
+    ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
+    ["status", "in-progress"],
+    ["_count", "100"],
+  ]);
+  return searchHasCommunication(fhir, inProgress, (communication) =>
+    communication.status === "in-progress"
+    && matchesFrequencyCapScope(communication, patient.id!, campaignType)
+    && !communication.identifier?.some((identifier) => identifier.value === messageId));
+}
+
+async function searchHasCommunication(
+  fhir: SuppressionFhir,
+  initialBundle: Bundle<Communication>,
+  matches: (communication: Communication) => boolean,
+): Promise<boolean> {
+  let bundle = initialBundle;
   let pages = 1;
   let rows = bundle.entry?.length ?? 0;
   while (true) {
-    if (bundleContainsCappedCommunication(bundle, patient.id, campaignType, cutoff)) {
+    if ((bundle.entry ?? []).some((entry) => entry.resource && matches(entry.resource))) {
       return true;
     }
     const next = bundle.link?.find((link) => link.relation === "next")?.url;
@@ -124,22 +154,15 @@ async function isFrequencyCapped(
   }
 }
 
-function bundleContainsCappedCommunication(
-  bundle: Bundle<Communication>,
+function matchesFrequencyCapScope(
+  communication: Communication,
   patientId: string,
   campaignType: string,
-  cutoff: string,
 ): boolean {
-  return (bundle.entry ?? []).some((entry) => {
-    const communication = entry.resource;
-    return communication?.status === "completed"
-      && Boolean(communication.sent)
-      && Date.parse(communication.sent!) >= Date.parse(cutoff)
-      && communication.subject?.reference === `Patient/${patientId}`
-      && communication.category?.some((category) =>
-        category.coding?.some((coding) =>
-          coding.system === ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM && coding.code === campaignType));
-  });
+  return communication.subject?.reference === `Patient/${patientId}`
+    && (communication.category?.some((category) =>
+      category.coding?.some((coding) =>
+        coding.system === ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM && coding.code === campaignType)) ?? false);
 }
 
 function patientEmail(patient: Patient, now: Date): string {
