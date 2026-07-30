@@ -13,7 +13,10 @@ import {
   DEFAULT_M2A_STATE_DIR,
   ImportLedger,
 } from "../mcp/src/legacy-import/import-ledger.js";
-import { EPM_PATIENT_IDENTIFIER_SYSTEM } from "../mcp/src/legacy-import/patient-import.js";
+import {
+  EHR_PATIENT_IDENTIFIER_SYSTEM,
+  EPM_PATIENT_IDENTIFIER_SYSTEM,
+} from "../mcp/src/legacy-import/patient-import.js";
 import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
@@ -51,6 +54,13 @@ export async function runVisitImportCli(input: {
       && identifier.value === manifest.epmPatientId,
   )) {
     throw new Error("The selected Patient does not carry the manifest EPM patient identifier.");
+  }
+  if (!patient.identifier?.some(
+    (identifier) =>
+      identifier.system === EHR_PATIENT_IDENTIFIER_SYSTEM
+      && identifier.value === manifest.ehrPatientId,
+  )) {
+    throw new Error("The selected Patient does not carry the manifest EHR patient identifier.");
   }
 
   const ledger = new ImportLedger({ stateDirectory: input.stateDirectory });

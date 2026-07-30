@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -26,9 +26,14 @@ import {
   EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
 } from "../src/legacy-import/appointment-export.js";
 import { ImportLedger } from "../src/legacy-import/import-ledger.js";
+import {
+  EHR_PATIENT_IDENTIFIER_SYSTEM,
+  EPM_PATIENT_IDENTIFIER_SYSTEM,
+} from "../src/legacy-import/patient-import.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import { FhirClient } from "../../src/fhir-client.js";
+import { runVisitImportCli } from "../../scripts/import-legacy-visits-m2b1.js";
 
 const PROJECT_ID = "project-1";
 
@@ -156,12 +161,101 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
     () => analyzeAppointmentExport(appointmentCsv([exact]), "other-office"),
     /verified only for office export 00127314/,
   );
+  assert.throws(
+    () =>
+      analyzeAppointmentExport(
+        appointmentCsv([exact, appointmentRow({ OfficeNum: "00127362" })]),
+        "00127314",
+      ),
+    /row office 00127362 does not match verified source office 00127314/,
+  );
   const malformedVendorQuote = `${appointmentCsv([exact])}oct n"p`;
   assert.match(malformedVendorQuote, /,oct n"p$/);
   assert.equal(
     analyzeAppointmentExport(malformedVendorQuote, "00127314").sourceRows,
     1,
   );
+});
+
+test("M2b-1 refuses a Patient with a mismatched EHR identifier before any write", async () => {
+  const state = tempState();
+  const manifestPath = join(state.path, "manifest.json");
+  const appointmentsPath = join(state.path, "appointments.csv");
+  const examsPath = join(state.path, "exams.tsv");
+  writeFileSync(manifestPath, JSON.stringify(manifest()));
+  writeFileSync(appointmentsPath, appointmentCsv([appointmentRow()]));
+  writeFileSync(
+    examsPath,
+    "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n"
+      + "ehr-typical-1\texam-1\t2020-01-02 00:00:00.000\t1\t1",
+  );
+  const emptyLedger = new ImportLedger({ stateDirectory: state.path });
+  emptyLedger.close();
+
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ url: string; method: string }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    requests.push({ url, method });
+    if (url.endsWith("/oauth2/token")) {
+      return Response.json({ access_token: "synthetic-import-token" });
+    }
+    if (url.endsWith("/auth/me")) {
+      return Response.json({ project: { id: PROJECT_ID } });
+    }
+    if (url.endsWith("/fhir/R4/Patient/patient-1")) {
+      return Response.json({
+        resourceType: "Patient",
+        id: "patient-1",
+        identifier: [
+          { system: EPM_PATIENT_IDENTIFIER_SYSTEM, value: "epm-typical-1" },
+          { system: EHR_PATIENT_IDENTIFIER_SYSTEM, value: "different-ehr-patient" },
+        ],
+      });
+    }
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+
+  try {
+    await assert.rejects(
+      runVisitImportCli({
+        baseUrl: "http://localhost:8103",
+        manifestPath,
+        appointmentsPath,
+        examsPath,
+        stateDirectory: state.path,
+        runId: "m2b-wrong-ehr",
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+      }),
+      /selected Patient does not carry the manifest EHR patient identifier/,
+    );
+    assert.equal(
+      requests.filter(
+        (request) =>
+          request.url.includes("/fhir/R4/")
+          && ["POST", "PUT", "PATCH"].includes(request.method),
+      ).length,
+      0,
+    );
+    const auditDatabase = new DatabaseSync(join(state.path, "legacy-import.sqlite"));
+    try {
+      const runs = auditDatabase.prepare("SELECT COUNT(*) AS count FROM runs").get() as {
+        count: number;
+      };
+      const actions = auditDatabase.prepare(
+        "SELECT COUNT(*) AS count FROM resource_actions",
+      ).get() as { count: number };
+      assert.equal(runs.count, 0);
+      assert.equal(actions.count, 0);
+    } finally {
+      auditDatabase.close();
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    state.cleanup();
+  }
 });
 
 test("M2b-1 imports appointments, linked and technical Encounters, queues multi-appointment days, and converges", async () => {

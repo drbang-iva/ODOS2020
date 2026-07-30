@@ -92,7 +92,7 @@ export function analyzeAppointmentExport(
   const duplicateSourceKeys: string[] = [];
   const seenRawRows = new Set<string>();
   for (const entry of parsed) {
-    validateRow(entry.record);
+    validateRow(entry.record, sourceOfficeNumber);
     if (seenRawRows.has(entry.raw)) {
       duplicateSourceKeys.push(appointmentCompositeKey(entry.record));
       continue;
@@ -236,7 +236,13 @@ function assertHeaders(headers: readonly string[]): void {
   }
 }
 
-function validateRow(row: AppointmentExportRow): void {
+function validateRow(row: AppointmentExportRow, sourceOfficeNumber: string): void {
+  const rowOfficeNumber = normalized(row.OfficeNum);
+  if (rowOfficeNumber !== sourceOfficeNumber) {
+    throw new Error(
+      `AppointmentsExport row office ${rowOfficeNumber || "(blank)"} does not match verified source office ${sourceOfficeNumber}.`,
+    );
+  }
   for (const field of [
     "PatientID",
     "PatientUID",
