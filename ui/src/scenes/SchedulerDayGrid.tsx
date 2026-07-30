@@ -45,6 +45,7 @@ import { PatientQuickCard } from "./scheduler/PatientQuickCard";
 import { SchedulerMonthGrid } from "./scheduler/SchedulerMonthGrid";
 import { SchedulerWeekGrid } from "./scheduler/SchedulerWeekGrid";
 import { SchedulingSettingsModal } from "./scheduler/SchedulingSettingsModal";
+import { OdosChips } from "../components/inputs/OdosChips";
 import {
   GUTTER_WIDTH,
   ROW_HEIGHT,
@@ -778,7 +779,11 @@ export function SchedulerColumnsControl({
         <div className="space-y-3" aria-label="Scheduler columns">
           {RESOURCE_KINDS.map((kind) => {
             const group = resources.filter((resource) => resourceKind(resource) === kind.code);
-            if (group.length === 0) {
+            const options = group.flatMap((resource) => {
+              const reference = resourceActorReference(resource);
+              return reference ? [{ value: reference, label: resourceDisplay(resource) }] : [];
+            });
+            if (options.length === 0) {
               return null;
             }
             return (
@@ -786,26 +791,18 @@ export function SchedulerColumnsControl({
                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-white/40">
                   {groupLabels[kind.code]}
                 </div>
-                <div className="space-y-1">
-                  {group.map((resource) => {
-                    const reference = resourceActorReference(resource);
-                    if (!reference) {
-                      return null;
+                <OdosChips
+                  options={options}
+                  selected={options.filter((option) => !hidden.has(option.value)).map((option) => option.value)}
+                  onChange={(visibleReferences) => {
+                    for (const option of options) {
+                      const wasVisible = !hidden.has(option.value);
+                      const isVisible = visibleReferences.includes(option.value);
+                      if (wasVisible !== isVisible) onResourceHiddenChange(option.value, !isVisible);
                     }
-                    const display = resourceDisplay(resource);
-                    return (
-                      <label key={reference} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm text-white/80 hover:bg-white/[0.06]">
-                        <input
-                          aria-label={`Show ${display} column`}
-                          type="checkbox"
-                          checked={!hidden.has(reference)}
-                          onChange={(event) => onResourceHiddenChange(reference, !event.target.checked)}
-                        />
-                        <span>{display}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                  }}
+                  ariaLabel={`${groupLabels[kind.code]} scheduler columns`}
+                />
               </div>
             );
           })}

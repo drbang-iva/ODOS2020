@@ -57,6 +57,10 @@ test("the compose surface presents the locked clinical rail and honest transport
   assert.doesNotMatch(html, /Fax · soon/);
   assert.match(html, /Sending records a disclosure/);
   assert.match(html, /Return to chart/);
+  assert.match(html, /role="group" aria-label="Referral packet contents"/);
+  assert.match(html, /aria-pressed="true"[^>]*>Referral letter/);
+  assert.match(html, /aria-pressed="false"[^>]*>Clinical summary/);
+  assert.match(html, /aria-label="Reduce history count"[^>]*min-h-11 min-w-11/);
 });
 
 test("consultant changes regenerate untouched letters but protect clinician edits", () => {
