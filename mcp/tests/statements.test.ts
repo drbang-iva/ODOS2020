@@ -203,6 +203,21 @@ test("minor statements mail to the Account guarantor while a self-responsible ad
     cityStatePostal: "Greenville, SC 29601",
   });
 
+  const unsafeMinorFixture = fakeFhir({
+    patients: [minor],
+    invoices: [invoice("unsafe-minor-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("unsafe-minor-account", "minor", "Patient/minor")],
+  });
+  const unsafeMinorResult = await handleGeneratePatientStatementRequest(statementDeps(unsafeMinorFixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/minor" },
+  });
+  const unsafeMinorRun = unsafeMinorResult.body as StatementRunResult;
+  assert.equal(unsafeMinorRun.generatedCount, 0);
+  assert.equal(unsafeMinorRun.invalidRejects, 1);
+  assert.match(unsafeMinorRun.rejects[0].reason, /minor and cannot receive a statement as their own Account guarantor/);
+
   const adult = patientWithAddress();
   adult.birthDate = "1980-01-02";
   const adultFixture = fakeFhir({

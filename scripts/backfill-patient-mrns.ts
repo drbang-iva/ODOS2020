@@ -161,6 +161,7 @@ function buildBackfillAccount(
   minor: boolean,
 ): Account {
   return {
+    ...account,
     resourceType: "Account",
     id: account.id,
     meta: account.meta,

@@ -952,6 +952,11 @@ function resolveStatementRecipient(
   for (const guarantor of guarantors) {
     const reference = guarantor.party.reference;
     if (reference === patientReference) {
+      if (minorOn(patient.birthDate, onDate)) {
+        throw new StatementValidationError(
+          `${patientReference} is a minor and cannot receive a statement as their own Account guarantor.`,
+        );
+      }
       resolved.push(patient);
       continue;
     }

@@ -14,6 +14,7 @@ import {
   EYEFINITY_EPM_PATIENT_ID_SYSTEM,
   ODOS_MRN_ALLOCATION_TOKEN_SYSTEM,
   ODOS_MRN_SYSTEM,
+  formatOdosMrn,
   isValidOdosMrn,
 } from "../../ui/src/lib/patient-identity.ts";
 
@@ -71,6 +72,48 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
     minorsNeedingResponsibleParty: 1,
   });
   assert.equal(adapter.transactions.length, 2);
+});
+
+test("MRN backfill preserves unrelated fields on an existing Account full-resource update", async () => {
+  const mrn = formatOdosMrn(620_001);
+  assert.equal(isValidOdosMrn(mrn), true);
+  const adapter = new FakePatientMrnBackfillAdapter([
+    patient("adult", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: mrn }]),
+  ]);
+  adapter.accounts.set("account-existing", {
+    resourceType: "Account",
+    id: "account-existing",
+    meta: { versionId: "4" },
+    identifier: [
+      { system: "https://example.test/account-id", value: "acct-44" },
+      { system: ODOS_MRN_SYSTEM, value: mrn },
+    ],
+    status: "on-hold",
+    name: "Legacy account name",
+    subject: [{ reference: "Patient/adult" }],
+    owner: { reference: "Organization/practice" },
+    servicePeriod: { start: "2020-01-01" },
+    extension: [{ url: "https://example.test/account-note", valueString: "keep" }],
+  });
+
+  const result = await backfillPatientMrns(adapter, {
+    today: "2026-07-30",
+    nextMrnBase: () => {
+      throw new Error("existing MRN must not allocate another");
+    },
+    nextUuid: () => {
+      throw new Error("existing Account must not reserve another");
+    },
+  });
+
+  assert.equal(result.accountsUpdated, 1);
+  const account = accountFor(adapter.accounts, "Patient/adult");
+  assert.deepEqual(account.owner, { reference: "Organization/practice" });
+  assert.deepEqual(account.servicePeriod, { start: "2020-01-01" });
+  assert.deepEqual(account.extension, [{ url: "https://example.test/account-note", valueString: "keep" }]);
+  assert.equal(account.identifier?.some(
+    (identifier) => identifier.system === "https://example.test/account-id" && identifier.value === "acct-44",
+  ), true);
 });
 
 class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
