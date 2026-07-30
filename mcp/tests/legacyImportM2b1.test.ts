@@ -667,33 +667,67 @@ test("M2b-1 requires explicit visit-type mappings and the M2a calibration refusa
       true,
     );
 
+    const providerRows = [
+      appointmentRow({
+        ProviderFirst: "First",
+        appt_date: "01/02/2020 12:00:00 AM",
+      }),
+      appointmentRow({
+        ProviderFirst: "Different",
+        appt_date: "01/03/2020 12:00:00 AM",
+      }),
+    ];
     const providerResult = await importLegacyAppointmentsAndEncounters({
       fhir: new MemoryVisitFhir(),
       ledger,
       runId,
       projectId: PROJECT_ID,
       manifest: manifest(),
-      appointmentsCsv: appointmentCsv([
-        appointmentRow({
-          ProviderFirst: "First",
-          appt_date: "01/02/2020 12:00:00 AM",
-        }),
-        appointmentRow({
-          ProviderFirst: "Different",
-          appt_date: "01/03/2020 12:00:00 AM",
-        }),
-      ]),
+      appointmentsCsv: appointmentCsv(providerRows),
       examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
     });
     assert.equal(providerResult.practitioners.conflict, 1);
-    assert.equal(
-      listPendingDecisions(ledger, { runId }).some(
-        (decision) =>
-          decision.kind === "adjudication"
-          && decision.sourceKind === "provider",
-      ),
-      true,
+    const providerDecision = listPendingDecisions(ledger, { runId }).find(
+      (decision) =>
+        decision.kind === "adjudication"
+        && decision.sourceKind === "provider",
     );
+    assert.deepEqual(providerDecision?.decisions, ["exclude"]);
+    assert.throws(
+      () => applyDecisionFile(ledger, {
+        decidedBy: "test-operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "provider",
+          sourceKey: "provider-1",
+          decision: "keep",
+        }],
+      }),
+      /decision keep is not allowed/,
+    );
+    assert.deepEqual(
+      applyDecisionFile(ledger, {
+        decidedBy: "test-operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "provider",
+          sourceKey: "provider-1",
+          decision: "exclude",
+        }],
+      }),
+      { recorded: 1, previouslyDecided: 0 },
+    );
+    const providerReplay = await importLegacyAppointmentsAndEncounters({
+      fhir: new MemoryVisitFhir(),
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv: appointmentCsv(providerRows),
+      examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
+    });
+    assert.equal(providerReplay.appointments.conflict, 0);
+    assert.equal(providerReplay.appointments.created, 2);
     assert.match(ledger.renderReport(runId), /provider-source-name-ambiguity/);
 
     await assert.rejects(

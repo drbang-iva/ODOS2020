@@ -92,6 +92,14 @@ export function applyDecisionFile(
         `No ambiguity is queued for ${adjudication.sourceKind}/${adjudication.sourceKey}.`,
       );
     }
+    const allowedDecisions = new Set(
+      ambiguities.flatMap((ambiguity) => allowedAdjudicationDecisions(ambiguity)),
+    );
+    if (!allowedDecisions.has(adjudication.decision)) {
+      throw new Error(
+        `Adjudication decision ${adjudication.decision} is not allowed for ${adjudication.sourceKind}/${adjudication.sourceKey}.`,
+      );
+    }
     const existing = ledger.readAdjudication(
       adjudication.sourceKind,
       adjudication.sourceKey,
@@ -178,12 +186,14 @@ export function listPendingDecisions(
       );
       continue;
     }
+    const decisions = allowedAdjudicationDecisions(ambiguity);
+    if (decisions.length === 0) continue;
     pending.push({
       kind: "adjudication",
       sourceKind: ambiguity.sourceKind,
       sourceKey: ambiguity.sourceKey,
       ambiguityType: ambiguity.ambiguityType,
-      decisions: ["keep", "exclude", "mark-as-test"],
+      decisions,
     });
   }
 
@@ -225,7 +235,7 @@ export async function runInteractiveAdjudication(input: {
       continue;
     }
     const answer = (await input.prompt(
-      `Decide ${decision.sourceKind}/${decision.sourceKey} (${decision.ambiguityType}) [keep|exclude|mark-as-test]: `,
+      `Decide ${decision.sourceKind}/${decision.sourceKey} (${decision.ambiguityType}) [${decision.decisions.join("|")}]: `,
     )).trim() as AdjudicationDecision;
     asked += 1;
     if (!decision.decisions.includes(answer)) {
@@ -244,6 +254,17 @@ export async function runInteractiveAdjudication(input: {
     );
     recorded += 1;
   }
+}
+
+function allowedAdjudicationDecisions(
+  ambiguity: ImportAmbiguity,
+): readonly AdjudicationDecision[] {
+  const values = ambiguity.details.decisions;
+  if (!Array.isArray(values)) return [];
+  return values.filter(
+    (value): value is AdjudicationDecision =>
+      value === "keep" || value === "exclude" || value === "mark-as-test",
+  );
 }
 
 function scopedSourceKeys(

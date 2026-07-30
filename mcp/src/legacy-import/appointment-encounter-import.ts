@@ -171,7 +171,10 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       sourceKind: "provider",
       sourceKey: providerId,
       ambiguityType: "source-name",
-      details: { reason: "one-provider-id-has-multiple-source-names" },
+      details: {
+        reason: "one-provider-id-has-multiple-source-names",
+        decisions: ["exclude"],
+      },
     });
     recordResourceAction(
       input.ledger,
@@ -210,7 +213,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
         sourceKind: "appointment",
         sourceKey: source.sourceKey,
         ambiguityType: "visit-type",
-        details: { reason },
+        details: { reason, decisions: ["exclude"] },
       });
       recordResourceAction(input.ledger, input.runId, source.sourceKey, "Appointment", "conflict", reason);
       appointmentCounts.conflict += 1;
