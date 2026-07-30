@@ -16,6 +16,26 @@ export type ImportResourceType =
   | "Appointment"
   | "Encounter";
 export type GrantAction = "added" | "skipped" | "conflict";
+export type AdjudicationDecision = "keep" | "exclude" | "mark-as-test";
+
+export interface CaptureAllocation {
+  readonly visitDaySourceKey: string;
+  readonly exSrNo: string;
+  readonly appointmentSourceKey: string;
+  readonly decidedBy: string;
+  readonly decidedAt: string;
+  readonly note?: string;
+}
+
+export interface ImportAmbiguity {
+  readonly sourceKind: string;
+  readonly sourceKey: string;
+  readonly ambiguityType: string;
+  readonly state: "open" | "resolved";
+  readonly details: Readonly<Record<string, unknown>>;
+  readonly createdAt: string;
+  readonly resolvedAt?: string;
+}
 
 export interface ImportLedgerOptions {
   readonly databasePath?: string;
@@ -155,7 +175,15 @@ export class ImportLedger {
         source_kind, source_key, ambiguity_type, details_json, created_at
       ) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT (source_kind, source_key, ambiguity_type) DO UPDATE SET
-        details_json = excluded.details_json
+        details_json = excluded.details_json,
+        state = CASE
+          WHEN ambiguity_queue.details_json <> excluded.details_json THEN 'open'
+          ELSE ambiguity_queue.state
+        END,
+        resolved_at = CASE
+          WHEN ambiguity_queue.details_json <> excluded.details_json THEN NULL
+          ELSE ambiguity_queue.resolved_at
+        END
     `).run(
       input.sourceKind,
       input.sourceKey,
@@ -168,7 +196,7 @@ export class ImportLedger {
   recordAdjudication(input: {
     readonly sourceKind: string;
     readonly sourceKey: string;
-    readonly decision: "keep" | "exclude" | "mark-as-test";
+    readonly decision: AdjudicationDecision;
     readonly decidedBy: string;
     readonly note?: string;
   }): void {
@@ -195,7 +223,7 @@ export class ImportLedger {
     sourceKind: string,
     sourceKey: string,
   ): {
-    decision: "keep" | "exclude" | "mark-as-test";
+    decision: AdjudicationDecision;
     decidedBy: string;
     decidedAt: string;
     note?: string;
@@ -205,7 +233,7 @@ export class ImportLedger {
       FROM adjudications
       WHERE source_kind = ? AND source_key = ?
     `).get(sourceKind, sourceKey) as {
-      decision: "keep" | "exclude" | "mark-as-test";
+      decision: AdjudicationDecision;
       decided_by: string;
       decided_at: string;
       note: string | null;
@@ -218,6 +246,168 @@ export class ImportLedger {
           ...(row.note ? { note: row.note } : {}),
         }
       : undefined;
+  }
+
+  recordCaptureAllocation(input: {
+    readonly visitDaySourceKey: string;
+    readonly exSrNo: string;
+    readonly appointmentSourceKey: string;
+    readonly decidedBy: string;
+    readonly note?: string;
+  }): void {
+    this.database.prepare(`
+      INSERT INTO capture_allocations (
+        visit_day_source_key, ex_sr_no, appointment_source_key, decided_by, decided_at, note
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (visit_day_source_key, ex_sr_no) DO UPDATE SET
+        appointment_source_key = excluded.appointment_source_key,
+        decided_by = excluded.decided_by,
+        decided_at = excluded.decided_at,
+        note = excluded.note
+    `).run(
+      input.visitDaySourceKey,
+      input.exSrNo,
+      input.appointmentSourceKey,
+      input.decidedBy,
+      this.now(),
+      input.note ?? null,
+    );
+  }
+
+  readCaptureAllocation(
+    visitDaySourceKey: string,
+    exSrNo: string,
+  ): CaptureAllocation | undefined {
+    const row = this.database.prepare(`
+      SELECT
+        visit_day_source_key,
+        ex_sr_no,
+        appointment_source_key,
+        decided_by,
+        decided_at,
+        note
+      FROM capture_allocations
+      WHERE visit_day_source_key = ? AND ex_sr_no = ?
+    `).get(visitDaySourceKey, exSrNo) as {
+      visit_day_source_key: string;
+      ex_sr_no: string;
+      appointment_source_key: string;
+      decided_by: string;
+      decided_at: string;
+      note: string | null;
+    } | undefined;
+    return row ? captureAllocation(row) : undefined;
+  }
+
+  listCaptureAllocations(visitDaySourceKey: string): CaptureAllocation[] {
+    const rows = this.database.prepare(`
+      SELECT
+        visit_day_source_key,
+        ex_sr_no,
+        appointment_source_key,
+        decided_by,
+        decided_at,
+        note
+      FROM capture_allocations
+      WHERE visit_day_source_key = ?
+      ORDER BY ex_sr_no
+    `).all(visitDaySourceKey) as Array<{
+      visit_day_source_key: string;
+      ex_sr_no: string;
+      appointment_source_key: string;
+      decided_by: string;
+      decided_at: string;
+      note: string | null;
+    }>;
+    return rows.map(captureAllocation);
+  }
+
+  listAmbiguities(input: {
+    readonly sourceKind?: string;
+    readonly sourceKey?: string;
+    readonly state?: "open" | "resolved";
+  } = {}): ImportAmbiguity[] {
+    const clauses: string[] = [];
+    const values: string[] = [];
+    if (input.sourceKind) {
+      clauses.push("source_kind = ?");
+      values.push(input.sourceKind);
+    }
+    if (input.sourceKey) {
+      clauses.push("source_key = ?");
+      values.push(input.sourceKey);
+    }
+    if (input.state) {
+      clauses.push("state = ?");
+      values.push(input.state);
+    }
+    const rows = this.database.prepare(`
+      SELECT
+        source_kind,
+        source_key,
+        ambiguity_type,
+        state,
+        details_json,
+        created_at,
+        resolved_at
+      FROM ambiguity_queue
+      ${clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : ""}
+      ORDER BY ambiguity_id
+    `).all(...values) as Array<{
+      source_kind: string;
+      source_key: string;
+      ambiguity_type: string;
+      state: "open" | "resolved";
+      details_json: string;
+      created_at: string;
+      resolved_at: string | null;
+    }>;
+    return rows.map((row) => ({
+      sourceKind: row.source_kind,
+      sourceKey: row.source_key,
+      ambiguityType: row.ambiguity_type,
+      state: row.state,
+      details: JSON.parse(row.details_json) as Record<string, unknown>,
+      createdAt: row.created_at,
+      ...(row.resolved_at ? { resolvedAt: row.resolved_at } : {}),
+    }));
+  }
+
+  resolveAmbiguity(
+    sourceKind: string,
+    sourceKey: string,
+    ambiguityType: string,
+  ): void {
+    this.database.prepare(`
+      UPDATE ambiguity_queue
+      SET state = 'resolved', resolved_at = ?
+      WHERE source_kind = ? AND source_key = ? AND ambiguity_type = ?
+    `).run(this.now(), sourceKind, sourceKey, ambiguityType);
+  }
+
+  listRunSourceKeys(runId: string): string[] {
+    const rows = this.database.prepare(`
+      SELECT source_key
+      FROM resource_actions
+      WHERE run_id = ?
+      UNION
+      SELECT source_key
+      FROM junk_rejections
+      WHERE run_id = ?
+      ORDER BY source_key
+    `).all(runId, runId) as Array<{ source_key: string }>;
+    return rows.map((row) => row.source_key);
+  }
+
+  listPatientRunIds(patientSourceKey: string): string[] {
+    const rows = this.database.prepare(`
+      SELECT run_id, MAX(action_id) AS latest_action_id
+      FROM resource_actions
+      WHERE resource_type = 'Patient' AND source_key = ?
+      GROUP BY run_id
+      ORDER BY latest_action_id DESC
+    `).all(patientSourceKey) as Array<{ run_id: string }>;
+    return rows.map((row) => row.run_id);
   }
 
   renderReport(runId: string): string {
@@ -234,7 +424,7 @@ export class ImportLedger {
     if (!run) throw new Error(`Import run ${runId} is not present in the ledger.`);
 
     const resourceActions = this.database.prepare(`
-      SELECT source_key, resource_type, resource_reference, action, reason
+      SELECT source_key, resource_type, resource_reference, action, reason, recorded_at
       FROM resource_actions
       WHERE run_id = ?
       ORDER BY action_id
@@ -244,6 +434,7 @@ export class ImportLedger {
       resource_reference: string | null;
       action: string;
       reason: string;
+      recorded_at: string;
     }>;
     const rejections = this.database.prepare(`
       SELECT source_system, source_key, reason
@@ -266,6 +457,48 @@ export class ImportLedger {
       parameters_json: string;
       action: string;
     }>;
+    const sourceKeys = new Set([
+      ...resourceActions.map((row) => row.source_key),
+      ...rejections.map((row) => row.source_key),
+    ]);
+    const ambiguities = this.listAmbiguities().filter((row) =>
+      sourceKeys.has(row.sourceKey)
+      || (
+        Array.isArray(row.details.appointmentSourceKeys)
+        && row.details.appointmentSourceKeys.some(
+          (sourceKey) => typeof sourceKey === "string" && sourceKeys.has(sourceKey),
+        )
+      )
+    );
+    for (const ambiguity of ambiguities) sourceKeys.add(ambiguity.sourceKey);
+    const adjudications = sourceKeys.size === 0
+      ? []
+      : this.database.prepare(`
+          SELECT source_kind, source_key, decision, decided_by, decided_at, note
+          FROM adjudications
+          ORDER BY decided_at, source_kind, source_key
+        `).all().filter((value) =>
+          sourceKeys.has((value as { source_key: string }).source_key)
+        ) as Array<{
+          source_kind: string;
+          source_key: string;
+          decision: AdjudicationDecision;
+          decided_by: string;
+          decided_at: string;
+          note: string | null;
+        }>;
+    const allocations = [...sourceKeys].flatMap((sourceKey) =>
+      this.listCaptureAllocations(sourceKey)
+    );
+    const patientActions = resourceActions.filter((row) => row.resource_type === "Patient");
+    const visitActions = resourceActions.filter((row) =>
+      row.resource_type === "Appointment" || row.resource_type === "Encounter"
+    );
+    const otherActions = resourceActions.filter((row) =>
+      row.resource_type !== "Patient"
+      && row.resource_type !== "Appointment"
+      && row.resource_type !== "Encounter"
+    );
 
     return [
       `# Legacy import run ${run.run_id}`,
@@ -276,13 +509,30 @@ export class ImportLedger {
       `- Resource actions: ${resourceActions.length}`,
       `- Junk rejections: ${rejections.length}`,
       `- Access grants: ${grants.length}`,
+      `- Open decisions: ${ambiguities.filter((row) => row.state === "open").length}`,
       "",
-      "## Resource actions",
+      "## Patient roll-up",
       "",
-      "| Source key | Resource | Reference | Action | Reason |",
+      "| Patient source key | Reference | Status | Detail |",
+      "|---|---|---|---|",
+      ...patientActions.map((row) =>
+        `| ${cell(row.source_key)} | ${cell(row.resource_reference ?? "")} | ${cell(reportAction(row))} | ${cell(row.reason)} |`
+      ),
+      "",
+      "## Appointments and Encounters",
+      "",
+      "| Source key | Resource | Reference | Outcome | Reason | Recorded |",
+      "|---|---|---|---|---|---|",
+      ...visitActions.map((row) =>
+        `| ${cell(row.source_key)} | ${cell(row.resource_type)} | ${cell(row.resource_reference ?? "")} | ${cell(reportAction(row))} | ${cell(row.reason)} | ${cell(row.recorded_at)} |`
+      ),
+      "",
+      "## Other resource actions",
+      "",
+      "| Source key | Resource | Reference | Outcome | Reason |",
       "|---|---|---|---|---|",
-      ...resourceActions.map((row) =>
-        `| ${cell(row.source_key)} | ${cell(row.resource_type)} | ${cell(row.resource_reference ?? "")} | ${cell(row.action)} | ${cell(row.reason)} |`
+      ...otherActions.map((row) =>
+        `| ${cell(row.source_key)} | ${cell(row.resource_type)} | ${cell(row.resource_reference ?? "")} | ${cell(reportAction(row))} | ${cell(row.reason)} |`
       ),
       "",
       "## Junk-row rejections",
@@ -291,6 +541,30 @@ export class ImportLedger {
       "|---|---|---|",
       ...rejections.map((row) =>
         `| ${cell(row.source_system)} | ${cell(row.source_key)} | ${cell(row.reason)} |`
+      ),
+      "",
+      "## Ambiguity queue",
+      "",
+      "| Source kind | Source key | Ambiguity | State | Details |",
+      "|---|---|---|---|---|",
+      ...ambiguities.map((row) =>
+        `| ${cell(row.sourceKind)} | ${cell(row.sourceKey)} | ${cell(row.ambiguityType)} | ${cell(row.state.toUpperCase())} | ${cell(JSON.stringify(row.details))} |`
+      ),
+      "",
+      "## Capture allocations",
+      "",
+      "| Visit day | Capture | Appointment source key | Decided by | Decided at | Note |",
+      "|---|---|---|---|---|---|",
+      ...allocations.map((row) =>
+        `| ${cell(row.visitDaySourceKey)} | ${cell(row.exSrNo)} | ${cell(row.appointmentSourceKey)} | ${cell(row.decidedBy)} | ${cell(row.decidedAt)} | ${cell(row.note ?? "")} |`
+      ),
+      "",
+      "## Adjudications",
+      "",
+      "| Source kind | Source key | Decision | Decided by | Decided at | Note |",
+      "|---|---|---|---|---|---|",
+      ...adjudications.map((row) =>
+        `| ${cell(row.source_kind)} | ${cell(row.source_key)} | ${cell(row.decision.toUpperCase())} | ${cell(row.decided_by)} | ${cell(row.decided_at)} | ${cell(row.note ?? "")} |`
       ),
       "",
       "## Access grants",
@@ -381,8 +655,46 @@ export class ImportLedger {
         note TEXT,
         PRIMARY KEY (source_kind, source_key)
       );
+
+      CREATE TABLE IF NOT EXISTS capture_allocations (
+        visit_day_source_key TEXT NOT NULL,
+        ex_sr_no TEXT NOT NULL,
+        appointment_source_key TEXT NOT NULL,
+        decided_by TEXT NOT NULL,
+        decided_at TEXT NOT NULL,
+        note TEXT,
+        PRIMARY KEY (visit_day_source_key, ex_sr_no)
+      );
     `);
   }
+}
+
+function captureAllocation(row: {
+  visit_day_source_key: string;
+  ex_sr_no: string;
+  appointment_source_key: string;
+  decided_by: string;
+  decided_at: string;
+  note: string | null;
+}): CaptureAllocation {
+  return {
+    visitDaySourceKey: row.visit_day_source_key,
+    exSrNo: row.ex_sr_no,
+    appointmentSourceKey: row.appointment_source_key,
+    decidedBy: row.decided_by,
+    decidedAt: row.decided_at,
+    ...(row.note ? { note: row.note } : {}),
+  };
+}
+
+function reportAction(row: {
+  resource_type: string;
+  action: string;
+  reason: string;
+}): string {
+  return row.resource_type === "Encounter" && row.reason === "excluded-by-adjudication"
+    ? "EXCLUDED"
+    : row.action;
 }
 
 function cell(value: string): string {
