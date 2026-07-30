@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -1134,6 +1134,13 @@ test("M2b-2 decision replay adjudicates every operator-chart Encounter without r
 });
 
 test("M2b-2 non-interactive CLI applies a decisions file and replays it without mutation", async () => {
+  const packageJson = JSON.parse(
+    readFileSync(join(process.cwd(), "../package.json"), "utf8"),
+  ) as { scripts: Record<string, string> };
+  assert.match(
+    packageJson.scripts["import-legacy-visits-m2b2"] ?? "",
+    /scripts\/import-legacy-visits-m2b2\.ts$/,
+  );
   const state = tempState();
   const decisionsPath = join(state.path, "decisions.json");
   const ledger = new ImportLedger({
