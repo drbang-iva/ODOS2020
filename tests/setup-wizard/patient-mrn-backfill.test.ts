@@ -53,6 +53,7 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
     accountsUpdated: 0,
     unchangedPatients: 0,
     minorsNeedingResponsibleParty: 1,
+    patientsNeedingBirthDateResolution: 0,
   });
   assert.equal(adapter.transactions.length, 2);
   const adult = adapter.patients.get("adult")!;
@@ -65,6 +66,8 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
   const minorAccount = accountFor(adapter.accounts, "Patient/minor");
   assert.deepEqual(adultAccount.guarantor, [{ party: { reference: "Patient/adult" }, onHold: false }]);
   assert.deepEqual(minorAccount.guarantor, []);
+  assert.equal(adultAccount.status, "active");
+  assert.equal(minorAccount.status, "active");
   assert.equal(adultAccount.identifier?.some((identifier) => identifier.system === ODOS_MRN_ALLOCATION_TOKEN_SYSTEM), false);
 
   const second = await backfillPatientMrns(adapter, {
@@ -83,6 +86,7 @@ test("MRN backfill is idempotent, preserves migrated identifiers, and never inve
     accountsUpdated: 0,
     unchangedPatients: 2,
     minorsNeedingResponsibleParty: 1,
+    patientsNeedingBirthDateResolution: 0,
   });
   assert.equal(adapter.transactions.length, 2);
 });
@@ -127,6 +131,70 @@ test("MRN backfill preserves unrelated fields on an existing Account full-resour
   assert.equal(account.identifier?.some(
     (identifier) => identifier.system === "https://example.test/account-id" && identifier.value === "acct-44",
   ), true);
+  assert.equal(account.status, "on-hold");
+  assert.equal(account.name, "Legacy account name");
+});
+
+test("MRN backfill preserves inactive and entered-in-error Account status", async () => {
+  const inactiveMrn = formatOdosMrn(621_001);
+  const enteredInErrorMrn = formatOdosMrn(621_002);
+  const adapter = new FakePatientMrnBackfillAdapter([
+    patient("inactive", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: inactiveMrn }]),
+    patient("entered-in-error", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: enteredInErrorMrn }]),
+  ]);
+  adapter.accounts.set("account-inactive", {
+    ...account("account-inactive", "inactive", inactiveMrn),
+    status: "inactive",
+    name: "Inactive legacy account",
+  });
+  adapter.accounts.set("account-entered-in-error", {
+    ...account("account-entered-in-error", "entered-in-error", enteredInErrorMrn),
+    status: "entered-in-error",
+    name: "Merged duplicate account",
+  });
+
+  const result = await backfillPatientMrns(adapter, {
+    today: "2026-07-30",
+    nextMrnBase: () => {
+      throw new Error("existing MRNs must not allocate another");
+    },
+    nextUuid: () => {
+      throw new Error("existing Accounts must not reserve another");
+    },
+  });
+
+  assert.equal(result.accountsUpdated, 2);
+  assert.equal(adapter.accounts.get("account-inactive")?.status, "inactive");
+  assert.equal(adapter.accounts.get("account-inactive")?.name, "Inactive legacy account");
+  assert.equal(adapter.accounts.get("account-entered-in-error")?.status, "entered-in-error");
+  assert.equal(adapter.accounts.get("account-entered-in-error")?.name, "Merged duplicate account");
+});
+
+test("MRN backfill surfaces an indeterminate birth date without creating a self guarantor", async () => {
+  const missingBirthDate = {
+    ...patient("unknown-age", "1980-01-02", []),
+    birthDate: undefined,
+  };
+  const adapter = new FakePatientMrnBackfillAdapter([missingBirthDate]);
+
+  const result = await backfillPatientMrns(adapter, {
+    today: "2026-07-30",
+    nextMrnBase: () => 622_001,
+    nextUuid: sequentialUuid(),
+  });
+
+  assert.deepEqual(result, {
+    scannedPatients: 1,
+    mrnsAdded: 1,
+    accountsAdded: 1,
+    accountsUpdated: 0,
+    unchangedPatients: 0,
+    minorsNeedingResponsibleParty: 0,
+    patientsNeedingBirthDateResolution: 1,
+  });
+  const account = accountFor(adapter.accounts, "Patient/unknown-age");
+  assert.equal(account.status, "active");
+  assert.deepEqual(account.guarantor, []);
 });
 
 test("MRN backfill treats a complete Account with reordered identifiers as unchanged", async () => {

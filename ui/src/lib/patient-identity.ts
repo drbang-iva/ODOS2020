@@ -137,8 +137,18 @@ export function patientOdosMrn(patient: Patient): string | undefined {
   )?.value;
 }
 
+export function isR4Date(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 export function isMinorOn(birthDate: string | undefined, today: string): boolean {
-  if (!birthDate || !isR4Date(birthDate) || !isR4Date(today)) return false;
+  if (!birthDate || !isR4Date(birthDate)) {
+    throw new Error("A valid birth date is required to determine whether a patient is a minor.");
+  }
+  if (!isR4Date(today)) throw new Error("A valid current date is required to determine whether a patient is a minor.");
   const eighteenthBirthday = `${String(Number(birthDate.slice(0, 4)) + 18)}${birthDate.slice(4)}`;
   return eighteenthBirthday > today;
 }
@@ -149,8 +159,15 @@ export function validateResponsibleParties(
   today: string,
 ): Record<string, string> {
   const errors: Record<string, string> = {};
+  const collectionErrors: string[] = [];
+  const minorStatusKnown = isR4Date(birthDate) && isR4Date(today);
+  const minor = minorStatusKnown ? isMinorOn(birthDate, today) : undefined;
+  if (!minorStatusKnown) {
+    collectionErrors.push("A valid birth date and current date are required before responsible parties can be validated.");
+  }
   if (parties.length === 0) {
-    errors.responsibleParties = "At least one responsible party is required.";
+    collectionErrors.push("At least one responsible party is required.");
+    errors.responsibleParties = collectionErrors.join(" ");
     return errors;
   }
   let activeFinancial = 0;
@@ -186,22 +203,21 @@ export function validateResponsibleParties(
     }
   });
 
-  if (selfCount > 1) errors.responsibleParties = "The patient can appear as self only once.";
-  if (isMinorOn(birthDate, today) && selfCount > 0) {
-    errors.responsibleParties = "A minor cannot be registered as their own responsible party.";
-  }
+  if (selfCount > 1) collectionErrors.push("The patient can appear as self only once.");
+  if (minor && selfCount > 0) collectionErrors.push("A minor cannot be registered as their own responsible party.");
   if (activeFinancial === 0) {
-    errors.responsibleParties = "At least one current financially responsible party is required.";
+    collectionErrors.push("At least one current financially responsible party is required.");
   }
-  if (isMinorOn(birthDate, today) && activeConsent === 0) {
-    errors.responsibleParties = "A minor must have at least one current consent-authority party.";
+  if (minor && activeConsent === 0) {
+    collectionErrors.push("A minor must have at least one current consent-authority party.");
   }
   const activePeople = parties.filter(
     (party) => party.kind === "person" && responsiblePartyActiveOn(party, today),
   );
   if (activePeople.length > 0 && activePrimaryPeople !== 1) {
-    errors.responsibleParties = "Choose exactly one current related person as primary.";
+    collectionErrors.push("Choose exactly one current related person as primary.");
   }
+  if (collectionErrors.length > 0) errors.responsibleParties = collectionErrors.join(" ");
   return errors;
 }
 
@@ -341,6 +357,8 @@ function buildRelatedPerson(
   patientReference: string,
   today: string,
 ): RelatedPerson {
+  const hasAddress = [party.address, party.city, party.state, party.postalCode]
+    .some((value) => value.trim());
   return {
     resourceType: "RelatedPerson",
     active: responsiblePartyActiveOn(party, today),
@@ -354,13 +372,15 @@ function buildRelatedPerson(
     telecom: party.phone.trim()
       ? [{ system: "phone", use: "home", value: party.phone.trim() }]
       : undefined,
-    address: [{
-      use: "home",
-      line: party.address.trim() ? [party.address.trim()] : undefined,
-      city: party.city.trim() || undefined,
-      state: party.state.trim() || undefined,
-      postalCode: party.postalCode.trim() || undefined,
-    }],
+    address: hasAddress
+      ? [{
+          use: "home",
+          line: party.address.trim() ? [party.address.trim()] : undefined,
+          city: party.city.trim() || undefined,
+          state: party.state.trim() || undefined,
+          postalCode: party.postalCode.trim() || undefined,
+        }]
+      : undefined,
     period: responsiblePartyPeriod(party),
     extension: [
       { url: CONSENT_AUTHORITY_EXTENSION_URL, valueBoolean: party.consentAuthority },
@@ -388,11 +408,4 @@ function responsiblePartyActiveOn(party: ResponsiblePartyDraft, today: string): 
 function relationshipLabel(value: ResponsiblePartyRelationship): string {
   if (value === "legal-guardian") return "Legal guardian";
   return value[0].toUpperCase() + value.slice(1);
-}
-
-function isR4Date(value: string): boolean {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return false;
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }

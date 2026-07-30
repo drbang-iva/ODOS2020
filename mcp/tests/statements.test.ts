@@ -163,139 +163,166 @@ test("insurance detail passes through linked Claim diagnoses, ERA adjustments, p
   assert.deepEqual(order?.patientPayments, [{ paymentReference: "PaymentReconciliation/pay-1", date: "2026-07-02", amountCents: 500 }]);
 });
 
-test("minor statements mail to the Account guarantor while a self-responsible adult mails to themselves", async () => {
-  const minor = {
-    ...patient("minor", "Jamie Doe"),
-    birthDate: "2015-01-02",
-    address: [{ use: "home" as const, line: ["1 Minor St"], city: "Greenville", state: "SC", postalCode: "29601" }],
+test("minor statements mail to the current Account guarantor", async () => {
+  const account = patientAccount("minor-account", "minor", "RelatedPerson/guardian");
+  account.guarantor![0].period = {
+    start: "2026-07-12T23:59:59Z",
+    end: "2026-07-12T23:59:59Z",
   };
-  const guardian: RelatedPerson = {
-    resourceType: "RelatedPerson",
-    id: "guardian",
-    active: true,
-    patient: { reference: "Patient/minor" },
-    name: [{ use: "official", given: ["Pat"], family: "Doe" }],
-    address: [{ use: "home", line: ["2 Parent St"], city: "Greenville", state: "SC", postalCode: "29602" }],
-    extension: [{
-      url: "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
-      valueBoolean: true,
-    }],
-  };
-  const minorFixture = fakeFhir({
-    patients: [minor],
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
     invoices: [invoice("minor-invoice", "minor", 10_000)],
     payments: [],
-    accounts: [{
-      ...patientAccount("minor-account", "minor", "RelatedPerson/guardian"),
-      guarantor: [{
-        party: { reference: "RelatedPerson/guardian" },
-        onHold: false,
-        period: {
-          start: "2026-07-12T23:59:59Z",
-          end: "2026-07-12T23:59:59Z",
-        },
-      }],
-    }],
-    relatedPeople: [guardian],
+    accounts: [account],
+    relatedPeople: [guardian()],
   });
-  const minorResult = await handleGeneratePatientStatementRequest(statementDeps(minorFixture.fhir), {
-    authHeader: "Bearer good",
-    body: { patientReference: "Patient/minor" },
-  });
-  const minorStatement = (minorResult.body as StatementRunResult).statements[0];
-  assert.equal(minorStatement.detail?.header.recipientName, "Pat Doe");
-  assert.deepEqual(minorStatement.detail?.header.recipientAddress, {
+  const statement = run.statements[0];
+  assert.equal(statement.detail?.header.recipientName, "Pat Doe");
+  assert.deepEqual(statement.detail?.header.recipientAddress, {
     lines: ["2 Parent St"],
     cityStatePostal: "Greenville, SC 29602",
   });
-  assert.deepEqual(minorStatement.detail?.header.patientAddress, {
+  assert.deepEqual(statement.detail?.header.patientAddress, {
     lines: ["1 Minor St"],
     cityStatePostal: "Greenville, SC 29601",
   });
+});
 
-  const unsafeMinorFixture = fakeFhir({
-    patients: [minor],
+test("minor statements reject the patient as their own Account guarantor", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
     invoices: [invoice("unsafe-minor-invoice", "minor", 10_000)],
     payments: [],
     accounts: [patientAccount("unsafe-minor-account", "minor", "Patient/minor")],
   });
-  const unsafeMinorResult = await handleGeneratePatientStatementRequest(statementDeps(unsafeMinorFixture.fhir), {
-    authHeader: "Bearer good",
-    body: { patientReference: "Patient/minor" },
-  });
-  const unsafeMinorRun = unsafeMinorResult.body as StatementRunResult;
-  assert.equal(unsafeMinorRun.generatedCount, 0);
-  assert.equal(unsafeMinorRun.invalidRejects, 1);
-  assert.match(unsafeMinorRun.rejects[0].reason, /minor and cannot receive a statement as their own Account guarantor/);
+  assert.equal(run.generatedCount, 0);
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /minor and cannot receive a statement as their own Account guarantor/);
+});
 
-  const unnamedGuardianFixture = fakeFhir({
-    patients: [minor],
+test("statements reject a guarantor without a usable name", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
     invoices: [invoice("unnamed-guardian-invoice", "minor", 10_000)],
     payments: [],
     accounts: [patientAccount("unnamed-guardian-account", "minor", "RelatedPerson/unnamed")],
-    relatedPeople: [{ ...guardian, id: "unnamed", name: undefined }],
+    relatedPeople: [guardian("unnamed", { name: undefined })],
   });
-  const unnamedGuardianResult = await handleGeneratePatientStatementRequest(statementDeps(unnamedGuardianFixture.fhir), {
-    authHeader: "Bearer good",
-    body: { patientReference: "Patient/minor" },
-  });
-  const unnamedGuardianRun = unnamedGuardianResult.body as StatementRunResult;
-  assert.equal(unnamedGuardianRun.invalidRejects, 1);
-  assert.match(unnamedGuardianRun.rejects[0].reason, /has no usable name for statement delivery/);
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /has no usable name for statement delivery/);
+});
 
-  const missingGuardianFixture = fakeFhir({
-    patients: [minor],
+test("statements reject an unresolved Account guarantor", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
     invoices: [invoice("missing-guardian-invoice", "minor", 10_000)],
     payments: [],
     accounts: [patientAccount("missing-guardian-account", "minor", "RelatedPerson/missing")],
   });
-  const missingGuardianResult = await handleGeneratePatientStatementRequest(statementDeps(missingGuardianFixture.fhir), {
-    authHeader: "Bearer good",
-    body: { patientReference: "Patient/minor" },
-  });
-  const missingGuardianRun = missingGuardianResult.body as StatementRunResult;
-  assert.equal(missingGuardianRun.invalidRejects, 1);
-  assert.match(missingGuardianRun.rejects[0].reason, /has no resolvable current Account guarantor/);
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /has no resolvable current Account guarantor/);
+});
 
-  const wrongPatientGuardianFixture = fakeFhir({
-    patients: [minor],
+test("statements reject a RelatedPerson owned by another patient", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
     invoices: [invoice("wrong-patient-guardian-invoice", "minor", 10_000)],
     payments: [],
     accounts: [patientAccount("wrong-patient-guardian-account", "minor", "RelatedPerson/guardian")],
-    relatedPeople: [{
-      ...guardian,
-      patient: { reference: "Patient/another-patient" },
-    }],
+    relatedPeople: [guardian("guardian", { patient: { reference: "Patient/another-patient" } })],
   });
-  const wrongPatientGuardianResult = await handleGeneratePatientStatementRequest(
-    statementDeps(wrongPatientGuardianFixture.fhir),
-    {
-      authHeader: "Bearer good",
-      body: { patientReference: "Patient/minor" },
-    },
-  );
-  const wrongPatientGuardianRun = wrongPatientGuardianResult.body as StatementRunResult;
-  assert.equal(wrongPatientGuardianRun.invalidRejects, 1);
-  assert.match(wrongPatientGuardianRun.rejects[0].reason, /does not belong to Patient\/minor/);
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /does not belong to Patient\/minor/);
+});
 
-  const adult = patientWithAddress();
-  adult.birthDate = "1980-01-02";
-  const adultFixture = fakeFhir({
+test("self-responsible adult statements mail to the patient", async () => {
+  const adult = { ...patientWithAddress(), birthDate: "1980-01-02" };
+  const run = await generateStatementRun({
     patients: [adult],
     invoices: [invoice("adult-invoice", "p1", 10_000)],
     payments: [],
     accounts: [patientAccount("adult-account", "p1", "Patient/p1")],
-  });
-  const adultResult = await handleGeneratePatientStatementRequest(statementDeps(adultFixture.fhir), {
-    authHeader: "Bearer good",
-    body: { patientReference: "Patient/p1" },
-  });
-  const adultStatement = (adultResult.body as StatementRunResult).statements[0];
-  assert.equal(adultStatement.detail?.header.recipientName, "Alex Rivera");
-  assert.deepEqual(adultStatement.detail?.header.recipientAddress, {
+  }, "Patient/p1");
+  const statement = run.statements[0];
+  assert.equal(statement.detail?.header.recipientName, "Alex Rivera");
+  assert.deepEqual(statement.detail?.header.recipientAddress, {
     lines: ["10 Main St"],
     cityStatePostal: "Raleigh, NC 27601",
   });
+});
+
+test("statements reject self-guarantee when the patient's age is indeterminate", async () => {
+  const run = await generateStatementRun({
+    patients: [{ ...patientWithAddress(), birthDate: undefined }],
+    invoices: [invoice("unknown-age-invoice", "p1", 10_000)],
+    payments: [],
+    accounts: [patientAccount("unknown-age-account", "p1", "Patient/p1")],
+  }, "Patient/p1");
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /without a valid patient birth date/);
+});
+
+test("exactly one primary RelatedPerson disambiguates multiple current guarantors", async () => {
+  const account = patientAccount("multi-account", "minor", "RelatedPerson/guardian");
+  account.guarantor = [
+    { party: { reference: "RelatedPerson/guardian" }, onHold: false },
+    { party: { reference: "RelatedPerson/secondary" }, onHold: false },
+  ];
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
+    invoices: [invoice("multi-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [account],
+    relatedPeople: [
+      guardian(),
+      guardian("secondary", {
+        name: [{ text: "Secondary Doe" }],
+        extension: [{
+          url: "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+          valueBoolean: false,
+        }],
+      }),
+    ],
+  });
+  assert.equal(run.statements[0].detail?.header.recipientName, "Pat Doe");
+});
+
+test("multiple primary guarantors are rejected as ambiguous", async () => {
+  const account = patientAccount("multi-primary-account", "minor", "RelatedPerson/guardian");
+  account.guarantor = [
+    { party: { reference: "RelatedPerson/guardian" }, onHold: false },
+    { party: { reference: "RelatedPerson/secondary" }, onHold: false },
+  ];
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
+    invoices: [invoice("multi-primary-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [account],
+    relatedPeople: [guardian(), guardian("secondary", { name: [{ text: "Secondary Doe" }] })],
+  });
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /does not have one unambiguous current Account guarantor/);
+});
+
+test("on-hold and expired guarantors are excluded from statement recipients", async () => {
+  const account = patientAccount("window-account", "minor", "RelatedPerson/guardian");
+  account.guarantor = [
+    { party: { reference: "RelatedPerson/guardian" }, onHold: false },
+    { party: { reference: "RelatedPerson/on-hold" }, onHold: true },
+    { party: { reference: "RelatedPerson/expired" }, onHold: false, period: { end: "2026-07-11" } },
+  ];
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
+    invoices: [invoice("window-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [account],
+    relatedPeople: [
+      guardian(),
+      guardian("on-hold", { name: [{ text: "On Hold" }] }),
+      guardian("expired", { name: [{ text: "Expired" }] }),
+    ],
+  });
+  assert.equal(run.statements[0].detail?.header.recipientName, "Pat Doe");
 });
 
 test("a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance", () => {
@@ -665,8 +692,56 @@ function statementDeps(fhir: ReturnType<typeof fakeFhir>["fhir"]) {
   };
 }
 
+async function generateStatementRun(
+  input: Parameters<typeof fakeFhir>[0],
+  patientReference = "Patient/minor",
+): Promise<StatementRunResult> {
+  const fixture = fakeFhir(input);
+  const result = await handleGeneratePatientStatementRequest(statementDeps(fixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference },
+  });
+  return result.body as StatementRunResult;
+}
+
+function minorPatient(): Patient {
+  return {
+    ...patient("minor", "Jamie Doe"),
+    birthDate: "2015-01-02",
+    address: [{
+      use: "home",
+      line: ["1 Minor St"],
+      city: "Greenville",
+      state: "SC",
+      postalCode: "29601",
+    }],
+  };
+}
+
+function guardian(id = "guardian", overrides: Partial<RelatedPerson> = {}): RelatedPerson {
+  return {
+    resourceType: "RelatedPerson",
+    id,
+    active: true,
+    patient: { reference: "Patient/minor" },
+    name: [{ use: "official", given: ["Pat"], family: "Doe" }],
+    address: [{
+      use: "home",
+      line: ["2 Parent St"],
+      city: "Greenville",
+      state: "SC",
+      postalCode: "29602",
+    }],
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+      valueBoolean: true,
+    }],
+    ...overrides,
+  };
+}
+
 function patient(id: string, text: string): Patient {
-  return { resourceType: "Patient", id, name: [{ text }] };
+  return { resourceType: "Patient", id, birthDate: "1980-01-02", name: [{ text }] };
 }
 
 function patientWithAddress(): Patient {

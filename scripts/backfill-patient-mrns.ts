@@ -13,6 +13,7 @@ import {
   ODOS_MRN_MAX,
   ODOS_MRN_MIN,
   ODOS_MRN_SYSTEM,
+  isR4Date,
   isMinorOn,
   isValidOdosMrn,
   patientOdosMrn,
@@ -36,7 +37,10 @@ export interface PatientMrnBackfillResult {
   accountsUpdated: number;
   unchangedPatients: number;
   minorsNeedingResponsibleParty: number;
+  patientsNeedingBirthDateResolution: number;
 }
+
+type PatientAgeStatus = "adult" | "minor" | "indeterminate";
 
 interface PatientBackfillState {
   patient: Patient;
@@ -44,6 +48,7 @@ interface PatientBackfillState {
   patientVersionId: string;
   existingMrn: string | undefined;
   existingAccount: Account | undefined;
+  ageStatus: PatientAgeStatus;
 }
 
 export async function backfillPatientMrns(
@@ -54,6 +59,7 @@ export async function backfillPatientMrns(
     nextUuid?: () => string;
   },
 ): Promise<PatientMrnBackfillResult> {
+  if (!isR4Date(options.today)) throw new Error("MRN backfill requires a valid current date.");
   const patients = await adapter.listPatients();
   const accounts = await adapter.listAccounts();
   const nextMrnBase = options.nextMrnBase ?? (() => randomInt(ODOS_MRN_MIN, ODOS_MRN_MAX + 1));
@@ -65,6 +71,7 @@ export async function backfillPatientMrns(
     accountsUpdated: 0,
     unchangedPatients: 0,
     minorsNeedingResponsibleParty: 0,
+    patientsNeedingBirthDateResolution: 0,
   };
   const accountsByPatient = new Map<string, Account[]>();
   for (const account of accounts) {
@@ -75,7 +82,8 @@ export async function backfillPatientMrns(
       accountsByPatient.set(subject.reference, matches);
     }
   }
-  const patientStates = patients.map((patient) => inspectPatientBackfillState(patient, accountsByPatient));
+  const patientStates = patients.map((patient) =>
+    inspectPatientBackfillState(patient, accountsByPatient, options.today));
 
   for (const {
     patient,
@@ -83,6 +91,7 @@ export async function backfillPatientMrns(
     patientVersionId,
     existingMrn,
     existingAccount,
+    ageStatus,
   } of patientStates) {
     let reservation: ReservedMrn | undefined;
     let account = existingAccount;
@@ -96,13 +105,21 @@ export async function backfillPatientMrns(
     if (!account?.id) throw new Error(`${patientReference} Account could not be resolved.`);
 
     const mrn = existingMrn ?? reservation!.mrn;
-    const minor = isMinorOn(patient.birthDate, options.today);
-    const finalizedAccount = buildBackfillAccount(account, patientReference, mrn, minor);
+    const finalizedAccount = buildBackfillAccount(
+      account,
+      patientReference,
+      mrn,
+      ageStatus !== "adult",
+      reservation !== undefined,
+    );
     const patientNeedsMrn = !existingMrn;
     const accountNeedsWrite = !sameBackfillAccount(account, finalizedAccount);
+    if (ageStatus === "indeterminate") result.patientsNeedingBirthDateResolution += 1;
     if (!patientNeedsMrn && !accountNeedsWrite) {
       result.unchangedPatients += 1;
-      if (minor && finalizedAccount.guarantor?.length === 0) result.minorsNeedingResponsibleParty += 1;
+      if (ageStatus === "minor" && finalizedAccount.guarantor?.length === 0) {
+        result.minorsNeedingResponsibleParty += 1;
+      }
       continue;
     }
 
@@ -145,7 +162,9 @@ export async function backfillPatientMrns(
     if (patientNeedsMrn) result.mrnsAdded += 1;
     if (reservation) result.accountsAdded += 1;
     else result.accountsUpdated += 1;
-    if (minor && finalizedAccount.guarantor?.length === 0) result.minorsNeedingResponsibleParty += 1;
+    if (ageStatus === "minor" && finalizedAccount.guarantor?.length === 0) {
+      result.minorsNeedingResponsibleParty += 1;
+    }
   }
   return result;
 }
@@ -153,6 +172,7 @@ export async function backfillPatientMrns(
 function inspectPatientBackfillState(
   patient: Patient,
   accountsByPatient: ReadonlyMap<string, Account[]>,
+  today: string,
 ): PatientBackfillState {
   if (!patient.id || !patient.meta?.versionId) {
     throw new Error("Patient backfill requires every Patient search row to include id and meta.versionId.");
@@ -194,6 +214,9 @@ function inspectPatientBackfillState(
     patientVersionId: patient.meta.versionId,
     existingMrn,
     existingAccount,
+    ageStatus: !patient.birthDate || !isR4Date(patient.birthDate)
+      ? "indeterminate"
+      : isMinorOn(patient.birthDate, today) ? "minor" : "adult",
   };
 }
 
@@ -201,7 +224,8 @@ function buildBackfillAccount(
   account: Account,
   patientReference: string,
   mrn: string,
-  minor: boolean,
+  requiresNonSelfGuarantor: boolean,
+  freshReservation: boolean,
 ): Account {
   return {
     ...account,
@@ -221,11 +245,11 @@ function buildBackfillAccount(
         value: mrn,
       },
     ],
-    status: "active",
+    status: freshReservation ? "active" : account.status,
     type: { text: "Patient account" },
-    name: `ODOS chart ${mrn}`,
+    name: freshReservation ? `ODOS chart ${mrn}` : account.name,
     subject: [{ reference: patientReference }],
-    guarantor: minor
+    guarantor: requiresNonSelfGuarantor
       ? account.guarantor?.filter((guarantor) => guarantor.party.reference !== patientReference) ?? []
       : account.guarantor?.length
         ? account.guarantor

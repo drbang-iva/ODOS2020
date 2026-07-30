@@ -1978,7 +1978,12 @@ test("insurance visit flows Claim to ERA to PR Invoice to the unchanged T0 state
   const fixture = deps();
   const claim = { ...buildProfessionalClaim(professionalClaim), id: "claim-1" };
   fixture.created.Claim.push(claim);
-  fixture.created.Patient.push({ resourceType: "Patient", id: "pat-900", name: [{ text: "Jamie Synthetic" }] });
+  fixture.created.Patient.push({
+    resourceType: "Patient",
+    id: "pat-900",
+    birthDate: "1980-01-02",
+    name: [{ text: "Jamie Synthetic" }],
+  });
   fixture.deps.adapter!.retrieveEraData = async () => patientResponsibilityEra(17_189);
 
   const imported = await handleEraImportRequest(fixture.deps, { authHeader: "Bearer good", body: eraImportBody() });

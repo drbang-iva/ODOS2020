@@ -37,9 +37,9 @@ RelatedPerson stores the relationship, contact address, and active `period`. ODO
 - `https://odos2020.com/fhir/StructureDefinition/related-person-primary`
 - `https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes`
 
-Registration refuses a minor without a currently effective consent-authority party. Coverage subscriber and relationship remain the insurance-linkage source of truth and are not duplicated here.
+Registration requires a valid birth date before responsible-party validation and refuses a minor without a currently effective consent-authority party. Coverage subscriber and relationship remain the insurance-linkage source of truth and are not duplicated here.
 
-Statements resolve the active Account guarantor and mail to that person's name and address. An adult legacy chart without an Account may use the existing patient-address fallback until backfill runs. A minor without an unambiguous current guarantor is rejected from statement generation rather than addressed to the minor.
+Statements resolve the active Account guarantor and mail to that person's name and address. An adult legacy chart without an Account may use the existing patient-address fallback until backfill runs. A minor without an unambiguous current guarantor, or a chart whose age cannot be determined from a valid birth date, is rejected from statement generation rather than addressed to the patient.
 
 ## Backfill
 
@@ -47,7 +47,7 @@ Run:
 
 `npm run backfill-patient-mrns`
 
-The script is restricted to local or private self-hosted Medplum URLs. It appends an MRN to every Patient that lacks one and finalizes the reserved per-patient Account in the same FHIR transaction. Adults default to self-responsibility. The script does not invent a guardian or consent authority for an existing minor; it creates the Account without a guarantor, counts that chart in `minorsNeedingResponsibleParty`, and statement generation remains blocked until staff records the real responsible party. Re-running the script leaves already-complete Patient and Account resources unchanged.
+The script is restricted to local or private self-hosted Medplum URLs. It appends an MRN to every Patient that lacks one and finalizes the reserved per-patient Account in the same FHIR transaction. Adults default to self-responsibility. The script does not invent a guardian or consent authority for an existing minor; it creates the Account without a guarantor, counts that chart in `minorsNeedingResponsibleParty`, and statement generation remains blocked until staff records the real responsible party. A missing or invalid birth date never defaults to adult: the chart is counted in `patientsNeedingBirthDateResolution` and receives no invented self guarantor. Existing Account status and name are preserved; only an Account freshly reserved by this run transitions from `on-hold` to `active`. Re-running the script leaves already-complete Patient and Account resources unchanged.
 
 ## FHIR R4 verification
 

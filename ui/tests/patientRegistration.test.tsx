@@ -25,6 +25,7 @@ import {
   ODOS_MRN_SYSTEM,
   RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL,
   emptyRelatedResponsibleParty,
+  emptySelfResponsibleParty,
   formatOdosMrn,
   isValidOdosMrn,
   luhnCheckDigit,
@@ -90,6 +91,8 @@ test("no exact duplicate creates the patient with the registration source tag", 
   assert.equal(result.patient.name?.find((name) => name.use === "usual")?.given?.[0], "Janie");
   assert.equal(result.patient.telecom?.find((entry) => entry.system === "phone")?.value, "864-555-0100");
   assert.equal(isValidOdosMrn(result.patient.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value ?? ""), true);
+  const accountEntry = api.transactions[0].entry?.find((entry) => entry.resource?.resourceType === "Account");
+  assert.equal(accountEntry?.request?.ifMatch, 'W/"1"');
 });
 
 test("ODOS MRNs use a six-digit base plus a valid appended Luhn check digit", () => {
@@ -102,7 +105,7 @@ test("ODOS MRNs use a six-digit base plus a valid appended Luhn check digit", ()
 
 test("concurrent native registrations reserve unique MRNs when their first candidates collide", async () => {
   const api = new FakeRegistrationApi();
-  const firstBases = [200_001];
+  const firstBases = [200_001, 200_003];
   const secondBases = [200_001, 200_002];
   const [first, second] = await Promise.all([
     createPatient(COMPLETE_DRAFT, api as never, {
@@ -178,6 +181,31 @@ test("minor registration refuses a missing consent authority before reserving an
   assert.equal(api.sourceTags.length, 0);
 });
 
+test("registration refuses missing and invalid birth dates before reserving an MRN", async () => {
+  for (const birthDate of ["", "2026-02-30"]) {
+    const api = new FakeRegistrationApi();
+    await assert.rejects(
+      createPatient({ ...COMPLETE_DRAFT, birthDate }, api as never),
+      /Date of birth/,
+    );
+    assert.equal(api.sourceTags.length, 0);
+  }
+});
+
+test("responsible-party collection errors accumulate without hiding minor consent requirements", () => {
+  const self = emptySelfResponsibleParty("self");
+  const errors = validatePatientRegistration(
+    { ...COMPLETE_DRAFT, birthDate: "2015-01-02" },
+    {
+      today: "2026-07-30",
+      responsibleParties: [self, { ...self, localId: "duplicate-self" }],
+    },
+  );
+  assert.match(errors.responsibleParties, /appear as self only once/);
+  assert.match(errors.responsibleParties, /minor cannot be registered as their own responsible party/);
+  assert.match(errors.responsibleParties, /minor must have at least one current consent-authority party/);
+});
+
 test("minor registration writes RelatedPerson authority, primary, custody period, notes, and Account guarantor", async () => {
   const api = new FakeRegistrationApi();
   const guardian = {
@@ -208,6 +236,28 @@ test("minor registration writes RelatedPerson authority, primary, custody period
   assert.equal(relatedPerson.extension?.find((extension) => extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL)?.valueBoolean, true);
   assert.equal(relatedPerson.extension?.find((extension) => extension.url === COURT_ORDER_NOTES_EXTENSION_URL)?.valueString, "Medical decisions shared under current order.");
   assert.equal(account.guarantor?.[0]?.party.reference, relatedPersonEntry?.fullUrl);
+});
+
+test("registration omits an entirely blank RelatedPerson address", async () => {
+  const api = new FakeRegistrationApi();
+  const related = {
+    ...emptyRelatedResponsibleParty("contact", "2026-07-30"),
+    firstName: "Pat",
+    lastName: "Doe",
+    financialResponsible: false,
+    consentAuthority: false,
+  };
+  await createPatient(COMPLETE_DRAFT, api as never, {
+    today: "2026-07-30",
+    responsibleParties: [emptySelfResponsibleParty("self"), related],
+    nextMrnBase: () => 300_002,
+    nextUuid: sequentialUuid("blank-address"),
+  });
+  const relatedPerson = api.transactions[0].entry
+    ?.find((entry) => entry.resource?.resourceType === "RelatedPerson")?.resource;
+  assert.equal(relatedPerson?.resourceType, "RelatedPerson");
+  if (relatedPerson?.resourceType !== "RelatedPerson") throw new Error("RelatedPerson missing");
+  assert.equal(relatedPerson.address, undefined);
 });
 
 test("required fields block creation while address and email remain optional", () => {
@@ -289,6 +339,10 @@ class FakeRegistrationApi {
     for (const entry of bundle.entry ?? []) {
       if (entry.resource?.resourceType !== "Account") continue;
       const mrn = entry.resource.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
+      const expectedAccount = mrn ? this.accounts.get(mrn) : undefined;
+      if (expectedAccount?.meta?.versionId) {
+        assert.equal(entry.request?.ifMatch, `W/"${expectedAccount.meta.versionId}"`);
+      }
       if (mrn) this.accounts.set(mrn, { ...entry.resource, meta: { versionId: "2" } });
     }
     return {

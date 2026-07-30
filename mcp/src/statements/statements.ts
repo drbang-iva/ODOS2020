@@ -11,6 +11,7 @@ import type {
   Practitioner,
   PractitionerRole,
   RelatedPerson,
+  Resource,
   Task,
   TaskInput,
   TaskOutput,
@@ -44,6 +45,7 @@ export const PATIENT_STATEMENT_CODE = "patient-statement";
 export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/statement-run";
 export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-output";
 export const STATEMENT_TRANSACTION_CHILD_LIMIT = 40;
+const STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE = 100;
 const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
 const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
@@ -562,25 +564,22 @@ async function runStatements(
     const patientReferences = options.patientReference
       ? [options.patientReference]
       : unique(invoices.flatMap((invoice) => isPatientReference(invoice.subject?.reference) ? [invoice.subject.reference] : []));
-    const patients = patientReferences.length === 0
-      ? []
-      : await searchAll<Patient>(fhir, "Patient", { _id: patientReferences.map(referenceId).join(",") });
-    const accounts = patientReferences.length === 0
-      ? []
-      : await searchAll<Account>(fhir, "Account", {
-          patient: patientReferences.map(referenceId).join(","),
-          status: "active",
-        });
+    const patientIds = patientReferences.map(referenceId);
+    const [patients, accounts] = await Promise.all([
+      searchAllInReferenceChunks<Patient>(fhir, "Patient", "_id", patientIds),
+      searchAllInReferenceChunks<Account>(fhir, "Account", "patient", patientIds, { status: "active" }),
+    ]);
     const relatedPersonReferences = unique(accounts.flatMap((account) =>
       (account.guarantor ?? []).flatMap((guarantor) =>
         guarantor.party.reference?.startsWith("RelatedPerson/") ? [guarantor.party.reference] : [],
       ),
     ));
-    const relatedPeople = relatedPersonReferences.length === 0
-      ? []
-      : await searchAll<RelatedPerson>(fhir, "RelatedPerson", {
-          _id: relatedPersonReferences.map(localReferenceId).join(","),
-        });
+    const relatedPeople = await searchAllInReferenceChunks<RelatedPerson>(
+      fhir,
+      "RelatedPerson",
+      "_id",
+      relatedPersonReferences.map(localReferenceId),
+    );
     const [practitioners, practitionerRoles] = await Promise.all([
       claims.length > 0 ? searchAll<Practitioner>(fhir, "Practitioner", { active: "true" }) : Promise.resolve([]),
       claims.length > 0 ? searchAll<PractitionerRole>(fhir, "PractitionerRole", { active: "true" }) : Promise.resolve([]),
@@ -589,6 +588,15 @@ async function runStatements(
     const relatedPersonByReference = new Map(relatedPeople.flatMap((person) =>
       person.id ? [[`RelatedPerson/${person.id}`, person] as const] : [],
     ));
+    const accountsByPatientReference = new Map<string, Account[]>();
+    for (const account of accounts) {
+      for (const subject of account.subject ?? []) {
+        if (!subject.reference) continue;
+        const matches = accountsByPatientReference.get(subject.reference) ?? [];
+        matches.push(account);
+        accountsByPatientReference.set(subject.reference, matches);
+      }
+    }
     const statements: StatementSnapshot[] = [];
     const rejects: StatementRejectRow[] = [];
     let skippedZeroBalanceCount = 0;
@@ -610,7 +618,7 @@ async function runStatements(
       try {
         const recipient = resolveStatementRecipient(
           patient,
-          accounts,
+          accountsByPatientReference.get(patientReference) ?? [],
           relatedPersonByReference,
           options.generatedAt.slice(0, 10),
         );
@@ -997,10 +1005,20 @@ function personName(person: Patient | RelatedPerson): string | undefined {
 }
 
 function minorOn(birthDate: string | undefined, onDate: string): boolean {
-  if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
-    return false;
+  if (!birthDate || !isR4Date(birthDate)) {
+    throw new StatementValidationError(
+      "Statement recipient cannot be determined without a valid patient birth date.",
+    );
   }
+  if (!isR4Date(onDate)) throw new StatementValidationError("Statement date is invalid.");
   return `${String(Number(birthDate.slice(0, 4)) + 18)}${birthDate.slice(4)}` > onDate;
+}
+
+function isR4Date(value: string): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function humanName(practitioner: Practitioner | undefined): string | undefined {
@@ -1229,6 +1247,23 @@ function localReferenceId(reference: string): string {
 
 function unique(values: string[]): string[] {
   return [...new Set(values)];
+}
+
+async function searchAllInReferenceChunks<T extends Resource>(
+  fhir: AuthenticatedStatementStaff["fhir"],
+  resourceType: T["resourceType"],
+  parameter: string,
+  values: readonly string[],
+  additionalParams: Record<string, string> = {},
+): Promise<T[]> {
+  const searches: Array<Promise<T[]>> = [];
+  for (let index = 0; index < values.length; index += STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE) {
+    searches.push(searchAll<T>(fhir, resourceType, {
+      ...additionalParams,
+      [parameter]: values.slice(index, index + STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE).join(","),
+    }));
+  }
+  return (await Promise.all(searches)).flat();
 }
 
 function sum(values: number[]): number {

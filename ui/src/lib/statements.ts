@@ -155,8 +155,11 @@ function renderDetailedStatement(statement: StatementRow): string {
   const detail = statement.detail!;
   const credit = accountCredit(statement);
   const practiceAddress = renderAddress(detail.header.practiceAddress);
-  const recipientAddress = renderAddress(detail.header.recipientAddress ?? detail.header.patientAddress);
-  const recipientName = detail.header.recipientName ?? statement.patientName;
+  const hasRecipientPair = Boolean(detail.header.recipientName && detail.header.recipientAddress);
+  const recipientAddress = renderAddress(
+    hasRecipientPair ? detail.header.recipientAddress : detail.header.patientAddress,
+  );
+  const recipientName = hasRecipientPair ? detail.header.recipientName! : statement.patientName;
   const orders = detail.orders.map((order) => {
     const invoice = statement.invoices.find((candidate) => candidate.invoiceReference === order.invoiceReference)!;
     if (order.mode === "invoice-only") {

@@ -106,6 +106,29 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
   assert.doesNotMatch(html, /<input|fetch\(|payment processor/i);
 });
 
+test("mailer falls back to the patient name and address as one identity pair", () => {
+  const row: StatementRow = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    detail: {
+      header: {
+        practiceName: "Independent Eye Care",
+        patientAddress: { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" },
+        recipientName: "Pat Rivera",
+      },
+      orders: [{
+        invoiceReference: "Invoice/new",
+        orderNumber: "ORDER-TEST",
+        mode: "invoice-only",
+        lines: [],
+        patientPayments: [],
+      }],
+    },
+  };
+  const html = renderBalanceForwardStatement(row);
+  assert.match(html, /Mail to[\s\S]*Alex Rivera[\s\S]*10 Main St[\s\S]*Raleigh, NC 27601/);
+  assert.doesNotMatch(html, /Mail to[\s\S]{0,120}Pat Rivera/);
+});
+
 test("detailed mailer prints an invoice-only row for a pre-seam Order", () => {
   const row: StatementRow = {
     ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
