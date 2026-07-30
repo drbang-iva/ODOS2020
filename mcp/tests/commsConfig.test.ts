@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
-import type { Bundle, Resource } from "@medplum/fhirtypes";
+import type { Bundle, Patient, Resource } from "@medplum/fhirtypes";
 import {
   commsAdapterRegistrationsFromEnv,
   createCommsDispatch,
@@ -59,4 +60,53 @@ test("communications env config fails closed when selected provider credentials 
     () => commsAdapterRegistrationsFromEnv({ ODOS_COMMS_PROVIDERS: "unknown" }),
     /unsupported communications provider/i,
   );
+});
+
+test("communications dispatch reuses one Google adapter token cache across resolved sends", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  let tokenCalls = 0;
+  let gmailCalls = 0;
+  const dispatch = createCommsDispatch([{
+    provider: "google-workspace",
+    config: {
+      serviceAccountEmail: "odos@synthetic.iam.gserviceaccount.com",
+      privateKey: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      delegatedUserEmail: "info@synthetic-practice.example",
+      workspaceDomain: "synthetic-practice.example",
+      fromAddress: "info@synthetic-practice.example",
+      workspacePlanConfirmed: true,
+    },
+  }], {
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+    fetchImpl: (async (input) => {
+      if (String(input).includes("oauth2.googleapis.com")) {
+        tokenCalls += 1;
+        return Response.json({ access_token: "synthetic-token", expires_in: 3600 });
+      }
+      gmailCalls += 1;
+      return Response.json({ id: `message-${gmailCalls}` });
+    }) as typeof fetch,
+  });
+  const fhir = {
+    ...fakeFhir(),
+    read: async <T extends Resource>(): Promise<T> => ({
+      resourceType: "Patient",
+      id: "synthetic-1",
+      telecom: [{ system: "email", value: "patient@example.test" }],
+    } satisfies Patient) as T,
+  };
+  const request = {
+    patientReference: "Patient/synthetic-1",
+    subject: "Appointment reminder",
+    body: "Your appointment is tomorrow at Main Office.",
+    campaignType: "appointment-reminder",
+    suppression: {},
+  };
+
+  await dispatch.getAdapter("google-workspace", fhir).sendEmail(request);
+  await dispatch.getAdapter("google-workspace", fhir).sendEmail(request);
+
+  assert.equal(gmailCalls, 2);
+  assert.equal(tokenCalls, 1);
 });

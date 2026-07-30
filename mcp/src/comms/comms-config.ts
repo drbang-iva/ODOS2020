@@ -35,6 +35,7 @@ export function createCommsDispatch(
   const byProvider = new Map<string, CommsAdapterRegistration>(
     registrations.map((registration) => [registration.provider, registration]),
   );
+  const adapters = new Map<string, CommsProvider>();
   return {
     providers() {
       return [...byProvider.keys()];
@@ -46,11 +47,15 @@ export function createCommsDispatch(
       }
       switch (registration.provider) {
         case "google-workspace": {
-          const adapter = createGoogleWorkspaceAdapter(registration.config, {
-            fetchImpl: deps.fetchImpl,
-            now: deps.now,
-            warn: deps.warn,
-          });
+          let adapter = adapters.get(registration.provider);
+          if (!adapter) {
+            adapter = createGoogleWorkspaceAdapter(registration.config, {
+              fetchImpl: deps.fetchImpl,
+              now: deps.now,
+              warn: deps.warn,
+            });
+            adapters.set(registration.provider, adapter);
+          }
           return createSuppressedCommsProvider(adapter, {
             fhir,
             practiceTimeZone: deps.practiceTimeZone ?? "UTC",

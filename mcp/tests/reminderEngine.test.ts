@@ -146,7 +146,7 @@ function campaign(
     channel: "email",
     anchor: {
       resourceType: "Appointment",
-      searchParameter: "date",
+      searchParameter: fieldPath === "end" ? "end" : "date",
       fieldPath,
     },
     offsetMinutes,
@@ -167,6 +167,42 @@ test("signed offset math supports reminders before and campaigns after independe
   assert.deepEqual(
     DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((row) => row.offsetMinutes),
     [-7 * 24 * 60, -24 * 60, -2 * 60],
+  );
+});
+
+test("Appointment end anchors reject the start-oriented date search parameter", async () => {
+  const fhir = fakeFhir([]);
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      return { outcome: "sent", providerMessageId: "unexpected" };
+    },
+  };
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir),
+    now: () => new Date(NOW),
+    practiceTimeZone: "America/New_York",
+  });
+
+  await assert.rejects(
+    () => engine.run([{
+      ...campaign("after-end", "end", 2 * 60),
+      anchor: {
+        resourceType: "Appointment",
+        searchParameter: "date",
+        fieldPath: "end",
+      },
+    }]),
+    /Appointment\.end.*searchParameter.*end/i,
   );
 });
 

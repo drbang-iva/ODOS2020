@@ -672,6 +672,20 @@ function validateCampaign(campaign: ReminderCampaignConfig): void {
   ) {
     throw new Error("Reminder anchor searchParameter and fieldPath are required.");
   }
+  if (
+    campaign.anchor.resourceType === "Appointment"
+    && campaign.anchor.fieldPath === "start"
+    && campaign.anchor.searchParameter !== "date"
+  ) {
+    throw new Error('Appointment.start anchors require searchParameter "date".');
+  }
+  if (
+    campaign.anchor.resourceType === "Appointment"
+    && campaign.anchor.fieldPath === "end"
+    && campaign.anchor.searchParameter !== "end"
+  ) {
+    throw new Error('Appointment.end anchors require searchParameter "end".');
+  }
 }
 
 function assertTimeZone(value: string): void {
