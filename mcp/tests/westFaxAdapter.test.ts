@@ -125,7 +125,6 @@ test("WestFax config is all-or-nothing, HTTPS-only, and never appears in client 
   const clientSource = [
     "../../ui/src/components/referral/referral-api.ts",
     "../../ui/src/components/referral/ReferralCompose.tsx",
-    "../../ui/src/components/referral/referral-pdf.ts",
   ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8")).join("\n");
   assert.doesNotMatch(clientSource, /WESTFAX_USERNAME|WESTFAX_PASSWORD|Fax_SendFax|api2\.westfax\.com/);
 });

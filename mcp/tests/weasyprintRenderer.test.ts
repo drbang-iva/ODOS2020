@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ExecFileException, ExecFileOptions } from "node:child_process";
+import { inflateSync } from "node:zlib";
 import {
   ExecFileWeasyPrintRenderer,
   PDF_A_3U_VARIANT,
@@ -68,6 +69,19 @@ test("installed WeasyPrint 69.0 emits a real PDF/A-3u document", {
   );
   assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
   assert.ok(pdf.byteLength > 1_000);
-  assert.match(pdf.toString("latin1"), /pdfaid:part>3</);
-  assert.match(pdf.toString("latin1"), /pdfaid:conformance>U</);
+  const xmp = inflatePdfStreams(pdf).find((stream) => stream.includes("pdfaid:"));
+  assert.ok(xmp, "PDF/A XMP metadata stream is missing");
+  assert.match(xmp, /pdfaid:part="3"/);
+  assert.match(xmp, /pdfaid:conformance="U"/);
 });
+
+function inflatePdfStreams(pdf: Buffer): string[] {
+  return [...pdf.toString("latin1").matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)]
+    .flatMap((match) => {
+      try {
+        return [inflateSync(Buffer.from(match[1]!, "latin1")).toString("utf8")];
+      } catch {
+        return [];
+      }
+    });
+}

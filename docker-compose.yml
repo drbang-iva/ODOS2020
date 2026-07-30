@@ -98,7 +98,7 @@ services:
     profiles: ["agentops"]
     restart: unless-stopped
     working_dir: /workspace
-    command: ["node", "mcp/dist/correspondence/render-server.js"]
+    command: ["node", "mcp/dist/mcp/src/correspondence/render-server.js"]
     volumes:
       - ./:/workspace:ro
     ports:

@@ -14,4 +14,4 @@ RUN apt-get update \
 
 ENV PATH="/opt/weasyprint/bin:${PATH}"
 WORKDIR /workspace
-CMD ["node", "mcp/dist/correspondence/render-server.js"]
+CMD ["node", "mcp/dist/mcp/src/correspondence/render-server.js"]

@@ -555,7 +555,7 @@ test("referral defaults complete a save when conditional create finds a concurre
   assert.equal(fhir.resources("Basic")[0]?.id, "concurrent-defaults");
 });
 
-test("registered HTTP routes expose directory, draft mutation, defaults, create, preview, and send actions", async () => {
+test("registered HTTP routes expose templates, draft mutation, apply, preview, and send actions", async () => {
   const fhir = seededFhir();
   let serviceAuthCalls = 0;
   const app = express();
@@ -573,6 +573,10 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
   const headers = { Authorization: AUTH, "Content-Type": "application/json" };
 
   try {
+    const templates = await fetch(
+      `http://127.0.0.1:${port}/correspondence/templates?letterType=referral`,
+      { headers },
+    );
     const readDefaults = await fetch(`http://127.0.0.1:${port}/referrals/defaults`, { headers });
     const saveDefaults = await fetch(`http://127.0.0.1:${port}/referrals/defaults`, {
       method: "PUT",
@@ -596,6 +600,14 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
       headers,
       body: "{}",
     });
+    const applied = await fetch(
+      `http://127.0.0.1:${port}/referrals/patients/p1/referral-1/apply-template`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ templateId: "starter-referral-1" }),
+      },
+    );
     const previewed = await fetch(`http://127.0.0.1:${port}/referrals/patients/p1/referral-1/preview`, {
       method: "POST",
       headers,
@@ -607,6 +619,7 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
       body: "{}",
     });
 
+    assert.equal(templates.status, 200);
     assert.equal(readDefaults.status, 200);
     assert.equal(saveDefaults.status, 200);
     assert.equal(created.status, 201);
@@ -614,9 +627,10 @@ test("registered HTTP routes expose directory, draft mutation, defaults, create,
     assert.equal(recent.status, 200);
     assert.equal(updated.status, 200);
     assert.equal(regenerated.status, 200);
+    assert.equal(applied.status, 200);
     assert.equal(previewed.status, 200);
     assert.equal(sent.status, 200);
-    assert.equal(serviceAuthCalls, 9);
+    assert.equal(serviceAuthCalls, 11);
     assert.equal(fhir.provenances.length, 1);
   } finally {
     await new Promise<void>((resolve, reject) =>
