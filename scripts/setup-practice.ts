@@ -705,6 +705,10 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     }
     const organization = matches[0] ?? await this.client().create<Organization>(
       buildPracticeOrganization(config),
+      {
+        "If-None-Exist":
+          `identifier=${SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM}|${PRACTICE_ORGANIZATION_IDENTIFIER_VALUE}`,
+      },
     );
     return { organization, created: matches.length === 0 };
   }
@@ -731,6 +735,10 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     }
     const location = matches[0] ?? await this.client().create<Location>(
       buildPracticeLocation(input.organization),
+      {
+        "If-None-Exist":
+          `identifier=${SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM}|${DEFAULT_SCHEDULING_OFFICE_ID}`,
+      },
     );
     return { location, created: matches.length === 0 };
   }
