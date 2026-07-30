@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import type { MedicationStatement } from "@medplum/fhirtypes";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -12,6 +13,7 @@ import { CupDiscSection } from "../src/components/charting/CupDiscSection";
 import { DryEyeGlandStructureSection } from "../src/components/charting/DryEyeGlandStructureSection";
 import { PowerDropdown } from "../src/components/charting/PowerDropdown";
 import { GonioscopySection } from "../src/components/charting/GonioscopySection";
+import { MyopiaManagementSection } from "../src/components/charting/MyopiaManagementSection";
 import {
   OcularHealthSection,
   applyAnteriorAllNormal,
@@ -227,6 +229,103 @@ test("Eye Growth screening and Myopia Management plan stay on separate surfaces"
   assert.doesNotMatch(eyeGrowth, /CarePlan|Atropine|Treatment Plan|startEpisode/);
   assert.match(myopiaManagement, /Treatment Plan/);
   assert.doesNotMatch(myopiaManagement, /AxialGrowthChart|recordAxialLength|reference-population/);
+});
+
+test("atropine frequency input accepts alternate dosing text and saves it to MedicationStatement dosage", async () => {
+  const originalSearch = fhir.search;
+  const originalCreate = fhir.create;
+  const loadedFrequency = "1 drop OU nightly";
+  let savedAtropine: MedicationStatement | undefined;
+  fhir.search = (async (resourceType: string) => ({
+    resourceType: "Bundle",
+    type: "searchset",
+    entry: resourceType === "EpisodeOfCare"
+      ? [{
+          resource: {
+            resourceType: "EpisodeOfCare",
+            id: "episode-1",
+            status: "active",
+            patient: { reference: "Patient/patient-1" },
+            type: [{ coding: [{ code: "myopia-management" }] }],
+          },
+        }]
+      : resourceType === "MedicationStatement"
+        ? [{
+            resource: {
+              resourceType: "MedicationStatement",
+              id: "atropine-loaded",
+              status: "active",
+              subject: { reference: "Patient/patient-1" },
+              medicationCodeableConcept: {
+                coding: [{
+                  system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+                  code: "1223",
+                }],
+              },
+              dosage: [{ text: loadedFrequency }],
+            },
+          }]
+        : [],
+  })) as typeof fhir.search;
+  fhir.create = (async (resource: MedicationStatement) => {
+    if (resource.resourceType === "MedicationStatement") {
+      savedAtropine = resource;
+      return { ...resource, id: "atropine-1" };
+    }
+    return { ...resource, id: "provenance-1" };
+  }) as typeof fhir.create;
+
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <MyopiaManagementSection
+          patientReference="Patient/patient-1"
+          encounterReference="Encounter/encounter-1"
+          onSaved={() => undefined}
+        />,
+      );
+      await flushEffects();
+    });
+
+    const frequencySelect = renderer.root.findAllByType(OdosSelect)
+      .find((select) => select.props.ariaLabel === "Atropine frequency");
+    assert.ok(frequencySelect);
+    assert.deepEqual(
+      frequencySelect.props.options.map((option: { value: string }) => option.value),
+      ["1 drop OU qhs", loadedFrequency],
+    );
+    assert.equal(typeof frequencySelect.props.onInputChange, "function");
+    const concentrationSelect = renderer.root.findAllByType(OdosSelect)
+      .find((select) => select.props.ariaLabel === "Atropine concentration");
+    assert.ok(concentrationSelect);
+    assert.deepEqual(
+      concentrationSelect.props.options.map((option: { value: string }) => option.value),
+      ["0.01%", "0.025%", "0.05%", "0.1%"],
+    );
+    assert.equal(concentrationSelect.props.onInputChange, undefined);
+
+    const alternateFrequency = "1 drop OU every other night";
+    const frequencyInput = renderer.root.findAllByType("input")
+      .find((input) => input.props["aria-label"] === "Atropine frequency");
+    assert.ok(frequencyInput);
+    await act(async () => frequencyInput.props.onChange({ target: { value: alternateFrequency } }));
+    assert.equal(
+      renderer.root.findAllByType("input")
+        .find((input) => input.props["aria-label"] === "Atropine frequency")?.props.value,
+      alternateFrequency,
+    );
+
+    const addAtropine = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Add atropine");
+    assert.ok(addAtropine);
+    await act(async () => addAtropine.props.onClick());
+    assert.equal(savedAtropine?.dosage?.[0]?.text, alternateFrequency);
+  } finally {
+    renderer?.unmount();
+    fhir.search = originalSearch;
+    fhir.create = originalCreate;
+  }
 });
 
 test("the generic renderer shows ordered fields, OD and OS columns, automatic notes, and history", () => {
