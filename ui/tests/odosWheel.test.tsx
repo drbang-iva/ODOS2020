@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { formatSpherePower } from "../src/components/charting/power-options";
 import { normalizeWheelValue, OdosWheel } from "../src/components/inputs/OdosWheel";
 
 test("OdosWheel centerOn stays a required compile-time prop", () => {
@@ -252,6 +253,14 @@ test("OdosWheel clamps and snaps typed values on blur", () => {
   act(() => renderer.unmount());
 });
 
+test("negative Sphere formatting round-trips through OdosWheel typed commit", () => {
+  assertNegativePowerRoundTrip("Sphere", -2.25, -20, 20);
+});
+
+test("negative Cylinder formatting round-trips through OdosWheel typed commit", () => {
+  assertNegativePowerRoundTrip("Cylinder", -1.25, -8, 0);
+});
+
 test("OdosWheel preserves a blank state while keeping direct typing available", () => {
   let changedState: string | undefined;
   let changedValue: number | undefined;
@@ -293,6 +302,32 @@ test("OdosWheel preserves a blank state while keeping direct typing available", 
   assert.equal(input().props.value, "");
   act(() => renderer.unmount());
 });
+
+function assertNegativePowerRoundTrip(ariaLabel: string, negativeValue: number, min: number, max: number) {
+  let committed: number | undefined;
+  let renderer: ReturnType<typeof create>;
+  const formatted = formatSpherePower(negativeValue);
+  assert.equal(formatted, negativeValue.toFixed(2));
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={min}
+        max={max}
+        step={0.25}
+        format={formatSpherePower}
+        onChange={(value) => { committed = value; }}
+        ariaLabel={ariaLabel}
+      />,
+    );
+  });
+  const input = renderer.root.findByProps({ "aria-label": ariaLabel });
+  act(() => input.props.onChange({ target: { value: formatted } }));
+  act(() => input.props.onBlur());
+  assert.equal(committed, negativeValue);
+  act(() => renderer.unmount());
+}
 
 test("OdosWheel reverts a cleared value when no blank state is configured", () => {
   const changes: number[] = [];

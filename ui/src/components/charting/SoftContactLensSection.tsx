@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
-import { numericOptions } from "./power-options";
+import { formatSpherePower, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
@@ -659,11 +659,6 @@ function requiredWheel(options: string[]): { min: number; max: number; step: num
 
 function decimalPlaces(value: number): number {
   return String(value).split(".")[1]?.length ?? 0;
-}
-
-function formatSpherePower(value: number): string {
-  if (value === 0) return "pl";
-  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
 }
 
 function formatSignedPower(value: number): string {

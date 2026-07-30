@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
-import { numericOptions } from "./power-options";
+import { formatSpherePower, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
@@ -737,7 +737,7 @@ function PowerField({ label, value, onChange, options, ariaLabel }: {
         min={wheel.min}
         max={wheel.max}
         step={wheel.step}
-        format={formatPower}
+        format={formatSpherePower}
         onChange={(next) => onChange(next.toFixed(2))}
         ariaLabel={ariaLabel}
         unit="D"
@@ -785,11 +785,6 @@ function requiredWheel(options: string[]): { min: number; max: number; step: num
     max: values.at(-1)!,
     step: values.length > 1 ? values[1]! - values[0]! : 1,
   };
-}
-
-function formatPower(value: number): string {
-  if (value === 0) return "pl";
-  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
 }
 
 function VaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
