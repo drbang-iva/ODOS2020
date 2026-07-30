@@ -52,7 +52,15 @@ function fakeFhir(appointments: Appointment[]) {
 
   return {
     communications,
-    read: async <T extends Resource>(resourceType: T["resourceType"]): Promise<T> => {
+    read: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      id: string,
+    ): Promise<T> => {
+      if (resourceType === "Appointment") {
+        const resource = appointments.find((candidate) => candidate.id === id);
+        if (!resource) throw new Error(`Appointment/${id} not found.`);
+        return structuredClone(resource) as T;
+      }
       assert.equal(resourceType, "Patient");
       return structuredClone(subject) as T;
     },
@@ -79,6 +87,9 @@ function fakeFhir(appointments: Appointment[]) {
         type: "searchset",
         entry: matches.map((resource) => ({ resource: structuredClone(resource) as T })),
       };
+    },
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      throw new Error("Unexpected paginated FHIR search.");
     },
     create: async <T extends Resource>(
       resource: T,
@@ -244,6 +255,64 @@ test("a missed negative-offset reminder catches up while its Appointment is stil
   assert.equal(sent.length, 1);
 });
 
+test("a due-anchor sweep follows FHIR next links so later Appointment pages are reachable", async () => {
+  const first = appointment("page-1", "2026-07-30T15:00:00.000Z", "2026-07-30T15:30:00.000Z");
+  const second = appointment("page-2", "2026-07-30T15:30:00.000Z", "2026-07-30T16:00:00.000Z");
+  const base = fakeFhir([first, second]);
+  let nextReads = 0;
+  const fhir = {
+    ...base,
+    search: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      params?: FhirSearchParams,
+    ): Promise<Bundle<T>> => {
+      if (resourceType !== "Appointment") return base.search<T>(resourceType, params);
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(first) as T }],
+        link: [{ relation: "next", url: "https://odos.local/fhir/R4/Appointment?page=2" }],
+      };
+    },
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      nextReads += 1;
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(second) as T }],
+      };
+    },
+  };
+  const sent: SendEmailRequest[] = [];
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: `paged-${sent.length}` };
+    },
+  };
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir),
+    now: () => new Date(NOW),
+    practiceTimeZone: "America/New_York",
+  });
+
+  const result = await engine.run([campaign("two-hours-before", "start", -2 * 60)]);
+
+  assert.equal(nextReads, 1);
+  assert.deepEqual(result.map((row) => row.outcome), ["sent", "sent"]);
+  assert.equal(sent.length, 2);
+});
+
 test("engine reads Appointment anchors, dispatches both signed directions through the gate, persists Communication state, and is idempotent", async () => {
   const fhir = fakeFhir([
     appointment("before", "2026-07-31T14:00:00.000Z", "2026-07-31T14:30:00.000Z"),
@@ -342,4 +411,48 @@ test("an outside-hours Communication held by the gate is claimed and sent at the
   assert.deepEqual(released.map((row) => row.outcome), ["sent"]);
   assert.equal(fhir.communications[0].status, "completed");
   assert.equal(sent.length, 1);
+});
+
+test("a quiet-hours-held reminder is abandoned when its Appointment is cancelled before release", async () => {
+  let current = new Date("2026-07-30T06:00:00.000Z");
+  const heldAppointment = appointment(
+    "cancelled-after-hold",
+    "2026-07-31T06:00:00.000Z",
+    "2026-07-31T06:30:00.000Z",
+  );
+  const fhir = fakeFhir([heldAppointment]);
+  let sends = 0;
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      sends += 1;
+      return { outcome: "sent", providerMessageId: "must-not-send" };
+    },
+  };
+  const now = () => new Date(current);
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir, now),
+    now,
+    practiceTimeZone: "America/New_York",
+  });
+  const config = campaign("cancelled-held", "start", -24 * 60);
+
+  assert.deepEqual((await engine.run([config])).map((row) => row.outcome), ["rescheduled"]);
+  heldAppointment.status = "cancelled";
+  current = new Date("2026-07-30T12:00:00.000Z");
+
+  const released = await engine.run([config]);
+
+  assert.deepEqual(released.map((row) => row.outcome), ["suppressed"]);
+  assert.equal(sends, 0);
+  assert.equal(fhir.communications[0].status, "not-done");
 });

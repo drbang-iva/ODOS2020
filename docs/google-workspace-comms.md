@@ -58,6 +58,8 @@ offset falls inside the next sweep window and verify:
 - a second sweep does not send a duplicate;
 - setting the Patient email opt-out extension prevents the send;
 - an outside-window send becomes `on-hold` until the next 8:00 a.m. patient-local opening.
+- cancelling or rescheduling that Appointment before the window opens marks the held send
+  `not-done` instead of delivering stale logistics.
 
 Do not use a real patient or a production practice for this proof. Google's Workspace limits page
 currently reports a 2,000-message per-user rolling 24-hour limit, but treat this figure as

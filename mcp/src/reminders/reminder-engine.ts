@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type {
   Appointment,
+  Bundle,
   Communication,
   Patient,
   Resource,
@@ -27,7 +28,10 @@ const RESCHEDULED_AT_URL =
 const PROVIDER_MESSAGE_ID_URL =
   "https://odos2020.com/fhir/StructureDefinition/comms-provider-message-id";
 
-export type ReminderFhir = Pick<MedplumClient, "read" | "search" | "create" | "update">;
+export type ReminderFhir = Pick<
+  MedplumClient,
+  "read" | "search" | "searchUrl" | "create" | "update"
+>;
 
 export interface ReminderAnchorConfig {
   resourceType: Resource["resourceType"];
@@ -236,13 +240,43 @@ async function processHeldCommunication(
 ): Promise<ReminderRunResult> {
   const anchorReference = communication.about?.[0]?.reference;
   const patientReference = communication.subject?.reference;
-  const subject = communication.topic?.text;
-  const body = communication.payload?.find(
-    (payload) => typeof payload.contentString === "string",
-  )?.contentString;
-  if (!anchorReference || !patientReference?.startsWith("Patient/") || !subject || !body) {
-    throw new Error("Held Communication is missing its anchor, patient, subject, or body.");
+  if (!anchorReference || !patientReference?.startsWith("Patient/")) {
+    throw new Error("Held Communication is missing its anchor or patient.");
   }
+  const anchor = await readAnchor(deps.fhir, campaign, anchorReference);
+  const heldAnchorValue = anchorValueFromCommunication(
+    communication,
+    campaign,
+    anchorReference,
+  );
+  const currentAnchorValue = stringAtPath(anchor, campaign.anchor.fieldPath);
+  let currentPatientReference: string | undefined;
+  try {
+    currentPatientReference = patientReferenceOf(anchor);
+  } catch {
+    currentPatientReference = undefined;
+  }
+  if (
+    !activeAnchor(anchor)
+    || !heldAnchorValue
+    || currentAnchorValue !== heldAnchorValue
+    || currentPatientReference !== patientReference
+  ) {
+    return abandonHeldCommunication(
+      deps.fhir,
+      campaign,
+      anchorReference,
+      communication,
+      "Anchor changed or is no longer active.",
+    );
+  }
+  const patient = await deps.fhir.read<Patient>(
+    "Patient",
+    patientReference.slice("Patient/".length),
+  );
+  const context = templateContext(anchor, patient, deps.practiceTimeZone);
+  const subject = render(campaign.subjectTemplate, context);
+  const body = render(campaign.bodyTemplate, context);
   const claimId = generateId();
   const claimed = await updateCommunication(deps.fhir, {
     ...communication,
@@ -298,6 +332,53 @@ async function processHeldCommunication(
   }
 }
 
+async function readAnchor(
+  fhir: ReminderFhir,
+  campaign: ReminderCampaignConfig,
+  reference: string,
+): Promise<Resource> {
+  const match = /^([A-Z][A-Za-z]+)\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
+  if (!match || match[1] !== campaign.anchor.resourceType) {
+    throw new Error(`Held Communication anchor "${reference}" does not match its campaign.`);
+  }
+  return fhir.read<Resource>(
+    campaign.anchor.resourceType,
+    match[2],
+  );
+}
+
+function anchorValueFromCommunication(
+  communication: Communication,
+  campaign: ReminderCampaignConfig,
+  anchorReference: string,
+): string | undefined {
+  const metadata = extensionString(communication, ANCHOR_URL, "valueString");
+  const prefix = `${anchorReference}#${campaign.anchor.fieldPath}=`;
+  return metadata?.startsWith(prefix) ? metadata.slice(prefix.length) : undefined;
+}
+
+async function abandonHeldCommunication(
+  fhir: ReminderFhir,
+  campaign: ReminderCampaignConfig,
+  anchorReference: string,
+  communication: Communication,
+  reason: string,
+): Promise<ReminderRunResult> {
+  const updated = await updateCommunication(fhir, {
+    ...communication,
+    status: "not-done",
+    statusReason: { text: reason },
+    extension: communication.extension?.filter((entry) => entry.url !== RESCHEDULED_AT_URL),
+  });
+  return {
+    campaignId: campaign.id,
+    anchorReference,
+    outcome: "suppressed",
+    ...(updated.id ? { communicationId: updated.id } : {}),
+    detail: reason,
+  };
+}
+
 async function loadDueAnchors(
   fhir: ReminderFhir,
   campaign: ReminderCampaignConfig,
@@ -311,12 +392,31 @@ async function loadDueAnchors(
   const searchLower = new Date(
     anchorLower.getTime() - (campaign.anchor.searchPaddingMinutes ?? 0) * 60_000,
   );
-  const bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
+  let bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
     [campaign.anchor.searchParameter, `ge${searchLower.toISOString()}`],
     [campaign.anchor.searchParameter, `le${anchorUpper.toISOString()}`],
     ["_count", "1000"],
   ]);
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])
+  const resources = bundleResources(bundle);
+  let pages = 1;
+  while (nextLink(bundle)) {
+    if (pages >= 100 || resources.length >= 10_000) {
+      throw new Error("Reminder due-anchor search exceeded its 100-page or 10000-row bound.");
+    }
+    if (!fhir.searchUrl) {
+      throw new Error("Reminder due-anchor pagination requires FHIR next-link support.");
+    }
+    bundle = await fhir.searchUrl<Resource>(
+      nextLink(bundle)!,
+      campaign.anchor.resourceType,
+    );
+    resources.push(...bundleResources(bundle));
+    pages += 1;
+  }
+  if (resources.length > 10_000) {
+    throw new Error("Reminder due-anchor search exceeded its 10000-row bound.");
+  }
+  return resources
     .filter((resource) => activeAnchor(resource))
     .filter((resource) => {
       const value = stringAtPath(resource, campaign.anchor.fieldPath);
@@ -328,6 +428,14 @@ async function loadDueAnchors(
       }
       return due <= now.getTime() && due >= now.getTime() - lookbackMinutes * 60_000;
     });
+}
+
+function bundleResources(bundle: Bundle<Resource>): Resource[] {
+  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
+}
+
+function nextLink(bundle: Bundle<Resource>): string | undefined {
+  return bundle.link?.find((link) => link.relation === "next")?.url;
 }
 
 async function processAnchor(
