@@ -38,6 +38,14 @@ export interface PatientMrnBackfillResult {
   minorsNeedingResponsibleParty: number;
 }
 
+interface PatientBackfillState {
+  patient: Patient;
+  patientReference: string;
+  patientVersionId: string;
+  existingMrn: string | undefined;
+  existingAccount: Account | undefined;
+}
+
 export async function backfillPatientMrns(
   adapter: PatientMrnBackfillAdapter,
   options: {
@@ -67,42 +75,23 @@ export async function backfillPatientMrns(
       accountsByPatient.set(subject.reference, matches);
     }
   }
+  const patientStates = patients.map((patient) => inspectPatientBackfillState(patient, accountsByPatient));
 
-  for (const patient of patients) {
-    if (!patient.id || !patient.meta?.versionId) {
-      throw new Error("Patient backfill requires every Patient search row to include id and meta.versionId.");
-    }
-    const patientReference = `Patient/${patient.id}`;
-    const patientAccounts = accountsByPatient.get(patientReference) ?? [];
-    if (patientAccounts.length > 1) {
-      throw new Error(`${patientReference} has multiple Accounts; MRN backfill stopped without guessing.`);
-    }
-    const existingMrn = patientOdosMrn(patient);
-    if (patient.identifier?.some(
-      (identifier) => identifier.system === ODOS_MRN_SYSTEM && !isValidOdosMrn(identifier.value ?? ""),
-    )) {
-      throw new Error(`${patientReference} carries an invalid ODOS MRN; backfill stopped without replacing it.`);
-    }
-    const existingAccount = patientAccounts[0];
-    if (existingAccount && !existingAccount.id) {
-      throw new Error(`${patientReference} Account search row is missing id.`);
-    }
-
+  for (const {
+    patient,
+    patientReference,
+    patientVersionId,
+    existingMrn,
+    existingAccount,
+  } of patientStates) {
     let reservation: ReservedMrn | undefined;
     let account = existingAccount;
     if (!existingMrn) {
-      if (existingAccount) {
-        throw new Error(`${patientReference} already has an Account without an ODOS MRN; backfill stopped without merging Accounts.`);
-      }
       reservation = await reserveOdosMrn(adapter, nextMrnBase, nextUuid);
       account = reservation.account;
     } else if (!existingAccount) {
       reservation = await reserveSpecificMrn(adapter, existingMrn, nextUuid());
       account = reservation.account;
-    } else if (!existingAccount.identifier?.some(
-      (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === existingMrn,
-    )) {
-      throw new Error(`${patientReference} Account does not carry the Patient ODOS MRN; backfill stopped without overwriting it.`);
     }
     if (!account?.id) throw new Error(`${patientReference} Account could not be resolved.`);
 
@@ -135,7 +124,7 @@ export async function backfillPatientMrns(
         request: {
           method: "PUT",
           url: patientReference,
-          ifMatch: `W/"${patient.meta.versionId}"`,
+          ifMatch: `W/"${patientVersionId}"`,
         },
       });
     }
@@ -159,6 +148,53 @@ export async function backfillPatientMrns(
     if (minor && finalizedAccount.guarantor?.length === 0) result.minorsNeedingResponsibleParty += 1;
   }
   return result;
+}
+
+function inspectPatientBackfillState(
+  patient: Patient,
+  accountsByPatient: ReadonlyMap<string, Account[]>,
+): PatientBackfillState {
+  if (!patient.id || !patient.meta?.versionId) {
+    throw new Error("Patient backfill requires every Patient search row to include id and meta.versionId.");
+  }
+  const patientReference = `Patient/${patient.id}`;
+  const patientAccounts = accountsByPatient.get(patientReference) ?? [];
+  if (patientAccounts.length > 1) {
+    throw new Error(`${patientReference} has multiple Accounts; MRN backfill stopped without guessing.`);
+  }
+  const existingMrn = patientOdosMrn(patient);
+  if (patient.identifier?.some(
+    (identifier) => identifier.system === ODOS_MRN_SYSTEM && !isValidOdosMrn(identifier.value ?? ""),
+  )) {
+    throw new Error(`${patientReference} carries an invalid ODOS MRN; backfill stopped without replacing it.`);
+  }
+  const existingAccount = patientAccounts[0];
+  if (existingAccount && !existingAccount.id) {
+    throw new Error(`${patientReference} Account search row is missing id.`);
+  }
+  if (existingAccount && (
+    existingAccount.subject?.length !== 1
+    || existingAccount.subject[0]?.reference !== patientReference
+  )) {
+    throw new Error(
+      `${patientReference} uses a shared or multi-subject Account; backfill stopped without splitting a family Account.`,
+    );
+  }
+  if (!existingMrn && existingAccount) {
+    throw new Error(`${patientReference} already has an Account without an ODOS MRN; backfill stopped without merging Accounts.`);
+  }
+  if (existingMrn && existingAccount && !existingAccount.identifier?.some(
+    (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === existingMrn,
+  )) {
+    throw new Error(`${patientReference} Account does not carry the Patient ODOS MRN; backfill stopped without overwriting it.`);
+  }
+  return {
+    patient,
+    patientReference,
+    patientVersionId: patient.meta.versionId,
+    existingMrn,
+    existingAccount,
+  };
 }
 
 function buildBackfillAccount(
@@ -298,7 +334,7 @@ export function assertLocalOrPrivateBaseUrl(value: string): void {
     !["http:", "https:"].includes(url.protocol)
     || url.username
     || url.password
-    || !(host === "localhost" || host === "::1" || host === "[::1]" || host.endsWith(".local") || privateIpv4)
+    || !(host === "localhost" || host === "::1" || host === "[::1]" || privateIpv4)
   ) {
     throw new Error("MEDPLUM_BASE_URL must target a local or private self-hosted Medplum server.");
   }

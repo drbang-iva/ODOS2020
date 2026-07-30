@@ -25,6 +25,10 @@ test("MRN backfill URL guard accepts bracketed IPv6 loopback and rejects public 
     () => assertLocalOrPrivateBaseUrl("https://example.com"),
     /must target a local or private self-hosted Medplum server/,
   );
+  assert.throws(
+    () => assertLocalOrPrivateBaseUrl("https://medplum.local"),
+    /must target a local or private self-hosted Medplum server/,
+  );
 });
 
 test("MRN backfill is idempotent, preserves migrated identifiers, and never invents a minor guarantor", async () => {
@@ -202,6 +206,15 @@ test("MRN backfill fails before writes for ambiguous or inconsistent identity st
       }],
       error: /already has an Account without an ODOS MRN/,
     },
+    {
+      name: "shared or multi-subject Account",
+      patient: patient("patient", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: firstMrn }]),
+      accounts: [{
+        ...account("one", "patient", firstMrn),
+        subject: [{ reference: "Patient/patient" }, { reference: "Patient/other" }],
+      }],
+      error: /shared or multi-subject Account/,
+    },
   ];
 
   for (const fixture of cases) {
@@ -226,6 +239,31 @@ test("MRN backfill fails before writes for ambiguous or inconsistent identity st
       assert.equal(adapter.transactions.length, 0);
     });
   }
+});
+
+test("MRN backfill validates every Patient before reserving or writing an earlier valid row", async () => {
+  const adapter = new FakePatientMrnBackfillAdapter([
+    patient("valid-first", "1980-01-02", []),
+    patient("invalid-second", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: "invalid" }]),
+  ]);
+  let allocationCalls = 0;
+
+  await assert.rejects(
+    backfillPatientMrns(adapter, {
+      today: "2026-07-30",
+      nextMrnBase: () => {
+        allocationCalls += 1;
+        return 650_001;
+      },
+      nextUuid: sequentialUuid(),
+    }),
+    /Patient\/invalid-second carries an invalid ODOS MRN/,
+  );
+
+  assert.equal(allocationCalls, 0);
+  assert.equal(adapter.accounts.size, 0);
+  assert.equal(adapter.transactions.length, 0);
+  assert.equal(adapter.patients.get("valid-first")?.identifier?.length, 0);
 });
 
 class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
