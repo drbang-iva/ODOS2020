@@ -17,7 +17,7 @@ import {
   EHR_PATIENT_IDENTIFIER_SYSTEM,
   EPM_PATIENT_IDENTIFIER_SYSTEM,
 } from "../mcp/src/legacy-import/patient-import.js";
-import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import { assertLocalBaseUrl } from "./setup-legacy-importer.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 
@@ -36,7 +36,7 @@ export async function runVisitImportCli(input: {
   readonly reportPath: string;
   readonly result: Awaited<ReturnType<typeof importLegacyAppointmentsAndEncounters>>;
 }> {
-  assertLocalMedplumBaseUrl(input.baseUrl);
+  assertLocalBaseUrl(input.baseUrl);
   const manifest = appointmentEncounterImportManifestSchema.parse(
     JSON.parse(readFileSync(input.manifestPath, "utf8")),
   );

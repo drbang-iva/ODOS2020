@@ -35,6 +35,12 @@ export type PendingDecision =
       readonly appointmentSourceKeys: readonly string[];
     }
   | {
+      readonly kind: "blocked";
+      readonly sourceKind: string;
+      readonly sourceKey: string;
+      readonly ambiguityType: string;
+    }
+  | {
       readonly kind: "adjudication";
       readonly sourceKind: string;
       readonly sourceKey: string;
@@ -92,10 +98,11 @@ export function applyDecisionFile(
         `No ambiguity is queued for ${adjudication.sourceKind}/${adjudication.sourceKey}.`,
       );
     }
-    const allowedDecisions = new Set(
-      ambiguities.flatMap((ambiguity) => allowedAdjudicationDecisions(ambiguity)),
+    const decidable = ambiguities.filter(
+      (ambiguity) =>
+        allowedAdjudicationDecisions(ambiguity).includes(adjudication.decision),
     );
-    if (!allowedDecisions.has(adjudication.decision)) {
+    if (decidable.length === 0) {
       throw new Error(
         `Adjudication decision ${adjudication.decision} is not allowed for ${adjudication.sourceKind}/${adjudication.sourceKey}.`,
       );
@@ -113,6 +120,13 @@ export function applyDecisionFile(
           `${adjudication.sourceKind}/${adjudication.sourceKey} is already adjudicated as ${existing.decision}.`,
         );
       }
+      for (const ambiguity of decidable) {
+        ledger.resolveAmbiguity(
+          ambiguity.sourceKind,
+          ambiguity.sourceKey,
+          ambiguity.ambiguityType,
+        );
+      }
       previouslyDecided += 1;
       continue;
     }
@@ -120,7 +134,7 @@ export function applyDecisionFile(
       ...adjudication,
       decidedBy: decisions.decidedBy,
     });
-    for (const ambiguity of ambiguities) {
+    for (const ambiguity of decidable) {
       ledger.resolveAmbiguity(
         ambiguity.sourceKind,
         ambiguity.sourceKey,
@@ -178,7 +192,21 @@ export function listPendingDecisions(
       }
       continue;
     }
-    if (ledger.readAdjudication(ambiguity.sourceKind, ambiguity.sourceKey)) {
+    const decisions = allowedAdjudicationDecisions(ambiguity);
+    if (decisions.length === 0) {
+      pending.push({
+        kind: "blocked",
+        sourceKind: ambiguity.sourceKind,
+        sourceKey: ambiguity.sourceKey,
+        ambiguityType: ambiguity.ambiguityType,
+      });
+      continue;
+    }
+    const adjudication = ledger.readAdjudication(
+      ambiguity.sourceKind,
+      ambiguity.sourceKey,
+    );
+    if (adjudication?.decision && decisions.includes(adjudication.decision)) {
       ledger.resolveAmbiguity(
         ambiguity.sourceKind,
         ambiguity.sourceKey,
@@ -186,8 +214,15 @@ export function listPendingDecisions(
       );
       continue;
     }
-    const decisions = allowedAdjudicationDecisions(ambiguity);
-    if (decisions.length === 0) continue;
+    if (adjudication) {
+      pending.push({
+        kind: "blocked",
+        sourceKind: ambiguity.sourceKind,
+        sourceKey: ambiguity.sourceKey,
+        ambiguityType: ambiguity.ambiguityType,
+      });
+      continue;
+    }
     pending.push({
       kind: "adjudication",
       sourceKind: ambiguity.sourceKind,
@@ -211,7 +246,7 @@ export async function runInteractiveAdjudication(input: {
   let recorded = 0;
   for (;;) {
     const pending = listPendingDecisions(input.ledger, input);
-    const decision = pending[0];
+    const decision = pending.find((candidate) => candidate.kind !== "blocked");
     if (!decision) return { asked, recorded };
     if (decision.kind === "allocation") {
       const answer = (await input.prompt(

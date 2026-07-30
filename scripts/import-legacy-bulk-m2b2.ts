@@ -24,7 +24,7 @@ import {
   EHR_PATIENT_IDENTIFIER_SYSTEM,
   EPM_PATIENT_IDENTIFIER_SYSTEM,
 } from "../mcp/src/legacy-import/patient-import.js";
-import { assertLocalMedplumBaseUrl } from "./reseed-practice-role-tags.js";
+import { assertLocalBaseUrl } from "./setup-legacy-importer.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
 
@@ -41,7 +41,7 @@ export async function runBulkImportCli(input: {
   readonly reportPath: string;
   readonly charts: readonly LegacyVisitBulkChartResult[];
 }> {
-  assertLocalMedplumBaseUrl(input.baseUrl);
+  assertLocalBaseUrl(input.baseUrl);
   const bulkDirectory = dirname(input.bulkManifestPath);
   const bulk = legacyVisitBulkManifestSchema.parse(
     JSON.parse(readFileSync(input.bulkManifestPath, "utf8")),

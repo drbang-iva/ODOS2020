@@ -471,15 +471,15 @@ export class ImportLedger {
       )
     );
     for (const ambiguity of ambiguities) sourceKeys.add(ambiguity.sourceKey);
-    const adjudications = sourceKeys.size === 0
+    const keys = [...sourceKeys];
+    const adjudications = keys.length === 0
       ? []
       : this.database.prepare(`
           SELECT source_kind, source_key, decision, decided_by, decided_at, note
           FROM adjudications
+          WHERE source_key IN (SELECT value FROM json_each(?))
           ORDER BY decided_at, source_kind, source_key
-        `).all().filter((value) =>
-          sourceKeys.has((value as { source_key: string }).source_key)
-        ) as Array<{
+        `).all(JSON.stringify(keys)) as Array<{
           source_kind: string;
           source_key: string;
           decision: AdjudicationDecision;
@@ -487,9 +487,33 @@ export class ImportLedger {
           decided_at: string;
           note: string | null;
         }>;
-    const allocations = [...sourceKeys].flatMap((sourceKey) =>
-      this.listCaptureAllocations(sourceKey)
-    );
+    const allocationRows = keys.length === 0
+      ? []
+      : this.database.prepare(`
+          WITH selected_keys AS (
+            SELECT CAST(key AS INTEGER) AS key_order, value AS source_key
+            FROM json_each(?)
+          )
+          SELECT
+            allocation.visit_day_source_key,
+            allocation.ex_sr_no,
+            allocation.appointment_source_key,
+            allocation.decided_by,
+            allocation.decided_at,
+            allocation.note
+          FROM capture_allocations allocation
+          INNER JOIN selected_keys
+            ON selected_keys.source_key = allocation.visit_day_source_key
+          ORDER BY selected_keys.key_order, allocation.ex_sr_no
+        `).all(JSON.stringify(keys)) as Array<{
+          visit_day_source_key: string;
+          ex_sr_no: string;
+          appointment_source_key: string;
+          decided_by: string;
+          decided_at: string;
+          note: string | null;
+        }>;
+    const allocations = allocationRows.map(captureAllocation);
     const patientActions = resourceActions.filter((row) => row.resource_type === "Patient");
     const visitActions = resourceActions.filter((row) =>
       row.resource_type === "Appointment" || row.resource_type === "Encounter"

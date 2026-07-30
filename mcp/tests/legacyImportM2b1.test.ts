@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import type {
   Appointment,
   Bundle,
@@ -43,6 +44,7 @@ import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
 import { ODOS_DISCIPLINE_SYSTEM } from "../src/scheduling/clinic-mode.js";
 import { FhirClient } from "../../src/fhir-client.js";
 import { runAdjudicationCli } from "../../scripts/adjudicate-legacy-import-m2b2.js";
+import { runBulkImportCli } from "../../scripts/import-legacy-bulk-m2b2.js";
 import { runVisitImportCli } from "../../scripts/import-legacy-visits-m2b1.js";
 
 const PROJECT_ID = "project-1";
@@ -228,6 +230,29 @@ test("M2b-1 refuses a Patient with a mismatched EHR identifier before any write"
   };
 
   try {
+    await assert.rejects(
+      runVisitImportCli({
+        baseUrl: "http://192.168.1.25:8103",
+        manifestPath,
+        appointmentsPath,
+        examsPath,
+        stateDirectory: state.path,
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+      }),
+      /restricted to a local self-hosted Medplum/,
+    );
+    await assert.rejects(
+      runBulkImportCli({
+        baseUrl: "http://192.168.1.25:8103",
+        bulkManifestPath: join(state.path, "missing-bulk-manifest.json"),
+        stateDirectory: state.path,
+        clientId: "synthetic-client",
+        clientSecret: "synthetic-secret",
+      }),
+      /restricted to a local self-hosted Medplum/,
+    );
+    assert.equal(requests.length, 0);
     await assert.rejects(
       runVisitImportCli({
         baseUrl: "http://localhost:8103",
@@ -1133,9 +1158,101 @@ test("M2b-2 decision replay adjudicates every operator-chart Encounter without r
   }
 });
 
+test("M2b-2 encounter decisions leave unrelated identifier conflicts open and bulk-counted", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const sourceKey = "shared-encounter-source";
+  try {
+    const decisionRunId = ledger.startRun("m2b2-scoped-decision");
+    ledger.recordResourceAction({
+      runId: decisionRunId,
+      sourceKey,
+      resourceType: "Encounter",
+      action: "conflict",
+      reason: "migration-identifier-multi-match",
+    });
+    ledger.recordAmbiguity({
+      sourceKind: "encounter",
+      sourceKey,
+      ambiguityType: "migration-identifier",
+      details: { matchCount: 2 },
+    });
+    ledger.recordAmbiguity({
+      sourceKind: "encounter",
+      sourceKey,
+      ambiguityType: "encounter-decision",
+      details: { decisions: ["keep", "exclude", "mark-as-test"] },
+    });
+
+    assert.deepEqual(
+      applyDecisionFile(ledger, {
+        decidedBy: "operator",
+        allocations: [],
+        adjudications: [{
+          sourceKind: "encounter",
+          sourceKey,
+          decision: "keep",
+        }],
+      }),
+      { recorded: 1, previouslyDecided: 0 },
+    );
+    assert.deepEqual(
+      ledger.listAmbiguities({
+        sourceKind: "encounter",
+        sourceKey,
+      }).map((ambiguity) => ({
+        ambiguityType: ambiguity.ambiguityType,
+        state: ambiguity.state,
+      })),
+      [
+        { ambiguityType: "migration-identifier", state: "open" },
+        { ambiguityType: "encounter-decision", state: "resolved" },
+      ],
+    );
+    assert.deepEqual(
+      listPendingDecisions(ledger, { runId: decisionRunId }),
+      [{
+        kind: "blocked",
+        sourceKind: "encounter",
+        sourceKey,
+        ambiguityType: "migration-identifier",
+      }],
+    );
+
+    const bulk = await runLegacyVisitBulk({
+      ledger,
+      runId: "m2b2-scoped-decision-bulk",
+      charts: [{ chartKey: "chart-with-identifier-conflict" }],
+      runChart: async (_chart, runId) => {
+        ledger.recordResourceAction({
+          runId,
+          sourceKey,
+          resourceType: "Encounter",
+          action: "conflict",
+          reason: "migration-identifier-multi-match",
+        });
+        return {
+          conflicts: listPendingDecisions(ledger, { runId }).length,
+        };
+      },
+    });
+    assert.equal(bulk.charts[0]?.status, "conflict");
+    assert.match(
+      ledger.renderReport(bulk.charts[0]!.runId),
+      /Open decisions: 1/,
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
 test("M2b-2 non-interactive CLI applies a decisions file and replays it without mutation", async () => {
+  const repoPackageJsonPath = fileURLToPath(
+    new URL("../../package.json", import.meta.url),
+  );
   const packageJson = JSON.parse(
-    readFileSync(join(process.cwd(), "../package.json"), "utf8"),
+    readFileSync(repoPackageJsonPath, "utf8"),
   ) as { scripts: Record<string, string> };
   assert.match(
     packageJson.scripts["import-legacy-visits-m2b2"] ?? "",
