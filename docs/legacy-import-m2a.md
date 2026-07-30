@@ -107,7 +107,7 @@ applied writes are reported as `skipped`, and the remaining writes converge with
 
 ## M2b-1 Appointment and Encounter continuation
 
-M2b-1 resumes a successful M2a run and imports one selected patient's Appointments plus
+M2b-1 runs after a successful M2a run and imports one selected patient's Appointments plus
 Encounter visit days. It reads the entire Greenwood `AppointmentsExport` first so that exact
 duplicates and composite-key collisions are handled before any selected-patient FHIR write.
 The collision rules are verified only for the `00127314` export; another office export is

@@ -14,6 +14,7 @@ import type {
 import type { MedplumClient } from "../src/fhir-client.js";
 import {
   EYEFINITY_EXAM_IDENTIFIER_SYSTEM,
+  EYEFINITY_TECHNICAL_VISIT_IDENTIFIER_SYSTEM,
   MIGRATED_IMAGING_VISIT_CODE,
   appointmentEncounterImportManifestSchema,
   importLegacyAppointmentsAndEncounters,
@@ -154,7 +155,8 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
     () => analyzeAppointmentExport(appointmentCsv([exact]), "other-office"),
     /verified only for office export 00127314/,
   );
-  const malformedVendorQuote = `${appointmentCsv([exact]).replace(/Notes\\n$/, "Notes\n")}oct n"p`;
+  const malformedVendorQuote = `${appointmentCsv([exact])}oct n"p`;
+  assert.match(malformedVendorQuote, /,oct n"p$/);
   assert.equal(
     analyzeAppointmentExport(malformedVendorQuote, "00127314").sourceRows,
     1,
@@ -224,6 +226,11 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       ProviderFirst: "",
       ProviderLast: "",
     }),
+    appointmentRow({
+      appt_date: "01/09/2020 12:00:00 AM",
+      appt_start_time: "11:00:00",
+      appt_end_time: "11:00:00",
+    }),
     allCancelledOne,
     allCancelledTwo,
   ]);
@@ -233,8 +240,9 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     "ehr-typical-1\texam-2\t2020-01-02 00:00:00.000\t2\t2",
     "ehr-typical-1\texam-3\t2020-01-03 00:00:00.000\t3\t3",
     "ehr-typical-1\texam-4\t2020-01-04 00:00:00.000\t4\t1",
+    "ehr-typical-1\texam-5\t2020-01-05 00:00:00.000\t4\t1",
     "ehr-typical-1\texam-6\t2020-01-07 00:00:00.000\t4\t1",
-    "another-patient\texam-5\t2020-01-02 00:00:00.000\t1\t1",
+    "another-patient\texam-7\t2020-01-02 00:00:00.000\t1\t1",
   ].join("\n");
 
   try {
@@ -252,9 +260,9 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     ledger.finishRun(firstRun, "completed");
 
     assert.deepEqual(first.analysis, {
-      sourceRows: 10,
+      sourceRows: 11,
       exactDuplicates: 0,
-      rowsAfterExactDedupe: 10,
+      rowsAfterExactDedupe: 11,
       collisionGroups: 3,
       collisionRows: 6,
       resolvedCancelGroups: 1,
@@ -265,10 +273,10 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       created: 5,
       updated: 0,
       skipped: 0,
-      conflict: 0,
+      conflict: 1,
     });
     assert.deepEqual(first.encounters, {
-      created: 3,
+      created: 4,
       updated: 0,
       skipped: 1,
       conflict: 0,
@@ -279,7 +287,7 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       skipped: 0,
       conflict: 0,
     });
-    assert.equal(first.visitDays, 4);
+    assert.equal(first.visitDays, 5);
 
     const resources = fhir.resources;
     const appointments = resources.filter(
@@ -289,7 +297,7 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       (resource): resource is Encounter => resource.resourceType === "Encounter",
     );
     assert.equal(appointments.length, 5);
-    assert.equal(encounters.length, 3);
+    assert.equal(encounters.length, 4);
     assert.equal(
       appointments.find((appointment) => appointment.start?.startsWith("2020-01-02"))?.status,
       "fulfilled",
@@ -324,6 +332,14 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     assert.equal(technical?.participant, undefined);
     assert.equal(technical?.period?.start, "2020-01-03T00:00:00-05:00");
     assert.equal(technical?.period?.end, "2020-01-03T00:00:00-05:00");
+    const cancelledVisit = encounters.find((encounter) =>
+      encounter.period?.start?.startsWith("2020-01-05")
+    );
+    assert.equal(
+      cancelledVisit?.identifier?.[0]?.system,
+      EYEFINITY_TECHNICAL_VISIT_IDENTIFIER_SYSTEM,
+    );
+    assert.equal(cancelledVisit?.appointment, undefined);
     const noProvider = encounters.find((encounter) =>
       encounter.period?.start?.startsWith("2020-01-07")
     );
@@ -333,6 +349,8 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     const report = ledger.renderReport(firstRun);
     assert.match(report, /multi-appointment-day-queued/);
     assert.match(report, /all-cancelled-collision-group/);
+    assert.match(report, /non-positive-appointment-duration/);
+    assert.match(report, /Status: completed/);
     assert.match(report, /Appointment/);
     assert.match(report, /Encounter/);
     const auditDatabase = new DatabaseSync(ledger.databasePath);
@@ -369,12 +387,12 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       created: 0,
       updated: 0,
       skipped: 5,
-      conflict: 0,
+      conflict: 1,
     });
     assert.deepEqual(second.encounters, {
       created: 0,
       updated: 0,
-      skipped: 4,
+      skipped: 5,
       conflict: 0,
     });
     assert.deepEqual(second.practitioners, {
@@ -384,7 +402,7 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
       conflict: 0,
     });
     assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Appointment").length, 5);
-    assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Encounter").length, 3);
+    assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Encounter").length, 4);
   } finally {
     ledger.close();
     state.cleanup();

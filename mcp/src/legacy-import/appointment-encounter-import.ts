@@ -261,7 +261,7 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       continue;
     }
 
-    if (dayAppointments.length === 1) {
+    if (dayAppointments.length === 1 && !dayAppointments[0]!.cancelled) {
       const source = dayAppointments[0]!;
       const appointment = importedAppointments.get(source.sourceKey);
       if (!appointment?.id) {
@@ -453,7 +453,7 @@ async function upsertAppointment(input: {
   const end = localDateTime(input.source.visitDate, input.source.endTime);
   const duration = (Date.parse(end) - Date.parse(start)) / 60_000;
   if (!Number.isInteger(duration) || duration <= 0) {
-    throw new Error(`Appointment ${input.source.sourceKey} has a non-positive duration.`);
+    return appointmentConflict(input, "non-positive-appointment-duration", "source-data");
   }
   const status: Appointment["status"] = input.source.cancelled
     ? "cancelled"
@@ -511,7 +511,7 @@ async function upsertAppointment(input: {
   return recordedResource(input, updated, "Appointment", "updated", "source-state-changed");
 }
 
-async function upsertEncounter(input: {
+type UpsertEncounterInput = {
   readonly fhir: VisitFhirClient;
   readonly ledger: ImportLedger;
   readonly runId: string;
@@ -519,10 +519,15 @@ async function upsertEncounter(input: {
   readonly manifest: AppointmentEncounterImportManifest;
   readonly sourceKey: string;
   readonly primaryIdentifier: Identifier;
-  readonly appointment?: Appointment;
-  readonly visitDate?: string;
   readonly exSrNos: readonly string[];
-}): Promise<ResourceResult<Encounter>> {
+} & (
+  | { readonly appointment: Appointment; readonly visitDate?: never }
+  | { readonly appointment?: never; readonly visitDate: string }
+);
+
+async function upsertEncounter(
+  input: UpsertEncounterInput,
+): Promise<ResourceResult<Encounter>> {
   const matches = await searchAll<Encounter>(input.fhir, "Encounter", {
     identifier: `${input.primaryIdentifier.system}|${input.primaryIdentifier.value}`,
   });
@@ -549,7 +554,7 @@ async function upsertEncounter(input: {
     .find((reference) => reference?.startsWith("Practitioner/"));
   const period = input.appointment
     ? { start: input.appointment.start, end: input.appointment.end }
-    : technicalVisitPeriod(input.visitDate!);
+    : technicalVisitPeriod(input.visitDate);
   const visitType = input.appointment?.serviceType?.find((concept) =>
     concept.coding?.some((coding) => coding.system === ODOS_VISIT_TYPE_SYSTEM)
   );
@@ -649,11 +654,12 @@ function appointmentConflict(
     readonly source: PreparedAppointmentRow;
   },
   reason: string,
+  ambiguityType = "migration-identifier",
 ): ResourceResult<Appointment> {
   input.ledger.recordAmbiguity({
     sourceKind: "appointment",
     sourceKey: input.source.sourceKey,
-    ambiguityType: "migration-identifier",
+    ambiguityType,
     details: { reason },
   });
   recordResourceAction(

@@ -92,6 +92,7 @@ export function analyzeAppointmentExport(
   const duplicateSourceKeys: string[] = [];
   const seenRawRows = new Set<string>();
   for (const entry of parsed) {
+    validateRow(entry.record);
     if (seenRawRows.has(entry.raw)) {
       duplicateSourceKeys.push(appointmentCompositeKey(entry.record));
       continue;
@@ -103,7 +104,6 @@ export function analyzeAppointmentExport(
   const byComposite = new Map<string, AppointmentExportRow[]>();
   const patientIdByUid = new Map<string, string>();
   for (const row of uniqueRows) {
-    validateRow(row);
     const patientUid = normalized(row.PatientUID);
     const patientId = normalized(row.PatientID);
     const priorPatientId = patientIdByUid.get(patientUid);
@@ -134,7 +134,7 @@ export function analyzeAppointmentExport(
     collisionRows += rows.length;
     const activeRows = rows.filter((row) => !parseBoolean(row.appt_cancel_ind));
     const cancelledRows = rows.length - activeRows.length;
-    if (activeRows.length === 1 && cancelledRows === rows.length - 1) {
+    if (activeRows.length === 1) {
       resolvedCancelGroups += 1;
       appointments.push(preparedRow(activeRows[0]!, sourceKey, true));
       continue;

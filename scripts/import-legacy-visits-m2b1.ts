@@ -73,8 +73,16 @@ export async function runVisitImportCli(input: {
         reportPath: ledger.writeReport(runId),
       };
     } catch (error) {
-      ledger.finishRun(runId, "failed");
-      ledger.writeReport(runId);
+      try {
+        ledger.finishRun(runId, "failed");
+      } catch (bookkeepingError) {
+        console.error(`Failed to mark M2b-1 run as failed: ${String(bookkeepingError)}`);
+      }
+      try {
+        ledger.writeReport(runId);
+      } catch (bookkeepingError) {
+        console.error(`Failed to write the M2b-1 failure report: ${String(bookkeepingError)}`);
+      }
       throw error;
     }
   } finally {
