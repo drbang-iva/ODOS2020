@@ -744,12 +744,14 @@ test("the generic renderer reaches and captures a nested child option under its 
       />);
       await Promise.resolve();
     });
-    assert.equal(renderer.root.findAllByType("input").length, 1);
-    act(() => renderer.root.findByType("input").props.onChange({ target: { checked: true } }));
-    const checkboxes = renderer.root.findAllByType("input");
-    assert.equal(checkboxes.length, 2);
-    assert.equal(checkboxes[1]!.parent?.children.at(-1), "Central");
-    act(() => checkboxes[1]!.props.onChange({ target: { checked: true } }));
+    const severity = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Severity");
+    assert.ok(severity);
+    assert.equal(severity.props["aria-pressed"], false);
+    act(() => severity.props.onClick());
+    const central = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Central");
+    assert.ok(central);
+    assert.equal(central.props["aria-pressed"], false);
+    act(() => central.props.onClick());
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Nested Findings");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -858,6 +860,17 @@ test("the ocular-health renderer exposes segment headers, accelerators, bilatera
     assert.match(rendered, /Collarettes/);
     assert.equal(renderer.root.findByType("summary").children.join(""), "More findings (1)");
     assert.ok(rendered.indexOf("Demodex") < rendered.indexOf('"type":"summary"'));
+    const demodex = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Demodex");
+    const collarettes = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Collarettes");
+    assert.ok(demodex);
+    assert.ok(collarettes);
+    assert.equal(demodex.props["aria-pressed"], true);
+    assert.equal(collarettes.props["aria-pressed"], false);
+    act(() => collarettes.props.onClick());
+    assert.equal(
+      renderer.root.findAllByType("button").find((button) => button.children.join("") === "Collarettes")?.props["aria-pressed"],
+      true,
+    );
   } finally {
     renderer?.unmount();
   }
@@ -987,7 +1000,7 @@ test("posterior seeded history renders honestly and zero-data eyes remain untouc
     assert.match(rendered, /Posterior Segment/);
     assert.match(rendered, /Fundus All Normal/);
     assert.match(rendered, /Dot\/blot hemorrhage/);
-    assert.equal(renderer.root.findAllByProps({ checked: true }).length, 1);
+    assert.equal(renderer.root.findAllByProps({ "aria-pressed": true }).length, 1);
     assert.equal(renderer.root.findAllByProps({ value: "" }).length, 10);
   } finally {
     renderer?.unmount();
@@ -1542,6 +1555,68 @@ test("CupDiscSection clears every eye field before loading a different encounter
     assert.equal(picker("OD vertical cup disc ratio picker").props.value, "");
     assert.equal(picker("OD horizontal cup disc ratio picker").props.value, "");
     assert.equal(picker("OS vertical cup disc ratio picker").props.value, "0.2");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("CupDiscSection preserves descriptor codes and selected order through OdosChips", async () => {
+  const originalFetch = globalThis.fetch;
+  let postedBody: unknown;
+  globalThis.fetch = (async (input, init) => {
+    if (init?.method === "POST") {
+      postedBody = JSON.parse(String(init.body));
+      return jsonResponse({ eyes: {} });
+    }
+    if (String(input).includes("/definition")) {
+      return jsonResponse({
+        definition: {
+          fields: {
+            discAppearanceDescriptors: {
+              options: [
+                { code: "notching", display: "Notching", active: true },
+                { code: "pallor", display: "Pallor", active: true },
+              ],
+            },
+          },
+        },
+      });
+    }
+    return jsonResponse({ eyes: {} });
+  }) as typeof fetch;
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<CupDiscSection
+        patientReference="Patient/patient-1"
+        encounterReference="Encounter/encounter-1"
+        onSaved={() => undefined}
+      />);
+      await flushEffects();
+    });
+    const vertical = renderer.root.findAllByType(PowerDropdown).find((node) =>
+      node.props.ariaLabel === "OD vertical cup disc ratio picker"
+    );
+    const notching = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Notching");
+    assert.ok(vertical);
+    assert.ok(notching);
+    assert.equal(notching.props["aria-pressed"], false);
+    act(() => vertical.props.onChange("0.50"));
+    act(() => notching.props.onClick());
+    const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Cup/Disc");
+    assert.ok(saveButton);
+    await act(async () => saveButton.props.onClick());
+    assert.deepEqual(postedBody, {
+      patientReference: "Patient/patient-1",
+      encounterReference: "Encounter/encounter-1",
+      eyes: {
+        OD: {
+          verticalCupDiscRatio: 0.5,
+          discAppearanceDescriptors: ["notching"],
+        },
+      },
+    });
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

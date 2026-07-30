@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosWheel } from "../inputs/OdosWheel";
+import { OdosChips } from "../inputs/OdosChips";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -230,6 +231,20 @@ function CustomFieldControl({ field, value, onChange }: {
   const toggleValue = field.options?.[0]?.code ?? "true";
   const numericValue = typeof value === "string" ? value : "";
   const hasWheelBounds = field.min !== undefined && field.max !== undefined && field.step !== undefined;
+  if (!field.inputControl && field.valueType === "multi-select") {
+    return (
+      <div className="block">
+        <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
+        <HierarchicalChips
+          options={(field.options ?? []).filter((option) => option.active)}
+          selected={Array.isArray(value) ? value : []}
+          ariaLabel={field.display}
+          onChange={onChange}
+        />
+        {hint && <span className="mt-1 block text-xs text-white/30">{hint}</span>}
+      </div>
+    );
+  }
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
@@ -279,16 +294,7 @@ function CustomFieldControl({ field, value, onChange }: {
         </select>
       ) : field.valueType === "string" ? (
         <input type="text" value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)] outline-none focus:border-brand" />
-      ) : (
-        <div className="space-y-2 rounded border border-white/10 p-3">
-          {(field.options ?? []).filter((option) => option.active && !option.parentCode).map((option) => {
-            const selected = Array.isArray(value) ? value : [];
-            const children = (field.options ?? []).filter((candidate) => candidate.active && candidate.parentCode === option.code);
-            const checked = selected.includes(option.code);
-            return <div key={option.code}><label className="flex items-center gap-2 text-sm text-white/75"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked ? [...selected, option.code] : selected.filter((code) => code !== option.code && !children.some((child) => child.code === code)))} className="accent-brand" />{option.display}</label>{checked && children.length > 0 && <div className="ml-6 mt-2 space-y-1 border-l border-white/10 pl-3">{children.map((child) => <label key={child.code} className="flex items-center gap-2 text-xs text-white/60"><input type="checkbox" checked={selected.includes(child.code)} onChange={(event) => onChange(event.target.checked ? [...selected, child.code] : selected.filter((code) => code !== child.code))} className="accent-brand" />{child.display}</label>)}</div>}</div>;
-          })}
-        </div>
-      )}
+      ) : null}
       {hint && <span className="mt-1 block text-xs text-white/30">{hint}</span>}
     </label>
   );
@@ -297,6 +303,63 @@ function CustomFieldControl({ field, value, onChange }: {
 function formatStepValue(value: number, step: number): string {
   const decimals = String(step).split(".")[1]?.length ?? 0;
   return value.toFixed(decimals);
+}
+
+function HierarchicalChips({
+  options,
+  selected,
+  ariaLabel,
+  onChange,
+}: {
+  options: NonNullable<CustomFindingField["options"]>;
+  selected: string[];
+  ariaLabel: string;
+  onChange(value: string[]): void;
+}) {
+  const parents = options.filter((option) => !option.parentCode);
+  const parentCodes = parents.map((option) => option.code);
+  return (
+    <div className="space-y-3 rounded border border-white/10 p-3">
+      <OdosChips
+        options={parents.map((option) => ({ value: option.code, label: option.display }))}
+        selected={selected.filter((code) => parentCodes.includes(code))}
+        onChange={(nextParents) => {
+          const removedParents = parentCodes.filter((code) => selected.includes(code) && !nextParents.includes(code));
+          const removedChildren = new Set(options
+            .filter((option) => option.parentCode && removedParents.includes(option.parentCode))
+            .map((option) => option.code));
+          onChange(replaceSelectedGroup(selected, parentCodes, nextParents)
+            .filter((code) => !removedChildren.has(code)));
+        }}
+        ariaLabel={ariaLabel}
+      />
+      {parents.filter((parent) => selected.includes(parent.code)).map((parent) => {
+        const children = options.filter((option) => option.parentCode === parent.code);
+        if (children.length === 0) return null;
+        const childCodes = children.map((child) => child.code);
+        return (
+          <div key={parent.code} className="ml-3 border-l border-white/10 pl-3">
+            <div className="mb-2 text-xs text-[color:var(--odos-muted)]">{parent.display} details</div>
+            <OdosChips
+              options={children.map((child) => ({ value: child.code, label: child.display }))}
+              selected={selected.filter((code) => childCodes.includes(code))}
+              onChange={(nextChildren) => onChange(replaceSelectedGroup(selected, childCodes, nextChildren))}
+              ariaLabel={`${parent.display} details`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function replaceSelectedGroup(selected: string[], group: string[], nextGroup: string[]): string[] {
+  const groupSet = new Set(group);
+  const nextSet = new Set(nextGroup);
+  return [
+    ...selected.filter((value) => !groupSet.has(value) || nextSet.has(value)),
+    ...nextGroup.filter((value) => !selected.includes(value)),
+  ];
 }
 
 function fieldValues(fields: CustomFindingField[], values: Record<string, string | string[]>, eye?: Eye) {

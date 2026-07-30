@@ -109,11 +109,20 @@ The wizard:
 
 - Uses `auth/newuser` and `auth/newproject` for first-run admin/project creation.
 - Creates the first `Practitioner`.
+- Creates one active practice `Organization` named from `ODOS_PRACTICE_NAME` and one active
+  `Location` for the existing `main` scheduling office. The Location points to the Organization;
+  address and telecom are omitted because setup does not collect those values.
 - Creates the canonical ODOS `front-desk`, `practice-admin`, and `clinician` AccessPolicies. (Since 2026-07-05, ODOS AccessPolicies carry a `practice-role` `meta.tag` — the payments endpoint derives a caller's role from it. Installs seeded before that date must run `npm run reseed-role-tags` with a human-provisioned, short-lived `MEDPLUM_ACCESS_TOKEN` set so existing policies gain the tag; the command conditionally patches only missing tags, reports role-tag or concurrent-write conflicts without overwriting them, and exits non-zero when conflicts exist.)
 - Reconciles the named human administrator's `ProjectMembership.access[]` to `front-desk`, `practice-admin`, and `clinician`, with `front-desk` first so Desk mutations use the existing actor role.
 - Stops before provisioning if `ODOS_ADMIN_EMAIL` matches the `MEDPLUM_ADMIN_EMAIL` service identity.
 - Emits `odos_audit_events` rows with `actor_id = setup-wizard`, `actor_role = system`, and `action_reason = "v0.5d setup wizard first-run provisioning"`.
 - Records resumable progress in `.odos-setup-state.json`.
+
+Downstream local tooling reads `organizationId` and `locationId` from the setup state at
+`ODOS_SETUP_STATE_PATH` (default `.odos-setup-state.json`) and constructs
+`Organization/<organizationId>` and `Location/<locationId>` references. TypeScript tooling can
+use the exported `readSetupState(path)` helper from `scripts/setup-practice.ts`; no resource id is
+hardcoded or stored through a second mechanism.
 
 If setup has already completed, re-running the wizard exits cleanly:
 

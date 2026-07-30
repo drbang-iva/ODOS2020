@@ -11,6 +11,7 @@ import {
 import { nextAvailableHoursWindow } from "../../lib/scheduling-settings";
 import { DISCIPLINE_COLOR_BANDS } from "../../lib/scheduling";
 import { RequiredFieldLabel } from "./RequiredGate";
+import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 export const CATALOG_COLOR_PALETTE = [
@@ -173,19 +174,13 @@ function CatalogFieldControl({
       const selected = Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
       return (
         <FieldFrame field={field} error={error} showRequired={showRequired}>
-          <div id={inputId} className="grid gap-2 rounded border border-white/10 bg-black/20 p-3" aria-describedby={describedBy}>
-            {field.options.map((option) => (
-              <label key={option.value} className="flex items-center gap-2 text-sm text-white/75">
-                <input
-                  type="checkbox"
-                  checked={selected.includes(option.value)}
-                  onChange={(event) => onChange(event.target.checked
-                    ? [...selected, option.value]
-                    : selected.filter((entry) => entry !== option.value))}
-                />
-                {option.label}
-              </label>
-            ))}
+          <div id={inputId} className="rounded border border-white/10 bg-black/20 p-3" aria-describedby={describedBy}>
+            <OdosChips
+              options={field.options}
+              selected={selected}
+              onChange={onChange}
+              ariaLabel={field.label}
+            />
           </div>
         </FieldFrame>
       );

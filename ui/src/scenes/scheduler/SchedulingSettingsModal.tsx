@@ -5,6 +5,7 @@ import {
   TimeWindowWeekdayField,
   WeeklyHoursEditor,
 } from "../../components/settings/CatalogFields";
+import { OdosChips } from "../../components/inputs/OdosChips";
 import {
   BLOCKED_TIME_KINDS,
   DEFAULT_SLOT_MINUTES,
@@ -699,30 +700,16 @@ function BlockEditor({
         {scopeMode === "selected" && selectedReferences.length === 0 && (
           <div className="mb-2 text-sm text-red-200">Select at least one resource.</div>
         )}
-        <div className="grid gap-2 md:grid-cols-2">
-          {resources.map((entry) => {
-            const scoped = selectedReferences.includes(entry.reference);
-            return (
-              <label key={entry.reference} className="flex items-center gap-2 text-sm text-white/75">
-                <input
-                  type="checkbox"
-                  disabled={scopeMode !== "selected"}
-                  checked={scoped}
-                  onChange={(event) => {
-                    const current = new Set(selectedReferences);
-                    if (event.target.checked) {
-                      current.add(entry.reference);
-                    } else {
-                      current.delete(entry.reference);
-                    }
-                    applyScope("selected", [...current]);
-                  }}
-                />
-                <span>{resourceDisplay(entry.resource)}</span>
-              </label>
-            );
-          })}
-        </div>
+        <OdosChips
+          options={resources.map((entry) => ({
+            value: entry.reference,
+            label: resourceDisplay(entry.resource),
+          }))}
+          selected={selectedReferences}
+          onChange={(references) => applyScope("selected", references)}
+          ariaLabel="Selected scheduling resources"
+          disabled={scopeMode !== "selected"}
+        />
       </fieldset>
       <div>
         <button className="scheduler-button" type="button" onClick={onDelete}>

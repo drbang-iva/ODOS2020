@@ -20,6 +20,7 @@ import {
   type ReferralPriority,
 } from "./referral-api";
 import { buildReferralPdfBase64 } from "./referral-pdf";
+import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 import { OdosWheel } from "../inputs/OdosWheel";
 
@@ -33,8 +34,10 @@ const SYSTEM_DEFAULTS: ReferralIncludeList = {
   history_count: 2,
 };
 
+type ReferralPacketKey = Exclude<keyof ReferralIncludeList, "history_count">;
+
 const INCLUDE_ROWS: Array<{
-  key: Exclude<keyof ReferralIncludeList, "history_count">;
+  key: ReferralPacketKey;
   label: string;
 }> = [
   { key: "letter", label: "Referral letter" },
@@ -481,37 +484,36 @@ export function ReferralCompose({
             </Tile>
 
             <Tile title="Packet contents" index="04">
-              <div className="space-y-1">
-                {INCLUDE_ROWS.map((row) => (
-                  <div key={row.key} className={`flex items-center justify-between gap-3 rounded px-2 py-2 ${includeList[row.key] ? "bg-[var(--odos-surface-2)]" : "opacity-45"}`}>
-                    <label className="flex min-h-11 items-center gap-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={includeList[row.key]}
-                        disabled={composerLocked}
-                        className="h-4 w-4 accent-brand"
-                        onChange={(event) => updateIncludeList({ ...includeList, [row.key]: event.target.checked })}
-                      />
-                      {row.label}
-                    </label>
-                    {row.key === "history" && (
-                      <div className="w-28">
-                        <OdosWheel
-                          value={includeList.history_count}
-                          centerOn={0}
-                          min={1}
-                          max={50}
-                          step={1}
-                          format={String}
-                          onChange={(history_count) => updateIncludeList({ ...includeList, history_count })}
-                          ariaLabel="Prior finalized exam history count"
-                          disabled={composerLocked}
-                        />
-                      </div>
-                    )}
+              <OdosChips
+                options={INCLUDE_ROWS.map((row) => ({ value: row.key, label: row.label }))}
+                selected={INCLUDE_ROWS.filter((row) => includeList[row.key]).map((row) => row.key)}
+                onChange={(selected) => {
+                  const nextSelected = new Set(selected);
+                  const nextIncludeList = { ...includeList };
+                  for (const row of INCLUDE_ROWS) nextIncludeList[row.key] = nextSelected.has(row.key);
+                  updateIncludeList(nextIncludeList);
+                }}
+                ariaLabel="Referral packet contents"
+                disabled={composerLocked}
+              />
+              {includeList.history && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded border border-[color:var(--odos-line)] px-3 py-2 text-sm">
+                  <span>Prior finalized exams</span>
+                  <div className="w-28">
+                    <OdosWheel
+                      value={includeList.history_count}
+                      centerOn={0}
+                      min={1}
+                      max={50}
+                      step={1}
+                      format={String}
+                      onChange={(history_count) => updateIncludeList({ ...includeList, history_count })}
+                      ariaLabel="Prior finalized exam history count"
+                      disabled={composerLocked}
+                    />
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
               <button type="button" disabled={busy === "defaults" || composerLocked} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>
                 Save as my default
               </button>

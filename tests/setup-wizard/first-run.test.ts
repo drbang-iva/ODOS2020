@@ -4,10 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  conditionalCreateSetupResource,
   InMemorySetupPracticeAdapter,
   projectFromInitResponse,
+  readSetupState,
   SETUP_WIZARD_ACTION_REASON,
   SETUP_WIZARD_NOOP_REASON,
+  SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM,
+  SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
   runSetupPractice,
 } from "../../scripts/setup-practice.ts";
 import { parseSchedulingPracticeConfig } from "../../mcp/src/scheduling/practice-config.ts";
@@ -24,6 +28,72 @@ test("setup accepts Medplum 5.1.8's direct Project response from Project/$init",
     projectFromInitResponse({ resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" }),
     { resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" },
   );
+});
+
+test("setup conditional create reports whether this transaction created or resolved the resource", async () => {
+  let capturedIfNoneExist: string | undefined;
+  const created = await conditionalCreateSetupResource(
+    {
+      executeTransaction: async (bundle) => {
+        capturedIfNoneExist = bundle.entry?.[0]?.request?.ifNoneExist;
+        return {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [{
+            resource: {
+              resourceType: "Organization",
+              id: "created-organization",
+              name: "ODOS Test Practice",
+            },
+            response: { status: "201 Created" },
+          }],
+        };
+      },
+      read: async () => {
+        throw new Error("created response should not require a read");
+      },
+    },
+    {
+      resourceType: "Organization",
+      name: "ODOS Test Practice",
+    },
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-organization|primary",
+  );
+
+  assert.equal(created.created, true);
+  assert.equal(created.resource.id, "created-organization");
+  assert.equal(
+    capturedIfNoneExist,
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-organization|primary",
+  );
+
+  const resolved = await conditionalCreateSetupResource(
+    {
+      executeTransaction: async () => ({
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [{
+          response: {
+            status: "200 OK",
+            location: "Location/existing-location/_history/3",
+          },
+        }],
+      }),
+      read: async (_resourceType, id) => ({
+        resourceType: "Location",
+        id,
+        status: "active",
+      }),
+    },
+    {
+      resourceType: "Location",
+      status: "active",
+    },
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-location|main",
+  );
+
+  assert.equal(resolved.created, false);
+  assert.equal(resolved.resource.id, "existing-location");
 });
 
 test("v0.5d setup wizard creates all five policies while granting the first human admin three roles with front-desk primary", async () => {
@@ -49,16 +119,38 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(firstRun.noOp, false);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
+    assert.equal(adapter.organizations.length, 1);
+    assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
     assert.equal(adapter.policies.length, 5);
     assert.equal(adapter.assignments.length, 1);
     assert.equal(firstRun.state.completed, true);
+    assert.equal(firstRun.state.organizationCreated, true);
+    assert.equal(firstRun.state.organizationId, "organization-1");
+    assert.equal(firstRun.state.locationCreated, true);
+    assert.equal(firstRun.state.locationId, "location-1");
     assert.equal(firstRun.state.schedulingProvisioned, true);
     assert.equal(firstRun.state.scheduleId, "schedule-1");
     assert.equal(firstRun.state.schedulingConfigId, "scheduling-config-1");
     assert.equal(firstRun.practitionerId, "practitioner-1");
     assert.equal(firstRun.accessPolicyId, "access-policy-2");
+    assert.equal(adapter.organizations[0]?.name, "ODOS Test Practice");
+    assert.deepEqual(adapter.organizations[0]?.identifier, [{
+      system: SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM,
+      value: "primary",
+    }]);
+    assert.equal(adapter.locations[0]?.status, "active");
+    assert.equal(
+      adapter.locations[0]?.managingOrganization?.reference,
+      "Organization/organization-1",
+    );
+    assert.deepEqual(adapter.locations[0]?.identifier, [{
+      system: SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM,
+      value: "main",
+    }]);
+    assert.equal(adapter.locations[0]?.address, undefined);
+    assert.equal(adapter.locations[0]?.telecom, undefined);
     assert.deepEqual(adapter.policies.map((policy) => policy.name), [
       "ODOS Practice Admin",
       "ODOS Clinician",
@@ -90,6 +182,8 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
       "create",
       "create",
       "create",
+      "create",
+      "create",
       "projectmembership-lifecycle",
     ]);
     for (const row of firstRun.auditRows) {
@@ -111,6 +205,8 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(secondRun.noOp, true);
     assert.equal(adapter.admins.length, 1);
     assert.equal(adapter.practitioners.length, 1);
+    assert.equal(adapter.organizations.length, 1);
+    assert.equal(adapter.locations.length, 1);
     assert.equal(adapter.schedules.length, 1);
     assert.equal(adapter.schedulingConfigs.length, 1);
     assert.equal(adapter.policies.length, 5);
@@ -120,6 +216,14 @@ test("v0.5d setup wizard creates all five policies while granting the first huma
     assert.equal(secondRun.auditRows[0]?.actorId, "setup-wizard");
     assert.equal(secondRun.auditRows[0]?.actorRole, "system");
     assert.equal(secondRun.auditRows[0]?.actionReason, SETUP_WIZARD_NOOP_REASON);
+    assert.equal(
+      adapter.auditRows.filter((row) =>
+        row.eventType === "create"
+        && (row.resourceType === "Organization" || row.resourceType === "Location")
+      ).length,
+      2,
+    );
+    assert.deepEqual(readSetupState(statePath), firstRun.state);
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }
@@ -161,6 +265,8 @@ test("setup reuses a pre-existing canonical clinician policy while creating the 
     assert.deepEqual(result.auditRows.map((row) => row.resourceType), [
       "Project",
       "Practitioner",
+      "Organization",
+      "Location",
       "Schedule",
       "Basic",
       "AccessPolicy",
@@ -213,6 +319,108 @@ test("a completed legacy setup without the scheduling marker resumes and seeds t
     assert.equal(result.state.schedulingProvisioned, true);
     assert.equal(adapter.schedules[0]?.actor?.[0]?.reference, "Practitioner/existing-practitioner");
     assert.equal(adapter.schedulingConfigs.length, 1);
+  } finally {
+    rmSync(dir, { force: true, recursive: true });
+  }
+});
+
+test("setup ignores an unrelated payer Organization and provisions stable practice resources once", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "odos-setup-wizard-practice-resources-"));
+  try {
+    const statePath = join(dir, ".odos-setup-state.json");
+    const adapter = new InMemorySetupPracticeAdapter();
+    adapter.organizations.push({
+      resourceType: "Organization",
+      id: "payer-stub",
+      active: true,
+      name: "Contract Payer synthetic",
+    });
+    writeFileSync(statePath, JSON.stringify({
+      version: "v0.5d",
+      adminProjectCreated: true,
+      projectId: "project-1",
+      practitionerCreated: true,
+      practitionerId: "existing-practitioner",
+      schedulingProvisioned: true,
+      scheduleId: "existing-schedule",
+      schedulingConfigId: "existing-config",
+      accessPolicyAssigned: true,
+      completed: true,
+    }));
+    const config = {
+      baseUrl: "http://localhost:8103",
+      practiceName: "ODOS Test Practice",
+      adminEmail: "human-admin@example.test",
+      adminName: "ODOS Admin",
+      adminPassword: "not-real-password",
+      statePath,
+    };
+
+    const firstRun = await runSetupPractice({
+      adapter,
+      config,
+      skipInteractiveBoundaryCheck: true,
+    });
+
+    assert.equal(firstRun.noOp, false);
+    assert.equal(adapter.organizations.length, 2);
+    assert.equal(firstRun.state.organizationId, "organization-2");
+    assert.equal(adapter.locations.length, 1);
+    assert.equal(firstRun.state.locationId, "location-1");
+    assert.equal(
+      adapter.locations[0]?.managingOrganization?.reference,
+      "Organization/organization-2",
+    );
+    assert.deepEqual(
+      firstRun.auditRows
+        .filter((row) =>
+          row.resourceType === "Organization" || row.resourceType === "Location"
+        )
+        .map((row) => row.eventType),
+      ["create", "create"],
+    );
+
+    const secondRun = await runSetupPractice({
+      adapter,
+      config,
+      skipInteractiveBoundaryCheck: true,
+    });
+
+    assert.equal(secondRun.noOp, true);
+    assert.equal(adapter.organizations.length, 2);
+    assert.equal(adapter.locations.length, 1);
+    assert.equal(
+      adapter.auditRows.filter((row) =>
+        row.eventType === "create"
+        && (row.resourceType === "Organization" || row.resourceType === "Location")
+      ).length,
+      2,
+    );
+
+    writeFileSync(statePath, JSON.stringify({
+      ...readSetupState(statePath),
+      organizationCreated: undefined,
+      organizationId: undefined,
+      locationCreated: undefined,
+      locationId: undefined,
+    }));
+    const recovered = await runSetupPractice({
+      adapter,
+      config: { ...config, practiceName: "Renamed Practice" },
+      skipInteractiveBoundaryCheck: true,
+    });
+
+    assert.equal(recovered.noOp, false);
+    assert.equal(recovered.state.organizationId, "organization-2");
+    assert.equal(recovered.state.locationId, "location-1");
+    assert.equal(adapter.organizations.length, 2);
+    assert.equal(adapter.locations.length, 1);
+    assert.equal(
+      recovered.auditRows.some((row) =>
+        row.resourceType === "Organization" || row.resourceType === "Location"
+      ),
+      false,
+    );
   } finally {
     rmSync(dir, { force: true, recursive: true });
   }

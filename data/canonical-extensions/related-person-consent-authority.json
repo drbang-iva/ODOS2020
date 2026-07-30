@@ -1,0 +1,56 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "related-person-consent-authority",
+  "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+  "version": "patient-identity-v1",
+  "name": "ODOSRelatedPersonConsentAuthority",
+  "title": "ODOS RelatedPerson Consent Authority",
+  "status": "active",
+  "date": "2026-07-30",
+  "publisher": "ODOS",
+  "description": "Whether this RelatedPerson currently has authority to consent for the linked patient, subject to RelatedPerson.period.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "RelatedPerson"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Consent authority",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "boolean"
+          }
+        ]
+      }
+    ]
+  }
+}

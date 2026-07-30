@@ -4,6 +4,7 @@ import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { DiagnosisPicker } from "./DiagnosisPicker";
+import { OdosChips } from "../inputs/OdosChips";
 
 interface Props {
   patientReference: string;
@@ -175,15 +176,6 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
     });
   }
 
-  function toggleDescriptor(eye: Eye, code: string) {
-    const selected = rows[eye].discAppearanceDescriptors;
-    updateEye(eye, {
-      discAppearanceDescriptors: selected.includes(code)
-        ? selected.filter((item) => item !== code)
-        : [...selected, code],
-    });
-  }
-
   async function save() {
     let eyes: Partial<Record<Eye, EyePayload>>;
     try {
@@ -321,19 +313,14 @@ export function CupDiscSection({ patientReference, encounterReference, onSaved }
 
                 <div className="mt-4">
                   <div className="text-xs uppercase tracking-widest text-white/35">Disc appearance descriptors</div>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {descriptorOptions.map((option) => (
-                      <label key={option.code} className="flex min-h-10 items-center gap-2 rounded border border-white/10 px-3 py-2 text-sm text-white/75">
-                        <input
-                          type="checkbox"
-                          checked={row.discAppearanceDescriptors.includes(option.code)}
-                          onChange={() => toggleDescriptor(eye, option.code)}
-                          disabled={disabled}
-                          className="h-4 w-4 accent-brand disabled:opacity-45"
-                        />
-                        {option.display}
-                      </label>
-                    ))}
+                  <div className="mt-2">
+                    <OdosChips
+                      options={descriptorOptions.map((option) => ({ value: option.code, label: option.display }))}
+                      selected={row.discAppearanceDescriptors}
+                      onChange={(discAppearanceDescriptors) => updateEye(eye, { discAppearanceDescriptors })}
+                      ariaLabel={`${eye} disc appearance descriptors`}
+                      disabled={disabled}
+                    />
                   </div>
                 </div>
 

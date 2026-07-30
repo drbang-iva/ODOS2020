@@ -4,6 +4,7 @@ import type { Appointment, Coverage, HealthcareService, Schedule } from "@medplu
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
+import { OdosChips } from "../src/components/inputs/OdosChips";
 import type { AppointmentModalDraft } from "../src/lib/scheduler-appointment-ui";
 import {
   ODOS_DISCIPLINE_SYSTEM,
@@ -26,6 +27,7 @@ import { AppointmentHoverCard } from "../src/scenes/scheduler/AppointmentHoverCa
 import { AppointmentDetailsModal } from "../src/scenes/scheduler/AppointmentDetailsModal";
 import { PatientQuickCard } from "../src/scenes/scheduler/PatientQuickCard";
 import { ResourceDayColumn, SchedulerTimeGutter } from "../src/scenes/scheduler/ResourceDayColumn";
+import { SchedulingSettingsModal } from "../src/scenes/scheduler/SchedulingSettingsModal";
 
 const RESOURCE: Schedule = {
   resourceType: "Schedule",
@@ -318,7 +320,8 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
     assert.ok(!pickerText.includes("Aesthetics Provider"), "current clinic mode excludes unrelated resources");
     assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
 
-    act(() => checkbox(renderer, "Show Dr One column").props.onChange({ target: { checked: false } }));
+    assert.equal(button(renderer, "Dr One").props["aria-pressed"], true);
+    act(() => button(renderer, "Dr One").props.onClick());
     assert.deepEqual(renderedColumnRefs(renderer), ["Location/exam-1", "Device/oct-1"]);
 
     act(() => button(renderer, "Week").props.onClick());
@@ -329,8 +332,8 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
     act(() => button(renderer, "Show all").props.onClick());
     assert.deepEqual(renderedColumnRefs(renderer), ["Practitioner/doctor-1", "Location/exam-1", "Device/oct-1"]);
 
-    for (const label of ["Show Dr One column", "Show Exam 1 column", "Show OCT 1 column"]) {
-      act(() => checkbox(renderer, label).props.onChange({ target: { checked: false } }));
+    for (const label of ["Dr One", "Exam 1", "OCT 1"]) {
+      act(() => button(renderer, label).props.onClick());
     }
     assert.deepEqual(renderedColumnRefs(renderer), []);
     assert.match(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
@@ -340,6 +343,51 @@ test("Columns groups current resources, updates Day and Week, restores all, and 
     if (originalStorage) Object.defineProperty(globalThis, "localStorage", originalStorage);
     else delete (globalThis as { localStorage?: Storage }).localStorage;
   }
+});
+
+test("blocked-time selected resources preserve schedule references through OdosChips", () => {
+  let renderer!: ReactTestRenderer;
+  act(() => {
+    renderer = create(
+      <SchedulingSettingsModal
+        config={{
+          ...DEFAULT_SCHEDULING_PRACTICE_CONFIG,
+          blocks: [{
+            kind: "custom",
+            description: "Team meeting",
+            weekdays: ["wed"],
+            start: "12:00",
+            end: "13:00",
+            scheduleReferences: ["Schedule/schedule-1"],
+          }],
+        }}
+        currentDate="2026-07-30"
+        resources={SCHEDULER_RESOURCES}
+        canManageResources={false}
+        integrityIssues={[]}
+        integrityLoading={false}
+        onClose={() => undefined}
+        onDeactivateResource={async () => { throw new Error("not called"); }}
+        onInspectIntegrity={async () => undefined}
+        onSave={async () => undefined}
+      />,
+    );
+  });
+  const resourceChips = renderer.root.findByType(OdosChips);
+  assert.equal(resourceChips.props.ariaLabel, "Selected scheduling resources");
+  assert.deepEqual(resourceChips.props.selected, ["Schedule/schedule-1"]);
+  assert.deepEqual(
+    resourceChips.props.options.map((option: { value: string }) => option.value),
+    ["Schedule/schedule-1", "Schedule/exam-1", "Schedule/oct-1", "Schedule/aesthetics-1"],
+  );
+  const examChip = resourceChips.findAllByType("button").find((candidate) => candidate.children.join("") === "Exam 1");
+  assert.ok(examChip);
+  act(() => examChip.props.onClick());
+  assert.deepEqual(
+    renderer.root.findByType(OdosChips).props.selected,
+    ["Schedule/schedule-1", "Schedule/exam-1"],
+  );
+  act(() => renderer.unmount());
 });
 
 test("practice-admin resource lifecycle guards future appointments, supports acknowledgement, and lists broken links without raw ids", async () => {
@@ -503,7 +551,7 @@ test("one visible hours-less column retains the base practice time axis while tr
     assert.equal(timeAxisRows(renderer).length, 18);
     assert.doesNotMatch(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
 
-    act(() => checkbox(renderer, "Show Dr One column").props.onChange({ target: { checked: false } }));
+    act(() => button(renderer, "Dr One").props.onClick());
     assert.deepEqual(renderedColumnRefs(renderer), []);
     assert.equal(timeAxisRows(renderer).length, 0);
     assert.match(JSON.stringify(renderer.toJSON()), /No scheduler resources found for this clinic mode/);
@@ -756,10 +804,6 @@ function renderedColumnRefs(renderer: ReactTestRenderer): string[] {
 
 function timeAxisRows(renderer: ReactTestRenderer): Array<{ startMinutes: number; label: string }> {
   return renderer.root.findAllByType(SchedulerTimeGutter)[0]?.props.rows ?? [];
-}
-
-function checkbox(renderer: ReactTestRenderer, ariaLabel: string): ReactTestInstance {
-  return renderer.root.findByProps({ "aria-label": ariaLabel });
 }
 
 function button(renderer: ReactTestRenderer, label: string): ReactTestInstance {

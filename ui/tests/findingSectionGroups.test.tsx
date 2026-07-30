@@ -463,13 +463,13 @@ test("section-group settings creates a keyed group from the existing visit-type 
         target: { value: "custom:zz-test-" },
       });
     });
-    const categoryCheckbox = renderer.root.findAllByType("input").find(
-      (input) => input.props.type === "checkbox" &&
-        input.parent?.children.some((child) => child === "Dry Eye"),
+    const categoryChip = renderer.root.findAllByType("button").find(
+      (button) => button.children.join("") === "Dry Eye",
     );
-    assert.ok(categoryCheckbox);
+    assert.ok(categoryChip);
+    assert.equal(categoryChip.props["aria-pressed"], false);
     await act(async () => {
-      categoryCheckbox.props.onChange({ target: { checked: true } });
+      categoryChip.props.onClick();
     });
     await act(async () => {
       renderer.root.findByType("form").props.onSubmit({ preventDefault: () => undefined });

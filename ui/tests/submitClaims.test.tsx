@@ -363,8 +363,11 @@ test("inline picker creates and selects a payer Organization from only its name"
     await act(async () => {
       renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
         .props.onChange({ target: { value: "New Payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
+    await waitForObservable(
+      () => hasClaimsButton(renderer!, "Create payer “New Payer”"),
+      "create option for settled payer query",
+    );
     await act(async () => {
       claimsButton(renderer!, "Create payer “New Payer”").props.onClick();
       await Promise.resolve();
@@ -455,7 +458,10 @@ test("inline picker does not update selection after payer creation resolves post
       renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
         .props.onChange({ target: { value: "New Payer" } });
     });
-    await waitForClaimsButton(renderer!, "Create payer “New Payer”");
+    await waitForObservable(
+      () => hasClaimsButton(renderer!, "Create payer “New Payer”"),
+      "create option for settled payer query",
+    );
     act(() => claimsButton(renderer!, "Create payer “New Payer”").props.onClick());
     await act(async () => {
       renderer!.unmount();
@@ -986,12 +992,16 @@ function claimsButton(renderer: ReactTestRenderer, label: string): any {
   return button;
 }
 
-async function waitForClaimsButton(renderer: ReactTestRenderer, label: string): Promise<void> {
+function hasClaimsButton(renderer: ReactTestRenderer, label: string): boolean {
+  return renderer.root.findAllByType("button").some((button) => button.children.join("") === label);
+}
+
+async function waitForObservable(predicate: () => boolean, description: string): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    if (renderer.root.findAllByType("button").some((button) => button.children.join("") === label)) return;
+    if (predicate()) return;
     await act(async () => {
       await new Promise<void>((resolve) => setImmediate(resolve));
     });
   }
-  assert.fail(`Timed out waiting for ${label} button`);
+  assert.fail(`Timed out waiting for ${description}`);
 }

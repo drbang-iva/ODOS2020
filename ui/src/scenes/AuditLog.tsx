@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { OdosChips } from "../components/inputs/OdosChips";
 import {
   AUDIT_EVENT_TYPES,
   canReviewAuditLog,
@@ -107,16 +108,15 @@ export function AuditLog() {
               <input className="mt-1 w-full rounded border border-white/15 bg-bg-panel px-3 py-2 text-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
             </label>
           </div>
-          <label className="block text-sm text-white/70">
-            Event Type
-            <select multiple className="mt-1 h-40 w-full rounded border border-white/15 bg-bg-panel px-3 py-2 text-white" value={eventTypes} onChange={(event) => setEventTypes(Array.from(event.target.selectedOptions, (option) => option.value as AuditEventType))}>
-              {AUDIT_EVENT_TYPES.map((eventType) => (
-                <option key={eventType} value={eventType}>
-                  {eventType}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="block text-sm text-white/70">
+            <div className="mb-1">Event Type</div>
+            <OdosChips
+              options={AUDIT_EVENT_TYPES.map((eventType) => ({ value: eventType, label: eventType }))}
+              selected={eventTypes}
+              onChange={setEventTypes}
+              ariaLabel="Audit event types"
+            />
+          </div>
           <label className="block text-sm text-white/70">
             Outcome
             <select className="mt-1 w-full rounded border border-white/15 bg-bg-panel px-3 py-2 text-white" value={outcome} onChange={(event) => setOutcome(event.target.value as AuditOutcome | "")}>
