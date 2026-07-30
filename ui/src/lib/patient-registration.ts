@@ -4,6 +4,8 @@ import { fhir } from "./fhir";
 import { emptySubscriber, subscriberFromPatient } from "./patient-insurance";
 import {
   buildPatientIdentityTransaction,
+  ODOS_MRN_MAX,
+  ODOS_MRN_MIN,
   emptySelfResponsibleParty,
   reserveOdosMrn,
   validateResponsibleParties,
@@ -269,11 +271,11 @@ function registrationToday(options: PatientRegistrationOptions): string {
 }
 
 function secureMrnBase(): number {
-  const range = 999_999 - 100_001 + 1;
+  const range = ODOS_MRN_MAX - ODOS_MRN_MIN + 1;
   const ceiling = 2 ** 32 - ((2 ** 32) % range);
   const value = new Uint32Array(1);
   do {
     crypto.getRandomValues(value);
   } while (value[0] >= ceiling);
-  return 100_001 + (value[0] % range);
+  return ODOS_MRN_MIN + (value[0] % range);
 }

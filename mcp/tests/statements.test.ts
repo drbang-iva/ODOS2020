@@ -185,7 +185,17 @@ test("minor statements mail to the Account guarantor while a self-responsible ad
     patients: [minor],
     invoices: [invoice("minor-invoice", "minor", 10_000)],
     payments: [],
-    accounts: [patientAccount("minor-account", "minor", "RelatedPerson/guardian")],
+    accounts: [{
+      ...patientAccount("minor-account", "minor", "RelatedPerson/guardian"),
+      guarantor: [{
+        party: { reference: "RelatedPerson/guardian" },
+        onHold: false,
+        period: {
+          start: "2026-07-12T23:59:59Z",
+          end: "2026-07-12T23:59:59Z",
+        },
+      }],
+    }],
     relatedPeople: [guardian],
   });
   const minorResult = await handleGeneratePatientStatementRequest(statementDeps(minorFixture.fhir), {
@@ -217,6 +227,35 @@ test("minor statements mail to the Account guarantor while a self-responsible ad
   assert.equal(unsafeMinorRun.generatedCount, 0);
   assert.equal(unsafeMinorRun.invalidRejects, 1);
   assert.match(unsafeMinorRun.rejects[0].reason, /minor and cannot receive a statement as their own Account guarantor/);
+
+  const unnamedGuardianFixture = fakeFhir({
+    patients: [minor],
+    invoices: [invoice("unnamed-guardian-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("unnamed-guardian-account", "minor", "RelatedPerson/unnamed")],
+    relatedPeople: [{ ...guardian, id: "unnamed", name: undefined }],
+  });
+  const unnamedGuardianResult = await handleGeneratePatientStatementRequest(statementDeps(unnamedGuardianFixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/minor" },
+  });
+  const unnamedGuardianRun = unnamedGuardianResult.body as StatementRunResult;
+  assert.equal(unnamedGuardianRun.invalidRejects, 1);
+  assert.match(unnamedGuardianRun.rejects[0].reason, /has no usable name for statement delivery/);
+
+  const missingGuardianFixture = fakeFhir({
+    patients: [minor],
+    invoices: [invoice("missing-guardian-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("missing-guardian-account", "minor", "RelatedPerson/missing")],
+  });
+  const missingGuardianResult = await handleGeneratePatientStatementRequest(statementDeps(missingGuardianFixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/minor" },
+  });
+  const missingGuardianRun = missingGuardianResult.body as StatementRunResult;
+  assert.equal(missingGuardianRun.invalidRejects, 1);
+  assert.match(missingGuardianRun.rejects[0].reason, /has no resolvable current Account guarantor/);
 
   const adult = patientWithAddress();
   adult.birthDate = "1980-01-02";

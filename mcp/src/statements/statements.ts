@@ -902,6 +902,12 @@ function statementHeader(
   const recipientAddress = addressOf(
     recipient.address?.find((address) => address.use === "home") ?? recipient.address?.[0],
   );
+  const recipientName = personName(recipient);
+  if (!recipientName) {
+    throw new StatementValidationError(
+      `${recipient.resourceType}/${recipient.id ?? "unknown"} has no usable name for statement delivery.`,
+    );
+  }
   return {
     practiceName,
     ...(practiceAddress ? { practiceAddress } : {}),
@@ -910,7 +916,7 @@ function statementHeader(
     ...(providerNpi ? { providerNpi } : {}),
     ...(providerLicense ? { providerLicense } : {}),
     ...(patientAddress ? { patientAddress } : {}),
-    recipientName: personName(recipient),
+    recipientName,
     ...(recipientAddress ? { recipientAddress } : {}),
   };
 }
@@ -942,8 +948,8 @@ function resolveStatementRecipient(
   }
   const guarantors = (candidates[0].guarantor ?? []).filter((guarantor) =>
     !guarantor.onHold
-    && (!guarantor.period?.start || guarantor.period.start <= onDate)
-    && (!guarantor.period?.end || guarantor.period.end >= onDate),
+    && (!guarantor.period?.start || guarantor.period.start.slice(0, 10) <= onDate)
+    && (!guarantor.period?.end || guarantor.period.end.slice(0, 10) >= onDate),
   );
   if (guarantors.length === 0) {
     throw new StatementValidationError(`${patientReference} has no current Account guarantor.`);
@@ -963,6 +969,9 @@ function resolveStatementRecipient(
     const person = reference ? relatedPeople.get(reference) : undefined;
     if (person?.active !== false && person) resolved.push(person);
   }
+  if (resolved.length === 0) {
+    throw new StatementValidationError(`${patientReference} has no resolvable current Account guarantor.`);
+  }
   if (resolved.length === 1) return resolved[0];
   const primary = resolved.filter((recipient) =>
     recipient.resourceType === "RelatedPerson"
@@ -976,10 +985,10 @@ function resolveStatementRecipient(
   throw new StatementValidationError(`${patientReference} does not have one unambiguous current Account guarantor.`);
 }
 
-function personName(person: Patient | RelatedPerson): string {
+function personName(person: Patient | RelatedPerson): string | undefined {
   const name = person.name?.find((candidate) => candidate.use === "official") ?? person.name?.[0];
   const label = name?.text ?? [name?.given?.join(" "), name?.family].filter(Boolean).join(" ");
-  return label || `${person.resourceType}/${person.id ?? "unknown"}`;
+  return label || undefined;
 }
 
 function minorOn(birthDate: string | undefined, onDate: string): boolean {

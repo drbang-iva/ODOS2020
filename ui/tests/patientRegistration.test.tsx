@@ -174,7 +174,8 @@ test("minor registration writes RelatedPerson authority, primary, custody period
     nextUuid: sequentialUuid("minor"),
   });
   const transaction = api.transactions[0];
-  const relatedPerson = transaction.entry?.find((entry) => entry.resource?.resourceType === "RelatedPerson")?.resource;
+  const relatedPersonEntry = transaction.entry?.find((entry) => entry.resource?.resourceType === "RelatedPerson");
+  const relatedPerson = relatedPersonEntry?.resource;
   const account = transaction.entry?.find((entry) => entry.resource?.resourceType === "Account")?.resource as Account;
   assert.equal(relatedPerson?.resourceType, "RelatedPerson");
   if (relatedPerson?.resourceType !== "RelatedPerson") throw new Error("RelatedPerson missing");
@@ -182,7 +183,7 @@ test("minor registration writes RelatedPerson authority, primary, custody period
   assert.equal(relatedPerson.extension?.find((extension) => extension.url === CONSENT_AUTHORITY_EXTENSION_URL)?.valueBoolean, true);
   assert.equal(relatedPerson.extension?.find((extension) => extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL)?.valueBoolean, true);
   assert.equal(relatedPerson.extension?.find((extension) => extension.url === COURT_ORDER_NOTES_EXTENSION_URL)?.valueString, "Medical decisions shared under current order.");
-  assert.match(account.guarantor?.[0]?.party.reference ?? "", /^urn:uuid:minor-/);
+  assert.equal(account.guarantor?.[0]?.party.reference, relatedPersonEntry?.fullUrl);
 });
 
 test("required fields block creation while address and email remain optional", () => {

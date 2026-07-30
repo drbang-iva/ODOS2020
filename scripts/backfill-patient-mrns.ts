@@ -58,15 +58,22 @@ export async function backfillPatientMrns(
     unchangedPatients: 0,
     minorsNeedingResponsibleParty: 0,
   };
+  const accountsByPatient = new Map<string, Account[]>();
+  for (const account of accounts) {
+    for (const subject of account.subject ?? []) {
+      if (!subject.reference) continue;
+      const matches = accountsByPatient.get(subject.reference) ?? [];
+      matches.push(account);
+      accountsByPatient.set(subject.reference, matches);
+    }
+  }
 
   for (const patient of patients) {
     if (!patient.id || !patient.meta?.versionId) {
       throw new Error("Patient backfill requires every Patient search row to include id and meta.versionId.");
     }
     const patientReference = `Patient/${patient.id}`;
-    const patientAccounts = accounts.filter((account) =>
-      account.subject?.some((subject) => subject.reference === patientReference),
-    );
+    const patientAccounts = accountsByPatient.get(patientReference) ?? [];
     if (patientAccounts.length > 1) {
       throw new Error(`${patientReference} has multiple Accounts; MRN backfill stopped without guessing.`);
     }
@@ -191,21 +198,22 @@ function buildBackfillAccount(
 }
 
 function sameBackfillAccount(left: Account, right: Account): boolean {
-  return JSON.stringify({
-    identifier: left.identifier,
-    status: left.status,
-    type: left.type,
-    name: left.name,
-    subject: left.subject,
-    guarantor: left.guarantor ?? [],
-  }) === JSON.stringify({
-    identifier: right.identifier,
-    status: right.status,
-    type: right.type,
-    name: right.name,
-    subject: right.subject,
-    guarantor: right.guarantor ?? [],
+  const sortKey = (value: unknown) => JSON.stringify(value, (_key, child: unknown) => {
+    if (!child || typeof child !== "object" || Array.isArray(child)) return child;
+    return Object.fromEntries(Object.entries(child).sort(([leftKey], [rightKey]) =>
+      leftKey.localeCompare(rightKey)));
   });
+  const comparable = (account: Account) => ({
+    identifier: [...(account.identifier ?? [])].sort((leftIdentifier, rightIdentifier) =>
+      sortKey(leftIdentifier).localeCompare(sortKey(rightIdentifier))),
+    status: account.status,
+    type: account.type,
+    name: account.name,
+    subject: account.subject,
+    guarantor: [...(account.guarantor ?? [])].sort((leftGuarantor, rightGuarantor) =>
+      sortKey(leftGuarantor).localeCompare(sortKey(rightGuarantor))),
+  });
+  return sortKey(comparable(left)) === sortKey(comparable(right));
 }
 
 async function reserveSpecificMrn(
@@ -274,7 +282,7 @@ async function runCli(): Promise<void> {
   console.log(JSON.stringify(result, null, 2));
 }
 
-function assertLocalOrPrivateBaseUrl(value: string): void {
+export function assertLocalOrPrivateBaseUrl(value: string): void {
   const url = new URL(value);
   const host = url.hostname.toLowerCase();
   const octets = host.split(".").map(Number);
@@ -290,7 +298,7 @@ function assertLocalOrPrivateBaseUrl(value: string): void {
     !["http:", "https:"].includes(url.protocol)
     || url.username
     || url.password
-    || !(host === "localhost" || host === "::1" || host.endsWith(".local") || privateIpv4)
+    || !(host === "localhost" || host === "::1" || host === "[::1]" || host.endsWith(".local") || privateIpv4)
   ) {
     throw new Error("MEDPLUM_BASE_URL must target a local or private self-hosted Medplum server.");
   }
