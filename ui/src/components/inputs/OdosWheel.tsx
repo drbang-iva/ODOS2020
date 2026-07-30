@@ -85,6 +85,11 @@ export function OdosWheel({
     if (disabled) setOpen(false);
   }, [disabled]);
 
+  function restoreTypedValue() {
+    setTypedValue(selectedStateLabel === undefined ? format(value) : "");
+    setEditing(false);
+  }
+
   function commitTypedValue() {
     if (typedValue.trim() === "") {
       const blankState = states.find((state) => state.value === "");
@@ -94,11 +99,12 @@ export function OdosWheel({
         setEditing(false);
         return;
       }
+      restoreTypedValue();
+      return;
     }
     const parsed = Number(typedValue);
     if (!Number.isFinite(parsed)) {
-      setTypedValue(format(value));
-      setEditing(false);
+      restoreTypedValue();
       return;
     }
     const normalized = normalizeWheelValue(parsed, min, max, step);
@@ -188,8 +194,7 @@ export function OdosWheel({
       setOpen(false);
     } else if (event.key === "Escape") {
       event.preventDefault();
-      setTypedValue(format(value));
-      setEditing(false);
+      restoreTypedValue();
       setOpen(false);
     }
   }

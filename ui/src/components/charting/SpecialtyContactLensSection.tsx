@@ -243,12 +243,12 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
     return option ? [option] : [];
   });
   const hiddenAdditional = additionalOptions.filter((option) => !visibleAdditionalCodes.includes(option.code));
-  const sphereOptions = useMemo(() => numericOptions(fields.sphere, -30, 30, 0.25), [fields.sphere]);
-  const cylinderOptions = useMemo(() => numericOptions({ ...fields.cylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.cylinder]);
+  const sphereOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
+  const cylinderOptions = useMemo(() => numericOptions(fields.cylinder, -8, 0, 0.25), [fields.cylinder]);
   const addOptions = useMemo(() => numericOptions(fields.add, 0, 4, 0.25), [fields.add]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
-  const overCylinderOptions = useMemo(() => numericOptions({ ...fields.overRefractionCylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.overRefractionCylinder]);
+  const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
   const baseCurveOptions = useMemo(() => numericOptions(fields.baseCurve, 3, 15, 0.05), [fields.baseCurve]);
   const diameterOptions = useMemo(() => numericOptions(fields.diameter, 5, 30, 0.1), [fields.diameter]);

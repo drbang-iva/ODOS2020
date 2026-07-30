@@ -153,11 +153,11 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const fields = definition?.definition.fields ?? {};
   const manufacturerOptions = useMemo(() => activeOptions(fields.manufacturer), [fields.manufacturer]);
   const products = useMemo(() => activeProductOptions(fields.product), [fields.product]);
-  const cylinderOptions = useMemo(() => numericOptions({ ...fields.cylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.cylinder]);
+  const cylinderOptions = useMemo(() => numericOptions(fields.cylinder, -8, 0, 0.25), [fields.cylinder]);
   const addOptions = useMemo(() => numericOptions(fields.add, 0, 4, 0.25), [fields.add]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
-  const overCylinderOptions = useMemo(() => numericOptions({ ...fields.overRefractionCylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.overRefractionCylinder]);
+  const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
   const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
 
@@ -336,7 +336,7 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                     />
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
                     <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
-                    <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} />
+                    <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} format={formatSignedPower} />
                     {!state.manualEntry && cascadeOptions.length > 0 && (
                       <SelectField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} options={cascadeOptions} />
                     )}
@@ -549,12 +549,13 @@ function CatalogWheelField({ label, value, onChange, options, disabled, ariaLabe
   );
 }
 
-function PowerField({ label, value, onChange, options, ariaLabel }: {
+function PowerField({ label, value, onChange, options, ariaLabel, format = formatSpherePower }: {
   label: string;
   value: string;
   onChange(value: string): void;
   options: string[];
   ariaLabel: string;
+  format?: (value: number) => string;
 }) {
   const wheel = requiredWheel(options);
   return (
@@ -566,7 +567,7 @@ function PowerField({ label, value, onChange, options, ariaLabel }: {
         min={wheel.min}
         max={wheel.max}
         step={wheel.step}
-        format={formatSpherePower}
+        format={format}
         onChange={(next) => onChange(next.toFixed(2))}
         ariaLabel={ariaLabel}
         unit="D"
@@ -585,8 +586,8 @@ function SphereWheelField({ label, value, onChange, field, ariaLabel }: {
   field: DefinitionField | undefined;
   ariaLabel: string;
 }) {
-  const minimum = field?.minimum ?? -30;
-  const maximum = field?.maximum ?? 30;
+  const minimum = field?.minimum ?? -20;
+  const maximum = field?.maximum ?? 20;
   const step = field?.step ?? 0.25;
   return (
     <label className="block">
@@ -663,6 +664,10 @@ function decimalPlaces(value: number): number {
 function formatSpherePower(value: number): string {
   if (value === 0) return "pl";
   return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
+}
+
+function formatSignedPower(value: number): string {
+  return `${value >= 0 ? "+" : "-"}${Math.abs(value).toFixed(2)}`;
 }
 
 function VaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

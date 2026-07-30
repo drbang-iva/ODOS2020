@@ -284,6 +284,38 @@ test("OdosWheel preserves a blank state while keeping direct typing available", 
   act(() => input().props.onChange({ target: { value: "" } }));
   act(() => input().props.onBlur());
   assert.equal(changedState, "");
+
+  act(() => input().props.onChange({ target: { value: "0.5" } }));
+  act(() => input().props.onKeyDown({
+    key: "Escape",
+    preventDefault: () => undefined,
+  }));
+  assert.equal(input().props.value, "");
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel reverts a cleared value when no blank state is configured", () => {
+  const changes: number[] = [];
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={2}
+        centerOn={0}
+        min={1}
+        max={10}
+        step={1}
+        format={String}
+        onChange={(value) => { changes.push(value); }}
+        ariaLabel="Drops 1"
+      />,
+    );
+  });
+  const input = () => renderer.root.findByProps({ "aria-label": "Drops 1" });
+  act(() => input().props.onChange({ target: { value: "" } }));
+  act(() => input().props.onBlur());
+  assert.deepEqual(changes, []);
+  assert.equal(input().props.value, "2");
   act(() => renderer.unmount());
 });
 

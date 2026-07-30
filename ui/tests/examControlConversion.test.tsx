@@ -119,16 +119,24 @@ test("specialty-lens numeric geometry uses centered spinner fields", () => {
   assert.doesNotMatch(specialty, /<TextField label="Diameter \(mm\)"/);
 });
 
-test("Batch 4 cylinder wheels and definition sources stop at minus eight diopters", () => {
+test("Batch 4 contact-lens wheels consume corrected definition bounds with clinical fallbacks", () => {
   const soft = source("SoftContactLensSection.tsx");
   const specialty = source("SpecialtyContactLensSection.tsx");
   for (const component of [soft, specialty]) {
-    assert.equal((component.match(/minimum: -8, maximum: 0, step: 0\.25/g) ?? []).length, 2);
+    assert.match(component, /numericOptions\(fields\.cylinder, -8, 0, 0\.25\)/);
+    assert.match(component, /numericOptions\(fields\.overRefractionCylinder, -8, 0, 0\.25\)/);
+    assert.doesNotMatch(component, /\{\s*\.\.\.fields\.(?:cylinder|overRefractionCylinder),\s*minimum:/);
   }
+  assert.match(soft, /field\?\.minimum \?\? -20/);
+  assert.match(soft, /field\?\.maximum \?\? 20/);
+  assert.match(soft, /<PowerField label="Add"[\s\S]*format=\{formatSignedPower\}/);
+  assert.match(soft, /function formatSignedPower\(value: number\)[\s\S]*value >= 0 \? "\+" : "-"/);
+  assert.match(specialty, /numericOptions\(fields\.sphere, -20, 20, 0\.25\)/);
   const definition = readFileSync(
     new URL("../../mcp/src/clinical-graph/contact-lens-definition.ts", import.meta.url),
     "utf8",
   );
+  assert.equal((definition.match(/sphere: powerField\("Sphere", -20, 20\)/g) ?? []).length, 2);
   assert.equal((definition.match(/cylinder: powerField\("Cylinder", -8, 0\)/g) ?? []).length, 2);
   assert.equal((definition.match(/overRefractionCylinder: powerField\("Over-Refraction Cylinder", -8, 0\)/g) ?? []).length, 2);
 });
