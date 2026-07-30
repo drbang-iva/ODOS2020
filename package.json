@@ -23,6 +23,7 @@
     "setup-legacy-importer": "tsx scripts/setup-legacy-importer.ts",
     "gate:legacy-import-m2a": "tsx --env-file-if-exists=.env scripts/gate-legacy-import-m2a.ts",
     "import-legacy-patient-m2a": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-patient-m2a.ts",
+    "import-legacy-visits-m2b1": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/import-legacy-visits-m2b1.ts",
     "grant-migrated-patient-access": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/grant-migrated-patient-access.ts",
     "verify-legacy-import-m2a": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/verify-legacy-import-m2a.ts",
     "sweep-legacy-import-binaries": "tsx --env-file-if-exists=.odos/migration-importer.env scripts/sweep-legacy-import-binaries.ts",

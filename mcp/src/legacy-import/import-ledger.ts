@@ -8,6 +8,13 @@ export const DEFAULT_M2A_STATE_DIR =
   process.env.ODOS_M2A_STATE_DIR?.trim() || join(homedir(), ".odos", "legacy-import-m2a");
 
 export type ImportAction = "created" | "updated" | "skipped" | "conflict";
+export type ImportResourceType =
+  | "Patient"
+  | "AccessPolicy"
+  | "ProjectMembership"
+  | "Practitioner"
+  | "Appointment"
+  | "Encounter";
 export type GrantAction = "added" | "skipped" | "conflict";
 
 export interface ImportLedgerOptions {
@@ -74,7 +81,7 @@ export class ImportLedger {
   recordResourceAction(input: {
     readonly runId: string;
     readonly sourceKey: string;
-    readonly resourceType: string;
+    readonly resourceType: ImportResourceType;
     readonly resourceReference?: string;
     readonly action: ImportAction;
     readonly reason: string;
@@ -261,7 +268,7 @@ export class ImportLedger {
     }>;
 
     return [
-      `# Legacy import M2a run ${run.run_id}`,
+      `# Legacy import run ${run.run_id}`,
       "",
       `- Status: ${run.status}`,
       `- Started: ${run.started_at}`,
