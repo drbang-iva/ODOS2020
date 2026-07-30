@@ -30,7 +30,6 @@ interface ImagingPayload {
 }
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
-const LONGITUDINAL_STRUCTURE_OPTIONS = ["Lid margin", "Full face"] as const;
 
 export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
   const retriedImages = useRef(new Set<string>());
@@ -283,10 +282,14 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
             ariaLabel="Anatomical structure"
             value={structure}
             options={[...new Set([
-              ...LONGITUDINAL_STRUCTURE_OPTIONS,
-              structure,
+              ...images.map((image) => image.structure.trim()),
+              structure.trim(),
             ].filter(Boolean))].map((value) => ({ value, label: value }))}
             onChange={setStructure}
+            onInputChange={setStructure}
+            parseInput={(input) => input}
+            serializeValue={(value) => value}
+            maxLength={120}
           />
           <input aria-label="Choose clinical photo" type="file" accept="image/*" capture="environment" onChange={(event) => chooseFile(event.target.files?.[0])} className="block w-full text-xs text-white/50" />
           {previewUrl && (

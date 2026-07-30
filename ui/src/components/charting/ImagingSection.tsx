@@ -77,7 +77,7 @@ export const CATEGORY_OPTIONS = [
 
 export function ImagingSection({ patientReference, encounterReference, onSaved }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const refinementInputRef = useRef<HTMLButtonElement>(null);
+  const refinementInputRef = useRef<HTMLInputElement>(null);
   const refinementTriggerNodes = useRef(new Map<string, HTMLButtonElement>());
   const imagingTileNodes = useRef(new Map<string, HTMLElement>());
   const retriedImages = useRef(new Set<string>());
@@ -369,12 +369,15 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <div>
                 <OdosSelect
-                  buttonRef={refinementInputRef}
+                  inputRef={refinementInputRef}
                   ariaLabel="OCT structure"
                   value={refinement.structure}
                   defaultValue="Macula"
                   options={[...new Set([...OCT_STRUCTURE_OPTIONS, refinement.structure].filter(Boolean))].map((value) => ({ value, label: value }))}
                   onChange={(structure) => setRefinement({ ...refinement, structure })}
+                  onInputChange={(structure) => setRefinement({ ...refinement, structure })}
+                  parseInput={(input) => input}
+                  serializeValue={(structure) => structure}
                 />
               </div>
               <OdosSelect
