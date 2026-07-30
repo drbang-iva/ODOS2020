@@ -21,6 +21,9 @@ test("chart-level longitudinal imaging renders timeline, compare, capture, and c
   assert.match(html, /Timeline/);
   assert.match(html, /Compare/);
   assert.match(html, /Capture or import photo/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Anatomical structure"/);
+  assert.equal((html.match(/>Lid margin<\/button>/g) ?? []).length, 2);
+  assert.equal((html.match(/>Full face<\/button>/g) ?? []).length, 1);
   assert.match(html, /capture="environment"/);
   assert.match(html, /Documented cosmetic consent is checked before capture/);
 });

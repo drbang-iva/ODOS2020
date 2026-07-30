@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OdosSearchPicker } from "./inputs/OdosSearchPicker";
+import { OdosSelect } from "./inputs/OdosSelect";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 export type PhotoLens = "timeline" | "compare";
@@ -29,6 +30,7 @@ interface ImagingPayload {
 }
 
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const LONGITUDINAL_STRUCTURE_OPTIONS = ["Lid margin", "Full face"] as const;
 
 export function LongitudinalImagingCard({ patientReference }: { patientReference: string }) {
   const retriedImages = useRef(new Set<string>());
@@ -277,7 +279,15 @@ export function LongitudinalImagingCard({ patientReference }: { patientReference
             {definitions.length === 0 && <option value="">No active procedure definitions</option>}
             {definitions.map((definition) => <option key={definition.stableKey} value={definition.stableKey}>{definition.display}</option>)}
           </select>
-          <input aria-label="Anatomical structure" className="sidebar-input" value={structure} maxLength={120} onChange={(event) => setStructure(event.target.value)} />
+          <OdosSelect
+            ariaLabel="Anatomical structure"
+            value={structure}
+            options={[...new Set([
+              ...LONGITUDINAL_STRUCTURE_OPTIONS,
+              structure,
+            ].filter(Boolean))].map((value) => ({ value, label: value }))}
+            onChange={setStructure}
+          />
           <input aria-label="Choose clinical photo" type="file" accept="image/*" capture="environment" onChange={(event) => chooseFile(event.target.files?.[0])} className="block w-full text-xs text-white/50" />
           {previewUrl && (
             <div className="relative aspect-[4/3] overflow-hidden rounded border border-white/10 bg-black">

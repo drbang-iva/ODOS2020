@@ -23,6 +23,7 @@ import {
 import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
 import { VaSection } from "../src/components/charting/VaSection";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
@@ -976,12 +977,12 @@ test("Vessels defaults A/V ratio to 2:3, saves a per-eye grade, and does not POS
       />);
       await flushEffects();
     });
-    const selects = renderer.root.findAllByType("select");
+    const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["2:3", "2:3"]);
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
     act(() => normalButtons[0]!.props.onClick());
-    act(() => selects[0]!.props.onChange({ target: { value: "1:2" } }));
+    act(() => selects[0]!.props.onChange("1:2"));
     const saveButton = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Save Ocular Health");
     assert.ok(saveButton);
     await act(async () => saveButton.props.onClick());
@@ -1026,12 +1027,12 @@ test("anterior optional selects and numbers render blank, persist typed values, 
     assert.equal(numbers.length, 10);
     assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, ""]);
     assert.deepEqual([numbers[2]!.props.min, numbers[2]!.props.max, numbers[2]!.props.step], [0.1, 6.9, 0.1]);
-    const selects = renderer.root.findAllByType("select");
+    const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["", ""]);
 
     act(() => numbers[0]!.props.onChange({ target: { value: "6" } }));
-    act(() => selects[1]!.props.onChange({ target: { value: "grade-2" } }));
+    act(() => selects[1]!.props.onChange("grade-2"));
     act(() => numbers[2]!.props.onChange({ target: { value: "6.9" } }));
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
     act(() => normalButtons[3]!.props.onClick());
@@ -1475,7 +1476,8 @@ test("GonioscopySection clears encounter state before fetch and hydrates pigment
       await flushEffects();
     });
     const select = (label: string) => renderer.root.find((node) =>
-      node.type === "select" && node.props["aria-label"] === label
+      (node.type === "select" && node.props["aria-label"] === label)
+      || (node.type === OdosSelect && node.props.ariaLabel === label)
     );
     assert.equal(select("OD TM pigmentation").props.value, "3+");
     assert.equal(renderer.root.findByType("textarea").props.value, "Encounter A note");

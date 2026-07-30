@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
@@ -171,15 +172,16 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
           </div>
           <label className="block min-w-[180px]">
             <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Source</span>
-            <select
+            <OdosSelect
               value={sourceType}
-              onChange={(event) => setSourceType(event.target.value)}
               disabled={definitionLoading}
-              className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
-            >
-              <option value="">Select</option>
-              {sourceTypes.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-            </select>
+              options={[
+                { value: "", label: "Select" },
+                ...sourceTypes.map((option) => ({ value: option.code, label: option.display })),
+              ]}
+              onChange={setSourceType}
+              ariaLabel="Source"
+            />
           </label>
         </div>
 

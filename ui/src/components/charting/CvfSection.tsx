@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { MethodField } from "../inputs/MethodField";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
@@ -136,21 +137,25 @@ export function CvfSection({ definition, patientReference, encounterReference, o
                 </div>
                 {capture.state === "abnormal" && (
                   <div className="mt-4">
-                    <ZoneGrid eye={eye} capture={capture} update={(update) => updateEye(eye, update)} />
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <label className="text-xs uppercase tracking-wide text-[color:var(--odos-faint)]">
-                        Method
-                        <select value={capture.method} disabled={capture.unable} onChange={(event) => updateEye(eye, { method: event.target.value })} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm normal-case text-[color:var(--odos-text)] disabled:opacity-45">
-                          <option value="">Select</option>
-                          <option value="finger-count">Finger count</option>
-                          <option value="hand-motion">Hand motion</option>
-                        </select>
-                      </label>
-                      <label className="flex min-h-10 items-center gap-3 self-end rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm">
-                        <input type="checkbox" checked={capture.unable} onChange={(event) => updateEye(eye, { unable: event.target.checked })} />
-                        Unable to test
-                      </label>
-                    </div>
+                    <MethodField
+                      label="Method"
+                      renderValueControl={() => (
+                        <ZoneGrid eye={eye} capture={capture} update={(update) => updateEye(eye, update)} />
+                      )}
+                      methodValue={capture.method}
+                      methodOptions={[
+                        { value: "", label: "Select" },
+                        { value: "finger-count", label: "Finger count" },
+                        { value: "hand-motion", label: "Hand motion" },
+                      ]}
+                      onMethodChange={(method) => updateEye(eye, { method })}
+                      methodAriaLabel={`${eye} CVF method`}
+                      disabled={capture.unable}
+                    />
+                    <label className="mt-3 flex min-h-10 items-center gap-3 rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-sm">
+                      <input type="checkbox" checked={capture.unable} onChange={(event) => updateEye(eye, { unable: event.target.checked })} />
+                      Unable to test
+                    </label>
                   </div>
                 )}
                 <label className="mt-4 block text-xs uppercase tracking-wide text-[color:var(--odos-faint)]">

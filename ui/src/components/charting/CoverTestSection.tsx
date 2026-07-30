@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 
@@ -155,9 +156,14 @@ function RowSelect({ label, value, values, onChange }: { label: string; value: s
   return (
     <label className="text-xs text-[color:var(--odos-muted)]">
       {label}
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2">
-        {values.map((option) => <option key={option}>{option}</option>)}
-      </select>
+      <div className="mt-1">
+        <OdosSelect
+          value={value}
+          options={values.map((option) => ({ value: option, label: option }))}
+          onChange={onChange}
+          ariaLabel={label}
+        />
+      </div>
     </label>
   );
 }

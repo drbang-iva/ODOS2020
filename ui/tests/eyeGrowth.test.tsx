@@ -8,6 +8,7 @@ import {
   type AxialGrowthReading,
 } from "../src/components/charting/AxialGrowthChart";
 import { EyeGrowthSection } from "../src/components/charting/EyeGrowthSection";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 
 const UNKNOWN_REFRACTIVE_STATUS = {
   status: "UNKNOWN" as const,
@@ -423,17 +424,19 @@ test("reference curve defaults to European and offers only European and Asian", 
           />,
         );
       });
-      const select = renderer.root.findByProps({ "aria-label": "Reference curve" });
+      const select = renderer.root.find((node) =>
+        node.type === OdosSelect && node.props.ariaLabel === "Reference curve"
+      );
       assert.equal(select.props.value, "CAUCASIAN");
       assert.deepEqual(
-        select.findAllByType("option").map((option) => [option.props.value, option.children.join("")]),
+        select.props.options.map((option: { value: string; label: string }) => [option.value, option.label]),
         [
           ["CAUCASIAN", "European (default)"],
           ["ASIAN", "Asian"],
         ],
       );
       await act(async () => {
-        select.props.onChange({ target: { value: selected } });
+        select.props.onChange(selected);
         await Promise.resolve();
         await Promise.resolve();
       });

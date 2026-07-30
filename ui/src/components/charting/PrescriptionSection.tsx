@@ -20,6 +20,7 @@ import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -227,17 +228,26 @@ export function PrescriptionEditor({
           </Field>
         </div>
         <Field label="Route">
-          <select aria-label="Route" className="sidebar-input" value={draft.route} onChange={(event) => set({ route: event.target.value })}>
-            {ROUTE_OPTIONS.map((route) => <option key={route} value={route}>{route}</option>)}
-          </select>
+          <OdosSelect
+            ariaLabel="Route"
+            value={draft.route}
+            options={ROUTE_OPTIONS.map((route) => ({ value: route, label: route }))}
+            onChange={(route) => set({ route })}
+          />
         </Field>
         <Field label="Assessment diagnosis">
-          <select aria-label="Assessment diagnosis" className="sidebar-input" value={draft.indicationReference} onChange={(event) => set({ indicationReference: event.target.value })}>
-            <option value="">Free-text indication</option>
-            {conditions.map((condition) => (
-              <option key={condition.id} value={`Condition/${condition.id}`}>{displayCode(condition.code)}</option>
-            ))}
-          </select>
+          <OdosSelect
+            ariaLabel="Assessment diagnosis"
+            value={draft.indicationReference}
+            options={[
+              { value: "", label: "Free-text indication" },
+              ...conditions.map((condition) => ({
+                value: `Condition/${condition.id}`,
+                label: displayCode(condition.code),
+              })),
+            ]}
+            onChange={(indicationReference) => set({ indicationReference })}
+          />
         </Field>
         <Field label="Indication fallback">
           <input aria-label="Indication fallback" className="sidebar-input" value={draft.indicationText} onChange={(event) => set({ indicationText: event.target.value })} placeholder="Free text when no diagnosis is linked" />

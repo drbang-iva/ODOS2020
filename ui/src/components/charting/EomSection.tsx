@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
@@ -79,11 +80,111 @@ export function EomSection({ definition: _definition, patientReference, encounte
     } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } finally { setSaving(false); }
   }
 
-  return <section className="h-full overflow-y-auto p-6"><div className="max-w-6xl"><header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4"><div><div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div><h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">EOM / diplopia</h2><p className="mt-1 text-sm text-[color:var(--odos-muted)]">Nine-position motility, nystagmus, and structured diplopia findings.</p></div><button type="button" onClick={fullOu} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100">Full OU — SAFE</button></header><div className="mt-4 flex gap-2">{(["normal", "abnormal", "deferred"] as ExamState[]).map((value) => <button type="button" key={value} onClick={() => setState(value)} className={state === value ? "rounded border border-brand bg-brand/20 px-3 py-2 text-sm capitalize" : "rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm capitalize text-[color:var(--odos-muted)]"}>{value}</button>)}</div>{state === "abnormal" && <><div className="mt-5 grid gap-5 xl:grid-cols-2">{(["OD", "OS"] as Eye[]).map((eye) => <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4"><h3 className="font-semibold">{eye} nine-position gaze</h3><div className="mt-3 grid grid-cols-3 gap-2">{POSITIONS.map((position) => <label key={position.code} className="text-xs text-[color:var(--odos-muted)]">{position.label}<select aria-label={`${eye} ${position.label}`} value={eyes[eye][position.code] ?? ""} onChange={(event) => setEyes((current) => ({ ...current, [eye]: { ...current[eye], [position.code]: event.target.value } }))} className="mt-1 h-9 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-[color:var(--odos-text)]"><option value="">—</option>{MOVEMENTS.map((movement) => <option key={movement}>{movement}</option>)}</select></label>)}</div></div>)}</div><div className="mt-5 rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4"><label className="flex items-center gap-2"><input type="checkbox" checked={nystagmus} onChange={(event) => setNystagmus(event.target.checked)} />Nystagmus present</label>{nystagmus && <textarea aria-label="Nystagmus note" value={nystagmusNote} onChange={(event) => setNystagmusNote(event.target.value)} className="mt-3 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2" />}</div><div className="mt-5 rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4"><label className="flex items-center gap-2"><input type="checkbox" checked={diplopia} onChange={(event) => setDiplopia(event.target.checked)} />Diplopia present</label>{diplopia && <div className="mt-3 grid gap-3 md:grid-cols-3"><Select label="Type" value={diplopiaType} values={["monocular", "binocular"]} onChange={(value) => setDiplopiaType(value as typeof diplopiaType)} /><Select label="Direction" value={direction} values={["horizontal", "vertical", "oblique", "torsional"]} onChange={setDirection} /><Select label="Comitancy" value={comitancy} values={["comitant", "incomitant"]} onChange={(value) => setComitancy(value as typeof comitancy)} /><Select label="Worst gaze" value={worstGaze} values={POSITIONS.map((row) => row.code)} onChange={(value) => setWorstGaze(value as Position)} /><Select label="Frequency" value={frequency} values={["constant", "intermittent"]} onChange={setFrequency} /><label className="text-xs text-[color:var(--odos-muted)]">Onset<input type="date" value={onset} onChange={(event) => setOnset(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2" /></label><label className="md:col-span-3 text-xs text-[color:var(--odos-muted)]">Note<textarea value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2" /></label></div>}</div></>}<div className="mt-5 flex items-center justify-between"><span className="text-sm text-rose-200">{error}</span><button type="button" onClick={() => void save()} disabled={saving} className="rounded bg-brand px-5 py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save EOM"}</button></div><History rows={history} /></div></section>;
+  return (
+    <section className="h-full overflow-y-auto p-6">
+      <div className="max-w-6xl">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--odos-line)] pb-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-light">Entrance Testing</div>
+            <h2 className="mt-1 text-xl font-semibold text-[color:var(--odos-text)]">EOM / diplopia</h2>
+            <p className="mt-1 text-sm text-[color:var(--odos-muted)]">Nine-position motility, nystagmus, and structured diplopia findings.</p>
+          </div>
+          <button type="button" onClick={fullOu} className="rounded border border-emerald-300/50 bg-emerald-300/10 px-4 py-2 text-sm font-semibold text-emerald-100">Full OU — SAFE</button>
+        </header>
+        <div className="mt-4 flex gap-2">
+          {(["normal", "abnormal", "deferred"] as ExamState[]).map((value) => (
+            <button type="button" key={value} onClick={() => setState(value)} className={state === value ? "rounded border border-brand bg-brand/20 px-3 py-2 text-sm capitalize" : "rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm capitalize text-[color:var(--odos-muted)]"}>{value}</button>
+          ))}
+        </div>
+        {state === "abnormal" && (
+          <>
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+              {(["OD", "OS"] as Eye[]).map((eye) => (
+                <div key={eye} className="rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4">
+                  <h3 className="font-semibold">{eye} nine-position gaze</h3>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {POSITIONS.map((position) => (
+                      <label key={position.code} className="text-xs text-[color:var(--odos-muted)]">
+                        {position.label}
+                        <div className="mt-1">
+                          <OdosSelect
+                            ariaLabel={`${eye} ${position.label}`}
+                            value={eyes[eye][position.code] ?? ""}
+                            options={[
+                              { value: "", label: "—" },
+                              ...MOVEMENTS.map((movement) => ({ value: movement, label: movement })),
+                            ]}
+                            onChange={(value) => setEyes((current) => ({
+                              ...current,
+                              [eye]: { ...current[eye], [position.code]: value },
+                            }))}
+                          />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={nystagmus} onChange={(event) => setNystagmus(event.target.checked)} />
+                Nystagmus present
+              </label>
+              {nystagmus && <textarea aria-label="Nystagmus note" value={nystagmusNote} onChange={(event) => setNystagmusNote(event.target.value)} className="mt-3 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2" />}
+            </div>
+            <div className="mt-5 rounded border border-[color:var(--odos-line)] bg-bg-panel/65 p-4">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={diplopia} onChange={(event) => setDiplopia(event.target.checked)} />
+                Diplopia present
+              </label>
+              {diplopia && (
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <Select label="Type" value={diplopiaType} values={["monocular", "binocular"]} onChange={(value) => setDiplopiaType(value as typeof diplopiaType)} />
+                  <Select label="Direction" value={direction} values={["horizontal", "vertical", "oblique", "torsional"]} onChange={setDirection} />
+                  <Select label="Comitancy" value={comitancy} values={["comitant", "incomitant"]} onChange={(value) => setComitancy(value as typeof comitancy)} />
+                  <Select label="Worst gaze" value={worstGaze} values={POSITIONS.map((row) => row.code)} onChange={(value) => setWorstGaze(value as Position)} />
+                  <Select label="Frequency" value={frequency} values={["constant", "intermittent"]} onChange={setFrequency} />
+                  <label className="text-xs text-[color:var(--odos-muted)]">
+                    Onset
+                    <input type="date" value={onset} onChange={(event) => setOnset(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2" />
+                  </label>
+                  <label className="md:col-span-3 text-xs text-[color:var(--odos-muted)]">
+                    Note
+                    <textarea value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep p-2" />
+                  </label>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        <div className="mt-5 flex items-center justify-between">
+          <span className="text-sm text-rose-200">{error}</span>
+          <button type="button" onClick={() => void save()} disabled={saving} className="rounded bg-brand px-5 py-2 text-sm font-semibold disabled:opacity-50">{saving ? "Saving…" : "Save EOM"}</button>
+        </div>
+        <History rows={history} />
+      </div>
+    </section>
+  );
 }
 
 function Select({ label, value, values, onChange }: { label: string; value: string; values: string[]; onChange(value: string): void }) {
-  return <label className="text-xs text-[color:var(--odos-muted)]">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-[color:var(--odos-text)]"><option value="">Select</option>{values.map((option) => <option key={option}>{option}</option>)}</select></label>;
+  return (
+    <label className="text-xs text-[color:var(--odos-muted)]">
+      {label}
+      <div className="mt-1">
+        <OdosSelect
+          value={value}
+          options={[
+            { value: "", label: "Select" },
+            ...values.map((option) => ({ value: option, label: option })),
+          ]}
+          onChange={onChange}
+          ariaLabel={label}
+        />
+      </div>
+    </label>
+  );
 }
 export function diplopiaSelectionsComplete(...values: string[]): boolean {
   return values.every((value) => value.length > 0);

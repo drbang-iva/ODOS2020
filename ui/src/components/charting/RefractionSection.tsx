@@ -5,6 +5,7 @@ import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { DiagnosisPicker } from "./DiagnosisPicker";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -235,7 +236,15 @@ export function RefractionSection({ patientReference, encounterReference, onSave
             <p className="mt-1 text-sm text-white/45">Typed OD/OS blocks with Manifest-only diagnosis suggestions</p>
           </div>
           <div className="flex items-end gap-3">
-            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span><select value={sourceType} onChange={(event) => setSourceType(event.target.value)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white">{sourceTypes.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}</select></label>
+            <label className="block">
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span>
+              <OdosSelect
+                value={sourceType}
+                options={sourceTypes.map((option) => ({ value: option.code, label: option.display }))}
+                onChange={setSourceType}
+                ariaLabel="Source"
+              />
+            </label>
             <button
               type="button"
               onClick={addBlock}
@@ -259,29 +268,28 @@ export function RefractionSection({ patientReference, encounterReference, onSave
               <div className="flex flex-wrap items-end gap-3 border-b border-white/10 bg-white/[0.03] p-4">
                 <label className="block min-w-[220px]">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Refraction Type</span>
-                  <select
+                  <OdosSelect
                     value={block.type}
-                    onChange={(event) => updateBlock(block.id, { type: event.target.value })}
                     disabled={definitionLoading}
-                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
-                  >
-                    <option value="">Select</option>
-                    {typeOptions.map((option) => (
-                      <option key={option.code} value={option.code}>{option.display}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: "", label: "Select" },
+                      ...typeOptions.map((option) => ({ value: option.code, label: option.display })),
+                    ]}
+                    onChange={(type) => updateBlock(block.id, { type })}
+                    ariaLabel="Refraction type"
+                  />
                 </label>
                 <label className="block min-w-[260px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Purpose</span>
-                  <select
+                  <OdosSelect
                     value={block.purpose}
-                    onChange={(event) => updateBlock(block.id, { purpose: event.target.value })}
-                    aria-label={`Refraction ${blockIndex + 1} purpose`}
-                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-                  >
-                    <option value="">Select</option>
-                    {PURPOSE_OPTIONS.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
-                  </select>
+                    options={[
+                      { value: "", label: "Select" },
+                      ...PURPOSE_OPTIONS.map((purpose) => ({ value: purpose, label: purpose })),
+                    ]}
+                    onChange={(purpose) => updateBlock(block.id, { purpose })}
+                    ariaLabel={`Refraction ${blockIndex + 1} purpose`}
+                  />
                 </label>
                 <label className="block min-w-[260px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>

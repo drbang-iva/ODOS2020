@@ -7,6 +7,7 @@ import {
   type AxialGrowthReferenceDataset,
   type MyopiaReferencePopulation,
 } from "./AxialGrowthChart";
+import { MethodField } from "../inputs/MethodField";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -174,95 +175,79 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
       <div className="max-w-6xl">
         <h2 className="text-lg font-semibold text-[color:var(--odos-text)]">Eye Growth</h2>
         <div className="mt-5 rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface)] p-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-[color:var(--odos-text)]">Axial Length</h3>
-              <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
-                Decimal age is calculated from the measurement date and date of birth.
-              </div>
+          <div>
+            <h3 className="text-sm font-semibold text-[color:var(--odos-text)]">Axial Length</h3>
+            <div className="mt-1 text-xs text-[color:var(--odos-muted)]">
+              Decimal age is calculated from the measurement date and date of birth.
             </div>
-            <label className="max-w-sm text-xs text-[color:var(--odos-muted)]">
-              Reference curve
-              <select
-                value={history?.referencePopulation ?? "CAUCASIAN"}
-                onChange={(event) => void saveReferencePopulation(event.target.value as MyopiaReferencePopulation)}
-                disabled={busy !== null}
-                aria-label="Reference curve"
-                aria-describedby="eye-growth-reference-curve-help eye-growth-status-message"
-                className="mt-1 block h-9 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)] disabled:opacity-50"
-              >
-                <option value="CAUCASIAN">European (default)</option>
-                <option value="ASIAN">Asian</option>
-              </select>
-              <span id="eye-growth-reference-curve-help" className="mt-1 block leading-4">
-                Select a published comparison curve. This does not record patient demographics.
-              </span>
-            </label>
           </div>
-          <div className="mt-4 grid gap-2 lg:grid-cols-[70px_1fr_1fr]">
-            <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Eye</div>
-            <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Axial length (mm)</div>
-            <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Corneal radius (mm, optional)</div>
-            {(["OD", "OS"] as const).map((eye) => (
-              <div key={eye} className="contents">
-                <div className="self-center text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
-                <input
-                  type="number"
-                  min="18"
-                  max="32"
-                  step="0.01"
-                  value={eyes[eye].axialLength}
-                  onChange={(event) => setEyes((current) => ({
-                    ...current,
-                    [eye]: { ...current[eye], axialLength: event.target.value },
-                  }))}
-                  aria-label={`${eye} axial length in millimeters`}
-                  className="h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
-                />
-                <div>
-                  <input
-                    type="number"
-                    min="5"
-                    max="12"
-                    step="0.01"
-                    value={eyes[eye].cornealRadius}
-                    onChange={(event) => {
-                      setEyes((current) => ({
-                        ...current,
-                        [eye]: { ...current[eye], cornealRadius: event.target.value },
-                      }));
-                      setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
-                    }}
-                    aria-label={`${eye} corneal radius in millimeters`}
-                    aria-invalid={cornealRadiusErrors[eye] ? true : undefined}
-                    aria-describedby={cornealRadiusErrors[eye] ? `eye-growth-corneal-radius-${eye}-error` : undefined}
-                    className="h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
-                  />
-                  {cornealRadiusErrors[eye] && (
-                    <div
-                      id={`eye-growth-corneal-radius-${eye}-error`}
-                      aria-live="polite"
-                      className="mt-1 text-xs text-red-200"
-                    >
-                      {cornealRadiusErrors[eye]}
+          <div className="mt-4">
+            <MethodField
+              label="Biometry method"
+              renderValueControl={() => (
+                <div className="grid gap-2 lg:grid-cols-[70px_1fr_1fr]">
+                  <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Eye</div>
+                  <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Axial length (mm)</div>
+                  <div className="hidden text-xs font-medium uppercase tracking-wide text-[color:var(--odos-muted)] lg:block">Corneal radius (mm, optional)</div>
+                  {(["OD", "OS"] as const).map((eye) => (
+                    <div key={eye} className="contents">
+                      <div className="self-center text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
+                      <input
+                        type="number"
+                        min="18"
+                        max="32"
+                        step="0.01"
+                        value={eyes[eye].axialLength}
+                        onChange={(event) => setEyes((current) => ({
+                          ...current,
+                          [eye]: { ...current[eye], axialLength: event.target.value },
+                        }))}
+                        aria-label={`${eye} axial length in millimeters`}
+                        className="h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
+                      />
+                      <div>
+                        <input
+                          type="number"
+                          min="5"
+                          max="12"
+                          step="0.01"
+                          value={eyes[eye].cornealRadius}
+                          onChange={(event) => {
+                            setEyes((current) => ({
+                              ...current,
+                              [eye]: { ...current[eye], cornealRadius: event.target.value },
+                            }));
+                            setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
+                          }}
+                          aria-label={`${eye} corneal radius in millimeters`}
+                          aria-invalid={cornealRadiusErrors[eye] ? true : undefined}
+                          aria-describedby={cornealRadiusErrors[eye] ? `eye-growth-corneal-radius-${eye}-error` : undefined}
+                          className="h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
+                        />
+                        {cornealRadiusErrors[eye] && (
+                          <div
+                            id={`eye-growth-corneal-radius-${eye}-error`}
+                            aria-live="polite"
+                            className="mt-1 text-xs text-red-200"
+                          >
+                            {cornealRadiusErrors[eye]}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            ))}
+              )}
+              methodValue={biometryMethod}
+              methodOptions={[
+                { value: "OPTICAL_BIOMETRY", label: "Optical biometry" },
+                { value: "ULTRASOUND_A_SCAN", label: "Ultrasound A-scan" },
+              ]}
+              onMethodChange={(method) => setBiometryMethod(method as typeof biometryMethod)}
+              methodAriaLabel="Biometry method"
+            />
           </div>
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="text-xs text-[color:var(--odos-muted)]">
-              Biometry method
-              <select
-                value={biometryMethod}
-                onChange={(event) => setBiometryMethod(event.target.value as typeof biometryMethod)}
-                className="mt-1 block h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
-              >
-                <option value="OPTICAL_BIOMETRY">Optical biometry</option>
-                <option value="ULTRASOUND_A_SCAN">Ultrasound A-scan</option>
-              </select>
-            </label>
             <label className="min-w-56 flex-1 text-xs text-[color:var(--odos-muted)]">
               Instrument (optional)
               <input
@@ -280,12 +265,28 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
             </button>
           </div>
           <div className="mt-5">
-            <AxialGrowthChart
-              readings={history?.readings ?? []}
-              growthRates={history?.growthRates ?? []}
-              referenceDataset={history?.referenceDataset ?? null}
-              noReferenceMessage={history?.noReferenceMessage ?? null}
+            <MethodField
+              label="Reference curve"
+              renderValueControl={() => (
+                <AxialGrowthChart
+                  readings={history?.readings ?? []}
+                  growthRates={history?.growthRates ?? []}
+                  referenceDataset={history?.referenceDataset ?? null}
+                  noReferenceMessage={history?.noReferenceMessage ?? null}
+                />
+              )}
+              methodValue={history?.referencePopulation ?? "CAUCASIAN"}
+              methodOptions={[
+                { value: "CAUCASIAN", label: "European (default)" },
+                { value: "ASIAN", label: "Asian" },
+              ]}
+              onMethodChange={(referencePopulation) => void saveReferencePopulation(referencePopulation as MyopiaReferencePopulation)}
+              methodAriaLabel="Reference curve"
+              disabled={busy !== null}
             />
+            <span id="eye-growth-reference-curve-help" className="mt-1 block text-xs leading-4 text-[color:var(--odos-muted)]">
+              Select a published comparison curve. This does not record patient demographics.
+            </span>
           </div>
         </div>
         <div id="eye-growth-status-message" aria-live="polite" className="mt-5 min-h-10">

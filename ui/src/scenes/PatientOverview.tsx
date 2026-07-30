@@ -17,6 +17,7 @@ import { CreditBankDepositSheet } from "../components/commercial/CreditBankDepos
 import { SaleSheet } from "../components/commercial/SaleSheet";
 import { SeriesTrackerPanel } from "../components/series-tracker/SeriesTrackerPanel";
 import { PatientProgramPanels } from "../components/series-tracker/PatientProgramPanels";
+import { OdosSelect } from "../components/inputs/OdosSelect";
 import {
   findLatestActiveVisionPrescription,
   opticalOrderPath,
@@ -256,15 +257,22 @@ export function PatientOverview({
                 <FilterButton active={filter === "eye-exams"} onClick={() => applyFilter("eye-exams")}>Eye exams</FilterButton>
                 <FilterButton active={filter === "office-visits"} onClick={() => applyFilter("office-visits")}>Office visits</FilterButton>
                 <label>By diagnosis
-                  <select value={diagnosisFilter} onChange={(event) => {
-                    const value = event.target.value;
-                    setDiagnosisFilter(value);
-                    const diagnosis = overview.diagnosisChoices.find((choice) => `${choice.system}|${choice.code}` === value);
-                    void applyFilter(filter, diagnosis ?? null);
-                  }}>
-                    <option value="">All diagnoses</option>
-                    {overview.diagnosisChoices.map((choice) => <option key={`${choice.system}|${choice.code}`} value={`${choice.system}|${choice.code}`}>{choice.name}</option>)}
-                  </select>
+                  <OdosSelect
+                    value={diagnosisFilter}
+                    options={[
+                      { value: "", label: "All diagnoses" },
+                      ...overview.diagnosisChoices.map((choice) => ({
+                        value: `${choice.system}|${choice.code}`,
+                        label: choice.name,
+                      })),
+                    ]}
+                    onChange={(value) => {
+                      setDiagnosisFilter(value);
+                      const diagnosis = overview.diagnosisChoices.find((choice) => `${choice.system}|${choice.code}` === value);
+                      void applyFilter(filter, diagnosis ?? null);
+                    }}
+                    ariaLabel="By diagnosis"
+                  />
                 </label>
                 <span className="odos-ledger-query-note">Live FHIR query</span>
               </div>

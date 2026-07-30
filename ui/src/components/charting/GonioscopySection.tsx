@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -147,12 +148,15 @@ export function GonioscopySection({ patientReference, encounterReference, onSave
                           row?.entryMode === "quadrant-specific" ? "border-[color:var(--odos-accent-border)] bg-[color:var(--odos-accent-tint-hi)]" : "border-[color:var(--odos-line)]",
                         ].join(" ")}>
                           <span className="capitalize text-[color:var(--odos-muted)]">{quadrant}</span>
-                          <select aria-label={`${eye} ${quadrant}`} value={row?.value ?? ""}
-                            onChange={(event) => event.target.value && setQuadrant(eye, quadrant, event.target.value as Structure)}
-                            className="h-9 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-2 text-[color:var(--odos-text)]">
-                            <option value="">Select</option>
-                            {OPTIONS.map((value) => <option key={value} value={value}>{value.toUpperCase()}</option>)}
-                          </select>
+                          <OdosSelect
+                            ariaLabel={`${eye} ${quadrant}`}
+                            value={row?.value ?? ""}
+                            options={[
+                              { value: "", label: "Select" },
+                              ...OPTIONS.map((value) => ({ value, label: value.toUpperCase() })),
+                            ]}
+                            onChange={(value) => value && setQuadrant(eye, quadrant, value as Structure)}
+                          />
                         </label>
                       );
                     })}

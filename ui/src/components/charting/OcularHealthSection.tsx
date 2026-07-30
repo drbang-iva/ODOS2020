@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
@@ -280,10 +281,17 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
         {grade.valueType === "number" ? <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
           <input type="number" value={capture.grades?.[grade.localCode] ?? ""} min={grade.min} max={grade.max} step={grade.step ?? "any"} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none" />
           {grade.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{grade.unit}</span>}
-        </div> : <select value={capture.grades?.[grade.localCode] ?? defaultGradeValue(grade)} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="w-full rounded border border-white/15 bg-bg-deep px-3 py-2 text-sm text-white outline-none focus:border-brand">
-          {defaultGradeValue(grade) === "" && <option value="">Select</option>}
-          {(grade.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-        </select>}
+        </div> : <OdosSelect
+          value={String(capture.grades?.[grade.localCode] ?? defaultGradeValue(grade))}
+          options={[
+            ...(defaultGradeValue(grade) === "" ? [{ value: "", label: "Select" }] : []),
+            ...(grade.options ?? [])
+              .filter((option) => option.active)
+              .map((option) => ({ value: option.code, label: option.display })),
+          ]}
+          onChange={(value) => onGrade(grade.localCode, value)}
+          ariaLabel={grade.display}
+        />}
       </label>)}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-3">

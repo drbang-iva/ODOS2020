@@ -377,17 +377,27 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
                   onChange={(structure) => setRefinement({ ...refinement, structure })}
                 />
               </div>
-              <select aria-label="OCT laterality" className="sidebar-input" value={refinement.laterality} onChange={(event) => setRefinement({ ...refinement, laterality: event.target.value as typeof refinement.laterality })}>
-                <option value="">Laterality not recorded</option>
-                <option value="OD">Right eye (OD)</option>
-                <option value="OS">Left eye (OS)</option>
-                <option value="OU">Both eyes (OU)</option>
-                <option value="UNKNOWN">Unknown eye</option>
-              </select>
-              <select aria-label="Refinement confidence" className="sidebar-input" value={refinement.confidence} onChange={(event) => setRefinement({ ...refinement, confidence: event.target.value as typeof refinement.confidence })}>
-                <option value="clinician-confirmed">Clinician confirmed</option>
-                <option value="provisional">Provisional</option>
-              </select>
+              <OdosSelect
+                ariaLabel="OCT laterality"
+                value={refinement.laterality}
+                options={[
+                  { value: "", label: "Laterality not recorded" },
+                  { value: "OD", label: "Right eye (OD)" },
+                  { value: "OS", label: "Left eye (OS)" },
+                  { value: "OU", label: "Both eyes (OU)" },
+                  { value: "UNKNOWN", label: "Unknown eye" },
+                ]}
+                onChange={(laterality) => setRefinement({ ...refinement, laterality: laterality as typeof refinement.laterality })}
+              />
+              <OdosSelect
+                ariaLabel="Refinement confidence"
+                value={refinement.confidence}
+                options={[
+                  { value: "clinician-confirmed", label: "Clinician confirmed" },
+                  { value: "provisional", label: "Provisional" },
+                ]}
+                onChange={(confidence) => setRefinement({ ...refinement, confidence: confidence as typeof refinement.confidence })}
+              />
             </div>
             <div className="mt-3 flex gap-2">
               <button type="button" className="sidebar-button" disabled={refining || !refinement.structure.trim()} onClick={() => void saveRefinement()}>{refining ? "Saving…" : "Save refinement"}</button>
@@ -431,9 +441,14 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
               <label className="text-sm text-[color:var(--odos-muted)]">
                 Artifact type
-                <select aria-label="Artifact type" className="sidebar-input mt-2" value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
-                  {CATEGORY_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
+                <div className="mt-2">
+                  <OdosSelect
+                    ariaLabel="Artifact type"
+                    value={category}
+                    options={CATEGORY_OPTIONS.map(([value, label]) => ({ value, label }))}
+                    onChange={(value) => setCategory(value as typeof category)}
+                  />
+                </div>
               </label>
               <label className="text-sm text-[color:var(--odos-muted)] lg:row-span-2">
                 Interpretation (optional)

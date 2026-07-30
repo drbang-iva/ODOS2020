@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import { PowerDropdown } from "./PowerDropdown";
 import { numericOptions } from "./power-options";
@@ -219,10 +220,16 @@ function FieldControl({ field, value, onChange }: { field: CustomFindingField; v
   return (
     <label>
       <span className="mb-1 block text-xs uppercase tracking-wide text-[color:var(--odos-faint)]">{field.display}</span>
-      <select disabled={needsSetup} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)] outline-none focus:border-brand disabled:cursor-not-allowed disabled:text-amber-100/75">
-        <option value="">{needsSetup ? "Needs practice setup" : "Select"}</option>
-        {options.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-      </select>
+      <OdosSelect
+        disabled={needsSetup}
+        value={value}
+        options={[
+          { value: "", label: needsSetup ? "Needs practice setup" : "Select" },
+          ...options.map((option) => ({ value: option.code, label: option.display })),
+        ]}
+        onChange={onChange}
+        ariaLabel={field.display}
+      />
     </label>
   );
 }
