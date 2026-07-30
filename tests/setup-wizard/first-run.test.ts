@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  conditionalCreateSetupResource,
   InMemorySetupPracticeAdapter,
   projectFromInitResponse,
   readSetupState,
@@ -27,6 +28,72 @@ test("setup accepts Medplum 5.1.8's direct Project response from Project/$init",
     projectFromInitResponse({ resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" }),
     { resourceType: "Project", id: "practice-project", name: "ODOS Test Practice" },
   );
+});
+
+test("setup conditional create reports whether this transaction created or resolved the resource", async () => {
+  let capturedIfNoneExist: string | undefined;
+  const created = await conditionalCreateSetupResource(
+    {
+      executeTransaction: async (bundle) => {
+        capturedIfNoneExist = bundle.entry?.[0]?.request?.ifNoneExist;
+        return {
+          resourceType: "Bundle",
+          type: "transaction-response",
+          entry: [{
+            resource: {
+              resourceType: "Organization",
+              id: "created-organization",
+              name: "ODOS Test Practice",
+            },
+            response: { status: "201 Created" },
+          }],
+        };
+      },
+      read: async () => {
+        throw new Error("created response should not require a read");
+      },
+    },
+    {
+      resourceType: "Organization",
+      name: "ODOS Test Practice",
+    },
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-organization|primary",
+  );
+
+  assert.equal(created.created, true);
+  assert.equal(created.resource.id, "created-organization");
+  assert.equal(
+    capturedIfNoneExist,
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-organization|primary",
+  );
+
+  const resolved = await conditionalCreateSetupResource(
+    {
+      executeTransaction: async () => ({
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: [{
+          response: {
+            status: "200 OK",
+            location: "Location/existing-location/_history/3",
+          },
+        }],
+      }),
+      read: async (_resourceType, id) => ({
+        resourceType: "Location",
+        id,
+        status: "active",
+      }),
+    },
+    {
+      resourceType: "Location",
+      status: "active",
+    },
+    "identifier=https://odos2020.com/fhir/NamingSystem/setup-practice-location|main",
+  );
+
+  assert.equal(resolved.created, false);
+  assert.equal(resolved.resource.id, "existing-location");
 });
 
 test("v0.5d setup wizard creates all five policies while granting the first human admin three roles with front-desk primary", async () => {

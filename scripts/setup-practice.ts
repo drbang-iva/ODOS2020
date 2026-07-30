@@ -703,14 +703,15 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     if (matches.length > 1) {
       throw new Error(`Expected at most one practice Organization; found ${matches.length}.`);
     }
-    const organization = matches[0] ?? await this.client().create<Organization>(
+    if (matches[0]) {
+      return { organization: matches[0], created: false };
+    }
+    const result = await conditionalCreateSetupResource(
+      this.client(),
       buildPracticeOrganization(config),
-      {
-        "If-None-Exist":
-          `identifier=${SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM}|${PRACTICE_ORGANIZATION_IDENTIFIER_VALUE}`,
-      },
+      `identifier=${SETUP_PRACTICE_ORGANIZATION_IDENTIFIER_SYSTEM}|${PRACTICE_ORGANIZATION_IDENTIFIER_VALUE}`,
     );
-    return { organization, created: matches.length === 0 };
+    return { organization: result.resource, created: result.created };
   }
 
   async createPracticeLocation(input: {
@@ -733,14 +734,15 @@ class LiveSetupPracticeAdapter implements SetupPracticeAdapter {
     if (matches.length > 1) {
       throw new Error(`Expected at most one main-office Location; found ${matches.length}.`);
     }
-    const location = matches[0] ?? await this.client().create<Location>(
+    if (matches[0]) {
+      return { location: matches[0], created: false };
+    }
+    const result = await conditionalCreateSetupResource(
+      this.client(),
       buildPracticeLocation(input.organization),
-      {
-        "If-None-Exist":
-          `identifier=${SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM}|${DEFAULT_SCHEDULING_OFFICE_ID}`,
-      },
+      `identifier=${SETUP_PRACTICE_LOCATION_IDENTIFIER_SYSTEM}|${DEFAULT_SCHEDULING_OFFICE_ID}`,
     );
-    return { location, created: matches.length === 0 };
+    return { location: result.resource, created: result.created };
   }
 
   async createSchedulingFoundation(input: {
@@ -985,6 +987,49 @@ function buildFirstSchedulingConfig(scheduleId: string, timezoneOffset?: string)
   });
 }
 
+export async function conditionalCreateSetupResource<
+  T extends Organization | Location,
+>(
+  fhir: Pick<MedplumClient, "executeTransaction" | "read">,
+  resource: T,
+  ifNoneExist: string,
+): Promise<{ resource: T; created: boolean }> {
+  const response = await fhir.executeTransaction({
+    resourceType: "Bundle",
+    type: "transaction",
+    entry: [{
+      resource,
+      request: {
+        method: "POST",
+        url: resource.resourceType,
+        ifNoneExist,
+      },
+    }],
+  });
+  const entry = response.entry?.[0];
+  const status = Number(entry?.response?.status?.split(" ", 1)[0]);
+  if (status !== 200 && status !== 201) {
+    throw new Error(
+      `Setup wizard conditional ${resource.resourceType} create returned status ${
+        entry?.response?.status ?? "missing"
+      }.`,
+    );
+  }
+  if (entry?.resource?.resourceType === resource.resourceType && entry.resource.id) {
+    return { resource: entry.resource as T, created: status === 201 };
+  }
+  const id = conditionalCreateResponseId(entry?.response?.location, resource.resourceType);
+  if (!id) {
+    throw new Error(
+      `Setup wizard conditional ${resource.resourceType} create returned no resource id.`,
+    );
+  }
+  return {
+    resource: await fhir.read<T>(resource.resourceType, id),
+    created: status === 201,
+  };
+}
+
 function buildPracticeOrganization(config: SetupPracticeConfig): Organization {
   return {
     resourceType: "Organization",
@@ -1011,6 +1056,13 @@ function buildPracticeLocation(organization: Organization): Location {
       value: DEFAULT_SCHEDULING_OFFICE_ID,
     }],
   };
+}
+
+function conditionalCreateResponseId(
+  location: string | undefined,
+  resourceType: string,
+): string | undefined {
+  return location?.match(new RegExp(`(?:^|/)${resourceType}/([^/?]+)`))?.[1];
 }
 
 function hasIdentifier(
