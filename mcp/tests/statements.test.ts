@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type {
+  Account,
   Basic,
   Bundle,
   Claim,
@@ -11,6 +12,7 @@ import type {
   Practitioner,
   PractitionerRole,
   Resource,
+  RelatedPerson,
   Task,
 } from "@medplum/fhirtypes";
 import { ODOS_CLAIM_CHARGE_ITEM_EXTENSION_URL } from "../src/claims/claimmd-fhir.js";
@@ -159,6 +161,66 @@ test("insurance detail passes through linked Claim diagnoses, ERA adjustments, p
   assert.deepEqual(order?.lines[0].insuranceAdjustments, [{ group: "INS", code: "SOURCE", label: "adjustment INS SOURCE", amountCents: 2_500 }]);
   assert.deepEqual(order?.lines[0].patientAdjustments, [{ group: "PR", code: "SOURCE", label: "Source patient reason", amountCents: 2_500 }]);
   assert.deepEqual(order?.patientPayments, [{ paymentReference: "PaymentReconciliation/pay-1", date: "2026-07-02", amountCents: 500 }]);
+});
+
+test("minor statements mail to the Account guarantor while a self-responsible adult mails to themselves", async () => {
+  const minor = {
+    ...patient("minor", "Jamie Doe"),
+    birthDate: "2015-01-02",
+    address: [{ use: "home" as const, line: ["1 Minor St"], city: "Greenville", state: "SC", postalCode: "29601" }],
+  };
+  const guardian: RelatedPerson = {
+    resourceType: "RelatedPerson",
+    id: "guardian",
+    active: true,
+    patient: { reference: "Patient/minor" },
+    name: [{ use: "official", given: ["Pat"], family: "Doe" }],
+    address: [{ use: "home", line: ["2 Parent St"], city: "Greenville", state: "SC", postalCode: "29602" }],
+    extension: [{
+      url: "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+      valueBoolean: true,
+    }],
+  };
+  const minorFixture = fakeFhir({
+    patients: [minor],
+    invoices: [invoice("minor-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("minor-account", "minor", "RelatedPerson/guardian")],
+    relatedPeople: [guardian],
+  });
+  const minorResult = await handleGeneratePatientStatementRequest(statementDeps(minorFixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/minor" },
+  });
+  const minorStatement = (minorResult.body as StatementRunResult).statements[0];
+  assert.equal(minorStatement.detail?.header.recipientName, "Pat Doe");
+  assert.deepEqual(minorStatement.detail?.header.recipientAddress, {
+    lines: ["2 Parent St"],
+    cityStatePostal: "Greenville, SC 29602",
+  });
+  assert.deepEqual(minorStatement.detail?.header.patientAddress, {
+    lines: ["1 Minor St"],
+    cityStatePostal: "Greenville, SC 29601",
+  });
+
+  const adult = patientWithAddress();
+  adult.birthDate = "1980-01-02";
+  const adultFixture = fakeFhir({
+    patients: [adult],
+    invoices: [invoice("adult-invoice", "p1", 10_000)],
+    payments: [],
+    accounts: [patientAccount("adult-account", "p1", "Patient/p1")],
+  });
+  const adultResult = await handleGeneratePatientStatementRequest(statementDeps(adultFixture.fhir), {
+    authHeader: "Bearer good",
+    body: { patientReference: "Patient/p1" },
+  });
+  const adultStatement = (adultResult.body as StatementRunResult).statements[0];
+  assert.equal(adultStatement.detail?.header.recipientName, "Alex Rivera");
+  assert.deepEqual(adultStatement.detail?.header.recipientAddress, {
+    lines: ["10 Main St"],
+    cityStatePostal: "Raleigh, NC 27601",
+  });
 });
 
 test("a pre-seam Claim degrades to an invoice-only Order without changing the T0 balance", () => {
@@ -437,6 +499,8 @@ function fakeFhir(
     practitioners?: Practitioner[];
     practitionerRoles?: PractitionerRole[];
     basics?: Basic[];
+    accounts?: Account[];
+    relatedPeople?: RelatedPerson[];
   },
   options: { failTransactionAt?: number; failCleanup?: boolean } = {},
 ) {
@@ -453,8 +517,10 @@ function fakeFhir(
                 : resourceType === "Practitioner" ? input.practitioners ?? []
                   : resourceType === "PractitionerRole" ? input.practitionerRoles ?? []
                     : resourceType === "Basic" ? input.basics ?? []
-                      : resourceType === "Task" ? storedTasks
-                        : [];
+                      : resourceType === "Account" ? input.accounts ?? []
+                        : resourceType === "RelatedPerson" ? input.relatedPeople ?? []
+                          : resourceType === "Task" ? storedTasks
+                            : [];
       return { resourceType: "Bundle", type: "searchset", entry: rows.map((resource) => ({ resource: structuredClone(resource) as T })) };
     },
     executeTransaction: async (bundle: Bundle): Promise<Bundle> => {
@@ -532,6 +598,20 @@ function patientWithAddress(): Patient {
   return {
     ...patient("p1", "Alex Rivera"),
     address: [{ use: "home", line: ["10 Main St"], city: "Raleigh", state: "NC", postalCode: "27601" }],
+  };
+}
+
+function patientAccount(
+  id: string,
+  patientId: string,
+  guarantorReference: string,
+): Account {
+  return {
+    resourceType: "Account",
+    id,
+    status: "active",
+    subject: [{ reference: `Patient/${patientId}` }],
+    guarantor: [{ party: { reference: guarantorReference }, onHold: false }],
   };
 }
 

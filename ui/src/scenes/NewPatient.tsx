@@ -5,15 +5,26 @@ import {
   createPatient,
   emptyPatientDemographics,
   registerPatient,
-  validatePatientDemographics,
+  validatePatientRegistration,
   type PatientDemographicsDraft,
 } from "../lib/patient-registration";
+import { fhir } from "../lib/fhir";
+import {
+  emptyRelatedResponsibleParty,
+  emptySelfResponsibleParty,
+  type ResponsiblePartyDraft,
+  type ResponsiblePartyRelationship,
+} from "../lib/patient-identity";
 import { patientName } from "../lib/scheduler-appointment-ui";
 import { openPatientOverview, useViewState } from "../lib/view-state";
 
 export function NewPatient() {
   const setView = useViewState((state) => state.setView);
+  const today = new Date().toISOString().slice(0, 10);
   const [draft, setDraft] = useState<PatientDemographicsDraft>(() => emptyPatientDemographics());
+  const [responsibleParties, setResponsibleParties] = useState<ResponsiblePartyDraft[]>(() => [
+    emptySelfResponsibleParty("self"),
+  ]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [duplicates, setDuplicates] = useState<Patient[]>([]);
   const [saving, setSaving] = useState(false);
@@ -31,13 +42,14 @@ export function NewPatient() {
   };
 
   const submit = async () => {
-    const nextErrors = validatePatientDemographics(draft);
+    const registrationOptions = { responsibleParties, today };
+    const nextErrors = validatePatientRegistration(draft, registrationOptions);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setSaving(true);
     setSaveError(undefined);
     try {
-      const result = await registerPatient(draft);
+      const result = await registerPatient(draft, fhir, registrationOptions);
       if (result.kind === "duplicates") {
         setDuplicates(result.patients);
       } else {
@@ -54,7 +66,7 @@ export function NewPatient() {
     setSaving(true);
     setSaveError(undefined);
     try {
-      openPatient(await createPatient(draft));
+      openPatient(await createPatient(draft, fhir, { responsibleParties, today }));
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -71,6 +83,15 @@ export function NewPatient() {
         </header>
         {saveError && <div role="alert" className="mb-4 rounded border border-red-400/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">{saveError}</div>}
         <PatientDemographicsFields draft={draft} errors={errors} onChange={(next) => { setDraft(next); setDuplicates([]); }} />
+        <ResponsiblePartiesEditor
+          parties={responsibleParties}
+          errors={errors}
+          today={today}
+          onChange={(next) => {
+            setResponsibleParties(next);
+            setDuplicates([]);
+          }}
+        />
         <div className="mt-6 flex justify-end">
           <button type="button" disabled={saving} onClick={() => void submit()} className="rounded bg-blue-500 px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{saving ? "Checking…" : "Create patient"}</button>
         </div>
@@ -107,4 +128,100 @@ export function DuplicatePatientWarning({
       </div>
     </section>
   </div>;
+}
+
+function ResponsiblePartiesEditor({
+  parties,
+  errors,
+  today,
+  onChange,
+}: {
+  parties: readonly ResponsiblePartyDraft[];
+  errors: Record<string, string>;
+  today: string;
+  onChange: (parties: ResponsiblePartyDraft[]) => void;
+}) {
+  const update = (index: number, patch: Partial<ResponsiblePartyDraft>) => {
+    onChange(parties.map((party, partyIndex) => partyIndex === index ? { ...party, ...patch } : party));
+  };
+  const remove = (index: number) => onChange(parties.filter((_, partyIndex) => partyIndex !== index));
+  return (
+    <fieldset className="mt-6 grid gap-4 rounded-lg border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4">
+      <legend className="px-2 text-sm font-semibold text-blue-200">Responsible parties</legend>
+      <p className="text-sm text-[color:var(--odos-muted)]">Financial responsibility, consent authority, and insurance subscriber status are separate roles. Insurance subscriber linkage stays in Coverage.</p>
+      {errors.responsibleParties && <div role="alert" className="rounded border border-red-400/40 bg-red-950/40 px-3 py-2 text-sm text-red-200">{errors.responsibleParties}</div>}
+      {parties.map((party, index) => (
+        <section key={party.localId} className="grid gap-4 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface-2)] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <strong>{party.kind === "self" ? "Patient (self)" : `Related person ${index + 1}`}</strong>
+            <button type="button" onClick={() => remove(index)} className="rounded border border-[color:var(--odos-line-2)] px-3 py-1.5 text-sm text-[color:var(--odos-muted)]">Remove</button>
+          </div>
+          {party.kind === "person" && <>
+            <div className="grid gap-4 md:grid-cols-3">
+              <ResponsibleInput label="First name" value={party.firstName} error={partyError(errors, index, "firstName")} onChange={(value) => update(index, { firstName: value })} />
+              <ResponsibleInput label="Middle name" value={party.middleName} onChange={(value) => update(index, { middleName: value })} />
+              <ResponsibleInput label="Last name" value={party.lastName} error={partyError(errors, index, "lastName")} onChange={(value) => update(index, { lastName: value })} />
+              <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Relationship<select className="scheduler-input" value={party.relationship} onChange={(event) => update(index, { relationship: event.target.value as ResponsiblePartyRelationship })}>
+                <option value="parent">Parent</option>
+                <option value="legal-guardian">Legal guardian</option>
+                <option value="spouse">Spouse</option>
+                <option value="other">Other</option>
+              </select></label>
+              <ResponsibleInput label="Phone" value={party.phone} onChange={(value) => update(index, { phone: value })} />
+              <ResponsibleInput label="Mailing address" value={party.address} error={partyError(errors, index, "address")} onChange={(value) => update(index, { address: value })} />
+              <ResponsibleInput label="City" value={party.city} error={partyError(errors, index, "city")} onChange={(value) => update(index, { city: value })} />
+              <ResponsibleInput label="State" value={party.state} error={partyError(errors, index, "state")} onChange={(value) => update(index, { state: value })} />
+              <ResponsibleInput label="ZIP / postal code" value={party.postalCode} error={partyError(errors, index, "postalCode")} onChange={(value) => update(index, { postalCode: value })} />
+              <ResponsibleInput label="Effective date" type="date" value={party.effectiveDate} error={partyError(errors, index, "effectiveDate")} onChange={(value) => update(index, { effectiveDate: value })} />
+              <ResponsibleInput label="End date" type="date" value={party.endDate} error={partyError(errors, index, "endDate")} onChange={(value) => update(index, { endDate: value })} />
+            </div>
+            <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">Court order / custody notes<textarea className="scheduler-input min-h-24" value={party.courtOrderNotes} onChange={(event) => update(index, { courtOrderNotes: event.target.value })} /></label>
+          </>}
+          <div className="flex flex-wrap gap-5 text-sm text-[color:var(--odos-muted)]">
+            <ResponsibleCheckbox label="Financially responsible" checked={party.financialResponsible} onChange={(checked) => update(index, { financialResponsible: checked })} />
+            {party.kind === "person" && <>
+              <ResponsibleCheckbox label="Consent authority" checked={party.consentAuthority} onChange={(checked) => update(index, { consentAuthority: checked })} />
+              <ResponsibleCheckbox label="Primary related person" checked={party.primary} onChange={(checked) => update(index, { primary: checked })} />
+            </>}
+          </div>
+        </section>
+      ))}
+      <div className="flex flex-wrap gap-2">
+        {!parties.some((party) => party.kind === "self") && <button type="button" onClick={() => onChange([...parties, emptySelfResponsibleParty("self")])} className="rounded border border-[color:var(--odos-line-2)] px-3 py-2 text-sm">Add patient as self</button>}
+        <button type="button" onClick={() => onChange([...parties, emptyRelatedResponsibleParty(crypto.randomUUID(), today)])} className="rounded border border-blue-300/30 px-3 py-2 text-sm text-blue-100">Add related person</button>
+      </div>
+    </fieldset>
+  );
+}
+
+function ResponsibleInput({
+  label,
+  type = "text",
+  value,
+  error,
+  onChange,
+}: {
+  label: string;
+  type?: string;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}) {
+  return <label className="grid gap-1 text-sm font-medium text-[color:var(--odos-muted)]">{label}<input className="scheduler-input" type={type} value={value} aria-invalid={Boolean(error)} onChange={(event) => onChange(event.target.value)} />{error && <span className="text-sm text-red-200">{error}</span>}</label>;
+}
+
+function ResponsibleCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>;
+}
+
+function partyError(errors: Record<string, string>, index: number, field: string): string | undefined {
+  return errors[`responsibleParties.${index}.${field}`];
 }

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  Account,
   Bundle,
   BundleEntry,
   Claim,
@@ -9,6 +10,7 @@ import type {
   PaymentReconciliation,
   Practitioner,
   PractitionerRole,
+  RelatedPerson,
   Task,
   TaskInput,
   TaskOutput,
@@ -42,6 +44,9 @@ export const PATIENT_STATEMENT_CODE = "patient-statement";
 export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/statement-run";
 export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-output";
 export const STATEMENT_TRANSACTION_CHILD_LIMIT = 40;
+const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
+const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL =
+  "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
 
 const RUN_OUTPUTS = {
   generated: "generated-count",
@@ -73,6 +78,8 @@ export interface StatementHeader {
   providerNpi?: string;
   providerLicense?: string;
   patientAddress?: StatementAddress;
+  recipientName?: string;
+  recipientAddress?: StatementAddress;
 }
 
 export interface StatementAdjustmentRow {
@@ -333,6 +340,7 @@ export function addStatementDetail(input: {
   claimResponses: ClaimResponse[];
   practitioners: Practitioner[];
   practitionerRoles: PractitionerRole[];
+  recipient?: Patient | RelatedPerson;
 }): StatementSnapshot {
   const claims = new Map<string, Claim>(input.claims.flatMap((claim) => claim.id ? [[`Claim/${claim.id}`, claim] as const] : []));
   const practitioners = new Map(input.practitioners.flatMap((practitioner) =>
@@ -404,7 +412,13 @@ export function addStatementDetail(input: {
   return {
     ...input.snapshot,
     detail: {
-      header: statementHeader(input.patient, input.claims, practitioners, input.practitionerRoles),
+      header: statementHeader(
+        input.patient,
+        input.recipient ?? input.patient,
+        input.claims,
+        practitioners,
+        input.practitionerRoles,
+      ),
       orders,
     },
   };
@@ -551,11 +565,30 @@ async function runStatements(
     const patients = patientReferences.length === 0
       ? []
       : await searchAll<Patient>(fhir, "Patient", { _id: patientReferences.map(referenceId).join(",") });
+    const accounts = patientReferences.length === 0
+      ? []
+      : await searchAll<Account>(fhir, "Account", {
+          patient: patientReferences.map(referenceId).join(","),
+          status: "active",
+        });
+    const relatedPersonReferences = unique(accounts.flatMap((account) =>
+      (account.guarantor ?? []).flatMap((guarantor) =>
+        guarantor.party.reference?.startsWith("RelatedPerson/") ? [guarantor.party.reference] : [],
+      ),
+    ));
+    const relatedPeople = relatedPersonReferences.length === 0
+      ? []
+      : await searchAll<RelatedPerson>(fhir, "RelatedPerson", {
+          _id: relatedPersonReferences.map(localReferenceId).join(","),
+        });
     const [practitioners, practitionerRoles] = await Promise.all([
       claims.length > 0 ? searchAll<Practitioner>(fhir, "Practitioner", { active: "true" }) : Promise.resolve([]),
       claims.length > 0 ? searchAll<PractitionerRole>(fhir, "PractitionerRole", { active: "true" }) : Promise.resolve([]),
     ]);
     const patientByReference = new Map(patients.map((patient) => [patientReferenceOf(patient), patient]));
+    const relatedPersonByReference = new Map(relatedPeople.flatMap((person) =>
+      person.id ? [[`RelatedPerson/${person.id}`, person] as const] : [],
+    ));
     const statements: StatementSnapshot[] = [];
     const rejects: StatementRejectRow[] = [];
     let skippedZeroBalanceCount = 0;
@@ -575,6 +608,12 @@ async function runStatements(
         continue;
       }
       try {
+        const recipient = resolveStatementRecipient(
+          patient,
+          accounts,
+          relatedPersonByReference,
+          options.generatedAt.slice(0, 10),
+        );
         const snapshot = addStatementDetail({
           snapshot: addAccountCredit(
             buildStatementSnapshot({
@@ -593,6 +632,7 @@ async function runStatements(
           claimResponses: claimResponses.filter((response) => response.patient.reference === patientReference),
           practitioners,
           practitionerRoles,
+          recipient,
         });
         if (snapshot.balanceCents === 0) skippedZeroBalanceCount += 1;
         else statements.push(snapshot);
@@ -837,6 +877,7 @@ function claimLineRetailCents(item: ClaimItem): number {
 
 function statementHeader(
   patient: Patient,
+  recipient: Patient | RelatedPerson,
   claims: Claim[],
   practitioners: Map<string, Practitioner>,
   roles: PractitionerRole[],
@@ -857,6 +898,10 @@ function statementHeader(
   const providerNpi = practitioner?.identifier?.find((identifier) => /(?:^|[-/])npi$/i.test(identifier.system ?? ""))?.value;
   const providerLicense = practitioner?.qualification?.flatMap((qualification) => qualification.identifier ?? [])
     .find((identifier) => identifier.value)?.value;
+  const patientAddress = addressOf(patient.address?.find((address) => address.use === "home") ?? patient.address?.[0]);
+  const recipientAddress = addressOf(
+    recipient.address?.find((address) => address.use === "home") ?? recipient.address?.[0],
+  );
   return {
     practiceName,
     ...(practiceAddress ? { practiceAddress } : {}),
@@ -864,10 +909,79 @@ function statementHeader(
     ...(providerName ? { providerName } : {}),
     ...(providerNpi ? { providerNpi } : {}),
     ...(providerLicense ? { providerLicense } : {}),
-    ...(addressOf(patient.address?.find((address) => address.use === "home") ?? patient.address?.[0])
-      ? { patientAddress: addressOf(patient.address?.find((address) => address.use === "home") ?? patient.address?.[0]) }
-      : {}),
+    ...(patientAddress ? { patientAddress } : {}),
+    recipientName: personName(recipient),
+    ...(recipientAddress ? { recipientAddress } : {}),
   };
+}
+
+function resolveStatementRecipient(
+  patient: Patient,
+  accounts: readonly Account[],
+  relatedPeople: ReadonlyMap<string, RelatedPerson>,
+  onDate: string,
+): Patient | RelatedPerson {
+  const patientReference = patientReferenceOf(patient);
+  const patientAccounts = accounts.filter((account) =>
+    account.status === "active"
+    && account.subject?.some((subject) => subject.reference === patientReference),
+  );
+  const patientMrn = patient.identifier?.find((identifier) => identifier.system === ODOS_MRN_SYSTEM)?.value;
+  const matchingMrnAccounts = patientMrn
+    ? patientAccounts.filter((account) =>
+        account.identifier?.some((identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === patientMrn),
+      )
+    : [];
+  const candidates = matchingMrnAccounts.length > 0 ? matchingMrnAccounts : patientAccounts;
+  if (candidates.length === 0) {
+    if (!minorOn(patient.birthDate, onDate)) return patient;
+    throw new StatementValidationError(`${patientReference} is a minor without a patient Account guarantor.`);
+  }
+  if (candidates.length > 1) {
+    throw new StatementValidationError(`${patientReference} has multiple active patient Accounts.`);
+  }
+  const guarantors = (candidates[0].guarantor ?? []).filter((guarantor) =>
+    !guarantor.onHold
+    && (!guarantor.period?.start || guarantor.period.start <= onDate)
+    && (!guarantor.period?.end || guarantor.period.end >= onDate),
+  );
+  if (guarantors.length === 0) {
+    throw new StatementValidationError(`${patientReference} has no current Account guarantor.`);
+  }
+  const resolved: Array<Patient | RelatedPerson> = [];
+  for (const guarantor of guarantors) {
+    const reference = guarantor.party.reference;
+    if (reference === patientReference) {
+      resolved.push(patient);
+      continue;
+    }
+    const person = reference ? relatedPeople.get(reference) : undefined;
+    if (person?.active !== false && person) resolved.push(person);
+  }
+  if (resolved.length === 1) return resolved[0];
+  const primary = resolved.filter((recipient) =>
+    recipient.resourceType === "RelatedPerson"
+    && recipient.extension?.some(
+      (extension) =>
+        extension.url === RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL
+        && extension.valueBoolean === true,
+    ),
+  );
+  if (primary.length === 1) return primary[0];
+  throw new StatementValidationError(`${patientReference} does not have one unambiguous current Account guarantor.`);
+}
+
+function personName(person: Patient | RelatedPerson): string {
+  const name = person.name?.find((candidate) => candidate.use === "official") ?? person.name?.[0];
+  const label = name?.text ?? [name?.given?.join(" "), name?.family].filter(Boolean).join(" ");
+  return label || `${person.resourceType}/${person.id ?? "unknown"}`;
+}
+
+function minorOn(birthDate: string | undefined, onDate: string): boolean {
+  if (!birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate) || !/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
+    return false;
+  }
+  return `${String(Number(birthDate.slice(0, 4)) + 18)}${birthDate.slice(4)}` > onDate;
 }
 
 function humanName(practitioner: Practitioner | undefined): string | undefined {
@@ -1088,6 +1202,10 @@ function validDateTime(value: string): boolean {
 
 function referenceId(reference: string): string {
   return reference.slice("Patient/".length);
+}
+
+function localReferenceId(reference: string): string {
+  return reference.slice(reference.indexOf("/") + 1);
 }
 
 function unique(values: string[]): string[] {

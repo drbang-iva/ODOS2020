@@ -62,6 +62,8 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
         providerNpi: "1234567893",
         providerLicense: "OPT-1234",
         patientAddress: { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" },
+        recipientName: "Pat Rivera",
+        recipientAddress: { lines: ["12 Guarantor Ave"], cityStatePostal: "Raleigh, NC 27602" },
       },
       orders: [{
         invoiceReference: "Invoice/new",
@@ -97,6 +99,7 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
   assert.match(html, /Remit payment to/);
   assert.match(html, /NPI 1234567893/);
   assert.match(html, /License # OPT-1234/);
+  assert.match(html, /Mail to[\s\S]*Pat Rivera[\s\S]*12 Guarantor Ave[\s\S]*Raleigh, NC 27602/);
   assert.match(html, /PAY THIS AMOUNT[\s\S]*\$60\.00/);
   assert.match(html, /☐ VISA/);
   assert.match(html, /Card number/);
