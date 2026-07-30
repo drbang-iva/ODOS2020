@@ -10,6 +10,7 @@ import {
   suggestImagePair,
   type LongitudinalImageSummary,
 } from "../src/components/LongitudinalImagingCard";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { ProcedureDefinitionsSettings } from "../src/scenes/settings/ProcedureDefinitionsSettings";
 
 const DATA = "cGhvdG8=";
@@ -21,8 +22,53 @@ test("chart-level longitudinal imaging renders timeline, compare, capture, and c
   assert.match(html, /Timeline/);
   assert.match(html, /Compare/);
   assert.match(html, /Capture or import photo/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Anatomical structure"/);
+  assert.match(html, /maxLength="120"/);
   assert.match(html, /capture="environment"/);
   assert.match(html, /Documented cosmetic consent is checked before capture/);
+});
+
+test("longitudinal structure combobox accepts arbitrary typed labels and suggests prior patient structures", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).includes("procedure-definitions")) return definitionsResponse();
+    return photosResponse([
+      image("prior-one", "CarePlan/series-1", "Meibography OS"),
+      image("prior-two", "CarePlan/series-2", "Inferior cornea OD"),
+    ]);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<LongitudinalImagingCard patientReference="Patient/p1" />);
+      await Promise.resolve();
+    });
+    const select = renderer.root.find((node) =>
+      node.type === OdosSelect && node.props.ariaLabel === "Anatomical structure"
+    );
+    assert.deepEqual(
+      select.props.options.map((option: { value: string; label: string }) => [option.value, option.label]),
+      [
+        ["Meibography OS", "Meibography OS"],
+        ["Inferior cornea OD", "Inferior cornea OD"],
+        ["Lid margin", "Lid margin"],
+      ],
+    );
+    const input = renderer.root.find((node) =>
+      node.type === "input" && node.props["aria-label"] === "Anatomical structure"
+    );
+    assert.equal(input.props.maxLength, 120);
+    act(() => input.props.onChange({ target: { value: "Bulbar conjunctiva" } }));
+    assert.equal(
+      renderer.root.find((node) =>
+        node.type === "input" && node.props["aria-label"] === "Anatomical structure"
+      ).props.value,
+      "Bulbar conjunctiva",
+    );
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("procedure photo_posture controls the default viewing lens", () => {

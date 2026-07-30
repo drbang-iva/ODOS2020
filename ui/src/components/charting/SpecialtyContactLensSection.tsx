@@ -4,6 +4,7 @@ import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
+import { OdosSelect } from "../inputs/OdosSelect";
 import {
   CustomFieldEditor,
   type CustomFieldEditorValue,
@@ -663,10 +664,16 @@ function SelectField({ label, value, onChange, options, disabled = false }: {
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand disabled:opacity-45">
-        <option value="">Select</option>
-        {options.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-      </select>
+      <OdosSelect
+        value={value}
+        options={[
+          { value: "", label: "Select" },
+          ...options.map((option) => ({ value: option.code, label: option.display })),
+        ]}
+        onChange={onChange}
+        disabled={disabled}
+        ariaLabel={label}
+      />
     </label>
   );
 }

@@ -4,6 +4,7 @@ import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -318,12 +319,12 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                     {state.manualEntry ? (
                       <TextField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} inputMode="decimal" />
                     ) : (
-                      <SelectField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} options={baseCurveOptions} disabled={!state.product} />
+                      <NativeSelectField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} options={baseCurveOptions} disabled={!state.product} />
                     )}
                     {state.manualEntry ? (
                       <TextField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} inputMode="decimal" />
                     ) : (
-                      <SelectField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} />
+                      <NativeSelectField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} />
                     )}
                     <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
                     <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
@@ -405,6 +406,8 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+const FIELD_LABEL_CLASS = "mb-1 block text-xs uppercase tracking-widest text-white/35";
+
 function SelectField({ label, value, onChange, options, disabled = false }: {
   label: string;
   value: string;
@@ -414,7 +417,31 @@ function SelectField({ label, value, onChange, options, disabled = false }: {
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
+      <span className={FIELD_LABEL_CLASS}>{label}</span>
+      <OdosSelect
+        value={value}
+        options={[
+          { value: "", label: "Select" },
+          ...options.map((option) => ({ value: option.code, label: option.display })),
+        ]}
+        onChange={onChange}
+        disabled={disabled}
+        ariaLabel={label}
+      />
+    </label>
+  );
+}
+
+function NativeSelectField({ label, value, onChange, options, disabled = false }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: DefinitionOption[];
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className={FIELD_LABEL_CLASS}>{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}

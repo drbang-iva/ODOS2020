@@ -7,6 +7,7 @@ import {
   type SeriesProtocolDefinition,
   type SeriesTrackerView,
 } from "../../lib/series-tracker";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 export interface SeriesTrackerPanelApi {
   fetchSeries(patientReference: string): Promise<SeriesTrackerView[]>;
@@ -80,17 +81,15 @@ export function SeriesTrackerPanel({
         </div>
         {protocols.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="series-protocol-select">Treatment protocol</label>
-            <select
-              id="series-protocol-select"
-              className="h-9 rounded border border-white/15 bg-bg-deep px-3 text-xs text-white"
+            <OdosSelect
               value={selectedProtocolId}
-              onChange={(event) => setSelectedProtocolId(event.target.value)}
-            >
-              {protocols.filter((protocol) => protocol.active).map((protocol) => (
-                <option key={protocol.id} value={protocol.id}>{protocol.name}</option>
-              ))}
-            </select>
+              options={protocols.filter((protocol) => protocol.active).map((protocol) => ({
+                value: protocol.id,
+                label: protocol.name,
+              }))}
+              onChange={setSelectedProtocolId}
+              ariaLabel="Treatment protocol"
+            />
             <button
               type="button"
               className="h-9 rounded border border-violet-300/40 bg-violet-300/10 px-3 text-xs font-semibold text-violet-100"

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 import { FindingSectionGroupsSettings } from "../src/components/settings/FindingSectionGroupsSettings";
 import {
   filterDefinitionsForSectionGroups,
@@ -296,9 +297,9 @@ test("EncounterCharting pulls a group into only the current encounter and render
     );
 
     await act(async () => {
-      renderer.root.findByProps({ "aria-label": "Add section group" }).props.onChange({
-        target: { value: "dry-eye-workup" },
-      });
+      renderer.root.find((node) =>
+        node.type === OdosSelect && node.props.ariaLabel === "Add section group"
+      ).props.onChange("dry-eye-workup");
       await flushEffects();
     });
 

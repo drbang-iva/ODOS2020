@@ -1,3 +1,5 @@
+import { OdosSelect } from "../inputs/OdosSelect";
+
 interface Props {
   value: string;
   onChange: (value: string) => void;
@@ -57,36 +59,32 @@ export function VaValueSelect({ value, onChange, disabled = false, ariaLabel }: 
 
   return (
     <div className="flex min-w-[190px] gap-1">
-      <select
-        value={baseValue}
-        onChange={(event) => selectBase(event.target.value)}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        className="h-10 min-w-0 flex-1 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
-      >
-        <option value="">Select</option>
-        <optgroup label="Distance Snellen">
-          {DISTANCE_VALUES.map((option) => <option key={option} value={option}>{option}</option>)}
-        </optgroup>
-        <optgroup label="Low vision">
-          {LOW_VISION_VALUES.map((option) => <option key={option} value={option}>{option}</option>)}
-        </optgroup>
-        <optgroup label="Near (Jaeger)">
-          {NEAR_VALUES.map((option) => <option key={option} value={option}>{option}</option>)}
-        </optgroup>
-      </select>
-      <select
-        value={modifier}
-        onChange={(event) => selectModifier(event.target.value)}
-        disabled={disabled || !distanceBase}
-        aria-label={`${ariaLabel} modifier`}
-        className="h-10 w-[62px] rounded border border-white/15 bg-bg-deep px-1 text-sm text-white outline-none focus:border-brand disabled:opacity-45"
-      >
-        <option value="">±</option>
-        {MODIFIERS.map((option) => (
-          <option key={option} value={option}>{option.replace("-", "−")}</option>
-        ))}
-      </select>
+      <div className="min-w-0 flex-1">
+        <OdosSelect
+          value={baseValue}
+          options={[
+            { value: "", label: "Select" },
+            ...DISTANCE_VALUES.map((option) => ({ value: option, label: option, group: "Distance Snellen" })),
+            ...LOW_VISION_VALUES.map((option) => ({ value: option, label: option, group: "Low vision" })),
+            ...NEAR_VALUES.map((option) => ({ value: option, label: option, group: "Near (Jaeger)" })),
+          ]}
+          onChange={selectBase}
+          disabled={disabled}
+          ariaLabel={ariaLabel}
+        />
+      </div>
+      <div className="w-[62px]">
+        <OdosSelect
+          value={modifier}
+          options={[
+            { value: "", label: "±" },
+            ...MODIFIERS.map((option) => ({ value: option, label: option.replace("-", "−") })),
+          ]}
+          onChange={selectModifier}
+          disabled={disabled || !distanceBase}
+          ariaLabel={`${ariaLabel} modifier`}
+        />
+      </div>
     </div>
   );
 }

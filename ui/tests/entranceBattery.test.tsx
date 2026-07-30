@@ -107,7 +107,7 @@ test("diplopia choices are blank-safe and cannot be complete without all five se
   assert.equal(diplopiaSelectionsComplete("binocular", "horizontal", "incomitant", "right", "intermittent"), true);
   const source = readFileSync(new URL("../src/components/charting/EomSection.tsx", import.meta.url), "utf8");
   assert.match(source, /useState<"" \| "monocular" \| "binocular">\(""\)/);
-  assert.match(source, /<option value="">Select<\/option>/);
+  assert.match(source, /\{ value: "", label: "Select" \}/);
   const html = renderToStaticMarkup(<EomSection definition={{ stableKey: "entrance:eom", display: "EOM / diplopia", active: true, perEye: true, customFields: [] }} patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
   assert.match(html, /Full OU — SAFE/);
 });

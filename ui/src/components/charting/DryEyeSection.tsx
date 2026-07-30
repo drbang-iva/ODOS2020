@@ -30,6 +30,7 @@ import {
   DRY_EYE_QUESTIONNAIRE_INSTRUMENTS,
   type DryEyeQuestionnaireInstrument,
 } from "../../lib/fhir-dry-eye/terminology";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -240,15 +241,12 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
           <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-white">Questionnaire</h3>
-              <select
+              <OdosSelect
                 value={instrument}
-                onChange={(event) => changeInstrument(event.target.value as DryEyeQuestionnaireInstrument)}
-                className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-              >
-                {DRY_EYE_QUESTIONNAIRE_INSTRUMENTS.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
+                options={DRY_EYE_QUESTIONNAIRE_INSTRUMENTS.map((value) => ({ value, label: value }))}
+                onChange={(value) => changeInstrument(value as DryEyeQuestionnaireInstrument)}
+                ariaLabel="Questionnaire instrument"
+              />
             </div>
 
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -297,15 +295,12 @@ export function DryEyeSection({ patientReference, encounterReference, onSaved }:
             <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
               <h3 className="text-sm font-semibold text-white">Product</h3>
               <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-                <select
+                <OdosSelect
                   value={productText}
-                  onChange={(event) => setProductText(event.target.value)}
-                  className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-                >
-                  {PRODUCT_OPTIONS.map((option) => (
-                    <option key={option.text} value={option.text}>{option.text}</option>
-                  ))}
-                </select>
+                  options={PRODUCT_OPTIONS.map((option) => ({ value: option.text, label: option.text }))}
+                  onChange={setProductText}
+                  ariaLabel="Product"
+                />
                 <button
                   onClick={addProduct}
                   disabled={busy !== null}

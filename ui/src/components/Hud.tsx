@@ -18,6 +18,7 @@ import { episodeTypeLabel } from "../lib/clinical-view-model";
 import { useViewState } from "../lib/view-state";
 import type { OrbitalId } from "../types/orbital";
 import { ORBITAL_LABELS } from "../types/orbital";
+import { OdosSelect } from "./inputs/OdosSelect";
 
 interface Props {
   patient: Patient;
@@ -189,25 +190,30 @@ export function Hud({ patient, selected, onClearSelection }: Props) {
               </div>
 
               {startMode === "existing" && (
-                <select value={selectedProgramId} onChange={(event) => setSelectedProgramId(event.target.value)} className="mt-3 h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand">
-                  {programs.length === 0 ? (
-                    <option value="">No active programs</option>
-                  ) : (
-                    programs.map((program) => (
-                      <option key={program.id} value={program.id}>
-                        {episodeTypeLabel(program)} · {program.status}
-                      </option>
-                    ))
-                  )}
-                </select>
+                <div className="mt-3">
+                  <OdosSelect
+                    value={selectedProgramId}
+                    options={programs.length === 0
+                      ? [{ value: "", label: "No active programs" }]
+                      : programs.map((program) => ({
+                          value: program.id ?? "",
+                          label: `${episodeTypeLabel(program)} · ${program.status}`,
+                        }))}
+                    onChange={setSelectedProgramId}
+                    ariaLabel="Existing program"
+                  />
+                </div>
               )}
 
               {startMode === "new" && (
-                <select value={programType} onChange={(event) => setProgramType(event.target.value as EpisodeOfCareTypeCode)} className="mt-3 h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand">
-                  {EPISODE_OF_CARE_TYPE_CODES.map((code) => (
-                    <option key={code} value={code}>{programTypeLabel(code)}</option>
-                  ))}
-                </select>
+                <div className="mt-3">
+                  <OdosSelect
+                    value={programType}
+                    options={EPISODE_OF_CARE_TYPE_CODES.map((code) => ({ value: code, label: programTypeLabel(code) }))}
+                    onChange={setProgramType}
+                    ariaLabel="New program type"
+                  />
+                </div>
               )}
 
               <button

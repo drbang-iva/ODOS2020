@@ -42,6 +42,7 @@ import {
 } from "../../lib/protocol-authoring";
 import { ProtocolStagingList } from "./ProtocolStagingList";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
@@ -499,15 +500,25 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
         {canShowEditing && (
           <div data-testid="diagnosis-tier-tagger" className="mt-5 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-[150px_150px_1fr_auto]">
-              <select value={form.tier} onChange={(event) => setForm({ ...form, tier: event.target.value as DiagnosisTierChoice })} className={INPUT_CLASS}>
-                <option value="principal">Principal</option>
-                <option value="secondary">Secondary</option>
-              </select>
-              <select value={form.laterality} onChange={(event) => setForm({ ...form, laterality: event.target.value as EyeChoice })} className={INPUT_CLASS}>
-                <option value="OD">OD</option>
-                <option value="OS">OS</option>
-                <option value="OU">OU</option>
-              </select>
+              <OdosSelect
+                value={form.tier}
+                options={[
+                  { value: "principal", label: "Principal" },
+                  { value: "secondary", label: "Secondary" },
+                ]}
+                onChange={(tier) => setForm({ ...form, tier: tier as DiagnosisTierChoice })}
+                ariaLabel="Diagnosis tier"
+              />
+              <OdosSelect
+                value={form.laterality}
+                options={[
+                  { value: "OD", label: "OD" },
+                  { value: "OS", label: "OS" },
+                  { value: "OU", label: "OU" },
+                ]}
+                onChange={(laterality) => setForm({ ...form, laterality: laterality as EyeChoice })}
+                ariaLabel="Diagnosis laterality"
+              />
               <OdosSearchPicker
                 label="Diagnosis / ICD-10"
                 value={form.code}
@@ -761,20 +772,18 @@ function DiagnosisCard({
         </button>
         {!possible && (
           <div className="flex items-center gap-2">
-            <select
-              aria-label="Diagnosis visit status"
+            <OdosSelect
               value={visitStatus ?? ""}
               disabled={visitStatusDisabled || busy !== null}
-              onChange={(event) => {
-                if (event.target.value) onVisitStatus(event.target.value as DiagnosisVisitStatus);
+              options={[
+                { value: "", label: "" },
+                ...DIAGNOSIS_VISIT_STATUSES.map((choice) => ({ value: choice, label: visitStatusLabel(choice) })),
+              ]}
+              onChange={(value) => {
+                if (value) onVisitStatus(value as DiagnosisVisitStatus);
               }}
-              className="h-8 rounded border border-[color:var(--odos-line-2)] bg-[color:var(--odos-deep-surface)] px-2 text-xs text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)] disabled:opacity-60"
-            >
-              <option value=""></option>
-              {DIAGNOSIS_VISIT_STATUSES.map((choice) => (
-                <option key={choice} value={choice}>{visitStatusLabel(choice)}</option>
-              ))}
-            </select>
+              ariaLabel="Diagnosis visit status"
+            />
             {canShowEditing && <button type="button" onClick={onToggle} className="text-xs text-[color:var(--odos-accent)]">Edit</button>}
           </div>
         )}
@@ -790,11 +799,16 @@ function DiagnosisCard({
       {editing && !possible && (
         <div className="mt-4 grid gap-3 border-t border-[color:var(--odos-line)] pt-4">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[120px_1fr_auto]">
-            <select value={laterality} onChange={(event) => setLaterality(event.target.value as EyeChoice)} className={INPUT_CLASS}>
-              <option value="OD">OD</option>
-              <option value="OS">OS</option>
-              <option value="OU">OU</option>
-            </select>
+            <OdosSelect
+              value={laterality}
+              options={[
+                { value: "OD", label: "OD" },
+                { value: "OS", label: "OS" },
+                { value: "OU", label: "OU" },
+              ]}
+              onChange={(value) => setLaterality(value as EyeChoice)}
+              ariaLabel="Problem laterality"
+            />
             <div className="self-center text-sm text-[color:var(--odos-muted)]">Laterality correction</div>
             <button disabled={busy !== null} onClick={() => onLaterality(laterality)} className={BUTTON_CLASS}>Save</button>
           </div>
@@ -824,11 +838,16 @@ function DiagnosisCard({
             onMoveDown={onMoveDown}
           />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_1fr_auto_auto]">
-            <select value={status} onChange={(event) => setStatus(event.target.value as "active" | "recurrence" | "resolved")} className={INPUT_CLASS}>
-              <option value="active">active</option>
-              <option value="recurrence">recurrence</option>
-              <option value="resolved">resolved</option>
-            </select>
+            <OdosSelect
+              value={status}
+              options={[
+                { value: "active", label: "active" },
+                { value: "recurrence", label: "recurrence" },
+                { value: "resolved", label: "resolved" },
+              ]}
+              onChange={(value) => setStatus(value as "active" | "recurrence" | "resolved")}
+              ariaLabel="Problem status"
+            />
             <div className="self-center text-sm text-[color:var(--odos-muted)]">Clinical status</div>
             <button disabled={busy !== null} onClick={() => onStatus(status)} className={BUTTON_CLASS}>Save status</button>
             <button disabled={busy !== null} onClick={onEnteredInError} className="rounded border border-[color:var(--odos-alert)] bg-[color:var(--odos-surface-2)] px-3 py-2 text-sm font-semibold text-[color:var(--odos-alert)] transition hover:bg-[color:var(--odos-surface)]">

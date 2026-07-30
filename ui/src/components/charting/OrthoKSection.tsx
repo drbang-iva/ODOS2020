@@ -9,6 +9,7 @@ import {
   buildUpdateOrthoKLensParametersPatch,
   type OrthoKFitFindingCode,
 } from "../../lib/fhir-v04c/orthoK";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { SectionSaveStatus } from "./types";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
@@ -303,9 +304,12 @@ export function OrthoKSection({ patientReference, encounterReference, onSaved }:
             <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
               <h3 className="text-sm font-semibold text-white">Fit Finding</h3>
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <select value={finding} onChange={(event) => setFinding(event.target.value as OrthoKFitFindingCode)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand">
-                  {FIT_FINDINGS.map((code) => <option key={code} value={code}>{code}</option>)}
-                </select>
+                <OdosSelect
+                  value={finding}
+                  options={FIT_FINDINGS.map((code) => ({ value: code, label: code }))}
+                  onChange={(value) => setFinding(value as OrthoKFitFindingCode)}
+                  ariaLabel="Fitting finding"
+                />
                 <input value={findingText} onChange={(event) => setFindingText(event.target.value)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand" />
                 <button onClick={recordFitFinding} disabled={busy !== null} className="rounded border border-brand/60 bg-brand/15 px-4 py-2 text-sm font-semibold text-white hover:bg-brand/25 disabled:opacity-50">
                   Record

@@ -50,7 +50,7 @@ test("PrescriptionEditor exposes every prescription field with the specified con
   assert.match(html, /role="combobox"[^>]*aria-label="Days supply"/);
   assert.match(html, /data-default="true"[^>]*>30</);
   for (const route of ["Ophthalmic", "Oral", "Topical", "Otic", "Nasal", "Other"]) {
-    assert.match(html, new RegExp(`<option value="${route}"`));
+    assert.match(html, new RegExp(`>${route}</button>`));
   }
   assert.match(html, /value="printed"/);
   assert.match(html, /value="phoned-in"/);

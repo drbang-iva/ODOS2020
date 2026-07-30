@@ -28,10 +28,12 @@ interface OdosSelectButtonProps {
 }
 
 interface OdosSelectInputProps<T> {
+  inputRef?: Ref<HTMLInputElement>;
   onInputChange: (value: T) => void;
   parseInput: (input: string) => T;
   serializeValue: (value: T) => string;
   inputMode?: "text" | "decimal" | "numeric";
+  maxLength?: number;
 }
 
 export type OdosSelectProps<T> = CommonOdosSelectProps<T> & (
@@ -175,8 +177,10 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
       <div className="flex min-h-11 overflow-hidden rounded border border-[color:var(--odos-line-2)] bg-bg-deep focus-within:border-brand">
         {props.onInputChange ? (
           <input
+            ref={props.inputRef}
             type="text"
             inputMode={props.inputMode ?? "text"}
+            maxLength={props.maxLength}
             role="combobox"
             aria-label={ariaLabel}
             aria-autocomplete="list"

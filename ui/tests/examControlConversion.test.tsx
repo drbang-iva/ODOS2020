@@ -42,9 +42,9 @@ test("Auto-Refraction uses centered PD and K spinners plus the ARx axis select p
 
 test("Refraction Purpose is the exact seven-option dropdown", () => {
   const html = renderToStaticMarkup(<RefractionSection {...PROPS} />);
-  assert.match(html, /<select[^>]*aria-label="Refraction 1 purpose"/);
+  assert.match(html, /role="combobox"[^>]*aria-label="Refraction 1 purpose"/);
   for (const purpose of ["Distance", "Reading", "Intermediate", "Progressive", "Bifocal", "Safety", "Sunglasses"]) {
-    assert.equal((html.match(new RegExp(`<option value="${purpose}"`, "g")) ?? []).length, 2);
+    assert.equal((html.match(new RegExp(`>${purpose}</button>`, "g")) ?? []).length, 2);
   }
   assert.doesNotMatch(source("RefractionSection.tsx"), /<input[\s\S]{0,160}value=\{block\.purpose\}/);
 });
@@ -53,8 +53,8 @@ test("standalone Visual Acuity uses the curated VA selector for both eyes", () =
   const html = renderToStaticMarkup(<VaSection {...PROPS} />);
   assert.match(html, />Value<\/div><div>Chart<\/div>/);
   for (const eye of ["OD", "OS"]) {
-    assert.match(html, new RegExp(`<select[^>]*aria-label="${eye} visual acuity"`));
-    assert.match(html, new RegExp(`<select[^>]*aria-label="${eye} visual acuity modifier"`));
+    assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${eye} visual acuity"`));
+    assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${eye} visual acuity modifier"`));
   }
   assert.doesNotMatch(source("VaSection.tsx"), /placeholder="20\/20"/);
 });

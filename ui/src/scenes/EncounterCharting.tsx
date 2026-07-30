@@ -21,6 +21,7 @@ import { EncounterHeader } from "../components/charting/EncounterHeader";
 import { EyeGrowthSection } from "../components/charting/EyeGrowthSection";
 import { IopSection } from "../components/charting/IopSection";
 import { ImagingSection } from "../components/charting/ImagingSection";
+import { OdosSelect } from "../components/inputs/OdosSelect";
 import { HpiSection } from "../components/charting/HpiSection";
 import { MyopiaManagementSection } from "../components/charting/MyopiaManagementSection";
 import { OcularHealthSection } from "../components/charting/OcularHealthSection";
@@ -463,20 +464,21 @@ export function EncounterCharting({ patient, encounterId }: Props) {
                     </button>
                   ))}
                   {availableSectionGroups.length > 0 && (
-                    <select
-                      aria-label="Add section group"
+                    <OdosSelect
                       value=""
                       disabled={addingSectionGroup}
-                      onChange={(event) => {
-                        if (event.target.value) void addSectionGroup(event.target.value);
+                      options={[
+                        {
+                          value: "",
+                          label: addingSectionGroup ? "Updating section groups…" : "Add section group…",
+                        },
+                        ...availableSectionGroups.map((group) => ({ value: group.groupKey, label: group.label })),
+                      ]}
+                      onChange={(value) => {
+                        if (value) void addSectionGroup(value);
                       }}
-                      className="rounded border border-brand/50 bg-bg-panel px-3 py-2 text-sm text-brand-light shadow-lg"
-                    >
-                      <option value="">{addingSectionGroup ? "Updating section groups…" : "Add section group…"}</option>
-                      {availableSectionGroups.map((group) => (
-                        <option key={group.groupKey} value={group.groupKey}>{group.label}</option>
-                      ))}
-                    </select>
+                      ariaLabel="Add section group"
+                    />
                   )}
                 </div>
               )}

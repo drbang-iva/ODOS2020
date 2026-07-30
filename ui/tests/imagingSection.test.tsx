@@ -11,6 +11,7 @@ import {
   type ImagingSummary,
 } from "../src/components/charting/ImagingSection";
 import { SpineNav } from "../src/components/charting/SpineNav";
+import { OdosSelect } from "../src/components/inputs/OdosSelect";
 
 test("imaging section renders chart/visit scope, native capture, and all supported categories", () => {
   const html = renderToStaticMarkup(
@@ -328,6 +329,54 @@ test("OCT refinement moves focus into the form and restores the trigger after ca
       await Promise.resolve();
     });
     assert.equal(triggerFocuses, 1);
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("OCT structure combobox accepts arbitrary typed labels while retaining its sourced convenience options", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => imagingResponse([
+    image("oct-free-text", "2026-07-15T15:00:00Z", "Macula"),
+  ]);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(
+        <ImagingSection
+          patientReference="Patient/p1"
+          encounterReference="Encounter/e1"
+          onSaved={() => undefined}
+        />,
+      );
+      await Promise.resolve();
+    });
+    const refine = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Refine structure");
+    assert.ok(refine);
+    act(() => refine.props.onClick());
+
+    const select = renderer.root.find((node) =>
+      node.type === OdosSelect && node.props.ariaLabel === "OCT structure"
+    );
+    assert.deepEqual(
+      select.props.options.map((option: { value: string; label: string }) => [option.value, option.label]),
+      [
+        ["Macula", "Macula"],
+        ["Optic nerve", "Optic nerve"],
+      ],
+    );
+    const input = renderer.root.find((node) =>
+      node.type === "input" && node.props["aria-label"] === "OCT structure"
+    );
+    act(() => input.props.onChange({ target: { value: "Peripapillary RNFL" } }));
+    assert.equal(
+      renderer.root.find((node) =>
+        node.type === "input" && node.props["aria-label"] === "OCT structure"
+      ).props.value,
+      "Peripapillary RNFL",
+    );
   } finally {
     renderer?.unmount();
     globalThis.fetch = originalFetch;

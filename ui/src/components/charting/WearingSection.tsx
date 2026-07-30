@@ -4,6 +4,7 @@ import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -174,7 +175,15 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
             <p className="mt-1 text-sm text-white/45">Pretest lensometer capture for glasses worn into the visit</p>
           </div>
           <div className="flex items-end gap-3">
-            <label className="block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span><select value={sourceType} onChange={(event) => setSourceType(event.target.value)} className="h-10 rounded border border-white/15 bg-bg-deep px-3 text-sm text-white">{sourceTypes.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}</select></label>
+            <label className="block">
+              <span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Source</span>
+              <OdosSelect
+                value={sourceType}
+                options={sourceTypes.map((option) => ({ value: option.code, label: option.display }))}
+                onChange={setSourceType}
+                ariaLabel="Source"
+              />
+            </label>
             <button
               type="button"
               onClick={addPair}
@@ -209,16 +218,15 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
               <div className="flex flex-wrap items-end gap-3 border-b border-white/10 bg-white/[0.03] p-4">
                 <label className="block min-w-[280px]">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Eyeglass Type</span>
-                  <select
+                  <OdosSelect
                     value={pair.eyeglassType}
-                    onChange={(event) => updatePair(pair.id, { eyeglassType: event.target.value })}
-                    className="h-10 w-full rounded border border-white/15 bg-bg-deep px-3 text-sm text-white outline-none focus:border-brand"
-                  >
-                    <option value="">Select</option>
-                    {eyeglassTypes.map((option) => (
-                      <option key={option.code} value={option.code}>{option.display}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: "", label: "Select" },
+                      ...eyeglassTypes.map((option) => ({ value: option.code, label: option.display })),
+                    ]}
+                    onChange={(eyeglassType) => updatePair(pair.id, { eyeglassType })}
+                    ariaLabel="Eyeglass type"
+                  />
                 </label>
                 <label className="block min-w-[300px] flex-1">
                   <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">Remarks</span>
@@ -266,15 +274,15 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
                       </select>
                       <PowerDropdown value={pair[eye].add} options={addOptions} defaultValue="0.50" onChange={(value) => updateEye(pair.id, eye, { add: value })} ariaLabel={`${eye} add`} formatOption={formatDiopterOption} />
                       <PowerDropdown value={pair[eye].prismAmount} options={prismOptions} defaultValue="0.25" onChange={(value) => updateEye(pair.id, eye, { prismAmount: value })} ariaLabel={`${eye} prism amount`} />
-                      <select
+                      <OdosSelect
                         value={pair[eye].prismBase}
-                        onChange={(event) => updateEye(pair.id, eye, { prismBase: event.target.value })}
-                        aria-label={`${eye} prism base`}
-                        className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-                      >
-                        <option value="">Select</option>
-                        {prismBases.map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}
-                      </select>
+                        options={[
+                          { value: "", label: "Select" },
+                          ...prismBases.map((option) => ({ value: option.code, label: option.display })),
+                        ]}
+                        onChange={(prismBase) => updateEye(pair.id, eye, { prismBase })}
+                        ariaLabel={`${eye} prism base`}
+                      />
                       <VaValueSelect value={pair[eye].distanceVisualAcuity} onChange={(value) => updateEye(pair.id, eye, { distanceVisualAcuity: value })} ariaLabel={`${eye} distance visual acuity`} />
                       <VaValueSelect value={pair[eye].nearVisualAcuity} onChange={(value) => updateEye(pair.id, eye, { nearVisualAcuity: value })} ariaLabel={`${eye} near visual acuity`} />
                     </div>

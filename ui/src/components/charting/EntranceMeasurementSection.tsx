@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import { PowerDropdown } from "./PowerDropdown";
 import { numericOptions } from "./power-options";
@@ -125,7 +126,19 @@ function MeasurementControl({ field, value, onChange }: { field: CustomFindingFi
     return <div className="min-w-0"><PowerDropdown value={value} options={options} defaultValue={defaultValue} onChange={onChange} ariaLabel={field.display} /></div>;
   }
   if (field.valueType === "select") {
-    return <select aria-label={field.display} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-1 text-xs text-[color:var(--odos-text)] outline-none focus:border-brand sm:px-2 sm:text-sm"><option value="">Select</option>{(field.options ?? []).filter((option) => option.active).map((option) => <option key={option.code} value={option.code}>{option.display}</option>)}</select>;
+    return (
+      <OdosSelect
+        value={value}
+        options={[
+          { value: "", label: "Select" },
+          ...(field.options ?? [])
+            .filter((option) => option.active)
+            .map((option) => ({ value: option.code, label: option.display })),
+        ]}
+        onChange={onChange}
+        ariaLabel={field.display}
+      />
+    );
   }
   return <input aria-label={field.display} type="time" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-xs text-[color:var(--odos-text)] outline-none focus:border-brand sm:px-3 sm:text-sm" />;
 }
