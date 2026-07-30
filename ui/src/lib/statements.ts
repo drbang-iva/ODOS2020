@@ -18,6 +18,8 @@ export interface StatementHeader {
   providerNpi?: string;
   providerLicense?: string;
   patientAddress?: StatementAddress;
+  recipientName?: string;
+  recipientAddress?: StatementAddress;
 }
 export interface StatementAdjustmentRow { group?: string; code?: string; label: string; amountCents: number }
 export interface StatementPaymentRow { paymentReference: string; date: string; amountCents: number }
@@ -153,7 +155,10 @@ function renderDetailedStatement(statement: StatementRow): string {
   const detail = statement.detail!;
   const credit = accountCredit(statement);
   const practiceAddress = renderAddress(detail.header.practiceAddress);
-  const patientAddress = renderAddress(detail.header.patientAddress);
+  const recipientAddress = renderAddress(
+    detail.header.recipientName ? detail.header.recipientAddress : detail.header.patientAddress,
+  );
+  const recipientName = detail.header.recipientName ?? statement.patientName;
   const orders = detail.orders.map((order) => {
     const invoice = statement.invoices.find((candidate) => candidate.invoiceReference === order.invoiceReference)!;
     if (order.mode === "invoice-only") {
@@ -216,7 +221,7 @@ function renderDetailedStatement(statement: StatementRow): string {
   </style>
   <section class="top"><div class="practice"><h1>${escapeHtml(detail.header.practiceName)}</h1>${practiceAddress}${detail.header.practicePhone ? `<div>${escapeHtml(detail.header.practicePhone)}</div>` : ""}</div>
   <div class="meta"><div class="box"><span class="label">Statement date</span><br>${escapeHtml(formatDate(statement.generatedAt))}</div><div class="box pay"><span class="label">Pay this amount</span><strong>${formatStatementMoney(credit.balanceDueCents)}</strong></div></div></section>
-  <section class="addresses"><div class="box"><span class="label">Mail to</span><br><strong>${escapeHtml(statement.patientName)}</strong>${patientAddress ? `<br>${patientAddress}` : ""}</div>
+  <section class="addresses"><div class="box"><span class="label">Mail to</span><br><strong>${escapeHtml(recipientName)}</strong>${recipientAddress ? `<br>${recipientAddress}` : ""}</div>
   <div class="box"><span class="label">Remit payment to</span><br><strong>${escapeHtml(detail.header.practiceName)}</strong>${practiceAddress ? `<br>${practiceAddress}` : ""}${provider ? `<br><br>${provider}` : ""}</div></section>
   ${orders}
   <table class="detail-total"><tbody><tr><th colspan="2">Total</th><th>${escapeHtml(String(detailTotals.quantity))}</th><th>${formatStatementMoney(detailTotals.retailCents)}</th><th>${formatStatementMoney(detailTotals.insuranceCents)}</th><th>${formatStatementMoney(detailTotals.patientCents)}</th></tr></tbody></table>

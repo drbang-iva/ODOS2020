@@ -62,6 +62,8 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
         providerNpi: "1234567893",
         providerLicense: "OPT-1234",
         patientAddress: { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" },
+        recipientName: "Pat Rivera",
+        recipientAddress: { lines: ["12 Guarantor Ave"], cityStatePostal: "Raleigh, NC 27602" },
       },
       orders: [{
         invoiceReference: "Invoice/new",
@@ -97,10 +99,35 @@ test("insurance-aware mailer renders sourced line detail, addresses, provider id
   assert.match(html, /Remit payment to/);
   assert.match(html, /NPI 1234567893/);
   assert.match(html, /License # OPT-1234/);
+  assert.match(html, /Mail to[\s\S]*Pat Rivera[\s\S]*12 Guarantor Ave[\s\S]*Raleigh, NC 27602/);
   assert.match(html, /PAY THIS AMOUNT[\s\S]*\$60\.00/);
   assert.match(html, /☐ VISA/);
   assert.match(html, /Card number/);
   assert.doesNotMatch(html, /<input|fetch\(|payment processor/i);
+});
+
+test("mailer never redirects an incomplete distinct recipient to the patient", () => {
+  const row: StatementRow = {
+    ...statement("new", "2026-07-12T15:00:00.000Z", 6_000),
+    detail: {
+      header: {
+        practiceName: "Independent Eye Care",
+        patientAddress: { lines: ["10 Main St"], cityStatePostal: "Raleigh, NC 27601" },
+        recipientName: "Pat Rivera",
+      },
+      orders: [{
+        invoiceReference: "Invoice/new",
+        orderNumber: "ORDER-TEST",
+        mode: "invoice-only",
+        lines: [],
+        patientPayments: [],
+      }],
+    },
+  };
+  const html = renderBalanceForwardStatement(row);
+  assert.match(html, /Mail to[\s\S]*Pat Rivera/);
+  assert.doesNotMatch(html, /Mail to[\s\S]{0,120}Alex Rivera/);
+  assert.doesNotMatch(html, /10 Main St|Raleigh, NC 27601/);
 });
 
 test("detailed mailer prints an invoice-only row for a pre-seam Order", () => {

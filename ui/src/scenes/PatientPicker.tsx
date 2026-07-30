@@ -2,6 +2,12 @@ import type { Patient } from "@medplum/fhirtypes";
 import type { Ref } from "react";
 import { OdosSearchPicker, type OdosSearchPickerOption } from "../components/inputs/OdosSearchPicker";
 import { fhir } from "../lib/fhir";
+import {
+  EYEFINITY_EHR_PATIENT_ID_SYSTEM,
+  EYEFINITY_EPM_PATIENT_ID_SYSTEM,
+  ODOS_MRN_SYSTEM,
+  patientOdosMrn,
+} from "../lib/patient-identity";
 import { patientName } from "../lib/scheduler-appointment-ui";
 import { openPatientOverview } from "../lib/view-state";
 
@@ -61,26 +67,72 @@ export function PatientSearch({
       autoFocus={autoFocus}
       inputRef={inputRef}
       searchDelayMs={300}
-      search={async (query) => (await search(query)).flatMap((patient) => patientPickerOption(patient, actionLabel))}
+      search={async (query) => (await search(query)).flatMap(
+        (patient) => patientPickerOption(patient, actionLabel, query),
+      )}
       onClear={() => undefined}
       onSelect={(option) => onSelect(option.item)}
     />
   );
 }
 
-async function searchPatients(query: string): Promise<Patient[]> {
-  const bundle = await fhir.search<Patient>("Patient", { name: query, _count: "50" });
-  return (bundle.entry ?? []).flatMap((entry) => (entry.resource ? [entry.resource] : []));
+export async function searchPatients(
+  query: string,
+  api: Pick<typeof fhir, "search"> = fhir,
+): Promise<Patient[]> {
+  const normalized = query.trim();
+  const bundles = /^\d+$/.test(normalized)
+    ? await Promise.all([
+        api.search<Patient>("Patient", { identifier: `${ODOS_MRN_SYSTEM}|${normalized}`, _count: "50" }),
+        api.search<Patient>("Patient", { identifier: `${EYEFINITY_EHR_PATIENT_ID_SYSTEM}|${normalized}`, _count: "50" }),
+        api.search<Patient>("Patient", { identifier: `${EYEFINITY_EPM_PATIENT_ID_SYSTEM}|${normalized}`, _count: "50" }),
+      ])
+    : [await api.search<Patient>("Patient", { name: normalized, _count: "50" })];
+  const seen = new Set<string>();
+  return bundles
+    .flatMap((bundle) => bundle.entry ?? [])
+    .flatMap((entry) => entry.resource ? [entry.resource] : [])
+    .filter((patient) => {
+      const key = patient.id ?? JSON.stringify(patient.identifier ?? []);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
-function patientPickerOption(patient: Patient, actionLabel: string): OdosSearchPickerOption<Patient>[] {
+export function patientPickerOption(
+  patient: Patient,
+  actionLabel: string,
+  query: string,
+): OdosSearchPickerOption<Patient>[] {
   if (!patient.id) return [];
+  const matchedIdentifier = identifierMatchDescription(patient, query.trim());
+  const mrn = patientOdosMrn(patient);
   return [{
     value: `Patient/${patient.id}`,
     label: patientName(patient),
-    description: `DOB ${patient.birthDate ?? "unknown"} · ID ${shortId(patient.id)} · ${actionLabel}`,
+    description: [
+      `DOB ${patient.birthDate ?? "unknown"}`,
+      matchedIdentifier,
+      !matchedIdentifier && mrn ? `MRN ${mrn}` : undefined,
+      !matchedIdentifier && !mrn ? `ID ${shortId(patient.id)}` : undefined,
+      actionLabel,
+    ].filter(Boolean).join(" · "),
     item: patient,
   }];
+}
+
+function identifierMatchDescription(patient: Patient, query: string): string | undefined {
+  if (!/^\d+$/.test(query)) return undefined;
+  const identifier = patient.identifier?.find((candidate) => candidate.value === query && [
+    ODOS_MRN_SYSTEM,
+    EYEFINITY_EHR_PATIENT_ID_SYSTEM,
+    EYEFINITY_EPM_PATIENT_ID_SYSTEM,
+  ].includes(candidate.system ?? ""));
+  if (!identifier) return undefined;
+  if (identifier.system === ODOS_MRN_SYSTEM) return `Matched ODOS MRN ${query}`;
+  if (identifier.system === EYEFINITY_EHR_PATIENT_ID_SYSTEM) return `Matched legacy EHR ID ${query}`;
+  return `Matched legacy EPM ID ${query}`;
 }
 
 function shortId(id: string | undefined): string {

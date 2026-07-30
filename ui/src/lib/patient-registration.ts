@@ -1,6 +1,18 @@
 import type { Patient } from "@medplum/fhirtypes";
+import { assertTransactionSuccess, createdIdFromEntry } from "./encounter-bundles";
 import { fhir } from "./fhir";
 import { emptySubscriber, subscriberFromPatient } from "./patient-insurance";
+import {
+  buildPatientIdentityTransaction,
+  ODOS_MRN_MAX,
+  ODOS_MRN_MIN,
+  ODOS_MRN_SYSTEM,
+  emptySelfResponsibleParty,
+  isR4Date,
+  reserveOdosMrn,
+  validateResponsibleParties,
+  type ResponsiblePartyDraft,
+} from "./patient-identity";
 
 export type PatientGender = "male" | "female" | "other" | "unknown";
 
@@ -23,7 +35,17 @@ export type PatientRegistrationResult =
   | { kind: "duplicates"; patients: Patient[] }
   | { kind: "created"; patient: Patient };
 
-type PatientWriteApi = Pick<typeof fhir, "search" | "create" | "update">;
+export interface PatientRegistrationOptions {
+  responsibleParties?: readonly ResponsiblePartyDraft[];
+  today?: string;
+  nextMrnBase?: () => number;
+  nextUuid?: () => string;
+}
+
+type PatientWriteApi = Pick<
+  typeof fhir,
+  "search" | "create" | "read" | "executeTransaction" | "update"
+>;
 
 export function emptyPatientDemographics(): PatientDemographicsDraft {
   return {
@@ -121,8 +143,9 @@ export function buildPatientResource(draft: PatientDemographicsDraft, existing?:
 export async function registerPatient(
   draft: PatientDemographicsDraft,
   api: PatientWriteApi = fhir,
+  options: PatientRegistrationOptions = {},
 ): Promise<PatientRegistrationResult> {
-  const errors = validatePatientDemographics(draft);
+  const errors = validatePatientRegistration(draft, options);
   if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
   const bundle = await api.search<Patient>("Patient", {
     given: draft.firstName.trim(),
@@ -133,14 +156,62 @@ export async function registerPatient(
     .flatMap((entry) => entry.resource ? [entry.resource] : [])
     .filter((patient) => isExactDuplicate(patient, draft));
   if (patients.length) return { kind: "duplicates", patients };
-  return { kind: "created", patient: await createPatient(draft, api) };
+  return { kind: "created", patient: await createPatient(draft, api, options) };
 }
 
 export async function createPatient(
   draft: PatientDemographicsDraft,
-  api: Pick<typeof fhir, "create"> = fhir,
+  api: Pick<typeof fhir, "search" | "create" | "read" | "executeTransaction"> = fhir,
+  options: PatientRegistrationOptions = {},
 ): Promise<Patient> {
-  return api.create(buildPatientResource(draft), "patient-registration");
+  const errors = validatePatientRegistration(draft, options);
+  if (Object.keys(errors).length) throw new Error(Object.values(errors).join(" "));
+  const nextUuid = options.nextUuid ?? crypto.randomUUID.bind(crypto);
+  const reservation = await reserveOdosMrn(
+    {
+      patientIdentifierExists: async (mrn) => {
+        const matches = await api.search<Patient>("Patient", {
+          identifier: `${ODOS_MRN_SYSTEM}|${mrn}`,
+          _count: "1",
+        });
+        return (matches.entry ?? []).some((entry) =>
+          entry.resource?.identifier?.some(
+            (identifier) => identifier.system === ODOS_MRN_SYSTEM && identifier.value === mrn,
+          ),
+        );
+      },
+      createReservation: (account, ifNoneExist) =>
+        api.create(account, "patient-mrn-reservation", { "If-None-Exist": ifNoneExist }),
+    },
+    options.nextMrnBase ?? secureMrnBase,
+    nextUuid,
+  );
+  const response = await api.executeTransaction(
+    buildPatientIdentityTransaction({
+      patient: buildPatientResource(draft),
+      reservation,
+      responsibleParties: registrationResponsibleParties(options),
+      today: registrationToday(options),
+      nextUuid,
+    }),
+    "patient-registration",
+  );
+  assertTransactionSuccess(response);
+  return api.read<Patient>("Patient", createdIdFromEntry(response, 0, "Patient"));
+}
+
+export function validatePatientRegistration(
+  draft: PatientDemographicsDraft,
+  options: PatientRegistrationOptions = {},
+): Record<string, string> {
+  return {
+    ...validatePatientDemographics(draft),
+    ...validateResponsibleParties(
+      registrationResponsibleParties(options),
+      draft.birthDate,
+      registrationToday(options),
+    ),
+  };
 }
 
 export function createPatientDemographicsActions(
@@ -163,13 +234,6 @@ function isExactDuplicate(patient: Patient, draft: PatientDemographicsDraft): bo
 
 function normalized(value: string | undefined): string {
   return value?.trim().toLocaleLowerCase() ?? "";
-}
-
-function isR4Date(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function isPhoneNumber(value: string): boolean {
@@ -200,4 +264,32 @@ function preferredAddressIndex(patient: Patient | undefined): number {
   const homeIndex = patient?.address?.findIndex((address) => address.use === "home") ?? -1;
   if (homeIndex >= 0) return homeIndex;
   return patient?.address?.length ? 0 : -1;
+}
+
+function registrationResponsibleParties(
+  options: PatientRegistrationOptions,
+): readonly ResponsiblePartyDraft[] {
+  return options.responsibleParties ?? [emptySelfResponsibleParty("self")];
+}
+
+function registrationToday(options: PatientRegistrationOptions): string {
+  return options.today ?? localCalendarDate();
+}
+
+export function localCalendarDate(date = new Date()): string {
+  return [
+    String(date.getFullYear()).padStart(4, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function secureMrnBase(): number {
+  const range = ODOS_MRN_MAX - ODOS_MRN_MIN + 1;
+  const ceiling = 2 ** 32 - ((2 ** 32) % range);
+  const value = new Uint32Array(1);
+  do {
+    crypto.getRandomValues(value);
+  } while (value[0] >= ceiling);
+  return ODOS_MRN_MIN + (value[0] % range);
 }

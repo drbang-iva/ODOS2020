@@ -649,6 +649,24 @@
       "namespace": "appearance",
       "status": "active",
       "sliceConsumer": "appearance-settings"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/related-person-consent-authority",
+      "namespace": "patient-identity",
+      "status": "active",
+      "sliceConsumer": "patient-identity"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/related-person-primary",
+      "namespace": "patient-identity",
+      "status": "active",
+      "sliceConsumer": "patient-identity"
+    },
+    {
+      "url": "https://odos2020.com/fhir/StructureDefinition/related-person-court-order-notes",
+      "namespace": "patient-identity",
+      "status": "active",
+      "sliceConsumer": "patient-identity"
     }
   ]
 }
