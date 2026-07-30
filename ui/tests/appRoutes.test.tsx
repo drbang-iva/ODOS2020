@@ -5,6 +5,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create } from "react-test-renderer";
 import { RouteSwitch } from "../src/App";
+import { OdosChips } from "../src/components/inputs/OdosChips";
 import { RoleProvider } from "../src/lib/role-context";
 
 test("the Accounts Receivable dashboard UI route reaches the dashboard without replacing existing routing", () => {
@@ -105,6 +106,15 @@ test("audit log renders an empty patient filter", async () => {
     const patientLabel = renderer.root.findAllByType("label").find((label) => label.children.includes("Patient"));
     assert.ok(patientLabel);
     assert.equal(patientLabel.findByType("input").props.value, "");
+    const eventTypes = renderer.root.findByType(OdosChips);
+    assert.equal(eventTypes.props.ariaLabel, "Audit event types");
+    assert.deepEqual(eventTypes.props.selected, []);
+    const firstEventType = eventTypes.props.options[0];
+    assert.ok(firstEventType);
+    act(() => renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === firstEventType.label)!
+      .props.onClick());
+    assert.deepEqual(renderer.root.findByType(OdosChips).props.selected, [firstEventType.value]);
     act(() => renderer.unmount());
   } finally {
     globalThis.fetch = originalFetch;

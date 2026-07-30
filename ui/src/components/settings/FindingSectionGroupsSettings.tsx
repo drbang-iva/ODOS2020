@@ -4,6 +4,7 @@ import {
   type FindingSectionGroupCatalog,
 } from "../../lib/finding-section-groups";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosChips } from "../inputs/OdosChips";
 
 type Draft = {
   groupKey: string;
@@ -322,25 +323,18 @@ export function FindingSectionGroupsSettings() {
             </label>
             <fieldset className="mt-4">
               <legend className="text-sm text-[color:var(--odos-muted)]">Default visit-type categories</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {(catalog?.visitTypeCategories ?? []).filter((category) => category.active !== false).map((category) => (
-                  <label key={category.id} className="flex items-center gap-2 rounded border border-[color:var(--odos-line)] px-3 py-2 text-sm text-[color:var(--odos-muted)]">
-                    <input
-                      type="checkbox"
-                      checked={editing.draft.defaultForVisitTypeCategories.includes(category.id)}
-                      onChange={(event) => setEditing({
-                        ...editing,
-                        draft: {
-                          ...editing.draft,
-                          defaultForVisitTypeCategories: event.target.checked
-                            ? [...editing.draft.defaultForVisitTypeCategories, category.id]
-                            : editing.draft.defaultForVisitTypeCategories.filter((id) => id !== category.id),
-                        },
-                      })}
-                    />
-                    {category.label}
-                  </label>
-                ))}
+              <div className="mt-2">
+                <OdosChips
+                  options={(catalog?.visitTypeCategories ?? [])
+                    .filter((category) => category.active !== false)
+                    .map((category) => ({ value: category.id, label: category.label }))}
+                  selected={editing.draft.defaultForVisitTypeCategories}
+                  onChange={(defaultForVisitTypeCategories) => setEditing({
+                    ...editing,
+                    draft: { ...editing.draft, defaultForVisitTypeCategories },
+                  })}
+                  ariaLabel="Default visit-type categories"
+                />
               </div>
             </fieldset>
             <label className="mt-4 flex items-center gap-2 text-sm text-[color:var(--odos-muted)]">

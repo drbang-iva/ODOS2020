@@ -48,6 +48,15 @@ const FIELDS: readonly CatalogFieldDescriptor[] = [
     ],
   },
   {
+    type: "multi-select",
+    key: "tags",
+    label: "Tags",
+    options: [
+      { value: "routine", label: "Routine" },
+      { value: "urgent", label: "Urgent" },
+    ],
+  },
+  {
     type: "reference-picker",
     key: "plan",
     label: "Plan",
@@ -65,6 +74,7 @@ const VALUES = {
   threshold: 10,
   priceCents: 42_500,
   kind: "house",
+  tags: ["routine"],
   plan: "InsurancePlan/fixture",
   active: true,
   hours: { mon: [{ start: "09:00", end: "17:00" }] },
@@ -86,12 +96,36 @@ test("CatalogFieldKit renders every S1 field type including extracted scheduler 
   assert.match(html, /role="radiogroup"/);
   assert.match(html, /type="number"/);
   assert.match(html, /House/);
+  assert.match(html, /aria-label="Tags"/);
+  assert.match(html, /aria-pressed="true"[^>]*>Routine/);
   assert.match(html, /Stored reference: InsurancePlan\/fixture/);
   assert.match(html, /type="checkbox"/);
   assert.match(html, /Add Window/);
   assert.match(html, /All Day/);
   assert.match(html, /Tue/);
   assert.match(html, /Label must be unique within this catalog/);
+});
+
+test("dynamic multi-select fields preserve values while toggling through OdosChips", () => {
+  let nextValue: unknown;
+  const field = FIELDS.find((candidate) => candidate.key === "tags");
+  assert.ok(field);
+  const renderer = create(
+    <CatalogFieldKit
+      fields={[field]}
+      values={{ tags: ["routine"] }}
+      onChange={(_key, value) => { nextValue = value; }}
+    />,
+  );
+  const routine = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Routine");
+  const urgent = renderer.root.findAllByType("button").find((button) => button.children.join("") === "Urgent");
+  assert.ok(routine);
+  assert.ok(urgent);
+  assert.equal(routine.props["aria-pressed"], true);
+  assert.equal(urgent.props["aria-pressed"], false);
+  act(() => urgent.props.onClick());
+  assert.deepEqual(nextValue, ["routine", "urgent"]);
+  act(() => renderer.unmount());
 });
 
 test("currency control displays dollars, emits integer cents, and formats two decimals on blur", () => {

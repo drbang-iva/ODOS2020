@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosChips } from "../inputs/OdosChips";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
@@ -295,8 +296,8 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
       </label>)}
       {capture.state === "abnormal" && field && (
         <div className="mt-4 space-y-3">
-          <OptionList options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
-          {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-white/40">More findings ({additional.length})</summary><div className="mt-3"><OptionList options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
+          <OptionList ariaLabel="Priority ocular health findings" options={priority} allOptions={options} selected={capture.selections} onChange={onSelections} />
+          {additional.length > 0 && <details><summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-white/40">More findings ({additional.length})</summary><div className="mt-3"><OptionList ariaLabel="Additional ocular health findings" options={additional} allOptions={options} selected={capture.selections} onChange={onSelections} /></div></details>}
         </div>
       )}
       <label className="mt-4 block"><span className="mb-1 block text-xs uppercase tracking-wide text-white/35">Other</span><textarea value={capture.other} disabled={!capture.state} onChange={(event) => onOther(event.target.value)} rows={2} className="w-full rounded border border-white/15 bg-bg-deep p-2 text-sm text-white outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-45" />{!capture.state && <span className="mt-1 block text-xs text-amber-200/75">Choose an exam state before entering Other.</span>}</label>
@@ -304,17 +305,56 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
   );
 }
 
-function OptionList({ options, allOptions, selected, onChange }: {
+function OptionList({ ariaLabel, options, allOptions, selected, onChange }: {
+  ariaLabel: string;
   options: NonNullable<CustomFindingField["options"]>;
   allOptions: NonNullable<CustomFindingField["options"]>;
   selected: string[];
   onChange(selected: string[]): void;
 }) {
-  return <div className="grid gap-2 sm:grid-cols-2">{options.map((option) => {
-    const children = allOptions.filter((candidate) => candidate.parentCode === option.code);
-    const checked = selected.includes(option.code);
-    return <div key={option.code} className="min-w-0"><label className="flex items-start gap-2 text-sm text-white/75"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked ? [...selected, option.code] : selected.filter((code) => code !== option.code && !code.startsWith(`${option.code}::`)))} className="mt-0.5 accent-brand" /><span>{option.display}</span></label>{checked && children.length > 0 && <div className="ml-6 mt-2 space-y-1 border-l border-white/10 pl-3">{children.map((child) => <label key={child.code} className="flex items-center gap-2 text-xs text-white/60"><input type="checkbox" checked={selected.includes(child.code)} onChange={(event) => onChange(event.target.checked ? [...selected, child.code] : selected.filter((code) => code !== child.code))} className="accent-brand" />{child.display}</label>)}</div>}</div>;
-  })}</div>;
+  const optionCodes = options.map((option) => option.code);
+  return (
+    <div className="space-y-3">
+      <OdosChips
+        options={options.map((option) => ({ value: option.code, label: option.display }))}
+        selected={selected.filter((code) => optionCodes.includes(code))}
+        onChange={(nextOptions) => {
+          const removedParents = optionCodes.filter((code) => selected.includes(code) && !nextOptions.includes(code));
+          const removedChildren = new Set(allOptions
+            .filter((option) => option.parentCode && removedParents.includes(option.parentCode))
+            .map((option) => option.code));
+          onChange(replaceSelectionGroup(selected, optionCodes, nextOptions)
+            .filter((code) => !removedChildren.has(code)));
+        }}
+        ariaLabel={ariaLabel}
+      />
+      {options.filter((option) => selected.includes(option.code)).map((option) => {
+        const children = allOptions.filter((candidate) => candidate.parentCode === option.code);
+        if (children.length === 0) return null;
+        const childCodes = children.map((child) => child.code);
+        return (
+          <div key={option.code} className="ml-3 border-l border-white/10 pl-3">
+            <div className="mb-2 text-xs text-white/45">{option.display} details</div>
+            <OdosChips
+              options={children.map((child) => ({ value: child.code, label: child.display }))}
+              selected={selected.filter((code) => childCodes.includes(code))}
+              onChange={(nextChildren) => onChange(replaceSelectionGroup(selected, childCodes, nextChildren))}
+              ariaLabel={`${option.display} details`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function replaceSelectionGroup(selected: string[], group: string[], nextGroup: string[]): string[] {
+  const groupSet = new Set(group);
+  const nextSet = new Set(nextGroup);
+  return [
+    ...selected.filter((value) => !groupSet.has(value) || nextSet.has(value)),
+    ...nextGroup.filter((value) => !selected.includes(value)),
+  ];
 }
 
 function StateButton({ label, selected, onClick }: { label: string; selected: boolean; onClick(): void }) {

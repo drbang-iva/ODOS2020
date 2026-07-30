@@ -20,6 +20,7 @@ import {
   type ReferralPriority,
 } from "./referral-api";
 import { buildReferralPdfBase64 } from "./referral-pdf";
+import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
@@ -32,8 +33,10 @@ const SYSTEM_DEFAULTS: ReferralIncludeList = {
   history_count: 2,
 };
 
+type ReferralPacketKey = Exclude<keyof ReferralIncludeList, "history_count">;
+
 const INCLUDE_ROWS: Array<{
-  key: Exclude<keyof ReferralIncludeList, "history_count">;
+  key: ReferralPacketKey;
   label: string;
 }> = [
   { key: "letter", label: "Referral letter" },
@@ -480,29 +483,28 @@ export function ReferralCompose({
             </Tile>
 
             <Tile title="Packet contents" index="04">
-              <div className="space-y-1">
-                {INCLUDE_ROWS.map((row) => (
-                  <label key={row.key} className={`flex items-center justify-between gap-3 rounded px-2 py-2 ${includeList[row.key] ? "bg-[var(--odos-surface-2)]" : "opacity-45"}`}>
-                    <span className="flex items-center gap-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={includeList[row.key]}
-                        disabled={composerLocked}
-                        className="h-4 w-4 accent-brand"
-                        onChange={(event) => updateIncludeList({ ...includeList, [row.key]: event.target.checked })}
-                      />
-                      {row.label}
-                    </span>
-                    {row.key === "history" && (
-                      <span className="flex items-center overflow-hidden rounded border border-[color:var(--odos-line)]">
-                        <button type="button" aria-label="Reduce history count" disabled={composerLocked || includeList.history_count <= 1} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) }); }}>−</button>
-                        <span className="min-w-7 text-center text-xs">{includeList.history_count}</span>
-                        <button type="button" aria-label="Increase history count" disabled={composerLocked || includeList.history_count >= 50} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) }); }}>+</button>
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
+              <OdosChips
+                options={INCLUDE_ROWS.map((row) => ({ value: row.key, label: row.label }))}
+                selected={INCLUDE_ROWS.filter((row) => includeList[row.key]).map((row) => row.key)}
+                onChange={(selected) => {
+                  const nextSelected = new Set(selected);
+                  const nextIncludeList = { ...includeList };
+                  for (const row of INCLUDE_ROWS) nextIncludeList[row.key] = nextSelected.has(row.key);
+                  updateIncludeList(nextIncludeList);
+                }}
+                ariaLabel="Referral packet contents"
+                disabled={composerLocked}
+              />
+              {includeList.history && (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded border border-[color:var(--odos-line)] px-3 py-2 text-sm">
+                  <span>Prior finalized exams</span>
+                  <span className="flex items-center overflow-hidden rounded border border-[color:var(--odos-line)]">
+                    <button type="button" aria-label="Reduce history count" disabled={composerLocked || includeList.history_count <= 1} className="min-h-11 min-w-11" onClick={() => updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) })}>−</button>
+                    <span className="min-w-11 text-center text-xs">{includeList.history_count}</span>
+                    <button type="button" aria-label="Increase history count" disabled={composerLocked || includeList.history_count >= 50} className="min-h-11 min-w-11" onClick={() => updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) })}>+</button>
+                  </span>
+                </div>
+              )}
               <button type="button" disabled={busy === "defaults" || composerLocked} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>
                 Save as my default
               </button>
