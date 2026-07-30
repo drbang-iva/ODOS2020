@@ -13,6 +13,7 @@ import {
   createPatientDemographicsActions,
   createPatient,
   emptyPatientDemographics,
+  localCalendarDate,
   patientDemographicsFromPatient,
   registerPatient,
   validatePatientDemographics,
@@ -30,7 +31,10 @@ import {
   isValidOdosMrn,
   luhnCheckDigit,
 } from "../src/lib/patient-identity";
-import { DuplicatePatientWarning } from "../src/scenes/NewPatient";
+import {
+  DuplicatePatientWarning,
+  withoutResponsiblePartyErrors,
+} from "../src/scenes/NewPatient";
 
 const COMPLETE_DRAFT: PatientDemographicsDraft = {
   firstName: "Jane",
@@ -57,6 +61,17 @@ const EXISTING: Patient = {
   telecom: [{ system: "phone", use: "home", value: "864-555-0100" }, { system: "email", use: "home", value: "jane@example.test" }],
   address: [{ use: "home", line: ["1 Main St"], city: "Greenville", state: "SC", postalCode: "29601" }],
 };
+
+test("registration uses the local calendar date and clears stale responsible-party errors", () => {
+  assert.equal(localCalendarDate(new Date(2026, 6, 5, 23, 30)), "2026-07-05");
+  assert.deepEqual(withoutResponsiblePartyErrors({
+    firstName: "Legal first name is required.",
+    responsibleParties: "A responsible party is required.",
+    "responsibleParties.1.address": "Mailing address is required.",
+  }), {
+    firstName: "Legal first name is required.",
+  });
+});
 
 test("exact duplicate search returns a warning result and does not create", async () => {
   let createCalls = 0;

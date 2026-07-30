@@ -975,6 +975,11 @@ function resolveStatementRecipient(
   const resolved: Array<Patient | RelatedPerson> = [];
   for (const guarantor of guarantors) {
     const reference = guarantor.party.reference;
+    if (!reference) {
+      throw new StatementValidationError(
+        `${patientReference} has a current Account guarantor without a FHIR reference; statement delivery was blocked.`,
+      );
+    }
     if (reference === patientReference) {
       if (minorOn(patient.birthDate, onDate)) {
         throw new StatementValidationError(
@@ -984,13 +989,23 @@ function resolveStatementRecipient(
       resolved.push(patient);
       continue;
     }
-    const person = reference ? relatedPeople.get(reference) : undefined;
-    if (person && person.patient.reference !== patientReference) {
+    if (!reference.startsWith("RelatedPerson/")) {
+      throw new StatementValidationError(
+        `${reference} is not a supported statement guarantor for ${patientReference}; statement delivery was blocked.`,
+      );
+    }
+    const person = relatedPeople.get(reference);
+    if (!person) {
+      throw new StatementValidationError(
+        `${reference} could not be resolved for ${patientReference}; statement delivery was blocked.`,
+      );
+    }
+    if (person.patient.reference !== patientReference) {
       throw new StatementValidationError(
         `${reference} does not belong to ${patientReference}; statement delivery was blocked.`,
       );
     }
-    if (person?.active !== false && person) resolved.push(person);
+    if (person.active !== false) resolved.push(person);
   }
   if (resolved.length === 0) {
     throw new StatementValidationError(`${patientReference} has no resolvable current Account guarantor.`);

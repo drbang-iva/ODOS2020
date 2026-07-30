@@ -4,6 +4,7 @@ import { PatientDemographicsFields } from "../components/patient/PatientDemograp
 import {
   createPatient,
   emptyPatientDemographics,
+  localCalendarDate,
   registerPatient,
   validatePatientRegistration,
   type PatientDemographicsDraft,
@@ -20,7 +21,7 @@ import { openPatientOverview, useViewState } from "../lib/view-state";
 
 export function NewPatient() {
   const setView = useViewState((state) => state.setView);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localCalendarDate();
   const [draft, setDraft] = useState<PatientDemographicsDraft>(() => emptyPatientDemographics());
   const [responsibleParties, setResponsibleParties] = useState<ResponsiblePartyDraft[]>(() => [
     emptySelfResponsibleParty("self"),
@@ -90,6 +91,7 @@ export function NewPatient() {
           onChange={(next) => {
             setResponsibleParties(next);
             setDuplicates([]);
+            setErrors(withoutResponsiblePartyErrors);
           }}
         />
         <div className="mt-6 flex justify-end">
@@ -224,4 +226,13 @@ function ResponsibleCheckbox({
 
 function partyError(errors: Record<string, string>, index: number, field: string): string | undefined {
   return errors[`responsibleParties.${index}.${field}`];
+}
+
+export function withoutResponsiblePartyErrors(
+  errors: Record<string, string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(errors).filter(([key]) =>
+      key !== "responsibleParties" && !key.startsWith("responsibleParties.")),
+  );
 }

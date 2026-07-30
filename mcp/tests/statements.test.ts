@@ -229,15 +229,29 @@ test("statements reject a guarantor without a usable name", async () => {
   assert.match(run.rejects[0].reason, /has no usable name for statement delivery/);
 });
 
-test("statements reject an unresolved Account guarantor", async () => {
+test("statements reject an unresolved Account guarantor even when another guarantor resolves", async () => {
+  const account = patientAccount("missing-guardian-account", "minor", "RelatedPerson/missing");
+  account.guarantor!.push({ party: { reference: "RelatedPerson/guardian" }, onHold: false });
   const run = await generateStatementRun({
     patients: [minorPatient()],
     invoices: [invoice("missing-guardian-invoice", "minor", 10_000)],
     payments: [],
-    accounts: [patientAccount("missing-guardian-account", "minor", "RelatedPerson/missing")],
+    accounts: [account],
+    relatedPeople: [guardian()],
   });
   assert.equal(run.invalidRejects, 1);
-  assert.match(run.rejects[0].reason, /has no resolvable current Account guarantor/);
+  assert.match(run.rejects[0].reason, /RelatedPerson\/missing could not be resolved for Patient\/minor/);
+});
+
+test("statements reject an unsupported Account guarantor reference", async () => {
+  const run = await generateStatementRun({
+    patients: [minorPatient()],
+    invoices: [invoice("unsupported-guardian-invoice", "minor", 10_000)],
+    payments: [],
+    accounts: [patientAccount("unsupported-guardian-account", "minor", "Organization/guardian")],
+  });
+  assert.equal(run.invalidRejects, 1);
+  assert.match(run.rejects[0].reason, /Organization\/guardian is not a supported statement guarantor/);
 });
 
 test("statements reject a RelatedPerson owned by another patient", async () => {

@@ -334,10 +334,75 @@ test("MRN backfill validates every Patient before reserving or writing an earlie
   assert.equal(adapter.patients.get("valid-first")?.identifier?.length, 0);
 });
 
+test("MRN backfill rejects an existing-MRN reservation owned by another allocation token", async () => {
+  const mrn = formatOdosMrn(650_002);
+  const adapter = new FakePatientMrnBackfillAdapter([
+    patient("unlinked", "1980-01-02", [{ system: ODOS_MRN_SYSTEM, value: mrn }]),
+  ]);
+  adapter.accounts.set("foreign-reservation", {
+    resourceType: "Account",
+    id: "foreign-reservation",
+    meta: { versionId: "1" },
+    identifier: [
+      { system: ODOS_MRN_SYSTEM, value: mrn },
+      { system: ODOS_MRN_ALLOCATION_TOKEN_SYSTEM, value: "foreign-token" },
+    ],
+    status: "on-hold",
+  });
+
+  await assert.rejects(
+    backfillPatientMrns(adapter, {
+      today: "2026-07-30",
+      nextMrnBase: () => {
+        throw new Error("existing MRN must not allocate another");
+      },
+      nextUuid: () => "this-run-token",
+    }),
+    /already reserved by an Account not linked to its Patient/,
+  );
+  assert.equal(adapter.transactions.length, 0);
+  assert.equal(adapter.accounts.get("foreign-reservation")?.status, "on-hold");
+  assert.equal(adapter.accounts.get("foreign-reservation")?.subject, undefined);
+});
+
+test("MRN backfill honors Patient and Account ifMatch versions atomically", async (context) => {
+  for (const staleResource of ["Patient", "Account"] as const) {
+    await context.test(`stale ${staleResource}`, async () => {
+      const adapter = new FakePatientMrnBackfillAdapter([
+        patient("concurrent", "1980-01-02", []),
+      ]);
+      adapter.beforeTransaction = () => {
+        if (staleResource === "Patient") {
+          adapter.patients.get("concurrent")!.meta = { versionId: "2" };
+          return;
+        }
+        const reserved = [...adapter.accounts.values()][0];
+        assert.ok(reserved);
+        reserved.meta = { versionId: "2" };
+      };
+
+      await assert.rejects(
+        backfillPatientMrns(adapter, {
+          today: "2026-07-30",
+          nextMrnBase: () => 650_003,
+          nextUuid: sequentialUuid(),
+        }),
+        /transaction failed: 412 Precondition Failed/,
+      );
+      assert.equal(adapter.transactions.length, 1);
+      assert.equal(adapter.patients.get("concurrent")?.identifier?.length, 0);
+      const reservation = [...adapter.accounts.values()][0];
+      assert.equal(reservation.status, "on-hold");
+      assert.equal(reservation.subject, undefined);
+    });
+  }
+});
+
 class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
   readonly patients = new Map<string, Patient>();
   readonly accounts = new Map<string, Account>();
   readonly transactions: Bundle[] = [];
+  beforeTransaction?: () => void;
   private accountSequence = 0;
 
   constructor(patients: Patient[]) {
@@ -376,6 +441,28 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
 
   async executeTransaction(bundle: Bundle): Promise<Bundle> {
     this.transactions.push(structuredClone(bundle));
+    this.beforeTransaction?.();
+    const statuses = (bundle.entry ?? []).map((entry) => {
+      if (!entry.request?.ifMatch || !entry.resource?.id) return "200 OK";
+      const current = entry.resource.resourceType === "Patient"
+        ? this.patients.get(entry.resource.id)
+        : entry.resource.resourceType === "Account"
+          ? this.accounts.get(entry.resource.id)
+          : undefined;
+      const actual = current?.meta?.versionId ? `W/"${current.meta.versionId}"` : undefined;
+      return actual === entry.request.ifMatch ? "200 OK" : "412 Precondition Failed";
+    });
+    if (statuses.some((status) => status === "412 Precondition Failed")) {
+      return {
+        resourceType: "Bundle",
+        type: "transaction-response",
+        entry: statuses.map((status) => ({
+          response: {
+            status: status === "412 Precondition Failed" ? status : "424 Failed Dependency",
+          },
+        })),
+      };
+    }
     for (const entry of bundle.entry ?? []) {
       if (entry.resource?.resourceType === "Patient") {
         const current = this.patients.get(entry.resource.id!);
@@ -397,7 +484,7 @@ class FakePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
     return {
       resourceType: "Bundle",
       type: "transaction-response",
-      entry: (bundle.entry ?? []).map(() => ({ response: { status: "200 OK" } })),
+      entry: statuses.map((status) => ({ response: { status } })),
     };
   }
 }

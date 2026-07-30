@@ -23,6 +23,7 @@ import {
 } from "../ui/src/lib/patient-identity.js";
 
 const DEFAULT_BASE_URL = "http://localhost:8103";
+const BACKFILL_MAX_RESOURCES_PER_TYPE = 100_000;
 
 export interface PatientMrnBackfillAdapter extends MrnReservationStore {
   listPatients(): Promise<Patient[]>;
@@ -302,7 +303,8 @@ async function reserveSpecificMrn(
 }
 
 function assertTransactionSuccess(bundle: Bundle): void {
-  const failed = (bundle.entry ?? []).find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
+  const failed = (bundle.entry ?? []).find((entry) => entry.response?.status?.startsWith("412"))
+    ?? (bundle.entry ?? []).find((entry) => !/^2\d\d/.test(entry.response?.status ?? ""));
   if (failed) throw new Error(`Patient MRN backfill transaction failed: ${failed.response?.status ?? "missing status"}.`);
 }
 
@@ -310,11 +312,15 @@ class LivePatientMrnBackfillAdapter implements PatientMrnBackfillAdapter {
   constructor(private readonly fhir: MedplumClient) {}
 
   listPatients(): Promise<Patient[]> {
-    return searchAll<Patient>(this.fhir, "Patient", {});
+    return searchAll<Patient>(this.fhir, "Patient", {}, {
+      maxRows: BACKFILL_MAX_RESOURCES_PER_TYPE,
+    });
   }
 
   listAccounts(): Promise<Account[]> {
-    return searchAll<Account>(this.fhir, "Account", {});
+    return searchAll<Account>(this.fhir, "Account", {}, {
+      maxRows: BACKFILL_MAX_RESOURCES_PER_TYPE,
+    });
   }
 
   async patientIdentifierExists(mrn: string): Promise<boolean> {
