@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { OdosSearchPicker } from "./inputs/OdosSearchPicker";
 import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 export type PhotoLens = "timeline" | "compare";
@@ -339,13 +340,27 @@ function ImageSelect({
   images: LongitudinalImageSummary[];
   onChange: (value: string) => void;
 }) {
+  const selected = images.find((image) => image.mediaReference === value);
   return (
-    <label className="text-[11px] text-white/45">
-      {label}
-      <select aria-label={`${label} image`} className="sidebar-input mt-1" value={value} onChange={(event) => onChange(event.target.value)}>
-        {images.map((image) => <option key={image.mediaReference} value={image.mediaReference}>{localDate(image.createdAt)} · {image.structure}</option>)}
-      </select>
-    </label>
+    <OdosSearchPicker
+      label={`${label} image`}
+      value={value}
+      selectedLabel={selected ? `${localDate(selected.createdAt)} · ${selected.structure}` : undefined}
+      placeholder={`Search ${label.toLocaleLowerCase()} images`}
+      search={async (query) => {
+        const normalized = query.trim().toLocaleLowerCase();
+        return images
+          .filter((image) => `${localDate(image.createdAt)} ${image.structure} ${image.title}`.toLocaleLowerCase().includes(normalized))
+          .map((image) => ({
+            value: image.mediaReference,
+            label: `${localDate(image.createdAt)} · ${image.structure}`,
+            description: image.title,
+            item: image,
+          }));
+      }}
+      onClear={() => onChange("")}
+      onSelect={(option) => onChange(option.value)}
+    />
   );
 }
 

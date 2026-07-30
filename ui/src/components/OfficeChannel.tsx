@@ -1,10 +1,10 @@
 import type { Patient } from "@medplum/fhirtypes";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { acknowledgeOfficeMessage, fetchClinicOfficeMessages, fetchDeskOfficeMessages, type OfficeMessage } from "../lib/office-channel";
 import { fetchClinicSummary, type ClinicSummary } from "../lib/clinic-summary";
 import { fhir } from "../lib/fhir";
-import { patientName } from "../lib/scheduler-appointment-ui";
 import { openPatientOverview } from "../lib/view-state";
+import { PatientSearch } from "../scenes/PatientPicker";
 
 export interface OfficeInboxApi {
   list: typeof fetchClinicOfficeMessages;
@@ -140,11 +140,6 @@ export function ClinicOfficeShell(props: Omit<Parameters<typeof OfficeChannelShe
 
 export function ClinicPatientSearch() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>();
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -152,69 +147,26 @@ export function ClinicPatientSearch() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         inputRef.current?.focus();
-        setOpen(true);
       }
     };
     document.addEventListener("keydown", focusSearch);
     return () => document.removeEventListener("keydown", focusSearch);
   }, []);
 
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setPatients([]);
-      setLoading(false);
-      setError(undefined);
-      return;
-    }
-    let active = true;
-    const handle = window.setTimeout(() => {
-      setLoading(true);
-      searchClinicPatients(trimmed)
-        .then((results) => { if (active) { setPatients(results); setError(undefined); } })
-        .catch((reason) => { if (active) { setPatients([]); setError(reason instanceof Error ? reason.message : "Patient search unavailable."); } })
-        .finally(() => active && setLoading(false));
-    }, 250);
-    return () => { active = false; window.clearTimeout(handle); };
-  }, [query]);
-
   function selectPatient(patient: Patient) {
     if (!patient.id) return;
-    setQuery("");
-    setOpen(false);
     openPatientOverview(patient.id);
   }
 
   return (
-    <div className={`odos-clinic-search !order-none !basis-auto min-w-[240px]${open ? " is-open" : ""}`}>
-      <span className="odos-clinic-search-glass" aria-hidden>⌕</span>
-      <input
-        ref={inputRef}
-        value={query}
-        aria-label="Find a patient"
-        aria-expanded={open && Boolean(query.trim())}
+    <div className="!order-none !basis-auto min-w-[240px]">
+      <PatientSearch
+        label="Find a patient"
         placeholder="Find a patient — name, DOB, chart #"
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 180)}
-        onChange={(event) => setQuery(event.target.value)}
-        onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
+        inputRef={inputRef}
+        search={searchClinicPatients}
+        onSelect={selectPatient}
       />
-      <span className="odos-clinic-search-kbd">⌘K</span>
-      {open && query.trim() && (
-        <div className="odos-clinic-search-pop" role="listbox" aria-label="Patient search results">
-          {loading && <div className="odos-clinic-search-state">Searching…</div>}
-          {error && <div className="odos-clinic-search-state is-error">Patient search unavailable</div>}
-          {!loading && !error && patients.length === 0 && <div className="odos-clinic-search-state">No matching patients</div>}
-          {!loading && !error && patients.map((patient) => (
-            <button key={patient.id} type="button" role="option" disabled={!patient.id} onMouseDown={(event) => event.preventDefault()} onClick={() => selectPatient(patient)}>
-              <span>{patientName(patient)}</span>
-              <small>DOB {patient.birthDate ?? "unknown"}</small>
-              <i>chart {shortId(patient.id)}</i>
-            </button>
-          ))}
-          <a className="odos-clinic-search-new" href="/patient/new" onMouseDown={(event) => event.preventDefault()} onClick={navigateWithinApp}>＋ New patient…</a>
-        </div>
-      )}
     </div>
   );
 }
@@ -243,11 +195,6 @@ function normalizedBirthDate(value: string): string | undefined {
 
 function isFhirId(value: string): boolean {
   return /^[A-Za-z0-9.-]{1,64}$/.test(value);
-}
-
-function shortId(value: string | undefined): string {
-  if (!value) return "pending";
-  return value.length <= 8 ? value : value.slice(0, 8);
 }
 
 export function OfficePill({ count, open, onClick }: { count: number; open: boolean; onClick(): void }) {
@@ -319,11 +266,4 @@ export function ageLabel(value: string): string {
 
 function dateTimeLabel(value: string): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
-}
-
-function navigateWithinApp(event: MouseEvent<HTMLAnchorElement>) {
-  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  event.preventDefault();
-  window.history.pushState({}, "", event.currentTarget.href);
-  window.dispatchEvent(new PopStateEvent("popstate"));
 }

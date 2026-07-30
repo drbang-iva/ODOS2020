@@ -1,4 +1,4 @@
-import type { Appointment, Coverage, HealthcareService, Patient, Schedule } from "@medplum/fhirtypes";
+import type { Appointment, Coverage, HealthcareService, Schedule } from "@medplum/fhirtypes";
 import { useEffect, useMemo, useState } from "react";
 import { fhir } from "../../lib/fhir";
 import {
@@ -35,6 +35,7 @@ import type {
   SchedulingWriteDeps,
 } from "../../lib/scheduling-store";
 import { coveragePlanName, coverageType } from "../../lib/submit-claims";
+import { PatientSearch } from "../PatientPicker";
 
 const DURATION_PRESETS = [10, 15, 30, 60] as const;
 
@@ -526,7 +527,12 @@ export function AppointmentDetailsModal({
                 {patientQueryOpen && (
                   <PatientSearch
                     onSelect={(patient) => {
-                      setDraft((current) => ({ ...current, patient, nonPatient: false }));
+                      if (!patient.id) return;
+                      setDraft((current) => ({
+                        ...current,
+                        patient: { reference: `Patient/${patient.id}`, display: patientName(patient) },
+                        nonPatient: false,
+                      }));
                       setPatientQueryOpen(false);
                     }}
                   />
@@ -721,78 +727,4 @@ function emptyDraft(timezoneOffset: string): AppointmentModalDraft {
     urgent: false,
     followUp: false,
   };
-}
-
-function PatientSearch({
-  onSelect,
-}: {
-  onSelect: (patient: { reference: string; display?: string }) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setPatients([]);
-      return;
-    }
-    let cancelled = false;
-    const handle = window.setTimeout(() => {
-      async function searchPatients() {
-        setLoading(true);
-        setError(null);
-        try {
-          const bundle = await fhir.search<Patient>("Patient", { name: trimmed, _count: "20" });
-          if (!cancelled) {
-            setPatients((bundle.entry ?? []).flatMap((entry) => (entry.resource ? [entry.resource] : [])));
-          }
-        } catch (err) {
-          if (!cancelled) {
-            setError(err instanceof Error ? err.message : String(err));
-            setPatients([]);
-          }
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      }
-      void searchPatients();
-    }, 300);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(handle);
-    };
-  }, [query]);
-
-  return (
-    <div className="grid gap-2">
-      <input
-        className="scheduler-input"
-        value={query}
-        placeholder="Search patient"
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      {loading && <div className="text-xs text-white/45">Searching</div>}
-      {error && <div className="text-xs text-red-200">{error}</div>}
-      <div className="grid max-h-44 gap-1 overflow-y-auto">
-        {patients.map((patient) => (
-          <button
-            key={patient.id}
-            className="border border-white/10 bg-white/[0.04] px-2 py-1 text-left text-sm hover:bg-white/[0.1]"
-            type="button"
-            disabled={!patient.id}
-            onClick={() =>
-              patient.id &&
-              onSelect({ reference: `Patient/${patient.id}`, display: patientName(patient) })
-            }
-          >
-            <span className="block font-semibold">{patientName(patient)}</span>
-            <span className="text-xs text-white/45">DOB {patient.birthDate ?? "unknown"}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 }

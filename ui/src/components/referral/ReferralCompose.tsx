@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   Bundle,
   CarePlan,
@@ -20,6 +20,7 @@ import {
   type ReferralPriority,
 } from "./referral-api";
 import { buildReferralPdfBase64 } from "./referral-pdf";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
   letter: true,
@@ -69,9 +70,7 @@ export function ReferralCompose({
   const patientId = patientReference.replace(/^Patient\//, "");
   const [includeList, setIncludeList] = useState<ReferralIncludeList>(SYSTEM_DEFAULTS);
   const [recent, setRecent] = useState<ReferralConsultant[]>([]);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ReferralConsultant[]>([]);
-  const [directoryStatus, setDirectoryStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
+  const [consultantPickerValue, setConsultantPickerValue] = useState("");
   const [selectedConsultant, setSelectedConsultant] = useState<ReferralConsultant>();
   const [priority, setPriority] = useState<ReferralPriority>("routine");
   const [reasonText, setReasonText] = useState("");
@@ -136,34 +135,15 @@ export function ReferralCompose({
     return () => controller.abort();
   }, [api, encounterReference, loadContext]);
 
-  useEffect(() => {
-    if (isSending) return;
-    const normalized = query.trim();
-    if (normalized.length < 2) {
-      setResults([]);
-      setDirectoryStatus("idle");
-      return;
-    }
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setDirectoryStatus("searching");
-      api.searchConsultants(normalized, controller.signal)
-        .then((consultants) => {
-          if (controller.signal.aborted) return;
-          setResults(consultants);
-          setDirectoryStatus("ready");
-        })
-        .catch((caught) => {
-          if (controller.signal.aborted || (caught as Error).name === "AbortError") return;
-          setDirectoryStatus("error");
-          setError(errorMessage(caught));
-        });
-    }, 300);
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [api, isSending, query]);
+  const searchConsultantOptions = useCallback(async (query: string) => {
+    const consultants = await api.searchConsultants(query, new AbortController().signal);
+    return consultants.map((consultant) => ({
+      value: consultant.reference,
+      label: consultant.display,
+      description: `${consultant.reference}${consultant.faxNumber ? ` · Fax ${consultant.faxNumber}` : ""}`,
+      item: consultant,
+    }));
+  }, [api]);
 
   useEffect(() => {
     if (!referral?.id || sent || isSending) return;
@@ -265,9 +245,7 @@ export function ReferralCompose({
         }
       }
       setSelectedConsultant(consultant);
-      setQuery(consultant.display);
-      setResults([]);
-      setDirectoryStatus("idle");
+      setConsultantPickerValue(consultant.reference);
     } catch (caught) {
       handleFailure(caught);
     } finally {
@@ -398,8 +376,6 @@ export function ReferralCompose({
     URL.revokeObjectURL(url);
   }
 
-  const visibleConsultants = query.trim().length < 2 ? recent : results;
-
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-[var(--odos-ground)] text-[color:var(--odos-text)]" data-testid="referral-compose">
       <div className="flex h-full min-h-0 flex-col">
@@ -414,22 +390,20 @@ export function ReferralCompose({
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(340px,430px)_minmax(0,1fr)] lg:overflow-hidden">
           <aside className="space-y-3 border-r border-[color:var(--odos-line)] bg-[var(--odos-surface)] p-4 lg:overflow-y-auto sm:p-5">
             <Tile title="Consultant" index="01">
-              <label className="block text-xs font-semibold uppercase tracking-wide text-[color:var(--odos-muted)]" htmlFor="referral-consultant">Search the Directory</label>
-              <input
-                id="referral-consultant"
-                className="sidebar-input mt-2 w-full"
-                value={query}
+              <OdosSearchPicker
+                label="Search the Directory"
+                value={consultantPickerValue}
+                selectedLabel={selectedConsultant?.display}
                 disabled={composerLocked}
                 placeholder="Name or organization"
-                autoComplete="off"
-                onChange={(event) => { if (!sendingRef.current) setQuery(event.target.value); }}
+                searchDelayMs={300}
+                search={searchConsultantOptions}
+                onClear={() => setConsultantPickerValue("")}
+                onSelect={(option) => void chooseConsultant(option.item)}
               />
-              <div className="mt-2 text-xs text-[color:var(--odos-muted)]" aria-live="polite">
-                {directoryStatus === "searching" ? "Searching…" : directoryStatus === "error" ? "Directory unavailable" : ""}
-              </div>
-              {visibleConsultants.length > 0 && (
+              {!consultantPickerValue && recent.length > 0 && (
                 <div className="mt-2 overflow-hidden rounded border border-[color:var(--odos-line)] bg-[var(--odos-deep-surface)]">
-                  {visibleConsultants.map((consultant) => (
+                  {recent.map((consultant) => (
                     <button
                       key={consultant.reference}
                       type="button"
@@ -442,7 +416,7 @@ export function ReferralCompose({
                         <span className="block text-xs text-[color:var(--odos-faint)]">{consultant.reference}</span>
                         {consultant.faxNumber && <span className="block text-xs text-[color:var(--odos-muted)]">Fax {consultant.faxNumber}</span>}
                       </span>
-                      {query.trim().length < 2 && <span className="rounded-full border border-brand/35 bg-brand/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand">Recent</span>}
+                      <span className="rounded-full border border-brand/35 bg-brand/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-brand">Recent</span>
                     </button>
                   ))}
                 </div>

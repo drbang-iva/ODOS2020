@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -62,6 +63,7 @@ const CONTENT_TYPE_BY_EXTENSION = {
 const ACCEPTED_FILE_TYPES = Object.keys(CONTENT_TYPE_BY_EXTENSION).map((extension) => `.${extension}`).join(",");
 const ACCEPTED_CONTENT_TYPES = new Set<string>(Object.values(CONTENT_TYPE_BY_EXTENSION));
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const OCT_STRUCTURE_OPTIONS = ["Macula", "Optic nerve"] as const;
 export const CATEGORY_OPTIONS = [
   ["visual-field", "Visual field printout"],
   ["fundus-photo", "Fundus photo"],
@@ -75,7 +77,7 @@ export const CATEGORY_OPTIONS = [
 
 export function ImagingSection({ patientReference, encounterReference, onSaved }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const refinementInputRef = useRef<HTMLInputElement>(null);
+  const refinementInputRef = useRef<HTMLButtonElement>(null);
   const refinementTriggerNodes = useRef(new Map<string, HTMLButtonElement>());
   const imagingTileNodes = useRef(new Map<string, HTMLElement>());
   const retriedImages = useRef(new Set<string>());
@@ -365,7 +367,16 @@ export function ImagingSection({ patientReference, encounterReference, onSaved }
           <section className="mt-5 rounded border border-violet-300/25 bg-violet-300/5 p-4" aria-label="Refine OCT structure">
             <h3 className="text-sm font-semibold text-violet-100">Refine OCT structure</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              <input ref={refinementInputRef} aria-label="OCT structure" className="sidebar-input" value={refinement.structure} placeholder="e.g. Optic nerve or Macula" onChange={(event) => setRefinement({ ...refinement, structure: event.target.value })} />
+              <div>
+                <OdosSelect
+                  buttonRef={refinementInputRef}
+                  ariaLabel="OCT structure"
+                  value={refinement.structure}
+                  defaultValue="Macula"
+                  options={[...new Set([...OCT_STRUCTURE_OPTIONS, refinement.structure].filter(Boolean))].map((value) => ({ value, label: value }))}
+                  onChange={(structure) => setRefinement({ ...refinement, structure })}
+                />
+              </div>
               <select aria-label="OCT laterality" className="sidebar-input" value={refinement.laterality} onChange={(event) => setRefinement({ ...refinement, laterality: event.target.value as typeof refinement.laterality })}>
                 <option value="">Laterality not recorded</option>
                 <option value="OD">Right eye (OD)</option>

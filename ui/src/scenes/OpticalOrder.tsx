@@ -64,6 +64,7 @@ import {
   hasActiveApplicableBenefit,
 } from "../lib/patient-insurance";
 import { fhir } from "../lib/fhir";
+import { OdosSearchPicker } from "../components/inputs/OdosSearchPicker";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -1179,24 +1180,42 @@ function ChargeTable({
               onClick={() => onSelectCharge(line.id)}
             >
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Procedure"
                   value={line.procedure}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { procedure: event.target.value }))}
+                  selectedLabel={line.procedure}
+                  placeholder="Search procedure codes"
+                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.procedure), query)}
+                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
+                  createLabel="Use code"
+                  onClear={() => onChange(updateLine(lines, line.id, { procedure: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { procedure: option.value }))}
                 />
               </td>
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Modifier"
                   value={line.modifier}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { modifier: event.target.value }))}
+                  selectedLabel={line.modifier}
+                  placeholder="Search modifiers"
+                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.modifier), query)}
+                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
+                  createLabel="Use modifier"
+                  onClear={() => onChange(updateLine(lines, line.id, { modifier: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { modifier: option.value }))}
                 />
               </td>
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Diagnosis"
                   value={line.diagnosis}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { diagnosis: event.target.value }))}
+                  selectedLabel={line.diagnosis}
+                  placeholder="Search diagnosis codes"
+                  search={(query) => searchChargeValues(lines.map((candidate) => candidate.diagnosis), query)}
+                  onCreate={(value) => Promise.resolve(chargeValueOption(value))}
+                  createLabel="Use diagnosis"
+                  onClear={() => onChange(updateLine(lines, line.id, { diagnosis: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { diagnosis: option.value }))}
                 />
               </td>
               <DisabledCell value="" />
@@ -1249,6 +1268,17 @@ function ChargeTable({
       </table>
     </div>
   );
+}
+
+function chargeValueOption(value: string) {
+  return { value, label: value, item: value };
+}
+
+function searchChargeValues(values: string[], query: string) {
+  const normalized = query.trim().toLocaleLowerCase();
+  return Promise.resolve([...new Set(values.filter(Boolean))]
+    .filter((value) => value.toLocaleLowerCase().includes(normalized))
+    .map(chargeValueOption));
 }
 
 export function PaymentPanel({

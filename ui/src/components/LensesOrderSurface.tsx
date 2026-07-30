@@ -25,6 +25,7 @@ import {
   type LensSelection,
 } from "../lib/lens-selection";
 import { resolveVCode } from "../lib/v-code-resolver";
+import { OdosSearchPicker } from "./inputs/OdosSearchPicker";
 
 export interface LensesOrderSurfaceProps {
   open: boolean;
@@ -62,7 +63,6 @@ export function LensesOrderSurface({
   const [coatingId, setCoatingId] = useState("");
   const [confirmedModifiers, setConfirmedModifiers] = useState<Record<string, boolean>>({});
   const [fulfillment, setFulfillment] = useState<LensFulfillment>("lab");
-  const [query, setQuery] = useState("");
   const [clickCount, setClickCount] = useState(0);
   const [loadError, setLoadError] = useState("");
   const dialogRef = useRef<HTMLElement>(null);
@@ -86,7 +86,6 @@ export function LensesOrderSurface({
   useEffect(() => {
     if (!open) return;
     setClickCount(0);
-    setQuery("");
     setLoadError("");
     let cancelled = false;
     const load = suppliedProducts && suppliedCoatings && suppliedModifiers
@@ -212,10 +211,6 @@ export function LensesOrderSurface({
   const coatingRetailCents = selectedCoating ? addOnRetailCents(selectedCoating.pricePerPairCents) : 0;
   const totalCents = (selectedProduct?.retailPerPairCents ?? 0) + coatingRetailCents
     + modifierLines.filter((line) => line.confirmed).reduce((sum, line) => sum + line.chargeCents, 0);
-  const searchProducts = products.filter((product) => selectedLab === "all" || product.lab === selectedLab);
-  const searchResults = query.trim().length >= 2
-    ? fuzzySearchLensProducts(query, searchProducts, rxContext)
-    : [];
   const stockMatch = checkStockMatch();
   const canCommit = Boolean(
     selectedProduct
@@ -252,7 +247,7 @@ export function LensesOrderSurface({
     });
   }
 
-  function chooseProduct(product: LensProduct, fromSearch = false) {
+  function chooseProduct(product: LensProduct) {
     count(() => {
       setSelectedLab(product.lab);
       setDesignType(product.design.type);
@@ -261,7 +256,6 @@ export function LensesOrderSurface({
       setProductId(product.id);
       setCoatingId(houseDefault(coatings, product.lab)?.id ?? "");
       setConfirmedModifiers({});
-      if (fromSearch) setQuery("");
     });
   }
 
@@ -322,32 +316,24 @@ export function LensesOrderSurface({
           <span className={rxContext.od || rxContext.os ? "is-checked" : "is-unchecked"}>
             {rxContext.od || rxContext.os ? "Rx in context" : "Rx not checked"}
           </span>
-          <label>
-            <span>Search this {selectedLab === "all" ? "catalog" : "lab"}</span>
-            <input
-              aria-label="Search lenses"
-              value={query}
-              placeholder="Try 167 xtractive alpha"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          {searchResults.length > 0 ? (
-            <div className="lenses-search-results" role="listbox" aria-label="Lens search results">
-              {searchResults.map(({ product, envelope: result }) => (
-                <button
-                  key={product.id}
-                  type="button"
-                  className={result.fits ? "" : "is-blocked"}
-                  disabled={!result.fits}
-                  onClick={() => chooseProduct(product, true)}
-                >
-                  <strong>{product.design.productName} · {product.material.name} {product.material.index} · {treatmentLabel(product)}</strong>
-                  <span>{labLabel(product.lab)} · {formatPair(product.retailPerPairCents)}</span>
-                  {!result.fits ? <em>Outside Rx envelope — {result.reason}</em> : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <OdosSearchPicker
+            label={`Search this ${selectedLab === "all" ? "catalog" : "lab"}`}
+            value=""
+            placeholder="Try 167 xtractive alpha"
+            search={async (query) => {
+              const searchProducts = products.filter((product) => selectedLab === "all" || product.lab === selectedLab);
+              return fuzzySearchLensProducts(query, searchProducts, rxContext)
+                .filter(({ envelope }) => envelope.fits)
+                .map(({ product }) => ({
+                  value: product.id,
+                  label: `${product.design.productName} · ${product.material.name} ${product.material.index}`,
+                  description: `${treatmentLabel(product)} · ${labLabel(product.lab)} · ${formatPair(product.retailPerPairCents)}`,
+                  item: product,
+                }));
+            }}
+            onClear={() => undefined}
+            onSelect={(option) => chooseProduct(option.item)}
+          />
         </div>
 
         {loadError ? <div className="lenses-error" role="alert">Lens Catalog unavailable: {loadError}</div> : null}

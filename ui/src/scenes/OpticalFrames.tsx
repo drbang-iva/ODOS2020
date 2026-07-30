@@ -25,6 +25,7 @@ import {
 } from "../lib/optical-frames";
 import { fhir } from "../lib/fhir";
 import { useRole } from "../lib/role-context";
+import { OdosSearchPicker } from "../components/inputs/OdosSearchPicker";
 
 type OpticalFramesRoute = "catalog" | "inventory" | "lookup" | "settings";
 
@@ -56,6 +57,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
   const [variantSettings, setVariantSettings] = useState<PracticeFrameVariantSettings[]>([]);
   const [skippedUnitCount, setSkippedUnitCount] = useState(0);
   const [query, setQuery] = useState("");
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<FrameCatalogItem>();
   const [error, setError] = useState<string | null>(null);
   const inventoryRows = useMemo(
     () => summarizeInventoryByVariant(units, variantSettings, catalogRows),
@@ -64,7 +66,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
 
   useEffect(() => {
     let cancelled = false;
-    api.searchCatalog(query)
+    api.searchCatalog("")
       .then((catalog) => {
         if (!cancelled) setCatalogRows(catalog);
       })
@@ -74,7 +76,7 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
     return () => {
       cancelled = true;
     };
-  }, [api, query]);
+  }, [api]);
 
   useEffect(() => {
     if (route === "settings") return;
@@ -115,12 +117,30 @@ export function OpticalFrames({ route, api = defaultApi }: { route: OpticalFrame
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6">
         <OpticalNav active={route} />
         <div className="flex flex-wrap items-center gap-3">
-          <input
-            className="h-10 min-w-72 rounded border border-white/15 bg-bg-deep px-3 text-sm outline-none focus:border-brand"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+          <div className="min-w-72 flex-1">
+            <OdosSearchPicker
+              label="Frame catalog"
+              value={selectedCatalogItem?.canonicalUrl ?? ""}
+              selectedLabel={selectedCatalogItem?.display}
+              search={async (searchQuery) => (await api.searchCatalog(searchQuery)).map((item) => ({
+                value: item.canonicalUrl,
+                label: item.display,
+                description: [item.sku, item.gtin14, item.manufacturer].filter(Boolean).join(" · "),
+                item,
+              }))}
+              onClear={() => {
+                setSelectedCatalogItem(undefined);
+                setQuery("");
+                void api.searchCatalog("").then(setCatalogRows).catch((err) => setError(err instanceof Error ? err.message : String(err)));
+              }}
+              onSelect={(option) => {
+                setSelectedCatalogItem(option.item);
+                setQuery(option.item.sku);
+                setCatalogRows([option.item]);
+              }}
             placeholder="SKU, GTIN, brand, model"
-          />
+            />
+          </div>
           {route === "inventory" ? <CsvExportButton rows={catalogRows} /> : null}
         </div>
         {error ? <div role="alert" className="rounded border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-100">{error}</div> : null}
