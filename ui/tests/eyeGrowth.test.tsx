@@ -452,7 +452,7 @@ test("reference curve defaults to European and offers only European and Asian", 
   }
 });
 
-test("malformed optional corneal radii report field errors without discarding valid axial lengths", async () => {
+test("malformed typed corneal radii return to blank without discarding valid axial lengths", async () => {
   for (const eyes of [
     { OD: { axialLength: "24.12", cornealRadius: "7.7.4" } },
     {
@@ -463,12 +463,12 @@ test("malformed optional corneal radii report field errors without discarding va
     const { posted, rendered } = await submitEyeGrowthFixture(eyes);
     assert.equal(posted?.eyes.OD.axialLengthMm, 24.12);
     assert.equal("cornealRadiusMm" in posted!.eyes.OD, false);
-    assert.match(rendered, /Corneal radius for OD is not a number/);
+    assert.doesNotMatch(rendered, /Corneal radius for OD is not a number/);
     assert.doesNotMatch(rendered, /Enter axial length for OD, OS, or both eyes/);
     if ("OS" in eyes) {
       assert.equal(posted?.eyes.OS.axialLengthMm, 24.31);
       assert.equal("cornealRadiusMm" in posted!.eyes.OS, false);
-      assert.match(rendered, /Corneal radius for OS is not a number/);
+      assert.doesNotMatch(rendered, /Corneal radius for OS is not a number/);
     }
   }
 });
@@ -523,8 +523,18 @@ async function submitEyeGrowthFixture(
       act(() => {
         renderer.root.findByProps({ "aria-label": `${eye} axial length in millimeters` })
           .props.onChange({ target: { value: values.axialLength } });
+      });
+      act(() => {
+        renderer.root.findByProps({ "aria-label": `${eye} axial length in millimeters` })
+          .props.onBlur();
+      });
+      act(() => {
         renderer.root.findByProps({ "aria-label": `${eye} corneal radius in millimeters` })
           .props.onChange({ target: { value: values.cornealRadius } });
+      });
+      act(() => {
+        renderer.root.findByProps({ "aria-label": `${eye} corneal radius in millimeters` })
+          .props.onBlur();
       });
     }
     const recordButton = renderer.root.findAllByType("button")

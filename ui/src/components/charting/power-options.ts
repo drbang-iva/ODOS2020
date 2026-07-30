@@ -24,3 +24,8 @@ export function formatPowerOption(value: number): string {
   if (value === 0) return "Plano";
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}`;
 }
+
+export function formatSpherePower(value: number): string {
+  if (value === 0) return "pl";
+  return `${value > 0 ? "+" : "-"}${Math.abs(value).toFixed(2)}`;
+}

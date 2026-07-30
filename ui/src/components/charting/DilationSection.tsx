@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
@@ -111,7 +112,16 @@ export function DilationSection({ definition, patientReference, encounterReferen
                     ]}
                     onChange={(agent) => updateAgent(index, { agent })}
                   />
-                  <input aria-label={`Drops ${index + 1}`} type="number" min="1" max="10" value={row.drops} placeholder="Drops" onChange={(event) => updateAgent(index, { drops: event.target.value })} className="h-10 rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)]" />
+                  <OdosWheel
+                    ariaLabel={`Drops ${index + 1}`}
+                    value={Number(row.drops)}
+                    centerOn={0}
+                    min={1}
+                    max={10}
+                    step={1}
+                    format={String}
+                    onChange={(drops) => updateAgent(index, { drops: String(drops) })}
+                  />
                   <OdosSelect
                     ariaLabel={`Eyes ${index + 1}`}
                     value={row.eyes}

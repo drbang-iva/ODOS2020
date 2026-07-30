@@ -26,6 +26,7 @@ import { SpineNav } from "../src/components/charting/SpineNav";
 import { sectionStatus } from "../src/components/charting/types";
 import { VaSection } from "../src/components/charting/VaSection";
 import { OdosSelect } from "../src/components/inputs/OdosSelect";
+import { OdosWheel } from "../src/components/inputs/OdosWheel";
 import { PatientRoute } from "../src/App";
 import { fhir } from "../src/lib/fhir";
 import { RoleProvider } from "../src/lib/role-context";
@@ -558,6 +559,9 @@ test("gland-structure grade retry reuses the successful image upload", async () 
       scoreInput.props.onChange({ target: { value: "2" } });
       gradeSelect.props.onChange({ target: { value: "grade-2" } });
     });
+    act(() => renderer.root.findByProps({
+      "aria-label": "Meibography total score",
+    }).props.onBlur());
     const save = () => renderer.root.find((node) =>
       node.type === "button" &&
       (node.props.children === "Save image + grade" || node.props.children === "Retry grade")
@@ -1135,17 +1139,17 @@ test("anterior optional selects and numbers render blank, persist typed values, 
       />);
       await flushEffects();
     });
-    const numbers = renderer.root.findAllByType("input").filter((input) => input.props.type === "number");
+    const numbers = renderer.root.findAllByType(OdosWheel);
     assert.equal(numbers.length, 10);
-    assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, ""]);
+    assert.deepEqual(numbers.slice(0, 2).map((input) => input.props.value), [6, 0]);
     assert.deepEqual([numbers[2]!.props.min, numbers[2]!.props.max, numbers[2]!.props.step], [0.1, 6.9, 0.1]);
     const selects = renderer.root.findAllByType(OdosSelect);
     assert.equal(selects.length, 2);
     assert.deepEqual(selects.map((select) => select.props.value), ["", ""]);
 
-    act(() => numbers[0]!.props.onChange({ target: { value: "6" } }));
+    act(() => numbers[0]!.props.onChange(6));
     act(() => selects[1]!.props.onChange("grade-2"));
-    act(() => numbers[2]!.props.onChange({ target: { value: "6.9" } }));
+    act(() => numbers[2]!.props.onChange(6.9));
     const normalButtons = renderer.root.findAllByType("button").filter((button) => button.children.join("") === "Normal");
     act(() => normalButtons[3]!.props.onClick());
     act(() => normalButtons[4]!.props.onClick());

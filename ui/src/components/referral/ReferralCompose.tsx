@@ -22,6 +22,7 @@ import {
 import { buildReferralPdfBase64 } from "./referral-pdf";
 import { OdosChips } from "../inputs/OdosChips";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
   letter: true,
@@ -498,11 +499,19 @@ export function ReferralCompose({
               {includeList.history && (
                 <div className="mt-3 flex items-center justify-between gap-3 rounded border border-[color:var(--odos-line)] px-3 py-2 text-sm">
                   <span>Prior finalized exams</span>
-                  <span className="flex items-center overflow-hidden rounded border border-[color:var(--odos-line)]">
-                    <button type="button" aria-label="Reduce history count" disabled={composerLocked || includeList.history_count <= 1} className="min-h-11 min-w-11" onClick={() => updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) })}>−</button>
-                    <span className="min-w-11 text-center text-xs">{includeList.history_count}</span>
-                    <button type="button" aria-label="Increase history count" disabled={composerLocked || includeList.history_count >= 50} className="min-h-11 min-w-11" onClick={() => updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) })}>+</button>
-                  </span>
+                  <div className="w-28">
+                    <OdosWheel
+                      value={includeList.history_count}
+                      centerOn={0}
+                      min={1}
+                      max={50}
+                      step={1}
+                      format={String}
+                      onChange={(history_count) => updateIncludeList({ ...includeList, history_count })}
+                      ariaLabel="Prior finalized exam history count"
+                      disabled={composerLocked}
+                    />
+                  </div>
                 </div>
               )}
               <button type="button" disabled={busy === "defaults" || composerLocked} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>

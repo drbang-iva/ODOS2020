@@ -20,7 +20,7 @@ const PROPS = {
   onSaved: () => undefined,
 };
 
-test("Auto-Refraction uses centered PD and K spinners plus the ARx axis select pattern", () => {
+test("Auto-Refraction uses centered PD and K spinners plus plano-centered axis wheels", () => {
   const html = renderToStaticMarkup(<AutoRefractionSection {...PROPS} />);
 
   for (const label of [
@@ -36,7 +36,7 @@ test("Auto-Refraction uses centered PD and K spinners plus the ARx axis select p
   assert.equal((html.match(/data-default="true"[^>]*>63\.00 mm/g) ?? []).length, 2);
   assert.equal((html.match(/data-default="true"[^>]*>43\.50/g) ?? []).length, 4);
   for (const label of ["OD flat axis", "OD steep axis", "OS flat axis", "OS steep axis"]) {
-    assert.match(html, new RegExp(`<select[^>]*aria-label="${label}"`));
+    assert.match(html, new RegExp(`role="combobox"[^>]*aria-label="${label}"`));
   }
 });
 
@@ -97,8 +97,10 @@ test("soft-lens BC and DIA options change with the selected catalog product", ()
 
   const soft = source("SoftContactLensSection.tsx");
   assert.match(soft, /PowerDropdown value=\{binocularPdDistance\}[\s\S]*defaultValue="63\.00"/);
-  assert.match(soft, /SelectField label="Base Curve \(mm\)"[\s\S]*options=\{baseCurveOptions\}/);
-  assert.match(soft, /SelectField label="Diameter \(mm\)"[\s\S]*options=\{diameterOptions\}/);
+  assert.match(soft, /<SphereWheelField[\s\S]*value=\{state\.sphere\}[\s\S]*field=\{fields\.sphere\}/);
+  assert.match(soft, /centerOn=\{0\}[\s\S]*states=\{\[\{ value: "", label: "Not recorded" \}\]\}/);
+  assert.match(soft, /CatalogWheelField label="Base Curve \(mm\)"[\s\S]*options=\{baseCurveOptions\}/);
+  assert.match(soft, /CatalogWheelField label="Diameter \(mm\)"[\s\S]*options=\{diameterOptions\}/);
   assert.match(soft, /product: "", baseCurve: "", diameter: ""/);
 });
 
@@ -115,6 +117,65 @@ test("specialty-lens numeric geometry uses centered spinner fields", () => {
   assert.match(specialty, /lensType: product\?\.lensTypeCode \?\? ""/);
   assert.doesNotMatch(specialty, /<TextField label="Base Curve \(mm\)"/);
   assert.doesNotMatch(specialty, /<TextField label="Diameter \(mm\)"/);
+});
+
+test("Batch 4 contact-lens wheels consume corrected definition bounds with clinical fallbacks", () => {
+  const soft = source("SoftContactLensSection.tsx");
+  const specialty = source("SpecialtyContactLensSection.tsx");
+  for (const component of [soft, specialty]) {
+    assert.match(component, /numericOptions\(fields\.cylinder, -8, 0, 0\.25\)/);
+    assert.match(component, /numericOptions\(fields\.overRefractionCylinder, -8, 0, 0\.25\)/);
+    assert.doesNotMatch(component, /\{\s*\.\.\.fields\.(?:cylinder|overRefractionCylinder),\s*minimum:/);
+  }
+  assert.match(soft, /field\?\.minimum \?\? -20/);
+  assert.match(soft, /field\?\.maximum \?\? 20/);
+  assert.match(soft, /<PowerField label="Add"[\s\S]*format=\{formatSignedPower\}/);
+  assert.match(soft, /function formatSignedPower\(value: number\)[\s\S]*value >= 0 \? "\+" : "-"/);
+  assert.match(specialty, /numericOptions\(fields\.sphere, -20, 20, 0\.25\)/);
+  const definition = readFileSync(
+    new URL("../../mcp/src/clinical-graph/contact-lens-definition.ts", import.meta.url),
+    "utf8",
+  );
+  assert.equal((definition.match(/sphere: powerField\("Sphere", -20, 20\)/g) ?? []).length, 2);
+  assert.equal((definition.match(/cylinder: powerField\("Cylinder", -8, 0\)/g) ?? []).length, 2);
+  assert.equal((definition.match(/overRefractionCylinder: powerField\("Over-Refraction Cylinder", -8, 0\)/g) ?? []).length, 2);
+});
+
+test("every Batch 4 wheel declaration is explicitly plano-centered", () => {
+  for (const file of [
+    "AutoRefractionSection.tsx",
+    "CustomFindingSection.tsx",
+    "DilationSection.tsx",
+    "DryEyeGlandStructureSection.tsx",
+    "EntranceMeasurementSection.tsx",
+    "EyeGrowthSection.tsx",
+    "IopTimeline.tsx",
+    "OcularHealthSection.tsx",
+    "RefractionSection.tsx",
+    "SoftContactLensSection.tsx",
+    "SpecialtyContactLensSection.tsx",
+    "WearingSection.tsx",
+  ]) {
+    const component = source(file);
+    assert.match(component, /centerOn=\{0\}/, file);
+    assert.doesNotMatch(component, /centerOn=\{(?!0\})/, file);
+  }
+  const referral = readFileSync(
+    new URL("../src/components/referral/ReferralCompose.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(referral, /centerOn=\{0\}/);
+  assert.doesNotMatch(referral, /centerOn=\{(?!0\})/);
+});
+
+test("unknown Batch 4 bounds stay typed instead of acquiring guessed wheel ranges", () => {
+  assert.match(source("DryEyeSection.tsx"), /inputMode="numeric"/);
+  assert.match(source("HpiSection.tsx"), /aria-label="Duration value"[\s\S]*type="number"[\s\S]*min=\{1\}/);
+  assert.match(source("VaSection.tsx"), /rows\[laterality\]\.chartType === "SNELLEN"[\s\S]*<input/);
+  const optical = readFileSync(new URL("../src/scenes/OpticalOrder.tsx", import.meta.url), "utf8");
+  const scheduler = readFileSync(new URL("../src/scenes/scheduler/AppointmentDetailsModal.tsx", import.meta.url), "utf8");
+  assert.match(optical, /Field label="Dist PD" type="number"/);
+  assert.match(scheduler, /aria-label="Custom duration minutes"[\s\S]*min=\{1\}[\s\S]*type="number"/);
 });
 
 test("IOP and corneal hysteresis use definition-derived ranges with centered spinners", async () => {

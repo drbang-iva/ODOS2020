@@ -6,6 +6,7 @@ import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { DiagnosisPicker } from "./DiagnosisPicker";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 interface Props {
   patientReference: string;
@@ -135,7 +136,9 @@ export function RefractionSection({ patientReference, encounterReference, onSave
   const typeOptions = useMemo(() => activeOptions(fields.type), [fields.type]);
   const sourceTypes = useMemo(() => activeOptions(fields.sourceType), [fields.sourceType]);
   const powerOptions = useMemo(() => numericOptions(fields.sphere, -20, 20, 0.25), [fields.sphere]);
-  const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
+  const axisMinimum = fields.axis?.minimum ?? 0;
+  const axisMaximum = fields.axis?.maximum ?? 180;
+  const axisStep = fields.axis?.step ?? 1;
 
   function updateBlock(blockId: string, next: Partial<BlockState>) {
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, ...next } : block));
@@ -335,15 +338,20 @@ export function RefractionSection({ patientReference, encounterReference, onSave
                           formatOption={formatDiopterOption}
                         />
                       ))}
-                      <select
-                        value={block[eye].axis}
-                        onChange={(event) => updateEye(block.id, eye, { axis: event.target.value })}
-                        aria-label={`${eye} axis`}
-                        className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-                      >
-                        <option value="">Select</option>
-                        {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-                      </select>
+                      <OdosWheel
+                        value={block[eye].axis === "" ? 0 : Number(block[eye].axis)}
+                        centerOn={0}
+                        min={axisMinimum}
+                        max={axisMaximum}
+                        step={axisStep}
+                        format={String}
+                        onChange={(value) => updateEye(block.id, eye, { axis: String(value) })}
+                        ariaLabel={`${eye} axis`}
+                        unit="°"
+                        states={[{ value: "", label: "Not recorded" }]}
+                        selectedState={block[eye].axis === "" ? "" : undefined}
+                        onStateChange={(value) => updateEye(block.id, eye, { axis: value })}
+                      />
                       <PowerDropdown
                         value={block[eye].add}
                         onChange={(value) => updateEye(block.id, eye, { add: value })}

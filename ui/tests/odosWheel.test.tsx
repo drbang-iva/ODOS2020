@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { formatSpherePower } from "../src/components/charting/power-options";
 import { normalizeWheelValue, OdosWheel } from "../src/components/inputs/OdosWheel";
 
 test("OdosWheel centerOn stays a required compile-time prop", () => {
@@ -52,6 +53,12 @@ test("OdosWheel opens centered on centerOn rather than the first row", () => {
                 removeEventListener: () => undefined,
               };
             }
+            if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+              return {
+                addEventListener: () => undefined,
+                removeEventListener: () => undefined,
+              };
+            }
             return element.props["data-center"] === "true"
               ? { scrollIntoView: () => { centered = true; } }
               : {};
@@ -70,6 +77,154 @@ test("OdosWheel opens centered on centerOn rather than the first row", () => {
     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
     Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
   }
+});
+
+test("OdosWheel uses native scroll snap without pointer physics", () => {
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={() => undefined}
+        ariaLabel="Power"
+      />,
+    );
+  });
+  const list = renderer.root.find((node) =>
+    typeof node.props.className === "string" && node.props.className.includes("overflow-y-auto"));
+  assert.match(list.props.className, /snap-y/);
+  assert.match(list.props.className, /snap-mandatory/);
+  assert.match(list.props.className, /overscroll-contain/);
+  assert.doesNotMatch(list.props.className, /touch-none/);
+  assert.equal(list.props.onPointerDown, undefined);
+  assert.equal(list.props.onPointerMove, undefined);
+  assert.equal(list.props.onPointerUp, undefined);
+  assert.equal(list.props.onPointerCancel, undefined);
+  let prevented = false;
+  list.props.onWheel({
+    currentTarget: { clientHeight: 100, scrollHeight: 500, scrollTop: 400 },
+    deltaY: 1,
+    preventDefault: () => { prevented = true; },
+  });
+  assert.equal(prevented, true);
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel commits the centered option on native scrollend", () => {
+  let changed: number | undefined;
+  let scrollEnd: (() => void) | undefined;
+  let optionIndex = 0;
+  const list = {
+    clientHeight: 100,
+    onscrollend: null,
+    scrollTop: 232,
+    getBoundingClientRect: () => ({ height: 100, top: 0 }),
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === "scrollend") scrollEnd = listener;
+    },
+    removeEventListener: () => undefined,
+  };
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={(value) => { changed = value; }}
+        ariaLabel="Power"
+      />,
+      {
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return list;
+          }
+          if (element.props.role === "option") {
+            const index = optionIndex++;
+            return {
+              getBoundingClientRect: () => ({ height: 44, top: index * 52 - list.scrollTop }),
+            };
+          }
+          return {};
+        },
+      },
+    );
+  });
+  assert.ok(scrollEnd);
+  act(() => scrollEnd?.());
+  assert.equal(changed, 0.25);
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel debounces scroll settle when scrollend is unavailable", async () => {
+  let changed: number | undefined;
+  let scroll: (() => void) | undefined;
+  let optionIndex = 0;
+  const list = {
+    clientHeight: 100,
+    scrollTop: 232,
+    getBoundingClientRect: () => ({ height: 100, top: 0 }),
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === "scroll") scroll = listener;
+    },
+    removeEventListener: () => undefined,
+  };
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={(value) => { changed = value; }}
+        ariaLabel="Power"
+      />,
+      {
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return list;
+          }
+          if (element.props.role === "option") {
+            const index = optionIndex++;
+            return {
+              getBoundingClientRect: () => ({ height: 44, top: index * 52 - list.scrollTop }),
+            };
+          }
+          return {};
+        },
+      },
+    );
+  });
+  assert.ok(scroll);
+  await act(async () => {
+    scroll?.();
+    await new Promise((resolve) => setTimeout(resolve, 175));
+  });
+  assert.equal(changed, 0.25);
+  act(() => renderer.unmount());
 });
 
 test("OdosWheel clamps and snaps typed values on blur", () => {
@@ -95,6 +250,107 @@ test("OdosWheel clamps and snaps typed values on blur", () => {
   assert.equal(changed, 10);
   assert.equal(renderer.root.findByProps({ "aria-label": "Power" }).props.value, "10");
   assert.equal(normalizeWheelValue(0.37, -10, 10, 0.25), 0.25);
+  act(() => renderer.unmount());
+});
+
+test("negative Sphere formatting round-trips through OdosWheel typed commit", () => {
+  assertNegativePowerRoundTrip("Sphere", -2.25, -20, 20);
+});
+
+test("negative Cylinder formatting round-trips through OdosWheel typed commit", () => {
+  assertNegativePowerRoundTrip("Cylinder", -1.25, -8, 0);
+});
+
+test("OdosWheel preserves a blank state while keeping direct typing available", () => {
+  let changedState: string | undefined;
+  let changedValue: number | undefined;
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={(value) => value === 0 ? "pl" : value.toFixed(2)}
+        onChange={(value) => { changedValue = value; }}
+        ariaLabel="Sphere"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState=""
+        onStateChange={(value) => { changedState = value; }}
+      />,
+    );
+  });
+  const input = () => renderer.root.findByProps({ "aria-label": "Sphere" });
+  assert.equal(input().props.value, "");
+  assert.equal(input().props.placeholder, "Not recorded");
+
+  act(() => input().props.onChange({ target: { value: "-0.38" } }));
+  act(() => input().props.onBlur());
+  assert.equal(changedValue, -0.5);
+
+  act(() => input().props.onChange({ target: { value: "" } }));
+  act(() => input().props.onBlur());
+  assert.equal(changedState, "");
+
+  act(() => input().props.onChange({ target: { value: "0.5" } }));
+  act(() => input().props.onKeyDown({
+    key: "Escape",
+    preventDefault: () => undefined,
+  }));
+  assert.equal(input().props.value, "");
+  act(() => renderer.unmount());
+});
+
+function assertNegativePowerRoundTrip(ariaLabel: string, negativeValue: number, min: number, max: number) {
+  let committed: number | undefined;
+  let renderer: ReturnType<typeof create>;
+  const formatted = formatSpherePower(negativeValue);
+  assert.equal(formatted, negativeValue.toFixed(2));
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={min}
+        max={max}
+        step={0.25}
+        format={formatSpherePower}
+        onChange={(value) => { committed = value; }}
+        ariaLabel={ariaLabel}
+      />,
+    );
+  });
+  const input = renderer.root.findByProps({ "aria-label": ariaLabel });
+  act(() => input.props.onChange({ target: { value: formatted } }));
+  act(() => input.props.onBlur());
+  assert.equal(committed, negativeValue);
+  act(() => renderer.unmount());
+}
+
+test("OdosWheel reverts a cleared value when no blank state is configured", () => {
+  const changes: number[] = [];
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={2}
+        centerOn={0}
+        min={1}
+        max={10}
+        step={1}
+        format={String}
+        onChange={(value) => { changes.push(value); }}
+        ariaLabel="Drops 1"
+      />,
+    );
+  });
+  const input = () => renderer.root.findByProps({ "aria-label": "Drops 1" });
+  act(() => input().props.onChange({ target: { value: "" } }));
+  act(() => input().props.onBlur());
+  assert.deepEqual(changes, []);
+  assert.equal(input().props.value, "2");
   act(() => renderer.unmount());
 });
 
@@ -170,15 +426,26 @@ test("OdosWheel ignores native wheel input while disabled", () => {
         disabled
       />,
       {
-        createNodeMock: (element) => element.type === "input" ? {
-          addEventListener: (
-            type: string,
-            handler: (event: { deltaY: number; preventDefault: () => void }) => void,
-          ) => {
-            if (type === "wheel") wheelHandler = handler;
-          },
-          removeEventListener: () => undefined,
-        } : {},
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: (
+                type: string,
+                handler: (event: { deltaY: number; preventDefault: () => void }) => void,
+              ) => {
+                if (type === "wheel") wheelHandler = handler;
+              },
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          return {};
+        },
       },
     );
   });
