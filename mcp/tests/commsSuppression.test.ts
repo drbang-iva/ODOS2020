@@ -190,14 +190,15 @@ test("frequency-cap evaluation follows FHIR next links before allowing a send", 
   assert.equal(sent.length, 0);
 });
 
-test("an in-progress Communication claim reserves the patient and campaign frequency cap", async () => {
+test("concurrent in-progress claims elect exactly one deterministic frequency-cap winner", async () => {
   const sent: SendEmailRequest[] = [];
-  const competingClaim: Communication = {
+  const claims: Communication[] = ["claim-a", "claim-b"].map((value) => ({
     resourceType: "Communication",
     status: "in-progress",
+    meta: { lastUpdated: "2026-07-30T13:59:00.000Z" },
     identifier: [{
       system: "https://odos2020.com/fhir/NamingSystem/comms-send",
-      value: "competing-send",
+      value,
     }],
     subject: { reference: "Patient/synthetic-1" },
     category: [{
@@ -206,21 +207,27 @@ test("an in-progress Communication claim reserves the patient and campaign frequ
         code: "review-request",
       }],
     }],
-  };
+  }));
   const provider = createSuppressedCommsProvider(fakeProvider(sent), {
-    fhir: fhirFor(patient(), [competingClaim]),
+    fhir: fhirFor(patient(), claims),
     practiceTimeZone: "America/New_York",
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
 
-  const result = await provider.sendEmail(baseRequest({
+  const winner = await provider.sendEmail(baseRequest({
     campaignType: "review-request",
-    messageId: "current-send",
+    messageId: "claim-a",
+    suppression: { frequencyCapDays: 90 },
+  }));
+  const loser = await provider.sendEmail(baseRequest({
+    campaignType: "review-request",
+    messageId: "claim-b",
     suppression: { frequencyCapDays: 90 },
   }));
 
-  assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
-  assert.equal(sent.length, 0);
+  assert.equal(winner.outcome, "sent");
+  assert.deepEqual(loser, { outcome: "suppressed", reason: "frequency-cap" });
+  assert.equal(sent.length, 1);
 });
 
 test("an allowed send resolves Patient.telecom email and reaches the provider", async () => {
@@ -235,4 +242,26 @@ test("an allowed send resolves Patient.telecom email and reaches the provider", 
   assert.equal(result.outcome, "sent");
   assert.equal(sent.length, 1);
   assert.equal(sent[0].toAddress, "patient@example.test");
+});
+
+test("email resolution skips a ContactPoint whose validity starts in the future", async () => {
+  const sent: SendEmailRequest[] = [];
+  const provider = createSuppressedCommsProvider(fakeProvider(sent), {
+    fhir: fhirFor(patient({
+      telecom: [
+        {
+          system: "email",
+          value: "future@example.test",
+          period: { start: "2026-08-01T00:00:00.000Z" },
+        },
+        { system: "email", value: "active@example.test" },
+      ],
+    })),
+    practiceTimeZone: "America/New_York",
+    now: () => new Date("2026-07-30T14:00:00.000Z"),
+  });
+
+  await provider.sendEmail(baseRequest());
+
+  assert.equal(sent[0].toAddress, "active@example.test");
 });

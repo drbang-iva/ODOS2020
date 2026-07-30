@@ -9,10 +9,11 @@ import type {
 import type { MedplumClient } from "../fhir-client.js";
 import type { CommsDispatch } from "../comms/comms-config.js";
 import type { SendResult } from "../comms/comms-provider.js";
-import { ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM } from "../comms/suppression-gate.js";
+import {
+  ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM,
+  ODOS_COMMS_SEND_IDENTIFIER_SYSTEM,
+} from "../comms/suppression-gate.js";
 
-const SEND_IDENTIFIER_SYSTEM =
-  "https://odos2020.com/fhir/NamingSystem/comms-send";
 const CHANNEL_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/comms-channel";
 const CAMPAIGN_ID_URL =
@@ -309,7 +310,7 @@ async function processHeldCommunication(
       campaignType: campaign.campaignType,
       campaignId: campaign.id,
       messageId: claimed.identifier?.find(
-        (identifier) => identifier.system === SEND_IDENTIFIER_SYSTEM,
+        (identifier) => identifier.system === ODOS_COMMS_SEND_IDENTIFIER_SYSTEM,
       )?.value,
       suppression: {
         ...(campaign.frequencyCapDays !== undefined
@@ -519,7 +520,7 @@ async function processAnchor(
         }).filter((entry) => entry.url !== RESCHEDULED_AT_URL),
       })
     : await deps.fhir.create<Communication>(candidate, {
-        "If-None-Exist": `identifier=${SEND_IDENTIFIER_SYSTEM}|${key}`,
+        "If-None-Exist": `identifier=${ODOS_COMMS_SEND_IDENTIFIER_SYSTEM}|${key}`,
       });
   if (extensionString(claimed, CLAIM_ID_URL, "valueString") !== claimId) {
     return {
@@ -643,7 +644,7 @@ function communicationCandidate(input: {
   return {
     resourceType: "Communication",
     status: "in-progress",
-    identifier: [{ system: SEND_IDENTIFIER_SYSTEM, value: input.key }],
+    identifier: [{ system: ODOS_COMMS_SEND_IDENTIFIER_SYSTEM, value: input.key }],
     category: [{
       coding: [{
         system: ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM,
@@ -675,7 +676,7 @@ async function findSend(
   key: string,
 ): Promise<Communication | undefined> {
   const bundle = await fhir.search<Communication>("Communication", {
-    identifier: `${SEND_IDENTIFIER_SYSTEM}|${key}`,
+    identifier: `${ODOS_COMMS_SEND_IDENTIFIER_SYSTEM}|${key}`,
     _count: "2",
   });
   const matches = (bundle.entry ?? []).flatMap((entry) =>

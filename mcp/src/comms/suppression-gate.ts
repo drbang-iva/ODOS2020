@@ -12,6 +12,8 @@ export const ODOS_PATIENT_TIMEZONE_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/odos-patient-timezone";
 export const ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM =
   "https://odos2020.com/fhir/CodeSystem/comms-campaign-type";
+export const ODOS_COMMS_SEND_IDENTIFIER_SYSTEM =
+  "https://odos2020.com/fhir/NamingSystem/comms-send";
 
 export type SuppressionFhir = Pick<MedplumClient, "read" | "search" | "searchUrl">;
 
@@ -100,58 +102,78 @@ async function isFrequencyCapped(
     throw new Error("Frequency-capped communications require a persisted messageId claim.");
   }
   const cutoff = new Date(now.getTime() - capDays * 86_400_000).toISOString();
-  const completed = await fhir.search<Communication>("Communication", [
+  const candidates = await fhir.search<Communication>("Communication", [
     ["subject", `Patient/${patient.id}`],
     ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
-    ["sent", `ge${cutoff}`],
+    ["status", "in-progress,completed"],
+    ["_lastUpdated", `ge${cutoff}`],
     ["_count", "100"],
   ]);
-  if (await searchHasCommunication(fhir, completed, (communication) =>
+  const communications = await collectCommunications(fhir, candidates);
+  if (communications.some((communication) =>
     communication.status === "completed"
     && Boolean(communication.sent)
     && Date.parse(communication.sent!) >= Date.parse(cutoff)
     && matchesFrequencyCapScope(communication, patient.id!, campaignType))) {
     return true;
   }
-  const inProgress = await fhir.search<Communication>("Communication", [
-    ["subject", `Patient/${patient.id}`],
-    ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
-    ["status", "in-progress"],
-    ["_count", "100"],
-  ]);
-  return searchHasCommunication(fhir, inProgress, (communication) =>
+  const claims = communications.filter((communication) =>
     communication.status === "in-progress"
-    && matchesFrequencyCapScope(communication, patient.id!, campaignType)
-    && !communication.identifier?.some((identifier) => identifier.value === messageId));
+    && matchesFrequencyCapScope(communication, patient.id!, campaignType));
+  const current = claims.find((communication) =>
+    frequencyCapClaimId(communication) === messageId);
+  if (!current) {
+    throw new Error("Frequency-capped communication claim is not visible in FHIR search.");
+  }
+  const winner = [...claims].sort(compareFrequencyCapClaims)[0];
+  return frequencyCapClaimId(winner) !== messageId;
 }
 
-async function searchHasCommunication(
+async function collectCommunications(
   fhir: SuppressionFhir,
   initialBundle: Bundle<Communication>,
-  matches: (communication: Communication) => boolean,
-): Promise<boolean> {
+): Promise<Communication[]> {
   let bundle = initialBundle;
+  const communications = (bundle.entry ?? []).flatMap((entry) =>
+    entry.resource ? [entry.resource] : []);
   let pages = 1;
-  let rows = bundle.entry?.length ?? 0;
-  while (true) {
-    if ((bundle.entry ?? []).some((entry) => entry.resource && matches(entry.resource))) {
-      return true;
-    }
-    const next = bundle.link?.find((link) => link.relation === "next")?.url;
-    if (!next) return false;
-    if (pages >= 100 || rows >= 10_000) {
+  while (bundle.link?.some((link) => link.relation === "next")) {
+    if (pages >= 100 || communications.length >= 10_000) {
       throw new Error("Communications frequency-cap search exceeded its 100-page or 10000-row bound.");
     }
     if (!fhir.searchUrl) {
       throw new Error("Communications frequency-cap pagination requires FHIR next-link support.");
     }
+    const next = bundle.link.find((link) => link.relation === "next")!.url;
     bundle = await fhir.searchUrl<Communication>(next, "Communication");
+    communications.push(...(bundle.entry ?? []).flatMap((entry) =>
+      entry.resource ? [entry.resource] : []));
     pages += 1;
-    rows += bundle.entry?.length ?? 0;
-    if (rows > 10_000) {
-      throw new Error("Communications frequency-cap search exceeded its 10000-row bound.");
-    }
   }
+  if (communications.length > 10_000) {
+    throw new Error("Communications frequency-cap search exceeded its 10000-row bound.");
+  }
+  return communications;
+}
+
+function compareFrequencyCapClaims(left: Communication, right: Communication): number {
+  const leftUpdated = Date.parse(left.meta?.lastUpdated ?? "");
+  const rightUpdated = Date.parse(right.meta?.lastUpdated ?? "");
+  if (!Number.isFinite(leftUpdated) || !Number.isFinite(rightUpdated)) {
+    throw new Error("Frequency-capped Communication claims require FHIR meta.lastUpdated.");
+  }
+  return leftUpdated - rightUpdated
+    || frequencyCapClaimId(left).localeCompare(frequencyCapClaimId(right));
+}
+
+function frequencyCapClaimId(communication: Communication): string {
+  const value = communication.identifier?.find(
+    (identifier) => identifier.system === ODOS_COMMS_SEND_IDENTIFIER_SYSTEM,
+  )?.value;
+  if (!value) {
+    throw new Error("Frequency-capped Communication claims require the ODOS send identifier.");
+  }
+  return value;
 }
 
 function matchesFrequencyCapScope(
@@ -170,6 +192,7 @@ function patientEmail(patient: Patient, now: Date): string {
     point.system === "email"
     && point.use !== "old"
     && Boolean(point.value?.trim())
+    && (!point.period?.start || Date.parse(point.period.start) <= now.getTime())
     && (!point.period?.end || Date.parse(point.period.end) > now.getTime()))
     ?.value?.trim();
   if (!email) {
