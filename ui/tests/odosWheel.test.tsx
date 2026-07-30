@@ -52,6 +52,12 @@ test("OdosWheel opens centered on centerOn rather than the first row", () => {
                 removeEventListener: () => undefined,
               };
             }
+            if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+              return {
+                addEventListener: () => undefined,
+                removeEventListener: () => undefined,
+              };
+            }
             return element.props["data-center"] === "true"
               ? { scrollIntoView: () => { centered = true; } }
               : {};
@@ -70,6 +76,154 @@ test("OdosWheel opens centered on centerOn rather than the first row", () => {
     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
     Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
   }
+});
+
+test("OdosWheel uses native scroll snap without pointer physics", () => {
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={() => undefined}
+        ariaLabel="Power"
+      />,
+    );
+  });
+  const list = renderer.root.find((node) =>
+    typeof node.props.className === "string" && node.props.className.includes("overflow-y-auto"));
+  assert.match(list.props.className, /snap-y/);
+  assert.match(list.props.className, /snap-mandatory/);
+  assert.match(list.props.className, /overscroll-contain/);
+  assert.doesNotMatch(list.props.className, /touch-none/);
+  assert.equal(list.props.onPointerDown, undefined);
+  assert.equal(list.props.onPointerMove, undefined);
+  assert.equal(list.props.onPointerUp, undefined);
+  assert.equal(list.props.onPointerCancel, undefined);
+  let prevented = false;
+  list.props.onWheel({
+    currentTarget: { clientHeight: 100, scrollHeight: 500, scrollTop: 400 },
+    deltaY: 1,
+    preventDefault: () => { prevented = true; },
+  });
+  assert.equal(prevented, true);
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel commits the centered option on native scrollend", () => {
+  let changed: number | undefined;
+  let scrollEnd: (() => void) | undefined;
+  let optionIndex = 0;
+  const list = {
+    clientHeight: 100,
+    onscrollend: null,
+    scrollTop: 232,
+    getBoundingClientRect: () => ({ height: 100, top: 0 }),
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === "scrollend") scrollEnd = listener;
+    },
+    removeEventListener: () => undefined,
+  };
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={(value) => { changed = value; }}
+        ariaLabel="Power"
+      />,
+      {
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return list;
+          }
+          if (element.props.role === "option") {
+            const index = optionIndex++;
+            return {
+              getBoundingClientRect: () => ({ height: 44, top: index * 52 - list.scrollTop }),
+            };
+          }
+          return {};
+        },
+      },
+    );
+  });
+  assert.ok(scrollEnd);
+  act(() => scrollEnd?.());
+  assert.equal(changed, 0.25);
+  act(() => renderer.unmount());
+});
+
+test("OdosWheel debounces scroll settle when scrollend is unavailable", async () => {
+  let changed: number | undefined;
+  let scroll: (() => void) | undefined;
+  let optionIndex = 0;
+  const list = {
+    clientHeight: 100,
+    scrollTop: 232,
+    getBoundingClientRect: () => ({ height: 100, top: 0 }),
+    addEventListener: (type: string, listener: () => void) => {
+      if (type === "scroll") scroll = listener;
+    },
+    removeEventListener: () => undefined,
+  };
+  let renderer: ReturnType<typeof create>;
+  act(() => {
+    renderer = create(
+      <OdosWheel
+        value={0}
+        centerOn={0}
+        min={-1}
+        max={1}
+        step={0.25}
+        format={String}
+        onChange={(value) => { changed = value; }}
+        ariaLabel="Power"
+      />,
+      {
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return list;
+          }
+          if (element.props.role === "option") {
+            const index = optionIndex++;
+            return {
+              getBoundingClientRect: () => ({ height: 44, top: index * 52 - list.scrollTop }),
+            };
+          }
+          return {};
+        },
+      },
+    );
+  });
+  assert.ok(scroll);
+  await act(async () => {
+    scroll?.();
+    await new Promise((resolve) => setTimeout(resolve, 175));
+  });
+  assert.equal(changed, 0.25);
+  act(() => renderer.unmount());
 });
 
 test("OdosWheel clamps and snaps typed values on blur", () => {
@@ -205,15 +359,26 @@ test("OdosWheel ignores native wheel input while disabled", () => {
         disabled
       />,
       {
-        createNodeMock: (element) => element.type === "input" ? {
-          addEventListener: (
-            type: string,
-            handler: (event: { deltaY: number; preventDefault: () => void }) => void,
-          ) => {
-            if (type === "wheel") wheelHandler = handler;
-          },
-          removeEventListener: () => undefined,
-        } : {},
+        createNodeMock: (element) => {
+          if (element.type === "input") {
+            return {
+              addEventListener: (
+                type: string,
+                handler: (event: { deltaY: number; preventDefault: () => void }) => void,
+              ) => {
+                if (type === "wheel") wheelHandler = handler;
+              },
+              removeEventListener: () => undefined,
+            };
+          }
+          if (typeof element.props.className === "string" && element.props.className.includes("overflow-y-auto")) {
+            return {
+              addEventListener: () => undefined,
+              removeEventListener: () => undefined,
+            };
+          }
+          return {};
+        },
       },
     );
   });

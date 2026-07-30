@@ -21,14 +21,7 @@ export interface OdosWheelProps {
   disabled?: boolean;
 }
 
-interface DragState {
-  pointerId: number;
-  startY: number;
-  previousY: number;
-  previousTime: number;
-  velocity: number;
-  moved: boolean;
-}
+const SCROLL_SETTLE_DELAY_MS = 150;
 
 export function OdosWheel({
   value,
@@ -57,8 +50,7 @@ export function OdosWheel({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const drag = useRef<DragState>();
-  const suppressClick = useRef(false);
+  const openingScrollTopRef = useRef<number>();
   const listboxId = useId();
   editingRef.current = editing;
   formatRef.current = format;
@@ -71,6 +63,7 @@ export function OdosWheel({
     if (!open || centerIndex < 0) return;
     const frame = requestAnimationFrame(() => {
       optionRefs.current[centerIndex]?.scrollIntoView({ block: "center" });
+      openingScrollTopRef.current = listRef.current?.scrollTop;
     });
     return () => cancelAnimationFrame(frame);
   }, [centerIndex, open]);
@@ -116,6 +109,48 @@ export function OdosWheel({
     if (normalized !== value) onChange(normalized);
   }, [format, max, min, onChange, step, value]);
 
+  const commitScrolledValue = useCallback(() => {
+    const list = listRef.current;
+    if (!list || !values.length) return;
+    const openingScrollTop = openingScrollTopRef.current;
+    openingScrollTopRef.current = undefined;
+    if (openingScrollTop !== undefined && Math.abs(list.scrollTop - openingScrollTop) < 1) return;
+    const listRect = list.getBoundingClientRect();
+    const center = listRect.top + listRect.height / 2;
+    let nearest = 0;
+    let distance = Number.POSITIVE_INFINITY;
+    optionRefs.current.forEach((option, index) => {
+      if (!option) return;
+      const optionRect = option.getBoundingClientRect();
+      const optionCenter = optionRect.top + optionRect.height / 2;
+      const nextDistance = Math.abs(optionCenter - center);
+      if (nextDistance < distance) {
+        nearest = index;
+        distance = nextDistance;
+      }
+    });
+    changeBy(values[nearest]);
+  }, [changeBy, values]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    if (Reflect.has(list, "onscrollend")) {
+      list.addEventListener("scrollend", commitScrolledValue);
+      return () => list.removeEventListener("scrollend", commitScrolledValue);
+    }
+    let settleTimer: ReturnType<typeof setTimeout> | undefined;
+    const handleScroll = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(commitScrolledValue, SCROLL_SETTLE_DELAY_MS);
+    };
+    list.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      clearTimeout(settleTimer);
+      list.removeEventListener("scroll", handleScroll);
+    };
+  }, [commitScrolledValue]);
+
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
@@ -153,25 +188,6 @@ export function OdosWheel({
       setEditing(false);
       setOpen(false);
     }
-  }
-
-  function snapFromScroll(projectedScrollTop?: number) {
-    const list = listRef.current;
-    if (!list || !values.length) return;
-    const center = (projectedScrollTop ?? list.scrollTop) + list.clientHeight / 2;
-    let nearest = 0;
-    let distance = Number.POSITIVE_INFINITY;
-    optionRefs.current.forEach((option, index) => {
-      if (!option) return;
-      const optionCenter = option.offsetTop + option.offsetHeight / 2;
-      const nextDistance = Math.abs(optionCenter - center);
-      if (nextDistance < distance) {
-        nearest = index;
-        distance = nextDistance;
-      }
-    });
-    optionRefs.current[nearest]?.scrollIntoView({ block: "center", behavior: "smooth" });
-    changeBy(values[nearest]);
   }
 
   return (
@@ -245,46 +261,14 @@ export function OdosWheel({
         )}
         <div
           ref={listRef}
-          className="max-h-[min(16rem,calc(100dvh-8rem))] touch-none snap-y snap-mandatory space-y-2 overflow-y-auto p-2"
-          onPointerDown={(event) => {
-            if (disabled) return;
-            event.currentTarget.setPointerCapture(event.pointerId);
-            drag.current = {
-              pointerId: event.pointerId,
-              startY: event.clientY,
-              previousY: event.clientY,
-              previousTime: event.timeStamp,
-              velocity: 0,
-              moved: false,
-            };
-          }}
-          onPointerMove={(event) => {
-            const current = drag.current;
-            if (!current || current.pointerId !== event.pointerId) return;
-            const elapsed = Math.max(1, event.timeStamp - current.previousTime);
-            const distance = current.previousY - event.clientY;
-            if (Math.abs(current.startY - event.clientY) >= 4) current.moved = true;
-            event.currentTarget.scrollTop += distance;
-            current.velocity = distance / elapsed;
-            current.previousY = event.clientY;
-            current.previousTime = event.timeStamp;
-          }}
-          onPointerUp={(event) => {
-            const current = drag.current;
-            if (!current || current.pointerId !== event.pointerId) return;
-            event.currentTarget.releasePointerCapture(event.pointerId);
-            if (current.moved) {
+          className="max-h-[min(16rem,calc(100dvh-8rem))] snap-y snap-mandatory space-y-2 overflow-y-auto overscroll-contain p-2"
+          onWheel={(event) => {
+            const list = event.currentTarget;
+            const atStart = list.scrollTop <= 0;
+            const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+            if ((event.deltaY < 0 && atStart) || (event.deltaY > 0 && atEnd)) {
               event.preventDefault();
-              suppressClick.current = true;
-              snapFromScroll(event.currentTarget.scrollTop + current.velocity * 120);
-              setTimeout(() => {
-                suppressClick.current = false;
-              }, 0);
             }
-            drag.current = undefined;
-          }}
-          onPointerCancel={() => {
-            drag.current = undefined;
           }}
         >
           {values.map((option, index) => (
@@ -296,10 +280,7 @@ export function OdosWheel({
               aria-selected={option === value}
               data-center={index === centerIndex ? "true" : undefined}
               disabled={disabled}
-              onClick={() => {
-                if (suppressClick.current) return;
-                select(option);
-              }}
+              onClick={() => select(option)}
               className={[
                 "block min-h-11 w-full snap-center rounded px-3 py-2 text-center text-sm outline-none",
                 option === value
