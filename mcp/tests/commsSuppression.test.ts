@@ -5,6 +5,7 @@ import type {
   CommsProvider,
   SendEmailRequest,
 } from "../src/comms/comms-provider.js";
+import type { FhirSearchParams } from "../src/fhir-client.js";
 import {
   ODOS_COMMS_OPT_OUT_EXTENSION_URL,
   createSuppressedCommsProvider,
@@ -48,14 +49,24 @@ function fakeProvider(sent: SendEmailRequest[]): CommsProvider {
   };
 }
 
-function fhirFor(subject: Patient, communications: Communication[] = []) {
+function fhirFor(
+  subject: Patient,
+  communications: Communication[] = [],
+  onSearch?: (params: FhirSearchParams) => void,
+) {
   return {
     read: async <T extends Resource>(): Promise<T> => structuredClone(subject) as T,
-    search: async <T extends Resource>(): Promise<Bundle<T>> => ({
-      resourceType: "Bundle",
-      type: "searchset",
-      entry: communications.map((resource) => ({ resource: structuredClone(resource) as T })),
-    }),
+    search: async <T extends Resource>(
+      _resourceType: T["resourceType"],
+      params: FhirSearchParams = {},
+    ): Promise<Bundle<T>> => {
+      onSearch?.(params);
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: communications.map((resource) => ({ resource: structuredClone(resource) as T })),
+      };
+    },
   };
 }
 
@@ -97,6 +108,7 @@ test("outside quiet hours reschedules to the next patient-local 8 AM rather than
 
 test("a configured campaign frequency cap suppresses a repeat inside the lookback window", async () => {
   const sent: SendEmailRequest[] = [];
+  let searchQuery: URLSearchParams | undefined;
   const prior: Communication = {
     resourceType: "Communication",
     status: "completed",
@@ -110,7 +122,11 @@ test("a configured campaign frequency cap suppresses a repeat inside the lookbac
     }],
   };
   const provider = createSuppressedCommsProvider(fakeProvider(sent), {
-    fhir: fhirFor(patient(), [prior]),
+    fhir: fhirFor(patient(), [prior], (params) => {
+      searchQuery = new URLSearchParams(
+        params as ConstructorParameters<typeof URLSearchParams>[0],
+      );
+    }),
     practiceTimeZone: "America/New_York",
     now: () => new Date("2026-07-30T14:00:00.000Z"),
   });
@@ -121,6 +137,8 @@ test("a configured campaign frequency cap suppresses a repeat inside the lookbac
   }));
   assert.deepEqual(result, { outcome: "suppressed", reason: "frequency-cap" });
   assert.equal(sent.length, 0);
+  assert.equal(searchQuery?.get("subject"), "Patient/synthetic-1");
+  assert.equal(searchQuery?.get("patient"), null);
 });
 
 test("an allowed send resolves Patient.telecom email and reaches the provider", async () => {

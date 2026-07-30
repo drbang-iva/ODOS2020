@@ -217,7 +217,13 @@ async function loadHeldCommunications(
     ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaign.campaignType}`],
     ["_count", "1000"],
   ]);
-  return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : [])
+  const communications = await collectSearchResources(
+    fhir,
+    bundle,
+    "Communication",
+    "Reminder held-send",
+  );
+  return communications
     .filter((communication) => communication.status === "on-hold")
     .filter((communication) =>
       extensionString(communication, CAMPAIGN_ID_URL, "valueString") === campaign.id)
@@ -261,13 +267,18 @@ async function processHeldCommunication(
     || !heldAnchorValue
     || currentAnchorValue !== heldAnchorValue
     || currentPatientReference !== patientReference
+    || (
+      campaign.offsetMinutes < 0
+      && Boolean(currentAnchorValue)
+      && Date.parse(currentAnchorValue!) <= now.getTime()
+    )
   ) {
     return abandonHeldCommunication(
       deps.fhir,
       campaign,
       anchorReference,
       communication,
-      "Anchor changed or is no longer active.",
+      "Anchor changed, is no longer active, or the reminder is no longer timely.",
     );
   }
   const patient = await deps.fhir.read<Patient>(
@@ -392,30 +403,17 @@ async function loadDueAnchors(
   const searchLower = new Date(
     anchorLower.getTime() - (campaign.anchor.searchPaddingMinutes ?? 0) * 60_000,
   );
-  let bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
+  const bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
     [campaign.anchor.searchParameter, `ge${searchLower.toISOString()}`],
     [campaign.anchor.searchParameter, `le${anchorUpper.toISOString()}`],
     ["_count", "1000"],
   ]);
-  const resources = bundleResources(bundle);
-  let pages = 1;
-  while (nextLink(bundle)) {
-    if (pages >= 100 || resources.length >= 10_000) {
-      throw new Error("Reminder due-anchor search exceeded its 100-page or 10000-row bound.");
-    }
-    if (!fhir.searchUrl) {
-      throw new Error("Reminder due-anchor pagination requires FHIR next-link support.");
-    }
-    bundle = await fhir.searchUrl<Resource>(
-      nextLink(bundle)!,
-      campaign.anchor.resourceType,
-    );
-    resources.push(...bundleResources(bundle));
-    pages += 1;
-  }
-  if (resources.length > 10_000) {
-    throw new Error("Reminder due-anchor search exceeded its 10000-row bound.");
-  }
+  const resources = await collectSearchResources(
+    fhir,
+    bundle,
+    campaign.anchor.resourceType,
+    "Reminder due-anchor",
+  );
   return resources
     .filter((resource) => activeAnchor(resource))
     .filter((resource) => {
@@ -430,11 +428,40 @@ async function loadDueAnchors(
     });
 }
 
-function bundleResources(bundle: Bundle<Resource>): Resource[] {
+async function collectSearchResources<T extends Resource>(
+  fhir: ReminderFhir,
+  initialBundle: Bundle<T>,
+  resourceType: T["resourceType"],
+  label: string,
+): Promise<T[]> {
+  let bundle = initialBundle;
+  const resources = bundleResources(bundle);
+  let pages = 1;
+  while (nextLink(bundle)) {
+    if (pages >= 100 || resources.length >= 10_000) {
+      throw new Error(`${label} search exceeded its 100-page or 10000-row bound.`);
+    }
+    if (!fhir.searchUrl) {
+      throw new Error(`${label} pagination requires FHIR next-link support.`);
+    }
+    bundle = await fhir.searchUrl<T>(
+      nextLink(bundle)!,
+      resourceType,
+    );
+    resources.push(...bundleResources(bundle));
+    pages += 1;
+  }
+  if (resources.length > 10_000) {
+    throw new Error(`${label} search exceeded its 10000-row bound.`);
+  }
+  return resources;
+}
+
+function bundleResources<T extends Resource>(bundle: Bundle<T>): T[] {
   return (bundle.entry ?? []).flatMap((entry) => entry.resource ? [entry.resource] : []);
 }
 
-function nextLink(bundle: Bundle<Resource>): string | undefined {
+function nextLink<T extends Resource>(bundle: Bundle<T>): string | undefined {
   return bundle.link?.find((link) => link.relation === "next")?.url;
 }
 

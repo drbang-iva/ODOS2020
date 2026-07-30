@@ -97,7 +97,7 @@ const DYNAMIC_SEARCH_SPECS: Record<string, SearchSpec[] | typeof DYNAMIC_FHIR_SE
     spec("Observation", "patient", "encounter", "_count"),
     spec("CarePlan", "patient", "encounter", "_count"),
   ],
-  "src/reminders/reminder-engine.ts:395": [spec("Appointment", "date", "_count")],
+  "src/reminders/reminder-engine.ts:406": [spec("Appointment", "date", "_count")],
   "src/scheduling/scheduling-service.ts:112": [
     spec("Appointment", "actor"),
     spec("HealthcareService"),

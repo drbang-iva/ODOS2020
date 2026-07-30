@@ -96,7 +96,7 @@ async function isFrequencyCapped(
   }
   const cutoff = new Date(now.getTime() - capDays * 86_400_000).toISOString();
   const bundle = await fhir.search<Communication>("Communication", [
-    ["patient", `Patient/${patient.id}`],
+    ["subject", `Patient/${patient.id}`],
     ["category", `${ODOS_COMMS_CAMPAIGN_TYPE_SYSTEM}|${campaignType}`],
     ["sent", `ge${cutoff}`],
     ["_count", "100"],

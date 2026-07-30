@@ -413,6 +413,82 @@ test("an outside-hours Communication held by the gate is claimed and sent at the
   assert.equal(sent.length, 1);
 });
 
+test("a held-send sweep follows FHIR next links after its positive-offset due window has passed", async () => {
+  let current = new Date("2026-07-30T06:00:00.000Z");
+  const base = fakeFhir([
+    appointment("held-page-2", "2026-07-30T03:30:00.000Z", "2026-07-30T04:00:00.000Z"),
+  ]);
+  const sent: SendEmailRequest[] = [];
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "held-page-2" };
+    },
+  };
+  const now = () => new Date(current);
+  const config = campaign("after-end-held", "end", 2 * 60);
+  const firstEngine = createReminderEngine({
+    fhir: base,
+    dispatch: dispatchFor(provider, base, now),
+    now,
+    practiceTimeZone: "America/New_York",
+    lookbackMinutes: 5,
+  });
+  assert.deepEqual((await firstEngine.run([config])).map((row) => row.outcome), ["rescheduled"]);
+
+  current = new Date("2026-07-30T12:00:00.000Z");
+  let nextReads = 0;
+  const pagedFhir = {
+    ...base,
+    search: async <T extends Resource>(
+      resourceType: T["resourceType"],
+      params?: FhirSearchParams,
+    ): Promise<Bundle<T>> => {
+      const query = new URLSearchParams(
+        params as ConstructorParameters<typeof URLSearchParams>[0],
+      );
+      if (resourceType === "Communication" && query.get("status") === "on-hold") {
+        return {
+          resourceType: "Bundle",
+          type: "searchset",
+          link: [{ relation: "next", url: "https://odos.local/fhir/R4/Communication?page=2" }],
+        };
+      }
+      return base.search<T>(resourceType, params);
+    },
+    searchUrl: async <T extends Resource>(): Promise<Bundle<T>> => {
+      nextReads += 1;
+      return {
+        resourceType: "Bundle",
+        type: "searchset",
+        entry: [{ resource: structuredClone(base.communications[0]) as T }],
+      };
+    },
+  };
+  const releaseEngine = createReminderEngine({
+    fhir: pagedFhir,
+    dispatch: dispatchFor(provider, pagedFhir, now),
+    now,
+    practiceTimeZone: "America/New_York",
+    lookbackMinutes: 5,
+  });
+
+  const released = await releaseEngine.run([config]);
+
+  assert.equal(nextReads, 1);
+  assert.deepEqual(released.map((row) => row.outcome), ["sent"]);
+  assert.equal(sent.length, 1);
+});
+
 test("a quiet-hours-held reminder is abandoned when its Appointment is cancelled before release", async () => {
   let current = new Date("2026-07-30T06:00:00.000Z");
   const heldAppointment = appointment(
@@ -448,6 +524,46 @@ test("a quiet-hours-held reminder is abandoned when its Appointment is cancelled
 
   assert.deepEqual((await engine.run([config])).map((row) => row.outcome), ["rescheduled"]);
   heldAppointment.status = "cancelled";
+  current = new Date("2026-07-30T12:00:00.000Z");
+
+  const released = await engine.run([config]);
+
+  assert.deepEqual(released.map((row) => row.outcome), ["suppressed"]);
+  assert.equal(sends, 0);
+  assert.equal(fhir.communications[0].status, "not-done");
+});
+
+test("a held pre-appointment reminder is abandoned when the next quiet-hours opening is after the visit", async () => {
+  let current = new Date("2026-07-30T06:00:00.000Z");
+  const fhir = fakeFhir([
+    appointment("before-opening", "2026-07-30T11:00:00.000Z", "2026-07-30T11:30:00.000Z"),
+  ]);
+  let sends = 0;
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail() {
+      sends += 1;
+      return { outcome: "sent", providerMessageId: "must-not-send" };
+    },
+  };
+  const now = () => new Date(current);
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir, now),
+    now,
+    practiceTimeZone: "America/New_York",
+  });
+  const config = campaign("day-before-early-visit", "start", -24 * 60);
+
+  assert.deepEqual((await engine.run([config])).map((row) => row.outcome), ["rescheduled"]);
   current = new Date("2026-07-30T12:00:00.000Z");
 
   const released = await engine.run([config]);
