@@ -12,6 +12,7 @@ import {
   type GenericComplaintOptions,
 } from "../../lib/complaints";
 import type { SectionSaveStatus } from "./types";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 interface Props {
   patientReference: string;
@@ -48,7 +49,6 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const [draft, setDraft] = useState<ComplaintDraft | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [overrideDirty, setOverrideDirty] = useState(false);
-  const [search, setSearch] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [rosOptions, setRosOptions] = useState<HpiRosOption[]>(DEFAULT_HPI_ROS_OPTIONS);
   const [rosStatuses, setRosStatuses] = useState<Record<string, RosStatus>>({});
@@ -71,9 +71,17 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
   const topDefinitions = useMemo(() => definitions
     .filter((definition) => definition.status === "active")
     .sort((left, right) => left.seedRank - right.seedRank), [definitions]);
-  const searchedDefinitions = search.trim()
-    ? topDefinitions.filter((definition) => definition.display.toLowerCase().includes(search.trim().toLowerCase()))
-    : topDefinitions;
+  const searchComplaintOptions = useMemo(() => async (query: string) => {
+    const normalized = query.trim().toLocaleLowerCase();
+    return topDefinitions
+      .filter((definition) => `${definition.display} ${definition.stableKey}`.toLocaleLowerCase().includes(normalized))
+      .map((definition) => ({
+        value: definition.stableKey,
+        label: definition.display,
+        description: definition.stableKey,
+        item: definition,
+      }));
+  }, [topDefinitions]);
 
   async function load() {
     const [definitionResponse, catalogResponse, complaintsResponse] = await Promise.all([
@@ -163,10 +171,9 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         savedAt: new Date().toISOString(),
         operator: "ODOS UI Complaint Intake",
       });
-      setDraft(null);
+      setDraft(addAnother ? blankComplaintDraft() : null);
       setEditingId(null);
       setOverrideDirty(false);
-      if (addAnother) setSearch("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -275,7 +282,6 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
               <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Presenting Complaints</h3>
               <p className="odos-hpi-faint mt-1 text-xs">The first complaint is primary and leads the History Narrative.</p>
             </div>
-            {!draft && <button type="button" className="sidebar-button" onClick={() => setSearch("")}>Add complaint</button>}
           </div>
           {complaints.length === 0 && <p className="odos-hpi-muted mt-4 text-sm">No presenting complaints recorded.</p>}
           <div className="mt-4 space-y-3">
@@ -325,12 +331,18 @@ export function HpiSection({ patientReference, encounterReference, onSaved }: Pr
         ) : (
           <div className="odos-hpi-border mt-5 rounded border bg-bg-panel/70 p-5">
             <h3 className="odos-hpi-muted text-sm font-semibold uppercase tracking-wider">Top Complaints</h3>
-            <label className="odos-hpi-muted mt-4 block text-sm">
-              Search complaints
-              <input className="sidebar-input mt-2" value={search} onChange={(event) => setSearch(event.target.value)} />
-            </label>
+            <div className="mt-4">
+              <OdosSearchPicker
+                label="Search complaints"
+                value=""
+                placeholder="Complaint name"
+                search={searchComplaintOptions}
+                onClear={() => undefined}
+                onSelect={(option) => beginDefinition(option.item)}
+              />
+            </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {searchedDefinitions.map((definition) => (
+              {topDefinitions.map((definition) => (
                 <button key={definition.stableKey} type="button" className="odos-hpi-border odos-hpi-muted rounded border p-3 text-left text-sm hover:border-brand/50 hover:bg-brand/10" onClick={() => beginDefinition(definition)}>
                   {definition.display}
                 </button>

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type Ref } from "react";
 
 export interface OdosSelectOption<T> {
   value: T;
@@ -20,6 +20,7 @@ interface CommonOdosSelectProps<T> {
 }
 
 interface OdosSelectButtonProps {
+  buttonRef?: Ref<HTMLButtonElement>;
   onInputChange?: undefined;
   parseInput?: undefined;
   serializeValue?: undefined;
@@ -81,8 +82,12 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
     const index = defaultIndex(currentOptions, centerValue, isEqual);
     setActiveIndex(index);
     if (index < 0) return;
+    if (typeof requestAnimationFrame !== "function") {
+      optionRefs.current[index]?.scrollIntoView?.({ block: "center" });
+      return;
+    }
     const frame = requestAnimationFrame(() => {
-      optionRefs.current[index]?.scrollIntoView({ block: "center" });
+      optionRefs.current[index]?.scrollIntoView?.({ block: "center" });
     });
     return () => cancelAnimationFrame(frame);
   }, [centerValue, isEqual, open]);
@@ -96,7 +101,7 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
   }, [selectableOptions.length]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || typeof document === "undefined") return;
     const close = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -192,6 +197,7 @@ export function OdosSelect<T>(props: OdosSelectProps<T>) {
           />
         ) : (
           <button
+            ref={props.buttonRef}
             type="button"
             role="combobox"
             aria-label={ariaLabel}

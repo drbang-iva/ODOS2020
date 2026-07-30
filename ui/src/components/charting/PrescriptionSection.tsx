@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Coding, Condition, Encounter, MedicationRequest } from "@medplum/fhirtypes";
 import { clinicalStatus, displayCode, isEncounterDiagnosisCondition } from "../../lib/clinical-view-model";
 import {
@@ -19,6 +19,7 @@ import { clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 interface Props {
   patientReference: string;
@@ -67,6 +68,12 @@ interface EditorProps {
   onSave: () => void;
   onCancel?: () => void;
 }
+type FormularySelection =
+  | { kind: "coded"; result: FormularyResult }
+  | { kind: "free-text"; text: string };
+type DirectorySelection =
+  | { kind: "coded"; result: DirectoryResult }
+  | { kind: "free-text"; text: string };
 
 export const CONTROLLED_SUBSTANCE_DRUG_TERMS: readonly string[] = [];
 const REFILL_OPTIONS = numericOptions(undefined, 0, 11, 1);
@@ -151,98 +158,52 @@ export function PrescriptionEditor({
 }: EditorProps) {
   const controlled = isControlledSubstanceDrug(draft.drug, controlledSubstanceTerms);
   const set = (next: Partial<PrescriptionDraft>) => onChange({ ...draft, ...next });
-  const [formularyResults, setFormularyResults] = useState<FormularyResult[]>([]);
-  const [formularyStatus, setFormularyStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
-  const [directoryPlace, setDirectoryPlace] = useState("");
   const [directoryState, setDirectoryState] = useState("");
   const [directorySearchType, setDirectorySearchType] = useState<"local-retail" | "mail-order">("local-retail");
-  const [directoryResults, setDirectoryResults] = useState<DirectoryResult[]>([]);
-  const [directoryStatus, setDirectoryStatus] = useState<"idle" | "searching" | "ready" | "error">("idle");
-  const directoryRequest = useRef(0);
-  const directoryAbort = useRef<AbortController | undefined>(undefined);
-
-  useEffect(() => {
-    const query = draft.drug.trim();
-    if (!query || draft.drugDbCode) {
-      setFormularyResults([]);
-      setFormularyStatus("idle");
-      return;
-    }
-    const controller = new AbortController();
-    let active = true;
-    const timeout = setTimeout(() => {
-      setFormularyStatus("searching");
-      void searchApi.searchFormulary(query, controller.signal)
-        .then((results) => {
-          if (!active) return;
-          setFormularyResults(results);
-          setFormularyStatus("ready");
-        })
-        .catch((caught) => {
-          if (!active || (caught instanceof Error && caught.name === "AbortError")) return;
-          setFormularyResults([]);
-          setFormularyStatus("error");
-        });
-    }, formularyDebounceMs);
-    return () => {
-      active = false;
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [draft.drug, draft.drugDbCode, formularyDebounceMs, searchApi]);
-
-  useEffect(() => () => {
-    directoryRequest.current += 1;
-    directoryAbort.current?.abort();
-  }, []);
-
-  function invalidateDirectorySearch() {
-    directoryRequest.current += 1;
-    directoryAbort.current?.abort();
-    directoryAbort.current = undefined;
-    setDirectoryResults([]);
-    setDirectoryStatus("idle");
-  }
-
-  async function runDirectorySearch() {
-    const place = directoryPlace.trim();
-    const state = directoryState.trim();
-    if (!place || !state) return;
-    const request = directoryRequest.current + 1;
-    directoryRequest.current = request;
-    directoryAbort.current?.abort();
-    const controller = new AbortController();
-    directoryAbort.current = controller;
-    setDirectoryStatus("searching");
-    try {
-      const results = await searchApi.searchDirectory({
-        place,
-        state,
-        searchType: directorySearchType,
-      }, controller.signal);
-      if (directoryRequest.current !== request) return;
-      setDirectoryResults(results);
-      setDirectoryStatus("ready");
-    } catch (caught) {
-      if (directoryRequest.current !== request
-        || (caught instanceof Error && caught.name === "AbortError")) return;
-      setDirectoryResults([]);
-      setDirectoryStatus("error");
-    } finally {
-      if (directoryRequest.current === request) directoryAbort.current = undefined;
-    }
-  }
+  const searchFormularyOptions = useMemo(() => async (query: string, signal: AbortSignal) =>
+    (await searchApi.searchFormulary(query, signal)).map((result) => ({
+      value: `${result.drugDbCode}:${result.drugDbCodeQualifier}`,
+      label: result.psnDescription,
+      description: formularyDetails(result),
+      item: { kind: "coded", result } satisfies FormularySelection,
+    })), [searchApi]);
+  const searchDirectoryOptions = useMemo(() => async (query: string, signal: AbortSignal) => {
+    if (!directoryState.trim()) throw new Error("Enter the pharmacy state before searching.");
+    return (await searchApi.searchDirectory({
+      place: query,
+      state: directoryState.trim(),
+      searchType: directorySearchType,
+    }, signal)).map((result, index) => ({
+      value: result.ncpdpId || `${result.businessName}:${index}`,
+      label: result.businessName,
+      description: directoryAddress(result),
+      item: { kind: "coded", result } satisfies DirectorySelection,
+    }));
+  }, [directorySearchType, directoryState, searchApi]);
 
   return (
     <div className="rounded border border-white/10 bg-bg-panel/70 p-4">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Field label="Formulary">
-          <input
-            aria-label="Formulary"
-            className="sidebar-input"
-            value={draft.drug}
-            onChange={(event) => onChange(withDrugText(draft, event.target.value, controlledSubstanceTerms))}
-            placeholder="Start typing a medication or enter it as written"
+        <div>
+          <OdosSearchPicker<FormularySelection>
+            label="Formulary"
+            value={draft.drug ? draft.drugDbCode ?? `free:${draft.drug}` : ""}
+            selectedLabel={draft.drug}
+            placeholder="Start typing a medication"
+            searchDelayMs={formularyDebounceMs}
+            search={searchFormularyOptions}
+            createLabel="Use as written"
+            onCreate={async (text) => ({
+              value: `free:${text}`,
+              label: text,
+              item: { kind: "free-text", text } satisfies FormularySelection,
+            })}
+            onClear={() => onChange(withDrugText(draft, "", controlledSubstanceTerms))}
+            onSelect={(option) => {
+              onChange(option.item.kind === "coded"
+                ? withFormularyResult(draft, option.item.result)
+                : withDrugText(draft, option.item.text, controlledSubstanceTerms));
+            }}
           />
           {draft.drugDbCode && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-emerald-200/80">
@@ -250,32 +211,7 @@ export function PrescriptionEditor({
               <span>RxCUI {draft.drugDbCode}</span>
             </div>
           )}
-          {formularyStatus === "searching" && <SearchNote>Searching the Formulary…</SearchNote>}
-          {formularyStatus === "error" && <SearchNote>The Formulary is unavailable. You can keep this entry as written.</SearchNote>}
-          {formularyStatus === "ready" && formularyResults.length === 0 && (
-            <SearchNote>No Formulary matches. You can keep this entry as written.</SearchNote>
-          )}
-          {formularyResults.length > 0 && (
-            <div className="mt-2 max-h-56 overflow-y-auto rounded border border-white/10 bg-bg-panel shadow-xl">
-              {formularyResults.map((result) => (
-                <button
-                  key={`${result.drugDbCode}:${result.drugDbCodeQualifier}`}
-                  type="button"
-                  className="block w-full border-b border-white/5 px-3 py-2 text-left normal-case tracking-normal last:border-b-0 hover:bg-white/5"
-                  aria-label={`Choose ${result.psnDescription} from the Formulary`}
-                  onClick={() => {
-                    onChange(withFormularyResult(draft, result));
-                    setFormularyResults([]);
-                    setFormularyStatus("idle");
-                  }}
-                >
-                  <span className="block text-sm font-semibold text-white">{result.psnDescription}</span>
-                  <span className="mt-0.5 block text-xs text-white/50">{formularyDetails(result)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </Field>
+        </div>
         <Field label="Sig">
           <input aria-label="Sig" className="sidebar-input" value={draft.sig} onChange={(event) => set({ sig: event.target.value })} placeholder="1 drop OU four times daily" />
         </Field>
@@ -306,13 +242,25 @@ export function PrescriptionEditor({
         <Field label="Indication fallback">
           <input aria-label="Indication fallback" className="sidebar-input" value={draft.indicationText} onChange={(event) => set({ indicationText: event.target.value })} placeholder="Free text when no diagnosis is linked" />
         </Field>
-        <Field label="Directory">
-          <input
-            aria-label="Directory entry"
-            className="sidebar-input"
-            value={draft.pharmacy}
-            onChange={(event) => set({ pharmacy: event.target.value, pharmacyNcpdpId: undefined })}
-            placeholder="Type a name or phone, or choose from the Directory"
+        <div>
+          <OdosSearchPicker<DirectorySelection>
+            label="Directory ZIP or city"
+            value={draft.pharmacy ? draft.pharmacyNcpdpId ?? `free:${draft.pharmacy}` : ""}
+            selectedLabel={draft.pharmacy}
+            placeholder="Search by ZIP or city"
+            search={searchDirectoryOptions}
+            createLabel="Use as written"
+            onCreate={async (text) => ({
+              value: `free:${text}`,
+              label: text,
+              item: { kind: "free-text", text } satisfies DirectorySelection,
+            })}
+            onClear={() => set({ pharmacy: "", pharmacyNcpdpId: undefined })}
+            onSelect={(option) => {
+              set(option.item.kind === "coded"
+                ? withDirectoryResult(draft, option.item.result)
+                : { pharmacy: option.item.text, pharmacyNcpdpId: undefined });
+            }}
           />
           {draft.pharmacyNcpdpId && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium normal-case tracking-normal text-sky-200/80">
@@ -320,45 +268,14 @@ export function PrescriptionEditor({
               <span>NCPDP {draft.pharmacyNcpdpId}</span>
             </div>
           )}
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
-            <input aria-label="Directory ZIP or city" className="sidebar-input" value={directoryPlace} onChange={(event) => { invalidateDirectorySearch(); setDirectoryPlace(event.target.value); }} placeholder="ZIP or city" />
-            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => { invalidateDirectorySearch(); setDirectoryState(event.target.value.toUpperCase()); }} placeholder="State" />
-          </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 normal-case tracking-normal">
+          <div className="mt-3 grid grid-cols-[5rem_1fr] gap-2">
+            <input aria-label="Directory state" className="sidebar-input uppercase" maxLength={2} value={directoryState} onChange={(event) => setDirectoryState(event.target.value.toUpperCase())} placeholder="State" />
             <div className="flex rounded border border-white/10 bg-black/10 p-1 text-xs">
-              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => { invalidateDirectorySearch(); setDirectorySearchType("local-retail"); }}>Local</button>
-              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => { invalidateDirectorySearch(); setDirectorySearchType("mail-order"); }}>Mail order</button>
+              <button type="button" aria-pressed={directorySearchType === "local-retail"} className={directorySearchType === "local-retail" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("local-retail")}>Local</button>
+              <button type="button" aria-pressed={directorySearchType === "mail-order"} className={directorySearchType === "mail-order" ? "rounded bg-white/10 px-3 py-1.5 text-white" : "px-3 py-1.5 text-white/50"} onClick={() => setDirectorySearchType("mail-order")}>Mail order</button>
             </div>
-            <button type="button" className="sidebar-button" disabled={!directoryPlace.trim() || !directoryState.trim() || directoryStatus === "searching"} onClick={() => void runDirectorySearch()}>
-              {directoryStatus === "searching" ? "Searching…" : "Search Directory"}
-            </button>
           </div>
-          {directoryStatus === "error" && <SearchNote>The Directory is unavailable. You can keep this entry as written.</SearchNote>}
-          {directoryStatus === "ready" && directoryResults.length === 0 && <SearchNote>No Directory matches. You can keep this entry as written.</SearchNote>}
-          {directoryResults.length > 0 && (
-            <div className="mt-2 max-h-64 overflow-y-auto rounded border border-white/10 bg-bg-panel shadow-xl">
-              {directoryResults.map((result, index) => (
-                <button
-                  key={`${result.ncpdpId}:${result.businessName}:${index}`}
-                  type="button"
-                  className="block w-full border-b border-white/5 px-3 py-2 text-left normal-case tracking-normal last:border-b-0 hover:bg-white/5"
-                  aria-label={`Choose ${result.businessName} from the Directory`}
-                  onClick={() => {
-                    onChange(withDirectoryResult(draft, result));
-                    setDirectoryResults([]);
-                    setDirectoryStatus("idle");
-                  }}
-                >
-                  <span className="flex items-center gap-2 text-sm font-semibold text-white">
-                    {result.businessName}
-                    {result.onWeno && <span className="rounded-full border border-sky-300/25 bg-sky-300/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-sky-100">On WENO</span>}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-white/50">{directoryAddress(result)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </Field>
+        </div>
       </div>
 
       {controlled && (
@@ -567,10 +484,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="mt-1">{children}</div>
     </div>
   );
-}
-
-function SearchNote({ children }: { children: React.ReactNode }) {
-  return <div role="status" className="mt-2 text-xs font-normal normal-case tracking-normal text-white/45">{children}</div>;
 }
 
 function optionalText(value: string): string | undefined {

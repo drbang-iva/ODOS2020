@@ -64,6 +64,8 @@ import {
   hasActiveApplicableBenefit,
 } from "../lib/patient-insurance";
 import { fhir } from "../lib/fhir";
+import { OdosSearchPicker } from "../components/inputs/OdosSearchPicker";
+import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 interface OrderHeaderState {
   staffLocation: string;
@@ -1179,24 +1181,36 @@ function ChargeTable({
               onClick={() => onSelectCharge(line.id)}
             >
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Procedure"
                   value={line.procedure}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { procedure: event.target.value }))}
+                  selectedLabel={line.procedure}
+                  placeholder="Search procedure codes"
+                  search={(query) => searchVerifiedProcedureCodes(lines, query)}
+                  onClear={() => onChange(updateLine(lines, line.id, { procedure: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { procedure: option.value }))}
                 />
               </td>
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Modifier"
                   value={line.modifier}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { modifier: event.target.value }))}
+                  selectedLabel={line.modifier}
+                  placeholder="Search modifiers"
+                  search={(query) => searchVerifiedModifierCodes(lines, query)}
+                  onClear={() => onChange(updateLine(lines, line.id, { modifier: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { modifier: option.value }))}
                 />
               </td>
               <td className="border-r border-white/10 px-2 py-2">
-                <input
-                  className="sidebar-input h-8 w-full"
+                <OdosSearchPicker<string>
+                  label="Diagnosis"
                   value={line.diagnosis}
-                  onChange={(event) => onChange(updateLine(lines, line.id, { diagnosis: event.target.value }))}
+                  selectedLabel={line.diagnosis}
+                  placeholder="Search diagnosis codes"
+                  search={searchVerifiedDiagnosisCodes}
+                  onClear={() => onChange(updateLine(lines, line.id, { diagnosis: "" }))}
+                  onSelect={(option) => onChange(updateLine(lines, line.id, { diagnosis: option.value }))}
                 />
               </td>
               <DisabledCell value="" />
@@ -1249,6 +1263,81 @@ function ChargeTable({
       </table>
     </div>
   );
+}
+
+interface VerifiedChargeCode {
+  code: string;
+  display: string;
+}
+
+function searchVerifiedProcedureCodes(lines: OpticalChargeLineDraft[], query: string) {
+  const codes = lines.flatMap((line) => [
+    ...(line.frame ? [{ code: "V2020", display: "Frames, purchases" }] : []),
+    ...(line.billingCodes ?? []).map((code) => ({ code: code.code, display: code.display })),
+  ]);
+  return Promise.resolve(searchVerifiedChargeCodes(codes, query));
+}
+
+function searchVerifiedModifierCodes(lines: OpticalChargeLineDraft[], query: string) {
+  const codes = lines.flatMap((line) => (line.billingCodes ?? []).map((code) => ({
+    code: code.lateralityModifier,
+    display: `${code.lateralityModifier} — ${code.eye} laterality`,
+  })));
+  return Promise.resolve(searchVerifiedChargeCodes(codes, query));
+}
+
+function searchVerifiedChargeCodes(codes: VerifiedChargeCode[], query: string) {
+  const normalized = query.trim().toLocaleLowerCase();
+  const unique = [...new Map(codes.map((code) => [code.code, code])).values()];
+  return unique
+    .filter((code) => `${code.code} ${code.display}`.toLocaleLowerCase().includes(normalized))
+    .map((code) => ({
+      value: code.code,
+      label: code.code,
+      description: code.display,
+      item: code.code,
+    }));
+}
+
+interface OpticalDiagnosisCatalogRow {
+  display: string;
+  stableKey: string;
+  active: boolean;
+  codingStatus: "verified" | "placeholder" | "provisional";
+  icd10?: { code?: string; pattern?: Record<string, string> };
+}
+
+let cachedOpticalDiagnosisCatalog: OpticalDiagnosisCatalogRow[] | undefined;
+
+async function searchVerifiedDiagnosisCodes(query: string, signal: AbortSignal) {
+  if (!cachedOpticalDiagnosisCatalog) {
+    const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+      headers: authHeaders(),
+      signal,
+    });
+    const body = await response.json() as {
+      diagnoses?: OpticalDiagnosisCatalogRow[];
+      error?: string;
+    };
+    if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
+    cachedOpticalDiagnosisCatalog = body.diagnoses ?? [];
+  }
+  const normalized = query.trim().toLocaleLowerCase();
+  return cachedOpticalDiagnosisCatalog.flatMap((row) => {
+    const code = row.icd10?.code ?? row.icd10?.pattern?.unspecifiedEye;
+    if (
+      !row.active
+      || row.codingStatus !== "verified"
+      || !code
+      || !`${row.display} ${row.stableKey} ${code}`.toLocaleLowerCase().includes(normalized)
+    ) return [];
+    return [{
+      value: code,
+      label: code,
+      description: row.display,
+      item: code,
+    }];
+  }).slice(0, 20);
 }
 
 export function PaymentPanel({

@@ -4,7 +4,7 @@ import type { Coverage, Encounter, Organization, Patient, Practitioner, RelatedP
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { InlinePicker, type InlinePickerOption } from "../src/components/InlinePicker";
+import { OdosSearchPicker, type OdosSearchPickerOption } from "../src/components/inputs/OdosSearchPicker";
 import { fhir } from "../src/lib/fhir";
 import {
   addChargeLine,
@@ -210,22 +210,22 @@ test("inline picker keeps a multi-given-name Practitioner label aligned with the
     id: "pract-1",
     name: [{ given: ["Eric", "Michael"], family: "Bang" }],
   };
-  const option: InlinePickerOption<Practitioner> = {
+  const option: OdosSearchPickerOption<Practitioner> = {
     value: "Practitioner/pract-1",
     label: practitionerDisplay(practitioner),
     item: practitioner,
   };
   const searches: string[] = [];
-  let selected: InlinePickerOption<Practitioner> | undefined;
+  let selected: OdosSearchPickerOption<Practitioner> | undefined;
   let renderer: ReactTestRenderer | undefined;
   function PickerHarness() {
-    const [selection, setSelection] = React.useState<InlinePickerOption<Practitioner>>();
+    const [selection, setSelection] = React.useState<OdosSearchPickerOption<Practitioner>>();
     const provider = selection ? claimProviderFromPractitioner(selection.item) : undefined;
     const selectedLabel = provider
       ? [provider.firstName, provider.lastName].filter(Boolean).join(" ")
       : undefined;
     return (
-      <InlinePicker
+      <OdosSearchPicker
         label="Rendering provider"
         value={selection?.value ?? ""}
         selectedLabel={selectedLabel}
@@ -293,7 +293,7 @@ test("inline picker closes its search results when focus leaves the picker", asy
   try {
     await act(async () => {
       renderer = create(
-        <InlinePicker
+        <OdosSearchPicker
           label="Rendering provider"
           value=""
           placeholder="Search practitioner name"
@@ -332,7 +332,7 @@ test("inline picker creates and selects a payer Organization from only its name"
   const originalWindow = globalThis.window;
   const created: Organization = { resourceType: "Organization", id: "payer-new", name: "New Payer" };
   let createName = "";
-  let selected: InlinePickerOption<Organization> | undefined;
+  let selected: OdosSearchPickerOption<Organization> | undefined;
   let renderer: ReactTestRenderer | undefined;
   Object.defineProperty(globalThis, "window", {
     configurable: true,
@@ -344,7 +344,7 @@ test("inline picker creates and selects a payer Organization from only its name"
   try {
     await act(async () => {
       renderer = create(
-        <InlinePicker
+        <OdosSearchPicker
           label="Payor organization"
           value=""
           placeholder="Search payer name"
@@ -425,7 +425,7 @@ test("payer Organization search and create use the verified payer type coding", 
 
 test("inline picker does not update selection after payer creation resolves post-unmount", async () => {
   const originalWindow = globalThis.window;
-  let resolveCreate: (option: InlinePickerOption<Organization>) => void = () => undefined;
+  let resolveCreate: (option: OdosSearchPickerOption<Organization>) => void = () => undefined;
   let selected = false;
   let renderer: ReactTestRenderer | undefined;
   Object.defineProperty(globalThis, "window", {
@@ -438,7 +438,7 @@ test("inline picker does not update selection after payer creation resolves post
   try {
     await act(async () => {
       renderer = create(
-        <InlinePicker
+        <OdosSearchPicker
           label="Payor organization"
           value=""
           placeholder="Search payer name"
@@ -454,8 +454,8 @@ test("inline picker does not update selection after payer creation resolves post
     await act(async () => {
       renderer!.root.find((node) => node.type === "input" && node.props.placeholder === "Search payer name")
         .props.onChange({ target: { value: "New Payer" } });
-      await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
     });
+    await waitForClaimsButton(renderer!, "Create payer “New Payer”");
     act(() => claimsButton(renderer!, "Create payer “New Payer”").props.onClick());
     await act(async () => {
       renderer!.unmount();
@@ -984,4 +984,14 @@ function claimsButton(renderer: ReactTestRenderer, label: string): any {
   );
   assert.ok(button, `Expected ${label} button`);
   return button;
+}
+
+async function waitForClaimsButton(renderer: ReactTestRenderer, label: string): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (renderer.root.findAllByType("button").some((button) => button.children.join("") === label)) return;
+    await act(async () => {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    });
+  }
+  assert.fail(`Timed out waiting for ${label} button`);
 }

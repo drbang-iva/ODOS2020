@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coverage, Encounter, Organization, Patient, Practitioner, PractitionerRole, RelatedPerson } from "@medplum/fhirtypes";
-import { InlinePicker, type InlinePickerOption } from "../../components/InlinePicker";
+import { OdosSearchPicker, type OdosSearchPickerOption } from "../../components/inputs/OdosSearchPicker";
 import { fhir } from "../../lib/fhir";
 import { searchAll } from "../../lib/fhir-search";
 import { patientName } from "../../lib/scheduler-appointment-ui";
@@ -536,7 +536,7 @@ export function SubmitClaims({
                   </button>
                   {showCoverageEntry && (
                     <div className="mt-4 grid gap-3 rounded border border-white/10 bg-black/20 p-4 md:grid-cols-2">
-                      <InlinePicker
+                      <OdosSearchPicker
                         label="Payor organization"
                         value={coverageEntry.payorReference}
                         selectedLabel={coverageEntry.payorDisplay}
@@ -566,7 +566,7 @@ export function SubmitClaims({
 
                 <Section title="Claim details" description="FHIR references and clearinghouse identifiers for this submission.">
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    <InlinePicker
+                    <OdosSearchPicker
                       label="Rendering provider"
                       value={draft.providerReference}
                       selectedLabel={providerDisplay(draft.renderingProvider)}
@@ -1009,7 +1009,7 @@ export function validateCoverageEntry(entry: CoverageEntryInput): string[] {
   return errors;
 }
 
-export async function searchPayerOrganizations(query: string): Promise<InlinePickerOption<Organization>[]> {
+export async function searchPayerOrganizations(query: string): Promise<OdosSearchPickerOption<Organization>[]> {
   const bundle = await fhir.search<Organization>("Organization", {
     name: query,
     type: `${ORGANIZATION_TYPE_SYSTEM}|${PAYER_ORGANIZATION_TYPE_CODE}`,
@@ -1021,7 +1021,7 @@ export async function searchPayerOrganizations(query: string): Promise<InlinePic
     .map(organizationPickerOption);
 }
 
-export async function createPayerOrganization(name: string): Promise<InlinePickerOption<Organization>> {
+export async function createPayerOrganization(name: string): Promise<OdosSearchPickerOption<Organization>> {
   const organization = await fhir.create<Organization>(
     {
       resourceType: "Organization",
@@ -1040,7 +1040,7 @@ export async function createPayerOrganization(name: string): Promise<InlinePicke
   return organizationPickerOption(organization);
 }
 
-function organizationPickerOption(organization: Organization): InlinePickerOption<Organization> {
+function organizationPickerOption(organization: Organization): OdosSearchPickerOption<Organization> {
   return {
     value: `Organization/${organization.id}`,
     label: organization.name!,
@@ -1049,7 +1049,7 @@ function organizationPickerOption(organization: Organization): InlinePickerOptio
   };
 }
 
-async function searchPractitioners(query: string): Promise<InlinePickerOption<Practitioner>[]> {
+async function searchPractitioners(query: string): Promise<OdosSearchPickerOption<Practitioner>[]> {
   const bundle = await fhir.search<Practitioner>("Practitioner", { name: query, _count: "20" });
   return (bundle.entry ?? [])
     .flatMap((entry) => entry.resource?.id ? [entry.resource] : [])

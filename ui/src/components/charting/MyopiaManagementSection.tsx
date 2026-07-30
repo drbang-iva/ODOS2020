@@ -14,6 +14,7 @@ import {
   type MyopiaPlanActivityInput,
 } from "../../lib/fhir-v04c/myopiaManagement";
 import type { SectionSaveStatus } from "./types";
+import { OdosSelect } from "../inputs/OdosSelect";
 
 interface Props {
   patientReference: string;
@@ -26,6 +27,7 @@ const EDUCATION_SNIPPETS = [
   "Bring any drops, lenses, or spectacles to follow-up so the plan can be reconciled.",
   "Axial length values are trended over time; the doctor decides how the plan changes.",
 ] as const;
+const DEFAULT_ATROPINE_FREQUENCY = "1 drop OU qhs";
 
 export function MyopiaManagementSection({ patientReference, encounterReference, onSaved }: Props) {
   const [busy, setBusy] = useState<string | null>("load");
@@ -35,7 +37,7 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
   const [carePlan, setCarePlan] = useState<CarePlan | null>(null);
   const [atropine, setAtropine] = useState<MedicationStatement | null>(null);
   const [concentration, setConcentration] = useState<AtropineConcentrationCode>("0.025%");
-  const [frequency, setFrequency] = useState("1 drop OU qhs");
+  const [frequency, setFrequency] = useState(DEFAULT_ATROPINE_FREQUENCY);
   const [snippet, setSnippet] = useState<string>(EDUCATION_SNIPPETS[0]);
 
   useEffect(() => {
@@ -234,16 +236,26 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
             ) : (
               <>
                 <div className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr]">
-                  <label className="text-sm text-[color:var(--odos-muted)]">
-                    Atropine
-                    <select value={concentration} onChange={(event) => setConcentration(event.target.value as AtropineConcentrationCode)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]">
-                      {ATROPINE_CONCENTRATION_CODES.map((code) => <option key={code} value={code}>{code}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-sm text-[color:var(--odos-muted)]">
-                    Frequency
-                    <input value={frequency} onChange={(event) => setFrequency(event.target.value)} className="mt-1 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]" />
-                  </label>
+                  <div className="text-sm text-[color:var(--odos-muted)]">
+                    <div className="mb-1">Atropine</div>
+                    <OdosSelect
+                      ariaLabel="Atropine concentration"
+                      value={concentration}
+                      defaultValue="0.025%"
+                      options={ATROPINE_CONCENTRATION_CODES.map((code) => ({ value: code, label: code }))}
+                      onChange={setConcentration}
+                    />
+                  </div>
+                  <div className="text-sm text-[color:var(--odos-muted)]">
+                    <div className="mb-1">Frequency</div>
+                    <OdosSelect
+                      ariaLabel="Atropine frequency"
+                      value={frequency}
+                      defaultValue={DEFAULT_ATROPINE_FREQUENCY}
+                      options={[...new Set([DEFAULT_ATROPINE_FREQUENCY, frequency])].map((value) => ({ value, label: value }))}
+                      onChange={setFrequency}
+                    />
+                  </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button onClick={() => void addAtropine()} disabled={busy !== null} className="rounded border border-[color:var(--odos-accent-border)] bg-[var(--odos-accent-tint-hi)] px-4 py-2 text-sm font-semibold text-[color:var(--odos-text)] hover:bg-[var(--odos-accent-tint-lo)] disabled:opacity-50">
@@ -268,9 +280,15 @@ export function MyopiaManagementSection({ patientReference, encounterReference, 
           </div>
           <div className="rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface)] p-4">
             <h3 className="text-sm font-semibold text-[color:var(--odos-text)]">Parent Education</h3>
-            <select value={snippet} onChange={(event) => setSnippet(event.target.value)} className="mt-3 h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]">
-              {EDUCATION_SNIPPETS.map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
+            <div className="mt-3">
+              <OdosSelect
+                ariaLabel="Parent education snippet"
+                value={snippet}
+                defaultValue={EDUCATION_SNIPPETS[0]}
+                options={EDUCATION_SNIPPETS.map((value) => ({ value, label: value }))}
+                onChange={setSnippet}
+              />
+            </div>
             <div className="mt-3 rounded border border-[color:var(--odos-line)] bg-[var(--odos-surface-2)] p-3 text-sm text-[color:var(--odos-muted)]">{snippet}</div>
           </div>
         </div>

@@ -41,6 +41,7 @@ import {
   type ProtocolItem,
 } from "../../lib/protocol-authoring";
 import { ProtocolStagingList } from "./ProtocolStagingList";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 const DIAGNOSIS_KEY_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/NamingSystem/diagnosis-catalog-stable-key";
 const VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status";
@@ -58,6 +59,18 @@ interface FormState {
   laterality: EyeChoice;
   tier: DiagnosisTierChoice;
 }
+interface DiagnosisCodeOption {
+  code: string;
+  display: string;
+}
+interface DiagnosisCatalogCodeRow {
+  display: string;
+  stableKey: string;
+  active: boolean;
+  codingStatus: "verified" | "placeholder" | "provisional";
+  icd10?: { code?: string; pattern?: Record<string, string> };
+}
+let cachedDiagnosisCatalog: DiagnosisCatalogCodeRow[] | undefined;
 interface ProtocolOffer {
   id: string;
   title: string;
@@ -485,7 +498,7 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
 
         {canShowEditing && (
           <div data-testid="diagnosis-tier-tagger" className="mt-5 rounded border border-[color:var(--odos-line)] bg-[color:var(--odos-surface)] p-4">
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[150px_150px_1fr_1fr_auto]">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[150px_150px_1fr_auto]">
               <select value={form.tier} onChange={(event) => setForm({ ...form, tier: event.target.value as DiagnosisTierChoice })} className={INPUT_CLASS}>
                 <option value="principal">Principal</option>
                 <option value="secondary">Secondary</option>
@@ -495,8 +508,15 @@ export function AssessmentSection({ patientReference, encounterReference, onSave
                 <option value="OS">OS</option>
                 <option value="OU">OU</option>
               </select>
-              <input value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} className={INPUT_CLASS} placeholder="ICD-10" />
-              <input value={form.display} onChange={(event) => setForm({ ...form, display: event.target.value })} className={INPUT_CLASS} placeholder="Diagnosis label" />
+              <OdosSearchPicker
+                label="Diagnosis / ICD-10"
+                value={form.code}
+                selectedLabel={form.display}
+                placeholder="Search diagnosis catalog"
+                search={searchDiagnosisCodeOptions}
+                onClear={() => setForm({ ...form, code: "", display: "" })}
+                onSelect={(option) => setForm({ ...form, code: option.item.code, display: option.item.display })}
+              />
               <button disabled={busy !== null || !form.code.trim()} onClick={addDiagnosis} className={BUTTON_CLASS}>
                 Add diagnosis
               </button>
@@ -778,9 +798,19 @@ function DiagnosisCard({
             <div className="self-center text-sm text-[color:var(--odos-muted)]">Laterality correction</div>
             <button disabled={busy !== null} onClick={() => onLaterality(laterality)} className={BUTTON_CLASS}>Save</button>
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[140px_1fr_auto]">
-            <input value={code} onChange={(event) => setCode(event.target.value)} className={INPUT_CLASS} />
-            <input value={display} onChange={(event) => setDisplay(event.target.value)} className={INPUT_CLASS} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <OdosSearchPicker
+              label="Recode diagnosis"
+              value={code}
+              selectedLabel={display}
+              placeholder="Search diagnosis catalog"
+              search={searchDiagnosisCodeOptions}
+              onClear={() => { setCode(""); setDisplay(""); }}
+              onSelect={(option) => {
+                setCode(option.item.code);
+                setDisplay(option.item.display);
+              }}
+            />
             <button disabled={busy !== null || !code.trim()} onClick={() => onCode(code, display)} className={BUTTON_CLASS}>Recode</button>
           </div>
           <DiagnosisRankActions
@@ -809,6 +839,42 @@ function DiagnosisCard({
       )}
     </div>
   );
+}
+
+async function loadDiagnosisCatalog(signal: AbortSignal): Promise<DiagnosisCatalogCodeRow[]> {
+  if (cachedDiagnosisCatalog) return cachedDiagnosisCatalog;
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+    headers: authHeaders(),
+    signal,
+  });
+  const body = await response.json() as {
+    diagnoses?: DiagnosisCatalogCodeRow[];
+    error?: string;
+  };
+  if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
+  cachedDiagnosisCatalog = body.diagnoses ?? [];
+  return cachedDiagnosisCatalog;
+}
+
+async function searchDiagnosisCodeOptions(query: string, signal: AbortSignal) {
+  const diagnoses = await loadDiagnosisCatalog(signal);
+  const normalized = query.trim().toLocaleLowerCase();
+  return diagnoses.flatMap((row) => {
+    const code = row.icd10?.code ?? row.icd10?.pattern?.unspecifiedEye;
+    if (
+      !row.active
+      || row.codingStatus !== "verified"
+      || !code
+      || !`${row.display} ${row.stableKey} ${code}`.toLocaleLowerCase().includes(normalized)
+    ) return [];
+    const item = { code, display: row.display } satisfies DiagnosisCodeOption;
+    return [{
+      value: code,
+      label: row.display,
+      description: code,
+      item,
+    }];
+  }).slice(0, 20);
 }
 
 export function DiagnosisRankActions({

@@ -391,7 +391,11 @@ test("successful OCT refinement restores focus to the trigger from the updated t
     assert.equal(inputFocuses, 1);
 
     const structure = renderer.root.findByProps({ "aria-label": "OCT structure" });
-    act(() => structure.props.onChange({ target: { value: "RNFL" } }));
+    act(() => structure.props.onClick());
+    const opticNerve = renderer.root.findAllByType("button")
+      .find((button) => button.props.role === "option" && button.children.join("") === "Optic nerve");
+    assert.ok(opticNerve);
+    act(() => opticNerve.props.onClick());
     const save = renderer.root.findAllByType("button")
       .find((button) => button.children.join("") === "Save refinement");
     assert.ok(save);

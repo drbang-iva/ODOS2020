@@ -18,7 +18,8 @@ import {
   type PracticeFrameInventoryUnit,
 } from "../src/lib/optical-frames";
 import { RoleProvider } from "../src/lib/role-context";
-import { OpticalFrames, type OpticalFramesApi } from "../src/scenes/OpticalFrames";
+import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
+import { CatalogTable, OpticalFrames, type OpticalFramesApi } from "../src/scenes/OpticalFrames";
 
 const BASIC_KIND_SYSTEM = "https://odos2020.com/fhir/CodeSystem/basic-kind";
 const CATALOG_URL = "https://odos2020.com/catalog/frames/SKU-100";
@@ -526,6 +527,36 @@ test("Receipt form forces an explicit quantity, converts optional dollars exactl
     await Promise.resolve();
   });
   assert.equal(renderer.root.findByProps({ role: "alert" }).children.join(""), "Receipt transaction failed");
+});
+
+test("frame search selection narrows only the catalog route", async () => {
+  const secondItem: FrameCatalogItem = {
+    ...CATALOG_ITEM,
+    canonicalUrl: "https://odos2020.com/catalog/frames/SKU-200",
+    sku: "SKU-200",
+    display: "Second Frame",
+  };
+  const api = testApi({ searchCatalog: async () => [CATALOG_ITEM, secondItem] });
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<RoleProvider><OpticalFrames route="catalog" api={api} /></RoleProvider>);
+    await flushPromises();
+  });
+  act(() => renderer.root.findByType(OdosSearchPicker).props.onSelect({
+    value: secondItem.canonicalUrl,
+    label: secondItem.display,
+    item: secondItem,
+  }));
+  assert.deepEqual(renderer.root.findByType(CatalogTable).props.rows, [secondItem]);
+
+  await act(async () => {
+    renderer.update(<RoleProvider><OpticalFrames route="inventory" api={api} /></RoleProvider>);
+    await flushPromises();
+  });
+  const inventoryTable = renderer.root.find((node) =>
+    typeof node.type === "function" && node.type.name === "InventoryTable");
+  assert.deepEqual(inventoryTable.props.catalog, [CATALOG_ITEM, secondItem]);
+  act(() => renderer.unmount());
 });
 
 test("Inventory ledger expands to individual units and decrements its rollup without reloading", async () => {

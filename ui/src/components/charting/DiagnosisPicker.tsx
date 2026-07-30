@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase, submitDiagnosisPick } from "../../lib/clinical-graph-client";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 interface Candidate {
   diagnosisKey: string;
@@ -39,7 +40,7 @@ export function DiagnosisPicker({
   const [findings, setFindings] = useState<CandidateFinding[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [catalogSelection, setCatalogSelection] = useState<CatalogRow>();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loadVersion = useRef(0);
@@ -88,11 +89,18 @@ export function DiagnosisPicker({
     };
   }, [encounterId, findingDefinitionKey, observationKey, refreshKey]);
 
-  const searchRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return [];
-    return catalog.filter((row) => `${row.display} ${row.stableKey} ${catalogCode(row)}`.toLowerCase().includes(term)).slice(0, 12);
-  }, [catalog, search]);
+  const searchCatalog = useMemo(() => async (query: string) => {
+    const term = query.trim().toLocaleLowerCase();
+    return catalog
+      .filter((row) => `${row.display} ${row.stableKey} ${catalogCode(row)}`.toLocaleLowerCase().includes(term))
+      .slice(0, 12)
+      .map((row) => ({
+        value: row.stableKey,
+        label: row.display,
+        description: catalogCode(row) ?? "No code yet",
+        item: row,
+      }));
+  }, [catalog]);
 
   async function pick(finding: CandidateFinding, diagnosisKey: string, action: "possible" | "confirm", source: Candidate["source"] | "catalog-search") {
     setBusy(`${finding.findingInstanceId}:${diagnosisKey}:${action}`);
@@ -107,7 +115,7 @@ export function DiagnosisPicker({
       });
       await load();
       setOpenId(null);
-      setSearch("");
+      setCatalogSelection(undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -123,7 +131,10 @@ export function DiagnosisPicker({
         <div key={finding.findingInstanceId} className="relative inline-block align-top">
           <button
             type="button"
-            onClick={() => setOpenId((current) => current === finding.findingInstanceId ? null : finding.findingInstanceId)}
+            onClick={() => {
+              setCatalogSelection(undefined);
+              setOpenId((current) => current === finding.findingInstanceId ? null : finding.findingInstanceId);
+            }}
             className="rounded-full border border-brand/50 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/20"
             aria-expanded={openId === finding.findingInstanceId}
           >
@@ -145,25 +156,25 @@ export function DiagnosisPicker({
                 ))}
               </div>
               <div className="mt-3 border-t border-white/10 pt-3">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                <OdosSearchPicker
+                  label="Full diagnosis catalog"
+                  value={catalogSelection?.stableKey ?? ""}
+                  selectedLabel={catalogSelection?.display}
                   placeholder="Search full diagnosis catalog"
-                  className="h-9 w-full rounded border border-white/15 bg-bg-panel px-3 text-sm text-white outline-none focus:border-brand"
+                  search={searchCatalog}
+                  onClear={() => setCatalogSelection(undefined)}
+                  onSelect={(option) => setCatalogSelection(option.item)}
                 />
-                {searchRows.length > 0 && (
-                  <div className="mt-2 max-h-64 space-y-2 overflow-y-auto">
-                    {searchRows.map((row) => (
-                      <DiagnosisChoice
-                        key={row.stableKey}
-                        display={row.display}
-                        code={catalogCode(row)}
-                        codingStatus={row.codingStatus}
-                        busy={busy !== null}
-                        onPossible={() => pick(finding, row.stableKey, "possible", "catalog-search")}
-                        onConfirm={() => pick(finding, row.stableKey, "confirm", "catalog-search")}
-                      />
-                    ))}
+                {catalogSelection && (
+                  <div className="mt-2">
+                    <DiagnosisChoice
+                      display={catalogSelection.display}
+                      code={catalogCode(catalogSelection)}
+                      codingStatus={catalogSelection.codingStatus}
+                      busy={busy !== null}
+                      onPossible={() => pick(finding, catalogSelection.stableKey, "possible", "catalog-search")}
+                      onConfirm={() => pick(finding, catalogSelection.stableKey, "confirm", "catalog-search")}
+                    />
                   </div>
                 )}
               </div>

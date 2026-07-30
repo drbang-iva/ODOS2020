@@ -9,6 +9,7 @@ import type {
   MedicationStatement,
   Observation,
   Patient,
+  PractitionerRole,
 } from "@medplum/fhirtypes";
 import { fhir } from "../lib/fhir";
 import { cardDensity, type ChartCardId } from "../lib/card-registry";
@@ -34,6 +35,8 @@ import {
 } from "../lib/clinical-view-model";
 import { SMOKING_STATUS_CODES, smokingStatusAnswerConcept, type SmokingStatusCode } from "../lib/fhir-clinical/smokingStatus";
 import { LongitudinalImagingCard } from "./LongitudinalImagingCard";
+import { OdosSearchPicker } from "./inputs/OdosSearchPicker";
+import { authHeaders, clinicalGraphApiBase } from "../lib/clinical-graph-client";
 
 interface ChartData {
   allergies: AllergyIntolerance[];
@@ -302,8 +305,18 @@ function AllergiesCard({
       )}
       {density === "full" && (
         <div className="mt-3 grid gap-2">
-          <input value={display} onChange={(event) => setDisplay(event.target.value)} placeholder="Allergy name" className="sidebar-input" />
-          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="RxNorm code" className="sidebar-input" />
+          <OdosSearchPicker
+            label="Allergy / RxNorm"
+            value={code}
+            selectedLabel={display}
+            placeholder="Search medication allergies"
+            search={searchAllergyOptions}
+            onClear={() => { setCode(""); setDisplay(""); }}
+            onSelect={(option) => {
+              setCode(option.item.code);
+              setDisplay(option.item.display);
+            }}
+          />
           <div className="grid grid-cols-2 gap-2">
             <button disabled={busy !== null || !code.trim()} onClick={addAllergy} className="sidebar-button">
               Add allergy
@@ -425,6 +438,7 @@ function CareTeamCard({
 }) {
   const [roleText, setRoleText] = useState("Primary care physician");
   const [memberReference, setMemberReference] = useState("");
+  const [memberLabel, setMemberLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const lines = careTeams.flatMap((team) =>
     (team.participant ?? []).map((participant) => careTeamParticipantLabel(participant)),
@@ -440,6 +454,7 @@ function CareTeamCard({
         memberReference: memberReference.trim(),
       });
       setMemberReference("");
+      setMemberLabel("");
       await onChanged();
     } finally {
       setBusy(false);
@@ -456,7 +471,18 @@ function CareTeamCard({
               <option key={role} value={role}>{role}</option>
             ))}
           </select>
-          <input value={memberReference} onChange={(event) => setMemberReference(event.target.value)} placeholder="PractitionerRole/<id>" className="sidebar-input" />
+          <OdosSearchPicker
+            label="Care-team member"
+            value={memberReference}
+            selectedLabel={memberLabel}
+            placeholder="Search practitioner roles"
+            search={searchPractitionerRoleOptions}
+            onClear={() => { setMemberReference(""); setMemberLabel(""); }}
+            onSelect={(option) => {
+              setMemberReference(option.value);
+              setMemberLabel(option.label);
+            }}
+          />
           <button disabled={busy || !memberReference.trim()} onClick={addMember} className="sidebar-button">
             Add team member
           </button>
@@ -564,8 +590,18 @@ function ProblemListCard({
       {density === "full" && (
         <div className="mt-3 grid gap-2">
           {error && <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-100">{error}</div>}
-          <input value={display} onChange={(event) => setDisplay(event.target.value)} placeholder="Problem" className="sidebar-input" />
-          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="SNOMED code" className="sidebar-input" />
+          <OdosSearchPicker
+            label="Problem / SNOMED"
+            value={code}
+            selectedLabel={display}
+            placeholder="Search the diagnosis catalog"
+            search={searchProblemOptions}
+            onClear={() => { setCode(""); setDisplay(""); }}
+            onSelect={(option) => {
+              setCode(option.item.code);
+              setDisplay(option.item.display);
+            }}
+          />
           <button disabled={busy || !code.trim()} onClick={addProblem} className="sidebar-button">
             Add problem
           </button>
@@ -573,6 +609,79 @@ function ProblemListCard({
       )}
     </SidebarCard>
   );
+}
+
+interface ClinicalCodeOption {
+  code: string;
+  display: string;
+}
+
+async function searchAllergyOptions(query: string, signal: AbortSignal) {
+  const results = await fhir.searchWenoFormulary(clinicalGraphApiBase(), query, signal);
+  return results.map((result) => ({
+    value: result.drugDbCode,
+    label: result.psnDescription,
+    description: [result.route, result.strength, result.drugDbCode].filter(Boolean).join(" · "),
+    item: { code: result.drugDbCode, display: result.psnDescription } satisfies ClinicalCodeOption,
+  }));
+}
+
+async function searchProblemOptions(query: string, signal: AbortSignal) {
+  const response = await fetch(`${clinicalGraphApiBase()}/clinical-graph/diagnosis-catalog`, {
+    headers: authHeaders(),
+    signal,
+  });
+  const body = await response.json() as {
+    diagnoses?: Array<{
+      display: string;
+      stableKey: string;
+      active: boolean;
+      codingStatus: "verified" | "placeholder" | "provisional";
+      snomed?: ClinicalCodeOption;
+    }>;
+    error?: string;
+  };
+  if (!response.ok) throw new Error(body.error ?? `Diagnosis catalog request failed: ${response.status}`);
+  const normalized = query.trim().toLocaleLowerCase();
+  return (body.diagnoses ?? [])
+    .filter((row) =>
+      row.active
+      && row.codingStatus === "verified"
+      && row.snomed
+      && `${row.display} ${row.stableKey} ${row.snomed.code}`.toLocaleLowerCase().includes(normalized))
+    .slice(0, 20)
+    .map((row) => ({
+      value: row.snomed!.code,
+      label: row.snomed!.display,
+      description: `${row.snomed!.code} · ${row.display}`,
+      item: row.snomed!,
+    }));
+}
+
+async function searchPractitionerRoleOptions(query: string) {
+  const bundle = await fhir.search<PractitionerRole>("PractitionerRole", {
+    "practitioner.name": query,
+    active: "true",
+    _count: "20",
+  });
+  return (bundle.entry ?? []).flatMap((entry) => {
+    const role = entry.resource;
+    if (!role?.id) return [];
+    const label = role.practitioner?.display
+      ?? role.specialty?.[0]?.text
+      ?? role.code?.[0]?.text
+      ?? `Practitioner role ${role.id}`;
+    return [{
+      value: `PractitionerRole/${role.id}`,
+      label,
+      description: [
+        role.specialty?.[0]?.text,
+        role.organization?.display,
+        `PractitionerRole/${role.id}`,
+      ].filter(Boolean).join(" · "),
+      item: role,
+    }];
+  });
 }
 
 function SidebarCard({

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type Ref } from "react";
 
 export interface OdosSearchPickerOption<T> {
   value: string;
@@ -12,7 +12,7 @@ export interface OdosSearchPickerProps<T> {
   value: string;
   selectedLabel?: string;
   placeholder: string;
-  search: (query: string) => Promise<OdosSearchPickerOption<T>[]>;
+  search: (query: string, signal: AbortSignal) => Promise<OdosSearchPickerOption<T>[]>;
   onSelect: (option: OdosSearchPickerOption<T>) => void;
   onClear: () => void;
   onCreate?: (name: string) => Promise<OdosSearchPickerOption<T>>;
@@ -20,6 +20,10 @@ export interface OdosSearchPickerProps<T> {
   searchDelayMs?: number;
   validationMessage?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
+  inputRef?: Ref<HTMLInputElement>;
+  inputId?: string;
+  describedBy?: string;
 }
 
 export function OdosSearchPicker<T>({
@@ -35,8 +39,13 @@ export function OdosSearchPicker<T>({
   searchDelayMs = 250,
   validationMessage,
   disabled = false,
+  autoFocus = false,
+  inputRef,
+  inputId: providedInputId,
+  describedBy,
 }: OdosSearchPickerProps<T>) {
-  const inputId = useId();
+  const generatedInputId = useId();
+  const inputId = providedInputId ?? generatedInputId;
   const listboxId = useId();
   const [query, setQuery] = useState(selectedLabel ?? "");
   const [editing, setEditing] = useState(false);
@@ -73,10 +82,11 @@ export function OdosSearchPicker<T>({
       return;
     }
     let cancelled = false;
-    const handle = window.setTimeout(() => {
+    const controller = new AbortController();
+    const runSearch = () => {
       setLoading(true);
       setError(undefined);
-      search(trimmed)
+      search(trimmed, controller.signal)
         .then((results) => {
           if (!cancelled) {
             setOptions(results);
@@ -94,10 +104,15 @@ export function OdosSearchPicker<T>({
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
-    }, searchDelayMs);
+    };
+    const handle = typeof window === "undefined"
+      ? globalThis.setTimeout(runSearch, searchDelayMs)
+      : window.setTimeout(runSearch, searchDelayMs);
     return () => {
       cancelled = true;
-      window.clearTimeout(handle);
+      controller.abort();
+      if (typeof window === "undefined") globalThis.clearTimeout(handle);
+      else window.clearTimeout(handle);
     };
   }, [editing, query, search, searchDelayMs, selectedLabel, value]);
 
@@ -151,6 +166,7 @@ export function OdosSearchPicker<T>({
         id={inputId}
         role="combobox"
         aria-autocomplete="list"
+        aria-label={label}
         aria-expanded={showResults}
         aria-controls={listboxId}
         aria-activedescendant={showResults && options.length ? `${listboxId}-option-${activeIndex}` : undefined}
@@ -158,7 +174,10 @@ export function OdosSearchPicker<T>({
         placeholder={placeholder}
         autoComplete="off"
         aria-invalid={validationMessage ? true : undefined}
+        aria-describedby={describedBy}
         disabled={disabled}
+        autoFocus={autoFocus}
+        ref={inputRef}
         onChange={(event) => {
           setEditing(true);
           setQuery(event.target.value);

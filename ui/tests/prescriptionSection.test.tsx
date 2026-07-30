@@ -41,7 +41,6 @@ test("PrescriptionEditor exposes every prescription field with the specified con
     "Route",
     "Assessment diagnosis",
     "Indication fallback",
-    "Directory entry",
     "Directory ZIP or city",
     "Directory state",
   ]) {
@@ -208,35 +207,43 @@ test("formatDate safely renders malformed and absent authoredOn values", () => {
   assert.equal(formatDate(undefined), "Date unknown");
 });
 
-test("typing in the Formulary without selecting remains a freeform draft", () => {
-  let changed: PrescriptionDraft | undefined;
+test("a Formulary query becomes free text only through the explicit create action", async () => {
+  let latestDraft = EMPTY_PRESCRIPTION_DRAFT;
   const html = renderToStaticMarkup(
     <PrescriptionEditor
       draft={EMPTY_PRESCRIPTION_DRAFT}
       conditions={[]}
-      onChange={(draft) => { changed = draft; }}
+      onChange={(draft) => { latestDraft = draft; }}
       onSave={NOOP}
     />,
   );
   assert.match(html, /aria-label="Formulary"/);
 
   let renderer: ReactTestRenderer;
-  act(() => {
+  await act(async () => {
     renderer = create(
-      <PrescriptionEditor
-        draft={EMPTY_PRESCRIPTION_DRAFT}
-        conditions={[]}
-        onChange={(draft) => { changed = draft; }}
-        onSave={NOOP}
-      />,
+      <Harness />,
     );
   });
-  act(() => renderer!.root.findByProps({ "aria-label": "Formulary" }).props.onChange({ target: { value: "Custom compound" } }));
-  assert.equal(changed?.drug, "Custom compound");
-  assert.equal(changed?.drugDbCode, undefined);
-  assert.equal(changed?.drugDbCodeQualifier, undefined);
-  assert.equal(changed?.quantityUnitOfMeasureCode, undefined);
+  await act(async () => {
+    renderer!.root.findByProps({ "aria-label": "Formulary" }).props.onChange({ target: { value: "Custom compound" } });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+  assert.equal(latestDraft.drug, "");
+  const createButton = renderer!.root.findAllByType("button")
+    .find((button) => button.children.join("").includes("Use as written"));
+  assert.ok(createButton);
+  await act(async () => { await createButton.props.onClick(); });
+  assert.equal(latestDraft.drug, "Custom compound");
+  assert.equal(latestDraft.drugDbCode, undefined);
+  assert.equal(latestDraft.drugDbCodeQualifier, undefined);
+  assert.equal(latestDraft.quantityUnitOfMeasureCode, undefined);
   act(() => renderer!.unmount());
+
+  function Harness() {
+    const [draft, setDraft] = useState(EMPTY_PRESCRIPTION_DRAFT);
+    return <PrescriptionEditor draft={draft} conditions={[]} searchApi={searchApiStub()} formularyDebounceMs={0} onChange={(next) => { latestDraft = next; setDraft(next); }} onSave={NOOP} />;
+  }
 });
 
 test("selecting a Formulary result stores coded fields and later text edits clear them", async () => {
@@ -270,10 +277,12 @@ test("selecting a Formulary result stores coded fields and later text edits clea
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": "Formulary" }).props.onChange({ target: { value: "lata" } });
     await searchStartedPromise;
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 10));
   });
   await act(async () => {
-    renderer!.root.findByProps({ "aria-label": `Choose ${result.psnDescription} from the Formulary` }).props.onClick();
+    renderer!.root.findAllByProps({ role: "option" }).find((option) =>
+      option.findAllByType("span").some((span) => span.children.join("") === result.psnDescription)
+    )!.props.onClick();
   });
   assert.equal(latestDraft.drugDbCode, result.drugDbCode);
   assert.equal(latestDraft.route, result.route);
@@ -282,6 +291,7 @@ test("selecting a Formulary result stores coded fields and later text edits clea
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": "Formulary" }).props.onChange({ target: { value: `${result.psnDescription} edited` } });
   });
+  assert.equal(latestDraft.drug, "");
   assert.equal(latestDraft.drugDbCode, undefined);
   assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Coded — from WENO drug database/);
   await act(async () => renderer!.unmount());
@@ -304,16 +314,15 @@ test("the Directory waits for both place and state before firing a search", asyn
       />,
     );
   });
-  const searchButton = () => renderer!.root.findAllByType("button").find((button) => button.children.includes("Search Directory"))!;
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": "Directory ZIP or city" }).props.onChange({ target: { value: "29646" } });
+    await new Promise((resolve) => setTimeout(resolve, 300));
   });
-  await act(async () => { await searchButton().props.onClick(); });
   assert.equal(calls, 0);
   await act(async () => {
     renderer!.root.findByProps({ "aria-label": "Directory state" }).props.onChange({ target: { value: "sc" } });
+    await new Promise((resolve) => setTimeout(resolve, 300));
   });
-  await act(async () => { await searchButton().props.onClick(); });
   assert.equal(calls, 1);
   await act(async () => renderer!.unmount());
 });
@@ -334,16 +343,15 @@ test("changing Directory criteria invalidates a stale response", async () => {
       />,
     );
   });
-  const place = renderer!.root.findByProps({ "aria-label": "Directory ZIP or city" });
   const state = renderer!.root.findByProps({ "aria-label": "Directory state" });
   await act(async () => {
-    place.props.onChange({ target: { value: "29646" } });
     state.props.onChange({ target: { value: "SC" } });
+    renderer!.root.findByProps({ "aria-label": "Directory ZIP or city" }).props.onChange({ target: { value: "29646" } });
+    await new Promise((resolve) => setTimeout(resolve, 300));
   });
-  const searchButton = renderer!.root.findAllByType("button")
-    .find((button) => button.children.includes("Search Directory"))!;
-  await act(async () => { void searchButton.props.onClick(); });
-  await act(async () => { place.props.onChange({ target: { value: "29649" } }); });
+  await act(async () => {
+    renderer!.root.findByProps({ "aria-label": "Directory ZIP or city" }).props.onChange({ target: { value: "29649" } });
+  });
   await act(async () => { resolveSearch([directoryResult()]); await pending; });
   assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Greenwood Pharmacy/);
   await act(async () => renderer!.unmount());
@@ -397,7 +405,7 @@ test("MedicationRequest readback restores WENO fields only as a complete group",
   );
 });
 
-test("a failed Formulary search leaves the field typeable as freeform text", async () => {
+test("a failed Formulary search keeps the query but blocks free-text creation on uncertainty", async () => {
   let latestDraft = EMPTY_PRESCRIPTION_DRAFT;
   let renderer: ReactTestRenderer;
   const searchApi = searchApiStub({ formulary: async () => { throw new Error("offline"); } });
@@ -411,8 +419,12 @@ test("a failed Formulary search leaves the field typeable as freeform text", asy
     await new Promise((resolve) => setTimeout(resolve, 10));
   });
   assert.equal(renderer!.root.findByProps({ "aria-label": "Formulary" }).props.value, "Unlisted medication");
-  assert.equal(latestDraft.drug, "Unlisted medication");
-  assert.match(JSON.stringify(renderer!.toJSON()), /You can keep this entry as written/);
+  assert.equal(latestDraft.drug, "");
+  assert.match(JSON.stringify(renderer!.toJSON()), /offline/);
+  const createButton = renderer!.root.findAllByType("button")
+    .find((button) => button.children.join("").includes("Use as written"));
+  assert.equal(createButton, undefined);
+  assert.equal(latestDraft.drug, "");
   await act(async () => renderer!.unmount());
 });
 

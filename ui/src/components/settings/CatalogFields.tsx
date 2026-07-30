@@ -11,6 +11,7 @@ import {
 import { nextAvailableHoursWindow } from "../../lib/scheduling-settings";
 import { DISCIPLINE_COLOR_BANDS } from "../../lib/scheduling";
 import { RequiredFieldLabel } from "./RequiredGate";
+import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
 
 export const CATALOG_COLOR_PALETTE = [
   ...new Set(Object.values(DISCIPLINE_COLOR_BANDS).flat()),
@@ -191,7 +192,7 @@ function CatalogFieldControl({
     }
     case "reference-picker":
       return (
-        <FieldFrame field={field} error={error} showRequired={showRequired}>
+        <FieldFrame field={field} error={error} showRequired={showRequired} hideLabel>
           <ReferencePicker
             label={field.label}
             value={typeof value === "string" ? value : ""}
@@ -350,74 +351,26 @@ function ReferencePicker({
   inputId?: string;
   onChange: (value: unknown) => void;
 }) {
-  const [query, setQuery] = useState(value);
-  const [options, setOptions] = useState<ReferencePickerOption[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!search || query.trim().length < 2 || query === value) {
-      setOptions([]);
-      setLoading(false);
-      setSearchError(null);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    const timeout = window.setTimeout(() => {
-      void search(query)
-        .then((next) => {
-          if (!cancelled) {
-            setOptions(next);
-            setSearchError(null);
-          }
-        })
-        .catch((error: unknown) => {
-          if (!cancelled) {
-            setOptions([]);
-            setSearchError(error instanceof Error ? error.message : String(error));
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    }, 200);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [query, search, value]);
-
   return (
     <div className="grid gap-2">
-      <input
-        id={inputId}
-        className="scheduler-input"
-        value={query}
+      <OdosSearchPicker
+        inputId={inputId}
+        describedBy={describedBy}
+        label={label}
+        value={value}
+        selectedLabel={value}
         placeholder={`Search ${label.toLocaleLowerCase()}…`}
-        aria-describedby={describedBy}
-        onChange={(event) => setQuery(event.target.value)}
+        searchDelayMs={200}
+        disabled={!search}
+        search={async (query) => (await search?.(query) ?? []).map((option) => ({
+          value: option.reference,
+          label: option.display,
+          description: option.reference,
+          item: option,
+        }))}
+        onClear={() => onChange("")}
+        onSelect={(option) => onChange(option.item.reference)}
       />
-      {loading && <div className="text-xs text-white/45">Searching…</div>}
-      {searchError && <div className="text-sm text-red-200">{searchError}</div>}
-      {options.length > 0 && (
-        <div className="border border-white/10 bg-[#10111c]">
-          {options.map((option) => (
-            <button
-              key={option.reference}
-              type="button"
-              className="block w-full px-3 py-2 text-left text-sm text-white/75 hover:bg-white/10"
-              onClick={() => {
-                onChange(option.reference);
-                setQuery(option.reference);
-                setOptions([]);
-              }}
-            >
-              {option.display}
-            </button>
-          ))}
-        </div>
-      )}
       {value && (
         <div className="text-xs text-white/45">
           Stored {valueKind === "text" ? "value" : "reference"}: {value}

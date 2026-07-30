@@ -211,6 +211,52 @@ test("add medical flag network failures surface a visible error", async () => {
   });
 });
 
+test("Save and Add Another keeps a fresh complaint intake open", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/clinical-graph/hpi/definition")) {
+      return jsonResponse({ definition: { fields: { reviewOfSystems: { options: DEFAULT_HPI_ROS_OPTIONS } } } });
+    }
+    if (url.endsWith("/clinical-graph/complaint-definitions")) {
+      return jsonResponse({ definitions: [DRY_EYE, ROUTINE], genericOptions: GENERIC });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints") && init?.method === "POST") {
+      return jsonResponse({ complaints: [complaintFixture("complaint-1", 1)] });
+    }
+    if (url.endsWith("/clinical-graph/encounters/e1/complaints")) {
+      return jsonResponse({ complaints: [] });
+    }
+    throw new Error(`Unexpected request: ${init?.method ?? "GET"} ${url}`);
+  };
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => {
+      renderer = create(<HpiSection patientReference="Patient/p1" encounterReference="Encounter/e1" onSaved={() => undefined} />);
+      await flushEffects();
+    });
+    const complaint = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Patient (Dry Eye)");
+    assert.ok(complaint);
+    act(() => complaint.props.onClick());
+    const saveAndAdd = renderer.root.findAllByType("button")
+      .find((button) => button.children.join("") === "Save and Add Another");
+    assert.ok(saveAndAdd);
+    await act(async () => {
+      saveAndAdd.props.onClick();
+      await flushEffects();
+    });
+    assert.ok(renderer.root.findAllByType("h3").some((heading) => heading.children.join("") === "Complaint Intake"));
+    const concern = renderer.root.findAllByType("input")
+      .find((input) => input.props.maxLength === 4000);
+    assert.ok(concern);
+    assert.equal(concern.props.value, "");
+  } finally {
+    renderer?.unmount();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("legacy next-field wiring is fully removed from the source", () => {
   const source = readFileSync(new URL("../src/components/charting/HpiSection.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(source, /HPI_ELEMENTS|EMPTY_HPI|chiefComplaint|modifyingFactors|associatedSignsSymptoms/);

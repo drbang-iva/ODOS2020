@@ -5,6 +5,7 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { CollectPanel } from "../src/components/CollectPanel";
 import { AttachedLensPanel, LensesOrderSurface } from "../src/components/LensesOrderSurface";
+import { OdosSearchPicker } from "../src/components/inputs/OdosSearchPicker";
 import {
   BP_DIGITAL_LENS_PRODUCTS,
   COATING_OPTION_SEEDS,
@@ -277,6 +278,19 @@ test("OpticalOrder skips benefit fetches and V-code resolution when no patient i
   await openSceneLensPicker(renderer);
   chooseSingleVision(renderer);
   assert.equal(resolverCalls, 0);
+  act(() => renderer.unmount());
+});
+
+test("OpticalOrder charge-code pickers do not expose free-text creation", async () => {
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<OpticalOrder search="" api={opticalOrderApi()} />);
+    await flushPromises();
+  });
+  const chargePickers = renderer.root.findAllByType(OdosSearchPicker)
+    .filter((picker) => ["Procedure", "Modifier", "Diagnosis"].includes(picker.props.label));
+  assert.equal(chargePickers.length, 6);
+  assert.ok(chargePickers.every((picker) => picker.props.onCreate === undefined));
   act(() => renderer.unmount());
 });
 
@@ -792,6 +806,47 @@ test("search-first returns the same catalog row as the guided axes and leaves bl
   const blockedResult = fuzzySearchLensProducts("alpha", [blocked], rx)[0];
   assert.equal(blockedResult?.product.id, "blocked-search");
   assert.equal(blockedResult?.envelope.fits, false);
+});
+
+test("search-first filters Rx-incompatible lenses before applying the result limit", async () => {
+  const blocked = Array.from({ length: 8 }, (_, index) => boundedProduct({
+    id: `blocked-${index}`,
+    addMin: 2.5,
+    addMax: 3.5,
+    retailPerPairCents: 10_000 + index,
+  }));
+  const fitting = boundedProduct({
+    id: "fitting-after-blocked",
+    addMin: 1.5,
+    addMax: 2.5,
+    retailPerPairCents: 99_999,
+  });
+  assert.equal(
+    fuzzySearchLensProducts("alpha", [...blocked, fitting], lensOrderRxFromVisionPrescription(TEST_RX))
+      .some(({ product }) => product.id === fitting.id),
+    false,
+  );
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(
+      <LensesOrderSurface
+        open
+        rx={TEST_RX}
+        products={[...blocked, fitting]}
+        coatings={[]}
+        modifiers={[]}
+        onCancel={() => undefined}
+        onCommit={() => undefined}
+      />,
+    );
+    await flushPromises();
+  });
+  const results = await renderer.root.findByType(OdosSearchPicker).props.search(
+    "alpha",
+    new AbortController().signal,
+  );
+  assert.deepEqual(results.map((option: { value: string }) => option.value), [fitting.id]);
+  act(() => renderer.unmount());
 });
 
 test("order wiring snapshots the full selection, auto-fills the existing lab spec, and emits base plus add-on lines", () => {
