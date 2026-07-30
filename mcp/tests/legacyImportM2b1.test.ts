@@ -954,6 +954,65 @@ test("M2b-2 imports only fully allocated multi-appointment days and converges on
   }
 });
 
+test("M2b-2 ignores cancelled sittings when deciding whether capture allocation is required", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new MemoryVisitFhir();
+  const active = appointmentRow({
+    appt_date: "02/04/2020 12:00:00 AM",
+    appt_start_time: "09:00:00",
+    appt_end_time: "09:30:00",
+  });
+  const cancelled = appointmentRow({
+    appt_date: "02/04/2020 12:00:00 AM",
+    appt_start_time: "14:00:00",
+    appt_end_time: "14:30:00",
+    appt_cancel_ind: "True",
+  });
+  const activeKey = appointmentCompositeKey(active);
+
+  try {
+    const runId = ledger.startRun("m2b2-active-plus-cancelled");
+    const result = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: manifest(),
+      appointmentsCsv: appointmentCsv([active, cancelled]),
+      examsTsv: [
+        "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
+        "ehr-typical-1\texam-active\t2020-02-04 00:00:00.000\t1\t1",
+      ].join("\n"),
+    });
+
+    assert.deepEqual(result.encounters, {
+      created: 1,
+      updated: 0,
+      skipped: 0,
+      conflict: 0,
+    });
+    assert.equal(
+      listPendingDecisions(ledger, { runId }).some(
+        (decision) => decision.kind === "allocation",
+      ),
+      false,
+    );
+    const encounter = fhir.resources.find(
+      (resource): resource is Encounter => resource.resourceType === "Encounter",
+    );
+    assert.equal(
+      encounter?.identifier?.find(
+        (identifier) => identifier.system === EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
+      )?.value,
+      activeKey,
+    );
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
 test("M2b-2 decision replay adjudicates every operator-chart Encounter without re-asking", async () => {
   const state = tempState();
   const ledger = new ImportLedger({

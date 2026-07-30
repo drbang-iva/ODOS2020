@@ -296,9 +296,9 @@ export async function importLegacyAppointmentsAndEncounters(input: {
     }
 
     const dayAppointments = rowsByDay.get(visitDay.date) ?? [];
-    if (dayAppointments.length > 1) {
-      const appointmentSourceKeys = dayAppointments
-        .filter((row) => !row.cancelled)
+    const activeDayAppointments = dayAppointments.filter((row) => !row.cancelled);
+    if (activeDayAppointments.length > 1) {
+      const appointmentSourceKeys = activeDayAppointments
         .map((row) => row.sourceKey)
         .sort();
       const allocations = visitDay.exSrNos.map((exSrNo) => ({
@@ -307,10 +307,8 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       }));
       const invalidAllocations = allocations.filter(({ allocation }) =>
         allocation
-        && !dayAppointments.some(
-          (row) =>
-            row.sourceKey === allocation.appointmentSourceKey
-            && !row.cancelled,
+        && !activeDayAppointments.some(
+          (row) => row.sourceKey === allocation.appointmentSourceKey,
         )
       );
       const missingAllocations = allocations.filter(({ allocation }) => !allocation);
@@ -422,8 +420,8 @@ export async function importLegacyAppointmentsAndEncounters(input: {
       continue;
     }
 
-    if (dayAppointments.length === 1 && !dayAppointments[0]!.cancelled) {
-      const source = dayAppointments[0]!;
+    if (activeDayAppointments.length === 1) {
+      const source = activeDayAppointments[0]!;
       const adjudication = input.ledger.readAdjudication("encounter", source.sourceKey);
       if (!adjudication && isOperatorChart(manifest)) {
         recordEncounterDecisionAmbiguity(input.ledger, source.sourceKey);
