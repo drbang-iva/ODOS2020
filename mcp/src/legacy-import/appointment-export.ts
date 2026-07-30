@@ -136,7 +136,13 @@ export function analyzeAppointmentExport(
     const cancelledRows = rows.length - activeRows.length;
     if (activeRows.length === 1) {
       resolvedCancelGroups += 1;
-      appointments.push(preparedRow(activeRows[0]!, sourceKey, true));
+      appointments.push(
+        preparedRow(
+          activeRows[0]!,
+          sourceKey,
+          parseBoolean(activeRows[0]!.appt_cancel_ind),
+        ),
+      );
       continue;
     }
     if (activeRows.length === 0) {

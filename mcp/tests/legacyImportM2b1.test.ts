@@ -23,6 +23,7 @@ import {
   APPOINTMENT_EXPORT_COLUMNS,
   analyzeAppointmentExport,
   appointmentCompositeKey,
+  EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
 } from "../src/legacy-import/appointment-export.js";
 import { ImportLedger } from "../src/legacy-import/import-ledger.js";
 import { ODOS_VISIT_TYPE_SYSTEM } from "../src/fhir/schedulingVisitType.js";
@@ -137,7 +138,7 @@ test("AppointmentsExport analysis drops exact duplicates and applies only the ap
   });
   assert.equal(
     analysis.appointments.find((entry) => entry.row.PatientUID === "patient-b")?.cancelled,
-    true,
+    false,
   );
   assert.equal(
     analysis.ambiguities.find((entry) => entry.patientUid === "patient-c")?.activeRows,
@@ -304,7 +305,7 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     );
     assert.equal(
       appointments.find((appointment) => appointment.start?.startsWith("2020-01-05"))?.status,
-      "cancelled",
+      "fulfilled",
     );
     assert.ok(appointments.every((appointment) => appointment.start?.endsWith("-05:00")));
 
@@ -332,14 +333,14 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     assert.equal(technical?.participant, undefined);
     assert.equal(technical?.period?.start, "2020-01-03T00:00:00-05:00");
     assert.equal(technical?.period?.end, "2020-01-03T00:00:00-05:00");
-    const cancelledVisit = encounters.find((encounter) =>
+    const resolvedVisit = encounters.find((encounter) =>
       encounter.period?.start?.startsWith("2020-01-05")
     );
     assert.equal(
-      cancelledVisit?.identifier?.[0]?.system,
-      EYEFINITY_TECHNICAL_VISIT_IDENTIFIER_SYSTEM,
+      resolvedVisit?.identifier?.[0]?.system,
+      EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
     );
-    assert.equal(cancelledVisit?.appointment, undefined);
+    assert.match(resolvedVisit?.appointment?.[0]?.reference ?? "", /^Appointment\//);
     const noProvider = encounters.find((encounter) =>
       encounter.period?.start?.startsWith("2020-01-07")
     );
@@ -403,6 +404,128 @@ test("M2b-1 imports appointments, linked and technical Encounters, queues multi-
     });
     assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Appointment").length, 5);
     assert.equal(fhir.resources.filter((resource) => resource.resourceType === "Encounter").length, 4);
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-1 keeps patient-b linked and ledgers an adopted Practitioner by legacy source key", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  const fhir = new MemoryVisitFhir();
+  fhir.resources.push({
+    resourceType: "Practitioner",
+    id: "native-practitioner",
+    meta: { versionId: "1" },
+    identifier: [{
+      system: "https://example.test/native-provider",
+      value: "native-provider-id",
+    }],
+    name: [{ given: ["Synthetic"], family: "Doctor" }],
+  });
+  const active = appointmentRow({
+    PatientUID: "patient-b",
+    PatientID: "epm-b",
+    appt_date: "01/03/2020 12:00:00 AM",
+    appt_cancel_ind: "False",
+  });
+  const cancellationHistory = {
+    ...active,
+    appt_cancel_ind: "True",
+    Notes: "cancellation history",
+  };
+
+  try {
+    const runId = ledger.startRun("m2b-patient-b");
+    const result = await importLegacyAppointmentsAndEncounters({
+      fhir,
+      ledger,
+      runId,
+      projectId: PROJECT_ID,
+      manifest: {
+        ...manifest(),
+        patientUid: "patient-b",
+        epmPatientId: "epm-b",
+        ehrPatientId: "ehr-b",
+      },
+      appointmentsCsv: appointmentCsv([active, cancellationHistory]),
+      examsTsv: [
+        "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye",
+        "ehr-b\texam-b\t2020-01-03 00:00:00.000\t1\t1",
+      ].join("\n"),
+      now: new Date("2026-07-29T12:00:00Z"),
+    });
+    ledger.finishRun(runId, "completed");
+
+    assert.deepEqual(result.analysis, {
+      sourceRows: 2,
+      exactDuplicates: 0,
+      rowsAfterExactDedupe: 2,
+      collisionGroups: 1,
+      collisionRows: 2,
+      resolvedCancelGroups: 1,
+      allCancelledSkipped: 0,
+      ambiguousCollisionGroups: 0,
+    });
+    const appointment = fhir.resources.find(
+      (resource): resource is Appointment => resource.resourceType === "Appointment",
+    );
+    const encounter = fhir.resources.find(
+      (resource): resource is Encounter => resource.resourceType === "Encounter",
+    );
+    assert.equal(appointment?.status, "fulfilled");
+    assert.equal(encounter?.appointment?.[0]?.reference, `Appointment/${appointment?.id}`);
+
+    const adopted = fhir.resources.find(
+      (resource): resource is Practitioner =>
+        resource.resourceType === "Practitioner" && resource.id === "native-practitioner",
+    );
+    assert.equal(adopted?.identifier?.[0]?.value, "native-provider-id");
+    const auditDatabase = new DatabaseSync(ledger.databasePath);
+    try {
+      const action = auditDatabase.prepare(`
+        SELECT source_key, reason
+        FROM resource_actions
+        WHERE run_id = ? AND resource_type = 'Practitioner'
+      `).get(runId) as { source_key: string; reason: string };
+      assert.equal(action.source_key, "provider-1");
+      assert.equal(action.reason, "adopted-native-name-match");
+    } finally {
+      auditDatabase.close();
+    }
+  } finally {
+    ledger.close();
+    state.cleanup();
+  }
+});
+
+test("M2b-1 refuses an ambiguous New York fall-back wall time", async () => {
+  const state = tempState();
+  const ledger = new ImportLedger({ stateDirectory: state.path });
+  try {
+    const runId = ledger.startRun("m2b-dst-fallback");
+    await assert.rejects(
+      importLegacyAppointmentsAndEncounters({
+        fhir: new MemoryVisitFhir(),
+        ledger,
+        runId,
+        projectId: PROJECT_ID,
+        manifest: manifest(),
+        appointmentsCsv: appointmentCsv([
+          appointmentRow({
+            appt_date: "11/01/2020 12:00:00 AM",
+            appt_start_time: "01:30:00",
+            appt_end_time: "02:00:00",
+            ProviderID: "",
+            ProviderFirst: "",
+            ProviderLast: "",
+          }),
+        ]),
+        examsTsv: "ptSrNo\texSrNo\texDateTime\texDevType\texWhichEye\n",
+      }),
+      /2020-11-01 01:30:00 is not an unambiguous America\/New_York wall time/,
+    );
   } finally {
     ledger.close();
     state.cleanup();

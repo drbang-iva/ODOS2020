@@ -408,12 +408,19 @@ async function upsertPractitioner(input: {
     const created = await input.fhir.create<Practitioner>(imported, {
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     });
-    return recordedResource(input, created, "Practitioner", "created", reason);
+    return recordedResource(input, input.providerId, created, "Practitioner", "created", reason);
   }
   assertVersioned(existing, "Practitioner");
   const desired = mergePractitioner(existing, imported);
   if (sameManagedState(existing, desired, managedPractitionerState)) {
-    return recordedResource(input, existing, "Practitioner", "skipped", "already-converged");
+    return recordedResource(
+      input,
+      input.providerId,
+      existing,
+      "Practitioner",
+      "skipped",
+      "already-converged",
+    );
   }
   const updated = await input.fhir.update<Practitioner>(
     "Practitioner",
@@ -424,7 +431,7 @@ async function upsertPractitioner(input: {
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     },
   );
-  return recordedResource(input, updated, "Practitioner", "updated", reason);
+  return recordedResource(input, input.providerId, updated, "Practitioner", "updated", reason);
 }
 
 async function upsertAppointment(input: {
@@ -492,12 +499,26 @@ async function upsertAppointment(input: {
     const created = await input.fhir.create<Appointment>(imported, {
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     });
-    return recordedResource(input, created, "Appointment", "created", "no-existing-match");
+    return recordedResource(
+      input,
+      input.source.sourceKey,
+      created,
+      "Appointment",
+      "created",
+      "no-existing-match",
+    );
   }
   assertVersioned(existing, "Appointment");
   const desired = mergeAppointment(existing, imported);
   if (sameManagedState(existing, desired, managedAppointmentState)) {
-    return recordedResource(input, existing, "Appointment", "skipped", "already-converged");
+    return recordedResource(
+      input,
+      input.source.sourceKey,
+      existing,
+      "Appointment",
+      "skipped",
+      "already-converged",
+    );
   }
   const updated = await input.fhir.update<Appointment>(
     "Appointment",
@@ -508,7 +529,14 @@ async function upsertAppointment(input: {
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     },
   );
-  return recordedResource(input, updated, "Appointment", "updated", "source-state-changed");
+  return recordedResource(
+    input,
+    input.source.sourceKey,
+    updated,
+    "Appointment",
+    "updated",
+    "source-state-changed",
+  );
 }
 
 type UpsertEncounterInput = {
@@ -602,12 +630,26 @@ async function upsertEncounter(
     const created = await input.fhir.create<Encounter>(imported, {
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     });
-    return recordedResource(input, created, "Encounter", "created", "no-existing-match");
+    return recordedResource(
+      input,
+      input.sourceKey,
+      created,
+      "Encounter",
+      "created",
+      "no-existing-match",
+    );
   }
   assertVersioned(existing, "Encounter");
   const desired = mergeEncounter(existing, imported);
   if (sameManagedState(existing, desired, managedEncounterState)) {
-    return recordedResource(input, existing, "Encounter", "skipped", "already-converged");
+    return recordedResource(
+      input,
+      input.sourceKey,
+      existing,
+      "Encounter",
+      "skipped",
+      "already-converged",
+    );
   }
   const updated = await input.fhir.update<Encounter>(
     "Encounter",
@@ -618,7 +660,14 @@ async function upsertEncounter(
       "X-ODOS-Source": "scripts/import-legacy-visits-m2b1",
     },
   );
-  return recordedResource(input, updated, "Encounter", "updated", "source-state-changed");
+  return recordedResource(
+    input,
+    input.sourceKey,
+    updated,
+    "Encounter",
+    "updated",
+    "source-state-changed",
+  );
 }
 
 function practitionerConflict(
@@ -675,16 +724,29 @@ function appointmentConflict(
 
 function recordedResource<T extends Practitioner | Appointment | Encounter>(
   input: { readonly ledger: ImportLedger; readonly runId: string },
+  sourceKey: string,
   resource: T,
-  resourceType: ImportResourceType,
+  resourceType: T["resourceType"],
   action: ImportAction,
   reason: string,
 ): ResourceResult<T> {
   if (!resource.id) throw new Error(`${resourceType} write returned no id.`);
+  const migrationIdentifierSystems = resourceType === "Practitioner"
+    ? [EYEFINITY_PROVIDER_IDENTIFIER_SYSTEM]
+    : resourceType === "Appointment"
+    ? [EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM]
+    : [
+      EYEFINITY_APPOINTMENT_IDENTIFIER_SYSTEM,
+      EYEFINITY_TECHNICAL_VISIT_IDENTIFIER_SYSTEM,
+    ];
   recordResourceAction(
     input.ledger,
     input.runId,
-    resource.identifier?.find((identifier) => identifier.value)?.value ?? resource.id,
+    resource.identifier?.find(
+      (identifier) =>
+        identifier.value
+        && migrationIdentifierSystems.includes(identifier.system ?? ""),
+    )?.value ?? sourceKey,
     resourceType,
     action,
     reason,
@@ -927,18 +989,24 @@ function localDateTime(date: string, time: string): string {
   const [year, month, day] = date.split("-").map(Number);
   const [hour, minute, second] = time.split(":").map(Number);
   const wallClock = Date.UTC(year!, month! - 1, day!, hour!, minute!, second!);
-  let instant = wallClock;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const offset = zoneOffsetMilliseconds(new Date(instant), PRACTICE_TIME_ZONE);
-    const corrected = wallClock - offset;
-    if (corrected === instant) break;
-    instant = corrected;
-  }
-  const actual = localParts(new Date(instant), PRACTICE_TIME_ZONE);
   const expected = [year, month, day, hour, minute, second];
-  if (actual.some((value, index) => value !== expected[index])) {
+  const offsets = new Set(
+    [-86_400_000, 0, 86_400_000].map((delta) =>
+      zoneOffsetMilliseconds(new Date(wallClock + delta), PRACTICE_TIME_ZONE)
+    ),
+  );
+  const instants = [...offsets]
+    .map((offset) => wallClock - offset)
+    .filter((candidate, index, values) =>
+      values.indexOf(candidate) === index
+      && localParts(new Date(candidate), PRACTICE_TIME_ZONE).every(
+        (value, partIndex) => value === expected[partIndex],
+      )
+    );
+  if (instants.length !== 1) {
     throw new Error(`${date} ${time} is not an unambiguous ${PRACTICE_TIME_ZONE} wall time.`);
   }
+  const instant = instants[0]!;
   const offsetMinutes = zoneOffsetMilliseconds(new Date(instant), PRACTICE_TIME_ZONE) / 60_000;
   const sign = offsetMinutes >= 0 ? "+" : "-";
   const absolute = Math.abs(offsetMinutes);
