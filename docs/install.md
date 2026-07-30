@@ -93,6 +93,7 @@ Create `.env` from `.env.example` or export these variables in the shell that ru
 | `ODOS_COMMS_PROVIDERS` | no | Comma-separated native communications adapters. Empty keeps communications inert; Slice 1 supports `google-workspace`. |
 | `ODOS_TIMEZONE` | yes for reminders | IANA practice timezone used when no patient timezone is present. |
 | `ODOS_REMINDER_ENGINE_ENABLED` | no | Must be explicitly `true` after Google Workspace and BAA setup is confirmed. |
+| `ODOS_REMINDER_LOOKBACK_MINUTES` | no | Bounded positive-offset recovery window; defaults to 1,440 minutes. Negative appointment reminders recover while the appointment is still upcoming. |
 | `ODOS_COMMS_PUBLIC_BASE_URL` | yes for tracked links | HTTPS practice-domain origin for campaign redirect links. |
 
 Google Workspace communications setup and the documented manual-send verification path are in

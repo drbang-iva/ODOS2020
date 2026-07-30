@@ -19,6 +19,7 @@ import { createSuppressedCommsProvider } from "../src/comms/suppression-gate.js"
 import {
   DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS,
   createReminderEngine,
+  reminderLookbackMinutes,
   scheduledAt,
   type ReminderCampaignConfig,
 } from "../src/reminders/reminder-engine.js";
@@ -146,8 +147,9 @@ function campaign(
     channel: "email",
     anchor: {
       resourceType: "Appointment",
-      searchParameter: fieldPath === "end" ? "end" : "date",
+      searchParameter: "date",
       fieldPath,
+      ...(fieldPath === "end" ? { searchPaddingMinutes: 24 * 60 } : {}),
     },
     offsetMinutes,
     subjectTemplate: "Appointment reminder",
@@ -168,9 +170,10 @@ test("signed offset math supports reminders before and campaigns after independe
     DEFAULT_APPOINTMENT_REMINDER_CAMPAIGNS.map((row) => row.offsetMinutes),
     [-7 * 24 * 60, -24 * 60, -2 * 60],
   );
+  assert.equal(reminderLookbackMinutes(undefined), 24 * 60);
 });
 
-test("Appointment end anchors reject the start-oriented date search parameter", async () => {
+test("Appointment end anchors reject the non-standard end search parameter", async () => {
   const fhir = fakeFhir([]);
   const provider: CommsProvider = {
     name: "fake",
@@ -198,12 +201,47 @@ test("Appointment end anchors reject the start-oriented date search parameter", 
       ...campaign("after-end", "end", 2 * 60),
       anchor: {
         resourceType: "Appointment",
-        searchParameter: "date",
+        searchParameter: "end",
         fieldPath: "end",
+        searchPaddingMinutes: 24 * 60,
       },
     }]),
-    /Appointment\.end.*searchParameter.*end/i,
+    /Appointment\.end.*standard.*searchParameter.*date/i,
   );
+});
+
+test("a missed negative-offset reminder catches up while its Appointment is still upcoming", async () => {
+  const fhir = fakeFhir([
+    appointment("missed-sweep", "2026-07-30T15:00:00.000Z", "2026-07-30T15:30:00.000Z"),
+  ]);
+  const sent: SendEmailRequest[] = [];
+  const provider: CommsProvider = {
+    name: "fake",
+    capabilities: {
+      sms: false,
+      calls: false,
+      email: true,
+      contacts: false,
+      conversations: false,
+      reviews: false,
+    },
+    async sendEmail(request) {
+      sent.push(request);
+      return { outcome: "sent", providerMessageId: "recovered-reminder" };
+    },
+  };
+  const engine = createReminderEngine({
+    fhir,
+    dispatch: dispatchFor(provider, fhir),
+    now: () => new Date(NOW),
+    practiceTimeZone: "America/New_York",
+    lookbackMinutes: 5,
+  });
+
+  const result = await engine.run([campaign("two-hours-before", "start", -2 * 60)]);
+
+  assert.deepEqual(result.map((row) => row.outcome), ["sent"]);
+  assert.equal(sent.length, 1);
 });
 
 test("engine reads Appointment anchors, dispatches both signed directions through the gate, persists Communication state, and is idempotent", async () => {

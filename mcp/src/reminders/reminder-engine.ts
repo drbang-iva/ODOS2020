@@ -33,6 +33,7 @@ export interface ReminderAnchorConfig {
   resourceType: Resource["resourceType"];
   searchParameter: string;
   fieldPath: string;
+  searchPaddingMinutes?: number;
 }
 
 export interface ReminderCampaignConfig {
@@ -194,7 +195,7 @@ export function reminderWorkerIntervalMs(value: string | undefined): number {
 }
 
 export function reminderLookbackMinutes(value: string | undefined): number {
-  if (!value?.trim()) return 5;
+  if (!value?.trim()) return 24 * 60;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error("ODOS_REMINDER_LOOKBACK_MINUTES must be a positive integer.");
@@ -304,9 +305,14 @@ async function loadDueAnchors(
   lookbackMinutes: number,
 ): Promise<Resource[]> {
   const anchorUpper = new Date(now.getTime() - campaign.offsetMinutes * 60_000);
-  const anchorLower = new Date(anchorUpper.getTime() - lookbackMinutes * 60_000);
+  const anchorLower = campaign.offsetMinutes < 0
+    ? now
+    : new Date(anchorUpper.getTime() - lookbackMinutes * 60_000);
+  const searchLower = new Date(
+    anchorLower.getTime() - (campaign.anchor.searchPaddingMinutes ?? 0) * 60_000,
+  );
   const bundle = await fhir.search<Resource>(campaign.anchor.resourceType, [
-    [campaign.anchor.searchParameter, `ge${anchorLower.toISOString()}`],
+    [campaign.anchor.searchParameter, `ge${searchLower.toISOString()}`],
     [campaign.anchor.searchParameter, `le${anchorUpper.toISOString()}`],
     ["_count", "1000"],
   ]);
@@ -315,7 +321,11 @@ async function loadDueAnchors(
     .filter((resource) => {
       const value = stringAtPath(resource, campaign.anchor.fieldPath);
       if (!value) return false;
+      const anchorMs = Date.parse(value);
       const due = Date.parse(scheduledAt(value, campaign.offsetMinutes));
+      if (campaign.offsetMinutes < 0) {
+        return due <= now.getTime() && anchorMs > now.getTime();
+      }
       return due <= now.getTime() && due >= now.getTime() - lookbackMinutes * 60_000;
     });
 }
@@ -672,6 +682,10 @@ function validateCampaign(campaign: ReminderCampaignConfig): void {
   ) {
     throw new Error("Reminder anchor searchParameter and fieldPath are required.");
   }
+  const searchPaddingMinutes = campaign.anchor.searchPaddingMinutes ?? 0;
+  if (!Number.isInteger(searchPaddingMinutes) || searchPaddingMinutes < 0) {
+    throw new Error("Reminder anchor searchPaddingMinutes must be a non-negative integer.");
+  }
   if (
     campaign.anchor.resourceType === "Appointment"
     && campaign.anchor.fieldPath === "start"
@@ -682,9 +696,18 @@ function validateCampaign(campaign: ReminderCampaignConfig): void {
   if (
     campaign.anchor.resourceType === "Appointment"
     && campaign.anchor.fieldPath === "end"
-    && campaign.anchor.searchParameter !== "end"
+    && campaign.anchor.searchParameter !== "date"
   ) {
-    throw new Error('Appointment.end anchors require searchParameter "end".');
+    throw new Error(
+      'Appointment.end anchors require standard FHIR searchParameter "date" with search padding.',
+    );
+  }
+  if (
+    campaign.anchor.resourceType === "Appointment"
+    && campaign.anchor.fieldPath === "end"
+    && searchPaddingMinutes === 0
+  ) {
+    throw new Error("Appointment.end anchors require positive searchPaddingMinutes.");
   }
 }
 

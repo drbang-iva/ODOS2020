@@ -37,10 +37,15 @@ GOOGLE_WORKSPACE_PLAN_CONFIRMED=true
 ODOS_REMINDER_ENGINE_ENABLED=true
 ```
 
-Restart `odos-mcp` after changing configuration. The worker defaults to a 60-second sweep with a
-five-minute lookback and the three appointment-start offsets: 7 days before, 1 day before, and 2
-hours before. Recall, no-show, birthday, reactivation, and review-request campaign rows are not
-included in Slice 1.
+Restart `odos-mcp` after changing configuration. The worker defaults to a 60-second sweep, a
+24-hour bounded recovery window for positive-offset campaigns, and three appointment-start
+offsets: 7 days before, 1 day before, and 2 hours before. Negative-offset Appointment reminders
+also scan every still-upcoming anchor whose reminder is already due, so a restart does not skip
+the reminder while the appointment remains in the future. An Appointment-end campaign must still
+query the standard FHIR R4 `date` parameter (`Appointment.start`) with explicit duration padding,
+then filter on `Appointment.end`; it never emits the server-specific `Appointment?end` search.
+Recall, no-show, birthday, reactivation, and review-request campaign rows are not included in
+Slice 1.
 
 ## Manual verification
 

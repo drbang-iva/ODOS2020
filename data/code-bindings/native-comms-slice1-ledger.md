@@ -26,7 +26,7 @@ and are typechecked by `cd mcp && npx tsc --noEmit`.
 |---|---|---|---|---|---|
 | Outbound send-state | `Communication` with `identifier`, `status`, `category`, `medium`, `subject`, `about`, `sent`, and `payload.contentString` | https://hl7.org/fhir/R4/communication.html | https://build.fhir.org/communication.html | 2026-07-30 | verified |
 | Send natural-key idempotency | conditional create with `If-None-Exist: identifier={system}\|{value}` before provider dispatch | https://hl7.org/fhir/R4/http.html#ccreate | https://hl7.org/fhir/R4/search.html#token | 2026-07-30 | verified |
-| Appointment anchor | `Appointment.start`/`.end` are FHIR dateTime fields; Patient is resolved from `participant.actor` | https://hl7.org/fhir/R4/appointment.html | https://build.fhir.org/appointment.html | 2026-07-30 | verified |
+| Appointment anchor and portable search | `Appointment.start`/`.end` are FHIR dateTime fields; the standard R4 `date` search targets `Appointment.start`, so end-anchor campaigns query `date` with explicit padding and filter `.end`; Patient is resolved from `participant.actor` | https://hl7.org/fhir/R4/appointment.html | https://www.hl7.org/fhir/R4/searchparameter-registry.html | 2026-07-30 | verified |
 | Email resolution | `Patient.telecom` ContactPoint where `system = email`, excluding `use = old` and expired periods | https://hl7.org/fhir/R4/patient.html | https://build.fhir.org/patient.html | 2026-07-30 | verified |
 | Tracked-link and click records | local coded `Basic` resources with identifiers and ODOS extensions | https://hl7.org/fhir/R4/basic.html | https://build.fhir.org/basic.html | 2026-07-30 | verified |
 
