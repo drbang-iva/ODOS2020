@@ -21,6 +21,7 @@ import {
 } from "./referral-api";
 import { buildReferralPdfBase64 } from "./referral-pdf";
 import { OdosSearchPicker } from "../inputs/OdosSearchPicker";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 const SYSTEM_DEFAULTS: ReferralIncludeList = {
   letter: true,
@@ -482,8 +483,8 @@ export function ReferralCompose({
             <Tile title="Packet contents" index="04">
               <div className="space-y-1">
                 {INCLUDE_ROWS.map((row) => (
-                  <label key={row.key} className={`flex items-center justify-between gap-3 rounded px-2 py-2 ${includeList[row.key] ? "bg-[var(--odos-surface-2)]" : "opacity-45"}`}>
-                    <span className="flex items-center gap-3 text-sm">
+                  <div key={row.key} className={`flex items-center justify-between gap-3 rounded px-2 py-2 ${includeList[row.key] ? "bg-[var(--odos-surface-2)]" : "opacity-45"}`}>
+                    <label className="flex min-h-11 items-center gap-3 text-sm">
                       <input
                         type="checkbox"
                         checked={includeList[row.key]}
@@ -492,15 +493,23 @@ export function ReferralCompose({
                         onChange={(event) => updateIncludeList({ ...includeList, [row.key]: event.target.checked })}
                       />
                       {row.label}
-                    </span>
+                    </label>
                     {row.key === "history" && (
-                      <span className="flex items-center overflow-hidden rounded border border-[color:var(--odos-line)]">
-                        <button type="button" aria-label="Reduce history count" disabled={composerLocked || includeList.history_count <= 1} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.max(1, includeList.history_count - 1) }); }}>−</button>
-                        <span className="min-w-7 text-center text-xs">{includeList.history_count}</span>
-                        <button type="button" aria-label="Increase history count" disabled={composerLocked || includeList.history_count >= 50} className="px-2 py-1" onClick={(event) => { event.preventDefault(); updateIncludeList({ ...includeList, history_count: Math.min(50, includeList.history_count + 1) }); }}>+</button>
-                      </span>
+                      <div className="w-28">
+                        <OdosWheel
+                          value={includeList.history_count}
+                          centerOn={0}
+                          min={1}
+                          max={50}
+                          step={1}
+                          format={String}
+                          onChange={(history_count) => updateIncludeList({ ...includeList, history_count })}
+                          ariaLabel="Prior finalized exam history count"
+                          disabled={composerLocked}
+                        />
+                      </div>
                     )}
-                  </label>
+                  </div>
                 ))}
               </div>
               <button type="button" disabled={busy === "defaults" || composerLocked} className="mt-3 text-xs font-semibold text-brand disabled:opacity-40" onClick={() => void saveDefaults()}>

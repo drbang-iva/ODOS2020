@@ -8,6 +8,7 @@ import {
   type MyopiaReferencePopulation,
 } from "./AxialGrowthChart";
 import { MethodField } from "../inputs/MethodField";
+import { OdosWheel } from "../inputs/OdosWheel";
 import type { SectionSaveStatus } from "./types";
 
 interface Props {
@@ -192,37 +193,51 @@ export function EyeGrowthSection({ patientReference, encounterReference, onSaved
                   {(["OD", "OS"] as const).map((eye) => (
                     <div key={eye} className="contents">
                       <div className="self-center text-sm font-semibold text-[color:var(--odos-text)]">{eye}</div>
-                      <input
-                        type="number"
-                        min="18"
-                        max="32"
-                        step="0.01"
-                        value={eyes[eye].axialLength}
-                        onChange={(event) => setEyes((current) => ({
+                      <OdosWheel
+                        value={eyes[eye].axialLength === "" ? 0 : Number(eyes[eye].axialLength)}
+                        centerOn={0}
+                        min={18}
+                        max={32}
+                        step={0.01}
+                        format={(value) => value.toFixed(2)}
+                        onChange={(value) => setEyes((current) => ({
                           ...current,
-                          [eye]: { ...current[eye], axialLength: event.target.value },
+                          [eye]: { ...current[eye], axialLength: value.toFixed(2) },
                         }))}
-                        aria-label={`${eye} axial length in millimeters`}
-                        className="h-10 rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
+                        ariaLabel={`${eye} axial length in millimeters`}
+                        unit="mm"
+                        states={[{ value: "", label: "Not recorded" }]}
+                        selectedState={eyes[eye].axialLength === "" ? "" : undefined}
+                        onStateChange={() => setEyes((current) => ({
+                          ...current,
+                          [eye]: { ...current[eye], axialLength: "" },
+                        }))}
                       />
                       <div>
-                        <input
-                          type="number"
-                          min="5"
-                          max="12"
-                          step="0.01"
-                          value={eyes[eye].cornealRadius}
-                          onChange={(event) => {
+                        <OdosWheel
+                          value={eyes[eye].cornealRadius === "" ? 0 : Number(eyes[eye].cornealRadius)}
+                          centerOn={0}
+                          min={5}
+                          max={12}
+                          step={0.01}
+                          format={(value) => value.toFixed(2)}
+                          onChange={(value) => {
                             setEyes((current) => ({
                               ...current,
-                              [eye]: { ...current[eye], cornealRadius: event.target.value },
+                              [eye]: { ...current[eye], cornealRadius: value.toFixed(2) },
                             }));
                             setCornealRadiusErrors((current) => ({ ...current, [eye]: undefined }));
                           }}
-                          aria-label={`${eye} corneal radius in millimeters`}
-                          aria-invalid={cornealRadiusErrors[eye] ? true : undefined}
-                          aria-describedby={cornealRadiusErrors[eye] ? `eye-growth-corneal-radius-${eye}-error` : undefined}
-                          className="h-10 w-full rounded border border-[color:var(--odos-line-2)] bg-[var(--odos-deep-surface)] px-3 text-sm text-[color:var(--odos-text)] outline-none focus:border-[color:var(--odos-accent-border)]"
+                          ariaLabel={`${eye} corneal radius in millimeters`}
+                          ariaInvalid={cornealRadiusErrors[eye] ? true : undefined}
+                          ariaDescribedBy={cornealRadiusErrors[eye] ? `eye-growth-corneal-radius-${eye}-error` : undefined}
+                          unit="mm"
+                          states={[{ value: "", label: "Not recorded" }]}
+                          selectedState={eyes[eye].cornealRadius === "" ? "" : undefined}
+                          onStateChange={() => setEyes((current) => ({
+                            ...current,
+                            [eye]: { ...current[eye], cornealRadius: "" },
+                          }))}
                         />
                         {cornealRadiusErrors[eye] && (
                           <div

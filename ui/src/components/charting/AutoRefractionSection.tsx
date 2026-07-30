@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 import { formatPowerOption, numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
@@ -94,7 +95,9 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
   const sourceTypes = useMemo(() => activeOptions(refractionFields.sourceType), [refractionFields.sourceType]);
   const sphereOptions = useMemo(() => numericOptions(undefined, -16, 12, 0.25).reverse(), []);
   const cylinderOptions = useMemo(() => numericOptions(undefined, -8, 0, 0.25).reverse(), []);
-  const axisOptions = useMemo(() => numericOptions(refractionFields.axis, 0, 180, 1), [refractionFields.axis]);
+  const axisMinimum = refractionFields.axis?.minimum ?? 0;
+  const axisMaximum = refractionFields.axis?.maximum ?? 180;
+  const axisStep = refractionFields.axis?.step ?? 1;
   const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
   const flatKOptions = useMemo(() => numericOptions(keratometryFields.flatK, 30, 60, 0.25), [keratometryFields.flatK]);
   const steepKOptions = useMemo(() => numericOptions(keratometryFields.steepK, 30, 60, 0.25), [keratometryFields.steepK]);
@@ -205,15 +208,14 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
                   <div className="text-sm font-semibold text-white">{eye}</div>
                   <PowerDropdown value={eyes[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { sphere: value })} ariaLabel={`${eye} auto-refraction sphere`} formatOption={formatDiopterOption} />
                   <PowerDropdown value={eyes[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(eye, { cylinder: value })} ariaLabel={`${eye} auto-refraction cylinder`} formatOption={formatDiopterOption} />
-                  <select
+                  <AxisWheel
                     value={eyes[eye].axis}
-                    onChange={(event) => updateEye(eye, { axis: event.target.value })}
-                    aria-label={`${eye} auto-refraction axis`}
-                    className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-                  >
-                    <option value="">Select</option>
-                    {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-                  </select>
+                    onChange={(value) => updateEye(eye, { axis: value })}
+                    ariaLabel={`${eye} auto-refraction axis`}
+                    min={axisMinimum}
+                    max={axisMaximum}
+                    step={axisStep}
+                  />
                 </div>
               ))}
             </div>
@@ -260,15 +262,9 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
             <div key={eye} className="grid grid-cols-[54px_repeat(4,minmax(130px,190px))] items-center gap-2 border-t border-white/10 px-4 py-3">
               <div className="text-sm font-semibold text-white">{eye}</div>
               <PowerDropdown value={eyes[eye].flatK} options={flatKOptions} defaultValue="43.50" onChange={(value) => updateEye(eye, { flatK: value })} ariaLabel={`${eye} flat K`} />
-              <select value={eyes[eye].flatAxis} onChange={(event) => updateEye(eye, { flatAxis: event.target.value })} aria-label={`${eye} flat axis`} className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-                <option value="">Select</option>
-                {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-              </select>
+              <AxisWheel value={eyes[eye].flatAxis} onChange={(value) => updateEye(eye, { flatAxis: value })} ariaLabel={`${eye} flat axis`} min={axisMinimum} max={axisMaximum} step={axisStep} />
               <PowerDropdown value={eyes[eye].steepK} options={steepKOptions} defaultValue="43.50" onChange={(value) => updateEye(eye, { steepK: value })} ariaLabel={`${eye} steep K`} />
-              <select value={eyes[eye].steepAxis} onChange={(event) => updateEye(eye, { steepAxis: event.target.value })} aria-label={`${eye} steep axis`} className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-                <option value="">Select</option>
-                {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-              </select>
+              <AxisWheel value={eyes[eye].steepAxis} onChange={(value) => updateEye(eye, { steepAxis: value })} ariaLabel={`${eye} steep axis`} min={axisMinimum} max={axisMaximum} step={axisStep} />
             </div>
           ))}
         </div>
@@ -306,6 +302,32 @@ export function AutoRefractionSection({ patientReference, encounterReference, on
 
 function formatDiopterOption(option: string): string {
   return formatPowerOption(Number(option));
+}
+
+function AxisWheel({ value, onChange, ariaLabel, min, max, step }: {
+  value: string;
+  onChange(value: string): void;
+  ariaLabel: string;
+  min: number;
+  max: number;
+  step: number;
+}) {
+  return (
+    <OdosWheel
+      value={value === "" ? 0 : Number(value)}
+      centerOn={0}
+      min={min}
+      max={max}
+      step={step}
+      format={String}
+      onChange={(next) => onChange(String(next))}
+      ariaLabel={ariaLabel}
+      unit="°"
+      states={[{ value: "", label: "Not recorded" }]}
+      selectedState={value === "" ? "" : undefined}
+      onStateChange={onChange}
+    />
+  );
 }
 
 function emptyEye(): EyeState {

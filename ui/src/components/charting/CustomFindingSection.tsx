@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosWheel } from "../inputs/OdosWheel";
 import type { SectionSaveStatus } from "./types";
 
 type Eye = "OD" | "OS";
@@ -227,6 +228,8 @@ function CustomFieldControl({ field, value, onChange }: {
     field.step !== undefined ? `step ${field.step}` : "",
   ].filter(Boolean).join(" · ");
   const toggleValue = field.options?.[0]?.code ?? "true";
+  const numericValue = typeof value === "string" ? value : "";
+  const hasWheelBounds = field.min !== undefined && field.max !== undefined && field.step !== undefined;
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{field.display}</span>
@@ -248,10 +251,27 @@ function CustomFieldControl({ field, value, onChange }: {
           className="h-11 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-3 text-[color:var(--odos-text)] outline-none focus:border-brand"
         />
       ) : field.valueType === "number" ? (
-        <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
-          <input type="number" value={typeof value === "string" ? value : ""} min={field.min} max={field.max} step={field.step ?? "any"} onChange={(event) => onChange(event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-white outline-none" />
-          {field.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{field.unit}</span>}
-        </div>
+        hasWheelBounds ? (
+          <OdosWheel
+            value={numericValue === "" ? 0 : Number(numericValue)}
+            centerOn={0}
+            min={field.min!}
+            max={field.max!}
+            step={field.step!}
+            format={(next) => formatStepValue(next, field.step!)}
+            onChange={(next) => onChange(String(next))}
+            ariaLabel={field.display}
+            unit={field.unit}
+            states={[{ value: "", label: "Not recorded" }]}
+            selectedState={numericValue === "" ? "" : undefined}
+            onStateChange={onChange}
+          />
+        ) : (
+          <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
+            <input type="number" value={numericValue} min={field.min} max={field.max} step={field.step ?? "any"} onChange={(event) => onChange(event.target.value)} className="h-11 min-w-0 flex-1 bg-transparent px-3 text-white outline-none" />
+            {field.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{field.unit}</span>}
+          </div>
+        )
       ) : field.valueType === "select" ? (
         <select value={typeof value === "string" ? value : ""} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded border border-white/15 bg-bg-deep px-3 text-white outline-none focus:border-brand">
           <option value="">Select</option>
@@ -272,6 +292,11 @@ function CustomFieldControl({ field, value, onChange }: {
       {hint && <span className="mt-1 block text-xs text-white/30">{hint}</span>}
     </label>
   );
+}
+
+function formatStepValue(value: number, step: number): string {
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  return value.toFixed(decimals);
 }
 
 function fieldValues(fields: CustomFindingField[], values: Record<string, string | string[]>, eye?: Eye) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosWheel } from "../inputs/OdosWheel";
 import { OdosSelect } from "../inputs/OdosSelect";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
@@ -278,10 +279,25 @@ function EyePanel({ eye, capture, field, gradeFields, normalTemplate, allowDefer
       {displayedNormalTemplate && <p className="mt-3 text-sm text-white/45">{displayedNormalTemplate}</p>}
       {gradeFields.map((grade) => <label key={grade.localCode} className="mt-4 block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-white/45">{grade.display}</span>
-        {grade.valueType === "number" ? <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
-          <input type="number" value={capture.grades?.[grade.localCode] ?? ""} min={grade.min} max={grade.max} step={grade.step ?? "any"} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none" />
-          {grade.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{grade.unit}</span>}
-        </div> : <OdosSelect
+        {grade.valueType === "number" ? (
+          grade.min !== undefined && grade.max !== undefined && grade.step !== undefined ? <OdosWheel
+            value={capture.grades?.[grade.localCode] === undefined ? 0 : Number(capture.grades?.[grade.localCode])}
+            centerOn={0}
+            min={grade.min}
+            max={grade.max}
+            step={grade.step}
+            format={(value) => formatStepValue(value, grade.step!)}
+            onChange={(value) => onGrade(grade.localCode, String(value))}
+            ariaLabel={grade.display}
+            unit={grade.unit}
+            states={[{ value: "", label: "Not recorded" }]}
+            selectedState={capture.grades?.[grade.localCode] === undefined ? "" : undefined}
+            onStateChange={(value) => onGrade(grade.localCode, value)}
+          /> : <div className="flex overflow-hidden rounded border border-white/15 bg-bg-deep focus-within:border-brand">
+            <input type="number" value={capture.grades?.[grade.localCode] ?? ""} min={grade.min} max={grade.max} step={grade.step ?? "any"} onChange={(event) => onGrade(grade.localCode, event.target.value)} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-white outline-none" />
+            {grade.unit && <span className="flex items-center border-l border-white/10 px-3 text-sm text-white/45">{grade.unit}</span>}
+          </div>
+        ) : <OdosSelect
           value={String(capture.grades?.[grade.localCode] ?? defaultGradeValue(grade))}
           options={[
             ...(defaultGradeValue(grade) === "" ? [{ value: "", label: "Select" }] : []),
@@ -359,6 +375,11 @@ function defaultGradeValue(field: CustomFindingField): string {
   return field.localCode === "CUSTOM_GRADE_A_V_RATIO"
     ? field.options?.find((option) => option.active)?.code ?? ""
     : "";
+}
+
+function formatStepValue(value: number, step: number): string {
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  return value.toFixed(decimals);
 }
 
 function emptyCaptures(definitions: CustomFindingDefinition[]) {

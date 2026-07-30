@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
-import { formatPowerOption, numericOptions } from "./power-options";
+import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 import {
   CustomFieldEditor,
   type CustomFieldEditorValue,
@@ -243,11 +244,11 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
   });
   const hiddenAdditional = additionalOptions.filter((option) => !visibleAdditionalCodes.includes(option.code));
   const sphereOptions = useMemo(() => numericOptions(fields.sphere, -30, 30, 0.25), [fields.sphere]);
-  const cylinderOptions = useMemo(() => numericOptions(fields.cylinder, -20, 0, 0.25), [fields.cylinder]);
+  const cylinderOptions = useMemo(() => numericOptions({ ...fields.cylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.cylinder]);
   const addOptions = useMemo(() => numericOptions(fields.add, 0, 4, 0.25), [fields.add]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
-  const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -20, 0, 0.25), [fields.overRefractionCylinder]);
+  const overCylinderOptions = useMemo(() => numericOptions({ ...fields.overRefractionCylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
   const baseCurveOptions = useMemo(() => numericOptions(fields.baseCurve, 3, 15, 0.05), [fields.baseCurve]);
   const diameterOptions = useMemo(() => numericOptions(fields.diameter, 5, 30, 0.1), [fields.diameter]);
@@ -525,10 +526,10 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                         <span className="mb-1 block text-xs uppercase tracking-widest text-[color:var(--odos-faint)]">Diameter (mm)</span>
                         <PowerDropdown value={state.diameter} options={diameterOptions} defaultValue="15.00" onChange={(value) => updateEye(eye, { diameter: value })} ariaLabel="Diameter (mm)" />
                       </label>
-                      <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} />
-                      <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
-                      <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} />
-                      <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} />
+                      <PowerField label="Sphere" value={state.sphere} onChange={(value) => updateEye(eye, { sphere: value })} options={sphereOptions} ariaLabel={`${eye} sphere`} />
+                      <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
+                      <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
+                      <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} />
                       <VaField label="Dist VA" value={state.distanceVisualAcuity} onChange={(value) => updateEye(eye, { distanceVisualAcuity: value })} />
                       <VaField label="Near VA" value={state.nearVisualAcuity} onChange={(value) => updateEye(eye, { nearVisualAcuity: value })} />
                       <VaField label="Dist PH" value={state.distancePinholeVisualAcuity} onChange={(value) => updateEye(eye, { distancePinholeVisualAcuity: value })} />
@@ -572,9 +573,9 @@ export function SpecialtyContactLensSection({ patientReference, encounterReferen
                     <div className="mt-5 rounded border border-brand/20 bg-brand/5 p-4">
                       <h4 className="text-sm font-semibold text-white">Over-Refraction over this {eye} lens</h4>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <PowerField label="Sphere" value={state.overRefraction.sphere} onChange={(value) => updateOverRefraction(eye, { sphere: value })} options={overSphereOptions} />
-                        <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} />
-                        <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} />
+                        <PowerField label="Sphere" value={state.overRefraction.sphere} onChange={(value) => updateOverRefraction(eye, { sphere: value })} options={overSphereOptions} ariaLabel={`${eye} over-refraction sphere`} />
+                        <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} ariaLabel={`${eye} over-refraction cylinder`} />
+                        <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} ariaLabel={`${eye} over-refraction axis`} />
                         <VaField label="Dist VA" value={state.overRefraction.distanceVisualAcuity} onChange={(value) => updateOverRefraction(eye, { distanceVisualAcuity: value })} />
                         <VaField label="Near VA" value={state.overRefraction.nearVisualAcuity} onChange={(value) => updateOverRefraction(eye, { nearVisualAcuity: value })} />
                       </div>
@@ -719,28 +720,76 @@ function additionalSpinnerFallback(field: DefinitionOption) {
   return { minimum: 0, maximum: 30, step: 0.1, defaultValue: "15.00" };
 }
 
-function PowerField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+function PowerField({ label, value, onChange, options, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  const wheel = requiredWheel(options);
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-        <option value="">Select</option>
-        {options.map((option) => <option key={option} value={option}>{formatPowerOption(Number(option))}</option>)}
-      </select>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={wheel.min}
+        max={wheel.max}
+        step={wheel.step}
+        format={formatPower}
+        onChange={(next) => onChange(next.toFixed(2))}
+        ariaLabel={ariaLabel}
+        unit="D"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
     </label>
   );
 }
 
-function AxisField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+function AxisField({ label, value, onChange, options, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  const wheel = requiredWheel(options);
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-        <option value="">Select</option>
-        {options.map((option) => <option key={option} value={option}>{option}°</option>)}
-      </select>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={wheel.min}
+        max={wheel.max}
+        step={wheel.step}
+        format={String}
+        onChange={(next) => onChange(String(next))}
+        ariaLabel={ariaLabel}
+        unit="°"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
     </label>
   );
+}
+
+function requiredWheel(options: string[]): { min: number; max: number; step: number } {
+  const values = options.map(Number);
+  return {
+    min: values[0]!,
+    max: values.at(-1)!,
+    step: values.length > 1 ? values[1]! - values[0]! : 1,
+  };
+}
+
+function formatPower(value: number): string {
+  if (value === 0) return "pl";
+  return `${value > 0 ? "+" : "−"}${Math.abs(value).toFixed(2)}`;
 }
 
 function VaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

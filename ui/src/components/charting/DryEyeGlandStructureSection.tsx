@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosWheel } from "../inputs/OdosWheel";
 import type { CustomFindingDefinition } from "./CustomFindingSection";
 import type { SectionSaveStatus } from "./types";
 
@@ -308,7 +309,21 @@ export function DryEyeGlandStructureSection({
           </label>
           <label className="text-sm text-[color:var(--odos-muted)]">
             Total score
-            <input aria-label="Meibography total score" type="number" min={0} max={maximumScore} step={1} value={totalScore} onChange={(event) => setTotalScore(event.target.value)} className="sidebar-input mt-2" />
+            <div className="mt-2">
+              <OdosWheel
+                ariaLabel="Meibography total score"
+                value={totalScore === "" ? 0 : Number(totalScore)}
+                centerOn={0}
+                min={0}
+                max={maximumScore}
+                step={1}
+                format={String}
+                onChange={(value) => setTotalScore(String(value))}
+                states={[{ value: "", label: "Not recorded" }]}
+                selectedState={totalScore === "" ? "" : undefined}
+                onStateChange={setTotalScore}
+              />
+            </div>
           </label>
           <label className="text-sm text-[color:var(--odos-muted)]">
             Dropout grade (grading scheme provisional)

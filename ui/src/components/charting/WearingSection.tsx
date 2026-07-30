@@ -5,6 +5,7 @@ import { PowerDropdown } from "./PowerDropdown";
 import type { SectionSaveStatus } from "./types";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 interface Props {
   patientReference: string;
@@ -101,7 +102,9 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
   const sphereOptions = useMemo(() => numericOptions(undefined, -16, 12, 0.25).reverse(), []);
   const cylinderOptions = useMemo(() => numericOptions(undefined, -8, 0, 0.25).reverse(), []);
   const addOptions = useMemo(() => numericOptions(undefined, 0.5, 5, 0.25), []);
-  const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
+  const axisMinimum = fields.axis?.minimum ?? 0;
+  const axisMaximum = fields.axis?.maximum ?? 180;
+  const axisStep = fields.axis?.step ?? 1;
   const prismOptions = useMemo(() => numericOptions(fields.prismAmount, 0.25, 20, 0.25), [fields.prismAmount]);
 
   function updatePair(pairId: string, next: Partial<PairState>) {
@@ -263,15 +266,20 @@ export function WearingSection({ patientReference, encounterReference, onSaved }
                       <div className="text-sm font-semibold text-white">{eye}</div>
                       <PowerDropdown value={pair[eye].sphere} options={sphereOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { sphere: value })} ariaLabel={`${eye} sphere`} formatOption={formatDiopterOption} />
                       <PowerDropdown value={pair[eye].cylinder} options={cylinderOptions} defaultValue="0.00" onChange={(value) => updateEye(pair.id, eye, { cylinder: value })} ariaLabel={`${eye} cylinder`} formatOption={formatDiopterOption} />
-                      <select
-                        value={pair[eye].axis}
-                        onChange={(event) => updateEye(pair.id, eye, { axis: event.target.value })}
-                        aria-label={`${eye} axis`}
-                        className="h-10 rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand"
-                      >
-                        <option value="">Select</option>
-                        {axisOptions.map((value) => <option key={value} value={value}>{value}°</option>)}
-                      </select>
+                      <OdosWheel
+                        value={pair[eye].axis === "" ? 0 : Number(pair[eye].axis)}
+                        centerOn={0}
+                        min={axisMinimum}
+                        max={axisMaximum}
+                        step={axisStep}
+                        format={String}
+                        onChange={(value) => updateEye(pair.id, eye, { axis: String(value) })}
+                        ariaLabel={`${eye} axis`}
+                        unit="°"
+                        states={[{ value: "", label: "Not recorded" }]}
+                        selectedState={pair[eye].axis === "" ? "" : undefined}
+                        onStateChange={(value) => updateEye(pair.id, eye, { axis: value })}
+                      />
                       <PowerDropdown value={pair[eye].add} options={addOptions} defaultValue="0.50" onChange={(value) => updateEye(pair.id, eye, { add: value })} ariaLabel={`${eye} add`} formatOption={formatDiopterOption} />
                       <PowerDropdown value={pair[eye].prismAmount} options={prismOptions} defaultValue="0.25" onChange={(value) => updateEye(pair.id, eye, { prismAmount: value })} ariaLabel={`${eye} prism amount`} />
                       <OdosSelect

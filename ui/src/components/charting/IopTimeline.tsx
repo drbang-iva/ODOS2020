@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
+import { OdosWheel } from "../inputs/OdosWheel";
 
 type Eye = "OD" | "OS";
 type ViewMode = "timeline" | "diurnal" | "table";
@@ -431,30 +432,37 @@ export function IopTimeline({ patientReference, refreshSignal }: Props) {
                       {preset}%
                     </button>
                   ))}
-                  <input
-                    value={targetDraft.percent}
-                    onChange={(event) => setTargetDraft({ ...targetDraft, percent: event.target.value })}
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="h-8 w-20 rounded border border-white/15 bg-bg-deep px-2 font-mono text-sm text-white outline-none focus:border-brand"
-                    aria-label="Target percent"
-                  />
+                  <div className="w-28">
+                    <OdosWheel
+                      value={Number(targetDraft.percent)}
+                      centerOn={0}
+                      min={0}
+                      max={100}
+                      step={1}
+                      format={String}
+                      onChange={(value) => setTargetDraft({ ...targetDraft, percent: String(value) })}
+                      ariaLabel="Target percent"
+                      unit="%"
+                    />
+                  </div>
                   <span className="font-mono text-sm text-white/70">
                     target {formatMetric(computedDraftTarget(targetDraft, history))}
                   </span>
                 </div>
               ) : (
-                <input
-                  value={targetDraft.directValue}
-                  onChange={(event) => setTargetDraft({ ...targetDraft, directValue: event.target.value })}
-                  type="number"
-                  min={3}
-                  max={80}
-                  step={0.1}
-                  className="mt-3 h-9 w-32 rounded border border-white/15 bg-bg-deep px-2 font-mono text-sm text-white outline-none focus:border-brand"
-                  aria-label="Direct target mmHg"
-                />
+                <div className="mt-3 w-40">
+                  <OdosWheel
+                    value={Number(targetDraft.directValue)}
+                    centerOn={0}
+                    min={3}
+                    max={80}
+                    step={0.1}
+                    format={(value) => value.toFixed(1)}
+                    onChange={(value) => setTargetDraft({ ...targetDraft, directValue: value.toFixed(1) })}
+                    ariaLabel="Direct target mmHg"
+                    unit="mmHg"
+                  />
+                </div>
               )}
             </div>
             <button

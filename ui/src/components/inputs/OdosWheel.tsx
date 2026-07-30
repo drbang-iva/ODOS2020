@@ -14,6 +14,8 @@ export interface OdosWheelProps {
   format: (value: number) => string;
   onChange: (value: number) => void;
   ariaLabel: string;
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   unit?: string;
   states?: readonly OdosWheelState[];
   selectedState?: string;
@@ -32,6 +34,8 @@ export function OdosWheel({
   format,
   onChange,
   ariaLabel,
+  ariaDescribedBy,
+  ariaInvalid,
   unit,
   states = [],
   selectedState,
@@ -199,6 +203,8 @@ export function OdosWheel({
           inputMode="decimal"
           role="combobox"
           aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           aria-expanded={open}
           aria-controls={listboxId}
           disabled={disabled}

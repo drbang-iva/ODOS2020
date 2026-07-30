@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import { OdosSelect } from "../inputs/OdosSelect";
+import { OdosWheel } from "../inputs/OdosWheel";
 import type { CustomFindingDefinition, CustomFindingField } from "./CustomFindingSection";
 import { PowerDropdown } from "./PowerDropdown";
 import { numericOptions } from "./power-options";
@@ -117,6 +118,24 @@ export function EntranceMeasurementSection({ definition, patientReference, encou
 }
 
 function MeasurementControl({ field, value, onChange }: { field: CustomFindingField; value: string; onChange(value: string): void }) {
+  if (field.valueType === "number" && field.min !== undefined && field.max !== undefined && field.step !== undefined) {
+    return (
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={field.min}
+        max={field.max}
+        step={field.step}
+        format={(next) => formatStepValue(next, field.step!)}
+        onChange={(next) => onChange(String(next))}
+        ariaLabel={field.display}
+        unit={field.unit}
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
+    );
+  }
   if (field.valueType === "number" && field.localCode.includes("AXIS")) {
     return <select aria-label={field.display} value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-1 text-xs text-[color:var(--odos-text)] outline-none focus:border-brand sm:px-2 sm:text-sm"><option value="">Select</option>{numericOptions(undefined, field.min ?? 0, field.max ?? 180, field.step ?? 1).map((option) => <option key={option} value={option}>{option}°</option>)}</select>;
   }
@@ -141,4 +160,9 @@ function MeasurementControl({ field, value, onChange }: { field: CustomFindingFi
     );
   }
   return <input aria-label={field.display} type="time" value={value} onChange={(event) => onChange(event.target.value)} className="h-10 min-w-0 w-full rounded border border-[color:var(--odos-line-2)] bg-bg-deep px-2 text-xs text-[color:var(--odos-text)] outline-none focus:border-brand sm:px-3 sm:text-sm" />;
+}
+
+function formatStepValue(value: number, step: number): string {
+  const decimals = String(step).split(".")[1]?.length ?? 0;
+  return value.toFixed(decimals);
 }

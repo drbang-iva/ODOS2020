@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { authHeaders, clinicalGraphApiBase } from "../../lib/clinical-graph-client";
 import type { SectionSaveStatus } from "./types";
-import { formatPowerOption, numericOptions } from "./power-options";
+import { numericOptions } from "./power-options";
 import { PowerDropdown } from "./PowerDropdown";
 import { VaValueSelect } from "./VaValueSelect";
 import { OdosSelect } from "../inputs/OdosSelect";
@@ -36,6 +36,7 @@ interface DefinitionField {
   display?: string;
   minimum?: number;
   maximum?: number;
+  precision?: number;
   step?: number;
   options?: DefinitionOption[] | ProductOption[];
 }
@@ -152,11 +153,11 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
   const fields = definition?.definition.fields ?? {};
   const manufacturerOptions = useMemo(() => activeOptions(fields.manufacturer), [fields.manufacturer]);
   const products = useMemo(() => activeProductOptions(fields.product), [fields.product]);
-  const cylinderOptions = useMemo(() => numericOptions(fields.cylinder, -20, 0, 0.25), [fields.cylinder]);
+  const cylinderOptions = useMemo(() => numericOptions({ ...fields.cylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.cylinder]);
   const addOptions = useMemo(() => numericOptions(fields.add, 0, 4, 0.25), [fields.add]);
   const axisOptions = useMemo(() => numericOptions(fields.axis, 0, 180, 1), [fields.axis]);
   const overSphereOptions = useMemo(() => numericOptions(fields.overRefractionSphere, -20, 20, 0.25), [fields.overRefractionSphere]);
-  const overCylinderOptions = useMemo(() => numericOptions(fields.overRefractionCylinder, -20, 0, 0.25), [fields.overRefractionCylinder]);
+  const overCylinderOptions = useMemo(() => numericOptions({ ...fields.overRefractionCylinder, minimum: -8, maximum: 0, step: 0.25 }, -8, 0, 0.25), [fields.overRefractionCylinder]);
   const overAxisOptions = useMemo(() => numericOptions(fields.overRefractionAxis, 0, 180, 1), [fields.overRefractionAxis]);
   const binocularPdOptions = useMemo(() => numericOptions(undefined, 50, 75, 0.5), []);
 
@@ -317,14 +318,14 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                       </>
                     )}
                     {state.manualEntry ? (
-                      <TextField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} inputMode="decimal" />
+                      <DefinitionWheelField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} field={fields.baseCurve} ariaLabel={`${eye} manual base curve`} />
                     ) : (
-                      <NativeSelectField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} options={baseCurveOptions} disabled={!state.product} />
+                      <CatalogWheelField label="Base Curve (mm)" value={state.baseCurve} onChange={(value) => updateEye(eye, { baseCurve: value })} options={baseCurveOptions} disabled={!state.product} ariaLabel={`${eye} catalog base curve`} />
                     )}
                     {state.manualEntry ? (
-                      <TextField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} inputMode="decimal" />
+                      <DefinitionWheelField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} field={fields.diameter} ariaLabel={`${eye} manual diameter`} />
                     ) : (
-                      <NativeSelectField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} />
+                      <CatalogWheelField label="Diameter (mm)" value={state.diameter} onChange={(value) => updateEye(eye, { diameter: value })} options={diameterOptions} disabled={!state.product} ariaLabel={`${eye} catalog diameter`} />
                     )}
                     <SphereWheelField
                       label="Sphere"
@@ -333,9 +334,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                       field={fields.sphere}
                       ariaLabel={`${eye} sphere`}
                     />
-                    <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} />
-                    <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} />
-                    <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} />
+                    <PowerField label="Cylinder" value={state.cylinder} onChange={(value) => updateEye(eye, { cylinder: value })} options={cylinderOptions} ariaLabel={`${eye} cylinder`} />
+                    <AxisField label="Axis" value={state.axis} onChange={(value) => updateEye(eye, { axis: value })} options={axisOptions} ariaLabel={`${eye} axis`} />
+                    <PowerField label="Add" value={state.add} onChange={(value) => updateEye(eye, { add: value })} options={addOptions} ariaLabel={`${eye} add`} />
                     {!state.manualEntry && cascadeOptions.length > 0 && (
                       <SelectField label="Color/MF-PWR" value={state.colorMfPower} onChange={(value) => updateEye(eye, { colorMfPower: value })} options={cascadeOptions} />
                     )}
@@ -352,9 +353,9 @@ export function SoftContactLensSection({ patientReference, encounterReference, o
                   <div className="mt-5 rounded border border-brand/20 bg-brand/5 p-4">
                     <h4 className="text-sm font-semibold text-white">Over-Refraction over this {eye} lens</h4>
                     <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                      <PowerField label="Sphere" value={state.overRefraction.sphere} onChange={(value) => updateOverRefraction(eye, { sphere: value })} options={overSphereOptions} />
-                      <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} />
-                      <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} />
+                      <PowerField label="Sphere" value={state.overRefraction.sphere} onChange={(value) => updateOverRefraction(eye, { sphere: value })} options={overSphereOptions} ariaLabel={`${eye} over-refraction sphere`} />
+                      <PowerField label="Cylinder" value={state.overRefraction.cylinder} onChange={(value) => updateOverRefraction(eye, { cylinder: value })} options={overCylinderOptions} ariaLabel={`${eye} over-refraction cylinder`} />
+                      <AxisField label="Axis" value={state.overRefraction.axis} onChange={(value) => updateOverRefraction(eye, { axis: value })} options={overAxisOptions} ariaLabel={`${eye} over-refraction axis`} />
                       <VaField label="Dist VA" value={state.overRefraction.distanceVisualAcuity} onChange={(value) => updateOverRefraction(eye, { distanceVisualAcuity: value })} />
                       <VaField label="Near VA" value={state.overRefraction.nearVisualAcuity} onChange={(value) => updateOverRefraction(eye, { nearVisualAcuity: value })} />
                     </div>
@@ -482,14 +483,97 @@ function TextField({ label, value, onChange, type = "text", inputMode }: {
   );
 }
 
-function PowerField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+function DefinitionWheelField({ label, value, onChange, field, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  field: DefinitionField | undefined;
+  ariaLabel: string;
+}) {
+  const step = field?.step ?? (field?.precision === undefined ? undefined : 10 ** -field.precision);
+  if (field?.minimum === undefined || field.maximum === undefined || step === undefined) {
+    return <TextField label={label} value={value} onChange={onChange} inputMode="decimal" />;
+  }
+  return (
+    <label className="block">
+      <span className={FIELD_LABEL_CLASS}>{label}</span>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={field.minimum}
+        max={field.maximum}
+        step={step}
+        format={(next) => next.toFixed(field.precision ?? decimalPlaces(step))}
+        onChange={(next) => onChange(String(next))}
+        ariaLabel={ariaLabel}
+        unit="mm"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
+    </label>
+  );
+}
+
+function CatalogWheelField({ label, value, onChange, options, disabled, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  options: DefinitionOption[];
+  disabled: boolean;
+  ariaLabel: string;
+}) {
+  const wheel = catalogWheel(options);
+  if (!wheel) {
+    return <NativeSelectField label={label} value={value} onChange={onChange} options={options} disabled={disabled} />;
+  }
+  return (
+    <label className="block">
+      <span className={FIELD_LABEL_CLASS}>{label}</span>
+      <OdosWheel
+        value={value === "" ? wheel.min : Number(value)}
+        centerOn={0}
+        min={wheel.min}
+        max={wheel.max}
+        step={wheel.step}
+        format={(next) => options.find((option) => Number(option.code) === next)?.display ?? String(next)}
+        onChange={(next) => onChange(options.find((option) => Number(option.code) === next)?.code ?? String(next))}
+        ariaLabel={ariaLabel}
+        unit="mm"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+        disabled={disabled}
+      />
+    </label>
+  );
+}
+
+function PowerField({ label, value, onChange, options, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  const wheel = requiredWheel(options);
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-        <option value="">Select</option>
-        {options.map((option) => <option key={option} value={option}>{formatPowerOption(Number(option))}</option>)}
-      </select>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={wheel.min}
+        max={wheel.max}
+        step={wheel.step}
+        format={formatSpherePower}
+        onChange={(next) => onChange(next.toFixed(2))}
+        ariaLabel={ariaLabel}
+        unit="D"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
     </label>
   );
 }
@@ -525,16 +609,55 @@ function SphereWheelField({ label, value, onChange, field, ariaLabel }: {
   );
 }
 
-function AxisField({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+function AxisField({ label, value, onChange, options, ariaLabel }: {
+  label: string;
+  value: string;
+  onChange(value: string): void;
+  options: string[];
+  ariaLabel: string;
+}) {
+  const wheel = requiredWheel(options);
   return (
     <label className="block">
       <span className="mb-1 block text-xs uppercase tracking-widest text-white/35">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded border border-white/15 bg-bg-deep px-2 text-sm text-white outline-none focus:border-brand">
-        <option value="">Select</option>
-        {options.map((option) => <option key={option} value={option}>{option}°</option>)}
-      </select>
+      <OdosWheel
+        value={value === "" ? 0 : Number(value)}
+        centerOn={0}
+        min={wheel.min}
+        max={wheel.max}
+        step={wheel.step}
+        format={String}
+        onChange={(next) => onChange(String(next))}
+        ariaLabel={ariaLabel}
+        unit="°"
+        states={[{ value: "", label: "Not recorded" }]}
+        selectedState={value === "" ? "" : undefined}
+        onStateChange={onChange}
+      />
     </label>
   );
+}
+
+function catalogWheel(options: DefinitionOption[]): { min: number; max: number; step: number } | undefined {
+  if (!options.length || options.some((option) => !Number.isFinite(Number(option.code)))) return undefined;
+  const values = options.map((option) => Number(option.code));
+  if (values.length === 1) return { min: values[0]!, max: values[0]!, step: 1 };
+  const step = values[1]! - values[0]!;
+  if (step <= 0 || values.some((value, index) => index > 0 && Math.abs(value - values[index - 1]! - step) > 1e-9)) return undefined;
+  return { min: values[0]!, max: values.at(-1)!, step };
+}
+
+function requiredWheel(options: string[]): { min: number; max: number; step: number } {
+  const values = options.map(Number);
+  return {
+    min: values[0]!,
+    max: values.at(-1)!,
+    step: values.length > 1 ? values[1]! - values[0]! : 1,
+  };
+}
+
+function decimalPlaces(value: number): number {
+  return String(value).split(".")[1]?.length ?? 0;
 }
 
 function formatSpherePower(value: number): string {
