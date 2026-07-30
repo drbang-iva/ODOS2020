@@ -21,7 +21,11 @@ import { ODOS_SOURCE_CLAIM_EXTENSION_URL } from "../claims/patient-responsibilit
 import { ODOS_PAYMENT_TENDER_EXTENSION_URL } from "../fhir/odosPaymentTender.js";
 import { resolveBusinessActionRole, type PracticeRoleId } from "../authz/roles.js";
 import type { MedplumClient } from "../fhir-client.js";
-import { FhirSearchLimitError, searchAll } from "../fhir-search.js";
+import {
+  DEFAULT_FHIR_SEARCH_MAX_ROWS,
+  FhirSearchLimitError,
+  searchAll,
+} from "../fhir-search.js";
 import {
   filterUnappliedCredits,
   paymentAmountCents,
@@ -46,6 +50,7 @@ export const STATEMENT_RUN_IDENTIFIER_SYSTEM = "https://odos2020.com/fhir/Naming
 export const STATEMENT_OUTPUT_CODE_SYSTEM = "https://odos2020.com/fhir/CodeSystem/statement-output";
 export const STATEMENT_TRANSACTION_CHILD_LIMIT = 40;
 const STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE = 100;
+const STATEMENT_REFERENCE_SEARCH_CONCURRENCY = 4;
 const ODOS_MRN_SYSTEM = "https://odos2020.com/fhir/NamingSystem/odos-mrn";
 const RESPONSIBLE_PARTY_PRIMARY_EXTENSION_URL =
   "https://odos2020.com/fhir/StructureDefinition/related-person-primary";
@@ -1256,14 +1261,34 @@ async function searchAllInReferenceChunks<T extends Resource>(
   values: readonly string[],
   additionalParams: Record<string, string> = {},
 ): Promise<T[]> {
-  const searches: Array<Promise<T[]>> = [];
-  for (let index = 0; index < values.length; index += STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE) {
-    searches.push(searchAll<T>(fhir, resourceType, {
-      ...additionalParams,
-      [parameter]: values.slice(index, index + STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE).join(","),
-    }));
+  const results: T[] = [];
+  for (
+    let batchStart = 0;
+    batchStart < values.length;
+    batchStart += STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE * STATEMENT_REFERENCE_SEARCH_CONCURRENCY
+  ) {
+    const searches: Array<Promise<T[]>> = [];
+    const batchEnd = Math.min(
+      values.length,
+      batchStart + STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE * STATEMENT_REFERENCE_SEARCH_CONCURRENCY,
+    );
+    for (
+      let chunkStart = batchStart;
+      chunkStart < batchEnd;
+      chunkStart += STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE
+    ) {
+      searches.push(searchAll<T>(fhir, resourceType, {
+        ...additionalParams,
+        [parameter]: values.slice(chunkStart, chunkStart + STATEMENT_REFERENCE_SEARCH_CHUNK_SIZE).join(","),
+      }));
+    }
+    const batch = (await Promise.all(searches)).flat();
+    if (results.length + batch.length > DEFAULT_FHIR_SEARCH_MAX_ROWS) {
+      throw new FhirSearchLimitError(resourceType, DEFAULT_FHIR_SEARCH_MAX_ROWS);
+    }
+    results.push(...batch);
   }
-  return (await Promise.all(searches)).flat();
+  return results;
 }
 
 function sum(values: number[]): number {
